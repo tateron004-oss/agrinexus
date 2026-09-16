@@ -4563,6 +4563,99 @@ function projectAgentMemoryItemForUser(item, user, textField = "text") {
   };
 }
 
+// nexusPersistentMemory records have no per-user owner field at all (this
+// feature was built as a single-user, browser-local-style store, not a
+// multi-tenant one), so a real cross-user IDOR fix would need a broader
+// ownership model than this session's other fixes -- out of scope here.
+// This closes the narrower, proven Investor-redaction gap: a record whose
+// type is one of the two explicitly health-shaped MEMORY_TYPES must not
+// surface its real payload to an Investor, the same as every other
+// Healthcare-shaped array in this file.
+const NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES = new Set(["health_patient_intake", "chronic_condition_record"]);
+
+function projectPersistentMemoryRecordForUser(record, user) {
+  if (!isInvestorUser(user) || !record || typeof record !== "object") return record;
+  if (!NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(record.type)) return record;
+  return {
+    ...record,
+    title: "Healthcare memory record",
+    name: "Healthcare memory record",
+    payload: { redacted: true },
+    safetyNote: "Patient-level details are redacted for investor view.",
+    redacted: true
+  };
+}
+
+function projectPersistentMemoryForUser(memoryState, user) {
+  if (!isInvestorUser(user) || !memoryState || typeof memoryState !== "object") return memoryState;
+  const projected = { ...memoryState };
+  const healthRecordIds = new Set((memoryState.records || []).filter(record => NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(record.type)).map(record => record.id));
+  if (Array.isArray(memoryState.records)) {
+    projected.records = memoryState.records.map(record => projectPersistentMemoryRecordForUser(record, user));
+  }
+  if (Array.isArray(memoryState.receipts)) {
+    projected.receipts = memoryState.receipts.map(receipt => healthRecordIds.has(receipt.relatedRecordId)
+      ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for investor view." }
+      : receipt);
+  }
+  // createRecord()/updateRecord() etc. return {state: this.snapshot()}, and
+  // callers persist that whole snapshot -- including its own already-computed
+  // predictiveContext -- straight into db.profile.nexusPersistentMemory, so
+  // that nested copy needs the same redaction as the top-level records.
+  if (memoryState.predictiveContext && typeof memoryState.predictiveContext === "object") {
+    const ctx = memoryState.predictiveContext;
+    projected.predictiveContext = {
+      ...ctx,
+      activeRecords: (ctx.activeRecords || []).map(record => projectPersistentMemoryRecordForUser(record, user)),
+      archivedRecords: (ctx.archivedRecords || []).map(record => projectPersistentMemoryRecordForUser(record, user)),
+      receipts: (ctx.receipts || []).map(receipt => healthRecordIds.has(receipt.relatedRecordId)
+        ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for investor view." }
+        : receipt),
+      signals: (ctx.signals || []).map(signal => NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
+        ? { ...signal, title: "Healthcare memory record", missingData: [] }
+        : signal)
+    };
+  }
+  return projected;
+}
+
+// nexusAgenticBrainRuntime.listTasks(db) surfaces real chronic-care task
+// content (userGoal, chronicIntake, providerReport, readings, rtmNotes,
+// history) with no per-user owner concept and no Investor awareness at
+// all. Redact any task typed "medical_follow_up", and anything in the
+// activity log / provider queue derived from one, the same way every
+// other Healthcare-shaped array in this file is redacted.
+function projectAgenticTaskForUser(task, user) {
+  if (!isInvestorUser(user) || !task || typeof task !== "object" || task.type !== "medical_follow_up") return task;
+  return {
+    ...task,
+    title: "Healthcare task recorded",
+    userGoal: "Patient-level details are redacted for investor view.",
+    chronicIntake: task.chronicIntake ? { redacted: true } : null,
+    providerReport: task.providerReport ? { redacted: true } : null,
+    readings: [],
+    rtmNotes: [],
+    reminderRequest: task.reminderRequest ? { ...task.reminderRequest, purpose: "Redacted for investor view." } : task.reminderRequest,
+    history: (task.history || []).map(entry => ({ ...entry, summary: "Healthcare task activity recorded. Redacted for investor view." })),
+    redacted: true
+  };
+}
+
+function projectAgenticTasksStateForUser(state, user) {
+  if (!isInvestorUser(user) || !state || typeof state !== "object") return state;
+  const redactedTaskIds = new Set((state.tasks || []).filter(task => task.type === "medical_follow_up").map(task => task.taskId));
+  return {
+    ...state,
+    tasks: (state.tasks || []).map(task => projectAgenticTaskForUser(task, user)),
+    providerQueue: (state.providerQueue || []).map(item => redactedTaskIds.has(item.taskId)
+      ? { ...item, visiblePurpose: "Healthcare provider request recorded. Redacted for investor view." }
+      : item),
+    activity: (state.activity || []).map(event => redactedTaskIds.has(event.taskId)
+      ? { ...event, summary: "Healthcare task activity recorded. Redacted for investor view." }
+      : event)
+  };
+}
+
 function projectAgentMemoryForUser(agentMemory, user) {
   if (!isInvestorUser(user) || !agentMemory || typeof agentMemory !== "object") return agentMemory;
   const projected = { ...agentMemory };
@@ -4655,6 +4748,24 @@ function profileForUser(profile, user) {
   }
   if (profile.agentMemory) {
     projected.agentMemory = projectAgentMemoryForUser(profile.agentMemory, user);
+  }
+  if (profile.nexusPersistentMemory) {
+    projected.nexusPersistentMemory = projectPersistentMemoryForUser(profile.nexusPersistentMemory, user);
+  }
+  if (Array.isArray(profile.nexusRuntimeActivity)) {
+    projected.nexusRuntimeActivity = profile.nexusRuntimeActivity.map(event => isInvestorUser(user) && event.domain === "medical"
+      ? { ...event, userGoal: "Redacted for investor view.", safeUserFacingSummary: "Redacted for investor view." }
+      : event);
+  }
+  if (Array.isArray(profile.nexusAgenticTasks) || Array.isArray(profile.nexusProviderQueue) || Array.isArray(profile.nexusAgenticBrainActivity)) {
+    const agenticState = projectAgenticTasksStateForUser({
+      tasks: profile.nexusAgenticTasks || [],
+      providerQueue: profile.nexusProviderQueue || [],
+      activity: profile.nexusAgenticBrainActivity || []
+    }, user);
+    projected.nexusAgenticTasks = agenticState.tasks;
+    projected.nexusProviderQueue = agenticState.providerQueue;
+    projected.nexusAgenticBrainActivity = agenticState.activity;
   }
   if (profile.accessibilityProfile) {
     projected.accessibilityProfile = {
@@ -44744,14 +44855,16 @@ async function api(req, res, url) {
     // it there) belonging to every session that has ever used this feature.
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (url.pathname === "/api/nexus/persistent-memory/records" && req.method === "GET") {
+      const searchResult = store.searchRecords({
+        type: url.searchParams.get("type") || "",
+        status: url.searchParams.get("status") || "",
+        query: url.searchParams.get("query") || "",
+        includeArchived: url.searchParams.get("activeOnly") !== "true"
+      });
       return send(res, 200, {
         ok: true,
-        ...store.searchRecords({
-          type: url.searchParams.get("type") || "",
-          status: url.searchParams.get("status") || "",
-          query: url.searchParams.get("query") || "",
-          includeArchived: url.searchParams.get("activeOnly") !== "true"
-        }),
+        ...searchResult,
+        records: searchResult.records.map(record => projectPersistentMemoryRecordForUser(record, user)),
         persistenceScope: store.status().persistenceScope,
         noExternalExecutionAuthorized: true
       });
@@ -44763,7 +44876,8 @@ async function api(req, res, url) {
     }
     const recordMatch = url.pathname.match(/^\/api\/nexus\/persistent-memory\/records\/([^/]+)$/);
     if (recordMatch && req.method === "GET") {
-      return send(res, 200, { ...store.readRecord(decodeURIComponent(recordMatch[1])), noExternalExecutionAuthorized: true });
+      const readResult = store.readRecord(decodeURIComponent(recordMatch[1]));
+      return send(res, 200, { ...readResult, record: projectPersistentMemoryRecordForUser(readResult.record, user), noExternalExecutionAuthorized: true });
     }
     if (recordMatch && (req.method === "PATCH" || req.method === "POST")) {
       const body = await readBody(req);
@@ -44785,7 +44899,7 @@ async function api(req, res, url) {
     if (url.pathname === "/api/nexus/persistent-memory/receipts" && req.method === "GET") {
       return send(res, 200, {
         ok: true,
-        receipts: store.snapshot().receipts,
+        receipts: projectPersistentMemoryForUser(store.snapshot(), user).receipts,
         persistenceScope: store.status().persistenceScope,
         noExternalExecutionAuthorized: true
       });
@@ -44796,9 +44910,17 @@ async function api(req, res, url) {
       return send(res, 200, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
     }
     if (url.pathname === "/api/nexus/persistent-memory/predictive-context" && req.method === "GET") {
+      const predictiveContext = store.predictiveContext();
       return send(res, 200, {
         ok: true,
-        predictiveContext: store.predictiveContext(),
+        predictiveContext: {
+          ...predictiveContext,
+          activeRecords: predictiveContext.activeRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
+          archivedRecords: predictiveContext.archivedRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
+          signals: predictiveContext.signals.map(signal => isInvestorUser(user) && NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
+            ? { ...signal, title: "Healthcare memory record", missingData: [] }
+            : signal)
+        },
         persistenceScope: store.status().persistenceScope,
         noExternalExecutionAuthorized: true
       });
@@ -44819,11 +44941,11 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/tasks" && req.method === "GET") {
-    return send(res, 200, nexusAgenticBrainRuntime.listTasks(db));
+    return send(res, 200, projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user));
   }
 
   if (url.pathname === "/api/nexus/brain/missions" && req.method === "GET") {
-    const state = nexusAgenticBrainRuntime.listTasks(db);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
     return send(res, 200, {
       ok: true,
       missions: state.tasks || [],
@@ -44834,7 +44956,7 @@ async function api(req, res, url) {
 
   if (url.pathname.startsWith("/api/nexus/brain/missions/") && req.method === "GET") {
     const missionId = decodeURIComponent(url.pathname.replace("/api/nexus/brain/missions/", ""));
-    const state = nexusAgenticBrainRuntime.listTasks(db);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
     const mission = (state.tasks || []).find(task => task.taskId === missionId || task.caseId === missionId);
     return send(res, mission ? 200 : 404, {
       ok: Boolean(mission),
@@ -44854,7 +44976,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/receipts" && req.method === "GET") {
-    const state = nexusAgenticBrainRuntime.listTasks(db);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
     const receipts = (state.activity || []).map(event => ({
       receiptId: event.activityId,
       createdAt: event.createdAt,
@@ -44869,7 +44991,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/memory" && req.method === "GET") {
-    const state = nexusAgenticBrainRuntime.listTasks(db);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
     return send(res, 200, {
       ok: true,
       memory: {
