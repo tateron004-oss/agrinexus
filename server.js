@@ -20057,7 +20057,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // instead of respecting what was actually asked, or honestly finding
       // nothing for a city not in the local catalog.
       const locationMatch = command.match(/\bin\s+([a-z\s]+?)[.,!?]*$/i);
-      const searchResult = nexusRealProviders.mobileClinicBridge.search({ q: locationMatch?.[1]?.trim() || "" });
+      const searchResult = await nexusRealProviders.mobileClinicBridge.search({ location: locationMatch?.[1]?.trim() || "" });
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { mobileClinics: cards };
       response = cards.length
@@ -45746,7 +45746,7 @@ async function api(req, res, url) {
   // except the plain "/status" ones reads or writes real record content.
   if (req.method === "GET" && medicalGetRoutes[url.pathname]) {
     if (!user && !url.pathname.endsWith("/status")) return send(res, 401, { error: "Sign in required" });
-    const result = medicalGetRoutes[url.pathname]();
+    const result = await medicalGetRoutes[url.pathname]();
     if (result.body) return sendProviderResult(res, result);
     return send(res, 200, result);
   }

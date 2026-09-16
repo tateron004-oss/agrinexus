@@ -51,6 +51,7 @@ const { createMapsViewExecutor, verifyMapsViewOutcome } = require("../maps/execu
 const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../health/executor.js");
 const { createChronicDiseaseIntakeExecutor, verifyChronicDiseaseIntakeOutcome, createChronicDiseaseReadingExecutor,
   verifyChronicDiseaseReadingOutcome, createChronicDiseaseSummaryExecutor, verifyChronicDiseaseSummaryOutcome } = require("../health/chronic-executor.js");
+const { createPharmacyFindExecutor, verifyPharmacyFindOutcome, createClinicFindExecutor, verifyClinicFindOutcome } = require("../health/places-executor.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -105,7 +106,9 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "health.record": { create: () => createHealthRecordExecutor({ records }), verify: verifyHealthRecordOutcome, method: "real_record_write" },
     "health.chronic-intake": { create: () => createChronicDiseaseIntakeExecutor({ records }), verify: verifyChronicDiseaseIntakeOutcome, method: "real_record_write" },
     "health.chronic-reading": { create: () => createChronicDiseaseReadingExecutor({ records }), verify: verifyChronicDiseaseReadingOutcome, method: "real_record_write" },
-    "health.chronic-summary": { create: () => createChronicDiseaseSummaryExecutor({ records }), verify: verifyChronicDiseaseSummaryOutcome, method: "real_record_lookup" }
+    "health.chronic-summary": { create: () => createChronicDiseaseSummaryExecutor({ records }), verify: verifyChronicDiseaseSummaryOutcome, method: "real_record_lookup" },
+    "pharmacy.find": { create: () => createPharmacyFindExecutor({ env }), verify: verifyPharmacyFindOutcome, method: "real_osm_place_search_with_local_fallback" },
+    "clinic.find": { create: () => createClinicFindExecutor({ env }), verify: verifyClinicFindOutcome, method: "real_osm_place_search_with_local_fallback" }
   };
   const localExecutorFns = Object.fromEntries(Object.entries(LOCAL_EXECUTORS).map(([toolId, entry]) => [toolId, entry.create()]));
   const governedExecutors = Object.assign({}, providers.executors, localExecutorFns, executors);

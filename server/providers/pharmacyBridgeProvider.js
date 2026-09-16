@@ -4,6 +4,7 @@ const {
   guardMedicalText,
   requireConfirmation,
   safeText,
+  envEnabled,
   ensureProfileStore,
   localRecord,
   saveRecord,
@@ -11,6 +12,7 @@ const {
   createReminder,
   queueOffline
 } = require("./medicalBridgeUtils");
+const osmPlacesProvider = require("./osmPlacesProvider");
 
 const PROVIDER = "nexus-pharmacy-bridge";
 const FLAG = "NEXUS_PHARMACY_BRIDGE_ENABLED";
@@ -33,11 +35,11 @@ const SAFE_QUESTION_PROMPTS = [
 ];
 
 function status(env = process.env) {
-  return defaultStatus(PROVIDER, FLAG, env, { localCatalog: true, safeQuestionPrompts: SAFE_QUESTION_PROMPTS, prescriptionExecution: false });
+  return defaultStatus(PROVIDER, FLAG, env, { localCatalog: true, liveOsmSearch: envEnabled("NEXUS_PHARMACY_OSM_SEARCH_ENABLED", env, true),
+    safeQuestionPrompts: SAFE_QUESTION_PROMPTS, prescriptionExecution: false });
 }
 
-function search(query = {}) {
-  const text = safeText([query.q, query.query, query.city, query.serviceType, query.keyword].filter(Boolean).join(" "), 300).toLowerCase();
+function localCatalogSearch(text) {
   const cards = CATALOG.filter(item => !text || [item.name, item.category, item.city, ...item.services].join(" ").toLowerCase().includes(text)).map(item => ({
     ...item,
     source: "Nexus local pharmacy starter catalog",
@@ -46,6 +48,37 @@ function search(query = {}) {
     paymentEnabled: false
   }));
   return response(PROVIDER, "pharmacy.search", "completed", `Loaded ${cards.length} local pharmacy option(s).`, { cards });
+}
+
+// Real when a location is given (OpenStreetMap Overpass, keyless, same
+// zero-config-real pattern as nexus/maps/executor.js) -- falls back to the
+// small local catalog only when no location was given, or when the live
+// lookup genuinely fails (network/geocoding error). A failure must never
+// look like "no pharmacies exist"; the local catalog is a real, if
+// limited, fallback, not a fabricated one.
+async function search(query = {}, env = process.env) {
+  const text = safeText([query.q, query.query, query.location, query.city, query.serviceType, query.keyword].filter(Boolean).join(" "), 300).toLowerCase();
+  // Only location/city is treated as a real place to geocode -- q/query are
+  // free-text keyword search terms (e.g. "chronic care"), not place names,
+  // and geocoding them would produce nonsensical live-search behavior.
+  const locationText = safeText(query.location || query.city || "", 200);
+  if (locationText && envEnabled("NEXUS_PHARMACY_OSM_SEARCH_ENABLED", env, true)) {
+    try {
+      const { origin, places } = await osmPlacesProvider.findNearbyPlaces({ locationText, osmFilters: ['"amenity"="pharmacy"'], limit: 8, env });
+      if (places.length) {
+        return response(PROVIDER, "pharmacy.search", "completed", `Found ${places.length} real pharmacy location(s) near ${origin.label} via OpenStreetMap.`, {
+          cards: places.map((place, index) => ({
+            id: `osm-pharmacy-${index}`, name: place.name, category: "pharmacy", city: origin.label,
+            address: place.address, distanceMeters: place.distanceMeters, phone: place.phone, openingHours: place.openingHours,
+            source: "OpenStreetMap (live)", inventoryClaimed: false, refillEnabled: false, paymentEnabled: false
+          }))
+        });
+      }
+    } catch {
+      // Fall through to the local catalog.
+    }
+  }
+  return localCatalogSearch(text);
 }
 
 function intake(body = {}, db, env = process.env) {
