@@ -129,7 +129,7 @@ async function call(path, body) {
       assert(languageState.profile.accessibilityProfile.language === targetLanguage);
     }
   }
-  await call("/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
+  const adminLogin = await call("/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
   assert(login.providers.length >= 8);
   assert(login.providers.some(provider => provider.id === "voice-stt"));
   assert(login.providers.some(provider => provider.id === "voice-tts"));
@@ -255,10 +255,10 @@ async function call(path, body) {
   assert(login.automation.items.some(item => item.id === "event-triggered-workflows"));
   assert(login.automation.items.some(item => item.id === "notification-delivery"));
   assert(login.automation.items.some(item => item.id === "production-user-management"));
-  assert(login.admin.modules.length >= 6);
-  assert(login.admin.readiness.total >= 12);
-  assert(login.admin.readiness.moduleReadiness.length >= 6);
-  assert(login.admin.readiness.status === "local-optimized" || login.admin.readiness.status === "production-ready");
+  assert(adminLogin.admin.modules.length >= 6);
+  assert(adminLogin.admin.readiness.total >= 12);
+  assert(adminLogin.admin.readiness.moduleReadiness.length >= 6);
+  assert(adminLogin.admin.readiness.status === "local-optimized" || adminLogin.admin.readiness.status === "production-ready");
   const language = await call("/api/user/language", { language: "fr" });
   assert(language.user.language === "fr");
   assert(language.profile.accessibilityProfile.language === "fr");
