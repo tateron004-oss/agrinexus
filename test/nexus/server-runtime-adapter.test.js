@@ -305,6 +305,77 @@ test("toggling the autonomy pause switch requires the admin role, not just any p
   assert.equal(adminResponse.result.body.paused, true);
 });
 
+test("document listing and download are strictly scoped to the caller's own tenant/owner", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-doc-route-test-"));
+  const filename = "11111111-1111-1111-1111-111111111111.txt";
+  fs.writeFileSync(path.join(tmpDir, filename), "real file content");
+
+  const own = { document_id: "doc_own", title: "My report", document_type: "txt", version: 1,
+    object_key: `local:${filename}`, created_at: "2026-09-01T00:00:00.000Z", updated_at: "2026-09-01T00:00:00.000Z" };
+  const runtime = { engine: { tasks: {} },
+    documents: {
+      list: async () => [own],
+      get: async ({ documentId }) => (documentId === "doc_own" ? own : null)
+    } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_EXPORT_DIR: tmpDir },
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+
+  const list = responseCapture();
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents"), list.send);
+  assert.equal(list.result.status, 200);
+  assert.equal(list.result.body.documents.length, 1);
+  assert.equal(list.result.body.documents[0].documentId, "doc_own");
+  assert.equal(list.result.body.documents[0].downloadPath, undefined); // summary shape has no raw path, just metadata
+
+  const download = responseCapture();
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents/doc_own"), download.send);
+  assert.equal(download.result.status, 200);
+  assert.equal(download.result.body.contentType, "text/plain");
+  assert.equal(Buffer.from(download.result.body.contentBase64, "base64").toString("utf8"), "real file content");
+
+  const notOwned = responseCapture();
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents/doc_someone_elses"), notOwned.send);
+  assert.equal(notOwned.result.status, 404);
+  assert.equal(notOwned.result.body.code, "document_not_found");
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test("document download rejects a malformed local object key instead of reading an arbitrary path", async () => {
+  const traversal = { document_id: "doc_bad", title: "x", document_type: "txt", object_key: "local:../../etc/passwd" };
+  const runtime = { engine: { tasks: {} }, documents: { get: async () => traversal } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents/doc_bad"), response.send);
+  assert.equal(response.result.status, 404);
+  assert.equal(response.result.body.code, "document_not_found");
+});
+
+test("document download reports a real 'file missing' error rather than a fake success when the local file is gone", async () => {
+  const missing = { document_id: "doc_gone", title: "x", document_type: "txt", object_key: "local:22222222-2222-2222-2222-222222222222.txt" };
+  const runtime = { engine: { tasks: {} }, documents: { get: async () => missing } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_EXPORT_DIR: require("node:os").tmpdir() },
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents/doc_gone"), response.send);
+  assert.equal(response.result.status, 404);
+  assert.equal(response.result.body.code, "document_file_missing");
+});
+
+test("document download falls back to shared object storage for a non-local object key", async () => {
+  const s3Doc = { document_id: "doc_s3", title: "x", document_type: "pdf", object_key: "nexus/tenant-1/user-1/doc_s3/report.pdf" };
+  const runtime = { engine: { tasks: {} }, documents: { get: async () => s3Doc },
+    objectStorage: { get: async key => { assert.equal(key, s3Doc.object_key); return { body: Buffer.from("s3 bytes"), contentType: "application/pdf" }; } } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "GET", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents/doc_s3"), response.send);
+  assert.equal(response.result.status, 200);
+  assert.equal(Buffer.from(response.result.body.contentBase64, "base64").toString("utf8"), "s3 bytes");
+});
+
 test("production acceptance requires its machine token before runtime access", async () => {
   let runtimeCreated = false; const capture = responseCapture();
   const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "secret" }, resolveUser: async () => null,

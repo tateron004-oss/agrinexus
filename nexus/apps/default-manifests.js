@@ -11,7 +11,7 @@ const DEFINITIONS = [
   ["marketplace", "AgriTrade Marketplace", ["marketplace.search"], ["low", "medium", "high"]],
   ["maps", "Maps and Field Visit", ["maps.view"], ["low", "medium"]],
   ["music-media", "Music and Media", ["media.play"], ["low"]],
-  ["documents", "Documents and Guided Entry", ["documents.create"], ["low", "medium", "regulated"]],
+  ["documents", "Documents and Guided Entry", ["documents.create", "documents.read"], ["low", "medium", "regulated"]],
   ["reminders", "Reminders and Calendar", ["reminders.schedule"], ["low", "medium"]],
   ["offline-queue", "Offline Queue", ["offline.sync"], ["low", "medium", "high", "regulated"]],
   ["live-knowledge", "Live Knowledge", ["knowledge.search"], ["low"]],
