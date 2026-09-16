@@ -76,6 +76,7 @@ const suites = {
     "scripts/operations-phi-and-credential-disclosure-smoke.js",
     "scripts/nexus-records-and-persistent-memory-auth-smoke.js",
     "scripts/nexus-second-preauth-wave-smoke.js",
+    "scripts/openai-native-tool-auth-and-health-source-ssrf-smoke.js",
     "scripts/logout-durable-token-revocation-smoke.js"
   ],
   call: [
