@@ -49,6 +49,31 @@ test("complete route endpoints take precedence over single destination targeting
   assert.match(openMap, /userMap\.fitBounds\(points/);
 });
 
+test("route and single-target draws wait for a stable canvas instead of racing openFullScaleUserMap's destructive staggered re-render", () => {
+  const start = appSource.indexOf("function openGenesisRealtimeMapWorkspace(");
+  const end = appSource.indexOf("const genesisWorkspaceBridgeRequests", start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const openMap = appSource.slice(start, end);
+
+  // openFullScaleUserMap's own [80, 180, 360, 700]ms checks destructively
+  // recreate #userMapCanvas (new DOM node, fresh userMap/userMapLayers)
+  // whenever it isn't yet a Leaflet container. A route/marker draw fired at
+  // a fixed delay -- 360ms previously -- can race one of those checkpoints
+  // and get wiped out; confirmed live via a production capability probe
+  // finding the map canvas gone right after a route was drawn. Waiting for
+  // the canvas to actually become stable first closes that race.
+  assert.doesNotMatch(openMap, /window\.setTimeout\(\(\) => \{[\s\S]*?\}, 360\)/);
+  const routeDrawCount = (openMap.match(/waitForStableUserMapCanvas\(\)\.then\(/g) || []).length;
+  assert.equal(routeDrawCount, 2, "both the route-endpoints and single-target branches must wait for a stable canvas");
+
+  const helperStart = appSource.indexOf("function waitForStableUserMapCanvas(");
+  assert.notEqual(helperStart, -1);
+  const helperEnd = appSource.indexOf("function openGenesisRealtimeMapWorkspace(", helperStart);
+  const helper = appSource.slice(helperStart, helperEnd);
+  assert.match(helper, /leaflet-container/);
+});
+
 test("the certified Nairobi to Nakuru route resolves both catalog endpoints", () => {
   const catalog = functionSource("africanCityLocationCatalog", "cityLocationFromCommand");
 

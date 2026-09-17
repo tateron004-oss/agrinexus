@@ -639,6 +639,18 @@ async function captureMapsLifecycleDiagnostic(page, releaseSha, error) {
   return record;
 }
 
+async function diagnoseVisibleCommandFailure(page, application, commandError) {
+  if (application === "live-knowledge") {
+    const lifecycle = liveKnowledgeLifecycleByPage.get(page);
+    if (lifecycle) {
+      const diagnostic = await captureLiveKnowledgeLifecycleDiagnostics(page, lifecycle, commandError);
+      fs.writeFileSync("output/nexus-live-knowledge-browser-lifecycle.json", JSON.stringify(diagnostic, null, 2));
+      console.error(JSON.stringify({ liveKnowledgeLifecycleDiagnostic: diagnostic }, null, 2));
+    }
+  }
+  if (application === "maps") await captureMapsLifecycleDiagnostic(page, process.env.EXPECTED_RELEASE_SHA || "unknown", commandError);
+}
+
 async function submitVisibleCommand(page, text, application) {
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   const send = page.locator('[data-nexus-primary-typed-submit="true"]:visible').first();
@@ -665,30 +677,34 @@ async function submitVisibleCommand(page, text, application) {
   } catch (error) {
     const status = await page.locator('[role="status"]').allTextContents().catch(() => []);
     const commandError = new Error(`Visible Standard User command failed application=${application}: ${status.join(" | ").slice(-1200) || error.message}`);
-    if (application === "live-knowledge") {
-      const lifecycle = liveKnowledgeLifecycleByPage.get(page);
-      if (lifecycle) {
-        const diagnostic = await captureLiveKnowledgeLifecycleDiagnostics(page, lifecycle, commandError);
-        fs.writeFileSync("output/nexus-live-knowledge-browser-lifecycle.json", JSON.stringify(diagnostic, null, 2));
-        console.error(JSON.stringify({ liveKnowledgeLifecycleDiagnostic: diagnostic }, null, 2));
-      }
-    }
-    if (application === "maps") await captureMapsLifecycleDiagnostic(page, process.env.EXPECTED_RELEASE_SHA || "unknown", commandError);
+    await diagnoseVisibleCommandFailure(page, application, commandError);
     throw commandError;
   }
   const surface = application === "maps"
     ? page.locator("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas").first()
     : page.locator('[data-nexus-authoritative-outcome="true"]').first();
-  if (!await surface.isVisible()) throw new Error(`Visible Standard User outcome was not visible application=${application}.`);
-  const workspace = application === "maps" ? "map" : await surface.getAttribute("data-workspace");
-  const textContent = await surface.innerText();
-  if (/authoritative Nexus runtime is unavailable|legacy write fallback|behavior spine is unavailable/i.test(textContent)) {
-    throw new Error(`Visible Standard User command failed closed application=${application}: ${textContent.slice(0, 500)}`);
-  }
-  if (application === "images") {
-    const loaded = await page.locator('[data-nexus-authoritative-image="true"]').evaluateAll(nodes =>
-      nodes.filter(node => node.complete && node.naturalWidth > 0 && node.naturalHeight > 0).length);
-    if (loaded < 1) throw new Error("Visible image search produced no genuinely loaded image.");
+  // The waitForFunction above only proves the outcome existed at the instant
+  // it was polled -- confirmed live in production that the map canvas can
+  // pass that poll and then fail this very next isVisible() check a moment
+  // later (a destructive re-render elsewhere replaced the canvas). Every
+  // check from here on can fail the same way, so route all of them through
+  // the same diagnostic capture used above, not just the wait timeout.
+  let workspace, textContent;
+  try {
+    if (!await surface.isVisible()) throw new Error(`Visible Standard User outcome was not visible application=${application}.`);
+    workspace = application === "maps" ? "map" : await surface.getAttribute("data-workspace");
+    textContent = await surface.innerText();
+    if (/authoritative Nexus runtime is unavailable|legacy write fallback|behavior spine is unavailable/i.test(textContent)) {
+      throw new Error(`Visible Standard User command failed closed application=${application}: ${textContent.slice(0, 500)}`);
+    }
+    if (application === "images") {
+      const loaded = await page.locator('[data-nexus-authoritative-image="true"]').evaluateAll(nodes =>
+        nodes.filter(node => node.complete && node.naturalWidth > 0 && node.naturalHeight > 0).length);
+      if (loaded < 1) throw new Error("Visible image search produced no genuinely loaded image.");
+    }
+  } catch (error) {
+    await diagnoseVisibleCommandFailure(page, application, error);
+    throw error;
   }
   return { application, workspace, text: textContent.slice(0, 1000) };
 }
