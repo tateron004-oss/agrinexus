@@ -51206,6 +51206,16 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
 
 async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
   const command = String(transcript || "").trim();
+  // The OpenAI Realtime session's speech-to-text runs entirely client-side --
+  // this transcript is the only place the browser ever sees the user's raw,
+  // unmediated spoken words for this pathway. The tool-call arguments the
+  // model later sends to /api/voice/realtime/tool are the model's own
+  // rewritten text, not necessarily the caller's words (confirmed live: a
+  // direct crisis statement over voice reached ordinary tool execution
+  // because the model's tool-call argument no longer matched crisis
+  // patterns). Checking here, before any workspace action executes, is the
+  // only point in this pathway that can reliably see the real words at all.
+  if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "openai-realtime-final-transcript" })) return true;
   const normalized = command.toLowerCase().replace(/\s+/g, " ");
   const now = Date.now();
   if (lastGenesisTranscriptWorkspaceExecution.command === normalized && now - lastGenesisTranscriptWorkspaceExecution.at < 5000) return false;
