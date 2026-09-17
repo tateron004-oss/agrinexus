@@ -72,10 +72,39 @@
       container.append(div);
     });
   }
+  // Tool 10 of the small-business/nonprofit suite: a live performance
+  // dashboard. Purely computed from the real data already loaded on this
+  // page (income/expenses, invoices, customers/donors, grants, tasks,
+  // appointments) -- no new API calls, no estimates, nothing simulated.
+  function renderDashboard() {
+    const editable = current.data.editable;
+    const income = editable.transactions.filter(row => row.type !== "expense").reduce((sum, row) => sum + row.amount, 0);
+    const expenses = editable.transactions.filter(row => row.type === "expense").reduce((sum, row) => sum + row.amount, 0);
+    const customers = editable.leads.filter(row => row.type === "customer").length;
+    const donors = editable.leads.filter(row => row.type === "donor").length;
+    const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
+    const volunteers = editable.leads.filter(row => row.type === "volunteer").length;
+    const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
+    const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
+    const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
+    const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
+    const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
+    const rows = [
+      ["Net income", `${(income - expenses).toFixed(2)} (income ${income.toFixed(2)} / expenses ${expenses.toFixed(2)})`],
+      ["Customers & donors", `${customers} customers, ${donors} donors, ${sponsors} sponsors, ${volunteers} volunteers`],
+      ["Invoiced (all line items)", `${invoiceTotal.toFixed(2)}, ${unpaidInvoices} invoice(s) not marked paid`],
+      ["Grants & funding", `${grantsRequested.toFixed(2)} tracked, ${grantsAwarded.toFixed(2)} awarded`],
+      ["Open tasks", `${openTasks} of ${editable.tasks.length} not yet done`],
+      ["Appointments", `${upcomingAppointments} active`]
+    ];
+    byId("dashboard-summary").innerHTML = rows.map(([label, value]) => `<div class="fields"><strong>${label}</strong><span>${value}</span></div>`).join("");
+  }
   function render() {
     byId("editor").hidden = !current; byId("empty").hidden = Boolean(current); if (!current) return;
     byId("client-name").textContent = current.data.info.businessName;
     const info = current.data.info, editable = current.data.editable;
+    renderDashboard();
     const business = byId("business-fields"); business.replaceChildren();
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
     rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"]]);
