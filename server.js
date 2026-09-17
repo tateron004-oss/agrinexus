@@ -19100,6 +19100,42 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (!command) {
     return { ...common, ok: false, status: "needs-input", response: "I need the request before I can use a Nexus tool.", missingInformation: ["command"] };
   }
+  // Confirmed by the production capability audit: this exact crisis/
+  // mental-health safety net (nexus-mental-health-behavioral-wellness.js)
+  // already runs for typed and browser-STT voice commands via
+  // public/app.js's handleNexusMentalHealthBehavioralWellnessCommand, but
+  // OpenAI Realtime voice (/api/voice/realtime/tool), the Windows desktop
+  // wake listener (/api/agent/command), and this endpoint's own direct
+  // /api/nexus/openai-native/tool route all reach real tool execution
+  // through this one function without ever passing through that check --
+  // meaning a caller in crisis over voice or the desktop listener got
+  // routed straight into ordinary tool execution instead of the safety
+  // response. Checked before the restriction gate below on purpose: a
+  // restricted guest account in crisis must still get the safety message,
+  // not a bounce.
+  //
+  // Deliberately gates on classifyState(...).crisisOverride (immediate
+  // danger, abuse/safeguarding, medical emergency), not the module's own
+  // broader shouldHandle() -- confirmed live that shouldHandle()'s general
+  // MENTAL_HEALTH_PATTERNS list matches plain words like "therapy" and
+  // "provider" that appear constantly in real, unrelated commands (a real
+  // "I completed my therapy session today" fitness log, or any
+  // communications/calendar action naming a "provider"). Firing a safety
+  // redirect on every one of those would silently replace real actions
+  // across most of this dispatcher. crisisOverride only fires for the
+  // patterns that are actually safety-critical, which is what this
+  // previously-uncovered gap needs closed.
+  const mentalHealthSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
+  if (mentalHealthSignal.crisisOverride === true) {
+    const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(command, {
+      language, source: context.inputMode || "voice-or-native",
+      locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
+      screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(command)
+    });
+    return { ...common, capability: "mental-health-behavioral-wellness", status: "completed",
+      response: packet.userVisibleStatus, mentalHealth: packet,
+      noDiagnosis: true, noProviderContacted: true, noEmergencyDispatch: true };
+  }
   // A restricted account (today, only self-service guest sessions --
   // user.restrictions is set at /api/auth/guest-session with zero identity
   // verification beyond a free-text display name) must not reach a tool
@@ -33067,6 +33103,34 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   const inputMode = String(body.inputMode || "api").trim() || "api";
   const outputMode = String(body.outputMode || "").trim();
   const commandLanguage = canonicalVoiceLanguage(body.targetLanguage || body.language || user.language);
+  // Same crisis/mental-health safety net as executeNexusOpenAiNativeTool --
+  // this is the separate legacy companion pipeline that Twilio phone calls
+  // (/api/voice/phone/gather) route through, which never shared that check.
+  // A caller in crisis over a phone call must get the same safety response
+  // typed/browser-voice callers already get, not the ordinary companion
+  // classification/response flow below. Gates on classifyState(...)
+  // .crisisOverride, not the broader shouldHandle() -- see the identical
+  // reasoning in executeNexusOpenAiNativeTool.
+  const mentalHealthSignal = command ? nexusMentalHealthBehavioralWellness.classifyState(command, {}) : null;
+  if (mentalHealthSignal?.crisisOverride === true) {
+    const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(command, {
+      language: commandLanguage, source: inputMode,
+      locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
+      screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(command)
+    });
+    // Matches this function's normal { result, companionUnderstanding,
+    // companionRouteOutcome } return shape -- callers destructure `result`
+    // unconditionally and some mutate result.metadata directly. Deliberately
+    // not persisted via commandRecord()/voiceRecord() the way a normal
+    // command is: the mental-health module's own privacy stance is
+    // session-only by default, not saved into standard conversation history.
+    return {
+      result: { intent: "mental_health_behavioral_wellness", response: packet.userVisibleStatus,
+        capability: "mental-health-behavioral-wellness", mentalHealth: packet,
+        noDiagnosis: true, noProviderContacted: true, noEmergencyDispatch: true, metadata: {} },
+      companionUnderstanding: null, companionRouteOutcome: null
+    };
+  }
   const companionUnderstanding = companionUnderstandingClassification(command, {
     source: inputMode,
     mode: body.mode,

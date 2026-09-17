@@ -26,7 +26,8 @@ test('native visual tool keeps primary search and uses fallback only after no us
  fetchWithTimeout:async()=>({ok:true,json:async()=>({query:{pages:primary?{one:{title:'Maize',imageinfo:[{url:'https://images.example/primary',descriptionurl:'https://source.example/primary'}]}}:{}}})}),
  require:name=>{assert.equal(name,'./server/nexus-open-image-fallback');return {searchOpenImages:async()=>{fallbackCalls++;return fallback?[{title:'Maize',imageUrl:'https://images.example/fallback',sourceUrl:'https://source.example/fallback'}]:[]}}},
  nexusOpenAiNativeToolReceipt:()=>({testReceipt:true}),nexusRealProviders:{vision:{analyze:async()=>{visionCalls++;return {status:'blocked'}}}},
- nexusOpenAiNativeProviderToolResult:(_db,_common,result)=>result};
+ nexusOpenAiNativeProviderToolResult:(_db,_common,result)=>result,
+ nexusMentalHealthBehavioralWellness:require('../../public/nexus-mental-health-behavioral-wellness.js')};
  vm.createContext(sandbox);vm.runInContext(source.slice(begin,end)+'\nthis.run=executeNexusOpenAiNativeTool;',sandbox);
  const invoke=()=>sandbox.run({}, {}, 'nexus_visual_analysis',{command:'show images of maize',capability:'visual-search'});
  assert.match((await invoke()).images[0].imageUrl,/primary/);assert.equal(fallbackCalls,0);
