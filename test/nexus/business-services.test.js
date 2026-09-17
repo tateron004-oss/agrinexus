@@ -107,6 +107,20 @@ test("business deletion stops at legal holds and erases historical versions only
   assert.ok(queries.some(query => query.sql.startsWith("update nexus_record_versions")));
 });
 
+test("customer/donor tracker: leads carry a type and a real follow-up date, backward-compatible with older rows", () => {
+  const { normalizeEditable } = require('../../nexus/business/service');
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  const editable = normalizeEditable(info, { leads: [
+    { name: 'Ada', contact: 'ada@example.test', type: 'donor', need: 'Annual gift renewal', stage: 'active', nextAction: 'Call to thank', followUpDate: '2026-03-01' },
+    // An older stored row with no type/followUpDate at all must still normalize cleanly, not throw.
+    { name: 'Old Customer', contact: '555-0100', need: 'Quote', stage: 'new', nextAction: 'Send quote' }
+  ] });
+  assert.equal(editable.leads[0].type, 'donor');
+  assert.equal(editable.leads[0].followUpDate, '2026-03-01');
+  assert.equal(editable.leads[1].type, 'customer');
+  assert.equal(editable.leads[1].followUpDate, '');
+});
+
 test("malformed business editor shapes are rejected before draft generation", () => {
   const { normalizeEditable } = require('../../nexus/business/service');
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
