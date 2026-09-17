@@ -450,6 +450,7 @@ function defaultClientWorkspace(info) {
     businessName: detail.businessName,
     updatedAt: new Date().toISOString(),
     leads: [],
+    transactions: [],
     socialPosts: [
       { platform: "Facebook", status: "draft", caption: `Meet ${detail.businessName}. We are helping local customers get reliable service with clear communication and easy next steps.` },
       { platform: "Instagram", status: "draft", caption: "Behind the scenes: a quick look at how we prepare to deliver a professional customer experience." },

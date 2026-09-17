@@ -107,6 +107,24 @@ test("business deletion stops at legal holds and erases historical versions only
   assert.ok(queries.some(query => query.sql.startsWith("update nexus_record_versions")));
 });
 
+test("income/expense tracker: transactions are typed, numeric amounts are validated, and older rows without the field default cleanly", () => {
+  const { normalizeEditable } = require('../../nexus/business/service');
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  assert.deepEqual(templates.defaultClientWorkspace(info).transactions, []);
+  const editable = normalizeEditable(info, { transactions: [
+    { date: '2026-01-15', type: 'income', category: 'Sales', amount: 250.5, description: 'Farmers market' },
+    { date: '2026-01-16', type: 'expense', category: 'Supplies', amount: 40, description: 'Packaging' }
+  ] });
+  assert.equal(editable.transactions[0].amount, 250.5);
+  assert.equal(editable.transactions[1].type, 'expense');
+  // A record created before this field existed must still normalize.
+  const legacy = normalizeEditable(info, {});
+  assert.deepEqual(legacy.transactions, []);
+  for (const bad of [NaN, Infinity, -Infinity]) {
+    assert.throws(() => normalizeEditable(info, { transactions: [{ amount: bad }] }), error => error.code === 'business_workspace_invalid');
+  }
+});
+
 test("customer/donor tracker: leads carry a type and a real follow-up date, backward-compatible with older rows", () => {
   const { normalizeEditable } = require('../../nexus/business/service');
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
