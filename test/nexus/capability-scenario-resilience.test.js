@@ -56,3 +56,20 @@ test("the earlier visible-ingress loop is also resilient, not just the cutover l
   assert.doesNotMatch(catchBody, /\breturn\b/);
   assert.match(catchBody, /scenarioFailures\.push\(/);
 });
+
+test("the post-reload typed-ingress readiness check gets a second reload-and-wait attempt before failing", () => {
+  // Confirmed live in production: reloadAuthenticatedShell's reload
+  // navigation can settle ("networkidle") before the client app's own
+  // async boot/render work finishes, so the typed-entry/microphone UI
+  // requireVisibleAuthoritativeTypedIngress waits for is not always ready
+  // on the very next check. A single reload attempt was not a reliable
+  // enough signal for that separate readiness, and this failure sat before
+  // the SCENARIOS loop, so it blocked every capability cutover exactly like
+  // the other loops fixed alongside it.
+  const start = probe.indexOf("await reloadAuthenticatedShell(page);\n  //");
+  assert.notEqual(start, -1, "the post-reload retry comment must immediately follow the first reload call");
+  const end = probe.indexOf("const capabilityProbes = [];", start);
+  const region = probe.slice(start, end);
+  assert.match(region, /try\s*\{\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}\s*catch \(error\) \{/);
+  assert.match(region, /catch \(error\) \{\s*await reloadAuthenticatedShell\(page\);\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}/);
+});
