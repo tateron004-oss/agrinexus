@@ -20,6 +20,19 @@ test("production browser evidence classifies the registered login boundary befor
   assert.doesNotMatch(probe, /loginBoundary[^\n]*(password|cookie|authorization)/i);
 });
 
+test("the login diagnostic tracks the real submit button, not the first button in the form", () => {
+  // The form's DOM order is email, password, demo-profile buttons, then the
+  // guest-start button (#guestStartBtn, type="button"), and only then the
+  // real submit button. 'button[type="submit"], button' -- a compound
+  // selector -- resolves to whichever button matches EITHER branch first in
+  // document order, which is #guestStartBtn, not the real submit control.
+  // Confirmed live: every login diagnostic in a failed CI run was reporting
+  // #guestStartBtn's identity/connected/disabled state under "buttonIdentity"
+  // while investigating an unrelated login-timeout regression.
+  assert.match(probe, /const button = form\?\.querySelector\('button\[type="submit"\]'\);/);
+  assert.doesNotMatch(probe, /querySelector\('button\[type="submit"\], button'\)/);
+});
+
 test("login click waits for the current form's registered submit listener", async () => {
   let waitPredicate;
   let waitArgument;

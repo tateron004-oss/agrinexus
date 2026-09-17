@@ -66,37 +66,29 @@ async function reloadAuthenticatedShell(page, attempts = 4) {
   throw new Error(`Authenticated Standard User shell reload failed after ${attempts} attempts: ${lastError?.message || "navigation error"}`);
 }
 
-async function submitRegisteredStandardUserLogin(page, base, lifecycle = null) {
+async function submitRegisteredStandardUserLogin(page, base, credentials, lifecycle = null) {
   const listenerBoundary = await waitForCurrentLoginSubmitListener(page);
-  // Diagnostic-only (never gates pass/fail -- see captureLoginLifecycleDiagnostics)
-  // so a stray navigation destroying this evaluate's execution context must not
-  // fail the whole probe run. Confirmed live: this exact call failed with
-  // "Execution context was destroyed, most likely because of a navigation" and
-  // killed an otherwise-successful deploy's evidence step, even though the
-  // sibling after-timeout evaluate a few lines below already tolerates the same
-  // error with .catch(() => null).
-  const beforeClick = await page.evaluate(() => window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("before-click") || null).catch(() => null);
-  if (lifecycle) lifecycle.beforeClick = { ...listenerBoundary, ...beforeClick };
-  const loginResponsePromise = page.waitForResponse(response => {
-    try {
-      const url = new URL(response.url());
-      return url.origin === base && url.pathname === "/api/login" &&
-        response.request().method() === "POST";
-    } catch {
-      return false;
-    }
-  }, { timeout: 30000 });
-  const selectedButton = page.getByRole("button", { name: "Enter platform", exact: true });
-  await selectedButton.click();
-  if (lifecycle) lifecycle.afterClick = await page.evaluate(() =>
-    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-click") || null).catch(() => null);
-  let response;
-  try {
-    response = await loginResponsePromise;
-  } catch (error) {
-    if (lifecycle) lifecycle.afterTimeout = await page.evaluate(() =>
-      window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-timeout") || null).catch(() => null);
-    throw new Error(`Registered Standard User login request was not observed within 30000ms (${error?.name || "timeout"}).`);
+  if (lifecycle) lifecycle.beforeClick = listenerBoundary;
+  let response = await attemptRegisteredStandardUserLoginClick(page, base, lifecycle, "");
+  if (!response) {
+    // Confirmed live in production: the password field can read back empty
+    // immediately after the click even though it held the right value right
+    // before it (some external interference -- e.g. Chrome's own autofill
+    // machinery, which this probe deliberately leaves enabled by mimicking a
+    // real, non-automated browser -- clears it between fill and submit),
+    // which silently no-ops the app's own submit handler (it requires a
+    // non-empty password) and leaves the POST to /api/login never sent. One
+    // re-fill-and-retry survives that one-off interference without masking a
+    // genuine, repeated failure to reach the server.
+    const passwordValue = await page.getByLabel("Password", { exact: true }).inputValue().catch(() => "");
+    const emailValue = await page.getByLabel("Email", { exact: true }).inputValue().catch(() => "");
+    if (lifecycle) lifecycle.retryReason = { passwordEmpty: !passwordValue, emailEmpty: !emailValue };
+    if (!passwordValue) await page.getByLabel("Password", { exact: true }).fill(credentials.password);
+    if (!emailValue) await page.getByLabel("Email", { exact: true }).fill(credentials.email);
+    response = await attemptRegisteredStandardUserLoginClick(page, base, lifecycle, "Retry");
+  }
+  if (!response) {
+    throw new Error("Registered Standard User login request was not observed within 30000ms (TimeoutError), even after a re-fill retry.");
   }
   if (!response.ok()) {
     throw new Error(`Registered Standard User login returned HTTP ${response.status()}.`);
@@ -117,6 +109,38 @@ async function waitForCurrentLoginSubmitListener(page, timeoutMs = 30000) {
     currentFormWasRegisteredTarget:
       document.querySelector("#loginForm") === window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.registeredLoginForm
   }));
+}
+
+async function attemptRegisteredStandardUserLoginClick(page, base, lifecycle, phaseLabel) {
+  // Diagnostic-only (never gates pass/fail -- see captureLoginLifecycleDiagnostics)
+  // so a stray navigation destroying this evaluate's execution context must not
+  // fail the whole probe run. Confirmed live: this exact call failed with
+  // "Execution context was destroyed, most likely because of a navigation" and
+  // killed an otherwise-successful deploy's evidence step, even though the
+  // sibling after-timeout evaluate a few lines below already tolerates the same
+  // error with .catch(() => null).
+  const beforeClick = await page.evaluate(() => window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("before-click") || null).catch(() => null);
+  if (lifecycle) lifecycle[`beforeClick${phaseLabel}`] = beforeClick;
+  const loginResponsePromise = page.waitForResponse(response => {
+    try {
+      const url = new URL(response.url());
+      return url.origin === base && url.pathname === "/api/login" &&
+        response.request().method() === "POST";
+    } catch {
+      return false;
+    }
+  }, { timeout: 30000 });
+  const selectedButton = page.getByRole("button", { name: "Enter platform", exact: true });
+  await selectedButton.click();
+  if (lifecycle) lifecycle[`afterClick${phaseLabel}`] = await page.evaluate(() =>
+    window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-click") || null).catch(() => null);
+  try {
+    return await loginResponsePromise;
+  } catch (error) {
+    if (lifecycle) lifecycle[`afterTimeout${phaseLabel}`] = await page.evaluate(() =>
+      window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-timeout") || null).catch(() => null);
+    return null;
+  }
 }
 
 function sanitizeLoginLifecycleValue(value, limit = 1000) {
@@ -175,7 +199,13 @@ async function installLoginLifecycleDiagnostics(page, base) {
     };
     const describeLogin = phase => {
       const form = document.querySelector("#loginForm");
-      const button = form?.querySelector('button[type="submit"], button');
+      // Not 'button[type="submit"], button' -- that compound selector
+      // returns the FIRST button in the form in document order matching
+      // EITHER branch, which in this form is #guestStartBtn (type="button",
+      // appears before the real submit button), not the actual submit
+      // control. Confirmed live: this silently tracked the wrong button's
+      // identity/connected/disabled state in every login diagnostic here.
+      const button = form?.querySelector('button[type="submit"]');
       const email = document.querySelector("#email");
       const password = document.querySelector("#password");
       return {
@@ -731,15 +761,17 @@ async function run(env = process.env) {
     await permissionSession.detach();
   }
   await page.goto(`${base}/?nexusProductionEvidence=${encodeURIComponent(releaseSha)}`, { waitUntil: "networkidle", timeout: 90000 });
-  await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
+  const standardUserCredentials = { email: env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org",
+    password: env.NEXUS_STANDARD_USER_PASSWORD || "User2026!" };
+  await page.getByLabel("Email", { exact: true }).fill(standardUserCredentials.email);
   loginLifecycle.afterEmailFill = await page.evaluate(() =>
     window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-email-fill") || null).catch(() => null);
-  await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
+  await page.getByLabel("Password", { exact: true }).fill(standardUserCredentials.password);
   loginLifecycle.afterPasswordFill = await page.evaluate(() =>
     window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-password-fill") || null).catch(() => null);
   let loginBoundary;
   try {
-    loginBoundary = await submitRegisteredStandardUserLogin(page, base, loginLifecycle);
+    loginBoundary = await submitRegisteredStandardUserLogin(page, base, standardUserCredentials, loginLifecycle);
     await waitForAuthenticatedStandardUserShell(page, base);
     await requireVisibleAuthoritativeTypedIngress(page);
   } catch (error) {
