@@ -46737,16 +46737,40 @@ async function api(req, res, url) {
   </Gather>
 </Response>`);
     }
-    const { result } = await runCompanionSafeAgentCommand(db, phoneUser, {
+    // Confirmed by the production capability audit: phone calls were the
+    // only voice channel that never reached executeNexusOpenAiNativeTool's
+    // real provider bridges (chronic-care vitals, mobile-clinic/pharmacy
+    // search, marketplace, learning, drone/field-agent dispatch, etc.) --
+    // runCompanionSafeAgentCommand falls into runAgentCommand, a ~2,500-line
+    // separate legacy intent dispatcher that never calls any of them. The
+    // desktop wake listener and browser voice (/api/agent/command) already
+    // try the real OpenAI-native path first and only fall back to the
+    // legacy companion pipeline when it's disabled/unconfigured; phone
+    // calls went straight to the legacy fallback unconditionally. Matching
+    // that same native-first pattern here, rather than rewriting the
+    // legacy dispatcher, gives phone calls the same real capabilities
+    // with no change to existing behavior when native voice is unavailable.
+    const phoneLanguage = canonicalVoiceLanguage(session.language || phoneUser.language || "en");
+    const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, {
       command,
       confirm: false,
       conversational: true,
       inputMode: "phone",
       outputMode: "voice",
-      language: canonicalVoiceLanguage(session.language || phoneUser.language || "en"),
-      targetLanguage: canonicalVoiceLanguage(session.language || phoneUser.language || "en"),
+      language: phoneLanguage,
+      targetLanguage: phoneLanguage,
       note: "Phone call voice assistant command"
     });
+    const result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, {
+      command,
+      confirm: false,
+      conversational: true,
+      inputMode: "phone",
+      outputMode: "voice",
+      language: phoneLanguage,
+      targetLanguage: phoneLanguage,
+      note: "Phone call voice assistant command"
+    })).result;
     session.commands.unshift({ command, response: result.response, createdAt: new Date().toISOString() });
     session.commands = session.commands.slice(0, 20);
     updatePhoneVoiceSession(db, session, { step: "command" });
