@@ -17841,6 +17841,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
     "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
     "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it.",
+    "When the user asks to start or join a telehealth video call, video visit, or virtual appointment with a doctor or provider, you must call nexus_health_preparation with the complete request, including any symptoms mentioned. This creates a real, provider-reviewed video visit -- it is never a communications/messaging request.",
     "When the user asks to create a fitness or training plan, reports a completed workout, run, or training session, or asks about their fitness or training progress, you must call nexus_health_preparation with the complete request. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
     "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning/monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
@@ -18491,6 +18492,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "Understand the user's goal and keep natural conversation fluid. Ordinary greetings, small talk, and pure follow-up questions about something you already said do not need a tool.",
     "For everything else, prefer calling a tool over answering from your own knowledge or explaining that something is unavailable without checking. Do not silently answer in conversation or say a capability is disabled when a tool exists for the request — call it and let its real result decide the answer.",
     "When the user reports a health vital or reading (blood pressure, blood sugar/glucose, oxygen, weight, pulse), or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management or steps to take, patient support resources, or finding/saving a doctor or provider, you must call nexus_health_preparation.",
+    "When the user asks to start or join a telehealth video call, video visit, or virtual appointment with a doctor or provider (not a search for videos about a topic -- an actual live visit), you must call nexus_health_preparation with the complete request, including any symptoms mentioned. This creates a real, provider-reviewed video visit; it is never a communications/messaging request.",
     "When the user asks to create a fitness or training plan, reports a completed workout/run/training session (with or without a duration), or asks about their fitness or training progress, you must call nexus_health_preparation. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to see, find, or show images, photos, or pictures of anything (including crop damage, pests, disease, or any other visual subject), you must call nexus_visual_analysis with that request. This is a real keyless image search — never say visual analysis is disabled without calling it first.",
     "When the user asks to see, find, show, or play videos of anything (including crop damage, pests, disease, farming technique, or any other subject), you must call nexus_visual_analysis with that request. This is a real video search (YouTube when configured, Wikimedia Commons otherwise) — never say video is unavailable without calling it first. If the user asks for both images and videos in the same request, call nexus_visual_analysis once with the full request text and both will be searched.",
@@ -20063,6 +20065,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       || /\bhealth literacy\b/i.test(command)
     );
     const wantsNavigationHelp = /\b(?:not sure what to do|help me navigate|where do i start|health navigation)\b/i.test(command);
+    // Confirmed by the production capability audit: video calls had no
+    // voice path to the real backend at all. The voice "telehealth intake"
+    // branch just below only ever writes to the legacy db.profile.healthIntakes
+    // store (ensureVoiceHealthIntake) -- a completely separate data model
+    // from db.nexusTelehealthEncounters, which is what
+    // nexusTelehealthProvider.createVideoRoom requires an encounterId from.
+    // There was never a way for a voice-created "intake" to produce a real
+    // encounter a video room could attach to.
+    const wantsTelehealthVideo = /\b(video\s*call|video\s*visit|video\s*appointment|video\s*consult(?:ation)?|start\s+(?:a\s+|my\s+)?video|join\s+(?:a\s+|the\s+)?video|virtual\s+(?:visit|appointment)|see\s+a\s+doctor\s+(?:on|by|via)\s+video)\b/i.test(command);
     // Two real gaps confirmed live: (1) the bare `$` anchor meant any
     // trailing punctuation ("find a doctor.") made the whole gate fail
     // silently, falling through to the generic menu instead of the real NPI
@@ -20223,6 +20234,60 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       response = cards.length
         ? `I found ${cards.length} patient support resource(s): ${cards.map(c => `${c.title} — ${c.summary.replace(/\.$/, "")}`).join("; ")}. No referral was submitted and no one was contacted automatically.`
         : "I did not find a matching patient support resource. Tell me more about what kind of support you need.";
+    } else if (wantsTelehealthVideo) {
+      const symptomText = sanitizePilotText(command.replace(/\b(start|join|see|a|my|the|please|can|could|would|you|nexus|doctor|on|by|via)\b/gi, " ").replace(/\s+/g, " ").trim(), 500) || "general telehealth visit";
+      const { country } = activeContext(db);
+      const guidance = safeSymptomGuidance(symptomText, country);
+      // Defense in depth: normalizeBody()/createEncounter() only mark an
+      // encounter "emergency" from a redFlags LIST the caller explicitly
+      // supplies -- it does not itself scan symptom text for danger signs.
+      // A voice request has no structured intake form to check boxes on, so
+      // without running the same danger-sign detection used elsewhere in
+      // this file first, that safety gate would never fire for voice at all.
+      if (guidance.redFlags.length) {
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "emergency-guidance",
+          ["Checked the reported symptoms for danger signs before offering a video visit."],
+          ["Nexus did not create a video room, diagnose, prescribe, or contact emergency services automatically."]);
+        return { ...common, capability: "nexus_health_preparation", status: "emergency-guidance",
+          response: `${guidance.plainLanguage} Please use local emergency or urgent care resources now instead of a routine video visit.`,
+          receipt, evidenceReceipt: receipt, localOnly: true, noDiagnosis: true, noEmergencyDispatch: true };
+      }
+      if (!wantsHealthActionConfirmed) {
+        return { ...common, capability: "nexus_health_preparation", status: "confirmation-required", requiresConfirmation: true,
+          response: `I can prepare a telehealth video visit for "${symptomText}". This shares your symptoms with a reviewing provider and starts a video room -- I will not diagnose or prescribe, and no provider has accepted the visit yet. Say confirm to proceed.` };
+      }
+      const encounterResult = await nexusTelehealthProvider.createEncounter(db, {
+        conditionArea: "other",
+        symptoms: [symptomText],
+        urgency: guidance.urgency === "priority-review" ? "priority" : "routine",
+        confirmed: true,
+        consentToPreparePacket: true,
+        createVideo: true,
+        consentToShare: true,
+        patient: { preferredLanguage: language }
+      }, user, process.env);
+      const encounter = encounterResult?.encounter;
+      const video = encounter?.video;
+      const videoStatus = encounter?.status === "emergency-guidance" ? "emergency-guidance"
+        : video?.roomCreated ? "video-room-created" : encounter ? "video-packet-prepared" : "video-blocked";
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, videoStatus,
+        encounter ? [`Prepared telehealth encounter ${encounter.id} for provider review.`,
+          video?.roomCreated ? `Created a real video room via ${video.provider}.` : "A video room was not created."]
+          : ["Could not prepare the telehealth encounter."],
+        ["Nexus did not diagnose, prescribe, or contact emergency services.", "Nexus did not claim provider acceptance -- this is queued for review."]);
+      const videoResponse = encounter?.status === "emergency-guidance"
+        ? "Nexus detected urgent symptoms while preparing this visit. Please use local emergency or urgent care resources now instead."
+        : video?.roomCreated
+          ? `I prepared your telehealth visit and created a real video room. Join link: ${video.roomUrl}. This link expires in about an hour. A reviewing provider still needs to confirm the visit -- no diagnosis or prescription has occurred.`
+          : video?.status === "missing_config"
+            ? "I prepared your telehealth visit and queued it for provider review, but video calling is not configured yet, so I could not start a video room."
+            : encounter
+              ? "I prepared your telehealth visit and queued it for provider review. I could not start a video room right now, but the packet is saved."
+              : "I could not prepare the telehealth visit right now. Please try again.";
+      return { ...common, capability: "nexus_health_preparation", status: videoStatus, response: videoResponse,
+        receipt, evidenceReceipt: receipt, localOnly: false, executionAttempted: true, executionVerified: Boolean(video?.roomCreated),
+        encounterId: encounter?.id || null, videoUrl: video?.roomUrl || null,
+        noDiagnosis: true, noPrescribing: true, noEmergencyDispatch: true };
     } else if (/\btelehealth|intake\b/i.test(command)) {
       intakeRecord = ensureVoiceHealthIntake(db, user, { needSummary: args.summary || args.reason || command, force: true });
       response = `I started your telehealth intake, case ${intakeRecord.patientRef}. Status: ${intakeRecord.queueStatus}. Tell me the reason for the visit, when it began, and any symptoms, and I will add them to the case for provider review.`;

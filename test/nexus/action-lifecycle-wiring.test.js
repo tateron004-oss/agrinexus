@@ -8,7 +8,7 @@ const { withActionLifecycle, ensureNexusActionLedger, resetActionLedgerForTests 
 
 test.beforeEach(() => resetActionLedgerForTests());
 
-function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, authoritativeNexusRuntime }) {
+function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, authoritativeNexusRuntime, nexusTelehealthProvider, safeSymptomGuidance, activeContext }) {
   const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
   const start = source.indexOf("async function executeNexusOpenAiNativeTool(");
   const end = source.indexOf("\nfunction nexusGenesisWorkspaceAction(", start);
@@ -25,6 +25,7 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
     firstPresentEnvValue: (env, keys) => keys.map(key => env[key]).find(Boolean) || "",
     withActionLifecycle,
     nexusOpenAiNativeToolChoiceHint: () => "nexus_general_conversation",
+    nexusOpenAiNativeToolReceipt: (_db, _tool, _command, status) => ({ testReceipt: true, status }),
     nexusRealProviders: {
       twilio: twilio || {},
       email: email || {},
@@ -36,6 +37,13 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
     authoritativeNexusRuntime: authoritativeNexusRuntime || {
       behaviorTurnRequest: async () => { throw new Error("behaviorTurnRequest should not be called in this test"); },
       behaviorAcknowledgeRequest: async () => { throw new Error("behaviorAcknowledgeRequest should not be called in this test"); }
+    },
+    activeContext: activeContext || (() => ({ country: { id: "kenya", risk: "Moderate" }, route: {} })),
+    safeSymptomGuidance: safeSymptomGuidance || ((symptoms) => ({
+      redFlags: [], urgency: "routine-review", plainLanguage: "", possibleExplanations: []
+    })),
+    nexusTelehealthProvider: nexusTelehealthProvider || {
+      createEncounter: async () => { throw new Error("createEncounter should not be called in this test"); }
     }
   };
   vm.createContext(sandbox);
@@ -302,4 +310,77 @@ test("nexus_lists fails closed with a plain message when the authoritative behav
   const result = await run(db, {}, "nexus_lists", { command: "Create a checklist called Farm Chores." });
   assert.equal(result.status, "blocked");
   assert.match(result.response, /temporarily unavailable/i);
+});
+
+// nexus_health_preparation's telehealth "video call" branch has no backend
+// of its own -- the pre-existing voice "intake" branch only ever writes to
+// the legacy db.profile.healthIntakes store, a completely separate data
+// model from db.nexusTelehealthEncounters, which is what a real video room
+// needs an encounterId from. These tests cover the bridge to
+// nexusTelehealthProvider.createEncounter added directly here.
+test("a video call request with danger-sign symptoms is redirected to emergency guidance and never reaches the real telehealth backend", async () => {
+  let createCalls = 0;
+  const run = loadExecuteTool({
+    safeSymptomGuidance: () => ({ redFlags: ["chest pain"], urgency: "urgent-human-review", plainLanguage: "Danger sign found: chest pain." }),
+    nexusTelehealthProvider: { createEncounter: async () => { createCalls++; return {}; } }
+  });
+  const db = {};
+  // "severe bleeding" (not "chest pain") deliberately: the latter is also
+  // caught by the earlier, broader crisis interceptor regardless of
+  // toolName, which would make this test pass without ever exercising this
+  // branch's own defense-in-depth red-flag check.
+  const result = await run(db, {}, "nexus_health_preparation", { command: "Start a video call, I have severe bleeding.", confirmed: true });
+  assert.equal(createCalls, 0, "the real telehealth encounter must never be created when danger signs are present");
+  assert.equal(result.status, "emergency-guidance");
+  assert.match(result.response, /chest pain/i);
+  assert.match(result.response, /emergency|urgent care/i);
+});
+
+test("a video call request requires explicit confirmation before creating a real encounter", async () => {
+  let createCalls = 0;
+  const run = loadExecuteTool({
+    nexusTelehealthProvider: { createEncounter: async () => { createCalls++; return {}; } }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_health_preparation", { command: "Start a video visit for my headache." });
+  assert.equal(createCalls, 0, "the real telehealth encounter must not be created without explicit confirmation");
+  assert.equal(result.status, "confirmation-required");
+  assert.equal(result.requiresConfirmation, true);
+  assert.match(result.response, /confirm/i);
+});
+
+test("a confirmed video call request creates a real telehealth encounter and returns the real video room link", async () => {
+  let capturedBody = null;
+  const run = loadExecuteTool({
+    nexusTelehealthProvider: {
+      createEncounter: async (_db, body) => {
+        capturedBody = body;
+        return { encounter: { id: "telehealth-1", status: "queued-for-provider-review", video: { ok: true, roomCreated: true, provider: "daily", roomUrl: "https://kyro.daily.co/nexus-telehealth-1" } } };
+      }
+    }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_health_preparation", { command: "Start a video visit for my headache.", confirmed: true });
+  assert.equal(capturedBody.createVideo, true);
+  assert.equal(capturedBody.consentToShare, true);
+  assert.equal(capturedBody.confirmed, true);
+  assert.equal(capturedBody.consentToPreparePacket, true);
+  assert.equal(result.status, "video-room-created");
+  assert.match(result.response, /https:\/\/kyro\.daily\.co\/nexus-telehealth-1/);
+  assert.equal(result.encounterId, "telehealth-1");
+  assert.equal(result.executionVerified, true);
+});
+
+test("a confirmed video call request still reports the prepared packet when the video provider isn't configured", async () => {
+  const run = loadExecuteTool({
+    nexusTelehealthProvider: {
+      createEncounter: async () => ({ encounter: { id: "telehealth-2", status: "queued-for-provider-review", video: { ok: true, roomCreated: false, status: "missing_config" } } })
+    }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_health_preparation", { command: "Start a video visit for my headache.", confirmed: true });
+  assert.equal(result.status, "video-packet-prepared");
+  assert.match(result.response, /not configured/i);
+  assert.equal(result.executionVerified, false);
+  assert.equal(result.encounterId, "telehealth-2");
 });
