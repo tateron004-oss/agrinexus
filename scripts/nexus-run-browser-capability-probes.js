@@ -535,11 +535,19 @@ async function preserveTypedIngressDiagnostic(page, releaseSha, phase, error) {
 }
 
 async function requireVisibleAuthoritativeTypedIngress(page) {
+  // Confirmed live against production (Standard User role, the same role
+  // this probe authenticates as): the typed-entry composer's visibility is
+  // governed entirely by experience mode/section/initial render timing --
+  // clicking the always-available microphone permission control (a
+  // completely separate dock) has zero effect on it either way. The
+  // previous fallback (click that microphone, then wait for the input)
+  // could never succeed: whenever the immediate visibility check missed a
+  // cold-start render race, the click-and-wait branch was guaranteed to
+  // burn its full timeout waiting on an event the click could never cause.
+  // A plain, longer wait for the real condition is the actual fix; the
+  // caller's own reload-and-retry stays as the outer recovery for a
+  // genuinely slow first render.
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
-  if (await input.isVisible()) return input;
-  const microphone = page.locator('[data-nexus-permanent-microphone-control="true"]:visible').first();
-  await microphone.waitFor({ state: "visible", timeout: 30000 });
-  await microphone.click();
   await input.waitFor({ state: "visible", timeout: 30000 });
   return input;
 }

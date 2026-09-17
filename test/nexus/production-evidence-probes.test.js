@@ -155,29 +155,24 @@ test("typed ingress diagnostics bind the failure to the exact release and browse
   assert.equal(diagnostic.browserState.typedEntries[0].visible, false);
 });
 
-test("browser verifier returns an already-visible authoritative typed ingress without recursion", async () => {
-  let microphoneRequested = false;
-  const input = { isVisible: async () => true };
+test("browser verifier waits directly on the typed ingress and never touches the unrelated microphone control", async () => {
+  // Confirmed live in production (the same Standard User role this probe
+  // authenticates as): clicking the always-available microphone permission
+  // control has zero effect on the typed-entry composer's visibility either
+  // way -- they are two unrelated UI regions. The previous fallback (click
+  // that microphone, then wait for the input) was guaranteed to fail
+  // whenever the immediate visibility check missed a cold-start render
+  // race, burning its whole timeout waiting on an event the click could
+  // never cause. This is the actual fix: plain, direct waiting.
+  const calls = []; let microphoneRequested = false;
+  const input = { waitFor: async options => calls.push(["input-wait", options]) };
   const page = { locator: selector => ({ first: () => {
     if (selector.includes("primary-typed-entry")) return input;
     microphoneRequested = true; return {};
   } }) };
   assert.equal(await requireVisibleAuthoritativeTypedIngress(page), input);
   assert.equal(microphoneRequested, false);
-});
-
-test("browser verifier uses the visible microphone control to establish truthful typed fallback", async () => {
-  const calls = []; let visible = false;
-  const input = { isVisible: async () => visible, waitFor: async options => {
-    calls.push(["input-wait", options]); visible = true;
-  } };
-  const microphone = { waitFor: async options => calls.push(["microphone-wait", options]),
-    click: async () => calls.push(["microphone-click"]) };
-  const page = { locator: selector => ({
-    first: () => selector.includes("primary-typed-entry") ? input : microphone
-  }) };
-  assert.equal(await requireVisibleAuthoritativeTypedIngress(page), input);
-  assert.deepEqual(calls.map(call => call[0]), ["microphone-wait", "microphone-click", "input-wait"]);
+  assert.deepEqual(calls, [["input-wait", { state: "visible", timeout: 30000 }]]);
 });
 
 test("production browser establishes a real denied microphone permission before proving typed fallback", () => {
