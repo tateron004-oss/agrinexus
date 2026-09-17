@@ -33,7 +33,7 @@
           // a string, but the backend's normalizeEditable rejects a field
           // whose type doesn't match its default (amount defaults to 0).
           field(div, label, String(row[key]), value => { const n = Number(value); row[key] = Number.isFinite(n) ? n : 0; }, false, "number");
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["followUpDate", "date", "dueDate"].includes(key) ? "date" : "text");
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["followUpDate", "date", "dueDate", "deadline"].includes(key) ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -56,6 +56,9 @@
     byId("finance-summary").textContent = `Income: ${income.toFixed(2)}  |  Expenses: ${expenses.toFixed(2)}  |  Net: ${(income - expenses).toFixed(2)}`;
     rows("invoices", editable.invoices, [["invoiceNumber", "Invoice #"], ["clientName", "Client"], ["date", "Date"], ["dueDate", "Due date"], ["notes", "Notes"], ["status", "Status"]]);
     rows("invoice-items", editable.invoiceItems, [["invoiceNumber", "Invoice #"], ["description", "Description"], ["quantity", "Qty"], ["unitPrice", "Unit price"]]);
+    rows("grants", editable.grants, [["funderName", "Funder"], ["program", "Program / grant name"], ["amount", "Amount"], ["deadline", "Deadline"], ["status", "Status (researching, drafting, submitted, awarded, declined)"], ["notes", "Notes"]]);
+    const soonest = editable.grants.filter(row => row.deadline).map(row => row.deadline).sort()[0];
+    byId("grants-summary").textContent = soonest ? `Next deadline: ${soonest}` : "No deadlines set yet.";
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"]]);
     const landing = byId("landing-fields"); landing.replaceChildren();
@@ -102,6 +105,7 @@
   byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, description: "" }); render(); });
   byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: `INV-${String(current.data.editable.invoices.length + 1001)}`, clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
+  byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }); render(); });
   byId("generate-invoice-pdf").addEventListener("click", () => run(async () => {
     const invoiceNumber = byId("invoice-pdf-number").value.trim();
     if (!invoiceNumber) throw new Error("Enter the invoice number to generate a PDF for.");

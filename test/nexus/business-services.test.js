@@ -107,6 +107,19 @@ test("business deletion stops at legal holds and erases historical versions only
   assert.ok(queries.some(query => query.sql.startsWith("update nexus_record_versions")));
 });
 
+test("grant/funding tracker: opportunities, deadlines and status persist and validate like every other row list", () => {
+  const { normalizeEditable } = require('../../nexus/business/service');
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  assert.deepEqual(templates.defaultClientWorkspace(info).grants, []);
+  const editable = normalizeEditable(info, { grants: [
+    { funderName: 'USDA Rural Development', program: 'Value-Added Producer Grant', amount: 50000, deadline: '2026-04-01', status: 'drafting', notes: 'Needs a business plan attachment' }
+  ] });
+  assert.equal(editable.grants[0].amount, 50000);
+  assert.equal(editable.grants[0].status, 'drafting');
+  assert.deepEqual(normalizeEditable(info, {}).grants, [], 'a record created before this field existed must still normalize');
+  assert.throws(() => normalizeEditable(info, { grants: [{ amount: NaN }] }), error => error.code === 'business_workspace_invalid');
+});
+
 test("income/expense tracker: transactions are typed, numeric amounts are validated, and older rows without the field default cleanly", () => {
   const { normalizeEditable } = require('../../nexus/business/service');
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
