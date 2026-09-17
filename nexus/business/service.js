@@ -4,7 +4,7 @@ const templates = require("./templates");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
 const { renderPdfBuffer } = require("../../server/providers/exportProvider");
 const DATA_SCOPE = "business:client-data";
-const ALLOWED_OPERATIONS = new Set(["launch-kit", "landing-page", "assistant-package", "workflow", "strategy"]);
+const ALLOWED_OPERATIONS = new Set(["launch-kit", "landing-page", "assistant-package", "workflow", "strategy", "documents"]);
 const INPUT_FIELDS = ["businessName", "industry", "location", "customer", "problem", "request", "objective", "audience"];
 
 function fail(code, message, status = 400) { throw new NexusRuntimeError(code, message, status); }
@@ -105,6 +105,11 @@ function filesFor(info, editable, operation, profile = "coach") {
     put("assistant-studio/assistant-preview.md", "Template preview; no AI or message was sent.\n\n" + templates.testAssistantReply(workspace, workspace.assistantStudio.testMessage));
   }
   if (operation === "workflow") for (const action of ["leads", "social", "phone", "followup"]) put(`workflows/${action}.md`, templates.clientWorkflowOutput(info, action));
+  if (operation === "documents") {
+    put("documents/Service_Agreement.md", templates.serviceAgreementTemplate(info));
+    put("documents/Client_Intake_Form.md", templates.clientIntakeFormTemplate(info));
+    put("documents/Application_Checklist.md", templates.applicationChecklistTemplate(info));
+  }
   if (operation === "strategy") {
     const { agentProfiles, createResponse } = require("./strategy");
     if (!Object.hasOwn(agentProfiles, profile)) fail("business_profile_unknown", "Unknown planning template.");
