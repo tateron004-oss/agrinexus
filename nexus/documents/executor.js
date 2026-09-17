@@ -31,10 +31,31 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
         const checksum = crypto.createHash("sha256").update(bytes).digest("hex");
         const document = await documents.create({ tenantId: context.tenantId, ownerId: context.userId,
           taskId, title: body.title, documentType: body.format, metadata: { exportId: data.exportId, filename: data.filename } });
-        await documents.addVersion({ documentId: document.document_id, tenantId: context.tenantId,
+        const version = await documents.addVersion({ documentId: document.document_id, tenantId: context.tenantId,
           content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath },
           objectKey: `local:${data.filename}`, checksum, createdBy: context.userId });
-        return { ...result.body, documentId: document.document_id };
+        // The "documents" capability's completion contract
+        // (nexus/apps/capability-completion-contracts.js) requires
+        // savedVersion and reopenVerified as real evidence, not just a
+        // successful write -- genuinely reading the document back through
+        // the same owner-scoped path documents.read uses is what makes
+        // "reopen" a verified fact instead of an assumed one. This was the
+        // one piece the plan's reopenAfterSave hint (nexus/brain/planner.js)
+        // asked for but this executor never implemented, which is why the
+        // live "documents-lifecycle" production acceptance probe kept
+        // failing even though the underlying create/save always worked.
+        // A failure here is kept separate from the create+index try above --
+        // the document is already genuinely saved by this point, so a
+        // read-back error must only mark reopenVerified false, not erase the
+        // real documentId/savedVersion this call already earned.
+        let reopenVerified = false;
+        try {
+          const reopened = await documents.get({ tenantId: context.tenantId, ownerId: context.userId, documentId: document.document_id });
+          reopenVerified = Boolean(reopened && reopened.document_id === document.document_id && Number(reopened.version) === Number(version.version));
+        } catch {
+          // Leave reopenVerified honestly false; the create/save above already succeeded.
+        }
+        return { ...result.body, documentId: document.document_id, savedVersion: version.version, reopenVerified };
       } catch {
         // The real file export already succeeded; a failure to also index it
         // for later listing/reading shouldn't fail the whole create action --

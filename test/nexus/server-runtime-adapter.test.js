@@ -124,6 +124,35 @@ test("documents lifecycle probe fails closed when reopenVerified/savedVersion ar
   assert.equal(result.fullLifecycle, false);
 });
 
+// Confirmed live: the real documents.create executor's verifier
+// (nexus/documents/executor.js's verifyDocumentsCreateOutcome) never
+// produces a receipt.verification.evidence array at all -- only
+// {verified, method, reason} -- so a receipt-evidence-only check always
+// saw an empty array in production, even though the executor's real
+// output (savedVersion/reopenVerified) reached nexus.workspace-outcome.v2's
+// render.data via mergeStepObjects. This is the exact shape a real
+// production run produces; the fix must pass this without any evidence array.
+test("documents lifecycle probe passes on the real production shape: no receipt evidence array, only workspace-outcome render data", async () => {
+  const principal = { tenantId: "tenant-1", userId: "user-1", role: "admin", permissions: ["acceptance:identity"] };
+  const active = { db: { query: async () => ({ rows: [principal] }) }, behavior: { turn: async () => ({
+    application: "documents", state: "render_required", render: { data: { documentId: "doc-1", savedVersion: 3, reopenVerified: true } },
+    receipts: [{ verification: { verified: true, method: "real_local_export", reason: null } }]
+  }) } };
+  const result = await runObjectiveProbe("documents-lifecycle", { active, env: {}, releaseSha: "a".repeat(40) });
+  assert.equal(result.ok, true); assert.equal(result.documentId, "doc-1");
+  assert.equal(result.saved, true); assert.equal(result.reopened, true); assert.equal(result.fullLifecycle, true);
+});
+
+test("documents lifecycle probe still fails closed on the real production shape when reopenVerified is honestly false", async () => {
+  const principal = { tenantId: "tenant-1", userId: "user-1", role: "admin", permissions: ["acceptance:identity"] };
+  const active = { db: { query: async () => ({ rows: [principal] }) }, behavior: { turn: async () => ({
+    application: "documents", state: "render_required", render: { data: { documentId: "doc-1", savedVersion: 3, reopenVerified: false } },
+    receipts: [{ verification: { verified: true, method: "real_local_export", reason: null } }]
+  }) } };
+  const result = await runObjectiveProbe("documents-lifecycle", { active, env: {}, releaseSha: "a".repeat(40) });
+  assert.equal(result.ok, false); assert.equal(result.reopened, false); assert.equal(result.fullLifecycle, false);
+});
+
 test("authenticated users see only their tenant-owned task status", async () => {
   let listInput; const capture = responseCapture();
   const runtime = { engine: { tasks: { list: async input => { listInput = input; return [{ taskId: "task-1", state: "running" }]; } } },

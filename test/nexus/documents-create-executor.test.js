@@ -110,3 +110,78 @@ test("indexing is skipped entirely with no documents repository or no context, e
     assert.equal(result.documentId, undefined);
   });
 });
+
+test("genuinely reads the document back and reports savedVersion/reopenVerified when the read-back matches", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const tmpFile = path.join(os.tmpdir(), `nexus-doc-test-${Date.now()}-reopen.txt`);
+  fs.writeFileSync(tmpFile, "hello world");
+  const gets = [];
+  const documents = {
+    create: async () => ({ document_id: "doc_1" }),
+    addVersion: async () => ({ version_id: "ver_1", version: 3 }),
+    get: async input => { gets.push(input); return { document_id: "doc_1", version: 3 }; }
+  };
+  await withPatched(exportProvider, "exportDocument", async () => ({
+    httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-7", bytes: 11, filename: "exp-7.txt", localPath: tmpFile, downloadPath: "/exports/exp-7.txt" } }
+  }), async () => {
+    const execute = createDocumentsCreateExecutor({ env: {}, documents });
+    const result = await execute({ input: { title: "Field report", content: "hello world", format: "txt" },
+      context: { tenantId: "t1", userId: "u1" }, taskId: "tsk_1" });
+    assert.equal(result.documentId, "doc_1");
+    assert.equal(result.savedVersion, 3);
+    assert.equal(result.reopenVerified, true);
+    assert.equal(gets.length, 1);
+    assert.equal(gets[0].tenantId, "t1"); assert.equal(gets[0].ownerId, "u1"); assert.equal(gets[0].documentId, "doc_1");
+  });
+  fs.unlinkSync(tmpFile);
+});
+
+test("reports reopenVerified false, without losing the real documentId/savedVersion, when the read-back version does not match", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const tmpFile = path.join(os.tmpdir(), `nexus-doc-test-${Date.now()}-mismatch.txt`);
+  fs.writeFileSync(tmpFile, "hello world");
+  const documents = {
+    create: async () => ({ document_id: "doc_1" }),
+    addVersion: async () => ({ version_id: "ver_1", version: 2 }),
+    get: async () => ({ document_id: "doc_1", version: 1 })
+  };
+  await withPatched(exportProvider, "exportDocument", async () => ({
+    httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-8", bytes: 11, filename: "exp-8.txt", localPath: tmpFile, downloadPath: "/exports/exp-8.txt" } }
+  }), async () => {
+    const execute = createDocumentsCreateExecutor({ env: {}, documents });
+    const result = await execute({ input: { title: "x", content: "hello world", format: "txt" },
+      context: { tenantId: "t1", userId: "u1" }, taskId: "tsk_1" });
+    assert.equal(result.documentId, "doc_1");
+    assert.equal(result.savedVersion, 2);
+    assert.equal(result.reopenVerified, false);
+  });
+  fs.unlinkSync(tmpFile);
+});
+
+test("reports reopenVerified false, without losing the real documentId/savedVersion, when the read-back itself throws", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const tmpFile = path.join(os.tmpdir(), `nexus-doc-test-${Date.now()}-get-throws.txt`);
+  fs.writeFileSync(tmpFile, "hello world");
+  const documents = {
+    create: async () => ({ document_id: "doc_1" }),
+    addVersion: async () => ({ version_id: "ver_1", version: 1 }),
+    get: async () => { throw new Error("db unavailable"); }
+  };
+  await withPatched(exportProvider, "exportDocument", async () => ({
+    httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-9", bytes: 11, filename: "exp-9.txt", localPath: tmpFile, downloadPath: "/exports/exp-9.txt" } }
+  }), async () => {
+    const execute = createDocumentsCreateExecutor({ env: {}, documents });
+    const result = await execute({ input: { title: "x", content: "hello world", format: "txt" },
+      context: { tenantId: "t1", userId: "u1" }, taskId: "tsk_1" });
+    assert.equal(result.documentId, "doc_1");
+    assert.equal(result.savedVersion, 1);
+    assert.equal(result.reopenVerified, false);
+  });
+  fs.unlinkSync(tmpFile);
+});
