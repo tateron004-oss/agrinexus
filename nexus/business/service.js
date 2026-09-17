@@ -54,7 +54,10 @@ function normalizeEditable(info, input = {}) {
     // reminded on, not just described.
     leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }),
     socialPosts: rows(input.socialPosts === undefined ? starter.socialPosts : input.socialPosts, { platform: "", caption: "", status: "draft" }),
-    tasks: rows(input.tasks === undefined ? starter.tasks : input.tasks, { title: "", status: "todo" }),
+    // Tool 5: project/task management. Extended from a flat checklist
+    // (title/status only) to carry a due date, an assignee, and a
+    // priority -- what a "manager," not just a list, actually needs.
+    tasks: rows(input.tasks === undefined ? starter.tasks : input.tasks, { title: "", status: "todo", dueDate: "", assignee: "", priority: "medium" }),
     // Tool 2 of the small-business/nonprofit suite: income and expense
     // tracking. "amount" is the first numeric field in this workspace --
     // the Number.isFinite guard above exists specifically so a stray
