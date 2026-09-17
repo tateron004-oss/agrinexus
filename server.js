@@ -18602,9 +18602,11 @@ async function nexusRealCommonsVideoSearch(query) {
   commonsUrl.searchParams.set("iiprop", "url|extmetadata|mime");
   commonsUrl.searchParams.set("format", "json");
   commonsUrl.searchParams.set("origin", "*");
-  // Same missing-User-Agent issue as the image search below -- Wikimedia's
-  // API etiquette policy blocks/throttles requests with no identifying
-  // User-Agent, especially from cloud/datacenter IP ranges.
+  // Sends a real identifying User-Agent, matching every other outbound
+  // provider call in this file (Wikimedia's API etiquette policy expects
+  // one), though the confirmed root cause of the production image-search
+  // failure was the query extraction feeding this call, not the headers --
+  // see nexus_visual_analysis's imageQuery/videoQuery comments.
   const response = await fetchWithTimeout(commonsUrl, { headers: publicProviderHeaders() }, 10000);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`Wikimedia Commons returned ${response.status}`);
@@ -19435,7 +19437,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const wantsVideos = !args.imageUrl && !args.url && /\b(show|find|search|display|open|play)\b.*\bvideos?\b/i.test(command);
     const wantsImages = !args.imageUrl && !args.url && /\b(show|find|search|display|open)\b.*\b(images?|photos?|pictures?)\b/i.test(command);
     if (wantsVideos) {
-      const videoQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|play|me|real|and|also|while|explaining|please|videos?|images?|photos?|pictures?|with sources?)\b/gi, " ").replace(/\s+/g, " ").trim(), 180);
+      // Confirmed live: the extracted query kept filler words ("current",
+      // "of") and trailing punctuation intact -- "Show me current images of
+      // healthy maize leaves." reduced to "current of healthy maize
+      // leaves." (verified directly against the real Wikimedia API: zero
+      // results), which fell through to Openverse, then to the disabled
+      // vision.analyze refusal, even though a clean "healthy maize leaves"
+      // query returns real results every time. Stripping non-word
+      // characters (matching the pattern already used for cancel/delete
+      // title extraction elsewhere in this file) removes the trailing
+      // period; the added filler words remove the temporal/connector noise
+      // that was narrowing the search into a near-unmatchable phrase.
+      const videoQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|play|me|real|current|today|now|of|for|about|some|any|the|a|an|to|with|and|also|while|explaining|please|videos?|images?|photos?|pictures?|sources?)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 180);
       let videos = [];
       let videoProviderSucceeded = false;
       try {
@@ -19472,7 +19485,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
     const imageSearchRequest = wantsImages;
     if (imageSearchRequest) {
-      const imageQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|me|real|and|also|while|explaining|please|videos?|images?|photos?|pictures?|with sources?)\b/gi, " ").replace(/\s+/g, " ").trim(), 180);
+      // Same filler-word/punctuation fix as videoQuery above -- confirmed
+      // live this exact query reduction ("current of healthy maize
+      // leaves.") returned zero real Wikimedia results for what should be
+      // an easy, common search.
+      const imageQuery = sanitizePilotText(command.replace(/\b(show|find|search|display|open|me|real|current|today|now|of|for|about|some|any|the|a|an|to|with|and|also|while|explaining|please|videos?|images?|photos?|pictures?|sources?)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 180);
       try {
         const commonsUrl = new URL("https://commons.wikimedia.org/w/api.php");
         commonsUrl.searchParams.set("action", "query");
@@ -19485,14 +19502,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         commonsUrl.searchParams.set("iiurlwidth", "900");
         commonsUrl.searchParams.set("format", "json");
         commonsUrl.searchParams.set("origin", "*");
-        // Wikimedia's API etiquette policy blocks/throttles requests with no
-        // identifying User-Agent, especially from cloud/datacenter IP
-        // ranges like Render's -- confirmed live that this exact call
-        // consistently failed from production (falling through to the
-        // vision.analyze refusal) while an identical request from a real
-        // browser succeeded every time. Every other outbound provider call
-        // in this file already sends publicProviderHeaders(); this one
-        // never did.
+        // Wikimedia's API etiquette policy expects a real identifying
+        // User-Agent (every other outbound provider call in this file
+        // already sends publicProviderHeaders(); this one never did) --
+        // worth sending on general principle, though direct testing
+        // confirmed Render's outbound network and this exact request both
+        // work fine either way. The actual cause of the production
+        // "images disabled" symptom was the query extraction just above
+        // (see videoQuery's comment for the confirmed root cause).
         const response = await fetchWithTimeout(commonsUrl, { headers: publicProviderHeaders() }, 10000);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(`Wikimedia Commons returned ${response.status}`);
