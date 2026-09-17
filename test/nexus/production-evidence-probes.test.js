@@ -155,6 +155,42 @@ test("typed ingress diagnostics bind the failure to the exact release and browse
   assert.equal(diagnostic.browserState.typedEntries[0].visible, false);
 });
 
+test("typed ingress diagnostics carry real console/page/network errors, not just DOM state", async () => {
+  // Confirmed live in production: two prior fixes to this same check
+  // (PR #447, #448) both addressed real but insufficient causes, and the
+  // typed-entry composer was found completely ABSENT from the DOM in the
+  // failure's own diagnostic (typedEntries: []) -- something neither fix
+  // explains. Nothing previously captured real console errors, uncaught
+  // exceptions, or failed requests, so every prior diagnosis was a guess
+  // from DOM state alone. This locks in the fix: recentBrowserEvents must
+  // carry the actual browser-level events leading up to a failure.
+  const page = { evaluate: async () => ({
+    url: "https://nexus.example/", readyState: "complete", bodyClass: "user-mode",
+    microphonePermission: "denied", loginView: { visible: false }, appView: { visible: true },
+    typedEntries: [], microphoneControls: [{ visible: true, disabled: false }], statusText: []
+  }) };
+  const browserDiagnosticLog = [
+    { kind: "pageerror", text: "TypeError: cannot read properties of undefined", at: "2026-01-01T00:00:00.000Z" },
+    { kind: "console.error", text: "Failed to fetch /api/state", at: "2026-01-01T00:00:01.000Z" },
+    { kind: "requestfailed", text: "GET https://nexus.example/api/state - net::ERR_CONNECTION_RESET", at: "2026-01-01T00:00:02.000Z" }
+  ];
+  const diagnostic = await captureTypedIngressDiagnostic(page, "a".repeat(40), "post-login",
+    new Error("typed ingress timeout"), browserDiagnosticLog);
+  assert.deepEqual(diagnostic.recentBrowserEvents, browserDiagnosticLog);
+});
+
+test("the production browser wires console, pageerror, and requestfailed listeners into the diagnostic log before login", () => {
+  const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+  const pageCreated = source.indexOf("const page = await browser.newPage(");
+  assert.notEqual(pageCreated, -1);
+  const region = source.slice(pageCreated, source.indexOf("const loginLifecycle = await installLoginLifecycleDiagnostics", pageCreated));
+  assert.match(region, /const browserDiagnosticLog = \[\];/);
+  assert.match(region, /page\.on\("console", msg =>/);
+  assert.match(region, /page\.on\("pageerror", error =>/);
+  assert.match(region, /page\.on\("requestfailed", request =>/);
+  assert.match(source, /preserveTypedIngressDiagnostic\(page, releaseSha, "post-login", diagnosticError, browserDiagnosticLog\)/);
+});
+
 test("browser verifier waits directly on the typed ingress and never touches the unrelated microphone control", async () => {
   // Confirmed live in production (the same Standard User role this probe
   // authenticates as): clicking the always-available microphone permission
