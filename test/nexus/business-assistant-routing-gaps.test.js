@@ -251,3 +251,22 @@ test("'generate/print the business plan PDF' is recognized as exporting the busi
   const documents = await callBusinessAssistant("Generate a service agreement");
   assert.equal(documents.status, "blocked");
 });
+
+// Voice access for Tool 6 (Marketing Content Creator): generate a flyer,
+// newsletter, and promotional email draft. Scoped to
+// flyer/newsletter/promotional-email/marketing-material wording, so it
+// doesn't collide with the invoice-PDF generator (literal "invoice"), the
+// document/form builder (service agreement/contract/intake form/
+// application checklist), or the business-plan-PDF generator (literal
+// "business plan").
+test("'create/generate a flyer/newsletter/promotional email' is recognized as generating marketing drafts, not any other generate action", async () => {
+  const marketing = await callBusinessAssistant("Create a flyer and a promotional email");
+  assert.equal(marketing.status, "blocked");
+  assert.match(marketing.response, /PostgreSQL/i);
+  const invoice = await callBusinessAssistant("Generate the PDF for invoice INV-1001");
+  assert.equal(invoice.status, "blocked");
+  const documents = await callBusinessAssistant("Generate a service agreement");
+  assert.equal(documents.status, "blocked");
+  const plan = await callBusinessAssistant("Generate the business plan PDF");
+  assert.equal(plan.status, "blocked");
+});
