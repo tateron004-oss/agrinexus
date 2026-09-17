@@ -19125,8 +19125,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // across most of this dispatcher. crisisOverride only fires for the
   // patterns that are actually safety-critical, which is what this
   // previously-uncovered gap needs closed.
+  // Medical-emergency text (chest pain, can't breathe, etc.) reaching plain
+  // conversation is deliberately excluded here: nexus_general_conversation
+  // already has its own, older, already-tested emergency-safety pathway
+  // (safeSymptomGuidance's redFlags table, further down this dispatcher)
+  // that produces a fuller traced response. Routing it through this newer
+  // packet first would silently shadow that existing, working behavior.
+  // Genuine psychological crisis / safeguarding concerns have no such
+  // pre-existing coverage in conversation, so they still fire here.
   const mentalHealthSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
-  if (mentalHealthSignal.crisisOverride === true) {
+  const mentalHealthAlreadyHandledElsewhere =
+    mentalHealthSignal.state === "medical_emergency" && toolName === "nexus_general_conversation";
+  if (mentalHealthSignal.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
     const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(command, {
       language, source: context.inputMode || "voice-or-native",
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
@@ -33111,8 +33121,19 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   // classification/response flow below. Gates on classifyState(...)
   // .crisisOverride, not the broader shouldHandle() -- see the identical
   // reasoning in executeNexusOpenAiNativeTool.
+  // Medical-emergency text reaching a conversational request (body.conversational
+  // === true) is deliberately excluded: the conversationalModeOrchestrator/
+  // safeSymptomGuidance pathway further below already has its own, older,
+  // already-tested emergency-safety handling (redFlags table covering chest
+  // pain, trouble breathing, etc.) with a fuller traced response. Routing it
+  // through this newer packet first would silently shadow that existing,
+  // working behavior. Genuine psychological crisis / safeguarding concerns
+  // have no such pre-existing coverage in this pipeline, so they still fire
+  // here regardless of the conversational flag.
   const mentalHealthSignal = command ? nexusMentalHealthBehavioralWellness.classifyState(command, {}) : null;
-  if (mentalHealthSignal?.crisisOverride === true) {
+  const mentalHealthAlreadyHandledElsewhere =
+    mentalHealthSignal?.state === "medical_emergency" && body.conversational === true;
+  if (mentalHealthSignal?.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
     const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(command, {
       language: commandLanguage, source: inputMode,
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
