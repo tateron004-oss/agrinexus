@@ -205,3 +205,118 @@ test("situational-awareness.sweep re-throws an unrelated engine.create failure i
   const handlers = createHandlers({ runtime });
   await assert.rejects(() => handlers["situational-awareness.sweep"]({ job: { payload: {} } }), /database unavailable/);
 });
+
+test("listUnacknowledgedNudges joins real delivery state and excludes already-escalated nudges, never guessing the freeform data shape", async () => {
+  const db = fakeDb([{ rows: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }] }]);
+  const repo = new RecordRepository(db);
+  const deliveredBefore = new Date("2026-09-01T00:00:00.000Z");
+  const result = await repo.listUnacknowledgedNudges({ workspaceId: "situational-awareness", recordType: "health_checkin_nudge", deliveredBefore, limit: 10 });
+  assert.equal(result.length, 1);
+  const sql = db.calls[0].sql;
+  assert.match(sql, /join nexus_notifications no on no\.task_id = n\.task_id/);
+  assert.match(sql, /no\.state='delivered'/);
+  assert.match(sql, /no\.delivered_at < \$3/);
+  assert.match(sql, /\(n\.data->>'escalatedAt'\) is null/);
+  assert.match(sql, /not exists/);
+  assert.match(sql, /h\.classification='health'/);
+  assert.deepEqual(db.calls[0].params, ["situational-awareness", "health_checkin_nudge", deliveredBefore, 10]);
+});
+
+function escalationFixture({ unacknowledgedNudges = [], autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null, updateImpl = null } = {}) {
+  const created = { tasks: [], updates: [] };
+  const runtime = {
+    records: {
+      listUnacknowledgedNudges: async () => unacknowledgedNudges,
+      update: updateImpl || (async item => { created.updates.push(item); return { ...item }; })
+    },
+    tasks: {
+      countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0
+    },
+    engine: {
+      create: engineCreate || (async input => { created.tasks.push(input); return { taskId: `tsk_${created.tasks.length}` }; })
+    }
+  };
+  if (pausedTenants) runtime.autonomyControl = { isPaused: async ({ tenantId }) => Boolean(pausedTenants[tenantId]) };
+  return { runtime, created };
+}
+
+test("situational-awareness.escalate-unacknowledged-nudges escalates a delivered, unfollowed-up nudge with a real second reminder task", async () => {
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: { reason: "health_checkin_stale" } }]
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
+  assert.equal(result.scanned, 1);
+  assert.equal(result.escalated, 1);
+  assert.equal(created.tasks.length, 1);
+  const taskInput = created.tasks[0];
+  assert.equal(taskInput.autonomous, true);
+  assert.equal(taskInput.command.tenantId, "t1");
+  assert.equal(taskInput.command.actorId, "sub1");
+  assert.equal(taskInput.steps[0].toolId, "reminders.schedule");
+  assert.equal(created.updates.length, 1);
+  assert.equal(created.updates[0].recordId, "rec_1");
+  assert.equal(created.updates[0].expectedVersion, 1);
+  assert.equal(created.updates[0].data.reason, "health_checkin_stale");
+  assert.ok(created.updates[0].data.escalatedAt);
+  assert.equal(created.updates[0].data.escalationTaskId, "tsk_1");
+});
+
+test("situational-awareness.escalate-unacknowledged-nudges enforces the per-tenant daily autonomous-task cap", async () => {
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [
+      { record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} },
+      { record_id: "rec_2", tenant_id: "t1", subject_id: "sub2", version: 1, data: {} }
+    ],
+    autonomousCountsByTenant: { t1: 10 }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: { dailyAutonomousTaskCapPerTenant: 10 } } });
+  assert.equal(result.escalated, 0);
+  assert.equal(created.tasks.length, 0);
+});
+
+test("situational-awareness.escalate-unacknowledged-nudges skips a paused tenant entirely", async () => {
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
+    pausedTenants: { t1: true }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
+  assert.equal(result.escalated, 0);
+  assert.equal(result.skippedPaused, 1);
+  assert.equal(created.tasks.length, 0);
+});
+
+test("situational-awareness.escalate-unacknowledged-nudges defers to the engine's own guard when a pause races the cached check", async () => {
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
+    pausedTenants: { t1: false },
+    engineCreate: async () => { const error = new Error("Autonomous task creation is paused for this tenant."); error.code = "autonomy_paused"; throw error; }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
+  assert.equal(result.escalated, 0);
+  assert.equal(result.skippedPaused, 1);
+  assert.equal(created.tasks.length, 0);
+});
+
+test("situational-awareness.escalate-unacknowledged-nudges still counts the escalation even when marking the nudge record loses a concurrent update race", async () => {
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
+    updateImpl: async () => { throw new Error("Record rec_1 was changed by another operation."); }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
+  assert.equal(result.escalated, 1, "the escalation task was genuinely created and must still count even if the marker update lost a race");
+  assert.equal(created.tasks.length, 1);
+});
+
+test("situational-awareness.escalate-unacknowledged-nudges re-throws an unrelated engine.create failure instead of swallowing it as a pause", async () => {
+  const { runtime } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
+    engineCreate: async () => { throw new Error("database unavailable"); }
+  });
+  const handlers = createHandlers({ runtime });
+  await assert.rejects(() => handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } }), /database unavailable/);
+});

@@ -165,6 +165,70 @@ function createHandlers({ runtime, deliveryProviders = {} }) {
         created += 1;
       }
       return { scanned: candidates.length, created, skippedPaused };
+    },
+    // The plan's other candidate proactive trigger, now validated against the
+    // real schema and built: "a delivered reminder with no corresponding
+    // follow-up afterward." An explicit user-facing acknowledgement doesn't
+    // exist anywhere in this schema (a push notification has no read-receipt
+    // concept), so this only claims what's honestly there -- the reminder was
+    // confirmed *delivered* (a real nexus_notifications row, not merely
+    // scheduled) and the subject still hasn't logged a newer health record
+    // since. Escalates with a second, more direct reminders.schedule task
+    // (still a non-confirmation-required tool, so it can complete
+    // autonomously end to end) rather than communications.send -- that tool
+    // has no resolved contact address here and would only ever stall at
+    // awaiting_confirmation anyway. Each nudge is escalated at most once
+    // (listUnacknowledgedNudges excludes anything already marked
+    // data.escalatedAt); situational-awareness.sweep's own cooldown creates a
+    // fresh nudge record on its next cycle, giving the subject a new
+    // escalation candidate rather than repeating this one forever.
+    "situational-awareness.escalate-unacknowledged-nudges": async ({ job }) => {
+      const graceMs = Number(job.payload?.graceMs || 3 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.records.listUnacknowledgedNudges({
+        workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE,
+        deliveredBefore: new Date(Date.now() - graceMs), limit
+      });
+      const tenantCounts = new Map();
+      const tenantPaused = new Map();
+      let escalated = 0; let skippedPaused = 0;
+      for (const nudge of candidates) {
+        const tenantId = nudge.tenant_id; const subjectId = nudge.subject_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
+          correlationId: createId("event"), text: "Kyro's first health check-in reminder went unacknowledged, so it followed up again." });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: "Follow up after an unacknowledged health check-in nudge",
+            application: "health", riskTier: "low", autonomous: true, steps: [{ title: "Send a follow-up health check-in reminder",
+              toolId: "reminders.schedule", input: { when: "Tomorrow, remind me again to log a quick health check-in with Kyro -- the last reminder didn't get a new entry." } }] });
+        } catch (error) {
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
+        try {
+          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: nudge.version, actorId: subjectId,
+            data: { ...nudge.data, escalatedAt: new Date().toISOString(), escalationTaskId: task.taskId },
+            provenance: { source: "situational-awareness-escalate" } });
+        } catch {
+          // A concurrent update to this exact nudge record (another worker,
+          // or the subject's own action) losing this race must not fail the
+          // whole sweep -- the escalation task itself was already created
+          // successfully either way. Worst case, an unlucky repeat run
+          // re-escalates the same nudge once more next cycle.
+        }
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        escalated += 1;
+      }
+      return { scanned: candidates.length, escalated, skippedPaused };
     }
   });
 }
