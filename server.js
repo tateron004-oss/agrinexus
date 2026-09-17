@@ -18600,7 +18600,10 @@ async function nexusRealCommonsVideoSearch(query) {
   commonsUrl.searchParams.set("iiprop", "url|extmetadata|mime");
   commonsUrl.searchParams.set("format", "json");
   commonsUrl.searchParams.set("origin", "*");
-  const response = await fetchWithTimeout(commonsUrl, { headers: { accept: "application/json" } }, 10000);
+  // Same missing-User-Agent issue as the image search below -- Wikimedia's
+  // API etiquette policy blocks/throttles requests with no identifying
+  // User-Agent, especially from cloud/datacenter IP ranges.
+  const response = await fetchWithTimeout(commonsUrl, { headers: publicProviderHeaders() }, 10000);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`Wikimedia Commons returned ${response.status}`);
   return Object.values(payload.query?.pages || {})
@@ -19480,7 +19483,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         commonsUrl.searchParams.set("iiurlwidth", "900");
         commonsUrl.searchParams.set("format", "json");
         commonsUrl.searchParams.set("origin", "*");
-        const response = await fetchWithTimeout(commonsUrl, { headers: { accept: "application/json" } }, 10000);
+        // Wikimedia's API etiquette policy blocks/throttles requests with no
+        // identifying User-Agent, especially from cloud/datacenter IP
+        // ranges like Render's -- confirmed live that this exact call
+        // consistently failed from production (falling through to the
+        // vision.analyze refusal) while an identical request from a real
+        // browser succeeded every time. Every other outbound provider call
+        // in this file already sends publicProviderHeaders(); this one
+        // never did.
+        const response = await fetchWithTimeout(commonsUrl, { headers: publicProviderHeaders() }, 10000);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(`Wikimedia Commons returned ${response.status}`);
         const images = Object.values(payload.query?.pages || {}).map(page => {

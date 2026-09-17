@@ -13,7 +13,10 @@ async function searchOpenImages(query, {fetchFn=globalThis.fetch}={}) {
   const disease=/\b(disease|diseases|symptom|symptoms|infection|pest)\b/i.test(text);
   const pathology=/\b(disease|symptom|virus|viral|blight|rust|necrosis|wilt|smut|mildew|rot|streak|fung\w*|bacter\w*|pest|lesion)\b/i;
   const url=new URL('https://api.openverse.org/v1/images/');url.searchParams.set('q',text);url.searchParams.set('page_size','12');
-  const response=await fetchFn(url,{headers:{accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(8000)});
+  // Openverse (like Wikimedia) can throttle or reject requests with no
+  // identifying User-Agent, especially from cloud/datacenter IP ranges --
+  // every other outbound provider call in this codebase already sends one.
+  const response=await fetchFn(url,{headers:{accept:'application/json','user-agent':'AgriNexus/1.0 rural-health-agritech-investor-platform'},redirect:'error',signal:AbortSignal.timeout(8000)});
   if(!response.ok)throw new Error('Openverse image retrieval unavailable');
   const payload=await response.json();const seen=new Set();
   return (Array.isArray(payload.results)?payload.results:[]).filter(item=>item&&typeof item==='object').map(item=>{

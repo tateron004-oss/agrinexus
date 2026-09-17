@@ -16,6 +16,16 @@ test('image fallback does not turn empty or failed retrieval into success',async
  assert.deepEqual(await searchOpenImages('maize',{fetchFn:async()=>({ok:true,json:async()=>({results:[]})})}),[]);
  for(const url of ['file:///private','http://images.example/x','https://127.0.0.1/x','https://10.0.0.1/x','https://user:pass@images.example/x'])assert.equal(publicUrl(url),'');
 });
+test('Openverse requests identify themselves with a real User-Agent, not an anonymous default',async()=>{
+ // Confirmed live in production: this request had no User-Agent at all --
+ // Wikimedia/Openverse-style API etiquette policies throttle or reject
+ // anonymous requests, especially from cloud/datacenter IP ranges, which is
+ // consistent with this call consistently failing from Render while an
+ // identical request from a real browser succeeded every time.
+ let capturedHeaders=null;
+ await searchOpenImages('maize disease',{fetchFn:async(url,init)=>{capturedHeaders=init.headers;return {ok:true,json:async()=>({results:[]})};}});
+ assert.equal(capturedHeaders['user-agent'],'AgriNexus/1.0 rural-health-agritech-investor-platform');
+});
 
 test('native visual tool keeps primary search and uses fallback only after no usable primary result',async()=>{
  const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
@@ -23,6 +33,7 @@ test('native visual tool keeps primary search and uses fallback only after no us
  const begin=source.indexOf('async function executeNexusOpenAiNativeTool('),end=source.indexOf('\nfunction nexusGenesisWorkspaceAction(',begin);
  assert.ok(begin>=0&&end>begin);let primary=true,fallback=true,fallbackCalls=0,visionCalls=0;
  const sandbox={URL,process:{env:{}},sanitizePilotText:value=>String(value||''),
+ publicProviderHeaders:()=>({'user-agent':'AgriNexus/1.0 rural-health-agritech-investor-platform',accept:'application/json'}),
  fetchWithTimeout:async()=>({ok:true,json:async()=>({query:{pages:primary?{one:{title:'Maize',imageinfo:[{url:'https://images.example/primary',descriptionurl:'https://source.example/primary'}]}}:{}}})}),
  require:name=>{assert.equal(name,'./server/nexus-open-image-fallback');return {searchOpenImages:async()=>{fallbackCalls++;return fallback?[{title:'Maize',imageUrl:'https://images.example/fallback',sourceUrl:'https://source.example/fallback'}]:[]}}},
  nexusOpenAiNativeToolReceipt:()=>({testReceipt:true}),nexusRealProviders:{vision:{analyze:async()=>{visionCalls++;return {status:'blocked'}}}},
@@ -49,6 +60,7 @@ test('a real image search still runs when the tool-calling model paraphrases awa
  const begin=source.indexOf('async function executeNexusOpenAiNativeTool('),end=source.indexOf('\nfunction nexusGenesisWorkspaceAction(',begin);
  assert.ok(begin>=0&&end>begin); let visionCalls=0;
  const sandbox={URL,process:{env:{}},sanitizePilotText:value=>String(value||''),
+ publicProviderHeaders:()=>({'user-agent':'AgriNexus/1.0 rural-health-agritech-investor-platform',accept:'application/json'}),
  fetchWithTimeout:async()=>({ok:true,json:async()=>({query:{pages:{one:{title:'Maize',imageinfo:[{url:'https://images.example/primary',descriptionurl:'https://source.example/primary'}]}}}})}),
  require:name=>{assert.equal(name,'./server/nexus-open-image-fallback');return {searchOpenImages:async()=>[]}},
  nexusOpenAiNativeToolReceipt:()=>({testReceipt:true}),nexusRealProviders:{vision:{analyze:async()=>{visionCalls++;return {status:'blocked'}}}},
@@ -61,4 +73,26 @@ test('a real image search still runs when the tool-calling model paraphrases awa
    { command: 'Show me current images of healthy maize leaves.' });
  assert.equal(visionCalls, 0, 'the real Wikimedia search must be used, not the unconfigured vision provider fallback');
  assert.match(result.images[0].imageUrl, /primary/);
+});
+
+test('the server-side Wikimedia image search identifies itself with a real User-Agent, not an anonymous default', async () => {
+ // Same missing-User-Agent issue as the Openverse fallback -- confirmed
+ // live that this exact request consistently failed from production
+ // (falling through to the vision.analyze refusal) while an identical
+ // request from a real browser succeeded every time.
+ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+ const source=fs.readFileSync(path.join(__dirname,'../../server.js'),'utf8');
+ const begin=source.indexOf('async function executeNexusOpenAiNativeTool('),end=source.indexOf('\nfunction nexusGenesisWorkspaceAction(',begin);
+ assert.ok(begin>=0&&end>begin);
+ let capturedHeaders=null;
+ const sandbox={URL,process:{env:{}},sanitizePilotText:value=>String(value||''),
+ publicProviderHeaders:()=>({'user-agent':'AgriNexus/1.0 rural-health-agritech-investor-platform',accept:'application/json'}),
+ fetchWithTimeout:async(_url,options)=>{capturedHeaders=options.headers;return {ok:true,json:async()=>({query:{pages:{}}})};},
+ require:name=>{assert.equal(name,'./server/nexus-open-image-fallback');return {searchOpenImages:async()=>[]}},
+ nexusOpenAiNativeToolReceipt:()=>({testReceipt:true}),nexusRealProviders:{vision:{analyze:async()=>({status:'blocked'})}},
+ nexusOpenAiNativeProviderToolResult:(_db,_common,result)=>result,
+ nexusMentalHealthBehavioralWellness:require('../../public/nexus-mental-health-behavioral-wellness.js')};
+ vm.createContext(sandbox);vm.runInContext(source.slice(begin,end)+'\nthis.run=executeNexusOpenAiNativeTool;',sandbox);
+ await sandbox.run({}, {}, 'nexus_visual_analysis', { command: 'show images of maize', capability: 'visual-search' });
+ assert.equal(capturedHeaders['user-agent'], 'AgriNexus/1.0 rural-health-agritech-investor-platform');
 });
