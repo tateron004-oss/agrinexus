@@ -78,6 +78,13 @@ function normalizeEditable(info, input = {}) {
     grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
+    // Tool 1: a real, editable, versioned business plan document -- distinct
+    // from the existing AI-generated `planning` field (a one-shot outline)
+    // and from strategy.js's template generator (a text blob, not a
+    // structured, saved document). Named sections use the same
+    // fixed-key/strings() validation the landing page already uses, so
+    // editing one section can never corrupt the others.
+    businessPlan: strings(input.businessPlan === undefined ? starter.businessPlan : input.businessPlan, starter.businessPlan),
     assistantStudio
   };
 }
@@ -210,6 +217,28 @@ class BusinessService {
       expectedVersion: record.version,
       data: { ...record.data, files: { ...record.data.files, [fileName]: { content: pdf.toString("base64"), binary: true, contentType: "application/pdf" } } },
       provenance: { source: "owner-requested-invoice-pdf", invoiceNumber, externalAction: false } });
+  }
+  async exportBusinessPlan(context, recordId, body) {
+    await this.authorize(context, true); await this.consent(context);
+    const record = await this.owned(context, recordId);
+    if (body.expectedVersion !== record.version) fail("business_version_conflict", "Reload the current workspace before generating the plan document.", 409);
+    const plan = record.data.editable.businessPlan;
+    const sections = [
+      ["Executive Summary", plan.executiveSummary],
+      ["Market Analysis", plan.marketAnalysis],
+      ["Products & Services", plan.productsServices],
+      ["Marketing & Sales", plan.marketingSales],
+      ["Operations Plan", plan.operationsPlan],
+      ["Financial Plan", plan.financialPlan],
+      ["Funding Request", plan.fundingRequest]
+    ];
+    const content = sections.map(([title, body]) => `## ${title}\n\n${body?.trim() || "[Not yet written.]"}`).join("\n\n");
+    const pdf = await renderPdfBuffer(`${record.data.info.businessName} - Business Plan`, content);
+    const fileName = "business-plan/Business_Plan.pdf";
+    return this.repository.update({ tenantId: context.tenantId, recordId, actorId: context.userId,
+      expectedVersion: record.version,
+      data: { ...record.data, files: { ...record.data.files, [fileName]: { content: pdf.toString("base64"), binary: true, contentType: "application/pdf" } } },
+      provenance: { source: "owner-requested-business-plan-pdf", externalAction: false } });
   }
   async export(context, recordId) {
     await this.authorize(context); const record = await this.owned(context, recordId);

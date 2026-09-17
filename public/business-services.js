@@ -63,6 +63,8 @@
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"], ["assignee", "Assigned to"], ["priority", "Priority (low, medium, high)"], ["dueDate", "Due date"]]);
     const landing = byId("landing-fields"); landing.replaceChildren();
     for (const [key, label] of [["headline", "Headline"], ["subheadline", "Supporting text"], ["offer", "Offer"], ["phone", "Business phone"], ["email", "Business email"], ["proof", "Evidence or customer story"]]) field(landing, label, editable.landingPage[key], value => { editable.landingPage[key] = value; });
+    const plan = byId("business-plan-fields"); plan.replaceChildren();
+    for (const [key, label] of [["executiveSummary", "Executive Summary"], ["marketAnalysis", "Market Analysis"], ["productsServices", "Products & Services"], ["marketingSales", "Marketing & Sales"], ["operationsPlan", "Operations Plan"], ["financialPlan", "Financial Plan"], ["fundingRequest", "Funding Request"]]) field(plan, label, editable.businessPlan[key], value => { editable.businessPlan[key] = value; }, true);
     const assistant = byId("assistant-fields"); assistant.replaceChildren();
     for (const [key, label] of [["name", "Assistant name"], ["purpose", "Purpose"], ["personality", "Tone"]]) field(assistant, label, editable.assistantStudio[key], value => { editable.assistantStudio[key] = value; }, key === "purpose");
     const scripts = byId("scripts-fields"); scripts.replaceChildren();
@@ -112,6 +114,11 @@
     await save();
     current = await api(`/clients/${current.record_id}/invoice-pdf`, "POST", { invoiceNumber, expectedVersion: current.version });
     render(); notice(`Invoice ${invoiceNumber} PDF generated. Download it from the files list below.`);
+  }));
+  byId("generate-business-plan-pdf").addEventListener("click", () => run(async () => {
+    await save();
+    current = await api(`/clients/${current.record_id}/business-plan-pdf`, "POST", { expectedVersion: current.version });
+    render(); notice("Business plan PDF generated. Download it from the files list below.");
   }));
   byId("add-post").addEventListener("click", () => { current.data.editable.socialPosts.push({ platform: "", caption: "", status: "draft" }); render(); });
   byId("add-task").addEventListener("click", () => { current.data.editable.tasks.push({ title: "", status: "todo", dueDate: "", assignee: "", priority: "medium" }); render(); });

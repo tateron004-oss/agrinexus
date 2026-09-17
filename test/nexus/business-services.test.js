@@ -196,6 +196,26 @@ test("document/form builder: generates a real service agreement, intake form and
   assert.match(files['documents/Application_Checklist.md'].content, /- \[ \] Application form completed/);
 });
 
+test("business plan builder: a real, editable, versioned plan document persists and exports as a real PDF", async () => {
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  assert.deepEqual(templates.defaultClientWorkspace(info).businessPlan, {
+    executiveSummary: "", marketAnalysis: "", productsServices: "", marketingSales: "", operationsPlan: "", financialPlan: "", fundingRequest: ""
+  });
+  const f = fixture(); const row = await f.service.create(f.context, { businessName: 'Cooperative', consent: true });
+  const editable = { ...row.data.editable, businessPlan: { ...row.data.editable.businessPlan,
+    executiveSummary: 'We sell surplus produce directly to local restaurants.',
+    financialPlan: 'Break even in month 8 with 20 active restaurant accounts.'
+  } };
+  const updated = await f.service.update(f.context, row.record_id, { expectedVersion: 1, editable });
+  assert.equal(updated.data.editable.businessPlan.executiveSummary, 'We sell surplus produce directly to local restaurants.');
+  const withPdf = await f.service.exportBusinessPlan(f.context, row.record_id, { expectedVersion: updated.version });
+  const file = withPdf.data.files['business-plan/Business_Plan.pdf'];
+  assert.ok(file); assert.equal(file.binary, true); assert.equal(file.contentType, 'application/pdf');
+  const bytes = Buffer.from(file.content, 'base64');
+  assert.equal(bytes.subarray(0, 4).toString(), '%PDF');
+  await assert.rejects(() => f.service.exportBusinessPlan(f.context, row.record_id, { expectedVersion: 1 }), error => error.code === 'business_version_conflict');
+});
+
 test("invoice/receipt generator: a real, printable PDF is produced from an invoice's header and line items", async () => {
   const f = fixture(); const row = await f.service.create(f.context, { businessName: 'Cooperative', consent: true });
   const editable = { ...row.data.editable,

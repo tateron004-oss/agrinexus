@@ -478,6 +478,15 @@ function defaultClientWorkspace(info) {
       email: "Add email",
       proof: "Trusted local service with a simple process and responsive follow-up."
     },
+    businessPlan: {
+      executiveSummary: "",
+      marketAnalysis: "",
+      productsServices: "",
+      marketingSales: "",
+      operationsPlan: "",
+      financialPlan: "",
+      fundingRequest: ""
+    },
     assistantStudio: {
       name: `${detail.businessName} AI Concierge`,
       purpose: "Help customers, capture leads, support phone and website inquiries, draft social posts, and keep the owner organized.",
