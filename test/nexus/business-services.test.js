@@ -169,6 +169,22 @@ test("customer/donor tracker: leads carry a type and a real follow-up date, back
   assert.equal(editable.leads[1].followUpDate, '');
 });
 
+test("marketing content creator: generates a real printable flyer, a newsletter draft, and a promotional email draft", () => {
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  const editable = templates.defaultClientWorkspace(info);
+  const files = filesFor(info, editable, 'marketing');
+  assert.deepEqual(Object.keys(files).sort(), ['marketing/Newsletter.md', 'marketing/Promotional_Email.md', 'marketing/flyer/flyer.css', 'marketing/flyer/index.html']);
+  assert.match(files['marketing/flyer/index.html'].content, /<title>Cooperative Flyer<\/title>/);
+  assert.match(files['marketing/flyer/index.html'].content, /link rel="stylesheet" href="flyer\.css"/);
+  assert.match(files['marketing/Newsletter.md'].content, /Cooperative Newsletter/);
+  assert.match(files['marketing/Promotional_Email.md'].content, /confirm recipient consent, add a real unsubscribe link/);
+  // The flyer's own ZIP path must actually be packageable (nested folder,
+  // matching the same landing-page/website pattern already shipped).
+  const { packageFiles } = require('../../nexus/business/package');
+  const archive = packageFiles(files);
+  assert.equal(archive.readUInt32LE(0), 0x04034b50);
+});
+
 test("document/form builder: generates a real service agreement, intake form and application checklist, each disclosing it is a template", () => {
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
   const editable = templates.defaultClientWorkspace(info);
@@ -230,6 +246,19 @@ test("draft ZIP keeps asset directories and rejects path traversal", () => {
   while (offset < directory) { const size = archive.readUInt32LE(offset + 18), length = archive.readUInt16LE(offset + 26); names.push(archive.subarray(offset + 30, offset + 30 + length).toString()); offset += 30 + length + size; }
   assert.deepEqual(names, ['website/index.html', 'website/styles.css']);
   assert.throws(() => packageFiles({ '../escape': { content: 'x' } }), /path/);
+});
+
+test("draft ZIP decodes binary files from base64 instead of embedding the literal base64 text", () => {
+  // Confirmed as a real bug while building the marketing content creator:
+  // an invoice PDF (PR #454) stores its real bytes as base64 text with
+  // binary:true. Naively Buffer.from()-ing that string embeds the literal
+  // base64 characters as the ZIP entry's "bytes" -- a corrupted .pdf that
+  // looks present but doesn't open. This locks in the fix.
+  const { packageFiles } = require('../../nexus/business/package');
+  const realPdfBytes = Buffer.from('%PDF-1.4 fake pdf content for test');
+  const archive = packageFiles({ 'invoices/INV-1001.pdf': { content: realPdfBytes.toString('base64'), binary: true } });
+  const nameLen = archive.readUInt16LE(26), dataLen = archive.readUInt32LE(18), dataStart = 30 + nameLen;
+  assert.ok(archive.subarray(dataStart, dataStart + dataLen).equals(realPdfBytes));
 });
 
 test("signed checkout events bind identity and ignore paid-state rollback and replay", async () => {
