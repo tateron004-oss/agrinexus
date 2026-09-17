@@ -198,14 +198,33 @@ test("browser capability verifier binds visible interaction to stable authoritat
 
 test("browser capability evidence hydrates an authenticated Standard User shell", () => {
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
-  assert.match(source, /submitRegisteredStandardUserLogin\(page, base, loginLifecycle\)/);
+  assert.match(source, /submitRegisteredStandardUserLogin\(page, base, standardUserCredentials, loginLifecycle\)/);
   assert.match(source, /url\.pathname === "\/api\/login"/);
   assert.match(source, /response\.request\(\)\.method\(\) === "POST"/);
   assert.match(source, /waitForAuthenticatedStandardUserShell\(page, base\)/);
   assert.match(source, /return shell\?\.user\?\.role \|\| ""/);
   assert.match(source, /page\.reload/);
   assert.match(source, /lastRole === "Standard User" && shellState\.appVisible && !shellState\.loginVisible/);
-  assert.match(source, /Registered Standard User login request was not observed within 30000ms/);
+  assert.match(source, /Registered Standard User login request was not observed within 30000ms \(TimeoutError\), even after a re-fill retry\./);
+});
+
+test("a login submit that never reaches the server re-fills any emptied field and retries once before failing", () => {
+  const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
+  const start = source.indexOf("async function submitRegisteredStandardUserLogin(");
+  const end = source.indexOf("\nasync function waitForCurrentLoginSubmitListener(");
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const fn = source.slice(start, end);
+  // Confirmed live in production: the password field can read back empty
+  // immediately after a correctly-targeted click on the real submit button,
+  // silently no-opping the app's own submit guard and leaving the POST to
+  // /api/login unsent. A single re-fill-and-retry survives that without
+  // masking a genuine, repeated failure to reach the server.
+  assert.match(fn, /attemptRegisteredStandardUserLoginClick\(page, base, lifecycle, ""\)/);
+  assert.match(fn, /attemptRegisteredStandardUserLoginClick\(page, base, lifecycle, "Retry"\)/);
+  assert.match(fn, /getByLabel\("Password", \{ exact: true \}\)\.inputValue\(\)/);
+  assert.match(fn, /getByLabel\("Email", \{ exact: true \}\)\.inputValue\(\)/);
+  assert.ok(fn.indexOf("if (!response) {") < fn.indexOf('attemptRegisteredStandardUserLoginClick(page, base, lifecycle, "Retry")'));
 });
 test("live probe receipts remain exact-release and fail on stale identities", () => {
   const sha = "a".repeat(40); const probe = { url: "https://production/health", status: 200, ok: true, body: { releaseSha: sha } };
