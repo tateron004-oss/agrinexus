@@ -75,6 +75,33 @@ test('a real image search still runs when the tool-calling model paraphrases awa
  assert.match(result.images[0].imageUrl, /primary/);
 });
 
+test('the Wikimedia search query strips filler words and trailing punctuation instead of sending a near-unmatchable phrase', async () => {
+ // Confirmed live in production, and directly against the real Wikimedia
+ // API: "Show me current images of healthy maize leaves." reduced to
+ // "current of healthy maize leaves." (filler words "current"/"of" left in,
+ // trailing period left in) -- zero real search results. The clean
+ // "healthy maize leaves" query returns real results every time. This was
+ // the actual, confirmed root cause of the production "images disabled"
+ // symptom -- not a missing User-Agent, which real network testing
+ // (browser, curl, and Node fetch, all from the production container)
+ // ruled out.
+ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+ const source=fs.readFileSync(path.join(__dirname,'../../server.js'),'utf8');
+ const begin=source.indexOf('async function executeNexusOpenAiNativeTool('),end=source.indexOf('\nfunction nexusGenesisWorkspaceAction(',begin);
+ assert.ok(begin>=0&&end>begin);
+ let capturedSearchTerm=null;
+ const sandbox={URL,process:{env:{}},sanitizePilotText:value=>String(value||''),
+ publicProviderHeaders:()=>({'user-agent':'AgriNexus/1.0 rural-health-agritech-investor-platform',accept:'application/json'}),
+ fetchWithTimeout:async(url)=>{capturedSearchTerm=url.searchParams.get('gsrsearch');return {ok:true,json:async()=>({query:{pages:{}}})};},
+ require:name=>{assert.equal(name,'./server/nexus-open-image-fallback');return {searchOpenImages:async()=>[]}},
+ nexusOpenAiNativeToolReceipt:()=>({testReceipt:true}),nexusRealProviders:{vision:{analyze:async()=>({status:'blocked'})}},
+ nexusOpenAiNativeProviderToolResult:(_db,_common,result)=>result,
+ nexusMentalHealthBehavioralWellness:require('../../public/nexus-mental-health-behavioral-wellness.js')};
+ vm.createContext(sandbox);vm.runInContext(source.slice(begin,end)+'\nthis.run=executeNexusOpenAiNativeTool;',sandbox);
+ await sandbox.run({}, {}, 'nexus_visual_analysis', { command: 'Show me current images of healthy maize leaves.', capability: 'visual-search' });
+ assert.equal(capturedSearchTerm, 'filetype:bitmap healthy maize leaves');
+});
+
 test('the server-side Wikimedia image search identifies itself with a real User-Agent, not an anonymous default', async () => {
  // Same missing-User-Agent issue as the Openverse fallback -- confirmed
  // live that this exact request consistently failed from production
