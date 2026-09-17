@@ -205,6 +205,31 @@ test("a current-source question has explicit Live Knowledge ownership", () => {
   assert.equal(completeLiveKnowledgePlan("Assess yellow leaves on my maize crop and show sources.", catalog), null);
 });
 
+// Confirmed live in production: this exact phrase (the browser-capability
+// acceptance probe's own live-knowledge scenario text) was misrouted to
+// agriculture instead, because agricultureAdvicePlan runs first in
+// OpenEndedPlanner.plan() and a crop name plus a symptom/question word is
+// broad enough to also claim an explicit request for sourced, current
+// knowledge. completeLiveKnowledgePlan alone correctly recognized this
+// phrase (see the test above) -- the bug only existed in the full
+// dispatch's priority ordering, which no test exercised end to end.
+test("the full planner resolves a maize-plus-current-sources question to live-knowledge, not agriculture", async () => {
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("must not reach the model"); } },
+    tools: { list: async () => [{ tool_id: "knowledge.search", domain: "knowledge", description: "Search", risk_tier: "low", availability: "available" }] },
+    applications: new ApplicationRegistry(defaultApplicationManifests()) });
+  const plan = await planner.plan({ command: { ...command, text: "Why do maize leaves turn yellow? Answer with current sources." }, context });
+  assert.equal(plan.application, "live-knowledge");
+  assert.equal(plan.steps[0].toolId, "knowledge.search");
+});
+
+test("the full planner still resolves a plain crop-diagnosis question to agriculture", async () => {
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("must not reach the model"); } },
+    tools: { list: async () => [{ tool_id: "knowledge.search", domain: "knowledge", description: "Search", risk_tier: "low", availability: "available" }] },
+    applications: new ApplicationRegistry(defaultApplicationManifests()) });
+  const plan = await planner.plan({ command: { ...command, text: "Why do maize leaves turn yellow?" }, context });
+  assert.equal(plan.application, "agriculture");
+});
+
 test("a complete mobile clinic search has an executable Mobile Clinic plan", () => {
   const { completeMobileClinicPlan } = require("../../nexus/brain/planner.js");
   const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "clinic.find" }] };

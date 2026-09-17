@@ -91,6 +91,17 @@ function agricultureAdvicePlan(text, catalog) {
   const agricultureSubject = /\b(maize|corn|cassava|rice|wheat|sorghum|millet|beans?|crop|farm|farmer|soil|irrigation|pest|plant disease|livestock|harvest)\b/i.test(goal);
   const adviceRequest = /[?]|\b(why|what|how|when|where|help|advise|advice|assess|diagnose|inspect|treat|prevent|manage|improve|yellow|wilting|spots?|dying)\b/i.test(goal);
   if (!agricultureSubject || !adviceRequest) return null;
+  // Confirmed live: "Why do maize leaves turn yellow? Answer with current
+  // sources." was misrouted to agriculture -- this matcher runs first in
+  // OpenEndedPlanner.plan() and a crop name plus a symptom/question word is
+  // broad enough to also swallow an explicit request for sourced, current
+  // knowledge. Defer to completeLiveKnowledgePlan's own narrower trigger
+  // (a question word/"?" plus an explicit current/latest/live/sources
+  // request) whenever it would also match this text, instead of duplicating
+  // and risking drifting from its regex. If live-knowledge isn't available
+  // in this catalog, completeLiveKnowledgePlan returns null and agriculture
+  // still handles the request as a reasonable fallback.
+  if (completeLiveKnowledgePlan(text, catalog)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "knowledge.search") ||
       !catalog.applications.some(app => app.applicationId === "agriculture")) return null;
   const crop = goal.match(/\b(maize|corn|cassava|rice|wheat|sorghum|millet|beans?)\b/i)?.[1]?.toLowerCase() || "crop";
