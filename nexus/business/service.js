@@ -76,6 +76,14 @@ function normalizeEditable(info, input = {}) {
     // persisted an actual funding opportunity, its deadline, or its
     // application status across visits.
     grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }),
+    // Tool 5 of the small-business/nonprofit suite: appointment scheduling.
+    // A real Google Calendar integration already exists (server/providers/
+    // calendarProvider.js, createEvent()) but was only reachable through
+    // voice/typed nexus_calendar commands, never surfaced in this
+    // workspace. calendarEventId/calendarLink stay empty until an
+    // appointment is actually synced -- an unsynced row is honestly just a
+    // local plan, never mistaken for a real calendar booking.
+    appointments: rows(input.appointments === undefined ? starter.appointments : input.appointments, { title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
     // Tool 1: a real, editable, versioned business plan document -- distinct
@@ -217,6 +225,29 @@ class BusinessService {
       expectedVersion: record.version,
       data: { ...record.data, files: { ...record.data.files, [fileName]: { content: pdf.toString("base64"), binary: true, contentType: "application/pdf" } } },
       provenance: { source: "owner-requested-invoice-pdf", invoiceNumber, externalAction: false } });
+  }
+  async syncAppointment(context, recordId, body) {
+    await this.authorize(context, true); await this.consent(context);
+    if (body.confirmed !== true) fail("business_confirmation_required", "Confirm creating a real calendar event first.", 409);
+    const record = await this.owned(context, recordId);
+    if (body.expectedVersion !== record.version) fail("business_version_conflict", "Reload the current workspace before syncing this appointment.", 409);
+    const index = Number(body.appointmentIndex);
+    const appointments = record.data.editable.appointments;
+    if (!Number.isInteger(index) || !appointments[index]) fail("business_appointment_not_found", "No appointment at that position exists in this workspace.", 404);
+    const appointment = appointments[index];
+    if (!this.providers.calendar) fail("business_provider_unavailable", "Calendar sync is unavailable.", 503);
+    const result = await this.providers.calendar({ title: appointment.title, start: appointment.start,
+      end: appointment.end, notes: appointment.notes });
+    // A successful sync can still be the local demo double's simulated
+    // fallback (no real credentials configured) -- never label that the
+    // same as a real, provider-verified booking.
+    const synced = appointment => ({ ...appointment,
+      calendarEventId: result.eventId || "", calendarLink: result.htmlLink || "",
+      status: result.providerVerified ? "synced" : "synced-simulated" });
+    const updatedAppointments = appointments.map((item, itemIndex) => itemIndex === index ? synced(item) : item);
+    return this.repository.update({ tenantId: context.tenantId, recordId, actorId: context.userId, expectedVersion: record.version,
+      data: { ...record.data, editable: { ...record.data.editable, appointments: updatedAppointments } },
+      provenance: { source: "owner-requested-calendar-sync", externalAction: true, providerVerified: Boolean(result.providerVerified) } });
   }
   async exportBusinessPlan(context, recordId, body) {
     await this.authorize(context, true); await this.consent(context);
