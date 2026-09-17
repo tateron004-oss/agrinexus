@@ -9,7 +9,8 @@ test('recovered owner-recipient call coverage preserves explicit identity and co
  const context={process:{env},sanitizePilotText:v=>String(v||''),firstPresentEnvValue:(e,keys)=>keys.map(k=>e[k]).find(Boolean)||'',
  nexusRealProviders:{twilio:{startCall:async args=>{calls.push(args);return {status:args.confirmed===true?'mock-confirmed':'needs-confirmation'};}}},
  nexusOpenAiNativeProviderToolResult:(_db,_common,result)=>result,
- withActionLifecycle:async(_db,{execute})=>execute()};
+ withActionLifecycle:async(_db,{execute})=>execute(),
+ nexusMentalHealthBehavioralWellness:require('../../public/nexus-mental-health-behavioral-wellness.js')};
  vm.createContext(context);vm.runInContext(source.slice(a,b)+'\n'+source.slice(start,end)+'\nthis.run=executeNexusOpenAiNativeTool;this.owner=nexusOpenAiNativeOwnerTestRecipient;',context);
  assert.equal(context.owner('call someone',{},env),'');assert.equal(context.owner('call my owner test recipient',{},env),env.OWNER_TEST_RECIPIENT_NUMBER);
  assert.equal((await context.run({}, {}, 'nexus_communications',{command:'call my owner test recipient',capability:'communications',channel:'call',confirmed:false})).status,'needs-confirmation');

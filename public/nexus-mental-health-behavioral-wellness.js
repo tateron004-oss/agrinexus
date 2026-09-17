@@ -143,6 +143,17 @@
     /\b(my child|my mother|older adult|vulnerable adult).*\b(abused|neglected|unsafe|hurt)\b/i
   ];
 
+  // Previously only checked inline inside classifyState(), never in
+  // shouldHandle() -- a medical-emergency phrase like "chest pain" or
+  // "cannot breathe" would classify correctly (crisisOverride: true) if
+  // classifyState() ran, but shouldHandle() itself (the gate every caller
+  // checks first) returned false for the exact same text, so callers that
+  // gate on shouldHandle() before ever calling classifyState() silently
+  // skipped it.
+  const MEDICAL_EMERGENCY_PATTERNS = [
+    /\b(overdose|chest pain|can't breathe|cannot breathe|medical emergency)\b/i
+  ];
+
   const MENTAL_HEALTH_PATTERNS = [
     /\b(overwhelmed|need to talk|not feel like myself|anxious|anxiety|panic|stressed|stress|burned out|burnt out)\b/i,
     /\b(depressed|low mood|sad|hopeless|alone|lonely|grief|lost someone|bereavement|cannot sleep|insomnia)\b/i,
@@ -161,6 +172,7 @@
     if (!text) return false;
     return CRISIS_PATTERNS.some(pattern => pattern.test(text))
       || SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text))
+      || MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text))
       || MENTAL_HEALTH_PATTERNS.some(pattern => pattern.test(text));
   }
 
@@ -333,7 +345,7 @@
       };
     }
 
-    if (/\b(overdose|chest pain|can't breathe|cannot breathe|medical emergency)\b/i.test(text)) {
+    if (MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text))) {
       matchedSignals.push("medical_emergency_language");
       return {
         capabilityId: CAPABILITY_ID,

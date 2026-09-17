@@ -30,7 +30,8 @@ function loadExecuteTool({ twilio, email, calendar }) {
       email: email || {},
       calendar: calendar || {}
     },
-    nexusOpenAiNativeProviderToolResult: (_db, _common, result) => result
+    nexusOpenAiNativeProviderToolResult: (_db, _common, result) => result,
+    nexusMentalHealthBehavioralWellness: require("../../public/nexus-mental-health-behavioral-wellness.js")
   };
   vm.createContext(sandbox);
   vm.runInContext(
@@ -169,4 +170,37 @@ test("nexusOpenAiNativeProviderToolResult falls back to the old ok+status heuris
   const plainResult = { httpStatus: 200, body: { ok: true, status: "completed", message: "sent", data: { sid: "SMreal" } } };
   const output = run({}, { toolName: "nexus_communications", command: "text someone" }, plainResult);
   assert.equal(output.executionVerified, true, "call sites not wrapped by withActionLifecycle must keep their prior behavior unchanged");
+});
+
+// Confirmed by the production capability audit: OpenAI Realtime voice and
+// the Windows desktop wake listener both reach real tool execution through
+// this exact function (executeNexusOpenAiNativeTool) without ever passing
+// through the browser's own mental-health interceptor. These two tests
+// cover the fix added directly here, and double as a regression guard for
+// the false positive it could have introduced (a real "therapy session"
+// health/communications action must still go through, not get silently
+// replaced by a support redirect).
+test("a genuine crisis command is intercepted with the safety response before any provider is called, regardless of tool name", async () => {
+  let calls = 0;
+  const run = loadExecuteTool({
+    email: { send: async () => { calls += 1; return ok({ providerMessageId: "MSG1" }); } }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_email", { command: "I want to end my life", confirmed: true });
+  assert.equal(calls, 0, "the real email provider must never be called for a crisis message");
+  assert.equal(result.capability, "mental-health-behavioral-wellness");
+  assert.equal(result.status, "completed");
+  assert.match(result.response, /contact local emergency/i);
+  assert.equal(result.mentalHealth.classification.crisisOverride, true);
+});
+
+test("a real therapy/provider-mentioning action is not intercepted -- only genuine crisis language is", async () => {
+  let calls = 0;
+  const run = loadExecuteTool({
+    calendar: { createEvent: async () => { calls += 1; return ok({ eventId: "evt1" }); } }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_calendar", { command: "Book a calendar event with my therapy provider", confirmed: true });
+  assert.equal(result.capability !== "mental-health-behavioral-wellness", true,
+    "a plain mention of therapy/provider must not be treated as a crisis signal");
 });
