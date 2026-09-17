@@ -1966,6 +1966,25 @@
           </div>
           <div class="cards two">
             <article>
+              <div class="tag-row"><span>Authoritative runtime</span><span id="nexusRuntimeAuditCount">0 event(s)</span></div>
+              <h3>Nexus Runtime Audit Trail</h3>
+              <p>Everything Kyro's authoritative task engine did or attempted -- including every autonomous action -- from the real audit log, not the legacy activity feed above.</p>
+              <div id="nexusRuntimeAuditPanel" class="activity"><div>Click refresh to load the live audit trail.</div></div>
+              <div class="action-row"><button id="nexusRuntimeAuditRefreshBtn" type="button">Refresh audit trail</button></div>
+            </article>
+            <article>
+              <div class="tag-row"><span>Autonomy kill switch</span><span id="nexusAutonomyPauseState">unknown</span></div>
+              <h3>Autonomy Pause Control</h3>
+              <p>Pausing stops Kyro from creating any new autonomous task (proactive nudges, follow-ups). Tasks you asked for directly are never affected.</p>
+              <div id="nexusAutonomyPausePanel" class="activity"><div>Click refresh to load the current state.</div></div>
+              <div class="action-row">
+                <button id="nexusAutonomyPauseRefreshBtn" type="button">Refresh status</button>
+                <button id="nexusAutonomyPauseToggleBtn" type="button" class="primary">Pause autonomy</button>
+              </div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
               <h3>Production Readiness</h3>
               <div id="productionReadiness" class="rows"></div>
             </article>

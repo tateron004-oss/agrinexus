@@ -46858,6 +46858,85 @@ async function runAdminHealthCheckDirect() {
   }
 }
 
+// Phase 3 of the JARVIS-mode plan: the review surface over nexus/'s real
+// audit trail (GET /api/nexus/runtime/audit/events) -- distinct from
+// #adminAudit above, which reads the legacy db.profile activity feed, not
+// the authoritative task engine's own audit log.
+let nexusAutonomyPausedCache = false;
+
+async function loadNexusRuntimeAuditTrail() {
+  const panel = $("#nexusRuntimeAuditPanel");
+  const countEl = $("#nexusRuntimeAuditCount");
+  const button = $("#nexusRuntimeAuditRefreshBtn");
+  if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); button.textContent = "Loading..."; }
+  try {
+    const result = await request("/api/nexus/runtime/audit/events?limit=50");
+    const events = result.events || [];
+    if (countEl) countEl.textContent = `${events.length} event(s)`;
+    if (panel) {
+      panel.innerHTML = events.length
+        // Real nexus_audit_events columns (nexus/audit/repository.js):
+        // event_type, outcome, task_id, occurred_at -- confirmed directly
+        // against a live production response; there is no "component" column.
+        ? events.map(event => `<div><strong>${escapeHtml(event.event_type || "event")}</strong><span>${escapeHtml(event.outcome || "")}${event.task_id ? ` - task ${escapeHtml(event.task_id)}` : ""}</span><small>${escapeHtml(event.occurred_at || "")}</small></div>`).join("")
+        : "<div>No audit events recorded yet.</div>";
+    }
+  } catch (error) {
+    if (panel) panel.innerHTML = `<div>Could not load the audit trail: ${escapeHtml(error.message || "Request failed")}</div>`;
+  } finally {
+    if (button) { button.disabled = false; button.removeAttribute("aria-busy"); button.textContent = "Refresh audit trail"; }
+  }
+}
+
+// The tenant-wide autonomy kill switch (Phase 3c): GET/POST
+// /api/nexus/runtime/autonomy/pause, backed by AutonomyControlRepository.
+// Pausing only ever blocks NEW autonomous task creation (situational-
+// awareness sweeps) -- it never touches a task the user asked for directly.
+async function loadNexusAutonomyPauseStatus() {
+  const panel = $("#nexusAutonomyPausePanel");
+  const stateEl = $("#nexusAutonomyPauseState");
+  const toggleButton = $("#nexusAutonomyPauseToggleBtn");
+  const refreshButton = $("#nexusAutonomyPauseRefreshBtn");
+  if (refreshButton) { refreshButton.disabled = true; refreshButton.setAttribute("aria-busy", "true"); }
+  try {
+    const result = await request("/api/nexus/runtime/autonomy/pause");
+    nexusAutonomyPausedCache = result.paused === true;
+    if (stateEl) stateEl.textContent = nexusAutonomyPausedCache ? "paused" : "active";
+    if (toggleButton) { toggleButton.textContent = nexusAutonomyPausedCache ? "Resume autonomy" : "Pause autonomy"; toggleButton.disabled = false; }
+    if (panel) {
+      // Real fields (AutonomyControlRepository.status(), confirmed against a
+      // live production response): paused, reason, changedBy, changedAt.
+      panel.innerHTML = [
+        row("State", nexusAutonomyPausedCache ? "Paused - no new autonomous tasks" : "Active - Kyro can create autonomous tasks"),
+        row("Reason", result.reason || "None recorded"),
+        row("Changed by", result.changedBy || "Never changed"),
+        row("Changed at", result.changedAt || "N/A")
+      ].join("");
+    }
+  } catch (error) {
+    if (panel) panel.innerHTML = `<div>Could not load autonomy status: ${escapeHtml(error.message || "Request failed")}</div>`;
+    if (toggleButton) toggleButton.disabled = true;
+  } finally {
+    if (refreshButton) { refreshButton.disabled = false; refreshButton.removeAttribute("aria-busy"); }
+  }
+}
+
+async function toggleNexusAutonomyPause() {
+  const button = $("#nexusAutonomyPauseToggleBtn");
+  const nextPaused = !nexusAutonomyPausedCache;
+  if (button) { button.disabled = true; button.setAttribute("aria-busy", "true"); }
+  try {
+    await request("/api/nexus/runtime/autonomy/pause", { method: "POST",
+      body: { paused: nextPaused, reason: nextPaused ? "Paused from Admin Control Room" : "Resumed from Admin Control Room" } });
+    await loadNexusAutonomyPauseStatus();
+    toast(nextPaused ? "Kyro's autonomous task creation is now paused" : "Kyro's autonomous task creation is now active");
+  } catch (error) {
+    toast(error.message || "Could not change autonomy state");
+  } finally {
+    if (button) button.removeAttribute("aria-busy");
+  }
+}
+
 function setLiveServiceCheckStatus(html) {
   const adminPanel = $("#liveServiceCheckPanel");
   const inlineStatus = $("#liveServiceCheckInlineStatus");
@@ -62972,6 +63051,12 @@ function bindStatic() {
   if (remoteLaunchKitBtn) remoteLaunchKitBtn.onclick = runRemoteLaunchKit;
   const adminHealthCheck = $("#adminHealthCheck");
   if (adminHealthCheck) adminHealthCheck.onclick = runAdminHealthCheckDirect;
+  const nexusRuntimeAuditRefreshBtn = $("#nexusRuntimeAuditRefreshBtn");
+  if (nexusRuntimeAuditRefreshBtn) nexusRuntimeAuditRefreshBtn.onclick = loadNexusRuntimeAuditTrail;
+  const nexusAutonomyPauseRefreshBtn = $("#nexusAutonomyPauseRefreshBtn");
+  if (nexusAutonomyPauseRefreshBtn) nexusAutonomyPauseRefreshBtn.onclick = loadNexusAutonomyPauseStatus;
+  const nexusAutonomyPauseToggleBtn = $("#nexusAutonomyPauseToggleBtn");
+  if (nexusAutonomyPauseToggleBtn) nexusAutonomyPauseToggleBtn.onclick = toggleNexusAutonomyPause;
   const liveServiceCheck = $("#liveServiceCheckBtn");
   if (liveServiceCheck) liveServiceCheck.onclick = runLiveServiceCheck;
   const liveServiceCheckFromIntegrations = $("#liveServiceCheckFromIntegrations");

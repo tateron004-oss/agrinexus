@@ -28077,7 +28077,12 @@ function missionBrainCommandResponse(db, user, text, options = {}) {
   const first = brain.nextActions[0] || brain.missionSteps[0] || null;
   return {
     intent: "agent.mission_brain",
-    response: `Nexus Mission Brain is active. I read the goal, checked context, memory, providers, map intelligence, safety, role mode, and next actions. Confidence is ${Math.round(brain.confidence * 100)}%. I planned ${brain.missionSteps.length} step(s), found ${brain.proactiveAlerts.length} alert(s), and ${brain.safety.confirmationRequired ? "will require confirmation before sensitive actions" : "can guide the next low-risk step"}. Recommended next step: ${first?.title || first?.action || "continue guided mission"}.`,
+    // brain.disclosureNotice (legacyIntelligenceDisclosure()) is real data on
+    // every mission-brain run, but this conversational path -- unlike the
+    // frontier/network/ecosystem/executive/orchestration dashboards -- has no
+    // dedicated UI panel to render it into, so the spoken/displayed response
+    // is the only user-visible surface this disclosure can reach.
+    response: `Nexus Mission Brain is active. I read the goal, checked context, memory, providers, map intelligence, safety, role mode, and next actions. Confidence is ${Math.round(brain.confidence * 100)}%. I planned ${brain.missionSteps.length} step(s), found ${brain.proactiveAlerts.length} alert(s), and ${brain.safety.confirmationRequired ? "will require confirmation before sensitive actions" : "can guide the next low-risk step"}. Recommended next step: ${first?.title || first?.action || "continue guided mission"}. ${brain.disclosureNotice}`,
     status: brain.status,
     metadata: {
       conversationMode: true,
