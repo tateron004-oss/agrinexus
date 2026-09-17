@@ -754,13 +754,22 @@ async function run(env = process.env) {
   }
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   await installMapsCommandBoundRenderDiagnostics(page);
-  const visibleIngress = [];
+  const visibleIngress = []; const scenarioFailures = [];
+  // Same resilience fix as the SCENARIOS loop below, and for the same
+  // confirmed-live reason: this loop ran before it, with no per-item
+  // recovery, so a single flaky application here (most often "maps") threw
+  // straight out of the whole run and meant the SCENARIOS loop -- and every
+  // capability cutover it performs, including "lists" -- never even started.
   for (const application of ["live-knowledge", "maps", "workforce", "documents", "images"]) {
-    visibleIngress.push(await submitVisibleCommand(page, SCENARIOS[application], application));
+    try {
+      visibleIngress.push(await submitVisibleCommand(page, SCENARIOS[application], application));
+    } catch (error) {
+      scenarioFailures.push({ application: `visible-ingress:${application}`, error: String(error?.message || error) });
+    }
   }
   await reloadAuthenticatedShell(page);
   await requireVisibleAuthoritativeTypedIngress(page);
-  const capabilityProbes = []; const workspaceProbes = []; const scenarioFailures = [];
+  const capabilityProbes = []; const workspaceProbes = [];
   async function runScenario(application, text) {
       const execute = async phase => {
         let turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,

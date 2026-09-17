@@ -37,3 +37,22 @@ test("one capability scenario's failure does not stop later scenarios from getti
   assert.ok(afterLoop.indexOf("fs.writeFileSync(probeFile") < afterLoop.indexOf("if (scenarioFailures.length)"),
     "evidence for scenarios that DID succeed must still be written before the step fails for the ones that didn't");
 });
+
+test("the earlier visible-ingress loop is also resilient, not just the cutover loop", () => {
+  // Confirmed live in production: this separate, EARLIER loop runs before
+  // the SCENARIOS/runScenario loop and had the exact same bug -- no
+  // per-item recovery, so one flaky application (again, "maps") threw
+  // straight out of the whole run before the cutover loop -- and every
+  // capability cutover it performs, including "lists" -- ever started.
+  const ingressLoopStart = probe.indexOf('for (const application of ["live-knowledge", "maps", "workforce", "documents", "images"])');
+  assert.notEqual(ingressLoopStart, -1);
+  const ingressLoopEnd = probe.indexOf("await reloadAuthenticatedShell(page);", ingressLoopStart);
+  const ingressLoopBody = probe.slice(ingressLoopStart, ingressLoopEnd);
+  assert.match(ingressLoopBody, /try\s*\{\s*visibleIngress\.push\(await submitVisibleCommand\(page, SCENARIOS\[application\], application\)\);\s*\}\s*catch \(error\) \{/,
+    "each visible-ingress application must be individually try/caught so one failure cannot prevent the cutover loop from running at all");
+  const catchStart = ingressLoopBody.indexOf("} catch (error) {");
+  const catchBody = ingressLoopBody.slice(catchStart, ingressLoopBody.indexOf("}", catchStart + 1));
+  assert.doesNotMatch(catchBody, /\bthrow\b/);
+  assert.doesNotMatch(catchBody, /\breturn\b/);
+  assert.match(catchBody, /scenarioFailures\.push\(/);
+});
