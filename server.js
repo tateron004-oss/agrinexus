@@ -17850,7 +17850,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, or to add a project task or mark/complete/update a task's status, for their business or nonprofit workspace, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, or to add/schedule an appointment or sync an appointment to their calendar, for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks to see, find, show, or play images, photos, pictures, or videos of anything (including crop damage, pests, disease, or any other subject), you must call nexus_visual_analysis with that request. This is a real search (Wikimedia Commons for images, YouTube/Wikimedia Commons for videos) — never say visual or video search is disabled without calling it first.",
@@ -18266,7 +18266,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_marketplace_logistics", "Run Nexus marketplace, buyer/seller, vendor research, logistics, shipment, route, and no-payment/no-purchase guarded support.", "commerce-preparation"),
     tool("nexus_communications", "Run Nexus SMS, WhatsApp, email, phone, Telegram, and message-preparation workflows. Sending/calling remains confirmation- and credential-gated.", "high-risk-confirmation-required"),
     tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for structured task support.", "workflow-preparation"),
-    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates); also add a customer/donor/lead/sponsor/volunteer, log or record an income or expense transaction, create an invoice or receipt, add a line item to an invoice, generate/print an invoice PDF, add/track a grant or funding opportunity and update its status, or add a project task and mark/complete/update its status, in that workspace through the existing Nexus business-services backend.", "business-assistant-preparation"),
+    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates); also add a customer/donor/lead/sponsor/volunteer, log or record an income or expense transaction, create an invoice or receipt, add a line item to an invoice, generate/print an invoice PDF, add/track a grant or funding opportunity and update its status, add a project task and mark/complete/update its status, or add an appointment and sync it to the configured real calendar provider, in that workspace through the existing Nexus business-services backend.", "business-assistant-preparation"),
     tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
     tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
@@ -18507,7 +18507,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to play, pause, resume, or stop music, a song, an artist, an album, or a playlist -- including a plain 'play <artist> <title>' request with no other context -- you must call nexus_general_conversation. This is never a communications request: do not call nexus_communications for a request to play a song just because a person's or artist's name is mentioned in it.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, or to add a project task or mark/complete/update a task's status, for their business or nonprofit workspace, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, or to add/schedule an appointment or sync an appointment to their calendar, for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "recentTurns shows the actual conversation history in order. If the most recent assistant turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user's new message is a confirmation (yes, confirm, confirmed, go ahead, do it, that's right), you must call the SAME tool again with the SAME arguments reconstructed from recentTurns (title, content, recipient, format, etc.) plus confirmed: true. Never just repeat the confirmation request back to the user — a user who already said yes has confirmed.",
     "If recentTurns shows a mental-health crisis, self-harm, or emergency-safety turn, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, marketplace, or any other everyday task), answer the current request plainly and factually using the real tool result. Do not re-open, repeat, or extend crisis-support or 'your safety comes first' language into an answer to an unrelated request — that reads as dismissive of a real request and confusing after a crisis has already been acknowledged. Only continue crisis-support framing when the user's current message itself still relates to safety, self-harm, or the same crisis topic.",
@@ -19048,6 +19048,40 @@ function nexusOpenAiNativeExtractTaskStatusArgs(command = "", args = {}) {
 function nexusOpenAiNativeResolveTask(tasks, command = "") {
   const text = String(command || "").toLowerCase();
   return tasks.find(task => task.title && text.includes(String(task.title).toLowerCase()));
+}
+
+function nexusOpenAiNativeExtractAppointmentArgs(command = "", args = {}) {
+  const text = String(command || "");
+  // Stops the title capture before an "on"/"at" date-time clause (or a
+  // comma/period/end) so "appointment called Client meeting on Friday at
+  // 2pm" doesn't swallow the date/time into the title.
+  const titleMatch = text.match(/\bappointment\s+(?:for|with|called|named|titled)\s+["']?(.+?)["']?(?=\s+(?:on|at)\s+|[,.]|$)/i)
+    || text.match(/\b(?:called|named|titled)\s+["']?(.+?)["']?(?=\s+(?:on|at)\s+|[,.]|$)/i);
+  // Stored as free text rather than parsed into a canonical date/time --
+  // the same choice this workspace already makes for grant deadlines --
+  // since reliably parsing a date/time out of open speech is out of scope
+  // for a regex extractor; the row is still editable in Business services.
+  const startMatch = text.match(/\b(?:on|at)\s+([^"'.,\n]{3,60})$/i);
+  return {
+    title: sanitizePilotText(args.title || (titleMatch ? titleMatch[1].trim() : ""), 200),
+    start: sanitizePilotText(args.start || (startMatch ? startMatch[1].trim() : ""), 60)
+  };
+}
+
+// Same containment-match strategy as nexusOpenAiNativeResolveGrant/Task,
+// returning an INDEX (not the row) since the real appointment-sync route
+// (nexus/business/service.js's syncAppointment) identifies the target row
+// by position, not by a stable id. Falls back to the sole not-yet-synced
+// appointment when the command names no title and exactly one candidate
+// exists -- the same single-item convenience nexusOpenAiNativeResolveBusinessClient
+// applies for a lone workspace -- and returns -1 when that's still ambiguous.
+function nexusOpenAiNativeResolveAppointmentIndex(appointments, command = "") {
+  const text = String(command || "").toLowerCase();
+  const named = appointments.findIndex(appointment => appointment.title && text.includes(String(appointment.title).toLowerCase()));
+  if (named !== -1) return named;
+  const unsynced = appointments.map((appointment, index) => ({ appointment, index }))
+    .filter(entry => entry.appointment.status !== "synced" && entry.appointment.status !== "synced-simulated");
+  return unsynced.length === 1 ? unsynced[0].index : -1;
 }
 
 function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
@@ -20696,6 +20730,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const wantsUpdateGrantStatus = /\b(?:mark|update|set|change)\b/i.test(command) && /\bgrant\b/i.test(command);
     const wantsAddTask = /\b(?:add|create|new)\b/i.test(command) && /\btask\b/i.test(command);
     const wantsUpdateTaskStatus = !wantsAddTask && /\b(?:mark|update|set|change|complete|finish)\b/i.test(command) && /\btask\b/i.test(command);
+    const wantsSyncAppointment = /\bsync\b/i.test(command) && /\b(appointment|calendar)\b/i.test(command);
+    const wantsAddAppointment = !wantsSyncAppointment && /\b(?:add|schedule|create|book|new)\b/i.test(command) && /\bappointment\b/i.test(command);
     try {
       if (wantsList) {
         const listing = await authoritativeNexusRuntime.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients", user: authoritativeUser });
@@ -20997,6 +21033,69 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           ...common, capability: "business-assistant", status: "completed", localOnly: true,
           response: `Set the "${target.title}" task status to "${statusArgs.status}" in "${workspaceName}".`,
           businessRecord: updated?.body || null
+        };
+      }
+      if (wantsAddAppointment) {
+        const appointment = nexusOpenAiNativeExtractAppointmentArgs(command, args);
+        if (!appointment.title) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: "What should I call this appointment?", missingInformation: ["title"] };
+        }
+        const resolved = await nexusOpenAiNativeResolveBusinessClient(authoritativeUser, command);
+        if (!resolved.client) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding appointments.", missingInformation: ["businessName"] };
+        }
+        const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+        const startPhrase = appointment.start ? ` on ${appointment.start}` : "";
+        if (!(args.confirmed === true || args.confirmation === true)) {
+          return {
+            ...common, capability: "business-assistant", status: "needs-confirmation", requiresConfirmation: true,
+            response: `I can add an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan. This does not book anything on a real calendar until you sync it. Should I go ahead?`
+          };
+        }
+        const editable = { ...resolved.client.data.editable, appointments: [...resolved.client.data.editable.appointments,
+          { title: appointment.title, start: appointment.start, end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }] };
+        const updated = await authoritativeNexusRuntime.businessRequest({
+          method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+          body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable },
+          user: authoritativeUser
+        });
+        return {
+          ...common, capability: "business-assistant", status: "completed", localOnly: true,
+          response: `Added an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan. Say "sync it to my calendar" when you want a real calendar event created.`,
+          businessRecord: updated?.body || null
+        };
+      }
+      if (wantsSyncAppointment) {
+        const resolved = await nexusOpenAiNativeResolveBusinessClient(authoritativeUser, command);
+        if (!resolved.client) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: "You do not have a business or nonprofit workspace yet.", missingInformation: ["businessName"] };
+        }
+        const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+        const appointments = resolved.client.data.editable.appointments;
+        const index = nexusOpenAiNativeResolveAppointmentIndex(appointments, command);
+        if (index === -1) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: `Which appointment in "${workspaceName}" should I sync? Name it exactly as you created it.`, missingInformation: ["title"] };
+        }
+        const target = appointments[index];
+        if (!(args.confirmed === true || args.confirmation === true)) {
+          return {
+            ...common, capability: "business-assistant", status: "needs-confirmation", requiresConfirmation: true,
+            response: `I can sync "${target.title}" to your configured calendar provider now, creating a real event. Should I go ahead?`
+          };
+        }
+        const synced = await authoritativeNexusRuntime.businessRequest({
+          method: "POST", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}/appointment-sync`,
+          body: { appointmentIndex: index, expectedVersion: resolved.client.version, confirmed: true },
+          user: authoritativeUser
+        });
+        const syncedAppointment = synced?.body?.data?.editable?.appointments?.[index];
+        const wasReal = syncedAppointment?.status === "synced";
+        return {
+          ...common, capability: "business-assistant", status: "completed", localOnly: true,
+          response: wasReal
+            ? `Synced "${target.title}" to your real calendar provider.`
+            : `Synced "${target.title}" using the local demo calendar double -- no real calendar provider is configured, so this is a labeled simulated event, not a real booking.`,
+          businessRecord: synced?.body || null
         };
       }
       const businessName = nexusOpenAiNativeExtractBusinessName(command, args);
