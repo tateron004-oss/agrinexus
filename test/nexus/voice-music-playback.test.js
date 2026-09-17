@@ -39,6 +39,23 @@ test("genre-keyword and 'by' phrasing still work, unaffected by the added capita
   assert.notEqual(musicAssistantIntent("play thriller by michael jackson"), null);
 });
 
+test("the active OpenAI-native system prompt explicitly instructs the model to call a tool for music/play requests", () => {
+  // Confirmed live in production: every other real capability has an
+  // explicit "you must call X" line in this prompt, but music had none at
+  // all -- the model's tool choice for a plain "Play <Artist> <Title>"
+  // request was observably inconsistent across otherwise-identical calls,
+  // sometimes landing on nexus_communications instead of
+  // nexus_general_conversation, with no music-specific instruction anywhere
+  // to correct it.
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../../server.js"), "utf8");
+  const start = source.indexOf("function nexusOpenAiNativeSystemPrompt(");
+  const end = source.indexOf("\nfunction ", start + 10);
+  const prompt = source.slice(start, end);
+  assert.match(prompt, /play, pause, resume, or stop music/i);
+  assert.match(prompt, /you must call nexus_general_conversation/);
+  assert.match(prompt, /never a communications request/i);
+});
+
 function loadDispatchGenesisWorkspaceAction({ playbackImpl, capabilityOpened = true } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
   const start = source.indexOf("function dispatchGenesisWorkspaceAction(");
