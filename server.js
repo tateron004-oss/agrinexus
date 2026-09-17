@@ -17850,7 +17850,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, or to create/generate a flyer, newsletter, or promotional email, for their business or nonprofit workspace, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks to see, find, show, or play images, photos, pictures, or videos of anything (including crop damage, pests, disease, or any other subject), you must call nexus_visual_analysis with that request. This is a real search (Wikimedia Commons for images, YouTube/Wikimedia Commons for videos) — never say visual or video search is disabled without calling it first.",
@@ -18266,7 +18266,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_marketplace_logistics", "Run Nexus marketplace, buyer/seller, vendor research, logistics, shipment, route, and no-payment/no-purchase guarded support.", "commerce-preparation"),
     tool("nexus_communications", "Run Nexus SMS, WhatsApp, email, phone, Telegram, and message-preparation workflows. Sending/calling remains confirmation- and credential-gated.", "high-risk-confirmation-required"),
     tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for structured task support.", "workflow-preparation"),
-    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates); also add a customer/donor/lead/sponsor/volunteer, log or record an income or expense transaction, create an invoice or receipt, add a line item to an invoice, generate/print an invoice PDF, add/track a grant or funding opportunity and update its status, add a project task and mark/complete/update its status, add an appointment and sync it to the configured real calendar provider, generate a service agreement, client intake form, and application checklist template, generate/print the business plan PDF, or generate a flyer, newsletter, and promotional email draft, in that workspace through the existing Nexus business-services backend.", "business-assistant-preparation"),
+    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates); also add a customer/donor/lead/sponsor/volunteer, log or record an income or expense transaction, create an invoice or receipt, add a line item to an invoice, generate/print an invoice PDF, add/track a grant or funding opportunity and update its status, add a project task and mark/complete/update its status, add an appointment and sync it to the configured real calendar provider, generate a service agreement, client intake form, and application checklist template, generate/print the business plan PDF, generate a flyer, newsletter, and promotional email draft, or get a computed business performance dashboard summary (income/expenses, customers/donors, invoices, grants, tasks, appointments), in that workspace through the existing Nexus business-services backend.", "business-assistant-preparation"),
     tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
     tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
@@ -18507,7 +18507,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to play, pause, resume, or stop music, a song, an artist, an album, or a playlist -- including a plain 'play <artist> <title>' request with no other context -- you must call nexus_general_conversation. This is never a communications request: do not call nexus_communications for a request to play a song just because a person's or artist's name is mentioned in it.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, or to create/generate a flyer, newsletter, or promotional email, for their business or nonprofit workspace, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "recentTurns shows the actual conversation history in order. If the most recent assistant turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user's new message is a confirmation (yes, confirm, confirmed, go ahead, do it, that's right), you must call the SAME tool again with the SAME arguments reconstructed from recentTurns (title, content, recipient, format, etc.) plus confirmed: true. Never just repeat the confirmation request back to the user — a user who already said yes has confirmed.",
     "If recentTurns shows a mental-health crisis, self-harm, or emergency-safety turn, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, marketplace, or any other everyday task), answer the current request plainly and factually using the real tool result. Do not re-open, repeat, or extend crisis-support or 'your safety comes first' language into an answer to an unrelated request — that reads as dismissive of a real request and confusing after a crisis has already been acknowledged. Only continue crisis-support framing when the user's current message itself still relates to safety, self-harm, or the same crisis topic.",
@@ -19082,6 +19082,34 @@ function nexusOpenAiNativeResolveAppointmentIndex(appointments, command = "") {
   const unsynced = appointments.map((appointment, index) => ({ appointment, index }))
     .filter(entry => entry.appointment.status !== "synced" && entry.appointment.status !== "synced-simulated");
   return unsynced.length === 1 ? unsynced[0].index : -1;
+}
+
+// Mirrors public/business-services.js's renderDashboard() computation
+// exactly -- same field names, same filters, same reduces -- so a voice
+// summary of "how's my business doing" is always numerically identical to
+// what the workspace's own dashboard section shows. Purely computed from
+// data already in the workspace; nothing here is estimated or simulated.
+function nexusOpenAiNativeComputeBusinessDashboard(editable) {
+  const income = editable.transactions.filter(row => row.type !== "expense").reduce((sum, row) => sum + row.amount, 0);
+  const expenses = editable.transactions.filter(row => row.type === "expense").reduce((sum, row) => sum + row.amount, 0);
+  const customers = editable.leads.filter(row => row.type === "customer").length;
+  const donors = editable.leads.filter(row => row.type === "donor").length;
+  const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
+  const volunteers = editable.leads.filter(row => row.type === "volunteer").length;
+  const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
+  const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
+  const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
+  const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
+  const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
+  return {
+    netIncome: income - expenses, income, expenses,
+    customers, donors, sponsors, volunteers,
+    invoiceTotal, unpaidInvoices,
+    grantsRequested, grantsAwarded,
+    openTasks, totalTasks: editable.tasks.length,
+    upcomingAppointments
+  };
 }
 
 function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
@@ -20710,6 +20738,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // "what" need to sit directly next to the noun they're asking about
     // (or in a "do I have" query) to actually mean a listing request.
     const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|admin[- ]assistant|workspace)s?";
+    // Checked ahead of wantsList below -- "show me my business dashboard"
+    // would otherwise also satisfy wantsList's show+workspace-noun trigger,
+    // but a dashboard request is the more specific, correct read of it.
+    const wantsBusinessDashboard = /\b(business|nonprofit)\b/i.test(command) && /\b(dashboard|doing|performing|performance summary|financial summary)\b/i.test(command);
     const wantsList = (
       (/\b(list|show)\b/i.test(command) && new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command))
       || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
@@ -20736,6 +20768,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
     const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft)\b/i.test(command);
     try {
+      if (wantsBusinessDashboard) {
+        const resolved = await nexusOpenAiNativeResolveBusinessClient(authoritativeUser, command);
+        if (!resolved.client) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+        }
+        const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+        const dashboard = nexusOpenAiNativeComputeBusinessDashboard(resolved.client.data.editable);
+        const response = `Here is the performance summary for "${workspaceName}": net income $${dashboard.netIncome.toFixed(2)} (income $${dashboard.income.toFixed(2)}, expenses $${dashboard.expenses.toFixed(2)}); ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers; $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+        return {
+          ...common, capability: "business-assistant", status: "completed", localOnly: true,
+          response,
+          businessDashboard: dashboard
+        };
+      }
       if (wantsList) {
         const listing = await authoritativeNexusRuntime.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients", user: authoritativeUser });
         const clients = listing?.body?.clients || [];

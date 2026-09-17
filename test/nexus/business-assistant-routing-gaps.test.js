@@ -270,3 +270,25 @@ test("'create/generate a flyer/newsletter/promotional email' is recognized as ge
   const plan = await callBusinessAssistant("Generate the business plan PDF");
   assert.equal(plan.status, "blocked");
 });
+
+// Voice access for Tool 10 (Business Performance Dashboard), the last of
+// the 10 business/nonprofit tools: "how's my business doing" computes the
+// same real, live numbers (net income, customers/donors, invoices, grants,
+// tasks, appointments) as the workspace's own dashboard section. Read-only,
+// so there is no local missing-field check and no confirmation gate before
+// the real database lookup -- the observable proof of routing is
+// "blocked"/PostgreSQL, matching every other no-local-field sub-intent.
+// The dashboard-vs-list distinction (a "show me my business dashboard"
+// phrasing would otherwise also satisfy wantsList's show+workspace-noun
+// trigger) is enforced by checking wantsBusinessDashboard first in the
+// code, verified by reading server.js rather than by a different test
+// outcome here -- both branches hit the same PostgreSQL failure with no
+// live database configured in this test environment.
+test("'how's my business doing'/'business performance dashboard' is recognized as a dashboard summary request", async () => {
+  const dashboard = await callBusinessAssistant("How's my business doing");
+  assert.equal(dashboard.status, "blocked");
+  assert.match(dashboard.response, /PostgreSQL/i);
+  const shown = await callBusinessAssistant("Show me my business performance dashboard");
+  assert.equal(shown.status, "blocked");
+  assert.match(shown.response, /PostgreSQL/i);
+});
