@@ -171,3 +171,27 @@ test("'mark/update a grant's status' is recognized as a status update, not addin
   assert.equal(withoutStatus.status, "needs-input");
   assert.equal(withoutStatus.missingInformation[0], "status");
 });
+
+// Voice access for Tool 5 (Project/Task Manager): add a task, and
+// mark/complete/update an existing one's status. "add|create|new" vs.
+// "mark|update|set|change|complete|finish" are checked so that adding a
+// task and completing one never collide (wantsAddTask is excluded from
+// wantsUpdateTaskStatus explicitly, since "update" alone doesn't imply
+// "not adding").
+test("'add a task' is recognized as creating a task, not a new workspace", async () => {
+  const withTitle = await callBusinessAssistant("Add a task to call the vendor, due Friday, assign to Sarah, high priority");
+  assert.equal(withTitle.status, "blocked");
+  assert.match(withTitle.response, /PostgreSQL/i);
+  const withoutTitle = await callBusinessAssistant("Add a new task");
+  assert.equal(withoutTitle.status, "needs-input");
+  assert.equal(withoutTitle.missingInformation[0], "title");
+});
+
+test("'mark/complete a task's status' is recognized as a status update, not creating a new task", async () => {
+  const withStatus = await callBusinessAssistant("Complete the task to follow up with the donor");
+  assert.equal(withStatus.status, "blocked");
+  assert.match(withStatus.response, /PostgreSQL/i);
+  const withoutStatus = await callBusinessAssistant("Update the task");
+  assert.equal(withoutStatus.status, "needs-input");
+  assert.equal(withoutStatus.missingInformation[0], "status");
+});
