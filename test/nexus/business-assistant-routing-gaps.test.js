@@ -235,3 +235,19 @@ test("'create/generate a service agreement/contract/intake form/application chec
   assert.equal(invoice.status, "blocked");
   assert.match(invoice.response, /PostgreSQL/i);
 });
+
+// Voice access for the Business Plan Builder: generate the real, printable
+// PDF of the already-saved business plan document. Scoped to the literal
+// phrase "business plan" plus a pdf/document word, so it doesn't collide
+// with the invoice-PDF generator (scoped to "invoice") or the document/form
+// builder (scoped to "service agreement"/"contract"/"intake form"/
+// "application checklist").
+test("'generate/print the business plan PDF' is recognized as exporting the business plan, not an invoice PDF or document templates", async () => {
+  const plan = await callBusinessAssistant("Generate the business plan PDF");
+  assert.equal(plan.status, "blocked");
+  assert.match(plan.response, /PostgreSQL/i);
+  const invoice = await callBusinessAssistant("Generate the PDF for invoice INV-1001");
+  assert.equal(invoice.status, "blocked");
+  const documents = await callBusinessAssistant("Generate a service agreement");
+  assert.equal(documents.status, "blocked");
+});
