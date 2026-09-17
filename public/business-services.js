@@ -33,7 +33,7 @@
           // a string, but the backend's normalizeEditable rejects a field
           // whose type doesn't match its default (amount defaults to 0).
           field(div, label, String(row[key]), value => { const n = Number(value); row[key] = Number.isFinite(n) ? n : 0; }, false, "number");
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["followUpDate", "date", "dueDate", "deadline"].includes(key) ? "date" : "text");
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["start", "end"].includes(key) ? "datetime-local" : ["followUpDate", "date", "dueDate", "deadline"].includes(key) ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -42,6 +42,35 @@
   function download(name, content, type = "application/json") {
     const link = document.createElement("a"); const url = URL.createObjectURL(new Blob([content], { type }));
     link.href = url; link.download = name.replace(/[\\/]/g, "-"); link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  // Appointments get a dedicated renderer instead of the generic rows()
+  // helper: each row needs a "Sync to calendar" action and a live-linked
+  // real calendar event once synced, which rows() has no way to express.
+  function renderAppointments() {
+    const container = byId("appointments"); container.replaceChildren();
+    current.data.editable.appointments.forEach((appointment, index) => {
+      const div = document.createElement("div"); div.className = "fields";
+      field(div, "Title", appointment.title, value => { appointment.title = value; });
+      field(div, "Start", appointment.start, value => { appointment.start = value; }, false, "datetime-local");
+      field(div, "End", appointment.end, value => { appointment.end = value; }, false, "datetime-local");
+      field(div, "Notes", appointment.notes, value => { appointment.notes = value; }, true);
+      const status = document.createElement("span"); status.textContent = `Status: ${appointment.status}`; div.append(status);
+      if (appointment.calendarLink) {
+        const link = document.createElement("a"); link.href = appointment.calendarLink; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = "Open in calendar"; div.append(link);
+      }
+      const sync = document.createElement("button"); sync.type = "button"; sync.textContent = "Sync to calendar";
+      sync.addEventListener("click", () => run(async () => {
+        if (!byId("calendar-consent").checked) throw new Error("Confirm creating a real calendar event with the configured provider first.");
+        await save();
+        current = await api(`/clients/${current.record_id}/appointment-sync`, "POST", { appointmentIndex: index, expectedVersion: current.version, confirmed: true });
+        render(); notice("Appointment synced with the configured calendar provider.");
+      }));
+      div.append(sync);
+      const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
+      remove.addEventListener("click", () => { current.data.editable.appointments.splice(index, 1); render(); });
+      div.append(remove);
+      container.append(div);
+    });
   }
   function render() {
     byId("editor").hidden = !current; byId("empty").hidden = Boolean(current); if (!current) return;
@@ -57,6 +86,7 @@
     rows("invoices", editable.invoices, [["invoiceNumber", "Invoice #"], ["clientName", "Client"], ["date", "Date"], ["dueDate", "Due date"], ["notes", "Notes"], ["status", "Status"]]);
     rows("invoice-items", editable.invoiceItems, [["invoiceNumber", "Invoice #"], ["description", "Description"], ["quantity", "Qty"], ["unitPrice", "Unit price"]]);
     rows("grants", editable.grants, [["funderName", "Funder"], ["program", "Program / grant name"], ["amount", "Amount"], ["deadline", "Deadline"], ["status", "Status (researching, drafting, submitted, awarded, declined)"], ["notes", "Notes"]]);
+    renderAppointments();
     const soonest = editable.grants.filter(row => row.deadline).map(row => row.deadline).sort()[0];
     byId("grants-summary").textContent = soonest ? `Next deadline: ${soonest}` : "No deadlines set yet.";
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
@@ -108,6 +138,7 @@
   byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: `INV-${String(current.data.editable.invoices.length + 1001)}`, clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
   byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }); render(); });
+  byId("add-appointment").addEventListener("click", () => { current.data.editable.appointments.push({ title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }); render(); });
   byId("generate-invoice-pdf").addEventListener("click", () => run(async () => {
     const invoiceNumber = byId("invoice-pdf-number").value.trim();
     if (!invoiceNumber) throw new Error("Enter the invoice number to generate a PDF for.");

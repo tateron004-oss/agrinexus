@@ -196,6 +196,31 @@ test("document/form builder: generates a real service agreement, intake form and
   assert.match(files['documents/Application_Checklist.md'].content, /- \[ \] Application form completed/);
 });
 
+test("appointment scheduler: syncing writes back a real calendar event and never mislabels a simulated one as real", async () => {
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  assert.deepEqual(templates.defaultClientWorkspace(info).appointments, []);
+  let calendarCalls = [];
+  const f = fixture({ calendar: async input => { calendarCalls.push(input); return { eventId: 'evt_1', htmlLink: 'https://calendar.example/evt_1', providerVerified: true }; } });
+  const row = await f.service.create(f.context, { businessName: 'Cooperative', consent: true });
+  const editable = { ...row.data.editable, appointments: [{ title: 'Site visit', start: '2026-04-01T09:00', end: '2026-04-01T10:00', notes: 'Bring soil samples', status: 'scheduled', calendarEventId: '', calendarLink: '' }] };
+  const updated = await f.service.update(f.context, row.record_id, { expectedVersion: 1, editable });
+  await assert.rejects(() => f.service.syncAppointment(f.context, row.record_id, { appointmentIndex: 0, expectedVersion: updated.version }), error => error.code === 'business_confirmation_required');
+  assert.equal(calendarCalls.length, 0);
+  const synced = await f.service.syncAppointment(f.context, row.record_id, { appointmentIndex: 0, expectedVersion: updated.version, confirmed: true });
+  assert.equal(synced.data.editable.appointments[0].calendarEventId, 'evt_1');
+  assert.equal(synced.data.editable.appointments[0].calendarLink, 'https://calendar.example/evt_1');
+  assert.equal(synced.data.editable.appointments[0].status, 'synced');
+  assert.equal(calendarCalls[0].title, 'Site visit');
+  await assert.rejects(() => f.service.syncAppointment(f.context, row.record_id, { appointmentIndex: 5, expectedVersion: synced.version, confirmed: true }), error => error.code === 'business_appointment_not_found');
+  // A calendar provider with no real credentials returns a labeled
+  // simulated result -- confirm it is never written back as "synced".
+  const f2 = fixture({ calendar: async () => ({ eventId: 'SIMULATED-EVT-1', htmlLink: '', providerVerified: false }) });
+  const row2 = await f2.service.create(f2.context, { businessName: 'Cooperative', consent: true });
+  const updated2 = await f2.service.update(f2.context, row2.record_id, { expectedVersion: 1, editable: { ...row2.data.editable, appointments: [{ title: 'Call', start: '2026-04-02T09:00', end: '', notes: '', status: 'scheduled', calendarEventId: '', calendarLink: '' }] } });
+  const synced2 = await f2.service.syncAppointment(f2.context, row2.record_id, { appointmentIndex: 0, expectedVersion: updated2.version, confirmed: true });
+  assert.equal(synced2.data.editable.appointments[0].status, 'synced-simulated');
+});
+
 test("business plan builder: a real, editable, versioned plan document persists and exports as a real PDF", async () => {
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
   assert.deepEqual(templates.defaultClientWorkspace(info).businessPlan, {

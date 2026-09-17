@@ -18,7 +18,7 @@ function createBusinessApi(runtime, options = {}) {
         if (method === "GET") return { status: 200, body: { clients: await service.list(context) } };
         if (method === "POST") return { status: 201, body: await service.create(context, body) };
       }
-      const match = pathname.match(/^\/api\/nexus\/runtime\/business\/clients\/([A-Za-z0-9_-]+)(?:\/(generate|plan|export|package|preview|assistant|checkout|refresh-subscription|delete|invoice-pdf|business-plan-pdf))?$/);
+      const match = pathname.match(/^\/api\/nexus\/runtime\/business\/clients\/([A-Za-z0-9_-]+)(?:\/(generate|plan|export|package|preview|assistant|checkout|refresh-subscription|delete|invoice-pdf|business-plan-pdf|appointment-sync))?$/);
       if (!match) throw new NexusRuntimeError("business_route_not_found", "Business route not found.", 404);
       const [, recordId, action] = match;
       let result;
@@ -33,6 +33,7 @@ function createBusinessApi(runtime, options = {}) {
       else if (method === "POST" && action === "generate") result = await service.generate(context, recordId, body);
       else if (method === "POST" && action === "invoice-pdf") result = await service.exportInvoice(context, recordId, body);
       else if (method === "POST" && action === "business-plan-pdf") result = await service.exportBusinessPlan(context, recordId, body);
+      else if (method === "POST" && action === "appointment-sync") result = await service.syncAppointment(context, recordId, body);
       else if (method === "POST" && action === "preview") result = await service.preview(context, recordId, body);
       else if (method === "POST" && action === "assistant") result = await service.assistant(context, recordId, body);
       else if (method === "POST" && action === "checkout") result = await service.checkout(context, recordId, body);

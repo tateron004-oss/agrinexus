@@ -2,6 +2,7 @@
 const crypto = require("node:crypto");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
 const { assistantStudioPrompt, agenticPlan } = require("./templates");
+const calendarProvider = require("../../server/providers/calendarProvider");
 
 function unavailable(message) { throw new NexusRuntimeError("business_provider_unavailable", message, 503); }
 function createBusinessProviders({ env = process.env, fetchFn = globalThis.fetch, now = () => Date.now() } = {}) {
@@ -78,6 +79,20 @@ function createBusinessProviders({ env = process.env, fetchFn = globalThis.fetch
       if (session.id !== sessionId || session.client_reference_id !== `${tenantId}:${ownerId}:${recordId}`) throw new NexusRuntimeError("business_checkout_identity_mismatch", "Provider checkout identity does not match this workspace.", 502);
       return { state: session.status === "complete" && session.payment_status === "paid" ? "active" : session.status === "expired" ? "expired" : "pending_payment",
         paid: session.status === "complete" && session.payment_status === "paid", sessionId, providerVerified: true };
+    },
+    async calendar({ title, start, end, notes }) {
+      // calendarProvider.createEvent already has its own real/simulated-
+      // fallback logic (server/providers/calendarProvider.js, the same
+      // backend nexus_calendar voice/typed commands already use) --
+      // this just translates its response shape into what
+      // BusinessService.syncAppointment expects, the same way every other
+      // provider call in this file is wrapped for testability.
+      const result = await calendarProvider.createEvent({ confirmed: true, title, start, end, description: notes }, env);
+      if (result.body.status !== "completed") {
+        throw new NexusRuntimeError("business_calendar_sync_failed", result.body.message || "The calendar provider could not create this event.",
+          Number.isInteger(result.httpStatus) && result.httpStatus >= 400 ? result.httpStatus : 502);
+      }
+      return { eventId: result.body.data.eventId || "", htmlLink: result.body.data.htmlLink || "", providerVerified: Boolean(result.body.data.providerVerified) };
     },
     verifyWebhook(raw, signature) {
       if (!billingEnabled || !env.STRIPE_WEBHOOK_SECRET) unavailable("Business billing webhooks are disabled or unconfigured.");
