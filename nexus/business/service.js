@@ -4,7 +4,7 @@ const templates = require("./templates");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
 const { renderPdfBuffer } = require("../../server/providers/exportProvider");
 const DATA_SCOPE = "business:client-data";
-const ALLOWED_OPERATIONS = new Set(["launch-kit", "landing-page", "assistant-package", "workflow", "strategy", "documents"]);
+const ALLOWED_OPERATIONS = new Set(["launch-kit", "landing-page", "assistant-package", "workflow", "strategy", "documents", "marketing"]);
 const INPUT_FIELDS = ["businessName", "industry", "location", "customer", "problem", "request", "objective", "audience"];
 
 function fail(code, message, status = 400) { throw new NexusRuntimeError(code, message, status); }
@@ -109,6 +109,12 @@ function filesFor(info, editable, operation, profile = "coach") {
     put("documents/Service_Agreement.md", templates.serviceAgreementTemplate(info));
     put("documents/Client_Intake_Form.md", templates.clientIntakeFormTemplate(info));
     put("documents/Application_Checklist.md", templates.applicationChecklistTemplate(info));
+  }
+  if (operation === "marketing") {
+    put("marketing/flyer/index.html", templates.flyerHtml(workspace));
+    put("marketing/flyer/flyer.css", templates.flyerCss());
+    put("marketing/Newsletter.md", templates.newsletterTemplate(info));
+    put("marketing/Promotional_Email.md", templates.emailCampaignTemplate(info));
   }
   if (operation === "strategy") {
     const { agentProfiles, createResponse } = require("./strategy");

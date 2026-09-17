@@ -753,7 +753,105 @@ This workflow is ready when the owner can open the client workspace, see the nex
 }
 
 
-// Tool 9 of the small-business/nonprofit suite: document/form templates.
+// Tool 7 of the small-business/nonprofit suite: marketing content. The
+// existing socialPosts[] list and Social_Calendar.csv covered social
+// media drafts, but nothing here produced a flyer, a newsletter, or a
+// promotional email -- distinct formats a small business or nonprofit
+// genuinely needs for print handouts, member updates, and outreach.
+function flyerHtml(workspace) {
+  const businessName = htmlEscape(workspace.businessName);
+  const landing = workspace.landingPage || {};
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${businessName} Flyer</title>
+  <link rel="stylesheet" href="flyer.css">
+</head>
+<body>
+  <main class="flyer">
+    <p class="eyebrow">${businessName}</p>
+    <h1>${htmlEscape(landing.headline || "Reliable service, right when you need it.")}</h1>
+    <p class="subhead">${htmlEscape(landing.subheadline || "Clear pricing, professional service, and easy next steps.")}</p>
+    <p class="offer">${htmlEscape(landing.offer || "Request a quote today")}</p>
+    <ul class="highlights">
+      <li>Trusted local service</li>
+      <li>Clear, upfront pricing</li>
+      <li>Fast, friendly follow-up</li>
+    </ul>
+    <p class="contact">Call or text: ${htmlEscape(landing.phone || "[phone number]")}</p>
+    <p class="contact">Email: ${htmlEscape(landing.email || "[email address]")}</p>
+  </main>
+</body>
+</html>`;
+}
+
+function flyerCss() {
+  return `:root{--ink:#14231f;--muted:#62736d;--green:#17845f;--bg:#f7f8f2}*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;color:var(--ink);background:var(--bg)}.flyer{max-width:720px;margin:40px auto;padding:56px;background:white;border:2px solid var(--green);border-radius:16px;text-align:center}.eyebrow{color:var(--green);font-weight:900;text-transform:uppercase;letter-spacing:.08em}h1{font-size:2.6rem;line-height:1.1;margin:12px 0}.subhead{color:var(--muted);font-size:1.15rem;margin-bottom:20px}.offer{display:inline-block;background:var(--green);color:white;font-weight:800;padding:14px 28px;border-radius:10px;margin-bottom:24px}.highlights{list-style:none;padding:0;margin:0 0 24px;display:flex;justify-content:center;gap:24px;flex-wrap:wrap;color:var(--ink);font-weight:600}.contact{margin:4px 0;color:var(--muted)}@media(max-width:600px){.flyer{padding:32px}.highlights{flex-direction:column;gap:8px}}`;
+}
+
+function newsletterTemplate(info) {
+  const now = new Date().toLocaleDateString();
+  return `# ${info.businessName} Newsletter (Template)
+
+Issue date: ${now}
+
+## What's New
+
+[Share a recent update, milestone, or announcement.]
+
+## Spotlight
+
+[Highlight a customer, client, volunteer, or team member story.]
+
+## Upcoming
+
+[List an upcoming event, deadline, or opportunity to get involved.]
+
+## Call to Action
+
+[Tell readers exactly what to do next: visit, donate, book, reply, or share.]
+
+---
+
+${info.businessName} | ${info.location}
+[Unsubscribe / contact preferences link -- required for real email delivery]
+`;
+}
+
+function emailCampaignTemplate(info) {
+  const now = new Date().toLocaleDateString();
+  return `# Promotional Email (Template)
+
+Prepared: ${now}
+
+## Subject Line
+
+[Write a short, specific subject line -- avoid ALL CAPS and excessive punctuation.]
+
+## Body
+
+Hi [First name],
+
+${info.businessName} wants to let you know about [the offer, service, or update]. ${info.problem}
+
+[Add 2-3 sentences describing the specific benefit to the reader.]
+
+[Call-to-action button/link text]: [What happens when they click]
+
+Thank you for being part of ${info.businessName}.
+
+[Sender name]
+${info.businessName}
+
+---
+
+This is a draft. Before sending: confirm recipient consent, add a real unsubscribe link, and review with Nexus communications for its existing confirmation controls.
+`;
+}
+
+// Tool 6 of the small-business/nonprofit suite: document/form templates.
 // The document-export backend (server/providers/exportProvider.js) was
 // already real -- it genuinely renders PDF/DOCX -- but nothing in this
 // workspace had actual contract/intake-form/checklist *content* to feed
@@ -854,4 +952,4 @@ ______________________
 `;
 }
 
-module.exports = Object.freeze({ clientWorkflowOutput, htmlEscape, safeSlug, titleCase, inferBusiness, businessLaunchKit, websiteHtml, websiteCss, socialCalendar, assistantPrompt, phoneAssistantScript, aiAssistantSystem, outreachScripts, defaultClientWorkspace, normalizeWorkspace, landingPageHtml, landingPageCss, assistantStudioPrompt, testAssistantReply, agenticPlan, serviceAgreementTemplate, clientIntakeFormTemplate, applicationChecklistTemplate });
+module.exports = Object.freeze({ clientWorkflowOutput, htmlEscape, safeSlug, titleCase, inferBusiness, businessLaunchKit, websiteHtml, websiteCss, socialCalendar, assistantPrompt, phoneAssistantScript, aiAssistantSystem, outreachScripts, defaultClientWorkspace, normalizeWorkspace, landingPageHtml, landingPageCss, assistantStudioPrompt, testAssistantReply, agenticPlan, serviceAgreementTemplate, clientIntakeFormTemplate, applicationChecklistTemplate, flyerHtml, flyerCss, newsletterTemplate, emailCampaignTemplate });

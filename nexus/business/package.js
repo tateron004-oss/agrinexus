@@ -10,7 +10,12 @@ function packageFiles(files) {
   for (const [path, file] of Object.entries(files || {})) {
     if (!/^[A-Za-z0-9_./-]+$/.test(path) || path.startsWith('/') || path.split('/').some(part => !part || part === '.' || part === '..')) throw new Error('Invalid package path');
     if (typeof file.content !== 'string') throw new Error('Invalid package content');
-    const name = Buffer.from(path), bytes = Buffer.from(file.content), crc = crc32(bytes);
+    // A binary file (e.g. an invoice PDF) stores its real bytes as base64 --
+    // confirmed the naive Buffer.from(file.content) here would embed the
+    // literal base64 TEXT as the file's bytes, producing a real-looking but
+    // corrupted .pdf inside the downloaded ZIP. Decode it the same way the
+    // frontend's per-file "Download" button already does.
+    const name = Buffer.from(path), bytes = file.binary ? Buffer.from(file.content, 'base64') : Buffer.from(file.content), crc = crc32(bytes);
     if (++count > 100 || offset + bytes.length > 10 * 1024 * 1024) throw new Error('Package exceeds size limit');
     const header = Buffer.alloc(30); header.writeUInt32LE(0x04034b50); header.writeUInt16LE(20,4); header.writeUInt16LE(0x800,6); header.writeUInt16LE(33,12);
     header.writeUInt32LE(crc,14); header.writeUInt32LE(bytes.length,18); header.writeUInt32LE(bytes.length,22); header.writeUInt16LE(name.length,26);
