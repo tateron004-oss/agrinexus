@@ -781,7 +781,20 @@ async function run(env = process.env) {
   try {
     loginBoundary = await submitRegisteredStandardUserLogin(page, base, standardUserCredentials, loginLifecycle);
     await waitForAuthenticatedStandardUserShell(page, base);
-    await requireVisibleAuthoritativeTypedIngress(page);
+    // The same reload-and-retry protection the post-visible-ingress-loop
+    // occurrence of this check already had (PR #441) was never applied
+    // here, even though this is the FIRST occurrence and reaches the same
+    // cold-start render race: /api/state alone is a ~1.6MB payload, and a
+    // slow cold fetch/render of it on a loaded CI runner can outlast a
+    // single 30s wait for the composer to appear, with nothing tested here
+    // being a real, repeated failure to ever render.
+    try {
+      await requireVisibleAuthoritativeTypedIngress(page);
+    } catch (error) {
+      await reloadAuthenticatedShell(page);
+      await waitForAuthenticatedStandardUserShell(page, base);
+      await requireVisibleAuthoritativeTypedIngress(page);
+    }
   } catch (error) {
     const diagnosticError = loginBoundary
       ? new Error(`${error.message} Login boundary: requestObserved=true, status=${loginBoundary.status}.`)

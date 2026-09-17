@@ -73,3 +73,18 @@ test("the post-reload typed-ingress readiness check gets a second reload-and-wai
   assert.match(region, /try\s*\{\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}\s*catch \(error\) \{/);
   assert.match(region, /catch \(error\) \{\s*await reloadAuthenticatedShell\(page\);\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}/);
 });
+
+test("the post-login typed-ingress readiness check also gets a reload-and-retry attempt before failing", () => {
+  // Confirmed live in production: the FIRST occurrence of this same check,
+  // right after login, never got the reload-and-retry protection the LATER
+  // occurrence (above) received in PR #441 -- even though it hits the exact
+  // same cold-start render race (/api/state alone is a ~1.6MB payload).
+  // Deploys kept showing a red X on this specific check because only one of
+  // its two call sites was ever hardened.
+  const start = probe.indexOf("await waitForAuthenticatedStandardUserShell(page, base);\n    // The same reload-and-retry protection");
+  assert.notEqual(start, -1, "the post-login retry comment must immediately follow the first waitForAuthenticatedStandardUserShell call");
+  const end = probe.indexOf("const diagnosticError = loginBoundary", start);
+  const region = probe.slice(start, end);
+  assert.match(region, /try\s*\{\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}\s*catch \(error\) \{/);
+  assert.match(region, /catch \(error\) \{\s*await reloadAuthenticatedShell\(page\);\s*await waitForAuthenticatedStandardUserShell\(page, base\);\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}/);
+});
