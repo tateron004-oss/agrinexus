@@ -479,7 +479,7 @@ async function waitForAuthenticatedStandardUserShell(page, base, timeoutMs = 300
   throw new Error(`Authenticated Standard User shell did not settle (role=${lastRole || "missing"}, appVisible=${shellState.appVisible}, loginVisible=${shellState.loginVisible}, lastError=${lastError || "none"}).`);
 }
 
-async function captureTypedIngressDiagnostic(page, releaseSha, phase, error) {
+async function captureTypedIngressDiagnostic(page, releaseSha, phase, error, browserDiagnosticLog = []) {
   const browserState = await page.evaluate(async () => {
     const visible = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).visibility !== "hidden" &&
       getComputedStyle(node).display !== "none");
@@ -515,12 +515,21 @@ async function captureTypedIngressDiagnostic(page, releaseSha, phase, error) {
     phase,
     observedAt: new Date().toISOString(),
     error: String(error?.message || error),
-    browserState
+    browserState,
+    // Confirmed live in production: two prior fixes to this same check
+    // (PR #447, #448) both addressed real but insufficient causes -- the
+    // typed-entry composer was found completely ABSENT from the DOM
+    // (typedEntries: []), not merely invisible, which neither fix
+    // explains. Nothing here previously captured actual console errors,
+    // uncaught exceptions, or failed requests, so every prior diagnosis
+    // was a guess from DOM state alone. Recent browser-level events give
+    // the next occurrence (if any) a real answer instead of another guess.
+    recentBrowserEvents: browserDiagnosticLog.slice(-30)
   };
 }
 
-async function preserveTypedIngressDiagnostic(page, releaseSha, phase, error) {
-  const diagnostic = await captureTypedIngressDiagnostic(page, releaseSha, phase, error).catch(diagnosticError => ({
+async function preserveTypedIngressDiagnostic(page, releaseSha, phase, error, browserDiagnosticLog = []) {
+  const diagnostic = await captureTypedIngressDiagnostic(page, releaseSha, phase, error, browserDiagnosticLog).catch(diagnosticError => ({
     schema: "nexus.typed-ingress-diagnostic.v1",
     releaseSha,
     phase,
@@ -758,6 +767,24 @@ async function run(env = process.env) {
     ignoreDefaultArgs: ["--enable-automation"],
     args: ["--autoplay-policy=no-user-gesture-required", "--disable-blink-features=AutomationControlled"] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  // Nothing in this file previously captured real console errors, uncaught
+  // exceptions, or failed requests -- every prior diagnosis of a typed-
+  // ingress failure was a guess from DOM state alone. This is the evidence
+  // trail the next occurrence (if any) actually needs.
+  const browserDiagnosticLog = [];
+  page.on("console", msg => {
+    if (msg.type() === "error" || msg.type() === "warning") {
+      browserDiagnosticLog.push({ kind: `console.${msg.type()}`, text: msg.text().slice(0, 500), at: new Date().toISOString() });
+    }
+  });
+  page.on("pageerror", error => {
+    browserDiagnosticLog.push({ kind: "pageerror", text: String(error?.message || error).slice(0, 500), at: new Date().toISOString() });
+  });
+  page.on("requestfailed", request => {
+    browserDiagnosticLog.push({ kind: "requestfailed",
+      text: `${request.method()} ${request.url()} - ${request.failure()?.errorText || "unknown"}`.slice(0, 500),
+      at: new Date().toISOString() });
+  });
   const loginLifecycle = await installLoginLifecycleDiagnostics(page, base);
   await installLiveKnowledgeLifecycleDiagnostics(page, base);
   const permissionSession = await page.context().newCDPSession(page);
@@ -799,7 +826,7 @@ async function run(env = process.env) {
     const diagnosticError = loginBoundary
       ? new Error(`${error.message} Login boundary: requestObserved=true, status=${loginBoundary.status}.`)
       : error;
-    await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", diagnosticError);
+    await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", diagnosticError, browserDiagnosticLog);
     const lifecycleDiagnostic = await captureLoginLifecycleDiagnostics(page, loginLifecycle);
     fs.writeFileSync("output/nexus-browser-login-lifecycle-context.json", JSON.stringify(lifecycleDiagnostic, null, 2));
     console.error(JSON.stringify({ loginLifecycleDiagnostic: lifecycleDiagnostic }, null, 2));
