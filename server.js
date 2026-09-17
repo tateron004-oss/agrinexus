@@ -19084,7 +19084,19 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
 }
 
 async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}, realUserEmail = user?.email) {
-  const command = sanitizePilotText(args.command || args.query || context.command || "", 700);
+  // args.command is the tool-calling model's own required "command" argument
+  // ("The user's plain-language Nexus request") -- confirmed live in
+  // production, repeatedly, that the model paraphrases/summarizes here
+  // rather than echoing verbatim: a direct crisis statement no longer
+  // matched crisis-detection patterns once rewritten, and a checklist
+  // request lost the exact item list a downstream parser needed. context.
+  // command is the caller's original, unmediated text when the caller has
+  // one to give (runNexusOpenAiNativeAgentCommand always does); prefer it
+  // over the model's own restatement. args.query keeps its original, higher
+  // priority -- it is a deliberate, tool-specific refinement ("a concise
+  // research or tool query when different from the original command"), not
+  // a plain restatement, so a caller that explicitly sets it still wins.
+  const command = sanitizePilotText(args.query || context.command || args.command || "", 700);
   const language = args.language || context.language || user?.language || "en";
   const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
   const common = {
@@ -19612,14 +19624,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     if (!authoritativeUser) {
       return { ...common, capability: "lists", status: "needs-auth", response: "Sign in first, then I can create or manage a list." };
     }
-    // The model's own "command" tool-call argument can drop the item list
-    // the user actually said (confirmed live with the same paraphrase
-    // pattern that affected crisis detection) -- context.command is the
-    // caller's original, unmediated text when available, and the list
-    // planner's item extraction needs the full original phrasing.
-    const listCommandText = sanitizePilotText(context.command || command, 700) || command;
     try {
-      const turn = await authoritativeNexusRuntime.behaviorTurnRequest({ text: listCommandText, channel: "voice", locale: language, user: authoritativeUser });
+      const turn = await authoritativeNexusRuntime.behaviorTurnRequest({ text: command, channel: "voice", locale: language, user: authoritativeUser });
       if (turn.state === "clarification_required") {
         return { ...common, capability: "lists", status: "needs-input", response: turn.response || "What should I call this list?", missingInformation: ["title"] };
       }
