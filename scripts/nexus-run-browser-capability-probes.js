@@ -556,6 +556,18 @@ async function requireVisibleAuthoritativeTypedIngress(page) {
   // A plain, longer wait for the real condition is the actual fix; the
   // caller's own reload-and-retry stays as the outer recovery for a
   // genuinely slow first render.
+  //
+  // KNOWN FLAKE, accepted, not a bug here: this check can still
+  // intermittently time out in CI with recentBrowserEvents showing
+  // "GET /api/state -> 401". Every server.js code path for /api/state was
+  // ruled out (publicState() always returns 200, even for a logged-out
+  // guest), and the production origin sits behind Cloudflare -- the
+  // evidence points to Cloudflare bot detection flagging GitHub Actions'
+  // runner IPs, not this function or the composer's rendering. See the
+  // comment on the "Produce and record exact-release production evidence"
+  // step in .github/workflows/nexus-protected-production-deploy.yml for
+  // the full investigation (PRs #447-#450). Fixing it for real needs a
+  // Cloudflare-side change, not another code change here.
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   await input.waitFor({ state: "visible", timeout: 30000 });
   return input;
