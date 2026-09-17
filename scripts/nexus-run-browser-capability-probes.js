@@ -760,9 +760,8 @@ async function run(env = process.env) {
   }
   await reloadAuthenticatedShell(page);
   await requireVisibleAuthoritativeTypedIngress(page);
-  const capabilityProbes = []; const workspaceProbes = [];
-  try {
-    for (const [application, text] of Object.entries(SCENARIOS)) {
+  const capabilityProbes = []; const workspaceProbes = []; const scenarioFailures = [];
+  async function runScenario(application, text) {
       const execute = async phase => {
         let turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
           { releaseSha, application, text, channel: "typed", locale: "en", phase });
@@ -832,6 +831,25 @@ async function run(env = process.env) {
         "durable-write": exactRecord(releaseSha, [`${base}/probes/task-engine durable=true taskId=${outcome.taskId}`]),
         receipt: proof, "browser-outcome": exactRecord(releaseSha, receipts)
       } }));
+  }
+  try {
+    for (const [application, text] of Object.entries(SCENARIOS)) {
+      // Confirmed live: this loop used to let one scenario's failure (most
+      // often "maps", which has had several distinct flaky failure modes)
+      // throw straight out of the whole run, skipping every scenario that
+      // comes after it in SCENARIOS -- and since the per-scenario cutover
+      // POST inside runScenario only ever fires for a scenario this loop
+      // actually reaches, every later capability (including "lists", last
+      // in this object) silently never got its own chance to cut over, on
+      // every affected deploy, regardless of whether ITS OWN code was
+      // correct. Catching per scenario lets every capability that can
+      // succeed still cut over, while scenarioFailures still fails the
+      // overall step so a genuinely broken capability keeps blocking release.
+      try {
+        await runScenario(application, text);
+      } catch (error) {
+        scenarioFailures.push({ application, error: String(error?.message || error) });
+      }
     }
     const voiceText = SCENARIOS["live-knowledge"];
     const voice = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
@@ -840,14 +858,21 @@ async function run(env = process.env) {
       throw new Error("Voice and typed input did not preserve equivalent authoritative intent.");
     }
     const faultProbes = [];
-    Object.assign(document, { workspaceProbes, capabilityProbes, faultProbes,
+    Object.assign(document, { workspaceProbes, capabilityProbes, faultProbes, scenarioFailures,
       faultProofStatus: { closed: false, releaseSha, required: FAULTS.length, proven: 0,
         missing: [...FAULTS], reason: "Typed fault verifiers have not executed; capability success receipts cannot prove fault closure." },
       browserProbe: { releaseSha, capabilities: capabilityProbes.length, workspaces: workspaceProbes.length,
         visibleIngress, visibleAuthenticatedLogin: true, sequential: true, voiceTypedEquivalent: true, observedAt: new Date().toISOString() } });
     fs.writeFileSync(probeFile, JSON.stringify(document, null, 2));
-    console.log(JSON.stringify({ ok: true, releaseSha, capabilities: capabilityProbes.length,
-      workspaces: workspaceProbes.length, faults: faultProbes.length, faultProofClosed: false }, null, 2));
+    console.log(JSON.stringify({ ok: scenarioFailures.length === 0, releaseSha, capabilities: capabilityProbes.length,
+      workspaces: workspaceProbes.length, faults: faultProbes.length, faultProofClosed: false, scenarioFailures }, null, 2));
+    // Every scenario that could succeed already ran and cut over above,
+    // independent of this check -- this only decides whether the overall
+    // step (and therefore the release gate) still reports failure for a
+    // capability that genuinely could not complete.
+    if (scenarioFailures.length) {
+      throw new Error(`${scenarioFailures.length} capability scenario(s) failed: ${scenarioFailures.map(item => `${item.application} (${item.error})`).join("; ")}`);
+    }
     return document;
   } finally { await browser.close(); }
 }
