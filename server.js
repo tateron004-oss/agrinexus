@@ -17850,7 +17850,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, or to log or record an expense, income, transaction, payment, donation, or sale for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks to see, find, show, or play images, photos, pictures, or videos of anything (including crop damage, pests, disease, or any other subject), you must call nexus_visual_analysis with that request. This is a real search (Wikimedia Commons for images, YouTube/Wikimedia Commons for videos) — never say visual or video search is disabled without calling it first.",
@@ -18266,7 +18266,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_marketplace_logistics", "Run Nexus marketplace, buyer/seller, vendor research, logistics, shipment, route, and no-payment/no-purchase guarded support.", "commerce-preparation"),
     tool("nexus_communications", "Run Nexus SMS, WhatsApp, email, phone, Telegram, and message-preparation workflows. Sending/calling remains confirmation- and credential-gated.", "high-risk-confirmation-required"),
     tool("nexus_workflow", "Open or continue a clearly requested Nexus workflow only when the user asks for structured task support.", "workflow-preparation"),
-    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates) through the existing Nexus business-services backend.", "business-assistant-preparation"),
+    tool("nexus_business_assistant", "List, start, or check the user's Kyro business or nonprofit admin-assistant workspace (task/lead management, launch-kit drafting, and in Kyro Business & Grants: grant proposal, marketing strategy, financial literacy, minority-owned business development, and government/public-sector partnership planning templates); also add a customer/donor/lead/sponsor/volunteer, and log or record an income or expense transaction, in that workspace through the existing Nexus business-services backend.", "business-assistant-preparation"),
     tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
     tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
@@ -18507,7 +18507,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to play, pause, resume, or stop music, a song, an artist, an album, or a playlist -- including a plain 'play <artist> <title>' request with no other context -- you must call nexus_general_conversation. This is never a communications request: do not call nexus_communications for a request to play a song just because a person's or artist's name is mentioned in it.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
-    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, you must call nexus_business_assistant.",
+    "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, or to log or record an expense, income, transaction, payment, donation, or sale for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
     "recentTurns shows the actual conversation history in order. If the most recent assistant turn asked the user to confirm a specific action (an export, a message, a call, a payment) and the user's new message is a confirmation (yes, confirm, confirmed, go ahead, do it, that's right), you must call the SAME tool again with the SAME arguments reconstructed from recentTurns (title, content, recipient, format, etc.) plus confirmed: true. Never just repeat the confirmation request back to the user — a user who already said yes has confirmed.",
     "If recentTurns shows a mental-health crisis, self-harm, or emergency-safety turn, but the user's CURRENT message is a plainly unrelated, routine request (a clinic location, weather, shipment, learning, marketplace, or any other everyday task), answer the current request plainly and factually using the real tool result. Do not re-open, repeat, or extend crisis-support or 'your safety comes first' language into an answer to an unrelated request — that reads as dismissive of a real request and confusing after a crisis has already been acknowledged. Only continue crisis-support framing when the user's current message itself still relates to safety, self-harm, or the same crisis topic.",
@@ -18870,6 +18870,63 @@ function nexusOpenAiNativeExtractBusinessName(command = "", args = {}) {
   // called/named/titled are unambiguous naming verbs; "for" is not.
   const nameMatch = text.match(/\b(?:called|named|titled)\s+["']?([^"'.,\n]{2,80})["']?/i);
   return sanitizePilotText(args.businessName || args.title || (nameMatch ? nameMatch[1].trim() : ""), 180);
+}
+
+// Resolves which business/nonprofit workspace a voice command like "add a
+// customer named X" or "log a $50 expense" should act on. Confirmed live:
+// most users only ever have one workspace, so defaulting to it (rather than
+// always asking "which business?") keeps the common case one turn instead of
+// two; a business name spoken in the command still takes priority when the
+// user has more than one. Falls back to the most recently updated workspace
+// (the list endpoint already orders by updated_at desc) when neither a name
+// match nor a lone workspace resolves it, and always names the workspace it
+// picked in the response so a wrong guess is easy to notice and correct.
+async function nexusOpenAiNativeResolveBusinessClient(authoritativeUser, command = "") {
+  const listing = await authoritativeNexusRuntime.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients", user: authoritativeUser });
+  const clients = listing?.body?.clients || [];
+  if (!clients.length) return { clients, client: null };
+  const text = String(command || "").toLowerCase();
+  const named = clients.find(item => {
+    const name = item.data?.info?.businessName;
+    return name && text.includes(String(name).toLowerCase());
+  });
+  return { clients, client: named || clients[0] };
+}
+
+function nexusOpenAiNativeExtractLeadArgs(command = "", args = {}) {
+  const text = String(command || "");
+  // "named"/"called" is an unambiguous naming verb; falling back to the noun
+  // right after the customer/donor/etc. type word covers the more common
+  // spoken phrasing ("add a donor Maria Chen") where no naming verb is used.
+  const nameMatch = text.match(/\b(?:named|called)\s+["']?([^"'.,\n]{2,80})["']?/i)
+    || text.match(/\b(?:customer|donor|lead|client|sponsor|volunteer)\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/);
+  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer)\b/i);
+  const contactMatch = text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
+    || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
+  return {
+    name: sanitizePilotText(args.name || (nameMatch ? nameMatch[1].trim() : ""), 160),
+    type: sanitizePilotText(args.type || (typeMatch ? typeMatch[1].toLowerCase() : "customer"), 40),
+    contact: sanitizePilotText(args.contact || (contactMatch ? contactMatch[1].trim() : ""), 160)
+  };
+}
+
+function nexusOpenAiNativeExtractTransactionArgs(command = "", args = {}) {
+  const text = String(command || "");
+  const amountMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)|\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s?(?:dollars|usd)\b/i);
+  const amountText = amountMatch ? (amountMatch[1] || amountMatch[2]) : "";
+  const type = /\b(expense|spent|spend|paid|purchase|purchased|bought|cost)\b/i.test(text) ? "expense"
+    : /\b(income|revenue|donation|donated|sale|sold|payment received|earned)\b/i.test(text) ? "income" : "expense";
+  // "for"/"on" marks what the money was for, the same way "for" marks
+  // purpose elsewhere in this file -- distinct from "from"/"to", which
+  // would name a payer or payee instead of a category.
+  const categoryMatch = text.match(/\b(?:for|on)\s+([^\n,.]{2,60})/i);
+  const rawAmount = args.amount !== undefined ? Number(args.amount) : (amountText ? Number(amountText.replace(/,/g, "")) : NaN);
+  return {
+    amount: Number.isFinite(rawAmount) ? rawAmount : null,
+    type: sanitizePilotText(args.type || type, 20),
+    category: sanitizePilotText(args.category || (categoryMatch ? categoryMatch[1].trim() : ""), 160),
+    description: sanitizePilotText(args.description || text, 500)
+  };
 }
 
 function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
@@ -20503,6 +20560,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
       || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
     ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
+    // These two run before the "start a new workspace" fallback below so
+    // that e.g. "add a donor named Maria" is never misread as a request to
+    // create a workspace called "Maria".
+    const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer)\b/i.test(command);
+    const wantsLogTransaction = /\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command);
     try {
       if (wantsList) {
         const listing = await authoritativeNexusRuntime.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients", user: authoritativeUser });
@@ -20513,6 +20575,65 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
             ? `You have ${clients.length} business or nonprofit workspace${clients.length === 1 ? "" : "s"}: ${clients.map(item => item.data?.info?.businessName || "Untitled").join(", ")}.`
             : "You do not have a business or nonprofit workspace yet. Tell me its name and what it does, and I can start one.",
           businessClients: clients
+        };
+      }
+      if (wantsAddLead) {
+        const lead = nexusOpenAiNativeExtractLeadArgs(command, args);
+        if (!lead.name) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: `What is the name of the ${lead.type} to add?`, missingInformation: ["name"] };
+        }
+        const resolved = await nexusOpenAiNativeResolveBusinessClient(authoritativeUser, command);
+        if (!resolved.client) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding customers or donors.", missingInformation: ["businessName"] };
+        }
+        const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+        if (!(args.confirmed === true || args.confirmation === true)) {
+          return {
+            ...common, capability: "business-assistant", status: "needs-confirmation", requiresConfirmation: true,
+            response: `I can add ${lead.name} as a ${lead.type} to "${workspaceName}". Should I go ahead?`
+          };
+        }
+        const editable = { ...resolved.client.data.editable, leads: [...resolved.client.data.editable.leads,
+          { name: lead.name, contact: lead.contact, type: lead.type, need: "", stage: "new", nextAction: "", followUpDate: "" }] };
+        const updated = await authoritativeNexusRuntime.businessRequest({
+          method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+          body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable },
+          user: authoritativeUser
+        });
+        return {
+          ...common, capability: "business-assistant", status: "completed", localOnly: true,
+          response: `Added ${lead.name} as a ${lead.type} to "${workspaceName}".`,
+          businessRecord: updated?.body || null
+        };
+      }
+      if (wantsLogTransaction) {
+        const transaction = nexusOpenAiNativeExtractTransactionArgs(command, args);
+        if (!transaction.amount || transaction.amount <= 0) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: `What is the dollar amount for this ${transaction.type}?`, missingInformation: ["amount"] };
+        }
+        const resolved = await nexusOpenAiNativeResolveBusinessClient(authoritativeUser, command);
+        if (!resolved.client) {
+          return { ...common, capability: "business-assistant", status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before logging income or expenses.", missingInformation: ["businessName"] };
+        }
+        const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+        const categoryPhrase = transaction.category ? ` for ${transaction.category}` : "";
+        if (!(args.confirmed === true || args.confirmation === true)) {
+          return {
+            ...common, capability: "business-assistant", status: "needs-confirmation", requiresConfirmation: true,
+            response: `I can log a $${transaction.amount.toFixed(2)} ${transaction.type}${categoryPhrase} in "${workspaceName}". Should I go ahead?`
+          };
+        }
+        const editable = { ...resolved.client.data.editable, transactions: [...resolved.client.data.editable.transactions,
+          { date: new Date().toISOString().slice(0, 10), type: transaction.type, category: transaction.category, amount: transaction.amount, description: transaction.description }] };
+        const updated = await authoritativeNexusRuntime.businessRequest({
+          method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+          body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable },
+          user: authoritativeUser
+        });
+        return {
+          ...common, capability: "business-assistant", status: "completed", localOnly: true,
+          response: `Logged a $${transaction.amount.toFixed(2)} ${transaction.type}${categoryPhrase} in "${workspaceName}".`,
+          businessRecord: updated?.body || null
         };
       }
       const businessName = nexusOpenAiNativeExtractBusinessName(command, args);

@@ -91,3 +91,32 @@ test("'called'/'named'/'titled' still extract the real business name, unaffected
   assert.equal(called.status, "needs-confirmation");
   assert.match(called.response, /Acme Farms Cooperative/);
 });
+
+// Voice access for Tool 1 (Customer/Donor Tracker) and Tool 2 (Income/Expense
+// Tracker): "add a customer/donor" and "log an expense/income" must be
+// recognized and routed BEFORE the "start a new workspace" fallback, so they
+// never get misread as a request to create a workspace named after the
+// person or the amount. Local extraction (name/amount) runs before any real
+// database lookup, so a missing field is testable here without live
+// Postgres; once extraction succeeds, resolving which workspace to act on
+// does require the database, so -- exactly like the listing tests above --
+// the observable proof that routing worked is a real "blocked"/PostgreSQL
+// response, not a local needs-input.
+test("'add a customer/donor/lead' is recognized as adding a contact, not creating a new workspace", async () => {
+  const withName = await callBusinessAssistant("Add a donor named Maria Chen");
+  assert.equal(withName.status, "blocked");
+  assert.match(withName.response, /PostgreSQL/i);
+  const withoutName = await callBusinessAssistant("Add a new donor");
+  assert.equal(withoutName.status, "needs-input");
+  assert.equal(withoutName.missingInformation[0], "name");
+  assert.doesNotMatch(withoutName.response, /workspace/i);
+});
+
+test("'log/record an expense or income' is recognized as a transaction entry, not creating a new workspace", async () => {
+  const withAmount = await callBusinessAssistant("Log a $50 expense for supplies");
+  assert.equal(withAmount.status, "blocked");
+  assert.match(withAmount.response, /PostgreSQL/i);
+  const withoutAmount = await callBusinessAssistant("Record an expense");
+  assert.equal(withoutAmount.status, "needs-input");
+  assert.equal(withoutAmount.missingInformation[0], "amount");
+});
