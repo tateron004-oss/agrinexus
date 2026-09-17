@@ -26,7 +26,7 @@ function normalizeEditable(info, input = {}) {
     if (!object(value)) invalid();
     return Object.fromEntries(Object.keys(defaults).map(key => {
       const item = value[key] === undefined ? defaults[key] : value[key];
-      if (typeof item !== typeof defaults[key] || (typeof item === "string" && item.length > 8000)) invalid();
+      if (typeof item !== typeof defaults[key] || (typeof item === "string" && item.length > 8000) || (typeof item === "number" && !Number.isFinite(item))) invalid();
       return [key, item];
     }));
   }
@@ -54,6 +54,11 @@ function normalizeEditable(info, input = {}) {
     leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }),
     socialPosts: rows(input.socialPosts === undefined ? starter.socialPosts : input.socialPosts, { platform: "", caption: "", status: "draft" }),
     tasks: rows(input.tasks === undefined ? starter.tasks : input.tasks, { title: "", status: "todo" }),
+    // Tool 2 of the small-business/nonprofit suite: income and expense
+    // tracking. "amount" is the first numeric field in this workspace --
+    // the Number.isFinite guard above exists specifically so a stray
+    // NaN/Infinity here can never silently corrupt a summed total.
+    transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, description: "" }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
     assistantStudio

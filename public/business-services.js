@@ -28,7 +28,12 @@
           const wrapper = document.createElement("label"), checkbox = document.createElement("input");
           checkbox.type = "checkbox"; checkbox.checked = row[key]; checkbox.addEventListener("change", () => { row[key] = checkbox.checked; });
           wrapper.append(checkbox, document.createTextNode(label)); div.append(wrapper);
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), key === "followUpDate" ? "date" : "text");
+        } else if (typeof row[key] === "number") {
+          // Coerce back to a real number on change -- every DOM input value is
+          // a string, but the backend's normalizeEditable rejects a field
+          // whose type doesn't match its default (amount defaults to 0).
+          field(div, label, String(row[key]), value => { const n = Number(value); row[key] = Number.isFinite(n) ? n : 0; }, false, "number");
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["followUpDate", "date"].includes(key) ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -45,6 +50,10 @@
     const business = byId("business-fields"); business.replaceChildren();
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
     rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"]]);
+    rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["description", "Description"]]);
+    const income = editable.transactions.filter(row => row.type !== "expense").reduce((sum, row) => sum + row.amount, 0);
+    const expenses = editable.transactions.filter(row => row.type === "expense").reduce((sum, row) => sum + row.amount, 0);
+    byId("finance-summary").textContent = `Income: ${income.toFixed(2)}  |  Expenses: ${expenses.toFixed(2)}  |  Net: ${(income - expenses).toFixed(2)}`;
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"]]);
     const landing = byId("landing-fields"); landing.replaceChildren();
@@ -84,6 +93,7 @@
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
+  byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, description: "" }); render(); });
   byId("add-post").addEventListener("click", () => { current.data.editable.socialPosts.push({ platform: "", caption: "", status: "draft" }); render(); });
   byId("add-task").addEventListener("click", () => { current.data.editable.tasks.push({ title: "", status: "todo" }); render(); });
   document.querySelectorAll("[data-generate]").forEach(button => button.addEventListener("click", () => run(async () => { await save(); current = await api(`/clients/${current.record_id}/generate`, "POST", { operation: button.dataset.generate, profile: byId("strategy-profile").value, expectedVersion: current.version }); render(); notice("Draft files created. Nothing was published or sent."); })));
