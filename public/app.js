@@ -54880,6 +54880,28 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   if (experienceMode !== "user" || !document.body.classList.contains("user-mode")) {
     setExperienceMode("user", { persist: false, announceChange: false });
   }
+  // Confirmed live: openNexusCapability(capabilityId, ...) below never
+  // reaches playNexusProviderNeutralMusic (the real, keyless Apple iTunes
+  // preview / YouTube playback the typed path uses) -- capabilityId here
+  // defaults to the raw "media" string, which isn't a registered
+  // NEXUS_CAPABILITIES key ("music-media" is), so it falls to alias-matching
+  // against the command text, which a plain "Play <Artist> <Title>" request
+  // often doesn't contain ("music"/"media" as literal words). Even when it
+  // does resolve, the resulting workflow panel never calls the real
+  // playback function at all. Calling it directly here, the same way
+  // workspace === "map" calls its own real launcher, is what actually
+  // plays audio for a voice request instead of silently opening (or
+  // failing to open) a decorative panel.
+  if (workspace === "media") {
+    playNexusProviderNeutralMusic(payload.query || command).catch(error => {
+      nexusGenesisVoiceDebugLog("genesis-media-playback-failed", {
+        query: payload.query || command, error: String(error?.message || error).slice(0, 300)
+      });
+    });
+    document.body.dataset.genesisWorkspace = "media";
+    document.body.dataset.genesisWorkspaceRequestId = action.requestId || "";
+    return true;
+  }
   const opened = workspace === "map"
     ? openGenesisRealtimeMapWorkspace(payload, command)
     : openNexusCapability(capabilityId, {

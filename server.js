@@ -28214,8 +28214,18 @@ function knownAfricanCityLocation(text = "") {
 function musicAssistantIntent(text = "") {
   const lower = String(text || "").toLowerCase();
   if (!/\b(play|open|find|search|put on|listen to)\b/.test(lower)) return null;
+  // Confirmed live: "Play Stevie Wonder Sir Duke." -- a plain "Play <Artist>
+  // <Title>" request with no genre keyword and no "by" connector -- matched
+  // neither branch here, so the whole request silently fell through to
+  // ordinary conversation instead of ever reaching real playback. A
+  // capitalized run of words right after "play" (checked against the
+  // original-case text, not lower) is a reasonable, low-false-positive
+  // signal for an artist/title reference -- an ordinary idiom like "play it
+  // safe" or "play defense" has a lowercase word immediately after "play".
+  const afterPlay = String(text || "").match(/\bplay\b\s+(.*)/i)?.[1] || "";
+  const capitalizedTitleAfterPlay = /^(?:[A-Z][\w'.-]*\s+){1,5}[A-Z0-9][\w'.-]*/.test(afterPlay);
   if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm)\b/.test(lower)
-    && !/\bplay\s+.+\s+by\s+.+/.test(lower)) return null;
+    && !/\bplay\s+.+\s+by\s+.+/.test(lower) && !capitalizedTitleAfterPlay) return null;
   const query = String(text || "")
     .replace(/\bnexus\b/ig, "")
     .replace(/\b(can you|please|could you|would you|open|play|find|search|put on|listen to)\b/ig, " ")
