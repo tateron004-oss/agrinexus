@@ -17,7 +17,8 @@ const CONTRACTS = Object.freeze({
   "live-knowledge": ["answer", "sources"],
   images: ["query", "images", "sources"],
   communications: ["draft", "consentState", "deliveryReceipt"],
-  operations: ["operation", "approvalState", "receipt"]
+  operations: ["operation", "approvalState", "receipt"],
+  lists: ["listId", "title", "itemCount"]
 });
 
 function completionRequirements(application) {

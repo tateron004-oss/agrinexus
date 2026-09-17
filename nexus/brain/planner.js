@@ -37,6 +37,8 @@ class OpenEndedPlanner {
     if (completeMediaPlayback) return Object.freeze({ ...completeMediaPlayback, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
+    const completeLists = completeListsPlan(command.text, catalog);
+    if (completeLists) return Object.freeze({ ...completeLists, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
     if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
@@ -291,6 +293,29 @@ function completeDocumentPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// Confirmed by production capability audit: lists.create/read/update had
+// real executors and real tests but no fast-path matcher at all, so every
+// list request depended on the LLM planning model -- which, unlike a
+// fast-path, produces a channel-sensitive prompt (see
+// nexus/experience/interaction-profile.js's voiceOnly/conciseSpokenPrompts),
+// meaning voice and typed weren't guaranteed to plan identically for this
+// domain. A deterministic matcher makes lists channel-blind by construction,
+// the same way documents/maps/images already are.
+function completeListsPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(list|checklist)\b/i.test(goal)) return null;
+  if (!/\b(create|make|start|save)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "lists.create") ||
+      !catalog.applications.some(app => app.applicationId === "lists")) return null;
+  const namedTitle = goal.match(/(?:called|titled|named|for)\s+["']?(.+?)(?=["']?(?:,|\s+with\b|\s+including\b|\.|$))/i)?.[1]?.trim();
+  const itemsClause = goal.match(/\b(?:with|including)\s+(?:items?\s*[:]?\s*)?(.+?)(?:\.|$)/i)?.[1];
+  const items = itemsClause ? itemsClause.split(/,|\band\b/i).map(item => item.trim()).filter(Boolean) : [];
+  return { goal, application: "lists", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "create-list", title: "Create a checklist",
+      toolId: "lists.create", input: { title: namedTitle || "Nexus checklist", items, command: goal },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeCommunicationPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(message|communication|follow-up)\b/i.test(goal) || !/\b(draft|write|prepare)\b/i.test(goal) ||
@@ -374,5 +399,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeCommunicationPlan,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan,
   completeRemainingWorkspacePlan, validatePlan });

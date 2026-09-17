@@ -30,7 +30,7 @@ test("release readiness accepts every deploy-stage production component", () => 
   assert.equal(report.passed, true);
   assert.equal(report.requiredComponents, 14);
   assert.equal(report.closedFaults, 30);
-  assert.equal(report.verifiedCapabilities, 17);
+  assert.equal(report.verifiedCapabilities, 18);
 });
 
 test("release readiness does not claim success without durable object storage", () => {

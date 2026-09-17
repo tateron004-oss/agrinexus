@@ -261,6 +261,33 @@ test("a complete document create-save-reopen request has an executable Documents
   assert.equal(completeDocumentPlan("Tell me about farming plans.", catalog), null);
 });
 
+test("a complete list-creation request has an executable Lists plan", () => {
+  const { completeListsPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "lists.create" }] };
+  const plan = completeListsPlan("Create a checklist called Farm Chores with feed goats, water crops, and check fences.", catalog);
+  assert.equal(plan.application, "lists"); assert.equal(plan.steps[0].toolId, "lists.create");
+  assert.equal(plan.steps[0].input.title, "Farm Chores");
+  assert.deepEqual(plan.steps[0].input.items, ["feed goats", "water crops", "check fences"]);
+  assert.deepEqual(completeListsPlan("Start a list for harvest tasks.", catalog).steps[0].input.items, []);
+  assert.equal(completeListsPlan("Tell me about my farm.", catalog), null);
+  assert.equal(completeListsPlan("Find maize marketplace listings with sources and select one listing.", catalog), null);
+});
+
+// Confirmed by the production capability audit: lists.create/read/update had
+// real executors but no fast-path matcher, so voice and typed weren't
+// guaranteed to plan identically for this domain (the LLM path is
+// channel-sensitive; a fast-path is channel-blind by construction). Exercise
+// the full planner dispatch, not just the isolated matcher, since that's
+// exactly where a prior misrouting bug (live-knowledge vs. agriculture) hid.
+test("the full planner resolves a list-creation request to lists, not the LLM path", async () => {
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("must not reach the model"); } },
+    tools: { list: async () => [{ tool_id: "lists.create", domain: "lists", description: "Create a list", risk_tier: "low", availability: "available" }] },
+    applications: new ApplicationRegistry(defaultApplicationManifests()) });
+  const plan = await planner.plan({ command: { ...command, text: "Create a checklist called Farm Chores with feed goats and water crops." }, context });
+  assert.equal(plan.application, "lists");
+  assert.equal(plan.steps[0].toolId, "lists.create");
+});
+
 test("a complete consented communication request has an executable Communications plan", () => {
   const { completeCommunicationPlan } = require("../../nexus/brain/planner.js");
   const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "communications.send" }] };

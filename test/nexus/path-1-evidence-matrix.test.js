@@ -9,7 +9,7 @@ const SHA = "a".repeat(40);
 
 test("all workspaces start pending with no inferred production evidence", () => {
   const matrix = createPendingEvidenceMatrix();
-  assert.equal(Object.keys(matrix).length, 15);
+  assert.equal(Object.keys(matrix).length, 16);
   for (const record of Object.values(matrix)) {
     assert.equal(record.state, "pending");
     assert.equal(record.releaseSha, null);
