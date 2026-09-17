@@ -195,3 +195,23 @@ test("'mark/complete a task's status' is recognized as a status update, not crea
   assert.equal(withoutStatus.status, "needs-input");
   assert.equal(withoutStatus.missingInformation[0], "status");
 });
+
+// Voice access for Tool 9 (Appointment Scheduler): add a local appointment
+// plan, and sync an existing one to the real, configured calendar provider.
+// "sync" is checked first and excludes wantsAddAppointment explicitly, so
+// "sync the appointment to my calendar" is never misread as adding a new
+// appointment named "my calendar".
+test("'add/schedule an appointment' is recognized as a local appointment plan, not a calendar sync or a new workspace", async () => {
+  const withTitle = await callBusinessAssistant("Add an appointment called Client meeting on Friday at 2pm");
+  assert.equal(withTitle.status, "blocked");
+  assert.match(withTitle.response, /PostgreSQL/i);
+  const withoutTitle = await callBusinessAssistant("Schedule a new appointment");
+  assert.equal(withoutTitle.status, "needs-input");
+  assert.equal(withoutTitle.missingInformation[0], "title");
+});
+
+test("'sync an appointment to my calendar' is recognized as a real calendar sync, not adding a new appointment", async () => {
+  const result = await callBusinessAssistant("Sync the Client meeting appointment to my calendar");
+  assert.equal(result.status, "blocked");
+  assert.match(result.response, /PostgreSQL/i);
+});
