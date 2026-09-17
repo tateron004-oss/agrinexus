@@ -768,7 +768,19 @@ async function run(env = process.env) {
     }
   }
   await reloadAuthenticatedShell(page);
-  await requireVisibleAuthoritativeTypedIngress(page);
+  // Confirmed live in production: reloadAuthenticatedShell's own reload
+  // navigation ("networkidle") can complete before the client app has
+  // finished its own async boot/render work, so the typed-entry/microphone
+  // UI this checks for is not always ready the instant the reload settles
+  // -- a single reload attempt is not a reliable enough signal for that
+  // separate readiness. A second reload-and-wait cycle survives that one-off
+  // timing gap without masking a genuine, repeated failure to ever render.
+  try {
+    await requireVisibleAuthoritativeTypedIngress(page);
+  } catch (error) {
+    await reloadAuthenticatedShell(page);
+    await requireVisibleAuthoritativeTypedIngress(page);
+  }
   const capabilityProbes = []; const workspaceProbes = [];
   async function runScenario(application, text) {
       const execute = async phase => {
