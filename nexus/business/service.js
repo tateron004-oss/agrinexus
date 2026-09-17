@@ -68,6 +68,11 @@ function normalizeEditable(info, input = {}) {
     // rather than one row holding an embedded line-items array.
     invoices: rows(input.invoices === undefined ? starter.invoices : input.invoices, { invoiceNumber: "", clientName: "", date: "", dueDate: "", notes: "", status: "draft" }),
     invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }),
+    // Tool 4: grant and funding tracking. The existing "Grant Writing Agent"
+    // (strategy.js) only ever produced a one-shot text template -- nothing
+    // persisted an actual funding opportunity, its deadline, or its
+    // application status across visits.
+    grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
     assistantStudio
