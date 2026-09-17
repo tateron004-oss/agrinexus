@@ -52,7 +52,7 @@ jobs:
           // Any edit invalidates the exception. New files have no exception.
           const reviewed={
             ".env.example": "03164e965bb90db8e913f8e6c18042c9ea0236e577bbb31e74d8087aaf6c71c1",
-            ".github/workflows/nexus-protected-production-deploy.yml": "ef23befb4314573bf9e3332c1869b845967d34e58eebb492a5d32d86eb22faff",
+            ".github/workflows/nexus-protected-production-deploy.yml": "2ad29c91a62d313a96d881a4e1ea8903720902927ed5562ae2da26444d729e12",
             "AGRINEXUS_INVESTOR_DEMO_VIDEO_PACKAGE.md": "39a7f80172177ed7c538c99ff24838aabb66bb94c940691eeac6aaeaea2bd566",
             "AGRINEXUS_STEP_BY_STEP_TRAINING_VIDEO_SCRIPT.md": "3675ded7c2f7017670127ff20fa418c46204cf02b86645b3789adba90e07543f",
             "README.md": "2fc011922eb426a2d3e91de1317b3a3146bd7c4acd40ef8792021c3643a37be0",
