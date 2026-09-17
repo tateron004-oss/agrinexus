@@ -94,13 +94,20 @@ async function run(env = process.env) {
       waitUntil: "networkidle",
       timeout: 90000
     });
+    // Diagnostic-only (buildDiagnostic below already tolerates null/undefined
+    // via optional chaining) -- confirmed live that this exact evaluate call
+    // failed with "Execution context was destroyed, most likely because of
+    // a navigation" and crashed this whole script, along with everything
+    // that runs after it in the same evidence step (including the
+    // capability-scenario probes), even though the diagnostic content this
+    // call produces was never load-bearing for anything downstream.
     const beforeClick = await page.evaluate(() => ({
       url: location.href,
       readyState: document.readyState,
       loginSubmitListenerRegistrations:
         window.__NEXUS_LOGIN_BINDING_DIAGNOSTIC__?.loginSubmitListenerRegistrations || 0,
       startupErrors: window.__NEXUS_LOGIN_BINDING_DIAGNOSTIC__?.startupErrors || []
-    }));
+    })).catch(() => null);
     await page.getByLabel("Email", { exact: true }).fill(env.NEXUS_STANDARD_USER_EMAIL || "user@agrinexus.org");
     await page.getByLabel("Password", { exact: true }).fill(env.NEXUS_STANDARD_USER_PASSWORD || "User2026!");
     const responsePromise = page.waitForResponse(response => {
@@ -119,7 +126,7 @@ async function run(env = process.env) {
         loginViewVisible: visible(document.querySelector("#loginView")),
         appViewVisible: visible(document.querySelector("#appView"))
       };
-    });
+    }).catch(() => null);
     diagnostic = buildDiagnostic({
       releaseSha,
       beforeClick,
