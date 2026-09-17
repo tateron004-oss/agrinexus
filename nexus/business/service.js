@@ -47,7 +47,11 @@ function normalizeEditable(info, input = {}) {
     deployment: rows(studioInput.deployment === undefined ? base.deployment : studioInput.deployment, { item: "", done: false }, 100)
   };
   return {
-    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", need: "", stage: "new", nextAction: "" }),
+    // "type" turns this into a combined customer/donor/sponsor tracker
+    // rather than a leads-only list; "followUpDate" is a real date field
+    // (distinct from the free-text "nextAction") so a follow-up can be
+    // reminded on, not just described.
+    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }),
     socialPosts: rows(input.socialPosts === undefined ? starter.socialPosts : input.socialPosts, { platform: "", caption: "", status: "draft" }),
     tasks: rows(input.tasks === undefined ? starter.tasks : input.tasks, { title: "", status: "todo" }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),

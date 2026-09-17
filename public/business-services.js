@@ -12,9 +12,11 @@
     return result;
   }
   async function run(work) { try { await work(); } catch (error) { notice(error.message || "The operation could not be completed."); } }
-  function field(container, labelText, value, onChange, multiline = false) {
+  function field(container, labelText, value, onChange, multiline = false, type = "text") {
     const label = document.createElement("label"); label.textContent = labelText;
-    const input = document.createElement(multiline ? "textarea" : "input"); input.value = value || ""; input.maxLength = 4000;
+    const input = document.createElement(multiline ? "textarea" : "input");
+    if (!multiline) input.type = type;
+    input.value = value || ""; if (type === "text") input.maxLength = 4000;
     input.addEventListener("input", () => onChange(input.value)); label.append(input); container.append(label);
   }
   function rows(containerId, values, keys) {
@@ -26,7 +28,7 @@
           const wrapper = document.createElement("label"), checkbox = document.createElement("input");
           checkbox.type = "checkbox"; checkbox.checked = row[key]; checkbox.addEventListener("change", () => { row[key] = checkbox.checked; });
           wrapper.append(checkbox, document.createTextNode(label)); div.append(wrapper);
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key));
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), key === "followUpDate" ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -42,7 +44,7 @@
     const info = current.data.info, editable = current.data.editable;
     const business = byId("business-fields"); business.replaceChildren();
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
-    rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"]]);
+    rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"]]);
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"]]);
     const landing = byId("landing-fields"); landing.replaceChildren();
@@ -81,7 +83,7 @@
   byId("create-client").addEventListener("submit", event => { event.preventDefault(); run(async () => { const form = new FormData(event.currentTarget); current = await api("/clients", "POST", { ...Object.fromEntries(form), consent: form.get("consent") === "on" }); await reload(); notice("Client workspace created with your AgriNexus identity."); }); });
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
-  byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", need: "", stage: "new", nextAction: "" }); render(); });
+  byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
   byId("add-post").addEventListener("click", () => { current.data.editable.socialPosts.push({ platform: "", caption: "", status: "draft" }); render(); });
   byId("add-task").addEventListener("click", () => { current.data.editable.tasks.push({ title: "", status: "todo" }); render(); });
   document.querySelectorAll("[data-generate]").forEach(button => button.addEventListener("click", () => run(async () => { await save(); current = await api(`/clients/${current.record_id}/generate`, "POST", { operation: button.dataset.generate, profile: byId("strategy-profile").value, expectedVersion: current.version }); render(); notice("Draft files created. Nothing was published or sent."); })));
