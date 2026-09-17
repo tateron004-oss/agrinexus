@@ -120,3 +120,31 @@ test("'log/record an expense or income' is recognized as a transaction entry, no
   assert.equal(withoutAmount.status, "needs-input");
   assert.equal(withoutAmount.missingInformation[0], "amount");
 });
+
+// Voice access for Tool 3 (Invoice/Receipt Generator): create an invoice,
+// add a line item to one, and generate its real, printable PDF. All three
+// must be recognized before the "start a new workspace" fallback (an
+// invoice/receipt request should never be misread as "create a workspace
+// called Jane's Bakery"), and the three phrasings must not collide with
+// each other (an "add a line item" request must not be read as "create an
+// invoice", and a "generate the PDF" request must not be read as either).
+test("'create an invoice/receipt' is recognized as creating an invoice, not a new workspace", async () => {
+  const result = await callBusinessAssistant("Create an invoice for Jane's Bakery");
+  assert.equal(result.status, "blocked");
+  assert.match(result.response, /PostgreSQL/i);
+});
+
+test("'add a line item to an invoice' is recognized as an invoice line item, not creating a new invoice or workspace", async () => {
+  const withPrice = await callBusinessAssistant("Add a line item to invoice INV-1001: 2 hours of consulting at $75");
+  assert.equal(withPrice.status, "blocked");
+  assert.match(withPrice.response, /PostgreSQL/i);
+  const withoutPrice = await callBusinessAssistant("Add a line item to the invoice");
+  assert.equal(withoutPrice.status, "needs-input");
+  assert.equal(withoutPrice.missingInformation[0], "unitPrice");
+});
+
+test("'generate/print the invoice PDF' is recognized as exporting a PDF, not adding a line item or creating an invoice", async () => {
+  const result = await callBusinessAssistant("Generate the PDF for invoice INV-1001");
+  assert.equal(result.status, "blocked");
+  assert.match(result.response, /PostgreSQL/i);
+});
