@@ -34,3 +34,31 @@ test('native visual tool keeps primary search and uses fallback only after no us
  primary=false;assert.match((await invoke()).images[0].imageUrl,/fallback/);assert.equal(fallbackCalls,1);assert.equal(visionCalls,0);
  fallback=false;assert.equal((await invoke()).status,'blocked');assert.equal(visionCalls,1);
 });
+
+test('a real image search still runs when the tool-calling model paraphrases away the show/find verb the wantsImages check needs', async () => {
+ // Confirmed live in production: "Show me current images of healthy maize
+ // leaves." over real voice reached nexus_visual_analysis, but the model's
+ // own "command" tool-call argument dropped the leading verb (show/find/
+ // search/display/open) that wantsImages' regex requires, so it fell
+ // through to nexusRealProviders.vision.analyze (an unconfigured, separate
+ // "configured visual provider" feature) instead of the real, keyless
+ // Wikimedia/Openverse search -- producing a "visual search tool is
+ // disabled" response even though real search code exists and works.
+ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+ const source=fs.readFileSync(path.join(__dirname,'../../server.js'),'utf8');
+ const begin=source.indexOf('async function executeNexusOpenAiNativeTool('),end=source.indexOf('\nfunction nexusGenesisWorkspaceAction(',begin);
+ assert.ok(begin>=0&&end>begin); let visionCalls=0;
+ const sandbox={URL,process:{env:{}},sanitizePilotText:value=>String(value||''),
+ fetchWithTimeout:async()=>({ok:true,json:async()=>({query:{pages:{one:{title:'Maize',imageinfo:[{url:'https://images.example/primary',descriptionurl:'https://source.example/primary'}]}}}})}),
+ require:name=>{assert.equal(name,'./server/nexus-open-image-fallback');return {searchOpenImages:async()=>[]}},
+ nexusOpenAiNativeToolReceipt:()=>({testReceipt:true}),nexusRealProviders:{vision:{analyze:async()=>{visionCalls++;return {status:'blocked'}}}},
+ nexusOpenAiNativeProviderToolResult:(_db,_common,result)=>result,
+ nexusOpenAiNativeToolChoiceHint:()=>'nexus_visual_analysis',
+ nexusMentalHealthBehavioralWellness:require('../../public/nexus-mental-health-behavioral-wellness.js')};
+ vm.createContext(sandbox);vm.runInContext(source.slice(begin,end)+'\nthis.run=executeNexusOpenAiNativeTool;',sandbox);
+ const result = await sandbox.run({}, {}, 'nexus_visual_analysis',
+   { command: 'healthy maize leaves' },
+   { command: 'Show me current images of healthy maize leaves.' });
+ assert.equal(visionCalls, 0, 'the real Wikimedia search must be used, not the unconfigured vision provider fallback');
+ assert.match(result.images[0].imageUrl, /primary/);
+});
