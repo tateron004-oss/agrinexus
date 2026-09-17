@@ -19133,14 +19133,32 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // packet first would silently shadow that existing, working behavior.
   // Genuine psychological crisis / safeguarding concerns have no such
   // pre-existing coverage in conversation, so they still fire here.
+  // Confirmed live in production: the OpenAI Realtime/desktop-listener
+  // model rewrites the user's words into this tool call's own required
+  // "command" argument ("The user's plain-language Nexus request") before
+  // this function ever runs -- args.command always wins over context.command
+  // in the resolution above. A direct first-person crisis statement ("I want
+  // to end my life...") reached nexus_health_preparation with crisisOverride
+  // never firing, because the model's rewritten argument no longer matched
+  // these patterns even though the caller's actual raw words plainly would
+  // have. context.command is always the caller's original, unmediated text
+  // (see runNexusOpenAiNativeAgentCommand), so classify that too and treat
+  // either one tripping crisisOverride as sufficient -- this only adds
+  // coverage, it never removes any existing check.
+  const rawCallerText = sanitizePilotText(context.command || "", 700);
   const mentalHealthSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
+  const rawMentalHealthSignal = rawCallerText && rawCallerText !== command
+    ? nexusMentalHealthBehavioralWellness.classifyState(rawCallerText, {})
+    : null;
+  const effectiveMentalHealthSignal = rawMentalHealthSignal?.crisisOverride === true ? rawMentalHealthSignal : mentalHealthSignal;
+  const effectiveMentalHealthText = effectiveMentalHealthSignal === rawMentalHealthSignal ? rawCallerText : command;
   const mentalHealthAlreadyHandledElsewhere =
-    mentalHealthSignal.state === "medical_emergency" && toolName === "nexus_general_conversation";
-  if (mentalHealthSignal.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
-    const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(command, {
+    effectiveMentalHealthSignal.state === "medical_emergency" && toolName === "nexus_general_conversation";
+  if (effectiveMentalHealthSignal.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
+    const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(effectiveMentalHealthText, {
       language, source: context.inputMode || "voice-or-native",
-      locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
-      screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(command)
+      locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(effectiveMentalHealthText),
+      screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(effectiveMentalHealthText)
     });
     return { ...common, capability: "mental-health-behavioral-wellness", status: "completed",
       response: packet.userVisibleStatus, mentalHealth: packet,
