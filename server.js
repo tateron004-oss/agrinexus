@@ -18273,6 +18273,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_visual_analysis", "Analyze user-authorized images, document photos, crop photos, equipment photos, or camera inputs only when a configured visual provider and explicit user-supplied media are present.", "visual-analysis"),
     tool("nexus_memory", "Inspect, create, correct, export, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls.", "privacy-memory"),
     tool("nexus_automation_reminder", "Create, inspect, or prepare reminders, recurring monitoring, scheduled tasks, and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated.", "confirmation-gated-automation"),
+    tool("nexus_lists", "Create, read, or update a checklist or to-do list through Nexus's real, persisted lists capability. Use the title argument for the list's name and content for its items (one per line or comma-separated).", "local-record-write"),
     tool("nexus_email", "Prepare, read, or send email only through configured authorized email providers. Drafting can occur locally; sending requires credentials, consent, confirmation, and receipts.", "high-risk-confirmation-required"),
     tool("nexus_calendar", "Search, schedule, change, or cancel calendar events only through configured authorized calendar providers. Local preparation is allowed; real calendar writes require confirmation and provider receipts.", "high-risk-confirmation-required"),
     tool("nexus_browser_computer_action", "Use browser or computer actions only through an authorized connector when no direct API exists. Never performs hidden external execution.", "high-risk-confirmation-required"),
@@ -18379,6 +18380,7 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   if (/\b(image|photo|picture|camera|visual|scan|document photo|crop photo|equipment photo)\b/.test(lower)) return "nexus_visual_analysis";
   if (/\b(remember|memory|forget|delete memory|correct memory|export memory|what do you remember|preferences)\b/.test(lower)) return "nexus_memory";
   if (/\b(remind|reminder|scheduled task|recurring|monitor|notification|notify me|follow up)\b/.test(lower)) return "nexus_automation_reminder";
+  if (/\b(checklist|to-?do list)\b/.test(lower)) return "nexus_lists";
   if (/\b(receipt|receipts|audit history|audit trail|audit log)\b/.test(lower)) return "nexus_receipts";
   if (/\b(email|inbox|mail)\b/.test(lower)) return "nexus_email";
   if (/\b(calendar|schedule|reschedule|cancel appointment|meeting|event)\b/.test(lower)) return "nexus_calendar";
@@ -18499,6 +18501,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks for a route, directions, or traffic between two places, you must call nexus_maps_route.",
     "When the user asks to export something or save it as a PDF or document, you must call nexus_document_export.",
     "When the user asks to set, create, or list a reminder, or queue/sync something for offline use, you must call nexus_automation_reminder.",
+    "When the user asks to create, save, read, or update a checklist or to-do list (e.g. 'create a checklist called X with items A, B, C'), you must call nexus_lists. This is a real, persisted list, not a reminder or a document — never route a checklist request to nexus_automation_reminder or nexus_document_export.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, you must call nexus_business_assistant.",
@@ -19594,6 +19597,56 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, localOnly: true };
     }
     return nexusOpenAiNativeCreateLocalReminder(db, user, common, args);
+  }
+  if (toolName === "nexus_lists") {
+    // Real lists persistence only exists in the modern nexus/ runtime
+    // (nexus/lists/executor.js, a real RecordRepository-backed write) --
+    // this dispatcher has no equivalent of its own, and confirmed live that
+    // without this branch the model routed checklist requests to
+    // nexus_automation_reminder/nexus_document_export instead, which never
+    // created a real list. authoritativeNexusRuntime.behaviorTurnRequest
+    // reaches the same behavior spine /api/nexus/runtime/behavior/turn
+    // already uses for typed commands, in-process, rather than
+    // reimplementing list parsing/persistence here.
+    const authoritativeUser = await authoritativeRuntimeUser(user);
+    if (!authoritativeUser) {
+      return { ...common, capability: "lists", status: "needs-auth", response: "Sign in first, then I can create or manage a list." };
+    }
+    // The model's own "command" tool-call argument can drop the item list
+    // the user actually said (confirmed live with the same paraphrase
+    // pattern that affected crisis detection) -- context.command is the
+    // caller's original, unmediated text when available, and the list
+    // planner's item extraction needs the full original phrasing.
+    const listCommandText = sanitizePilotText(context.command || command, 700) || command;
+    try {
+      const turn = await authoritativeNexusRuntime.behaviorTurnRequest({ text: listCommandText, channel: "voice", locale: language, user: authoritativeUser });
+      if (turn.state === "clarification_required") {
+        return { ...common, capability: "lists", status: "needs-input", response: turn.response || "What should I call this list?", missingInformation: ["title"] };
+      }
+      if (turn.state === "confirmation_required") {
+        return { ...common, capability: "lists", status: "confirmation-required", requiresConfirmation: true, response: "I can save that list -- say confirm and I will create it." };
+      }
+      if (turn.state !== "render_required" || !turn.render) {
+        return { ...common, capability: "lists", status: "blocked", response: "I could not complete the checklist request right now." };
+      }
+      const acknowledgement = await authoritativeNexusRuntime.behaviorAcknowledgeRequest({
+        taskId: turn.taskId, commandId: turn.commandId, correlationId: turn.correlationId,
+        workspace: turn.render.workspace, rendered: true, visible: false, audible: true,
+        evidence: { listId: turn.render.data?.listId, title: turn.render.data?.title, itemCount: Array.isArray(turn.render.data?.items) ? turn.render.data.items.length : 0 },
+        user: authoritativeUser
+      });
+      const listData = turn.render.data || {};
+      const itemCount = Array.isArray(listData.items) ? listData.items.length : 0;
+      const verb = listData.listId && turn.render.operation === "update_list" ? "updated" : "created";
+      const response = acknowledgement.completed
+        ? `I ${verb} your "${listData.title || "list"}" checklist${itemCount ? ` with ${itemCount} item${itemCount === 1 ? "" : "s"}` : ""}.`
+        : "I prepared the checklist but could not confirm it saved. Please try again.";
+      return { ...common, capability: "lists", status: acknowledgement.completed ? "completed" : "blocked", response,
+        executionAttempted: true, executionVerified: acknowledgement.completed === true, list: listData };
+    } catch (error) {
+      return { ...common, capability: "lists", status: "blocked",
+        response: error.code === "behavior_spine_unavailable" ? "The lists capability is temporarily unavailable." : (error.message || "I could not create that list right now.") };
+    }
   }
   if (toolName === "nexus_email") {
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);

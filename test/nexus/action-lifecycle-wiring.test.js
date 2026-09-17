@@ -8,7 +8,7 @@ const { withActionLifecycle, ensureNexusActionLedger, resetActionLedgerForTests 
 
 test.beforeEach(() => resetActionLedgerForTests());
 
-function loadExecuteTool({ twilio, email, calendar }) {
+function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, authoritativeNexusRuntime }) {
   const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
   const start = source.indexOf("async function executeNexusOpenAiNativeTool(");
   const end = source.indexOf("\nfunction nexusGenesisWorkspaceAction(", start);
@@ -31,7 +31,12 @@ function loadExecuteTool({ twilio, email, calendar }) {
       calendar: calendar || {}
     },
     nexusOpenAiNativeProviderToolResult: (_db, _common, result) => result,
-    nexusMentalHealthBehavioralWellness: require("../../public/nexus-mental-health-behavioral-wellness.js")
+    nexusMentalHealthBehavioralWellness: require("../../public/nexus-mental-health-behavioral-wellness.js"),
+    authoritativeRuntimeUser: authoritativeRuntimeUser || (async () => null),
+    authoritativeNexusRuntime: authoritativeNexusRuntime || {
+      behaviorTurnRequest: async () => { throw new Error("behaviorTurnRequest should not be called in this test"); },
+      behaviorAcknowledgeRequest: async () => { throw new Error("behaviorAcknowledgeRequest should not be called in this test"); }
+    }
   };
   vm.createContext(sandbox);
   vm.runInContext(
@@ -226,4 +231,75 @@ test("a real therapy/provider-mentioning action is not intercepted -- only genui
   const result = await run(db, {}, "nexus_calendar", { command: "Book a calendar event with my therapy provider", confirmed: true });
   assert.equal(result.capability !== "mental-health-behavioral-wellness", true,
     "a plain mention of therapy/provider must not be treated as a crisis signal");
+});
+
+// nexus_lists has no real backend of its own in this dispatcher -- real list
+// persistence only exists in the modern nexus/ runtime's behavior spine.
+// These tests cover the bridge added directly here (authoritativeNexusRuntime
+// .behaviorTurnRequest/.behaviorAcknowledgeRequest), confirming it reaches
+// that real backend instead of silently no-oping or misrouting to reminders.
+test("nexus_lists requires sign-in before attempting the authoritative runtime", async () => {
+  const run = loadExecuteTool({ authoritativeRuntimeUser: async () => null });
+  const db = {};
+  const result = await run(db, {}, "nexus_lists", { command: "Create a checklist called Farm Chores with feed goats, water crops, and check fences." });
+  assert.equal(result.status, "needs-auth");
+  assert.equal(result.capability, "lists");
+});
+
+test("nexus_lists creates a real list through the authoritative runtime and reports the actual saved title and item count", async () => {
+  const turnCalls = []; const ackCalls = [];
+  const run = loadExecuteTool({
+    authoritativeRuntimeUser: async user => ({ id: "auth-user-1", tenantId: "tenant-1" }),
+    authoritativeNexusRuntime: {
+      behaviorTurnRequest: async input => { turnCalls.push(input); return {
+        state: "render_required", taskId: "task-1", commandId: "cmd-1", correlationId: "corr-1",
+        render: { workspace: "lists", operation: "create_list", data: { title: "Farm Chores", items: [{ text: "feed goats" }, { text: "water crops" }, { text: "check fences" }], listId: "list-1" } }
+      }; },
+      behaviorAcknowledgeRequest: async input => { ackCalls.push(input); return { completed: true }; }
+    }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_lists",
+    { command: "create a list" },
+    { command: "Create a checklist called Farm Chores with feed goats, water crops, and check fences." });
+  assert.equal(turnCalls.length, 1);
+  // The model's own paraphrased tool-call argument must not be what actually
+  // gets planned -- the caller's raw, unmediated text (context.command) is
+  // what the list planner needs to correctly extract every item.
+  assert.equal(turnCalls[0].text, "Create a checklist called Farm Chores with feed goats, water crops, and check fences.");
+  assert.equal(ackCalls.length, 1);
+  assert.equal(ackCalls[0].taskId, "task-1");
+  assert.equal(ackCalls[0].rendered, true);
+  assert.equal(result.status, "completed");
+  assert.equal(result.capability, "lists");
+  assert.match(result.response, /Farm Chores/);
+  assert.match(result.response, /3 items/);
+  assert.equal(result.executionVerified, true);
+});
+
+test("nexus_lists reports a needed confirmation instead of silently completing", async () => {
+  const run = loadExecuteTool({
+    authoritativeRuntimeUser: async () => ({ id: "auth-user-1", tenantId: "tenant-1" }),
+    authoritativeNexusRuntime: {
+      behaviorTurnRequest: async () => ({ state: "confirmation_required" }),
+      behaviorAcknowledgeRequest: async () => { throw new Error("must not acknowledge a task still awaiting confirmation"); }
+    }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_lists", { command: "Delete my Farm Chores list" });
+  assert.equal(result.status, "confirmation-required");
+  assert.equal(result.requiresConfirmation, true);
+});
+
+test("nexus_lists fails closed with a plain message when the authoritative behavior spine is unavailable", async () => {
+  const run = loadExecuteTool({
+    authoritativeRuntimeUser: async () => ({ id: "auth-user-1", tenantId: "tenant-1" }),
+    authoritativeNexusRuntime: {
+      behaviorTurnRequest: async () => { throw Object.assign(new Error("The authoritative behavior spine is unavailable; no legacy write fallback was used."), { code: "behavior_spine_unavailable" }); }
+    }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_lists", { command: "Create a checklist called Farm Chores." });
+  assert.equal(result.status, "blocked");
+  assert.match(result.response, /temporarily unavailable/i);
 });
