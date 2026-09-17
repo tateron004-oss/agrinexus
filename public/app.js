@@ -54922,6 +54922,31 @@ function genesisRealtimeMapTarget(payload = {}) {
   return targets[normalized] || null;
 }
 
+// openFullScaleUserMap() (called just below) schedules its own staggered
+// [80, 180, 360, 700]ms checks that destructively recreate #userMapCanvas
+// (via renderUserRealMap()/freshLeafletCanvas(), which replaces the DOM node
+// and reassigns userMap/userMapLayers from scratch) whenever the canvas isn't
+// yet a Leaflet container. A route/marker draw fired at a fixed delay can
+// land on the wrong side of one of those checkpoints -- confirmed live via
+// production capability probes intermittently finding the map canvas not
+// visible right after a route was drawn. Waiting for the canvas to actually
+// become a stable Leaflet container first (which is exactly the signal
+// openFullScaleUserMap's own checks use to stop recreating it) avoids racing
+// a draw against a recreation that would otherwise wipe it out.
+function waitForStableUserMapCanvas(maxWaitMs = 900, intervalMs = 30) {
+  return new Promise(resolve => {
+    const deadline = Date.now() + maxWaitMs;
+    const check = () => {
+      if ($("#userMapCanvas")?.classList.contains("leaflet-container") || Date.now() >= deadline) {
+        resolve();
+        return;
+      }
+      setTimeout(check, intervalMs);
+    };
+    check();
+  });
+}
+
 function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
   const country = africanMapCountryTarget(payload.country || command);
   const hasRouteEndpoints = Boolean(String(payload.origin || "").trim() && String(payload.destination || "").trim());
@@ -54944,7 +54969,7 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
     const destination = resolvePlace(payload.destination);
     if (origin && destination) {
       document.body.dataset.genesisMapLocation = `${origin.city} to ${destination.city}`;
-      window.setTimeout(() => {
+      waitForStableUserMapCanvas().then(() => {
         if (!userMap) return;
         userMapLayers.route?.clearLayers?.();
         userMapLayers.markers?.clearLayers?.();
@@ -54959,13 +54984,13 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
         // runs before this timeout fires) is what actually makes a freshly
         // computed route visible without an extra manual click.
         document.querySelector("#map .user-simple-module > details.user-module-more")?.setAttribute("open", "true");
-      }, 360);
+      });
     } else {
       delete document.body.dataset.genesisMapLocation;
     }
   } else if (target) {
     document.body.dataset.genesisMapLocation = target.name;
-    window.setTimeout(() => {
+    waitForStableUserMapCanvas().then(() => {
       if (!userMap) return;
       userMap.setView([target.lat, target.lng], target.zoom);
       userMapLayers.markers?.clearLayers?.();
@@ -54975,7 +55000,7 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
         .openPopup();
       safeInvalidateLeafletMap(userMap);
       document.querySelector("#map .user-simple-module > details.user-module-more")?.setAttribute("open", "true");
-    }, 360);
+    });
   } else {
     delete document.body.dataset.genesisMapLocation;
   }
