@@ -148,3 +148,26 @@ test("'generate/print the invoice PDF' is recognized as exporting a PDF, not add
   assert.equal(result.status, "blocked");
   assert.match(result.response, /PostgreSQL/i);
 });
+
+// Voice access for Tool 4 (Grant/Funding Tracker): add a grant/funding
+// opportunity, and mark/update an existing one's status. The two verb sets
+// (add|create|new|log|track vs. mark|update|set|change) are disjoint, so a
+// status-update command is never misread as adding a new grant and vice
+// versa; both are recognized before the "start a new workspace" fallback.
+test("'add/track a grant or funding opportunity' is recognized as tracking a grant, not creating a new workspace", async () => {
+  const withFunder = await callBusinessAssistant("Add a grant from the Ford Foundation for $10,000");
+  assert.equal(withFunder.status, "blocked");
+  assert.match(withFunder.response, /PostgreSQL/i);
+  const withoutFunder = await callBusinessAssistant("Track a new funding opportunity");
+  assert.equal(withoutFunder.status, "needs-input");
+  assert.equal(withoutFunder.missingInformation[0], "funderName");
+});
+
+test("'mark/update a grant's status' is recognized as a status update, not adding a new grant", async () => {
+  const withStatus = await callBusinessAssistant("Mark the Ford Foundation grant as submitted");
+  assert.equal(withStatus.status, "blocked");
+  assert.match(withStatus.response, /PostgreSQL/i);
+  const withoutStatus = await callBusinessAssistant("Update the grant");
+  assert.equal(withoutStatus.status, "needs-input");
+  assert.equal(withoutStatus.missingInformation[0], "status");
+});
