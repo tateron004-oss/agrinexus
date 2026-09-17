@@ -139,6 +139,29 @@ test("customer/donor tracker: leads carry a type and a real follow-up date, back
   assert.equal(editable.leads[1].followUpDate, '');
 });
 
+test("invoice/receipt generator: a real, printable PDF is produced from an invoice's header and line items", async () => {
+  const f = fixture(); const row = await f.service.create(f.context, { businessName: 'Cooperative', consent: true });
+  const editable = { ...row.data.editable,
+    invoices: [{ invoiceNumber: 'INV-1001', clientName: 'Green Valley Co-op', date: '2026-01-15', dueDate: '2026-02-15', notes: 'Thank you', status: 'sent' }],
+    invoiceItems: [
+      { invoiceNumber: 'INV-1001', description: 'Farm consulting', quantity: 2, unitPrice: 50 },
+      { invoiceNumber: 'INV-1001', description: 'Soil test kit', quantity: 1, unitPrice: 25 },
+      { invoiceNumber: 'INV-9999', description: 'A different invoice entirely', quantity: 1, unitPrice: 999 }
+    ]
+  };
+  const updated = await f.service.update(f.context, row.record_id, { expectedVersion: 1, editable });
+  const withPdf = await f.service.exportInvoice(f.context, row.record_id, { invoiceNumber: 'INV-1001', expectedVersion: updated.version });
+  const file = withPdf.data.files['invoices/INV-1001.pdf'];
+  assert.ok(file, 'the generated PDF must be stored on the record');
+  assert.equal(file.binary, true); assert.equal(file.contentType, 'application/pdf');
+  const bytes = Buffer.from(file.content, 'base64');
+  assert.equal(bytes.subarray(0, 4).toString(), '%PDF', 'the stored content must decode to a real PDF');
+  assert.ok(bytes.length > 500);
+  await assert.rejects(() => f.service.exportInvoice(f.context, row.record_id, { expectedVersion: withPdf.version }), error => error.code === 'business_invoice_number_required');
+  await assert.rejects(() => f.service.exportInvoice(f.context, row.record_id, { invoiceNumber: 'INV-NOPE', expectedVersion: withPdf.version }), error => error.code === 'business_invoice_not_found');
+  await assert.rejects(() => f.service.exportInvoice(f.context, row.record_id, { invoiceNumber: 'INV-1001', expectedVersion: 1 }), error => error.code === 'business_version_conflict');
+});
+
 test("malformed business editor shapes are rejected before draft generation", () => {
   const { normalizeEditable } = require('../../nexus/business/service');
   const info = templates.inferBusiness({ businessName: 'Cooperative' });

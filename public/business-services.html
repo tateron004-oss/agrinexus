@@ -29,6 +29,12 @@
       <section><h3>Business details</h3><div id="business-fields" class="fields"></div></section>
       <section><h3>Customers &amp; Donors</h3><p>Track leads, customers, donors, sponsors, and volunteers in one list. Set a follow-up date on any row to know who needs outreach next.</p><div id="leads" class="rows"></div><button id="add-lead" type="button">Add customer or donor</button></section>
       <section><h3>Income &amp; Expenses</h3><p>Track revenue and spending. Totals below are computed from the rows you enter.</p><div id="transactions" class="rows"></div><button id="add-transaction" type="button">Add transaction</button><p id="finance-summary" class="result" aria-live="polite">Income: 0.00  |  Expenses: 0.00  |  Net: 0.00</p></section>
+      <section><h3>Invoices &amp; Receipts</h3><p>Create an invoice, then add line items with the matching invoice number. Generate a real, printable PDF from the totals below.</p>
+        <h4>Invoices</h4><div id="invoices" class="rows"></div><button id="add-invoice" type="button">Add invoice</button>
+        <h4>Line items</h4><div id="invoice-items" class="rows"></div><button id="add-invoice-item" type="button">Add line item</button>
+        <label>Invoice # to generate<input id="invoice-pdf-number" placeholder="INV-1001"></label>
+        <button id="generate-invoice-pdf" type="button">Generate invoice PDF</button>
+      </section>
       <section><h3>Social drafts</h3><div id="posts" class="rows"></div><button id="add-post" type="button">Add social draft</button></section>
       <section><h3>Tasks</h3><div id="tasks" class="rows"></div><button id="add-task" type="button">Add task</button></section>
       <section><h3>Landing page</h3><div id="landing-fields" class="fields"></div><p>Generated pages are draft files. They are not published, and their contact forms are not connected.</p></section>
