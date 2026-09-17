@@ -710,7 +710,26 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const context = requestContext({ headers: {} }, user);
     return createBusinessApi(active, { env }).handle({ method, pathname, context, body });
   }
-  return Object.freeze({ handle, status, businessRequest });
+  // Mirrors the /api/nexus/runtime/behavior/turn and .../acknowledgements
+  // HTTP handling above, but callable in-process with a plain user object
+  // instead of raw req/res -- the same pattern businessRequest already uses.
+  // This is what lets a non-HTTP caller (the legacy server.js voice/native
+  // tool dispatcher) reach the real, authoritative task engine for a
+  // capability (e.g. lists) that only exists in this runtime, instead of
+  // duplicating its logic.
+  async function behaviorTurnRequest({ text, channel = "api", locale = "en", user, conversationId, taskId }) {
+    const active = await runtime(); await active.ready;
+    if (!active.behavior) throw Object.assign(new Error("The authoritative behavior spine is unavailable; no legacy write fallback was used."), { code: "behavior_spine_unavailable", status: 503 });
+    const context = requestContext({ headers: {} }, user);
+    return active.behavior.turn({ input: { correlationId: context.requestId, conversationId, taskId, channel, locale, text }, context });
+  }
+  async function behaviorAcknowledgeRequest({ taskId, commandId, correlationId, workspace, rendered, visible, audible, evidence = {}, user }) {
+    const active = await runtime(); await active.ready;
+    if (!active.behavior?.acknowledge) throw Object.assign(new Error("The authoritative renderer acknowledgement path is unavailable."), { code: "behavior_acknowledgement_unavailable", status: 503 });
+    const context = requestContext({ headers: {} }, user);
+    return active.behavior.acknowledge({ input: { taskId, commandId, correlationId, workspace, rendered, visible, audible, evidence }, context });
+  }
+  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {
