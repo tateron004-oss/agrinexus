@@ -37,6 +37,27 @@ test("server outcome retains both map endpoints", () => {
   assert.deepEqual({ origin: result.data.origin, destination: result.data.destination }, { origin: "Nairobi", destination: "Nakuru" });
 });
 
+test("server outcome registers lists as a real workspace, not a mock or a throw", () => {
+  const created = createWorkspaceOutcome({
+    command: command("Create a checklist called Farm Chores with feed goats and water crops."),
+    plan: { application: "lists", steps: [{ input: { title: "Farm Chores", items: ["feed goats", "water crops"] } }] },
+    task: { taskId: "tsk_3", steps: [{ output: { listId: "rec_1", itemCount: 2, persisted: true } }] },
+    state: "completed", outcome: { verified: true }
+  });
+  assert.equal(created.workspace, "lists");
+  assert.equal(created.operation, "create_list");
+  assert.equal(created.presentation.kind, "checklist");
+  assert.equal(created.data.listId, "rec_1");
+
+  const updated = createWorkspaceOutcome({
+    command: command("Add bring feed to my Farm Chores list."),
+    plan: { application: "lists", steps: [{ input: { listId: "rec_1", addItems: ["bring feed"] } }] },
+    task: { taskId: "tsk_4", steps: [{ output: { updated: true, listId: "rec_1" } }] },
+    state: "completed", outcome: { verified: true }
+  });
+  assert.equal(updated.operation, "update_list");
+});
+
 test("workspace selection is server-owned and rejects unknown applications", () => {
   assert.throws(() => createWorkspaceOutcome({ command: command("Do something"), plan: { application: "legacy-browser", steps: [] }, task: {}, state: "completed" }), /No authoritative workspace/);
 });

@@ -5,8 +5,8 @@ const test = require("node:test");
 const { WORKSPACE_TOPOLOGY, resolveWorkspace } = require("../../nexus/apps/workspace-topology.js");
 const { durableWorkspacePort } = require("../../nexus/apps/durable-workspace-ports.js");
 
-test("all 15 user workspaces resolve to authoritative manifests without changing protected routes", () => {
-  assert.equal(WORKSPACE_TOPOLOGY.length, 15);
+test("all 16 user workspaces resolve to authoritative manifests without changing protected routes", () => {
+  assert.equal(WORKSPACE_TOPOLOGY.length, 16);
   assert.equal(resolveWorkspace("chronic-care").manifestId, "health");
   assert.equal(resolveWorkspace("music").browserRoute, "music");
   assert.equal(resolveWorkspace("offline").workspaceId, "offline-queue");

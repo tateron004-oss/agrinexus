@@ -15,7 +15,8 @@ const WORKSPACE_TOPOLOGY = Object.freeze([
   entry("documents", "documents", "documents"),
   entry("reminders", "reminders", "reminders", { durablePort: "schedules" }),
   entry("offline-queue", "offline-queue", "offline", { aliases: ["offline"], durablePort: "sync" }),
-  entry("live-knowledge", "live-knowledge", "live-knowledge")
+  entry("live-knowledge", "live-knowledge", "live-knowledge"),
+  entry("lists", "lists", "lists")
 ]);
 
 const BY_ID = new Map();
