@@ -215,3 +215,23 @@ test("'sync an appointment to my calendar' is recognized as a real calendar sync
   assert.equal(result.status, "blocked");
   assert.match(result.response, /PostgreSQL/i);
 });
+
+// Voice access for Tool 8 (Document/Form Builder): generate the service
+// agreement, client intake form, and application checklist templates.
+// Requires only the workspace (no free-text fields to extract), so a
+// well-formed request always reaches the real database lookup -- the
+// observable proof of routing is "blocked"/PostgreSQL, matching every other
+// no-local-field sub-intent (see the invoice-PDF and appointment-sync
+// tests above). Also proves this doesn't collide with the invoice-PDF
+// generator, since both are triggered by a "generate" verb.
+test("'create/generate a service agreement/contract/intake form/application checklist' is recognized as generating document templates, not an invoice PDF or a new workspace", async () => {
+  const documents = await callBusinessAssistant("Generate a service agreement and client intake form");
+  assert.equal(documents.status, "blocked");
+  assert.match(documents.response, /PostgreSQL/i);
+  // Neither trigger requires the other's keyword ("service agreement" etc.
+  // vs. literal "invoice"), so an invoice-PDF request still reaches the
+  // real lookup unaffected by this new sub-intent.
+  const invoice = await callBusinessAssistant("Generate the PDF for invoice INV-1001");
+  assert.equal(invoice.status, "blocked");
+  assert.match(invoice.response, /PostgreSQL/i);
+});
