@@ -33,7 +33,7 @@
           // a string, but the backend's normalizeEditable rejects a field
           // whose type doesn't match its default (amount defaults to 0).
           field(div, label, String(row[key]), value => { const n = Number(value); row[key] = Number.isFinite(n) ? n : 0; }, false, "number");
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["followUpDate", "date"].includes(key) ? "date" : "text");
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["followUpDate", "date", "dueDate"].includes(key) ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -54,6 +54,8 @@
     const income = editable.transactions.filter(row => row.type !== "expense").reduce((sum, row) => sum + row.amount, 0);
     const expenses = editable.transactions.filter(row => row.type === "expense").reduce((sum, row) => sum + row.amount, 0);
     byId("finance-summary").textContent = `Income: ${income.toFixed(2)}  |  Expenses: ${expenses.toFixed(2)}  |  Net: ${(income - expenses).toFixed(2)}`;
+    rows("invoices", editable.invoices, [["invoiceNumber", "Invoice #"], ["clientName", "Client"], ["date", "Date"], ["dueDate", "Due date"], ["notes", "Notes"], ["status", "Status"]]);
+    rows("invoice-items", editable.invoiceItems, [["invoiceNumber", "Invoice #"], ["description", "Description"], ["quantity", "Qty"], ["unitPrice", "Unit price"]]);
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"]]);
     const landing = byId("landing-fields"); landing.replaceChildren();
@@ -73,7 +75,11 @@
     const checkoutLink = byId("checkout-link"); checkoutLink.hidden = true;
     if (subscription.checkoutUrl) { try { const url = new URL(subscription.checkoutUrl); if (url.protocol === "https:" && url.hostname === "checkout.stripe.com") { checkoutLink.href = url.href; checkoutLink.hidden = false; } } catch {} }
     const files = byId("files"); files.replaceChildren();
-    Object.entries(current.data.files || {}).forEach(([name, file]) => { const li = document.createElement("li"); const button = document.createElement("button"); button.type = "button"; button.textContent = `Download ${name}`; button.addEventListener("click", () => download(name, file.content, "text/plain;charset=utf-8")); li.append(button); files.append(li); });
+    Object.entries(current.data.files || {}).forEach(([name, file]) => { const li = document.createElement("li"); const button = document.createElement("button"); button.type = "button"; button.textContent = `Download ${name}`;
+      button.addEventListener("click", () => file.binary
+        ? download(name, Uint8Array.from(atob(file.content), value => value.charCodeAt(0)), file.contentType || "application/octet-stream")
+        : download(name, file.content, "text/plain;charset=utf-8"));
+      li.append(button); files.append(li); });
   }
   async function reload() {
     const [available, data] = await Promise.all([api("/status"), api("/clients")]); status = available;
@@ -94,6 +100,15 @@
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
   byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, description: "" }); render(); });
+  byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: `INV-${String(current.data.editable.invoices.length + 1001)}`, clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
+  byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
+  byId("generate-invoice-pdf").addEventListener("click", () => run(async () => {
+    const invoiceNumber = byId("invoice-pdf-number").value.trim();
+    if (!invoiceNumber) throw new Error("Enter the invoice number to generate a PDF for.");
+    await save();
+    current = await api(`/clients/${current.record_id}/invoice-pdf`, "POST", { invoiceNumber, expectedVersion: current.version });
+    render(); notice(`Invoice ${invoiceNumber} PDF generated. Download it from the files list below.`);
+  }));
   byId("add-post").addEventListener("click", () => { current.data.editable.socialPosts.push({ platform: "", caption: "", status: "draft" }); render(); });
   byId("add-task").addEventListener("click", () => { current.data.editable.tasks.push({ title: "", status: "todo" }); render(); });
   document.querySelectorAll("[data-generate]").forEach(button => button.addEventListener("click", () => run(async () => { await save(); current = await api(`/clients/${current.record_id}/generate`, "POST", { operation: button.dataset.generate, profile: byId("strategy-profile").value, expectedVersion: current.version }); render(); notice("Draft files created. Nothing was published or sent."); })));

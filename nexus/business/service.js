@@ -2,6 +2,7 @@
 
 const templates = require("./templates");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
+const { renderPdfBuffer } = require("../../server/providers/exportProvider");
 const DATA_SCOPE = "business:client-data";
 const ALLOWED_OPERATIONS = new Set(["launch-kit", "landing-page", "assistant-package", "workflow", "strategy"]);
 const INPUT_FIELDS = ["businessName", "industry", "location", "customer", "problem", "request", "objective", "audience"];
@@ -59,6 +60,14 @@ function normalizeEditable(info, input = {}) {
     // the Number.isFinite guard above exists specifically so a stray
     // NaN/Infinity here can never silently corrupt a summed total.
     transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, description: "" }),
+    // Tool 3: invoices/receipts. An invoice header (client, dates, status)
+    // is stored separately from its line items, joined by "invoiceNumber" --
+    // the same flat-row validation this workspace already uses for every
+    // other list has no concept of a nested array within one row, so a
+    // real one-to-many relationship has to be modeled as two flat lists
+    // rather than one row holding an embedded line-items array.
+    invoices: rows(input.invoices === undefined ? starter.invoices : input.invoices, { invoiceNumber: "", clientName: "", date: "", dueDate: "", notes: "", status: "draft" }),
+    invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
     assistantStudio
@@ -149,6 +158,39 @@ class BusinessService {
       expectedVersion: record.version, data: { ...record.data, files: { ...record.data.files, ...files },
         lastWorkflow: { mode: "template", steps: templates.agenticPlan(record.data.info), published: false, externalAction: false } },
       provenance: { source: "nexusos-fa0614ce-adapted", operation: body.operation, generatedBy: "template", externalAction: false } });
+  }
+  async exportInvoice(context, recordId, body) {
+    await this.authorize(context, true); await this.consent(context);
+    const record = await this.owned(context, recordId);
+    if (body.expectedVersion !== record.version) fail("business_version_conflict", "Reload the current workspace before generating an invoice.", 409);
+    const invoiceNumber = String(body.invoiceNumber || "").trim();
+    if (!invoiceNumber) fail("business_invoice_number_required", "Provide the invoice number to generate.");
+    const invoice = record.data.editable.invoices.find(item => item.invoiceNumber === invoiceNumber);
+    if (!invoice) fail("business_invoice_not_found", "No invoice with that number exists in this workspace.", 404);
+    const items = record.data.editable.invoiceItems.filter(item => item.invoiceNumber === invoiceNumber);
+    // A "|" inside a client-entered description or name would otherwise be
+    // read back as an extra table column by the shared markdown-table
+    // renderer -- not a security issue (this never reaches a database
+    // query or shell), but it would silently corrupt the printed invoice.
+    const cell = value => String(value ?? "").replace(/\|/g, "/");
+    const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const content = [
+      `Bill to: ${cell(invoice.clientName || "Client")}`,
+      `Date: ${cell(invoice.date)}    Due: ${cell(invoice.dueDate)}`,
+      "",
+      "| Description | Qty | Unit Price | Total |",
+      "|---|---|---|---|",
+      ...items.map(item => `| ${cell(item.description)} | ${item.quantity} | ${item.unitPrice.toFixed(2)} | ${(item.quantity * item.unitPrice).toFixed(2)} |`),
+      "",
+      `Total due: ${total.toFixed(2)}`,
+      invoice.notes ? invoice.notes : ""
+    ].join("\n");
+    const pdf = await renderPdfBuffer(`Invoice ${invoiceNumber}`, content);
+    const fileName = `invoices/${invoiceNumber}.pdf`;
+    return this.repository.update({ tenantId: context.tenantId, recordId, actorId: context.userId,
+      expectedVersion: record.version,
+      data: { ...record.data, files: { ...record.data.files, [fileName]: { content: pdf.toString("base64"), binary: true, contentType: "application/pdf" } } },
+      provenance: { source: "owner-requested-invoice-pdf", invoiceNumber, externalAction: false } });
   }
   async export(context, recordId) {
     await this.authorize(context); const record = await this.owned(context, recordId);
