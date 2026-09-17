@@ -753,4 +753,105 @@ This workflow is ready when the owner can open the client workspace, see the nex
 }
 
 
-module.exports = Object.freeze({ clientWorkflowOutput, htmlEscape, safeSlug, titleCase, inferBusiness, businessLaunchKit, websiteHtml, websiteCss, socialCalendar, assistantPrompt, phoneAssistantScript, aiAssistantSystem, outreachScripts, defaultClientWorkspace, normalizeWorkspace, landingPageHtml, landingPageCss, assistantStudioPrompt, testAssistantReply, agenticPlan });
+// Tool 9 of the small-business/nonprofit suite: document/form templates.
+// The document-export backend (server/providers/exportProvider.js) was
+// already real -- it genuinely renders PDF/DOCX -- but nothing in this
+// workspace had actual contract/intake-form/checklist *content* to feed
+// it. These are editable starting points, not legal documents; each one
+// says so explicitly rather than implying a lawyer wrote it.
+function serviceAgreementTemplate(info) {
+  const now = new Date().toLocaleDateString();
+  return `# Service Agreement (Template)
+
+This is an editable template, not legal advice. Have a licensed attorney review it before use.
+
+Prepared: ${now}
+
+## Parties
+
+This agreement is between ${info.businessName} ("Provider") and [Client name] ("Client").
+
+## Scope of Services
+
+Provider will perform the following services for Client: [describe the specific service, deliverables, and any exclusions].
+
+## Term
+
+This agreement begins on [start date] and ends on [end date or "upon completion of the services described above"].
+
+## Payment
+
+- Total fee: [amount]
+- Payment schedule: [e.g., 50% deposit, 50% on completion]
+- Late payment: [policy, if any]
+
+## Client Responsibilities
+
+Client agrees to provide [access, information, materials] needed for Provider to perform the services.
+
+## Termination
+
+Either party may terminate this agreement with [number] days' written notice. [Describe what happens to fees already paid or owed.]
+
+## Signatures
+
+Provider: _______________________  Date: _______
+Client: _______________________  Date: _______
+`;
+}
+
+function clientIntakeFormTemplate(info) {
+  const now = new Date().toLocaleDateString();
+  return `# Client Intake Form (Template)
+
+${info.businessName} - prepared ${now}
+
+## Contact Information
+
+- Full name: ______________________
+- Phone: ______________________
+- Email: ______________________
+- Preferred contact method: [ ] Phone  [ ] Text  [ ] Email
+
+## Service Needed
+
+- What do you need help with? ______________________
+- When do you need this by? ______________________
+- Location or address (if applicable): ______________________
+
+## Additional Information
+
+- How did you hear about ${info.businessName}? ______________________
+- Anything else we should know? ______________________
+
+## Consent
+
+[ ] I consent to ${info.businessName} contacting me about this request and storing the information above.
+
+Signature: _______________________  Date: _______
+`;
+}
+
+function applicationChecklistTemplate(info) {
+  const now = new Date().toLocaleDateString();
+  return `# Application Checklist (Template)
+
+${info.businessName} - prepared ${now}
+
+Use this checklist to track what an applicant, new client, or new team member still needs to submit or complete.
+
+- [ ] Application form completed
+- [ ] Identification or verification documents received
+- [ ] Signed agreement or consent form on file
+- [ ] Payment or deposit received (if applicable)
+- [ ] Orientation or intake call scheduled
+- [ ] Welcome message or confirmation sent
+- [ ] Added to active client/member records
+
+## Notes
+
+______________________
+`;
+}
+
+module.exports = Object.freeze({ clientWorkflowOutput, htmlEscape, safeSlug, titleCase, inferBusiness, businessLaunchKit, websiteHtml, websiteCss, socialCalendar, assistantPrompt, phoneAssistantScript, aiAssistantSystem, outreachScripts, defaultClientWorkspace, normalizeWorkspace, landingPageHtml, landingPageCss, assistantStudioPrompt, testAssistantReply, agenticPlan, serviceAgreementTemplate, clientIntakeFormTemplate, applicationChecklistTemplate });

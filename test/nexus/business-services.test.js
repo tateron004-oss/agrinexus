@@ -169,6 +169,17 @@ test("customer/donor tracker: leads carry a type and a real follow-up date, back
   assert.equal(editable.leads[1].followUpDate, '');
 });
 
+test("document/form builder: generates a real service agreement, intake form and application checklist, each disclosing it is a template", () => {
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  const editable = templates.defaultClientWorkspace(info);
+  const files = filesFor(info, editable, 'documents');
+  assert.deepEqual(Object.keys(files).sort(), ['documents/Application_Checklist.md', 'documents/Client_Intake_Form.md', 'documents/Service_Agreement.md']);
+  assert.match(files['documents/Service_Agreement.md'].content, /not legal advice/i);
+  assert.match(files['documents/Service_Agreement.md'].content, /Cooperative/);
+  assert.match(files['documents/Client_Intake_Form.md'].content, /I consent to Cooperative contacting me/);
+  assert.match(files['documents/Application_Checklist.md'].content, /- \[ \] Application form completed/);
+});
+
 test("invoice/receipt generator: a real, printable PDF is produced from an invoice's header and line items", async () => {
   const f = fixture(); const row = await f.service.create(f.context, { businessName: 'Cooperative', consent: true });
   const editable = { ...row.data.editable,
