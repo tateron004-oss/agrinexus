@@ -785,6 +785,18 @@ async function run(env = process.env) {
       text: `${request.method()} ${request.url()} - ${request.failure()?.errorText || "unknown"}`.slice(0, 500),
       at: new Date().toISOString() });
   });
+  // "console.error" alone for a failed resource load never includes the
+  // URL (Chrome's own "Failed to load resource" text is generic) --
+  // confirmed live in production, where two such errors gave no way to
+  // tell which endpoint actually 401'd. This is the missing correlation:
+  // every non-2xx HTTP response, with its real URL and status.
+  page.on("response", response => {
+    if (response.status() >= 400) {
+      browserDiagnosticLog.push({ kind: "http-error",
+        text: `${response.request().method()} ${response.url()} -> ${response.status()}`.slice(0, 500),
+        at: new Date().toISOString() });
+    }
+  });
   const loginLifecycle = await installLoginLifecycleDiagnostics(page, base);
   await installLiveKnowledgeLifecycleDiagnostics(page, base);
   const permissionSession = await page.context().newCDPSession(page);

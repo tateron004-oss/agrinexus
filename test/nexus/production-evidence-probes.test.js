@@ -179,7 +179,14 @@ test("typed ingress diagnostics carry real console/page/network errors, not just
   assert.deepEqual(diagnostic.recentBrowserEvents, browserDiagnosticLog);
 });
 
-test("the production browser wires console, pageerror, and requestfailed listeners into the diagnostic log before login", () => {
+test("the production browser wires console, pageerror, requestfailed, and http-error listeners into the diagnostic log before login", () => {
+  // Confirmed live in production: two "Failed to load resource: ... 401"
+  // console.error entries surfaced by this diagnostic gave no way to tell
+  // which endpoint actually 401'd, because Chrome's own console text for a
+  // failed resource load never includes the URL. page.on("response") is
+  // the missing correlation -- every non-2xx HTTP response, with its real
+  // URL and status, needed to actually identify the failing endpoint next
+  // time instead of an unattributable generic error string.
   const source = fs.readFileSync("scripts/nexus-run-browser-capability-probes.js", "utf8");
   const pageCreated = source.indexOf("const page = await browser.newPage(");
   assert.notEqual(pageCreated, -1);
@@ -188,6 +195,8 @@ test("the production browser wires console, pageerror, and requestfailed listene
   assert.match(region, /page\.on\("console", msg =>/);
   assert.match(region, /page\.on\("pageerror", error =>/);
   assert.match(region, /page\.on\("requestfailed", request =>/);
+  assert.match(region, /page\.on\("response", response =>/);
+  assert.match(region, /response\.status\(\) >= 400/);
   assert.match(source, /preserveTypedIngressDiagnostic\(page, releaseSha, "post-login", diagnosticError, browserDiagnosticLog\)/);
 });
 
