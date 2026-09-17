@@ -743,15 +743,26 @@ async function runObjectiveProbe(probe, { active, env, releaseSha }) {
       context: acceptanceContext(principal, { actorId: principal.userId, requestId: correlationId, correlationId,
         roles: principal.roles || [principal.role].filter(Boolean), permissions: acceptanceExecutionPermissions(principal) }) });
     const evidence = (result.receipts || []).flatMap(item => item.verification?.evidence || item.evidence || []);
-    const documentId = evidence.find(item => item?.documentId)?.documentId || result.render?.data?.documentId || null;
+    const renderData = result.render?.data || {};
+    const documentId = evidence.find(item => item?.documentId)?.documentId || renderData.documentId || null;
     // Confirmed: the JSON.stringify(result).includes(...) fallbacks checked
     // for the FIELD NAME appearing anywhere in the serialized result, not
     // its value -- JSON.stringify({reopenVerified:false}).includes(
     // "reopenVerified") is also true, so this acceptance gate could never
     // actually fail on a dishonest or missing verification, only on the key
     // being entirely absent. Rely only on the typed evidence check.
-    const saved = evidence.some(item => item?.savedVersion || item?.persisted === true);
-    const reopened = evidence.some(item => item?.reopenVerified === true);
+    //
+    // renderData is the same typed fallback documentId already used above,
+    // not a repeat of that bug: nexus.workspace-outcome.v2's data field
+    // merges each completed step's real raw output
+    // (nexus/contracts/workspace-outcome.js's mergeStepObjects), so
+    // documents.create's real executor (nexus/documents/executor.js)
+    // landing savedVersion/reopenVerified there is genuine typed evidence,
+    // checked by exact value (=== true / a real version number), never by
+    // key presence.
+    const saved = evidence.some(item => item?.savedVersion || item?.persisted === true)
+      || Boolean(renderData.savedVersion) || renderData.persisted === true;
+    const reopened = evidence.some(item => item?.reopenVerified === true) || renderData.reopenVerified === true;
     const fullLifecycle = result.application === "documents" && result.state === "render_required" && Boolean(documentId) && saved && reopened;
     return { ok: fullLifecycle, fullLifecycle, documentId, saved, reopened, signedReceiptCount: (result.receipts || []).length };
   }
