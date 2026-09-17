@@ -60,7 +60,7 @@
     const soonest = editable.grants.filter(row => row.deadline).map(row => row.deadline).sort()[0];
     byId("grants-summary").textContent = soonest ? `Next deadline: ${soonest}` : "No deadlines set yet.";
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
-    rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"]]);
+    rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"], ["assignee", "Assigned to"], ["priority", "Priority (low, medium, high)"], ["dueDate", "Due date"]]);
     const landing = byId("landing-fields"); landing.replaceChildren();
     for (const [key, label] of [["headline", "Headline"], ["subheadline", "Supporting text"], ["offer", "Offer"], ["phone", "Business phone"], ["email", "Business email"], ["proof", "Evidence or customer story"]]) field(landing, label, editable.landingPage[key], value => { editable.landingPage[key] = value; });
     const assistant = byId("assistant-fields"); assistant.replaceChildren();
@@ -114,7 +114,7 @@
     render(); notice(`Invoice ${invoiceNumber} PDF generated. Download it from the files list below.`);
   }));
   byId("add-post").addEventListener("click", () => { current.data.editable.socialPosts.push({ platform: "", caption: "", status: "draft" }); render(); });
-  byId("add-task").addEventListener("click", () => { current.data.editable.tasks.push({ title: "", status: "todo" }); render(); });
+  byId("add-task").addEventListener("click", () => { current.data.editable.tasks.push({ title: "", status: "todo", dueDate: "", assignee: "", priority: "medium" }); render(); });
   document.querySelectorAll("[data-generate]").forEach(button => button.addEventListener("click", () => run(async () => { await save(); current = await api(`/clients/${current.record_id}/generate`, "POST", { operation: button.dataset.generate, profile: byId("strategy-profile").value, expectedVersion: current.version }); render(); notice("Draft files created. Nothing was published or sent."); })));
   byId("preview").addEventListener("click", () => run(async () => { await save(); const result = await api(`/clients/${current.record_id}/preview`, "POST", { message: byId("test-message").value }); byId("assistant-result").textContent = "Template preview — no AI provider or message delivery was used.\n\n" + result.reply; }));
   byId("ai-test").addEventListener("click", () => run(async () => { if (!byId("ai-consent").checked) throw new Error("Confirm sharing the draft and test message with the configured AI provider first."); await save(); const result = await api(`/clients/${current.record_id}/assistant`, "POST", { message: byId("test-message").value, confirmed: true, consent: true }); byId("assistant-result").textContent = result.reply; }));

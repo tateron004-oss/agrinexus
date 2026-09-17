@@ -107,6 +107,23 @@ test("business deletion stops at legal holds and erases historical versions only
   assert.ok(queries.some(query => query.sql.startsWith("update nexus_record_versions")));
 });
 
+test("project/task manager: tasks carry an assignee, priority and due date, backward-compatible with the seeded default checklist", () => {
+  const { normalizeEditable } = require('../../nexus/business/service');
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  // The default workspace seeds four starter tasks with only title/status --
+  // confirms they still normalize cleanly with the new fields defaulted.
+  const seeded = templates.defaultClientWorkspace(info).tasks;
+  assert.ok(seeded.length > 0);
+  const normalizedSeeded = normalizeEditable(info, { tasks: seeded });
+  assert.ok(normalizedSeeded.tasks.every(task => task.priority === 'medium' && task.assignee === '' && task.dueDate === ''));
+  const editable = normalizeEditable(info, { tasks: [
+    { title: 'File the grant application', status: 'in-progress', assignee: 'Jordan', priority: 'high', dueDate: '2026-04-01' }
+  ] });
+  assert.equal(editable.tasks[0].assignee, 'Jordan');
+  assert.equal(editable.tasks[0].priority, 'high');
+  assert.equal(editable.tasks[0].dueDate, '2026-04-01');
+});
+
 test("grant/funding tracker: opportunities, deadlines and status persist and validate like every other row list", () => {
   const { normalizeEditable } = require('../../nexus/business/service');
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
