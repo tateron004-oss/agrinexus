@@ -194,6 +194,29 @@ test("a genuine crisis command is intercepted with the safety response before an
   assert.equal(result.mentalHealth.classification.crisisOverride, true);
 });
 
+test("a crisis is still caught when the tool-calling model paraphrases the user's raw words into a non-matching command argument", async () => {
+  // Confirmed live in production: runNexusOpenAiNativeAgentCommand lets the
+  // model's own required "command" tool-call argument win over the caller's
+  // actual raw text (args.command || context.command) -- so a direct
+  // first-person crisis statement ("I want to end my life...") reached
+  // nexus_health_preparation with crisisOverride never firing, because the
+  // model rewrote it into clinical-sounding text that no longer matched the
+  // crisis patterns, even though the caller's real words plainly would have.
+  let calls = 0;
+  const run = loadExecuteTool({
+    email: { send: async () => { calls += 1; return ok({ providerMessageId: "MSG1" }); } }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_health_preparation",
+    { command: "User is requesting emotional wellbeing support." },
+    { command: "I want to end my life, I don't see the point anymore." });
+  assert.equal(calls, 0, "the real provider must never be called for a crisis message");
+  assert.equal(result.capability, "mental-health-behavioral-wellness");
+  assert.equal(result.status, "completed");
+  assert.match(result.response, /contact local emergency/i);
+  assert.equal(result.mentalHealth.classification.crisisOverride, true);
+});
+
 test("a real therapy/provider-mentioning action is not intercepted -- only genuine crisis language is", async () => {
   let calls = 0;
   const run = loadExecuteTool({
