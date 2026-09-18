@@ -61,3 +61,24 @@ test("server outcome registers lists as a real workspace, not a mock or a throw"
 test("workspace selection is server-owned and rejects unknown applications", () => {
   assert.throws(() => createWorkspaceOutcome({ command: command("Do something"), plan: { application: "legacy-browser", steps: [] }, task: {}, state: "completed" }), /No authoritative workspace/);
 });
+
+test("business outcomes use the generic operation presentation, not the document lifecycle gate", () => {
+  // Confirmed live against production: the client's document-kind renderer
+  // (renderNexusAuthoritativeDocument) requires a real create/save/reopen
+  // document lifecycle (documentId + savedVersion + reopenVerified) and
+  // returns null otherwise. A real business.query/business.manage outcome
+  // never carries those fields -- it carries businessRecord/businessClients/
+  // businessDashboard -- so presentation.kind "document" rendered nothing
+  // visible for every real business command. "operation" is the generic,
+  // already-registered kind with no such field gate (the same one
+  // `operations` already uses).
+  const result = createWorkspaceOutcome({
+    command: command("List my business workspaces."),
+    plan: { application: "business", steps: [{ input: {} }] },
+    task: { taskId: "tsk_5", steps: [{ output: { businessClients: [] } }] },
+    state: "completed", response: "You do not have a business workspace yet.", outcome: { verified: true }
+  });
+  assert.equal(result.workspace, "business");
+  assert.equal(result.operation, "business_workspace_action");
+  assert.equal(result.presentation.kind, "operation");
+});

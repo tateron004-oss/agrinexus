@@ -68,6 +68,24 @@ test("completeBusinessPlan produces a business.query step for a read-only comman
   assert.equal(plan.steps[0].toolId, "business.query");
 });
 
+test("the production browser-capability probe's business scenario text resolves to a confirmation-free, idempotent read", () => {
+  // scripts/nexus-run-browser-capability-probes.js runs its SCENARIOS text
+  // for `business` TWICE, unattended, with no confirmation-continuation
+  // handling for this application (unlike health/offline-queue) -- so it
+  // must resolve to business.query (confirmationRequired: false), and
+  // running it with zero existing business records must still complete
+  // rather than error, or the real per-deploy activation attempt would fail
+  // every single time.
+  const { SCENARIOS } = require("../../scripts/nexus-run-browser-capability-probes.js");
+  const text = SCENARIOS.business;
+  assert.equal(typeof text, "string");
+  assert.ok(text.length > 0);
+  const precheck = voiceDispatch.precheck(text, {});
+  assert.equal(precheck.toolId, "business.query");
+  assert.equal(precheck.clarification, null);
+  assert.equal(voiceDispatch.isReadIntent(voiceDispatch.classify(text)), true);
+});
+
 test("completeBusinessPlan asks a clarification instead of proceeding when a required field is missing", () => {
   const plan = completeBusinessPlan("Add a new donor", fakeCatalog());
   assert.equal(plan.steps.length, 0);
