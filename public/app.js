@@ -27093,6 +27093,13 @@ function renderNexusMissionHistoryPanel() {
 }
 
 function nexusAdapterTypeForLane(lane = {}, packet = {}) {
+  // buildNexusVerifiedExecutionAttemptRecord's own signature legitimately
+  // defaults lane to `null` (a real, valid "no provider lane" case for any
+  // action with no packet/lane concept at all -- confirmed live for a
+  // typed-outcome-triggered reminder). A default parameter only substitutes
+  // for `undefined`, not an explicitly passed `null`, so that case reached
+  // `lane.id` below and crashed the entire active-workflow render.
+  lane = lane || {}; packet = packet || {};
   const text = `${lane.id || ""} ${lane.category || ""} ${packet.packetType || ""}`.toLowerCase();
   if (/\bemail\b/.test(text)) return "email";
   if (/\bsms\b/.test(text)) return "sms";
@@ -33901,9 +33908,21 @@ function nexusCurrentMissionSnapshot() {
   };
 }
 
+// Sources that represent a real, verified backend outcome the user should
+// see the actual active-workflow surface for (renderNexusActiveWorkflowWorkspaceSafe,
+// which is what actually contains the #nexus-workspace outcome host) rather
+// than the generic mission-snapshot panel below. "openai-realtime" is the
+// original real-voice bridge (dispatchGenesisWorkspaceAction);
+// "nexus-authoritative-typed-outcome" is renderNexusPassiveWorkspace's own
+// source for a real typed authoritative-runtime result -- confirmed live
+// this was never recognized here, so every typed outcome (reminders,
+// business, communications, and every other generic-presentation workspace)
+// fell through to the mission-snapshot panel instead of ever showing its
+// real result.
+const NEXUS_ACTIVE_WORKFLOW_SOURCES = new Set(["openai-realtime", "nexus-authoritative-typed-outcome"]);
 function renderNexusAgenticMissionWorkspace() {
   if (
-    nexusActiveWorkflowState?.source === "openai-realtime"
+    NEXUS_ACTIVE_WORKFLOW_SOURCES.has(nexusActiveWorkflowState?.source)
     && (nexusActiveWorkflowState?.id || nexusActiveWorkflowState?.functionId)
   ) {
     return renderNexusActiveWorkflowWorkspaceSafe();
@@ -57178,6 +57197,19 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   if (experienceMode !== "user" || !document.body.classList.contains("user-mode")) {
     setExperienceMode("user", { persist: false, announceChange: false });
   }
+  // Confirmed live: a real, verified typed/voice outcome (reminders,
+  // business, communications, operations, and every other presentation kind
+  // that renders through the generic renderNexusAuthoritativeData() below)
+  // never became visible, because nexusTrueExperienceMode() only returns
+  // "mission" -- the one mode whose markup actually includes the
+  // #nexus-workspace host that renderer writes into -- once
+  // nexusTrueExperienceSessionStarted is true. The real spoken-voice bridge
+  // (dispatchGenesisWorkspaceAction) happens to already run after that flag
+  // gets set elsewhere in the voice pipeline, which is why voice outcomes
+  // were never seen failing this same way; this generic typed-outcome path
+  // never set it at all, for any workspace, so the outcome was computed and
+  // verified server-side but had nowhere visible to render client-side.
+  nexusTrueExperienceSessionStarted = true;
   let opened = false;
   let audible = false;
   if (presentation.kind === "map") {
