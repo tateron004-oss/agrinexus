@@ -82,3 +82,23 @@ test("business outcomes use the generic operation presentation, not the document
   assert.equal(result.operation, "business_workspace_action");
   assert.equal(result.presentation.kind, "operation");
 });
+
+test("workforce outcomes use the generic operation presentation, so a real job-search result renders", () => {
+  // Confirmed live against production: workforce's manifest has THREE tools
+  // (jobs.search, resume.create, documents.create -- see
+  // nexus/apps/default-manifests.js), but only the latter two ever produce
+  // documentId/savedVersion/reopenVerified (see scripts/provider-engines.js).
+  // A real jobs.search result (listings/selectedListing) never has those
+  // fields, so with presentation.kind "document" a real job search --
+  // workforce's most common interaction -- rendered nothing visible at all.
+  // "operation" has no field gate and was confirmed live to render both a
+  // jobs.search-shaped and a resume.create-shaped outcome correctly.
+  const searchResult = createWorkspaceOutcome({
+    command: command("Find agriculture jobs in Nairobi with sources and select one listing."),
+    plan: { application: "workforce", steps: [{ input: {} }] },
+    task: { taskId: "tsk_6", steps: [{ output: { listings: [{ id: "rec_1", title: "Agriculture opportunity" }], selectedListing: "rec_1" } }] },
+    state: "completed", response: "Found 1 agriculture job listing in Nairobi.", outcome: { verified: true }
+  });
+  assert.equal(searchResult.workspace, "workforce");
+  assert.equal(searchResult.presentation.kind, "operation");
+});
