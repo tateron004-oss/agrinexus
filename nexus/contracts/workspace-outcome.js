@@ -29,7 +29,19 @@ const APPLICATION_PRESENTATION = Object.freeze({
   "mobile-clinic": "location-list",
   pharmacy: "location-list",
   learning: "learning-plan",
-  workforce: "document",
+  // Not "document": workforce's default manifest (nexus/apps/default-
+  // manifests.js) has THREE tools -- jobs.search, resume.create,
+  // documents.create -- but only the latter two ever produce the
+  // documentId/savedVersion/reopenVerified fields renderNexusAuthoritative-
+  // Document() requires. jobs.search's real output (listings/
+  // selectedListing, see scripts/provider-engines.js) never has them, so a
+  // real job-search result -- workforce's most common interaction, and
+  // exactly what scripts/nexus-run-browser-capability-probes.js's
+  // SCENARIOS.workforce exercises -- rendered nothing at all, in production,
+  // for every real user; confirmed live the same way as the business fix
+  // below. "operation" has no field gate and renders both shapes correctly
+  // (confirmed live for both jobs.search- and resume.create-shaped data).
+  workforce: "operation",
   marketplace: "listing",
   maps: "map",
   "music-media": "media-player",
