@@ -2,6 +2,7 @@
 
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
+const businessVoiceDispatch = require("../business/voice-dispatch.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, maxRepairAttempts = 2 }) {
@@ -43,6 +44,8 @@ class OpenEndedPlanner {
     if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
     if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
+    const completeBusiness = completeBusinessPlan(command.text, catalog);
+    if (completeBusiness) return Object.freeze({ ...completeBusiness, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -362,6 +365,32 @@ function completeRemainingWorkspacePlan(text, catalog) {
   return null;
 }
 
+// Confirmed live (2026-09-18): a real user's typed command for any of the
+// 10 business/nonprofit tools (add a customer/donor, log a transaction,
+// invoices, grants, tasks, appointments, generate documents/plan/marketing,
+// the performance dashboard) never reached nexus/business/* at all -- with
+// no deterministic matcher and no canonical business tool in this catalog,
+// the AI planning model guessed the nearest unrelated tool (documents.create)
+// and silently created a fabricated document instead of the real action.
+// Delegates classification and field extraction to
+// nexus/business/voice-dispatch.js's pure, no-database helpers -- the SAME
+// module the real executor (nexus/runtime/create-runtime.js) and the legacy
+// nexus_business_assistant OpenAI-native tool (server.js) both use, so this
+// deterministic fast path, real voice, and real execution never drift apart
+// on what counts as a valid command.
+function completeBusinessPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!catalog.tools.some(tool => tool.toolId === "business.manage") ||
+      !catalog.tools.some(tool => tool.toolId === "business.query") ||
+      !catalog.applications.some(app => app.applicationId === "business")) return null;
+  const { intent, toolId, clarification } = businessVoiceDispatch.precheck(goal, {});
+  if (!intent) return null;
+  if (clarification) return { goal, application: "business", riskTier: "low", clarification, steps: [] };
+  return { goal, application: "business", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "business-action", title: "Handle the business/nonprofit workspace request",
+      toolId, input: { command: goal }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -400,4 +429,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan,
-  completeRemainingWorkspacePlan, validatePlan });
+  completeRemainingWorkspacePlan, completeBusinessPlan, validatePlan });
