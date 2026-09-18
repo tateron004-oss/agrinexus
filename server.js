@@ -144,7 +144,14 @@ async function authoritativeRuntimeUser(user) {
   const role = String(user.role || "standard-user").toLowerCase().replace(/\s+/g, "-");
   const permissions = user.guest === true
     ? ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "guest:restricted"]
-    : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write"];
+    // devices:write lets a signed-in user register/list/revoke THEIR OWN push
+    // device (control-api.js scopes every device call to the caller's tenant
+    // and user). Without it, the app's push-subscribe step (subscribeToNexus-
+    // PushNotifications) was rejected with a 403 for every normal user and
+    // silently swallowed, so no device could ever be registered and a
+    // scheduled reminder could never be delivered as a push, whatever the
+    // VAPID configuration. Guests stay restricted.
+    : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write", "devices:write"];
   if (usingPostgresState()) {
     const pool = getPgPool();
     const email = String(user.email || `${user.id}@local.agrinexus.invalid`).toLowerCase();
