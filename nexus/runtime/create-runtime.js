@@ -52,6 +52,8 @@ const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../he
 const { createChronicDiseaseIntakeExecutor, verifyChronicDiseaseIntakeOutcome, createChronicDiseaseReadingExecutor,
   verifyChronicDiseaseReadingOutcome, createChronicDiseaseSummaryExecutor, verifyChronicDiseaseSummaryOutcome } = require("../health/chronic-executor.js");
 const { createPharmacyFindExecutor, verifyPharmacyFindOutcome, createClinicFindExecutor, verifyClinicFindOutcome } = require("../health/places-executor.js");
+const { createBusinessExecutor, verifyBusinessOutcome } = require("../business/authoritative-executor.js");
+const { BusinessRepository } = require("../business/repository.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -73,6 +75,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const models = new ModelGovernanceRepository(db);
   const outcomes = new OutcomeRepository(db);
   const records = new RecordRepository(db);
+  const businessRecords = new BusinessRepository(db);
   const documents = new DocumentRepository(db);
   const workspaceStates = new WorkspaceStateRepository(records);
   const autonomyControl = new AutonomyControlRepository(records);
@@ -108,7 +111,15 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "health.chronic-reading": { create: () => createChronicDiseaseReadingExecutor({ records }), verify: verifyChronicDiseaseReadingOutcome, method: "real_record_write" },
     "health.chronic-summary": { create: () => createChronicDiseaseSummaryExecutor({ records }), verify: verifyChronicDiseaseSummaryOutcome, method: "real_record_lookup" },
     "pharmacy.find": { create: () => createPharmacyFindExecutor({ env }), verify: verifyPharmacyFindOutcome, method: "real_osm_place_search_with_local_fallback" },
-    "clinic.find": { create: () => createClinicFindExecutor({ env }), verify: verifyClinicFindOutcome, method: "real_osm_place_search_with_local_fallback" }
+    "clinic.find": { create: () => createClinicFindExecutor({ env }), verify: verifyClinicFindOutcome, method: "real_osm_place_search_with_local_fallback" },
+    // Confirmed live: a real user's typed "add a donor"/"log an expense"/etc.
+    // never reached nexus/business/* at all (see canonical-provider-
+    // definitions.js's note on business.manage/business.query) -- both tools
+    // share this one executor since nexus/business/voice-dispatch.js's run()
+    // already branches internally on whether the command is a read or a
+    // write.
+    "business.manage": { create: () => createBusinessExecutor({ repository: businessRecords, access, consents, env }), verify: verifyBusinessOutcome, method: "real_business_workspace_write" },
+    "business.query": { create: () => createBusinessExecutor({ repository: businessRecords, access, consents, env }), verify: verifyBusinessOutcome, method: "real_business_workspace_write" }
   };
   const localExecutorFns = Object.fromEntries(Object.entries(LOCAL_EXECUTORS).map(([toolId, entry]) => [toolId, entry.create()]));
   const governedExecutors = Object.assign({}, providers.executors, localExecutorFns, executors);

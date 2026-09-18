@@ -18,7 +18,8 @@ const APPLICATION_TO_WORKSPACE = Object.freeze({
   images: "images",
   communications: "communications",
   operations: "operations",
-  lists: "lists"
+  lists: "lists",
+  business: "business"
 });
 
 const APPLICATION_PRESENTATION = Object.freeze({
@@ -39,7 +40,8 @@ const APPLICATION_PRESENTATION = Object.freeze({
   images: "image-gallery",
   communications: "communication",
   operations: "operation",
-  lists: "checklist"
+  lists: "checklist",
+  business: "document"
 });
 
 function createWorkspaceOutcome({ command, plan, task, state, response, outcome }) {
@@ -96,6 +98,7 @@ function operationFor(application, input) {
   if (application === "live-knowledge") return "show_answer";
   if (application === "images") return "show_images";
   if (application === "lists") return input.listId ? "update_list" : "create_list";
+  if (application === "business") return "business_workspace_action";
   return "show_result";
 }
 

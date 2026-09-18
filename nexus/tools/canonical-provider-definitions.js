@@ -46,7 +46,29 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   // reaches the AI planner directly instead.
   Object.freeze({ toolId: "communications.send", domain: "communications", description: "Deliver a governed communication",
     riskTier: "regulated", confirmationRequired: true, consentScope: "communications:send:write", dataClassification: "communications" }),
-  Object.freeze({ toolId: "drone.plan", domain: "operations", description: "Prepare a governed field operation" })
+  Object.freeze({ toolId: "drone.plan", domain: "operations", description: "Prepare a governed field operation" }),
+  // Confirmed live: a real user's TYPED command ("add a donor named X", "log
+  // a $75 expense", "generate the business plan PDF") never reached the
+  // real nexus/business/* backend at all -- it went through this canonical
+  // catalog (handleNexusUnifiedBrainRuntimeCommand calls the authoritative
+  // runtime unconditionally, before any keyword gate), which had no business
+  // tool, so the AI planner guessed the nearest unrelated tool
+  // (documents.create) and silently created a fabricated document instead.
+  // Real spoken voice was unaffected (it reaches nexus_business_assistant
+  // via the separate OpenAI-native dispatcher), but typed chat -- the more
+  // common path -- was completely broken for all 10 business/nonprofit
+  // tools. business.query covers read-only actions (list workspaces, the
+  // performance dashboard); business.manage covers every write (add a
+  // customer/donor, log a transaction, invoices, grants, tasks,
+  // appointments, generate documents/plan/marketing). Both delegate to
+  // nexus/business/voice-dispatch.js, the same classify/extract/execute
+  // logic nexus_business_assistant itself uses, via a real local executor
+  // (see create-runtime.js's LOCAL_EXECUTORS) -- not this file's
+  // signed-provider-receipt mock, which cannot express this domain's
+  // multi-turn clarification/confirmation shape.
+  Object.freeze({ toolId: "business.query", domain: "business", description: "List business/nonprofit workspaces or get a computed performance summary" }),
+  Object.freeze({ toolId: "business.manage", domain: "business", description: "Create or manage a business/nonprofit workspace record (customers, donors, transactions, invoices, grants, tasks, appointments, documents, plan, marketing)",
+    confirmationRequired: true })
 ]);
 
 function canonicalProviderTools({ receiptSecret, providerBaseUrl }) {
