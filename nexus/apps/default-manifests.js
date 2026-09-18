@@ -14,7 +14,7 @@ const DEFINITIONS = [
   ["music-media", "Music and Media", ["media.play"], ["low"]],
   ["documents", "Documents and Guided Entry", ["documents.create", "documents.read"], ["low", "medium", "regulated"]],
   ["lists", "Lists and Checklists", ["lists.create", "lists.read", "lists.update"], ["low"]],
-  ["reminders", "Reminders and Calendar", ["reminders.schedule"], ["low", "medium"]],
+  ["reminders", "Reminders and Calendar", ["reminders.schedule", "reminders.list", "reminders.cancel"], ["low", "medium"]],
   ["offline-queue", "Offline Queue", ["offline.sync"], ["low", "medium", "high", "regulated"]],
   ["live-knowledge", "Live Knowledge", ["knowledge.search"], ["low"]],
   ["images", "Images", ["images.search"], ["low"]],

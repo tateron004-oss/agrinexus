@@ -116,7 +116,7 @@ function operationFor(application, input) {
   if (application === "maps") return input.origin && input.destination ? "show_route" : "show_location";
   if (application === "music-media") return input.action || "play_media";
   if (application === "health") return input.intakeType === "blood-pressure" ? "record_blood_pressure" : "health_support";
-  if (application === "reminders") return "schedule_reminder";
+  if (application === "reminders") return input.intent === "list_reminders" ? "list_reminders" : input.intent === "cancel_reminder" ? "cancel_reminder" : "schedule_reminder";
   if (application === "agriculture") return "agriculture_assessment";
   if (application === "live-knowledge") return "show_answer";
   if (application === "images") return "show_images";
