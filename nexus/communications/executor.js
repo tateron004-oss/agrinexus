@@ -40,7 +40,19 @@ function createCommunicationsSendExecutor({ env = process.env } = {}) {
       text: input.message || input.text || input.body || ""
     };
     const result = await handler(body, env);
-    return { channel, ...result.body };
+    // twilioProvider/emailProvider both use providerUtils.js's
+    // providerResponse() (the shared server/providers/*.js convention),
+    // which nests the real send fields (sid/providerMessageId/to/subject)
+    // inside result.body.data, not at result.body's own top level. Confirmed
+    // via the same audit that found the identical shape mismatch for
+    // maps.view (nexus/maps/executor.js): communications.send's own
+    // presentation kind ("communication") has no strict field gate, so this
+    // never made a real send invisible the way it did for maps -- but it did
+    // mean the client's generic outcome card showed a raw, unreadable nested
+    // JSON blob (`Data: {"sid":"SM...", ...}`) instead of clean sid/to
+    // fields, and any future caller reading outcome.data.sid directly
+    // (rather than outcome.data.data.sid) would silently see undefined.
+    return { channel, ...result.body, ...(result.body?.data || {}) };
   };
 }
 
