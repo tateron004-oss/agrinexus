@@ -88,9 +88,10 @@ test("map and document completion require complete user-observable outcomes", ()
   assert.match(source, /userMapLayers\.route\?\.getLayers\?\.\(\)\.length > 0/);
   assert.match(source, /userMapLayers\.markers\?\.getLayers\?\.\(\)\.length >= 2/);
   assert.match(source, /function renderNexusAuthoritativeDocument/);
-  assert.match(source, /data\.reopenVerified !== true/);
+  assert.match(source, /function nexusDocumentLifecycleComplete[\s\S]{0,120}data\.reopenVerified === true/);
+  assert.match(source, /if \(!nexusDocumentLifecycleComplete\(data\)\) return renderNexusAuthoritativeData\(outcome\)/);
   assert.match(source, /nexusDocumentLifecycle = "reopened"/);
-  assert.match(source, /created_saved_closed_reopened/);
+  assert.match(source, /visible && nexusDocumentLifecycleComplete\(data\) \? "created_saved_closed_reopened"/);
 });
 
 test("signed-in render restores authoritative conversation and database readiness", () => {
