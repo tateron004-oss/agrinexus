@@ -56989,9 +56989,19 @@ async function renderNexusAuthoritativeImages(outcome = {}) {
   return surface;
 }
 
+function nexusDocumentLifecycleComplete(data = {}) {
+  return Boolean(data.documentId && data.savedVersion && data.reopenVerified === true);
+}
+
 function renderNexusAuthoritativeDocument(outcome = {}) {
   const data = outcome.data || {};
-  if (!data.documentId || !data.savedVersion || data.reopenVerified !== true) return null;
+  // The document editor below is only truthful for a real create/save/reopen
+  // lifecycle. Other real documents outcomes (documents.read listing or
+  // fetching saved documents, or a create whose indexing step failed) carry
+  // no such fields; they used to return null here, so a real result rendered
+  // as nothing at all. Show them as the plain data card instead -- without
+  // the editor or the "saved and reopened" status, which would be false.
+  if (!nexusDocumentLifecycleComplete(data)) return renderNexusAuthoritativeData(outcome);
   const surface = renderNexusAuthoritativeData(outcome);
   if (!surface) return null;
   surface.dataset.nexusDocumentLifecycle = "reopened";
@@ -57305,7 +57315,7 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       renderedFields: Object.keys(data || {}),
       routeEndpoints: outcome.operation === "show_route" ? [data.origin, data.destination].filter(Boolean) : undefined,
       routeGeometryObserved: outcome.workspace === "map" ? visible : undefined,
-      documentLifecycle: outcome.workspace === "documents" && visible ? "created_saved_closed_reopened" : undefined,
+      documentLifecycle: outcome.workspace === "documents" && visible && nexusDocumentLifecycleComplete(data) ? "created_saved_closed_reopened" : undefined,
       providerVerified: outcome.verification?.providerVerified === true,
       playbackStarted: outcome.workspace === "media" ? audible : undefined,
       mediaProvider: outcome.workspace === "media" ? (document.body.dataset.nexusMediaProvider || undefined) : undefined,

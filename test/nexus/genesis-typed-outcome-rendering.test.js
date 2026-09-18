@@ -71,3 +71,30 @@ test("renderNexusAgenticMissionWorkspace recognizes the typed authoritative-outc
   const fnSnippet = appSource.slice(fnStart, fnStart + 400);
   assert.match(fnSnippet, /NEXUS_ACTIVE_WORKFLOW_SOURCES\.has\(/, "the function must actually consult the widened source set, not just define it nearby");
 });
+
+test("documents outcomes without a create/save/reopen lifecycle still render as a plain card, without a false editor", () => {
+  // documents.read (listing/fetching saved documents) and a create whose
+  // indexing step failed carry no documentId/savedVersion/reopenVerified.
+  // renderNexusAuthoritativeDocument used to return null for them, so a real
+  // result rendered as nothing. It must fall back to the generic data card,
+  // and must NOT add the "saved and reopened" editor/status that only a real
+  // lifecycle earns.
+  const source = extractFunction("nexusDocumentLifecycleComplete", "\nfunction renderNexusAuthoritativeDocument(")
+    + extractFunction("renderNexusAuthoritativeDocument", "\nfunction nexusMapOutcomeVerified(");
+  const created = [];
+  const sandbox = {
+    renderNexusAuthoritativeData: () => { const s = { dataset: {}, children: [], append(...n) { this.children.push(...n); } }; created.push(s); return s; },
+    document: { createElement: () => ({ dataset: {}, setAttribute() {} }) }
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(source + "\nthis.run = renderNexusAuthoritativeDocument;", sandbox);
+
+  const readResult = sandbox.run({ data: { request: "Show my saved documents", found: true, documents: [] } });
+  assert.ok(readResult, "a documents.read result must still produce a visible surface");
+  assert.equal(readResult.children.length, 0, "no editor or false lifecycle status for a read result");
+  assert.equal(readResult.dataset.nexusDocumentLifecycle, undefined);
+
+  const lifecycle = sandbox.run({ data: { documentId: "doc_1", savedVersion: 1, reopenVerified: true, content: "x" }, originalText: "x" });
+  assert.equal(lifecycle.dataset.nexusDocumentLifecycle, "reopened");
+  assert.equal(lifecycle.children.length, 2, "a real lifecycle still gets the editor and status");
+});
