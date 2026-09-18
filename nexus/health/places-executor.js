@@ -16,7 +16,15 @@ const mobileClinicBridgeProvider = require("../../server/providers/mobileClinicB
 function createPharmacyFindExecutor({ env = process.env } = {}) {
   return async function execute({ input = {} }) {
     const result = await pharmacyBridgeProvider.search({ location: input.location || input.city, q: input.query || input.q }, env);
-    return { ...result.body };
+    // Same shape mismatch already fixed for maps.view and communications.send:
+    // pharmacyBridgeProvider (like every server/providers/*.js module) uses
+    // providerUtils.js's providerResponse(), which nests the real fields
+    // (cards, safetyNote, emergencyNote) inside body.data, not at body's own
+    // top level. Confirmed live: a real pharmacy search's cards were only
+    // reachable at outcome.data.data.cards, so the client's generic
+    // "location-list" outcome card showed a raw nested JSON blob instead of
+    // clean pharmacy listings.
+    return { ...result.body, ...(result.body?.data || {}) };
   };
 }
 
@@ -28,7 +36,8 @@ function verifyPharmacyFindOutcome({ result }) {
 function createClinicFindExecutor({ env = process.env } = {}) {
   return async function execute({ input = {} }) {
     const result = await mobileClinicBridgeProvider.search({ location: input.location || input.city, q: input.query || input.q }, env);
-    return { ...result.body };
+    // See createPharmacyFindExecutor above -- same shape mismatch.
+    return { ...result.body, ...(result.body?.data || {}) };
   };
 }
 
