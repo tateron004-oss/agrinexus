@@ -17,7 +17,18 @@ function createMapsViewExecutor({ env = process.env } = {}) {
       waypoints: Array.isArray(input.waypoints) ? input.waypoints : []
     };
     const result = await googleMapsProvider.route(body, env);
-    return { ...result.body };
+    // providerUtils.js's providerResponse() (this provider's own established
+    // convention, shared with every other server/providers/*.js module)
+    // nests the real route fields -- routeGeometry, originLat/Lng,
+    // destinationLat/Lng, distanceMeters, durationSeconds -- inside
+    // result.body.data, not at result.body's own top level. Confirmed live:
+    // without flattening them here, outcome.data (what the client's map
+    // renderer actually reads -- openGenesisRealtimeMapWorkspace /
+    // nexusMapOutcomeVerified in public/app.js) never received real route
+    // geometry at all for a real "show a route" command through the
+    // authoritative runtime (voice or typed), even though the provider
+    // genuinely computed one.
+    return { ...result.body, ...(result.body?.data || {}) };
   };
 }
 
