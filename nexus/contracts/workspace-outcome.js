@@ -41,7 +41,18 @@ const APPLICATION_PRESENTATION = Object.freeze({
   communications: "communication",
   operations: "operation",
   lists: "checklist",
-  business: "document"
+  // Not "document": that kind's client-side renderer
+  // (renderNexusAuthoritativeDocument) strictly requires a real document
+  // create/save/reopen lifecycle (documentId + savedVersion + reopenVerified)
+  // and returns null otherwise. Confirmed live: a real business.query/
+  // business.manage outcome never carries those fields (it carries
+  // businessRecord/businessClients/businessDashboard), so with "document"
+  // every business outcome rendered nothing at all -- an empty passive
+  // workspace -- for every real user, independent of and in addition to the
+  // three universal typed-outcome rendering bugs fixed in PR #472.
+  // "operation" is the generic, already-registered presentation kind with no
+  // extra field gate (same one `operations` already uses successfully).
+  business: "operation"
 });
 
 function createWorkspaceOutcome({ command, plan, task, state, response, outcome }) {

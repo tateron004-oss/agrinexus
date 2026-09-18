@@ -24,7 +24,13 @@ const SCENARIOS = Object.freeze({
   images: "Show me current images of healthy maize leaves with sources.",
   communications: "Draft a clinic follow-up message, obtain consent, send it, and return the delivery receipt.",
   operations: "Prepare a field operation, record approval state, and return its receipt.",
-  lists: "Create a checklist called Farm Chores with feed goats, water crops, and check fences."
+  lists: "Create a checklist called Farm Chores with feed goats, water crops, and check fences.",
+  // Read-only ("list" intent -> business.query, no confirmationRequired --
+  // see voice-dispatch.js's classify()/READ_INTENTS), so runScenario's two
+  // unattended executions (pre-cutover then post-cutover) are side-effect-
+  // free and idempotent even with zero existing business workspaces
+  // (voice-dispatch.js's "list" handler always completes, empty or not).
+  business: "List my business workspaces."
 });
 
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
