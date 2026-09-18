@@ -22,6 +22,12 @@ class OpenEndedPlanner {
     if (emergencyHealth) return Object.freeze({ ...emergencyHealth, planningAttempts: 1 });
     const completeHealthRecord = completeHealthRecordPlan(command.text, catalog);
     if (completeHealthRecord) return Object.freeze({ ...completeHealthRecord, planningAttempts: 1 });
+    // Before every other matcher: "list/cancel my reminders" must never fall
+    // through to reminders.schedule (which would create one) or to the lists
+    // matcher, and a cancel phrase can itself contain a time or a
+    // communications word.
+    const remindersManage = completeRemindersManagePlan(command.text, catalog);
+    if (remindersManage) return Object.freeze({ ...remindersManage, planningAttempts: 1 });
     const completeTelehealthIntake = completeTelehealthIntakePlan(command.text, catalog);
     if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
     const completeMarketplaceSearch = completeMarketplaceSearchPlan(command.text, catalog);
@@ -378,6 +384,30 @@ function completeRemainingWorkspacePlan(text, catalog) {
 // nexus_business_assistant OpenAI-native tool (server.js) both use, so this
 // deterministic fast path, real voice, and real execution never drift apart
 // on what counts as a valid command.
+// Deterministic fast path for reminders.list / reminders.cancel. "Remind me
+// to ..." is left to the schedule matcher; only explicit show/list/cancel
+// requests about reminders land here.
+function completeRemindersManagePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\breminders?\b/i.test(goal)) return null;
+  const has = toolId => catalog.tools.some(tool => tool.toolId === toolId);
+  if (!catalog.applications.some(app => app.applicationId === "reminders")) return null;
+  const build = (toolId, title, input) => ({ goal, application: "reminders", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "reminders-manage", title, toolId, input, dependsOn: [], fallbackToolIds: [] }] });
+  if (/\b(cancel|delete|remove|clear|forget|scrap)\b/i.test(goal)) {
+    if (!has("reminders.cancel")) return null;
+    const idMatch = goal.match(/\bntf_[a-z0-9-]+/i);
+    const subject = (goal.match(/\breminders?\s+(?:to|about|for|of)\s+(.+?)[.?!]*$/i)
+      || goal.match(/\b(?:cancel|delete|remove|clear|forget|scrap)\s+(?:my|the|that|this)?\s*(.+?)\s+reminders?\b/i))?.[1]?.trim() || "";
+    return build("reminders.cancel", "Cancel one upcoming reminder", { intent: "cancel_reminder", reminder: subject, ...(idMatch ? { reminderId: idMatch[0] } : {}) });
+  }
+  if (/\b(show|list|view|see|check|what|which|do i have|display|read)\b/i.test(goal) && !/\bremind\s+me\b/i.test(goal)) {
+    if (!has("reminders.list")) return null;
+    return build("reminders.list", "List the user's upcoming reminders", { intent: "list_reminders" });
+  }
+  return null;
+}
+
 function completeBusinessPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!catalog.tools.some(tool => tool.toolId === "business.manage") ||
@@ -429,4 +459,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan,
-  completeRemainingWorkspacePlan, completeBusinessPlan, validatePlan });
+  completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });

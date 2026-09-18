@@ -33,6 +33,11 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" }),
   Object.freeze({ toolId: "marketplace.search", domain: "trade", description: "Search governed marketplace listings" }),
   Object.freeze({ toolId: "reminders.schedule", domain: "reminders", description: "Persist a governed reminder" }),
+  // reminders.schedule could create a reminder but nothing could show or
+  // remove one. list is read-only; cancel needs confirmation and never
+  // guesses between several matches (see nexus/reminders/manage-executor.js).
+  Object.freeze({ toolId: "reminders.list", domain: "reminders", description: "List the user's upcoming reminders" }),
+  Object.freeze({ toolId: "reminders.cancel", domain: "reminders", description: "Cancel one upcoming reminder", confirmationRequired: true }),
   Object.freeze({ toolId: "offline.sync", domain: "offline", description: "Synchronize a governed offline operation", confirmationRequired: true }),
   // Confirmed live: "Send a message to my doctor saying I'm not feeling
   // well." (a completely natural request, no "consent"/"receipt" language)

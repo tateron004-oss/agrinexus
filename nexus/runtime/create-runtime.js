@@ -42,6 +42,7 @@ const { OutcomeVerifierRegistry } = require("../verification/verifier-registry.j
 const { CapabilityExecutionAuthority } = require("./capability-execution-authority.js");
 const { AuthorityCoverage } = require("./authority-coverage.js");
 const { createReminderScheduleExecutor, verifyReminderScheduleOutcome } = require("../reminders/executor.js");
+const { createRemindersListExecutor, verifyRemindersListOutcome, createRemindersCancelExecutor, verifyRemindersCancelOutcome } = require("../reminders/manage-executor.js");
 const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
 const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome } = require("../documents/executor.js");
 const { createDocumentsReadExecutor, verifyDocumentsReadOutcome } = require("../documents/read-executor.js");
@@ -99,6 +100,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   // reusable pattern for adding more, not a ceiling.
   const LOCAL_EXECUTORS = {
     "reminders.schedule": { create: () => createReminderScheduleExecutor({ notifications }), verify: verifyReminderScheduleOutcome, method: "local_notification_enqueue" },
+    "reminders.list": { create: () => createRemindersListExecutor({ notifications }), verify: verifyRemindersListOutcome, method: "real_reminder_lookup" },
+    "reminders.cancel": { create: () => createRemindersCancelExecutor({ notifications }), verify: verifyRemindersCancelOutcome, method: "real_reminder_cancel" },
     "communications.send": { create: () => createCommunicationsSendExecutor({ env }), verify: verifyCommunicationsSendOutcome, method: "real_provider_send" },
     "documents.create": { create: () => createDocumentsCreateExecutor({ env, documents }), verify: verifyDocumentsCreateOutcome, method: "real_local_export" },
     "documents.read": { create: () => createDocumentsReadExecutor({ documents }), verify: verifyDocumentsReadOutcome, method: "real_document_lookup" },
