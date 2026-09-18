@@ -61,3 +61,33 @@ test("clinic.find verification fails when the underlying search does not return 
     assert.equal(verifyClinicFindOutcome({ result }).verified, false);
   });
 });
+
+test("real pharmacy/clinic cards are flattened to the top level, not just nested under .data", async () => {
+  // Same shape mismatch already fixed for maps.view and communications.send:
+  // pharmacyBridgeProvider/mobileClinicBridgeProvider both use providerUtils.js's
+  // providerResponse(), which nests the real fields (cards, safetyNote,
+  // emergencyNote) inside body.data. Confirmed live: a real pharmacy/clinic
+  // search's cards were only reachable at outcome.data.data.cards, so the
+  // client's generic "location-list" outcome card showed a raw nested JSON
+  // blob instead of clean listings.
+  await withPatched(pharmacyBridgeProvider, "search", async () => ({
+    httpStatus: 200, body: { ok: true, status: "completed",
+      data: { cards: [{ name: "Real Pharmacy" }], safetyNote: "Preparation only." } }
+  }), async () => {
+    const execute = createPharmacyFindExecutor({ env: {} });
+    const result = await execute({ input: { location: "Nairobi" } });
+    assert.equal(result.cards[0].name, "Real Pharmacy");
+    assert.equal(result.safetyNote, "Preparation only.");
+    assert.equal(result.data.cards[0].name, "Real Pharmacy");
+  });
+
+  await withPatched(mobileClinicBridgeProvider, "search", async () => ({
+    httpStatus: 200, body: { ok: true, status: "completed",
+      data: { cards: [{ name: "Real Clinic" }], safetyNote: "Preparation only." } }
+  }), async () => {
+    const execute = createClinicFindExecutor({ env: {} });
+    const result = await execute({ input: { location: "Kisumu" } });
+    assert.equal(result.cards[0].name, "Real Clinic");
+    assert.equal(result.safetyNote, "Preparation only.");
+  });
+});
