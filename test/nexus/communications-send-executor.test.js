@@ -75,6 +75,33 @@ test("channel dispatch routes call and email correctly", async () => {
   });
 });
 
+test("real send fields are flattened to the top level, not just nested under .data", async () => {
+  // Confirmed live: twilioProvider/emailProvider's own providerResponse()
+  // convention nests real fields (sid/to/channel, providerMessageId/subject)
+  // inside result.body.data. Without flattening, a real send's sid/
+  // providerMessageId were only reachable at outcome.data.data.sid, so the
+  // client's generic outcome card rendered a raw nested JSON blob instead of
+  // clean fields -- the same class of bug fixed for maps.view, just lower
+  // severity here since communications.send has no strict field gate.
+  await withPatched(twilioProvider, "sendSms", async () => ({
+    httpStatus: 200, body: { ok: true, provider: "twilio", action: "sms.send", status: "completed",
+      message: "sent", data: { sid: "SM456", to: "+15551234567", channel: "sms" } }
+  }), async () => {
+    const execute = createCommunicationsSendExecutor({ env: {} });
+    const result = await execute({ input: { channel: "sms", to: "+15551234567", message: "hello" } });
+    assert.equal(result.sid, "SM456");
+    assert.equal(result.data.sid, "SM456");
+  });
+
+  await withPatched(emailProvider, "send", async () => ({
+    httpStatus: 200, body: { ok: true, status: "completed", data: { providerMessageId: "msg-42", subject: "hi" } }
+  }), async () => {
+    const execute = createCommunicationsSendExecutor({ env: {} });
+    const result = await execute({ input: { channel: "email", to: "farmer@example.com", subject: "hi", message: "hello" } });
+    assert.equal(result.providerMessageId, "msg-42");
+  });
+});
+
 test("an unrecognized channel falls back to sms", async () => {
   await withPatched(twilioProvider, "sendSms", async () => ({ httpStatus: 200, body: { ok: true, status: "completed", data: { sid: "SM9" } } }), async () => {
     const execute = createCommunicationsSendExecutor({ env: {} });
