@@ -232,27 +232,23 @@ jobs:
           NEXUS_CANDIDATE_URL: ${{ env.PRODUCTION_ORIGIN }}
         run: node scripts/nexus-preproduction-black-box.js
 
-      # KNOWN FLAKE (accepted, not fixed): this step can intermittently fail
-      # at the post-login typed-ingress readiness check with the browser
-      # diagnostic showing "GET /api/state -> 401". Investigated at length
-      # (PRs #447, #448, #449, #450): every server.js code path for
-      # /api/state was ruled out -- publicState() always returns 200
-      # unconditionally, even for a logged-out guest, so the app itself
-      # cannot produce this 401. The production origin sits behind
-      # Cloudflare (confirmed via the `server: cloudflare` response
-      # header), and this 401 could not be reproduced from any interactive
-      # session no matter how closely CI's conditions (cold cache, cleared
-      # cookies, fresh login) were matched -- only from this workflow's
-      # GitHub Actions runner. The evidence points to Cloudflare bot
-      # detection intermittently flagging GitHub Actions' well-known,
-      # heavily-shared runner IP ranges, not an application bug. Fixing
-      # this for real requires a Cloudflare dashboard change (an IP/WAF
-      # allowlist or a bypass rule for this endpoint) that is out of this
-      # repo's control -- there is no Cloudflare-as-code config here to
-      # change instead. The actual deploy (the steps above this one) has
-      # succeeded every time this has happened; only this evidence-
-      # collection step is affected. Do not attempt another code-level fix
-      # here without first confirming a Cloudflare-side change was made.
+      # This step used to fail at the post-login typed-ingress readiness check
+      # with the browser diagnostic showing "GET /api/state -> 401", which
+      # earlier investigations (PRs #447-#450) attributed to Cloudflare bot
+      # detection. That attribution was wrong. /api/state answers 401 "Sign
+      # in required" from the app itself (with the app's own security
+      # headers) for ANY request without a session, and in the 2026-09-18
+      # logs those two 401s are timestamped before the login click: they are
+      # the normal logged-out page load. The same diagnostic shows the login
+      # succeeded (app view visible, header "User - User") while the
+      # typed-entry composer was absent from the page entirely.
+      # scripts/nexus-run-browser-capability-probes.js now records that as a
+      # scenario failure with composerState diagnostics and CONTINUES into the
+      # workspace-activation loop instead of aborting before it, because
+      # activation needs only a signed-in page. The step still ends red while
+      # the composer is missing, so nothing is hidden; the open question is
+      # why the composer is not rendered in a fresh CI browser (see the
+      # composerState block in the uploaded typed-ingress diagnostic).
       - name: Produce and record exact-release production evidence
         env:
           EXPECTED_RELEASE_SHA: ${{ steps.target.outputs.sha }}

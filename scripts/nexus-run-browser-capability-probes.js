@@ -502,7 +502,27 @@ async function captureTypedIngressDiagnostic(page, releaseSha, phase, error, bro
     catch (permissionError) { microphonePermission = `error:${permissionError?.name || "unknown"}`; }
     const inputs = [...document.querySelectorAll('[data-nexus-primary-typed-entry="true"]')];
     const microphones = [...document.querySelectorAll('[data-nexus-permanent-microphone-control="true"]')];
+    // Why is the composer absent? The 2026-09-18 CI logs showed the app fully
+    // signed in (appView visible, "User - User", user-mode) yet no typed entry
+    // in the DOM at all -- and the "GET /api/state -> 401" lines that earlier
+    // investigations blamed on Cloudflare were timestamped BEFORE the login
+    // click (they are the normal logged-out page load). None of the state
+    // below was captured, so the real cause was never observable.
+    const safe = read => { try { return read(); } catch (readError) { return `error:${String(readError?.message || readError).slice(0, 80)}`; } };
+    const composerState = {
+      composerContainerPresent: Boolean(document.querySelector("[data-nexus-command-composer]")),
+      composerHtml: safe(() => String(document.querySelector("[data-nexus-command-composer]")?.outerHTML || "").slice(0, 600)),
+      textareaCount: document.querySelectorAll("textarea").length,
+      visibleTextareaCount: [...document.querySelectorAll("textarea")].filter(visible).length,
+      experienceMode: safe(() => (typeof experienceMode === "string" ? experienceMode : null)),
+      trueExperienceMode: safe(() => (typeof nexusTrueExperienceMode === "function" ? nexusTrueExperienceMode() : null)),
+      trueExperienceSessionStarted: safe(() => (typeof nexusTrueExperienceSessionStarted === "boolean" ? nexusTrueExperienceSessionStarted : null)),
+      bodyDataset: safe(() => Object.fromEntries(Object.entries(document.body.dataset).slice(0, 25))),
+      appViewText: safe(() => String(document.querySelector("#appView")?.innerText || "").replace(/\s+/g, " ").slice(0, 900)),
+      localStorageKeys: safe(() => Object.keys(localStorage).slice(0, 40))
+    };
     return {
+      composerState,
       url: location.href,
       readyState: document.readyState,
       bodyClass: document.body?.className || "",
@@ -563,17 +583,19 @@ async function requireVisibleAuthoritativeTypedIngress(page) {
   // caller's own reload-and-retry stays as the outer recovery for a
   // genuinely slow first render.
   //
-  // KNOWN FLAKE, accepted, not a bug here: this check can still
-  // intermittently time out in CI with recentBrowserEvents showing
-  // "GET /api/state -> 401". Every server.js code path for /api/state was
-  // ruled out (publicState() always returns 200, even for a logged-out
-  // guest), and the production origin sits behind Cloudflare -- the
-  // evidence points to Cloudflare bot detection flagging GitHub Actions'
-  // runner IPs, not this function or the composer's rendering. See the
-  // comment on the "Produce and record exact-release production evidence"
-  // step in .github/workflows/nexus-protected-production-deploy.yml for
-  // the full investigation (PRs #447-#450). Fixing it for real needs a
-  // Cloudflare-side change, not another code change here.
+  // NOT a Cloudflare problem (this comment used to say it was). The
+  // "GET /api/state -> 401" lines in recentBrowserEvents are the normal
+  // logged-out page load: /api/state answers 401 "Sign in required" from the
+  // app itself for any request without a session (with the app's own
+  // security headers, which an edge block would not carry), and in the
+  // 2026-09-18 CI logs they are timestamped before the login click. The
+  // same diagnostic shows the login succeeded -- appView visible, header
+  // "User - User" -- while the typed-entry composer was absent from the DOM
+  // entirely. Why it is not rendered in that fresh CI state is still open;
+  // captureTypedIngressDiagnostic now records composerState to answer it.
+  // Callers treat a failure here as a recorded scenario failure rather than
+  // aborting the run, so workspace activation (which needs only a signed-in
+  // page) is never blocked by it; the step still ends red.
   const input = page.locator('[data-nexus-primary-typed-entry="true"]:visible').first();
   await input.waitFor({ state: "visible", timeout: 30000 });
   return input;
@@ -835,6 +857,14 @@ async function run(env = process.env) {
   loginLifecycle.afterPasswordFill = await page.evaluate(() =>
     window.__NEXUS_LOGIN_LIFECYCLE_CONTEXT__?.describeLogin?.("after-password-fill") || null).catch(() => null);
   let loginBoundary;
+  const visibleIngress = []; const scenarioFailures = [];
+  // False once the typed-entry composer could not be found even after a
+  // reload. A missing composer is recorded as a scenario failure (so the step
+  // still ends red) but must not abort the run: workspace activation
+  // (runScenario) needs only a signed-in page and
+  // __NEXUS_CAPTURE_PRODUCTION_OUTCOME__, never the composer, and aborting
+  // here meant business/lists/images never even attempted their cutover.
+  let typedIngressAvailable = true;
   try {
     loginBoundary = await submitRegisteredStandardUserLogin(page, base, standardUserCredentials, loginLifecycle);
     await waitForAuthenticatedStandardUserShell(page, base);
@@ -850,7 +880,14 @@ async function run(env = process.env) {
     } catch (error) {
       await reloadAuthenticatedShell(page);
       await waitForAuthenticatedStandardUserShell(page, base);
-      await requireVisibleAuthoritativeTypedIngress(page);
+      try {
+        await requireVisibleAuthoritativeTypedIngress(page);
+      } catch (retryError) {
+        typedIngressAvailable = false;
+        const failure = new Error(`${retryError.message} Login boundary: requestObserved=true, status=${loginBoundary.status}.`);
+        await preserveTypedIngressDiagnostic(page, releaseSha, "post-login", failure, browserDiagnosticLog);
+        scenarioFailures.push({ application: "typed-ingress:post-login", error: String(failure.message) });
+      }
     }
   } catch (error) {
     const diagnosticError = loginBoundary
@@ -864,13 +901,14 @@ async function run(env = process.env) {
   }
   await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   await installMapsCommandBoundRenderDiagnostics(page);
-  const visibleIngress = []; const scenarioFailures = [];
   // Same resilience fix as the SCENARIOS loop below, and for the same
   // confirmed-live reason: this loop ran before it, with no per-item
   // recovery, so a single flaky application here (most often "maps") threw
   // straight out of the whole run and meant the SCENARIOS loop -- and every
   // capability cutover it performs, including "lists" -- never even started.
-  for (const application of ["live-knowledge", "maps", "workforce", "documents", "images"]) {
+  // These need the composer, so skip them (recorded once, above) rather than
+  // burn their long per-command timeouts against a page that has none.
+  if (typedIngressAvailable) for (const application of ["live-knowledge", "maps", "workforce", "documents", "images"]) {
     try {
       visibleIngress.push(await submitVisibleCommand(page, SCENARIOS[application], application));
     } catch (error) {
@@ -885,12 +923,23 @@ async function run(env = process.env) {
   // -- a single reload attempt is not a reliable enough signal for that
   // separate readiness. A second reload-and-wait cycle survives that one-off
   // timing gap without masking a genuine, repeated failure to ever render.
-  try {
-    await requireVisibleAuthoritativeTypedIngress(page);
-  } catch (error) {
-    await reloadAuthenticatedShell(page);
-    await requireVisibleAuthoritativeTypedIngress(page);
+  if (typedIngressAvailable) {
+    try {
+      await requireVisibleAuthoritativeTypedIngress(page);
+    } catch (error) {
+      await reloadAuthenticatedShell(page);
+      try {
+        await requireVisibleAuthoritativeTypedIngress(page);
+      } catch (retryError) {
+        typedIngressAvailable = false;
+        await preserveTypedIngressDiagnostic(page, releaseSha, "post-reload", retryError, browserDiagnosticLog);
+        scenarioFailures.push({ application: "typed-ingress:post-reload", error: String(retryError?.message || retryError) });
+      }
+    }
   }
+  // The composer wait used to double as "the app has finished booting"; the
+  // activation loop below needs exactly this hook, so wait for it explicitly.
+  await page.waitForFunction(() => typeof window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function", null, { timeout: 30000 });
   const capabilityProbes = []; const workspaceProbes = [];
   async function runScenario(application, text) {
       const execute = async phase => {
