@@ -43,6 +43,7 @@ const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workf
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
+const { conversationFollowUpFlags } = require("./server/nexus-conversation-followup-flags.js");
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
@@ -25340,11 +25341,7 @@ function conversationFollowUpResponse(db, user, text, lower) {
   const pending = db.profile.agentPendingAction;
   const recommendation = memory.lastRecommendedAction || smartNextActions(db, user).items[0] || null;
   const context = lastWorkflowContext(db.profile);
-  const wantsExplanation = /\b(explain|repeat|say that again|read that|what do you mean|why|summarize that)\b/.test(lower);
-  const wantsSource = /\b(where did you get that|what source|which source|sources?|citations?|cite that|evidence|receipt|where is that from|source are you using)\b/.test(lower);
-  const wantsMission = /\b(current mission|mission status|where are we|what are we doing|what step|where am i|orient me|checklist|guided mission)\b/.test(lower);
-  const wantsNavigation = /\b(take me there|open that|show me|go there|go to it|where is that)\b/.test(lower);
-  const wantsNext = /\b(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed)\b/.test(lower);
+  const { wantsExplanation, wantsSource, wantsMission, wantsNavigation, wantsNext } = conversationFollowUpFlags(lower);
   if (!wantsExplanation && !wantsSource && !wantsNavigation && !wantsNext && !wantsMission) return null;
 
   if (wantsSource) return genesisSourceFollowUpResponse(db, user, text);
