@@ -227,13 +227,29 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
     throw Object.assign(new Error("Authoritative knowledge retrieval requires an approved domain filter."), { code: "knowledge_domain_filter_required" });
   if (process.env.TAVILY_API_KEY) {
     try {
-      const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced", include_answer: true, max_results: 5,
-        ...(includeDomains.length ? { include_domains: includeDomains } : {}) }) });
-    if (!response.ok) throw Object.assign(new Error(`Live knowledge provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
-    const body = await response.json();
-    const sources = (body.results || []).filter(item => item?.url && (!includeDomains.length || sourceAllowed(item.url, includeDomains)))
-      .map(item => ({ title: item.title || item.url, url: item.url }));
+      const search = async domains => {
+        const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced", include_answer: true, max_results: 5,
+            ...(domains.length ? { include_domains: domains } : {}) }) });
+        if (!response.ok) throw Object.assign(new Error(`Live knowledge provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
+        const found = await response.json();
+        return { body: found, sources: (found.results || []).filter(item => item?.url && (!includeDomains.length || sourceAllowed(item.url, includeDomains)))
+          .map(item => ({ title: item.title || item.url, url: item.url })) };
+      };
+      let { body, sources } = await search(includeDomains);
+      // Confirmed live (2026-09-19): with several approved domains Tavily can
+      // treat the filter as a preference and return open-web results (all
+      // filtered out above) for conversational phrasing such as "Assess yellow
+      // leaves on my maize crop and show sources." A single-domain filter is
+      // honored, so retry one real domain at a time (a bare TLD like "edu" is
+      // not a domain Tavily can filter on) before giving up. Approved-domain
+      // enforcement is unchanged: sources are still filtered by sourceAllowed.
+      if ((!String(body.answer || "").trim() || !sources.length) && includeDomains.length > 1) {
+        for (const domain of includeDomains.filter(value => value.includes("."))) {
+          ({ body, sources } = await search([domain]));
+          if (String(body.answer || "").trim() && sources.length) break;
+        }
+      }
     if (!String(body.answer || "").trim() || !sources.length) throw Object.assign(new Error("Live knowledge returned no answer with sources."), { code: "knowledge_outcome_unverified" });
     return { ...common, sources, source: sources[0], answer: body.answer, assessment: body.answer,
       crop: input.crop || "crop", observations: input.observations || [query], lesson: body.answer,
