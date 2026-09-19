@@ -339,3 +339,34 @@ test("a pharmacy request names the place to search near, and asks for none it wa
   assert.equal(none.steps[0].input.location, undefined, "no place is invented");
   assert.equal(none.steps[0].toolId, "pharmacy.find");
 });
+
+test("reminders with a relative time or a weekday take the deterministic path instead of the AI planner", () => {
+  const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "reminders.schedule" }] };
+  for (const text of ["Remind me to test push in 2 minutes.", "Remind me to call Ron in 3 hours", "Remind me on Friday to order supplies",
+    "Remind me later today to check the pump", "Remind me tomorrow at 9 AM to check my crops and save the reminder."]) {
+    const plan = completeRemainingWorkspacePlan(text, catalog);
+    assert.equal(plan?.steps[0].toolId, "reminders.schedule", text);
+    assert.equal(plan.steps[0].input.when, text);
+  }
+  for (const text of ["Remind me to be kind", "What is a reminder?", "Show my reminders"])
+    assert.equal(completeRemainingWorkspacePlan(text, catalog), null, `${text} has no time, so it is not scheduled here`);
+});
+
+test("the full planner never consults the AI model for a reminder with a relative time or weekday", async () => {
+  const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
+  const defs = require("../../nexus/tools/canonical-provider-definitions.js");
+  const list = Array.isArray(defs) ? defs : Object.values(defs).find(Array.isArray) || [];
+  const rows = list.map(tool => ({ tool_id: tool.toolId, domain: tool.domain, description: tool.description, risk_tier: tool.riskTier,
+    confirmation_required: tool.confirmationRequired, consent_scope: tool.consentScope }));
+  assert.ok(rows.some(row => row.tool_id === "reminders.schedule"));
+  let modelCalls = 0;
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { modelCalls += 1; throw new Error("AI planner must not be used"); } },
+    memory: { search: async () => [] }, tools: { list: async () => rows }, applications: { list: () => defaultApplicationManifests() } });
+  for (const text of ["Remind me to test push in 2 minutes.", "Remind me to call Ron in 3 hours", "Remind me on Friday to order supplies"]) {
+    const plan = await planner.plan({ command: { text, tenantId: "t", actorId: "u", locale: "en", channel: "typed" }, context: { roles: [] } });
+    assert.equal(plan.steps[0].toolId, "reminders.schedule", text);
+    assert.equal(plan.steps[0].input.when, text);
+  }
+  assert.equal(modelCalls, 0);
+});

@@ -364,7 +364,12 @@ function completeRemainingWorkspacePlan(text, catalog) {
     return plan("maps", "maps.view", "Render governed route", { origin: endpoints?.[1]?.trim() || "Nairobi",
       destination: endpoints?.[2]?.trim() || "Nakuru", requireRouteGeometry: true });
   }
-  if (/\b(remind|reminder)\b/i.test(goal) && /\b(tomorrow|today|tonight|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i.test(goal) && /\b(save|schedule|remind)\b/i.test(goal))
+  // Every phrase parseAssistantReminderTime (nexus/reminders/time-phrase.js) understands must route here.
+  // "in 2 minutes" and weekdays used to be missing, so "Remind me to ... in 2 minutes" fell through to the
+  // AI planner, whose invented input shape was ignored and which was silently scheduled for tomorrow.
+  if (/\b(remind|reminder)\b/i.test(goal) &&
+      /\b(tomorrow|today|tonight|later today|this afternoon|in\s+\d{1,3}\s*(?:minutes?|mins?|hours?|hrs?|days?|weeks?)|(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i.test(goal) &&
+      /\b(save|schedule|remind)\b/i.test(goal))
     return plan("reminders", "reminders.schedule", "Persist governed reminder", { reminder: goal, when: goal });
   if (/\b(queue|queued)\b/i.test(goal) && /\boffline\b/i.test(goal) && /\b(sync|synchronize|synchronise)\b/i.test(goal) &&
       /\b(acknowledg(?:e|ement)|server|receipt|confirm)\b/i.test(goal))

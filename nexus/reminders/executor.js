@@ -5,9 +5,16 @@ const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./
 function createReminderScheduleExecutor({ notifications }) {
   if (!notifications?.enqueue) throw new Error("A notification repository is required.");
   return async function execute({ input, context, taskId, idempotencyKey }) {
-    const rawText = String(input?.when || input?.reminder || "").trim();
-    const { scheduledAt, whenLabel } = parseAssistantReminderTime(rawText);
-    const task = extractAssistantReminderTask(rawText);
+    // The deterministic planner sends { reminder, when } (the user's own words). The AI planner, when it
+    // handles a phrasing the deterministic one misses, invents its own field names ({ title,
+    // timeOffsetMinutes }). Those were ignored, so the reminder silently became "follow up" due tomorrow.
+    const rawText = String(input?.when || input?.reminder || input?.text || input?.message || input?.title || "").trim();
+    const offsetMinutes = Number(input?.timeOffsetMinutes);
+    const hasOffset = Number.isFinite(offsetMinutes) && offsetMinutes > 0 && offsetMinutes <= 60 * 24 * 365;
+    const { scheduledAt, whenLabel } = hasOffset
+      ? { scheduledAt: new Date(Date.now() + offsetMinutes * 60 * 1000).toISOString(), whenLabel: `in ${offsetMinutes} minute${offsetMinutes === 1 ? "" : "s"}` }
+      : parseAssistantReminderTime(rawText);
+    const task = extractAssistantReminderTask(String(input?.reminder || input?.title || rawText).trim());
     const notification = await notifications.enqueue({
       tenantId: context.tenantId,
       userId: context.userId,
