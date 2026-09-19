@@ -134,3 +134,17 @@ test("an unverified browser capture reports the browser's own receipt and page s
     assert.ok(region.includes(field), `the failure must include ${field}`);
   }
 });
+
+test("the release parameter the capture needs is restored before every capture", () => {
+  // Reproduced 2026-09-19: with the URL at "/?" (no nexusProductionEvidence)
+  // the capture returns exact_release_evidence_required and renders nothing,
+  // which is what 18 of 19 CI scenarios reported.
+  const helper = probe.indexOf("async function ensureExactReleaseEvidenceUrl(page, releaseSha)");
+  assert.ok(helper > 0);
+  const helperBody = probe.slice(helper, probe.indexOf("async function reloadAuthenticatedShell", helper));
+  assert.ok(helperBody.includes('searchParams.set("nexusProductionEvidence", sha)'));
+  assert.ok(helperBody.includes("history.replaceState"), "restoring must not navigate or reload the page");
+  const restore = probe.indexOf("await ensureExactReleaseEvidenceUrl(page, releaseSha);");
+  const capture = probe.indexOf("const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);");
+  assert.ok(restore > 0 && capture > restore, "the parameter is restored immediately before the capture runs");
+});

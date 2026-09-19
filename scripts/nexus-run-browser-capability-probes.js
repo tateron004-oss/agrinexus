@@ -54,6 +54,25 @@ async function post(url, token, body) {
   return value;
 }
 
+// window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ (public/app.js) reads the release
+// it binds its receipt to from the page's own URL and returns
+// {rendered:false, visible:false, error:"exact_release_evidence_required"}
+// without rendering anything when "?nexusProductionEvidence=<sha>" is absent.
+// In the 2026-09-19 CI run the page URL was "/?" (the parameter gone) and 18 of
+// 19 workspaces failed with the server's generic "did not verify a visible or
+// audible outcome"; reproduced locally: no parameter -> not rendered, restore
+// it with history.replaceState (no navigation) -> rendered and visible. The
+// server still validates the receipt's release against the running release, so
+// restoring the parameter does not weaken the exact-release binding.
+async function ensureExactReleaseEvidenceUrl(page, releaseSha) {
+  await page.evaluate(sha => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("nexusProductionEvidence") === sha) return;
+    url.searchParams.set("nexusProductionEvidence", sha);
+    window.history.replaceState(null, "", url);
+  }, releaseSha);
+}
+
 async function reloadAuthenticatedShell(page, attempts = 4) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -955,6 +974,7 @@ async function run(env = process.env) {
         const outcome = turn.result?.render;
         if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required` +
           ` (state=${turn.result?.state || "missing"}, pendingStep=${Boolean(turn.result?.outcome?.pendingStepId)}, render=${Boolean(outcome)}).`);
+        await ensureExactReleaseEvidenceUrl(page, releaseSha);
         const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
         if (application === "music-media") {
           const player = page.locator('[data-nexus-provider-audio="true"], [data-nexus-youtube-player] iframe').first();
