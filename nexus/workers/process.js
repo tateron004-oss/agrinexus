@@ -23,7 +23,7 @@ async function main() {
   if (!health.ok) throw new Error("Nexus worker refuses to start before pgvector and migrations are ready.");
   const webPush = createWebPushProvider({ env: process.env, devices: runtime.devices, deviceTokens: runtime.deviceTokens });
   const deliveryProviders={ ...createNotificationProviders(), ...(webPush ? { push: webPush } : {}) };
-  const handlers=createHandlers({ runtime,deliveryProviders });
+  const handlers=createHandlers({ runtime,deliveryProviders,logger });
   const queues = ["default"];
   const releaseSha = resolveWorkerReleaseSha();
   const handlerNames = Object.keys(handlers);
