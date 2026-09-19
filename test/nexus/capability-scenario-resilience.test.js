@@ -148,3 +148,37 @@ test("the release parameter the capture needs is restored before every capture",
   const capture = probe.indexOf("const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);");
   assert.ok(restore > 0 && capture > restore, "the parameter is restored immediately before the capture runs");
 });
+
+const probeModule = require("../../scripts/nexus-run-browser-capability-probes.js");
+const pendingTurn = (application, extra = {}) => ({ result: { state: "confirmation_required", taskId: "t", commandId: "c", correlationId: "k",
+  outcome: { pendingStepId: "s" }, application, render: { workspace: application }, ...extra } });
+
+test("telehealth and the other consent-gated tools are continued; communications never is", () => {
+  assert.deepEqual(Object.keys(probeModule.CONFIRMATION_CONTINUATIONS).sort(), ["health", "offline-queue", "telehealth"]);
+  assert.equal(probeModule.CONFIRMATION_CONTINUATIONS.telehealth, "telehealth-continuation");
+  assert.equal(probeModule.pendingConfirmationContinuation("telehealth", pendingTurn("telehealth")), true);
+  assert.equal(probeModule.pendingConfirmationContinuation("communications", pendingTurn("communications")), false,
+    "approving communications.send would call a live SMS/email provider");
+  assert.equal(probeModule.pendingConfirmationContinuation("constructor", pendingTurn("constructor")), false);
+  assert.equal(probeModule.pendingConfirmationContinuation("telehealth", { result: { state: "render_required" } }), false);
+});
+
+test("communications is verified as a held gate, and only when nothing completed", () => {
+  assert.equal(probeModule.confirmationGateHeld("communications", pendingTurn("communications")), true);
+  assert.equal(probeModule.confirmationGateHeld("communications", pendingTurn("communications", { completed: true })), false);
+  assert.equal(probeModule.confirmationGateHeld("communications", pendingTurn("communications", { render: null })), false, "the confirmation must be rendered");
+  assert.equal(probeModule.confirmationGateHeld("communications", { result: { state: "render_required" } }), false);
+  assert.equal(probeModule.confirmationGateHeld("telehealth", pendingTurn("telehealth")), false, "other applications still need the real continuation");
+});
+
+test("a held gate is captured in the browser but never acknowledged, and its receipts say so", () => {
+  const execute = probe.slice(probe.indexOf("const execute = async phase =>"), probe.indexOf("const candidate = await execute("));
+  const heldReturn = execute.indexOf("if (gateHeld) return { outcome, receipt, gateHeld: true };");
+  const capture = execute.indexOf("const receipt = await receiptPromise;");
+  const ack = execute.indexOf("probes/browser-acknowledgement");
+  assert.ok(capture > 0 && heldReturn > capture && ack > heldReturn, "capture, then return before the acknowledgement POST");
+  assert.doesNotMatch(execute.slice(0, ack), /communications-continuation/);
+  const after = probe.slice(probe.indexOf("const candidate = await execute("));
+  assert.match(after, /confirmationGateHeld=true actionExecuted=false/);
+  assert.match(after, /confirmationGateHeld: true, actionExecuted: false/);
+});

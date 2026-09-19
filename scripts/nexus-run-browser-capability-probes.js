@@ -38,10 +38,32 @@ async function json(response) { const text = await response.text(); try { return
 function exactRecord(releaseSha, receipts, extra = {}) { return { releaseSha, production: true, simulated: false,
   passed: true, observedAt: new Date().toISOString(), receipts, ...extra }; }
 
+// Applications whose confirmation-gated step the probe approves through a
+// dedicated, pinned acceptance endpoint (see CONSENTED_CONTINUATIONS in
+// nexus/compat/server-runtime-adapter.js), mapped to that endpoint's name.
+const CONFIRMATION_CONTINUATIONS = Object.freeze({ health: "health-continuation", telehealth: "telehealth-continuation",
+  "offline-queue": "offline-queue-continuation" });
+// Applications whose gated step performs a real outward action (communications.send
+// calls a live SMS/email provider). The probe must never approve these: it
+// verifies that the transaction stops at confirmation_required, that the
+// browser renders the confirmation, and that nothing was executed or sent.
+const CONFIRMATION_GATE_ONLY = Object.freeze(new Set(["communications"]));
+
 function pendingConfirmationContinuation(application, turn) {
-  return ["health", "offline-queue"].includes(application) && turn?.result?.state === "confirmation_required" &&
+  return Object.hasOwn(CONFIRMATION_CONTINUATIONS, application) && confirmationPending(turn);
+}
+
+function confirmationPending(turn) {
+  return turn?.result?.state === "confirmation_required" &&
     Boolean(turn?.result?.taskId) && Boolean(turn?.result?.outcome?.pendingStepId) &&
     Boolean(turn?.result?.commandId) && Boolean(turn?.result?.correlationId);
+}
+
+// True only for a gate-only application whose transaction is correctly stopped
+// at the confirmation prompt with nothing executed.
+function confirmationGateHeld(application, turn) {
+  return CONFIRMATION_GATE_ONLY.has(application) && confirmationPending(turn) &&
+    turn.result.completed !== true && Boolean(turn.result.render);
 }
 
 async function post(url, token, body) {
@@ -965,14 +987,15 @@ async function run(env = process.env) {
         let turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/behavior-turn`, token,
           { releaseSha, application, text, channel: "typed", locale: "en", phase });
         if (pendingConfirmationContinuation(application, turn)) {
-          const continuation = application === "health" ? "health-continuation" : "offline-queue-continuation";
+          const continuation = CONFIRMATION_CONTINUATIONS[application];
           turn = await post(`${base}/api/nexus/runtime/production-acceptance/probes/${continuation}`, token,
             { releaseSha, taskId: turn.result.taskId, stepId: turn.result.outcome?.pendingStepId,
               commandId: turn.result.commandId, correlationId: turn.result.correlationId,
               channel: "typed", confirmed: true, consented: true });
         }
         const outcome = turn.result?.render;
-        if (!outcome || turn.result?.state !== "render_required") throw new Error(`${application} ${phase} did not reach render_required` +
+        const gateHeld = confirmationGateHeld(application, turn);
+        if (!outcome || (turn.result?.state !== "render_required" && !gateHeld)) throw new Error(`${application} ${phase} did not reach render_required` +
           ` (state=${turn.result?.state || "missing"}, pendingStep=${Boolean(turn.result?.outcome?.pendingStepId)}, render=${Boolean(outcome)}).`);
         await ensureExactReleaseEvidenceUrl(page, releaseSha);
         const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);
@@ -1030,6 +1053,9 @@ async function run(env = process.env) {
             throw new Error(`Music did not return genuine provider-owned playback evidence: ${JSON.stringify(receipt?.evidence || {})}`);
           }
         }
+        // A held gate is left pending on purpose: acknowledging would complete a
+        // task whose action was (correctly) never approved or executed.
+        if (gateHeld) return { outcome, receipt, gateHeld: true };
         const acknowledged = await post(`${base}/api/nexus/runtime/production-acceptance/probes/browser-acknowledgement`, token,
           { releaseSha, taskId: outcome.taskId, commandId: outcome.commandId, correlationId: outcome.correlationId,
             workspace: outcome.workspace, receipt });
@@ -1038,7 +1064,8 @@ async function run(env = process.env) {
       };
       const candidate = await execute("pre-cutover");
       const candidateReceipts = [`${base}/behavior-turn application=${application} phase=pre-cutover commandId=${candidate.outcome.commandId}`,
-        `${base}/browser-acknowledgement application=${application} phase=pre-cutover completed=true`];
+        candidate.gateHeld ? `${base}/browser-capture application=${application} phase=pre-cutover confirmationGateHeld=true actionExecuted=false rendered=true visible=true`
+          : `${base}/browser-acknowledgement application=${application} phase=pre-cutover completed=true`];
       const candidateProof = exactRecord(releaseSha, candidateReceipts);
       const proofs = { contract: candidateProof,
         "tenant-isolation": exactRecord(releaseSha, [`${base}/probes/identity tenantIsolation=true`]),
@@ -1047,11 +1074,13 @@ async function run(env = process.env) {
       await post(`${base}/api/nexus/runtime/production-acceptance/workspaces/${encodeURIComponent(application)}`, token,
         { releaseSha, rollbackRef: env.NEXUS_ROLLBACK_REF, proofs: Object.fromEntries(Object.entries(proofs).map(([key, value]) =>
           [key, { state: "verified", evidenceId: `${application}-${key}-${candidate.outcome.commandId}`, releaseSha, record: value }])) });
-      const { outcome, receipt } = await execute("post-cutover");
+      const { outcome, receipt, gateHeld } = await execute("post-cutover");
       const receipts = [`${base}/behavior-turn application=${application} commandId=${outcome.commandId}`,
-        `${base}/browser-acknowledgement application=${application} completed=true`];
+        gateHeld ? `${base}/browser-capture application=${application} confirmationGateHeld=true actionExecuted=false rendered=true visible=true`
+          : `${base}/browser-acknowledgement application=${application} completed=true`];
       capabilityProbes.push(exactRecord(releaseSha, receipts, { application, rendered: receipt.rendered === true,
-        visible: receipt.visible === true, audible: receipt.audible === true, evidence: outcome.data || {} }));
+        visible: receipt.visible === true, audible: receipt.audible === true, evidence: outcome.data || {},
+        ...(gateHeld ? { confirmationGateHeld: true, actionExecuted: false } : {}) }));
       const proof = exactRecord(releaseSha, receipts);
       workspaceProbes.push(exactRecord(releaseSha, receipts, { workspaceId: application, proofs: {
         contract: proof, "tenant-isolation": exactRecord(releaseSha, [`${base}/probes/identity tenantIsolation=true`]),
@@ -1105,4 +1134,4 @@ async function run(env = process.env) {
 }
 
 if (require.main === module) run().catch(error => { console.error(error.stack || error.message); process.exit(1); });
-module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, reloadAuthenticatedShell, waitForCurrentLoginSubmitListener, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, installMapsCommandBoundRenderDiagnostics, captureMapsLifecycleDiagnostic, submitVisibleCommand, post, run });
+module.exports = Object.freeze({ SCENARIOS, exactRecord, pendingConfirmationContinuation, confirmationGateHeld, CONFIRMATION_CONTINUATIONS, CONFIRMATION_GATE_ONLY, reloadAuthenticatedShell, waitForCurrentLoginSubmitListener, authenticatedStandardUserRole, waitForAuthenticatedStandardUserShell, sanitizeLoginLifecycleValue, sanitizedAuthoritativeLifecyclePayload, sanitizedAcknowledgementLifecyclePayload, installLoginLifecycleDiagnostics, captureLoginLifecycleDiagnostics, installLiveKnowledgeLifecycleDiagnostics, captureLiveKnowledgeLifecycleDiagnostics, captureTypedIngressDiagnostic, preserveTypedIngressDiagnostic, requireVisibleAuthoritativeTypedIngress, installMapsCommandBoundRenderDiagnostics, captureMapsLifecycleDiagnostic, submitVisibleCommand, post, run });

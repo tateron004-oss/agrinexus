@@ -1,6 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { defaultApplicationManifests } = require("../../nexus/apps/default-manifests.js");
 const { assembleExternalFaultProofs } = require("../../scripts/nexus-assemble-external-fault-proofs.js");
 
 const sha = "a".repeat(40);
@@ -20,7 +21,7 @@ function fixture() {
         component("database", { connected: true }),
         component("tools", { providerReady: true })
       ],
-      capabilityProbes: Array.from({ length: 17 }, (_, index) => ({
+      capabilityProbes: Array.from({ length: defaultApplicationManifests().length }, (_, index) => ({
         application: "app-" + index, releaseSha: sha, production: true, simulated: false,
         passed: true, rendered: true, visible: true
       })),
@@ -95,4 +96,17 @@ test("assembler leaves production injection obligations open when any required o
   assert.equal(proofs["provider-failure-production-injection"], undefined);
   assert.equal(proofs["database-failure-production-injection"], undefined);
   assert.equal(proofs["dependency-failure-production-injection"], undefined);
+});
+
+test("the visible capability matrix requires one probe per registered application, not a stale fixed count", () => {
+  const count = defaultApplicationManifests().length;
+  assert.ok(count >= 19, "business and lists are registered workspaces");
+  const key = "visible-production-capability-matrix";
+  assert.ok(assembleExternalFaultProofs(fixture())[key], "a full matrix proves capability-verification");
+  const short = fixture(); short.probes.capabilityProbes = short.probes.capabilityProbes.slice(0, count - 1);
+  assert.equal(assembleExternalFaultProofs(short)[key], undefined, "one missing capability leaves it unproved");
+  const extra = fixture(); extra.probes.capabilityProbes = [...extra.probes.capabilityProbes, { ...extra.probes.capabilityProbes[0], application: "extra" }];
+  assert.equal(assembleExternalFaultProofs(extra)[key], undefined, "an unexpected extra probe is not accepted either");
+  const invisible = fixture(); invisible.probes.capabilityProbes[0] = { ...invisible.probes.capabilityProbes[0], visible: false };
+  assert.equal(assembleExternalFaultProofs(invisible)[key], undefined, "every capability must be visible");
 });
