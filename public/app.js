@@ -9726,33 +9726,66 @@ async function subscribeToNexusPushNotifications() {
     const reason = String(error?.message || error?.name || "Registration failed");
     // The server refuses device registration with "Missing permission: devices:write" for a
     // guest session (guests are deliberately restricted). Say what to do instead of showing that.
-    if (/devices:write/i.test(reason)) return { ok: false, message: "This session is a guest or limited session, which cannot receive alerts. Sign out, then sign in with your account and try again." };
+    if (/devices:write/i.test(reason)) return { ok: false, message: "This session is not allowed to register a device for alerts. Sign out, sign in with your regular account, and try again." };
     return { ok: false, message: reason.slice(0, 160) };
   }
 }
 
-// Home is audio-only: the global assistant bar (which holds the "Enable alerts" button) is
-// hidden there, and the browser only shows the notification prompt from a click. This
-// small control is the visible way to turn alerts on. Nothing renders where it cannot work
-// (no push support) or is not needed (permission already granted: the app subscribes on
-// load); a blocked permission explains itself instead of offering a dead button.
+// Alerts are turned on without a button. The browser only shows the notification prompt in
+// response to a tap or click, so the prompt is attached to the first tap the user makes in the
+// signed-in app anyway (usually the orb or the mic). Once permission is granted the app registers
+// and refreshes the device by itself on every load (see verifyLoadedBuildWithServer). Only a
+// failure is ever shown, in this small status line under the orb.
 function renderNexusHomeAlertsControl() {
   if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return "";
-  const permission = Notification.permission;
-  if (permission === "granted") return "";
-  const blocked = permission === "denied";
   return `
     <div class="nexus-home-alerts" data-nexus-home-alerts="true">
-      ${blocked ? "" : `<button type="button" class="nexus-home-alerts-button" data-mobile-permission="notifications" data-nexus-home-alerts-button="true">${escapeHtml(translateText("Enable alerts"))}</button>`}
-      <span class="nexus-home-alerts-status" data-nexus-home-alerts-status="true" role="status" aria-live="polite">${blocked ? escapeHtml(translateText("Alerts are blocked for this site. Allow notifications in the browser's site settings to turn them on.")) : ""}</span>
+      <span class="nexus-home-alerts-status" data-nexus-home-alerts-status="true" role="status" aria-live="polite"></span>
     </div>
   `;
 }
 
-function setNexusHomeAlertsStatus(message, { done = false } = {}) {
+function setNexusHomeAlertsStatus(message) {
   document.querySelectorAll("[data-nexus-home-alerts-status]").forEach(node => { node.textContent = translateText(message); });
-  if (done) document.querySelectorAll("[data-nexus-home-alerts-button]").forEach(node => { node.hidden = true; });
 }
+
+// At most three prompts ever (matching where Chrome itself starts blocking a site that keeps
+// being dismissed), and only one per page load. A blocked or dismissed prompt is never repeated
+// after that: the person chose, and alerts still show inside the app.
+const NEXUS_ALERT_PROMPT_KEY = "agrinexusAlertPromptAttempts";
+const NEXUS_ALERT_PROMPT_MAX_ATTEMPTS = 3;
+
+function nexusAlertPromptAttempts() {
+  try { return Number(localStorage.getItem(NEXUS_ALERT_PROMPT_KEY) || 0) || 0; } catch { return 0; }
+}
+
+function nexusAlertsPromptEligible() {
+  if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  if (Notification.permission !== "default") return false;
+  if (!document.body?.classList.contains("user-mode")) return false;
+  if (document.querySelector("#appView")?.classList.contains("hidden")) return false;
+  return nexusAlertPromptAttempts() < NEXUS_ALERT_PROMPT_MAX_ATTEMPTS;
+}
+
+async function requestNexusAlertsFromGesture() {
+  try { localStorage.setItem(NEXUS_ALERT_PROMPT_KEY, String(nexusAlertPromptAttempts() + 1)); } catch { /* storage unavailable: still ask this once */ }
+  let permission = "default";
+  try { permission = await Notification.requestPermission(); } catch { return; }
+  if (permission !== "granted") return;
+  const push = await subscribeToNexusPushNotifications();
+  if (!push.ok) setNexusHomeAlertsStatus(`Alerts could not be turned on: ${push.message}`);
+}
+
+function installNexusAlertsFirstTapPrompt() {
+  if (typeof document === "undefined") return;
+  const onTap = () => {
+    if (!nexusAlertsPromptEligible()) return;
+    document.removeEventListener("click", onTap, true);
+    requestNexusAlertsFromGesture();
+  };
+  document.addEventListener("click", onTap, true);
+}
+installNexusAlertsFirstTapPrompt();
 
 async function requestProductionMobilePermission(kind) {
   const status = $("#mobilePermissionStatus");
@@ -9782,15 +9815,14 @@ async function requestProductionMobilePermission(kind) {
       setStatus(result === "granted" ? "Notifications are ready for app alerts." : "Notifications were not enabled. The platform will keep alerts inside the app.");
       updateNexusBehaviorLayer("ready", result === "granted" ? "Nexus can use browser alerts when supported." : "Nexus will keep proactive alerts inside the app.");
       if (result !== "granted") {
-        setNexusHomeAlertsStatus(result === "denied" ? "Alerts are blocked for this site. Allow notifications in the browser's site settings to turn them on." : "Alerts were not turned on.",
-          { done: result === "denied" });
+        setNexusHomeAlertsStatus(result === "denied" ? "Alerts are blocked for this site. Allow notifications in the browser's site settings to turn them on." : "Alerts were not turned on.");
         return;
       }
       const push = await subscribeToNexusPushNotifications();
       const outcome = push.ok ? "Alerts are on for this device. Reminders will notify you here."
         : `Alerts could not be turned on: ${push.message}`;
       setStatus(outcome);
-      setNexusHomeAlertsStatus(outcome, { done: push.ok });
+      setNexusHomeAlertsStatus(outcome);
       return;
     }
     if (kind === "location") {
