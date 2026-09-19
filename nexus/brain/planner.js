@@ -37,9 +37,10 @@ class OpenEndedPlanner {
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
     const completeImageSearch = completeImageSearchPlan(command.text, catalog);
     if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
-    const agricultureAdvice = agricultureAdvicePlan(command.text, catalog);
+    const followUpGoal = followUpGoalFrom(command.text, conversationHistory);
+    const agricultureAdvice = agricultureAdvicePlan(followUpGoal || command.text, catalog);
     if (agricultureAdvice) return Object.freeze({ ...agricultureAdvice, planningAttempts: 1 });
-    const completeLiveKnowledge = completeLiveKnowledgePlan(command.text, catalog);
+    const completeLiveKnowledge = completeLiveKnowledgePlan(followUpGoal || command.text, catalog);
     if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
     const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
     if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
@@ -148,6 +149,18 @@ function assistantIntroductionPlan(text, catalog) {
   return { goal: String(text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [],
     response: `I'm Kyro, your AgriNexus assistant. I can help with ${list}. I always ask before I save or send anything. Just tell me what you need.`,
     sourceRequired: false };
+}
+
+// "And what about beans?" after "Why do maize leaves turn yellow?" used to search for "And what about beans?" alone
+// and answer generically. Join a short follow-up opener to the previous user question; used only by the farm-advice
+// and live-knowledge matchers, which take the whole sentence as their search query.
+const FOLLOW_UP_OPENER = /^(?:(?:and|also|ok|okay)[, ]+)?(?:what|how) about\b|^and\b/i;
+
+function followUpGoalFrom(text, history) {
+  const current = String(text || "").trim();
+  if (!current || current.length > 80 || !FOLLOW_UP_OPENER.test(current)) return null;
+  const previous = [...(history || [])].reverse().find(turn => turn?.role === "user" && String(turn.content || "").trim());
+  return previous ? `${String(previous.content).trim()} ${current}` : null;
 }
 
 function agricultureAdvicePlan(text, catalog) {
@@ -483,6 +496,12 @@ function completeBusinessPlan(text, catalog) {
       toolId, input: { command: goal }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// The model sometimes selects a tool that cannot run on what the user asked for: 2026-09-19 "Give me a 3-step plan
+// for starting a small poultry business" was planned as maps.view with no route, and surfaced as a 502
+// "verifier rejected the maps.view outcome". Rejecting it here lets the repair loop (with this feedback) or the
+// direct-answer fallback handle it.
+const REQUIRED_STEP_INPUTS = Object.freeze({ "maps.view": Object.freeze(["origin", "destination"]) });
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -497,6 +516,8 @@ function validatePlan(candidate, catalog, context) {
     if (!String(step.title || "").trim()) errors.push(`Step ${id} requires a title.`);
     if (!clarification && !step.toolId) errors.push(`Step ${id} requires an executable tool.`);
     if (step.toolId && !toolIds.has(step.toolId)) errors.push(`Step ${id} references unavailable tool ${step.toolId}.`);
+    const missingInput = (REQUIRED_STEP_INPUTS[step.toolId] || []).filter(key => !String(step.input?.[key] ?? "").trim());
+    if (missingInput.length) errors.push(`Step ${id} uses ${step.toolId} but is missing required input: ${missingInput.join(", ")}. Choose a different tool or ask for the missing detail.`);
     if (step.requiredPermission && !context.can(step.requiredPermission)) errors.push(`Step ${id} requires unavailable permission ${step.requiredPermission}.`);
   }
   for (const step of candidate?.steps || []) for (const dependency of step.dependsOn || []) if (!ids.has(String(dependency))) errors.push(`Unknown dependency ${dependency}.`);

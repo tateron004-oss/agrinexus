@@ -29,7 +29,7 @@ function factFor(lane, index) { const facts = PATH2_LANES[lane].requiredFacts; r
 function validCandidate(index, overrides = {}) {
   const application = CATALOG.applications[index % CATALOG.applications.length].applicationId;
   return { goal: `Unseen production goal ${index + 1}`, application, riskTier: "low", clarification: null,
-    steps: [{ id: "first", title: `Inspect ${index + 1}`, toolId: TOOL_IDS[index % TOOL_IDS.length], input: { variant: index },
+    steps: [{ id: "first", title: `Inspect ${index + 1}`, toolId: TOOL_IDS[index % TOOL_IDS.length], input: { variant: index, origin: "Nairobi", destination: "Nakuru" },
       dependsOn: [], fallbackToolIds: [], requiredPermission: null }], ...overrides };
 }
 
@@ -91,7 +91,7 @@ async function crossApplicationCase(index) {
   const apps = CATALOG.applications; const first = apps[index % apps.length]; const second = apps[(index + 1) % apps.length];
   const third = apps[(index + 2) % apps.length];
   const steps = [first, second, third].map((app, offset) => ({ id: `step-${offset}`, title: `${app.applicationId} outcome`,
-    toolId: TOOL_IDS[(index + offset) % TOOL_IDS.length], input: { workspace: app.applicationId },
+    toolId: TOOL_IDS[(index + offset) % TOOL_IDS.length], input: { workspace: app.applicationId, origin: "Nairobi", destination: "Nakuru" },
     dependsOn: offset ? [`step-${offset - 1}`] : [], fallbackToolIds: [], requiredPermission: null }));
   const validation = validatePlan(validCandidate(index, { application: first.applicationId, steps }), CATALOG, CONTEXT);
   const shared = steps[1].dependsOn[0] === steps[0].id && steps[2].dependsOn[0] === steps[1].id;
