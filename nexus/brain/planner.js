@@ -13,6 +13,9 @@ class OpenEndedPlanner {
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
     const ordinaryConversation = ordinaryConversationPlan(command.text, context);
     if (ordinaryConversation) return Object.freeze({ ...ordinaryConversation, planningAttempts: 0 });
+    if (isAssistantIntroductionRequest(command.text)) {
+      return Object.freeze({ ...assistantIntroductionPlan(command.text, await this.catalog()), planningAttempts: 0 });
+    }
     const memories = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
       purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
     const catalog = await this.catalog();
@@ -34,9 +37,10 @@ class OpenEndedPlanner {
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
     const completeImageSearch = completeImageSearchPlan(command.text, catalog);
     if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
-    const agricultureAdvice = agricultureAdvicePlan(command.text, catalog);
+    const followUpGoal = followUpGoalFrom(command.text, conversationHistory);
+    const agricultureAdvice = agricultureAdvicePlan(followUpGoal || command.text, catalog);
     if (agricultureAdvice) return Object.freeze({ ...agricultureAdvice, planningAttempts: 1 });
-    const completeLiveKnowledge = completeLiveKnowledgePlan(command.text, catalog);
+    const completeLiveKnowledge = completeLiveKnowledgePlan(followUpGoal || command.text, catalog);
     if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
     const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
     if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
@@ -63,6 +67,18 @@ class OpenEndedPlanner {
       const validation = validatePlan(candidate, catalog, context);
       if (validation.valid) return Object.freeze({ ...validation.plan, planningAttempts: attempt + 1 });
       feedback = validation.errors;
+    }
+    // No registered application or tool fits (a general question, arithmetic, "what do you remember about me").
+    // That is not an error for the person asking: answer it directly, without tools and without claiming any
+    // action or live data (see OpenAiPlanningModel.respond). Only if that also fails is the original error raised.
+    if (typeof this.model.respond === "function") {
+      const answer = await this.model.respond({ goal: command.text, locale: interactionProfile.locale, interactionProfile,
+        conversationHistory: request.conversationHistory, memories: request.memories,
+        capabilities: catalog.applications.map(app => app.applicationId) }).catch(() => null);
+      if (typeof answer === "string" && answer.trim()) {
+        return Object.freeze({ goal: command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
+          response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: this.maxRepairAttempts + 1 });
+      }
     }
     throw new NexusRuntimeError("plan_invalid", "Nexus could not produce a safe executable plan.", 422, { feedback });
   }
@@ -95,6 +111,56 @@ function ordinaryConversationPlan(text, context = {}) {
       response: "You're welcome.", sourceRequired: false };
   }
   return null;
+}
+
+// "Who are you?", "What can you do for me?", "help": answered from the catalog, so it is always accurate and
+// costs no model call. (These used to be sent to the model, which routed "Who are you?" to the learning app and
+// failed "what can you do" with a 422.)
+const INTRODUCTION_PHRASES = [
+  /^(?:who|what) (?:are|r) you$/, /^what(?:'s| is) your name$/, /^what can you do(?: for me)?$/, /^what do you do$/,
+  /^(?:how|what) can you help(?: me)?$/, /^help(?: me)?$/, /^what can i (?:ask|say to) (?:you|kyro|nexus)$/,
+  /^what (?:are )?your (?:capabilities|features|abilities)$/, /^(?:introduce yourself|tell me about yourself)$/
+];
+
+function normalizedIntroduction(text) {
+  return String(text || "").toLowerCase().replace(/[\u2019]/g, "'").replace(/[.!?]+$/g, "").trim()
+    .replace(/^(?:(?:hello|hi|hey)[, ]+)?(?:(?:kyro|nexus)[, ]+)?/, "").replace(/[, ]+(?:kyro|nexus)$/, "").trim();
+}
+
+function isAssistantIntroductionRequest(text) {
+  const normalized = normalizedIntroduction(text);
+  return Boolean(normalized) && INTRODUCTION_PHRASES.some(pattern => pattern.test(normalized));
+}
+
+const CAPABILITY_PHRASES = [
+  ["agriculture", "crop and farm advice with sources"], ["live-knowledge", "up-to-date answers with sources"],
+  ["health", "recording health readings"], ["telehealth", "preparing telehealth visits"],
+  ["pharmacy", "finding nearby pharmacies"], ["mobile-clinic", "finding nearby clinics"],
+  ["workforce", "finding jobs"], ["marketplace", "finding marketplace listings"], ["maps", "routes on a map"],
+  ["images", "current images"], ["documents", "documents"], ["lists", "lists"], ["reminders", "reminders"],
+  ["learning", "short lessons"], ["business", "business workspaces"], ["music-media", "playing music"],
+  ["communications", "drafting messages"]
+];
+
+function assistantIntroductionPlan(text, catalog) {
+  const present = new Set((catalog?.applications || []).map(app => app.applicationId));
+  const phrases = CAPABILITY_PHRASES.filter(([id]) => present.has(id)).map(([, phrase]) => phrase);
+  const list = phrases.length > 1 ? `${phrases.slice(0, -1).join(", ")}, and ${phrases.at(-1)}` : phrases[0] || "answering questions";
+  return { goal: String(text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [],
+    response: `I'm Kyro, your AgriNexus assistant. I can help with ${list}. I always ask before I save or send anything. Just tell me what you need.`,
+    sourceRequired: false };
+}
+
+// "And what about beans?" after "Why do maize leaves turn yellow?" used to search for "And what about beans?" alone
+// and answer generically. Join a short follow-up opener to the previous user question; used only by the farm-advice
+// and live-knowledge matchers, which take the whole sentence as their search query.
+const FOLLOW_UP_OPENER = /^(?:(?:and|also|ok|okay)[, ]+)?(?:what|how) about\b|^and\b/i;
+
+function followUpGoalFrom(text, history) {
+  const current = String(text || "").trim();
+  if (!current || current.length > 80 || !FOLLOW_UP_OPENER.test(current)) return null;
+  const previous = [...(history || [])].reverse().find(turn => turn?.role === "user" && String(turn.content || "").trim());
+  return previous ? `${String(previous.content).trim()} ${current}` : null;
 }
 
 function agricultureAdvicePlan(text, catalog) {
@@ -430,6 +496,12 @@ function completeBusinessPlan(text, catalog) {
       toolId, input: { command: goal }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// The model sometimes selects a tool that cannot run on what the user asked for: 2026-09-19 "Give me a 3-step plan
+// for starting a small poultry business" was planned as maps.view with no route, and surfaced as a 502
+// "verifier rejected the maps.view outcome". Rejecting it here lets the repair loop (with this feedback) or the
+// direct-answer fallback handle it.
+const REQUIRED_STEP_INPUTS = Object.freeze({ "maps.view": Object.freeze(["origin", "destination"]) });
+
 function validatePlan(candidate, catalog, context) {
   const errors = []; const toolIds = new Set(catalog.tools.map(tool => tool.toolId));
   const applicationIds = new Set(catalog.applications.map(app => app.applicationId));
@@ -444,6 +516,8 @@ function validatePlan(candidate, catalog, context) {
     if (!String(step.title || "").trim()) errors.push(`Step ${id} requires a title.`);
     if (!clarification && !step.toolId) errors.push(`Step ${id} requires an executable tool.`);
     if (step.toolId && !toolIds.has(step.toolId)) errors.push(`Step ${id} references unavailable tool ${step.toolId}.`);
+    const missingInput = (REQUIRED_STEP_INPUTS[step.toolId] || []).filter(key => !String(step.input?.[key] ?? "").trim());
+    if (missingInput.length) errors.push(`Step ${id} uses ${step.toolId} but is missing required input: ${missingInput.join(", ")}. Choose a different tool or ask for the missing detail.`);
     if (step.requiredPermission && !context.can(step.requiredPermission)) errors.push(`Step ${id} requires unavailable permission ${step.requiredPermission}.`);
   }
   for (const step of candidate?.steps || []) for (const dependency of step.dependsOn || []) if (!ids.has(String(dependency))) errors.push(`Unknown dependency ${dependency}.`);
@@ -465,7 +539,7 @@ function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.g
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
+module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
