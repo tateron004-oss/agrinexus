@@ -53,3 +53,39 @@ test("compiler refuses release evidence without every fault and capability proof
   assert.throws(() => compileProductionProof({ releaseSha: sha, source: "probe", rollbackRef: "rollback",
     faultProbes, capabilityProbes: capabilityProbes.slice(1) }), /capability evidence is incomplete/);
 });
+
+test("faultIsolation is validated as exact-release evidence but never compiled as an acceptance component", () => {
+  // The production probes emit it for the fault-proof assembler; compiling it used to
+  // abort the evidence step with "Unknown acceptance component: faultIsolation".
+  const proof = compileProductionProof(complete({ releaseSha: sha, source: "probe", rollbackRef: "rollback", workspaceProbes: [],
+    componentProbes: [{ component: "faultIsolation", ...receipt("fault"), facts: { staleTransitionRejected: true } },
+      { component: "taskEngine", ...receipt("task") }] }));
+  assert.deepEqual(proof.components.map(item => item.name), ["taskEngine"]);
+  for (const mutation of [{ releaseSha: "b".repeat(40) }, { production: false }, { simulated: true }, { passed: false }, { receipts: [] }])
+    assert.throws(() => compileProductionProof(complete({ releaseSha: sha, source: "probe", rollbackRef: "rollback", workspaceProbes: [],
+      componentProbes: [{ component: "faultIsolation", ...receipt("fault"), ...mutation }] })), /release|production|pass|receipts/i);
+  assert.throws(() => compileProductionProof(complete({ releaseSha: sha, source: "probe", rollbackRef: "rollback", workspaceProbes: [],
+    componentProbes: [{ component: "somethingElse", ...receipt("x") }] })), /Unknown acceptance component: somethingElse/, "other unknown components still fail");
+});
+
+test("a held communications gate is accepted as gate evidence only, never as a delivery", () => {
+  const gate = { application: "communications", ...receipt("communications"), rendered: true, visible: true,
+    confirmationGateHeld: true, actionExecuted: false, evidence: { draft: "Draft a clinic follow-up message.", consentRequired: true } };
+  const others = capabilityProbes.filter(item => item.application !== "communications");
+  const compile = probes => compileProductionProof({ releaseSha: sha, source: "probe", rollbackRef: "rollback", faultProbes, capabilityProbes: probes });
+  assert.equal(compile([...others, gate]).capabilityEvidence.communications.confirmationGateHeld, true);
+  assert.throws(() => compile([...others, { ...gate, actionExecuted: true }]), /deliveryReceipt/, "an executed action needs its delivery receipt");
+  assert.throws(() => compile([...others, { ...gate, confirmationGateHeld: undefined }]), /deliveryReceipt/, "without the gate statement the full contract applies");
+  assert.throws(() => compile([...others, { ...gate, actionExecuted: undefined }]), /deliveryReceipt/, "the gate must state nothing was executed");
+  const health = capabilityProbes.find(item => item.application === "health");
+  assert.throws(() => compile([...others.filter(item => item.application !== "health"), { ...health, evidence: {}, confirmationGateHeld: true, actionExecuted: false }]),
+    /health is missing completion evidence/, "no other application can use the gate exemption");
+});
+
+test("business has a completion contract requiring its own verified summary", () => {
+  assert.deepEqual(CONTRACTS.business, ["command", "summary", "verified"]);
+  const others = capabilityProbes.filter(item => item.application !== "business");
+  assert.throws(() => compileProductionProof({ releaseSha: sha, source: "probe", rollbackRef: "rollback", faultProbes,
+    capabilityProbes: [...others, { ...capabilityProbes.find(item => item.application === "business"), evidence: { command: "List my business workspaces." } }] }),
+    /business is missing completion evidence: summary, verified/);
+});

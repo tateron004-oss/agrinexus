@@ -348,8 +348,12 @@ function completeRemainingWorkspacePlan(text, catalog) {
   if (/\b(assess|diagnose|inspect)\b/i.test(goal) && /\b(crop|maize|corn|cassava|rice|wheat|leaves?)\b/i.test(goal) && /\bsources?\b/i.test(goal))
     return plan("agriculture", "knowledge.search", "Assess crop condition with governed sources",
       { query: goal, crop: goal.match(/\b(maize|corn|cassava|rice|wheat)\b/i)?.[1] || "crop", observations: [goal] });
-  if (/\b(find|search|show|locate)\b/i.test(goal) && /\bpharmacy\b/i.test(goal) && /\b(safety|sources?|medication|metformin)\b/i.test(goal))
-    return plan("pharmacy", "pharmacy.find", "Find governed pharmacy support", { query: goal });
+  if (/\b(find|search|show|locate)\b/i.test(goal) && /\bpharmacy\b/i.test(goal) && /\b(safety|sources?|medication|metformin)\b/i.test(goal)) {
+    // A pharmacy search needs a real place to look near; without one the tool can only
+    // consult its empty local catalog. Take it from "near/in/around <place>" when given.
+    const place = goal.match(/\b(?:near|in|around)\s+([a-z][a-z .'-]*?)(?=\s+(?:and|then|with)\b|[,.?]|$)/i)?.[1]?.trim();
+    return plan("pharmacy", "pharmacy.find", "Find governed pharmacy support", { query: goal, ...(place ? { location: place } : {}) });
+  }
   if (/\b(create|make|prepare)\b/i.test(goal) && /\b(lesson|literacy|learning)\b/i.test(goal) && /\b(save|progress)\b/i.test(goal))
     return plan("learning", "knowledge.search", "Create and save governed learning content",
       { query: goal, lesson: goal, content: goal, saveProgress: true });

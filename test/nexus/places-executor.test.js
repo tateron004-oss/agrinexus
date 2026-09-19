@@ -91,3 +91,31 @@ test("real pharmacy/clinic cards are flattened to the top level, not just nested
     assert.equal(result.safetyNote, "Preparation only.");
   });
 });
+
+test("clinic and pharmacy results carry the completion-contract evidence derived only from real cards", async () => {
+  const { verifyCapabilityCompletion } = require("../../nexus/apps/capability-completion-contracts.js");
+  const sha = "a".repeat(40);
+  const cards = [{ name: "Kilimani Clinic", address: "Ngong Road", city: "Nairobi, Kenya", source: "OpenStreetMap (live)" }, { name: "Second", address: "Address not listed in OpenStreetMap", city: "Nairobi, Kenya" }];
+  await withPatched(mobileClinicBridgeProvider, "search", async () => ({ body: { ok: true, status: "completed", data: { cards } } }), async () => {
+    const result = await createClinicFindExecutor({ env: {} })({ input: { location: "Nairobi", selectClosest: true } });
+    assert.deepEqual(result.locations, ["Kilimani Clinic, Ngong Road, Nairobi, Kenya", "Second, Nairobi, Kenya"]);
+    assert.equal(result.selectedLocation, result.locations[0]); assert.equal(result.source, "OpenStreetMap (live)");
+    assert.equal(verifyCapabilityCompletion({ application: "mobile-clinic", evidence: { ...result, rendered: true, visible: true }, releaseSha: sha }).verified, true);
+    const unselected = await createClinicFindExecutor({ env: {} })({ input: { location: "Nairobi" } });
+    assert.equal(unselected.selectedLocation, undefined, "nothing is selected unless the user asked");
+  });
+  await withPatched(pharmacyBridgeProvider, "search", async () => ({ body: { ok: true, status: "completed", data: { cards } } }), async () => {
+    const result = await createPharmacyFindExecutor({ env: {} })({ input: { location: "Nairobi", query: "metformin" } });
+    assert.match(result.result, /Found 2 pharmacy location\(s\) near Nairobi, Kenya/); assert.match(result.safetyResponse, /pharmacist or prescribing-clinician/);
+    assert.equal(verifyCapabilityCompletion({ application: "pharmacy", evidence: { ...result, rendered: true, visible: true }, releaseSha: sha }).verified, true);
+  });
+});
+
+test("an empty search adds no completion evidence, so it can never certify as complete", async () => {
+  const { verifyCapabilityCompletion } = require("../../nexus/apps/capability-completion-contracts.js");
+  await withPatched(mobileClinicBridgeProvider, "search", async () => ({ body: { ok: true, status: "completed", data: { cards: [] } } }), async () => {
+    const result = await createClinicFindExecutor({ env: {} })({ input: { location: "Nairobi", selectClosest: true } });
+    assert.equal(result.locations, undefined); assert.equal(result.selectedLocation, undefined);
+    assert.throws(() => verifyCapabilityCompletion({ application: "mobile-clinic", evidence: { ...result, rendered: true, visible: true }, releaseSha: "a".repeat(40) }), /missing completion evidence/);
+  });
+});

@@ -71,3 +71,37 @@ test("a missing recordId or non-positive version does not verify", () => {
   assert.equal(verifyHealthRecordOutcome({ result: { persisted: false, recordId: "rec-1", version: 1 } }).verified, false);
   assert.equal(verifyHealthRecordOutcome({ result: undefined }).verified, false);
 });
+
+test("a reading sent at the top level of the step input, as the planner does, is actually stored", async () => {
+  // Before: only observation/record/data were read, so "record my blood pressure
+  // as 140 over 90" was persisted with empty data although the task verified.
+  const { records, created } = fixture();
+  const execute = createHealthRecordExecutor({ records });
+  const result = await execute({ input: { intakeType: "blood-pressure", readingType: "blood-pressure", systolic: 140, diastolic: 90 },
+    context: { tenantId: "t1", userId: "u1" }, taskId: "task-9" });
+  assert.deepEqual(created[0].data, { type: "blood-pressure", systolic: 140, diastolic: 90 });
+  assert.deepEqual(result.reading, { type: "blood-pressure", systolic: 140, diastolic: 90 });
+  assert.equal(result.persistedRecordId, "rec-1");
+  assert.match(result.safetyResponse, /above the usual range/);
+  assert.match(result.safetyResponse, /does not diagnose/);
+  for (const [key, value] of [["glucose", 110], ["oxygenSaturation", 96], ["temperature", 99.1], ["pulse", 72]]) {
+    const each = fixture(); await createHealthRecordExecutor({ records: each.records })({ input: { readingType: key, [key]: value }, context: { tenantId: "t", userId: "u" }, taskId: "t" });
+    assert.equal(each.created[0].data[key], value, key);
+  }
+});
+
+test("an empty input stores nothing invented and returns no reading or safety claim", async () => {
+  const { records } = fixture();
+  const result = await createHealthRecordExecutor({ records })({ input: {}, context: { tenantId: "t", userId: "u" }, taskId: "t" });
+  assert.equal(result.reading, undefined); assert.equal(result.safetyResponse, undefined); assert.equal(result.persisted, true);
+});
+
+test("safety guidance follows the stored values and never diagnoses", () => {
+  const { healthSafetyResponse } = require("../../nexus/health/executor.js");
+  assert.match(healthSafetyResponse({ systolic: 185, diastolic: 100 }), /very high/);
+  assert.match(healthSafetyResponse({ systolic: 120, diastolic: 80 }), /typical range/);
+  assert.match(healthSafetyResponse({ systolic: 85, diastolic: 55 }), /below the usual range/);
+  assert.match(healthSafetyResponse({ glucose: 250 }), /recorded/);
+  for (const reading of [{ systolic: 120, diastolic: 80 }, { systolic: 150, diastolic: 95 }, { glucose: 90 }])
+    assert.doesNotMatch(healthSafetyResponse(reading), /you have (hypertension|diabetes)|prescrib(e|ing) (you|a)/i);
+});

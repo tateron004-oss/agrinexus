@@ -41,11 +41,60 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
   return Math.round(earthRadiusM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
+const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+
+// Overpass is a shared public service: measured 2026-09-19 it answered in 4-9s
+// when it answered at all, rate-limited (429) and timed out intermittently, so
+// a clinic/pharmacy search silently fell back to the empty local catalog
+// ("Loaded 0 local ... option(s)") for a city that has dozens. Nominatim, which
+// this provider already depends on for geocoding, answered the same bounded
+// query in under a second. Used only when the caller names a fallbackTerm and
+// Overpass failed or found nothing; results are the same real OpenStreetMap data.
+async function nominatimPlaces({ origin, term, limit, radiusMeters, fetcher }) {
+  const latDelta = radiusMeters / 111000;
+  const lonDelta = radiusMeters / (111000 * Math.max(Math.cos((origin.lat * Math.PI) / 180), 0.1));
+  const url = new URL(NOMINATIM_SEARCH_URL);
+  url.searchParams.set("q", term);
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("limit", String(Math.min(Math.max(limit * 2, 10), 40)));
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("extratags", "1");
+  url.searchParams.set("bounded", "1");
+  url.searchParams.set("viewbox", [origin.lon - lonDelta, origin.lat + latDelta, origin.lon + lonDelta, origin.lat - latDelta].join(","));
+  const response = await fetcher(url, { method: "GET", headers: { accept: "application/json", "user-agent": USER_AGENT }, signal: AbortSignal.timeout(9000) });
+  const payload = await safeJson(response);
+  if (!response.ok || !Array.isArray(payload)) throw new Error("nominatim-unavailable");
+  return payload.map(item => {
+    const lat = Number(item.lat); const lon = Number(item.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const address = item.address || {};
+    const street = clean([address.house_number, address.road, address.suburb || address.city || address.town].filter(Boolean).join(" "));
+    return {
+      name: clean(item.name || String(item.display_name || "").split(",")[0]) || "Unnamed location",
+      address: street || "Address not listed in OpenStreetMap",
+      lat, lon,
+      distanceMeters: haversineMeters(origin.lat, origin.lon, lat, lon),
+      phone: clean(item.extratags?.phone || item.extratags?.["contact:phone"] || ""),
+      openingHours: clean(item.extratags?.opening_hours || "")
+    };
+  }).filter(Boolean).sort((a, b) => a.distanceMeters - b.distanceMeters).slice(0, limit);
+}
+
 // osmFilters: an array of Overpass tag-match strings, e.g. ['"amenity"="pharmacy"'].
-async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000, limit = 8, fetchImpl, env = process.env }) {
+// fallbackTerm (optional): a plain word such as "pharmacy" for the Nominatim fallback above.
+async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000, limit = 8, fetchImpl, env = process.env, fallbackTerm = "" }) {
   const fetcher = fetchImpl || mapsFetch(env);
   if (typeof fetcher !== "function") throw new Error("no-fetch-available");
   const origin = await geocodeLocation(locationText, fetcher);
+  if (!fallbackTerm) return overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher });
+  let result = { origin, places: [] };
+  try { result = await overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }); } catch { /* fall through to Nominatim */ }
+  if (result.places.length) return result;
+  try { return { origin, places: await nominatimPlaces({ origin, term: fallbackTerm, limit, radiusMeters, fetcher }) }; }
+  catch { return result; }
+}
+
+async function overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }) {
   const clauses = osmFilters.flatMap(filter => [
     `node[${filter}](around:${radiusMeters},${origin.lat},${origin.lon});`,
     `way[${filter}](around:${radiusMeters},${origin.lat},${origin.lon});`

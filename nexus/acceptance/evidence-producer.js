@@ -15,6 +15,8 @@ const COMPONENT_REQUIREMENTS = Object.freeze({
   testing: ["exactSha"], operations: []
 });
 
+const FAULT_EVIDENCE_COMPONENTS = Object.freeze(["faultIsolation"]);
+
 function validSha(value) { return typeof value === "string" && /^[0-9a-f]{40}$/.test(value); }
 function evidenceId(releaseSha, subject, kind) {
   return `evd_${crypto.createHash("sha256").update(`${releaseSha}:${subject}:${kind}`).digest("hex").slice(0, 24)}`;
@@ -60,7 +62,15 @@ function compileProductionProof({ releaseSha, source, rollbackRef, componentProb
   faultProbes = [], capabilityProbes = [] }) {
   if (!validSha(releaseSha)) throw new Error("An exact 40-character release SHA is required.");
   if (!source || !rollbackRef) throw new Error("Evidence source and rollback reference are required.");
-  const components = componentProbes.map(record => compileComponent(record, releaseSha));
+  // faultIsolation records the production fault-injection observations that
+  // scripts/nexus-assemble-external-fault-proofs.js turns into fault proofs. It is
+  // exact-release production evidence like any component, but it is not one of the
+  // acceptance COMPONENTS, so it is validated here and not compiled into them.
+  const components = componentProbes.filter(record => {
+    if (!FAULT_EVIDENCE_COMPONENTS.includes(record?.component)) return true;
+    requireExactRelease(record, releaseSha, `Component ${record.component}`);
+    return false;
+  }).map(record => compileComponent(record, releaseSha));
   const workspaces = workspaceProbes.map(record => compileWorkspace(record, releaseSha, rollbackRef));
   const componentNames = components.map(item => item.name);
   const workspaceNames = workspaces.map(item => item.workspaceId);
@@ -69,7 +79,8 @@ function compileProductionProof({ releaseSha, source, rollbackRef, componentProb
   validateFaultClosure({ releaseSha, evidence: faultEvidence });
   const capabilityEvidence = Object.fromEntries(capabilityProbes.map(record => {
     requireExactRelease(record, releaseSha, `Capability ${record?.application}`);
-    const evidence = { ...(record.evidence || {}), rendered: record.rendered, visible: record.visible, audible: record.audible };
+    const evidence = { ...(record.evidence || {}), rendered: record.rendered, visible: record.visible, audible: record.audible,
+      ...(record.confirmationGateHeld === true ? { confirmationGateHeld: true, actionExecuted: record.actionExecuted } : {}) };
     verifyCapabilityCompletion({ application: record.application, evidence, releaseSha });
     return [record.application, evidence];
   }));

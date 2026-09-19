@@ -327,3 +327,15 @@ test("strict planning schema encodes free-form tool input as JSON text and norma
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });
   assert.throws(() => normalizePlan({ steps: [{ input: "not-json" }] }));
 });
+
+test("a pharmacy request names the place to search near, and asks for none it was not given", () => {
+  const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "pharmacy.find" }] };
+  const near = completeRemainingWorkspacePlan("Find pharmacy support for metformin near Nairobi and show a safety response with sources.", catalog);
+  assert.equal(near.steps[0].input.location, "Nairobi");
+  const inCity = completeRemainingWorkspacePlan("Find a pharmacy in Kisumu with medication safety info.", catalog);
+  assert.equal(inCity.steps[0].input.location, "Kisumu");
+  const none = completeRemainingWorkspacePlan("Find pharmacy support for metformin and show a safety response with sources.", catalog);
+  assert.equal(none.steps[0].input.location, undefined, "no place is invented");
+  assert.equal(none.steps[0].toolId, "pharmacy.find");
+});

@@ -11,7 +11,7 @@ const SCENARIOS = Object.freeze({
   health: "Record my blood pressure as 140 over 90 and show the safety response.",
   telehealth: "Save a telehealth intake for my blood pressure concern and show the next step.",
   "mobile-clinic": "Find mobile clinic locations near Nairobi and select the closest one.",
-  pharmacy: "Find pharmacy support for metformin and show a safety response with sources.",
+  pharmacy: "Find pharmacy support for metformin near Nairobi and show a safety response with sources.",
   learning: "Create a short maize farming literacy lesson and save my progress.",
   workforce: "Find agriculture jobs in Nairobi with sources and select one listing.",
   marketplace: "Find maize marketplace listings with sources and select one listing.",

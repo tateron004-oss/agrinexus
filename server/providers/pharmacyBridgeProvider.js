@@ -64,7 +64,7 @@ async function search(query = {}, env = process.env) {
   const locationText = safeText(query.location || query.city || "", 200);
   if (locationText && envEnabled("NEXUS_PHARMACY_OSM_SEARCH_ENABLED", env, true)) {
     try {
-      const { origin, places } = await osmPlacesProvider.findNearbyPlaces({ locationText, osmFilters: ['"amenity"="pharmacy"'], limit: 8, env });
+      const { origin, places } = await osmPlacesProvider.findNearbyPlaces({ locationText, osmFilters: ['"amenity"="pharmacy"'], limit: 8, env, fallbackTerm: "pharmacy" });
       if (places.length) {
         return response(PROVIDER, "pharmacy.search", "completed", `Found ${places.length} real pharmacy location(s) near ${origin.label} via OpenStreetMap.`, {
           cards: places.map((place, index) => ({

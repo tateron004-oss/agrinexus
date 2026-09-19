@@ -13,6 +13,27 @@
 const pharmacyBridgeProvider = require("../../server/providers/pharmacyBridgeProvider");
 const mobileClinicBridgeProvider = require("../../server/providers/mobileClinicBridgeProvider");
 
+// The capability completion contracts (nexus/apps/capability-completion-contracts.js)
+// ask for locations/source/selectedLocation (clinic) and result/source/
+// safetyResponse (pharmacy). They are derived only from real search cards; an
+// empty search adds none of them, so it can never be mistaken for a completed one.
+const placeLine = card => [card.name, card.address && card.address !== "Address not listed in OpenStreetMap" ? card.address : "", card.city].filter(Boolean).join(", ");
+
+function clinicEvidence(flat, input) {
+  const cards = Array.isArray(flat?.cards) ? flat.cards : [];
+  if (!cards.length) return {};
+  const locations = cards.map(placeLine);
+  return { locations, source: cards[0].source || "OpenStreetMap (live)", ...(input.selectClosest ? { selectedLocation: locations[0] } : {}) };
+}
+
+function pharmacyEvidence(flat) {
+  const cards = Array.isArray(flat?.cards) ? flat.cards : [];
+  if (!cards.length) return {};
+  return { result: `Found ${cards.length} pharmacy location(s) near ${cards[0].city || "the requested area"}: ${cards.slice(0, 3).map(card => card.name).join("; ")}`,
+    source: cards[0].source || "OpenStreetMap (live)",
+    safetyResponse: "Medication decisions need pharmacist or prescribing-clinician review; Nexus does not confirm stock, prescribe, or change medication." };
+}
+
 function createPharmacyFindExecutor({ env = process.env } = {}) {
   return async function execute({ input = {} }) {
     const result = await pharmacyBridgeProvider.search({ location: input.location || input.city, q: input.query || input.q }, env);
@@ -24,7 +45,8 @@ function createPharmacyFindExecutor({ env = process.env } = {}) {
     // reachable at outcome.data.data.cards, so the client's generic
     // "location-list" outcome card showed a raw nested JSON blob instead of
     // clean pharmacy listings.
-    return { ...result.body, ...(result.body?.data || {}) };
+    const flat = { ...result.body, ...(result.body?.data || {}) };
+    return { ...flat, ...pharmacyEvidence(flat) };
   };
 }
 
@@ -37,7 +59,8 @@ function createClinicFindExecutor({ env = process.env } = {}) {
   return async function execute({ input = {} }) {
     const result = await mobileClinicBridgeProvider.search({ location: input.location || input.city, q: input.query || input.q }, env);
     // See createPharmacyFindExecutor above -- same shape mismatch.
-    return { ...result.body, ...(result.body?.data || {}) };
+    const flat = { ...result.body, ...(result.body?.data || {}) };
+    return { ...flat, ...clinicEvidence(flat, input) };
   };
 }
 
