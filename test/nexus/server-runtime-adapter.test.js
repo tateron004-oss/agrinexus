@@ -708,3 +708,50 @@ test("fault-isolation execution proves stale rejection, typed provider failure, 
   assert.equal(queries.some(item => item.sql.includes("delete from nexus_task_steps")), true);
   assert.equal(queries.some(item => item.sql.includes("delete from nexus_tasks")), true);
 });
+
+function telehealthContinuationHarness(taskOverrides = {}, toolOverrides = {}) {
+  const releaseSha = "a".repeat(40); const calls = [];
+  const task = { taskId: "task-1", ownerId: "user-1", application: "telehealth", commandId: "command-1", correlationId: "correlation-1",
+    conversationId: "conversation-1", goal: "Save a telehealth intake", steps: [{ step_id: "step-1", tool_id: "telehealth.prepare",
+      confirmation_state: "required", input: { concern: "blood pressure" } }], ...taskOverrides };
+  const runtime = { ready: Promise.resolve(), db: { query: async () => ({ rows: [{ tenant_id: "tenant-1", user_id: "user-1",
+    role: "acceptance-controller", permissions: ["acceptance:identity"] }] }) }, tasks: { get: async () => task },
+    tools: { get: async () => ({ tool_id: "telehealth.prepare", consent_scope: "health:telehealth-intake:write", confirmation_required: true, ...toolOverrides }) },
+    consents: { grant: async input => { calls.push(["consent", input]); return { consent_id: "consent-1" }; } },
+    engine: { approve: async input => { calls.push(["approve", input]); }, executeTask: async input => {
+      calls.push(["execute", input]); return { state: "awaiting_render", receipts: [] }; } },
+    workspaceStates: { stage: async input => { calls.push(["stage", input]); return input; } } };
+  const adapter = createServerRuntimeAdapter({ env: { NEXUS_ACCEPTANCE_TOKEN: "token", RENDER_GIT_COMMIT: releaseSha },
+    resolveUser: async () => null, readJson: async () => ({ releaseSha, taskId: "task-1", stepId: "step-1",
+      commandId: "command-1", correlationId: "correlation-1", confirmed: true, consented: true }), createRuntimeFn: () => runtime });
+  return { adapter, calls };
+}
+const telehealthUrl = name => new URL(`http://local/api/nexus/runtime/production-acceptance/probes/${name}`);
+
+test("exact-SHA Telehealth continuation approves only the consent-scoped telehealth intake", async () => {
+  const { adapter, calls } = telehealthContinuationHarness();
+  const response = responseCapture(); await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {},
+    telehealthUrl("telehealth-continuation"), response.send);
+  assert.equal(response.result.status, 200); assert.equal(response.result.body.result.state, "render_required");
+  assert.equal(response.result.body.result.render.workspace, "telehealth");
+  assert.equal(calls[0][1].scope, "health:telehealth-intake:write"); assert.equal(calls[1][1].approved, true);
+  assert.equal(calls[3][0], "stage");
+});
+
+test("Telehealth continuation rejects another application's task and a different tool contract", async () => {
+  const wrongApp = telehealthContinuationHarness({ application: "health" });
+  const a = responseCapture(); await wrongApp.adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {}, telehealthUrl("telehealth-continuation"), a.send);
+  assert.equal(a.result.status, 409); assert.equal(a.result.body.code, "acceptance_telehealth_transaction_mismatch"); assert.equal(wrongApp.calls.length, 0);
+  const wrongScope = telehealthContinuationHarness({}, { consent_scope: "communications:send:write" });
+  const b = responseCapture(); await wrongScope.adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {}, telehealthUrl("telehealth-continuation"), b.send);
+  assert.equal(b.result.status, 409); assert.equal(b.result.body.code, "acceptance_telehealth_contract_mismatch"); assert.equal(wrongScope.calls.length, 0);
+});
+
+test("only the listed continuations exist: communications can never be approved through the acceptance path", async () => {
+  for (const name of ["communications-continuation", "constructor", "__proto__", "toString"]) {
+    const { adapter, calls } = telehealthContinuationHarness();
+    const response = responseCapture(); const handled = await adapter.handle({ method: "POST", headers: { authorization: "Bearer token" } }, {}, telehealthUrl(name), response.send);
+    assert.notEqual(response.result?.status, 200, name); assert.equal(calls.length, 0, name);
+    assert.ok(handled === false || response.result?.status >= 400, name);
+  }
+});

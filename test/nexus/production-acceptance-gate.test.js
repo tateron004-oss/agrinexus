@@ -65,3 +65,17 @@ test("acceptance waits through Render cutover until runtime and authorization ag
     global.fetch = originalFetch;
   }
 });
+
+test("durable_workspaces requires exactly one authoritative workspace per registered application", () => {
+  const { defaultApplicationManifests } = require("../../nexus/apps/default-manifests.js");
+  const count = defaultApplicationManifests().length;
+  const run = length => evaluate({ expectedSha: "sha", runtime: { ok: true, body: { ok: true, releaseSha: "sha", pgvector: true, migrationsCurrent: true } },
+    health: { ok: true, body: {} }, integrations: { ok: true, body: { liveGaps: [] } }, providers: { ok: true, body: { ok: true } },
+    acceptance: { ok: true, body: { releaseSha: "sha", components: {}, workspaces: Array.from({ length }, (_, index) =>
+      ({ workspaceId: `w${index}`, state: "authoritative", releaseSha: "sha", proofsComplete: true })) } } })
+    .objectives.find(item => item.id === "durable_workspaces");
+  assert.equal(run(count).passed, true, `${count} of ${count}`);
+  assert.equal(run(17).passed, false, "the stale fixed count no longer passes");
+  assert.equal(run(count - 1).passed, false);
+  assert.match(run(count).evidence.join(" "), new RegExp(`${count}/${count} authoritative workspaces`));
+});

@@ -5,6 +5,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { FAULT_CONTRACTS } = require("../nexus/acceptance/fault-register.js");
 const { FAULT_VERIFIERS } = require("../nexus/acceptance/fault-verifier-registry.js");
+const { defaultApplicationManifests } = require("../nexus/apps/default-manifests.js");
+
+// The browser probe runs one scenario per registered application, so the visible
+// matrix must contain exactly that many capabilities. This was the literal 17,
+// stale since lists and business were added (19 today).
+const EXPECTED_CAPABILITY_COUNT = defaultApplicationManifests().length;
 
 const contractByFault = new Map(FAULT_CONTRACTS.map(item => [item.fault, item]));
 function required(value, label) { if (!value) throw new Error(label + " is required."); return value; }
@@ -41,7 +47,7 @@ function assembleExternalFaultProofs(input) {
   const tools = component("tools");
   const runtimeFacts = [database, tools].every(item => item?.passed === true && item.releaseSha === releaseSha);
   const capabilities = probes.capabilityProbes || [];
-  const visibleMatrix = capabilities.length === 17 && capabilities.every(item =>
+  const visibleMatrix = capabilities.length === EXPECTED_CAPABILITY_COUNT && capabilities.every(item =>
     item.releaseSha === releaseSha && item.production === true && item.simulated === false &&
     item.passed === true && item.rendered === true && item.visible === true);
   const browser = probes.browserProbe || {};
@@ -112,7 +118,7 @@ function assembleExternalFaultProofs(input) {
   if (visibleMatrix && browser.releaseSha === releaseSha && browser.visibleAuthenticatedLogin === true) {
     const key = FAULT_VERIFIERS["capability-verification"].evidenceKey;
     proofs[key] = makeProof("capability-verification", releaseSha, executionId, observedAt,
-      "17 supported capabilities rendered visible exact-SHA outcomes after authenticated UI ingress",
+      `${capabilities.length} supported capabilities rendered visible exact-SHA outcomes after authenticated UI ingress`,
       { capabilities: capabilities.length, visibleAuthenticatedLogin: true, visibleIngress: browser.visibleIngress });
   }
 
