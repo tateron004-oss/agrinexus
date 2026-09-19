@@ -15,6 +15,7 @@ class AuthoritativeTaskEngine {
 
   async create({ command, goal, application = "general", riskTier = "low", priority = 3, dueAt = null, steps, autonomous = false }) {
     if (!Array.isArray(steps) || !steps.length) throw new NexusRuntimeError("steps_required", "At least one task step is required.");
+    riskTier = storedRiskTier(riskTier);
     // The global kill switch only ever gates new autonomous task creation --
     // it never touches a live-conversation task the user asked for directly
     // (autonomous is always false there), and it never touches advancing a
@@ -322,6 +323,17 @@ function executionKeys(step, toolId, fallbackAttempt) {
 function withTimeout(promise, ms = 30000) {
   let timer; const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(new NexusRuntimeError("tool_timeout", `Tool exceeded ${ms}ms.`, 504)), ms); });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// nexus_tasks.risk_tier only accepts these four values (foundation/migrations/003_nexus_unified_runtime.sql).
+// The planner's emergency plan (health.emergency-guidance) says "critical", which the database rejected with
+// check violation 23514, so EVERY emergency request ("I have chest pain") returned a 503 instead of guidance.
+// Anything above the stored range is kept at the highest stored tier, and an unknown value fails safe to the
+// same tier rather than crashing; the planner's own label is unchanged.
+const STORED_RISK_TIERS = new Set(["low", "medium", "high", "regulated"]);
+function storedRiskTier(value) {
+  const tier = String(value || "low");
+  return STORED_RISK_TIERS.has(tier) ? tier : "regulated";
 }
 
 module.exports = Object.freeze({ AuthoritativeTaskEngine, NexusRuntimeError, sanitizeProviderFailure });
