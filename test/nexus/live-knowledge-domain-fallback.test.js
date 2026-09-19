@@ -6,15 +6,15 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const source = fs.readFileSync(path.join(__dirname, "../../scripts/provider-engines.js"), "utf8");
-const start = source.indexOf("async function liveKnowledgeEvidence(");
+const start = source.indexOf("// jobs.search / marketplace.search used to return");
 const end = source.indexOf("const server = http.createServer(");
 assert.ok(start > 0 && end > start, "liveKnowledgeEvidence and its helpers must stay extractable");
 
-function load(fetchFn) {
-  const sandbox = { fetch: fetchFn, process: { env: { TAVILY_API_KEY: "test-key" } }, URL, Object, String, Array, Set, Error, JSON };
+function load(fetchFn, env = {}) {
+  const sandbox = { fetch: fetchFn, process: { env: { TAVILY_API_KEY: "test-key", ...env } }, URL, Object, String, Array, Set, Error, JSON };
   vm.createContext(sandbox);
-  vm.runInContext(`${source.slice(start, end)}\nthis.liveKnowledgeEvidence = liveKnowledgeEvidence;`, sandbox);
-  return sandbox.liveKnowledgeEvidence;
+  vm.runInContext(`${source.slice(start, end)}\nthis.liveKnowledgeEvidence = liveKnowledgeEvidence; this.liveListingsEvidence = liveListingsEvidence;`, sandbox);
+  return Object.assign(sandbox.liveKnowledgeEvidence, { listings: sandbox.liveListingsEvidence });
 }
 
 const DOMAINS = ["fao.org", "cgiar.org", "cimmyt.org", "extension.org", "edu"];
@@ -55,4 +55,28 @@ test("a first-try success makes exactly one provider call", async () => {
   const run = load(async () => { calls += 1; return reply("answer", ["https://www.fao.org/maize"]); });
   await run(input, {}, "receipt-1");
   assert.equal(calls, 1);
+});
+
+test("jobs.search returns the real search results with their source URLs, not an invented placeholder", async () => {
+  let sent;
+  const run = load(async (_url, options) => { sent = JSON.parse(options.body); return reply("", ["https://jobs.example.org/agronomist", "http://insecure.example/x", "https://farm.example.com/roles"]); });
+  const result = await run.listings("jobs", { query: "Find agriculture jobs in Nairobi" }, "receipt-1");
+  assert.match(sent.query, /Find agriculture jobs in Nairobi .*job/);
+  assert.deepEqual(result.sources.map(item => item.url), ["https://jobs.example.org/agronomist", "https://farm.example.com/roles"], "only https results are kept");
+  assert.equal(result.listings.length, 2);
+  assert.ok(result.listings.every(item => typeof item === "string"), "listings are strings so the generic renderer shows them");
+  assert.equal(result.selectedListing, result.listings[0]);
+  assert.doesNotMatch(JSON.stringify(result), /Agriculture opportunity|Verified maize listing/);
+});
+
+test("marketplace.search uses the marketplace hint and fails honestly with no results", async () => {
+  let sent;
+  const run = load(async (_url, options) => { sent = JSON.parse(options.body); return reply("", []); });
+  await assert.rejects(() => run.listings("marketplace", { query: "Find maize listings" }, "r"), /no results with sources/);
+  assert.match(sent.query, /for sale/);
+});
+
+test("listings search refuses to invent results when no search provider is configured", async () => {
+  const run = load(async () => { throw new Error("must not be called"); }, { TAVILY_API_KEY: "" });
+  await assert.rejects(() => run.listings("jobs", { query: "x" }, "r"), /No live search provider/);
 });

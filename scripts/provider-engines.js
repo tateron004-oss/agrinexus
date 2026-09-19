@@ -154,7 +154,7 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
     "images.search": toolId === "images.search" ? await liveImageEvidence(input, common) : null,
     "documents.create": { documentId: id, savedVersion: 1, reopenVerified: true,
       lesson: input.lesson || "Saved learning lesson", content: input.content || "Provider-verified document content", savedProgress: id },
-    "jobs.search": { ...common, listings: input.listings || [{ id, title: "Agriculture opportunity" }], selectedListing: input.selectedListing || id },
+    "jobs.search": toolId === "jobs.search" ? await liveListingsEvidence("jobs", input, id) : null,
     "resume.create": { documentId: id, savedVersion: 1, reopenVerified: true },
     "maps.view": { origin: input.origin || "Nairobi", destination: input.destination || "Nakuru",
       routeGeometry: input.routeGeometry || [[-1.286389, 36.817223], [-0.303099, 36.080026]] },
@@ -191,7 +191,7 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
     "clinic.find": { locations: [{ id, name: "Connected mobile clinic", source: outcomeUrl }], source, selectedLocation: id },
     "pharmacy.find": { result: { id, query: input.query || "pharmacy support" }, source,
       safetyResponse: "Medication decisions require pharmacist or prescribing-clinician review" },
-    "marketplace.search": { ...common, listings: [{ id, title: "Verified maize listing" }], selectedListing: id },
+    "marketplace.search": toolId === "marketplace.search" ? await liveListingsEvidence("marketplace", input, id) : null,
     "reminders.schedule": { resolvedTime: input.resolvedTime || input.when || "tomorrow 09:00", reminderId: id, persisted: true },
     "offline.sync": { operationId: id, syncState: "synchronized", serverAcknowledged: true },
     "communications.send": { draft: input.draft || input.message || "Clinic follow-up message", consentState: "confirmed", deliveryReceipt: id },
@@ -216,6 +216,28 @@ async function liveImageEvidence(input, common) {
   if (!images.length) throw Object.assign(new Error("Image search returned no verifiable images."), { code: "image_outcome_unverified" });
   const sources = [...(common.sources || []), ...images.map(item => ({ title: item.title, url: item.sourceUrl }))];
   return { query, images, sources, provider: "tavily" };
+}
+
+// jobs.search / marketplace.search used to return one invented placeholder
+// ("Agriculture opportunity" / "Verified maize listing") for every request.
+// They now return real web search results with their source URLs, and fail
+// honestly (like liveKnowledgeEvidence) when the provider is unavailable or
+// finds nothing, rather than presenting an invented listing as a result.
+const LISTING_HINTS = Object.freeze({ jobs: "job openings vacancies apply", marketplace: "for sale buy sell prices listings" });
+async function liveListingsEvidence(kind, input, receiptId) {
+  const query = String(input.query || "").trim();
+  if (!query) throw Object.assign(new Error("A search request is required."), { code: "listings_query_required" });
+  if (!process.env.TAVILY_API_KEY) throw Object.assign(new Error("No live search provider is configured."), { code: "listings_provider_unavailable" });
+  const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: `${query} ${LISTING_HINTS[kind]}`, search_depth: "advanced", include_answer: false, max_results: 8 }) });
+  if (!response.ok) throw Object.assign(new Error(`Live search provider returned ${response.status}.`), { code: "listings_provider_failed" });
+  const body = await response.json();
+  const sources = (body.results || []).filter(item => item?.url && /^https:\/\//i.test(item.url))
+    .map(item => ({ title: String(item.title || item.url).trim(), url: item.url })).slice(0, 8);
+  if (!sources.length) throw Object.assign(new Error("Live search returned no results with sources."), { code: "listings_outcome_unverified" });
+  const listings = sources.map(item => `${item.title} - ${item.url}`);
+  return { sources, source: sources[0], listings, selectedListing: listings[0], count: listings.length, provider: "tavily",
+    note: "Live web search results; confirm details with the listing owner before acting.", savedProgress: receiptId };
 }
 
 async function liveKnowledgeEvidence(input, common, receiptId) {
