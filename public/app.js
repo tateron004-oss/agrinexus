@@ -9723,7 +9723,11 @@ async function subscribeToNexusPushNotifications() {
     // Best-effort for the load-time caller: a browser that blocks the subscribe call
     // still gets the rest of the app working normally. The reason is returned so the
     // button can show it instead of failing invisibly.
-    return { ok: false, message: String(error?.message || error?.name || "Registration failed").slice(0, 160) };
+    const reason = String(error?.message || error?.name || "Registration failed");
+    // The server refuses device registration with "Missing permission: devices:write" for a
+    // guest session (guests are deliberately restricted). Say what to do instead of showing that.
+    if (/devices:write/i.test(reason)) return { ok: false, message: "This session is a guest or limited session, which cannot receive alerts. Sign out, then sign in with your account and try again." };
+    return { ok: false, message: reason.slice(0, 160) };
   }
 }
 
