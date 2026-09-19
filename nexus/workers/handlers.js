@@ -17,7 +17,7 @@ const AUTONOMOUS_OUTCOME_NOTIFICATION_KIND = "autonomous_task_outcome";
 const SITUATIONAL_AWARENESS_WORKSPACE_ID = "situational-awareness";
 const HEALTH_CHECKIN_NUDGE_RECORD_TYPE = "health_checkin_nudge";
 
-function createHandlers({ runtime, deliveryProviders = {} }) {
+function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
   return Object.freeze({
     "acceptance.canary": async ({ job }) => ({ accepted: true, releaseSha: process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development",
@@ -35,6 +35,8 @@ function createHandlers({ runtime, deliveryProviders = {} }) {
             message: `No ${notification.channel} delivery provider is configured.` });
           if (failedRow?.state === "failed") await blockStalledAutonomousTaskIfApplicable({ runtime, notification,
             error: { code: "delivery_provider_unavailable" } });
+          logger?.warn?.("notifications.delivery_unavailable", { notificationId: notification.notification_id, channel: notification.channel,
+            code: "delivery_provider_unavailable" });
           outcomes.push({ notificationId: notification.notification_id, delivered: false, code: "delivery_provider_unavailable" });
           continue;
         }
@@ -43,11 +45,14 @@ function createHandlers({ runtime, deliveryProviders = {} }) {
           if (!receipt?.verified) throw Object.assign(new Error("Delivery provider returned no verified receipt."), { code: "delivery_unverified" });
           await runtime.notifications.delivered(notification.notification_id);
           await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
+          logger?.info?.("notifications.delivered", { notificationId: notification.notification_id, channel: notification.channel, method: receipt.method });
           outcomes.push({ notificationId: notification.notification_id, delivered: true, receipt });
         } catch (error) {
           const failedRow = await runtime.notifications.failed(notification.notification_id, { code: error.code || "delivery_failed", message: error.message });
           if (failedRow?.state === "failed") await blockStalledAutonomousTaskIfApplicable({ runtime, notification,
             error: { code: error.code || "delivery_failed" } });
+          logger?.warn?.("notifications.delivery_failed", { notificationId: notification.notification_id, channel: notification.channel,
+            code: error.code || "delivery_failed", detail: String(error.message || "").slice(0, 300) });
           outcomes.push({ notificationId: notification.notification_id, delivered: false, code: error.code || "delivery_failed" });
         }
       }

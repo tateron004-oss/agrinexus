@@ -74,7 +74,8 @@ function extractAssistantReminderTask(text = "") {
     .replace(/\b(in\s+\d{1,3}\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)|tomorrow|tonight|later today|this afternoon|on\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?)\b/ig, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return task || "follow up";
+  // Removing "in 2 minutes" from "test push in 2 minutes." left "test push ." (a space before the period).
+  return task.replace(/\s+([.,!?;:])/g, "$1").trim() || "follow up";
 }
 
 module.exports = Object.freeze({ parseAssistantReminderTime, extractAssistantReminderTask });

@@ -20,10 +20,13 @@ function createWebPushProvider({ env = process.env, devices, deviceTokens, webPu
     });
     let delivered = false;
     let lastError = null;
+    let stage = "decrypt";
     for (const device of targets) {
+      stage = "decrypt";
       try {
         const keys = deviceTokens.decrypt(device.push_key_ciphertext, `${notification.tenant_id}:${notification.user_id}:${device.device_id}`);
         const subscription = { endpoint: device.push_endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } };
+        stage = "send";
         await webPush.sendNotification(subscription, payload, {
           vapidDetails: { subject: VAPID_SUBJECT, publicKey: VAPID_PUBLIC_KEY, privateKey: VAPID_PRIVATE_KEY },
           TTL: 300
@@ -38,7 +41,14 @@ function createWebPushProvider({ env = process.env, devices, deviceTokens, webPu
         lastError = error;
       }
     }
-    if (!delivered) throw coded(lastError?.code || "webpush_delivery_failed", lastError?.message || "No push subscription could be delivered to.");
+    if (!delivered) {
+      // web-push's WebPushError carries the push service's answer in statusCode/body ("invalid JWT",
+      // "VAPID credentials do not correspond", ...). Keeping only .message hid why every send failed.
+      const status = lastError?.statusCode ? `status ${lastError.statusCode}` : "";
+      const reason = String(lastError?.body || lastError?.message || "").replace(/\s+/g, " ").slice(0, 240);
+      const detail = [`stage ${stage}`, status, reason].filter(Boolean).join("; ");
+      throw coded(lastError?.code || "webpush_delivery_failed", lastError ? `Push delivery failed (${detail})` : "No push subscription could be delivered to.");
+    }
     return { verified: true, method: "webpush_delivery", devicesDelivered: targets.length };
   };
 }
