@@ -182,3 +182,33 @@ test("a held gate is captured in the browser but never acknowledged, and its rec
   assert.match(after, /confirmationGateHeld=true actionExecuted=false/);
   assert.match(after, /confirmationGateHeld: true, actionExecuted: false/);
 });
+
+async function withPage(mode, text, fn) {
+  const saved = { m: globalThis.nexusTrueExperienceMode, d: globalThis.document };
+  if (mode === "missing") delete globalThis.nexusTrueExperienceMode; else globalThis.nexusTrueExperienceMode = () => mode;
+  globalThis.document = { querySelector: () => ({ innerText: text }) };
+  try { return await fn({ evaluate: async callback => callback() }); }
+  finally { if (saved.m === undefined) delete globalThis.nexusTrueExperienceMode; else globalThis.nexusTrueExperienceMode = saved.m;
+    if (saved.d === undefined) delete globalThis.document; else globalThis.document = saved.d; }
+}
+const HOME_TEXT = "Nexus Genesis home is audio-only. The orb is a non-interactive voice companion.";
+
+test("a missing composer is only a warning when the app itself reports its audio-only home mode", async () => {
+  assert.equal(await withPage("home", HOME_TEXT, page => probeModule.reportsAudioOnlyHome(page)), true);
+  assert.equal(await withPage("workspace", HOME_TEXT, page => probeModule.reportsAudioOnlyHome(page)), false, "another mode must still fail");
+  assert.equal(await withPage("home", "Something went wrong", page => probeModule.reportsAudioOnlyHome(page)), false, "home without the audio-only statement must still fail");
+  assert.equal(await withPage("missing", HOME_TEXT, page => probeModule.reportsAudioOnlyHome(page)), false, "an app that reports no mode must still fail");
+  assert.equal(await probeModule.reportsAudioOnlyHome({ evaluate: async () => { throw new Error("page closed"); } }), false, "an unreadable page must still fail");
+});
+
+test("both composer checks warn only for audio-only home and otherwise still fail the run", () => {
+  for (const phase of ["post-login", "post-reload"]) {
+    const at = probe.indexOf(`application: "typed-ingress:${phase}", warning:`);
+    assert.ok(at > 0, phase);
+    const region = probe.slice(at - 120, at + 700);
+    assert.match(region, /reportsAudioOnlyHome\(page\)/);
+    assert.ok(region.includes(`else scenarioFailures.push({ application: "typed-ingress:${phase}"`), `${phase} keeps the failure path`);
+  }
+  assert.match(probe, /Object\.assign\(document, \{ workspaceProbes, capabilityProbes, faultProbes, scenarioFailures, typedIngressWarnings,/,
+    "warnings are preserved in the evidence file, not dropped");
+});
