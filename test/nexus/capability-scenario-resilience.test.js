@@ -117,3 +117,20 @@ test("the composer diagnostic records why the composer is absent", () => {
     assert.ok(probe.includes(field), `captureTypedIngressDiagnostic must record ${field}`);
   }
 });
+
+test("an unverified browser capture reports the browser's own receipt and page state, not just the server's 422", () => {
+  // 2026-09-19: 18 of 19 workspaces failed with the server's generic "The
+  // browser did not verify a visible or audible outcome" although the same
+  // capture succeeds in an ordinary browser; the receipt and page state that
+  // would show why were discarded. They must be thrown before the
+  // acknowledgement is posted.
+  const receiptIndex = probe.indexOf("const receipt = await receiptPromise;");
+  const ackIndex = probe.indexOf("probes/browser-acknowledgement", receiptIndex);
+  const diagnosticIndex = probe.indexOf("browser capture did not verify the outcome", receiptIndex);
+  assert.ok(receiptIndex > 0 && diagnosticIndex > receiptIndex && diagnosticIndex < ackIndex,
+    "the diagnostic must be raised between the capture and the acknowledgement POST");
+  const region = probe.slice(receiptIndex, ackIndex);
+  for (const field of ["hostPresent", "surfacePresent", "surfaceVisible", "evidenceViewportPresent", "genesisMode", "voiceState", "recentBrowserEvents"]) {
+    assert.ok(region.includes(field), `the failure must include ${field}`);
+  }
+});

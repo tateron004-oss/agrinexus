@@ -967,6 +967,33 @@ async function run(env = process.env) {
           }
         }
         const receipt = await receiptPromise;
+        // The server's browser-acknowledgement answers only "The browser did
+        // not verify a visible or audible outcome" (422), which hid why 18 of
+        // 19 workspaces failed in the CI browser on 2026-09-19 although the
+        // same capture succeeds in an ordinary browser. Report the browser's
+        // own receipt and page state instead, so the cause is observable.
+        if (receipt?.rendered !== true || (receipt?.visible !== true && receipt?.audible !== true)) {
+          const pageState = await page.evaluate(() => {
+            const shown = node => Boolean(node && node.getClientRects().length && getComputedStyle(node).display !== "none" &&
+              getComputedStyle(node).visibility !== "hidden");
+            const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
+            const surface = document.querySelector('[data-nexus-authoritative-outcome="true"]');
+            const rect = surface?.getBoundingClientRect?.();
+            return {
+              hostPresent: Boolean(host), hostVisible: shown(host), surfacePresent: Boolean(surface), surfaceVisible: shown(surface),
+              surfaceSize: rect ? [Math.round(rect.width), Math.round(rect.height)] : null,
+              evidenceViewportPresent: Boolean(document.querySelector("[data-nexus-production-evidence-viewport]")),
+              appViewHidden: document.querySelector("#appView")?.classList.contains("hidden"),
+              loginViewHidden: document.querySelector("#loginView")?.classList.contains("hidden"),
+              genesisMode: document.body.dataset.nexusGenesisMode, voiceState: document.body.dataset.nexusOsVoiceState,
+              viewport: [window.innerWidth, window.innerHeight]
+            };
+          }).catch(error => ({ pageStateError: String(error?.message || error).slice(0, 120) }));
+          throw new Error(`${application} ${phase} browser capture did not verify the outcome: receipt=${JSON.stringify({
+            rendered: receipt?.rendered, visible: receipt?.visible, audible: receipt?.audible, error: receipt?.error,
+            exactReleaseViewport: receipt?.evidence?.exactReleaseViewport })} pageState=${JSON.stringify(pageState)}` +
+            ` recentBrowserEvents=${JSON.stringify(browserDiagnosticLog.slice(-5))}`.slice(0, 1800));
+        }
         if (application === "music-media") {
           const playback = receipt?.evidence?.playbackEvidence || {};
           const previewVerified = receipt.audible === true &&
