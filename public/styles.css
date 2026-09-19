@@ -16557,3 +16557,36 @@ body.nexus-provider-question-report-open {
   color: var(--amber, #b7791f);
   font-style: italic;
 }
+
+/* Visible way to turn on alerts from the audio-only home screen (the global assistant bar
+   that normally holds "Enable alerts" is hidden there). Deliberately small and quiet. */
+body.user-mode .nexus-home-alerts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+body.user-mode .nexus-home-alerts-button {
+  min-height: 44px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, .45);
+  background: rgba(8, 13, 28, .55);
+  color: inherit;
+  font: inherit;
+  font-size: .9rem;
+  cursor: pointer;
+}
+body.user-mode .nexus-home-alerts-button:hover,
+body.user-mode .nexus-home-alerts-button:focus-visible {
+  border-color: rgba(125, 211, 252, .9);
+  outline: 2px solid rgba(125, 211, 252, .55);
+  outline-offset: 2px;
+}
+body.user-mode .nexus-home-alerts-status {
+  max-width: 34ch;
+  font-size: .82rem;
+  opacity: .85;
+}
+body.user-mode .nexus-home-alerts-status:empty { display: none; }

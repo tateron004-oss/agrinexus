@@ -9694,8 +9694,11 @@ function urlBase64ToUint8Array(base64String) {
 // (e.g. local dev without the env vars set) -- this is an enhancement, not a
 // requirement for the rest of the app to work.
 async function subscribeToNexusPushNotifications() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !nexusVapidPublicKey) return;
-  if (Notification.permission !== "granted") return;
+  // Returns { ok, message } so a user-initiated caller (the "Enable alerts" button) can say
+  // what happened; the load-time caller ignores the result and stays silent.
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return { ok: false, message: "This browser cannot receive push alerts." };
+  if (!nexusVapidPublicKey) return { ok: false, message: "Push alerts are not configured on the server yet." };
+  if (Notification.permission !== "granted") return { ok: false, message: "Notifications are not allowed for this site." };
   try {
     const registration = await navigator.serviceWorker.ready;
     let subscription = await registration.pushManager.getSubscription();
@@ -9715,11 +9718,36 @@ async function subscribeToNexusPushNotifications() {
       method: "POST",
       body: { provider: "webpush", pushSubscription: json.keys }
     }, 15000);
-  } catch (_) {
-    // Best-effort: a user who already granted permission but whose browser
-    // blocks the subscribe call (e.g. no VAPID key yet) still gets the rest
-    // of the app working normally.
+    return { ok: true, message: "" };
+  } catch (error) {
+    // Best-effort for the load-time caller: a browser that blocks the subscribe call
+    // still gets the rest of the app working normally. The reason is returned so the
+    // button can show it instead of failing invisibly.
+    return { ok: false, message: String(error?.message || error?.name || "Registration failed").slice(0, 160) };
   }
+}
+
+// Home is audio-only: the global assistant bar (which holds the "Enable alerts" button) is
+// hidden there, and the browser only shows the notification prompt from a click. This
+// small control is the visible way to turn alerts on. Nothing renders where it cannot work
+// (no push support) or is not needed (permission already granted: the app subscribes on
+// load); a blocked permission explains itself instead of offering a dead button.
+function renderNexusHomeAlertsControl() {
+  if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) return "";
+  const permission = Notification.permission;
+  if (permission === "granted") return "";
+  const blocked = permission === "denied";
+  return `
+    <div class="nexus-home-alerts" data-nexus-home-alerts="true">
+      ${blocked ? "" : `<button type="button" class="nexus-home-alerts-button" data-mobile-permission="notifications" data-nexus-home-alerts-button="true">${escapeHtml(translateText("Enable alerts"))}</button>`}
+      <span class="nexus-home-alerts-status" data-nexus-home-alerts-status="true" role="status" aria-live="polite">${blocked ? escapeHtml(translateText("Alerts are blocked for this site. Allow notifications in the browser's site settings to turn them on.")) : ""}</span>
+    </div>
+  `;
+}
+
+function setNexusHomeAlertsStatus(message, { done = false } = {}) {
+  document.querySelectorAll("[data-nexus-home-alerts-status]").forEach(node => { node.textContent = translateText(message); });
+  if (done) document.querySelectorAll("[data-nexus-home-alerts-button]").forEach(node => { node.hidden = true; });
 }
 
 async function requestProductionMobilePermission(kind) {
@@ -9749,7 +9777,16 @@ async function requestProductionMobilePermission(kind) {
       const result = await Notification.requestPermission();
       setStatus(result === "granted" ? "Notifications are ready for app alerts." : "Notifications were not enabled. The platform will keep alerts inside the app.");
       updateNexusBehaviorLayer("ready", result === "granted" ? "Nexus can use browser alerts when supported." : "Nexus will keep proactive alerts inside the app.");
-      if (result === "granted") subscribeToNexusPushNotifications();
+      if (result !== "granted") {
+        setNexusHomeAlertsStatus(result === "denied" ? "Alerts are blocked for this site. Allow notifications in the browser's site settings to turn them on." : "Alerts were not turned on.",
+          { done: result === "denied" });
+        return;
+      }
+      const push = await subscribeToNexusPushNotifications();
+      const outcome = push.ok ? "Alerts are on for this device. Reminders will notify you here."
+        : `Alerts could not be turned on: ${push.message}`;
+      setStatus(outcome);
+      setNexusHomeAlertsStatus(outcome, { done: push.ok });
       return;
     }
     if (kind === "location") {
@@ -33343,6 +33380,7 @@ function renderNexusTrueHome() {
       <span id="userWorkspaceTitle" class="sr-only">${escapeHtml(translateText("Nexus"))}</span>
       <span id="nexusFirstImpressionDescription" class="sr-only" data-nexus-first-impression-status="true" aria-live="polite">${escapeHtml(translateText("Nexus Genesis home is audio-only. The orb is a non-interactive voice companion presence."))}</span>
       ${renderNexusGenesisHomeVoiceGate()}
+      ${renderNexusHomeAlertsControl()}
     </section>
   `;
 }
@@ -33364,6 +33402,7 @@ function renderNexusAudioCompanionExperience() {
         </div>
       </div>
       ${renderNexusGenesisHomeVoiceGate()}
+      ${renderNexusHomeAlertsControl()}
       <div class="nexus-audio-companion-caption" data-nexus-audio-companion-caption="true" data-read-only-transcript="true" aria-live="polite">
         <span>${escapeHtml(translateText(transcriptText))}</span>
       </div>
