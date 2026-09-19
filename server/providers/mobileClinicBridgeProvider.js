@@ -54,7 +54,7 @@ async function search(query = {}, env = process.env) {
   if (locationText && envEnabled("NEXUS_MOBILE_CLINIC_OSM_SEARCH_ENABLED", env, true)) {
     try {
       const { origin, places } = await osmPlacesProvider.findNearbyPlaces({
-        locationText, osmFilters: ['"amenity"="clinic"', '"healthcare"="clinic"', '"amenity"="doctors"'], limit: 8, env
+        locationText, osmFilters: ['"amenity"="clinic"', '"healthcare"="clinic"', '"amenity"="doctors"'], limit: 8, env, fallbackTerm: "clinic"
       });
       if (places.length) {
         return response(PROVIDER, "mobile_clinics.search", "completed", `Found ${places.length} real clinic location(s) near ${origin.label} via OpenStreetMap.`, {
