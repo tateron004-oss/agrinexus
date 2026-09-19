@@ -52416,6 +52416,40 @@ function bindNexusPermanentMicrophoneControl() {
   setNexusPermanentMicrophoneState("ready", "Microphone ready to enable.");
 }
 
+// On the audio-only home only the orb shows: the mic pill is visually hidden there (styles.css) and a
+// tap on the orb does what the pill does -- start or retry voice. The button stays in the page, so
+// keyboard and screen-reader users keep a real control and programmatic activation still works.
+// button.click() runs inside this same user tap, so the browser's microphone prompt is allowed.
+function nexusHomeOrbTapStartsVoice(event) {
+  if (!event?.isTrusted) return;
+  if (event.target?.closest?.("#nexusPermanentMicrophoneDock, a, button, input, textarea, select, label")) return;
+  const button = nexusPermanentMicrophoneElements().button;
+  if (!button || button.disabled || !nexusPointIsOnHomeOrb(event.clientX, event.clientY)) return;
+  button.click();
+}
+
+// The orb stage ignores pointer events by design, so the pointer cursor cannot come from CSS on the orb;
+// mark the body while the pointer is over it (only the boolean is written, and only when it changes).
+function nexusPointIsOnHomeOrb(x, y) {
+  if (document.body?.dataset?.nexusGenesisMode !== "home" || !document.body.classList.contains("user-mode")) return false;
+  const orb = document.querySelector('[data-nexus-genesis-home-orb="true"]');
+  if (!orb) return false;
+  const rect = orb.getBoundingClientRect();
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function nexusHomeOrbHover(event) {
+  const over = nexusPointIsOnHomeOrb(event.clientX, event.clientY);
+  if (document.body && document.body.classList.contains("nexus-orb-hover") !== over) document.body.classList.toggle("nexus-orb-hover", over);
+}
+
+function installNexusHomeOrbTap() {
+  if (typeof document === "undefined") return;
+  document.addEventListener("click", nexusHomeOrbTapStartsVoice);
+  document.addEventListener("mousemove", nexusHomeOrbHover, { passive: true });
+}
+installNexusHomeOrbTap();
+
 async function refreshChromeVoicePermissionHint() {
   const profile = browserVoiceRuntimeProfile();
   if (!profile.isChrome) return;

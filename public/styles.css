@@ -16577,3 +16577,23 @@ body.user-mode .nexus-home-alerts-status {
   opacity: .85;
 }
 body.user-mode .nexus-home-alerts-status:empty { display: none; }
+
+/* Audio-only home: only the orb shows. The mic dock is visually hidden (still in the page, still
+   announced to screen readers, still focusable) and a tap on the orb starts voice. When a keyboard user
+   tabs to it the dock is shown normally so they can see what has focus. */
+body.user-mode[data-nexus-genesis-mode="home"] #nexusPermanentMicrophoneDock:not(:focus-within) {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+body.user-mode[data-nexus-genesis-mode="home"].nexus-orb-hover {
+  cursor: pointer;
+}
