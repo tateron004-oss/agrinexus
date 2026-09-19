@@ -71,7 +71,10 @@ test("the post-reload typed-ingress readiness check gets a second reload-and-wai
   const end = probe.indexOf("const capabilityProbes = [];", start);
   const region = probe.slice(start, end);
   assert.match(region, /try\s*\{\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}\s*catch \(error\) \{/);
-  assert.match(region, /catch \(error\) \{\s*await reloadAuthenticatedShell\(page\);\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}/);
+  assert.match(region, /catch \(error\) \{\s*await reloadAuthenticatedShell\(page\);\s*try \{\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\} catch \(retryError\) \{/,
+    "the second attempt must be caught, not thrown out of run()");
+  assert.match(region, /scenarioFailures\.push\(\{ application: "typed-ingress:post-reload"/);
+  assert.doesNotMatch(region, /catch \(retryError\) \{[^}]*\bthrow\b/, "a missing composer must never abort the run");
 });
 
 test("the post-login typed-ingress readiness check also gets a reload-and-retry attempt before failing", () => {
@@ -86,5 +89,31 @@ test("the post-login typed-ingress readiness check also gets a reload-and-retry 
   const end = probe.indexOf("const diagnosticError = loginBoundary", start);
   const region = probe.slice(start, end);
   assert.match(region, /try\s*\{\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}\s*catch \(error\) \{/);
-  assert.match(region, /catch \(error\) \{\s*await reloadAuthenticatedShell\(page\);\s*await waitForAuthenticatedStandardUserShell\(page, base\);\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\}/);
+  assert.match(region, /catch \(error\) \{\s*await reloadAuthenticatedShell\(page\);\s*await waitForAuthenticatedStandardUserShell\(page, base\);\s*try \{\s*await requireVisibleAuthoritativeTypedIngress\(page\);\s*\} catch \(retryError\) \{/);
+  assert.match(region, /scenarioFailures\.push\(\{ application: "typed-ingress:post-login"/);
+  assert.doesNotMatch(region, /catch \(retryError\) \{[^}]*\bthrow\b/, "a missing composer must never abort the run");
+});
+
+test("a missing typed-entry composer is recorded but never blocks workspace activation", () => {
+  // Confirmed from the 2026-09-18 CI logs: after a SUCCESSFUL login the app
+  // was signed in but the composer was absent, and the run aborted before the
+  // SCENARIOS loop -- so business/lists/images never attempted their cutover.
+  // Activation (runScenario) needs only a signed-in page and the capture hook.
+  const failureCallIndex = probe.indexOf('scenarioFailures.push({ application: "typed-ingress:post-login"');
+  const loginCatchIndex = probe.indexOf("const diagnosticError = loginBoundary");
+  assert.ok(failureCallIndex > 0 && loginCatchIndex > failureCallIndex, "the composer failure is recorded inside the login try, ahead of the fatal login catch");
+  assert.match(probe, /let typedIngressAvailable = true;/);
+  assert.match(probe, /if \(typedIngressAvailable\) for \(const application of \["live-knowledge"/,
+    "composer-dependent visible-ingress commands are skipped, not timed out one by one, when it is unavailable");
+  const hookWait = probe.indexOf('window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ === "function"', probe.indexOf("typed-ingress:post-reload"));
+  const scenarioLoop = probe.indexOf("for (const [application, text] of Object.entries(SCENARIOS))");
+  assert.ok(hookWait > 0 && hookWait < scenarioLoop, "the capture hook the activation loop needs is awaited explicitly before it");
+  // The step must still end red: the recorded failure reaches the final throw.
+  assert.match(probe.slice(scenarioLoop), /if \(scenarioFailures\.length\) \{/);
+});
+
+test("the composer diagnostic records why the composer is absent", () => {
+  for (const field of ["composerContainerPresent", "trueExperienceMode", "experienceMode", "appViewText", "textareaCount"]) {
+    assert.ok(probe.includes(field), `captureTypedIngressDiagnostic must record ${field}`);
+  }
 });
