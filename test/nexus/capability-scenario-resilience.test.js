@@ -117,3 +117,34 @@ test("the composer diagnostic records why the composer is absent", () => {
     assert.ok(probe.includes(field), `captureTypedIngressDiagnostic must record ${field}`);
   }
 });
+
+test("an unverified browser capture reports the browser's own receipt and page state, not just the server's 422", () => {
+  // 2026-09-19: 18 of 19 workspaces failed with the server's generic "The
+  // browser did not verify a visible or audible outcome" although the same
+  // capture succeeds in an ordinary browser; the receipt and page state that
+  // would show why were discarded. They must be thrown before the
+  // acknowledgement is posted.
+  const receiptIndex = probe.indexOf("const receipt = await receiptPromise;");
+  const ackIndex = probe.indexOf("probes/browser-acknowledgement", receiptIndex);
+  const diagnosticIndex = probe.indexOf("browser capture did not verify the outcome", receiptIndex);
+  assert.ok(receiptIndex > 0 && diagnosticIndex > receiptIndex && diagnosticIndex < ackIndex,
+    "the diagnostic must be raised between the capture and the acknowledgement POST");
+  const region = probe.slice(receiptIndex, ackIndex);
+  for (const field of ["hostPresent", "surfacePresent", "surfaceVisible", "evidenceViewportPresent", "genesisMode", "voiceState", "recentBrowserEvents"]) {
+    assert.ok(region.includes(field), `the failure must include ${field}`);
+  }
+});
+
+test("the release parameter the capture needs is restored before every capture", () => {
+  // Reproduced 2026-09-19: with the URL at "/?" (no nexusProductionEvidence)
+  // the capture returns exact_release_evidence_required and renders nothing,
+  // which is what 18 of 19 CI scenarios reported.
+  const helper = probe.indexOf("async function ensureExactReleaseEvidenceUrl(page, releaseSha)");
+  assert.ok(helper > 0);
+  const helperBody = probe.slice(helper, probe.indexOf("async function reloadAuthenticatedShell", helper));
+  assert.ok(helperBody.includes('searchParams.set("nexusProductionEvidence", sha)'));
+  assert.ok(helperBody.includes("history.replaceState"), "restoring must not navigate or reload the page");
+  const restore = probe.indexOf("await ensureExactReleaseEvidenceUrl(page, releaseSha);");
+  const capture = probe.indexOf("const receiptPromise = page.evaluate(value => window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__(value), outcome);");
+  assert.ok(restore > 0 && capture > restore, "the parameter is restored immediately before the capture runs");
+});
