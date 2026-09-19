@@ -83,3 +83,16 @@ test("the load-time subscription stays silent: it ignores the result", () => {
   assert.match(onLoad, /\n\s+subscribeToNexusPushNotifications\(\);/);
   assert.doesNotMatch(onLoad, /await subscribeToNexusPushNotifications/);
 });
+
+test("a guest or limited session is told to sign in instead of seeing a raw permission error", async () => {
+  const harness = load({ permission: "granted" });
+  harness.sandbox.requestWithTimeout = async () => { throw new Error("Missing permission: devices:write"); };
+  const result = await harness.sandbox.subscribe();
+  assert.equal(result.ok, false);
+  assert.match(result.message, /guest or limited session/);
+  assert.match(result.message, /sign in with your account/i);
+  assert.doesNotMatch(result.message, /devices:write/);
+  const other = load({ permission: "granted" });
+  other.sandbox.requestWithTimeout = async () => { throw new Error("Device registration rejected (500)"); };
+  assert.match((await other.sandbox.subscribe()).message, /500/, "other failures keep their own reason");
+});
