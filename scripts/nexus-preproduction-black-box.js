@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
+const { waitForStableIdentity, identityPatienceFor } = require("./nexus-stable-identity.js");
 
 const base = String(process.env.NEXUS_CANDIDATE_URL || "http://127.0.0.1:4173").replace(/\/$/, "");
 const expectedSha = String(process.env.RENDER_GIT_COMMIT || "");
@@ -24,8 +25,8 @@ async function text(pathname) {
   return body;
 }
 
-async function run() {
-  assert.match(expectedSha, /^[0-9a-f]{40}$/, "candidate must be bound to a full commit SHA");
+// Every identity assertion, unchanged. Run as one attempt so a deploy that is still switching instances can be retried whole.
+async function verifyIdentityOnce() {
   const health = await json("/api/healthz");
   const release = await json("/api/release");
   const version = await json("/api/version");
@@ -43,6 +44,13 @@ async function run() {
     assert.match(asset, new RegExp(expectedSha), `${pathname} must contain the exact candidate SHA`);
     assert.doesNotMatch(asset, /__NEXUS_RELEASE_SHA__|nexus-behavior-502|agrinexus-pwa-v447/, `${pathname} must not expose a placeholder or legacy identity`);
   }
+  return { health };
+}
+
+async function run() {
+  assert.match(expectedSha, /^[0-9a-f]{40}$/, "candidate must be bound to a full commit SHA");
+  // A deployed origin may briefly answer from the previous instance while it switches over; require three clean consecutive passes.
+  const { health } = await waitForStableIdentity({ attempt: verifyIdentityOnce, ...identityPatienceFor(base) });
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
