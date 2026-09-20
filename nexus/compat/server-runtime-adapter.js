@@ -621,6 +621,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } else if (url.pathname === "/api/nexus/runtime/documents" && req.method === "GET") {
         const list = await active.documents.list({ tenantId: context.tenantId, ownerId: context.userId, limit: Number(request.query.limit) || 50 });
         send(res, 200, { authoritative: true, documents: list.map(row => formatDocumentSummary(row)) }); return true;
+      } else if (/^\/api\/nexus\/runtime\/documents\/[^/]+$/.test(url.pathname) && req.method === "DELETE") {
+        // Archive (hide) one of the caller's own documents; the file and its versions are kept. Owner scoping is in the query, so a
+        // document that is not the caller's is reported exactly like one that does not exist.
+        const documentId = decodeURIComponent(url.pathname.split("/").pop());
+        const archived = await active.documents.archive({ tenantId: context.tenantId, ownerId: context.userId, documentId });
+        if (!archived) { send(res, 404, { error: "Document not found.", code: "document_not_found" }); return true; }
+        await active.audit.record({ tenantId: context.tenantId, actorId: context.userId, correlationId: context.correlationId || crypto.randomUUID(),
+          eventType: "document.archived", outcome: "completed", metadata: { documentId: archived.document_id, title: archived.title } });
+        send(res, 200, { authoritative: true, archived: true, document: { documentId: archived.document_id, title: archived.title } }); return true;
       } else if (/^\/api\/nexus\/runtime\/documents\/[^/]+$/.test(url.pathname) && req.method === "GET") {
         const documentId = decodeURIComponent(url.pathname.split("/").pop());
         const document = await active.documents.get({ tenantId: context.tenantId, ownerId: context.userId, documentId });
