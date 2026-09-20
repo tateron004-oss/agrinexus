@@ -45,6 +45,18 @@ function createCommunicationsSendExecutor({ env = process.env } = {}) {
       text: words
     };
     const result = await handler(body, env);
+    // A provider that is switched off, not configured, refused the request or failed did not send anything. Say that plainly
+    // (the person otherwise sees a generic "verifier rejected the outcome" error and cannot tell that nothing went out).
+    const providerStatus = result?.body?.status;
+    const label = { sms: "text message", whatsapp: "WhatsApp", call: "call", email: "email" }[channel];
+    if (providerStatus === "disabled" || providerStatus === "missing_config") {
+      throw Object.assign(new Error(`I could not send it: ${label} sending is not set up on this server yet, so nothing was sent.`),
+        { code: "communications_provider_unavailable", status: 503 });
+    }
+    if (providerStatus === "blocked" || providerStatus === "failed") {
+      throw Object.assign(new Error(`I could not send it: ${String(result.body.message || "the provider refused the request").replace(/[.\s]+$/, "")}. Nothing was sent.`),
+        { code: providerStatus === "blocked" ? "communications_send_blocked" : "communications_provider_failed", status: providerStatus === "blocked" ? 422 : 502 });
+    }
     // twilioProvider/emailProvider both use providerUtils.js's
     // providerResponse() (the shared server/providers/*.js convention),
     // which nests the real send fields (sid/providerMessageId/to/subject)
