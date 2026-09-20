@@ -700,8 +700,17 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
   return { status: "completed", localOnly: true, response, businessRecord: created?.body || null, summary: response };
 }
 
+// What the person is asked before a confirmed action is saved: exactly the amount, currency and item that will be logged.
+// Null for every other business action, which keeps the generic confirmation wording.
+function confirmationPrompt(command = "") {
+  if (classify(command) !== "logTransaction") return null;
+  const transaction = extractTransactionArgs(command, {});
+  if (!transaction.amount || transaction.amount <= 0 || !transaction.currency) return null;
+  return `I can log ${formatMoney(transaction.currency, transaction.amount)} as ${transaction.type === "expense" ? "an expense" : "income"}${transaction.category ? ` for ${transaction.category}` : ""} in your business workspace. Say yes to save it, or no to cancel.`;
+}
+
 module.exports = Object.freeze({
-  sanitizeText, classify, isReadIntent, precheck, run,
+  sanitizeText, classify, isReadIntent, precheck, run, confirmationPrompt,
   extractBusinessName, resolveBusinessClient, extractLeadArgs, extractTransactionArgs,
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,

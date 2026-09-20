@@ -32,6 +32,11 @@ function createBusinessExecutor({ repository, access, consents, env }) {
     const result = await voiceDispatch.run({
       command: String(input?.command || ""), args: input?.args || {}, confirmed: true, businessRequest
     });
+    // A read with nothing to read yet ("show my business dashboard" before any workspace exists) is a true answer, not a
+    // failure: it said so, and how to start, instead of surfacing as a 422 error.
+    if (result.status === "needs-input" && voiceDispatch.isReadIntent(voiceDispatch.classify(String(input?.command || "")))) {
+      return { verified: true, response: result.response, summary: result.response, businessRecord: null, businessClients: null, businessDashboard: null };
+    }
     if (result.status !== "completed") {
       // The deterministic planner fast path already asks for any required
       // field it can check without a database call before confirmation is
