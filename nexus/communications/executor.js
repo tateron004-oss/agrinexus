@@ -45,6 +45,18 @@ function createCommunicationsSendExecutor({ env = process.env } = {}) {
       text: words
     };
     const result = await handler(body, env);
+    // A provider that is switched off, not configured, refused the request or failed did not send anything. Say that plainly
+    // (the person otherwise sees a generic "verifier rejected the outcome" error and cannot tell that nothing went out).
+    const providerStatus = result?.body?.status;
+    const label = { sms: "text message", whatsapp: "WhatsApp", call: "call", email: "email" }[channel];
+    if (providerStatus === "disabled" || providerStatus === "missing_config") {
+      throw Object.assign(new Error(`I could not send it: ${label} sending is not set up on this server yet, so nothing was sent.`),
+        { code: "communications_provider_unavailable", status: 503 });
+    }
+    if (providerStatus === "blocked" || providerStatus === "failed") {
+      throw Object.assign(new Error(`I could not send it: ${String(result.body.message || "the provider refused the request").replace(/[.\s]+$/, "")}. Nothing was sent.`),
+        { code: providerStatus === "blocked" ? "communications_send_blocked" : "communications_provider_failed", status: providerStatus === "blocked" ? 422 : 502 });
+    }
     // twilioProvider/emailProvider both use providerUtils.js's
     // providerResponse() (the shared server/providers/*.js convention),
     // which nests the real send fields (sid/providerMessageId/to/subject)
@@ -70,7 +82,12 @@ function verifyCommunicationsSendOutcome({ result }) {
   const data = result?.data || {};
   const hasRealProviderId = Boolean(data.sid || data.providerMessageId);
   const verified = result?.status === "completed" && result?.ok !== false && hasRealProviderId && data.simulated !== true;
-  return { verified, method: "real_provider_send", reason: verified ? null : (data.simulated === true ? "provider_not_configured_simulated_only" : "send_not_completed") };
+  // Say which way it failed: "the provider accepted it but gave no message id" means the message may well have been sent and
+  // only the proof is missing, which is very different from a provider that never sent anything.
+  const reason = data.simulated === true ? "provider_not_configured_simulated_only"
+    : result?.status === "completed" && result?.ok !== false && !hasRealProviderId ? "provider_accepted_without_message_id"
+      : `provider_status_${String(result?.status || "unknown").replace(/[^a-z_]/gi, "").toLowerCase() || "unknown"}`;
+  return { verified, method: "real_provider_send", reason: verified ? null : reason };
 }
 
 module.exports = Object.freeze({ createCommunicationsSendExecutor, verifyCommunicationsSendOutcome });

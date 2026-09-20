@@ -43,14 +43,23 @@ test("a simulated (unconfigured-credentials) send does not verify -- must not be
   });
 });
 
-test("a missing-config / disabled response does not verify", async () => {
-  await withPatched(twilioProvider, "sendWhatsapp", async () => ({
-    httpStatus: 200, body: { ok: false, provider: "twilio", action: "whatsapp.send", status: "missing_config", message: "not configured", data: {} }
-  }), async () => {
-    const execute = createCommunicationsSendExecutor({ env: {} });
-    const result = await execute({ input: { channel: "whatsapp", to: "+15551234567", message: "hello" } });
-    assert.equal(verifyCommunicationsSendOutcome({ result }).verified, false);
-  });
+// Production 2026-09-21: confirming a real email send returned "The authoritative verifier rejected the communications.send
+// outcome" (send_not_completed) with no hint that email sending is switched off on the server. Nothing had been sent.
+test("a provider that is off, unconfigured, blocked or failing says so plainly and nothing is reported as sent", async () => {
+  const cases = [
+    ["disabled", "email", emailProvider, "send", /email sending is not set up on this server yet, so nothing was sent\./, "communications_provider_unavailable", 503],
+    ["missing_config", "whatsapp", twilioProvider, "sendWhatsapp", /WhatsApp sending is not set up on this server yet, so nothing was sent\./, "communications_provider_unavailable", 503],
+    ["blocked", "sms", twilioProvider, "sendSms", /^I could not send it: A valid recipient is required\. Nothing was sent\.$/, "communications_send_blocked", 422],
+    ["failed", "sms", twilioProvider, "sendSms", /^I could not send it: Twilio rejected the request\. Nothing was sent\.$/, "communications_provider_failed", 502]
+  ];
+  for (const [status, channel, provider, fn, message, code, httpStatus] of cases) {
+    await withPatched(provider, fn, async () => ({ httpStatus: 200, body: { ok: false, provider: "p", action: "a", status,
+      message: status === "blocked" ? "A valid recipient is required." : status === "failed" ? "Twilio rejected the request." : "not set up", data: {} } }), async () => {
+      const execute = createCommunicationsSendExecutor({ env: {} });
+      await assert.rejects(() => execute({ input: { channel, to: channel === "email" ? "a@b.co" : "+15551234567", message: "hello" } }),
+        error => message.test(error.message) && error.code === code && error.status === httpStatus, status);
+    });
+  }
 });
 
 test("channel dispatch routes call and email correctly", async () => {
@@ -108,4 +117,13 @@ test("an unrecognized channel falls back to sms", async () => {
     const result = await execute({ input: { channel: "carrier-pigeon", to: "+15551234567", message: "hi" } });
     assert.equal(result.channel, "sms");
   });
+});
+
+test("the verifier says whether a provider accepted a send without a message id (may have been sent) or never completed it", () => {
+  const verify = result => verifyCommunicationsSendOutcome({ result });
+  assert.equal(verify({ ok: true, status: "completed", data: { acceptedByProvider: true, providerMessageId: "" } }).reason, "provider_accepted_without_message_id");
+  assert.equal(verify({ ok: true, status: "completed", data: { providerMessageId: "abc" } }).verified, true);
+  assert.equal(verify({ ok: false, status: "failed", data: {} }).reason, "provider_status_failed");
+  assert.equal(verify({}).reason, "provider_status_unknown");
+  assert.equal(verify({ ok: true, status: "completed", data: { sid: "SIMULATEDSMS-1", simulated: true } }).reason, "provider_not_configured_simulated_only");
 });
