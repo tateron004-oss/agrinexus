@@ -6,6 +6,7 @@ const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
+const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
 class OpenEndedPlanner {
@@ -86,6 +87,14 @@ class OpenEndedPlanner {
     context = { ...context, ...(known.byKind.name && !context?.preferredName ? { preferredName: known.byKind.name.split(" ")[0] } : {}) };
     command = withSavedLocationForWeather(command, known.byKind);
     const locale = LANGUAGE_LOCALES[known.byKind.language] || command.locale;
+    // "What's the weather in Nakuru tomorrow?" / "Will it rain in Kisumu?": answered from a real forecast in degrees Celsius. If the forecast
+    // cannot be had, planning carries on as before (the live web search).
+    const weatherQuestion = this.brief?.forecast ? parseWeatherQuestion(command.text) : null;
+    if (weatherQuestion) {
+      const forecast = await this.brief.forecast({ place: weatherQuestion.place, days: daysNeeded(weatherQuestion) }).catch(() => null);
+      const response = weatherAnswer(weatherQuestion, forecast);
+      if (response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0 });
+    }
     const ordinaryConversation = ordinaryConversationPlan(command.text, context);
     if (ordinaryConversation) return Object.freeze({ ...ordinaryConversation, planningAttempts: 0 });
     if (isAssistantIntroductionRequest(command.text)) {
