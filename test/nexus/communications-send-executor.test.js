@@ -49,8 +49,8 @@ test("a provider that is off, unconfigured, blocked or failing says so plainly a
   const cases = [
     ["disabled", "email", emailProvider, "send", /email sending is not set up on this server yet, so nothing was sent\./, "communications_provider_unavailable", 503],
     ["missing_config", "whatsapp", twilioProvider, "sendWhatsapp", /WhatsApp sending is not set up on this server yet, so nothing was sent\./, "communications_provider_unavailable", 503],
-    ["blocked", "sms", twilioProvider, "sendSms", /^I could not send it: A valid recipient is required\. Nothing was sent\.$/, "communications_send_blocked", 422],
-    ["failed", "sms", twilioProvider, "sendSms", /^I could not send it: Twilio rejected the request\. Nothing was sent\.$/, "communications_provider_failed", 502]
+    ["blocked", "sms", twilioProvider, "sendSms", /^I could not send it: A valid recipient is required\. It was not delivered.$/, "communications_send_blocked", 422],
+    ["failed", "sms", twilioProvider, "sendSms", /^I could not send it: Twilio rejected the request\. It was not delivered.$/, "communications_provider_failed", 502]
   ];
   for (const [status, channel, provider, fn, message, code, httpStatus] of cases) {
     await withPatched(provider, fn, async () => ({ httpStatus: 200, body: { ok: false, provider: "p", action: "a", status,
