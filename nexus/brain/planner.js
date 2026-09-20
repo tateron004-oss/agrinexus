@@ -3,6 +3,7 @@
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
+const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, maxRepairAttempts = 2 }) {
@@ -552,6 +553,9 @@ function callPlan(text, catalog) {
   const clause = CALL_MESSAGE_CLAUSE.exec(goal.slice(goal.indexOf(phone) + phone.length));
   const words = clause?.[1]?.replace(/\s+/g, " ").replace(/^that\s+/i, "").trim();
   const base = { goal, application: "communications", riskTier: "regulated" };
+  // A number that can never be called (premium-rate or special range, or not a full international number) is refused here, before
+  // anyone is asked to confirm something that would be refused afterwards.
+  if (!normalizeRecipient("call", phone)) return { ...base, clarification: "I cannot place a call to that number. Give me a regular phone number with the country code, like +15105019401.", steps: [] };
   if (!words) return { ...base, clarification: "What should the call say?", steps: [] };
   return { ...base, clarification: null,
     steps: [{ clientStepId: "place-call", title: "Place a phone call", toolId: "communications.send",
@@ -672,6 +676,10 @@ function validatePlan(candidate, catalog, context) {
     if (step.toolId && !toolIds.has(step.toolId)) errors.push(`Step ${id} references unavailable tool ${step.toolId}.`);
     const missingInput = (REQUIRED_STEP_INPUTS[step.toolId] || []).filter(key => !String(step.input?.[key] ?? "").trim());
     if (missingInput.length) errors.push(`Step ${id} uses ${step.toolId} but is missing required input: ${missingInput.join(", ")}. Choose a different tool or ask for the missing detail.`);
+    // A send or call with no usable recipient or words used to reach a generic "I prepared the request" confirmation and then be
+    // refused ("Call my brother and say hi"). Only the deploy's draft-only shape is exempt (see completeCommunicationPlan).
+    if (step.toolId === "communications.send" && !normalizeSendRequest(step.input) && !(step.input?.draft && step.input?.consentRequired === true))
+      errors.push(`Step ${id} uses communications.send but has no usable recipient and message. Ask the user for the recipient (a phone number with the country code, or an email address) and the exact words; never guess a number or address.`);
     if (step.requiredPermission && !context.can(step.requiredPermission)) errors.push(`Step ${id} requires unavailable permission ${step.requiredPermission}.`);
   }
   for (const step of candidate?.steps || []) for (const dependency of step.dependsOn || []) if (!ids.has(String(dependency))) errors.push(`Unknown dependency ${dependency}.`);
