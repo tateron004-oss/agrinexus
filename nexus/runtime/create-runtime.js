@@ -57,6 +57,7 @@ const { createChronicDiseaseIntakeExecutor, verifyChronicDiseaseIntakeOutcome, c
 const { createPharmacyFindExecutor, verifyPharmacyFindOutcome, createClinicFindExecutor, verifyClinicFindOutcome } = require("../health/places-executor.js");
 const { createBusinessExecutor, verifyBusinessOutcome } = require("../business/authoritative-executor.js");
 const { BusinessRepository } = require("../business/repository.js");
+const { createBriefService } = require("../brief/service.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
   const config = assertProductionConfig(readConfig(env));
@@ -150,7 +151,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority, jobs, autonomyControl });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
-  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory }) : null;
+  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief: createBriefService({ notifications }) }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
