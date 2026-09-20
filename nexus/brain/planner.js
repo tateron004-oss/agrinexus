@@ -7,9 +7,9 @@ const { normalizeRecipient, normalizeSendRequest } = require("../communications/
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, maxRepairAttempts });
   }
 
   // The facts Kyro has saved about this person: the list, by kind, and the same facts as planner memories. Never throws and never
@@ -67,6 +67,12 @@ class OpenEndedPlanner {
       const saved = this.memory?.recent ? await this.memory.recent({ tenantId: command.tenantId, userId: command.actorId,
         purpose: "task_planning", roles: context.roles || [], limit: 10 }) : [];
       return Object.freeze({ ...memoryRecallPlan(command.text, saved), planningAttempts: 0 });
+    }
+    // "Give me my brief": today's weather for the person's saved town and the reminders due today, composed from what is real right
+    // now. It only reads; nothing is sent or scheduled.
+    if (isBriefRequest(command.text) && this.brief?.compose) {
+      const text = await this.brief.compose({ tenantId: command.tenantId, userId: command.actorId, known: known.byKind, timeZone: context?.timeZone }).catch(() => null);
+      return Object.freeze({ ...briefPlan(command.text, text, known.byKind), planningAttempts: 0 });
     }
     // "How many bags of maize do I have in stock?" was sent to a web search and answered "You have 21 bags", a number
     // taken from an unrelated web page. Nexus holds no such record, so it says so instead of guessing.
@@ -744,6 +750,23 @@ function hasCycle(steps) {
   return [...graph.keys()].some(visit);
 }
 function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.goal, application: task.application, state: task.state, outcome: task.outcome || null } : null; }
+// "give me my brief", "what's my morning brief", "brief me". Anchored, so a request to SCHEDULE one ("send me a brief at 7am") is not this.
+const BRIEF_REQUEST = [
+  /^(?:please )?(?:give me|show me|tell me|get me|read me|what(?:'s| is)) (?:my|the) (?:(?:daily|morning|today's|todays) )*(?:brief|briefing|update|rundown)(?: for today| today| now| please)?$/,
+  /^(?:please )?brief me(?: now| today| please)?$/,
+  /^(?:my )?(?:(?:daily|morning) )+brief(?:ing)?(?: now| today| please)?$/
+];
+function isBriefRequest(text) {
+  const normalized = String(text || "").toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
+  return Boolean(normalized) && BRIEF_REQUEST.some(pattern => pattern.test(normalized));
+}
+function briefPlan(goal, text, byKind = {}) {
+  const response = text || (byKind.location
+    ? `I could not reach the weather for ${byKind.location} just now, and you have no reminders due today, so I have nothing to brief you on.`
+    : 'I have nothing to brief you on yet. Tell me where you are ("I live in <your town>") and set a reminder, and I will have something to say.');
+  return { goal: String(goal || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false };
+}
+
 // The languages a person can say they prefer, as the locale their direct answers are written in.
 const LANGUAGE_LOCALES = Object.freeze({ Swahili: "sw", French: "fr", Hausa: "ha", Yoruba: "yo", Igbo: "ig", Amharic: "am", Arabic: "ar", Portuguese: "pt", Somali: "so", Zulu: "zu", Xhosa: "xh" });
 
@@ -778,5 +801,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
