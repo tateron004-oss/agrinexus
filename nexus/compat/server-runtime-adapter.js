@@ -532,9 +532,11 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         result = await createBusinessApi(active, { env }).handle({ method: req.method, pathname: url.pathname, context, body });
       } else if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
         if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
+        // The device's own time zone, when the app sends one and it is a real IANA zone, so "7am" means 7am where the person is.
+        const turnContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
         const result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
-          locale: request.locale, text: body.text }, context });
+          locale: request.locale, text: body.text }, context: turnContext });
         send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/confirm" && req.method === "POST") {
         if (!active.behavior?.confirm) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
@@ -967,6 +969,12 @@ async function acceptancePrincipalForTask(active, taskId) {
   const row = (result.rows || result)[0];
   if (!row) { const error = new Error("The pending task has no active production acceptance owner."); error.code = "acceptance_transaction_owner_unavailable"; throw error; }
   return Object.freeze({ tenantId: row.tenant_id, userId: row.user_id, role: row.role, permissions: row.permissions || [] });
+}
+
+// A real IANA time zone name (like "Africa/Nairobi"); anything else, including non-strings, is ignored.
+function validIanaZone(value) {
+  if (typeof value !== "string" || !/^[A-Za-z][A-Za-z0-9_+-]*(?:\/[A-Za-z0-9_+-]+){0,2}$/.test(value)) return false;
+  try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; }
 }
 
 function requestContext(req, user) {

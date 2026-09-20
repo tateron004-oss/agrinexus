@@ -51,6 +51,9 @@ async function main() {
   // grace periods are measured in days, not minutes.
   const situationalAwarenessEscalationIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_ESCALATION_POLL_MS || 6 * 60 * 60 * 1000);
   let lastSituationalAwarenessEscalationSweepAt = 0;
+  // Briefs go out at a chosen minute of the person's own day, so this checks about once a minute (a sent brief is remembered per local day).
+  const briefIntervalMs = Number(process.env.NEXUS_BRIEF_POLL_MS || 60000);
+  let lastBriefSweepAt = 0;
   while (!stopping) {
     const result = await worker.runOne();
     releaseHeartbeat.recordJob(result.job?.job_id || null);
@@ -63,6 +66,11 @@ async function main() {
       lastAgentSweepAt = Date.now();
       try { await handlers["agent.sweep-advanceable-tasks"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.agent_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastBriefSweepAt >= briefIntervalMs) {
+      lastBriefSweepAt = Date.now();
+      try { const outcome = await handlers["brief.send-due"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.sent) logger.info("worker.brief_sweep", outcome); }
+      catch (error) { logger.error("worker.brief_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastSituationalAwarenessSweepAt >= situationalAwarenessIntervalMs) {
       lastSituationalAwarenessSweepAt = Date.now();

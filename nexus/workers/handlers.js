@@ -22,6 +22,8 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
   return Object.freeze({
     "acceptance.canary": async ({ job }) => ({ accepted: true, releaseSha: process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development",
       nonce: required(job.payload?.nonce, "Acceptance canary nonce") }),
+    // Sends the morning brief to everyone whose brief is on and whose chosen local time has arrived (see nexus/brief/service.js).
+    "brief.send-due": async () => (runtime.brief?.sendDue ? runtime.brief.sendDue({}) : { checked: 0, sent: 0 }),
     "schedules.dispatch": async ({ job }) => ({ dispatched: await runtime.schedules.dispatchDue({ jobs: runtime.jobs,
       limit: job.payload?.limit || 100 }) }),
     "notifications.deliver": async ({ job, heartbeat }) => {

@@ -57807,7 +57807,9 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
         channel: options.source === "voice" || options.source === "voice_transcript" ? "voice" : "typed",
         locale: languageCode(),
         conversationId: nexusAuthoritativeConversationId(),
-        taskId: localStorage.getItem(NEXUS_AUTHORITATIVE_TASK_KEY) || undefined
+        taskId: localStorage.getItem(NEXUS_AUTHORITATIVE_TASK_KEY) || undefined,
+        // Where the person is, so times like "7am" mean their own morning.
+        timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })()
       }
     }, 90000);
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {

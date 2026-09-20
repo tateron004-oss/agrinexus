@@ -5,11 +5,41 @@ const { createInteractionProfile } = require("../experience/interaction-profile.
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
+const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
+const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, brief, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
     Object.assign(this, { model, tools, applications, memory, brief, maxRepairAttempts });
+  }
+
+  async briefControlTurn(command, context, known) {
+    const brief = this.brief;
+    if (!brief?.schedule || !brief?.stop || !brief?.status) return null;
+    const request = parseBriefControl(command.text);
+    if (!request) return null;
+    const scope = { tenantId: command.tenantId, userId: command.actorId };
+    const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+    try {
+      if (request.action === "stop") return answer(await brief.stop(scope) ? "Done. I've stopped your morning brief." : "You don't have a morning brief set up.");
+      if (request.action === "status") {
+        const current = await brief.status(scope);
+        return answer(current ? `Your morning brief goes out every morning at ${formatTimeOfDay(current.timeOfDay)} (${current.timeZone} time). Say "stop my morning brief" any time.`
+          : 'You don\'t have a morning brief set up. Say "send me a morning brief at 7am" to start one.');
+      }
+      if (!request.timeOfDay) return answer("What time each morning? For example 7am or 6:30.");
+      const zoneGiven = Boolean(context?.timeZone) && validTimeZone(context.timeZone) === context.timeZone;
+      const saved = await brief.schedule({ ...scope, timeOfDay: request.timeOfDay, timeZone: zoneGiven ? context.timeZone : DEFAULT_TIME_ZONE });
+      const town = saved.location || known?.byKind?.location || "";
+      const notes = [
+        town ? `It uses your saved town (${town}) and the reminders due that day.` : 'Tell me where you are ("I live in <your town>") and I will add the weather; for now it has your reminders due that day.',
+        zoneGiven ? "" : `I do not know your time zone, so I used ${saved.timeZone}; tell me if you are elsewhere.`,
+        saved.hasPushDevice === false ? "Alerts are not turned on for any of your devices yet, so nothing can be sent until you turn them on." : "",
+        'Say "stop my morning brief" any time.'
+      ].filter(Boolean).join(" ");
+      return answer(`Done. ${saved.replaced ? "Your brief is now" : "I'll send your brief"} every morning at ${formatTimeOfDay(saved.timeOfDay)} (${saved.timeZone} time). ${notes}`);
+    } catch { return null; }
   }
 
   // The facts Kyro has saved about this person: the list, by kind, and the same facts as planner memories. Never throws and never
@@ -74,6 +104,10 @@ class OpenEndedPlanner {
       const text = await this.brief.compose({ tenantId: command.tenantId, userId: command.actorId, known: known.byKind, timeZone: context?.timeZone }).catch(() => null);
       return Object.freeze({ ...briefPlan(command.text, text, known.byKind), planningAttempts: 0 });
     }
+    // "Send me a morning brief at 7am" / "stop my morning brief" / "when is my brief?": the person turns their own brief on, changes,
+    // stops or asks about it. Opt-in only: nothing is ever scheduled without this request.
+    const briefControl = await this.briefControlTurn(command, context, known);
+    if (briefControl) return Object.freeze({ ...briefControl, planningAttempts: 0 });
     // "How many bags of maize do I have in stock?" was sent to a web search and answered "You have 21 bags", a number
     // taken from an unrelated web page. Nexus holds no such record, so it says so instead of guessing.
     const personalRecord = personalRecordQuestionPlan(command.text);
@@ -760,6 +794,32 @@ function isBriefRequest(text) {
   const normalized = String(text || "").toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
   return Boolean(normalized) && BRIEF_REQUEST.some(pattern => pattern.test(normalized));
 }
+// Setting up, changing, stopping and asking about a scheduled brief. Anchored patterns: "Give me a brief history of maize" and
+// "Brief my supplier" are never this. A setup with no time asks for one; a time that cannot be read is treated as no time.
+const BRIEF_NOUN = "(?:(?:daily|morning) )+brief(?:ing)?s?";
+const BRIEF_SETUP = [
+  new RegExp(`^(?:please )?(?:send|give|push|text) me (?:a |my )?${BRIEF_NOUN}(?: every (?:day|morning))?(?:\\s+(?:at|for|by)\\s+(.+))?$`),
+  new RegExp(`^(?:please )?(?:set up|start|turn on|schedule|enable) (?:a |my )?${BRIEF_NOUN}(?: every (?:day|morning))?(?:\\s+(?:at|for|by)\\s+(.+))?$`),
+  new RegExp(`^(?:please )?change my ${BRIEF_NOUN.replace("+", "*")} to\\s+(.+)$`),
+  new RegExp(`^(?:every|each) (?:day|morning),? (?:at )?(.+?),? (?:please )?(?:send|give|push) me (?:a |my )?${BRIEF_NOUN.replace("+", "*")}$`)
+];
+const BRIEF_STOP = new RegExp(`^(?:please )?(?:stop|cancel|turn off|disable|end|remove|pause) (?:sending )?(?:my |the )?${BRIEF_NOUN.replace("+", "*")}(?: please)?$|^no more ${BRIEF_NOUN}$`);
+const BRIEF_STATUS = [
+  new RegExp(`^(?:when|what time) (?:is|does) my ${BRIEF_NOUN.replace("+", "*")}(?: (?:come|arrive|go out|get sent|send|start))?$`),
+  new RegExp(`^is my ${BRIEF_NOUN.replace("+", "*")} (?:on|set up|scheduled|active|turned on)$`),
+  new RegExp(`^do i have a ${BRIEF_NOUN.replace("+", "*")}(?: set up| scheduled)?$`)
+];
+function parseBriefControl(text) {
+  const normalized = String(text || "").toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
+  if (!normalized || normalized.length > 120) return null;
+  if (BRIEF_STOP.test(normalized)) return { action: "stop" };
+  if (BRIEF_STATUS.some(pattern => pattern.test(normalized))) return { action: "status" };
+  for (const pattern of BRIEF_SETUP) {
+    const match = pattern.exec(normalized);
+    if (match) return { action: "schedule", timeOfDay: match[1] ? parseTimeOfDay(match[1]) : null };
+  }
+  return null;
+}
 function briefPlan(goal, text, byKind = {}) {
   const response = text || (byKind.location
     ? `I could not reach the weather for ${byKind.location} just now, and you have no reminders due today, so I have nothing to brief you on.`
@@ -801,5 +861,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
