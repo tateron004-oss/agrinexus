@@ -733,7 +733,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const context = requestContext({ headers: {} }, user);
     return active.behavior.acknowledge({ input: { taskId, commandId, correlationId, workspace, rendered, visible, audible, evidence }, context });
   }
-  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest });
+  // Mirrors POST /api/nexus/runtime/behavior/confirm in-process: resumes a task a behavior turn left in
+  // confirmation_required (for example cancelling a reminder), for the same non-HTTP caller.
+  async function behaviorConfirmRequest({ taskId, stepId, approved = true, text, channel = "api", user }) {
+    const active = await runtime(); await active.ready;
+    if (!active.behavior?.confirm) throw Object.assign(new Error("The authoritative behavior spine is unavailable; no legacy write fallback was used."), { code: "behavior_spine_unavailable", status: 503 });
+    const context = requestContext({ headers: {} }, user);
+    return active.behavior.confirm({ input: { correlationId: context.requestId, taskId, stepId, approved: approved === true, channel, text }, context });
+  }
+  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {
