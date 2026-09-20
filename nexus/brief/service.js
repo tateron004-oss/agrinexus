@@ -1,6 +1,6 @@
 "use strict";
 
-const { fetchTodayForecast } = require("./weather.js");
+const { fetchTodayForecast, fetchForecast } = require("./weather.js");
 const { composeBrief, DEFAULT_TIME_ZONE, validTimeZone } = require("./compose.js");
 const { isDueNow, localClock } = require("./schedule.js");
 const { isFact } = require("../memory/profile-facts.js");
@@ -32,6 +32,8 @@ function createBriefService({ notifications, settings = null, memory = null, dev
 
   return {
     compose: composeFor,
+    // A multi-day forecast for a named place (Celsius), or null when it cannot be had.
+    forecast: ({ place, days }) => fetchForecast({ place, days, fetchImpl }),
 
     // Turn a person's brief on (or change its time). Also reports what they still need for it to be useful.
     async schedule({ tenantId, userId, timeOfDay, timeZone }) {
