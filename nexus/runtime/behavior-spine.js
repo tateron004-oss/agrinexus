@@ -4,6 +4,7 @@ const { NexusRuntimeError } = require("./authoritative-task-engine.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createCommand } = require("../contracts/command.js");
 const crypto = require("node:crypto");
+const { userConfirmableConsent, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
 class BehaviorSpine {
   constructor({ agent, engine, tasks, conversations, workspaceStates }) {
@@ -51,6 +52,7 @@ class BehaviorSpine {
     const plan = { application: priorTask.application, goal: priorTask.goal, riskTier: priorTask.riskTier,
       clarification: null, steps: priorTask.steps || [] };
     await this.engine.approve({ tenantId: context.tenantId, taskId, stepId, actorId: context.userId, approved: Boolean(approved) });
+    if (approved) await this.recordConfirmedConsent({ priorTask, stepId, command, context, text: input.text, channel: input.channel });
     if (!approved) {
       const cancelled = await this.engine.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
         nextState: "cancelled", reason: "User declined the requested confirmation",
@@ -66,10 +68,37 @@ class BehaviorSpine {
     return this.resolveExecution({ command, plan, execution, task, context });
   }
 
+  // What the person is asked before they say yes. A step that will write their health information says exactly what
+  // is stored and that yes is consent; every other confirmation keeps the generic wording.
+  async confirmationPrompt({ task, pendingStepId }) {
+    const generic = "I prepared the request and need your confirmation before the next governed action.";
+    const step = (task?.steps || []).find(item => item.step_id === pendingStepId);
+    const tool = step?.tool_id && this.engine.tools?.get ? await this.engine.tools.get(step.tool_id).catch(() => null) : null;
+    return informedConfirmationPrompt({ scope: tool?.consent_scope, step }) || generic;
+  }
+
+  // Saying yes to that prompt is the person's consent to that one write. Bound to this task and scope, and only when the
+  // task's own owner says it: an administrator confirming for someone else does not consent on their behalf.
+  async recordConfirmedConsent({ priorTask, stepId, command, context, text, channel }) {
+    const consents = this.engine.consents;
+    if (!consents?.grant || !consents?.active || !this.engine.tools?.get) return null;
+    if (priorTask.ownerId !== context.userId) return null;
+    const step = (priorTask.steps || []).find(item => item.step_id === stepId);
+    const tool = step?.tool_id ? await this.engine.tools.get(step.tool_id) : null;
+    const policy = userConfirmableConsent(tool?.consent_scope);
+    if (!policy) return null;
+    const existing = await consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId: priorTask.taskId });
+    if (existing) return existing;
+    return consents.grant({ tenantId: context.tenantId, subjectId: context.userId, taskId: priorTask.taskId, scope: tool.consent_scope,
+      purpose: policy.purpose, policyVersion: policy.policyVersion,
+      receipt: { source: "user-confirmation", channel: channel || "api", taskId: priorTask.taskId, stepId, commandId: command.commandId,
+        correlationId: command.correlationId, confirmation: String(text || "").slice(0, 200), grantedAt: new Date().toISOString() } });
+  }
+
   async resolveExecution({ command, plan, execution, task, context }) {
     if (execution.state === "awaiting_confirmation") {
       return envelope({ command, plan, task, execution, state: "confirmation_required", completed: false,
-        response: "I prepared the request and need your confirmation before the next governed action.",
+        response: await this.confirmationPrompt({ task, pendingStepId: execution.pendingStepId }),
         outcome: { verified: false, reason: "confirmation_required", pendingStepId: execution.pendingStepId } });
     }
     if (execution.state === "awaiting_render") {
