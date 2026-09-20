@@ -78,4 +78,13 @@ function extractAssistantReminderTask(text = "") {
   return task.replace(/\s+([.,!?;:])/g, "$1").trim() || "follow up";
 }
 
-module.exports = Object.freeze({ parseAssistantReminderTime, extractAssistantReminderTask });
+// True only when the sentence names a time parseAssistantReminderTime really understands. Without one the parser
+// silently falls back to "tomorrow", so callers that must not guess (the spoken reminder tool) check this first.
+// Kept in step with the planner's reminder matcher (nexus/brain/planner.js completeRemainingWorkspacePlan).
+const REMINDER_TIME_PHRASE = /\b(tomorrow|today|tonight|later today|this afternoon|in\s+\d{1,3}\s*(?:minutes?|mins?|hours?|hrs?|days?|weeks?)|(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i;
+
+function hasReminderTimePhrase(text = "") {
+  return REMINDER_TIME_PHRASE.test(String(text || ""));
+}
+
+module.exports = Object.freeze({ parseAssistantReminderTime, extractAssistantReminderTask, hasReminderTimePhrase });
