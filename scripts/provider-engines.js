@@ -177,9 +177,12 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
     }, persistedRecordId: id, safetyResponse: "Reading recorded with provider-review safety guidance" },
     "health.emergency-guidance": {
       riskLevel: "emergency",
-      safetyResponse: "This may be a medical emergency. Call 911 or your local emergency number now. Do not wait for Nexus or drive yourself. If someone is with you, ask them to stay with you and help emergency responders reach you.",
+      // Not US-only: the people using this are mostly in Africa. Lead with "your local emergency number", then give
+      // the numbers that are well established (Kenya 999 or 112, Nigeria 112, the U.S. 911); 112 also works on many
+      // mobile networks elsewhere.
+      safetyResponse: "This may be a medical emergency. Call your local emergency number now (for example 999 or 112 in Kenya, 112 in Nigeria, 911 in the U.S.; 112 works on many mobile networks). Do not wait for Nexus or drive yourself. If someone is with you, ask them to stay with you and help emergency responders reach you.",
       immediateActions: [
-        "Call 911 or your local emergency number now.",
+        "Call your local emergency number now (for example 999 or 112 in Kenya, 112 in Nigeria, 911 in the U.S.).",
         "Do not wait for Nexus and do not drive yourself.",
         "Ask someone nearby to stay with you if possible."
       ],
