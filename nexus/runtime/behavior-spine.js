@@ -4,7 +4,7 @@ const { NexusRuntimeError } = require("./authoritative-task-engine.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createCommand } = require("../contracts/command.js");
 const crypto = require("node:crypto");
-const { userConfirmableConsent, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
+const { userConfirmableConsent, consentRecipient, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
 class BehaviorSpine {
   constructor({ agent, engine, tasks, conversations, workspaceStates }) {
@@ -52,7 +52,16 @@ class BehaviorSpine {
     const plan = { application: priorTask.application, goal: priorTask.goal, riskTier: priorTask.riskTier,
       clarification: null, steps: priorTask.steps || [] };
     await this.engine.approve({ tenantId: context.tenantId, taskId, stepId, actorId: context.userId, approved: Boolean(approved) });
-    if (approved) await this.recordConfirmedConsent({ priorTask, stepId, command, context, text: input.text, channel: input.channel });
+    const consent = approved ? await this.recordConfirmedConsent({ priorTask, stepId, command, context, text: input.text, channel: input.channel }) : null;
+    if (consent?.limitReached) {
+      const response = `I did not send it: you have used today's limit of ${consent.limit} messages sent through Nexus. Try again tomorrow.`;
+      const cancelled = await this.engine.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+        nextState: "cancelled", reason: "Daily message send limit reached", outcome: { verified: false, reason: "send_limit_reached" } });
+      await this.conversations?.append?.({ tenantId: context.tenantId, conversationId: command.conversationId,
+        actorId: null, role: "assistant", content: response, provenance: { type: "send_limit_outcome", systemActor: "nexus-brain", taskId } });
+      return envelope({ command, plan, task: cancelled, state: "cancelled", completed: false, response,
+        outcome: { verified: false, reason: "send_limit_reached" } });
+    }
     if (!approved) {
       const cancelled = await this.engine.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
         nextState: "cancelled", reason: "User declined the requested confirmation",
@@ -85,12 +94,16 @@ class BehaviorSpine {
     if (priorTask.ownerId !== context.userId) return null;
     const step = (priorTask.steps || []).find(item => item.step_id === stepId);
     const tool = step?.tool_id ? await this.engine.tools.get(step.tool_id) : null;
-    const policy = userConfirmableConsent(tool?.consent_scope);
+    const policy = userConfirmableConsent(tool?.consent_scope, step);
     if (!policy) return null;
     const existing = await consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId: priorTask.taskId });
     if (existing) return existing;
+    // A capped scope (message sends) stops the action rather than consenting once the person's daily allowance is used.
+    if (policy.dailyLimit && consents.countGrantedSince &&
+        await consents.countGrantedSince({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, hours: 24 }) >= policy.dailyLimit)
+      return { limitReached: true, limit: policy.dailyLimit };
     return consents.grant({ tenantId: context.tenantId, subjectId: context.userId, taskId: priorTask.taskId, scope: tool.consent_scope,
-      purpose: policy.purpose, policyVersion: policy.policyVersion,
+      purpose: policy.purpose, policyVersion: policy.policyVersion, recipient: consentRecipient(tool.consent_scope, step),
       receipt: { source: "user-confirmation", channel: channel || "api", taskId: priorTask.taskId, stepId, commandId: command.commandId,
         correlationId: command.correlationId, confirmation: String(text || "").slice(0, 200), grantedAt: new Date().toISOString() } });
   }

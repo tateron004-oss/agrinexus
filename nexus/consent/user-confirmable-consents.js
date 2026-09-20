@@ -1,25 +1,38 @@
 "use strict";
 
-// Consent given by explicitly confirming ONE specific action, for scopes where the action only writes to the person's
-// own records.
+// Consent given by explicitly confirming ONE specific action.
 //
 // AuthoritativeTaskEngine refuses to run a tool with a consentScope unless an active consent exists. Until now the only
 // code that ever granted one was the deploy's acceptance probe, so a real person confirming "Save a telehealth intake..."
 // got 403 consent_required (verified on production 2026-09-20). Here, the confirmation prompt states exactly what will
-// be stored and that "yes" is consent for it, and BehaviorSpine.confirm records a consent bound to that task and scope
+// be done and that "yes" is consent for it, and BehaviorSpine.confirm records a consent bound to that task and scope
 // when the task's own owner says yes.
 //
-// Deliberately NOT included: communications:send:write. Sending a message is an outward action to another person, so it
-// keeps requiring a consent that is granted some other way.
+// The health scopes only write to the person's own records. communications:send:write is included only in the narrow form of
+// ONE text, WhatsApp message or email to ONE recipient the person named, whose exact words and recipient are read back in the
+// prompt (see communications/send-request.js), capped per day. It is outward and cannot be unsent, so a request that does not
+// fit that shape (a call, no recipient, no message, a very long message) gets no consent here and simply does not send.
+const { normalizeSendRequest } = require("../communications/send-request.js");
+
 const POLICIES = Object.freeze({
   "health:record:write": Object.freeze({ policyVersion: "user-confirmation-health-record-v1",
     purpose: "Save a health reading you asked Nexus to record to your own health records" }),
   "health:telehealth-intake:write": Object.freeze({ policyVersion: "user-confirmation-telehealth-intake-v1",
-    purpose: "Save the telehealth intake you asked Nexus to prepare to your own health records" })
+    purpose: "Save the telehealth intake you asked Nexus to prepare to your own health records" }),
+  "communications:send:write": Object.freeze({ policyVersion: "user-confirmation-message-send-v1", dailyLimit: 10,
+    purpose: "Send the one message you asked Nexus to send, to the recipient you named, exactly as read back to you" })
 });
 
-function userConfirmableConsent(scope) {
-  return Object.hasOwn(POLICIES, String(scope || "")) ? POLICIES[scope] : null;
+// A message send is only confirmable when the step itself is a complete, sendable request; the health scopes need no step.
+function userConfirmableConsent(scope, step) {
+  if (!Object.hasOwn(POLICIES, String(scope || ""))) return null;
+  if (scope === "communications:send:write" && !normalizeSendRequest(step?.input)) return null;
+  return POLICIES[scope];
+}
+
+// Who the consent is for, recorded on the consent row (null for the health scopes, which stay in the person's own records).
+function consentRecipient(scope, step) {
+  return scope === "communications:send:write" ? normalizeSendRequest(step?.input)?.to || null : null;
 }
 
 const clip = (value, limit) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
@@ -36,8 +49,13 @@ function describeReading(input = {}) {
 
 // The words the person hears or reads before they say yes. Null when this step needs no informed consent prompt.
 function informedConfirmationPrompt({ scope, step }) {
-  if (!userConfirmableConsent(scope)) return null;
+  if (!userConfirmableConsent(scope, step)) return null;
   const input = step?.input && typeof step.input === "object" ? step.input : {};
+  if (scope === "communications:send:write") {
+    const send = normalizeSendRequest(input);
+    const kind = { sms: "text message", whatsapp: "WhatsApp message", email: "email" }[send.channel];
+    return `I can send this ${kind} to ${send.to}${send.subject ? `, subject "${send.subject}"` : ""}: "${send.message}". It will really be sent and cannot be unsent. Say yes to send it, or no to cancel.`;
+  }
   if (scope === "health:telehealth-intake:write") {
     const concern = clip(input.concern || input.reason || input.goal, 160);
     return `I can save this telehealth intake to your own health records${concern ? `: "${concern}"` : ""}. It is not shared with or sent to any provider. Say yes to consent and save it, or no to cancel.`;
@@ -46,4 +64,4 @@ function informedConfirmationPrompt({ scope, step }) {
   return `I can save this to your own health records: ${what}. It stays in your records and is not shared with anyone. Say yes to consent and save it, or no to cancel.`;
 }
 
-module.exports = Object.freeze({ userConfirmableConsent, informedConfirmationPrompt, describeReading, POLICIES });
+module.exports = Object.freeze({ userConfirmableConsent, consentRecipient, informedConfirmationPrompt, describeReading, POLICIES });

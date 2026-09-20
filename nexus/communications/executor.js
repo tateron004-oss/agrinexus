@@ -9,6 +9,7 @@
 // scripts/provider-engines.js mock every other canonical tool still uses.
 const twilioProvider = require("../../server/providers/twilioProvider.js");
 const emailProvider = require("../../server/providers/emailProvider.js");
+const { normalizeSendRequest } = require("./send-request.js");
 
 const CHANNEL_HANDLERS = {
   sms: (body, env) => twilioProvider.sendSms(body, env),
@@ -32,12 +33,16 @@ function createCommunicationsSendExecutor({ env = process.env } = {}) {
     // confirmed:true through so the provider's own internal
     // requireConfirmation() check (a second, independent gate inside
     // twilioProvider/emailProvider) doesn't re-block an already-approved step.
+    // A complete text/WhatsApp/email request is sent exactly as the person was shown it (see send-request.js and the
+    // confirmation prompt): the normalized number or address and the whitespace-collapsed words.
+    const shown = normalizeSendRequest({ ...input, channel });
+    const words = shown ? shown.message : input.message || input.text || input.body || "";
     const body = {
       confirmed: true,
-      to: input.to || input.recipient || "",
-      message: input.message || input.text || input.body || "",
-      subject: input.subject || "Nexus message",
-      text: input.message || input.text || input.body || ""
+      to: shown ? shown.to : input.to || input.recipient || "",
+      message: words,
+      subject: shown?.subject || input.subject || "Nexus message",
+      text: words
     };
     const result = await handler(body, env);
     // twilioProvider/emailProvider both use providerUtils.js's

@@ -59,6 +59,8 @@ class OpenEndedPlanner {
     if (completeLists) return Object.freeze({ ...completeLists, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
     if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
+    const sendMessage = sendMessagePlan(command.text, catalog);
+    if (sendMessage) return Object.freeze({ ...sendMessage, planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
     if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
     const completeBusiness = completeBusinessPlan(command.text, catalog);
@@ -435,6 +437,37 @@ function completeCommunicationPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// "Text +254712345678 saying I'm on my way", "Email amina@example.com saying the delivery is ready". The recipient must be
+// a phone number with country code or an email address given in the request, and the words must be given too; the person
+// is then shown both and must say yes before anything is sent (see consent/user-confirmable-consents.js). A request that
+// starts like a send but lacks either gets a question, never a guess.
+const SEND_OPENER = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:(text|sms|whatsapp|whats app|e-?mail)\b|send\s+(?:an?\s+|the\s+)?(text(?:\s+message)?|sms|whatsapp(?:\s+message)?|e-?mail|message)\b)/i;
+const SEND_MESSAGE_CLAUSE = /(?:\b(?:saying|says|that says|to say|with the (?:message|text))\b[:,]?|:)\s*["“']?(.+?)["”']?\s*$/is;
+const SEND_PHONE = /\+\d[\d\s().-]{6,18}\d/;
+const SEND_EMAIL = /[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+/;
+
+function sendMessagePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  const opener = SEND_OPENER.exec(goal);
+  if (!opener) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
+      !catalog.applications.some(app => app.applicationId === "communications")) return null;
+  const message = SEND_MESSAGE_CLAUSE.exec(goal);
+  const before = message ? goal.slice(0, message.index) : goal;
+  const email = SEND_EMAIL.exec(before)?.[0].replace(/[.,;:!?]+$/, "");
+  const phone = email ? null : SEND_PHONE.exec(before)?.[0];
+  const asked = String(opener[1] || opener[2] || "").toLowerCase().replace(/\s+/g, " ");
+  const clarify = question => ({ goal, application: "communications", riskTier: "regulated", clarification: question, steps: [] });
+  if (!email && !phone) return clarify("Who should I send it to? Give me their phone number with the country code, like +254712345678, or their email address.");
+  const words = message?.[1]?.replace(/\s+/g, " ").trim();
+  if (!words) return clarify("What should the message say?");
+  const channel = email ? "email" : /whatsapp|whats app/.test(asked) ? "whatsapp" : "sms";
+  return { goal, application: "communications", riskTier: "regulated", clarification: null,
+    steps: [{ clientStepId: "send-message", title: `Send a ${channel === "email" ? "email" : channel === "whatsapp" ? "WhatsApp message" : "text message"}`,
+      toolId: "communications.send", input: { channel, to: email || phone.replace(/[\s().-]/g, ""), message: words },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeRemainingWorkspacePlan(text, catalog) {
   const goal = String(text || "").trim();
   const has = (toolId, application) => catalog.tools.some(tool => tool.toolId === toolId) &&
@@ -572,5 +605,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
