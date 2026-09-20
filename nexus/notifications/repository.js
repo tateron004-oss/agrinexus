@@ -17,6 +17,8 @@ class NotificationRepository{
   // delivered is history, not something to rewrite. Returns null in that case.
   async cancelReminder({tenantId,userId,notificationId}){if(!tenantId||!userId||!notificationId)throw new Error("Tenant, user, and reminder are required.");const r=await this.db.query(`update nexus_notifications set state='cancelled'
     where notification_id=$1 and tenant_id=$2 and user_id=$3 and state='queued' and (content->>'reminderText') is not null returning notification_id,content,scheduled_at`,[notificationId,tenantId,userId]);return (r.rows||r)[0]||null;}
+  // Whether a notification with this idempotency key already exists for the tenant (used so a daily brief is queued at most once per local day).
+  async existsByKey({tenantId,idempotencyKey}){if(!tenantId||!idempotencyKey)return false;const r=await this.db.query("select 1 from nexus_notifications where tenant_id=$1 and idempotency_key=$2 limit 1",[tenantId,idempotencyKey]);return (r.rows||r).length>0;}
   async delivered(notificationId){const r=await this.db.query("update nexus_notifications set state='delivered',delivered_at=now(),last_error=null where notification_id=$1 and state='delivering' returning *",[notificationId]);return (r.rows||r)[0]||null;}
   async failed(notificationId,error){const r=await this.db.query("update nexus_notifications set state=case when attempts>=5 then 'failed' else 'queued' end,last_error=$2 where notification_id=$1 and state='delivering' returning *",[notificationId,error]);return (r.rows||r)[0]||null;}
 }
