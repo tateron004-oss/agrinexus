@@ -99,8 +99,8 @@ test("a failed consent write stops the action, and a runtime without consents be
   assert.deepEqual(bare.calls.map(call => call[0]), ["approve", "execute"]);
 });
 
-test("the policy is a short allow-list of own-record health writes", () => {
-  assert.deepEqual(Object.keys(POLICIES).sort(), ["health:record:write", "health:telehealth-intake:write"]);
+test("the policy is a short allow-list: own-record health writes and one confirmed message", () => {
+  assert.deepEqual(Object.keys(POLICIES).sort(), ["communications:send:write", "health:record:write", "health:telehealth-intake:write"]);
   for (const scope of ["communications:send:write", "acceptance:identity", "", undefined, "__proto__", "constructor"]) assert.equal(userConfirmableConsent(scope), null, String(scope));
   assert.equal(informedConfirmationPrompt({ scope: "communications:send:write", step: step("communications.send") }), null);
   assert.equal(describeReading({ glucose: 110 }), "blood glucose 110"); assert.equal(describeReading({ oxygenSaturation: 96 }), "oxygen saturation 96 percent");
