@@ -15,6 +15,12 @@ class BehaviorSpine {
 
   async turn({ input, context }) {
     const planned = await this.agent.command({ input, context });
+    // A plain conversational answer (greeting, "who are you", a general question answered without tools) has
+    // no task to execute or render. AgentService already returned it; it used to fall through to
+    // executeTask(planned.task.taskId) with no task and surface as a 503 "runtime unavailable".
+    if (planned.action === "respond") {
+      return conversationEnvelope({ command: planned.command, plan: planned.plan, response: planned.response });
+    }
     if (planned.action === "clarify") {
       return envelope({ command: planned.command, plan: planned.plan, task: planned.task,
         state: "clarification_required", completed: false,
@@ -104,6 +110,16 @@ class BehaviorSpine {
 function completedResponse(task) {
   const explicit = task?.outcome?.summary || task?.outcome?.message;
   return explicit || `Completed and verified: ${task.goal}`;
+}
+
+// The client speaks and shows result.response for any state other than render_required, so a conversational
+// turn carries no workspace render (there is no authoritative workspace for "conversation").
+function conversationEnvelope({ command, plan, response }) {
+  return Object.freeze({ schema: "nexus.behavior-turn.v1", authoritative: true, legacyFallbackUsed: false,
+    commandId: command.commandId, correlationId: command.correlationId, conversationId: command.conversationId,
+    taskId: null, application: "conversation", state: "completed", completed: true, response,
+    outcome: { verified: true, reason: "conversation_response", modelAnswered: plan?.modelAnswered === true },
+    plan, receipts: [], render: null });
 }
 
 function envelope({ command, plan, execution = null, task = null, state, completed, response, outcome }) {
