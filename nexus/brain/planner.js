@@ -23,6 +23,20 @@ class OpenEndedPlanner {
         purpose: "task_planning", roles: context.roles || [], limit: 10 }) : [];
       return Object.freeze({ ...memoryRecallPlan(command.text, saved), planningAttempts: 0 });
     }
+    // "How many bags of maize do I have in stock?" was sent to a web search and answered "You have 21 bags", a number
+    // taken from an unrelated web page. Nexus holds no such record, so it says so instead of guessing.
+    const personalRecord = personalRecordQuestionPlan(command.text);
+    if (personalRecord) return Object.freeze({ ...personalRecord, planningAttempts: 0 });
+    // Jokes and riddles are not web searches ("Tell me a joke" returned a stitched-together search snippet).
+    if (isLightChatRequest(command.text) && typeof this.model.respond === "function") {
+      const answer = await this.model.respond({ goal: command.text, locale: command.locale,
+        interactionProfile: createInteractionProfile({ locale: command.locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
+        conversationHistory: conversationHistory.slice(-24).map(safeTurn), memories: [], capabilities: [] }).catch(() => null);
+      if (typeof answer === "string" && answer.trim()) {
+        return Object.freeze({ goal: command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
+          response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: 0 });
+      }
+    }
     const memories = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
       purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
     const catalog = await this.catalog();
@@ -115,11 +129,36 @@ function ordinaryConversationPlan(text, context = {}) {
     return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [],
       response: `Hello${name ? ` ${name}` : ""}, how can I help?`, sourceRequired: false };
   }
+  // Keyboard mashing ("asdf qwerty") was searched on the web and answered "ASDF is a compiler for Qwerty, a quantum
+  // programming language".
+  if (/^(?:(?:asdf|qwer|zxcv|hjkl|sdfg|dfgh|fghj|wert|erty|rtyu)[a-z]*\s*){1,4}$/.test(normalized) || /^(.)\1{4,}$/.test(normalized)) {
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [],
+      response: "I didn't catch that. What would you like help with?", sourceRequired: false };
+  }
   if (/^(?:thank you|thanks|thank you nexus|thanks nexus|okay thanks|ok thanks)$/.test(normalized)) {
     return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [],
       response: "You're welcome.", sourceRequired: false };
   }
   return null;
+}
+
+const LIGHT_CHAT = /^(?:please\s+)?(?:(?:tell|give|say)\s+me|can you tell me|do you know)\s+(?:a|an|another|one)\s+(?:(?:good|funny|short|clean)\s+)?(?:joke|riddle|proverb|pun|fun fact)\b/i;
+function isLightChatRequest(text) { return LIGHT_CHAT.test(String(text || "").trim()); }
+
+// Questions about the person's OWN holdings and money ("how many bags of maize do I have in stock", "show me my farm
+// expenses"). Nexus only knows what was saved with it, and it keeps no stock or expense ledger it can read back, so the
+// truthful answer is that it has no record, with the way to start one that it really does have.
+const PERSONAL_RECORD_NOUN = /\b(stock|inventory|expenses?|income|sales|revenue|profit|balance|savings|debts?|harvest|yield|livestock|cattle|cows|goats|chickens|sheep|pigs)\b/i;
+const PERSONAL_RECORD_OPENER = /^(?:please\s+)?(?:how (?:many|much)|what(?:'s| is| are| was| were)|show|tell|check|give)\b/i;
+const PERSONAL_RECORD_OWNERSHIP = /\b(?:my|our|i have|do i have|did i|i've got|do we have|did we)\b/i;
+const PERSONAL_RECORD_OTHER_TOOL = /\b(reminders?|lists?|checklists?|documents?|records?|health|readings?|weather|price|prices|market|forecast|business)\b/i;
+function personalRecordQuestionPlan(text) {
+  const goal = String(text || "").trim();
+  if (!PERSONAL_RECORD_OPENER.test(goal) || !PERSONAL_RECORD_OWNERSHIP.test(goal) || PERSONAL_RECORD_OTHER_TOOL.test(goal)) return null;
+  const noun = PERSONAL_RECORD_NOUN.exec(goal)?.[1]?.toLowerCase();
+  if (!noun) return null;
+  return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
+    response: `I don't have your ${noun} on record, so I can't say without guessing. I only know what you have saved with me. You can keep it with me, for example: "Create a list called Stock with 21 bags of maize", and I can read it back later.` };
 }
 
 // "Who are you?", "What can you do for me?", "help": answered from the catalog, so it is always accurate and
@@ -605,5 +644,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, personalRecordQuestionPlan, isLightChatRequest,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
