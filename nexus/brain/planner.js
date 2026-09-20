@@ -135,6 +135,31 @@ function ordinaryConversationPlan(text, context = {}) {
     return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [],
       response: "I didn't catch that. What would you like help with?", sourceRequired: false };
   }
+  // Swahili greetings and thanks were answered with a dictionary definition of "Habari".
+  if (/^(?:habari(?: yako| za (?:asubuhi|mchana|jioni))?|jambo|hujambo|mambo|shikamoo)(?:\s+nexus|\s+kyro)?$/.test(normalized))
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: "Habari! Naweza kukusaidia vipi?", sourceRequired: false };
+  if (/^(?:asante|ahsante)(?: sana)?$/.test(normalized))
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: "Karibu sana.", sourceRequired: false };
+  // The date and time come from the server clock, not a web search (which answered "It is a Tuesday" for a Sunday and
+  // gave two contradictory times). Nexus does not know the person's time zone, so it says which zone each time is in.
+  if (/^(?:(?:what(?:'s| is)?|tell me|give me)\s+)?(?:the\s+)?(?:current\s+)?(?:time|date|day)(?:\s+(?:is it|it is))?(?:\s+(?:now|right now|today))?$/.test(normalized) ||
+      /^what (?:time|day|date) is it(?:\s+(?:now|right now|today))?$/.test(normalized) || /^what(?:'s| is) today(?:'s date)?$/.test(normalized) || /^what(?:'s| is) the date today$/.test(normalized)) {
+    const now = context.now instanceof Date ? context.now : new Date();
+    const at = timeZone => ({ date: new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(now),
+      time: new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(now) });
+    const nairobi = at("Africa/Nairobi"), utc = at("UTC");
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
+      response: `It is ${nairobi.time} on ${nairobi.date} in Nairobi (East Africa Time). In UTC that is ${utc.time}${utc.date === nairobi.date ? "" : ` on ${utc.date}`}. I do not know your time zone, so tell me if you are elsewhere.` };
+  }
+  // "weather" on its own was answered for Chicago and an Italian region. Ask where.
+  if (/^(?:(?:what(?:'s| is)?|how(?:'s| is))\s+)?(?:the\s+)?(?:weather|forecast|temperature|hali ya hewa)(?:\s+like)?(?:\s+(?:today|tomorrow|now|right now|leo|kesho))?$/.test(normalized))
+    return { goal, application: "conversation", riskTier: "low", clarification: "Which town or place should I check the weather for?", steps: [], sourceRequired: false };
+  // Mouldy grain is a real poisoning risk (aflatoxin); a web snippet answered "usually safe to eat".
+  if (/\b(?:safe|okay|ok|fine|alright)\b.*\b(?:eat|eating|feed|feeding|consume|consuming)\b|\b(?:can|could|should) (?:i|we|my)\b.*\b(?:eat|feed|consume)\b/.test(normalized) &&
+      /\b(?:mou?ld|mou?ldy|fung(?:us|al)|rotten|black spots?|green spots?|discou?lou?red|musty|damp)\b/.test(normalized) &&
+      /\b(?:maize|corn|grain|grains|beans|groundnuts?|peanuts?|millet|sorghum|rice|flour|wheat|cassava)\b/.test(normalized))
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
+      response: "Be careful. Grain with mould, black or green spots or a musty smell can carry aflatoxin and other toxins that harm people and animals, and cooking or drying does not remove them. If you cannot be sure it is clean, do not eat it or feed it to animals. Sort out and throw away any discoloured or mouldy kernels, and store grain dry and off the floor. If you or your animals already ate it and feel unwell, see a health worker or a vet. For a particular batch, ask your local agricultural extension officer." };
   if (/^(?:thank you|thanks|thank you nexus|thanks nexus|okay thanks|ok thanks)$/.test(normalized)) {
     return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [],
       response: "You're welcome.", sourceRequired: false };
