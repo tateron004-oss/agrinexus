@@ -17,9 +17,13 @@ on:
 permissions:
   contents: read
 
+# Real deploys (merges to main and manual runs) share ONE queue and are never cancelled: they run one at a time, in order.
+# Pull-request runs only qualify a candidate (the deploy job below skips them), so each pull request gets its own queue and a
+# newer push cancels that pull request's stale run. Sharing the production queue let any push to any pull-request branch take
+# the single waiting slot and cancel a queued deploy of merged code.
 concurrency:
-  group: nexus-genesis-certified-production
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('nexus-pr-{0}', github.event.pull_request.number) || 'nexus-genesis-certified-production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   PRODUCTION_ORIGIN: https://nexus-genesis-certified.onrender.com
