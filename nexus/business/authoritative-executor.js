@@ -21,6 +21,14 @@ function createBusinessExecutor({ repository, access, consents, env }) {
   const api = createBusinessApi({ access, consents, agent: null }, { env, repository });
   return async function execute({ input, context }) {
     const businessRequest = ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body });
+    // A request this module does not recognize used to fall through to "create a workspace" and ask "What should I call
+    // this business?" ("Show me my farm expenses this month"). Say what it can actually do instead.
+    if (!voiceDispatch.classify(String(input?.command || ""))) {
+      const error = new Error("I could not tell what to do with that in your business records. I can add a customer or donor, log an expense or income, add a task or appointment, or show your business dashboard.");
+      error.code = "business_request_not_understood";
+      error.status = 422;
+      throw error;
+    }
     const result = await voiceDispatch.run({
       command: String(input?.command || ""), args: input?.args || {}, confirmed: true, businessRequest
     });
