@@ -69,6 +69,41 @@ class MemoryRepository {
     return result.rows || result;
   }
 
+  // What Kyro has learned about this person from what they said about themselves (see profile-facts.js): one current fact per
+  // kind. purpose "task_planning" is the purpose recall and planning already read, and sensitivity stays "internal" (health
+  // details are never stored here). Facts are never matched by similarity, so they carry a fixed placeholder embedding.
+  async saveProfileFact({ tenantId, userId, kind, value, sourceText, conversationId = null }) {
+    const now = new Date().toISOString();
+    const replaced = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_class='profile' and purpose='task_planning' and content->>'kind'=$3 and deleted_at is null
+      returning content`, [tenantId, userId, kind]);
+    const saved = await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,conversation_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,$4,'profile','task_planning',$5,$6,$7::vector,'none',$8,0.8,0.9,'user_confirmed','internal') returning memory_id,content`,
+    [createId("memory"), tenantId, userId, conversationId, { kind, value }, `${kind}: ${value}`, PLACEHOLDER_VECTOR,
+      { source: "user-statement", text: String(sourceText || "").slice(0, 220), conversationId, capturedAt: now }]);
+    return { fact: (saved.rows || saved)[0]?.content || { kind, value }, replaced: (replaced.rows || replaced).map(row => row.content).filter(Boolean) };
+  }
+
+  // Everything currently known about the person's profile, newest first.
+  async profile({ tenantId, userId }) {
+    const result = await this.db.query(`select memory_id,content,created_at from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and memory_class='profile' and purpose='task_planning' and deleted_at is null
+      order by created_at desc, memory_id desc limit 50`, [tenantId, userId]);
+    return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.kind);
+  }
+
+  // Take facts back (soft-deleted, like forget()). kind: a fact kind, "last" (the most recently saved), or "all".
+  async forgetProfile({ tenantId, userId, kind }) {
+    const current = await this.profile({ tenantId, userId });
+    const chosen = kind === "all" ? current : kind === "last" ? current.slice(0, 1) : current.filter(row => row.content.kind === kind);
+    if (!chosen.length) return [];
+    const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_class='profile' and memory_id = any($3::text[]) and deleted_at is null returning content`,
+    [tenantId, userId, chosen.map(row => row.memory_id)]);
+    return (result.rows || result).map(row => row.content).filter(Boolean);
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,
@@ -76,6 +111,9 @@ class MemoryRepository {
     return Boolean((result.rows || result)[0]);
   }
 }
+
+// A unit vector: the column is required, and cosine distance is undefined for a zero vector.
+const PLACEHOLDER_VECTOR = `[1${",0".repeat(1535)}]`;
 
 function vectorLiteral(values) {
   if (!Array.isArray(values) || values.length !== 1536 || values.some(value => !Number.isFinite(Number(value)))) {

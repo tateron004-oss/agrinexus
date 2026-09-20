@@ -4,6 +4,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
+const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, maxRepairAttempts = 2 }) {
@@ -11,7 +12,30 @@ class OpenEndedPlanner {
     Object.assign(this, { model, tools, applications, memory, maxRepairAttempts });
   }
 
+  // A plain statement about the person ("I grow maize in Kisumu") is saved and announced; "forget that" takes it back. Returns a
+  // conversational answer plan, or null when the text is neither (or memory is unavailable), so normal planning carries on.
+  async profileTurn(command) {
+    const memory = this.memory;
+    if (!memory?.saveProfileFact || !memory?.forgetProfile) return null;
+    const scope = { tenantId: command.tenantId, userId: command.actorId };
+    const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+    try {
+      const forget = extractForgetRequest(command.text);
+      if (forget) return answer(forgottenNotice(await memory.forgetProfile({ ...scope, kind: forget.kind })));
+      const stated = extractProfileStatement(command.text);
+      if (!stated.length) return null;
+      const replaced = []; const saved = [];
+      for (const { kind, value } of stated) {
+        const result = await memory.saveProfileFact({ ...scope, kind, value, sourceText: command.text, conversationId: command.conversationId || null });
+        saved.push({ kind, value }); replaced.push(...(result?.replaced || []));
+      }
+      return answer(savedNotice(saved, replaced));
+    } catch { return null; }
+  }
+
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
+    const profile = await this.profileTurn(command);
+    if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
     const ordinaryConversation = ordinaryConversationPlan(command.text, context);
     if (ordinaryConversation) return Object.freeze({ ...ordinaryConversation, planningAttempts: 0 });
     if (isAssistantIntroductionRequest(command.text)) {
@@ -235,6 +259,7 @@ function isMemoryRecallQuestion(text) {
 
 function memoryRecallPlan(text, saved) {
   const notes = (Array.isArray(saved) ? saved : []).map(item => {
+    if (isFact(item?.content)) return sentenceFor(item.content);
     const content = typeof item?.content === "string" ? item.content : JSON.stringify(item?.content ?? "");
     return String(content).replace(/\s+/g, " ").trim().slice(0, 200);
   }).filter(Boolean).slice(0, 8);
