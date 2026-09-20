@@ -43,6 +43,8 @@ const nexusOsHealthWorkforceSafetyPack = require("./public/nexus-os-health-workf
 const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexus-reference-profile.js");
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
+const { hasReminderTimePhrase } = require("./nexus/reminders/time-phrase.js");
+const { personalFirstName, spokenNameFromGreeting } = require("./server/nexus-greeting-name.js");
 const { conversationFollowUpFlags } = require("./server/nexus-conversation-followup-flags.js");
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
@@ -18905,6 +18907,62 @@ function nexusOpenAiNativeOwnerTestRecipient(command = "", args = {}, env = proc
   return sanitizePilotText(firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]), 120);
 }
 
+// Spoken reminders used to exist only in db.nexusPilotReminders, which nothing ever delivers ("Local Nexus reminder
+// only. No ... push notification ... occurred"). After the person has confirmed, create the REAL push reminder through
+// the same authoritative pipeline the typed path uses (reminders.schedule -> notification queue -> the worker's web
+// push). Returns null when that is not possible (no recognizable time, not signed in, the pipeline declined), and the
+// caller then falls back to the local reminder exactly as before. The reminder is never created twice.
+function nexusSpokenReminderText(common = {}, args = {}) {
+  const title = sanitizePilotText(args.title || args.query || "", 160);
+  const when = sanitizePilotText(args.when || args.time || args.schedule || "", 120);
+  if (title && when && hasReminderTimePhrase(when)) return /^remind me/i.test(title) ? `${title} ${when}` : `Remind me to ${title} ${when}`;
+  const command = String(common.command || "").trim();
+  return /remind/i.test(command) && hasReminderTimePhrase(command) ? command : "";
+}
+
+async function nexusOpenAiNativeCreatePushReminder(user, common = {}, args = {}, language = "en") {
+  const text = nexusSpokenReminderText(common, args);
+  if (!text) return null;
+  const authoritativeUser = await authoritativeRuntimeUser(user);
+  if (!authoritativeUser) return null;
+  try {
+    const turn = await authoritativeNexusRuntime.behaviorTurnRequest({ text, channel: "voice", locale: language, user: authoritativeUser });
+    const data = turn?.render?.data || {};
+    if (turn?.state !== "render_required" || turn.render?.workspace !== "reminders" || data.persisted !== true || !data.reminderId) return null;
+    const acknowledgement = await authoritativeNexusRuntime.behaviorAcknowledgeRequest({
+      taskId: turn.taskId, commandId: turn.commandId, correlationId: turn.correlationId, workspace: turn.render.workspace,
+      rendered: true, visible: false, audible: true,
+      evidence: { reminderId: data.reminderId, resolvedTime: data.resolvedTime, persisted: true }, user: authoritativeUser
+    }).catch(() => null);
+    const what = data.reminder ? `to ${data.reminder}` : "";
+    return { ...common, capability: "automation-reminder", status: "reminder-scheduled",
+      response: `I set a reminder ${what} ${data.resolvedTime || ""}. I will send it as a notification to your devices that have alerts turned on.`.replace(/\s+/g, " ").replace(" .", "."),
+      executionAttempted: true, executionVerified: acknowledgement?.completed === true, pushNotification: true,
+      reminder: { id: data.reminderId, text: data.reminder || "", dueAt: data.scheduledAt || "", resolvedTime: data.resolvedTime || "" } };
+  } catch {
+    return null;
+  }
+}
+
+async function nexusOpenAiNativeListPushReminders(user, language = "en") {
+  const authoritativeUser = await authoritativeRuntimeUser(user);
+  if (!authoritativeUser) return [];
+  try {
+    const turn = await authoritativeNexusRuntime.behaviorTurnRequest({ text: "Show my reminders.", channel: "voice", locale: language, user: authoritativeUser });
+    const data = turn?.render?.data || {};
+    if (turn?.state !== "render_required" || data.intent !== "list_reminders") return [];
+    await authoritativeNexusRuntime.behaviorAcknowledgeRequest({
+      taskId: turn.taskId, commandId: turn.commandId, correlationId: turn.correlationId, workspace: turn.render.workspace,
+      rendered: true, visible: false, audible: true, evidence: { count: data.count }, user: authoritativeUser
+    }).catch(() => null);
+    const lines = Array.isArray(data.reminders) ? data.reminders : [];
+    const ids = Array.isArray(data.reminderIds) ? data.reminderIds : [];
+    return lines.map((line, index) => ({ id: ids[index] || `push-${index}`, title: String(line), dueAt: "" }));
+  } catch {
+    return [];
+  }
+}
+
 function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) {
   ensureNexusPilotState(db);
   const confirmed = args.confirmed === true || args.confirmation === true;
@@ -19604,7 +19662,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const listResult = nexusRealProviders.reminders.list(db, process.env);
       const providerCards = listResult?.body?.data?.cards || [];
       const pilotCards = (db.nexusPilotReminders || []).map(reminder => ({ id: reminder.id, title: reminder.title, dueAt: reminder.time }));
-      const cards = [...pilotCards, ...providerCards];
+      const pushCards = await nexusOpenAiNativeListPushReminders(user, language);
+      const cards = [...pushCards, ...pilotCards, ...providerCards];
       return { ...common, capability: "automation-reminder", status: "reminders-listed", response: cards.length ? `You have ${cards.length} reminder(s): ${cards.slice(0, 5).map(r => `${r.title}${r.dueAt ? ` (${r.dueAt})` : ""}`).join("; ")}.` : "You have no reminders saved yet.", localOnly: true, reminders: cards };
     }
     // Confirmed live: there was no cancel/delete path at all -- "Cancel my
@@ -19636,6 +19695,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       }
       db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
       return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, localOnly: true };
+    }
+    if (args.confirmed === true || args.confirmation === true) {
+      const pushed = await nexusOpenAiNativeCreatePushReminder(user, common, args, language);
+      if (pushed) return pushed;
     }
     return nexusOpenAiNativeCreateLocalReminder(db, user, common, args);
   }
@@ -33326,8 +33389,13 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     interruptionState: db.profile.agentMemory?.interruptionState || "none",
     memoryScope: db.profile.agentMemory?.memoryScope || "user-controlled",
     accessibilityPreferences: db.profile.agentMemory?.accessibilityPreferences || {},
-    userName: db.profile.agentMemory?.userName || user.name?.split(/\s+/)[0] || ""
+    // The name the person just said wins ("Hello Nexus, this is Ron"); an account called "Standard User" is not a name.
+    userName: spokenNameFromGreeting(command) || db.profile.agentMemory?.userName || personalFirstName(user)
   });
+  {
+    const spokenGreetingName = spokenNameFromGreeting(command);
+    if (spokenGreetingName) { db.profile.agentMemory = db.profile.agentMemory || {}; db.profile.agentMemory.userName = spokenGreetingName; }
+  }
   db.profile.agentMemory = db.profile.agentMemory || {};
   db.profile.agentMemory.lastConversationalModeOrchestrator = {
     schemaVersion: conversationalModeOrchestrator.schemaVersion,
