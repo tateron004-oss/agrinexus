@@ -34,7 +34,7 @@ test("precheck() surfaces the same missing-field clarification run() would ask f
   assert.match(withMissingName.clarification, /name of the donor/i);
 
   const withMissingAmount = voiceDispatch.precheck("Record an expense", {});
-  assert.match(withMissingAmount.clarification, /dollar amount/i);
+  assert.match(withMissingAmount.clarification, /amount .* currency/i);
 
   const dashboardCheck = voiceDispatch.precheck("How's my business doing", {});
   assert.equal(dashboardCheck.toolId, "business.query");

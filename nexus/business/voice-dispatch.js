@@ -73,20 +73,90 @@ function extractLeadArgs(command = "", args = {}) {
   };
 }
 
+// Money the people using Nexus actually deal in. Order matters: the country-specific shillings come before plain "shillings".
+const CURRENCY_WORDS = [
+  ["UGX", "ugx|uganda(?:n)? shillings?"], ["TZS", "tzs|tsh|tanzania(?:n)? shillings?"], ["KES", "kes|kshs?|kenya(?:n)? shillings?|shillings?"],
+  ["NGN", "ngn|naira|₦"], ["GHS", "ghs|cedis?"], ["ZAR", "zar|rand"], ["USD", "usd|dollars?|\\$"], ["EUR", "eur|euros?|€"]
+];
+const NUMBER = "\\d[\\d,]*(?:\\.\\d+)?";
+const currencyWord = ([, words]) => `(?:${words})`;
+const ANY_CURRENCY = CURRENCY_WORDS.map(currencyWord).join("|");
+function currencyIn(text) {
+  const named = CURRENCY_WORDS.find(([, words]) => new RegExp(`(?:^|[^a-z])(?:${words})(?![a-z])`, "i").test(text));
+  return named ? named[0] : "";
+}
+// An amount written next to its currency: "$50", "KES 6,000", "6000 shillings". Null when there is none.
+function amountWithCurrency(text) {
+  const adjacent = new RegExp(`(?:(?<![a-z])(?:${ANY_CURRENCY})\\s?(${NUMBER}))|(?:(${NUMBER})\\s?(?:${ANY_CURRENCY})(?![a-z]))`, "i").exec(text);
+  const raw = adjacent && (adjacent[1] || adjacent[2]);
+  return raw ? { amount: Number(raw.replace(/,/g, "")), currency: currencyIn(adjacent[0]) } : null;
+}
+function formatMoney(currency, amount) {
+  return currency === "USD" || !currency ? `$${Number(amount).toFixed(2)}` : `${currency} ${Number(amount).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+}
+
 function extractTransactionArgs(command = "", args = {}) {
   const text = String(command || "");
-  const amountMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)|\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s?(?:dollars|usd)\b/i);
-  const amountText = amountMatch ? (amountMatch[1] || amountMatch[2]) : "";
+  const withCurrency = amountWithCurrency(text);
+  const bare = withCurrency ? null : new RegExp(`\\b(?:of|for|worth)\\s+(${NUMBER})`, "i").exec(text);
+  const rawAmount = args.amount !== undefined ? Number(args.amount) : withCurrency ? withCurrency.amount : bare ? Number(bare[1].replace(/,/g, "")) : NaN;
+  const currency = String(args.currency || withCurrency?.currency || "").toUpperCase().slice(0, 3);
   const type = /\b(expense|spent|spend|paid|purchase|purchased|bought|cost)\b/i.test(text) ? "expense"
-    : /\b(income|revenue|donation|donated|sale|sold|payment received|earned)\b/i.test(text) ? "income" : "expense";
-  const categoryMatch = text.match(/\b(?:for|on)\s+([^\n,.]{2,60})/i);
-  const rawAmount = args.amount !== undefined ? Number(args.amount) : (amountText ? Number(amountText.replace(/,/g, "")) : NaN);
+    : /\b(income|revenue|donation|donated|sale|sold|payment received|earned|received)\b/i.test(text) ? "income" : "expense";
+  // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
+  const soldItem = text.match(/\b(?:sold|sell)\s+(.+?)\s+(?:for|at)\b/i);
+  const spentOn = text.match(/\b(?:on|for)\s+(?![\d$€₦])([^\n,.]{2,60})/i);
+  const category = (soldItem ? soldItem[1] : spentOn ? spentOn[1] : "").replace(/\s+(?:today|yesterday|this (?:week|month|year))\s*$/i, "").trim();
   return {
     amount: Number.isFinite(rawAmount) ? rawAmount : null,
+    currency,
     type: sanitizeText(args.type || type, 20),
-    category: sanitizeText(args.category || (categoryMatch ? categoryMatch[1].trim() : ""), 160),
+    category: sanitizeText(args.category || category, 160),
     description: sanitizeText(args.description || text, 500)
   };
+}
+
+const startOfIsoDay = date => date.toISOString().slice(0, 10);
+// "this month", "last month", "today", "this week", "this year"; anything else means everything recorded.
+function periodIn(text, now = new Date()) {
+  const day = startOfIsoDay(now);
+  const year = now.getUTCFullYear(), month = now.getUTCMonth();
+  const monthStart = new Date(Date.UTC(year, month, 1));
+  if (/\btoday\b/i.test(text)) return { label: "today", from: day, to: day };
+  if (/\bthis week\b/i.test(text)) { const monday = new Date(now); monday.setUTCDate(now.getUTCDate() - ((now.getUTCDay() + 6) % 7)); return { label: "this week", from: startOfIsoDay(monday), to: day }; }
+  if (/\blast month\b/i.test(text)) return { label: "last month", from: startOfIsoDay(new Date(Date.UTC(year, month - 1, 1))), to: startOfIsoDay(new Date(Date.UTC(year, month, 0))) };
+  if (/\bthis month\b/i.test(text)) return { label: "this month", from: startOfIsoDay(monthStart), to: day };
+  if (/\bthis year\b/i.test(text)) return { label: "this year", from: `${year}-01-01`, to: day };
+  return { label: "so far", from: "", to: "" };
+}
+
+// Income and expense totals per currency, so shillings and dollars are never added together.
+function financeTotals(transactions = [], { from = "", to = "", match = "" } = {}) {
+  const needle = String(match || "").trim().toLowerCase();
+  const totals = {};
+  for (const row of transactions) {
+    if (from && (!row.date || row.date < from)) continue;
+    if (to && (!row.date || row.date > to)) continue;
+    if (needle && !`${row.category} ${row.description}`.toLowerCase().includes(needle)) continue;
+    const currency = row.currency || "USD";
+    const entry = totals[currency] || (totals[currency] = { income: 0, expenses: 0, incomeCount: 0, expenseCount: 0 });
+    if (row.type === "expense") { entry.expenses += row.amount; entry.expenseCount += 1; } else { entry.income += row.amount; entry.incomeCount += 1; }
+  }
+  return totals;
+}
+
+function describeFinances(totals, { label, focus, workspaceName }) {
+  const currencies = Object.keys(totals);
+  if (!currencies.length) return `You have no ${focus === "expenses" ? "expenses" : focus === "income" ? "income" : "income or expenses"} recorded ${label === "so far" ? "yet" : label}. To start, say for example "I sold 5 bags of maize for 6000 shillings" or "Log a 500 shilling expense for seed".`;
+  const parts = currencies.map(currency => {
+    const t = totals[currency];
+    const income = `${formatMoney(currency, t.income)} income (${t.incomeCount} ${t.incomeCount === 1 ? "entry" : "entries"})`;
+    const expenses = `${formatMoney(currency, t.expenses)} expenses (${t.expenseCount} ${t.expenseCount === 1 ? "entry" : "entries"})`;
+    if (focus === "expenses") return expenses;
+    if (focus === "income") return income;
+    return `${income} and ${expenses}, net ${formatMoney(currency, t.income - t.expenses)}`;
+  });
+  return `${label === "so far" ? "So far" : label.charAt(0).toUpperCase() + label.slice(1)}, in "${workspaceName}": ${parts.join("; ")}.`;
 }
 
 function extractInvoiceArgs(command = "", args = {}) {
@@ -210,8 +280,12 @@ function resolveAppointmentIndex(appointments, command = "") {
 // summary of "how's my business doing" is always numerically identical to
 // what the workspace's own dashboard section shows.
 function computeBusinessDashboard(editable) {
-  const income = editable.transactions.filter(row => row.type !== "expense").reduce((sum, row) => sum + row.amount, 0);
-  const expenses = editable.transactions.filter(row => row.type === "expense").reduce((sum, row) => sum + row.amount, 0);
+  // Shillings and dollars are never added together: the dashboard totals the currency used most, and names any others.
+  const byCurrency = financeTotals(editable.transactions);
+  const currencies = Object.keys(byCurrency).sort((a, b) => (byCurrency[b].incomeCount + byCurrency[b].expenseCount) - (byCurrency[a].incomeCount + byCurrency[a].expenseCount));
+  const currency = currencies[0] || "USD";
+  const income = byCurrency[currency]?.income || 0;
+  const expenses = byCurrency[currency]?.expenses || 0;
   const customers = editable.leads.filter(row => row.type === "customer").length;
   const donors = editable.leads.filter(row => row.type === "donor").length;
   const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
@@ -223,7 +297,7 @@ function computeBusinessDashboard(editable) {
   const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
   return {
-    netIncome: income - expenses, income, expenses,
+    netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
     customers, donors, sponsors, volunteers,
     invoiceTotal, unpaidInvoices,
     grantsRequested, grantsAwarded,
@@ -237,7 +311,7 @@ function computeBusinessDashboard(editable) {
 // load-bearing -- see each flag's inline note -- and must stay in sync with
 // server.js's legacy nexus_business_assistant handler, which uses this same
 // function (rather than a second, hand-maintained copy of these regexes).
-const READ_INTENTS = new Set(["dashboard", "list"]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary"]);
 
 function classify(command = "") {
   const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|admin[- ]assistant|workspace)s?";
@@ -248,7 +322,13 @@ function classify(command = "") {
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
   const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer)\b/i.test(command);
-  const wantsLogTransaction = /\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command);
+  // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
+  const saysWhatHappened = /\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) && amountWithCurrency(command) !== null;
+  const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
+  // "How much did I spend on seed this month?", "Show me my income this week": a question about the money already logged.
+  const wantsFinanceSummary = !wantsLogTransaction && !/\b(?:log|record|track|create|start|new)\b|\badd\b(?!\s+up)/i.test(command)
+    && /\b(?:how much|total|summary|summari[sz]e|what (?:is|are|was|were|did|have)|show|tell me|list|give me)\b/i.test(command)
+    && /\b(?:my|our|i|we)\b/i.test(command) && /\b(?:expenses?|income|sales|revenue|profit|spen[dt]|earn(?:ed|ings)?|make|made|sell|sold)\b/i.test(command);
   const wantsAddInvoiceItem = /\binvoice\b/i.test(command) && /\b(?:line[- ]?item|item)s?\b/i.test(command) && /\b(?:add|include)\b/i.test(command);
   const wantsGenerateInvoicePdf = !wantsAddInvoiceItem && /\binvoice\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|receipt)\b/i.test(command);
   const wantsCreateInvoice = !wantsAddInvoiceItem && !wantsGenerateInvoicePdf && /\b(invoice|receipt)\b/i.test(command) && /\b(?:create|add|start|open|new)\b/i.test(command);
@@ -271,6 +351,7 @@ function classify(command = "") {
   const wantsCreateWorkspace = /\b(business|nonprofit|non-profit|ngo)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command);
 
   if (wantsBusinessDashboard) return "dashboard";
+  if (wantsFinanceSummary) return "financeSummary";
   if (wantsList) return "list";
   if (wantsAddLead) return "addLead";
   if (wantsLogTransaction) return "logTransaction";
@@ -310,7 +391,8 @@ function precheck(command = "", args = {}) {
     if (!lead.name) clarification = `What is the name of the ${lead.type} to add?`;
   } else if (intent === "logTransaction") {
     const transaction = extractTransactionArgs(command, args);
-    if (!transaction.amount || transaction.amount <= 0) clarification = `What is the dollar amount for this ${transaction.type}?`;
+    if (!transaction.amount || transaction.amount <= 0) clarification = `What is the amount for this ${transaction.type}, and in which currency?`;
+    else if (!transaction.currency) clarification = `Which currency is ${transaction.amount} in, for example shillings or dollars?`;
   } else if (intent === "addInvoiceItem") {
     const item = extractInvoiceItemArgs(command, args);
     if (!item.unitPrice) clarification = "What is the unit price for this line item?";
@@ -357,8 +439,24 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     }
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const dashboard = computeBusinessDashboard(resolved.client.data.editable);
-    const response = `Here is the performance summary for "${workspaceName}": net income $${dashboard.netIncome.toFixed(2)} (income $${dashboard.income.toFixed(2)}, expenses $${dashboard.expenses.toFixed(2)}); ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers; $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""}); ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers; $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
     return { status: "completed", localOnly: true, response, businessDashboard: dashboard, summary: response };
+  }
+
+  if (intent === "financeSummary") {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    const period = periodIn(command);
+    const focus = /\b(?:spen[dt]|expenses?)\b/i.test(command) && !/\b(?:income|earn|sales|revenue|sell|sold|make|made|profit)\b/i.test(command) ? "expenses"
+      : /\b(?:income|earn(?:ed|ings)?|sales|revenue|sell|sold|make|made)\b/i.test(command) && !/\b(?:spen[dt]|expenses?|profit)\b/i.test(command) ? "income" : "both";
+    if (!resolved.client) {
+      const response = "You have not recorded any income or expenses yet, because you do not have a business or nonprofit workspace. Tell me its name and I can start one, then say for example \"I sold 5 bags of maize for 6000 shillings\".";
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    const item = command.match(/\b(?:spen[dt]|paid|earn(?:ed)?|made|make|sold|sell)\b.*?\b(?:on|for|from)\s+(?!this\b|last\b|today\b|the\b)([a-z][a-z ]{1,40}?)(?=\s+(?:today|this|last|so far|all time)\b|[?.!,]|$)/i)?.[1];
+    const totals = financeTotals(resolved.client.data.editable.transactions, { from: period.from, to: period.to, match: item });
+    const response = describeFinances(totals, { label: period.label, focus, workspaceName });
+    return { status: "completed", localOnly: true, response, summary: response, businessRecord: null };
   }
 
   if (intent === "list") {
@@ -387,17 +485,18 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
 
   if (intent === "logTransaction") {
     const transaction = extractTransactionArgs(command, args);
-    if (!transaction.amount || transaction.amount <= 0) return { status: "needs-input", response: `What is the dollar amount for this ${transaction.type}?`, missingInformation: ["amount"] };
+    if (!transaction.amount || transaction.amount <= 0) return { status: "needs-input", response: `What is the amount for this ${transaction.type}, and in which currency?`, missingInformation: ["amount"] };
+    if (!transaction.currency) return { status: "needs-input", response: `Which currency is ${transaction.amount} in, for example shillings or dollars?`, missingInformation: ["currency"] };
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before logging income or expenses.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const categoryPhrase = transaction.category ? ` for ${transaction.category}` : "";
-    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can log a $${transaction.amount.toFixed(2)} ${transaction.type}${categoryPhrase} in "${workspaceName}". Should I go ahead?` };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can log a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, transactions: [...resolved.client.data.editable.transactions,
-      { date: new Date().toISOString().slice(0, 10), type: transaction.type, category: transaction.category, amount: transaction.amount, description: transaction.description }] };
+      { date: new Date().toISOString().slice(0, 10), type: transaction.type, category: transaction.category, amount: transaction.amount, currency: transaction.currency, description: transaction.description }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
-    const response = `Logged a $${transaction.amount.toFixed(2)} ${transaction.type}${categoryPhrase} in "${workspaceName}".`;
+    const response = `Logged a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}".`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 

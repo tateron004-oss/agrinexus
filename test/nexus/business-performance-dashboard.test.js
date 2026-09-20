@@ -10,9 +10,10 @@ const fs = require("node:fs"), path = require("node:path");
 // aggregate of the input rows, not a placeholder or an estimate.
 function loadRenderDashboard(editable) {
   const source = fs.readFileSync(path.join(__dirname, "../../public/business-services.js"), "utf8");
-  const begin = source.indexOf("function renderDashboard(");
+  const begin = source.indexOf("function moneyByCurrency(");
   const end = source.indexOf("\n  function render(", begin);
   assert.ok(begin >= 0 && end > begin, "could not locate renderDashboard in public/business-services.js");
+  assert.ok(source.indexOf("function renderDashboard(") > begin, "moneyByCurrency must precede renderDashboard");
   const summaryEl = { innerHTML: "" };
   const sandbox = { byId: id => (id === "dashboard-summary" ? summaryEl : null), current: { data: { editable } } };
   const fn = new Function("byId", "current", source.slice(begin, end) + "\nreturn renderDashboard;")(sandbox.byId, sandbox.current);

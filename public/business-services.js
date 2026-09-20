@@ -76,10 +76,20 @@
   // dashboard. Purely computed from the real data already loaded on this
   // page (income/expenses, invoices, customers/donors, grants, tasks,
   // appointments) -- no new API calls, no estimates, nothing simulated.
+  // Income and expenses per currency, so shillings and dollars are never added together (rows saved before currencies existed are dollars).
+  function moneyByCurrency(transactions) {
+    const totals = {};
+    for (const row of transactions) {
+      const entry = totals[row.currency || "USD"] || (totals[row.currency || "USD"] = { income: 0, expenses: 0 });
+      if (row.type === "expense") entry.expenses += row.amount; else entry.income += row.amount;
+    }
+    return totals;
+  }
   function renderDashboard() {
     const editable = current.data.editable;
-    const income = editable.transactions.filter(row => row.type !== "expense").reduce((sum, row) => sum + row.amount, 0);
-    const expenses = editable.transactions.filter(row => row.type === "expense").reduce((sum, row) => sum + row.amount, 0);
+    const money = moneyByCurrency(editable.transactions);
+    if (!Object.keys(money).length) money.USD = { income: 0, expenses: 0 };
+    const currencies = Object.keys(money);
     const customers = editable.leads.filter(row => row.type === "customer").length;
     const donors = editable.leads.filter(row => row.type === "donor").length;
     const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
@@ -91,7 +101,7 @@
     const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
     const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
     const rows = [
-      ["Net income", `${(income - expenses).toFixed(2)} (income ${income.toFixed(2)} / expenses ${expenses.toFixed(2)})`],
+      ["Net income", currencies.map(code => `${code} ${(money[code].income - money[code].expenses).toFixed(2)} (income ${money[code].income.toFixed(2)} / expenses ${money[code].expenses.toFixed(2)})`).join("; ")],
       ["Customers & donors", `${customers} customers, ${donors} donors, ${sponsors} sponsors, ${volunteers} volunteers`],
       ["Invoiced (all line items)", `${invoiceTotal.toFixed(2)}, ${unpaidInvoices} invoice(s) not marked paid`],
       ["Grants & funding", `${grantsRequested.toFixed(2)} tracked, ${grantsAwarded.toFixed(2)} awarded`],
@@ -108,10 +118,9 @@
     const business = byId("business-fields"); business.replaceChildren();
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
     rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"]]);
-    rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["description", "Description"]]);
-    const income = editable.transactions.filter(row => row.type !== "expense").reduce((sum, row) => sum + row.amount, 0);
-    const expenses = editable.transactions.filter(row => row.type === "expense").reduce((sum, row) => sum + row.amount, 0);
-    byId("finance-summary").textContent = `Income: ${income.toFixed(2)}  |  Expenses: ${expenses.toFixed(2)}  |  Net: ${(income - expenses).toFixed(2)}`;
+    rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"]]);
+    const money = moneyByCurrency(editable.transactions);
+    byId("finance-summary").textContent = Object.keys(money).length ? Object.entries(money).map(([code, t]) => `${code}: Income ${t.income.toFixed(2)}  |  Expenses ${t.expenses.toFixed(2)}  |  Net ${(t.income - t.expenses).toFixed(2)}`).join("   ||   ") : "Income: 0.00  |  Expenses: 0.00  |  Net: 0.00";
     rows("invoices", editable.invoices, [["invoiceNumber", "Invoice #"], ["clientName", "Client"], ["date", "Date"], ["dueDate", "Due date"], ["notes", "Notes"], ["status", "Status"]]);
     rows("invoice-items", editable.invoiceItems, [["invoiceNumber", "Invoice #"], ["description", "Description"], ["quantity", "Qty"], ["unitPrice", "Unit price"]]);
     rows("grants", editable.grants, [["funderName", "Funder"], ["program", "Program / grant name"], ["amount", "Amount"], ["deadline", "Deadline"], ["status", "Status (researching, drafting, submitted, awarded, declined)"], ["notes", "Notes"]]);
@@ -163,7 +172,7 @@
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
-  byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, description: "" }); render(); });
+  byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, currency: "USD", description: "" }); render(); });
   byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: `INV-${String(current.data.editable.invoices.length + 1001)}`, clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
   byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }); render(); });
