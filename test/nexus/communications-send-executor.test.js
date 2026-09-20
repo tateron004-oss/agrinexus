@@ -118,3 +118,12 @@ test("an unrecognized channel falls back to sms", async () => {
     assert.equal(result.channel, "sms");
   });
 });
+
+test("the verifier says whether a provider accepted a send without a message id (may have been sent) or never completed it", () => {
+  const verify = result => verifyCommunicationsSendOutcome({ result });
+  assert.equal(verify({ ok: true, status: "completed", data: { acceptedByProvider: true, providerMessageId: "" } }).reason, "provider_accepted_without_message_id");
+  assert.equal(verify({ ok: true, status: "completed", data: { providerMessageId: "abc" } }).verified, true);
+  assert.equal(verify({ ok: false, status: "failed", data: {} }).reason, "provider_status_failed");
+  assert.equal(verify({}).reason, "provider_status_unknown");
+  assert.equal(verify({ ok: true, status: "completed", data: { sid: "SIMULATEDSMS-1", simulated: true } }).reason, "provider_not_configured_simulated_only");
+});

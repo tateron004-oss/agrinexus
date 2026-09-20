@@ -82,7 +82,12 @@ function verifyCommunicationsSendOutcome({ result }) {
   const data = result?.data || {};
   const hasRealProviderId = Boolean(data.sid || data.providerMessageId);
   const verified = result?.status === "completed" && result?.ok !== false && hasRealProviderId && data.simulated !== true;
-  return { verified, method: "real_provider_send", reason: verified ? null : (data.simulated === true ? "provider_not_configured_simulated_only" : "send_not_completed") };
+  // Say which way it failed: "the provider accepted it but gave no message id" means the message may well have been sent and
+  // only the proof is missing, which is very different from a provider that never sent anything.
+  const reason = data.simulated === true ? "provider_not_configured_simulated_only"
+    : result?.status === "completed" && result?.ok !== false && !hasRealProviderId ? "provider_accepted_without_message_id"
+      : `provider_status_${String(result?.status || "unknown").replace(/[^a-z_]/gi, "").toLowerCase() || "unknown"}`;
+  return { verified, method: "real_provider_send", reason: verified ? null : reason };
 }
 
 module.exports = Object.freeze({ createCommunicationsSendExecutor, verifyCommunicationsSendOutcome });
