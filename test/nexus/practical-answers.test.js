@@ -22,7 +22,7 @@ test("the date and time come from the clock, in Nairobi time with UTC beside it"
 test("a bare weather question asks where, and one with a place is left to the weather tool", () => {
   for (const text of ["weather", "What's the weather", "how's the weather today", "forecast", "hali ya hewa", "What is the temperature"]) {
     const plan = ordinaryConversationPlan(text, {});
-    assert.equal(plan.clarification, "Which town or place should I check the weather for?", text); assert.deepEqual(plan.steps, [], text);
+    assert.equal(plan.clarification, "Which town or place should I check the weather for? (Tell me \"I live in <your town>\" once and I will remember it.)", text); assert.deepEqual(plan.steps, [], text);
   }
   for (const text of ["What's the weather in Nakuru tomorrow?", "weather in Kisumu", "Hali ya hewa Nakuru kesho ikoje?"]) assert.equal(ordinaryConversationPlan(text, {}), null, text);
 });

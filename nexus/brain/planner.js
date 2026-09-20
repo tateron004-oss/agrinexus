@@ -12,6 +12,20 @@ class OpenEndedPlanner {
     Object.assign(this, { model, tools, applications, memory, maxRepairAttempts });
   }
 
+  // The facts Kyro has saved about this person: the list, by kind, and the same facts as planner memories. Never throws and never
+  // blocks a turn: with no memory, or a failing store, nothing is known and planning is unchanged.
+  async knownAboutPerson(command) {
+    const empty = { list: [], byKind: {}, memories: [] };
+    if (!this.memory?.profile) return empty;
+    try {
+      const rows = await this.memory.profile({ tenantId: command.tenantId, userId: command.actorId });
+      const list = rows.map(row => row.content).filter(isFact);
+      const byKind = {}; for (const fact of [...list].reverse()) byKind[fact.kind] = fact.value;
+      const memories = list.map(fact => ({ kind: "profile", content: { kind: fact.kind, value: fact.value }, confidence: 0.9, provenance: { source: "user-statement" } }));
+      return { list, byKind, memories };
+    } catch { return empty; }
+  }
+
   // A plain statement about the person ("I grow maize in Kisumu") is saved and announced; "forget that" takes it back. Returns a
   // conversational answer plan, or null when the text is neither (or memory is unavailable), so normal planning carries on.
   async profileTurn(command) {
@@ -36,6 +50,12 @@ class OpenEndedPlanner {
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
     const profile = await this.profileTurn(command);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
+    // What Kyro has learned about this person (see memory/profile-facts.js) is used wherever it helps: their first name in greetings,
+    // their town for a bare "weather" and for local farming searches, their language for direct answers, and as context for the planner.
+    const known = await this.knownAboutPerson(command);
+    context = { ...context, ...(known.byKind.name && !context?.preferredName ? { preferredName: known.byKind.name.split(" ")[0] } : {}) };
+    command = withSavedLocationForWeather(command, known.byKind);
+    const locale = LANGUAGE_LOCALES[known.byKind.language] || command.locale;
     const ordinaryConversation = ordinaryConversationPlan(command.text, context);
     if (ordinaryConversation) return Object.freeze({ ...ordinaryConversation, planningAttempts: 0 });
     if (isAssistantIntroductionRequest(command.text)) {
@@ -54,18 +74,19 @@ class OpenEndedPlanner {
     if (personalRecord) return Object.freeze({ ...personalRecord, planningAttempts: 0 });
     // Jokes and riddles are not web searches ("Tell me a joke" returned a stitched-together search snippet).
     if (isLightChatRequest(command.text) && typeof this.model.respond === "function") {
-      const answer = await this.model.respond({ goal: command.text, locale: command.locale,
-        interactionProfile: createInteractionProfile({ locale: command.locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
-        conversationHistory: conversationHistory.slice(-24).map(safeTurn), memories: [], capabilities: [] }).catch(() => null);
+      const answer = await this.model.respond({ goal: command.text, locale,
+        interactionProfile: createInteractionProfile({ locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
+        conversationHistory: conversationHistory.slice(-24).map(safeTurn), memories: known.memories, capabilities: [] }).catch(() => null);
       if (typeof answer === "string" && answer.trim()) {
         return Object.freeze({ goal: command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
           response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: 0 });
       }
     }
-    const memories = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
+    const searched = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
       purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
+    const memories = [...known.memories, ...searched];
     const catalog = await this.catalog();
-    const interactionProfile = createInteractionProfile({ locale: command.locale,
+    const interactionProfile = createInteractionProfile({ locale,
       userPreferences: context.userPreferences || {}, channel: command.channel });
     const emergencyHealth = emergencyHealthGuidancePlan(command.text, catalog);
     if (emergencyHealth) return Object.freeze({ ...emergencyHealth, planningAttempts: 1 });
@@ -85,9 +106,9 @@ class OpenEndedPlanner {
     if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
     const followUpGoal = followUpGoalFrom(command.text, conversationHistory);
     const agricultureAdvice = agricultureAdvicePlan(followUpGoal || command.text, catalog);
-    if (agricultureAdvice) return Object.freeze({ ...agricultureAdvice, planningAttempts: 1 });
+    if (agricultureAdvice) return Object.freeze({ ...personalizedSearch(agricultureAdvice, known.byKind), planningAttempts: 1 });
     const completeLiveKnowledge = completeLiveKnowledgePlan(followUpGoal || command.text, catalog);
-    if (completeLiveKnowledge) return Object.freeze({ ...completeLiveKnowledge, planningAttempts: 1 });
+    if (completeLiveKnowledge) return Object.freeze({ ...personalizedSearch(completeLiveKnowledge, known.byKind), planningAttempts: 1 });
     const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
     if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
     const completeMediaPlayback = completeMediaPlaybackPlan(command.text, catalog);
@@ -115,7 +136,7 @@ class OpenEndedPlanner {
     for (let attempt = 0; attempt <= this.maxRepairAttempts; attempt += 1) {
       const candidate = canonicalizeExplicitApplication(await this.model.plan({ ...request, feedback, attempt }), command.text, catalog);
       const validation = validatePlan(candidate, catalog, context);
-      if (validation.valid) return Object.freeze({ ...validation.plan, planningAttempts: attempt + 1 });
+      if (validation.valid) return Object.freeze({ ...personalizedSearch(validation.plan, known.byKind), planningAttempts: attempt + 1 });
       feedback = validation.errors;
     }
     // No registered application or tool fits (a general question, arithmetic, "what do you remember about me").
@@ -181,7 +202,7 @@ function ordinaryConversationPlan(text, context = {}) {
   // "weather" on its own was answered for Chicago and an Italian region. Ask where.
   if (/^(?:(?:what(?:'s| is)?|how(?:'s| is))\s+)?(?:the\s+)?(?:weather|forecast|temperature|hali ya hewa)(?:\s+like)?(?:\s+(?:today|tomorrow|now|right now|leo|kesho))?$/.test(normalized))
     // A clarification is rendered as a workspace outcome, so it must name a registered application ("conversation" is not one).
-    return { goal, application: "live-knowledge", riskTier: "low", clarification: "Which town or place should I check the weather for?", steps: [], sourceRequired: false };
+    return { goal, application: "live-knowledge", riskTier: "low", clarification: "Which town or place should I check the weather for? (Tell me \"I live in <your town>\" once and I will remember it.)", steps: [], sourceRequired: false };
   // Mouldy grain is a real poisoning risk (aflatoxin); a web snippet answered "usually safe to eat".
   if (/\b(?:safe|okay|ok|fine|alright)\b.*\b(?:eat|eating|feed|feeding|consume|consuming)\b|\b(?:can|could|should) (?:i|we|my)\b.*\b(?:eat|feed|consume)\b/.test(normalized) &&
       /\b(?:mou?ld|mou?ldy|fung(?:us|al)|rotten|black spots?|green spots?|discou?lou?red|musty|damp)\b/.test(normalized) &&
@@ -723,6 +744,35 @@ function hasCycle(steps) {
   return [...graph.keys()].some(visit);
 }
 function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.goal, application: task.application, state: task.state, outcome: task.outcome || null } : null; }
+// The languages a person can say they prefer, as the locale their direct answers are written in.
+const LANGUAGE_LOCALES = Object.freeze({ Swahili: "sw", French: "fr", Hausa: "ha", Yoruba: "yo", Igbo: "ig", Amharic: "am", Arabic: "ar", Portuguese: "pt", Somali: "so", Zulu: "zu", Xhosa: "xh" });
+
+// "weather" on its own asks which town; when the person has told Kyro where they are, it just answers for that town.
+const BARE_WEATHER = /^(?:(?:what(?:'s| is)?|how(?:'s| is))\s+)?(?:the\s+)?(?:weather|forecast|temperature|hali ya hewa)(?:\s+like)?(?:\s+(?:today|tomorrow|now|right now|leo|kesho))?$/;
+function withSavedLocationForWeather(command, byKind) {
+  const normalized = String(command?.text || "").toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").trim();
+  if (!byKind?.location || !BARE_WEATHER.test(normalized)) return command;
+  const when = /\b(tomorrow|kesho)\b/.test(normalized) ? "tomorrow" : /\bnow\b/.test(normalized) ? "right now" : "today";
+  return { ...command, text: `What's the weather in ${byKind.location} ${when}?` };
+}
+
+// Searches about farming, weather or prices are local. When the person has told Kyro where they are and the question names no
+// place, the search asks about their town; "my crops" becomes the crops they said they grow. The question shown to the person
+// (the plan's goal) is left as they asked it.
+const LOCAL_TOPIC = /\b(plant|planting|sow|sowing|harvest|rain|rains|rainy|weather|season|seasons|fertili[sz]er|pest|pests|price|prices|market|yield|soil|irrigat\w*|drought|frost|forecast)\b/i;
+const NAMES_A_PLACE = /\b(?:in|near|around|at|for)\s+[A-Za-z]/i;
+function personalizedQuery(query, byKind) {
+  let text = String(query || "");
+  if (byKind?.crops && /\bmy (?:crops?|plants?|harvest|farm)\b/i.test(text)) text += ` (I grow ${byKind.crops})`;
+  if (byKind?.location && LOCAL_TOPIC.test(text) && !NAMES_A_PLACE.test(text)) text += ` in ${byKind.location}`;
+  return text;
+}
+function personalizedSearch(plan, byKind) {
+  if (!plan?.steps?.length || !byKind || !Object.keys(byKind).length) return plan;
+  return { ...plan, steps: plan.steps.map(step => step?.toolId === "knowledge.search" && typeof step.input?.query === "string" && step.input.query
+    ? { ...step, input: { ...step.input, query: personalizedQuery(step.input.query, byKind) } } : step) };
+}
+
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
