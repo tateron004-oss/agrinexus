@@ -28983,11 +28983,11 @@ async function utilityWeatherAnswer(db, text, options = {}) {
       }
     };
   }
-  const liveWeatherExplicitlyEnabled = [
-    process.env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED,
-    process.env.NEXUS_WEATHER_PROVIDER_ENABLED,
-    process.env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED
-  ].every(value => String(value || "").toLowerCase() === "true");
+  // Open-Meteo is a free, keyless, read-only public source. The provider's own gate (also used by the
+  // provider-status report, which said "public_fallback_active") treats it as on unless one of the three
+  // flags is set to "false". This used to demand all three be exactly "true", so a deployment that had not
+  // set them answered "provider-not-configured" while the status report claimed the source was active.
+  const liveWeatherExplicitlyEnabled = nexusWeatherSourceProvider.isOpenMeteoPublicProviderConfigured(process.env);
   const weatherRequest = {
     locationText,
     timeframe: "current",
@@ -29664,11 +29664,11 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
   }
   db.profile.agentMemory.activeWeatherTurn = null;
   storeGenesisWeatherLocation(db, locationText);
-  const liveWeatherExplicitlyEnabled = [
-    process.env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED,
-    process.env.NEXUS_WEATHER_PROVIDER_ENABLED,
-    process.env.NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED
-  ].every(value => String(value || "").toLowerCase() === "true");
+  // Open-Meteo is a free, keyless, read-only public source. The provider's own gate (also used by the
+  // provider-status report, which said "public_fallback_active") treats it as on unless one of the three
+  // flags is set to "false". This used to demand all three be exactly "true", so a deployment that had not
+  // set them answered "provider-not-configured" while the status report claimed the source was active.
+  const liveWeatherExplicitlyEnabled = nexusWeatherSourceProvider.isOpenMeteoPublicProviderConfigured(process.env);
   const weatherRequest = {
     locationText,
     timeframe: "current",
