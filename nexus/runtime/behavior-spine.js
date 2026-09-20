@@ -7,6 +7,10 @@ const crypto = require("node:crypto");
 const businessDispatch = require("../business/voice-dispatch.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
+// Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
+// request before sending). An undelivered text or failed call is not here: the provider did try, so it still counts.
+const NOT_SENT_CODES = new Set(["communications_provider_unavailable", "communications_send_blocked"]);
+
 class BehaviorSpine {
   constructor({ agent, engine, tasks, conversations, workspaceStates }) {
     if (!agent?.command || !engine?.executeTask || !tasks?.get || !workspaceStates?.stage || !workspaceStates?.acknowledge) {
@@ -73,7 +77,17 @@ class BehaviorSpine {
       return envelope({ command, plan, task: cancelled, state: "cancelled", completed: false,
         response: "Okay, I did not proceed with that.", outcome: { verified: false, reason: "declined_by_user" } });
     }
-    const execution = await this.engine.executeTask({ context, taskId });
+    let execution;
+    try {
+      execution = await this.engine.executeTask({ context, taskId });
+    } catch (error) {
+      // A send that verifiably went nowhere (the provider is off, or refused the request before sending) must not use up a slot in
+      // the person's daily cap: release the consent that was recorded for it, but only one recorded by this very confirmation.
+      if (consent?.justGranted && NOT_SENT_CODES.has(error?.code) && this.engine.consents?.release) {
+        await this.engine.consents.release({ tenantId: context.tenantId, subjectId: context.userId, consentId: consent.consent_id, reason: error.code }).catch(() => null);
+      }
+      throw error;
+    }
     const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
     return this.resolveExecution({ command, plan, execution, task, context });
   }
@@ -107,10 +121,11 @@ class BehaviorSpine {
         if (used >= cap.limit) return { limitReached: true, limit: cap.limit, noun: cap.noun };
       }
     }
-    return consents.grant({ tenantId: context.tenantId, subjectId: context.userId, taskId: priorTask.taskId, scope: tool.consent_scope,
+    const granted = await consents.grant({ tenantId: context.tenantId, subjectId: context.userId, taskId: priorTask.taskId, scope: tool.consent_scope,
       purpose: policy.purpose, policyVersion: policy.policyVersion, recipient: consentRecipient(tool.consent_scope, step),
       receipt: { source: "user-confirmation", channel: channel || "api", sendChannel: consentSendChannel(tool.consent_scope, step), taskId: priorTask.taskId, stepId, commandId: command.commandId,
         correlationId: command.correlationId, confirmation: String(text || "").slice(0, 200), grantedAt: new Date().toISOString() } });
+    return { ...granted, justGranted: true };
   }
 
   async resolveExecution({ command, plan, execution, task, context }) {

@@ -25,9 +25,19 @@ class ConsentRepository {
   // With `channel`, only consents whose receipt records that send channel (sms, whatsapp, email, call) are counted.
   async countGrantedSince({ tenantId, subjectId, scope, hours = 24, channel = null }) {
     const result = await this.db.query(`select count(*)::int as count from nexus_consents where tenant_id=$1 and subject_id=$2
-      and scope=$3 and granted_at > now() - ($4::int * interval '1 hour') and ($5::text is null or receipt->>'sendChannel' = $5::text)`,
+      and scope=$3 and granted_at > now() - ($4::int * interval '1 hour') and ($5::text is null or receipt->>'sendChannel' = $5::text)
+      and coalesce(receipt->>'released','') = ''`,
     [tenantId, subjectId, scope, hours, channel]);
     return Number((result.rows || result)[0]?.count || 0);
+  }
+
+  // Give back a consent whose action verifiably never happened (a send the provider refused before sending). It is revoked, so it
+  // can never authorize anything, and marked released so it no longer counts toward the daily cap.
+  async release({ tenantId, subjectId, consentId, reason }) {
+    const result = await this.db.query(`update nexus_consents set state='revoked',revoked_at=now(),
+      receipt=coalesce(receipt,'{}'::jsonb) || jsonb_build_object('released',$4::text)
+      where tenant_id=$1 and subject_id=$2 and consent_id=$3 and state='granted' returning *`, [tenantId, subjectId, consentId, String(reason || "not_sent").slice(0, 80)]);
+    return (result.rows || result)[0] || null;
   }
 
   async revoke({ tenantId, subjectId, consentId }) {
