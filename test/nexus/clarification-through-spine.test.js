@@ -20,7 +20,7 @@ test("every deterministic clarification the planner can return survives the resu
     const plan = ordinaryConversationPlan(text, {});
     assert.ok(plan.clarification, text);
     const result = await spineReturning(plan).turn({ input: { text }, context: { tenantId: "t1", userId: "u1" } });
-    assert.equal(result.state, "clarification_required", text); assert.equal(result.response, "Which town or place should I check the weather for?", text);
+    assert.equal(result.state, "clarification_required", text); assert.equal(result.response, "Which town or place should I check the weather for? (Tell me \"I live in <your town>\" once and I will remember it.)", text);
     assert.equal(result.application, "live-knowledge", "a registered application, not the made-up 'conversation'");
   }
 });
