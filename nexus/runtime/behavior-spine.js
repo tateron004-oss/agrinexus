@@ -4,6 +4,7 @@ const { NexusRuntimeError } = require("./authoritative-task-engine.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createCommand } = require("../contracts/command.js");
 const crypto = require("node:crypto");
+const businessDispatch = require("../business/voice-dispatch.js");
 const { userConfirmableConsent, consentRecipient, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
 class BehaviorSpine {
@@ -83,7 +84,8 @@ class BehaviorSpine {
     const generic = "I prepared the request and need your confirmation before the next governed action.";
     const step = (task?.steps || []).find(item => item.step_id === pendingStepId);
     const tool = step?.tool_id && this.engine.tools?.get ? await this.engine.tools.get(step.tool_id).catch(() => null) : null;
-    return informedConfirmationPrompt({ scope: tool?.consent_scope, step }) || generic;
+    return informedConfirmationPrompt({ scope: tool?.consent_scope, step })
+      || (step?.tool_id === "business.manage" ? businessDispatch.confirmationPrompt(step.input?.command) : null) || generic;
   }
 
   // Saying yes to that prompt is the person's consent to that one write. Bound to this task and scope, and only when the

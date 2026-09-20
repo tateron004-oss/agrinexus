@@ -90,3 +90,25 @@ test("the planner sends a ledger phrase to the business tools, reads without con
   assert.equal((await plan("I sold 5 bags of maize for 6000 shillings")).steps[0].toolId, "business.manage");
   assert.match((await plan("Log an expense of 500 for seed")).clarification, /Which currency is 500 in/);
 });
+
+const { BehaviorSpine } = require("../../nexus/runtime/behavior-spine.js");
+const { createBusinessExecutor } = require("../../nexus/business/authoritative-executor.js");
+
+test("the confirmation says exactly what will be logged, and every other business action keeps the generic wording", async () => {
+  const tools = { get: async id => ({ tool_id: id }) };
+  const spine = new BehaviorSpine({ agent: { command: async () => {} }, engine: { tools, executeTask: async () => ({}) }, tasks: { get: async () => null }, conversations: {}, workspaceStates: { stage: async () => {}, acknowledge: async () => {} } });
+  const prompt = command => spine.confirmationPrompt({ task: { steps: [{ step_id: "s1", tool_id: "business.manage", input: { command } }] }, pendingStepId: "s1" });
+  assert.equal(await prompt("I sold 5 bags of maize for 6000 shillings"), "I can log KES 6,000 as income for 5 bags of maize in your business workspace. Say yes to save it, or no to cancel.");
+  assert.equal(await prompt("We spent $40.50 on seed"), "I can log $40.50 as an expense for seed in your business workspace. Say yes to save it, or no to cancel.");
+  const generic = "I prepared the request and need your confirmation before the next governed action.";
+  for (const command of ["Add a customer named Amina", "Log an expense of 500 for seed", "Start a business called Amina Farm", ""]) assert.equal(await prompt(command), generic, command);
+});
+
+test("a business read with nothing to read yet is an answer, not a 422 error", async () => {
+  const execute = createBusinessExecutor({ repository: { list: async () => [] }, access: { authorize: async () => {} }, consents: { active: async () => ({ granted: true }), grant: async item => item }, env: {} });
+  const context = { tenantId: "t", userId: "u", can: () => true, hasRole: () => false, roles: [], requestId: "r", correlationId: "c" };
+  const result = await execute({ input: { command: "Show me my business dashboard" }, context }).catch(error => ({ error }));
+  assert.ok(!result.error, result.error?.message);
+  assert.equal(result.verified, true); assert.match(result.response, /You do not have a business or nonprofit workspace yet/);
+  await assert.rejects(() => execute({ input: { command: "Log a $50 expense for supplies" }, context }), error => error.code === "business_action_incomplete", "a write with no workspace still fails honestly");
+});
