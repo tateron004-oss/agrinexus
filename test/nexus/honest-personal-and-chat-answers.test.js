@@ -8,18 +8,18 @@ const { createBusinessExecutor } = require("../../nexus/business/authoritative-e
 // page; "Tell me a joke" and "asdf qwerty" returned stitched-together web snippets; "Show me my farm expenses this month"
 // failed with a 422 asking "What should I call this business?".
 test("a question about the person's own stock or money is answered honestly, never from the web", () => {
-  for (const text of ["How many bags of maize do I have in stock?", "Show me my farm expenses this month", "What is my inventory?", "how much income did I make", "Tell me my savings", "How many goats do I have?"]) {
+  for (const text of ["How many bags of maize do I have in stock?", "What is my inventory?", "Tell me my savings", "How many goats do I have?"]) {
     const plan = personalRecordQuestionPlan(text);
     assert.equal(plan.application, "conversation", text); assert.deepEqual(plan.steps, [], text);
     assert.match(plan.response, /^I don't have your [a-z]+ on record, so I can't say without guessing\./, text);
-    assert.match(plan.response, /Create a list called Stock/, "it points at something Nexus really does");
+    if (!/savings/.test(text)) assert.match(plan.response, /Create a list called (?:Stock|Farm) with maize, beans/, "it points at something Nexus really does");
   }
   assert.match(personalRecordQuestionPlan("How many bags of maize do I have in stock?").response, /your stock/);
-  assert.match(personalRecordQuestionPlan("Show me my farm expenses this month").response, /your expenses/);
+  assert.doesNotMatch(personalRecordQuestionPlan("Tell me my savings").response, /Create a list/, "no list suggestion for money it cannot track that way");
 });
 
 test("it leaves alone everything that has a real tool or is not about the person's own holdings", () => {
-  for (const text of ["What are current maize prices in Kenya?", "What is the yield of maize per acre?", "What reminders do I have?", "Show me my shopping list",
+  for (const text of ["Show me my farm expenses this month", "How much income did I make?", "What is my profit?", "What are current maize prices in Kenya?", "What is the yield of maize per acre?", "What reminders do I have?", "Show me my shopping list",
     "Show me my business dashboard", "How do I record my expenses in a business?", "What's my blood pressure reading", "Log an expense of 500 shillings",
     "What is the weather for my harvest?", "How much fertilizer do I need for one acre of maize?", "Find a pharmacy near me"])
     assert.equal(personalRecordQuestionPlan(text), null, text);
@@ -59,6 +59,6 @@ test("the planner answers a stock question without calling any model", async () 
 
 test("the business executor says what it can do for a request it does not recognize, instead of asking for a workspace name", async () => {
   const execute = createBusinessExecutor({ repository: {}, access: {}, consents: {}, env: {} });
-  await assert.rejects(() => execute({ input: { command: "Show me my farm expenses this month" }, context: {} }),
+  await assert.rejects(() => execute({ input: { command: "Make it happen with my business somehow" }, context: {} }),
     error => error.code === "business_request_not_understood" && error.status === 422 && /log an expense or income/.test(error.message) && !/What should I call/.test(error.message));
 });

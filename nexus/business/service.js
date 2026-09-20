@@ -62,7 +62,7 @@ function normalizeEditable(info, input = {}) {
     // tracking. "amount" is the first numeric field in this workspace --
     // the Number.isFinite guard above exists specifically so a stray
     // NaN/Infinity here can never silently corrupt a summed total.
-    transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, description: "" }),
+    transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, currency: "USD", description: "" }),
     // Tool 3: invoices/receipts. An invoice header (client, dates, status)
     // is stored separately from its line items, joined by "invoiceNumber" --
     // the same flat-row validation this workspace already uses for every

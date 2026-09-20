@@ -148,7 +148,8 @@ function isLightChatRequest(text) { return LIGHT_CHAT.test(String(text || "").tr
 // Questions about the person's OWN holdings and money ("how many bags of maize do I have in stock", "show me my farm
 // expenses"). Nexus only knows what was saved with it, and it keeps no stock or expense ledger it can read back, so the
 // truthful answer is that it has no record, with the way to start one that it really does have.
-const PERSONAL_RECORD_NOUN = /\b(stock|inventory|expenses?|income|sales|revenue|profit|balance|savings|debts?|harvest|yield|livestock|cattle|cows|goats|chickens|sheep|pigs)\b/i;
+// Money nouns (expenses, income, sales, profit) are NOT here: those are answered from the business workspace's income and expense log.
+const PERSONAL_RECORD_NOUN = /\b(stock|inventory|balance|savings|debts?|harvest|yield|livestock|cattle|cows|goats|chickens|sheep|pigs)\b/i;
 const PERSONAL_RECORD_OPENER = /^(?:please\s+)?(?:how (?:many|much)|what(?:'s| is| are| was| were)|show|tell|check|give)\b/i;
 const PERSONAL_RECORD_OWNERSHIP = /\b(?:my|our|i have|do i have|did i|i've got|do we have|did we)\b/i;
 const PERSONAL_RECORD_OTHER_TOOL = /\b(reminders?|lists?|checklists?|documents?|records?|health|readings?|weather|price|prices|market|forecast|business)\b/i;
@@ -158,7 +159,7 @@ function personalRecordQuestionPlan(text) {
   const noun = PERSONAL_RECORD_NOUN.exec(goal)?.[1]?.toLowerCase();
   if (!noun) return null;
   return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
-    response: `I don't have your ${noun} on record, so I can't say without guessing. I only know what you have saved with me. You can keep it with me, for example: "Create a list called Stock with 21 bags of maize", and I can read it back later.` };
+    response: `I don't have your ${noun} on record, so I can't say without guessing. I only know what you have saved with me.${/^(?:balance|savings|debts?)$/.test(noun) ? "" : ` You can keep it with me, for example: "Create a list called ${noun === "stock" || noun === "inventory" ? "Stock" : "Farm"} with maize, beans", and I can read it back later.`}` };
 }
 
 // "Who are you?", "What can you do for me?", "help": answered from the catalog, so it is always accurate and
