@@ -16,6 +16,13 @@ class OpenEndedPlanner {
     if (isAssistantIntroductionRequest(command.text)) {
       return Object.freeze({ ...assistantIntroductionPlan(command.text, await this.catalog()), planningAttempts: 0 });
     }
+    // "What do you remember about me?" was sent to a web search and answered "I'm an AI built by a team of inventors at
+    // Amazon". It is answered from what is actually saved for this person, and nothing else.
+    if (isMemoryRecallQuestion(command.text)) {
+      const saved = this.memory?.recent ? await this.memory.recent({ tenantId: command.tenantId, userId: command.actorId,
+        purpose: "task_planning", roles: context.roles || [], limit: 10 }) : [];
+      return Object.freeze({ ...memoryRecallPlan(command.text, saved), planningAttempts: 0 });
+    }
     const memories = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
       purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
     const catalog = await this.catalog();
@@ -141,6 +148,30 @@ const CAPABILITY_PHRASES = [
   ["learning", "short lessons"], ["business", "business workspaces"], ["music-media", "playing music"],
   ["communications", "drafting messages"]
 ];
+
+const MEMORY_RECALL_PHRASES = [
+  /^(?:what|which)\s+(?:do|did|can|could)\s+you\s+(?:remember|know|recall|learn|save|store|note)\s+about\s+me$/,
+  /^(?:what|which)\s+(?:have|has)\s+you\s+(?:saved|stored|learned|learnt|remembered|noted)\s+about\s+me$/,
+  /^(?:what|which)\s+(?:things|notes|facts)\s+do\s+you\s+(?:remember|know|have)\s+about\s+me$/,
+  /^do\s+you\s+(?:remember|know)\s+(?:me|anything about me)$/,
+  /^what(?:'s| is)\s+in\s+your\s+memory\s+(?:about|of)\s+me$/
+];
+
+function isMemoryRecallQuestion(text) {
+  const normalized = normalizedIntroduction(text);
+  return Boolean(normalized) && MEMORY_RECALL_PHRASES.some(pattern => pattern.test(normalized));
+}
+
+function memoryRecallPlan(text, saved) {
+  const notes = (Array.isArray(saved) ? saved : []).map(item => {
+    const content = typeof item?.content === "string" ? item.content : JSON.stringify(item?.content ?? "");
+    return String(content).replace(/\s+/g, " ").trim().slice(0, 200);
+  }).filter(Boolean).slice(0, 8);
+  const response = notes.length
+    ? `Here is what I have saved about you: ${notes.map((note, index) => `${index + 1}. ${note}`).join(" ")} I do not list health details here.`
+    : "I do not have any saved notes about you to show here.";
+  return { goal: String(text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false };
+}
 
 function assistantIntroductionPlan(text, catalog) {
   const present = new Set((catalog?.applications || []).map(app => app.applicationId));
@@ -539,7 +570,7 @@ function summarizeTask(task) { return task ? { taskId: task.taskId, goal: task.g
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
+module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
