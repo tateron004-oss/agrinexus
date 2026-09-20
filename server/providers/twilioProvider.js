@@ -126,16 +126,45 @@ async function sendSms(body = {}, env = process.env) {
   if (missing.length) return simulatedTwilioResponse(provider, action, "sms", clean(body.to));
   try {
     const result = await twilioPost("/Messages.json", { To: clean(body.to), From: twilioFromNumber(env), Body: clean(body.message) }, env);
+    // Twilio answering with a message id means it ACCEPTED the message, not that it reached the phone (2026-09-21: a
+    // "sent" text never arrived). Look the message up once, shortly after, and report what Twilio says.
+    const progress = await twilioMessageProgress(result.sid, result.status, env);
+    if (progress.failed) {
+      return failedResponse(provider, action, new Error(`Twilio reported the text as ${progress.status}${progress.errorCode ? ` (error ${progress.errorCode}${progress.errorMessage ? `: ${progress.errorMessage}` : ""})` : ""}`));
+    }
     return providerResponse({
       provider,
       action,
       status: "completed",
-      message: "SMS sent through Twilio after explicit confirmation.",
-      data: { sid: result.sid, to: clean(body.to), channel: "sms" }
+      message: progress.status === "delivered" ? "SMS delivered by Twilio after explicit confirmation."
+        : `SMS accepted by Twilio${progress.status ? ` (status: ${progress.status})` : ""} after explicit confirmation. Delivery to the phone is not confirmed yet.`,
+      data: { sid: result.sid, to: clean(body.to), channel: "sms", providerStatus: progress.status || "", errorCode: progress.errorCode || null, deliveryConfirmed: progress.status === "delivered" }
     });
   } catch (error) {
     return failedResponse(provider, action, error);
   }
+}
+
+// One read-only look at a message Twilio has just accepted. Never throws: if the lookup fails, the send result stands with
+// whatever status Twilio returned when it accepted the message.
+async function twilioMessageProgress(sid, acceptedStatus, env = process.env) {
+  let status = String(acceptedStatus || "").toLowerCase(), errorCode = null, errorMessage = "";
+  try {
+    const delay = Number(clean(env.NEXUS_SMS_STATUS_DELAY_MS) || 2000);
+    if (sid && delay > 0) await new Promise(resolve => setTimeout(resolve, Math.min(delay, 10000)));
+    const credentials = twilioCredentials(env);
+    if (sid && credentials) {
+      const auth = Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64");
+      const response = await fetch(`${TWILIO_BASE}/Accounts/${credentials.accountSid}/Messages/${encodeURIComponent(sid)}.json`, { headers: { authorization: `Basic ${auth}` } });
+      const payload = await safeJson(response);
+      if (response.ok && payload && typeof payload === "object") {
+        status = String(payload.status || status).toLowerCase();
+        errorCode = payload.error_code ?? null;
+        errorMessage = String(payload.error_message || "");
+      }
+    }
+  } catch { /* the accepted send stands */ }
+  return { status, errorCode, errorMessage, failed: status === "failed" || status === "undelivered" };
 }
 
 async function sendWhatsapp(body = {}, env = process.env) {

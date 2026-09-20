@@ -58,7 +58,7 @@ test("twilioProvider.sendSms uses the real path, not simulation, once real crede
   global.fetch = async () => { called = true; return { ok: true, text: async () => JSON.stringify({ sid: "SMreal123" }) }; };
   try {
     const result = await twilioProvider.sendSms({ to: "+15550001111", message: "hi", confirmed: true }, unconfiguredEnv({
-      TWILIO_ACCOUNT_SID: "AC123", TWILIO_AUTH_TOKEN: "token", TWILIO_FROM_NUMBER: "+15550009999"
+      TWILIO_ACCOUNT_SID: "AC123", TWILIO_AUTH_TOKEN: "token", TWILIO_FROM_NUMBER: "+15550009999", NEXUS_SMS_STATUS_DELAY_MS: "0"
     }));
     assert.equal(called, true, "a real credential set must use the real Twilio call, not the simulated fallback");
     assert.equal(result.body.data.simulated, undefined);

@@ -54,7 +54,7 @@ function createCommunicationsSendExecutor({ env = process.env } = {}) {
         { code: "communications_provider_unavailable", status: 503 });
     }
     if (providerStatus === "blocked" || providerStatus === "failed") {
-      throw Object.assign(new Error(`I could not send it: ${String(result.body.message || "the provider refused the request").replace(/[.\s]+$/, "")}. Nothing was sent.`),
+      throw Object.assign(new Error(`I could not send it: ${String(result.body.message || "the provider refused the request").replace(/[.\s]+$/, "")}. It was not delivered.`),
         { code: providerStatus === "blocked" ? "communications_send_blocked" : "communications_provider_failed", status: providerStatus === "blocked" ? 422 : 502 });
     }
     // twilioProvider/emailProvider both use providerUtils.js's
