@@ -755,3 +755,25 @@ test("only the listed continuations exist: communications can never be approved 
     assert.ok(handled === false || response.result?.status >= 400, name);
   }
 });
+
+test("DELETE archives only the caller's own document, keeps it, and records who did it", async () => {
+  const archived = []; const audited = [];
+  const runtime = { engine: { tasks: {} },
+    documents: { archive: async args => { archived.push(args); return args.documentId === "doc_own" && args.ownerId === "user-1" ? { document_id: "doc_own", title: "Call it a day", deleted_at: "2026-09-21T00:00:00.000Z" } : null; } },
+    audit: { record: async event => { audited.push(event); } } };
+  const adapter = createServerRuntimeAdapter({ env: {}, resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1" }), readJson: async () => ({}), createRuntimeFn: () => runtime });
+
+  const own = responseCapture();
+  await adapter.handle({ method: "DELETE", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents/doc_own"), own.send);
+  assert.equal(own.result.status, 200);
+  assert.deepEqual(own.result.body, { authoritative: true, archived: true, document: { documentId: "doc_own", title: "Call it a day" } });
+  assert.equal(archived[0].tenantId, "tenant-1"); assert.equal(archived[0].ownerId, "user-1"); assert.equal(archived[0].documentId, "doc_own");
+  assert.equal(audited.length, 1);
+  assert.equal(audited[0].eventType, "document.archived"); assert.equal(audited[0].actorId, "user-1"); assert.equal(audited[0].outcome, "completed");
+  assert.deepEqual(audited[0].metadata, { documentId: "doc_own", title: "Call it a day" });
+
+  const someoneElses = responseCapture();
+  await adapter.handle({ method: "DELETE", headers: {} }, {}, new URL("http://local/api/nexus/runtime/documents/doc_someone_elses"), someoneElses.send);
+  assert.equal(someoneElses.result.status, 404); assert.equal(someoneElses.result.body.code, "document_not_found");
+  assert.equal(audited.length, 1, "nothing is audited for a document that was not archived");
+});

@@ -47,6 +47,16 @@ class DocumentRepository {
     return (result.rows || result)[0] || null;
   }
 
+  // Archive, never delete: the document is hidden from get/list (they skip anything with deleted_at) but its row, versions and
+  // stored file all stay. Tenant AND owner scoped like get(), so only the person who created it can archive it. Returns the
+  // archived document's id and title, or null when there is no such active document for this owner.
+  async archive({ tenantId, ownerId, documentId }) {
+    const result = await this.db.query(`update nexus_documents set deleted_at=now(), updated_at=now()
+      where tenant_id=$1 and owner_id=$2 and document_id=$3 and deleted_at is null returning document_id, title, deleted_at`,
+    [tenantId, ownerId, documentId]);
+    return (result.rows || result)[0] || null;
+  }
+
   async list({ tenantId, ownerId, limit = 50 }) {
     const result = await this.db.query(`select d.*, v.version, v.object_key, v.checksum
       from nexus_documents d

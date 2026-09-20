@@ -64,3 +64,15 @@ test("list scopes to tenant and owner, orders by updated_at desc, and clamps lim
   assert.match(db.calls[0].sql, /order by d\.updated_at desc/);
   assert.equal(db.calls[0].params[2], 1);
 });
+
+test("archive hides one document for its owner only and keeps the row, versions and file", async () => {
+  const db = fakeDb([{ rows: [{ document_id: "doc_abc", title: "Call it a day", deleted_at: "2026-09-21T00:00:00.000Z" }] }, { rows: [] }]);
+  const repo = new DocumentRepository(db);
+  const archived = await repo.archive({ tenantId: "t1", ownerId: "u1", documentId: "doc_abc" });
+  assert.equal(archived.document_id, "doc_abc");
+  assert.match(db.calls[0].sql, /update nexus_documents set deleted_at=now\(\)/);
+  assert.match(db.calls[0].sql, /where tenant_id=\$1 and owner_id=\$2 and document_id=\$3 and deleted_at is null/);
+  assert.doesNotMatch(db.calls[0].sql, /delete from|nexus_document_versions/i, "nothing is removed");
+  assert.deepEqual(db.calls[0].params, ["t1", "u1", "doc_abc"]);
+  assert.equal(await repo.archive({ tenantId: "t1", ownerId: "someone-else", documentId: "doc_abc" }), null, "not the owner, or already archived");
+});
