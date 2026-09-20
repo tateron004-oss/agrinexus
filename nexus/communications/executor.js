@@ -9,7 +9,7 @@
 // scripts/provider-engines.js mock every other canonical tool still uses.
 const twilioProvider = require("../../server/providers/twilioProvider.js");
 const emailProvider = require("../../server/providers/emailProvider.js");
-const { normalizeSendRequest } = require("./send-request.js");
+const { normalizeSendRequest, CALL_INTRO } = require("./send-request.js");
 
 const CHANNEL_HANDLERS = {
   sms: (body, env) => twilioProvider.sendSms(body, env),
@@ -36,7 +36,9 @@ function createCommunicationsSendExecutor({ env = process.env } = {}) {
     // A complete text/WhatsApp/email request is sent exactly as the person was shown it (see send-request.js and the
     // confirmation prompt): the normalized number or address and the whitespace-collapsed words.
     const shown = normalizeSendRequest({ ...input, channel });
-    const words = shown ? shown.message : input.message || input.text || input.body || "";
+    // A call opens with the fixed disclosure that it is automated and from Kyro, which the confirmation prompt announces.
+    const spoken = shown ? shown.message : input.message || input.text || input.body || "";
+    const words = channel === "call" && shown ? `${CALL_INTRO} ${spoken}` : spoken;
     const body = {
       confirmed: true,
       to: shown ? shown.to : input.to || input.recipient || "",
@@ -50,11 +52,12 @@ function createCommunicationsSendExecutor({ env = process.env } = {}) {
     const providerStatus = result?.body?.status;
     const label = { sms: "text message", whatsapp: "WhatsApp", call: "call", email: "email" }[channel];
     if (providerStatus === "disabled" || providerStatus === "missing_config") {
-      throw Object.assign(new Error(`I could not send it: ${label} sending is not set up on this server yet, so nothing was sent.`),
-        { code: "communications_provider_unavailable", status: 503 });
+      throw Object.assign(new Error(channel === "call" ? "I could not place the call: phone calls are not set up on this server yet, so no call was made."
+        : `I could not send it: ${label} sending is not set up on this server yet, so nothing was sent.`),
+      { code: "communications_provider_unavailable", status: 503 });
     }
     if (providerStatus === "blocked" || providerStatus === "failed") {
-      throw Object.assign(new Error(`I could not send it: ${String(result.body.message || "the provider refused the request").replace(/[.\s]+$/, "")}. It was not delivered.`),
+      throw Object.assign(new Error(`${channel === "call" ? "I could not place the call" : "I could not send it"}: ${String(result.body.message || "the provider refused the request").replace(/[.\s]+$/, "")}. ${channel === "call" ? "No call was completed." : "It was not delivered."}`),
         { code: providerStatus === "blocked" ? "communications_send_blocked" : "communications_provider_failed", status: providerStatus === "blocked" ? 422 : 502 });
     }
     // twilioProvider/emailProvider both use providerUtils.js's

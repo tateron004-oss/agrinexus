@@ -22,9 +22,11 @@ class ConsentRepository {
 
   // How many consents of this scope the person granted in the last `hours` hours (a revoked one still counts: the
   // message was already approved).
-  async countGrantedSince({ tenantId, subjectId, scope, hours = 24 }) {
+  // With `channel`, only consents whose receipt records that send channel (sms, whatsapp, email, call) are counted.
+  async countGrantedSince({ tenantId, subjectId, scope, hours = 24, channel = null }) {
     const result = await this.db.query(`select count(*)::int as count from nexus_consents where tenant_id=$1 and subject_id=$2
-      and scope=$3 and granted_at > now() - ($4::int * interval '1 hour')`, [tenantId, subjectId, scope, hours]);
+      and scope=$3 and granted_at > now() - ($4::int * interval '1 hour') and ($5::text is null or receipt->>'sendChannel' = $5::text)`,
+    [tenantId, subjectId, scope, hours, channel]);
     return Number((result.rows || result)[0]?.count || 0);
   }
 

@@ -75,6 +75,8 @@ class OpenEndedPlanner {
     if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
     const sendMessage = sendMessagePlan(command.text, catalog);
     if (sendMessage) return Object.freeze({ ...sendMessage, planningAttempts: 1 });
+    const placeCall = callPlan(command.text, catalog);
+    if (placeCall) return Object.freeze({ ...placeCall, planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
     if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
     const completeBusiness = completeBusinessPlan(command.text, catalog);
@@ -534,6 +536,28 @@ function sendMessagePlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// "Call +15105019401 and say I am on my way", "Phone +254712345678 saying the delivery is ready". Only when a phone number is given in
+// the request, so "call me a taxi" or "call it a day" are never taken for a call. The person is shown the number and the words the
+// computer voice will say and must say yes before the call is placed (see consent/user-confirmable-consents.js).
+const CALL_OPENER = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:call|phone|ring|dial)\b/i;
+const CALL_MESSAGE_CLAUSE = /(?:\b(?:and|then)?\s*(?:say|saying|says|tell (?:them|him|her)|tell (?:them|him|her) that|with the message|to say)\b[:,]?|:)\s*["“']?(.+?)["”']?\s*$/is;
+
+function callPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!CALL_OPENER.test(goal)) return null;
+  const phone = SEND_PHONE.exec(goal)?.[0];
+  if (!phone) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
+      !catalog.applications.some(app => app.applicationId === "communications")) return null;
+  const clause = CALL_MESSAGE_CLAUSE.exec(goal.slice(goal.indexOf(phone) + phone.length));
+  const words = clause?.[1]?.replace(/\s+/g, " ").replace(/^that\s+/i, "").trim();
+  const base = { goal, application: "communications", riskTier: "regulated" };
+  if (!words) return { ...base, clarification: "What should the call say?", steps: [] };
+  return { ...base, clarification: null,
+    steps: [{ clientStepId: "place-call", title: "Place a phone call", toolId: "communications.send",
+      input: { channel: "call", to: phone.replace(/[\s().-]/g, ""), message: words }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeRemainingWorkspacePlan(text, catalog) {
   const goal = String(text || "").trim();
   const has = (toolId, application) => catalog.tools.some(tool => tool.toolId === toolId) &&
@@ -671,5 +695,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, personalRecordQuestionPlan, isLightChatRequest,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
