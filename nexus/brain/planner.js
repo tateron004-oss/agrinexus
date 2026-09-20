@@ -153,7 +153,8 @@ function ordinaryConversationPlan(text, context = {}) {
   }
   // "weather" on its own was answered for Chicago and an Italian region. Ask where.
   if (/^(?:(?:what(?:'s| is)?|how(?:'s| is))\s+)?(?:the\s+)?(?:weather|forecast|temperature|hali ya hewa)(?:\s+like)?(?:\s+(?:today|tomorrow|now|right now|leo|kesho))?$/.test(normalized))
-    return { goal, application: "conversation", riskTier: "low", clarification: "Which town or place should I check the weather for?", steps: [], sourceRequired: false };
+    // A clarification is rendered as a workspace outcome, so it must name a registered application ("conversation" is not one).
+    return { goal, application: "live-knowledge", riskTier: "low", clarification: "Which town or place should I check the weather for?", steps: [], sourceRequired: false };
   // Mouldy grain is a real poisoning risk (aflatoxin); a web snippet answered "usually safe to eat".
   if (/\b(?:safe|okay|ok|fine|alright)\b.*\b(?:eat|eating|feed|feeding|consume|consuming)\b|\b(?:can|could|should) (?:i|we|my)\b.*\b(?:eat|feed|consume)\b/.test(normalized) &&
       /\b(?:mou?ld|mou?ldy|fung(?:us|al)|rotten|black spots?|green spots?|discou?lou?red|musty|damp)\b/.test(normalized) &&
