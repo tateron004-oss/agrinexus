@@ -91,3 +91,19 @@ test("the planner answers the brief from the service, or explains what it needs,
   assert.equal((await ask({ compose: async () => null }, strangerMemory)).response, 'I have nothing to brief you on yet. Tell me where you are ("I live in <your town>") and set a reminder, and I will have something to say.');
   assert.equal((await ask({ compose: async () => { throw new Error("x"); } })).response.startsWith("I could not reach the weather for Nakuru"), true, "a failing service never blocks the answer");
 });
+
+test("the greeting is 'Hello' in the small hours, and morning starts at five", () => {
+  const rain = { place: "Nakuru", high: 26, low: 14, rainChance: 72, summary: "rain" };
+  const at = utcHour => composeBrief({ forecast: rain, now: new Date(`2026-09-21T${String(utcHour).padStart(2, "0")}:30:00Z`), timeZone: "UTC" }).split(".")[0];
+  assert.equal(at(0), "Hello"); assert.equal(at(4), "Hello"); assert.equal(at(5), "Good morning"); assert.equal(at(11), "Good morning");
+  assert.equal(at(12), "Good afternoon"); assert.equal(at(17), "Good afternoon"); assert.equal(at(18), "Good evening"); assert.equal(at(23), "Good evening");
+  assert.equal(composeBrief({ name: "Amina", forecast: rain, now: new Date("2026-09-20T21:36:00Z") }).startsWith("Hello Amina."), true, "00:36 in Nairobi, the moment the live check caught");
+});
+
+test("the planner is told a place named in the request overrides a saved one, and never to confirm it", () => {
+  const file = require("node:path").join(__dirname, "../../nexus/brain/openai-planning-model.js");
+  const source = require("node:fs").readFileSync(file, "utf8");
+  assert.match(source, /a place, language or name stated in the request itself always overrides them, and never ask the person to confirm a place they just named/);
+  // The module must actually load: this instruction sits inside a double-quoted string, and an inner double quote once broke every process that requires it.
+  assert.equal(typeof require(file).OpenAiPlanningModel, "function");
+});

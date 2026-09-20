@@ -44,7 +44,9 @@ function composeBrief({ name = "", forecast = null, reminders = [], now = new Da
   const weather = weatherLine(forecast); const due = reminderLine(reminders, now, zone);
   if (!weather && !due) return null;
   const first = String(name || "").trim().split(/\s+/)[0];
-  const hello = localHour(now, zone) < 12 ? "Good morning" : localHour(now, zone) < 18 ? "Good afternoon" : "Good evening";
+  // Morning starts at 5: at half past midnight "Good morning" is wrong, so the small hours get a plain "Hello".
+  const hour = localHour(now, zone);
+  const hello = hour < 5 ? "Hello" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   return [`${hello}${first ? ` ${first}` : ""}.`, weather, due].filter(Boolean).join(" ");
 }
 
