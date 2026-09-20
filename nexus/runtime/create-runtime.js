@@ -49,6 +49,7 @@ const { createDocumentsReadExecutor, verifyDocumentsReadOutcome } = require("../
 const { createListsCreateExecutor, verifyListsCreateOutcome, createListsReadExecutor, verifyListsReadOutcome,
   createListsUpdateExecutor, verifyListsUpdateOutcome } = require("../lists/executor.js");
 const { createMapsViewExecutor, verifyMapsViewOutcome } = require("../maps/executor.js");
+const { createTelehealthPrepareExecutor, verifyTelehealthPrepareOutcome, createOperationPlanExecutor, verifyOperationPlanOutcome } = require("../data/prepared-record-executors.js");
 const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../health/executor.js");
 const { createChronicDiseaseIntakeExecutor, verifyChronicDiseaseIntakeOutcome, createChronicDiseaseReadingExecutor,
   verifyChronicDiseaseReadingOutcome, createChronicDiseaseSummaryExecutor, verifyChronicDiseaseSummaryOutcome } = require("../health/chronic-executor.js");
@@ -110,6 +111,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "lists.update": { create: () => createListsUpdateExecutor({ records }), verify: verifyListsUpdateOutcome, method: "real_record_write" },
     "maps.view": { create: () => createMapsViewExecutor({ env }), verify: verifyMapsViewOutcome, method: "real_route_computation" },
     "health.record": { create: () => createHealthRecordExecutor({ records }), verify: verifyHealthRecordOutcome, method: "real_record_write" },
+    "telehealth.prepare": { create: () => createTelehealthPrepareExecutor({ records }), verify: verifyTelehealthPrepareOutcome, method: "real_record_write" },
+    "drone.plan": { create: () => createOperationPlanExecutor({ records }), verify: verifyOperationPlanOutcome, method: "real_record_write" },
     "health.chronic-intake": { create: () => createChronicDiseaseIntakeExecutor({ records }), verify: verifyChronicDiseaseIntakeOutcome, method: "real_record_write" },
     "health.chronic-reading": { create: () => createChronicDiseaseReadingExecutor({ records }), verify: verifyChronicDiseaseReadingOutcome, method: "real_record_write" },
     "health.chronic-summary": { create: () => createChronicDiseaseSummaryExecutor({ records }), verify: verifyChronicDiseaseSummaryOutcome, method: "real_record_lookup" },
