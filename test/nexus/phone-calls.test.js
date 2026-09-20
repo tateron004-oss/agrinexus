@@ -112,3 +112,40 @@ test("a call Twilio reports as failed, or that the server has switched off, says
   await assert.rejects(() => createCommunicationsSendExecutor({ env: { ...env, NEXUS_CALLS_ENABLED: "false" } })({ input: call }),
     error => error.code === "communications_provider_unavailable" && error.message === "I could not place the call: phone calls are not set up on this server yet, so no call was made.");
 });
+
+const { validatePlan, OpenEndedPlanner } = require("../../nexus/brain/planner.js");
+
+// Live check of #513 (2026-09-21): "Call +19005551234 and say hi" got the generic "I prepared the request" confirmation and would only
+// have been refused after the person said yes; "Call my brother and say hi" got the same generic confirmation for a send with no number.
+test("a number that can never be called is refused with a clear question, not a generic confirmation", () => {
+  for (const text of ["Call +19005551234 and say hi", "Call +19765551234 and say hi", "Call +9795551234567 and say hi", "Call +0123456789 and say hi"]) {
+    const plan = callPlan(text, catalog);
+    assert.equal(plan.clarification, "I cannot place a call to that number. Give me a regular phone number with the country code, like +15105019401.", text);
+    assert.deepEqual(plan.steps, [], text);
+  }
+  assert.equal(callPlan("Call +15105019401 and say hi", catalog).steps.length, 1);
+});
+
+const validationCatalog = { tools: [{ toolId: "communications.send" }], applications: [{ applicationId: "communications" }] };
+const sendStep = input => ({ goal: "g", application: "communications", riskTier: "regulated", steps: [{ id: "s1", title: "Send", toolId: "communications.send", input }] });
+
+test("a send or call step with no usable recipient and words is rejected so the planner asks for them; complete and draft-only steps pass", () => {
+  for (const input of [{}, { message: "hi" }, { to: "+15105019401" }, { channel: "call", message: "hi" }, { channel: "sms", to: "my brother", message: "hi" }, { channel: "call", to: "+19005551234", message: "hi" }]) {
+    const result = validatePlan(sendStep(input), validationCatalog, { can: () => true });
+    assert.equal(result.valid, false, JSON.stringify(input));
+    assert.match(result.errors[0], /communications\.send but has no usable recipient and message/);
+  }
+  assert.equal(validatePlan(sendStep({ channel: "call", to: "+15105019401", message: "hi" }), validationCatalog, { can: () => true }).valid, true);
+  assert.equal(validatePlan(sendStep({ channel: "email", to: "a@b.co", message: "hi" }), validationCatalog, { can: () => true }).valid, true);
+  assert.equal(validatePlan(sendStep({ draft: "Draft a follow-up message", consentRequired: true, returnDeliveryReceipt: true }), validationCatalog, { can: () => true }).valid, true, "the deploy's draft-only shape is exempt");
+});
+
+test("when the model picks a send with no number, it is told why and asks the person instead", async () => {
+  const seenFeedback = [];
+  const model = { plan: async request => { seenFeedback.push(request.feedback.length);
+    return request.feedback.length ? { goal: "Call my brother", application: "communications", riskTier: "regulated", clarification: "What is your brother's phone number, with the country code?", steps: [] }
+      : sendStep({ channel: "call", message: "hi" }); }, respond: async () => null };
+  const planner = new OpenEndedPlanner({ model, tools: { list: async () => [{ tool_id: "communications.send", availability: "available" }] }, applications: { list: () => [{ applicationId: "communications", capabilities: [], riskTiers: [] }] } });
+  const plan = await planner.plan({ command: { text: "Call my brother and say hi", channel: "typed", locale: "en", tenantId: "t", actorId: "u" }, context: { can: () => true, roles: [] } });
+  assert.equal(plan.clarification, "What is your brother's phone number, with the country code?"); assert.deepEqual(plan.steps, []); assert.deepEqual(seenFeedback, [0, 1]);
+});
