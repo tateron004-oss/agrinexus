@@ -75,7 +75,7 @@ function extractLeadArgs(command = "", args = {}) {
 
 // Money the people using Nexus actually deal in. Order matters: the country-specific shillings come before plain "shillings".
 const CURRENCY_WORDS = [
-  ["UGX", "ugx|uganda(?:n)? shillings?"], ["TZS", "tzs|tsh|tanzania(?:n)? shillings?"], ["KES", "kes|kshs?|kenya(?:n)? shillings?|shillings?"],
+  ["UGX", "ugx|uganda(?:n)? shillings?"], ["TZS", "tzs|tsh|tanzania(?:n)? shillings?"], ["KES", "kes|kshs?|kenya(?:n)? shillings?|shillings?|shilingi"],
   ["NGN", "ngn|naira|₦"], ["GHS", "ghs|cedis?"], ["ZAR", "zar|rand"], ["USD", "usd|dollars?|\\$"], ["EUR", "eur|euros?|€"]
 ];
 const NUMBER = "\\d[\\d,]*(?:\\.\\d+)?";
@@ -101,11 +101,11 @@ function extractTransactionArgs(command = "", args = {}) {
   const bare = withCurrency ? null : new RegExp(`\\b(?:of|for|worth)\\s+(${NUMBER})`, "i").exec(text);
   const rawAmount = args.amount !== undefined ? Number(args.amount) : withCurrency ? withCurrency.amount : bare ? Number(bare[1].replace(/,/g, "")) : NaN;
   const currency = String(args.currency || withCurrency?.currency || "").toUpperCase().slice(0, 3);
-  const type = /\b(expense|spent|spend|paid|purchase|purchased|bought|cost)\b/i.test(text) ? "expense"
-    : /\b(income|revenue|donation|donated|sale|sold|payment received|earned|received)\b/i.test(text) ? "income" : "expense";
+  const type = /\b(expense|spent|spend|paid|purchase|purchased|bought|cost|nimetumia|nimenunua|nimelipa|matumizi|gharama)\b/i.test(text) ? "expense"
+    : /\b(income|revenue|donation|donated|sale|sold|payment received|earned|received|nimeuza|nimepokea|mapato|mauzo)\b/i.test(text) ? "income" : "expense";
   // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
-  const soldItem = text.match(/\b(?:sold|sell)\s+(.+?)\s+(?:for|at)\b/i);
-  const spentOn = text.match(/\b(?:on|for)\s+(?![\d$€₦])([^\n,.]{2,60})/i);
+  const soldItem = text.match(/\b(?:sold|sell|nimeuza)\s+(.+?)\s+(?:for|at|kwa)\b/i);
+  const spentOn = text.match(/\b(?:on|for|kwa)\s+(?![\d$€₦]|shilingi\b)([^\n,.]{2,60})/i);
   const category = (soldItem ? soldItem[1] : spentOn ? spentOn[1] : "").replace(/\s+(?:today|yesterday|this (?:week|month|year))\s*$/i, "").trim();
   return {
     amount: Number.isFinite(rawAmount) ? rawAmount : null,
@@ -323,7 +323,7 @@ function classify(command = "") {
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
   const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer)\b/i.test(command);
   // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
-  const saysWhatHappened = /\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) && amountWithCurrency(command) !== null;
+  const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
   // "How much did I spend on seed this month?", "Show me my income this week": a question about the money already logged.
   const wantsFinanceSummary = !wantsLogTransaction && !/\b(?:log|record|track|create|start|new)\b|\badd\b(?!\s+up)/i.test(command)
