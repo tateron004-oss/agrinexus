@@ -12,11 +12,11 @@ const { createCommunicationsSendExecutor } = require("../../nexus/communications
 const send = (input, extra = {}) => ({ step_id: "stp_1", tool_id: "communications.send", title: "Send a text message", input, ...extra });
 const SCOPE = "communications:send:write";
 
-test("only a complete text, WhatsApp or email request to one recipient is sendable", () => {
+test("only a complete text, WhatsApp, email or call request to one recipient is sendable", () => {
   assert.deepEqual(normalizeSendRequest({ channel: "sms", to: "+254 712-345-678", message: "  I'm   on my way " }), { channel: "sms", to: "+254712345678", message: "I'm on my way", subject: "" });
   assert.equal(normalizeSendRequest({ to: "+254712345678", message: "hi" }).channel, "sms", "sms is the default");
   assert.equal(normalizeSendRequest({ channel: "email", to: "amina@example.com", message: "Ready", subject: "Delivery" }).subject, "Delivery");
-  for (const bad of [{ channel: "call", to: "+254712345678", message: "hi" }, { to: "0712345678", message: "hi" }, { to: "+254712345678", message: "" },
+  for (const bad of [{ channel: "fax", to: "+254712345678", message: "hi" }, { to: "0712345678", message: "hi" }, { to: "+254712345678", message: "" },
     { to: "+254712345678" }, { channel: "email", to: "not-an-address", message: "hi" }, { channel: "email", to: "a@b.co, c@d.co", message: "hi" },
     { to: "+254712345678", message: "x".repeat(501) }, { to: "+254712345678 +254700000000", message: "hi" }, {}])
     assert.equal(normalizeSendRequest(bad), null, JSON.stringify(bad));
@@ -30,7 +30,7 @@ test("the prompt reads back the channel, recipient and exact words, and says it 
   const mail = informedConfirmationPrompt({ scope: SCOPE, step: send({ channel: "email", to: "a@b.co", message: "Ready", subject: "Delivery" }) });
   assert.match(mail, /^I can send this email to a@b\.co, subject "Delivery": "Ready"\./);
   assert.match(informedConfirmationPrompt({ scope: SCOPE, step: send({ channel: "whatsapp", to: "+254712345678", message: "hi" }) }), /WhatsApp message/);
-  for (const input of [{}, { draft: "Draft a follow-up", consentRequired: true }, { channel: "call", to: "+254712345678", message: "hi" }])
+  for (const input of [{}, { draft: "Draft a follow-up", consentRequired: true }, { channel: "call", to: "+254712345678" }, { channel: "call", to: "+19005551234", message: "hi" }])
     assert.equal(informedConfirmationPrompt({ scope: SCOPE, step: send(input) }), null, JSON.stringify(input));
   assert.equal(userConfirmableConsent(SCOPE, send({ draft: "x" })), null, "the acceptance probe's draft-only step can never be consented");
   assert.equal(consentRecipient(SCOPE, send({ to: "+254 712 345 678", message: "hi" })), "+254712345678");
@@ -66,7 +66,7 @@ test("the owner's yes to a complete message records a consent for that recipient
 });
 
 test("no consent and no send for an incomplete request, a bystander, or a decline", async () => {
-  for (const input of [{ draft: "Draft a follow-up message", consentRequired: true }, { channel: "call", to: "+254712345678", message: "hi" }, { to: "0712345678", message: "hi" }]) {
+  for (const input of [{ draft: "Draft a follow-up message", consentRequired: true }, { channel: "call", to: "+19005551234", message: "hi" }, { to: "0712345678", message: "hi" }]) {
     const { spine, calls } = harness({ input }); await spine.confirm({ input: yes, context: ctx() });
     assert.equal(calls.some(call => call[0] === "grant"), false, JSON.stringify(input));
   }
@@ -91,7 +91,7 @@ test("the consent repository counts the last day's grants of a scope", async () 
   let seen;
   const repo = new ConsentRepository({ query: async (sql, params) => { seen = { sql, params }; return { rows: [{ count: 3 }] }; } });
   assert.equal(await repo.countGrantedSince({ tenantId: "t", subjectId: "u", scope: SCOPE }), 3);
-  assert.deepEqual(seen.params, ["t", "u", SCOPE, 24]); assert.match(seen.sql, /granted_at > now\(\)/);
+  assert.deepEqual(seen.params, ["t", "u", SCOPE, 24, null]); assert.match(seen.sql, /granted_at > now\(\)/);
 });
 
 test("the executor sends exactly what the person was shown", async () => {

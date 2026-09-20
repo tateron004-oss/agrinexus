@@ -147,7 +147,7 @@ async function sendSms(body = {}, env = process.env) {
 
 // One read-only look at a message Twilio has just accepted. Never throws: if the lookup fails, the send result stands with
 // whatever status Twilio returned when it accepted the message.
-async function twilioMessageProgress(sid, acceptedStatus, env = process.env) {
+async function twilioMessageProgress(sid, acceptedStatus, env = process.env, resource = "Messages") {
   let status = String(acceptedStatus || "").toLowerCase(), errorCode = null, errorMessage = "";
   try {
     const delay = Number(clean(env.NEXUS_SMS_STATUS_DELAY_MS) || 2000);
@@ -155,7 +155,7 @@ async function twilioMessageProgress(sid, acceptedStatus, env = process.env) {
     const credentials = twilioCredentials(env);
     if (sid && credentials) {
       const auth = Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64");
-      const response = await fetch(`${TWILIO_BASE}/Accounts/${credentials.accountSid}/Messages/${encodeURIComponent(sid)}.json`, { headers: { authorization: `Basic ${auth}` } });
+      const response = await fetch(`${TWILIO_BASE}/Accounts/${credentials.accountSid}/${resource}/${encodeURIComponent(sid)}.json`, { headers: { authorization: `Basic ${auth}` } });
       const payload = await safeJson(response);
       if (response.ok && payload && typeof payload === "object") {
         status = String(payload.status || status).toLowerCase();
@@ -209,12 +209,15 @@ async function startCall(body = {}, env = process.env) {
   const twiml = `<Response><Say voice="alice">${xmlEscape(clean(body.message || "This is a confirmed Nexus provider testing call."))}</Say></Response>`;
   try {
     const result = await twilioPost("/Calls.json", { To: clean(body.to), From: twilioFromNumber(env), Twiml: twiml }, env);
+    // Twilio returning a call id means it accepted the call, not that anyone answered. Look it up once and say what Twilio reports.
+    const progress = await twilioMessageProgress(result.sid, result.status, env, "Calls");
+    if (progress.status === "failed") return failedResponse(provider, action, new Error("Twilio reported the call as failed"));
     return providerResponse({
       provider,
       action,
       status: "completed",
-      message: "Call started through Twilio after explicit confirmation.",
-      data: { sid: result.sid, to: clean(body.to), channel: "voice" }
+      message: `Call started through Twilio${progress.status ? ` (status: ${progress.status})` : ""} after explicit confirmation. Whether the person answered is not confirmed.`,
+      data: { sid: result.sid, to: clean(body.to), channel: "voice", providerStatus: progress.status || "", answered: progress.status === "in-progress" || progress.status === "completed" }
     });
   } catch (error) {
     return failedResponse(provider, action, error);
