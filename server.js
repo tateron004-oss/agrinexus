@@ -18963,6 +18963,56 @@ async function nexusOpenAiNativeListPushReminders(user, language = "en") {
   }
 }
 
+// --- cancelling a reminder by voice -------------------------------------------------------------------------
+// The query used to be stripped of "the", "a", "my", "about"... but compared against the UNstripped stored title, so
+// "Cancel my reminder about check the pump" looked for "check pump" inside "check the pump" and said "not found".
+// Both sides now go through the same normalization, and a match must be on whole words ("pump" is not "pumpkin").
+const NEXUS_REMINDER_STOP_WORDS = new Set(["cancel", "delete", "remove", "clear", "my", "reminder", "reminders", "about", "for", "the", "a", "an", "to", "please"]);
+
+function nexusReminderMatchKey(text) {
+  return String(text || "").toLowerCase().replace(/[^\w\s-]/g, " ").split(/\s+/).filter(word => word && !NEXUS_REMINDER_STOP_WORDS.has(word)).join(" ");
+}
+
+function nexusReminderTitleMatches(title, query) {
+  const wanted = nexusReminderMatchKey(query);
+  return Boolean(wanted) && ` ${nexusReminderMatchKey(title)} `.includes(` ${wanted} `);
+}
+
+// The authoritative list renders each reminder as "<text> (due 2026-09-20 04:15 UTC)".
+function nexusPushReminderText(title) {
+  return String(title || "").replace(/\s*\(due [^)]*\)\s*$/, "").trim();
+}
+
+// Which reminders does "cancel my reminder about X" mean? Local notes and real push reminders, together.
+function nexusReminderCancelCandidates(command, localReminders = [], pushCards = []) {
+  const query = nexusReminderMatchKey(command);
+  if (!query) return { query, candidates: [] };
+  const push = pushCards.map(card => ({ kind: "push", id: card.id, title: nexusPushReminderText(card.title) })).filter(item => nexusReminderTitleMatches(item.title, query));
+  const local = localReminders.map(item => ({ kind: "local", id: item.id, title: String(item.title || "") })).filter(item => nexusReminderTitleMatches(item.title, query));
+  return { query, candidates: [...push, ...local] };
+}
+
+async function nexusOpenAiNativeCancelPushReminder(user, title, language = "en") {
+  const authoritativeUser = await authoritativeRuntimeUser(user);
+  if (!authoritativeUser) return null;
+  try {
+    let turn = await authoritativeNexusRuntime.behaviorTurnRequest({ text: `Cancel my reminder about ${title}`, channel: "voice", locale: language, user: authoritativeUser });
+    if (turn?.state === "confirmation_required" && turn.taskId && turn.outcome?.pendingStepId) {
+      // The person has already confirmed out loud (the tool only gets here with confirmed:true).
+      turn = await authoritativeNexusRuntime.behaviorConfirmRequest({ taskId: turn.taskId, stepId: turn.outcome.pendingStepId, approved: true, text: "Confirmed.", channel: "voice", user: authoritativeUser });
+    }
+    const data = turn?.render?.data || {};
+    if (turn?.state !== "render_required" || data.cancelled !== true) return { ok: false, reason: String(data.reason || "") };
+    await authoritativeNexusRuntime.behaviorAcknowledgeRequest({
+      taskId: turn.taskId, commandId: turn.commandId, correlationId: turn.correlationId, workspace: turn.render.workspace,
+      rendered: true, visible: false, audible: true, evidence: { cancelled: true, reminderId: data.reminderId }, user: authoritativeUser
+    }).catch(() => null);
+    return { ok: true, reminder: data.reminder || title, reminderId: data.reminderId || "" };
+  } catch {
+    return null;
+  }
+}
+
 function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) {
   ensureNexusPilotState(db);
   const confirmed = args.confirmed === true || args.confirmation === true;
@@ -19671,12 +19721,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // asked to confirm CREATING it instead.
     const wantsCancelReminder = /\b(cancel|delete|remove|clear)\b.*\breminder\b/i.test(command);
     if (wantsCancelReminder) {
-      const titleQuery = sanitizePilotText(command.replace(/\b(cancel|delete|remove|clear|my|reminder|reminders|about|for|the|a|an)\b/gi, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 160).toLowerCase();
       // .find() silently picked the FIRST substring match -- confirmed live,
       // two reminders sharing a word (e.g. "check the pump" and "check the
       // pump filter") let a query for one silently cancel the other instead.
-      // Mirrors nexus_memory's already-correct matches.length === 1 gate.
-      const matches = titleQuery ? (db.nexusPilotReminders || []).filter(reminder => reminder.title.toLowerCase().includes(titleQuery)) : [];
+      // Mirrors nexus_memory's already-correct matches.length === 1 gate. Real push reminders are matched too.
+      const pushCards = await nexusOpenAiNativeListPushReminders(user, language);
+      const { candidates: matches } = nexusReminderCancelCandidates(command, db.nexusPilotReminders || [], pushCards);
       const match = matches.length === 1 ? matches[0] : null;
       if (!(args.confirmed === true || args.confirmation === true)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
@@ -19692,6 +19742,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       }
       if (!match) {
         return { ...common, capability: "automation-reminder", status: "reminder-not-found", response: "I could not find a matching reminder to cancel. Tell me its exact title, or ask to list your reminders first.", localOnly: true };
+      }
+      if (match.kind === "push") {
+        const cancelled = await nexusOpenAiNativeCancelPushReminder(user, match.title, language);
+        if (!cancelled?.ok) return { ...common, capability: "automation-reminder", status: "reminder-cancel-blocked", response: `I could not cancel the reminder "${match.title}" right now. Please try again.` };
+        return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, executionAttempted: true, executionVerified: true, pushNotification: true };
       }
       db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
       return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, localOnly: true };
