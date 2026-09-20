@@ -13,6 +13,7 @@ const { AuthoritativeTaskEngine } = require("./authoritative-task-engine.js");
 const { AccessControl } = require("../identity/access-control.js");
 const { ArtifactRepository } = require("../storage/artifact-repository.js");
 const { SyncRepository } = require("../sync/repository.js");
+const { createOfflineSyncStatusExecutor, verifyOfflineSyncStatusOutcome } = require("../sync/status-executor.js");
 const { ObservabilityRepository } = require("../observability/operations-repository.js");
 const { ModelGovernanceRepository } = require("../models/repository.js");
 const { OutcomeRepository } = require("../verification/outcome-repository.js");
@@ -113,6 +114,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "health.record": { create: () => createHealthRecordExecutor({ records }), verify: verifyHealthRecordOutcome, method: "real_record_write" },
     "telehealth.prepare": { create: () => createTelehealthPrepareExecutor({ records }), verify: verifyTelehealthPrepareOutcome, method: "real_record_write" },
     "drone.plan": { create: () => createOperationPlanExecutor({ records }), verify: verifyOperationPlanOutcome, method: "real_record_write" },
+    "offline.sync": { create: () => createOfflineSyncStatusExecutor({ sync }), verify: verifyOfflineSyncStatusOutcome, method: "real_server_state" },
     "health.chronic-intake": { create: () => createChronicDiseaseIntakeExecutor({ records }), verify: verifyChronicDiseaseIntakeOutcome, method: "real_record_write" },
     "health.chronic-reading": { create: () => createChronicDiseaseReadingExecutor({ records }), verify: verifyChronicDiseaseReadingOutcome, method: "real_record_write" },
     "health.chronic-summary": { create: () => createChronicDiseaseSummaryExecutor({ records }), verify: verifyChronicDiseaseSummaryOutcome, method: "real_record_lookup" },
