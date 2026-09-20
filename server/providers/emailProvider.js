@@ -11,6 +11,15 @@ const {
   safeJson
 } = require("./providerUtils");
 
+// What the email provider said about a refused request. SendGrid answers with { errors: [{ message, field }] } and Resend with
+// { message }; reading only those flat fields turned "The from address does not match a verified Sender Identity" into the bare
+// "Forbidden". Never includes credentials: only the provider's own message text, trimmed.
+function providerErrorText(payload = {}, response = {}) {
+  const listed = Array.isArray(payload.errors) ? payload.errors.map(item => [item?.message, item?.field ? `(${item.field})` : ""].filter(Boolean).join(" ")).filter(Boolean).slice(0, 2).join("; ") : "";
+  const text = String(payload.message || listed || payload.error?.message || payload.error || response.statusText || "The provider refused the request.");
+  return `${text.replace(/\s+/g, " ").trim().slice(0, 300)}${response.status ? ` [${response.status}]` : ""}`;
+}
+
 function provider(env = process.env) {
   return clean(env.NEXUS_EMAIL_PROVIDER || (env.RESEND_API_KEY ? "resend" : env.SENDGRID_API_KEY ? "sendgrid" : "generic"));
 }
@@ -76,7 +85,7 @@ async function send(body = {}, env = process.env) {
       });
     }
     const payload = await safeJson(response);
-    if (!response.ok) throw new Error(payload.message || payload.error || response.statusText);
+    if (!response.ok) throw new Error(providerErrorText(payload, response));
     return providerResponse({
       provider: selected,
       action,
