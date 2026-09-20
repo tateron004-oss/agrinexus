@@ -36,6 +36,15 @@ class SyncRepository {
     return result.rows||result;
   }
 
+  // The server's view of everything this person's devices have sent: counts by state and when the last change was applied.
+  async summary({tenantId,userId}) {
+    const result=await this.db.query(`select state,count(*)::int as count,max(applied_at) as last_applied
+      from nexus_sync_operations where tenant_id=$1 and user_id=$2 group by state`,[tenantId,userId]);
+    const rows=result.rows||result; const count=state=>Number(rows.find(row=>row.state===state)?.count||0);
+    const last=rows.map(row=>row.last_applied).filter(Boolean).sort().pop();
+    return {applied:count("applied"),conflicts:count("conflict"),pending:count("pending"),rejected:count("rejected"),lastAppliedAt:last?new Date(last).toISOString():null};
+  }
+
   async resolve({tenantId,userId,deviceId,syncId,resolution,expectedServerVersion}) {
     if(!["accept-server","retry-client"].includes(resolution)) throw new Error("Unsupported conflict resolution.");
     const result=await this.db.query(`update nexus_sync_operations set
