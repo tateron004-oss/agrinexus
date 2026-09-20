@@ -52,6 +52,23 @@ class MemoryRepository {
     return result.rows || result;
   }
 
+  // What is saved for this person, newest and most important first, with the same purpose and sensitivity
+  // rules as search(). search() matches the WHOLE query as a substring of the stored text, so a question such as
+  // "what do you remember about me" can never match anything; recall questions list instead of searching.
+  async recent({ tenantId, userId, purpose, roles = [], limit = 10 }) {
+    if (!purpose) return [];
+    const healthAllowed = roles.includes("admin") || roles.includes("health_operator");
+    const boundedLimit = Math.min(Math.max(Number(limit) || 10, 1), 20);
+    const result = await this.db.query(`select memory_id,memory_class as kind,purpose,content,provenance,
+      importance,confidence,verification_state,sensitivity,created_at
+      from nexus_memory_items where tenant_id=$1 and principal_id=$2 and purpose=$3
+      and deleted_at is null and (expires_at is null or expires_at > now())
+      and (sensitivity <> 'health' or $5::boolean)
+      order by verification_state='source_verified' desc,importance desc,updated_at desc limit $4`,
+    [tenantId, userId, purpose, boundedLimit, healthAllowed]);
+    return result.rows || result;
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,
