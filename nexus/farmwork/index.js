@@ -11,11 +11,12 @@ const journal = require("./journal.js");
 const money = require("./money.js");
 const parties = require("./parties.js");
 const budget = require("./budget.js");
+const coop = require("./coop.js");
 
 // The farm toolkit's front door. Order: an open guided conversation first (the person's words are its answers), then each tool in turn.
 // A tool answers only when the words are plainly for it (returns null otherwise), so everything else carries on to normal planning.
 // A tool may answer with a string (a conversational reply) or { plan } (a governed step, such as a printable report).
-const MODULES = [fields, tasks, inventory, livestock, journal, money, parties, budget];
+const MODULES = [fields, tasks, inventory, livestock, journal, money, parties, budget, coop];
 const TEMPLATES = Object.assign({}, ...MODULES.map(mod => mod.templates || {}));
 const CONFIRMS = Object.assign({
   // Removing any record (a field, an animal, a buyer...) after the person said yes. Records are soft-deleted.
