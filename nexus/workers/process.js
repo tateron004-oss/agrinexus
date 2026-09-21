@@ -83,7 +83,7 @@ async function main() {
     }
     if (Date.now() - lastCheckinSweepAt >= checkinIntervalMs) {
       lastCheckinSweepAt = Date.now();
-      try { const outcome = await handlers["companion.checkin-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.prompted || outcome?.alerted) logger.info("worker.checkin_sweep", outcome); }
+      try { const outcome = await handlers["companion.checkin-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.prompted || outcome?.alerted || outcome?.medications?.prompted || outcome?.medications?.alerted) logger.info("worker.checkin_sweep", outcome); }
       catch (error) { logger.error("worker.checkin_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastWeeklySummarySweepAt >= weeklySummaryIntervalMs) {
