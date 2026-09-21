@@ -57773,6 +57773,28 @@ async function submitNexusPendingBehaviorConfirmation(approved, text, options = 
   }
 }
 
+// Keeps a plain record-keeping note on this phone when there is no signal (see kyro-offline-notes.js). Returns true when the note was kept.
+function keepKyroOfflineNote(error, text) {
+  try { return Boolean(window.KyroOfflineNotes?.shouldKeep(error, text) && window.KyroOfflineNotes.add(text)); } catch { return false; }
+}
+
+// Say the notes kept while offline to Kyro, in order, once the phone can reach it.
+let kyroOfflineReplayRunning = false;
+async function replayKyroOfflineNotes() {
+  if (kyroOfflineReplayRunning || !window.KyroOfflineNotes || navigator.onLine === false || !window.KyroOfflineNotes.pending()) return;
+  kyroOfflineReplayRunning = true;
+  try {
+    const outcome = await window.KyroOfflineNotes.drain({ send: async note => {
+      const result = await requestWithTimeout("/api/nexus/runtime/behavior/turn", { method: "POST", body: { text: note, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(),
+        timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })() } }, 60000);
+      if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true) throw new Error("Kyro did not accept the note yet.");
+    } });
+    if (outcome.sent) toast(outcome.sent === 1 ? "I added the note you saved offline to your records." : `I added the ${outcome.sent} notes you saved offline to your records.`);
+  } catch { /* try again next time the phone is online */ } finally { kyroOfflineReplayRunning = false; }
+}
+window.addEventListener("online", () => { setTimeout(replayKyroOfflineNotes, 1500); });
+setTimeout(replayKyroOfflineNotes, 10000);
+
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return false;
@@ -57817,6 +57839,12 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     }
     return await processNexusAuthoritativeBehaviorResult(result, text, options);
   } catch (error) {
+    // No signal: a plain record-keeping statement ("sold 200 kg of maize for 9000") is kept on this phone and said to Kyro again when it is back
+    // online. Nothing that sends, calls, pays or deletes is ever kept (see kyro-offline-notes.js).
+    if (typeof keepKyroOfflineNote === "function" && keepKyroOfflineNote(error, text)) {
+      setVoiceResponse("There's no signal right now, so I saved that note on this phone. I'll add it to your records when you're back online, dated then.", true, { allowHandoff: false, command: text, source: "kyro-offline-note" });
+      return true;
+    }
     return false;
   }
 }

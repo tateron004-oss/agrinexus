@@ -64,6 +64,7 @@ const { createWeatherAlertService } = require("../alerts/service.js");
 const { createWeeklySummaryService, WeeklySummarySettingsRepository } = require("../brief/weekly.js");
 const { createCompanion } = require("../companion/index.js");
 const { CircleRepository } = require("../companion/circle-repository.js");
+const { FarmRecordRepository } = require("../farmwork/store.js");
 const { CheckinSettingsRepository, CheckinStateRepository } = require("../companion/checkin-store.js");
 const { MedicationRepository } = require("../companion/medication-store.js");
 const { WellnessRepository } = require("../wellness/store.js");
@@ -163,13 +164,15 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority, jobs, autonomyControl });
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
-  const brief = createBriefService({ notifications, settings: new BriefSettingsRepository(db), memory, devices, autonomyControl });
+  const farmRecords = new FarmRecordRepository(db);
+  const brief = createBriefService({ notifications, settings: new BriefSettingsRepository(db), memory, farmRecords, devices, autonomyControl });
   const alerts = createWeatherAlertService({ notifications, settings: new WeatherAlertSettingsRepository(db), memory, devices, autonomyControl });
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
   const circleRepository = new CircleRepository(db);
   const companion = createCompanion({ circle: circleRepository, checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memory, notifications, devices, autonomyControl });
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: new WellnessRepository(db),
-    community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) } }) : null;
+    community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) },
+    farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
