@@ -37,6 +37,7 @@ const DAY_FORMS = [
   { pattern: new RegExp(`\\b(?:on\\s+)?${MONTH_PATTERN}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4}))?`, "i"),
     read: (m, today) => m[3] ? makeDay(Number(m[3]), monthIndex(m[1]), Number(m[2])) : withinYear(monthIndex(m[1]), Number(m[2]), today) },
   { pattern: /\bday after tomorrow\b/i, read: (m, today) => addDays(today, 2) },
+  { pattern: /\byesterday\b/i, read: (m, today) => addDays(today, -1) },
   { pattern: /\btomorrow\b/i, read: (m, today) => addDays(today, 1) },
   { pattern: /\b(?:today|tonight)\b/i, read: (m, today) => today },
   { pattern: /\bin (\d{1,2}) (day|days|week|weeks)\b/i, read: (m, today) => addDays(today, Number(m[1]) * (/^week/i.test(m[2]) ? 7 : 1)) },
@@ -100,4 +101,21 @@ function extractRange(text, today) {
   return { from: today, to: addDays(today, 13), label: "the next two weeks" };
 }
 
-module.exports = Object.freeze({ extractDay, extractTime, tidyTitle, extractRange, describeDay, addDays, weekdayOf, makeDay });
+// Looking back: the days a question about the past covers. "today", "yesterday", "this week" (since Monday), "last week", "this month",
+// "last month", "this year" (also "this season"), "the last 10 days". Returns { from, to, label } or null when no period is named.
+function extractPeriod(text, today) {
+  const t = String(text || "").toLowerCase();
+  const monthStart = day => `${day.slice(0, 7)}-01`;
+  let m;
+  if ((m = /\b(?:last|past|previous) (\d{1,3}) days\b/.exec(t))) { const n = Math.min(Number(m[1]), 366); return { from: addDays(today, -(n - 1)), to: today, label: `the last ${n} days` }; }
+  if (/\blast week\b/.test(t)) { const monday = addDays(today, -((weekdayOf(today) + 6) % 7) - 7); return { from: monday, to: addDays(monday, 6), label: "last week" }; }
+  if (/\bthis week\b/.test(t)) return { from: addDays(today, -((weekdayOf(today) + 6) % 7)), to: today, label: "this week" };
+  if (/\blast month\b/.test(t)) { const last = addDays(monthStart(today), -1); return { from: monthStart(last), to: last, label: "last month" }; }
+  if (/\bthis month\b/.test(t)) return { from: monthStart(today), to: today, label: "this month" };
+  if (/\b(?:this year|this season|so far this year)\b/.test(t)) return { from: `${today.slice(0, 4)}-01-01`, to: today, label: /season/.test(t) ? "this season" : "this year" };
+  if (/\byesterday\b/.test(t)) return { from: addDays(today, -1), to: addDays(today, -1), label: "yesterday" };
+  if (/\btoday\b/.test(t)) return { from: today, to: today, label: "today" };
+  return null;
+}
+
+module.exports = Object.freeze({ extractDay, extractTime, tidyTitle, extractRange, extractPeriod, describeDay, addDays, weekdayOf, makeDay });

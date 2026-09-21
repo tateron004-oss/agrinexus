@@ -141,3 +141,15 @@ test("the morning brief mentions today's calendar and open to-dos, and a day wit
   const brief = createBriefService({ notifications: { listReminders: async () => [], enqueue: async () => {} }, memory: { listPersonalItems: async () => rows, profile: async () => [] }, now: () => NOW });
   assert.match(await brief.compose({ tenantId: "t1", userId: "u1", known: { name: "Amina" }, timeZone: "Africa/Nairobi" }), /^Good morning Amina\. On your calendar: Vet visit at 10:00 am\./);
 });
+
+test("looking back: yesterday and periods such as this week, last month and the last 10 days", () => {
+  const { extractPeriod } = require("../../nexus/personal/dates.js");
+  assert.equal(extractDay("rain yesterday", TODAY).day, "2026-09-19");
+  assert.deepEqual(extractPeriod("this week", TODAY), { from: "2026-09-14", to: "2026-09-20", label: "this week" });
+  assert.deepEqual(extractPeriod("last week", TODAY), { from: "2026-09-07", to: "2026-09-13", label: "last week" });
+  assert.deepEqual(extractPeriod("this month", TODAY), { from: "2026-09-01", to: "2026-09-20", label: "this month" });
+  assert.deepEqual(extractPeriod("last month", TODAY), { from: "2026-08-01", to: "2026-08-31", label: "last month" });
+  assert.deepEqual(extractPeriod("the last 10 days", TODAY), { from: "2026-09-11", to: "2026-09-20", label: "the last 10 days" });
+  assert.equal(extractPeriod("this season", TODAY).label, "this season");
+  assert.equal(extractPeriod("whenever", TODAY), null);
+});
