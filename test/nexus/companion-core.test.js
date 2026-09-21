@@ -166,6 +166,7 @@ test("a member can decline, and either side can leave or remove at any time, and
   await ask(w, "Add amina@example.com to my circle");
   assert.equal(await ask(w, "Decline the invitation from Baba", "u-amina"), "Okay. I've told Baba Kamau you're not able to right now.");
   assert.equal(await ask(w, "Who is in my circle?"), 'Your circle is empty. Say "add name@example.com to my circle" to invite someone you trust.');
+  for (const row of w.db.rows) if (row.content.endedAt) row.content.endedAt = new Date(Date.now() - 31 * 24 * 3600 * 1000).toISOString(); // the 30-day cooldown after a decline has passed
   await inCircle(w);
   assert.match(await ask(w, "Leave Baba's circle", "u-amina"), /^Done\. You've left Baba Kamau's circle\./);
   assert.match(w.pushes.at(-1).content.body, /Amina Wanjiru has left your trusted circle\./);
@@ -353,4 +354,17 @@ test("through the planner, safety comes before everything, ordinary messages cos
   const handlers = createHandlers({ runtime: { companion: { async sendDue() { ran += 1; return { checked: 1, prompted: 1 }; } } } });
   assert.deepEqual(await handlers["companion.checkin-sweep"]({ job: { payload: {} } }), { checked: 1, prompted: 1 }); assert.equal(ran, 1);
   assert.deepEqual(await createHandlers({ runtime: {} })["companion.checkin-sweep"]({ job: { payload: {} } }), { checked: 0, prompted: 0 });
+});
+
+test("someone who declined is not asked again for 30 days, and the reply reveals nothing about it", async () => {
+  const w = world();
+  await ask(w, "Add amina@example.com to my circle"); await ask(w, "Decline the invitation from Baba", "u-amina");
+  w.pushes.length = 0;
+  const again = await ask(w, "Add amina@example.com to my circle");
+  assert.match(again, /^If amina@example\.com has a Kyro account/);
+  assert.equal(w.pushes.length, 0, "no second push for someone who said no");
+  assert.equal((await w.circle.listFor({ tenantId: "t1", userId: "u-amina" })).length, 0);
+  for (const row of w.db.rows) if (row.content.endedAt) row.content.endedAt = new Date(Date.now() - 31 * 24 * 3600 * 1000).toISOString();
+  await ask(w, "Add amina@example.com to my circle");
+  assert.equal(w.pushes.length, 1, "after 30 days they may be asked again");
 });

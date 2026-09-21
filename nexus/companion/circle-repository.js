@@ -13,7 +13,7 @@ const { createId } = require("../contracts/identifiers.js");
 // Links are within one community (tenant): both people must belong to the same one.
 const MAX_MEMBERS = 8;
 const MAX_LINKS_AS_MEMBER = 20;
-const SHARE_KEYS = Object.freeze(["checkins"]);
+const SHARE_KEYS = Object.freeze(["checkins", "medications"]);
 const PLACEHOLDER_VECTOR = `[1${",0".repeat(1535)}]`;
 const clean = value => String(value ?? "").replace(/\s+/g, " ").trim();
 
@@ -64,6 +64,10 @@ class CircleRepository {
     if (person.id === member.id) return { refused: "self" };
     const mine = await this.listFor({ tenantId, userId: person.id });
     if (mine.some(link => link.role === "person" && link.otherId === member.id)) return { refused: "duplicate" };
+    // Someone who said no is not asked again for 30 days, so an invitation cannot be used to pester them.
+    const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+    if ((await this.rows({ tenantId, userId: person.id })).some(row => row.content.role === "person" && row.content.otherId === member.id && row.content.status === "ended"
+      && row.content.endedBy === member.id && !row.content.acceptedAt && new Date(row.content.endedAt).getTime() > cutoff)) return { refused: "declined_recently" };
     if (mine.filter(link => link.role === "person").length >= MAX_MEMBERS) return { refused: "full" };
     if ((await this.listFor({ tenantId, userId: member.id })).filter(link => link.role === "member").length >= MAX_LINKS_AS_MEMBER) return { refused: "member_full" };
     const linkId = `lnk_${crypto.randomUUID()}`; const invitedAt = new Date().toISOString(); const rel = clean(relationship).slice(0, 40);

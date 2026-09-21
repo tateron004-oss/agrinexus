@@ -18,8 +18,10 @@ function readCircleRequest(text) {
   if ((m = new RegExp(`^(?:please )?(?:add|invite) (.+?) to my ${CIRCLE}(?: as (?:my )?(.+))?$`, "i").exec(t))) return { action: "invite", who: clean(m[1]), relationship: clean(m[2] || "") };
   if (new RegExp(`^(?:who(?:'s| is) in my ${CIRCLE}|show my ${CIRCLE}|who looks out for me)$`).test(lower)) return { action: "list" };
   if ((m = new RegExp(`^(?:please )?(?:remove|take) (.+?) (?:out of|from) my ${CIRCLE}$`, "i").exec(t))) return { action: "remove", who: clean(m[1]) };
-  if ((m = /^(?:please )?(?:share|let) my check-?ins? (?:be )?(?:with|shared with) (.+)$/i.exec(t)) || (m = /^(?:please )?let (.+?) (?:be told|know) (?:if|when) i (?:miss|skip) (?:a |my )?check-?in$/i.exec(t))) return { action: "share", who: clean(m[1]), value: true };
-  if ((m = /^(?:stop sharing|(?:do not|don't) share) my check-?ins? with (.+)$/i.exec(t))) return { action: "share", who: clean(m[1]), value: false };
+  if ((m = /^(?:please )?(?:share|let) my check-?ins? (?:be )?(?:with|shared with) (.+)$/i.exec(t)) || (m = /^(?:please )?let (.+?) (?:be told|know) (?:if|when) i (?:miss|skip) (?:a |my )?check-?in$/i.exec(t))) return { action: "share", key: "checkins", who: clean(m[1]), value: true };
+  if ((m = /^(?:stop sharing|(?:do not|don't) share) my check-?ins? with (.+)$/i.exec(t))) return { action: "share", key: "checkins", who: clean(m[1]), value: false };
+  if ((m = /^(?:please )?(?:share|let) my (?:medication|medicine|meds)(?: reminders?)? (?:be )?(?:with|shared with) (.+)$/i.exec(t)) || (m = /^(?:please )?let (.+?) (?:be told|know) (?:if|when) i (?:miss|skip) (?:a |my )?(?:dose|medication|medicine|meds)$/i.exec(t))) return { action: "share", key: "medications", who: clean(m[1]), value: true };
+  if ((m = /^(?:stop sharing|(?:do not|don't) share) my (?:medication|medicine|meds)(?: reminders?)? with (.+)$/i.exec(t))) return { action: "share", key: "medications", who: clean(m[1]), value: false };
   if (/^(?:do i have|show|list|what are) (?:any |my )?(?:circle )?invitations?$/.test(lower) || /^any (?:circle )?invitations?$/.test(lower)) return { action: "invitations" };
   if ((m = /^accept (?:the |an )?(?:circle )?invitation (?:from )?(.+)$/i.exec(t)) || (m = /^(?:yes,? )?(?:i )?accept (.+?)'s (?:circle )?invitation$/i.exec(t))) return { action: "accept", who: clean(m[1]) };
   if ((m = /^(?:decline|refuse|reject) (?:the |an )?(?:circle )?invitation (?:from )?(.+)$/i.exec(t)) || (m = /^(?:i )?(?:decline|refuse) (.+?)'s (?:circle )?invitation$/i.exec(t))) return { action: "decline", who: clean(m[1]) };
@@ -72,13 +74,14 @@ async function circleTurn({ text, circle, memory, push, tenantId, userId, userNa
         if (result.refused === "self") return "That's you. Your circle is for other people.";
         if (result.refused === "duplicate") return `${found.name} is already in your circle, or has an invitation waiting.`;
         if (result.refused === "full") return "Your circle is full (eight people). Remove someone first if you want to add another.";
-        if (result.refused === "member_full") return generic;
+        if (result.refused === "member_full" || result.refused === "declined_recently") return generic; // deliberately says nothing new: no probing, no pestering
         await notify(found.id, "Circle invitation", `${person.name} would like you in their trusted circle${request.relationship ? ` as their ${request.relationship}` : ""}. Say "accept the invitation from ${first(person.name)}" in Kyro, or "decline" if you'd rather not.`, `circle-invite:${result.link.linkId}`);
         return generic;
       }
       case "list": {
         if (!mine.length) return 'Your circle is empty. Say "add name@example.com to my circle" to invite someone you trust.';
-        const line = link => `${link.otherName}${link.relationship ? ` (${link.relationship})` : ""} — ${link.status === "invited" ? "invitation waiting" : link.shares?.checkins ? "may be told if you miss a check-in" : "told nothing except an emergency"}`;
+        const told = link => [link.shares?.checkins ? "if you miss a check-in" : "", link.shares?.medications ? "if a dose goes unconfirmed" : ""].filter(Boolean).join(" or ");
+        const line = link => `${link.otherName}${link.relationship ? ` (${link.relationship})` : ""} — ${link.status === "invited" ? "invitation waiting" : told(link) ? `may be told ${told(link)}` : "told nothing except an emergency"}`;
         return `Your circle: ${mine.map(line).join("; ")}.`;
       }
       case "remove": {
@@ -94,10 +97,17 @@ async function circleTurn({ text, circle, memory, push, tenantId, userId, userNa
         const picked = pickLink(active, request.who);
         if (picked?.ambiguous) return `Which one: ${nameList(picked.ambiguous)}?`;
         if (!picked) return mine.some(link => pickLink([link], request.who)) ? `${clean(request.who)} hasn't said yes to your invitation yet.` : `I don't see ${clean(request.who)} in your circle.`;
-        await circle.setShare({ tenantId, personId: userId, linkId: picked.link.linkId, key: "checkins", value: request.value });
+        const key = request.key || "checkins";
+        await circle.setShare({ tenantId, personId: userId, linkId: picked.link.linkId, key, value: request.value });
+        const who = first(picked.link.otherName);
+        if (key === "medications") {
+          return request.value
+            ? `Done. If a dose you asked me to remind you about goes unconfirmed for two hours, I may tell ${picked.link.otherName} that a dose is waiting. They will not be told which medicine, and never the doses. Say "stop sharing my medication reminders with ${who}" to undo.`
+            : `Done. ${picked.link.otherName} will not be told about your doses. Emergency alerts still reach everyone in your circle; say "remove ${who} from my circle" if you don't want that either.`;
+        }
         return request.value
-          ? `Done. If you miss a check-in, or you ask me to, I may tell ${picked.link.otherName}. They will not see your answers. Say "stop sharing my check-ins with ${first(picked.link.otherName)}" to undo.`
-          : `Done. ${picked.link.otherName} will not be told about your check-ins. Emergency alerts still reach everyone in your circle; say "remove ${first(picked.link.otherName)} from my circle" if you don't want that either.`;
+          ? `Done. If you miss a check-in, or you ask me to, I may tell ${picked.link.otherName}. They will not see your answers. Say "stop sharing my check-ins with ${who}" to undo.`
+          : `Done. ${picked.link.otherName} will not be told about your check-ins. Emergency alerts still reach everyone in your circle; say "remove ${who} from my circle" if you don't want that either.`;
       }
       case "invitations": {
         const waiting = asMember.filter(link => link.status === "invited");
