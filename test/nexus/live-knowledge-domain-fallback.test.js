@@ -41,7 +41,30 @@ test("the bare 'edu' entry is never sent as a single-domain filter", async () =>
   const calls = [];
   const run = load(async (_url, options) => { calls.push(JSON.parse(options.body).include_domains); return reply("x", ["https://www.facebook.com/x"]); });
   await assert.rejects(() => run(input, {}, "receipt-1"), /no answer with sources/);
-  assert.deepEqual(JSON.parse(JSON.stringify(calls.slice(1))), [["fao.org"], ["cgiar.org"], ["cimmyt.org"], ["extension.org"]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.slice(1, 5))), [["fao.org"], ["cgiar.org"], ["cimmyt.org"], ["extension.org"]]);
+  assert.equal(calls.length, 6, "after the single domains, one last try with the plainer question under all approved domains");
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[5])), DOMAINS);
+});
+
+test("when nothing comes back, the question is retried once in plainer keyword form, under the same approved domains", async () => {
+  const asked = [];
+  const run = load(async (_url, options) => {
+    const body = JSON.parse(options.body); asked.push(body.query);
+    return body.query === "Assess yellow leaves on my maize crop" ? reply("Plain answer", ["https://www.fao.org/maize"]) : reply("", []);
+  });
+  const result = await run(input, {}, "receipt-1");
+  assert.equal(asked.at(-1), "Assess yellow leaves on my maize crop");
+  assert.equal(asked[0], "Assess yellow leaves on my maize crop and show sources.", "the person's own words are always tried first");
+  assert.equal(result.answer, "Plain answer"); assert.deepEqual(result.sources.map(item => item.url), ["https://www.fao.org/maize"]);
+});
+
+test("a question with nothing to simplify is not retried, and a plainer query still cannot accept unapproved sources", async () => {
+  let calls = 0;
+  const run = load(async () => { calls += 1; return reply("", []); });
+  await assert.rejects(() => run({ query: "maize spacing", includeDomains: [] }, {}, "receipt-1"), /no answer with sources/);
+  assert.equal(calls, 1, "no domains and nothing to simplify: one call");
+  const strict = load(async (_url, options) => (JSON.parse(options.body).query.endsWith("sources.") ? reply("", []) : reply("answer", ["https://www.facebook.com/x"])));
+  await assert.rejects(() => strict(input, {}, "receipt-1"), /no answer with sources/);
 });
 
 test("only approved-domain sources are ever accepted, even after the fallback", async () => {

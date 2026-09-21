@@ -252,9 +252,9 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
     throw Object.assign(new Error("Authoritative knowledge retrieval requires an approved domain filter."), { code: "knowledge_domain_filter_required" });
   if (process.env.TAVILY_API_KEY) {
     try {
-      const search = async domains => {
+      const search = async (domains, asked = query) => {
         const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, search_depth: "advanced", include_answer: true, max_results: 5,
+          body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: asked, search_depth: "advanced", include_answer: true, max_results: 5,
             ...(domains.length ? { include_domains: domains } : {}) }) });
         if (!response.ok) throw Object.assign(new Error(`Live knowledge provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
         const found = await response.json();
@@ -274,6 +274,11 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
           ({ body, sources } = await search([domain]));
           if (String(body.answer || "").trim() && sources.length) break;
         }
+      }
+      // Adjust once more before giving up: ask the plainer keyword form of the same question, under the same approved domains.
+      if (!String(body.answer || "").trim() || !sources.length) {
+        const plainer = simplifiedQuery(query);
+        if (plainer) ({ body, sources } = await search(includeDomains, plainer));
       }
     if (!String(body.answer || "").trim() || !sources.length) throw Object.assign(new Error("Live knowledge returned no answer with sources."), { code: "knowledge_outcome_unverified" });
     return { ...common, sources, source: sources[0], answer: body.answer, assessment: body.answer,
@@ -297,6 +302,16 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
   }
   if (lastProviderError) throw lastProviderError;
   throw Object.assign(new Error("No live reasoning or knowledge provider is configured."), { code: "knowledge_provider_unavailable" });
+}
+
+// A search engine matches keywords, not conversation: "Please tell me why my maize leaves are yellow and show sources." finds less than
+// "why my maize leaves are yellow". Returns the plainer question, or "" when there is nothing to simplify.
+function simplifiedQuery(query) {
+  const plain = String(query || "")
+    .replace(/\b(?:and |then )?(?:please )?(?:show|give|include|cite|list|add)(?: me)?(?: the| your| some)? (?:sources?|references?|citations?|links?)\b/gi, " ")
+    .replace(/^\s*(?:please|can you|could you|would you|tell me|i want to know|i would like to know|i need to know)\b[,\s]*/i, " ")
+    .replace(/\s+/g, " ").replace(/[\s.,;:!?]+$/g, "").trim();
+  return plain.length >= 8 && plain.toLowerCase() !== String(query || "").toLowerCase().replace(/[\s.,;:!?]+$/g, "") ? plain : "";
 }
 
 function normalizedDomains(values) {
