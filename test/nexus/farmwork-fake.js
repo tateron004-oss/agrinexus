@@ -19,7 +19,13 @@ function fakeFarmStore() {
     async remove({ tenantId, userId, memoryId }) { const row = live().find(item => item.tenantId === tenantId && item.userId === userId && item.memoryId === memoryId); if (!row) return false; row.deleted = true; return true; },
     async getSession({ tenantId, userId }) { return sessions.get(`${tenantId}:${userId}`) || null; },
     async setSession({ tenantId, userId, session }) { sessions.set(`${tenantId}:${userId}`, { memoryId: "s", kind: "session", ...session }); },
-    async clearSession({ tenantId, userId }) { sessions.delete(`${tenantId}:${userId}`); }
+    async clearSession({ tenantId, userId }) { sessions.delete(`${tenantId}:${userId}`); },
+    // the health store's hard erase (see healthwork/store.js); `hold.active` stands in for a legal hold
+    hold: { active: false },
+    async activeHold() { return this.hold.active; },
+    async countRemoved({ tenantId, userId }) { return rows.filter(row => row.deleted && row.tenantId === tenantId && row.userId === userId).length; },
+    async purgeRemoved({ tenantId, userId }) { if (this.hold.active) return { blocked: true }; let purged = 0; for (let i = rows.length - 1; i >= 0; i -= 1) if (rows[i].deleted && rows[i].tenantId === tenantId && rows[i].userId === userId) { rows.splice(i, 1); purged += 1; } return { purged }; },
+    async purgeAll({ tenantId, userId }) { if (this.hold.active) return { blocked: true }; let purged = sessions.delete(`${tenantId}:${userId}`) ? 1 : 0; for (let i = rows.length - 1; i >= 0; i -= 1) if (rows[i].tenantId === tenantId && rows[i].userId === userId && rows[i].collection !== "audit") { rows.splice(i, 1); purged += 1; } return { purged }; }
   };
 }
 

@@ -129,7 +129,7 @@ async function handle(ctx) {
     const found = await resolvePatient(ctx, m[1]);
     if (!found) return "You have no patients registered.";
     if (found.reply) return found.reply;
-    return askConfirm(ctx, `Remove ${found.patient.data.name} (#${found.patient.number}) and everything recorded about them: visits, immunisations, follow-ups and referrals? This cannot be undone.`, { type: "remove-patient", memoryId: found.patient.memoryId, label: found.patient.data.name });
+    return askConfirm(ctx, `Remove ${found.patient.data.name} (#${found.patient.number}) and everything recorded about them: visits, immunisations, follow-ups and referrals? This cannot be undone.`, { type: "remove-patient", memoryId: found.patient.memoryId, label: found.patient.data.name, number: found.patient.number });
   }
   return null;
 }
@@ -143,6 +143,7 @@ const confirms = {
       for (const item of await ctx.store.list({ ...scope, collection })) if (item.data.pid === action.memoryId && await ctx.store.remove({ ...scope, memoryId: item.memoryId })) removed += 1;
     }
     const gone = await ctx.store.remove({ ...scope, memoryId: action.memoryId });
+    if (gone) await record(ctx, "audit", { event: "patient-removed", day: ctx.today, patient: action.number, records: removed }); // a number and a count, never a name
     return gone ? `Done. I've removed ${action.label} and ${plural(removed, "record")} kept about them.` : `I couldn't find ${action.label} any more.`;
   }
 };
