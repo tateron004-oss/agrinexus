@@ -6,6 +6,7 @@ const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { farmLogTurn } = require("../farm/log.js");
 const { farmWorkTurn } = require("../farmwork/index.js");
+const { healthWorkTurn } = require("../healthwork/index.js");
 const { wellnessTurn } = require("../wellness/log.js");
 const { communityTurn } = require("../community/desk.js");
 const { feedbackTurn } = require("../quality/feedback.js");
@@ -18,9 +19,9 @@ const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, farmWork, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, farmWork, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, farmWork, healthWork, maxRepairAttempts });
   }
 
   // "Send me a weekly summary on Sunday at 6pm" / "stop my weekly summary" / "do I have a weekly summary?": opt-in, like the morning brief.
@@ -203,14 +204,15 @@ class OpenEndedPlanner {
       const companionAnswer = await this.companion.turn({ command, context }).catch(() => null);
       if (companionAnswer) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionAnswer, sourceRequired: false, planningAttempts: 0 });
     }
-    // The farm toolkit: fields, crop calendar, workers and tasks, stock, animals, money, buyers and suppliers, loans and budgets, the co-op, the
-    // marketplace board, safety guides and printable reports (see farmwork/). An open guided question is answered here first.
-    if (this.farmWork?.store) {
-      const work = await farmWorkTurn({ text: command.text, store: this.farmWork.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: this.farmWork.notifications, nameOf: this.farmWork.nameOf });
+    // The health worker's record-keeping (patients, visits, immunisations, pregnancies, follow-ups, clinic stock, referral letters, monthly reports:
+    // see healthwork/) comes before the farm toolkit; each answers only words plainly for it, and an open guided question is answered first.
+    for (const [toolkit, turn, stepId] of [[this.healthWork, healthWorkTurn, "health-report"], [this.farmWork, farmWorkTurn, "farm-report"]]) {
+      if (!toolkit?.store) continue;
+      const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf });
       const goal = String(command.text || "").trim();
       const catalog = work?.report ? await this.catalog() : null;
       if (work?.report && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) return Object.freeze({ goal, application: "documents", riskTier: "low", clarification: null, planningAttempts: 0,
-        steps: [{ clientStepId: "farm-report", title: work.report.title, toolId: "documents.create", input: { title: work.report.title, content: work.report.content, format: work.report.format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+        steps: [{ clientStepId: stepId, title: work.report.title, toolId: "documents.create", input: { title: work.report.title, content: work.report.content, format: work.report.format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
       if (work?.report) return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: work.report.content, sourceRequired: false, planningAttempts: 0 });
       if (typeof work === "string") return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: work, sourceRequired: false, planningAttempts: 0 });
     }

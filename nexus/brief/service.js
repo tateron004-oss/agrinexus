@@ -1,6 +1,7 @@
 "use strict";
 
 const { farmWorkLine } = require("../farmwork/brief.js");
+const { healthWorkLine } = require("../healthwork/brief.js");
 const { fetchTodayForecast, fetchForecast } = require("./weather.js");
 const { composeBrief, DEFAULT_TIME_ZONE, validTimeZone, localDay } = require("./compose.js");
 const { isDueNow, localClock } = require("./schedule.js");
@@ -21,17 +22,18 @@ async function factsByKind(memory, { tenantId, userId }) {
 // Composes a person's brief from what is real right now (the forecast for the town they told Kyro, and the reminders they have set),
 // keeps their opt-in setting, and sends a due brief through the push path that reminders already use. Composing only reads; sending
 // happens only for people who asked for it, at most once per local day.
-function createBriefService({ notifications, settings = null, memory = null, farmRecords = null, devices = null, autonomyControl = null, logger = null, fetchImpl = globalThis.fetch, now = () => new Date() } = {}) {
+function createBriefService({ notifications, settings = null, memory = null, farmRecords = null, healthRecords = null, devices = null, autonomyControl = null, logger = null, fetchImpl = globalThis.fetch, now = () => new Date() } = {}) {
   const composeFor = async ({ tenantId, userId, known = {}, timeZone = DEFAULT_TIME_ZONE }) => {
-    const [forecast, rows, personalRows, farmRows, workRows] = await Promise.all([
+    const [forecast, rows, personalRows, farmRows, workRows, healthRows] = await Promise.all([
       known.location ? fetchTodayForecast({ place: known.location, fetchImpl }) : Promise.resolve(null),
       notifications?.listReminders ? notifications.listReminders({ tenantId, userId, limit: 50 }).catch(() => []) : Promise.resolve([]),
       memory?.listPersonalItems ? memory.listPersonalItems({ tenantId, userId }).catch(() => []) : Promise.resolve([]),
       memory?.listFarmEntries ? memory.listFarmEntries({ tenantId, userId }).catch(() => []) : Promise.resolve([]),
-      farmRecords?.listAll ? farmRecords.listAll({ tenantId, userId }).catch(() => []) : Promise.resolve([])
+      farmRecords?.listAll ? farmRecords.listAll({ tenantId, userId }).catch(() => []) : Promise.resolve([]),
+      healthRecords?.listAll ? healthRecords.listAll({ tenantId, userId }).catch(() => []) : Promise.resolve([])
     ]);
     const today = localDay(now(), timeZone);
-    const agenda = [digestLine(todayDigest(personalRows, today)), farmDigest(farmRows, today), farmWorkLine(workRows, today)].filter(Boolean).join(" ");
+    const agenda = [digestLine(todayDigest(personalRows, today)), farmDigest(farmRows, today), farmWorkLine(workRows, today), healthWorkLine(healthRows, today)].filter(Boolean).join(" ");
     const reminders = (rows || []).map(row => ({ text: row?.content?.reminderText || row?.content?.body || "", scheduledAt: row?.scheduled_at }));
     return composeBrief({ name: known.name, forecast, reminders, agenda, now: now(), timeZone });
   };

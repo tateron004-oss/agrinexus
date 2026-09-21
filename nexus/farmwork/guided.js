@@ -72,12 +72,14 @@ async function continueGuided(ctx, session, template) {
   // Someone who asks something else, or types a whole new request, is not answering: let the question go and handle what they said.
   const dropped = async () => { await ctx.store.clearSession({ tenantId: ctx.tenantId, userId: ctx.userId }); return null; };
   if (looksLikeQuestion(text) && q.type !== "longtext") return dropped();
+  // A free-text question accepts almost anything, so a message that opens like a new command is that command, not an answer.
+  if ((q.type === "text" || q.type === "longtext") && /^(?:please )?(?:register|add|visit|follow[- ]?up|print|remove|delete|record|set up|write|create|assign|post|sold|spent|bought)\b/i.test(text)) return dropped();
   const answers = { ...session.answers };
   if (SKIP_WORDS.test(text)) {
     if (!q.optional) return `I do need that one. ${ask(q)}`;
     answers[q.key] = null;
   } else {
-    const parsed = PARSERS[q.type](text, q, ctx);
+    const parsed = (q.parse || PARSERS[q.type])(text, q, ctx); // a template may bring its own parser (the health worker's ages)
     if (parsed.hint) {
       const misses = (session.misses || 0) + 1;
       if (misses >= 2 || (q.type !== "longtext" && text.split(/\s+/).length >= 4)) return dropped();
