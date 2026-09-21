@@ -267,6 +267,20 @@ test("every production acceptance probe phrase passes straight through the farm 
   for (const text of [...phrases, "Find mobile clinic locations near Nairobi", "Find agriculture jobs in Nairobi", "Find pharmacy support for metformin", "Find maize marketplace listings", "Search for buyers of my house"]) assert.equal(await who.say(text), null, text);
 });
 
+// Found by the live check: "Remove the field X" and "Remove Daisy" (a name with no species word) did nothing.
+test("a field or an animal can be removed in the words people use, after a yes", async () => {
+  const who = farmer();
+  await run(who, ["Add a field called North Plot, 2 acres", "skip", "skip", "skip", "Register a cow called Daisy", "skip", "female", "skip", "skip"]);
+  assert.match(await who.say("Remove the field North Plot"), /Remove the field North Plot\?.*Say yes/);
+  assert.match(await who.say("yes"), /removed North Plot/);
+  assert.match(await who.say("Remove Daisy"), /Remove daisy and stop keeping its records\?/);
+  assert.match(await who.say("no"), /left it as it is/);
+  assert.match(await who.say("Show my animals"), /daisy/);
+  assert.match(await who.say("Remove Daisy"), /Say yes/); assert.match(await who.say("yes"), /removed daisy/);
+  assert.match(await who.say("Show my animals"), /no animals/i);
+  assert.equal(await who.say("Remove the batteries"), null, "a name that is not one of the person's animals is not taken");
+});
+
 test("board searches still work in the words a farmer would use", async () => {
   const names = { u1: "Amina", u2: "Otieno" }; const store = fakeFarmStore();
   const seller = farmer({ userId: "u1", store, names }); const buyer = farmer({ userId: "u2", store, names });

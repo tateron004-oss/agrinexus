@@ -210,7 +210,7 @@ async function handle(ctx) {
     }
   }
 
-  if ((m = /^(?:please )?(?:remove|delete) (?:my )?(?:field|plot) (.+)$/i.exec(t))) {
+  if ((m = /^(?:please )?(?:remove|delete) (?:my |the )?(?:field|plot) (.+)$/i.exec(t))) {
     const fields = await ctx.store.list({ ...scope, collection: "field" }); const picked = pickByName(fields, m[1]);
     if (picked?.record) return askConfirm(ctx, `Remove the field ${picked.record.data.name}?`, { type: "remove-record", collection: "field", memoryId: picked.record.memoryId, label: picked.record.data.name });
     return picked?.ambiguous ? `Which one: ${picked.ambiguous.map(field => field.data.name).join(" or ")}?` : `I don't have a field called ${clean(m[1])}.`;
