@@ -1,7 +1,8 @@
 "use strict";
 
 const { circleTurn, readCircleRequest } = require("./circle.js");
-const { safetyTurn, readSafety } = require("./safety.js");
+const { safetyTurn, safeTurn, readSafety, readSafe } = require("./safety.js");
+const { createEmergencyLocation } = require("./emergency-location.js");
 const { createCheckinService, parseCheckinControl, readCheckinAnswer } = require("./checkins.js");
 const { createMedicationService, readMedicationRequest } = require("./medications.js");
 const { formatTimeOfDay } = require("../brief/schedule.js");
@@ -18,17 +19,35 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
     push: ({ tenantId, userId, title, body, key }) => notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "medication" } }),
     memoryUserName: args => circle.userName(args) }) : null;
 
+  // A push that opens a page when tapped (the emergency location opens a map).
+  const pushWithLink = ({ tenantId, toUserId, title, body, url, key }) => notifications.enqueue({ tenantId, userId: toUserId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, url, kind: "circle" } });
+
   return {
     circle,
     checkins,
     medications,
+    // Send a person's location to the members they chose, after an emergency alert they triggered (see emergency-location.js).
+    async shareEmergencyLocation({ tenantId, userId, alertId, position }) {
+      const userName = await circle.userName({ tenantId, userId });
+      const service = createEmergencyLocation({ circle, now, pushWithLink: args => pushWithLink({ ...args, tenantId }) });
+      return service.share({ tenantId, userId, userName, alertId, position });
+    },
     // One sweep for everything proactive in the companion: check-ins, then medicine reminders. Counts are kept apart.
     sendDue: async args => ({ ...(await checkins.sendDue(args)), medications: medications ? await medications.sendDue(args) : null }),
 
-    // Returns the words to answer with, or null when the text is nothing for the companion.
-    async turn({ command, context }) {
+    // The words to answer with, or null when the text is nothing for the companion; plus, for an emergency alert, { emergency } so the phone knows a
+    // location should follow (only ever when someone in the circle has chosen to receive it).
+    async handle({ command, context }) {
+      const outcome = {};
+      const response = await run({ command, context, outcome });
+      return response ? { response, ...(outcome.emergency ? { emergency: outcome.emergency } : {}) } : null;
+    },
+    async turn(args) { return (await this.handle(args))?.response ?? null; }
+  };
+
+  async function run({ command, context, outcome }) {
       // Most messages are nothing for the companion: decide from the words alone, before any lookup.
-      const needsName = Boolean(readSafety(command.text) || readCheckinAnswer(command.text) || parseCheckinControl(command.text) || readCircleRequest(command.text));
+      const needsName = Boolean(readSafety(command.text) || readSafe(command.text) || readCheckinAnswer(command.text) || parseCheckinControl(command.text) || readCircleRequest(command.text));
       if (!needsName && !(medications && readMedicationRequest(command.text))) return null;
       const tenantId = command.tenantId; const userId = command.actorId;
       // The person's display name is only looked up when what they said needs it (an alert, an invitation); "I had lunch" does not.
@@ -36,7 +55,11 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
       const scope = { tenantId, userId, userName };
       const send = (toUserId, title, body, key) => notifications.enqueue({ tenantId, userId: toUserId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "circle" } });
 
-      const safety = await safetyTurn({ text: command.text, circle, push: send, ...scope, now: now() });
+      // "I'm safe" only means something while an alert of theirs is open; otherwise it falls through to an ordinary answer.
+      const allClear = await safeTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome });
+      if (allClear) return allClear;
+
+      const safety = await safetyTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, recordAlert: circle.recordAlert ? args => circle.recordAlert(args) : null });
       if (safety) return safety;
 
       const answered = await checkins.answer({ ...scope, text: command.text, at: now() });
@@ -68,8 +91,7 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
       }
 
       return circleTurn({ text: command.text, circle, memory, push: send, ...scope });
-    }
-  };
+  }
 }
 
 module.exports = Object.freeze({ createCompanion });

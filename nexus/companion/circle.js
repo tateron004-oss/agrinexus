@@ -22,6 +22,10 @@ function readCircleRequest(text) {
   if ((m = /^(?:stop sharing|(?:do not|don't) share) my check-?ins? with (.+)$/i.exec(t))) return { action: "share", key: "checkins", who: clean(m[1]), value: false };
   if ((m = /^(?:please )?(?:share|let) my (?:medication|medicine|meds)(?: reminders?)? (?:be )?(?:with|shared with) (.+)$/i.exec(t)) || (m = /^(?:please )?let (.+?) (?:be told|know) (?:if|when) i (?:miss|skip) (?:a |my )?(?:dose|medication|medicine|meds)$/i.exec(t))) return { action: "share", key: "medications", who: clean(m[1]), value: true };
   if ((m = /^(?:stop sharing|(?:do not|don't) share) my (?:medication|medicine|meds)(?: reminders?)? with (.+)$/i.exec(t))) return { action: "share", key: "medications", who: clean(m[1]), value: false };
+  // Location in an emergency: chosen by the person, for one member or for everyone in the circle, and only ever sent when they ask for urgent help.
+  if ((m = /^(?:please )?(?:share|send|include) my (?:current )?location (?:in|during|with) (?:an? )?emergenc(?:y|ies)(?: alerts?)?(?: (?:with|to) (.+))?$/i.exec(t)) || (m = /^(?:please )?let (.+?) (?:see|get|know) my location (?:in|during) (?:an? )?emergenc(?:y|ies)$/i.exec(t))) return { action: "share", key: "emergencyLocation", who: clean(m[1] || "").replace(/^(?:everyone|everybody|all of them|all)(?: in my circle)?$/i, ""), value: true };
+  if ((m = /^(?:stop sharing|stop sending|(?:do not|don't) share|(?:do not|don't) send|(?:do not|don't) include) my (?:current )?location (?:in|during|with) (?:an? )?emergenc(?:y|ies)(?: alerts?)?(?: (?:with|to) (.+))?$/i.exec(t))) return { action: "share", key: "emergencyLocation", who: clean(m[1] || "").replace(/^(?:everyone|everybody|all of them|all)(?: in my circle)?$/i, ""), value: false };
+  if (/^(?:do i|am i) (?:share|sharing) my location (?:in|during) (?:an? )?emergenc(?:y|ies)$/.test(lower)) return { action: "list" };
   if (/^(?:do i have|show|list|what are) (?:any |my )?(?:circle )?invitations?$/.test(lower) || /^any (?:circle )?invitations?$/.test(lower)) return { action: "invitations" };
   if ((m = /^accept (?:the |an )?(?:circle )?invitation (?:from )?(.+)$/i.exec(t)) || (m = /^(?:yes,? )?(?:i )?accept (.+?)'s (?:circle )?invitation$/i.exec(t))) return { action: "accept", who: clean(m[1]) };
   if ((m = /^(?:decline|refuse|reject) (?:the |an )?(?:circle )?invitation (?:from )?(.+)$/i.exec(t)) || (m = /^(?:i )?(?:decline|refuse) (.+?)'s (?:circle )?invitation$/i.exec(t))) return { action: "decline", who: clean(m[1]) };
@@ -80,9 +84,11 @@ async function circleTurn({ text, circle, memory, push, tenantId, userId, userNa
       }
       case "list": {
         if (!mine.length) return 'Your circle is empty. Say "add name@example.com to my circle" to invite someone you trust.';
-        const told = link => [link.shares?.checkins ? "if you miss a check-in" : "", link.shares?.medications ? "if a dose goes unconfirmed" : ""].filter(Boolean).join(" or ");
+        const told = link => [link.shares?.checkins ? "if you miss a check-in" : "", link.shares?.medications ? "if a dose goes unconfirmed" : "", link.shares?.emergencyLocation ? "your location if you ask for urgent help" : ""].filter(Boolean).join(" or ");
         const line = link => `${link.otherName}${link.relationship ? ` (${link.relationship})` : ""} — ${link.status === "invited" ? "invitation waiting" : told(link) ? `may be told ${told(link)}` : "told nothing except an emergency"}`;
-        return `Your circle: ${mine.map(line).join("; ")}.`;
+        const active = mine.filter(link => link.status === "active");
+        const hint = active.length && !active.some(link => link.shares?.emergencyLocation) ? ' If you want them to be able to find you in an emergency, say "share my location in emergencies".' : "";
+        return `Your circle: ${mine.map(line).join("; ")}.${hint}`;
       }
       case "remove": {
         const picked = pickLink(mine, request.who);
@@ -94,12 +100,25 @@ async function circleTurn({ text, circle, memory, push, tenantId, userId, userNa
       }
       case "share": {
         const active = mine.filter(link => link.status === "active");
+        if (request.key === "emergencyLocation" && !request.who) {
+          if (!active.length) return "Nobody in your circle has said yes to your invitation yet, so there is nobody to share with. Once someone has, say this again.";
+          for (const link of active) await circle.setShare({ tenantId, personId: userId, linkId: link.linkId, key: "emergencyLocation", value: request.value });
+          const names = active.map(link => link.otherName).join(", ");
+          return request.value
+            ? `Done. If you ask me for urgent help, I'll also send your location to ${names}, as soon as your phone tells me where you are, and keep it updated for a while. Only then, never otherwise. Say "stop sharing my location in emergencies" any time.`
+            : `Done. ${names} will not be sent your location in an emergency. Alerts still reach everyone in your circle.`;
+        }
         const picked = pickLink(active, request.who);
         if (picked?.ambiguous) return `Which one: ${nameList(picked.ambiguous)}?`;
         if (!picked) return mine.some(link => pickLink([link], request.who)) ? `${clean(request.who)} hasn't said yes to your invitation yet.` : `I don't see ${clean(request.who)} in your circle.`;
         const key = request.key || "checkins";
         await circle.setShare({ tenantId, personId: userId, linkId: picked.link.linkId, key, value: request.value });
         const who = first(picked.link.otherName);
+        if (key === "emergencyLocation") {
+          return request.value
+            ? `Done. If you ask me for urgent help, I'll also send your location to ${picked.link.otherName}, as soon as your phone tells me where you are, and keep it updated for a while. Only then, never otherwise. Say "stop sharing my location in emergencies with ${who}" to undo.`
+            : `Done. ${picked.link.otherName} will not be sent your location in an emergency. Alerts still reach everyone in your circle; say "remove ${who} from my circle" if you don't want that either.`;
+        }
         if (key === "medications") {
           return request.value
             ? `Done. If a dose you asked me to remind you about goes unconfirmed for two hours, I may tell ${picked.link.otherName} that a dose is waiting. They will not be told which medicine, and never the doses. Say "stop sharing my medication reminders with ${who}" to undo.`

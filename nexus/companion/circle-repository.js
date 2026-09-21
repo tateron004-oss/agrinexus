@@ -13,7 +13,9 @@ const { createId } = require("../contracts/identifiers.js");
 // Links are within one community (tenant): both people must belong to the same one.
 const MAX_MEMBERS = 8;
 const MAX_LINKS_AS_MEMBER = 20;
-const SHARE_KEYS = Object.freeze(["checkins", "medications"]);
+const SHARE_KEYS = Object.freeze(["checkins", "medications", "emergencyLocation"]);
+// An emergency alert the person triggered is remembered for an hour, so their location can follow it (see emergency-location.js).
+const ALERT_MINUTES = 60;
 const PLACEHOLDER_VECTOR = `[1${",0".repeat(1535)}]`;
 const clean = value => String(value ?? "").replace(/\s+/g, " ").trim();
 
@@ -34,12 +36,12 @@ class CircleRepository {
     } catch { return ""; }
   }
 
-  async rows({ tenantId, userId, linkId = null }) {
+  async rows({ tenantId, userId, linkId = null, kind = "circle" }) {
     const result = await this.db.query(`select memory_id,principal_id,content from nexus_memory_items
       where tenant_id=$1 and memory_class='domain' and purpose='circle' and deleted_at is null
       and ($2::text is null or principal_id::text=$2::text) and ($3::text is null or content->>'linkId'=$3)
       order by created_at desc, memory_id desc limit 200`, [tenantId, userId, linkId]);
-    return (result.rows || result).filter(row => row.content && row.content.kind === "circle");
+    return (result.rows || result).filter(row => row.content && row.content.kind === kind);
   }
 
   // The caller's own links that are not over, newest first.
@@ -50,6 +52,27 @@ class CircleRepository {
   // Everyone who has said yes to looking out for this person.
   async activeMembers({ tenantId, personId }) {
     return (await this.listFor({ tenantId, userId: personId })).filter(link => link.role === "person" && link.status === "active");
+  }
+
+  // ---- emergency alerts the person triggered (same table and purpose; a different kind, so links never see them) ----
+  // The same alert within five minutes is one alert, matching the push de-duplication in safety.js.
+  async recordAlert({ tenantId, userId, alerted, now = new Date() }) {
+    const latest = await this.latestAlert({ tenantId, userId, now });
+    if (latest && !latest.ended && now.getTime() - Date.parse(latest.at) < 5 * 60 * 1000) return { alertId: latest.alertId, reused: true };
+    const alertId = `alt_${crypto.randomUUID()}`;
+    await this.insertRow(this.db, { tenantId, userId, content: { kind: "alert", role: "alert", alertId, at: now.toISOString(), alerted: alerted.map(member => ({ id: member.otherId, name: member.otherName })), ended: false, updates: 0, lastUpdateAt: null } });
+    return { alertId, reused: false };
+  }
+  // The person's most recent alert that is still within the hour, or null.
+  async latestAlert({ tenantId, userId, now = new Date() }) {
+    const rows = (await this.rows({ tenantId, userId, kind: "alert" })).filter(row => now.getTime() - Date.parse(row.content.at) < ALERT_MINUTES * 60 * 1000);
+    rows.sort((a, b) => Date.parse(b.content.at) - Date.parse(a.content.at));
+    return rows[0] ? { memoryId: rows[0].memory_id, ...rows[0].content } : null;
+  }
+  async updateAlert({ tenantId, userId, memoryId, change }) {
+    const row = (await this.rows({ tenantId, userId, kind: "alert" })).find(item => item.memory_id === memoryId); if (!row) return false;
+    await this.db.query(`update nexus_memory_items set content=$3,updated_at=now() where tenant_id=$1 and memory_id=$2 and purpose='circle' and deleted_at is null`, [tenantId, memoryId, change(row.content)]);
+    return true;
   }
 
   async insertRow(db, { tenantId, userId, content }) {
@@ -114,4 +137,4 @@ class CircleRepository {
   }
 }
 
-module.exports = Object.freeze({ CircleRepository, MAX_MEMBERS, SHARE_KEYS });
+module.exports = Object.freeze({ CircleRepository, MAX_MEMBERS, SHARE_KEYS, ALERT_MINUTES });

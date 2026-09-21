@@ -688,6 +688,12 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         result = { status: 200, body: { authoritative: true, progress: snapshot.progress } };
       }
       else if (url.pathname === "/api/nexus/runtime/navigation" && req.method === "POST") result = await navigation.handle(request);
+      else if (url.pathname === "/api/nexus/runtime/companion/emergency-location" && req.method === "POST") {
+        // The phone's position after an emergency alert the person triggered. Goes only to members they chose (see companion/emergency-location.js); never stored or logged.
+        if (!active.companion?.shareEmergencyLocation) { send(res, 503, { error: "Emergency location is unavailable.", code: "emergency_location_unavailable" }); return true; }
+        try { result = await active.companion.shareEmergencyLocation({ tenantId: context.tenantId, userId: context.userId, alertId: body.alertId, position: body.position }); }
+        catch (error) { if (!error.status) throw error; result = { status: error.status, body: { error: error.message, code: error.code, ...(error.ended ? { ended: true } : {}) } }; }
+      }
       else if (url.pathname === "/api/nexus/runtime/devices" && req.method === "POST") result = await controls.registerDevice(request);
       else if (/^\/api\/nexus\/runtime\/devices\/[^/]+$/.test(url.pathname) && req.method === "DELETE") { request.params.deviceId=decodeURIComponent(url.pathname.split("/").pop()); result=await controls.revokeDevice(request); }
       else if (url.pathname === "/api/nexus/runtime/schedules" && req.method === "POST") result = await controls.createSchedule(request);
