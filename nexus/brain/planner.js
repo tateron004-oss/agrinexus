@@ -9,6 +9,7 @@ const { extractContactStatement, extractContactRequest, resolveContact, describe
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
+const { personalTurn } = require("../personal/items.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, brief, maxRepairAttempts = 2 }) {
@@ -140,6 +141,9 @@ class OpenEndedPlanner {
     const named = await this.namedContactRequest(command);
     if (named?.clarification) return Object.freeze({ goal: String(command.text || "").trim(), application: "communications", riskTier: "regulated", clarification: named.clarification, steps: [], planningAttempts: 0 });
     if (named) command = { ...command, text: named.text };
+    // To-do and shopping lists, notes and calendar events the person asks Kyro to keep (see personal/items.js).
+    const personal = await personalTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+    if (personal) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: personal, sourceRequired: false, planningAttempts: 0 });
     // What Kyro has learned about this person (see memory/profile-facts.js) is used wherever it helps: their first name in greetings,
     // their town for a bare "weather" and for local farming searches, their language for direct answers, and as context for the planner.
     const known = await this.knownAboutPerson(command);
