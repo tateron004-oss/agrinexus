@@ -52,7 +52,7 @@ async function handle(ctx) {
     return `Added ${unitLabel(quantity.value, quantity.unit)} of ${name}. You now have ${unitLabel(record.data.qty, record.data.unit)}.`;
   }
 
-  if ((m = new RegExp(`^(?:i )?(?:used up|used|applied|fed out|fed|took out|withdrew|removed) ${QTY} (?:of )?(.+?)(?: (?:on|in|for|to|from|at) .+)?$`, "i").exec(t))) {
+  if ((m = new RegExp(`^(?:i |we )?(?:used up|used|use|apply|applied|fed out|fed|took out|take out|take|took|withdrew|removed) ${QTY} (?:of )?(.+?)(?: (?:on|in|for|to|from|at|out of) .+)?$`, "i").exec(t))) {
     const quantity = parseQuantity(m[1]); const name = tidyName(m[2]);
     if (!quantity || !name) return null;
     const items = await ctx.store.list({ ...scope, collection: "stock" });

@@ -104,6 +104,9 @@ async function handle(ctx) {
   if ((m = /^(?:please )?(?:print|make|create|prepare|generate|give me|export|produce)(?: me)?(?: a| an| my| the| our)? (?:printable )?(.+?)(?: (?:as|in) (?:a )?(?:pdf|word|docx)(?: file)?)?$/i.exec(t)) && /\b(?:report|summary|record|list|register|statement|overview)\b/i.test(t) && /^(?:please )?(?:print|make|create|prepare|generate|give me|export|produce)/i.test(t)) {
     const what = m[1]; const kind = REPORTS.find(entry => entry.pattern.test(what));
     if (!kind) return null;
+    // Only the farmer's own records: "make a summary of this article" or "a list of tasks for my trip" is not a farm report, and someone who keeps
+    // no farm records is left to normal planning.
+    if (!/\b(?:my|our|farm)\b/i.test(t) || /\b(?:of|about)\b/i.test(t) || (kind.id === "summary" && !/\bfarm\b/i.test(t)) || !(await ctx.hasFarmData())) return null;
     const made = await build(ctx, kind.id, t);
     return made ? { report: { ...made, format: formatOf(t) } } : `I have nothing recorded yet for your ${kind.label}${/expense|income|profit|statement|harvest|coop/.test(kind.id) ? " in that period" : ""}, so there is nothing to print.`;
   }

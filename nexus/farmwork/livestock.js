@@ -91,7 +91,7 @@ async function handle(ctx) {
     if (!animals.length) return 'You have no animals recorded. Say "add a cow called Bella".';
     return `You have ${plural(animals.length, "animal record")}: ${animals.slice().reverse().slice(0, 10).map(animal => describeAnimal(animal, ctx.today)).join("; ")}${animals.length > 10 ? ` and ${animals.length - 10} more` : ""}.`;
   }
-  if (/^(?:what|which) (?:vaccinations|treatments|jobs|animals) (?:are|is) (?:due|coming up|overdue)(?: soon)?$/.test(lower) || /^(?:what|which) animals need (?:vaccinating|treatment|attention)$/.test(lower) || /^(?:any )?(?:vaccinations|treatments) due$/.test(lower)) {
+  if (/^(?:what|which) (?:vaccinations|treatments|jobs|animals) (?:are|is) (?:due|coming up|overdue)(?: soon)?$/.test(lower) || /^(?:what|which) animals need (?:vaccinating|treatment|attention)$/.test(lower) || /^what(?:'s| is) due (?:for|on) my (?:animals|livestock|herd|flock)$/.test(lower) || /^(?:any )?(?:vaccinations|treatments) due$/.test(lower)) {
     const events = (await ctx.store.list({ ...scope, collection: "animal_event" })).filter(event => event.data.nextDue && event.data.nextDue <= addDays(ctx.today, 30));
     const latest = new Map(); for (const event of events) { const key = `${event.data.animal}|${event.data.type}|${event.data.detail || ""}`; if (!latest.has(key) || latest.get(key).data.nextDue < event.data.nextDue) latest.set(key, event); }
     const due = [...latest.values()].sort((a, b) => a.data.nextDue.localeCompare(b.data.nextDue));
@@ -121,7 +121,12 @@ async function handle(ctx) {
   }
 
   // ---- recording what happened ----
-  if ((m = /^(?:i |we )?(vaccinated|dewormed|drenched|dipped|treated) (.+?)(?: (?:against|for|with) (.+?))?(?:[,;]?\s*(?:next(?: one| dose)?(?: is)? due|due again|repeat|next dose) (?:on |in )?(.+))?$/i.exec(t)) || (m = /^(?:record|log|add) (vaccination|deworming|treatment|dipping)(?: for| of| on)? (.+?)(?: (?:against|for|with) (.+?))?(?:[,;]?\s*next due (?:on |in )?(.+))?$/i.exec(t))) {
+  // "Daisy was vaccinated for foot and mouth": only when the name is one of this person's animals (never "I was treated for malaria")
+  let careWords = null;
+  if ((careWords = /^(.+?) (?:was |were |has been |have been |got )(vaccinated|dewormed|drenched|dipped|treated)(?: (?:against|for|with) (.+?))?(?:[,;]?\s*(?:next(?: one| dose)?(?: is)? due|due again|repeat|next dose) (?:on |in )?(.+))?$/i.exec(t))
+      && !findAnimal(await ctx.store.list({ ...scope, collection: "animal" }), careWords[1])) careWords = null;
+  if (careWords) m = [careWords[0], careWords[2], careWords[1], careWords[3], careWords[4]];
+  if (careWords || (m = /^(?:i |we )?(vaccinated|dewormed|drenched|dipped|treated) (.+?)(?: (?:against|for|with) (.+?))?(?:[,;]?\s*(?:next(?: one| dose)?(?: is)? due|due again|repeat|next dose) (?:on |in )?(.+))?$/i.exec(t)) || (m = /^(?:record|log|add) (vaccination|deworming|treatment|dipping)(?: for| of| on)? (.+?)(?: (?:against|for|with) (.+?))?(?:[,;]?\s*next due (?:on |in )?(.+))?$/i.exec(t))) {
     const animals = await ctx.store.list({ ...scope, collection: "animal" }); const animal = findAnimal(animals, m[2]);
     if (!animal) return animals.length ? `I don't have an animal called ${clean(m[2])}. Say "add a ${clean(m[2])}" first.` : null;
     const verb = m[1].toLowerCase(); const type = /^vaccin/.test(verb) ? "vaccination" : /^(?:deworm|drench)/.test(verb) ? "deworming" : /^dip/.test(verb) ? "dipping" : "treatment";

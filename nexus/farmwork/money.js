@@ -24,7 +24,12 @@ function incomeCategory(text) {
 
 const defaultCurrency = records => (records.find(record => record.data.currency)?.data.currency) || "";
 
+// Not everything someone buys or sells is farm business. A sale or purchase that matches no farm word is only recorded for a person who already
+// keeps farm records; for anyone else it is left to normal planning ("I sold my old car").
+const NOT_FARM = Symbol("not-farm");
+
 async function recordMoney(ctx, entry) {
+  if (entry.category === "other" && !(await ctx.hasFarmData())) throw NOT_FARM;
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   const all = await ctx.store.list({ ...scope, collection: "money" });
   if (all.length >= 5000) return { refused: "Your money records are full (five thousand entries). Ask me for a summary, then remove some." };
@@ -45,6 +50,10 @@ const fieldIn = (fields, text) => fields.find(field => nameKey(field.data.name) 
 const periodOf = (text, today, fallback) => extractPeriod(text, today) || extractPeriod(fallback, today);
 
 async function handle(ctx) {
+  try { return await handleMoney(ctx); } catch (error) { if (error === NOT_FARM) return null; throw error; }
+}
+
+async function handleMoney(ctx) {
   const t = clean(ctx.text).replace(/[.!?]+$/g, ""); const lower = t.toLowerCase();
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   let m;

@@ -42,8 +42,9 @@ async function farmWorkTurn({ text, store, tenantId, userId, now = new Date(), t
   if (!store?.getSession || !text) return null;
   const wrapped = track(store);
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
-  let entries = null;
+  let entries = null; let hasFarm = null;
   const ctx = { text: clean(text), store: wrapped, tenantId, userId, now, zone, today: localDay(now, zone), roles, memory, notifications, nameOf,
+    hasFarmData: async () => { if (hasFarm === null) { try { hasFarm = (await store.listAll({ tenantId, userId, limit: 1 })).length > 0; } catch { hasFarm = false; } } return hasFarm; },
     farmEntries: async () => { if (entries === null) { try { entries = memory?.listFarmEntries ? (await memory.listFarmEntries({ tenantId, userId })).map(row => row.content) : []; } catch { entries = []; } } return entries; },
     personal: memory?.addPersonalItem ? { add: content => memory.addPersonalItem({ tenantId, userId, content }), list: async () => (await memory.listPersonalItems({ tenantId, userId })).map(row => row.content) } : null };
   try {
@@ -56,7 +57,8 @@ async function farmWorkTurn({ text, store, tenantId, userId, now = new Date(), t
           if (NO.test(ctx.text)) return "Okay, I've left it as it is.";
           // anything else is a new request: the question is dropped and the words are handled normally below
         } else if (TEMPLATES[session.collection]) {
-          return await continueGuided(ctx, session, TEMPLATES[session.collection]);
+          const answer = await continueGuided(ctx, session, TEMPLATES[session.collection]);
+          if (answer) return answer; // null: the person moved on to something else, so their words are handled normally below
         } else await wrapped.clearSession({ tenantId, userId });
       } else { await wrapped.clearSession({ tenantId, userId }); }
     }

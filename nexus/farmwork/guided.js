@@ -69,19 +69,26 @@ async function continueGuided(ctx, session, template) {
   const q = template.questions.find(item => item.key === session.asking);
   if (!q) { await ctx.store.clearSession({ tenantId: ctx.tenantId, userId: ctx.userId }); return null; }
   if (CANCEL_WORDS.test(text)) { await ctx.store.clearSession({ tenantId: ctx.tenantId, userId: ctx.userId }); return "Okay, I've stopped that. Nothing was saved."; }
-  if (looksLikeQuestion(text) && q.type !== "longtext") return `I'm in the middle of something: ${ask(q)} Say "cancel" if you'd like to stop.`;
+  // Someone who asks something else, or types a whole new request, is not answering: let the question go and handle what they said.
+  const dropped = async () => { await ctx.store.clearSession({ tenantId: ctx.tenantId, userId: ctx.userId }); return null; };
+  if (looksLikeQuestion(text) && q.type !== "longtext") return dropped();
   const answers = { ...session.answers };
   if (SKIP_WORDS.test(text)) {
     if (!q.optional) return `I do need that one. ${ask(q)}`;
     answers[q.key] = null;
   } else {
     const parsed = PARSERS[q.type](text, q, ctx);
-    if (parsed.hint) return `${parsed.hint} ${ask(q)}`;
+    if (parsed.hint) {
+      const misses = (session.misses || 0) + 1;
+      if (misses >= 2 || (q.type !== "longtext" && text.split(/\s+/).length >= 4)) return dropped();
+      await ctx.store.setSession({ tenantId: ctx.tenantId, userId: ctx.userId, session: { ...session, misses, expiresAt: new Date(Date.now() + SESSION_MINUTES * 60000).toISOString() } });
+      return `${parsed.hint} ${ask(q)} (Say "cancel" to stop.)`;
+    }
     answers[q.key] = parsed.value;
   }
   const next = template.questions.find(item => !(item.key in answers));
   if (!next) return finish(ctx, template, answers, session.extra || {});
-  await ctx.store.setSession({ tenantId: ctx.tenantId, userId: ctx.userId, session: { ...session, answers, asking: next.key, expiresAt: new Date(Date.now() + SESSION_MINUTES * 60000).toISOString() } });
+  await ctx.store.setSession({ tenantId: ctx.tenantId, userId: ctx.userId, session: { ...session, answers, misses: 0, asking: next.key, expiresAt: new Date(Date.now() + SESSION_MINUTES * 60000).toISOString() } });
   return ask(next);
 }
 

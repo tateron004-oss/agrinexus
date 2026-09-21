@@ -45,7 +45,12 @@ const describeTask = (task, today) => `Task ${task.number}: ${task.data.title}${
 // Splits "weed North Plot by Friday" into the job and its day.
 function splitDue(text, today) {
   const m = /^(.*?)(?:\s+(?:by|before|on|due|until|for)\s+((?:next |this )?(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(?:st|nd|rd|th)?(?:\s+of)?\s+[a-z]+|[a-z]+\s+\d{1,2}(?:st|nd|rd|th)?|\d{4}-\d{2}-\d{2}|in \d+ (?:days?|weeks?))))\s*$/i.exec(clean(text));
-  if (!m) return { title: clean(text).replace(/[.,;]+$/g, ""), due: null };
+  if (!m) {
+    // "spray maize tomorrow", "weed the beans on friday" said without "by"
+    const bare = /^(.+?)\s+((?:next |this )?(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday))\s*$/i.exec(clean(text));
+    if (bare) return { title: clean(bare[1]).replace(/[.,;]+$/g, ""), due: anyDay(bare[2], today) };
+    return { title: clean(text).replace(/[.,;]+$/g, ""), due: null };
+  }
   return { title: clean(m[1]).replace(/[.,;]+$/g, ""), due: anyDay(m[2], today) };
 }
 
@@ -112,7 +117,7 @@ async function handle(ctx) {
     const late = (await ctx.store.list({ ...scope, collection: "task" })).filter(task => task.data.status !== "done" && task.data.due && task.data.due < ctx.today);
     return late.length ? `${plural(late.length, "job is", "jobs are")} overdue: ${late.slice(0, 8).map(task => describeTask(task, ctx.today)).join("; ")}.` : "Nothing is overdue.";
   }
-  if ((m = /^what (?:is|are) (.+?) (?:supposed to do|meant to do|doing|to do|assigned)(?: today| this week)?$/i.exec(t)) || (m = /^(?:show|list) (?:the )?(?:tasks|jobs) (?:for|of) (.+)$/i.exec(t))) {
+  if ((m = /^what (?:is|are) (.+?) (?:supposed to do|meant to do|doing|to do|assigned)(?: today| this week)?$/i.exec(t)) || (m = /^(?:show|list) (?:the )?(?:tasks|jobs) (?:for|of) (.+)$/i.exec(t)) || (m = /^(?:show|list) (?:me )?(.+?)['’]s (?:tasks|jobs)$/i.exec(t))) {
     const workers = await ctx.store.list({ ...scope, collection: "worker" }); const worker = findWorker(workers, m[1]);
     const name = worker ? worker.data.name : titleCase(m[1]);
     const tasks = (await ctx.store.list({ ...scope, collection: "task" })).filter(task => task.data.assignee && task.data.assignee.toLowerCase() === name.toLowerCase() && task.data.status !== "done");

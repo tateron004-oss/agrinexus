@@ -71,8 +71,10 @@ async function handle(ctx) {
     const rows = (await parties()).filter(party => !role || party.data.role === role || party.data.role === "both");
     return rows.length ? `Your ${m[1].toLowerCase()}: ${rows.slice().reverse().slice(0, 12).map(party => `${party.data.name}${party.data.products ? ` (${party.data.products})` : ""}${party.data.area ? `, ${party.data.area}` : ""}`).join("; ")}.` : `You have no ${m[1].toLowerCase()} yet. Say "add a buyer".`;
   }
-  if ((m = /^(?:note|write) (?:down )?(?:about|on) (.+?)\s*[:,-]\s*(.+)$/i.exec(t)) || (m = /^(?:add a note (?:to|for|about)) (.+?)\s*[:,-]\s*(.+)$/i.exec(t))) {
-    const found = findParty(await parties(), m[1]);
+  if ((m = /^(?:note|write) (?:down )?(?:about|on) (.+?)\s*[:,-]\s*(.+)$/i.exec(t)) || (m = /^(?:add (?:a )?note (?:to|for|about|on)) (.+?)\s*[:,-]\s*(.+)$/i.exec(t))) {
+    const known = await parties();
+    if (!known.length || /^(?:my|the|our)\b|\b(?:calendar|reminders?|phone|diary|journal|list)\b/i.test(m[1])) return null; // "add a note to my calendar" is not about a buyer
+    const found = findParty(known, m[1]);
     if (!found) return `I don't have ${clean(m[1])} on your list. Say "add a buyer ${titleCase(m[1])}" first.`;
     if (found.ambiguous) return `Which one: ${found.ambiguous.map(party => party.data.name).join(" or ")}?`;
     await ctx.store.add({ ...scope, collection: "party_note", data: { party: found.party.data.name, text: clean(m[2]).slice(0, 300), day: ctx.today } });
@@ -122,7 +124,7 @@ async function handle(ctx) {
 
   // ---- orders ----
   let order = null;
-  if ((m = new RegExp(`^${NAME} ordered (.+)$`, "i").exec(t)) || (m = new RegExp(`^(?:new )?order from ${NAME}\\s*[:,-]?\\s*(.+)$`, "i").exec(t))) order = { kind: "sale", who: m[1], rest: m[2] };
+  if ((m = new RegExp(`^${NAME} ordered (.+)$`, "i").exec(t)) || (m = new RegExp(`^(?:(?:please )?(?:add|record|create|place|log) )?(?:an? )?(?:new )?order from ${NAME}\\s*[:,-]?\\s*(.+)$`, "i").exec(t))) order = { kind: "sale", who: m[1], rest: m[2] };
   else if ((m = new RegExp(`^(?:please )?order (.+?) from ${NAME}(?:\\s+(.*))?$`, "i").exec(t))) order = { kind: "purchase", who: m[2], rest: `${m[1]} ${m[3] || ""}` };
   if (order && !/^(?:i|we|you|they|it|he|she|who|what)$/i.test(order.who)) {
     const quantity = parseQuantity(order.rest); const per = parsePricePer(order.rest);
