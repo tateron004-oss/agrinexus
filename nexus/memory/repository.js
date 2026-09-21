@@ -104,6 +104,36 @@ class MemoryRepository {
     return (result.rows || result).map(row => row.content).filter(Boolean);
   }
 
+  // The person's own to-dos, shopping items, notes and calendar events (see personal/items.js): one row each under the purpose
+  // "personal_items", private to them. Newest first. Removing is a soft delete like every other forget.
+  async addPersonalItem({ tenantId, userId, content }) {
+    const saved = await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','personal_items',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','sensitive') returning memory_id`,
+    [createId("memory"), tenantId, userId, content, `${content.kind}: ${String(content.text || "").slice(0, 200)}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+  }
+
+  async listPersonalItems({ tenantId, userId, kind = null, limit = 400 }) {
+    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='personal_items' and deleted_at is null
+      order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 400, 1), 500)]);
+    return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.kind && (!kind || row.content.kind === kind));
+  }
+
+  async updatePersonalItem({ tenantId, userId, memoryId, content }) {
+    const result = await this.db.query(`update nexus_memory_items set content=$4,searchable_text=$5,updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='personal_items' and deleted_at is null returning memory_id`,
+    [tenantId, userId, memoryId, content, `${content.kind}: ${String(content.text || "").slice(0, 200)}`]);
+    return Boolean((result.rows || result)[0]);
+  }
+
+  async removePersonalItem({ tenantId, userId, memoryId }) {
+    const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='personal_items' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId]);
+    return Boolean((result.rows || result)[0]);
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,

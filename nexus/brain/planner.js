@@ -7,6 +7,7 @@ const { normalizeRecipient, normalizeSendRequest } = require("../communications/
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
+const { personalTurn } = require("../personal/items.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, brief, maxRepairAttempts = 2 }) {
@@ -80,6 +81,9 @@ class OpenEndedPlanner {
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
     const profile = await this.profileTurn(command);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
+    // To-do and shopping lists, notes and calendar events the person asks Kyro to keep (see personal/items.js).
+    const personal = await personalTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+    if (personal) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: personal, sourceRequired: false, planningAttempts: 0 });
     // What Kyro has learned about this person (see memory/profile-facts.js) is used wherever it helps: their first name in greetings,
     // their town for a bare "weather" and for local farming searches, their language for direct answers, and as context for the planner.
     const known = await this.knownAboutPerson(command);

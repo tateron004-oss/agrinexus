@@ -1,9 +1,10 @@
 "use strict";
 
 const { fetchTodayForecast } = require("./weather.js");
-const { composeBrief, DEFAULT_TIME_ZONE, validTimeZone } = require("./compose.js");
+const { composeBrief, DEFAULT_TIME_ZONE, validTimeZone, localDay } = require("./compose.js");
 const { isDueNow, localClock } = require("./schedule.js");
 const { isFact } = require("../memory/profile-facts.js");
+const { todayDigest, digestLine } = require("../personal/items.js");
 
 // What a person has told Kyro about themselves, by kind (name, location, ...). Never throws: with no memory nothing is known.
 async function factsByKind(memory, { tenantId, userId }) {
@@ -20,12 +21,14 @@ async function factsByKind(memory, { tenantId, userId }) {
 // happens only for people who asked for it, at most once per local day.
 function createBriefService({ notifications, settings = null, memory = null, devices = null, autonomyControl = null, logger = null, fetchImpl = globalThis.fetch, now = () => new Date() } = {}) {
   const composeFor = async ({ tenantId, userId, known = {}, timeZone = DEFAULT_TIME_ZONE }) => {
-    const [forecast, rows] = await Promise.all([
+    const [forecast, rows, personalRows] = await Promise.all([
       known.location ? fetchTodayForecast({ place: known.location, fetchImpl }) : Promise.resolve(null),
-      notifications?.listReminders ? notifications.listReminders({ tenantId, userId, limit: 50 }).catch(() => []) : Promise.resolve([])
+      notifications?.listReminders ? notifications.listReminders({ tenantId, userId, limit: 50 }).catch(() => []) : Promise.resolve([]),
+      memory?.listPersonalItems ? memory.listPersonalItems({ tenantId, userId }).catch(() => []) : Promise.resolve([])
     ]);
+    const agenda = digestLine(todayDigest(personalRows, localDay(now(), timeZone)));
     const reminders = (rows || []).map(row => ({ text: row?.content?.reminderText || row?.content?.body || "", scheduledAt: row?.scheduled_at }));
-    return composeBrief({ name: known.name, forecast, reminders, now: now(), timeZone });
+    return composeBrief({ name: known.name, forecast, reminders, agenda, now: now(), timeZone });
   };
   // Briefs already handled (sent, or nothing to say) by this process today, so a brief with nothing to say is not recomputed every minute.
   const handledToday = new Set();
