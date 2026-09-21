@@ -13,9 +13,36 @@ const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, maxRepairAttempts });
+  }
+
+  async alertsControlTurn(command, context, known) {
+    const alerts = this.alerts;
+    if (!alerts?.enable || !alerts?.disable || !alerts?.status) return null;
+    const request = parseAlertsControl(command.text);
+    if (!request) return null;
+    const scope = { tenantId: command.tenantId, userId: command.actorId };
+    const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+    try {
+      if (request.action === "stop") return answer(await alerts.disable(scope) ? "Done. I've stopped your weather alerts." : "You don't have weather alerts turned on.");
+      if (request.action === "status") {
+        const current = await alerts.status(scope);
+        return answer(current ? 'Weather alerts are on. I watch the forecast for your town and warn you by push about storms, heavy rain, strong wind, heat and frost. Say "stop weather alerts" any time.'
+          : 'Weather alerts are off. Say "warn me about storms and heavy rain" to turn them on.');
+      }
+      const zoneGiven = Boolean(context?.timeZone) && validTimeZone(context.timeZone) === context.timeZone;
+      const saved = await alerts.enable({ ...scope, timeZone: zoneGiven ? context.timeZone : DEFAULT_TIME_ZONE });
+      const town = saved.location || known?.byKind?.location || "";
+      const notes = [
+        town ? `I'll watch the forecast for ${town}.` : 'Tell me where you are ("I live in <your town>") and I will start watching; until then there is nothing to check.',
+        zoneGiven ? "" : `I do not know your time zone, so I used ${saved.timeZone}; tell me if you are elsewhere.`,
+        saved.hasPushDevice === false ? "Alerts are not turned on for any of your devices yet, so nothing can be sent until you turn them on." : "",
+        'I stay quiet between 10pm and 5am. Say "stop weather alerts" any time.'
+      ].filter(Boolean).join(" ");
+      return answer(`Done. ${saved.replaced ? "Weather alerts stay on." : "Weather alerts are on."} I'll warn you by push when storms, heavy rain, strong wind, heat or frost are forecast for today or tomorrow. ${notes}`);
+    } catch { return null; }
   }
 
   async briefControlTurn(command, context, known) {
@@ -184,6 +211,9 @@ class OpenEndedPlanner {
     // stops or asks about it. Opt-in only: nothing is ever scheduled without this request.
     const briefControl = await this.briefControlTurn(command, context, known);
     if (briefControl) return Object.freeze({ ...briefControl, planningAttempts: 0 });
+    // "Warn me about storms" / "stop weather alerts": opt-in weather warnings, sent by push when the forecast turns serious.
+    const alertsControl = await this.alertsControlTurn(command, context, known);
+    if (alertsControl) return Object.freeze({ ...alertsControl, planningAttempts: 0 });
     // "How many bags of maize do I have in stock?" was sent to a web search and answered "You have 21 bags", a number
     // taken from an unrelated web page. Nexus holds no such record, so it says so instead of guessing.
     const personalRecord = personalRecordQuestionPlan(command.text);
@@ -911,6 +941,23 @@ function parseBriefControl(text) {
   }
   return null;
 }
+// Weather alerts: "warn me about storms", "turn on weather alerts", "stop weather alerts", "are my weather alerts on?". "Warn me if the tank
+// drops below 20 percent" is a farm-log level, not this, so the weather words are required.
+const ALERT_SUBJECT = "(?:severe |bad |extreme |dangerous |heavy |strong )?(?:weather|storms?|rain|rains|heat|hot weather|frost|winds?|floods?|flooding|thunderstorms?)";
+const ALERT_SETUP = [
+  new RegExp(`^(?:please )?(?:turn on|enable|start|switch on|activate|set up) (?:my |the )?(?:severe )?weather (?:alerts?|warnings?)$`),
+  new RegExp(`^(?:please )?(?:warn|alert|notify|tell|let) me (?:about|of|when there(?:'s| is| will be)|if there(?:'s| is| will be)|if|when) (?:any |a |an )?${ALERT_SUBJECT}(?:(?:,| and| or) (?:any )?${ALERT_SUBJECT})*(?: is| are)?(?: coming| ahead| forecast| expected)?(?: to me)?$`)
+];
+const ALERT_STOP = /^(?:please )?(?:(?:turn off|disable|stop|switch off|cancel|end|pause) (?:my |the |all )?(?:severe )?weather (?:alerts?|warnings?)|stop (?:warning|alerting|notifying) me about (?:the )?(?:severe )?(?:weather|storms?))$/;
+const ALERT_STATUS = [/^(?:are|do i have) (?:my )?(?:weather )?(?:alerts?|warnings?) (?:on|turned on|set up|enabled|active)$/, /^(?:are|do i have) (?:my )?weather (?:alerts?|warnings?)(?: (?:on|turned on|set up|enabled|active))?$/, /^(?:what|which) weather (?:alerts?|warnings?) do i have$/];
+function parseAlertsControl(text) {
+  const normalized = String(text || "").toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
+  if (!normalized || normalized.length > 140) return null;
+  if (ALERT_STOP.test(normalized)) return { action: "stop" };
+  if (ALERT_STATUS.some(pattern => pattern.test(normalized))) return { action: "status" };
+  if (ALERT_SETUP.some(pattern => pattern.test(normalized))) return { action: "enable" };
+  return null;
+}
 function briefPlan(goal, text, byKind = {}) {
   const response = text || (byKind.location
     ? `I could not reach the weather for ${byKind.location} just now, and you have no reminders due today, so I have nothing to brief you on.`
@@ -950,7 +997,7 @@ function personalizedSearch(plan, byKind) {
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
+module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
