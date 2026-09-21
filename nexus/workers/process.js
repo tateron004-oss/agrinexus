@@ -54,6 +54,12 @@ async function main() {
   // Briefs go out at a chosen minute of the person's own day, so this checks about once a minute (a sent brief is remembered per local day).
   const briefIntervalMs = Number(process.env.NEXUS_BRIEF_POLL_MS || 60000);
   let lastBriefSweepAt = 0;
+  // Weather changes slowly and the forecast service is free but shared, so alerts are checked every 30 minutes (towns are fetched once per pass).
+  const weatherAlertIntervalMs = Number(process.env.NEXUS_WEATHER_ALERT_POLL_MS || 30 * 60 * 1000);
+  let lastWeatherAlertSweepAt = 0;
+  // The weekly summary is due on one weekday at one chosen time (a three-hour window), so checking every five minutes is plenty.
+  const weeklySummaryIntervalMs = Number(process.env.NEXUS_WEEKLY_SUMMARY_POLL_MS || 5 * 60 * 1000);
+  let lastWeeklySummarySweepAt = 0;
   while (!stopping) {
     const result = await worker.runOne();
     releaseHeartbeat.recordJob(result.job?.job_id || null);
@@ -71,6 +77,16 @@ async function main() {
       lastBriefSweepAt = Date.now();
       try { const outcome = await handlers["brief.send-due"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.sent) logger.info("worker.brief_sweep", outcome); }
       catch (error) { logger.error("worker.brief_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastWeeklySummarySweepAt >= weeklySummaryIntervalMs) {
+      lastWeeklySummarySweepAt = Date.now();
+      try { const outcome = await handlers["summary.weekly-send-due"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.sent) logger.info("worker.weekly_summary_sweep", outcome); }
+      catch (error) { logger.error("worker.weekly_summary_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastWeatherAlertSweepAt >= weatherAlertIntervalMs) {
+      lastWeatherAlertSweepAt = Date.now();
+      try { const outcome = await handlers["alerts.weather-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.sent) logger.info("worker.weather_alert_sweep", outcome); }
+      catch (error) { logger.error("worker.weather_alert_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastSituationalAwarenessSweepAt >= situationalAwarenessIntervalMs) {
       lastSituationalAwarenessSweepAt = Date.now();

@@ -104,6 +104,114 @@ class MemoryRepository {
     return (result.rows || result).map(row => row.content).filter(Boolean);
   }
 
+  // People the person has told Kyro about (see contacts.js). Other people's details are sensitive: kept under their own purpose
+  // ("contacts"), so no planning or recall query that reads profile facts ever returns them. One contact per name; saving the same
+  // name again merges what is new (a phone number added to an email) and replaces what changed.
+  async saveContact({ tenantId, userId, name, phone = "", email = "" }) {
+    const existing = (await this.listContacts({ tenantId, userId })).find(row => row.content.name.toLowerCase() === String(name).toLowerCase());
+    const content = { kind: "contact", name, phone: phone || existing?.content.phone || "", email: email || existing?.content.email || "" };
+    if (existing) await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null`, [tenantId, userId, existing.memory_id]);
+    await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','contacts',$4,$5,$6::vector,'none',$7,0.6,0.9,'user_confirmed','sensitive')`,
+    [createId("memory"), tenantId, userId, content, `contact: ${name}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { contact: content, updated: Boolean(existing) };
+  }
+
+  async listContacts({ tenantId, userId, limit = 200 }) {
+    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='contacts' and deleted_at is null
+      order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 200, 1), 500)]);
+    return (result.rows || result).filter(row => row.content && row.content.kind === "contact" && row.content.name);
+  }
+
+  // Forget one contact by (case-insensitive) name. Returns the contact that was forgotten, or null.
+  async forgetContact({ tenantId, userId, name }) {
+    const found = (await this.listContacts({ tenantId, userId })).find(row => row.content.name.toLowerCase() === String(name).toLowerCase());
+    if (!found) return null;
+    await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null`, [tenantId, userId, found.memory_id]);
+    return found.content;
+  }
+
+  // The person's own to-dos, shopping items, notes and calendar events (see personal/items.js): one row each under the purpose
+  // "personal_items", private to them. Newest first. Removing is a soft delete like every other forget.
+  async addPersonalItem({ tenantId, userId, content }) {
+    const saved = await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','personal_items',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','sensitive') returning memory_id`,
+    [createId("memory"), tenantId, userId, content, `${content.kind}: ${String(content.text || "").slice(0, 200)}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+  }
+
+  async listPersonalItems({ tenantId, userId, kind = null, limit = 400 }) {
+    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='personal_items' and deleted_at is null
+      order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 400, 1), 500)]);
+    return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.kind && (!kind || row.content.kind === kind));
+  }
+
+  async updatePersonalItem({ tenantId, userId, memoryId, content }) {
+    const result = await this.db.query(`update nexus_memory_items set content=$4,searchable_text=$5,updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='personal_items' and deleted_at is null returning memory_id`,
+    [tenantId, userId, memoryId, content, `${content.kind}: ${String(content.text || "").slice(0, 200)}`]);
+    return Boolean((result.rows || result)[0]);
+  }
+
+  async removePersonalItem({ tenantId, userId, memoryId }) {
+    const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='personal_items' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId]);
+    return Boolean((result.rows || result)[0]);
+  }
+
+  // The person's farm log (see farm/log.js): readings they reported (rain, soil moisture, tank level, harvest) and the warning levels
+  // they set, one row each under the purpose "farm_log", private to them, newest first. Removing is a soft delete.
+  async addFarmEntry({ tenantId, userId, content }) {
+    const saved = await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','farm_log',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','internal') returning memory_id`,
+    [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.metric} ${content.value ?? content.below ?? ""}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+  }
+
+  async listFarmEntries({ tenantId, userId, limit = 5000 }) {
+    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='farm_log' and deleted_at is null
+      order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 5000, 1), 5000)]);
+    return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.kind);
+  }
+
+  async removeFarmEntry({ tenantId, userId, memoryId }) {
+    const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='farm_log' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId]);
+    return Boolean((result.rows || result)[0]);
+  }
+
+  // Answer feedback (see quality/feedback.js): a person's "that was wrong" / "that helped", kept under the purpose "feedback". Given a
+  // userId it lists that person's; without one it lists the whole tenant's, for the administrator's report. Newest first.
+  async addFeedback({ tenantId, userId, content }) {
+    const saved = await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','feedback',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','internal') returning memory_id`,
+    [createId("memory"), tenantId, userId, content, `feedback: ${content.rating}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+  }
+
+  async listFeedback({ tenantId, userId = null, sinceDays = 30, limit = 200 }) {
+    const result = await this.db.query(`select memory_id,content,created_at from nexus_memory_items
+      where tenant_id=$1 and ($2::text is null or principal_id=$2) and memory_class='domain' and purpose='feedback' and deleted_at is null
+      and created_at > now() - ($3::int * interval '1 day') order by created_at desc, memory_id desc limit $4`,
+    [tenantId, userId, Math.min(Math.max(Number(sinceDays) || 30, 1), 365), Math.min(Math.max(Number(limit) || 200, 1), 1000)]);
+    return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.rating);
+  }
+
+  async updateFeedback({ tenantId, userId, memoryId, content }) {
+    const result = await this.db.query(`update nexus_memory_items set content=$4,updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='feedback' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId, content]);
+    return Boolean((result.rows || result)[0]);
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,

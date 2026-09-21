@@ -71,11 +71,13 @@ function informedConfirmationPrompt({ scope, step }) {
   const input = step?.input && typeof step.input === "object" ? step.input : {};
   if (scope === "communications:send:write") {
     const send = normalizeSendRequest(input);
+    // When the person named someone they saved, the prompt says who as well as the number, so they can catch a wrong match.
+    const who = /^[A-Za-z][A-Za-z'’ -]{0,60}$/.test(String(input.contactName || "")) ? `${input.contactName} (${send.to})` : send.to;
     if (send.channel === "call") {
-      return `I can place a phone call to ${send.to}. A computer voice will first say "${CALL_INTRO}" and then "${send.message}". The call really happens and cannot be undone. Say yes to call, or no to cancel.`;
+      return `I can place a phone call to ${who}. A computer voice will first say "${CALL_INTRO}" and then "${send.message}". The call really happens and cannot be undone. Say yes to call, or no to cancel.`;
     }
     const kind = { sms: "text message", whatsapp: "WhatsApp message", email: "email" }[send.channel];
-    return `I can send this ${kind} to ${send.to}${send.subject ? `, subject "${send.subject}"` : ""}: "${send.message}". It will really be sent and cannot be unsent. Say yes to send it, or no to cancel.`;
+    return `I can send this ${kind} to ${who}${send.subject ? `, subject "${send.subject}"` : ""}: "${send.message}". It will really be sent and cannot be unsent. Say yes to send it, or no to cancel.`;
   }
   if (scope === "health:telehealth-intake:write") {
     const concern = clip(input.concern || input.reason || input.goal, 160);
