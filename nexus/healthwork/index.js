@@ -12,12 +12,13 @@ const supplies = require("./supplies.js");
 const privacy = require("./privacy.js");
 const referrals = require("./referrals.js");
 const reports = require("./reports.js");
+const swahili = require("./swahili.js");
 
 // The health worker's record-keeping front door (community health workers, nurses, midwives, clinical officers, clinic staff). Same shape as the farm
 // toolkit: an open guided question first, then each tool in turn, and a tool answers only when the words are plainly for it and (for anything about a
 // patient) the patient is one of this person's own. Everything else carries on to normal planning. Kyro records what the worker says; it does not
 // diagnose, interpret a reading, or suggest treatment. A tool may answer with a string, or { report } (a printable letter or report).
-const MODULES = [profile, privacy, patients, visits, immunisation, pregnancy, supplies, referrals, reports];
+const MODULES = [swahili, profile, privacy, patients, visits, immunisation, pregnancy, supplies, referrals, reports];
 const TEMPLATES = Object.assign({}, ...MODULES.map(mod => mod.templates || {}));
 const CONFIRMS = Object.assign({
   "remove-record": async (ctx, action) => (await ctx.store.remove({ tenantId: ctx.tenantId, userId: ctx.userId, memoryId: action.memoryId }) ? `Done. I've removed ${action.label}.` : `I couldn't find ${action.label} any more.`)
