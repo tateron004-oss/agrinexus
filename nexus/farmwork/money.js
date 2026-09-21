@@ -101,8 +101,8 @@ async function handle(ctx) {
 
   // ---- spending ----
   const spendPatterns = [/^(?:i |we )?(?:spent|paid out) (.+?) (?:on|for) (.+)$/i, /^expense\s*[:,-]\s*(.+?)\s+(.+)$/i];
-  if ((m = spendPatterns[0].exec(t) || spendPatterns[1].exec(t)) && parseMoney(m[1] || "")) {
-    const money = parseMoney(m[1]); const what = clean(m[2]).replace(/\s+\d[\d,.]*$/, "");
+  if ((m = spendPatterns[0].exec(t) || spendPatterns[1].exec(t)) && (parseMoney(m[1] || "") || parseMoney(`spent ${m[1] || ""}`))) {
+    const money = parseMoney(m[1]) || parseMoney(`spent ${m[1]}`); const what = clean(m[2]).replace(/\s+\d[\d,.]*$/, "");
     const fields = await ctx.store.list({ ...scope, collection: "field" }); const field = fieldIn(fields, what);
     const category = expenseCategory(what);
     const result = await recordMoney(ctx, { type: "expense", category, amount: money.amount, currency: money.currency, field: field?.data.name || "", item: what.toLowerCase().slice(0, 60), note: what.slice(0, 80) });

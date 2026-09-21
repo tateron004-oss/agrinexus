@@ -23,6 +23,7 @@ async function handle(ctx) {
     const body = m[3] !== undefined ? m[3] : m[2] !== undefined && m[1] && /^(?:sell|list|advertise)$/i.test(m[1]) ? m[2] : m[1];
     const quantity = parseQuantity(body); const per = parsePricePer(body);
     const item = quantity ? clean(new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:at|for|@|price)\\b.*)?$`, "i").exec(body)?.[1] || "").toLowerCase() : "";
+    if (!quantity && !/\b(?:for sale|wanted|selling|buying|listing|advert|board|to sell)\b/i.test(t)) return null; // "post office hours" is not this
     if (!quantity || !item || item.length > 50) return "To post, give me the amount, what it is, and the price, like \"post for sale: 500 kg maize at 40 per kg\".";
     if (!per && !parseMoney(body)) return "What price do you want? Say it like \"at 40 per kg\" (or \"price 20000 for the lot\").";
     const mine = (await ctx.store.listPublic({ tenantId: ctx.tenantId, collection: "listing" })).filter(record => record.userId === ctx.userId && record.data.status === "active");
