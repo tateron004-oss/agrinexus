@@ -37,7 +37,7 @@ class CircleRepository {
   async rows({ tenantId, userId, linkId = null }) {
     const result = await this.db.query(`select memory_id,principal_id,content from nexus_memory_items
       where tenant_id=$1 and memory_class='domain' and purpose='circle' and deleted_at is null
-      and ($2::text is null or principal_id=$2) and ($3::text is null or content->>'linkId'=$3)
+      and ($2::text is null or principal_id::text=$2::text) and ($3::text is null or content->>'linkId'=$3)
       order by created_at desc, memory_id desc limit 200`, [tenantId, userId, linkId]);
     return (result.rows || result).filter(row => row.content && row.content.kind === "circle");
   }

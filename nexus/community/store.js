@@ -23,7 +23,7 @@ class CommunityRepository {
   }
   async select({ tenantId, userId = null, purpose, kind, limit = 500 }) {
     const result = await this.db.query(`select memory_id,principal_id,content from nexus_memory_items
-      where tenant_id=$1 and ($2::text is null or principal_id=$2) and memory_class='domain' and purpose=$3 and deleted_at is null and content->>'kind'=$4
+      where tenant_id=$1 and ($2::text is null or principal_id::text=$2::text) and memory_class='domain' and purpose=$3 and deleted_at is null and content->>'kind'=$4
       order by created_at desc, memory_id desc limit $5`, [tenantId, userId, purpose, kind, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
     return (result.rows || result).map(row => ({ memoryId: row.memory_id, userId: row.principal_id, content: row.content }));
   }

@@ -200,7 +200,7 @@ class MemoryRepository {
 
   async listFeedback({ tenantId, userId = null, sinceDays = 30, limit = 200 }) {
     const result = await this.db.query(`select memory_id,content,created_at from nexus_memory_items
-      where tenant_id=$1 and ($2::text is null or principal_id=$2) and memory_class='domain' and purpose='feedback' and deleted_at is null
+      where tenant_id=$1 and ($2::text is null or principal_id::text=$2::text) and memory_class='domain' and purpose='feedback' and deleted_at is null
       and created_at > now() - ($3::int * interval '1 day') order by created_at desc, memory_id desc limit $4`,
     [tenantId, userId, Math.min(Math.max(Number(sinceDays) || 30, 1), 365), Math.min(Math.max(Number(limit) || 200, 1), 1000)]);
     return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.rating);
