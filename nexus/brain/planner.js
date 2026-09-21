@@ -5,6 +5,8 @@ const { createInteractionProfile } = require("../experience/interaction-profile.
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { farmLogTurn } = require("../farm/log.js");
+const { wellnessTurn } = require("../wellness/log.js");
+const { communityTurn } = require("../community/desk.js");
 const { feedbackTurn } = require("../quality/feedback.js");
 const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
@@ -15,9 +17,9 @@ const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, maxRepairAttempts });
   }
 
   // "Send me a weekly summary on Sunday at 6pm" / "stop my weekly summary" / "do I have a weekly summary?": opt-in, like the morning brief.
@@ -194,6 +196,20 @@ class OpenEndedPlanner {
   }
 
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
+    // Emergencies and crisis first, before anything else: then a person's check-ins and trusted circle (see companion/). Nothing else may
+    // answer "I need help now" or "I want to die" before this does.
+    if (this.companion?.turn) {
+      const companionAnswer = await this.companion.turn({ command, context }).catch(() => null);
+      if (companionAnswer) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionAnswer, sourceRequired: false, planningAttempts: 0 });
+    }
+    // Sleep, mood, workouts (with personal bests), weight and water the person reports, and goals (see wellness/log.js).
+    const wellness = await wellnessTurn({ text: command.text, store: this.wellnessStore, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+    if (wellness) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: wellness, sourceRequired: false, planningAttempts: 0 });
+    // The community desk: citizens report problems and follow them up; staff (admin role) triage and announce (see community/desk.js).
+    if (this.community?.store) {
+      const desk = await communityTurn({ text: command.text, store: this.community.store, notifications: this.community.notifications, nameOf: this.community.nameOf, tenantId: command.tenantId, userId: command.actorId, roles: context?.roles || [], timeZone: context?.timeZone });
+      if (desk) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: desk, sourceRequired: false, planningAttempts: 0 });
+    }
     // Rainfall, soil moisture, tank levels and harvests the person reports, and totals on request (see farm/log.js).
     const farm = await farmLogTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
     if (farm) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: farm, sourceRequired: false, planningAttempts: 0 });

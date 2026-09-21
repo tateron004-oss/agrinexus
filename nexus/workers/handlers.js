@@ -26,6 +26,8 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
     "brief.send-due": async () => (runtime.brief?.sendDue ? runtime.brief.sendDue({}) : { checked: 0, sent: 0 }),
     // Warns everyone who turned weather alerts on when their forecast turns serious (see nexus/alerts/service.js).
     // Sends the weekly summary to everyone whose chosen weekday and time has arrived (see nexus/brief/weekly.js).
+    // Asks people how they are when their check-in time comes, and follows up once on missed ones (see nexus/companion/checkins.js).
+    "companion.checkin-sweep": async () => (runtime.companion?.sendDue ? runtime.companion.sendDue({}) : { checked: 0, prompted: 0 }),
     "summary.weekly-send-due": async () => (runtime.weekly?.sendDue ? runtime.weekly.sendDue({}) : { checked: 0, sent: 0 }),
     "alerts.weather-sweep": async () => (runtime.alerts?.sendDue ? runtime.alerts.sendDue({}) : { checked: 0, sent: 0 }),
     "schedules.dispatch": async ({ job }) => ({ dispatched: await runtime.schedules.dispatchDue({ jobs: runtime.jobs,
