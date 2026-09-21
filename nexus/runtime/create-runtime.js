@@ -66,6 +66,8 @@ const { createCompanion } = require("../companion/index.js");
 const { CircleRepository } = require("../companion/circle-repository.js");
 const { CheckinSettingsRepository, CheckinStateRepository } = require("../companion/checkin-store.js");
 const { MedicationRepository } = require("../companion/medication-store.js");
+const { WellnessRepository } = require("../wellness/store.js");
+const { CommunityRepository } = require("../community/store.js");
 const { WeatherAlertSettingsRepository } = require("../alerts/settings.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
@@ -164,8 +166,10 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const brief = createBriefService({ notifications, settings: new BriefSettingsRepository(db), memory, devices, autonomyControl });
   const alerts = createWeatherAlertService({ notifications, settings: new WeatherAlertSettingsRepository(db), memory, devices, autonomyControl });
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
-  const companion = createCompanion({ circle: new CircleRepository(db), checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memory, notifications, devices, autonomyControl });
-  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion }) : null;
+  const circleRepository = new CircleRepository(db);
+  const companion = createCompanion({ circle: circleRepository, checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memory, notifications, devices, autonomyControl });
+  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: new WellnessRepository(db),
+    community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
