@@ -46,6 +46,7 @@ const { createReminderScheduleExecutor, verifyReminderScheduleOutcome } = requir
 const { createRemindersListExecutor, verifyRemindersListOutcome, createRemindersCancelExecutor, verifyRemindersCancelOutcome } = require("../reminders/manage-executor.js");
 const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
 const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome } = require("../documents/executor.js");
+const { createResumeCreateExecutor, verifyResumeCreateOutcome } = require("../resume/executor.js");
 const { createDocumentsReadExecutor, verifyDocumentsReadOutcome } = require("../documents/read-executor.js");
 const { createListsCreateExecutor, verifyListsCreateOutcome, createListsReadExecutor, verifyListsReadOutcome,
   createListsUpdateExecutor, verifyListsUpdateOutcome } = require("../lists/executor.js");
@@ -110,6 +111,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "reminders.cancel": { create: () => createRemindersCancelExecutor({ notifications }), verify: verifyRemindersCancelOutcome, method: "real_reminder_cancel" },
     "communications.send": { create: () => createCommunicationsSendExecutor({ env }), verify: verifyCommunicationsSendOutcome, method: "real_provider_send" },
     "documents.create": { create: () => createDocumentsCreateExecutor({ env, documents }), verify: verifyDocumentsCreateOutcome, method: "real_local_export" },
+    "resume.create": { create: () => createResumeCreateExecutor({ env, documents, memory }), verify: verifyResumeCreateOutcome, method: "real_resume_export" },
     "documents.read": { create: () => createDocumentsReadExecutor({ documents }), verify: verifyDocumentsReadOutcome, method: "real_document_lookup" },
     "lists.create": { create: () => createListsCreateExecutor({ records }), verify: verifyListsCreateOutcome, method: "real_record_write" },
     "lists.read": { create: () => createListsReadExecutor({ records }), verify: verifyListsReadOutcome, method: "real_record_lookup" },
