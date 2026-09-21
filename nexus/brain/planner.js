@@ -200,9 +200,12 @@ class OpenEndedPlanner {
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
     // Emergencies and crisis first, before anything else: then a person's check-ins and trusted circle (see companion/). Nothing else may
     // answer "I need help now" or "I want to die" before this does.
-    if (this.companion?.turn) {
-      const companionAnswer = await this.companion.turn({ command, context }).catch(() => null);
-      if (companionAnswer) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionAnswer, sourceRequired: false, planningAttempts: 0 });
+    if (this.companion?.handle || this.companion?.turn) {
+      // handle() also says when an emergency alert went out and a location should follow (plan.emergency, read by the phone); a companion that only has turn() gives just words.
+      const companionResult = this.companion.handle
+        ? await this.companion.handle({ command, context }).catch(() => null)
+        : await this.companion.turn({ command, context }).then(words => (words ? { response: words } : null)).catch(() => null);
+      if (companionResult?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionResult.response, ...(companionResult.emergency ? { emergency: Object.freeze({ ...companionResult.emergency }) } : {}), sourceRequired: false, planningAttempts: 0 });
     }
     // The health worker's record-keeping (patients, visits, immunisations, pregnancies, follow-ups, clinic stock, referral letters, monthly reports:
     // see healthwork/) comes before the farm toolkit; each answers only words plainly for it, and an open guided question is answered first.

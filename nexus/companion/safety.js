@@ -48,30 +48,70 @@ function readSafety(text) {
 
 const NUMBER_LINE = "If you might be in danger, please call your local emergency number now.";
 
-// Alerts everyone in the person's circle who has said yes. Returns the names alerted.
-async function alertCircle({ circle, push, tenantId, userId, userName, now = new Date() }) {
+// Alerts everyone in the person's circle who has said yes. Returns the members reached (with what each has chosen to share).
+async function alertMembers({ circle, push, tenantId, userId, userName, now = new Date() }) {
   const members = circle?.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }) : [];
   const bucket = Math.floor(now.getTime() / (5 * 60 * 1000)); // a second alert within five minutes is the same alert, not a second push
-  const alerted = [];
+  const delivered = [];
   for (const member of members) {
     try {
       await push?.(member.otherId, "Emergency alert", `${userName || "Someone in your circle"} asked Kyro for urgent help just now. Please contact them right away, or call for help if you can't reach them.`, `emergency:${userId}:${member.otherId}:${bucket}`);
-      alerted.push(member.otherName);
+      delivered.push(member);
     } catch { /* keep going: one failed push must not stop the others */ }
   }
-  return alerted;
+  return delivered;
+}
+// The names alerted.
+async function alertCircle(args) { return (await alertMembers(args)).map(member => member.otherName); }
+
+// "I'm safe" / "false alarm" / "cancel the alert": only meaningful right after an alert, so it is only ever acted on when one is still open (see safeTurn).
+// Deliberately strict: a bare "ok" or "fine" (the person answering Kyro) must never end an alert and tell the circle they are safe.
+const SAFE = [
+  /^(?:i(?:'m| am) )?safe(?: now)?$/,
+  /^i(?:'m| am) (?:ok|okay|fine|alright|all right) now$/,
+  /^(?:it(?:'s| is) )?(?:a )?false alarm$/,
+  /^(?:please )?(?:cancel|stop|end|call off) (?:the |my )?(?:emergency )?alert$/,
+  /^everything(?:'s| is) (?:ok|okay|fine|alright) now$/
+];
+const readSafe = text => { const t = clean(text).toLowerCase().replace(/[.!?]+$/g, ""); return t.length > 0 && t.length <= 60 && SAFE.some(pattern => pattern.test(t)); };
+
+// The person says they are safe while an alert of theirs is still open: the circle is told, and no more location is sent. Otherwise null (an ordinary "I'm fine").
+async function safeTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), outcome = null }) {
+  if (!readSafe(text) || !circle?.latestAlert) return null;
+  const alert = await circle.latestAlert({ tenantId, userId, now }).catch(() => null);
+  if (!alert || alert.ended) return null;
+  await circle.updateAlert({ tenantId, userId, memoryId: alert.memoryId, change: content => ({ ...content, ended: true, endedAt: now.toISOString() }) }).catch(() => false);
+  const active = circle.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }).catch(() => []) : [];
+  const told = [];
+  for (const member of active.filter(item => (alert.alerted || []).some(entry => entry.id === item.otherId))) {
+    try { await push?.(member.otherId, "Emergency over", `${userName || "Someone in your circle"} says they are safe now. No more location will be sent.`, `emergency-clear:${alert.alertId}:${member.otherId}`); told.push(member.otherName); } catch { /* one failed push must not stop the others */ }
+  }
+  if (outcome) outcome.emergency = { alertId: alert.alertId, ended: true };
+  return told.length ? `I'm glad you're safe. I've told ${told.join(", ")} that you're okay, and I've stopped sharing your location.` : "I'm glad you're safe. I've closed the alert.";
 }
 
-// Returns the words to answer with, or null when this is not a safety moment.
-async function safetyTurn({ text, circle, push, tenantId, userId, userName, now = new Date() }) {
+// Returns the words to answer with, or null when this is not a safety moment. `recordAlert` remembers an alert so the person's location can follow it, and
+// `outcome` (optional) receives { emergency: { alertId, shareLocation, ... } } so the phone knows to send it; both are optional.
+async function safetyTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), recordAlert = null, outcome = null }) {
   const kind = readSafety(text);
   if (!kind) return null;
   const members = circle?.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }).catch(() => []) : [];
   if (kind === "emergency") {
     if (!members.length) return `I don't have anyone in your circle yet, so I couldn't alert anyone. ${NUMBER_LINE} Once you're safe, we can add people you trust: "add name@example.com to my circle".`;
-    const alerted = await alertCircle({ circle, push, tenantId, userId, userName, now });
-    if (!alerted.length) return `I tried to alert your circle but couldn't reach anyone just now. ${NUMBER_LINE}`;
-    return `I've alerted ${alerted.join(", ")}. ${NUMBER_LINE} I'm here with you.`;
+    const delivered = await alertMembers({ circle, push, tenantId, userId, userName, now });
+    if (!delivered.length) return `I tried to alert your circle but couldn't reach anyone just now. ${NUMBER_LINE}`;
+    const names = delivered.map(member => member.otherName);
+    // Location follows only for members the person has chosen to share it with, and only when this alert could be remembered.
+    let extra = "";
+    if (recordAlert) {
+      try {
+        const sharers = delivered.filter(member => member.shares?.emergencyLocation);
+        const remembered = await recordAlert({ tenantId, userId, alerted: delivered, now });
+        if (outcome) outcome.emergency = { alertId: remembered.alertId, alerted: names, shareLocation: sharers.length > 0, locationTo: sharers.map(member => member.otherName) };
+        if (sharers.length) extra = ` I'll send your location to ${sharers.map(member => member.otherName).join(", ")} as soon as your phone tells me where you are.`;
+      } catch { /* the alert itself already went; location is a bonus */ }
+    }
+    return `I've alerted ${names.join(", ")}.${extra} ${NUMBER_LINE} I'm here with you.`;
   }
   if (kind === "ask") {
     return members.length
@@ -81,4 +121,4 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
   return `I'm really sorry you're feeling this way, and I'm glad you told me. You matter, and you don't have to carry this alone. If you might act on these thoughts, or you're in danger right now, please call your local emergency number or a crisis line in your country, or go to someone who can be with you. ${members.length ? `I can alert ${members.map(member => member.otherName).join(", ")} right now — just say "alert my circle". ` : ""}I'm here, and I'm listening.`;
 }
 
-module.exports = Object.freeze({ safetyTurn, readSafety, alertCircle });
+module.exports = Object.freeze({ safetyTurn, safeTurn, readSafety, readSafe, alertCircle });

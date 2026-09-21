@@ -57795,6 +57795,16 @@ async function replayKyroOfflineNotes() {
 window.addEventListener("online", () => { setTimeout(replayKyroOfflineNotes, 1500); });
 setTimeout(replayKyroOfflineNotes, 10000);
 
+// Emergency location (public/kyro-emergency.js): the phone only reads its location after the server says an alert went to someone chosen to receive it.
+let kyroEmergencySharer = null;
+function handleKyroEmergencyResult(emergency) {
+  try {
+    const module = window.KyroEmergency; if (!module) return;
+    if (!kyroEmergencySharer) kyroEmergencySharer = module.forBrowser({ locale: languageCode(), api: body => requestWithTimeout("/api/nexus/runtime/companion/emergency-location", { method: "POST", body }, 20000) });
+    kyroEmergencySharer.handle(emergency);
+  } catch { /* the alert already went; location is a bonus */ }
+}
+
 // Kyro as a GPS (public/kyro-navigation.js): the words are handled on the phone, which asks the server only to find places and plan routes.
 let kyroNavigator = null;
 async function handleKyroNavigationCommand(text, options = {}) {
@@ -57851,6 +57861,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
       throw new Error("Nexus rejected an invalid behavior-spine response. No legacy route was used.");
     }
+    // An emergency alert just went to the circle: if someone there was chosen to receive the person's location, it follows (see kyro-emergency.js).
+    if (result.plan && result.plan.emergency && typeof handleKyroEmergencyResult === "function") handleKyroEmergencyResult(result.plan.emergency);
     return await processNexusAuthoritativeBehaviorResult(result, text, options);
   } catch (error) {
     // No signal: a plain record-keeping statement ("sold 200 kg of maize for 9000") is kept on this phone and said to Kyro again when it is back
