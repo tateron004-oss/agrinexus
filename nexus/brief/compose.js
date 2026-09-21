@@ -39,15 +39,16 @@ function reminderLine(reminders, now, timeZone) {
   return `Due today: ${shown.join("; ")}${more}.`;
 }
 
-function composeBrief({ name = "", forecast = null, reminders = [], now = new Date(), timeZone = DEFAULT_TIME_ZONE } = {}) {
+// agenda: one plain sentence about today's calendar events and open to-dos (see personal/items.js), already worded by the caller.
+function composeBrief({ name = "", forecast = null, reminders = [], agenda = "", now = new Date(), timeZone = DEFAULT_TIME_ZONE } = {}) {
   const zone = validTimeZone(timeZone);
   const weather = weatherLine(forecast); const due = reminderLine(reminders, now, zone);
-  if (!weather && !due) return null;
+  if (!weather && !due && !agenda) return null;
   const first = String(name || "").trim().split(/\s+/)[0];
   // Morning starts at 5: at half past midnight "Good morning" is wrong, so the small hours get a plain "Hello".
   const hour = localHour(now, zone);
   const hello = hour < 5 ? "Hello" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  return [`${hello}${first ? ` ${first}` : ""}.`, weather, due].filter(Boolean).join(" ");
+  return [`${hello}${first ? ` ${first}` : ""}.`, weather, agenda, due].filter(Boolean).join(" ");
 }
 
 module.exports = Object.freeze({ composeBrief, weatherLine, reminderLine, localDay, validTimeZone, DEFAULT_TIME_ZONE });
