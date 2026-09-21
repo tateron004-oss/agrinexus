@@ -15,9 +15,9 @@ const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, maxRepairAttempts });
   }
 
   // "Send me a weekly summary on Sunday at 6pm" / "stop my weekly summary" / "do I have a weekly summary?": opt-in, like the morning brief.
@@ -194,6 +194,12 @@ class OpenEndedPlanner {
   }
 
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
+    // Emergencies and crisis first, before anything else: then a person's check-ins and trusted circle (see companion/). Nothing else may
+    // answer "I need help now" or "I want to die" before this does.
+    if (this.companion?.turn) {
+      const companionAnswer = await this.companion.turn({ command, context }).catch(() => null);
+      if (companionAnswer) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionAnswer, sourceRequired: false, planningAttempts: 0 });
+    }
     // Rainfall, soil moisture, tank levels and harvests the person reports, and totals on request (see farm/log.js).
     const farm = await farmLogTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
     if (farm) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: farm, sourceRequired: false, planningAttempts: 0 });
