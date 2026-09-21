@@ -153,6 +153,8 @@ class OpenEndedPlanner {
     if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
     const completeMediaPlayback = completeMediaPlaybackPlan(command.text, catalog);
     if (completeMediaPlayback) return Object.freeze({ ...completeMediaPlayback, planningAttempts: 1 });
+    const resume = resumePlan(command.text, catalog, known.byKind);
+    if (resume) return Object.freeze({ ...resume, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
@@ -543,6 +545,35 @@ function completeMediaPlaybackPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// "Make my resume", "Create a resume for Amina Wanjiru. Skills: crop planning, irrigation. Experience: 5 years managing a maize farm.":
+// a resume built from what the person says plus what Kyro already knows about them (see resume/executor.js). Questions about resumes
+// ("how do I write a resume?") are not requests to make one, and a resume with nothing to put in it is asked about rather than invented.
+const RESUME_REQUEST = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:make|create|build|write|prepare|draft|generate)\b[^.?!]{0,40}\b(?:resume|résumé|cv|curriculum vitae)\b/i;
+const RESUME_QUESTION = /^\s*(?:how|what|why|when|where|should|can you explain|tips|is it|do i)\b|\?\s*$/i;
+function resumeField(text, label) {
+  const match = new RegExp(`\\b${label}\\s*(?:are|is|include|includes)?\\s*[:\\-]\\s*(.+?)(?=(?:\\.|;|,)?\\s+(?:skills?|experience|education|languages?|phone|email)\\s*[:\\-]|\\.\\s|$)`, "i").exec(text);
+  return match ? match[1].trim().replace(/[.]+$/, "") : "";
+}
+function resumePlan(text, catalog, byKind = {}) {
+  const goal = String(text || "").trim();
+  if (!goal || goal.length > 600 || !RESUME_REQUEST.test(goal) || RESUME_QUESTION.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "resume.create") || !catalog.applications.some(app => app.applicationId === "workforce")) return null;
+  const clarify = question => ({ goal, application: "workforce", riskTier: "low", clarification: question, steps: [] });
+  const name = /\b(?:for|named|called|name is)\s+([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+){0,2})\b/.exec(goal)?.[1] || byKind.name || "";
+  if (!name) return clarify('What name should go on your resume? You can also tell me once with "my name is …" and I will remember it.');
+  const skills = resumeField(goal, "skills?").split(/\s*,\s*|\s+and\s+/).filter(Boolean);
+  const experience = resumeField(goal, "experience").split(/\s*;\s*/).filter(Boolean);
+  const education = resumeField(goal, "education").split(/\s*;\s*/).filter(Boolean);
+  const languages = resumeField(goal, "languages?").split(/\s*,\s*|\s+and\s+/).filter(Boolean);
+  const known = Boolean(byKind.crops || byKind.livestock);
+  if (!skills.length && !experience.length && !education.length && !known)
+    return clarify('What should it say? Tell me your skills and experience, for example: "skills: crop planning, irrigation; experience: 5 years managing a maize farm".');
+  const phone = SEND_PHONE.exec(goal)?.[0]?.replace(/[\s().-]/g, ""); const email = SEND_EMAIL.exec(goal)?.[0]?.replace(/[.,;:!?]+$/, "");
+  const input = { name, ...(phone ? { phone } : {}), ...(email ? { email } : {}), skills, experience, education, languages };
+  return { goal, application: "workforce", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "create-resume", title: "Create your resume", toolId: "resume.create", input, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeDocumentPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(create|write|draft|make)\b/i.test(goal) || !/\b(document|plan|report|resume|résumé)\b/i.test(goal) ||
@@ -859,7 +890,7 @@ function personalizedSearch(plan, byKind) {
 function safeMemory(item) { return { kind: item.kind, content: item.content, confidence: item.confidence, provenance: item.provenance, occurredAt: item.occurred_at || item.occurredAt }; }
 function safeTurn(item) { return { role: item.role, content: item.content, occurredAt: item.created_at || item.occurredAt }; }
 
-module.exports = Object.freeze({ OpenEndedPlanner, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
+module.exports = Object.freeze({ OpenEndedPlanner, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
