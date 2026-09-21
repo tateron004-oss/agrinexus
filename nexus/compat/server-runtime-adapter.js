@@ -15,6 +15,7 @@ const { evaluateObservabilityAlerts } = require("../observability/alert-evaluato
 const { executeProductionCase } = require("../path2/production-case.js");
 const { classifyRuntimeError } = require("../runtime/error-taxonomy.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
+const { createNavigationService } = require("../navigation/service.js");
 
 function safeDatabaseIdentifier(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
@@ -23,6 +24,8 @@ function safeDatabaseIdentifier(value) {
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
   let runtimePromise = null;
+  // The GPS's place search, reverse lookup and routing (see navigation/service.js). Position is never logged or stored.
+  const navigation = createNavigationService({ env });
   async function runtime() {
     if (!runtimePromise) runtimePromise = Promise.resolve().then(() => createRuntimeFn({ env, logger })).catch(error => { runtimePromise = null; throw error; });
     return runtimePromise;
@@ -684,6 +687,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const snapshot = await active.observability.snapshot({ tenantId: context.tenantId, taskId });
         result = { status: 200, body: { authoritative: true, progress: snapshot.progress } };
       }
+      else if (url.pathname === "/api/nexus/runtime/navigation" && req.method === "POST") result = await navigation.handle(request);
       else if (url.pathname === "/api/nexus/runtime/devices" && req.method === "POST") result = await controls.registerDevice(request);
       else if (/^\/api\/nexus\/runtime\/devices\/[^/]+$/.test(url.pathname) && req.method === "DELETE") { request.params.deviceId=decodeURIComponent(url.pathname.split("/").pop()); result=await controls.revokeDevice(request); }
       else if (url.pathname === "/api/nexus/runtime/schedules" && req.method === "POST") result = await controls.createSchedule(request);
