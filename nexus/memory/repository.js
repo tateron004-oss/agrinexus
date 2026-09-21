@@ -165,6 +165,29 @@ class MemoryRepository {
     return Boolean((result.rows || result)[0]);
   }
 
+  // The person's farm log (see farm/log.js): readings they reported (rain, soil moisture, tank level, harvest) and the warning levels
+  // they set, one row each under the purpose "farm_log", private to them, newest first. Removing is a soft delete.
+  async addFarmEntry({ tenantId, userId, content }) {
+    const saved = await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','farm_log',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','internal') returning memory_id`,
+    [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.metric} ${content.value ?? content.below ?? ""}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+  }
+
+  async listFarmEntries({ tenantId, userId, limit = 5000 }) {
+    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='farm_log' and deleted_at is null
+      order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 5000, 1), 5000)]);
+    return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.kind);
+  }
+
+  async removeFarmEntry({ tenantId, userId, memoryId }) {
+    const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='farm_log' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId]);
+    return Boolean((result.rows || result)[0]);
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,
