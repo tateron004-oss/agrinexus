@@ -71,9 +71,12 @@ function findItem(items, query) {
   const wanted = words(query);
   if (!wanted.length) return null;
   const exact = items.filter(item => words(item.content.text).join(" ") === wanted.join(" "));
-  if (exact.length === 1) return { item: exact[0] };
+  // Several items with exactly the same words are the same thing said twice, so there is nothing to ask: take the newest (the list is
+  // newest first). Found live: two identical notes could never be deleted because Kyro kept asking which one.
+  if (exact.length >= 1) return { item: exact[0] };
   const all = items.filter(item => { const have = words(item.content.text); return wanted.every(word => have.includes(word)); });
   if (all.length === 1) return { item: all[0] };
+  if (all.length > 1 && all.every(item => words(item.content.text).join(" ") === words(all[0].content.text).join(" "))) return { item: all[0] };
   return all.length > 1 ? { ambiguous: all } : null;
 }
 

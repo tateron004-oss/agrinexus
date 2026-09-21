@@ -153,3 +153,13 @@ test("looking back: yesterday and periods such as this week, last month and the 
   assert.equal(extractPeriod("this season", TODAY).label, "this season");
   assert.equal(extractPeriod("whenever", TODAY), null);
 });
+
+test("the same words said twice are one thing: the newest is taken", async () => {
+  const memory = fakeMemory();
+  await say(memory, "Note: zzverify pump note"); await say(memory, "Note: zzverify pump note");
+  assert.equal(await say(memory, "Delete my note about zzverify"), "Deleted your note: zzverify pump note.");
+  assert.equal(await say(memory, "Delete my note about zzverify"), "Deleted your note: zzverify pump note.", "and then the other one");
+  assert.match(await say(memory, "Delete my note about zzverify"), /I have no note about zzverify/);
+  await say(memory, "Add buy seed to my to-do list"); await memory.addPersonalItem({ userId: "u1", content: { kind: "todo", list: "todo", text: "buy seed", done: false } });
+  assert.match(await say(memory, "Mark buy seed as done"), /^Done\. Ticked off buy seed\./);
+});
