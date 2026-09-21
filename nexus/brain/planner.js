@@ -5,6 +5,7 @@ const { createInteractionProfile } = require("../experience/interaction-profile.
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { farmLogTurn } = require("../farm/log.js");
+const { feedbackTurn } = require("../quality/feedback.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
@@ -165,6 +166,9 @@ class OpenEndedPlanner {
     // Rainfall, soil moisture, tank levels and harvests the person reports, and totals on request (see farm/log.js).
     const farm = await farmLogTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
     if (farm) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: farm, sourceRequired: false, planningAttempts: 0 });
+    // "That was wrong" / "that helped" / "the correct answer is ...": feedback on Kyro's last answer, kept for the team (see quality/feedback.js).
+    const answerFeedback = await feedbackTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, history: conversationHistory, roles: context?.roles || [] });
+    if (answerFeedback) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: answerFeedback, sourceRequired: false, planningAttempts: 0 });
     const profile = await this.profileTurn(command);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
     const contactsAnswer = await this.contactsTurn(command);
