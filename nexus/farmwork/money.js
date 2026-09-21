@@ -199,4 +199,4 @@ async function handleMoney(ctx) {
   return null;
 }
 
-module.exports = Object.freeze({ handle, recordMoney, expenseCategory, incomeCategory, sum, profitOf, showTotals });
+module.exports = Object.freeze({ handle, recordMoney, expenseCategory, incomeCategory, sum, profitOf, showTotals, NOT_FARM });
