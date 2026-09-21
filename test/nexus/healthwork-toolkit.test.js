@@ -197,7 +197,7 @@ test("removing a patient removes everything kept about them, and only after a ye
   assert.match(await who.say("Remove patient Mary"), /everything recorded about them.*cannot be undone.*Say yes/); assert.match(await who.say("no"), /left it as it is/);
   assert.match(await who.say("Show my patients"), /Mary Akinyi/);
   await who.say("Remove patient Mary"); assert.match(await who.say("yes"), /removed Mary Akinyi and 3 records/);
-  assert.match(await who.say("Show my patients"), /no patients registered/); assert.equal(who.store.rows.filter(row => !row.deleted && row.collection !== undefined).length, 0);
+  assert.match(await who.say("Show my patients"), /no patients registered/); assert.equal(who.store.rows.filter(row => !row.deleted && row.collection !== "audit").length, 0, "only the log entry (a number and a count) is left");
 });
 
 // ---------- privacy between people, and no hijacking ----------
