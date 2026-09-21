@@ -3,28 +3,36 @@
 const { circleTurn, readCircleRequest } = require("./circle.js");
 const { safetyTurn, readSafety } = require("./safety.js");
 const { createCheckinService, parseCheckinControl, readCheckinAnswer } = require("./checkins.js");
+const { createMedicationService, readMedicationRequest } = require("./medications.js");
 const { formatTimeOfDay } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
 // The companion core: a person's trusted circle, daily check-ins, and emergency handling, as one service the planner asks first (safety
 // before anything else). Every answer is a plain conversational reply; the worker sweep does the proactive part (see checkins.js).
-function createCompanion({ circle, checkinSettings, checkinState, memory = null, notifications, devices = null, autonomyControl = null, logger = null, now = () => new Date() } = {}) {
+function createCompanion({ circle, checkinSettings, checkinState, medicationStore = null, memory = null, notifications, devices = null, autonomyControl = null, logger = null, now = () => new Date() } = {}) {
   // Every push names its tenant explicitly: links never cross communities, and nothing here is shared between concurrent requests.
   const checkins = createCheckinService({ settings: checkinSettings, state: checkinState, circle, notifications, devices, autonomyControl, logger, now,
     push: ({ tenantId, userId, title, body, key }) => notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "circle" } }),
     memoryUserName: args => circle.userName(args) });
+  const medications = medicationStore ? createMedicationService({ store: medicationStore, circle, notifications, devices, autonomyControl, logger, now,
+    push: ({ tenantId, userId, title, body, key }) => notifications.enqueue({ tenantId, userId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "medication" } }),
+    memoryUserName: args => circle.userName(args) }) : null;
 
   return {
     circle,
     checkins,
-    sendDue: args => checkins.sendDue(args),
+    medications,
+    // One sweep for everything proactive in the companion: check-ins, then medicine reminders. Counts are kept apart.
+    sendDue: async args => ({ ...(await checkins.sendDue(args)), medications: medications ? await medications.sendDue(args) : null }),
 
     // Returns the words to answer with, or null when the text is nothing for the companion.
     async turn({ command, context }) {
       // Most messages are nothing for the companion: decide from the words alone, before any lookup.
-      if (!readSafety(command.text) && !readCheckinAnswer(command.text) && !parseCheckinControl(command.text) && !readCircleRequest(command.text)) return null;
+      const needsName = Boolean(readSafety(command.text) || readCheckinAnswer(command.text) || parseCheckinControl(command.text) || readCircleRequest(command.text));
+      if (!needsName && !(medications && readMedicationRequest(command.text))) return null;
       const tenantId = command.tenantId; const userId = command.actorId;
-      const userName = await circle.userName({ tenantId, userId });
+      // The person's display name is only looked up when what they said needs it (an alert, an invitation); "I had lunch" does not.
+      const userName = needsName ? await circle.userName({ tenantId, userId }) : "";
       const scope = { tenantId, userId, userName };
       const send = (toUserId, title, body, key) => notifications.enqueue({ tenantId, userId: toUserId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "circle" } });
 
@@ -33,6 +41,9 @@ function createCompanion({ circle, checkinSettings, checkinState, memory = null,
 
       const answered = await checkins.answer({ ...scope, text: command.text, at: now() });
       if (answered) return answered;
+
+      const medicine = medications ? await medications.turn({ ...scope, text: command.text, timeZone: context?.timeZone, at: now() }) : null;
+      if (medicine) return medicine;
 
       const control = parseCheckinControl(command.text);
       if (control) {
