@@ -6,6 +6,7 @@ const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { farmLogTurn } = require("../farm/log.js");
 const { feedbackTurn } = require("../quality/feedback.js");
+const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
@@ -14,9 +15,39 @@ const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, maxRepairAttempts });
+  }
+
+  // "Send me a weekly summary on Sunday at 6pm" / "stop my weekly summary" / "do I have a weekly summary?": opt-in, like the morning brief.
+  async weeklyControlTurn(command, context, known) {
+    const weekly = this.weekly;
+    if (!weekly?.schedule || !weekly?.stop || !weekly?.status) return null;
+    const request = parseWeeklyControl(command.text);
+    if (!request) return null;
+    const scope = { tenantId: command.tenantId, userId: command.actorId };
+    const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+    const dayName = index => WEEKDAYS[index].charAt(0).toUpperCase() + WEEKDAYS[index].slice(1);
+    try {
+      if (request.action === "stop") return answer(await weekly.stop(scope) ? "Done. I've stopped your weekly summary." : "You don't have a weekly summary set up.");
+      if (request.action === "status") {
+        const current = await weekly.status(scope);
+        return answer(current ? `Your weekly summary goes out every ${dayName(current.dayOfWeek)} at ${formatTimeOfDay(current.timeOfDay)} (${current.timeZone} time). Say "stop my weekly summary" any time.`
+          : "You don't have a weekly summary set up. Say \"send me a weekly summary on Sunday at 6pm\" to start one.");
+      }
+      if (!request.timeOfDay) return answer("What time? For example 6pm or 18:30.");
+      const zoneGiven = Boolean(context?.timeZone) && validTimeZone(context.timeZone) === context.timeZone;
+      const saved = await weekly.schedule({ ...scope, dayOfWeek: request.dayOfWeek, timeOfDay: request.timeOfDay, timeZone: zoneGiven ? context.timeZone : DEFAULT_TIME_ZONE });
+      const notes = [
+        "It covers what you logged on the farm this week, your open to-dos, and what is coming up.",
+        request.dayGiven && request.timeGiven ? "" : `I chose ${dayName(saved.dayOfWeek)} at ${formatTimeOfDay(saved.timeOfDay)} because you did not say; tell me another day or time to change it.`,
+        zoneGiven ? "" : `I do not know your time zone, so I used ${saved.timeZone}; tell me if you are elsewhere.`,
+        saved.hasPushDevice === false ? "Alerts are not turned on for any of your devices yet, so nothing can be sent until you turn them on." : "",
+        'Say "stop my weekly summary" any time.'
+      ].filter(Boolean).join(" ");
+      return answer(`Done. ${saved.replaced ? "Your weekly summary is now" : "I'll send your weekly summary"} every ${dayName(saved.dayOfWeek)} at ${formatTimeOfDay(saved.timeOfDay)} (${saved.timeZone} time). ${notes}`);
+    } catch { return null; }
   }
 
   async alertsControlTurn(command, context, known) {
@@ -216,6 +247,8 @@ class OpenEndedPlanner {
     const briefControl = await this.briefControlTurn(command, context, known);
     if (briefControl) return Object.freeze({ ...briefControl, planningAttempts: 0 });
     // "Warn me about storms" / "stop weather alerts": opt-in weather warnings, sent by push when the forecast turns serious.
+    const weeklyControl = await this.weeklyControlTurn(command, context, known);
+    if (weeklyControl) return Object.freeze({ ...weeklyControl, planningAttempts: 0 });
     const alertsControl = await this.alertsControlTurn(command, context, known);
     if (alertsControl) return Object.freeze({ ...alertsControl, planningAttempts: 0 });
     // "How many bags of maize do I have in stock?" was sent to a web search and answered "You have 21 bags", a number
