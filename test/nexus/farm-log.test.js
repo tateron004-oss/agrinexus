@@ -111,3 +111,19 @@ test("through the planner a report is a conversational answer with no tool and t
   const plan = await p.plan({ command: { text: "Log 12 mm of rain", channel: "typed", locale: "en", tenantId: "t1", actorId: "u1", conversationId: "c" }, context: { can: () => true, roles: [], timeZone: "Africa/Nairobi" } });
   assert.equal(plan.application, "conversation"); assert.deepEqual(plan.steps, []); assert.match(plan.response, /^Logged 12 mm of rain for today\./);
 });
+
+test("the morning brief repeats only recent readings that are below the person's own alert, and rain they logged", async () => {
+  const { farmDigest } = require("../../nexus/farm/log.js");
+  const { createBriefService } = require("../../nexus/brief/service.js");
+  const alert = { content: { kind: "alert", metric: "tank", below: 20, unit: "%", place: "" } };
+  const reading = (metric, value, day, extra = {}) => ({ content: { kind: "reading", metric, value, unit: metric === "rain" ? "mm" : "%", place: "", crop: "", day, ...extra } });
+  const rows = [reading("tank", 15, "2026-09-19"), reading("tank", 60, "2026-09-10"), reading("rain", 12, "2026-09-20"), reading("rain", 8, "2026-09-16"), reading("rain", 50, "2026-09-01"), alert];
+  assert.equal(farmDigest(rows, TODAY), "Heads up: the tank was last logged at 15%, below your 20% alert. Rain you logged in the last 7 days: 20 mm.");
+  assert.equal(farmDigest([reading("tank", 15, "2026-09-10"), alert], TODAY), "", "an old reading is not news");
+  assert.equal(farmDigest([reading("tank", 15, "2026-09-19")], TODAY), "", "no alert set, no warning");
+  assert.equal(farmDigest([reading("tank", 40, "2026-09-19"), alert], TODAY), "", "above the level is silent");
+  assert.equal(farmDigest([], TODAY), "");
+  const brief = createBriefService({ notifications: { listReminders: async () => [], enqueue: async () => {} }, memory: { listFarmEntries: async () => rows, profile: async () => [] }, now: () => NOW });
+  assert.equal(await brief.compose({ tenantId: "t1", userId: "u1", known: { name: "Amina" }, timeZone: "Africa/Nairobi" }),
+    "Good morning Amina. Heads up: the tank was last logged at 15%, below your 20% alert. Rain you logged in the last 7 days: 20 mm.");
+});

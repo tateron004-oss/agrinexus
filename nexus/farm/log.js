@@ -261,4 +261,24 @@ async function farmLogTurn({ text, memory, tenantId, userId, now = new Date(), t
   } catch { return null; }
 }
 
-module.exports = Object.freeze({ farmLogTurn, readRequest, MAX_ENTRIES });
+// For the morning brief: tank or soil readings the person logged in the last three days that sit below their own alert level, and the rain
+// they logged over the last seven days. "" when there is nothing worth saying. Only what the person logged is ever repeated.
+function farmDigest(rows, today) {
+  const entries = (rows || []).map(row => row?.content).filter(Boolean);
+  const alerts = entries.filter(item => item.kind === "alert");
+  const readings = entries.filter(item => item.kind === "reading");
+  const parts = [];
+  const seen = new Set();
+  for (const item of readings) { // newest logged first
+    if ((item.metric !== "soil" && item.metric !== "tank") || item.day < addDays(today, -3) || item.day > today) continue;
+    const key = `${item.metric}|${item.place}`;
+    if (seen.has(key)) continue; seen.add(key);
+    const hit = belowAlert(item, alerts);
+    if (hit) parts.push(`Heads up: ${item.metric === "soil" ? "soil moisture" : "the tank"}${item.place ? ` (${item.place})` : ""} was last logged at ${fmt(item.value)}${item.unit === "%" ? "%" : " litres"}, below your ${fmt(hit.below)}${hit.unit === "%" ? "%" : " litres"} alert.`);
+  }
+  const rain = readings.filter(item => item.metric === "rain" && item.day >= addDays(today, -6) && item.day <= today).reduce((sum, item) => sum + item.value, 0);
+  if (rain > 0) parts.push(`Rain you logged in the last 7 days: ${fmt(rain)} mm.`);
+  return parts.slice(0, 3).join(" ");
+}
+
+module.exports = Object.freeze({ farmLogTurn, readRequest, farmDigest, MAX_ENTRIES });
