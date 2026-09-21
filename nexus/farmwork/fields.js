@@ -16,7 +16,7 @@ function pickByName(records, query, get = record => record.data.name) {
   if (!wanted) return null;
   const exact = records.filter(record => nameKey(get(record)) === wanted);
   if (exact.length) return { record: exact[0] };
-  const loose = records.filter(record => nameKey(get(record)).includes(wanted) || wanted.includes(nameKey(get(record))));
+  const loose = records.filter(record => nameKey(get(record)).includes(wanted));
   return loose.length === 1 ? { record: loose[0] } : loose.length > 1 ? { ambiguous: loose } : null;
 }
 
