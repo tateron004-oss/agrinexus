@@ -1,6 +1,7 @@
 "use strict";
 
 const { encodePlusCode } = require("../../public/kyro-navigation.js");
+const { t, languageOf } = require("../i18n/index.js");
 
 // A person's location, sent to their circle in an emergency they triggered. Three rules, all enforced here and not left to the phone:
 //  1. Only after the person asked for urgent help: it must follow an open alert of theirs (safety.js), within the hour, and it stops the moment they
@@ -37,12 +38,16 @@ function createEmergencyLocation({ circle, pushWithLink, now = () => new Date() 
       const recipients = current.filter(member => alertedIds.has(member.otherId) && member.shares?.emergencyLocation === true);
       if (!recipients.length) return { status: 200, body: { shared: [], updates: alert.updates || 0, done: true, reason: "nobody_chose_to_receive_it" } };
 
-      const number_ = (alert.updates || 0) + 1; const name = userName || "Someone in your circle";
+      const number_ = (alert.updates || 0) + 1;
       const code = encodePlusCode(lat, lng);
-      const body = `${number_ === 1 ? `${name} asked Kyro for urgent help, and their phone says they are` : `${name}'s location has been updated: they are now`} at ${code} (${lat.toFixed(5)}, ${lng.toFixed(5)})${accuracy !== null ? `, within about ${Math.max(5, Math.round(accuracy))} meters` : ""}${ageSeconds > 60 ? `, from about ${Math.round(ageSeconds / 60)} minutes ago` : ""}. Tap to open the map. If you can't reach them, call for help.`;
+      // In the language the alert was raised in, and in English: the member's own language is not known here, so nobody is sent words they cannot read.
+      const language = languageOf(alert.language); const languages = language === "en" ? ["en"] : [language, "en"];
+      const name = userName || t(language, "safety.someone");
+      const say = key => languages.map(chosen => t(chosen, key, { name, code, lat: lat.toFixed(5), lng: lng.toFixed(5), acc: accuracy !== null ? t(chosen, "loc.acc", { m: Math.max(5, Math.round(accuracy)) }) : "", age: ageSeconds > 60 ? t(chosen, "loc.age", { n: Math.round(ageSeconds / 60) }) : "" })).join("\n");
+      const body = say(number_ === 1 ? "loc.first" : "loc.update"); const title = languages.map(chosen => t(chosen, "loc.title", { name })).join(" / ");
       const shared = [];
       for (const member of recipients) {
-        try { await pushWithLink({ toUserId: member.otherId, title: `Emergency: ${name}'s location`, body, url: mapLink(lat, lng), key: `emergency-location:${alert.alertId}:${member.otherId}:${number_}` }); shared.push(member.otherName); }
+        try { await pushWithLink({ toUserId: member.otherId, title, body, url: mapLink(lat, lng), key: `emergency-location:${alert.alertId}:${member.otherId}:${number_}` }); shared.push(member.otherName); }
         catch { /* one failed push must not stop the others */ }
       }
       // What is kept on the alert is a count and a time. Never the position.

@@ -1,6 +1,7 @@
 "use strict";
 
 const { buildRoute, haversine } = require("./directions.js");
+const { languageOf } = require("../i18n/index.js");
 
 // The server half of Kyro's GPS: find a place by name, say what is at a position, and plan a route with turn-by-turn steps. The phone follows the route
 // itself (see public/kyro-navigation.js); this only answers when asked, and does not keep or log anyone's position.
@@ -74,7 +75,7 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
     return { label: label(payload) };
   }
 
-  async function route({ from, to, mode }) {
+  async function route({ from, to, mode, language }) {
     const start = point(from, "Where you are"); const profile = mode === "walk" ? "walk" : "drive";
     let end; let destinationLabel = "";
     if (to && Number.isFinite(Number(to.lat)) && Number.isFinite(Number(to.lng))) { end = point(to, "The destination"); destinationLabel = text(to.label, 120); }
@@ -87,7 +88,7 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
     const url = `${urls[profile]}/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&steps=true&alternatives=false`;
     const payload = await getJson(url);
     if (payload.code === "NoRoute" || !Array.isArray(payload.routes) || !payload.routes[0]) throw fail(404, "no_route", "I couldn't find a way there by that route.");
-    let built; try { built = buildRoute(payload.routes[0]); } catch { throw fail(502, "navigation_provider_error", "The directions service gave me a route I couldn't follow."); }
+    let built; try { built = buildRoute(payload.routes[0], { language: languageOf(language) }); } catch { throw fail(502, "navigation_provider_error", "The directions service gave me a route I couldn't follow."); }
     return { ...built, mode: profile, destination: { label: destinationLabel, lat: end.lat, lng: end.lng }, provider: profile === "walk" && urls.walk === DEFAULTS.walk ? "openstreetmap-foot" : urls.drive === DEFAULTS.drive ? "openstreetmap-osrm" : "custom" };
   }
 

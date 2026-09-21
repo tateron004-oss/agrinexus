@@ -56,11 +56,11 @@ class CircleRepository {
 
   // ---- emergency alerts the person triggered (same table and purpose; a different kind, so links never see them) ----
   // The same alert within five minutes is one alert, matching the push de-duplication in safety.js.
-  async recordAlert({ tenantId, userId, alerted, now = new Date() }) {
+  async recordAlert({ tenantId, userId, alerted, now = new Date(), language = "en" }) {
     const latest = await this.latestAlert({ tenantId, userId, now });
     if (latest && !latest.ended && now.getTime() - Date.parse(latest.at) < 5 * 60 * 1000) return { alertId: latest.alertId, reused: true };
     const alertId = `alt_${crypto.randomUUID()}`;
-    await this.insertRow(this.db, { tenantId, userId, content: { kind: "alert", role: "alert", alertId, at: now.toISOString(), alerted: alerted.map(member => ({ id: member.otherId, name: member.otherName })), ended: false, updates: 0, lastUpdateAt: null } });
+    await this.insertRow(this.db, { tenantId, userId, content: { kind: "alert", role: "alert", alertId, at: now.toISOString(), alerted: alerted.map(member => ({ id: member.otherId, name: member.otherName })), language, ended: false, updates: 0, lastUpdateAt: null } });
     return { alertId, reused: false };
   }
   // The person's most recent alert that is still within the hour, or null.
