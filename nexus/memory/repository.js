@@ -104,6 +104,30 @@ class MemoryRepository {
     return (result.rows || result).map(row => row.content).filter(Boolean);
   }
 
+  // Answer feedback (see quality/feedback.js): a person's "that was wrong" / "that helped", kept under the purpose "feedback". Given a
+  // userId it lists that person's; without one it lists the whole tenant's, for the administrator's report. Newest first.
+  async addFeedback({ tenantId, userId, content }) {
+    const saved = await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','feedback',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','internal') returning memory_id`,
+    [createId("memory"), tenantId, userId, content, `feedback: ${content.rating}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+  }
+
+  async listFeedback({ tenantId, userId = null, sinceDays = 30, limit = 200 }) {
+    const result = await this.db.query(`select memory_id,content,created_at from nexus_memory_items
+      where tenant_id=$1 and ($2::text is null or principal_id=$2) and memory_class='domain' and purpose='feedback' and deleted_at is null
+      and created_at > now() - ($3::int * interval '1 day') order by created_at desc, memory_id desc limit $4`,
+    [tenantId, userId, Math.min(Math.max(Number(sinceDays) || 30, 1), 365), Math.min(Math.max(Number(limit) || 200, 1), 1000)]);
+    return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.rating);
+  }
+
+  async updateFeedback({ tenantId, userId, memoryId, content }) {
+    const result = await this.db.query(`update nexus_memory_items set content=$4,updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='feedback' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId, content]);
+    return Boolean((result.rows || result)[0]);
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,
