@@ -5,6 +5,7 @@ const { createInteractionProfile } = require("../experience/interaction-profile.
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
+const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
@@ -78,9 +79,67 @@ class OpenEndedPlanner {
     } catch { return null; }
   }
 
+  // People the person has told Kyro about: "Save Otieno's number as +254...", "Who are my contacts?", "Forget Otieno". Returns an answer
+  // plan, or null when the text is none of these (or contacts are unavailable), so normal planning carries on.
+  async contactsTurn(command) {
+    const memory = this.memory;
+    if (!memory?.saveContact || !memory?.listContacts || !memory?.forgetContact) return null;
+    const scope = { tenantId: command.tenantId, userId: command.actorId };
+    const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+    try {
+      const statement = extractContactStatement(command.text);
+      if (statement?.invalid) return answer(`I need ${statement.name}'s number with the country code, like +254712345678, so I can dial or text it.`);
+      if (statement) {
+        const saved = await memory.saveContact({ ...scope, ...statement });
+        return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}. Say "forget ${statement.name}" any time, or "who are my contacts?"`);
+      }
+      const request = extractContactRequest(command.text);
+      if (!request) return null;
+      if (request.action === "forget") {
+        const forgotten = await memory.forgetContact({ ...scope, name: request.name });
+        return answer(forgotten ? `Done. I've forgotten ${forgotten.name}.` : `I don't have a contact called ${request.name}.`);
+      }
+      const contacts = (await memory.listContacts(scope)).map(row => row.content);
+      if (request.action === "list") {
+        if (!contacts.length) return answer('You have no saved contacts. Say "save Otieno\'s number as +254712345678" to add one.');
+        const shown = contacts.slice(0, 20).map(contact => `${contact.name} (${describeContact(contact)})`).join("; ");
+        return answer(`Your contacts: ${shown}${contacts.length > 20 ? ` and ${contacts.length - 20} more` : ""}.`);
+      }
+      const found = resolveContact(contacts, request.name);
+      if (found?.contact) return answer(`${found.contact.name}: ${describeContact(found.contact)}.`);
+      return answer(found?.ambiguous ? `Which one: ${found.ambiguous.map(contact => contact.name).join(" or ")}?` : `I don't have a contact called ${request.name}.`);
+    } catch { return null; }
+  }
+
+  // "Text Otieno saying I'm on my way", "Call my brother and say hi": when the person names someone they saved instead of giving a
+  // number, the name becomes that person's number (or email) so the normal, confirmed send or call plans as usual. Returns
+  // { text, contactName } to plan with, { clarification } to ask, or null to leave the request alone.
+  async namedContactRequest(command) {
+    const memory = this.memory;
+    if (!memory?.listContacts) return null;
+    const parsed = parseNamedContactRequest(command.text);
+    if (!parsed) return null;
+    try {
+      const contacts = (await memory.listContacts({ tenantId: command.tenantId, userId: command.actorId })).map(row => row.content);
+      const found = resolveContact(contacts, parsed.name);
+      const clarify = question => ({ clarification: question });
+      if (found?.ambiguous) return clarify(`Which one: ${found.ambiguous.map(contact => contact.name).join(" or ")}?`);
+      if (!found?.contact) return clarify(`I don't have a contact called ${parsed.name}. Say "save ${parsed.name}'s number as +254712345678" first, or give me their number.`);
+      const value = parsed.wantsEmail ? found.contact.email : found.contact.phone;
+      if (!value) return clarify(parsed.wantsEmail ? `I don't have an email for ${found.contact.name}. Say "save ${found.contact.name}'s email as name@example.com" first.`
+        : `I don't have a phone number for ${found.contact.name}. Say "save ${found.contact.name}'s number as +254712345678" first.`);
+      return { text: `${parsed.before}${value} ${parsed.rest}`, contactName: found.contact.name };
+    } catch { return null; }
+  }
+
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
     const profile = await this.profileTurn(command);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
+    const contactsAnswer = await this.contactsTurn(command);
+    if (contactsAnswer) return Object.freeze({ ...contactsAnswer, planningAttempts: 0 });
+    const named = await this.namedContactRequest(command);
+    if (named?.clarification) return Object.freeze({ goal: String(command.text || "").trim(), application: "communications", riskTier: "regulated", clarification: named.clarification, steps: [], planningAttempts: 0 });
+    if (named) command = { ...command, text: named.text };
     // What Kyro has learned about this person (see memory/profile-facts.js) is used wherever it helps: their first name in greetings,
     // their town for a bare "weather" and for local farming searches, their language for direct answers, and as context for the planner.
     const known = await this.knownAboutPerson(command);
@@ -169,9 +228,9 @@ class OpenEndedPlanner {
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
     if (completeCommunication) return Object.freeze({ ...completeCommunication, planningAttempts: 1 });
     const sendMessage = sendMessagePlan(command.text, catalog);
-    if (sendMessage) return Object.freeze({ ...sendMessage, planningAttempts: 1 });
+    if (sendMessage) return Object.freeze({ ...withContactName(sendMessage, named?.contactName), planningAttempts: 1 });
     const placeCall = callPlan(command.text, catalog);
-    if (placeCall) return Object.freeze({ ...placeCall, planningAttempts: 1 });
+    if (placeCall) return Object.freeze({ ...withContactName(placeCall, named?.contactName), planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
     if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
     const completeBusiness = completeBusinessPlan(command.text, catalog);
@@ -803,6 +862,21 @@ function isBriefRequest(text) {
   const normalized = String(text || "").toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
   return Boolean(normalized) && BRIEF_REQUEST.some(pattern => pattern.test(normalized));
 }
+// "Text Otieno saying hi", "Email Amina Wanjiru saying the delivery is ready", "Call my brother and say I am late": a saved person's name where a
+// number would be. Only when the name is followed by the words to send or say, so "call me a taxi" and "text me" are never this.
+const NAMED_CONTACT_REQUEST = /^((?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*)(text|sms|whats ?app|e-?mail|call|phone|ring|dial|send (?:an? |the )?(?:(?:text|sms|whats ?app|e-?mail)(?: message)?|message) to)\s+(?:to )?(.+?)\s+((?:and say|and tell (?:them|him|her)|saying|says|to say|tell (?:them|him|her)|with the message)\b.*|:.*)$/is;
+function parseNamedContactRequest(text) {
+  const match = NAMED_CONTACT_REQUEST.exec(String(text || "").trim());
+  if (!match || /[\d@]/.test(match[3])) return null;
+  const name = contactName(match[3]);
+  if (!name) return null;
+  return { name, before: `${match[1]}${match[2]} `, rest: match[4], wantsEmail: /e-?mail/i.test(match[2]) };
+}
+function withContactName(plan, name) {
+  if (!name || !plan?.steps?.length) return plan;
+  return { ...plan, steps: plan.steps.map(step => (step?.toolId === "communications.send" ? { ...step, input: { ...step.input, contactName: name } } : step)) };
+}
+
 // Setting up, changing, stopping and asking about a scheduled brief. Anchored patterns: "Give me a brief history of maize" and
 // "Brief my supplier" are never this. A setup with no time asks for one; a time that cannot be read is treated as no time.
 const BRIEF_NOUN = "(?:(?:daily|morning) )+brief(?:ing)?s?";

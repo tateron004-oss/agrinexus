@@ -104,6 +104,37 @@ class MemoryRepository {
     return (result.rows || result).map(row => row.content).filter(Boolean);
   }
 
+  // People the person has told Kyro about (see contacts.js). Other people's details are sensitive: kept under their own purpose
+  // ("contacts"), so no planning or recall query that reads profile facts ever returns them. One contact per name; saving the same
+  // name again merges what is new (a phone number added to an email) and replaces what changed.
+  async saveContact({ tenantId, userId, name, phone = "", email = "" }) {
+    const existing = (await this.listContacts({ tenantId, userId })).find(row => row.content.name.toLowerCase() === String(name).toLowerCase());
+    const content = { kind: "contact", name, phone: phone || existing?.content.phone || "", email: email || existing?.content.email || "" };
+    if (existing) await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null`, [tenantId, userId, existing.memory_id]);
+    await this.db.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','contacts',$4,$5,$6::vector,'none',$7,0.6,0.9,'user_confirmed','sensitive')`,
+    [createId("memory"), tenantId, userId, content, `contact: ${name}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+    return { contact: content, updated: Boolean(existing) };
+  }
+
+  async listContacts({ tenantId, userId, limit = 200 }) {
+    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='contacts' and deleted_at is null
+      order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 200, 1), 500)]);
+    return (result.rows || result).filter(row => row.content && row.content.kind === "contact" && row.content.name);
+  }
+
+  // Forget one contact by (case-insensitive) name. Returns the contact that was forgotten, or null.
+  async forgetContact({ tenantId, userId, name }) {
+    const found = (await this.listContacts({ tenantId, userId })).find(row => row.content.name.toLowerCase() === String(name).toLowerCase());
+    if (!found) return null;
+    await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null`, [tenantId, userId, found.memory_id]);
+    return found.content;
+  }
+
   async forget({ tenantId, principalId, memoryId }) {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and deleted_at is null returning memory_id`,
