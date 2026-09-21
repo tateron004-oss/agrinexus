@@ -15,6 +15,17 @@ try { $Host.UI.RawUI.WindowTitle = "Kyro desktop listener (AgriNexus)" } catch {
 
 Add-Type -AssemblyName System.Speech
 
+# Older Windows PowerShell defaults to protocols the platform no longer accepts; ask for TLS 1.2 or better explicitly.
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+
+# One listener per Windows session. The sign-in task and a manual start would otherwise both hear the same words and send every command twice.
+$script:InstanceMutex = New-Object System.Threading.Mutex($false, "Local\KyroDesktopListener")
+if (-not $script:InstanceMutex.WaitOne(0)) {
+  Write-Host "Kyro's desktop listener is already running in this Windows session (check the taskbar). Close that window first if you want to restart it."
+  exit 0
+}
+
+$usingDemoAccount = [string]::IsNullOrWhiteSpace($Email) -and [string]::IsNullOrWhiteSpace($Password)
 if ([string]::IsNullOrWhiteSpace($Email)) { $Email = "user@agrinexus.org" }
 if ([string]::IsNullOrWhiteSpace($Password)) { $Password = "User2026!" }
 
@@ -107,6 +118,14 @@ function Ensure-NexusSession {
   }
 }
 
+function Invoke-NexusCommandRequest {
+  param($headers, $body)
+  if ($script:NativeWebSession) {
+    return Invoke-RestMethod -Method Post -Uri "$PlatformUrl/api/agent/command" -WebSession $script:NativeWebSession -ContentType "application/json" -Body $body -TimeoutSec 30
+  }
+  return Invoke-RestMethod -Method Post -Uri "$PlatformUrl/api/agent/command" -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 30
+}
+
 function Send-NexusCommand {
   param([string]$Command)
   if ([string]::IsNullOrWhiteSpace($Command)) { return }
@@ -133,10 +152,17 @@ function Send-NexusCommand {
     mode = "User"
   } | ConvertTo-Json -Depth 5
   try {
-    if ($script:NativeWebSession) {
-      $response = Invoke-RestMethod -Method Post -Uri "$PlatformUrl/api/agent/command" -WebSession $script:NativeWebSession -ContentType "application/json" -Body $body -TimeoutSec 30
-    } else {
-      $response = Invoke-RestMethod -Method Post -Uri "$PlatformUrl/api/agent/command" -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 30
+    try {
+      $response = Invoke-NexusCommandRequest $headers $body
+    } catch {
+      # A listener left running for days outlives its login session: sign in again once and retry, instead of failing every command until restarted.
+      $status = 0
+      try { $status = [int]$_.Exception.Response.StatusCode } catch { }
+      if (($status -eq 401 -or $status -eq 403) -and $script:NativeWebSession) {
+        Write-NexusStatus "The desktop session expired; signing in again."
+        $script:NativeWebSession = $null
+        if (Ensure-NexusSession) { $response = Invoke-NexusCommandRequest $headers $body } else { throw }
+      } else { throw }
     }
     $intent = $response.commandResult.intent
     $reply = $response.commandResult.response
@@ -283,7 +309,6 @@ Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognized -Sourc
       return
     }
     $script:WaitingForCommand = $false
-    $script:LastCommand = $afterWake
     Send-NexusCommand $afterWake
     return
   }
@@ -291,7 +316,6 @@ Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognized -Sourc
   $wakeAge = (New-TimeSpan -Start $script:LastWakeAt -End (Get-Date)).TotalSeconds
   if ($script:WaitingForCommand -and $wakeAge -lt 12) {
     $script:WaitingForCommand = $false
-    $script:LastCommand = $text
     Send-NexusCommand $text
     return
   }
@@ -301,6 +325,7 @@ Write-Host ""
 Write-Host "Kyro (AgriNexus) Desktop Wake Listener"
 Write-Host "Platform: $PlatformUrl"
 Write-Host "Session handoff: $(if (![string]::IsNullOrWhiteSpace($SessionCookie)) { 'session cookie provided' } elseif (![string]::IsNullOrWhiteSpace($Email)) { 'desktop login will use AGRINEXUS_EMAIL / AGRINEXUS_PASSWORD' } else { 'not set; add AGRINEXUS_EMAIL and AGRINEXUS_PASSWORD for live command execution' })"
+if ($usingDemoAccount) { Write-Host "Account: the shared demo account. Set AGRINEXUS_EMAIL and AGRINEXUS_PASSWORD before starting to use your own." }
 Write-Host "Wake phrases: $($wakePhrases -join ', ')"
 Write-Host "Stop phrases: $($stopPhrases -join ', ')"
 Write-Host "Privacy: visible listener. Close this window, or say a stop phrase, to stop it for this session."
