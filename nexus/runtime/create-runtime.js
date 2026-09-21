@@ -62,6 +62,9 @@ const { createBriefService } = require("../brief/service.js");
 const { BriefSettingsRepository } = require("../brief/settings.js");
 const { createWeatherAlertService } = require("../alerts/service.js");
 const { createWeeklySummaryService, WeeklySummarySettingsRepository } = require("../brief/weekly.js");
+const { createCompanion } = require("../companion/index.js");
+const { CircleRepository } = require("../companion/circle-repository.js");
+const { CheckinSettingsRepository, CheckinStateRepository } = require("../companion/checkin-store.js");
 const { WeatherAlertSettingsRepository } = require("../alerts/settings.js");
 
 function createRuntime({ env = process.env, executors = {}, verifier, planningModel, logger = console, fetchFn } = {}) {
@@ -160,11 +163,12 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const brief = createBriefService({ notifications, settings: new BriefSettingsRepository(db), memory, devices, autonomyControl });
   const alerts = createWeatherAlertService({ notifications, settings: new WeatherAlertSettingsRepository(db), memory, devices, autonomyControl });
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
-  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly }) : null;
+  const companion = createCompanion({ circle: new CircleRepository(db), checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), memory, notifications, devices, autonomyControl });
+  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
-  return Object.freeze({ config, adapter, db, brief, alerts, weekly, conversations, tasks, executions, tools, consents,
+  return Object.freeze({ config, adapter, db, brief, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });

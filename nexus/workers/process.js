@@ -60,6 +60,9 @@ async function main() {
   // The weekly summary is due on one weekday at one chosen time (a three-hour window), so checking every five minutes is plenty.
   const weeklySummaryIntervalMs = Number(process.env.NEXUS_WEEKLY_SUMMARY_POLL_MS || 5 * 60 * 1000);
   let lastWeeklySummarySweepAt = 0;
+  // Check-ins are due at a chosen minute and followed up hours later, so every five minutes is plenty.
+  const checkinIntervalMs = Number(process.env.NEXUS_CHECKIN_POLL_MS || 5 * 60 * 1000);
+  let lastCheckinSweepAt = 0;
   while (!stopping) {
     const result = await worker.runOne();
     releaseHeartbeat.recordJob(result.job?.job_id || null);
@@ -77,6 +80,11 @@ async function main() {
       lastBriefSweepAt = Date.now();
       try { const outcome = await handlers["brief.send-due"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.sent) logger.info("worker.brief_sweep", outcome); }
       catch (error) { logger.error("worker.brief_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastCheckinSweepAt >= checkinIntervalMs) {
+      lastCheckinSweepAt = Date.now();
+      try { const outcome = await handlers["companion.checkin-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.prompted || outcome?.alerted) logger.info("worker.checkin_sweep", outcome); }
+      catch (error) { logger.error("worker.checkin_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastWeeklySummarySweepAt >= weeklySummaryIntervalMs) {
       lastWeeklySummarySweepAt = Date.now();
