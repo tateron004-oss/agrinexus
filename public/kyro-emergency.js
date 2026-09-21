@@ -19,6 +19,13 @@
   const EVERY_MS = 2 * 60 * 1000; const RETRY_MS = 20 * 1000; const MAX_MS = 30 * 60 * 1000; const MAX_FAILURES = 4;
   const CLOSED = /closed|no open emergency|no longer/i;
 
+  // What the phone says, in the language the alert was raised in (English or Kiswahili; the Swahili is a first draft that needs a fluent speaker to review it).
+  const TEXT = {
+    en: { sent: "I've sent your location to {names}, and I'll keep it updated. Say \"I'm safe\" when you are.", warned: "I couldn't get your location yet. Your circle has still been alerted. I'll keep trying.", failed: "I couldn't get your location. Your circle was alerted without it, so please tell them where you are.", notSent: "I couldn't send your location. Your circle was alerted without it, so please tell them where you are." },
+    sw: { sent: "Nimetuma eneo lako kwa {names}, na nitaendelea kulisasisha. Sema \"niko salama\" ukiwa salama.", warned: "Bado sijapata eneo lako. Mzunguko wako umeshapewa tahadhari. Nitaendelea kujaribu.", failed: "Sikuweza kupata eneo lako. Mzunguko wako ulipewa tahadhari bila eneo, kwa hivyo tafadhali wajulishe ulipo.", notSent: "Sikuweza kutuma eneo lako. Mzunguko wako ulipewa tahadhari bila eneo, kwa hivyo tafadhali wajulishe ulipo." }
+  };
+  const words = (language, key, params = {}) => String((TEXT[language] || TEXT.en)[key]).replace(/\{(\w+)\}/g, (whole, name) => (params[name] === undefined ? whole : String(params[name])));
+
   function createEmergencySharer({ geolocation, api, say = () => {}, setTimer = setTimeout, clearTimer = clearTimeout, now = () => Date.now() } = {}) {
     let running = null; // { alertId, startedAt, timer, failures, updates, told, warned }
 
@@ -44,17 +51,17 @@
       if (running !== run) return;
       const fail = message => {
         run.failures += 1;
-        if (run.failures >= MAX_FAILURES) { say(message || "I couldn't send your location. Your circle was alerted without it, so please tell them where you are.", { interrupt: false }); stop(); return; }
-        if (!run.warned) { run.warned = true; say("I couldn't get your location yet. Your circle has still been alerted. I'll keep trying.", { interrupt: false }); }
+        if (run.failures >= MAX_FAILURES) { say(message || words(run.language, "notSent"), { interrupt: false }); stop(); return; }
+        if (!run.warned) { run.warned = true; say(words(run.language, "warned"), { interrupt: false }); }
         schedule(run, RETRY_MS);
       };
-      if (!position) { fail("I couldn't get your location. Your circle was alerted without it, so please tell them where you are."); return; }
+      if (!position) { fail(words(run.language, "failed")); return; }
       let result;
       try { result = await api({ alertId: run.alertId, position }); }
       catch (error) { if (error?.ended || CLOSED.test(String(error?.message || ""))) { stop(); return; } fail(); return; }
       if (running !== run) return;
       run.failures = 0;
-      if (result?.shared?.length) { run.updates += 1; if (!run.told) { run.told = true; say(`I've sent your location to ${result.shared.join(", ")}, and I'll keep it updated. Say "I'm safe" when you are.`, { interrupt: false }); } }
+      if (result?.shared?.length) { run.updates += 1; if (!run.told) { run.told = true; say(words(run.language, "sent", { names: result.shared.join(", ") }), { interrupt: false }); } }
       else if (result?.throttled) { /* the server just sent one; the next one is on the normal schedule */ }
       if (result?.done) { stop(); return; }
       schedule(run, EVERY_MS);
@@ -69,7 +76,7 @@
         if (!emergency.shareLocation || !emergency.alertId) return;
         if (running && running.alertId === emergency.alertId) return;
         stop();
-        running = { alertId: emergency.alertId, startedAt: now(), timer: null, failures: 0, updates: 0, told: false, warned: false };
+        running = { alertId: emergency.alertId, startedAt: now(), timer: null, failures: 0, updates: 0, told: false, warned: false, language: /^sw/i.test(String(emergency.language || "")) ? "sw" : "en" };
         tick(running);
       },
       stop
@@ -77,12 +84,12 @@
   }
 
   // The browser wiring: the real location and spoken confirmation.
-  function forBrowser({ api, locale = "en" } = {}) {
+  function forBrowser({ api, locale = "en", speechLang = "" } = {}) {
     const say = (text, { interrupt = false } = {}) => {
       try {
         const synth = typeof speechSynthesis !== "undefined" ? speechSynthesis : null; if (!synth || typeof SpeechSynthesisUtterance === "undefined") return;
         if (interrupt) synth.cancel();
-        const utterance = new SpeechSynthesisUtterance(text); utterance.lang = locale; synth.speak(utterance);
+        const utterance = new SpeechSynthesisUtterance(text); utterance.lang = speechLang || locale; synth.speak(utterance);
       } catch { /* silence is fine; the alert already went */ }
     };
     return createEmergencySharer({ geolocation: globalThis.navigator?.geolocation, api, say });

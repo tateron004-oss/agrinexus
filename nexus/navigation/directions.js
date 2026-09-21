@@ -10,8 +10,9 @@ const SIDE = { left: "on your left", right: "on your right" };
 const ordinal = n => { const v = Number(n); return v === 1 ? "first" : v === 2 ? "second" : v === 3 ? "third" : v === 4 ? "fourth" : v === 5 ? "fifth" : `${v}th`; };
 const onto = name => (name ? ` onto ${name}` : "");
 
-// One spoken instruction for one OSRM step.
-function describeStep(step) {
+// One spoken instruction for one OSRM step, in English (or Swahili: see describeStepSw).
+function describeStep(step, language = "en") {
+  if (language === "sw") return describeStepSw(step);
   const m = step?.maneuver || {}; const name = String(step?.name || step?.ref || "").trim(); const modifier = m.modifier;
   switch (m.type) {
     case "depart": return `Head ${compass(m.bearing_after)}${name ? ` on ${name}` : ""}`;
@@ -30,6 +31,33 @@ function describeStep(step) {
 }
 const sentence = (verb, tail) => `${verb.charAt(0).toUpperCase()}${verb.slice(1)}${tail}`;
 
+// Kiswahili. The same steps in Swahili; names of roads are never translated.
+const COMPASS_SW = ["kaskazini", "kaskazini mashariki", "mashariki", "kusini mashariki", "kusini", "kusini magharibi", "magharibi", "kaskazini magharibi"];
+const compassSw = bearing => COMPASS_SW[Math.round((((Number(bearing) % 360) + 360) % 360) / 45) % 8];
+const MODIFIER_SW = { uturn: "Geuka urudi ulikotoka", "sharp right": "Geuka kulia kabisa", right: "Geuka kulia", "slight right": "Elekea kulia kidogo", straight: "Endelea moja kwa moja", "slight left": "Elekea kushoto kidogo", left: "Geuka kushoto", "sharp left": "Geuka kushoto kabisa" };
+const SIDE_SW = { left: "upande wa kushoto", right: "upande wa kulia" };
+const ordinalSw = n => { const v = Number(n); return v === 1 ? "ya kwanza" : v === 2 ? "ya pili" : v === 3 ? "ya tatu" : v === 4 ? "ya nne" : v === 5 ? "ya tano" : `ya ${v}`; };
+const ontoSw = name => (name ? ` kuingia ${name}` : "");
+const lowerFirstSw = text => `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+
+function describeStepSw(step) {
+  const m = step?.maneuver || {}; const name = String(step?.name || step?.ref || "").trim(); const modifier = m.modifier;
+  switch (m.type) {
+    case "depart": return `Anza kuelekea ${compassSw(m.bearing_after)}${name ? ` kwenye ${name}` : ""}`;
+    case "arrive": return `Umefika${SIDE_SW[modifier] ? `, ${SIDE_SW[modifier]}` : ""}`;
+    case "turn": return `${MODIFIER_SW[modifier] || "Geuka"}${ontoSw(name)}`;
+    case "end of road": return `Mwisho wa barabara, ${lowerFirstSw(MODIFIER_SW[modifier] || "Geuka")}${ontoSw(name)}`;
+    case "fork": return `Shika ${modifier && /left/.test(modifier) ? "kushoto" : modifier && /right/.test(modifier) ? "kulia" : "moja kwa moja"} kwenye njia panda${ontoSw(name)}`;
+    case "merge": return `Jiunge${modifier && /left|right/.test(modifier) ? ` ${/left/.test(modifier) ? "kushoto" : "kulia"}` : ""}${ontoSw(name)}`;
+    case "on ramp": return `Tumia njia ya kuingilia${ontoSw(name)}`;
+    case "off ramp": return `Toka kwenye barabara${ontoSw(name)}`;
+    case "roundabout": case "rotary": case "roundabout turn": return `Kwenye mzunguko wa barabara, chukua njia ya kutokea ${m.exit ? ordinalSw(m.exit) : "inayofuata"}${ontoSw(name)}`;
+    case "exit roundabout": case "exit rotary": return `Toka kwenye mzunguko wa barabara${ontoSw(name)}`;
+    case "new name": case "continue": return modifier && modifier !== "straight" ? `${MODIFIER_SW[modifier] || "Endelea"}${ontoSw(name)}` : `Endelea${ontoSw(name)}`;
+    default: return `Endelea${ontoSw(name)}`;
+  }
+}
+
 const EARTH = 6371000;
 const rad = value => (value * Math.PI) / 180;
 function haversine(a, b) { // points are [lng, lat]
@@ -47,7 +75,7 @@ function thin(points, limit) {
 }
 
 // OSRM route -> { distanceMeters, durationSeconds, geometry: [[lng,lat]...], steps: [{ instruction, alongMeters, distanceMeters, name, type, modifier }] }
-function buildRoute(osrmRoute, { maxPoints = 6000 } = {}) {
+function buildRoute(osrmRoute, { maxPoints = 6000, language = "en" } = {}) {
   const leg = osrmRoute?.legs || []; const raw = (osrmRoute?.geometry?.coordinates || []).filter(pair => Array.isArray(pair) && Number.isFinite(pair[0]) && Number.isFinite(pair[1]));
   if (raw.length < 2) throw new Error("route-geometry-missing");
   const geometry = thin(raw, maxPoints);
@@ -58,7 +86,7 @@ function buildRoute(osrmRoute, { maxPoints = 6000 } = {}) {
     const at = step.maneuver?.location; let best = from; let bestDistance = Infinity;
     if (Array.isArray(at)) for (let i = from; i < geometry.length; i += 1) { const d = haversine(at, geometry[i]); if (d < bestDistance) { bestDistance = d; best = i; } if (d > bestDistance + 400 && bestDistance < 60) break; }
     from = best;
-    steps.push({ instruction: describeStep(step), alongMeters: Math.round(cumulative[best]), distanceMeters: Math.round(step.distance || 0), name: String(step.name || ""), type: step.maneuver?.type || "", modifier: step.maneuver?.modifier || "" });
+    steps.push({ instruction: describeStep(step, language), alongMeters: Math.round(cumulative[best]), distanceMeters: Math.round(step.distance || 0), name: String(step.name || ""), type: step.maneuver?.type || "", modifier: step.maneuver?.modifier || "" });
   }
   if (!steps.length) throw new Error("route-steps-missing");
   const total = Math.round(cumulative[cumulative.length - 1]);
@@ -66,4 +94,4 @@ function buildRoute(osrmRoute, { maxPoints = 6000 } = {}) {
   return { distanceMeters: total, durationSeconds: Math.round(osrmRoute.duration || 0), geometry, steps };
 }
 
-module.exports = Object.freeze({ describeStep, buildRoute, haversine, compass });
+module.exports = Object.freeze({ describeStep, describeStepSw, buildRoute, haversine, compass });

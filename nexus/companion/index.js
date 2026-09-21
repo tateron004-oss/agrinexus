@@ -56,10 +56,10 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
       const send = (toUserId, title, body, key) => notifications.enqueue({ tenantId, userId: toUserId, channel: "push", scheduledAt: now(), idempotencyKey: key, content: { title, body, kind: "circle" } });
 
       // "I'm safe" only means something while an alert of theirs is open; otherwise it falls through to an ordinary answer.
-      const allClear = await safeTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome });
+      const allClear = await safeTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, locale: command.locale });
       if (allClear) return allClear;
 
-      const safety = await safetyTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, recordAlert: circle.recordAlert ? args => circle.recordAlert(args) : null });
+      const safety = await safetyTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, locale: command.locale, recordAlert: circle.recordAlert ? args => circle.recordAlert(args) : null });
       if (safety) return safety;
 
       const answered = await checkins.answer({ ...scope, text: command.text, at: now() });
@@ -90,7 +90,7 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
         return `Done. ${saved.replaced ? "Your check-in is now" : "I'll check in on you"} every day at ${formatTimeOfDay(saved.timeOfDay)} (${saved.timeZone} time). ${notes}`;
       }
 
-      return circleTurn({ text: command.text, circle, memory, push: send, ...scope });
+      return circleTurn({ text: command.text, circle, memory, push: send, locale: command.locale, ...scope });
   }
 }
 

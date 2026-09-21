@@ -1,5 +1,7 @@
 "use strict";
 
+const { t, both, languageOf } = require("../i18n/index.js");
+
 // Emergencies and moments of crisis. Two things happen here and they are deliberately different:
 //
 //  * The person says, plainly, that they need help NOW ("this is an emergency", "I've fallen", "alert my circle"): every member of their
@@ -7,10 +9,14 @@
 //    told without the person choosing anything else, and it is only ever triggered by the person's own words. Autonomy pause does not stop
 //    it, because the person asked for it.
 //  * The person says something that suggests they may harm themselves: Kyro answers with care, points to real people and their local
-//    emergency number, and OFFERS to alert the circle ("say 'alert my circle'"). It never claims to be a crisis service, never acts on the
+//    emergency number, and OFFERS to alert the circle (say "alert my circle"). It never claims to be a crisis service, never acts on the
 //    person's behalf without their word, and never argues.
 //
-// The wording of the crisis reply must be reviewed by a clinician and a veterans' or crisis organisation before this is relied on live.
+// The wording of the crisis reply must be reviewed by a clinician and a veterans' or crisis organisation before this is relied on live. The same is true
+// of the Swahili wording (see i18n/sw.js), which also needs a fluent speaker.
+//
+// Languages: English and Swahili. A person is answered in the language they spoke (a Swahili trigger gets a Swahili reply even if the app is in English),
+// else in the app's language. An alert goes to another person's phone, whose language Kyro does not know, so it is sent in both languages.
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
 const IMMEDIATE = [
   /^(?:this is (?:an )?)?emergency$/,
@@ -35,27 +41,54 @@ const SELF_HARM = [
   /\bwish i (?:was|were) dead\b/i
 ];
 
-// "emergency" | "ask" | "self_harm" | null
-function readSafety(text) {
-  const t = clean(text);
-  if (!t || t.length > 400) return null;
-  const lower = t.toLowerCase().replace(/[.!?]+$/g, "");
-  if (lower.length <= 70 && IMMEDIATE.some(pattern => pattern.test(lower))) return "emergency";
-  if (ASK_FIRST.test(lower)) return "ask";
-  if (SELF_HARM.some(pattern => pattern.test(t))) return "self_harm";
+// Kiswahili. First person only, like the English ones ("nataka kufa" is about the person; a news story about "kujiua" is not).
+const IMMEDIATE_SW = [
+  /^(?:hii ni )?dharura$/,
+  /^(?:nahitaji|ninahitaji) msaada (?:wa haraka )?(?:sasa|sasa hivi|mara moja|haraka|haraka sana)$/,
+  /^(?:tafadhali )?(?:nisaidie|nisaidieni) (?:sasa|sasa hivi|haraka|mara moja)$/,
+  /^nimeanguka(?: na (?:siwezi|siwezi tena) kuamka)?$/,
+  /^siwezi kuamka$/,
+  /^niko hatarini$/,
+  /^nimejeruhiwa (?:vibaya|sana)$/,
+  /^nina (?:shambulio la moyo|kiharusi)$/,
+  /^(?:tafadhali )?(?:arifu|mwambie|wasiliana na|mjulishe|waarifu|wajulishe) (?:mzunguko wangu|watu wangu wa karibu)$/,
+  /^(?:tafadhali )?tuma tahadhari (?:ya dharura )?kwa mzunguko wangu$/
+];
+const ASK_FIRST_SW = /^(?:tafadhali )?(?:msaada|nisaidie|naomba msaada|nahitaji msaada|ninahitaji msaada)$/;
+const SELF_HARM_SW = [
+  /\b(?:nataka|ninataka|ningependa|nimeamua) kufa\b/,
+  /\b(?:nataka|ninataka|nafikiria|ninafikiria|nimeamua|nimefikiria) kujiua\b/,
+  /\b(?:nataka|ninataka) kujidhuru\b/,
+  /\b(?:sitaki|sitamani) (?:tena )?kuishi\b/,
+  /\bnimechoka kuishi\b/,
+  /\bmaisha yangu hayana maana\b/
+];
+
+// -> { kind: "emergency" | "ask" | "self_harm", language: "sw" | "en" } or null. `language` is the language the person spoke.
+function readSafetyDetailed(text) {
+  const raw = clean(text);
+  if (!raw || raw.length > 400) return null;
+  const lower = raw.toLowerCase().replace(/[.!?]+$/g, "");
+  if (lower.length <= 70 && IMMEDIATE.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "en" };
+  if (lower.length <= 70 && IMMEDIATE_SW.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "sw" };
+  if (ASK_FIRST.test(lower)) return { kind: "ask", language: "en" };
+  if (ASK_FIRST_SW.test(lower)) return { kind: "ask", language: "sw" };
+  if (SELF_HARM.some(pattern => pattern.test(raw))) return { kind: "self_harm", language: "en" };
+  if (SELF_HARM_SW.some(pattern => pattern.test(lower))) return { kind: "self_harm", language: "sw" };
   return null;
 }
-
-const NUMBER_LINE = "If you might be in danger, please call your local emergency number now.";
+// "emergency" | "ask" | "self_harm" | null
+const readSafety = text => readSafetyDetailed(text)?.kind || null;
 
 // Alerts everyone in the person's circle who has said yes. Returns the members reached (with what each has chosen to share).
-async function alertMembers({ circle, push, tenantId, userId, userName, now = new Date() }) {
+async function alertMembers({ circle, push, tenantId, userId, userName, now = new Date(), language = "en" }) {
   const members = circle?.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }) : [];
   const bucket = Math.floor(now.getTime() / (5 * 60 * 1000)); // a second alert within five minutes is the same alert, not a second push
   const delivered = [];
+  const name = userName || t(language, "safety.someone");
   for (const member of members) {
     try {
-      await push?.(member.otherId, "Emergency alert", `${userName || "Someone in your circle"} asked Kyro for urgent help just now. Please contact them right away, or call for help if you can't reach them.`, `emergency:${userId}:${member.otherId}:${bucket}`);
+      await push?.(member.otherId, both(language, "safety.pushTitle", {}, " / "), both(language, "safety.pushBody", { name }), `emergency:${userId}:${member.otherId}:${bucket}`);
       delivered.push(member);
     } catch { /* keep going: one failed push must not stop the others */ }
   }
@@ -73,52 +106,72 @@ const SAFE = [
   /^(?:please )?(?:cancel|stop|end|call off) (?:the |my )?(?:emergency )?alert$/,
   /^everything(?:'s| is) (?:ok|okay|fine|alright) now$/
 ];
-const readSafe = text => { const t = clean(text).toLowerCase().replace(/[.!?]+$/g, ""); return t.length > 0 && t.length <= 60 && SAFE.some(pattern => pattern.test(t)); };
+const SAFE_SW = [
+  /^niko salama(?: sasa)?$/,
+  /^nimesalama$/,
+  /^(?:ni |ilikuwa )?kengele ya uongo$/,
+  /^(?:tafadhali )?(?:ghairi|futa|acha|maliza) (?:tahadhari|dharura)(?: hiyo| yangu)?$/,
+  /^kila kitu kiko sawa sasa$/,
+  /^niko sawa sasa$/
+];
+const safeLanguage = text => {
+  const lower = clean(text).toLowerCase().replace(/[.!?]+$/g, "");
+  if (!lower || lower.length > 60) return null;
+  if (SAFE.some(pattern => pattern.test(lower))) return "en";
+  if (SAFE_SW.some(pattern => pattern.test(lower))) return "sw";
+  return null;
+};
+const readSafe = text => safeLanguage(text) !== null;
 
 // The person says they are safe while an alert of theirs is still open: the circle is told, and no more location is sent. Otherwise null (an ordinary "I'm fine").
-async function safeTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), outcome = null }) {
-  if (!readSafe(text) || !circle?.latestAlert) return null;
+async function safeTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), outcome = null, locale = "en" }) {
+  const spoken = safeLanguage(text);
+  if (!spoken || !circle?.latestAlert) return null;
+  const language = spoken === "sw" ? "sw" : languageOf(locale);
   const alert = await circle.latestAlert({ tenantId, userId, now }).catch(() => null);
   if (!alert || alert.ended) return null;
   await circle.updateAlert({ tenantId, userId, memoryId: alert.memoryId, change: content => ({ ...content, ended: true, endedAt: now.toISOString() }) }).catch(() => false);
   const active = circle.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }).catch(() => []) : [];
   const told = [];
+  const name = userName || t(language, "safety.someone");
   for (const member of active.filter(item => (alert.alerted || []).some(entry => entry.id === item.otherId))) {
-    try { await push?.(member.otherId, "Emergency over", `${userName || "Someone in your circle"} says they are safe now. No more location will be sent.`, `emergency-clear:${alert.alertId}:${member.otherId}`); told.push(member.otherName); } catch { /* one failed push must not stop the others */ }
+    try { await push?.(member.otherId, both(language, "safety.clearTitle", {}, " / "), both(language, "safety.clearBody", { name }), `emergency-clear:${alert.alertId}:${member.otherId}`); told.push(member.otherName); } catch { /* one failed push must not stop the others */ }
   }
   if (outcome) outcome.emergency = { alertId: alert.alertId, ended: true };
-  return told.length ? `I'm glad you're safe. I've told ${told.join(", ")} that you're okay, and I've stopped sharing your location.` : "I'm glad you're safe. I've closed the alert.";
+  return told.length ? t(language, "safety.allClearTold", { names: told.join(", ") }) : t(language, "safety.allClearClosed");
 }
 
 // Returns the words to answer with, or null when this is not a safety moment. `recordAlert` remembers an alert so the person's location can follow it, and
 // `outcome` (optional) receives { emergency: { alertId, shareLocation, ... } } so the phone knows to send it; both are optional.
-async function safetyTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), recordAlert = null, outcome = null }) {
-  const kind = readSafety(text);
-  if (!kind) return null;
+async function safetyTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), recordAlert = null, outcome = null, locale = "en" }) {
+  const found = readSafetyDetailed(text);
+  if (!found) return null;
+  const kind = found.kind; const language = found.language === "sw" ? "sw" : languageOf(locale);
+  const number = t(language, "safety.number");
   const members = circle?.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }).catch(() => []) : [];
   if (kind === "emergency") {
-    if (!members.length) return `I don't have anyone in your circle yet, so I couldn't alert anyone. ${NUMBER_LINE} Once you're safe, we can add people you trust: "add name@example.com to my circle".`;
-    const delivered = await alertMembers({ circle, push, tenantId, userId, userName, now });
-    if (!delivered.length) return `I tried to alert your circle but couldn't reach anyone just now. ${NUMBER_LINE}`;
+    if (!members.length) return t(language, "safety.noCircle", { number });
+    const delivered = await alertMembers({ circle, push, tenantId, userId, userName, now, language });
+    if (!delivered.length) return t(language, "safety.alertFailed", { number });
     const names = delivered.map(member => member.otherName);
     // Location follows only for members the person has chosen to share it with, and only when this alert could be remembered.
     let extra = "";
     if (recordAlert) {
       try {
         const sharers = delivered.filter(member => member.shares?.emergencyLocation);
-        const remembered = await recordAlert({ tenantId, userId, alerted: delivered, now });
-        if (outcome) outcome.emergency = { alertId: remembered.alertId, alerted: names, shareLocation: sharers.length > 0, locationTo: sharers.map(member => member.otherName) };
-        if (sharers.length) extra = ` I'll send your location to ${sharers.map(member => member.otherName).join(", ")} as soon as your phone tells me where you are.`;
+        const remembered = await recordAlert({ tenantId, userId, alerted: delivered, now, language });
+        if (outcome) outcome.emergency = { alertId: remembered.alertId, alerted: names, shareLocation: sharers.length > 0, locationTo: sharers.map(member => member.otherName), language };
+        if (sharers.length) extra = t(language, "safety.locationSoon", { names: sharers.map(member => member.otherName).join(", ") });
       } catch { /* the alert itself already went; location is a bonus */ }
     }
-    return `I've alerted ${names.join(", ")}.${extra} ${NUMBER_LINE} I'm here with you.`;
+    return t(language, "safety.alerted", { names: names.join(", "), extra, number });
   }
   if (kind === "ask") {
     return members.length
-      ? `I'm here. If this is urgent, say "alert my circle" and I'll message ${members.map(member => member.otherName).join(", ")} right away. ${NUMBER_LINE} Or tell me what's happening.`
-      : `I'm here. ${NUMBER_LINE} Tell me what's happening and I'll do what I can.`;
+      ? t(language, "safety.askWithCircle", { names: members.map(member => member.otherName).join(", "), number })
+      : t(language, "safety.askNoCircle", { number });
   }
-  return `I'm really sorry you're feeling this way, and I'm glad you told me. You matter, and you don't have to carry this alone. If you might act on these thoughts, or you're in danger right now, please call your local emergency number or a crisis line in your country, or go to someone who can be with you. ${members.length ? `I can alert ${members.map(member => member.otherName).join(", ")} right now — just say "alert my circle". ` : ""}I'm here, and I'm listening.`;
+  return t(language, "safety.selfHarm", { circle: members.length ? t(language, "safety.selfHarmCircle", { names: members.map(member => member.otherName).join(", ") }) : "" });
 }
 
-module.exports = Object.freeze({ safetyTurn, safeTurn, readSafety, readSafe, alertCircle });
+module.exports = Object.freeze({ safetyTurn, safeTurn, readSafety, readSafetyDetailed, readSafe, safeLanguage, alertCircle });

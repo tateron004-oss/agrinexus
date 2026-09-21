@@ -137,7 +137,7 @@ test("saved places stay on this phone, can be replaced and forgotten, and are bo
 test("take me home: routes to the saved place with no search, keeps the screen on, tells you about your location once", async () => {
   const t = setup(); t.p.at({ lat: -1.28, lng: 36.8, accuracy: 10 }); await t.navigator.handle("save this place as home"); t.p.at({ lat: -1.3, lng: 36.8, accuracy: 10 });
   const said = await t.navigator.handle("Take me home");
-  const routeCall = t.calls.find(call => call.action === "route"); assert.deepEqual(routeCall, { action: "route", from: { lat: -1.3, lng: 36.8 }, to: { lat: -1.28, lng: 36.8, label: "home" }, mode: "drive" });
+  const routeCall = t.calls.find(call => call.action === "route"); assert.deepEqual(routeCall, { action: "route", from: { lat: -1.3, lng: 36.8 }, to: { lat: -1.28, lng: 36.8, label: "home" }, mode: "drive", language: "en" });
   assert.equal(t.calls.some(call => call.action === "search"), false); assert.match(said, /^Taking you to home: 2\.2 kilometers, about 5 minutes\. Head north on First Road\. Keep your screen on, because a browser can't guide with the screen off\. I use your phone's location only while guiding you/);
   assert.match(said, /Say "stop navigation" to end\.$/); assert.equal(t.navigator.active, true); assert.equal(t.p.watchers.length, 1); assert.equal(t.panel.shows.length >= 1, true); assert.match(t.panel.shows[0].instruction, /Turn left onto Second Road/);
   t.navigator.stop(true); assert.deepEqual(t.p.cleared, [7]); assert.equal(t.released.length, 1); assert.equal(t.panel.hides, 1);
@@ -146,7 +146,7 @@ test("take me home: routes to the saved place with no search, keeps the screen o
 
 test("take me to a place by name: it is searched near you, walking is asked for, and a plus code works", async () => {
   const t = setup(); const said = await t.navigator.handle("walk me to Kibera Health Centre");
-  assert.deepEqual(t.calls.find(call => call.action === "route"), { action: "route", from: { lat: -1.3, lng: 36.8 }, to: { query: "Kibera Health Centre" }, mode: "walk" }); assert.match(said, /^Walking you to Kibera Health Centre:/);
+  assert.deepEqual(t.calls.find(call => call.action === "route"), { action: "route", from: { lat: -1.3, lng: 36.8 }, to: { query: "Kibera Health Centre" }, mode: "walk", language: "en" }); assert.match(said, /^Walking you to Kibera Health Centre:/);
   t.navigator.stop(true);
   const code = nav.encodePlusCode(-1.28, 36.81); await t.navigator.handle(`navigate to ${code}`); const to = t.calls.filter(call => call.action === "route").at(-1).to;
   assert.ok(Math.abs(to.lat + 1.28) < 0.0001 && Math.abs(to.lng - 36.81) < 0.0001 && to.label === code, JSON.stringify(to));

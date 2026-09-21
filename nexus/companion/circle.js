@@ -1,6 +1,7 @@
 "use strict";
 
 const { resolveContact } = require("../memory/contacts.js");
+const { t, languageOf } = require("../i18n/index.js");
 
 // The trusted circle by conversation. The agreed defaults: the PERSON invites; the member says yes (by a push notification, then in
 // their own words); either side can leave at any time, no reason needed; and a member is told NOTHING until the person chooses, except an
@@ -31,6 +32,27 @@ function readCircleRequest(text) {
   if ((m = /^(?:decline|refuse|reject) (?:the |an )?(?:circle )?invitation (?:from )?(.+)$/i.exec(t)) || (m = /^(?:i )?(?:decline|refuse) (.+?)'s (?:circle )?invitation$/i.exec(t))) return { action: "decline", who: clean(m[1]) };
   if ((m = new RegExp(`^(?:please )?leave (.+?)'s ${CIRCLE}$`, "i").exec(t))) return { action: "leave", who: clean(m[1]) };
   if (/^who am i looking out for$/.test(lower)) return { action: "looking-out" };
+  return readCircleRequestSw(text);
+}
+
+// Kiswahili: the same requests in Swahili. -> { action, ..., language: "sw" } or null. (Sharing check-ins and medication reminders is English only for now.)
+function readCircleRequestSw(text) {
+  const t = clean(text).replace(/[.!?]+$/g, "");
+  if (!t || t.length > 160) return null;
+  const lower = t.toLowerCase();
+  let m;
+  const everyone = value => clean(value || "").replace(/^(?:kila mtu|wote|watu wote)(?: kwenye mzunguko wangu)?$/i, "");
+  if ((m = /^(?:tafadhali )?(?:ongeza|alika) (.+?) (?:kwenye|katika|kwa) mzunguko wangu(?: kama (.+))?$/i.exec(t))) return { action: "invite", who: clean(m[1]), relationship: clean(m[2] || ""), language: "sw" };
+  if (/^(?:nani (?:yuko|wako) (?:kwenye|katika) mzunguko wangu|onyesha mzunguko wangu|mzunguko wangu|ni nani wanaonilinda)$/.test(lower)) return { action: "list", language: "sw" };
+  if ((m = /^(?:tafadhali )?(?:ondoa|mtoe) (.+?) (?:kwenye|katika|kutoka) mzunguko wangu$/i.exec(t))) return { action: "remove", who: clean(m[1]), language: "sw" };
+  if ((m = /^(?:tafadhali )?(?:shiriki|tuma) eneo langu (?:wakati wa|katika|kwenye) dharura(?: (?:na|kwa) (.+))?$/i.exec(t)) || (m = /^(?:tafadhali )?mruhusu (.+?) (?:aone|apate) eneo langu (?:wakati wa|katika) dharura$/i.exec(t))) return { action: "share", key: "emergencyLocation", who: everyone(m[1]), value: true, language: "sw" };
+  if ((m = /^(?:acha kushiriki|acha kutuma|usishiriki|usitume) eneo langu (?:wakati wa|katika|kwenye) dharura(?: (?:na|kwa) (.+))?$/i.exec(t))) return { action: "share", key: "emergencyLocation", who: everyone(m[1]), value: false, language: "sw" };
+  if (/^(?:je,? )?(?:ninashiriki|nashiriki) eneo langu wakati wa dharura$/.test(lower)) return { action: "list", language: "sw" };
+  if (/^(?:nina mialiko|kuna mialiko|onyesha mialiko(?: yangu)?|je,? nina mialiko)$/.test(lower)) return { action: "invitations", language: "sw" };
+  if ((m = /^(?:kubali|nakubali) mwaliko (?:kutoka kwa|kutoka|wa) (.+)$/i.exec(t))) return { action: "accept", who: clean(m[1]), language: "sw" };
+  if ((m = /^(?:kataa|nakataa) mwaliko (?:kutoka kwa|kutoka|wa) (.+)$/i.exec(t))) return { action: "decline", who: clean(m[1]), language: "sw" };
+  if ((m = /^(?:tafadhali )?(?:ondoka kwenye|acha|nitoke kwenye) mzunguko wa (.+)$/i.exec(t))) return { action: "leave", who: clean(m[1]), language: "sw" };
+  if (/^ninawaangalia nani$/.test(lower)) return { action: "looking-out", language: "sw" };
   return null;
 }
 
@@ -45,15 +67,21 @@ function pickLink(links, name) {
   if (loose.length === 1) return { link: loose[0] };
   return loose.length > 1 ? { ambiguous: loose } : null;
 }
-const nameList = links => links.map(link => link.otherName).join(" or ");
 const first = name => clean(name).split(" ")[0] || "them";
 
 // Returns the words to answer with, or null when the text is not about the circle. `push(userId, title, body, key)` sends a notification
 // to another person (failures are swallowed: a circle change never fails because a push could not be queued).
-async function circleTurn({ text, circle, memory, push, tenantId, userId, userName }) {
+// Languages: English and Kiswahili. The person is answered in the language they spoke, else the app's; a message to ANOTHER person's phone goes in both
+// (that person's language is not known here). Check-in and medication sharing are English only for now.
+async function circleTurn({ text, circle, memory, push, tenantId, userId, userName, locale = "en" }) {
   if (!circle?.listFor) return null;
   const request = readCircleRequest(text);
   if (!request) return null;
+  const language = request.language === "sw" ? "sw" : languageOf(locale);
+  const say = (key, params) => t(language, key, params);
+  const nameList = links => links.map(link => link.otherName).join(say("circle.or"));
+  const inLanguages = language === "en" ? ["en"] : [language, "en"];
+  const bilingual = (key, paramsFor = () => ({}), separator = "\n") => inLanguages.map(chosen => t(chosen, key, paramsFor(chosen))).join(separator);
   const notify = async (toUserId, title, body, key) => { try { await push?.(toUserId, title, body, key); } catch { /* the change itself already happened */ } };
   try {
     const links = await circle.listFor({ tenantId, userId });
@@ -65,60 +93,54 @@ async function circleTurn({ text, circle, memory, push, tenantId, userId, userNa
         if (!email) {
           const contacts = memory?.listContacts ? (await memory.listContacts({ tenantId, userId })).map(row => row.content) : [];
           const found = resolveContact(contacts, request.who);
-          if (found?.ambiguous) return `Which one: ${found.ambiguous.map(contact => contact.name).join(" or ")}?`;
-          if (!found?.contact) return `I need their email address to invite them. Say "add name@example.com to my circle", or save it first: "save ${clean(request.who)}'s email as name@example.com".`;
-          if (!found.contact.email) return `I don't have an email for ${found.contact.name}. Say "save ${found.contact.name}'s email as name@example.com" first.`;
+          if (found?.ambiguous) return say("circle.which", { names: found.ambiguous.map(contact => contact.name).join(say("circle.or")) });
+          if (!found?.contact) return say("circle.needEmail", { who: clean(request.who) });
+          if (!found.contact.email) return say("circle.noEmail", { name: found.contact.name });
           email = found.contact.email;
         }
-        const person = { id: userId, name: userName || "Someone" };
+        const person = { id: userId, name: userName || say("circle.someone") };
         const found = await circle.findUserByEmail({ tenantId, email });
-        const generic = `If ${clean(request.who)} has a Kyro account in your community, I've sent them your invitation. They choose whether to say yes, and you will hear back here. Nobody in your circle is told anything about you until you say so.`;
+        const generic = say("circle.invited", { who: clean(request.who) });
         if (!found) return generic;
         const result = await circle.invite({ tenantId, person, member: found, relationship: request.relationship });
-        if (result.refused === "self") return "That's you. Your circle is for other people.";
-        if (result.refused === "duplicate") return `${found.name} is already in your circle, or has an invitation waiting.`;
-        if (result.refused === "full") return "Your circle is full (eight people). Remove someone first if you want to add another.";
+        if (result.refused === "self") return say("circle.self");
+        if (result.refused === "duplicate") return say("circle.duplicate", { name: found.name });
+        if (result.refused === "full") return say("circle.full");
         if (result.refused === "member_full" || result.refused === "declined_recently") return generic; // deliberately says nothing new: no probing, no pestering
-        await notify(found.id, "Circle invitation", `${person.name} would like you in their trusted circle${request.relationship ? ` as their ${request.relationship}` : ""}. Say "accept the invitation from ${first(person.name)}" in Kyro, or "decline" if you'd rather not.`, `circle-invite:${result.link.linkId}`);
+        await notify(found.id, bilingual("circle.inviteTitle", () => ({}), " / "), bilingual("circle.inviteBody", chosen => ({ name: person.name, as: request.relationship ? t(chosen, "circle.inviteAs", { relationship: request.relationship }) : "", first: first(person.name) })), `circle-invite:${result.link.linkId}`);
         return generic;
       }
       case "list": {
-        if (!mine.length) return 'Your circle is empty. Say "add name@example.com to my circle" to invite someone you trust.';
-        const told = link => [link.shares?.checkins ? "if you miss a check-in" : "", link.shares?.medications ? "if a dose goes unconfirmed" : "", link.shares?.emergencyLocation ? "your location if you ask for urgent help" : ""].filter(Boolean).join(" or ");
-        const line = link => `${link.otherName}${link.relationship ? ` (${link.relationship})` : ""} — ${link.status === "invited" ? "invitation waiting" : told(link) ? `may be told ${told(link)}` : "told nothing except an emergency"}`;
+        if (!mine.length) return say("circle.empty");
+        const told = link => [link.shares?.checkins ? say("circle.told.checkins") : "", link.shares?.medications ? say("circle.told.medications") : "", link.shares?.emergencyLocation ? say("circle.told.location") : ""].filter(Boolean).join(say("circle.or"));
+        const line = link => `${link.otherName}${link.relationship ? ` (${link.relationship})` : ""} — ${link.status === "invited" ? say("circle.state.waiting") : told(link) ? say("circle.state.told", { items: told(link) }) : say("circle.state.none")}`;
         const active = mine.filter(link => link.status === "active");
-        const hint = active.length && !active.some(link => link.shares?.emergencyLocation) ? ' If you want them to be able to find you in an emergency, say "share my location in emergencies".' : "";
-        return `Your circle: ${mine.map(line).join("; ")}.${hint}`;
+        const hint = active.length && !active.some(link => link.shares?.emergencyLocation) ? say("circle.hint") : "";
+        return say("circle.list", { lines: mine.map(line).join("; "), hint });
       }
       case "remove": {
         const picked = pickLink(mine, request.who);
-        if (picked?.ambiguous) return `Which one: ${nameList(picked.ambiguous)}?`;
-        if (!picked) return `I don't see ${clean(request.who)} in your circle.`;
+        if (picked?.ambiguous) return say("circle.which", { names: nameList(picked.ambiguous) });
+        if (!picked) return say("circle.removeMissing", { who: clean(request.who) });
         await circle.end({ tenantId, userId, linkId: picked.link.linkId });
-        await notify(picked.link.otherId, "Circle update", `${userName || "Someone"} has taken you out of their trusted circle.`, `circle-end:${picked.link.linkId}`);
-        return `Done. ${picked.link.otherName} is out of your circle and will no longer be told anything.`;
+        await notify(picked.link.otherId, bilingual("circle.updateTitle", () => ({}), " / "), bilingual("circle.removedBody", chosen => ({ name: userName || t(chosen, "circle.someone") })), `circle-end:${picked.link.linkId}`);
+        return say("circle.removeDone", { name: picked.link.otherName });
       }
       case "share": {
         const active = mine.filter(link => link.status === "active");
         if (request.key === "emergencyLocation" && !request.who) {
-          if (!active.length) return "Nobody in your circle has said yes to your invitation yet, so there is nobody to share with. Once someone has, say this again.";
+          if (!active.length) return say("circle.locationNobody");
           for (const link of active) await circle.setShare({ tenantId, personId: userId, linkId: link.linkId, key: "emergencyLocation", value: request.value });
           const names = active.map(link => link.otherName).join(", ");
-          return request.value
-            ? `Done. If you ask me for urgent help, I'll also send your location to ${names}, as soon as your phone tells me where you are, and keep it updated for a while. Only then, never otherwise. Say "stop sharing my location in emergencies" any time.`
-            : `Done. ${names} will not be sent your location in an emergency. Alerts still reach everyone in your circle.`;
+          return say(request.value ? "circle.locationOnAll" : "circle.locationOffAll", { names });
         }
         const picked = pickLink(active, request.who);
-        if (picked?.ambiguous) return `Which one: ${nameList(picked.ambiguous)}?`;
-        if (!picked) return mine.some(link => pickLink([link], request.who)) ? `${clean(request.who)} hasn't said yes to your invitation yet.` : `I don't see ${clean(request.who)} in your circle.`;
+        if (picked?.ambiguous) return say("circle.which", { names: nameList(picked.ambiguous) });
+        if (!picked) return mine.some(link => pickLink([link], request.who)) ? say("circle.notYet", { who: clean(request.who) }) : say("circle.removeMissing", { who: clean(request.who) });
         const key = request.key || "checkins";
         await circle.setShare({ tenantId, personId: userId, linkId: picked.link.linkId, key, value: request.value });
         const who = first(picked.link.otherName);
-        if (key === "emergencyLocation") {
-          return request.value
-            ? `Done. If you ask me for urgent help, I'll also send your location to ${picked.link.otherName}, as soon as your phone tells me where you are, and keep it updated for a while. Only then, never otherwise. Say "stop sharing my location in emergencies with ${who}" to undo.`
-            : `Done. ${picked.link.otherName} will not be sent your location in an emergency. Alerts still reach everyone in your circle; say "remove ${who} from my circle" if you don't want that either.`;
-        }
+        if (key === "emergencyLocation") return say(request.value ? "circle.locationOn" : "circle.locationOff", { name: picked.link.otherName, first: who });
         if (key === "medications") {
           return request.value
             ? `Done. If a dose you asked me to remind you about goes unconfirmed for two hours, I may tell ${picked.link.otherName} that a dose is waiting. They will not be told which medicine, and never the doses. Say "stop sharing my medication reminders with ${who}" to undo.`
@@ -130,37 +152,37 @@ async function circleTurn({ text, circle, memory, push, tenantId, userId, userNa
       }
       case "invitations": {
         const waiting = asMember.filter(link => link.status === "invited");
-        if (!waiting.length) return "You have no circle invitations waiting.";
-        return `Waiting for your answer: ${waiting.map(link => `${link.otherName}${link.relationship ? ` (you as their ${link.relationship})` : ""}`).join("; ")}. Say "accept the invitation from ${first(waiting[0].otherName)}" or "decline the invitation from ${first(waiting[0].otherName)}".`;
+        if (!waiting.length) return say("circle.noInvitations");
+        return say("circle.waiting", { items: waiting.map(link => `${link.otherName}${link.relationship ? say("circle.waitingAs", { relationship: link.relationship }) : ""}`).join("; "), first: first(waiting[0].otherName) });
       }
       case "accept": case "decline": {
         const waiting = asMember.filter(link => link.status === "invited");
         const picked = pickLink(waiting, request.who);
-        if (picked?.ambiguous) return `Which one: ${nameList(picked.ambiguous)}?`;
-        if (!picked) return `I don't see an invitation from ${clean(request.who)}.`;
+        if (picked?.ambiguous) return say("circle.which", { names: nameList(picked.ambiguous) });
+        if (!picked) return say("circle.noInvitationFrom", { who: clean(request.who) });
         const accept = request.action === "accept";
         await circle.respond({ tenantId, memberId: userId, linkId: picked.link.linkId, accept });
-        await notify(picked.link.otherId, accept ? "Circle update" : "Circle invitation", accept ? `${userName || "They"} said yes and is now in your trusted circle.` : `${userName || "They"} isn't able to join your circle right now.`, `circle-answer:${picked.link.linkId}`);
+        await notify(picked.link.otherId, bilingual(accept ? "circle.updateTitle" : "circle.inviteTitle", () => ({}), " / "), bilingual(accept ? "circle.answerYes" : "circle.answerNo", chosen => ({ name: userName || t(chosen, "circle.they") })), `circle-answer:${picked.link.linkId}`);
         return accept
-          ? `Thank you. You're now in ${picked.link.otherName}'s circle. You'll only hear from Kyro about them in an emergency, or if they choose to share more. You can leave any time: "leave ${first(picked.link.otherName)}'s circle".`
-          : `Okay. I've told ${picked.link.otherName} you're not able to right now.`;
+          ? say("circle.acceptDone", { name: picked.link.otherName, first: first(picked.link.otherName) })
+          : say("circle.declineDone", { name: picked.link.otherName });
       }
       case "leave": {
         const active = asMember.filter(link => link.status === "active");
         const picked = pickLink(active, request.who);
-        if (picked?.ambiguous) return `Which one: ${nameList(picked.ambiguous)}?`;
-        if (!picked) return `You're not in ${clean(request.who)}'s circle.`;
+        if (picked?.ambiguous) return say("circle.which", { names: nameList(picked.ambiguous) });
+        if (!picked) return say("circle.leaveMissing", { who: clean(request.who) });
         await circle.end({ tenantId, userId, linkId: picked.link.linkId });
-        await notify(picked.link.otherId, "Circle update", `${userName || "Someone"} has left your trusted circle.`, `circle-end:${picked.link.linkId}`);
-        return `Done. You've left ${picked.link.otherName}'s circle.`;
+        await notify(picked.link.otherId, bilingual("circle.updateTitle", () => ({}), " / "), bilingual("circle.leftBody", chosen => ({ name: userName || t(chosen, "circle.someone") })), `circle-end:${picked.link.linkId}`);
+        return say("circle.leaveDone", { name: picked.link.otherName });
       }
       case "looking-out": {
         const active = asMember.filter(link => link.status === "active");
-        return active.length ? `You look out for ${active.map(link => link.otherName).join(", ")}.` : "You're not in anyone's circle right now.";
+        return active.length ? say("circle.lookingOut", { names: active.map(link => link.otherName).join(", ") }) : say("circle.lookingOutNone");
       }
       default: return null;
     }
   } catch { return null; }
 }
 
-module.exports = Object.freeze({ circleTurn, readCircleRequest, pickLink });
+module.exports = Object.freeze({ circleTurn, readCircleRequest, readCircleRequestSw, pickLink });

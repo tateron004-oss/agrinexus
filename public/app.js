@@ -57800,7 +57800,7 @@ let kyroEmergencySharer = null;
 function handleKyroEmergencyResult(emergency) {
   try {
     const module = window.KyroEmergency; if (!module) return;
-    if (!kyroEmergencySharer) kyroEmergencySharer = module.forBrowser({ locale: languageCode(), api: body => requestWithTimeout("/api/nexus/runtime/companion/emergency-location", { method: "POST", body }, 20000) });
+    if (!kyroEmergencySharer) kyroEmergencySharer = module.forBrowser({ locale: languageCode(), speechLang: voiceLocale(), api: body => requestWithTimeout("/api/nexus/runtime/companion/emergency-location", { method: "POST", body }, 20000) });
     kyroEmergencySharer.handle(emergency);
   } catch { /* the alert already went; location is a bonus */ }
 }
@@ -57809,7 +57809,7 @@ function handleKyroEmergencyResult(emergency) {
 let kyroNavigator = null;
 async function handleKyroNavigationCommand(text, options = {}) {
   const navigation = window.KyroNavigation; if (!navigation) return false;
-  if (!kyroNavigator) kyroNavigator = navigation.forBrowser({ locale: languageCode(), api: body => requestWithTimeout("/api/nexus/runtime/navigation", { method: "POST", body }, 25000) });
+  if (!kyroNavigator) kyroNavigator = navigation.forBrowser({ locale: languageCode(), speechLang: voiceLocale(), api: body => requestWithTimeout("/api/nexus/runtime/navigation", { method: "POST", body }, 25000) });
   let reply = null;
   try { reply = await kyroNavigator.handle(text); } catch { reply = null; }
   if (reply === null || reply === undefined) return false;
