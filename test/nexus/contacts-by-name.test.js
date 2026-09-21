@@ -147,3 +147,11 @@ test("ordinary requests that merely start with call or text are left alone", asy
   const me = await ask(p, "Text me saying hello");
   assert.ok(!me.steps?.[0]?.input?.contactName);
 });
+
+test("deleting or removing something that is not a contact is never read as forgetting a contact", () => {
+  // Found live: "Delete my note about the pump" was answered "I don't have a contact called Note About The Pump".
+  for (const text of ["Delete my note about zzverify", "Remove milk from my shopping list", "Delete my last reading", "Remove the pump note", "Erase my last entry"]) assert.equal(extractContactRequest(text), null, text);
+  assert.deepEqual(extractContactRequest("Forget Otieno"), { action: "forget", name: "Otieno" });
+  assert.deepEqual(extractContactRequest("Delete contact Otieno"), { action: "forget", name: "Otieno" });
+  assert.deepEqual(extractContactRequest("Remove Otieno from my contacts"), { action: "forget", name: "Otieno" });
+});

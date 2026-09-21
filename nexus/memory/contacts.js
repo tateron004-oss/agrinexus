@@ -47,7 +47,11 @@ function extractContactRequest(text) {
   const t = clean(text).toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "");
   if (!t || t.length > 100) return null;
   if (/^(?:who are|what are|list|show|tell me) (?:all )?(?:of )?my contacts$/.test(t) || /^(?:show|list) (?:me )?my contacts$/.test(t) || /^who(?:'s| is) in my contacts$/.test(t)) return { action: "list" };
-  const forget = /^(?:please )?(?:forget|delete|remove|erase) (?:(?:the )?contact )?(?:for )?(.+?)(?: from my contacts)?$/.exec(t)?.[1];
+  // "Forget Otieno" is enough. "Delete/remove/erase X" must say it is a contact ("delete contact Otieno", "remove Otieno from my
+  // contacts"), so "Delete my note about the pump" and "Remove milk from my shopping list" are left to notes and lists.
+  const forget = /^(?:please )?forget (?:(?:the )?contact )?(?:for )?(.+?)(?: from my contacts)?$/.exec(t)?.[1]
+    || /^(?:please )?(?:delete|remove|erase) (?:the )?contact (?:for )?(.+)$/.exec(t)?.[1]
+    || /^(?:please )?(?:delete|remove|erase) (.+?) from my contacts$/.exec(t)?.[1];
   if (forget && !/^(?:that|this|it|everything|all|my (?:name|location|town|place|city|region|crops?|livestock|animals|language))/.test(forget)) {
     const name = contactName(forget.replace(/'s (?:phone |mobile |cell )?(?:number|email|email address|e-mail)$/, ""));
     if (name) return { action: "forget", name };
