@@ -173,7 +173,7 @@ async function handle(ctx) {
     const animals = await ctx.store.list({ ...scope, collection: "animal" }); const animal = findAnimal(animals, m[1]);
     if (animal) return askConfirm(ctx, `Mark ${animal.data.tag} as gone from your herd? Its history stays in your records.`, { type: "animal-gone", memoryId: animal.memoryId, tag: animal.data.tag });
   }
-  if ((m = /^(?:please )?(?:remove|delete) (?:the )?(?:animal )?(.+?)(?: from my (?:animals|livestock|herd))?$/i.exec(t)) && new RegExp(`\\b(?:${SPECIES_WORDS})\\b|\\d`, "i").test(m[1]) && /^(?:please )?(?:remove|delete)/i.test(t)) {
+  if ((m = /^(?:please )?(?:remove|delete) (?:the )?(?:animal )?(.+?)(?: from my (?:animals|livestock|herd))?$/i.exec(t)) && /^(?:please )?(?:remove|delete)/i.test(t)) { // a name is enough when it is one of this person's animals (findAnimal); otherwise this is not for us
     const animal = findAnimal(await ctx.store.list({ ...scope, collection: "animal" }), m[1]);
     if (animal) return askConfirm(ctx, `Remove ${animal.data.tag} and stop keeping its records?`, { type: "remove-record", memoryId: animal.memoryId, label: animal.data.tag });
   }

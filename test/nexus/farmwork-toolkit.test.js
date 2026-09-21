@@ -255,3 +255,37 @@ test("an emergency or crisis is answered by the companion before the farm toolki
   const answer = await planner({ farmWork: { store }, companion }).plan({ command: command("I need help now"), context: {} });
   assert.equal(answer.response, "EMERGENCY FIRST"); assert.equal(consulted, false);
 });
+
+// The production acceptance probes (scripts/nexus-run-browser-capability-probes.js) must reach their own tools. A bare "Find ..." was once taken
+// by the board and answered "Nothing for sale", which failed the deploy's evidence step for four capabilities.
+test("every production acceptance probe phrase passes straight through the farm toolkit", async () => {
+  const who = farmer(); await run(who, ["Add a field called North Plot", "skip", "skip", "skip", "skip"]);
+  const src = require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "..", "scripts", "nexus-run-browser-capability-probes.js"), "utf8");
+  const block = /const SCENARIOS = Object\.freeze\(\{([\s\S]*?)\n\}\);/.exec(src)?.[1] || "";
+  const phrases = [...block.matchAll(/:\s*"((?:[^"\\]|\\.)*)"/g)].map(match => match[1]);
+  assert.ok(phrases.length >= 15, "the probe list was found");
+  for (const text of [...phrases, "Find mobile clinic locations near Nairobi", "Find agriculture jobs in Nairobi", "Find pharmacy support for metformin", "Find maize marketplace listings", "Search for buyers of my house"]) assert.equal(await who.say(text), null, text);
+});
+
+// Found by the live check: "Remove the field X" and "Remove Daisy" (a name with no species word) did nothing.
+test("a field or an animal can be removed in the words people use, after a yes", async () => {
+  const who = farmer();
+  await run(who, ["Add a field called North Plot, 2 acres", "skip", "skip", "skip", "Register a cow called Daisy", "skip", "female", "skip", "skip"]);
+  assert.match(await who.say("Remove the field North Plot"), /Remove the field North Plot\?.*Say yes/);
+  assert.match(await who.say("yes"), /removed North Plot/);
+  assert.match(await who.say("Remove Daisy"), /Remove daisy and stop keeping its records\?/);
+  assert.match(await who.say("no"), /left it as it is/);
+  assert.match(await who.say("Show my animals"), /daisy/);
+  assert.match(await who.say("Remove Daisy"), /Say yes/); assert.match(await who.say("yes"), /removed daisy/);
+  assert.match(await who.say("Show my animals"), /no animals/i);
+  assert.equal(await who.say("Remove the batteries"), null, "a name that is not one of the person's animals is not taken");
+});
+
+test("board searches still work in the words a farmer would use", async () => {
+  const names = { u1: "Amina", u2: "Otieno" }; const store = fakeFarmStore();
+  const seller = farmer({ userId: "u1", store, names }); const buyer = farmer({ userId: "u2", store, names });
+  await seller.say("Post for sale: 500 kg maize at 40 per kg"); await buyer.say("Post wanted: 100 kg beans at 90 per kg");
+  assert.match(await buyer.say("What is for sale: maize"), /Listing 1/);
+  assert.match(await buyer.say("Find buyers for beans"), /Listing 2/);
+  assert.match(await seller.say("Who is buying beans"), /Listing 2/);
+});

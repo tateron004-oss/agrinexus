@@ -39,7 +39,7 @@ async function handle(ctx) {
     const list = await active();
     return list.length ? `${plural(list.length, "listing")}: ${list.slice(0, 8).map(describeListing).join("; ")}${list.length > 8 ? ` and ${list.length - 8} more (ask for a crop, like "what is for sale: maize")` : ""}.` : 'The board is empty. Say "post for sale: 500 kg maize at 40 per kg".';
   }
-  if ((m = /^(?:what(?:'s| is) for sale|who(?:'s| is) (?:selling|buying)|who wants|who is looking for|find|search (?:the )?board for|show (?:me )?(?:the )?(?:wanted|buyers|sellers)(?: for)?)\s*(?:[:,-]|of|for)?\s*(.*)$/i.exec(t)) && (m[1] || /^who|^show/i.test(t)) && /\b(?:board|for sale|selling|buying|wants|looking for|wanted|find)\b/i.test(t) && !/^(?:what(?:'s| is) for sale)$/i.test(t)) {
+  if ((m = /^(?:what(?:'s| is) for sale|who(?:'s| is) (?:selling|buying)|who wants|who is looking for|find (?:me )?(?:buyers|sellers) (?:for|of|on the board)|search (?:the )?board for|show (?:me )?(?:the )?(?:wanted|buyers|sellers)(?: for)?)\s*(?:[:,-]|of|for)?\s*(.*)$/i.exec(t)) && (m[1] || /^who|^show/i.test(t)) && /\b(?:board|for sale|selling|buying|wants|looking for|wanted|buyers|sellers)\b/i.test(t) && !/^(?:what(?:'s| is) for sale)$/i.test(t)) {
     const wantBuyers = /\bbuying|wants|looking for|wanted|buyers\b/i.test(t.replace(/^find\b/i, ""));
     const term = clean(m[1]).toLowerCase().replace(/^(?:some|any|the)\s+/, "");
     const list = (await active()).filter(record => (wantBuyers ? record.data.type === "buy" : true) && (!term || record.data.item.includes(term) || term.includes(record.data.item)));
