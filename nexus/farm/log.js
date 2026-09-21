@@ -281,4 +281,4 @@ function farmDigest(rows, today) {
   return parts.slice(0, 3).join(" ");
 }
 
-module.exports = Object.freeze({ farmLogTurn, readRequest, farmDigest, MAX_ENTRIES });
+module.exports = Object.freeze({ farmLogTurn, readRequest, farmDigest, reportDay, MAX_ENTRIES });
