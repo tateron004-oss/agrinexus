@@ -79,7 +79,9 @@ async function handle(ctx) {
   let m;
 
   // ---- register ----
-  if ((m = /^(?:please )?(?:register|add|create|start|enrol|enroll) (?:a |another |a new |new |the )?(?:patient|client|mother|child|baby)(?: called| named| record for| file for)?\s*[:,-]?\s*(.*)$/i.exec(t)) && !/\b(?:to|in) (?:my )?(?:list|calendar|inventory|stock)\b/i.test(t)) {
+  // "client" is deliberately not here: "add a client" is a customer in the farm toolkit. "Patient" works with add/create/start; the words for a
+  // mother, child or baby need the explicit "register".
+  if (((m = /^(?:please )?(?:register|add|create|start|enrol|enroll) (?:a |another |a new |new |the )?patient(?: called| named| record for| file for)?\s*[:,-]?\s*(.*)$/i.exec(t)) || (m = /^(?:please )?(?:register|enrol|enroll) (?:a |another |a new |new |the )?(?:mother|child|baby)(?: called| named| record for| file for)?\s*[:,-]?\s*(.*)$/i.exec(t))) && !/\b(?:to|in) (?:my )?(?:list|calendar|inventory|stock)\b/i.test(t)) {
     return startGuided(ctx, templates.patient, inline(m[1], ctx.today));
   }
 

@@ -224,6 +224,12 @@ test("every production acceptance probe phrase passes straight through the healt
   for (const text of [...phrases, "Record my blood pressure as 140 over 90", "Find pharmacy support for metformin", "Show my doctor questions"]) assert.equal(await who.say(text), null, text);
 });
 
+test("registering needs the word patient (or an explicit register), so a farm customer or a household chore is never taken", async () => {
+  const who = worker();
+  for (const text of ["Add a client called Bob", "Add a child to my list", "Add baby shower to my calendar", "Add a mother-in-law reminder", "Create a baby name list"]) assert.equal(await who.say(text), null, text);
+  assert.match(await who.say("Register a baby called Amina, 2 weeks, female"), /village|contact|Which|phone/i); await who.say("skip"); assert.match(await who.say("skip"), /Registered #1 Amina, about 2 weeks, female/);
+});
+
 test("the health toolkit and the farm toolkit keep their own conversations and do not take each other's words", async () => {
   const store = fakeFarmStore(); const farmStore = fakeFarmStore(); const memory = fakeMemory();
   const health = worker({ store, memory }); await registerMary(health);
