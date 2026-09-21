@@ -22,8 +22,12 @@
     /^(?:rainfall|rain)\s*[:,-]?\s*\d/i,
     /^(?:add|put|record|log) \d[\d.,]* .+ (?:to|in|into) (?:my |the )?(?:stock|store|inventory)$/i,
     /^[A-Za-z][A-Za-z' -]{1,30} gave \d[\d.]* ?(?:litres?|liters?|l)\b/i,
-    /^(?:note|write down) (?:down )?(?:about|on) .{2,40}\s*[:,-]\s*.+$/i
+    /^(?:note|write down) (?:down )?(?:about|on) .{2,40}\s*[:,-]\s*.+$/i,
+    // a health worker's visit note and stock given out (see healthwork/)
+    /^(?:visit|visit note|new visit|log (?:a )?visit)\s+[A-Za-z][A-Za-z' -]{1,40}\s*[:,-]\s*\S/i,
+    /^(?:dispensed|gave out|issued)\s+\d/i
   ];
+  const VISIT = /^(visit|visit note|new visit|log (?:a )?visit)\s+([A-Za-z][A-Za-z' -]{1,40}?)\s*([:,-])\s*(\S.*)$/i;
   const NEVER = /\b(?:send|text|sms|email|e-mail|call|phone|ring|message|whatsapp|remind(?:er)?|alert|notify|tell|post|publish|advertise|pay(?: to)?|transfer|wire|delete|remove|cancel|forget|erase)\b/i;
 
   function isRecordable(text) {
@@ -56,12 +60,25 @@
   }
   const pending = ({ storage, now = Date.now() } = {}) => read(storage).filter(item => now - item.at < MAX_AGE_MS).length;
 
+  // A clinical visit keeps the day it really happened. Sent the same day it is unchanged; the next day it says "yesterday"; later it carries the
+  // real date in the note itself (the record is dated when it is added, and the note says when it was really made).
+  const localDay = time => { const d = new Date(time); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  function datedText(item, now) {
+    const m = VISIT.exec(item.text);
+    if (!m) return item.text;
+    const madeOn = localDay(item.at); const today = localDay(now);
+    if (madeOn === today) return item.text;
+    const daysAgo = Math.round((Date.parse(today) - Date.parse(madeOn)) / 86400000);
+    if (daysAgo === 1 && !/\b(?:yesterday|today)\b/i.test(m[2])) return `${m[1]} ${m[2]} yesterday${m[3]} ${m[4]}`;
+    return `${item.text} [recorded offline on ${madeOn}]`;
+  }
+
   // Say each kept note to Kyro in the order it was made. Stops at the first one that cannot be sent (still no signal), keeping it and the rest.
   async function drain({ send, storage, now = Date.now() }) {
     const list = read(storage).filter(item => now - item.at < MAX_AGE_MS);
     let sent = 0;
     while (list.length) {
-      try { await send(list[0].text); } catch { break; }
+      try { await send(datedText(list[0], now)); } catch { break; }
       list.shift(); sent += 1;
       write(list, storage);
     }
@@ -69,5 +86,5 @@
     return { sent, left: list.length };
   }
 
-  return Object.freeze({ isRecordable, shouldKeep, add, pending, drain, KEY, MAX_NOTES });
+  return Object.freeze({ isRecordable, shouldKeep, add, pending, drain, datedText, KEY, MAX_NOTES });
 });
