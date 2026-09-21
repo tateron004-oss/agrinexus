@@ -24,6 +24,8 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       nonce: required(job.payload?.nonce, "Acceptance canary nonce") }),
     // Sends the morning brief to everyone whose brief is on and whose chosen local time has arrived (see nexus/brief/service.js).
     "brief.send-due": async () => (runtime.brief?.sendDue ? runtime.brief.sendDue({}) : { checked: 0, sent: 0 }),
+    // Warns everyone who turned weather alerts on when their forecast turns serious (see nexus/alerts/service.js).
+    "alerts.weather-sweep": async () => (runtime.alerts?.sendDue ? runtime.alerts.sendDue({}) : { checked: 0, sent: 0 }),
     "schedules.dispatch": async ({ job }) => ({ dispatched: await runtime.schedules.dispatchDue({ jobs: runtime.jobs,
       limit: job.payload?.limit || 100 }) }),
     "notifications.deliver": async ({ job, heartbeat }) => {
