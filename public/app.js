@@ -57795,6 +57795,18 @@ async function replayKyroOfflineNotes() {
 window.addEventListener("online", () => { setTimeout(replayKyroOfflineNotes, 1500); });
 setTimeout(replayKyroOfflineNotes, 10000);
 
+// Kyro as a GPS (public/kyro-navigation.js): the words are handled on the phone, which asks the server only to find places and plan routes.
+let kyroNavigator = null;
+async function handleKyroNavigationCommand(text, options = {}) {
+  const navigation = window.KyroNavigation; if (!navigation) return false;
+  if (!kyroNavigator) kyroNavigator = navigation.forBrowser({ locale: languageCode(), api: body => requestWithTimeout("/api/nexus/runtime/navigation", { method: "POST", body }, 25000) });
+  let reply = null;
+  try { reply = await kyroNavigator.handle(text); } catch { reply = null; }
+  if (reply === null || reply === undefined) return false;
+  setVoiceResponse(reply, true, { allowHandoff: false, command: text, source: "kyro-navigation" });
+  return true;
+}
+
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return false;
@@ -57808,6 +57820,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // Local support and visit preparation cannot authorize or execute provider actions.
   // These explicit requests remain available even when the durable runtime is unavailable.
   if (handleNexusMentalHealthBehavioralWellnessCommand(text, { ...options, source: "unified-brain-mental-health-priority" })) return true;
+  // The GPS: "where am I", "save this place as home", "take me to ...", "stop navigation" (see kyro-navigation.js). The phone's location is read only when asked.
+  if (typeof handleKyroNavigationCommand === "function" && await handleKyroNavigationCommand(text, options)) return true;
   if (handleNexusVisualProviderQuestionReportCommand(text, options)) return true;
   if (/\b(show the source|who published|source current|when was this verified|source blocked|conflicting guidelines|conflicting sources|professional version|clinician version)\b/i.test(text)
       && handleNexusEnterpriseHealthEvidenceTrustCommand(text, options)) return true;
