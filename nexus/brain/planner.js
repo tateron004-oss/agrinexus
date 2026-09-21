@@ -4,6 +4,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
+const { farmLogTurn } = require("../farm/log.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
@@ -78,6 +79,9 @@ class OpenEndedPlanner {
   }
 
   async plan({ command, context, priorTask = null, conversationHistory = [] }) {
+    // Rainfall, soil moisture, tank levels and harvests the person reports, and totals on request (see farm/log.js).
+    const farm = await farmLogTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+    if (farm) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: farm, sourceRequired: false, planningAttempts: 0 });
     const profile = await this.profileTurn(command);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
     // What Kyro has learned about this person (see memory/profile-facts.js) is used wherever it helps: their first name in greetings,
