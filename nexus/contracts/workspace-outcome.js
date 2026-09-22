@@ -9,6 +9,7 @@ const APPLICATION_TO_WORKSPACE = Object.freeze({
   learning: "learning",
   workforce: "workforce",
   marketplace: "trade",
+  logistics: "logistics",
   maps: "map",
   "music-media": "media",
   documents: "documents",
@@ -44,6 +45,9 @@ const APPLICATION_PRESENTATION = Object.freeze({
   // (confirmed live for both jobs.search- and resume.create-shaped data).
   workforce: "operation",
   marketplace: "listing",
+  // Generic "operation" kind, same reasoning as business/operations above: a real route-based estimate
+  // (origin/destination/distanceMeters/durationSeconds/estimatedArrival) with no dedicated field gate.
+  logistics: "operation",
   maps: "map",
   "music-media": "media-player",
   documents: "document",
@@ -123,6 +127,7 @@ function operationFor(application, input) {
   if (application === "live-knowledge") return "show_answer";
   if (application === "images") return "show_images";
   if (application === "videos") return "show_videos";
+  if (application === "logistics") return "estimate_delivery";
   if (application === "lists") return input.listId ? "update_list" : "create_list";
   if (application === "business") return "business_workspace_action";
   return "show_result";

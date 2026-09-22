@@ -12,7 +12,7 @@ const command = { correlationId: "trace", tenantId: "tenant", actorId: "user", c
 
 test("application registry covers every production workspace without a second router", () => {
   const registry = new ApplicationRegistry(defaultApplicationManifests());
-  assert.equal(registry.list().length, 20);
+  assert.equal(registry.list().length, 21);
   assert.ok(registry.candidates({ capabilities: ["jobs.search"] }).some(item => item.applicationId === "workforce"));
   assert.throws(() => registry.register(defaultApplicationManifests()[0]), /already registered/);
 });
@@ -228,6 +228,23 @@ test("the full planner still resolves a plain crop-diagnosis question to agricul
     applications: new ApplicationRegistry(defaultApplicationManifests()) });
   const plan = await planner.plan({ command: { ...command, text: "Why do maize leaves turn yellow?" }, context });
   assert.equal(plan.application, "agriculture");
+});
+
+// Item 12 of the 2026-09-22 capability audit: "logistics tracking" had no path at all through the
+// authoritative runtime. completeLogisticsTrackPlan closes that specific wiring gap; it does not (and
+// cannot) fix production's decorative mock logistics provider itself -- a real carrier integration is a
+// genuine provider-access gap, out of scope here (see nexus/logistics/executor.js's header).
+test("a complete logistics-tracking request has an executable Logistics plan with real origin/destination extraction", () => {
+  const { completeLogisticsTrackPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "logistics.track" }] };
+  const plan = completeLogisticsTrackPlan("Track my shipment from Nairobi to Nakuru.", catalog);
+  assert.equal(plan.application, "logistics");
+  assert.equal(plan.steps[0].toolId, "logistics.track");
+  assert.equal(plan.steps[0].input.origin, "Nairobi");
+  assert.equal(plan.steps[0].input.destination, "Nakuru");
+  assert.equal(completeLogisticsTrackPlan("When will my delivery from Mombasa to Kisumu arrive?", catalog).steps[0].input.destination, "Kisumu");
+  assert.equal(completeLogisticsTrackPlan("Tell me about my farm.", catalog), null, "no shipment/delivery language -- not a logistics request");
+  assert.equal(completeLogisticsTrackPlan("Track my shipment.", catalog), null, "no origin/destination named -- nothing to estimate a route for");
 });
 
 test("a complete mobile clinic search has an executable Mobile Clinic plan", () => {

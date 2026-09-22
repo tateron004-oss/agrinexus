@@ -23,6 +23,7 @@ const SCENARIOS = Object.freeze({
   "live-knowledge": "Why do maize leaves turn yellow? Answer with current sources.",
   images: "Show me current images of healthy maize leaves with sources.",
   videos: "Show me videos of maize farming techniques.",
+  logistics: "Track my shipment from Nairobi to Nakuru.",
   communications: "Draft a clinic follow-up message, obtain consent, send it, and return the delivery receipt.",
   operations: "Prepare a field operation, record approval state, and return its receipt.",
   lists: "Create a checklist called Farm Chores with feed goats, water crops, and check fences.",

@@ -9,14 +9,14 @@ const { defaultApplicationManifests } = require("../../nexus/apps/default-manife
 const root = path.resolve(__dirname, "../..");
 const read = relative => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("production exposes one authoritative durable runtime for all 20 workspaces", () => {
+test("production exposes one authoritative durable runtime for all 21 workspaces", () => {
   const server = read("server.js");
   const factory = read("nexus/runtime/create-runtime.js");
   const blueprint = read("render.yaml");
   const workspaces = defaultApplicationManifests();
 
-  assert.equal(workspaces.length, 20);
-  assert.equal(new Set(workspaces.map(item => item.applicationId)).size, 20);
+  assert.equal(workspaces.length, 21);
+  assert.equal(new Set(workspaces.map(item => item.applicationId)).size, 21);
   assert.match(factory, /PostgreSQL is required for the authoritative Nexus runtime/);
   assert.match(factory, /new MemoryRepository\(db\)/);
   assert.match(factory, /new JobRepository\(db\)/);

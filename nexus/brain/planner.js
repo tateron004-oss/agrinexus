@@ -318,6 +318,8 @@ class OpenEndedPlanner {
     if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
     const completeMarketplaceSearch = completeMarketplaceSearchPlan(command.text, catalog);
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
+    const completeLogisticsTrack = completeLogisticsTrackPlan(command.text, catalog);
+    if (completeLogisticsTrack) return Object.freeze({ ...completeLogisticsTrack, planningAttempts: 1 });
     const completeImageSearch = completeImageSearchPlan(command.text, catalog);
     if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
     const completeVideoSearch = completeVideoSearchPlan(command.text, catalog);
@@ -674,6 +676,22 @@ function completeMarketplaceSearchPlan(text, catalog) {
     steps: [{ clientStepId: "search-marketplace", title: "Search marketplace listings",
       toolId: "marketplace.search", input: { query: crop, selectListing: /\bselect\b/i.test(goal) },
       dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// Item 12 of the 2026-09-22 capability audit: "logistics tracking" had no path at all through the
+// primary/authoritative runtime -- only the legacy voice-only path could reach it, and even there,
+// production's real deployed provider is AgriNexus's own decorative mock (see
+// nexus/logistics/executor.js's header for the full honest accounting of what is and isn't real here).
+function completeLogisticsTrackPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(track|where is|when will|how long)\b/i.test(goal) || !/\b(shipment|delivery|order|package|parcel)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "logistics.track") ||
+      !catalog.applications.some(app => app.applicationId === "logistics")) return null;
+  const match = /\bfrom\s+(.+?)\s+(?:to|arriving in|arriving at)\s+(.+?)(?:\s+(?:arrive|arrives|get there|gets there)\b.*)?(?:[.?!]|$)/i.exec(goal);
+  if (!match) return null;
+  return { goal, application: "logistics", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "track-logistics", title: "Estimate delivery time and distance", toolId: "logistics.track",
+      input: { origin: match[1].trim(), destination: match[2].trim() }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function completeImageSearchPlan(text, catalog) {
@@ -1118,5 +1136,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeVideoSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });

@@ -33,6 +33,7 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "clinic.find", domain: "health", description: "Find governed mobile clinic locations" }),
   Object.freeze({ toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" }),
   Object.freeze({ toolId: "marketplace.search", domain: "trade", description: "Search governed marketplace listings" }),
+  Object.freeze({ toolId: "logistics.track", domain: "logistics", description: "Estimate delivery time and distance for a shipment route (a real route-based estimate, not live carrier tracking)" }),
   Object.freeze({ toolId: "reminders.schedule", domain: "reminders", description: "Persist a governed reminder" }),
   // reminders.schedule could create a reminder but nothing could show or
   // remove one. list is read-only; cancel needs confirmation and never

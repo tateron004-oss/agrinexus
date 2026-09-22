@@ -9,6 +9,7 @@ const CONTRACTS = Object.freeze({
   learning: ["lesson", "content", "savedProgress"],
   workforce: ["listings", "sources", "selectedListing"],
   marketplace: ["listings", "sources", "selectedListing"],
+  logistics: ["origin", "destination", "durationSeconds"],
   maps: ["origin", "destination", "routeGeometry"],
   "music-media": ["requestedMedia", "resolvedMedia", "playbackState"],
   documents: ["documentId", "savedVersion", "reopenVerified"],
