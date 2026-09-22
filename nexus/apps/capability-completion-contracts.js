@@ -16,6 +16,7 @@ const CONTRACTS = Object.freeze({
   "offline-queue": ["operationId", "syncState", "serverAcknowledged"],
   "live-knowledge": ["answer", "sources"],
   images: ["query", "images", "sources"],
+  videos: ["query", "videos", "provider"],
   communications: ["draft", "consentState", "deliveryReceipt"],
   operations: ["operation", "approvalState", "receipt"],
   lists: ["listId", "title", "itemCount"],

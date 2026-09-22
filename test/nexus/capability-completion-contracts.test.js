@@ -7,7 +7,7 @@ const sha = "a".repeat(40);
 test("all authoritative applications have explicit completion evidence", () => {
   assert.deepEqual(Object.keys(CONTRACTS).sort(), ["agriculture", "business", "communications", "documents", "health", "images", "learning",
     "lists", "live-knowledge", "maps", "marketplace", "mobile-clinic", "music-media", "offline-queue", "operations",
-    "pharmacy", "reminders", "telehealth", "workforce"].sort());
+    "pharmacy", "reminders", "telehealth", "videos", "workforce"].sort());
 });
 
 test("map completion requires endpoints, route geometry, exact release and visible render", () => {

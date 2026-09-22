@@ -34,5 +34,6 @@ module.exports = {
   documents: require("./documentProvider"),
   vision: require("./visionProvider"),
   browserActions: require("./browserActionProvider"),
-  exports: require("./exportProvider")
+  exports: require("./exportProvider"),
+  videoSearch: require("./videoSearchProvider")
 };

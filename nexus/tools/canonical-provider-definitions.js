@@ -3,6 +3,7 @@
 const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "knowledge.search", domain: "knowledge", description: "Search governed production knowledge" }),
   Object.freeze({ toolId: "images.search", domain: "images", description: "Search governed production images with source provenance" }),
+  Object.freeze({ toolId: "videos.search", domain: "videos", description: "Search governed production videos with source provenance" }),
   Object.freeze({ toolId: "documents.create", domain: "documents", description: "Create a governed production document" }),
   Object.freeze({ toolId: "documents.read", domain: "documents", description: "Read back a document the caller previously created" }),
   Object.freeze({ toolId: "lists.create", domain: "lists", description: "Create a governed checklist or to-do list" }),
