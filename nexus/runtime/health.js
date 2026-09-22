@@ -10,7 +10,9 @@ const TAVILY_TOOLS = new Set(["knowledge.search", "images.search", "jobs.search"
 // reported `configured: true` for every tool regardless of any of this -- confirmed live 2026-09-22 (the capability
 // audit): every provider row on production said "configured" even though nothing here had ever checked a credential.
 function providerConfiguration(item, env) {
-  if (item.toolId === "media.play") return { configured: false, reason: "no real media backend exists; always returns a canned response" };
+  // Real via a genuine Apple iTunes Search API preview clip, which needs no credentials at all; YOUTUBE_API_KEY only
+  // extends it with a second, real fallback provider on top of that baseline (nexus/media/executor.js).
+  if (item.toolId === "media.play") return { configured: true };
   if (item.toolId === "health.emergency-guidance") return { configured: true, reason: "static, hand-reviewed safety text by design -- not a live lookup" };
   if (item.toolId === "communications.send") {
     const sms = twilioProvider.status(env); const mail = emailProvider.status(env);

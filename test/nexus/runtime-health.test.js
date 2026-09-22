@@ -25,11 +25,9 @@ function dbOk() {
 const runtimeWith = definitions => ({ db: dbOk(), access: { authorize() {} }, acceptance: { report() {} }, providers: { definitions } });
 const byId = (health, toolId) => health.providers.find(item => item.toolId === toolId);
 
-test("media.play is honestly reported as not configured -- it has no real backend regardless of any env var", async () => {
-  const health = await checkRuntimeHealth(runtimeWith([{ toolId: "media.play", domain: "media" }]),
-    { env: { TAVILY_API_KEY: "x", OPENAI_API_KEY: "x", TWILIO_ACCOUNT_SID: "x", TWILIO_AUTH_TOKEN: "x" } });
-  assert.equal(byId(health, "media.play").configured, false);
-  assert.match(byId(health, "media.play").reason, /no real media backend/);
+test("media.play is reported configured with no env vars at all -- the real Apple iTunes preview needs no credentials", async () => {
+  const health = await checkRuntimeHealth(runtimeWith([{ toolId: "media.play", domain: "media" }]), { env: {} });
+  assert.deepEqual(byId(health, "media.play"), { toolId: "media.play", domain: "media", configured: true });
 });
 
 test("health.emergency-guidance is reported configured with a note that it is static by design, not a live lookup", async () => {
