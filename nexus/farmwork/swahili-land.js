@@ -91,7 +91,7 @@ const FARM_CONTEXT = /(?:mahindi|maharage|mihogo|muhogo|mchele|mpunga|ngano|mtam
 
 async function handle(ctx) {
   const t = clean(ctx.text).replace(/[.!?]+$/g, ""); const lower = t.toLowerCase();
-  if (!/(?:shamba|mashamba|wasifu|ndama|mwanakondoo|kifaranga|vifaranga|ng'?ombe|mbuzi|kondoo|nguruwe|kuku|sungura|bata|punda|ngamia|mifugo|mfanyakazi|wafanyakazi|kibarua|kazi|nimeona|tatizo|matatizo|nimemchanja|nimechanja|nimemtibu|nimetibu|nimemwogesha|nimeogesha|nimempima|nimepima|nimemlisha|amezaa|amekufa|amepandishwa|ametoa|ana uzito|natarajia|nimepanda|anatakiwa kufanya|nilifanya|mifugo yangu|panga |ratibu|mpe |wape |mkabidhi|kalenda ya mazao|wanyama|mnyama|amemaliza|imekamilika|mavuno|nieleze|nimempa|nimewapa)/i.test(lower)) return null;
+  if (!/(?:shamba|mashamba|wasifu|ndama|mwanakondoo|kifaranga|vifaranga|ng'?ombe|mbuzi|kondoo|nguruwe|kuku|sungura|bata|punda|ngamia|mifugo|mfanyakazi|wafanyakazi|kibarua|kazi|nimeona|tatizo|matatizo|nimemchanja|nimechanja|nimemtibu|nimetibu|nimemwogesha|nimeogesha|nimempima|nimepima|nimemlisha|amezaa|amekufa|amepandishwa|ametoa|ana uzito|natarajia|nimepanda|anatakiwa kufanya|nilifanya|mifugo yangu|panga |ratibu|mpe |wape |mkabidhi|kalenda ya mazao|wanyama|mnyama|amemaliza|imekamilika|mavuno|nieleze|nimempa|nimewapa|^(?:tafadhali\s+)?(?:ondoa|futa))/i.test(lower)) return null;
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   const list = collection => ctx.store.list({ ...scope, collection });
   let m;
