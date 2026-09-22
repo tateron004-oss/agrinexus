@@ -13320,9 +13320,15 @@ function renderAgentCenter() {
   if ($("#frontierBrainStatus")) $("#frontierBrainStatus").textContent = translateText(frontier.status || "ready");
   if ($("#frontierBrainSummary")) {
     const frontierSummary = frontier.plainLanguageSummary || "Frontier Nexus Brain coordinates conversation, memory, workflows, maps, providers, safety, learning, and investor evidence.";
-    $("#frontierBrainSummary").textContent = frontier.disclosureNotice
-      ? `${translateText(frontierSummary)} ${translateText(frontier.disclosureNotice)}`
-      : translateText(frontierSummary);
+    $("#frontierBrainSummary").textContent = translateText(frontierSummary);
+  }
+  if ($("#frontierBrainDisclosure")) {
+    // Same amber notice treatment as the other legacy intelligence panels (network/ecosystem/executive/
+    // orchestration) -- this used to be appended as plain text onto the summary paragraph, which made this
+    // one dashboard's "not real execution" disclosure far less visible than the others'.
+    $("#frontierBrainDisclosure").innerHTML = frontier.disclosureNotice
+      ? `<div class="legacy-intelligence-notice"><small>${translateText(frontier.disclosureNotice)}</small></div>`
+      : "";
   }
   if ($("#frontierBrainLayerPanel")) {
     $("#frontierBrainLayerPanel").innerHTML = (frontier.layers || []).length
@@ -41955,6 +41961,7 @@ function render() {
   if ($("#adaptiveAutonomyScore")) $("#adaptiveAutonomyScore").textContent = `${Number(adaptive.score || 0)}%`;
   if ($("#adaptiveAutonomyPanel")) {
     $("#adaptiveAutonomyPanel").innerHTML = [
+      adaptive.disclosureNotice ? `<div class="legacy-intelligence-notice"><small>${translateText(adaptive.disclosureNotice)}</small></div>` : "",
       `<div><strong>${translateText(adaptive.status || "adaptive-autonomous-ready")}</strong><span>${translateText(adaptive.summary || "Adaptive autonomy is ready.")}</span></div>`,
       `<div><strong>${translateText("Boundary")}</strong><span>${translateText(adaptive.autonomyBoundary || "Nexus monitors and nudges locally; external actions still need live providers or approval.")}</span></div>`,
       adaptive.latestRun ? `<div><strong>${translateText(`Latest run: ${adaptive.latestRun.runNumber}`)}</strong><span>${translateText(adaptive.latestRun.summary || "Monitoring complete")}</span></div>` : `<div><strong>${translateText("Monitor")}</strong><span>${translateText("Run the monitor to inspect goals, gaps, providers, and stale workflows.")}</span></div>`,

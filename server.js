@@ -13683,6 +13683,15 @@ function adaptiveAutonomyModel(db, user, providers = runtimeProviders(db)) {
   return {
     status: score >= 80 ? "adaptive-autonomous-active" : score >= 60 ? "adaptive-autonomous-learning" : "adaptive-autonomous-ready",
     score,
+    // Unlike the other legacy intelligence dashboards, activeSignals/nudges/learning here really are
+    // computed from this account's own real activity (buildAdaptiveSignals reads db.profile directly) --
+    // but the score itself is still a local formula over those counts, and "autonomous actions" never
+    // reach past this app on their own (autonomousActions below always records
+    // requiresApprovalForExternalAction: true). Say that plainly rather than either overstating this as
+    // real background autonomy, or reusing the other dashboards' generic disclosure and implying the
+    // signals themselves are made up too.
+    isRealAutonomousExecution: false,
+    disclosureNotice: "The signals, nudges, and learning above are drawn from your real account activity. The score is a local formula that turns those real counts into a readiness index -- it is not a measurement of a real-world outcome, and every \"autonomous action\" stays inside the app until you approve anything external.",
     summary: "Adaptive Autonomous Intelligence lets Nexus monitor goals, learn user patterns, prepare proactive nudges, catch stale workflows, and guide the next best action with safety guardrails.",
     autonomyBoundary: "Nexus can monitor, nudge, draft, remember, and prepare local workflow actions automatically. Real provider dispatch, payments, clinical decisions, external messages, and live GPS still require credentials and/or approval.",
     operationalScore: operational.score,
