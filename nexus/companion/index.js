@@ -5,6 +5,7 @@ const { safetyTurn, safeTurn, readSafety, readSafe } = require("./safety.js");
 const { createEmergencyLocation } = require("./emergency-location.js");
 const { createCheckinService, parseCheckinControl, readCheckinAnswer } = require("./checkins.js");
 const { createMedicationService, readMedicationRequest } = require("./medications.js");
+const { readAudienceIntro, audienceIntroReply } = require("./audience.js");
 const { formatTimeOfDay } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
@@ -47,8 +48,9 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
 
   async function run({ command, context, outcome }) {
       // Most messages are nothing for the companion: decide from the words alone, before any lookup.
+      const audienceKind = readAudienceIntro(command.text);
       const needsName = Boolean(readSafety(command.text) || readSafe(command.text) || readCheckinAnswer(command.text) || parseCheckinControl(command.text) || readCircleRequest(command.text));
-      if (!needsName && !(medications && readMedicationRequest(command.text))) return null;
+      if (!needsName && !audienceKind && !(medications && readMedicationRequest(command.text))) return null;
       const tenantId = command.tenantId; const userId = command.actorId;
       // The person's display name is only looked up when what they said needs it (an alert, an invitation); "I had lunch" does not.
       const userName = needsName ? await circle.userName({ tenantId, userId }) : "";
@@ -61,6 +63,11 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
 
       const safety = await safetyTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, locale: command.locale, recordAlert: circle.recordAlert ? args => circle.recordAlert(args) : null });
       if (safety) return safety;
+
+      // A veteran or elderly person self-identifying: real, already-built features surfaced honestly (see audience.js) -- never a
+      // fabricated persona or crisis script. Checked after safety (so an actual emergency is never shadowed by this) and before
+      // the check-in/circle handlers, since it is its own distinct statement, not an answer to something else Kyro asked.
+      if (audienceKind) return audienceIntroReply(audienceKind, { hasMedications: Boolean(medications) });
 
       const answered = await checkins.answer({ ...scope, text: command.text, at: now() });
       if (answered) return answered;

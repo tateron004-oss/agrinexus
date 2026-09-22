@@ -100,6 +100,15 @@ function readRequest(text, today) {
   if (/^(?:what are|show) my personal (?:bests?|records?|pbs?)$/.test(lower)) return { action: "bests" };
   if (/^(?:show|read) (?:me )?my (?:training|wellness|workout|fitness) log$/.test(lower)) return { action: "show" };
   if (/^(?:undo|delete|remove) (?:my )?last (?:wellness|training|workout|sleep|weight|mood|water|fitness)(?: log)?(?: entry)?$/.test(lower)) return { action: "undo" };
+  // First person only, like the self-harm/safety patterns elsewhere in the
+  // companion tier ("my coach is a veteran athlete" is not about the
+  // speaker). "veteran"/"athlete" both carry idiomatic senses ("veteran
+  // teacher", "a veteran of the tech industry") the regex cannot fully
+  // disambiguate -- kept low-risk by only ever surfacing real, already-
+  // built log features, never a presumptuous reply, so a false match is
+  // still relevant, harmless information rather than an embarrassing guess.
+  if (/\bi(?:'m| am) (?:an? )?(?:athlete|runner|cyclist|swimmer|training for (?:a |an )?(?:race|marathon|half marathon|triathlon|event))\b/i.test(t)
+    || /\btraining for (?:a |an )?(?:race|marathon|half marathon|triathlon)\b/i.test(lower)) return { action: "intro" };
   return null;
 }
 
@@ -217,6 +226,9 @@ async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), t
         await store.removeEntry({ ...scope, memoryId: last.memoryId });
         return `Removed your last entry: ${describeEntry(last)} for ${when(last.day, today)}.`;
       }
+      // What this log actually does, said plainly -- no training plan, no coaching advice, no
+      // performance analysis beyond a real personal-best comparison on common running distances.
+      case "intro": return 'I can keep a real training log for you: say things like "I ran 5 km in 28 minutes" or "I did a 45 minute strength session", and I\'ll track it, tell you your pace, and call out a new personal best on common race distances. Say "my goal is 4 workouts a week" to track a weekly goal, or "show my personal bests" any time.';
       default: return null;
     }
   } catch { return null; }

@@ -26,6 +26,23 @@ test("ordinary talk that shares words with the log is left alone", () => {
   for (const text of ["I ran into a friend", "I walked to the shop", "I slept badly", "What is my mood", "I had a good time", "How did the match go?", "I drank tea", "Good morning"]) assert.equal(readRequest(text, TODAY), null, text);
 });
 
+// Confirmed PARTIAL: this log already works for an athlete's real training
+// data, but nothing ever told them so -- no discovery path, no sport-specific
+// framing. This adds an honest description of what is actually real (a
+// training log with pace and personal bests), never a fabricated training
+// plan or coaching advice.
+test("a self-identified athlete is told about the real training log, not a fabricated coaching plan", () => {
+  for (const text of ["I'm an athlete", "I am a runner", "I'm training for a marathon"]) assert.deepEqual(readRequest(text, TODAY), { action: "intro" }, text);
+});
+
+test("wellnessTurn's athlete intro describes only real, already-built features", async () => {
+  const store = fakeStore();
+  const reply = await say(store, "I'm an athlete");
+  assert.match(reply, /5 km in 28 minutes/);
+  assert.match(reply, /personal best/i);
+  assert.doesNotMatch(reply, /training plan|coach you|program/i);
+});
+
 function fakeStore() {
   const rows = []; let n = 0;
   return { rows,
