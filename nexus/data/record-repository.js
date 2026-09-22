@@ -141,6 +141,33 @@ class RecordRepository {
     return result.rows || result;
   }
 
+  // A more precise business-domain signal than listStaleBusinessWorkspaces()'s
+  // whole-record staleness: a lead/customer/donor's own followUpDate --
+  // stored by the dashboard's real HTML date input (public/business-
+  // services.js), and, per nexus/business/service.js's own comment,
+  // deliberately "a real date field ... distinct from the free-text
+  // nextAction ... so a follow-up can be reminded on" -- has passed. Nothing
+  // anywhere ever read this field before now; it was captured and displayed
+  // but never acted on. The regex guard keeps this honest: voice/chat never
+  // sets followUpDate today, only the dashboard's date input does, so a
+  // value that isn't a clean YYYY-MM-DD string is some other, unvalidated
+  // origin and is safely skipped rather than guessed at (same reasoning as
+  // listStaleBusinessWorkspaces avoiding dueDate/deadline).
+  async listBusinessWorkspacesWithDueFollowUps({ limit = 50 }) {
+    const DUE_LEAD = `l->>'followUpDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (l->>'followUpDate')::date < current_date`;
+    const result = await this.db.query(`select tenant_id, owner_id, record_id,
+        data->'info'->>'businessName' as business_name,
+        (select jsonb_agg(jsonb_build_object('name', l->>'name', 'followUpDate', l->>'followUpDate'))
+          from jsonb_array_elements(coalesce(data->'editable'->'leads','[]'::jsonb)) l
+          where ${DUE_LEAD}) as due_leads
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'leads','[]'::jsonb)) l where ${DUE_LEAD})
+      order by updated_at
+      limit $1`, [Math.min(Math.max(limit, 1), 200)]);
+    return result.rows || result;
+  }
+
   async remove({ tenantId, recordId, actorId }) {
     const result=await this.db.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance=jsonb_build_object('deletedBy',$3),deleted_at=now(),updated_at=now()
       where tenant_id=$1 and record_id=$2 and deleted_at is null returning record_id`,[tenantId,recordId,actorId]);

@@ -19,6 +19,7 @@ const HEALTH_CHECKIN_NUDGE_RECORD_TYPE = "health_checkin_nudge";
 const FARM_LOG_NUDGE_RECORD_TYPE = "farm_log_nudge";
 const BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE = "business_followup_nudge";
 const WELLNESS_GOAL_NUDGE_RECORD_TYPE = "wellness_goal_nudge";
+const LEAD_FOLLOWUP_NUDGE_RECORD_TYPE = "lead_followup_nudge";
 
 function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
@@ -476,6 +477,67 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         created += 1;
       }
       return { scanned: candidates.length, created, skippedPaused };
+    },
+    // A real, previously-unused signal in the business domain: a lead's own
+    // followUpDate (nexus/data/record-repository.js's new
+    // listBusinessWorkspacesWithDueFollowUps() -- see its own comment) has
+    // passed. This field was captured and displayed by the dashboard but
+    // never read by anything -- exactly the "stored but never acted on"
+    // pattern this session has been closing elsewhere. Deliberately uses
+    // reminders.schedule, not communications.send: the field's own purpose
+    // (per service.js's comment) is for the OWNER to be reminded, not for
+    // Kyro to draft outreach to the lead on the owner's behalf -- reaching
+    // that third party is a materially different, higher-stakes decision
+    // this sweep does not make. One consolidated reminder per business
+    // workspace per cooldown window (not one per lead) -- leads have no
+    // stable ID in this schema to track a per-lead cooldown against, and a
+    // single reminder naming everyone due is honest and avoids notification
+    // spam when several follow-ups land at once.
+    "situational-awareness.lead-followup-sweep": async ({ job }) => {
+      const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.records.listBusinessWorkspacesWithDueFollowUps({ limit });
+      const tenantCounts = new Map();
+      const tenantPaused = new Map();
+      let created = 0; let skippedPaused = 0;
+      for (const candidate of candidates) {
+        const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
+        const subjectId = candidate.record_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
+        const recentNudges = await runtime.records.list({ tenantId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 1 });
+        const lastNudge = recentNudges[0];
+        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const businessName = candidate.business_name || "your business workspace";
+        const dueLeads = Array.isArray(candidate.due_leads) ? candidate.due_leads.filter(lead => lead?.name) : [];
+        const names = dueLeads.map(lead => lead.followUpDate ? `${lead.name} (due ${lead.followUpDate})` : lead.name).join(", ");
+        const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
+          correlationId: createId("event"), text: `Kyro noticed a follow-up date passed for ${names || "a contact"} in "${businessName}".` });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: `Remind about a due follow-up in ${businessName}`,
+            application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a lead follow-up reminder",
+              toolId: "reminders.schedule", input: { when: `Tomorrow, remind me to follow up with ${names || "a contact"} in "${businessName}" -- their follow-up date already passed.` } }] });
+        } catch (error) {
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
+        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, classification: "standard",
+          data: { reason: "lead_followup_due", dueLeads },
+          provenance: { source: "situational-awareness-lead-followup-sweep" } });
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        created += 1;
+      }
+      return { scanned: candidates.length, created, skippedPaused };
     }
   });
 }
@@ -521,4 +583,4 @@ function required(value, label) { if (!value) throw new Error(`${label} is requi
 
 module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND,
   SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE, FARM_LOG_NUDGE_RECORD_TYPE,
-  BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, WELLNESS_GOAL_NUDGE_RECORD_TYPE });
+  BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, WELLNESS_GOAL_NUDGE_RECORD_TYPE, LEAD_FOLLOWUP_NUDGE_RECORD_TYPE });
