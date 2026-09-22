@@ -3,6 +3,7 @@
 const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "knowledge.search", domain: "knowledge", description: "Search governed production knowledge" }),
   Object.freeze({ toolId: "images.search", domain: "images", description: "Search governed production images with source provenance" }),
+  Object.freeze({ toolId: "videos.search", domain: "videos", description: "Search governed production videos with source provenance" }),
   Object.freeze({ toolId: "documents.create", domain: "documents", description: "Create a governed production document" }),
   Object.freeze({ toolId: "documents.read", domain: "documents", description: "Read back a document the caller previously created" }),
   Object.freeze({ toolId: "lists.create", domain: "lists", description: "Create a governed checklist or to-do list" }),
@@ -32,6 +33,7 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "clinic.find", domain: "health", description: "Find governed mobile clinic locations" }),
   Object.freeze({ toolId: "pharmacy.find", domain: "health", description: "Find governed pharmacy support" }),
   Object.freeze({ toolId: "marketplace.search", domain: "trade", description: "Search governed marketplace listings" }),
+  Object.freeze({ toolId: "logistics.track", domain: "logistics", description: "Estimate delivery time and distance for a shipment route (a real route-based estimate, not live carrier tracking)" }),
   Object.freeze({ toolId: "reminders.schedule", domain: "reminders", description: "Persist a governed reminder" }),
   // reminders.schedule could create a reminder but nothing could show or
   // remove one. list is read-only; cancel needs confirmation and never

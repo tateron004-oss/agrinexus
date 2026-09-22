@@ -318,8 +318,12 @@ class OpenEndedPlanner {
     if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
     const completeMarketplaceSearch = completeMarketplaceSearchPlan(command.text, catalog);
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
+    const completeLogisticsTrack = completeLogisticsTrackPlan(command.text, catalog);
+    if (completeLogisticsTrack) return Object.freeze({ ...completeLogisticsTrack, planningAttempts: 1 });
     const completeImageSearch = completeImageSearchPlan(command.text, catalog);
     if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
+    const completeVideoSearch = completeVideoSearchPlan(command.text, catalog);
+    if (completeVideoSearch) return Object.freeze({ ...completeVideoSearch, planningAttempts: 1 });
     const followUpGoal = followUpGoalFrom(command.text, conversationHistory);
     const agricultureAdvice = agricultureAdvicePlan(followUpGoal || command.text, catalog);
     if (agricultureAdvice) return Object.freeze({ ...personalizedSearch(agricultureAdvice, known.byKind), planningAttempts: 1 });
@@ -674,6 +678,22 @@ function completeMarketplaceSearchPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// Item 12 of the 2026-09-22 capability audit: "logistics tracking" had no path at all through the
+// primary/authoritative runtime -- only the legacy voice-only path could reach it, and even there,
+// production's real deployed provider is AgriNexus's own decorative mock (see
+// nexus/logistics/executor.js's header for the full honest accounting of what is and isn't real here).
+function completeLogisticsTrackPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(track|where is|when will|how long)\b/i.test(goal) || !/\b(shipment|delivery|order|package|parcel)\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "logistics.track") ||
+      !catalog.applications.some(app => app.applicationId === "logistics")) return null;
+  const match = /\bfrom\s+(.+?)\s+(?:to|arriving in|arriving at)\s+(.+?)(?:\s+(?:arrive|arrives|get there|gets there)\b.*)?(?:[.?!]|$)/i.exec(goal);
+  if (!match) return null;
+  return { goal, application: "logistics", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "track-logistics", title: "Estimate delivery time and distance", toolId: "logistics.track",
+      input: { origin: match[1].trim(), destination: match[2].trim() }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeImageSearchPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(show|find|search|display|open)\b/i.test(goal) || !/\b(images?|pictures?|photos?)\b/i.test(goal)) return null;
@@ -684,6 +704,22 @@ function completeImageSearchPlan(text, catalog) {
   return { goal, application: "images", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "search-images", title: "Search governed images", toolId: "images.search",
       input: { query, requireSources: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// The 2026-09-22 capability audit's item 18 finding: "show me videos of X" had no path at all through
+// the authoritative runtime -- only images.search existed here, with nothing for video. The real video
+// search itself already existed (server.js's legacy nexus_visual_analysis tool), now shared via
+// server/providers/videoSearchProvider.js so this fast path and that legacy one call the same real code.
+function completeVideoSearchPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!/\b(show|find|search|watch|play|display|open)\b/i.test(goal) || !/\bvideos?\b/i.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "videos.search") ||
+      !catalog.applications.some(app => app.applicationId === "videos")) return null;
+  const query = goal.replace(/^\s*(?:nexus[,:]?\s*)?(?:show|find|search|watch|play|display|open)\s+(?:me\s+)?/i, "")
+    .replace(/\bvideos?\b/ig, "").replace(/\s+/g, " ").trim() || goal;
+  return { goal, application: "videos", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "search-videos", title: "Search governed videos", toolId: "videos.search",
+      input: { query }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function completeLiveKnowledgePlan(text, catalog) {
@@ -1121,5 +1157,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });

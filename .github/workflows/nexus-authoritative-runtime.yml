@@ -68,7 +68,7 @@ jobs:
             "archive/qa-scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js": "1354a0cfcc1ba412229ac036a58db776f3f323a6ce2c82f5ea872435ccf2dbc6",
             "archive/qa-scripts/nexus-sandbox-click-path-mode-audit-qa.js": "bb5459f3128f7afe8f622cdbc65d6530a1e07fce7c1d68f5a4ac13121992c0dd",
             "test/nexus/deployment-contracts.test.js": "03b915bd50bb24aaac08378210aebd7b7653359800847d5d85086e0b50d4034a",
-            "test/nexus/render-release-controller.test.js": "c7f0e04d268c413f8a955a9c51eb4f49e4036466afacdea4f89bfabc2370f049"
+            "test/nexus/render-release-controller.test.js": "0bbde55f0c9b7f0be6f71b914162e326896790562b288f1d4323477c6d71fd84"
           };
           const patterns={privateKey:/-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,providerKey:/\b(?:sk-proj-|sk_live_|rk_live_|ghp_|github_pat_|xox[baprs]-)[A-Za-z0-9_-]{20,}/,aws:/\bAKIA[A-Z0-9]{16}\b/,credentialDsn:/\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/[^\s:'"]+:[^\s@'"]+@/,machinePath:/[A-Z]:[\\/]+Users[\\/]+tater/i};
           const paths=cp.execFileSync('git',['ls-files','-z','--cached','--others','--exclude-standard'],{encoding:'utf8'}).split('\0').filter(Boolean);

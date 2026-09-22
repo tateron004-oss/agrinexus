@@ -12,7 +12,7 @@ const command = { correlationId: "trace", tenantId: "tenant", actorId: "user", c
 
 test("application registry covers every production workspace without a second router", () => {
   const registry = new ApplicationRegistry(defaultApplicationManifests());
-  assert.equal(registry.list().length, 19);
+  assert.equal(registry.list().length, 21);
   assert.ok(registry.candidates({ capabilities: ["jobs.search"] }).some(item => item.applicationId === "workforce"));
   assert.throws(() => registry.register(defaultApplicationManifests()[0]), /already registered/);
 });
@@ -230,6 +230,23 @@ test("the full planner still resolves a plain crop-diagnosis question to agricul
   assert.equal(plan.application, "agriculture");
 });
 
+// Item 12 of the 2026-09-22 capability audit: "logistics tracking" had no path at all through the
+// authoritative runtime. completeLogisticsTrackPlan closes that specific wiring gap; it does not (and
+// cannot) fix production's decorative mock logistics provider itself -- a real carrier integration is a
+// genuine provider-access gap, out of scope here (see nexus/logistics/executor.js's header).
+test("a complete logistics-tracking request has an executable Logistics plan with real origin/destination extraction", () => {
+  const { completeLogisticsTrackPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "logistics.track" }] };
+  const plan = completeLogisticsTrackPlan("Track my shipment from Nairobi to Nakuru.", catalog);
+  assert.equal(plan.application, "logistics");
+  assert.equal(plan.steps[0].toolId, "logistics.track");
+  assert.equal(plan.steps[0].input.origin, "Nairobi");
+  assert.equal(plan.steps[0].input.destination, "Nakuru");
+  assert.equal(completeLogisticsTrackPlan("When will my delivery from Mombasa to Kisumu arrive?", catalog).steps[0].input.destination, "Kisumu");
+  assert.equal(completeLogisticsTrackPlan("Tell me about my farm.", catalog), null, "no shipment/delivery language -- not a logistics request");
+  assert.equal(completeLogisticsTrackPlan("Track my shipment.", catalog), null, "no origin/destination named -- nothing to estimate a route for");
+});
+
 test("a complete mobile clinic search has an executable Mobile Clinic plan", () => {
   const { completeMobileClinicPlan } = require("../../nexus/brain/planner.js");
   const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "clinic.find" }] };
@@ -272,6 +289,30 @@ test("a document request naming a format carries it through to the plan's input,
   assert.equal(completeDocumentPlan("Write and save a report as markdown, then open again.", catalog).steps[0].input.format, "md");
   assert.equal(completeDocumentPlan("Create and save a farming plan document, then reopen it.", catalog).steps[0].input.format, undefined,
     "no format named -- must not invent one, documents.create's own default still applies");
+});
+
+// Item 18 of the 2026-09-22 capability audit: "show me videos of X" had no path at all through the
+// authoritative runtime -- only images.search existed. completeVideoSearchPlan closes that gap.
+test("a complete video-search request has an executable Videos plan, distinct from image search and media playback", () => {
+  const { completeVideoSearchPlan, completeImageSearchPlan, completeMediaPlaybackPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "videos.search" }, { toolId: "images.search" }, { toolId: "media.play" }] };
+  const plan = completeVideoSearchPlan("Show me videos of maize harvesting.", catalog);
+  assert.equal(plan.application, "videos");
+  assert.equal(plan.steps[0].toolId, "videos.search");
+  // Same leading-preposition/trailing-punctuation shape completeImageSearchPlan's own extraction has
+  // (neither strips them) -- a real search provider handles a stray "of"/period fine, so this matches
+  // the established sibling behavior rather than diverging from it.
+  assert.equal(plan.steps[0].input.query, "of maize harvesting.");
+  assert.equal(completeVideoSearchPlan("Find videos about drip irrigation.", catalog).steps[0].input.query, "about drip irrigation.");
+  // Must not be caught by the neighboring image-search fast path (different noun) or by media.play's
+  // fast path (media.play's own matcher only requires the text to start with "play" -- "play a video of
+  // the harvest" would otherwise be misread as a song title to look up on iTunes/YouTube).
+  assert.equal(completeImageSearchPlan("Show me videos of maize harvesting.", catalog), null);
+  const playVideoPlan = completeVideoSearchPlan("Play a video of the harvest festival.", catalog);
+  assert.equal(playVideoPlan.application, "videos", "a 'play ... video' request must resolve to video search, not media playback");
+  const songPlan = completeMediaPlaybackPlan("Play Bohemian Rhapsody.", catalog);
+  assert.equal(songPlan.application, "music-media", "an ordinary song request is unaffected by the new video-search matcher");
+  assert.equal(completeVideoSearchPlan("Tell me about crop rotation.", catalog), null);
 });
 
 test("a complete list-creation request has an executable Lists plan", () => {

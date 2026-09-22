@@ -18559,103 +18559,16 @@ function nexusOpenAiNativeToolReceipt(db, toolName = "", command = "", status = 
   ], status);
 }
 
+// Both functions now delegate to server/providers/videoSearchProvider.js, extracted there so
+// nexus/media/video-search-executor.js (the videos.search canonical tool, the primary/authoritative
+// runtime's own real path -- previously there wasn't one at all, see that file's header comment) can
+// share this exact same real logic instead of a second, independently-drifting copy of it.
 async function nexusRealYouTubeVideoSearch(query, env = process.env) {
-  const apiKey = String(env.YOUTUBE_API_KEY || env.NEXUS_MEDIA_PROVIDER_API_KEY || "").trim();
-  if (!apiKey) return null;
-  const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
-  searchUrl.searchParams.set("part", "snippet");
-  searchUrl.searchParams.set("type", "video");
-  searchUrl.searchParams.set("videoEmbeddable", "true");
-  searchUrl.searchParams.set("videoSyndicated", "true");
-  searchUrl.searchParams.set("maxResults", "8");
-  searchUrl.searchParams.set("safeSearch", "moderate");
-  searchUrl.searchParams.set("q", query);
-  searchUrl.searchParams.set("key", apiKey);
-  const searchResponse = await fetchWithTimeout(searchUrl, { headers: { accept: "application/json" } }, 9000);
-  const searchPayload = await searchResponse.json().catch(() => ({}));
-  if (!searchResponse.ok) throw new Error(searchPayload.error?.message || `youtube-search-http-${searchResponse.status}`);
-  const candidates = (searchPayload.items || [])
-    .map(item => ({
-      videoId: item.id?.videoId || "",
-      title: item.snippet?.title || "",
-      channelTitle: item.snippet?.channelTitle || "",
-      thumbnailUrl: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || "",
-      publishedAt: item.snippet?.publishedAt || ""
-    }))
-    .filter(item => item.videoId);
-  if (!candidates.length) return [];
-  const statusUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
-  statusUrl.searchParams.set("part", "status");
-  statusUrl.searchParams.set("id", candidates.map(item => item.videoId).join(","));
-  statusUrl.searchParams.set("key", apiKey);
-  const statusResponse = await fetchWithTimeout(statusUrl, { headers: { accept: "application/json" } }, 9000);
-  const statusPayload = await statusResponse.json().catch(() => ({}));
-  const embeddableIds = new Set(
-    (statusPayload.items || [])
-      .filter(item => item.status?.embeddable === true && item.status?.privacyStatus === "public")
-      .map(item => item.id)
-  );
-  const eligible = candidates.filter(item => embeddableIds.has(item.videoId)).slice(0, 6);
-  const oembedChecked = await Promise.all(eligible.map(async item => {
-    try {
-      const oembedUrl = new URL("https://www.youtube.com/oembed");
-      oembedUrl.searchParams.set("url", `https://www.youtube.com/watch?v=${item.videoId}`);
-      oembedUrl.searchParams.set("format", "json");
-      const response = await fetchWithTimeout(oembedUrl, { headers: { accept: "application/json" } }, 6000);
-      if (!response.ok) return null;
-      const metadata = await response.json().catch(() => ({}));
-      return metadata?.type === "video" && metadata?.html ? item : null;
-    } catch (error) {
-      return null;
-    }
-  }));
-  return oembedChecked.filter(Boolean).map(item => ({
-    title: sanitizePilotText(item.title || "YouTube video", 180),
-    videoId: item.videoId,
-    embedUrl: `https://www.youtube.com/embed/${item.videoId}`,
-    thumbnailUrl: item.thumbnailUrl,
-    channelTitle: sanitizePilotText(item.channelTitle || "", 120),
-    sourceUrl: `https://www.youtube.com/watch?v=${item.videoId}`,
-    provider: "youtube"
-  }));
+  return nexusRealProviders.videoSearch.searchYouTubeVideos(query, env);
 }
 
 async function nexusRealCommonsVideoSearch(query) {
-  const commonsUrl = new URL("https://commons.wikimedia.org/w/api.php");
-  commonsUrl.searchParams.set("action", "query");
-  commonsUrl.searchParams.set("generator", "search");
-  commonsUrl.searchParams.set("gsrsearch", `filetype:video ${query}`);
-  commonsUrl.searchParams.set("gsrnamespace", "6");
-  commonsUrl.searchParams.set("gsrlimit", "6");
-  commonsUrl.searchParams.set("prop", "imageinfo");
-  commonsUrl.searchParams.set("iiprop", "url|extmetadata|mime");
-  commonsUrl.searchParams.set("format", "json");
-  commonsUrl.searchParams.set("origin", "*");
-  // Sends a real identifying User-Agent, matching every other outbound
-  // provider call in this file (Wikimedia's API etiquette policy expects
-  // one), though the confirmed root cause of the production image-search
-  // failure was the query extraction feeding this call, not the headers --
-  // see nexus_visual_analysis's imageQuery/videoQuery comments.
-  const response = await fetchWithTimeout(commonsUrl, { headers: publicProviderHeaders() }, 10000);
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Wikimedia Commons returned ${response.status}`);
-  return Object.values(payload.query?.pages || {})
-    .map(page => {
-      const info = page.imageinfo?.[0] || {};
-      const metadata = info.extmetadata || {};
-      return {
-        title: sanitizePilotText(page.title || "Wikimedia Commons video", 180),
-        videoUrl: info.url || "",
-        mimeType: info.mime || "",
-        sourceUrl: info.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title || "").replace(/ /g, "_"))}`,
-        creator: sanitizePilotText(metadata.Artist?.value || "", 180),
-        license: sanitizePilotText(metadata.LicenseShortName?.value || metadata.UsageTerms?.value || "See source", 120),
-        description: sanitizePilotText(metadata.ImageDescription?.value || metadata.ObjectName?.value || "", 260),
-        provider: "wikimedia-commons"
-      };
-    })
-    .filter(item => item.videoUrl && /^video\//.test(item.mimeType || ""))
-    .slice(0, 4);
+  return nexusRealProviders.videoSearch.searchCommonsVideos(query);
 }
 
 function nexusOpenAiNativeBlockedToolResult(db, common = {}, {

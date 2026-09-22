@@ -10,6 +10,7 @@ const DEFINITIONS = [
   ["learning", "Learning and Literacy", ["knowledge.search", "documents.create"], ["low"]],
   ["workforce", "Jobs and Workforce", ["jobs.search", "resume.create", "documents.create"], ["low"]],
   ["marketplace", "AgriTrade Marketplace", ["marketplace.search"], ["low", "medium", "high"]],
+  ["logistics", "Delivery and Shipment Estimates", ["logistics.track"], ["low"]],
   ["maps", "Maps and Field Visit", ["maps.view"], ["low", "medium"]],
   ["music-media", "Music and Media", ["media.play"], ["low"]],
   ["documents", "Documents and Guided Entry", ["documents.create", "documents.read"], ["low", "medium", "regulated"]],
@@ -18,6 +19,7 @@ const DEFINITIONS = [
   ["offline-queue", "Offline Queue", ["offline.sync"], ["low", "medium", "high", "regulated"]],
   ["live-knowledge", "Live Knowledge", ["knowledge.search"], ["low"]],
   ["images", "Images", ["images.search"], ["low"]],
+  ["videos", "Videos", ["videos.search"], ["low"]],
   ["communications", "Communications", ["communications.send"], ["medium", "high"]],
   ["operations", "Operations", ["drone.plan"], ["medium", "high", "regulated"]],
   ["business", "Business and Nonprofit Workspace", ["business.manage", "business.query"], ["low"]]

@@ -57105,6 +57105,48 @@ async function renderNexusAuthoritativeImages(outcome = {}) {
   return surface;
 }
 
+// Real video search (nexus/media/video-search-executor.js, canonical tool videos.search, closing item 18
+// of the 2026-09-22 capability audit -- "view videos" had no path at all through this, the primary
+// runtime). Same rendering technique already proven for the legacy rich-data videos card: a real
+// <iframe> embed for a YouTube result, a real <video> tag for a Wikimedia Commons one.
+async function renderNexusAuthoritativeVideos(outcome = {}) {
+  const videos = Array.isArray(outcome?.data?.videos) ? outcome.data.videos : [];
+  if (!videos.length) throw new Error("The authoritative video provider returned no videos.");
+  const surface = renderNexusAuthoritativeData(outcome);
+  if (!surface) return null;
+  surface.dataset.nexusVideoGallery = "true";
+  const gallery = document.createElement("div");
+  gallery.dataset.nexusAuthoritativeVideos = "true";
+  for (const video of videos.slice(0, 6)) {
+    const figure = document.createElement("figure");
+    figure.dataset.nexusAuthoritativeVideo = "true";
+    if (video.embedUrl) {
+      const iframe = document.createElement("iframe");
+      iframe.src = String(video.embedUrl);
+      iframe.title = String(video.title || "Video result");
+      iframe.loading = "lazy";
+      iframe.allowFullscreen = true;
+      figure.append(iframe);
+    } else {
+      const player = document.createElement("video");
+      player.controls = true;
+      player.preload = "none";
+      if (video.thumbnailUrl) player.poster = String(video.thumbnailUrl);
+      const source = document.createElement("source");
+      source.src = String(video.videoUrl || "");
+      source.type = String(video.mimeType || "video/webm");
+      player.append(source);
+      figure.append(player);
+    }
+    const caption = document.createElement("figcaption");
+    caption.textContent = `${video.title || ""}${video.channelTitle ? ` — ${video.channelTitle}` : ""}${video.license ? ` — ${video.license}` : ""}`;
+    figure.append(caption);
+    gallery.append(figure);
+  }
+  surface.append(gallery);
+  return surface;
+}
+
 function nexusDocumentLifecycleComplete(data = {}) {
   return Boolean(data.documentId && data.savedVersion && data.reopenVerified === true);
 }
@@ -57454,6 +57496,8 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       ? renderNexusAuthoritativeDocument(outcome)
       : presentation.kind === "image-gallery"
         ? await renderNexusAuthoritativeImages(outcome)
+      : presentation.kind === "video-gallery"
+        ? await renderNexusAuthoritativeVideos(outcome)
         : renderNexusAuthoritativeData(outcome);
   const visible = presentation.kind === "map"
     ? nexusMapOutcomeVerified(outcome, data)
