@@ -13,18 +13,21 @@ const privacy = require("./privacy.js");
 const referrals = require("./referrals.js");
 const reports = require("./reports.js");
 const swahili = require("./swahili.js");
+const swahiliMore = require("./swahili-more.js");
 
 // The health worker's record-keeping front door (community health workers, nurses, midwives, clinical officers, clinic staff). Same shape as the farm
 // toolkit: an open guided question first, then each tool in turn, and a tool answers only when the words are plainly for it and (for anything about a
 // patient) the patient is one of this person's own. Everything else carries on to normal planning. Kyro records what the worker says; it does not
 // diagnose, interpret a reading, or suggest treatment. A tool may answer with a string, or { report } (a printable letter or report).
-const MODULES = [swahili, profile, privacy, patients, visits, immunisation, pregnancy, supplies, referrals, reports];
+const MODULES = [swahili, swahiliMore, profile, privacy, patients, visits, immunisation, pregnancy, supplies, referrals, reports];
 const TEMPLATES = Object.assign({}, ...MODULES.map(mod => mod.templates || {}));
 const CONFIRMS = Object.assign({
   "remove-record": async (ctx, action) => (await ctx.store.remove({ tenantId: ctx.tenantId, userId: ctx.userId, memoryId: action.memoryId }) ? `Done. I've removed ${action.label}.` : `I couldn't find ${action.label} any more.`)
 }, ...MODULES.map(mod => mod.confirms || {}));
 
 // Which people have a guided conversation open (in this process), per store, so a message with none open costs no lookup. A lost one simply expires.
+const YES_SW = /^(?:ndiyo|ndio|sawa|naam|ok|sawa kabisa|endelea|fanya hivyo)$/i;
+const NO_SW = /^(?:hapana|la|siyo|sitaki|acha|usifanye|si sasa)$/i;
 const openByStore = new WeakMap();
 const sessionsOf = store => { let map = openByStore.get(store); if (!map) { map = new Map(); openByStore.set(store, map); } return map; };
 const keyOf = args => `${args.tenantId}:${args.userId}`;
@@ -53,12 +56,14 @@ async function healthWorkTurn({ text, store, tenantId, userId, now = new Date(),
         if (session.collection === "_confirm") {
           const action = session.action;
           // Something that cannot be undone may ask for an exact phrase: only those words go ahead, and a plain "yes" is asked again.
+          // A confirmation asked in Swahili is answered in Swahili ("ndiyo", "hapana", "FUTA YOTE").
+          const swahiliAsk = action?.language === "sw"; const yes = YES.test(ctx.text) || (swahiliAsk && YES_SW.test(ctx.text)); const no = NO.test(ctx.text) || (swahiliAsk && NO_SW.test(ctx.text));
           if (action?.phrase) {
             if (ctx.text.toLowerCase() === action.phrase && CONFIRMS[action.type]) { await wrapped.clearSession({ tenantId, userId }); return await CONFIRMS[action.type](ctx, action); }
-            if (YES.test(ctx.text)) return `To be sure, type exactly: ${action.phrase.toUpperCase()}. Or say no to leave everything as it is.`;
-          } else if (YES.test(ctx.text) && CONFIRMS[action?.type]) { await wrapped.clearSession({ tenantId, userId }); return await CONFIRMS[action.type](ctx, action); }
+            if (yes) return swahiliAsk ? swahiliMore.SW.typeExactly : `To be sure, type exactly: ${action.phrase.toUpperCase()}. Or say no to leave everything as it is.`;
+          } else if (yes && CONFIRMS[action?.type]) { await wrapped.clearSession({ tenantId, userId }); return await CONFIRMS[action.type](ctx, action); }
           await wrapped.clearSession({ tenantId, userId });
-          if (NO.test(ctx.text)) return "Okay, I've left it as it is.";
+          if (no) return swahiliAsk ? swahiliMore.SW.kept : "Okay, I've left it as it is.";
         } else if (TEMPLATES[session.collection]) {
           const answer = await continueGuided(ctx, session, TEMPLATES[session.collection]);
           if (answer) return answer;

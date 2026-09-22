@@ -231,4 +231,4 @@ async function handle(ctx) {
   return null;
 }
 
-module.exports = Object.freeze({ handle, SW, ageWordsSw, patientLineSw, inlineSw, toEnglish });
+module.exports = Object.freeze({ handle, SW, ageWordsSw, patientLineSw, inlineSw, toEnglish, resolveSw, tagSw, firstName, vitalWordsSw, sexOfSw, SEX_SW });
