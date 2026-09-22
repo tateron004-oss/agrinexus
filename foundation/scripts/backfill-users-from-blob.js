@@ -9,6 +9,16 @@
 // a local db.json file — a plain file read here would silently find nothing
 // to migrate in production. AGRINEXUS_STATE_STORE=json (local/dev only)
 // falls back to reading db.json / AGRINEXUS_DB_PATH directly.
+//
+// Since the blob-storage password-hashing fix, a blob row's `password` field
+// is no longer reliably plaintext — it may already be a real `scrypt:<salt>:
+// <hash>` string (every freshly-seeded default user, every account created
+// via the admin test-user endpoints, and any user who has logged in even
+// once since that fix deployed). Hashing an already-hashed value here would
+// silently produce a hash of the hash, leaving that real Postgres row
+// unloginable with the person's real password — so an already-hashed value
+// is passed straight through via pgUsers.createUser's `passwordHash`
+// parameter instead of its `password` (plaintext-to-be-hashed) one.
 
 const fs = require("fs");
 const path = require("path");
@@ -20,6 +30,18 @@ const pgUsers = require("../../server/pg-users.js");
 function usingPostgresState(env = process.env) {
   const store = env.AGRINEXUS_STATE_STORE || (env.DATABASE_URL ? "postgres" : "json");
   return store === "postgres";
+}
+
+// Pure and directly testable without a real Postgres connection, unlike main() itself. Returns null for
+// a row with no usable email/password (the caller counts that as skipped), otherwise the exact args
+// pgUsers.createUser needs -- passwordHash for an already-hashed blob value, password (to be hashed) for
+// a legacy plaintext one.
+function createUserArgsFromBlobUser(user) {
+  const email = String(user?.email || "").trim().toLowerCase();
+  const stored = String(user?.password || "");
+  if (!email || !stored) return null;
+  const displayName = String(user.name || email).trim() || email;
+  return stored.startsWith("scrypt:") ? { email, displayName, passwordHash: stored } : { email, displayName, password: stored };
 }
 
 async function loadBlobUsers(pool) {
@@ -48,14 +70,9 @@ async function main() {
     let migrated = 0;
     let skipped = 0;
     for (const user of users) {
-      const email = String(user.email || "").trim().toLowerCase();
-      const password = String(user.password || "");
-      if (!email || !password) { skipped++; continue; }
-      await pgUsers.createUser(pool, {
-        email,
-        displayName: String(user.name || email).trim() || email,
-        password
-      });
+      const args = createUserArgsFromBlobUser(user);
+      if (!args) { skipped++; continue; }
+      await pgUsers.createUser(pool, args);
       migrated++;
     }
     console.log(JSON.stringify({ ok: true, source, totalUsers: users.length, migrated, skipped }, null, 2));
@@ -71,4 +88,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { usingPostgresState, loadBlobUsers, main };
+module.exports = { usingPostgresState, loadBlobUsers, createUserArgsFromBlobUser, main };
