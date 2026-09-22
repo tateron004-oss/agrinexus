@@ -81,3 +81,28 @@ test("upsertCourseEnrollment upserts status, marking completed_at only when genu
   assert.equal(created.status, "completed");
   assert.match(pool.calls[0].sql, /on conflict \(learner_profile_id, course_id\) do update/);
 });
+
+test("listCourses scopes to the tenant, newest first", async () => {
+  const pool = stubPool([
+    [/^select \* from courses/, params => {
+      assert.equal(params[0], pgHealthIntakes.DEMO_TENANT_ID);
+      assert.equal(params[1], 50);
+      return { rows: [{ id: "course-1" }] };
+    }]
+  ]);
+  const rows = await pgCourses.listCourses(pool);
+  assert.equal(rows.length, 1);
+  assert.match(pool.calls[0].sql, /order by created_at desc/);
+});
+
+test("listCourseEnrollments is unscoped (the table has no tenant_id) and orders by the table's own started_at, not created_at", async () => {
+  const pool = stubPool([
+    [/^select \* from course_enrollments/, params => {
+      assert.equal(params[0], 50);
+      return { rows: [{ id: "enrollment-1" }] };
+    }]
+  ]);
+  const rows = await pgCourses.listCourseEnrollments(pool);
+  assert.equal(rows.length, 1);
+  assert.match(pool.calls[0].sql, /order by started_at desc/);
+});
