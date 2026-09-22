@@ -51,6 +51,11 @@ async function main() {
   // grace periods are measured in days, not minutes.
   const situationalAwarenessEscalationIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_ESCALATION_POLL_MS || 6 * 60 * 60 * 1000);
   let lastSituationalAwarenessEscalationSweepAt = 0;
+  // The farm-domain counterpart, same day-scale reasoning -- "no farm log activity in ~2 weeks."
+  const situationalAwarenessFarmIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_FARM_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastSituationalAwarenessFarmSweepAt = 0;
+  const situationalAwarenessFarmEscalationIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_FARM_ESCALATION_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastSituationalAwarenessFarmEscalationSweepAt = 0;
   // "deletion.execute" is an internal-only job type that nothing schedules or claims unless something enqueues it (see requestDeletion's
   // immediate enqueue and this sweep's self-healing role) -- a global, not-per-tenant scan, same reasoning as agent.sweep-advanceable-tasks.
   // Erasure requests are rare and the whole point of this sweep is to catch a lost job promptly, so it checks every couple of minutes.
@@ -123,6 +128,16 @@ async function main() {
       lastSituationalAwarenessEscalationSweepAt = Date.now();
       try { await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.situational_awareness_escalation_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSituationalAwarenessFarmSweepAt >= situationalAwarenessFarmIntervalMs) {
+      lastSituationalAwarenessFarmSweepAt = Date.now();
+      try { await handlers["situational-awareness.farm-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.situational_awareness_farm_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSituationalAwarenessFarmEscalationSweepAt >= situationalAwarenessFarmEscalationIntervalMs) {
+      lastSituationalAwarenessFarmEscalationSweepAt = Date.now();
+      try { await handlers["situational-awareness.escalate-unacknowledged-farm-nudges"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.situational_awareness_farm_escalation_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastDeletionSweepAt >= deletionSweepIntervalMs) {
       lastDeletionSweepAt = Date.now();

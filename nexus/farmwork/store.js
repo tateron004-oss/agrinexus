@@ -55,6 +55,23 @@ class FarmRecordRepository {
     return (result.rows || result).filter(row => row.content && row.content.kind === "record").map(toRecord);
   }
 
+  // Every principal (across every tenant) whose most recent record under this store's own purpose is older
+  // than staleBefore -- the same "gone quiet" shape as RecordRepository.listStaleHealthSubjects(), but over
+  // this store's real activity (whichever purpose this instance was constructed with: farm_records or
+  // health_records) instead of the older nexus_records world. Used by situational-awareness's proactive
+  // nudge sweeps. Only ever finds someone who has used this store at least once -- nudging someone who has
+  // never touched it at all isn't "gone quiet," it's marketing, and that's not this feature's job.
+  async listStalePrincipals({ staleBefore, limit = 50 }) {
+    const result = await this.db.query(`select tenant_id, principal_id, max(updated_at) as last_record_at
+      from nexus_memory_items
+      where purpose='${this.purpose}' and memory_class='domain' and deleted_at is null
+      group by tenant_id, principal_id
+      having max(updated_at) < $1
+      order by max(updated_at)
+      limit $2`, [staleBefore, Math.min(Math.max(limit, 1), 200)]);
+    return result.rows || result;
+  }
+
   // Everything a person keeps, across collections, for summaries.
   async listAll({ tenantId, userId, limit = 5000 }) {
     const result = await this.db.query(`select memory_id,principal_id,content from nexus_memory_items
