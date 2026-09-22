@@ -28,6 +28,14 @@ class DataLifecycleRepository {
       return {state:"verified",verification};
     });
   }
+  // Deletion requests that are still 'queued' well after they should have been picked up: the immediate enqueue at request time (see
+  // control-api.js's requestDeletion) either never happened or its job was lost. Mirrors AuthoritativeTaskEngine's stale-task sweep for the
+  // same reason -- a crashed or missed job must never strand an erasure request forever.
+  async listStaleQueued({staleBefore,limit=50}) {
+    const result=await this.db.query(`select tenant_id,request_id from nexus_deletion_requests where state='queued' and requested_at<=$1
+      order by requested_at limit $2`,[staleBefore,Math.min(Math.max(limit,1),500)]);
+    return result.rows||result;
+  }
   async purgeExpired({limit=100}) {
     const result=await this.db.query(`with expired as (select artifact_id from nexus_artifacts where retention_until<now() and deleted_at is null
       and not exists (select 1 from nexus_legal_holds h where h.tenant_id=nexus_artifacts.tenant_id and h.state='active')

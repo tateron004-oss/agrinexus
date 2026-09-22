@@ -23,6 +23,14 @@ test("a legal hold blocks the memory-items erasure too, not just nexus_records",
 });
 test("retention sweeps skip legal holds and use locked bounded batches",async()=>{const x=db([{rows:[{artifact_id:"art"}]}]);const rows=await new DataLifecycleRepository(x).purgeExpired({limit:900});assert.equal(rows.length,1);assert.match(x.calls[0].sql,/not exists/);assert.match(x.calls[0].sql,/for update skip locked/);assert.equal(x.calls[0].params[0],500);});
 test("backup evidence rejects unverifiable claims",async()=>{const repo=new DataLifecycleRepository(db());await assert.rejects(repo.recordBackupEvidence({releaseSha:"sha",backupId:"id",state:"restore_verified"}),/Valid backup evidence/);});
+test("listStaleQueued finds only requests still queued past the staleness cutoff, bounded and ordered",async()=>{
+  const x=db([{rows:[{tenant_id:"t1",request_id:"req_1"}]}]);
+  const cutoff=new Date("2026-01-01T00:00:00Z");
+  const rows=await new DataLifecycleRepository(x).listStaleQueued({staleBefore:cutoff,limit:900});
+  assert.deepEqual(rows,[{tenant_id:"t1",request_id:"req_1"}]);
+  assert.match(x.calls[0].sql,/state='queued'/); assert.match(x.calls[0].sql,/order by requested_at/);
+  assert.deepEqual(x.calls[0].params,[cutoff,500],"limit is bounded the same way purgeExpired bounds its own limit");
+});
 
 test("account deletion clears version history within the same tenant and subject boundary", async () => {
   const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);
