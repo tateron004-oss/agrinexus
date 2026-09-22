@@ -17,6 +17,8 @@ const AUTONOMOUS_OUTCOME_NOTIFICATION_KIND = "autonomous_task_outcome";
 const SITUATIONAL_AWARENESS_WORKSPACE_ID = "situational-awareness";
 const HEALTH_CHECKIN_NUDGE_RECORD_TYPE = "health_checkin_nudge";
 const FARM_LOG_NUDGE_RECORD_TYPE = "farm_log_nudge";
+const BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE = "business_followup_nudge";
+const WELLNESS_GOAL_NUDGE_RECORD_TYPE = "wellness_goal_nudge";
 
 function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
@@ -353,6 +355,127 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         escalated += 1;
       }
       return { scanned: candidates.length, escalated, skippedPaused };
+    },
+    // Widening proactive initiative to a new domain AND a new autonomous
+    // tool: a business/nonprofit workspace with open tasks or tracked grants
+    // that hasn't been touched in a while (nexus/data/record-repository.js's
+    // listStaleBusinessWorkspaces() -- see its own comment on why this is a
+    // record-staleness signal, not a dueDate/deadline comparison, since
+    // those fields are free, unvalidated text). Unlike the health/farm
+    // sweeps, the remedial action here is documents.create, not
+    // reminders.schedule: documents.create is equally real, equally
+    // non-confirmation-required (same "tasks:execute"-only permission, no
+    // consentScope), and produces a genuinely more useful artifact for this
+    // domain -- a saved, specific summary of what's open -- than a bare
+    // reminder text would. The completion notification pipeline
+    // (agent.advance-task's awaiting_render handling) already works
+    // identically for any tool, not just reminders.schedule, so this needed
+    // no engine changes.
+    "situational-awareness.business-sweep": async ({ job }) => {
+      const staleMs = Number(job.payload?.staleMs || 14 * 24 * 60 * 60 * 1000);
+      const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.records.listStaleBusinessWorkspaces({ staleBefore: new Date(Date.now() - staleMs), limit });
+      const tenantCounts = new Map();
+      const tenantPaused = new Map();
+      let created = 0; let skippedPaused = 0;
+      for (const candidate of candidates) {
+        const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
+        // The "subject" of this nudge is the specific business RECORD, not the
+        // owner -- an owner with several workspaces must get an independent
+        // cooldown per workspace, not one shared across all of them.
+        const subjectId = candidate.record_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
+        const recentNudges = await runtime.records.list({ tenantId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 1 });
+        const lastNudge = recentNudges[0];
+        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const businessName = candidate.business_name || "your business workspace";
+        const openTasks = Array.isArray(candidate.open_task_titles) ? candidate.open_task_titles.filter(Boolean) : [];
+        const openGrants = Array.isArray(candidate.open_grant_labels) ? candidate.open_grant_labels.filter(Boolean) : [];
+        const lines = [`# Business Follow-Up -- ${businessName}`, "",
+          "Kyro noticed this workspace has open items that have not been touched in a while."];
+        if (openTasks.length) lines.push("", "## Open Tasks", ...openTasks.map(title => `- ${title}`));
+        if (openGrants.length) lines.push("", "## Grants Not Yet Resolved", ...openGrants.map(label => `- ${label}`));
+        const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
+          correlationId: createId("event"), text: `Kyro noticed "${businessName}" has open items and saved a follow-up summary.` });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: `Prepare a business follow-up summary for ${businessName}`,
+            application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Save a business follow-up summary document",
+              toolId: "documents.create", input: { title: `Business Follow-Up -- ${businessName}`, content: lines.join("\n"), format: "md" } }] });
+        } catch (error) {
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
+        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, classification: "standard",
+          data: { reason: "business_workspace_stale", recordId: candidate.record_id, updatedAt: candidate.updated_at },
+          provenance: { source: "situational-awareness-business-sweep" } });
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        created += 1;
+      }
+      return { scanned: candidates.length, created, skippedPaused };
+    },
+    // The wellness-domain counterpart to situational-awareness.sweep: a
+    // person with an active weekly workout goal (nexus/wellness/log.js) and
+    // no workout logged since staleBefore (nexus/wellness/store.js's
+    // listStaleWorkoutGoalPrincipals()). Uses reminders.schedule, the same
+    // proven non-confirmation-required tool the health/farm sweeps use --
+    // there is no third party involved here, so a plain reminder is the
+    // right, minimal action, same as those domains.
+    "situational-awareness.wellness-sweep": async ({ job }) => {
+      // Shorter default than the 14-day health/farm staleness window: a
+      // *weekly* goal going quiet is meaningfully stale well before two weeks.
+      const staleMs = Number(job.payload?.staleMs || 10 * 24 * 60 * 60 * 1000);
+      const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.wellnessRecords.listStaleWorkoutGoalPrincipals({ staleBefore: new Date(Date.now() - staleMs), limit });
+      const tenantCounts = new Map();
+      const tenantPaused = new Map();
+      let created = 0; let skippedPaused = 0;
+      for (const candidate of candidates) {
+        const tenantId = candidate.tenant_id; const subjectId = candidate.principal_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
+        const recentNudges = await runtime.records.list({ tenantId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: WELLNESS_GOAL_NUDGE_RECORD_TYPE, limit: 1 });
+        const lastNudge = recentNudges[0];
+        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
+          correlationId: createId("event"), text: "Kyro noticed no recent workout logged against a weekly goal and scheduled a reminder." });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: "Nudge a workout after a quiet week",
+            application: "wellness", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a workout reminder",
+              toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a workout with Kyro -- it's been quiet against my weekly goal." } }] });
+        } catch (error) {
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
+        await runtime.records.create({ tenantId, ownerId: subjectId, subjectId, taskId: task.taskId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: WELLNESS_GOAL_NUDGE_RECORD_TYPE, classification: "standard",
+          data: { reason: "wellness_goal_stale", lastWorkoutAt: candidate.last_workout_at },
+          provenance: { source: "situational-awareness-wellness-sweep" } });
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        created += 1;
+      }
+      return { scanned: candidates.length, created, skippedPaused };
     }
   });
 }
@@ -397,4 +520,5 @@ async function blockStalledAutonomousTaskIfApplicable({ runtime, notification, e
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
 
 module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND,
-  SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE, FARM_LOG_NUDGE_RECORD_TYPE });
+  SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE, FARM_LOG_NUDGE_RECORD_TYPE,
+  BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, WELLNESS_GOAL_NUDGE_RECORD_TYPE });
