@@ -46707,16 +46707,7 @@ async function api(req, res, url) {
       const stored = String(candidate?.password || "");
       const isHashed = stored.startsWith("scrypt:");
       const validCredential = stored.length > 0 && (isHashed ? pgUsers.verifyPasswordHash(password, stored) : stored === password);
-      if (!candidate || !validCredential) {
-        // TEMPORARY (remove once the 2026-09-22 production login outage is root-caused): safe, non-
-        // sensitive facts only -- never the stored value or password itself -- gated behind an explicit
-        // query param so normal client behavior is completely unaffected.
-        const debug = url.searchParams.get("debug") === "1"
-          ? { totalUsers: db.users.length, candidateFound: Boolean(candidate), storedLength: stored.length, storedIsHashed: isHashed,
-              pepperConfigured: Boolean(process.env.PASSWORD_PEPPER), pepperLength: String(process.env.PASSWORD_PEPPER || "").length }
-          : undefined;
-        return send(res, 401, { error: "Invalid demo credentials", ...(debug ? { debug } : {}) });
-      }
+      if (!candidate || !validCredential) return send(res, 401, { error: "Invalid demo credentials" });
       if (!isHashed) {
         // A legacy plaintext row from before passwords were hashed here. The
         // credential just verified correctly against it, so migrate it to a
