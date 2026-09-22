@@ -94,6 +94,27 @@ test("with nobody in the circle, an emergency says so plainly and points to the 
   assert.match(await ask(w, "help"), /^I'm here\. If you might be in danger/);
 });
 
+// Confirmed previously MISSING: nothing distinguished a veteran or elderly
+// person from anyone else, and no discovery path told either of them what
+// real, already-built support exists.
+test("a veteran or elderly person self-identifying is told about real check-in/circle features, honestly, with no fabricated persona", async () => {
+  const w = world();
+  const veteran = await ask(w, "I'm a veteran");
+  assert.match(veteran, /check in on you every day/i);
+  assert.match(veteran, /add name@example\.com to my circle/i);
+  assert.match(veteran, /not a counselor or a veterans' service/i);
+  assert.doesNotMatch(veteran, /thank you for your service/i, "no presumptuous reply -- 'veteran' is ambiguous (e.g. a veteran teacher)");
+
+  const elderly1 = await ask(w, "I'm elderly");
+  assert.match(elderly1, /check in on you every day/i);
+  const elderly2 = await ask(w, "I am 72 years old");
+  assert.match(elderly2, /check in on you every day/i);
+
+  // First person only, and no crisis wording invented here -- an emergency still goes through safety.js unchanged.
+  assert.equal(await ask(w, "My grandfather is a veteran"), null);
+  assert.match(await ask(w, "I've fallen and I can't get up"), /I don't have anyone in your circle/);
+});
+
 test("a person in crisis is answered with care and offered the circle, never alerted without their word", async () => {
   const w = world();
   const alone = await ask(w, "I want to die");

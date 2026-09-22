@@ -57151,6 +57151,39 @@ function nexusDocumentLifecycleComplete(data = {}) {
   return Boolean(data.documentId && data.savedVersion && data.reopenVerified === true);
 }
 
+// documents.create's own executor (nexus/documents/executor.js) writes the real file
+// and indexes it into nexus_documents, but that document never gets an entry in the
+// legacy exportOwners map /exports/:filename download route checks -- so a document
+// made through this, the primary agent path, had no way to ever be downloaded, even
+// though the file itself was created correctly (confirmed live, 2026-09-22 audit).
+// GET /api/nexus/runtime/documents/:id is already real and already owner-scoped
+// (documents.get() is called with the caller's own context.userId) -- it just needed
+// a client that calls it. Fetches the bytes fresh rather than trusting the editor's
+// in-memory text, since the saved file is the actual authoritative artifact.
+async function downloadNexusAuthoritativeDocument(documentId, statusEl) {
+  const original = statusEl?.textContent || "";
+  try {
+    if (statusEl) statusEl.textContent = "Preparing download...";
+    const response = await fetch(`/api/nexus/runtime/documents/${encodeURIComponent(documentId)}`, { credentials: "same-origin" });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.contentBase64) throw new Error(body.error || `Download failed (${response.status})`);
+    const bytes = Uint8Array.from(atob(body.contentBase64), char => char.charCodeAt(0));
+    const blob = new Blob([bytes], { type: body.contentType || "application/octet-stream" });
+    const extension = { pdf: "pdf", docx: "docx", markdown: "md", md: "md" }[String(body.document?.documentType || "").toLowerCase()] || "txt";
+    const filename = `${(body.document?.title || "document").replace(/[^a-z0-9 _-]/gi, "").trim() || "document"}.${extension}`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = filename; link.style.display = "none";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (statusEl) statusEl.textContent = original;
+  } catch (error) {
+    if (statusEl) statusEl.textContent = `Couldn't download the file: ${error.message}`;
+  }
+}
+
 function renderNexusAuthoritativeDocument(outcome = {}) {
   const data = outcome.data || {};
   // The document editor below is only truthful for a real create/save/reopen
@@ -57171,7 +57204,12 @@ function renderNexusAuthoritativeDocument(outcome = {}) {
   const status = document.createElement("p");
   status.dataset.nexusDocumentStatus = "true";
   status.textContent = `Saved version ${data.savedVersion}; closed and reopened from the authoritative document record.`;
-  surface.append(editor, status);
+  const downloadButton = document.createElement("button");
+  downloadButton.type = "button";
+  downloadButton.dataset.nexusDocumentDownload = "true";
+  downloadButton.textContent = "Download";
+  downloadButton.addEventListener("click", () => downloadNexusAuthoritativeDocument(data.documentId, status));
+  surface.append(editor, status, downloadButton);
   return surface;
 }
 

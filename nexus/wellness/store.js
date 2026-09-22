@@ -26,6 +26,30 @@ class WellnessRepository {
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='wellness' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId]);
     return Boolean((result.rows || result)[0]);
   }
+
+  // The wellness-domain counterpart to RecordRepository.listStaleHealthSubjects():
+  // a real structural signal on this table's two real content shapes
+  // (content.kind='goal' vs content.kind='entry') -- someone who set a
+  // weekly workout goal with no workout entry logged since staleBefore.
+  // Global, not tenant-scoped, matching every other proactive-sweep query in
+  // this codebase (see nexus/data/record-repository.js's own comment on
+  // listStaleHealthSubjects for why).
+  async listStaleWorkoutGoalPrincipals({ staleBefore, limit = 50 }) {
+    const result = await this.db.query(`select g.tenant_id, g.principal_id, w.last_workout_at
+      from (
+        select distinct tenant_id, principal_id from nexus_memory_items
+        where purpose='wellness' and deleted_at is null and content->>'kind'='goal' and content->>'metric'='workouts'
+      ) g
+      left join lateral (
+        select max(created_at) as last_workout_at from nexus_memory_items e
+        where e.tenant_id=g.tenant_id and e.principal_id=g.principal_id and e.purpose='wellness' and e.deleted_at is null
+          and e.content->>'kind'='entry' and e.content->>'metric'='workout'
+      ) w on true
+      where w.last_workout_at is null or w.last_workout_at < $1
+      order by w.last_workout_at nulls first
+      limit $2`, [staleBefore, Math.min(Math.max(limit, 1), 200)]);
+    return result.rows || result;
+  }
 }
 
 module.exports = Object.freeze({ WellnessRepository });

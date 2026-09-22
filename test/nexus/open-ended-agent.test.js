@@ -278,6 +278,19 @@ test("a complete document create-save-reopen request has an executable Documents
   assert.equal(completeDocumentPlan("Tell me about farming plans.", catalog), null);
 });
 
+// Confirmed live in the 2026-09-22 capability audit: this fast path never looked at the requested
+// format at all, so "save this as a PDF" silently produced a real .txt file (documents.create's own
+// default) instead of the PDF the person actually asked for.
+test("a document request naming a format carries it through to the plan's input, and is omitted (default) otherwise", () => {
+  const { completeDocumentPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "documents.create" }] };
+  assert.equal(completeDocumentPlan("Create and save a farming plan document as a PDF, then reopen it.", catalog).steps[0].input.format, "pdf");
+  assert.equal(completeDocumentPlan("Write and save a report as a Word document, then open again.", catalog).steps[0].input.format, "docx");
+  assert.equal(completeDocumentPlan("Write and save a report as markdown, then open again.", catalog).steps[0].input.format, "md");
+  assert.equal(completeDocumentPlan("Create and save a farming plan document, then reopen it.", catalog).steps[0].input.format, undefined,
+    "no format named -- must not invent one, documents.create's own default still applies");
+});
+
 // Item 18 of the 2026-09-22 capability audit: "show me videos of X" had no path at all through the
 // authoritative runtime -- only images.search existed. completeVideoSearchPlan closes that gap.
 test("a complete video-search request has an executable Videos plan, distinct from image search and media playback", () => {

@@ -173,12 +173,17 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
   const farmRecords = new FarmRecordRepository(db);
   const healthRecords = new HealthRecordRepository(db);
+  // Exposed on the runtime alongside farmRecords/healthRecords, not just handed
+  // to the planner, so situational-awareness.wellness-sweep (nexus/workers/
+  // handlers.js) can run the exact same real listStaleWorkoutGoalPrincipals()
+  // query a background job needs -- one instance, reused, not a second copy.
+  const wellnessRecords = new WellnessRepository(db);
   const brief = createBriefService({ notifications, settings: new BriefSettingsRepository(db), memory, farmRecords, healthRecords, devices, autonomyControl });
   const alerts = createWeatherAlertService({ notifications, settings: new WeatherAlertSettingsRepository(db), memory, devices, autonomyControl });
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
   const circleRepository = new CircleRepository(db);
   const companion = createCompanion({ circle: circleRepository, checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memory, notifications, devices, autonomyControl });
-  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: new WellnessRepository(db),
+  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: wellnessRecords,
     community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) },
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) } }) : null;
@@ -186,7 +191,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, brief, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
-    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, farmRecords, healthRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
+    audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, farmRecords, healthRecords, wellnessRecords, businessRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
 }
