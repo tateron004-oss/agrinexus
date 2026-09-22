@@ -20,6 +20,7 @@ const FARM_LOG_NUDGE_RECORD_TYPE = "farm_log_nudge";
 const BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE = "business_followup_nudge";
 const WELLNESS_GOAL_NUDGE_RECORD_TYPE = "wellness_goal_nudge";
 const LEAD_FOLLOWUP_NUDGE_RECORD_TYPE = "lead_followup_nudge";
+const BUSINESS_DEADLINE_NUDGE_RECORD_TYPE = "business_deadline_nudge";
 
 function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
@@ -538,6 +539,65 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         created += 1;
       }
       return { scanned: candidates.length, created, skippedPaused };
+    },
+    // The task/grant counterpart to situational-awareness.lead-followup-sweep:
+    // a task's own dueDate already passed, or a grant's own deadline is
+    // within the next 7 days (nexus/data/record-repository.js's new
+    // listBusinessWorkspacesWithDatedDeadlines() -- see its own comment on
+    // why this is safe alongside listStaleBusinessWorkspaces's coarser,
+    // date-agnostic signal). Same reminders.schedule-only, owner-directed
+    // shape as every other business-domain sweep -- no third party is ever
+    // contacted by this sweep.
+    "situational-awareness.business-deadline-sweep": async ({ job }) => {
+      const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.records.listBusinessWorkspacesWithDatedDeadlines({ limit });
+      const tenantCounts = new Map();
+      const tenantPaused = new Map();
+      let created = 0; let skippedPaused = 0;
+      for (const candidate of candidates) {
+        const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
+        const subjectId = candidate.record_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
+        const recentNudges = await runtime.records.list({ tenantId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, limit: 1 });
+        const lastNudge = recentNudges[0];
+        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const businessName = candidate.business_name || "your business workspace";
+        const overdueTasks = Array.isArray(candidate.overdue_tasks) ? candidate.overdue_tasks.filter(item => item?.title) : [];
+        const approachingGrants = Array.isArray(candidate.approaching_grants) ? candidate.approaching_grants.filter(item => item?.label) : [];
+        const parts = [
+          ...overdueTasks.map(item => `"${item.title}" (due ${item.dueDate})`),
+          ...approachingGrants.map(item => `the "${item.label}" grant deadline (${item.deadline})`)
+        ];
+        const summary = parts.join(", ") || "an approaching deadline";
+        const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
+          correlationId: createId("event"), text: `Kyro noticed a real deadline in "${businessName}": ${summary}.` });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: `Remind about a deadline in ${businessName}`,
+            application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a deadline reminder",
+              toolId: "reminders.schedule", input: { when: `Tomorrow, remind me about ${summary} in "${businessName}".` } }] });
+        } catch (error) {
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
+        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, classification: "standard",
+          data: { reason: "business_deadline_due", overdueTasks, approachingGrants },
+          provenance: { source: "situational-awareness-business-deadline-sweep" } });
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        created += 1;
+      }
+      return { scanned: candidates.length, created, skippedPaused };
     }
   });
 }
@@ -583,4 +643,5 @@ function required(value, label) { if (!value) throw new Error(`${label} is requi
 
 module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND,
   SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE, FARM_LOG_NUDGE_RECORD_TYPE,
-  BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, WELLNESS_GOAL_NUDGE_RECORD_TYPE, LEAD_FOLLOWUP_NUDGE_RECORD_TYPE });
+  BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, WELLNESS_GOAL_NUDGE_RECORD_TYPE, LEAD_FOLLOWUP_NUDGE_RECORD_TYPE,
+  BUSINESS_DEADLINE_NUDGE_RECORD_TYPE });

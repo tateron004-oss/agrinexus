@@ -72,6 +72,10 @@ async function main() {
   // by checking it more often.
   const situationalAwarenessLeadFollowupIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_LEAD_FOLLOWUP_POLL_MS || 6 * 60 * 60 * 1000);
   let lastSituationalAwarenessLeadFollowupSweepAt = 0;
+  // The task/grant counterpart to the lead-followup sweep above -- same
+  // day-scale, date-driven reasoning, so the same 6h cadence.
+  const situationalAwarenessBusinessDeadlineIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_BUSINESS_DEADLINE_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastSituationalAwarenessBusinessDeadlineSweepAt = 0;
   // "deletion.execute" is an internal-only job type that nothing schedules or claims unless something enqueues it (see requestDeletion's
   // immediate enqueue and this sweep's self-healing role) -- a global, not-per-tenant scan, same reasoning as agent.sweep-advanceable-tasks.
   // Erasure requests are rare and the whole point of this sweep is to catch a lost job promptly, so it checks every couple of minutes.
@@ -169,6 +173,11 @@ async function main() {
       lastSituationalAwarenessLeadFollowupSweepAt = Date.now();
       try { await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.situational_awareness_lead_followup_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSituationalAwarenessBusinessDeadlineSweepAt >= situationalAwarenessBusinessDeadlineIntervalMs) {
+      lastSituationalAwarenessBusinessDeadlineSweepAt = Date.now();
+      try { await handlers["situational-awareness.business-deadline-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.situational_awareness_business_deadline_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastDeletionSweepAt >= deletionSweepIntervalMs) {
       lastDeletionSweepAt = Date.now();
