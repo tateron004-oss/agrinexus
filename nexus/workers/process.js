@@ -56,6 +56,16 @@ async function main() {
   let lastSituationalAwarenessFarmSweepAt = 0;
   const situationalAwarenessFarmEscalationIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_FARM_ESCALATION_POLL_MS || 6 * 60 * 60 * 1000);
   let lastSituationalAwarenessFarmEscalationSweepAt = 0;
+  // Widening proactive initiative to the business domain: a business/nonprofit
+  // workspace with open tasks or tracked grants untouched in ~2 weeks. Same
+  // day-scale reasoning as the health/farm sweeps.
+  const situationalAwarenessBusinessIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_BUSINESS_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastSituationalAwarenessBusinessSweepAt = 0;
+  // The wellness domain: a quiet week against an active workout goal is
+  // meaningfully stale sooner than the 2-week health/farm window, but still
+  // day-scale, not minute-scale.
+  const situationalAwarenessWellnessIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_WELLNESS_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastSituationalAwarenessWellnessSweepAt = 0;
   // "deletion.execute" is an internal-only job type that nothing schedules or claims unless something enqueues it (see requestDeletion's
   // immediate enqueue and this sweep's self-healing role) -- a global, not-per-tenant scan, same reasoning as agent.sweep-advanceable-tasks.
   // Erasure requests are rare and the whole point of this sweep is to catch a lost job promptly, so it checks every couple of minutes.
@@ -138,6 +148,16 @@ async function main() {
       lastSituationalAwarenessFarmEscalationSweepAt = Date.now();
       try { await handlers["situational-awareness.escalate-unacknowledged-farm-nudges"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.situational_awareness_farm_escalation_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSituationalAwarenessBusinessSweepAt >= situationalAwarenessBusinessIntervalMs) {
+      lastSituationalAwarenessBusinessSweepAt = Date.now();
+      try { await handlers["situational-awareness.business-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.situational_awareness_business_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSituationalAwarenessWellnessSweepAt >= situationalAwarenessWellnessIntervalMs) {
+      lastSituationalAwarenessWellnessSweepAt = Date.now();
+      try { await handlers["situational-awareness.wellness-sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); }
+      catch (error) { logger.error("worker.situational_awareness_wellness_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastDeletionSweepAt >= deletionSweepIntervalMs) {
       lastDeletionSweepAt = Date.now();

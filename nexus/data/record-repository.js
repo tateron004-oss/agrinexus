@@ -108,6 +108,39 @@ class RecordRepository {
     return result.rows || result;
   }
 
+  // The business-domain counterpart to listStaleHealthSubjects(): a real
+  // structural signal (a business/nonprofit workspace record untouched in a
+  // while) combined with a real structural check for at least one
+  // non-terminal task or grant. Deliberately NOT a comparison against
+  // dueDate/deadline -- nexus/business/service.js stores both as free,
+  // unvalidated text ("next Friday", "March 15", "in two weeks") with no
+  // guaranteed parseable format, so a date-based trigger cannot honestly be
+  // built on this schema yet. Staleness of the whole record (its own
+  // updated_at, bumped by any edit) is the one signal this data can support
+  // without guessing at freeform text -- the same reasoning
+  // listStaleHealthSubjects's own comment already applies to `data` generally.
+  // Returns enough of the real content (business name, open task titles,
+  // open grant labels) for the caller to write a genuinely specific nudge,
+  // not just "you have open items somewhere."
+  async listStaleBusinessWorkspaces({ staleBefore, limit = 50 }) {
+    const result = await this.db.query(`select tenant_id, owner_id, record_id, updated_at,
+        data->'info'->>'businessName' as business_name,
+        (select jsonb_agg(t->>'title') from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t
+          where coalesce(t->>'status','') not in ('done','complete')) as open_task_titles,
+        (select jsonb_agg(coalesce(g->>'funderName', g->>'program')) from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g
+          where coalesce(g->>'status','') not in ('awarded','declined')) as open_grant_labels
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and updated_at < $1
+        and (
+          exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t where coalesce(t->>'status','') not in ('done','complete'))
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g where coalesce(g->>'status','') not in ('awarded','declined'))
+        )
+      order by updated_at
+      limit $2`, [staleBefore, Math.min(Math.max(limit, 1), 200)]);
+    return result.rows || result;
+  }
+
   async remove({ tenantId, recordId, actorId }) {
     const result=await this.db.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance=jsonb_build_object('deletedBy',$3),deleted_at=now(),updated_at=now()
       where tenant_id=$1 and record_id=$2 and deleted_at is null returning record_id`,[tenantId,recordId,actorId]);
