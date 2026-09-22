@@ -60,6 +60,15 @@ async function main() {
   // anywhere until this line. Artifacts expire on a day-scale retention window, not a live conversation, so a few checks a day is plenty.
   const retentionSweepIntervalMs = Number(process.env.NEXUS_RETENTION_SWEEP_POLL_MS || 6 * 60 * 60 * 1000);
   let lastRetentionSweepAt = 0;
+  // "schedules.dispatch" (ScheduleRepository.dispatchDue) had the exact same problem, found during the 2026-09-22
+  // capability audit: registered as a handler, nothing anywhere ever called it. No real (non-parked) nexus_schedules
+  // row exists in this codebase today -- every real recurring behavior (checkins, brief, weekly summary, weather
+  // alerts) deliberately uses a "parked at year 2100" row plus its own direct interval call instead, specifically so
+  // none of them depend on this dispatcher -- but the mechanism is reachable (POST /api/nexus/runtime/schedules) and
+  // would have silently never fired a real schedule if anything ever relied on it. Checked once a minute, the same
+  // granularity as the reminders/notifications poll, since a schedule's own next_run_at is what actually paces it.
+  const schedulesDispatchIntervalMs = Number(process.env.NEXUS_SCHEDULES_DISPATCH_POLL_MS || 60000);
+  let lastSchedulesDispatchAt = 0;
   // Briefs go out at a chosen minute of the person's own day, so this checks about once a minute (a sent brief is remembered per local day).
   const briefIntervalMs = Number(process.env.NEXUS_BRIEF_POLL_MS || 60000);
   let lastBriefSweepAt = 0;
@@ -124,6 +133,11 @@ async function main() {
       lastRetentionSweepAt = Date.now();
       try { const outcome = await handlers["retention.sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.purged?.length) logger.info("worker.retention_sweep", { purged: outcome.purged.length }); }
       catch (error) { logger.error("worker.retention_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastSchedulesDispatchAt >= schedulesDispatchIntervalMs) {
+      lastSchedulesDispatchAt = Date.now();
+      try { const outcome = await handlers["schedules.dispatch"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.dispatched?.length) logger.info("worker.schedules_dispatch", { dispatched: outcome.dispatched.length }); }
+      catch (error) { logger.error("worker.schedules_dispatch_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (!result.claimed) await delay(Number(process.env.NEXUS_WORKER_POLL_MS || 2000));
   }
