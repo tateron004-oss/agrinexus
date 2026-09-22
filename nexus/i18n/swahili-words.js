@@ -110,5 +110,34 @@ function describeDaySw(day, today) {
   return `${WEEKDAYS_SW[weekday]} ${d} ${month[0].toUpperCase()}${month.slice(1)}${other ? ` ${y}` : ""}`;
 }
 
+// A day said in Swahili -> "YYYY-MM-DD" (null when it is not a day). Leading words like "kufikia" or "kabla ya" are ignored.
+const dayFromSw = (text, today) => { const raw = clean(text || "").replace(/^(?:ni |itakuwa |mnamo |kufikia |hadi |ifikapo |kabla ya )/i, ""); return raw && isDayWord(raw) ? extractDayEnglish(dayInEnglish(raw), today) : null; };
+const extractDayEnglish = (english, today) => (english ? require("../farmwork/parse.js").anyDay(english, today) : null);
+// "kupalilia mahindi kufikia Ijumaa" -> { title: "kupalilia mahindi", due: "2026-09-25" }. The day is taken from the end of the words, if there is one.
+function splitDueSw(text, today) {
+  const t = clean(text).replace(/[.,;]+$/g, ""); const words = t.split(" ");
+  for (let k = Math.min(6, words.length - 1); k >= 1; k -= 1) {
+    const tail = words.slice(-k).join(" "); if (!isDayWord(tail)) continue;
+    let cut = words.length - k; const lead = words.slice(Math.max(0, cut - 2), cut).join(" ");
+    if (/(?:^|\s)kabla ya$/i.test(lead)) cut -= 2; else if (/(?:^|\s)(?:kufikia|hadi|ifikapo|mnamo)$/i.test(lead)) cut -= 1;
+    if (cut < 1) continue;
+    return { title: words.slice(0, cut).join(" ").replace(/[.,;]+$/g, ""), due: dayFromSw(tail, today) };
+  }
+  return { title: t, due: null };
+}
+// A question or a request to look something up, not a statement to record.
+const askOf = text => /^(?:nani|ni nani|wapi|lini|vipi|ipi|zipi|gani|onyesha|orodhesha|nionyeshe|nisomee|kwa nini|je|nieleze)\b/i.test(clean(text));
+const placeName = raw => require("../farmwork/parse.js").titleCase(raw).replace(/\b(?:Ya|Wa|La|Cha|Za|Na|Wa)\b/g, word => word.toLowerCase());
+
+// Animals: the Swahili word for the kind, and the English word the English tools keep (a tag such as "cow 12" is stored in English so both languages find it).
+const ANIMALS = [[/^ng'?ombe$/i, "cow", "cattle", "ng'ombe"], [/^mbuzi$/i, "goat", "goat", "mbuzi"], [/^kondoo$/i, "sheep", "sheep", "kondoo"], [/^nguruwe$/i, "pig", "pig", "nguruwe"], [/^kuku$/i, "chicken", "chicken", "kuku"], [/^sungura$/i, "rabbit", "rabbit", "sungura"],
+  [/^bata$/i, "duck", "duck", "bata"], [/^punda$/i, "donkey", "donkey", "punda"], [/^ngamia$/i, "camel", "camel", "ngamia"],
+  [/^ndama$/i, "calf", "cattle", "ndama"], [/^mwanakondoo$/i, "lamb", "sheep", "mwanakondoo"], [/^mtoto wa mbuzi$/i, "kid", "goat", "mtoto wa mbuzi"], [/^(?:kifaranga|vifaranga)$/i, "chick", "chicken", "kifaranga"]];
+const ANIMAL_WORD = "mtoto wa mbuzi|mwanakondoo|vifaranga|kifaranga|ndama|ng'?ombe|mbuzi|kondoo|nguruwe|kuku|sungura|bata|punda|ngamia";
+const animalOf = word => ANIMALS.find(([pattern]) => pattern.test(clean(word)));
+// "ng'ombe 12" -> "cow 12"; "kuku kundi 50" -> "chicken flock 50"; a name such as "Bella" is left alone.
+const tagEnglish = tag => { const t = clean(tag).toLowerCase(); const m = new RegExp(`^(${ANIMAL_WORD})\\b\\s*(.*)$`, "i").exec(t); if (!m) return t; return clean(`${animalOf(m[1])[1]} ${m[2].replace(/^kundi\b/, "flock")}`); };
+const tagShown = tag => { const m = /^(cow|goat|sheep|pig|chicken|rabbit|duck|donkey|camel|calf|lamb|kid|chick)\b\s*(.*)$/.exec(String(tag)); if (!m) return /^[a-z]/.test(String(tag)) ? String(tag).charAt(0).toUpperCase() + String(tag).slice(1) : String(tag); const hit = ANIMALS.find(entry => entry[1] === m[1]); return clean(`${hit[3]} ${m[2].replace(/^flock\b/, "kundi")}`); };
+
 // Only the date forms above are read ("wiki 3 zilizopita" and the like are not).
-module.exports = Object.freeze({ UNITS, UNIT_WORD, NUMBER, parseQuantitySw, unitLabelSw, parseMoneySw, moneyShown, CURRENCY_WORDS, englishItem, swahiliItem, categorySw, incomeCategorySw, expenseCategorySw, periodSw, PERIODS, dayInEnglish, isDayWord, describeDaySw, MONTHS, DAYS, addDays });
+module.exports = Object.freeze({ dayFromSw, splitDueSw, askOf, placeName, ANIMALS, ANIMAL_WORD, animalOf, tagEnglish, tagShown, UNITS, UNIT_WORD, NUMBER, parseQuantitySw, unitLabelSw, parseMoneySw, moneyShown, CURRENCY_WORDS, englishItem, swahiliItem, categorySw, incomeCategorySw, expenseCategorySw, periodSw, PERIODS, dayInEnglish, isDayWord, describeDaySw, MONTHS, DAYS, addDays });
