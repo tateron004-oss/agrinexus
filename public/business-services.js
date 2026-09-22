@@ -94,6 +94,11 @@
     const donors = editable.leads.filter(row => row.type === "donor").length;
     const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
     const volunteers = editable.leads.filter(row => row.type === "volunteer").length;
+    // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard exactly:
+    // any lead type outside the original four (e.g. "member"/"congregant" for a
+    // church workspace, "client" from a conversational intake) still counts here
+    // instead of silently disappearing from the summary.
+    const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer"].includes(row.type)).length;
     const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
     const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
@@ -102,7 +107,7 @@
     const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
     const rows = [
       ["Net income", currencies.map(code => `${code} ${(money[code].income - money[code].expenses).toFixed(2)} (income ${money[code].income.toFixed(2)} / expenses ${money[code].expenses.toFixed(2)})`).join("; ")],
-      ["Customers & donors", `${customers} customers, ${donors} donors, ${sponsors} sponsors, ${volunteers} volunteers`],
+      ["Customers & donors", `${customers} customers, ${donors} donors, ${sponsors} sponsors, ${volunteers} volunteers${others ? `, ${others} other (members, clients, and similar)` : ""}`],
       ["Invoiced (all line items)", `${invoiceTotal.toFixed(2)}, ${unpaidInvoices} invoice(s) not marked paid`],
       ["Grants & funding", `${grantsRequested.toFixed(2)} tracked, ${grantsAwarded.toFixed(2)} awarded`],
       ["Open tasks", `${openTasks} of ${editable.tasks.length} not yet done`],
