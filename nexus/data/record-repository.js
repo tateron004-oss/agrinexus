@@ -111,14 +111,16 @@ class RecordRepository {
   // The business-domain counterpart to listStaleHealthSubjects(): a real
   // structural signal (a business/nonprofit workspace record untouched in a
   // while) combined with a real structural check for at least one
-  // non-terminal task or grant. Deliberately NOT a comparison against
-  // dueDate/deadline -- nexus/business/service.js stores both as free,
-  // unvalidated text ("next Friday", "March 15", "in two weeks") with no
-  // guaranteed parseable format, so a date-based trigger cannot honestly be
-  // built on this schema yet. Staleness of the whole record (its own
-  // updated_at, bumped by any edit) is the one signal this data can support
-  // without guessing at freeform text -- the same reasoning
-  // listStaleHealthSubjects's own comment already applies to `data` generally.
+  // non-terminal task or grant. Deliberately not a comparison against a
+  // specific dueDate/deadline value here -- unlike listBusinessWorkspacesWithDueFollowUps()
+  // and listBusinessWorkspacesWithDatedDeadlines() below (which DO use dueDate/
+  // deadline, behind the same strict regex guard), this is the coarse,
+  // catch-all signal for a workspace whose tasks/grants have no reliably
+  // dated value at all -- voice/chat's extractTaskArgs/extractGrantArgs store
+  // whatever natural-language phrase was spoken ("next Friday"), only the
+  // dashboard's own date input produces a clean, comparable value. Staleness
+  // of the whole record (its own updated_at, bumped by any edit) is what
+  // catches those cases; the two dated sweeps below catch the rest.
   // Returns enough of the real content (business name, open task titles,
   // open grant labels) for the caller to write a genuinely specific nudge,
   // not just "you have open items somewhere."
@@ -138,6 +140,66 @@ class RecordRepository {
         )
       order by updated_at
       limit $2`, [staleBefore, Math.min(Math.max(limit, 1), 200)]);
+    return result.rows || result;
+  }
+
+  // A more precise business-domain signal than listStaleBusinessWorkspaces()'s
+  // whole-record staleness: a lead/customer/donor's own followUpDate --
+  // stored by the dashboard's real HTML date input (public/business-
+  // services.js), and, per nexus/business/service.js's own comment,
+  // deliberately "a real date field ... distinct from the free-text
+  // nextAction ... so a follow-up can be reminded on" -- has passed. Nothing
+  // anywhere ever read this field before now; it was captured and displayed
+  // but never acted on. The regex guard keeps this honest: voice/chat never
+  // sets followUpDate today, only the dashboard's date input does, so a
+  // value that isn't a clean YYYY-MM-DD string is some other, unvalidated
+  // origin and is safely skipped rather than guessed at (same reasoning as
+  // listStaleBusinessWorkspaces avoiding dueDate/deadline).
+  async listBusinessWorkspacesWithDueFollowUps({ limit = 50 }) {
+    const DUE_LEAD = `l->>'followUpDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (l->>'followUpDate')::date < current_date`;
+    const result = await this.db.query(`select tenant_id, owner_id, record_id,
+        data->'info'->>'businessName' as business_name,
+        (select jsonb_agg(jsonb_build_object('name', l->>'name', 'followUpDate', l->>'followUpDate'))
+          from jsonb_array_elements(coalesce(data->'editable'->'leads','[]'::jsonb)) l
+          where ${DUE_LEAD}) as due_leads
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'leads','[]'::jsonb)) l where ${DUE_LEAD})
+      order by updated_at
+      limit $1`, [Math.min(Math.max(limit, 1), 200)]);
+    return result.rows || result;
+  }
+
+  // The task/grant counterpart to listBusinessWorkspacesWithDueFollowUps():
+  // a task's dueDate already passed (and it's not done), or a grant's
+  // deadline is within the next 7 days (and it's not yet awarded/declined).
+  // Both fields are also real dashboard date inputs (public/business-
+  // services.js's field() renders "dueDate"/"deadline" as type="date", same
+  // as "followUpDate"), so the identical strict YYYY-MM-DD guard applies:
+  // voice/chat's extractTaskArgs/extractGrantArgs store whatever
+  // natural-language phrase was spoken instead, and those rows are safely
+  // skipped here rather than misparsed. A grant's deadline is checked for
+  // "approaching," not "already passed" -- a grant can't be submitted after
+  // its deadline, so the useful moment to nudge is before it, not after.
+  async listBusinessWorkspacesWithDatedDeadlines({ limit = 50 }) {
+    const OVERDUE_TASK = `t->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (t->>'dueDate')::date < current_date and coalesce(t->>'status','') not in ('done','complete')`;
+    const APPROACHING_GRANT = `g->>'deadline' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'deadline')::date between current_date and current_date + 7 and coalesce(g->>'status','') not in ('awarded','declined')`;
+    const result = await this.db.query(`select tenant_id, owner_id, record_id,
+        data->'info'->>'businessName' as business_name,
+        (select jsonb_agg(jsonb_build_object('title', t->>'title', 'dueDate', t->>'dueDate'))
+          from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t
+          where ${OVERDUE_TASK}) as overdue_tasks,
+        (select jsonb_agg(jsonb_build_object('label', coalesce(g->>'funderName', g->>'program'), 'deadline', g->>'deadline'))
+          from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g
+          where ${APPROACHING_GRANT}) as approaching_grants
+      from nexus_records
+      where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
+        and (
+          exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t where ${OVERDUE_TASK})
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g where ${APPROACHING_GRANT})
+        )
+      order by updated_at
+      limit $1`, [Math.min(Math.max(limit, 1), 200)]);
     return result.rows || result;
   }
 
