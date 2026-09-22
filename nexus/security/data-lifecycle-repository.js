@@ -16,14 +16,36 @@ class DataLifecycleRepository {
       const holds=await trx.query(`select hold_id from nexus_legal_holds where tenant_id=$1 and state='active' and (subject_id is null or subject_id=$2) limit 1`,[tenantId,request.subject_id]);
       if((holds.rows||holds)[0]) { await trx.query(`update nexus_deletion_requests set state='blocked',verification=$3 where tenant_id=$1 and request_id=$2`,[tenantId,requestId,{reason:"legal_hold"}]); return {state:"blocked",reason:"legal_hold"}; }
       await trx.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and subject_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
-      await trx.query(`update nexus_artifacts set state='deleted',object_key=null,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
+      // title/metadata wiped too, not just the object pointer -- a title like "Mum's biopsy results.pdf" is
+      // itself personal data, and leaving it behind after "deletion" while only nulling object_key was a gap.
+      await trx.query(`update nexus_artifacts set state='deleted',title='',metadata='{}'::jsonb,object_key=null,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
       await trx.query(`update nexus_record_versions v set data='{}'::jsonb,provenance='{}'::jsonb
         from nexus_records r where v.record_id=r.record_id and r.tenant_id=$1 and r.subject_id=$2`,[tenantId,request.subject_id]);
       // The newer nexus/ runtime (companion, farm and health toolkits, navigation, reminders) keeps its data here, not in nexus_records, so an
       // erasure that skipped this table would leave most of what a person actually built with Kyro behind. No legal-hold carve-out here (unlike
       // the health toolkit's own "erase my records" self-service, which keeps a small name-free log): an account-level erasure is total.
       const memoryItems=await trx.query(`delete from nexus_memory_items where tenant_id=$1 and principal_id=$2 returning memory_id`,[tenantId,request.subject_id]);
-      const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,memoryItemsErased:true,memoryItemsCount:(memoryItems.rows||memoryItems).length,verifiedAt:new Date().toISOString()};
+      // Conversations/messages, documents, and notifications were the last subject-linked tables the general
+      // AI-agent layer (not the companion/farm/health toolkits above) writes to that "account deletion" still left
+      // untouched -- found auditing Kyro's full capability set. Conversations use the same soft-delete state their
+      // own check constraint already defines; messages and document versions have no such lifecycle column, so
+      // their content is wiped in place, matching how nexus_record_versions is handled above. Notifications are
+      // hard-deleted -- pure delivery-attempt history with no versioning/audit need, same treatment as memory items.
+      const conversations=await trx.query(`update nexus_conversations set state='deleted',title=null,summary=null,updated_at=now() where tenant_id=$1 and owner_id=$2 and state<>'deleted' returning conversation_id`,[tenantId,request.subject_id]);
+      // Scoped by conversation ownership OR direct authorship, so a person's own words in someone else's shared
+      // conversation are erased too, without touching that conversation's other participants' messages.
+      const messages=await trx.query(`update nexus_messages set content='{}'::jsonb,provenance='{}'::jsonb where tenant_id=$1 and (actor_id=$2 or conversation_id in (select conversation_id from nexus_conversations where tenant_id=$1 and owner_id=$2))`,[tenantId,request.subject_id]);
+      const documents=await trx.query(`update nexus_documents set state='deleted',title='',metadata='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null returning document_id`,[tenantId,request.subject_id]);
+      const documentVersions=await trx.query(`update nexus_document_versions v set content='{}'::jsonb,object_key=null
+        from nexus_documents d where v.document_id=d.document_id and d.tenant_id=$1 and d.owner_id=$2`,[tenantId,request.subject_id]);
+      const notifications=await trx.query(`delete from nexus_notifications where tenant_id=$1 and user_id=$2 returning notification_id`,[tenantId,request.subject_id]);
+      const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,memoryItemsErased:true,memoryItemsCount:(memoryItems.rows||memoryItems).length,
+        conversationsErased:true,conversationsCount:(conversations.rows||conversations).length,
+        messagesErased:true,
+        documentsErased:true,documentsCount:(documents.rows||documents).length,
+        documentVersionsErased:true,
+        notificationsErased:true,notificationsCount:(notifications.rows||notifications).length,
+        verifiedAt:new Date().toISOString()};
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};
     });

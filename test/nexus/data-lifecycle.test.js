@@ -44,3 +44,59 @@ test("account deletion clears version history within the same tenant and subject
   await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
   assert.equal(held.calls.some(call=>/update nexus_record_versions/.test(call.sql)),false);
 });
+
+// The general AI-agent layer's own tables -- found still untouched by the capability audit after conversations,
+// documents and notifications were shipped: account deletion erased companion/farm/health/navigation data
+// (nexus_memory_items) and the older nexus_records world, but not what the general agent writes on its own.
+test("account deletion also erases conversations, messages, documents, document versions, and notifications", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[{conversation_id:'c1'}]},{rows:[]},{rows:[{document_id:'d1'},{document_id:'d2'}]},{rows:[]},{rows:[{notification_id:'n1'}]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+
+  const conversations = x.calls.find(call => /update nexus_conversations/.test(call.sql));
+  assert.ok(conversations); assert.deepEqual(conversations.params,['tenant-a','owner-a']);
+  assert.match(conversations.sql,/state='deleted'/); assert.match(conversations.sql,/title=null/); assert.match(conversations.sql,/summary=null/);
+  assert.equal(result.verification.conversationsErased,true);
+  assert.equal(result.verification.conversationsCount,1);
+
+  const messages = x.calls.find(call => /update nexus_messages/.test(call.sql));
+  assert.ok(messages); assert.deepEqual(messages.params,['tenant-a','owner-a']);
+  assert.match(messages.sql,/content='\{\}'::jsonb/); assert.match(messages.sql,/provenance='\{\}'::jsonb/);
+  // Erased by ownership of the conversation OR direct authorship, so a person's own words in someone
+  // else's shared conversation are also wiped -- not just messages inside conversations they own.
+  assert.match(messages.sql,/actor_id=\$2/); assert.match(messages.sql,/conversation_id in/);
+  assert.equal(result.verification.messagesErased,true);
+
+  const documents = x.calls.find(call => /update nexus_documents/.test(call.sql));
+  assert.ok(documents); assert.deepEqual(documents.params,['tenant-a','owner-a']);
+  assert.match(documents.sql,/state='deleted'/); assert.match(documents.sql,/title=''/); assert.match(documents.sql,/metadata='\{\}'::jsonb/);
+  assert.equal(result.verification.documentsErased,true);
+  assert.equal(result.verification.documentsCount,2);
+
+  const documentVersions = x.calls.find(call => /update nexus_document_versions/.test(call.sql));
+  assert.ok(documentVersions); assert.deepEqual(documentVersions.params,['tenant-a','owner-a']);
+  assert.match(documentVersions.sql,/content='\{\}'::jsonb/); assert.match(documentVersions.sql,/object_key=null/);
+  assert.equal(result.verification.documentVersionsErased,true);
+
+  const notifications = x.calls.find(call => /delete from nexus_notifications/.test(call.sql));
+  assert.ok(notifications); assert.deepEqual(notifications.params,['tenant-a','owner-a']);
+  assert.equal(result.verification.notificationsErased,true);
+  assert.equal(result.verification.notificationsCount,1);
+});
+
+test("a legal hold blocks conversations/messages/documents/notifications erasure too, not just the older tables", async () => {
+  const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+  for (const pattern of [/update nexus_conversations/,/update nexus_messages/,/update nexus_documents/,/update nexus_document_versions/,/delete from nexus_notifications/]) {
+    assert.equal(held.calls.some(call=>pattern.test(call.sql)),false);
+  }
+});
+
+test("artifact deletion wipes title and metadata, not just the object pointer", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);
+  await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  const artifacts = x.calls.find(call => /update nexus_artifacts/.test(call.sql));
+  assert.ok(artifacts);
+  assert.match(artifacts.sql,/title=''/); assert.match(artifacts.sql,/metadata='\{\}'::jsonb/); assert.match(artifacts.sql,/object_key=null/);
+});
