@@ -36,4 +36,12 @@ async function upsertTradeOrder(pool, { orderNumber, countryId, stage, buyerInte
   return result.rows[0] || null;
 }
 
-module.exports = { upsertTradeOrder };
+async function listTradeOrders(pool, { tenantId = DEMO_TENANT_ID, limit = 50 } = {}) {
+  const result = await pool.query(
+    "select * from trade_orders where tenant_id = $1 order by created_at desc limit $2",
+    [tenantId, limit]
+  );
+  return result.rows || [];
+}
+
+module.exports = { upsertTradeOrder, listTradeOrders };

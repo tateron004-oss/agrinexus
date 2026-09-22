@@ -47708,6 +47708,48 @@ async function api(req, res, url) {
     });
   }
 
+  // Reads the Phase 9 shadow-write tables back directly -- the six additive shadow-write flags
+  // (HEALTH_INTAKE_STORE, WORKFORCE_STORE, TRADE_STORE, COURSE_STORE, AUDIT_EVENT_STORE, and
+  // eventually AUTH_STORE) all write to real Postgres with no read-back surface anywhere else, so an
+  // admin had no way to actually confirm a shadow-write landed short of trusting the absence of an
+  // entry in /api/admin/system/errors. Each domain reports honestly when its own store flag isn't on,
+  // rather than silently returning an empty list indistinguishable from "enabled but nothing written yet".
+  if (url.pathname === "/api/admin/system/postgres-shadow-status" && req.method === "GET") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow viewing Postgres shadow-write status" });
+    const pool = getPgPool();
+    const domain = async (enabled, loader) => {
+      if (!enabled) return { enabled: false, rows: [] };
+      try { return { enabled: true, rows: await loader() }; }
+      catch (error) { return { enabled: true, error: error.message, rows: [] }; }
+    };
+    const [healthIntakes, workforceRoles, jobApplications, tradeOrders, courses, courseEnrollments, auditEvents, aiRuns] = await Promise.all([
+      domain(usingPostgresHealthIntakes(), () => pgHealthIntakes.listIntakes(pool)),
+      domain(usingPostgresWorkforce(), () => pgWorkforce.listWorkforceRoles(pool)),
+      domain(usingPostgresWorkforce(), () => pgWorkforce.listJobApplications(pool)),
+      domain(usingPostgresTrade(), () => pgTrade.listTradeOrders(pool)),
+      domain(usingPostgresCourses(), () => pgCourses.listCourses(pool)),
+      domain(usingPostgresCourses(), () => pgCourses.listCourseEnrollments(pool)),
+      domain(usingPostgresAuditEvents(), () => pgAuditEvents.listAuditEvents(pool)),
+      domain(usingPostgresAuditEvents(), () => pgAuditEvents.listAiRuns(pool))
+    ]);
+    return send(res, 200, {
+      ok: true,
+      authStore: usingPostgresAuth() ? "postgres" : "blob",
+      domains: {
+        healthIntakes: { ...healthIntakes, count: healthIntakes.rows.length },
+        workforceRoles: { ...workforceRoles, count: workforceRoles.rows.length },
+        jobApplications: { ...jobApplications, count: jobApplications.rows.length,
+          note: "requires AUTH_STORE=postgres too (needs a real Postgres user id) -- stays empty until then even with WORKFORCE_STORE=postgres" },
+        tradeOrders: { ...tradeOrders, count: tradeOrders.rows.length },
+        courses: { ...courses, count: courses.rows.length },
+        courseEnrollments: { ...courseEnrollments, count: courseEnrollments.rows.length,
+          note: "requires AUTH_STORE=postgres too (needs a real Postgres user id) -- stays empty until then even with COURSE_STORE=postgres" },
+        auditEvents: { ...auditEvents, count: auditEvents.rows.length },
+        aiRuns: { ...aiRuns, count: aiRuns.rows.length }
+      }
+    });
+  }
+
   if (url.pathname === "/api/admin/health-check" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow admin health checks" });
     for (const provider of runtimeProviders(db)) {

@@ -67,4 +67,24 @@ async function upsertJobApplication(pool, { id, candidateProfileId, workforceRol
   return result.rows[0] || null;
 }
 
-module.exports = { isRealUserId, createWorkforceRole, findOrCreateCandidateProfile, upsertJobApplication };
+async function listWorkforceRoles(pool, { tenantId = DEMO_TENANT_ID, limit = 50 } = {}) {
+  const result = await pool.query(
+    "select * from workforce_roles where tenant_id = $1 order by created_at desc limit $2",
+    [tenantId, limit]
+  );
+  return result.rows || [];
+}
+
+async function listJobApplications(pool, { limit = 50 } = {}) {
+  // job_applications has no tenant_id column of its own (scoped indirectly
+  // via workforce_roles/candidate_profiles) -- listed globally, same as
+  // pg-audit-events.js's listing functions are tenant-scoped where the table
+  // actually carries that column and unscoped where it doesn't.
+  const result = await pool.query(
+    "select * from job_applications order by submitted_at desc limit $1",
+    [limit]
+  );
+  return result.rows || [];
+}
+
+module.exports = { isRealUserId, createWorkforceRole, findOrCreateCandidateProfile, upsertJobApplication, listWorkforceRoles, listJobApplications };

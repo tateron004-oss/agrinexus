@@ -50,4 +50,21 @@ async function upsertCourseEnrollment(pool, { learnerProfileId, courseId, status
   return result.rows[0] || null;
 }
 
-module.exports = { isRealUserId, upsertCourse, findOrCreateLearnerProfile, upsertCourseEnrollment };
+async function listCourses(pool, { tenantId = DEMO_TENANT_ID, limit = 50 } = {}) {
+  const result = await pool.query(
+    "select * from courses where tenant_id = $1 order by created_at desc limit $2",
+    [tenantId, limit]
+  );
+  return result.rows || [];
+}
+
+async function listCourseEnrollments(pool, { limit = 50 } = {}) {
+  // Same reasoning as pg-workforce.js's listJobApplications: course_enrollments has no tenant_id of its own.
+  const result = await pool.query(
+    "select * from course_enrollments order by started_at desc limit $1",
+    [limit]
+  );
+  return result.rows || [];
+}
+
+module.exports = { isRealUserId, upsertCourse, findOrCreateLearnerProfile, upsertCourseEnrollment, listCourses, listCourseEnrollments };

@@ -119,3 +119,28 @@ test("upsertJobApplication falls back to inserting when the tracked id no longer
   const created = await pgWorkforce.upsertJobApplication(pool, { id: "stale-id", candidateProfileId: "candidate-1", workforceRoleId: "role-1" });
   assert.equal(created.id, "application-2");
 });
+
+test("listWorkforceRoles scopes to the tenant and orders newest first via the table's own created_at", async () => {
+  const pool = stubPool([
+    [/^select \* from workforce_roles/, params => {
+      assert.equal(params[0], pgHealthIntakes.DEMO_TENANT_ID);
+      assert.equal(params[1], 50);
+      return { rows: [{ id: "role-1" }] };
+    }]
+  ]);
+  const rows = await pgWorkforce.listWorkforceRoles(pool);
+  assert.equal(rows.length, 1);
+  assert.match(pool.calls[0].sql, /order by created_at desc/);
+});
+
+test("listJobApplications is unscoped (the table has no tenant_id) and orders by the table's own submitted_at, not created_at", async () => {
+  const pool = stubPool([
+    [/^select \* from job_applications/, params => {
+      assert.equal(params[0], 50);
+      return { rows: [{ id: "application-1" }] };
+    }]
+  ]);
+  const rows = await pgWorkforce.listJobApplications(pool);
+  assert.equal(rows.length, 1);
+  assert.match(pool.calls[0].sql, /order by submitted_at desc/);
+});

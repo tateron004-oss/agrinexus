@@ -58,3 +58,16 @@ test("upsertTradeOrder defaults missing numeric fields to 0 rather than erroring
   ]);
   await pgTrade.upsertTradeOrder(pool, { orderNumber: "NX-TXN-2", countryId: "kenya" });
 });
+
+test("listTradeOrders scopes to the tenant, newest first", async () => {
+  const pool = stubPool([
+    [/^select \* from trade_orders/, params => {
+      assert.equal(params[0], pgHealthIntakes.DEMO_TENANT_ID);
+      assert.equal(params[1], 50);
+      return { rows: [{ id: "order-1" }] };
+    }]
+  ]);
+  const rows = await pgTrade.listTradeOrders(pool);
+  assert.equal(rows.length, 1);
+  assert.match(pool.calls[0].sql, /order by created_at desc/);
+});
