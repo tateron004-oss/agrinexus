@@ -70,6 +70,10 @@ test("animals in Swahili: recorded as told, keeping a tag the English tools find
   assert.match(await f.say("Bella amekufa"), /Nimweke Bella kuwa ameondoka/); assert.match(await f.say("sawa"), /Bella amewekwa kuwa ameondoka/);
   assert.match(await f.say("Onyesha mifugo yangu"), /Una rekodi 2 za wanyama/);
   assert.equal(await f.say("Nimemchanja Zed dhidi ya X"), null, "an animal that is not there is left to normal planning");
+  await f.say("Ongeza ng'ombe anayeitwa Zuri, jike");
+  assert.match(await f.say("Ondoa Zuri"), /Nimwondoe Zuri na kuacha kutunza rekodi zake\? Sema ndiyo kuendelea, au hapana kuacha\./, "removing an animal by its bare name (no species word) works, matching the English tools");
+  assert.match(await f.say("ndiyo"), /Nimeondoa Zuri/);
+  assert.equal(await f.say("Ondoa mfanyakazi Zaidi"), "Sina mfanyakazi anayeitwa Zaidi.", "a bare 'ondoa' for an unknown name still answers instead of falling through silently");
 });
 
 test("workers and jobs in Swahili", async () => {
