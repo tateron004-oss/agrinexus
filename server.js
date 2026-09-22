@@ -46712,7 +46712,8 @@ async function api(req, res, url) {
         // sensitive facts only -- never the stored value or password itself -- gated behind an explicit
         // query param so normal client behavior is completely unaffected.
         const debug = url.searchParams.get("debug") === "1"
-          ? { totalUsers: db.users.length, candidateFound: Boolean(candidate), storedLength: stored.length, storedIsHashed: isHashed }
+          ? { totalUsers: db.users.length, candidateFound: Boolean(candidate), storedLength: stored.length, storedIsHashed: isHashed,
+              pepperConfigured: Boolean(process.env.PASSWORD_PEPPER), pepperLength: String(process.env.PASSWORD_PEPPER || "").length }
           : undefined;
         return send(res, 401, { error: "Invalid demo credentials", ...(debug ? { debug } : {}) });
       }
