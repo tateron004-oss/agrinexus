@@ -16,11 +16,16 @@ const board = require("./board.js");
 const library = require("./library.js");
 const reports = require("./reports.js");
 const swahili = require("./swahili.js");
+const swahiliLand = require("./swahili-land.js");
+const swahiliPeople = require("./swahili-people.js");
+const swahiliBusiness = require("./swahili-business.js");
 
 // The farm toolkit's front door. Order: an open guided conversation first (the person's words are its answers), then each tool in turn.
 // A tool answers only when the words are plainly for it (returns null otherwise), so everything else carries on to normal planning.
 // A tool may answer with a string (a conversational reply) or { plan } (a governed step, such as a printable report).
-const MODULES = [swahili, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
+const MODULES = [swahili, swahiliLand, swahiliPeople, swahiliBusiness, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
+const YES_SW = /^(?:ndiyo|ndio|sawa|naam|ok|sawa kabisa|endelea|fanya hivyo)$/i;
+const NO_SW = /^(?:hapana|la|siyo|sitaki|acha|usifanye|si sasa)$/i;
 const TEMPLATES = Object.assign({}, ...MODULES.map(mod => mod.templates || {}));
 const CONFIRMS = Object.assign({
   // Removing any record (a field, an animal, a buyer...) after the person said yes. Records are soft-deleted.
@@ -53,9 +58,11 @@ async function farmWorkTurn({ text, store, tenantId, userId, now = new Date(), t
       const session = await store.getSession({ tenantId, userId });
       if (session && !expired(session)) {
         if (session.collection === "_confirm") {
-          if (YES.test(ctx.text) && CONFIRMS[session.action?.type]) { await wrapped.clearSession({ tenantId, userId }); return await CONFIRMS[session.action.type](ctx, session.action); }
+          // A question asked in Swahili is answered in Swahili ("ndiyo", "sawa", "hapana").
+          const swahiliAsk = session.action?.language === "sw";
+          if ((YES.test(ctx.text) || (swahiliAsk && YES_SW.test(ctx.text))) && CONFIRMS[session.action?.type]) { await wrapped.clearSession({ tenantId, userId }); return await CONFIRMS[session.action.type](ctx, session.action); }
           await wrapped.clearSession({ tenantId, userId });
-          if (NO.test(ctx.text)) return "Okay, I've left it as it is.";
+          if (NO.test(ctx.text) || (swahiliAsk && NO_SW.test(ctx.text))) return swahiliAsk ? "Sawa, nimeacha kama ilivyo." : "Okay, I've left it as it is.";
           // anything else is a new request: the question is dropped and the words are handled normally below
         } else if (TEMPLATES[session.collection]) {
           const answer = await continueGuided(ctx, session, TEMPLATES[session.collection]);
