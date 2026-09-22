@@ -62,8 +62,11 @@ async function resolveBusinessClient(businessRequest, command = "") {
 function extractLeadArgs(command = "", args = {}) {
   const text = String(command || "");
   const nameMatch = text.match(/\b(?:named|called)\s+["']?([^"'.,\n]{2,80})["']?/i)
-    || text.match(/\b(?:customer|donor|lead|client|sponsor|volunteer)\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/);
-  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer)\b/i);
+    || text.match(/\b(?:customer|donor|lead|client|sponsor|volunteer|member|congregant)\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/);
+  // "member"/"congregant" -- a church or congregation's own word for the
+  // person being tracked -- is kept verbatim rather than forced into an
+  // existing bucket; computeBusinessDashboard below counts it too.
+  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|member|congregant)\b/i);
   const contactMatch = text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   return {
@@ -71,6 +74,54 @@ function extractLeadArgs(command = "", args = {}) {
     type: sanitizeText(args.type || (typeMatch ? typeMatch[1].toLowerCase() : "customer"), 40),
     contact: sanitizeText(args.contact || (contactMatch ? contactMatch[1].trim() : ""), 160)
   };
+}
+
+// A real conversational intake: name, contact and stated need captured from
+// what was actually said and appended as a persisted lead row, rather than
+// nexus/business/templates.js's clientIntakeFormTemplate() -- a blank
+// Markdown form with underscored fields for someone to print and hand-fill,
+// which captures nothing anyone said. "for NAME" is checked first so
+// "take an intake for Grace Otieno" doesn't have its name swallowed by the
+// looser "named/called" pattern matching something later in the sentence.
+function extractIntakeArgs(command = "", args = {}) {
+  const text = String(command || "");
+  const nameMatch = text.match(/\bintake\s+for\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/i)
+    || text.match(/\b(?:named|called)\s+["']?([^"'.,\n]{2,80})["']?/i);
+  const contactMatch = text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
+    || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
+  const needMatch = text.match(/\b(?:needs?|regarding|about)\s+([^"'\n.]{3,300})(?:[.?!]|$)/i);
+  return {
+    name: sanitizeText(args.name || (nameMatch ? nameMatch[1].trim() : ""), 160),
+    contact: sanitizeText(args.contact || (contactMatch ? contactMatch[1].trim() : ""), 160),
+    need: sanitizeText(args.need || (needMatch ? needMatch[1].trim() : ""), 300)
+  };
+}
+
+// Infers which of strategy.js's real agent profiles fits the request, so
+// "draft an investor pitch" produces the Investor Agent template and
+// "help with a grant strategy" produces the Grant Writing Agent template,
+// rather than everything collapsing onto the generic "coach" profile.
+const STRATEGY_PROFILE_MATCHERS = [
+  ["investor", /\binvestor|pitch deck|funding pitch|raise\b/i],
+  ["grants", /\bgrant\b/i],
+  ["donors", /\bdonor|stewardship|fundraising\b/i],
+  ["volunteers", /\bvolunteer\b/i],
+  ["marketing", /\bmarketing\b/i],
+  ["finance", /\bfinanc(?:e|ial)|cash flow|budget(?:ing)?\b/i],
+  ["government", /\bgovernment|public[- ]sector|curriculum|institutional\b/i],
+  ["research", /\bresearch|market research|competitor\b/i],
+  ["product", /\bproduct|feature|roadmap\b/i],
+  ["operations", /\boperations|daily execution|weekly priorit(?:y|ies)\b/i],
+  ["content", /\bcontent|script|deck|one-pager|copy\b/i],
+  ["partnerships", /\bpartnership|partner(?:ing)?\b/i],
+  ["technical", /\btechnical|deployment|integration\b/i],
+  ["business", /\blaunch (?:plan|kit)\b/i],
+  ["strategy", /\bstrategy|strategic plan\b/i]
+];
+function inferStrategyProfile(command = "") {
+  const text = String(command || "");
+  for (const [profile, regex] of STRATEGY_PROFILE_MATCHERS) if (regex.test(text)) return profile;
+  return "coach";
 }
 
 // Money the people using Nexus actually deal in. Order matters: the country-specific shillings come before plain "shillings".
@@ -290,6 +341,11 @@ function computeBusinessDashboard(editable) {
   const donors = editable.leads.filter(row => row.type === "donor").length;
   const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
   const volunteers = editable.leads.filter(row => row.type === "volunteer").length;
+  // Any type outside the original four (e.g. "member"/"congregant" for a
+  // church, or "client" from a conversational intake) is still real, saved
+  // data -- counted here so it never silently disappears from the summary,
+  // rather than hardcoding every new church/industry word as its own bucket.
+  const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer"].includes(row.type)).length;
   const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
   const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
@@ -298,7 +354,7 @@ function computeBusinessDashboard(editable) {
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
   return {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
-    customers, donors, sponsors, volunteers,
+    customers, donors, sponsors, volunteers, others,
     invoiceTotal, unpaidInvoices,
     grantsRequested, grantsAwarded,
     openTasks, totalTasks: editable.tasks.length,
@@ -314,14 +370,20 @@ function computeBusinessDashboard(editable) {
 const READ_INTENTS = new Set(["dashboard", "list", "financeSummary"]);
 
 function classify(command = "") {
-  const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|admin[- ]assistant|workspace)s?";
-  const wantsBusinessDashboard = /\b(business|nonprofit)\b/i.test(command) && /\b(dashboard|doing|performing|performance summary|financial summary)\b/i.test(command);
+  // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
+  // not a government ministry -- server.js's legacy weather/safety code uses
+  // "ministry" the government way, in a completely different command shape,
+  // so there is no real collision here) let a church or faith community use
+  // this same workspace with its own words rather than being forced to say
+  // "business" or "nonprofit".
+  const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|church(?:es)?|congregation|parish|admin[- ]assistant|workspace)s?";
+  const wantsBusinessDashboard = /\b(business|nonprofit|church|congregation|parish)\b/i.test(command) && /\b(dashboard|doing|performing|performance summary|financial summary)\b/i.test(command);
   const wantsList = (
     (/\b(list|show)\b/i.test(command) && new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command))
     || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
-  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer)\b/i.test(command);
+  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant)\b/i.test(command);
   // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
   const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
@@ -341,14 +403,33 @@ function classify(command = "") {
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
   const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
   const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft)\b/i.test(command);
+  // Confirmed live: business.manage/business.query already existed for every
+  // OTHER business operation, but "strategy" (service.js's operation===
+  // "strategy", which calls strategy.js's real agent-profile templates --
+  // investor pitch, marketing strategy, grant strategy, and 12 more) was only
+  // ever reachable from the dashboard's own "Generate" button
+  // (public/business-services.js), which posts straight to the REST endpoint
+  // and never goes through this classifier. A typed/spoken "help me draft an
+  // investor pitch strategy" had no route to it at all. Excludes the other
+  // generate-* intents' own phrasing (an "intake form"/"business plan pdf"/
+  // "marketing flyer" request should still resolve to those, not this).
+  const wantsGenerateStrategy = !wantsGenerateDocuments && !wantsGenerateBusinessPlanPdf && !wantsGenerateMarketing &&
+    /\b(?:create|generate|draft|write|make|help (?:me )?(?:with|write|draft))\b/i.test(command) &&
+    /\b(strategy|strategic plan|pitch|investor pitch|pitch deck|business plan outline|marketing strategy|grant strategy|donor strategy|fundraising strategy|volunteer strategy|financial plan|partnership strategy|launch plan|launch kit)\b/i.test(command);
+  // A real, conversational client/customer/congregant intake -- captures a
+  // name, contact and stated need as a persisted lead row -- is distinct from
+  // wantsGenerateDocuments' "create an intake form" (a blank, unfilled
+  // Markdown template for someone to print and hand-fill). Excluding "form"
+  // keeps the two from colliding.
+  const wantsPerformIntake = /\b(?:perform|start|take|record|do|complete|begin)\b/i.test(command) && /\bintake\b/i.test(command) && !/\bform\b/i.test(command);
   // Narrower than server.js's own bare fallback (which assumes ANY command
   // reaching that handler is business-related, since the model already chose
   // the tool) -- this classifier is also reached from a deterministic fast
   // path that runs BEFORE any tool selection, against every typed command in
   // the app, so it must not swallow unrelated text into a bogus "create a
   // workspace called <command>" plan. Require an explicit start/create verb
-  // alongside the business/nonprofit word.
-  const wantsCreateWorkspace = /\b(business|nonprofit|non-profit|ngo)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command);
+  // alongside the business/nonprofit/church word.
+  const wantsCreateWorkspace = /\b(business|nonprofit|non-profit|ngo|church|congregation|parish)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command);
 
   if (wantsBusinessDashboard) return "dashboard";
   if (wantsFinanceSummary) return "financeSummary";
@@ -364,9 +445,11 @@ function classify(command = "") {
   if (wantsUpdateTaskStatus) return "updateTaskStatus";
   if (wantsSyncAppointment) return "syncAppointment";
   if (wantsAddAppointment) return "addAppointment";
+  if (wantsPerformIntake) return "performIntake";
   if (wantsGenerateDocuments) return "generateDocuments";
   if (wantsGenerateBusinessPlanPdf) return "generateBusinessPlanPdf";
   if (wantsGenerateMarketing) return "generateMarketing";
+  if (wantsGenerateStrategy) return "generateStrategy";
   if (wantsCreateWorkspace) return "createWorkspace";
   return null;
 }
@@ -389,6 +472,9 @@ function precheck(command = "", args = {}) {
   if (intent === "addLead") {
     const lead = extractLeadArgs(command, args);
     if (!lead.name) clarification = `What is the name of the ${lead.type} to add?`;
+  } else if (intent === "performIntake") {
+    const intake = extractIntakeArgs(command, args);
+    if (!intake.name) clarification = "What is the name of the person for this intake?";
   } else if (intent === "logTransaction") {
     const transaction = extractTransactionArgs(command, args);
     if (!transaction.amount || transaction.amount <= 0) clarification = `What is the amount for this ${transaction.type}, and in which currency?`;
@@ -439,7 +525,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     }
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const dashboard = computeBusinessDashboard(resolved.client.data.editable);
-    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""}); ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers; $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""}); ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""}; $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
     return { status: "completed", localOnly: true, response, businessDashboard: dashboard, summary: response };
   }
 
@@ -480,6 +566,22 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Added ${lead.name} as a ${lead.type} to "${workspaceName}".`;
+    return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
+  }
+
+  if (intent === "performIntake") {
+    const intake = extractIntakeArgs(command, args);
+    if (!intake.name) return { status: "needs-input", response: "What is the name of the person for this intake?", missingInformation: ["name"] };
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before taking an intake.", missingInformation: ["businessName"] };
+    const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    const needPhrase = intake.need ? `, who needs ${intake.need}` : "";
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can record an intake for ${intake.name}${needPhrase} in "${workspaceName}". Should I go ahead?` };
+    const editable = { ...resolved.client.data.editable, leads: [...resolved.client.data.editable.leads,
+      { name: intake.name, contact: intake.contact, type: "client", need: intake.need, stage: "new", nextAction: intake.need ? `Follow up on: ${intake.need}` : "Follow up", followUpDate: "" }] };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
+    const response = `Recorded an intake for ${intake.name}${needPhrase} in "${workspaceName}".`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 
@@ -688,6 +790,20 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     return { status: "completed", localOnly: true, response, businessRecord: generated?.body || null, summary: response };
   }
 
+  if (intent === "generateStrategy") {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before drafting a strategy document.", missingInformation: ["businessName"] };
+    const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    const profile = inferStrategyProfile(command);
+    const { agentProfiles } = require("./strategy");
+    const profileName = agentProfiles[profile]?.name || "Strategy Agent";
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can draft a ${profileName} planning outline for "${workspaceName}". This is a draft structure template, not live research or an investor assessment -- review it with someone qualified before use. Should I go ahead?` };
+    const generated = await businessRequest({ method: "POST", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}/generate`,
+      body: { operation: "strategy", profile, expectedVersion: resolved.client.version } });
+    const response = `Drafted a ${profileName} planning outline for "${workspaceName}". Open Business services to review and download it.`;
+    return { status: "completed", localOnly: true, response, businessRecord: generated?.body || null, summary: response };
+  }
+
   // Fallback: create a new workspace. Reached for `createWorkspace` and,
   // matching the legacy handler's own final fallback, anything else the
   // caller has already decided is business-related (e.g. the model chose
@@ -714,5 +830,5 @@ module.exports = Object.freeze({
   extractBusinessName, resolveBusinessClient, extractLeadArgs, extractTransactionArgs,
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
-  computeBusinessDashboard
+  extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard
 });

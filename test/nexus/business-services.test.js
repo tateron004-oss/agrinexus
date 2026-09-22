@@ -35,6 +35,20 @@ test("business draft generation escapes HTML and does not invent leads or comple
   assert.match(files["assistant-studio/assistant-preview.md"].content, /no AI or message was sent/);
 });
 
+// Explicit body.industry always wins; the keyword list is only a fallback
+// guess and was previously so narrow (12 local-service trades) that most
+// non-farm, non-service businesses fell to the generic "Local Service
+// Business" label. Broadened to cover common retail/tech/healthcare/church/
+// education cases, and the fallback itself renamed to the more universal
+// "Small Business".
+test("inferBusiness supports any industry: explicit text always wins, and the keyword fallback covers more than local-service trades", () => {
+  assert.equal(templates.inferBusiness({ businessName: "X", industry: "Aerospace Consulting" }).industry, "Aerospace Consulting");
+  assert.equal(templates.inferBusiness({ businessName: "X", request: "I run a small software startup" }).industry, "Technology / Software");
+  assert.equal(templates.inferBusiness({ businessName: "X", request: "I run a neighborhood restaurant" }).industry, "Restaurant / Food Service");
+  assert.equal(templates.inferBusiness({ businessName: "X", request: "our church needs a workspace" }).industry, "Church / Faith Community");
+  assert.equal(templates.inferBusiness({ businessName: "X", request: "no keyword matches anything here" }).industry, "Small Business");
+});
+
 test("business records use authenticated owner, explicit consent and existing access control", async () => {
   const f = fixture();
   await assert.rejects(() => f.service.create(f.context, { businessName: "Cooperative" }), error => error.code === "business_consent_required");

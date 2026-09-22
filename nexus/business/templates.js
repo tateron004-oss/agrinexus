@@ -31,6 +31,11 @@ function inferBusiness(body) {
   const combined = [request, objective, audience].filter(Boolean).join(" ");
   const nameMatch = combined.match(/(?:business named|called|for)\s+([A-Z][A-Za-z0-9&' ]{2,40})/);
   const lower = combined.toLowerCase();
+  // Free text (body.industry) always wins and is used as-is -- this list is
+  // only a fallback guess from the request/objective/audience text, so it
+  // does not need to be exhaustive to support "any industry"; it is kept
+  // broad so more requests get a specific label instead of falling to the
+  // generic default below.
   const industries = [
     ["detailing", "Mobile Detailing"],
     ["cleaning", "Cleaning Service"],
@@ -42,10 +47,27 @@ function inferBusiness(body) {
     ["daycare", "Childcare"],
     ["fitness", "Fitness Coaching"],
     ["nonprofit", "Nonprofit"],
+    ["church", "Church / Faith Community"],
+    ["congregation", "Church / Faith Community"],
     ["farm", "Agriculture"],
-    ["consult", "Consulting"]
+    ["consult", "Consulting"],
+    ["retail", "Retail"],
+    ["restaurant", "Restaurant / Food Service"],
+    ["software", "Technology / Software"],
+    ["tech startup", "Technology / Software"],
+    ["manufactur", "Manufacturing"],
+    ["real estate", "Real Estate"],
+    ["clinic", "Healthcare"],
+    ["healthcare", "Healthcare"],
+    ["wellness", "Health & Wellness"],
+    ["photograph", "Photography"],
+    ["event planning", "Event Planning"],
+    ["tutoring", "Education / Tutoring"],
+    ["school", "Education"],
+    ["construction", "Construction"],
+    ["repair", "Repair Services"]
   ];
-  const industry = body.industry || (industries.find(([needle]) => lower.includes(needle))?.[1] || "Local Service Business");
+  const industry = body.industry || (industries.find(([needle]) => lower.includes(needle))?.[1] || "Small Business");
   const locationMatch = combined.match(/\bin\s+([A-Z][A-Za-z '-]{2,40})(?:\.|,|$)/);
   const location = body.location || (locationMatch ? locationMatch[1].trim() : "the local community");
   const businessName = body.businessName || (nameMatch ? nameMatch[1].trim() : `${location === "the local community" ? "Local" : location} ${industry}`);

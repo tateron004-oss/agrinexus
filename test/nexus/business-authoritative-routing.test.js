@@ -27,6 +27,56 @@ test("classify() recognizes every business sub-intent and returns null for unrel
   assert.equal(voiceDispatch.classify("Play some music"), null);
 });
 
+// Confirmed live: a typed/spoken "help me draft an investor pitch strategy"
+// never reached strategy.js's real agent-profile templates at all -- the
+// "strategy" operation was only ever posted from the dashboard's own
+// "Generate" button, bypassing this classifier entirely.
+test("classify() recognizes a strategy-document request, distinct from the other generate-* intents", () => {
+  assert.equal(voiceDispatch.classify("Draft an investor pitch strategy"), "generateStrategy");
+  assert.equal(voiceDispatch.classify("Help me with a grant strategy"), "generateStrategy");
+  // These must still resolve to their own, older intents, not be swallowed by the new one.
+  assert.equal(voiceDispatch.classify("Create an intake form"), "generateDocuments");
+  assert.equal(voiceDispatch.classify("Generate the business plan PDF"), "generateBusinessPlanPdf");
+  assert.equal(voiceDispatch.classify("Create a marketing flyer"), "generateMarketing");
+});
+
+test("inferStrategyProfile maps request language onto strategy.js's real agent profiles", () => {
+  assert.equal(voiceDispatch.inferStrategyProfile("Draft an investor pitch"), "investor");
+  assert.equal(voiceDispatch.inferStrategyProfile("Help with a grant strategy"), "grants");
+  assert.equal(voiceDispatch.inferStrategyProfile("Write a donor stewardship plan"), "donors");
+  assert.equal(voiceDispatch.inferStrategyProfile("Give me a general business strategy"), "strategy");
+  assert.equal(voiceDispatch.inferStrategyProfile("Help me think this through"), "coach");
+});
+
+// A church or congregation should be able to use this same workspace with
+// its own words ("church", "congregation", "member") instead of being forced
+// to say "business" or "nonprofit" -- confirmed previously MISSING entirely.
+test("classify() recognizes church/congregation workspace language, using the same real backend as any other business", () => {
+  assert.equal(voiceDispatch.classify("Start a church called Grace Chapel"), "createWorkspace");
+  assert.equal(voiceDispatch.classify("How is my congregation doing"), "dashboard");
+  assert.equal(voiceDispatch.classify("Add a member named John Otieno"), "addLead");
+  const lead = voiceDispatch.extractLeadArgs("Add a member named John Otieno", {});
+  assert.equal(lead.name, "John Otieno");
+  assert.equal(lead.type, "member");
+});
+
+// A real, conversational intake -- distinct from generating the blank,
+// unfilled "Client_Intake_Form.md" template.
+test("classify() and extractIntakeArgs perform a real conversational intake, distinct from generating the blank template", () => {
+  assert.equal(voiceDispatch.classify("Create an intake form"), "generateDocuments");
+  assert.equal(voiceDispatch.classify("Take an intake for Grace Otieno"), "performIntake");
+  const intake = voiceDispatch.extractIntakeArgs("Take an intake for Grace Otieno, who needs help with a small loan", {});
+  assert.equal(intake.name, "Grace Otieno");
+  assert.match(intake.need, /loan/);
+});
+
+test("precheck() asks for a name before a performIntake action proceeds", () => {
+  const result = voiceDispatch.precheck("Take an intake", {});
+  assert.equal(result.intent, "performIntake");
+  assert.equal(result.toolId, "business.manage");
+  assert.match(result.clarification, /name of the person/i);
+});
+
 test("precheck() surfaces the same missing-field clarification run() would ask for, without touching a database", () => {
   const withMissingName = voiceDispatch.precheck("Add a new donor", {});
   assert.equal(withMissingName.intent, "addLead");
@@ -153,6 +203,46 @@ test("createBusinessExecutor throws a real, honest error instead of a false succ
     () => execute({ input: { command: "Add a donor named Grace Otieno" }, context: f.context }),
     error => error.code === "business_action_incomplete" && /workspace yet/i.test(error.message)
   );
+});
+
+test("createBusinessExecutor adds a real church member, and the dashboard counts it instead of losing it", async () => {
+  const f = fixture();
+  const execute = createBusinessExecutor({ repository: f.repository, access: f.access, consents: f.consents, env: {} });
+  await execute({ input: { command: "Start a church called Grace Chapel" }, context: f.context });
+  const added = await execute({ input: { command: "Add a member named John Otieno" }, context: f.context });
+  assert.match(added.response, /John Otieno/);
+  const row = [...f.rows.values()][0];
+  assert.equal(row.data.editable.leads[0].type, "member");
+  const dashboard = await execute({ input: { command: "How's my church doing" }, context: f.context });
+  // A "member" is not one of the original customer/donor/sponsor/volunteer
+  // buckets -- it must still be counted, not silently disappear.
+  assert.equal(dashboard.businessDashboard.others, 1);
+  assert.match(dashboard.response, /1 other contact/);
+});
+
+test("createBusinessExecutor performs a real conversational intake, persisting name/contact/need as a lead row", async () => {
+  const f = fixture();
+  const execute = createBusinessExecutor({ repository: f.repository, access: f.access, consents: f.consents, env: {} });
+  await execute({ input: { command: "Start a nonprofit called Real Farms Cooperative" }, context: f.context });
+  const intake = await execute({ input: { command: "Take an intake for Grace Otieno, who needs help with a small loan" }, context: f.context });
+  assert.match(intake.response, /Grace Otieno/);
+  assert.match(intake.response, /loan/);
+  const row = [...f.rows.values()][0];
+  assert.equal(row.data.editable.leads.length, 1);
+  assert.equal(row.data.editable.leads[0].name, "Grace Otieno");
+  assert.equal(row.data.editable.leads[0].type, "client");
+  assert.match(row.data.editable.leads[0].need, /loan/);
+});
+
+test("createBusinessExecutor generates a real strategy document, using the inferred agent profile", async () => {
+  const f = fixture();
+  const execute = createBusinessExecutor({ repository: f.repository, access: f.access, consents: f.consents, env: {} });
+  await execute({ input: { command: "Start a nonprofit called Real Farms Cooperative" }, context: f.context });
+  const generated = await execute({ input: { command: "Draft an investor pitch strategy" }, context: f.context });
+  assert.match(generated.response, /Investor Agent/);
+  const row = [...f.rows.values()][0];
+  assert.ok(row.data.files["strategy/investor.md"], "the real strategy file was written to the workspace, not just described in the response");
+  assert.match(row.data.files["strategy/investor.md"].content, /Investor Agent/);
 });
 
 test("createBusinessExecutor requires a repository", () => {

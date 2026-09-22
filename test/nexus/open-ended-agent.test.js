@@ -322,6 +322,23 @@ test("every remaining complete gauntlet request has a deterministic governed pla
   assert.equal(completeRemainingWorkspacePlan("Tell me about jobs.", catalog), null);
 });
 
+// Confirmed missing: a general youth-education request like "help this youth
+// learn to read" or "give my student a lesson" has no save/progress verb at
+// all, so the original narrower matcher never fired and it fell through to
+// the free AI-planner guess instead of the real, reachable "learning"
+// application.
+test("a general youth/education request reaches the real learning application without needing 'save'/'progress' wording", () => {
+  const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "knowledge.search" }] };
+  for (const command of ["Help this youth learn to read.", "Give my student a lesson.", "Teach me about education savings.", "Help me with my homework."]) {
+    const plan = completeRemainingWorkspacePlan(command, catalog);
+    assert.equal(plan.application, "learning", command);
+    assert.equal(plan.steps[0].toolId, "knowledge.search", command);
+    assert.equal(plan.steps[0].input.saveProgress, true, command);
+  }
+  assert.equal(completeRemainingWorkspacePlan("Tell me about the weather.", catalog), null);
+});
+
 test("strict planning schema encodes free-form tool input as JSON text and normalizes it", () => {
   assert.equal(PLAN_SCHEMA.properties.steps.items.properties.input.type, "string");
   assert.deepEqual(normalizePlan({ steps: [{ input: '{"location":"Kisumu"}' }] }).steps[0].input, { location: "Kisumu" });

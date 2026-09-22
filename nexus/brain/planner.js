@@ -871,7 +871,15 @@ function completeRemainingWorkspacePlan(text, catalog) {
     const place = goal.match(/\b(?:near|in|around)\s+([a-z][a-z .'-]*?)(?=\s+(?:and|then|with)\b|[,.?]|$)/i)?.[1]?.trim();
     return plan("pharmacy", "pharmacy.find", "Find governed pharmacy support", { query: goal, ...(place ? { location: place } : {}) });
   }
-  if (/\b(create|make|prepare)\b/i.test(goal) && /\b(lesson|literacy|learning)\b/i.test(goal) && /\b(save|progress)\b/i.test(goal))
+  // Broadened from a narrow "lesson|literacy|learning" + explicit "save/progress"
+  // match: real requests like "help this youth learn to read" or "give my
+  // student a lesson" have no save/progress verb at all and were falling
+  // through to the free AI-planner guess. saveProgress: true is still set
+  // regardless of the words actually spoken -- the "learning" application's
+  // real completion contract (nexus/apps/capability-completion-contracts.js)
+  // requires it on the executor's output, not on the user's own phrasing.
+  if (/\b(create|make|prepare|help|teach|give|start|tutor)\b/i.test(goal) &&
+      /\b(lesson|literacy|learning|education|youth|student|homework|study|tutor(?:ing)?|curriculum)\b/i.test(goal))
     return plan("learning", "knowledge.search", "Create and save governed learning content",
       { query: goal, lesson: goal, content: goal, saveProgress: true });
   if (/\b(find|search|show)\b/i.test(goal) && /\b(jobs?|work|opportunities)\b/i.test(goal) && /\b(select|listing|sources?)\b/i.test(goal))
