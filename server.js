@@ -154,7 +154,13 @@ async function authoritativeRuntimeUser(user) {
     // silently swallowed, so no device could ever be registered and a
     // scheduled reminder could never be delivered as a push, whatever the
     // VAPID configuration. Guests stay restricted.
-    : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write", "devices:write"];
+    // privacy:delete lets a signed-in user request erasure of THEIR OWN data
+    // (control-api.js's requestDeletion still requires the separate, never-
+    // granted-here privacy:delete:any before subjectId may name someone
+    // else). Confirmed live: without it, every real user's own "erase my
+    // data" request was rejected with a 403, so #549/#550's fix to actually
+    // run and correctly erase a deletion request was unreachable by anyone.
+    : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write", "devices:write", "privacy:delete"];
   if (usingPostgresState()) {
     const pool = getPgPool();
     const email = String(user.email || `${user.id}@local.agrinexus.invalid`).toLowerCase();
