@@ -47,8 +47,12 @@ async function verifyPassword(pool, email, password) {
   return user;
 }
 
-async function createUser(pool, { email, displayName, password, tenantId = DEMO_TENANT_ID }) {
-  const passwordHash = hashPassword(password);
+// `passwordHash` lets a caller that already holds a real scrypt hash (e.g. the blob backfill script,
+// once the blob itself stores hashed passwords rather than plaintext) install it directly instead of
+// hashing `password` again -- hashing an already-hashed value would produce a hash of the hash, silently
+// making the account unloginable with the real password.
+async function createUser(pool, { email, displayName, password, passwordHash, tenantId = DEMO_TENANT_ID }) {
+  const resolvedHash = passwordHash || hashPassword(password);
   const result = await pool.query(
     `insert into users (tenant_id, email, display_name, password_hash)
      values ($1, $2, $3, $4)
@@ -57,7 +61,7 @@ async function createUser(pool, { email, displayName, password, tenantId = DEMO_
        password_hash = excluded.password_hash,
        updated_at = now()
      returning id, tenant_id, email, display_name, status`,
-    [tenantId, email, displayName, passwordHash]
+    [tenantId, email, displayName, resolvedHash]
   );
   return result.rows[0];
 }
