@@ -69,6 +69,21 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
     "retention.sweep": async ({ job }) => ({ purged: await runtime.dataLifecycle.purgeExpired({ limit: job.payload?.limit || 100 }) }),
     "deletion.execute": async ({ job }) => runtime.dataLifecycle.executeDeletion({ tenantId: job.tenant_id,
       requestId: required(job.payload?.requestId, "Deletion request ID") }),
+    // Self-healing sweep for erasure requests, the same shape as agent.sweep-advanceable-tasks: requestDeletion() enqueues
+    // "deletion.execute" immediately, so this only ever finds one that was lost (a crash between the insert and the enqueue, a dropped job) --
+    // a request must never be able to sit at 'queued' forever. executeDeletion is idempotent (its updates and the memory-items delete are all
+    // no-ops once already applied), so re-enqueuing one that is in fact already mid-flight or done is harmless.
+    "deletion.sweep": async ({ job }) => {
+      const staleMs = Number(job.payload?.staleMs || 120000);
+      const stale = await runtime.dataLifecycle.listStaleQueued({ staleBefore: new Date(Date.now() - staleMs), limit: job.payload?.limit || 50 });
+      let requeued = 0;
+      for (const request of stale) {
+        await runtime.jobs.enqueue({ tenantId: request.tenant_id, jobType: "deletion.execute",
+          idempotencyKey: `deletion-sweep:${request.request_id}:${createId("job")}`, payload: { requestId: request.request_id } });
+        requeued += 1;
+      }
+      return { scanned: stale.length, requeued };
+    },
     // Advances one task exactly the way BehaviorSpine.turn() would inside a
     // live conversation, minus the live render -- the only caller that ever
     // needed to be a live HTTP request. Triggered immediately when an

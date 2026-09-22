@@ -38,3 +38,20 @@ test("retention and deletion jobs use the authoritative lifecycle repository", a
   assert.equal((await handlers["deletion.execute"]({ job: { tenant_id: "t", payload: { requestId: "r" } } })).state, "verified");
   assert.deepEqual(calls[1], { tenantId: "t", requestId: "r" });
 });
+
+// "deletion.execute" is internal-only (see control-api.test.js's createSchedule allowlist test): requestDeletion() enqueues it immediately,
+// so this sweep should only ever have to catch a lost one. Confirms it re-enqueues by requestId, not by re-running executeDeletion itself
+// directly (so retries/backoff still go through the normal durable job path), and that an empty scan is a no-op.
+test("deletion.sweep re-enqueues stale queued erasure requests, not the ones already picked up", async () => {
+  const enqueued = [];
+  const runtime = { notifications: {}, schedules: {}, jobs: { enqueue: async job => { enqueued.push(job); return { job_id: "j1" }; } },
+    dataLifecycle: { listStaleQueued: async () => [{ tenant_id: "t1", request_id: "req_1" }, { tenant_id: "t2", request_id: "req_2" }] } };
+  const outcome = await createHandlers({ runtime })["deletion.sweep"]({ job: { payload: {} } });
+  assert.deepEqual(outcome, { scanned: 2, requeued: 2 });
+  assert.equal(enqueued.length, 2);
+  assert.equal(enqueued[0].tenantId, "t1"); assert.equal(enqueued[0].jobType, "deletion.execute"); assert.equal(enqueued[0].payload.requestId, "req_1");
+  assert.match(enqueued[0].idempotencyKey, /^deletion-sweep:req_1:/);
+  assert.notEqual(enqueued[0].idempotencyKey, enqueued[1].idempotencyKey.replace("req_2", "req_1"), "each sweep pass gets its own idempotency key so a lost job can be retried");
+  const empty = { notifications: {}, schedules: {}, jobs: { enqueue: async () => { throw new Error("must not enqueue anything"); } }, dataLifecycle: { listStaleQueued: async () => [] } };
+  assert.deepEqual(await createHandlers({ runtime: empty })["deletion.sweep"]({ job: { payload: {} } }), { scanned: 0, requeued: 0 });
+});

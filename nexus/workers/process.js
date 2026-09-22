@@ -51,6 +51,15 @@ async function main() {
   // grace periods are measured in days, not minutes.
   const situationalAwarenessEscalationIntervalMs = Number(process.env.NEXUS_SITUATIONAL_AWARENESS_ESCALATION_POLL_MS || 6 * 60 * 60 * 1000);
   let lastSituationalAwarenessEscalationSweepAt = 0;
+  // "deletion.execute" is an internal-only job type that nothing schedules or claims unless something enqueues it (see requestDeletion's
+  // immediate enqueue and this sweep's self-healing role) -- a global, not-per-tenant scan, same reasoning as agent.sweep-advanceable-tasks.
+  // Erasure requests are rare and the whole point of this sweep is to catch a lost job promptly, so it checks every couple of minutes.
+  const deletionSweepIntervalMs = Number(process.env.NEXUS_DELETION_SWEEP_POLL_MS || 120000);
+  let lastDeletionSweepAt = 0;
+  // "retention.sweep" is the same kind of internal-only, nothing-enqueues-it job type: it was registered as a handler but had no trigger
+  // anywhere until this line. Artifacts expire on a day-scale retention window, not a live conversation, so a few checks a day is plenty.
+  const retentionSweepIntervalMs = Number(process.env.NEXUS_RETENTION_SWEEP_POLL_MS || 6 * 60 * 60 * 1000);
+  let lastRetentionSweepAt = 0;
   // Briefs go out at a chosen minute of the person's own day, so this checks about once a minute (a sent brief is remembered per local day).
   const briefIntervalMs = Number(process.env.NEXUS_BRIEF_POLL_MS || 60000);
   let lastBriefSweepAt = 0;
@@ -105,6 +114,16 @@ async function main() {
       lastSituationalAwarenessEscalationSweepAt = Date.now();
       try { await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.situational_awareness_escalation_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastDeletionSweepAt >= deletionSweepIntervalMs) {
+      lastDeletionSweepAt = Date.now();
+      try { const outcome = await handlers["deletion.sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.requeued) logger.info("worker.deletion_sweep", outcome); }
+      catch (error) { logger.error("worker.deletion_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastRetentionSweepAt >= retentionSweepIntervalMs) {
+      lastRetentionSweepAt = Date.now();
+      try { const outcome = await handlers["retention.sweep"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.purged?.length) logger.info("worker.retention_sweep", { purged: outcome.purged.length }); }
+      catch (error) { logger.error("worker.retention_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (!result.claimed) await delay(Number(process.env.NEXUS_WORKER_POLL_MS || 2000));
   }
