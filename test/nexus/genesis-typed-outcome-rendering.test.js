@@ -84,7 +84,7 @@ test("documents outcomes without a create/save/reopen lifecycle still render as 
   const created = [];
   const sandbox = {
     renderNexusAuthoritativeData: () => { const s = { dataset: {}, children: [], append(...n) { this.children.push(...n); } }; created.push(s); return s; },
-    document: { createElement: () => ({ dataset: {}, setAttribute() {} }) }
+    document: { createElement: () => ({ dataset: {}, setAttribute() {}, addEventListener() {} }) }
   };
   vm.createContext(sandbox);
   vm.runInContext(source + "\nthis.run = renderNexusAuthoritativeDocument;", sandbox);
@@ -96,5 +96,8 @@ test("documents outcomes without a create/save/reopen lifecycle still render as 
 
   const lifecycle = sandbox.run({ data: { documentId: "doc_1", savedVersion: 1, reopenVerified: true, content: "x" }, originalText: "x" });
   assert.equal(lifecycle.dataset.nexusDocumentLifecycle, "reopened");
-  assert.equal(lifecycle.children.length, 2, "a real lifecycle still gets the editor and status");
+  // Editor, status, and (added 2026-09-22, closing the "real file, no way to download it" gap on
+  // this exact lifecycle-complete path) a real Download button wired to the owner-scoped
+  // GET /api/nexus/runtime/documents/:id route.
+  assert.equal(lifecycle.children.length, 3, "a real lifecycle gets the editor, status, and download button");
 });

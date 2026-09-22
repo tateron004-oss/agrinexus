@@ -750,6 +750,18 @@ function resumePlan(text, catalog, byKind = {}) {
     steps: [{ clientStepId: "create-resume", title: "Create your resume", toolId: "resume.create", input, dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// "as a PDF"/"as a Word document"/etc, so a plainly-requested format isn't silently
+// dropped to documents.create's own default (txt) -- confirmed live, 2026-09-22 audit:
+// "save this as a PDF" produced a real .txt file because this fast path never looked.
+const DOCUMENT_FORMAT_WORDS = Object.freeze({
+  pdf: "pdf", docx: "docx", "word document": "docx", word: "docx", markdown: "md", md: "md",
+  txt: "txt", "text file": "txt", "plain text": "txt", json: "json"
+});
+function requestedDocumentFormat(goal) {
+  const match = /\bas\s+(?:an?\s+)?(pdf|docx|word document|word|markdown|md|text file|plain text|txt|json)\b/i.exec(goal);
+  return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] : null;
+}
+
 function completeDocumentPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(create|write|draft|make)\b/i.test(goal) || !/\b(document|plan|report|resume|résumé)\b/i.test(goal) ||
@@ -757,9 +769,10 @@ function completeDocumentPlan(text, catalog) {
   if (!catalog.tools.some(tool => tool.toolId === "documents.create") ||
       !catalog.applications.some(app => app.applicationId === "documents")) return null;
   const namedTitle = goal.match(/(?:called|titled|named)\s+["']?(.+?)(?=["']?(?:,|\s+then\b|\s+and\s+(?:save|open|reopen)\b|\.|$))/i)?.[1]?.trim();
+  const format = requestedDocumentFormat(goal);
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "create-document", title: "Create, save, and verify document",
-      toolId: "documents.create", input: { title: namedTitle || "Nexus document", content: goal, reopenAfterSave: true },
+      toolId: "documents.create", input: { title: namedTitle || "Nexus document", content: goal, reopenAfterSave: true, ...(format ? { format } : {}) },
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
