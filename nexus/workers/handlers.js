@@ -16,6 +16,7 @@ const AUTONOMOUS_OUTCOME_NOTIFICATION_KIND = "autonomous_task_outcome";
 // a new table. Its data carries no PHI, just why/when the nudge fired.
 const SITUATIONAL_AWARENESS_WORKSPACE_ID = "situational-awareness";
 const HEALTH_CHECKIN_NUDGE_RECORD_TYPE = "health_checkin_nudge";
+const FARM_LOG_NUDGE_RECORD_TYPE = "farm_log_nudge";
 
 function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
@@ -257,6 +258,101 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         escalated += 1;
       }
       return { scanned: candidates.length, escalated, skippedPaused };
+    },
+    // The farm-domain counterpart to situational-awareness.sweep -- same shape, but "gone quiet" is checked
+    // against the farm toolkit's own real activity (nexus_memory_items, purpose 'farm_records', via
+    // runtime.farmRecords.listStalePrincipals()) instead of the older nexus_records/health.record world,
+    // since that's where a farmer's actual fields/animals/stock/money/journal entries actually live.
+    "situational-awareness.farm-sweep": async ({ job }) => {
+      const staleMs = Number(job.payload?.staleMs || 14 * 24 * 60 * 60 * 1000);
+      const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.farmRecords.listStalePrincipals({ staleBefore: new Date(Date.now() - staleMs), limit });
+      const tenantCounts = new Map();
+      const tenantPaused = new Map();
+      let created = 0; let skippedPaused = 0;
+      for (const candidate of candidates) {
+        const tenantId = candidate.tenant_id; const subjectId = candidate.principal_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
+        const recentNudges = await runtime.records.list({ tenantId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: FARM_LOG_NUDGE_RECORD_TYPE, limit: 1 });
+        const lastNudge = recentNudges[0];
+        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
+          correlationId: createId("event"), text: "Kyro noticed no recent farm log activity and scheduled a reminder." });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: "Nudge a farm log entry after a quiet period",
+            application: "farm", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a farm log reminder",
+              toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a quick farm update with Kyro." } }] });
+        } catch (error) {
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
+        await runtime.records.create({ tenantId, ownerId: subjectId, subjectId, taskId: task.taskId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: FARM_LOG_NUDGE_RECORD_TYPE, classification: "standard",
+          data: { reason: "farm_log_stale", lastFarmRecordAt: candidate.last_record_at },
+          provenance: { source: "situational-awareness-farm-sweep" } });
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        created += 1;
+      }
+      return { scanned: candidates.length, created, skippedPaused };
+    },
+    // The farm-domain counterpart to situational-awareness.escalate-unacknowledged-nudges: same shape, but
+    // freshness is checked against nexus_memory_items (purpose 'farm_records') via
+    // listUnacknowledgedMemoryNudges() instead of nexus_records classification='health'.
+    "situational-awareness.escalate-unacknowledged-farm-nudges": async ({ job }) => {
+      const graceMs = Number(job.payload?.graceMs || 3 * 24 * 60 * 60 * 1000);
+      const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
+      const limit = Number(job.payload?.limit || 50);
+      const candidates = await runtime.records.listUnacknowledgedMemoryNudges({
+        workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: FARM_LOG_NUDGE_RECORD_TYPE, memoryPurpose: "farm_records",
+        deliveredBefore: new Date(Date.now() - graceMs), limit
+      });
+      const tenantCounts = new Map();
+      const tenantPaused = new Map();
+      let escalated = 0; let skippedPaused = 0;
+      for (const nudge of candidates) {
+        const tenantId = nudge.tenant_id; const subjectId = nudge.subject_id;
+        if (!tenantPaused.has(tenantId)) {
+          tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
+        }
+        if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
+        if (!tenantCounts.has(tenantId)) {
+          tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
+        }
+        if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
+          correlationId: createId("event"), text: "Kyro's first farm log reminder went unacknowledged, so it followed up again." });
+        let task;
+        try {
+          task = await runtime.engine.create({ command, goal: "Follow up after an unacknowledged farm log nudge",
+            application: "farm", riskTier: "low", autonomous: true, steps: [{ title: "Send a follow-up farm log reminder",
+              toolId: "reminders.schedule", input: { when: "Tomorrow, remind me again to log a quick farm update with Kyro -- the last reminder didn't get a new entry." } }] });
+        } catch (error) {
+          if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
+          throw error;
+        }
+        try {
+          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: nudge.version, actorId: subjectId,
+            data: { ...nudge.data, escalatedAt: new Date().toISOString(), escalationTaskId: task.taskId },
+            provenance: { source: "situational-awareness-escalate-farm" } });
+        } catch {
+          // Same reasoning as the health escalation's own update: a lost race here must not fail the sweep --
+          // the escalation task itself was already created successfully either way.
+        }
+        tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
+        escalated += 1;
+      }
+      return { scanned: candidates.length, escalated, skippedPaused };
     }
   });
 }
@@ -301,4 +397,4 @@ async function blockStalledAutonomousTaskIfApplicable({ runtime, notification, e
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
 
 module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND,
-  SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE });
+  SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE, FARM_LOG_NUDGE_RECORD_TYPE });

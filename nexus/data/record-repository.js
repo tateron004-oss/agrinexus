@@ -86,6 +86,28 @@ class RecordRepository {
     return result.rows || result;
   }
 
+  // The same shape as listUnacknowledgedNudges(), for a proactive-nudge domain whose real activity lives in
+  // nexus_memory_items rather than nexus_records classification='health' (e.g. the farm toolkit, purpose
+  // 'farm_records') -- the nudge bookkeeping record itself still lives here regardless of domain, only the
+  // "did they do anything since" freshness check differs. memoryPurpose is passed as a parameter, never
+  // string-interpolated, unlike FarmRecordRepository's own purpose (validated once at construction there).
+  async listUnacknowledgedMemoryNudges({ workspaceId, recordType, memoryPurpose, deliveredBefore, limit = 50 }) {
+    const result = await this.db.query(`select n.record_id, n.tenant_id, n.subject_id, n.owner_id, n.task_id, n.version, n.data, no.delivered_at
+      from nexus_records n
+      join nexus_notifications no on no.task_id = n.task_id and no.tenant_id = n.tenant_id
+      where n.workspace_id=$1 and n.record_type=$2 and n.state='active' and n.deleted_at is null
+        and no.state='delivered' and no.delivered_at < $3
+        and (n.data->>'escalatedAt') is null
+        and not exists (
+          select 1 from nexus_memory_items m
+          where m.tenant_id=n.tenant_id and m.principal_id=n.subject_id and m.purpose=$5
+            and m.deleted_at is null and m.updated_at > no.delivered_at
+        )
+      order by no.delivered_at
+      limit $4`, [workspaceId, recordType, deliveredBefore, Math.min(Math.max(limit, 1), 200), memoryPurpose]);
+    return result.rows || result;
+  }
+
   async remove({ tenantId, recordId, actorId }) {
     const result=await this.db.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance=jsonb_build_object('deletedBy',$3),deleted_at=now(),updated_at=now()
       where tenant_id=$1 and record_id=$2 and deleted_at is null returning record_id`,[tenantId,recordId,actorId]);
