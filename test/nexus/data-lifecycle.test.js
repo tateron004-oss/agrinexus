@@ -4,12 +4,28 @@ const {DataLifecycleRepository}=require("../../nexus/security/data-lifecycle-rep
 function db(results=[]){const calls=[];const runtime={calls,async query(sql,params){calls.push({sql,params});return results.shift()||{rows:[]};},async transaction(work){return work(runtime);}};return runtime;}
 test("lifecycle migration creates deletion, legal-hold, and restore evidence controls",()=>{const sql=fs.readFileSync(path.join(__dirname,"../../foundation/migrations/009_nexus_data_lifecycle.sql"),"utf8");for(const table of ["nexus_legal_holds","nexus_deletion_requests","nexus_backup_evidence"])assert.match(sql,new RegExp(`create table if not exists ${table}`));assert.match(sql,/enable row level security/);});
 test("legal hold blocks erasure before any protected data is changed",async()=>{const x=db([{rows:[{subject_id:"user"}]},{rows:[{hold_id:"hold"}]},{rows:[]}]);const result=await new DataLifecycleRepository(x).executeDeletion({tenantId:"tenant",requestId:"request"});assert.equal(result.state,"blocked");assert.equal(x.calls.some(call=>/update nexus_records/.test(call.sql)),false);});
-test("verified deletion erases record content and object pointers transactionally",async()=>{const x=db([{rows:[{subject_id:"user"}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);const result=await new DataLifecycleRepository(x).executeDeletion({tenantId:"tenant",requestId:"request"});assert.equal(result.state,"verified");assert.match(x.calls[2].sql,/data='\{\}'::jsonb/);assert.match(x.calls[3].sql,/object_key=null/);});
+test("verified deletion erases record content and object pointers transactionally",async()=>{const x=db([{rows:[{subject_id:"user"}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);const result=await new DataLifecycleRepository(x).executeDeletion({tenantId:"tenant",requestId:"request"});assert.equal(result.state,"verified");assert.match(x.calls[2].sql,/data='\{\}'::jsonb/);assert.match(x.calls[3].sql,/object_key=null/);});
+
+test("verified deletion erases this subject's memory items too (farm, health, companion, navigation, reminders data all live there)",async()=>{
+  const x=db([{rows:[{subject_id:"owner-a"}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[{memory_id:"m1"},{memory_id:"m2"}]}]);
+  const result=await new DataLifecycleRepository(x).executeDeletion({tenantId:"tenant-a",requestId:"request-a"});
+  const erase=x.calls.find(call=>/delete from nexus_memory_items/.test(call.sql));
+  assert.ok(erase); assert.deepEqual(erase.params,["tenant-a","owner-a"]);
+  assert.doesNotMatch(erase.sql,/purpose\s*=|purpose\s+in/i,"an account-level erasure has no per-purpose carve-out, unlike the health toolkit's own self-service erase");
+  assert.equal(result.state,"verified");
+  assert.equal(result.verification.memoryItemsErased,true);
+  assert.equal(result.verification.memoryItemsCount,2);
+});
+test("a legal hold blocks the memory-items erasure too, not just nexus_records",async()=>{
+  const held=db([{rows:[{subject_id:"owner-a"}]},{rows:[{hold_id:"hold"}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:"tenant-a",requestId:"request-a"});
+  assert.equal(held.calls.some(call=>/delete from nexus_memory_items/.test(call.sql)),false);
+});
 test("retention sweeps skip legal holds and use locked bounded batches",async()=>{const x=db([{rows:[{artifact_id:"art"}]}]);const rows=await new DataLifecycleRepository(x).purgeExpired({limit:900});assert.equal(rows.length,1);assert.match(x.calls[0].sql,/not exists/);assert.match(x.calls[0].sql,/for update skip locked/);assert.equal(x.calls[0].params[0],500);});
 test("backup evidence rejects unverifiable claims",async()=>{const repo=new DataLifecycleRepository(db());await assert.rejects(repo.recordBackupEvidence({releaseSha:"sha",backupId:"id",state:"restore_verified"}),/Valid backup evidence/);});
 
 test("account deletion clears version history within the same tenant and subject boundary", async () => {
-  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]}]);
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);
   const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
   const historical = x.calls.find(call => /update nexus_record_versions/.test(call.sql));
   assert.ok(historical); assert.deepEqual(historical.params,['tenant-a','owner-a']);

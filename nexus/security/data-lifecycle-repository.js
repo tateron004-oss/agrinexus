@@ -19,7 +19,11 @@ class DataLifecycleRepository {
       await trx.query(`update nexus_artifacts set state='deleted',object_key=null,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
       await trx.query(`update nexus_record_versions v set data='{}'::jsonb,provenance='{}'::jsonb
         from nexus_records r where v.record_id=r.record_id and r.tenant_id=$1 and r.subject_id=$2`,[tenantId,request.subject_id]);
-      const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,verifiedAt:new Date().toISOString()};
+      // The newer nexus/ runtime (companion, farm and health toolkits, navigation, reminders) keeps its data here, not in nexus_records, so an
+      // erasure that skipped this table would leave most of what a person actually built with Kyro behind. No legal-hold carve-out here (unlike
+      // the health toolkit's own "erase my records" self-service, which keeps a small name-free log): an account-level erasure is total.
+      const memoryItems=await trx.query(`delete from nexus_memory_items where tenant_id=$1 and principal_id=$2 returning memory_id`,[tenantId,request.subject_id]);
+      const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,memoryItemsErased:true,memoryItemsCount:(memoryItems.rows||memoryItems).length,verifiedAt:new Date().toISOString()};
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};
     });
