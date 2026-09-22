@@ -2553,12 +2553,15 @@ function ensureDefaultUsers(db) {
     if (existing) {
       for (const [key, value] of Object.entries(account)) {
         if (existing[key] === undefined || existing[key] === "") {
-          existing[key] = value;
+          existing[key] = key === "password" ? pgUsers.hashPassword(value) : value;
           changed = true;
         }
       }
     } else {
-      db.users.push({ ...account });
+      // Store a real scrypt hash, never the demo password in the clear -- these
+      // credentials are well-known/documented, but the storage discipline should
+      // be identical to any other account's.
+      db.users.push({ ...account, password: pgUsers.hashPassword(account.password) });
       changed = true;
     }
   }
@@ -46672,6 +46675,7 @@ async function api(req, res, url) {
     if (!email || !password.trim()) return send(res, 400, { error: "Email and password are required" });
     let found;
     let blobBackfilled = false;
+    let passwordMigrated = false;
     if (usingPostgresAuth()) {
       const pgUser = await pgUsers.verifyPassword(getPgPool(), email, password).catch(() => null);
       if (!pgUser) return send(res, 401, { error: "Invalid demo credentials" });
@@ -46690,10 +46694,21 @@ async function api(req, res, url) {
         blobBackfilled = true;
       }
     } else {
-      found = db.users.find(item => String(item.email || "").toLowerCase() === email && String(item.password || "") === password);
-      if (!found) return send(res, 401, { error: "Invalid demo credentials" });
+      const candidate = db.users.find(item => String(item.email || "").toLowerCase() === email);
+      const stored = String(candidate?.password || "");
+      const isHashed = stored.startsWith("scrypt:");
+      const validCredential = stored.length > 0 && (isHashed ? pgUsers.verifyPasswordHash(password, stored) : stored === password);
+      if (!candidate || !validCredential) return send(res, 401, { error: "Invalid demo credentials" });
+      if (!isHashed) {
+        // A legacy plaintext row from before passwords were hashed here. The
+        // credential just verified correctly against it, so migrate it to a
+        // real hash now rather than leaving plaintext sitting in the blob.
+        candidate.password = pgUsers.hashPassword(password);
+        passwordMigrated = true;
+      }
+      found = candidate;
     }
-    if (usersChanged || blobBackfilled) await writeDb(db);
+    if (usersChanged || blobBackfilled || passwordMigrated) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
     issueSession(sid, found.id);
     const durableToken = issueDurableAuthToken(found.id);
@@ -46771,7 +46786,7 @@ async function api(req, res, url) {
       // "blob", or any code path that still reads the blob's password field,
       // doesn't see the pre-reset value.
       const shadowUser = db.users.find(item => String(item.email || "").toLowerCase() === email);
-      if (shadowUser) shadowUser.password = newPassword;
+      if (shadowUser) shadowUser.password = pgUsers.hashPassword(newPassword);
     } else {
       const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -46785,7 +46800,7 @@ async function api(req, res, url) {
         && user.resetTokenExpiresAt
         && new Date(user.resetTokenExpiresAt).getTime() > Date.now();
       if (!valid) return send(res, 400, { error: "Invalid or expired reset code" });
-      user.password = newPassword;
+      user.password = pgUsers.hashPassword(newPassword);
       delete user.resetTokenHash;
       delete user.resetTokenExpiresAt;
     }
@@ -47425,14 +47440,16 @@ async function api(req, res, url) {
       isSandboxTestAccount: true
     };
     account.name = name;
-    account.password = password;
+    // Store a hash in the blob; the plaintext local `password` is used below only
+    // for the real Postgres write and the one-time display to the admin creating it.
+    account.password = pgUsers.hashPassword(password);
     account.role = "Standard User";
     account.country = String(body.country || account.country || "Nigeria").trim() || "Nigeria";
     account.language = String(body.language || account.language || COUNTRY_LANGUAGE[account.country.toLowerCase()] || "en").trim() || "en";
     account.lastUpdatedAt = new Date().toISOString();
     if (!db.users.some(item => item.id === account.id)) db.users.push(account);
     if (usingPostgresAuth()) {
-      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password: account.password })
+      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password })
         .catch(error => console.error("[admin] test-user Postgres shadow-write failed:", error.message));
     }
     addUsageEvent(db.profile, { module: "Admin", action: "test_user.created", detail: `${account.email} User-only test login created.` });
@@ -47446,7 +47463,7 @@ async function api(req, res, url) {
     addActivity(db.profile, `User-only test login ready: ${account.email}.`);
     await writeDb(db);
     const state = publicState(db, user);
-    state.testUserResult = { name: account.name, email: account.email, password: account.password, role: account.role, country: account.country, language: account.language };
+    state.testUserResult = { name: account.name, email: account.email, password, role: account.role, country: account.country, language: account.language };
     return send(res, 200, state);
   }
 
@@ -47472,14 +47489,16 @@ async function api(req, res, url) {
       isSandboxTestAccount: true
     };
     adminAccount.name = name;
-    adminAccount.password = password;
+    // Store a hash in the blob; the plaintext local `password` is used below only
+    // for the real Postgres write and the one-time display to the admin creating it.
+    adminAccount.password = pgUsers.hashPassword(password);
     adminAccount.role = "Admin";
     adminAccount.country = String(body.country || adminAccount.country || "Nigeria").trim() || "Nigeria";
     adminAccount.language = String(body.language || adminAccount.language || COUNTRY_LANGUAGE[adminAccount.country.toLowerCase()] || "en").trim() || "en";
     adminAccount.lastUpdatedAt = new Date().toISOString();
     if (!account) db.users.push(adminAccount);
     if (usingPostgresAuth()) {
-      await pgUsers.createUser(getPgPool(), { email: adminAccount.email, displayName: adminAccount.name, password: adminAccount.password })
+      await pgUsers.createUser(getPgPool(), { email: adminAccount.email, displayName: adminAccount.name, password })
         .catch(error => console.error("[admin] admin-user Postgres shadow-write failed:", error.message));
     }
     addUsageEvent(db.profile, { module: "Admin", action: "admin_user.created", detail: `${adminAccount.email} Admin test login created.` });
@@ -47493,7 +47512,7 @@ async function api(req, res, url) {
     addActivity(db.profile, `Admin test login ready: ${adminAccount.email}.`);
     await writeDb(db);
     const state = publicState(db, user);
-    state.adminUserResult = { name: adminAccount.name, email: adminAccount.email, password: adminAccount.password, role: adminAccount.role, country: adminAccount.country, language: adminAccount.language };
+    state.adminUserResult = { name: adminAccount.name, email: adminAccount.email, password, role: adminAccount.role, country: adminAccount.country, language: adminAccount.language };
     return send(res, 200, state);
   }
 
