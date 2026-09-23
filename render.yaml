@@ -271,6 +271,11 @@ services:
       # it should be turned on here. See .env.example.
       - key: PHONE_REALTIME_STREAMING_ENABLED
         value: "false"
+      # Call screening for unrecognized callers -- bridges them to the
+      # owner's real phone (with a voicemail fallback) instead of a flat
+      # decline. Ships off by default. See .env.example.
+      - key: PHONE_SCREENING_ENABLED
+        value: "false"
       - key: TRANSLATION_PROVIDER
         value: webhook
       - key: TRANSLATION_WEBHOOK_URL

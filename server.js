@@ -17086,6 +17086,50 @@ function phoneRealtimeStreamUrl(env = process.env) {
   return base.replace(/^http/i, "ws").replace(/\/$/, "") + "/api/voice/phone/stream";
 }
 
+// Call screening for unrecognized callers: instead of the flat decline
+// resolveAuthorizedPhoneCaller's callers otherwise give an unauthorized
+// number, an unrecognized caller gets a short screening greeting, then --
+// if today's bridge cap allows it -- is <Dial>-bridged straight to the
+// account owner's own phone, with a real voicemail + push notification
+// fallback if the owner does not pick up. The unrecognized caller NEVER
+// reaches an authenticated identity, real account data, or any tool --
+// this is a pure TwiML dial/record flow with no model or tool-call
+// involvement, so it cannot reopen the access hole PR #570 closed.
+function phoneScreeningEnabled(env = process.env) {
+  return env.PHONE_SCREENING_ENABLED === "true";
+}
+
+function phoneScreeningDailyBridgeCap(env = process.env) {
+  const configured = Number(env.PHONE_SCREENING_DAILY_BRIDGE_CAP);
+  return Number.isFinite(configured) && configured > 0 ? Math.min(configured, 50) : 5;
+}
+
+function phoneScreeningOwner(db) {
+  return db.users.find(item => item.role === "Admin") || db.users[0] || null;
+}
+
+// Returns true (and records the attempt) if today's bridge cap still has
+// room; false if a screened caller has already used up today's cap and must
+// be told to try again rather than ringing the owner's phone yet again --
+// the concrete abuse case this guards is a stranger repeatedly ringing the
+// real owner's real phone all day. Mutates db in place; the caller is still
+// responsible for writeDb(db) afterward, same as every other db mutator in
+// this file.
+function phoneScreeningBridgeAllowed(db, env = process.env) {
+  ensureAiProfile(db.profile);
+  const today = new Date().toISOString().slice(0, 10);
+  const state = db.profile.phoneScreeningState && db.profile.phoneScreeningState.date === today
+    ? db.profile.phoneScreeningState
+    : { date: today, bridgedCount: 0 };
+  if (state.bridgedCount >= phoneScreeningDailyBridgeCap(env)) {
+    db.profile.phoneScreeningState = state;
+    return false;
+  }
+  state.bridgedCount += 1;
+  db.profile.phoneScreeningState = state;
+  return true;
+}
+
 function ensurePhoneVoiceSessions(profile) {
   ensureAiProfile(profile);
   profile.phoneVoiceSessions = profile.phoneVoiceSessions || [];
@@ -46990,7 +47034,29 @@ async function api(req, res, url) {
     // Declined here too, not just at /gather: an unauthorized caller gets an
     // immediate, honest decline instead of being led through a pointless
     // "who am I speaking with" round trip before being refused later anyway.
+    // If call screening is enabled, "declined" becomes "screened" instead --
+    // see phoneScreeningEnabled's comment for why this cannot regress the
+    // PR #570 access fix (the caller never reaches an authenticated identity
+    // or a tool, only a plain dial/record TwiML flow).
     if (!resolveAuthorizedPhoneCaller(db, body)) {
+      if (phoneScreeningEnabled(process.env) && process.env.PUBLIC_BASE_URL) {
+        logIntegration(db, {
+          providerId: "phone-voice", module: "AI", action: "phone.screening_started",
+          detail: "An unrecognized caller was offered call screening instead of an outright decline.",
+          metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid: body.CallSid || body.callSid || null }
+        });
+        await writeDb(db);
+        const screeningGreeting = await phoneVoicePrompt("Hi, this is Kyro, an AI assistant. The person you're trying to reach isn't available to answer directly right now. Can I ask who's calling, and what this is about?", "en-US");
+        const screeningActionUrl = `${process.env.PUBLIC_BASE_URL}/api/voice/phone/screening-gather`;
+        const noScreeningResponse = twilioSay("I did not hear a response. Please call back, or reach out another way.", "en-US");
+        return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech" action="${xmlEscape(screeningActionUrl)}" method="POST" language="en-US" speechTimeout="auto" actionOnEmptyResult="true">
+    ${screeningGreeting}
+  </Gather>
+  ${noScreeningResponse}
+</Response>`);
+      }
       logIntegration(db, {
         providerId: "phone-voice", module: "AI", action: "phone.unauthorized_caller",
         detail: "An incoming phone call was declined: the caller's number is not on the authorized list.",
@@ -47062,6 +47128,130 @@ async function api(req, res, url) {
   </Gather>
   ${noCommand}
 </Response>`);
+  }
+
+  if (url.pathname === "/api/voice/phone/screening-gather" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const statement = sanitizePilotText(body.SpeechResult || body.speechResult || "", 400);
+    if (!statement) {
+      const retryPrompt = await phoneVoicePrompt("Sorry, I did not catch that. Who is calling, and what is this about?", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech" action="${xmlEscape(`${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/screening-gather`)}" method="POST" language="en-US" speechTimeout="auto" actionOnEmptyResult="true">
+    ${retryPrompt}
+  </Gather>
+</Response>`);
+    }
+    const callSid = String(body.CallSid || body.callSid || "");
+    if (!phoneScreeningBridgeAllowed(db, process.env)) {
+      await writeDb(db);
+      logIntegration(db, {
+        providerId: "phone-voice", module: "AI", action: "phone.screening_capped",
+        detail: "A screened caller was declined a bridge attempt because today's screening cap was already used.",
+        metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid, statement }
+      });
+      const capped = await phoneVoicePrompt("I'm sorry, we've reached today's limit for connecting calls this way. Please try again tomorrow, or reach out another way.", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${capped}
+  <Hangup/>
+</Response>`);
+    }
+    const owner = phoneScreeningOwner(db);
+    const ownerPhone = owner ? nexusOwnPhoneForUser(owner, process.env) : "";
+    if (!ownerPhone) {
+      await writeDb(db);
+      logIntegration(db, {
+        providerId: "phone-voice", module: "AI", action: "phone.screening_no_owner_phone",
+        detail: "Call screening could not bridge because no owner phone number is configured on the authorized-callers allowlist.",
+        metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid }
+      });
+      const noOwner = await phoneVoicePrompt("I'm sorry, I could not connect this call right now. Please try again another way.", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${noOwner}
+  <Hangup/>
+</Response>`);
+    }
+    logIntegration(db, {
+      providerId: "phone-voice", module: "AI", action: "phone.screening_bridging",
+      detail: "A screened caller is being bridged to the account owner's phone.",
+      metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid, statement }
+    });
+    await writeDb(db);
+    const connecting = await phoneVoicePrompt("Thank you. Connecting you now -- please hold.", "en-US");
+    const dialResultUrl = `${process.env.PUBLIC_BASE_URL}/api/voice/phone/screening-dial-result?statement=${encodeURIComponent(statement)}`;
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${connecting}
+  <Dial timeout="20" action="${xmlEscape(dialResultUrl)}">
+    <Number>${xmlEscape(ownerPhone)}</Number>
+  </Dial>
+</Response>`);
+  }
+
+  if (url.pathname === "/api/voice/phone/screening-dial-result" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const statement = sanitizePilotText(url.searchParams.get("statement") || "", 400);
+    const dialStatus = String(body.DialCallStatus || body.dialCallStatus || "").toLowerCase();
+    if (dialStatus === "completed") {
+      // The owner answered and the two of them talked directly -- Kyro's job
+      // here is done, nothing more to say.
+      logIntegration(db, {
+        providerId: "phone-voice", module: "AI", action: "phone.screening_bridged",
+        detail: "A screened call was successfully bridged and completed.",
+        metadata: { callSid: body.CallSid || body.callSid || null }
+      });
+      await writeDb(db);
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`);
+    }
+    logIntegration(db, {
+      providerId: "phone-voice", module: "AI", action: "phone.screening_no_answer",
+      detail: `The owner did not answer a screened call (status: ${dialStatus || "unknown"}). Offering the caller a voicemail.`,
+      metadata: { callSid: body.CallSid || body.callSid || null, dialStatus }
+    });
+    await writeDb(db);
+    const voicemailPrompt = await phoneVoicePrompt("Sorry, they're not available right now. Please leave a message after the tone, then hang up when you're done.", "en-US");
+    const voicemailActionUrl = `${process.env.PUBLIC_BASE_URL}/api/voice/phone/screening-voicemail?statement=${encodeURIComponent(statement)}`;
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${voicemailPrompt}
+  <Record maxLength="120" playBeep="true" action="${xmlEscape(voicemailActionUrl)}"/>
+  <Hangup/>
+</Response>`);
+  }
+
+  if (url.pathname === "/api/voice/phone/screening-voicemail" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const statement = sanitizePilotText(url.searchParams.get("statement") || "", 400) || "a caller left a voicemail but did not say why";
+    const recordingSid = String(body.RecordingSid || body.recordingSid || "");
+    const owner = phoneScreeningOwner(db);
+    logIntegration(db, {
+      providerId: "phone-voice", module: "AI", action: "phone.screening_voicemail_left",
+      detail: "A screened caller left a real voicemail after the owner did not answer.",
+      metadata: { callSid: body.CallSid || body.callSid || null, recordingSid, statement }
+    });
+    if (owner) {
+      try {
+        await nexusOpenAiNativeCreatePushReminder(owner, { command: "" }, {
+          title: `check a voicemail from a screened caller: "${statement}"`,
+          when: "in 1 minute"
+        }, owner.language || "en");
+      } catch (error) {
+        recordServerError({ source: "phone-screening-voicemail-notify", message: error.stack || error.message, context: { recordingSid } });
+      }
+    }
+    await writeDb(db);
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`);
   }
 
   if (url.pathname === "/api/voice/phone/gather" && req.method === "POST") {
