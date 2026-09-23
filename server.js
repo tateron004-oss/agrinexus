@@ -17015,6 +17015,22 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
   return db.users.find(item => item.role === "Admin") || db.users[0] || null;
 }
 
+// The reverse lookup of resolveAuthorizedPhoneCaller: given a user, find the
+// real phone number Kyro should dial to reach THEM (used by the "connect me
+// to someone" call-bridging feature, which has to ring the account owner's
+// own phone before it can bridge in a second party). Reuses the same
+// TWILIO_AUTHORIZED_CALLERS allowlist rather than a separate profile field,
+// since that list is already the source of truth for "which real phone
+// number belongs to which account."
+function nexusOwnPhoneForUser(user, env = process.env) {
+  const authorized = twilioAuthorizedCallers(env);
+  const email = String(user?.email || "").toLowerCase();
+  const byEmail = email && authorized.find(item => item.email === email);
+  if (byEmail) return byEmail.phone;
+  const bare = authorized.find(item => !item.email);
+  return bare ? bare.phone : "";
+}
+
 // Twilio's Media Streams WebSocket handshake carries no headers we control
 // and no webhook signature -- the only identity it hands back is whatever we
 // put in a <Parameter> on the <Stream> element, which round-trips through
@@ -17999,6 +18015,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
+    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
@@ -18676,6 +18693,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to create, save, read, or update a checklist or to-do list (e.g. 'create a checklist called X with items A, B, C'), you must call nexus_lists. This is a real, persisted list, not a reminder or a document — never route a checklist request to nexus_automation_reminder or nexus_document_export.",
     "When the user asks to play, pause, resume, or stop music, a song, an artist, an album, or a playlist -- including a plain 'play <artist> <title>' request with no other context -- you must call nexus_general_conversation. This is never a communications request: do not call nexus_communications for a request to play a song just because a person's or artist's name is mentioned in it.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
+    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
@@ -19904,6 +19922,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const ownerTestRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
     const recipient = contact.to || ownerTestRecipient;
     const channel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : /\b(email|mail)\b/i.test(command) ? "email" : "sms"), 40).toLowerCase();
+    // "Connect me to X" is a different shape of call than the default: the
+    // user wants to personally talk to X, with Kyro only as the dialer, not
+    // a participant -- see startConnectCall's comment. Detected from the
+    // caller's own unmediated text (not the model's paraphrase) for the same
+    // reason context.command is preferred elsewhere in this function.
+    const wantsConnectCall = channel === "call" && (args.mode === "connect" || /\b(connect me|patch me through|put me through|get me on the phone with|let me (?:talk|speak) (?:to|with))\b/i.test(command));
     const verifyRealProviderId = channelLabel => async result => {
       const data = result?.body?.data || {};
       const realId = data.sid || data.providerMessageId;
@@ -19918,13 +19942,19 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           execute: () => nexusRealProviders.twilio.sendWhatsapp({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
           verify: verifyRealProviderId("WhatsApp")
         })
-      : channel === "call"
+      : channel === "call" && wantsConnectCall
         ? await withActionLifecycle(db, {
-            provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
-            execute: () => nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
+            provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+            execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, process.env),
             verify: verifyRealProviderId("Call")
           })
-        : channel === "email"
+        : channel === "call"
+          ? await withActionLifecycle(db, {
+              provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+              execute: () => nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
+              verify: verifyRealProviderId("Call")
+            })
+          : channel === "email"
           ? await withActionLifecycle(db, {
               provider: "email", action: "email.send", body: { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
               execute: () => nexusRealProviders.email.send({ to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, process.env),
