@@ -276,6 +276,14 @@ services:
       # decline. Ships off by default. See .env.example.
       - key: PHONE_SCREENING_ENABLED
         value: "false"
+      # Real file uploads (photos, PDFs). Ships off by default. The storage
+      # dir is pre-pointed at the mounted persistent disk (see the disk:
+      # block above) so it's ready the moment this is turned on. See
+      # .env.example.
+      - key: NEXUS_FILE_UPLOAD_ENABLED
+        value: "false"
+      - key: NEXUS_FILE_STORAGE_DIR
+        value: /var/data/uploads
       - key: TRANSLATION_PROVIDER
         value: webhook
       - key: TRANSLATION_WEBHOOK_URL
