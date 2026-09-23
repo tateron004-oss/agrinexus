@@ -99,7 +99,13 @@ async function twilioPost(route, body) {
       OPENAI_API_KEY: "",
       NEXUS_PRESERVE_EMPTY_ENV: "1",
       PUBLIC_BASE_URL: base,
-      TWILIO_AUTH_TOKEN: authToken
+      TWILIO_AUTH_TOKEN: authToken,
+      // Required since the 2026-09-22 phone-security hardening: a phone
+      // caller now gets no account access at all unless explicitly
+      // authorized (see resolveAuthorizedPhoneCaller in server.js) --
+      // without this, this script's own test call would be declined before
+      // ever reaching the name/language collection flow it means to test.
+      TWILIO_AUTHORIZED_CALLERS: "+15555550222"
     },
     stdio: "ignore",
     windowsHide: true

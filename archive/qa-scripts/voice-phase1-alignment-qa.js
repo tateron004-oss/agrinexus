@@ -79,7 +79,10 @@ async function twilioPost(route, body) {
       OPENAI_API_KEY: "",
       NEXUS_PRESERVE_EMPTY_ENV: "1",
       PUBLIC_BASE_URL: base,
-      TWILIO_AUTH_TOKEN: authToken
+      TWILIO_AUTH_TOKEN: authToken,
+      // Required since the 2026-09-22 phone-security hardening -- see the
+      // identical note in voice-phase2-language-qa.js.
+      TWILIO_AUTHORIZED_CALLERS: "+15555550123"
     },
     stdio: "ignore",
     windowsHide: true
