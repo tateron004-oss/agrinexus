@@ -145,9 +145,19 @@ async function mockOpenMeteoWeatherResult() {
       AGRINEXUS_DB_PATH: tempDb,
       OPENAI_API_KEY: "",
       NEXUS_OPENAI_NATIVE_ENABLED: "false",
-      NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "",
-      NEXUS_WEATHER_PROVIDER_ENABLED: "",
-      NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "",
+      // Explicitly "false", not empty: isOpenMeteoPublicProviderConfigured()
+      // (server/nexus-weather-source-provider.js) now treats Open-Meteo as
+      // configured unless one of these is exactly "false" (a real fix --
+      // Open-Meteo is a free, keyless source with nothing to actually
+      // configure, so an *unset* var correctly means "on", matching the
+      // provider-status report's own long-standing default). Leaving these
+      // empty here used to genuinely simulate "not configured" under the
+      // old, stricter semantics; under the corrected default-on behavior it
+      // now simulates "configured" instead, so weather answers for real
+      // rather than hitting the blocked path this script means to exercise.
+      NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED: "false",
+      NEXUS_WEATHER_PROVIDER_ENABLED: "false",
+      NEXUS_WEATHER_OPEN_METEO_PROVIDER_ENABLED: "false",
       PUBLIC_BASE_URL: base
     },
     stdio: "ignore",

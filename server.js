@@ -125,6 +125,11 @@ function recordServerError({ source, message, context = {} }) {
   if (recentServerErrors.length > RECENT_SERVER_ERRORS_CAP) recentServerErrors.length = RECENT_SERVER_ERRORS_CAP;
 }
 const phoneAudioCache = new Map();
+// A real cap, not a theoretical one: confirmed by a 2026-09-22 security audit
+// that the Gather loop had no maximum turn count or call-duration check at
+// all -- a call could otherwise be kept alive indefinitely, billing a real
+// OpenAI call plus TTS on every single turn.
+const PHONE_CALL_MAX_TURNS = Number(process.env.PHONE_CALL_MAX_TURNS || 40);
 const spotifyOAuthStates = new Map();
 const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const authoritativeNexusRuntime = createServerRuntimeAdapter({
@@ -16956,8 +16961,56 @@ async function phoneVoicePrompt(text, language) {
   }
 }
 
-function phoneVoiceUser(db) {
-  return db.users.find(item => item.role === "Admin") || db.users[0];
+// Confirmed by a 2026-09-22 security audit: phoneVoiceUser used to hand the
+// full Admin identity -- real data access and real side-effecting actions --
+// to literally anyone who dialed the AgriNexus number, with no check of who
+// was actually calling. Replaced with real authorization: the caller (or,
+// for an outbound call we placed, the external party who answered -- see
+// phoneExternalPartyNumber) must match an explicit, admin-configured
+// allowlist before any account identity is granted at all.
+function twilioAuthorizedCallers(env = process.env) {
+  return String(env.TWILIO_AUTHORIZED_CALLERS || "")
+    .split(",")
+    .map(entry => entry.trim())
+    .filter(Boolean)
+    .map(entry => {
+      const [phonePart, emailPart] = entry.split(":");
+      return { phone: normalizePhoneNumber(phonePart), email: String(emailPart || "").trim().toLowerCase() };
+    })
+    .filter(item => item.phone);
+}
+
+// Identifies the real other party on a Twilio voice webhook regardless of
+// call direction: for an inbound call that is `From`; for an outbound call
+// we placed (where `From` is always our own Twilio number), it is `To`.
+function phoneExternalPartyNumber(body = {}, env = process.env) {
+  const from = normalizePhoneNumber(body.From || body.from);
+  const to = normalizePhoneNumber(body.To || body.to);
+  const ours = [env.TWILIO_PHONE_NUMBER, env.TWILIO_FROM_NUMBER, env.TWILIO_NUMBER, env.TWILIO_VOICE_FROM_NUMBER]
+    .map(value => normalizePhoneNumber(value))
+    .filter(Boolean);
+  if (from && !ours.includes(from)) return from;
+  if (to && !ours.includes(to)) return to;
+  return from || to || "";
+}
+
+// Returns the real, matched account for an authorized caller, or null.
+// Callers of this function MUST fail closed on null -- never fall back to a
+// default identity the way the old phoneVoiceUser did.
+function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
+  const caller = phoneExternalPartyNumber(body, env);
+  if (!caller) return null;
+  const authorized = twilioAuthorizedCallers(env);
+  const match = authorized.find(item => item.phone === caller);
+  if (!match) return null;
+  if (match.email) {
+    const byEmail = db.users.find(item => String(item.email || "").toLowerCase() === match.email);
+    if (byEmail) return byEmail;
+  }
+  // A bare "phone" entry (no ":email") authorizes the default account
+  // owner -- the same identity every call used to get unconditionally,
+  // now gated on an explicit allowlist instead of open to any caller.
+  return db.users.find(item => item.role === "Admin") || db.users[0] || null;
 }
 
 function ensurePhoneVoiceSessions(profile) {
@@ -16982,6 +17035,7 @@ function getPhoneVoiceSession(db, key) {
       locale: "en-US",
       step: "name",
       commands: [],
+      turnCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -16991,9 +17045,19 @@ function getPhoneVoiceSession(db, key) {
   return session;
 }
 
+// Confirmed by a 2026-09-22 security audit: eviction was purely by array
+// position (unshift + slice(0,60)), so a session's place in the array never
+// moved once created -- an ongoing call could fall out of the kept window
+// while it was still active, just because 60+ *other* calls started in the
+// meantime, silently resetting it mid-conversation with no error. Now
+// re-positions the session to the front on every real update, so eviction
+// is by recency of activity (like phoneAudioCache's own time-based
+// cleanup), not by creation order.
 function updatePhoneVoiceSession(db, session, patch = {}) {
   Object.assign(session, patch, { updatedAt: new Date().toISOString() });
-  db.profile.phoneVoiceSessions = ensurePhoneVoiceSessions(db.profile).slice(0, 60);
+  const sessions = ensurePhoneVoiceSessions(db.profile).filter(item => item !== session);
+  sessions.unshift(session);
+  db.profile.phoneVoiceSessions = sessions.slice(0, 60);
   return session;
 }
 
@@ -30890,7 +30954,30 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", userName: spokenName, suppressBehaviorNudge: true, suggestedReplies: ["I need a clinic", "my crop is bad", "help me find work"] }
     };
   }
-  const topPendingAction = db.profile.agentPendingAction;
+  // Confirmed by a 2026-09-22 security audit: db.profile.agentPendingAction
+  // is one single, unscoped slot -- a bare "yes" from ANY channel or caller
+  // could confirm a high-risk pending action (a real payment/message send)
+  // that a completely different context staged. A phone call's own "yes" is
+  // the highest-risk case (a caller has no visibility into what they are
+  // actually confirming, unlike the web UI, which displays the pending
+  // action before asking), so a phone-channel turn only ever honors a
+  // pending action staged no earlier than this exact call started --
+  // anything older belongs to some other context and is treated as though
+  // nothing were pending, falling through to ordinary command handling
+  // instead of confirming/canceling it. Combined with resolveAuthorizedPhoneCaller
+  // (only an authorized caller's own account ever reaches this code at all),
+  // this closes both the cross-caller and cross-channel confirmation-hijack
+  // paths the audit found.
+  const topPendingAction = (() => {
+    const pending = db.profile.agentPendingAction;
+    if (!pending) return null;
+    if (options.inputMode === "phone" && options.sessionStartedAt) {
+      const stagedAt = Date.parse(pending.createdAt || "");
+      const sessionStart = Date.parse(options.sessionStartedAt);
+      if (!Number.isFinite(stagedAt) || !Number.isFinite(sessionStart) || stagedAt < sessionStart) return null;
+    }
+    return pending;
+  })();
   if (topPendingAction?.phase4HighRisk && isVagueConfirmationCommand(lower)) {
     return {
       intent: "conversation.confirmation_required",
@@ -33555,7 +33642,9 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     timeZone: body.timeZone,
     location: body.location || body.currentLocation || null,
     language: commandLanguage,
-    targetLanguage: commandLanguage
+    targetLanguage: commandLanguage,
+    inputMode,
+    sessionStartedAt: body.sessionStartedAt || null
   });
   let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, ensureSpeakableAgentResult(rawResult), command), command);
   result = await translateAgentCommandResult(db, user, result, { targetLanguage: commandLanguage });
@@ -46748,19 +46837,29 @@ async function api(req, res, url) {
     if (!validTwilioWebhookSignature(req, url, outboundBody)) {
       return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
     }
-    const phoneUser = phoneVoiceUser(db);
+    // Only used to pick a greeting language, not to grant any account access
+    // -- the real authorization check happens in /gather, where a command
+    // could actually do something. A non-match just falls back to English.
+    const phoneUser = resolveAuthorizedPhoneCaller(db, outboundBody);
     const language = twilioLanguage(phoneUser?.language || "en");
     const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather`;
     const message = String(url.searchParams.get("message") || "This is AgriNexus. You are connected to the AI assistant. Please say what you need after the prompt.").slice(0, 700);
     const greeting = await phoneVoicePrompt(message, language);
     const prompt = await phoneVoicePrompt("You can say telehealth intake, contact buyer, apply for job, track delivery, or speak with support. What should AgriNexus do?", language);
+    // Confirmed by the same audit: this line was eagerly synthesized via a
+    // real OpenAI TTS call on every single outbound call, even though it is
+    // only ever spoken on the rare silent-caller path. twilioSay's native
+    // Twilio voice costs nothing extra and needs no network round trip, so
+    // it is used directly here instead of phoneVoicePrompt for this one
+    // low-stakes fallback line.
+    const noResponsePrompt = twilioSay("I did not hear a response. Please call the AgriNexus number again or use the web assistant.", language);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${greeting}
   <Gather input="speech dtmf" action="${xmlEscape(actionUrl || "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
     ${prompt}
   </Gather>
-  ${await phoneVoicePrompt("I did not hear a response. Please call the AgriNexus number again or use the web assistant.", language)}
+  ${noResponsePrompt}
 </Response>`);
   }
 
@@ -46769,18 +46868,37 @@ async function api(req, res, url) {
     if (!validTwilioWebhookSignature(req, url, body)) {
       return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
     }
+    // Declined here too, not just at /gather: an unauthorized caller gets an
+    // immediate, honest decline instead of being led through a pointless
+    // "who am I speaking with" round trip before being refused later anyway.
+    if (!resolveAuthorizedPhoneCaller(db, body)) {
+      logIntegration(db, {
+        providerId: "phone-voice", module: "AI", action: "phone.unauthorized_caller",
+        detail: "An incoming phone call was declined: the caller's number is not on the authorized list.",
+        metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid: body.CallSid || body.callSid || null }
+      });
+      const decline = await phoneVoicePrompt("I'm sorry, this number is not authorized for AgriNexus account access. Please use the AgriNexus app, or contact support directly.", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${decline}
+  <Hangup/>
+</Response>`);
+    }
     const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
     updatePhoneVoiceSession(db, session, { step: "name", callerName: "", language: "", locale: "en-US" });
     const language = "en-US";
     const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather?step=name`;
     const greeting = await phoneVoicePrompt("Hi, I am AgriNexus. Who am I speaking with?", language);
-    const noCommand = await phoneVoicePrompt("I did not hear your name. Please call back, or use the web assistant.", language);
+    // Same reasoning as the outbound-twiml fallback: only spoken on the rare
+    // silent-caller path, so it uses Twilio's own voice directly rather than
+    // an eager real TTS call on every single incoming call.
+    const noCommand = twilioSay("I did not hear your name. Please call back, or use the web assistant.", language);
     logIntegration(db, {
       providerId: "phone-voice",
       module: "AI",
       action: "phone.incoming",
       detail: "Incoming phone voice assistant session opened with name-first greeting.",
-      metadata: { from: body.From || body.from || req.headers["x-forwarded-for"] || "twilio", sessionId: session.id }
+      metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), sessionId: session.id }
     });
     await writeDb(db);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
@@ -46797,7 +46915,26 @@ async function api(req, res, url) {
     if (!validTwilioWebhookSignature(req, url, body)) {
       return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
     }
-    const phoneUser = phoneVoiceUser(db);
+    // Real caller authorization -- see resolveAuthorizedPhoneCaller's own
+    // comment. A caller who does not match TWILIO_AUTHORIZED_CALLERS gets no
+    // account identity at all and must never reach real command execution
+    // below, regardless of what step of the call flow they are in.
+    const phoneUser = resolveAuthorizedPhoneCaller(db, body);
+    if (!phoneUser) {
+      logIntegration(db, {
+        providerId: "phone-voice",
+        module: "AI",
+        action: "phone.unauthorized_caller",
+        detail: "A phone call was declined: the caller's number is not on the authorized list.",
+        metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid: body.CallSid || body.callSid || null }
+      });
+      const decline = await phoneVoicePrompt("I'm sorry, this number is not authorized for AgriNexus account access. Please use the AgriNexus app, or contact support directly.", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${decline}
+  <Hangup/>
+</Response>`);
+    }
     const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
     const step = String(url.searchParams.get("step") || session.step || "command");
     const sessionLanguage = canonicalVoiceLanguage(session.language || phoneUser?.language || "en");
@@ -46877,43 +47014,90 @@ async function api(req, res, url) {
     // that same native-first pattern here, rather than rewriting the
     // legacy dispatcher, gives phone calls the same real capabilities
     // with no change to existing behavior when native voice is unavailable.
+    // Confirmed by the same audit: every /gather turn re-issued another
+    // <Gather> unconditionally, with no maximum turn count and no call-
+    // duration check -- a call could be kept alive indefinitely, billing a
+    // real OpenAI call (plus TTS) on every single turn. Ends the call
+    // gracefully, rather than looping forever, once a turn cap is hit.
+    const turnCount = Number(session.turnCount || 0) + 1;
+    if (turnCount > PHONE_CALL_MAX_TURNS) {
+      updatePhoneVoiceSession(db, session, { step: "command", turnCount });
+      await writeDb(db);
+      const limitPrompt = await phoneVoicePrompt("This call has reached its maximum length. Please call back, or use the AgriNexus app to continue. Goodbye.", session.locale || language);
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${limitPrompt}
+  <Hangup/>
+</Response>`);
+    }
     const phoneLanguage = canonicalVoiceLanguage(session.language || phoneUser.language || "en");
-    const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, {
-      command,
-      confirm: false,
-      conversational: true,
-      inputMode: "phone",
-      outputMode: "voice",
-      language: phoneLanguage,
-      targetLanguage: phoneLanguage,
-      note: "Phone call voice assistant command"
-    });
-    const result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, {
-      command,
-      confirm: false,
-      conversational: true,
-      inputMode: "phone",
-      outputMode: "voice",
-      language: phoneLanguage,
-      targetLanguage: phoneLanguage,
-      note: "Phone call voice assistant command"
-    })).result;
+    let result;
+    try {
+      const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, {
+        command,
+        confirm: false,
+        conversational: true,
+        inputMode: "phone",
+        outputMode: "voice",
+        language: phoneLanguage,
+        targetLanguage: phoneLanguage,
+        sessionStartedAt: session.createdAt,
+        note: "Phone call voice assistant command"
+      });
+      result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, {
+        command,
+        confirm: false,
+        conversational: true,
+        inputMode: "phone",
+        outputMode: "voice",
+        language: phoneLanguage,
+        targetLanguage: phoneLanguage,
+        sessionStartedAt: session.createdAt,
+        note: "Phone call voice assistant command"
+      })).result;
+    } catch (error) {
+      // Confirmed by the same audit: an exception anywhere in either
+      // dispatcher used to bubble to the global handler, which replies with
+      // JSON, not TwiML -- Twilio cannot parse that and silently drops the
+      // call with its own generic error, never AgriNexus's own apology.
+      // Fail safe here instead: log it, keep the call alive with a real
+      // apology, and let the caller try again.
+      console.error("[phone.gather.dispatch_failed]", { message: error?.message, callSid: body.CallSid || body.callSid || null });
+      updatePhoneVoiceSession(db, session, { step: "command", turnCount });
+      await writeDb(db).catch(() => {});
+      const apology = await phoneVoicePrompt("Sorry, something went wrong on my end. Please try saying that again.", session.locale || language);
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${apology}
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather?step=command")}" method="POST" language="${xmlEscape(session.locale || language)}" speechTimeout="auto" actionOnEmptyResult="false">
+  </Gather>
+</Response>`);
+    }
+    if (!result || typeof result.response !== "string") result = { response: "Command completed." };
     session.commands.unshift({ command, response: result.response, createdAt: new Date().toISOString() });
     session.commands = session.commands.slice(0, 20);
-    updatePhoneVoiceSession(db, session, { step: "command" });
+    updatePhoneVoiceSession(db, session, { step: "command", turnCount });
     voiceRecord(db, phoneUser, "phone-call", `Phone command handled: ${command}`, {
       command,
       response: result.response,
       callSid: body.CallSid || body.callSid || null,
-      from: body.From || body.from || null,
+      from: redactPhoneNumber(phoneExternalPartyNumber(body)),
       provider: "twilio",
       callerName: session.callerName || "",
       language: canonicalVoiceLanguage(session.language || phoneUser.language || "en"),
       locale: session.locale || language
     });
     await writeDb(db);
-    const response = String(result.response || "Command completed.").slice(0, 900);
-    const spokenResponse = await phoneVoicePrompt(response, session.locale || language);
+    // Confirmed by the same audit: a provider failure's response text names
+    // internal error categories/provider jargon verbatim (see
+    // runNexusOpenAiNativeAgentCommand's own catch block) -- fine to keep for
+    // typed/web display, but not something a phone caller should hear read
+    // aloud. The real detail is still saved above (session.commands,
+    // voiceRecord) for diagnosis; only what gets spoken is softened here.
+    const spokenText = result.status === "provider-error" || String(result.intent || "").includes("provider_blocked")
+      ? "Sorry, I could not complete that just now. Please try again in a moment."
+      : String(result.response || "Command completed.").slice(0, 900);
+    const spokenResponse = await phoneVoicePrompt(spokenText, session.locale || language);
     const nextPromptName = session.callerName ? `${session.callerName}, ` : "";
     const nextPrompt = await phoneVoicePrompt(`${nextPromptName}you can say another command, or hang up when finished.`, session.locale || language);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>

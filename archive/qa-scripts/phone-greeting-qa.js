@@ -59,7 +59,13 @@ async function twilioPost(route, body) {
       OPENAI_API_KEY: "",
       NEXUS_PRESERVE_EMPTY_ENV: "1",
       PUBLIC_BASE_URL: base,
-      TWILIO_AUTH_TOKEN: authToken
+      TWILIO_AUTH_TOKEN: authToken,
+      // Required since the 2026-09-22 phone-security hardening -- see the
+      // identical note in voice-phase2-language-qa.js. The unsigned-forgery
+      // sub-test (+15555550999) is deliberately NOT authorized here: that
+      // request is meant to be rejected by signature verification before
+      // authorization is ever checked.
+      TWILIO_AUTHORIZED_CALLERS: "+15555550123,+15555550124"
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true

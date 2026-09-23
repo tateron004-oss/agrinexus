@@ -259,6 +259,11 @@ services:
         sync: false
       - key: TWILIO_MESSAGING_SERVICE_SID
         sync: false
+      # Required for anyone to get real account access on a phone call --
+      # without this set, every caller is refused (fails closed). See
+      # .env.example for the exact format.
+      - key: TWILIO_AUTHORIZED_CALLERS
+        sync: false
       - key: TRANSLATION_PROVIDER
         value: webhook
       - key: TRANSLATION_WEBHOOK_URL

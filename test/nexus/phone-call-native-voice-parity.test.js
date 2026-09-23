@@ -29,9 +29,12 @@ test("phone calls try the real OpenAI-native dispatcher before the legacy compan
   assert.ok(nativeCallIndex < legacyCallIndex, "the native dispatcher must be attempted before the legacy fallback");
 
   // The fallback must only run when the native call didn't produce a result
-  // (disabled/unconfigured native voice), not unconditionally.
+  // (disabled/unconfigured native voice), not unconditionally. `result` is
+  // declared with `let` ahead of this (not `const` inline) so the
+  // surrounding try/catch -- added by the 2026-09-22 security hardening --
+  // can assign it from either the try body or fall through safely.
   const betweenCalls = routeBody.slice(nativeCallIndex, legacyCallIndex + 40);
-  assert.match(betweenCalls, /const result = openAiNativeResult \|\| \(await runCompanionSafeAgentCommand/);
+  assert.match(betweenCalls, /result = openAiNativeResult \|\| \(await runCompanionSafeAgentCommand/);
 
   assert.match(routeBody, /inputMode: "phone"/);
 });
