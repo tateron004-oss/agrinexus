@@ -18631,6 +18631,16 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   if (/\b(crop|farm|farmer|agriculture|soil|irrigation|pest|disease|yield|post-harvest|harvest)\b/.test(lower)) return "nexus_agriculture";
   if (/\b(health|diabetes|hypertension|blood pressure|obesity|rpm|rtm|clinic|telehealth|pharmacy|medicine|medication|provider summary|chw|fitness|workout|training plan|exercise routine)\b/.test(lower)) return "nexus_health_preparation";
   if (/\b(job|workforce|training|learning|literacy|course|career|employer|apprentice|internship|marketing strategy|grant writing|minority[- ]owned|black[- ]owned|brown[- ]owned|tech(?:nology)? modernization)\b/.test(lower)) return "nexus_workforce_learning";
+  // Checked before the marketplace-logistics bucket below, which already
+  // claims "buyer"/"seller"/"listing" for the agri-trade marketplace --
+  // without this, "add a listing at 123 Main St" or "add a buyer named
+  // Jane" (real estate lead/listing tracking, added for the real estate
+  // toolkit) would be mislabeled as a crop/commodity marketplace command.
+  // Only the unambiguous real-estate-specific words are matched here;
+  // plain "buyer"/"seller"/"listing" with no such word still falls through
+  // to marketplace-logistics, which the underlying tool/model can still
+  // correct from there.
+  if (/\b(real estate|realtor|broker|property listing|tenant|landlord)\b/.test(lower)) return "nexus_business_assistant";
   if (/\b(marketplace|agritrade|buyer|seller|vendor|price|shipment|cold chain|product|listing)\b/.test(lower)) return "nexus_marketplace_logistics";
   if (/\b(sms|text|whatsapp|email|message|phone|call|telegram)\b/.test(lower)) return "nexus_communications";
   if (/\b(open|start|continue|show)\b.*\b(workflow|workspace|mode|panel|dashboard|intake|queue)\b/.test(lower)) return "nexus_workflow";

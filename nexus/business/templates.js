@@ -477,6 +477,7 @@ function defaultClientWorkspace(info) {
     invoiceItems: [],
     grants: [],
     appointments: [],
+    listings: [],
     socialPosts: [
       { platform: "Facebook", status: "draft", caption: `Meet ${detail.businessName}. We are helping local customers get reliable service with clear communication and easy next steps.` },
       { platform: "Instagram", status: "draft", caption: "Behind the scenes: a quick look at how we prepare to deliver a professional customer experience." },
@@ -551,6 +552,7 @@ function normalizeWorkspace(info, workspace) {
     ...starter,
     ...workspace,
     leads: workspace.leads || starter.leads,
+    listings: workspace.listings || starter.listings,
     socialPosts: workspace.socialPosts || starter.socialPosts,
     assistantScripts: { ...starter.assistantScripts, ...(workspace.assistantScripts || {}) },
     tasks: workspace.tasks || starter.tasks,

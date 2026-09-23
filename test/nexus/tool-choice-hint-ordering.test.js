@@ -30,3 +30,20 @@ test("a genuine live-knowledge question is unaffected by the reordering", () => 
   assert.equal(toolHint("What is the current price of maize in Nairobi?"), "nexus_live_knowledge");
   assert.equal(toolHint("Can you cite your sources for that?"), "nexus_live_knowledge");
 });
+
+// Core-essentials real estate support (2026-09-23): "buyer"/"seller"/
+// "listing" were already claimed by the agri-trade marketplace bucket
+// below, so without an earlier, unambiguous real-estate-specific check,
+// "add a listing at 123 Main St" would be mislabeled as a marketplace
+// command instead of the business assistant that actually tracks it.
+test("unambiguous real estate phrasing routes to the business assistant ahead of the marketplace bucket that already claims buyer/seller/listing", () => {
+  assert.equal(toolHint("I need a realtor to help me sell my house"), "nexus_business_assistant");
+  assert.equal(toolHint("Add a new tenant to my rental property"), "nexus_business_assistant");
+  assert.equal(toolHint("Add a landlord contact"), "nexus_business_assistant");
+  assert.equal(toolHint("Create a property listing for the office building"), "nexus_business_assistant");
+});
+
+test("plain agri-trade buyer/seller/listing phrasing (no real estate word) still reaches the marketplace bucket, unaffected", () => {
+  assert.equal(toolHint("Find a buyer for my maize"), "nexus_marketplace_logistics");
+  assert.equal(toolHint("Track vendor pricing for my tomato shipment"), "nexus_marketplace_logistics");
+});

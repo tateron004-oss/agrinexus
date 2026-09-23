@@ -62,11 +62,13 @@ async function resolveBusinessClient(businessRequest, command = "") {
 function extractLeadArgs(command = "", args = {}) {
   const text = String(command || "");
   const nameMatch = text.match(/\b(?:named|called)\s+["']?([^"'.,\n]{2,80})["']?/i)
-    || text.match(/\b(?:customer|donor|lead|client|sponsor|volunteer|member|congregant)\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/);
+    || text.match(/\b(?:customer|donor|lead|client|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/);
   // "member"/"congregant" -- a church or congregation's own word for the
   // person being tracked -- is kept verbatim rather than forced into an
   // existing bucket; computeBusinessDashboard below counts it too.
-  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|member|congregant)\b/i);
+  // "buyer"/"seller"/"tenant"/"landlord" -- a real estate workspace's own
+  // words for the person being tracked -- follow the same pattern.
+  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/i);
   const contactMatch = text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   return {
@@ -326,6 +328,50 @@ function resolveAppointmentIndex(appointments, command = "") {
   return unsynced.length === 1 ? unsynced[0].index : -1;
 }
 
+// Core-essentials real estate support: property listings, reusing this same
+// generic workspace engine (see the "listings" field added in
+// service.js/templates.js) rather than a separate real-estate-only system.
+const PROPERTY_TYPE_WORDS = ["house", "condo", "condominium", "apartment", "townhouse", "duplex", "land", "lot", "commercial", "office", "warehouse"];
+const LISTING_STATUS_WORDS = "(active|pending|under contract|sold|off[- ]market|coming soon|withdrawn|expired)";
+
+function extractListingArgs(command = "", args = {}) {
+  const text = String(command || "");
+  // "123 Main St", "456 Oak Avenue, Nairobi" -- a street number followed by
+  // words, stopping before a price/status/bed-bath clause rather than
+  // swallowing the rest of the sentence.
+  const addressMatch = text.match(/\b(\d{1,6}\s+[A-Za-z0-9][A-Za-z0-9 .,'-]{2,80}?)(?=\s+(?:for|at|priced|listed|status|with|is|as)\b|[,.]|$)/i);
+  const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/) || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/);
+  const priceRaw = priceMatch ? Number(priceMatch[1].replace(/,/g, "")) : NaN;
+  const price = Number.isFinite(priceRaw) ? (/[kK]/.test(priceMatch[0]) ? priceRaw * 1000 : priceRaw) : NaN;
+  const bedsMatch = text.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms|br)\b/i);
+  const bathsMatch = text.match(/\b(\d+(?:\.\d)?)\s*(?:bath|baths|bathroom|bathrooms|ba)\b/i);
+  const typeMatch = text.match(new RegExp(`\\b(${PROPERTY_TYPE_WORDS.join("|")})\\b`, "i"));
+  const statusMatch = text.match(new RegExp(`\\bstatus\\s+(?:to|as)\\s+["']?${LISTING_STATUS_WORDS}["']?`, "i")) || text.match(new RegExp(`\\b${LISTING_STATUS_WORDS}\\b`, "i"));
+  return {
+    address: sanitizeText(args.address || (addressMatch ? addressMatch[1].trim() : ""), 200),
+    price: args.price !== undefined ? Number(args.price) : (Number.isFinite(price) ? price : 0),
+    propertyType: sanitizeText(args.propertyType || (typeMatch ? typeMatch[1].toLowerCase() : ""), 40),
+    beds: args.beds !== undefined ? Number(args.beds) : (bedsMatch ? Number(bedsMatch[1]) : 0),
+    baths: args.baths !== undefined ? Number(args.baths) : (bathsMatch ? Number(bathsMatch[1]) : 0),
+    status: sanitizeText(args.status || (statusMatch ? statusMatch[1].toLowerCase().replace(/\s+/g, "-") : ""), 30)
+  };
+}
+
+function resolveListingIndex(listings, command = "") {
+  const text = String(command || "").toLowerCase();
+  const named = listings.findIndex(listing => listing.address && text.includes(String(listing.address).toLowerCase()));
+  if (named !== -1) return named;
+  // Only fall back to "the one active listing" when the caller didn't name
+  // an address-shaped token at all (real estate addresses are effectively
+  // always digit-led, e.g. "123 Main St"). If they named a specific address
+  // that matched nothing, that is a real mismatch to report -- silently
+  // falling back to a different property would risk marking the wrong one
+  // sold/pending, unlike resolveAppointmentIndex's lower-stakes equivalent.
+  if (/\d/.test(text)) return -1;
+  const active = listings.map((listing, index) => ({ listing, index })).filter(entry => entry.listing.status === "active");
+  return active.length === 1 ? active[0].index : -1;
+}
+
 // Mirrors public/business-services.js's renderDashboard() computation
 // exactly -- same field names, same filters, same reduces -- so a voice
 // summary of "how's my business doing" is always numerically identical to
@@ -341,24 +387,38 @@ function computeBusinessDashboard(editable) {
   const donors = editable.leads.filter(row => row.type === "donor").length;
   const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
   const volunteers = editable.leads.filter(row => row.type === "volunteer").length;
-  // Any type outside the original four (e.g. "member"/"congregant" for a
-  // church, or "client" from a conversational intake) is still real, saved
-  // data -- counted here so it never silently disappears from the summary,
-  // rather than hardcoding every new church/industry word as its own bucket.
-  const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer"].includes(row.type)).length;
+  // Real estate lead types get their own explicit counts, same as
+  // customers/donors/sponsors/volunteers, rather than falling into the
+  // generic "others" bucket where a voice summary can't name them clearly.
+  const buyers = editable.leads.filter(row => row.type === "buyer").length;
+  const sellers = editable.leads.filter(row => row.type === "seller").length;
+  const tenants = editable.leads.filter(row => row.type === "tenant").length;
+  const landlords = editable.leads.filter(row => row.type === "landlord").length;
+  // Any type outside the ones counted above (e.g. "member"/"congregant" for
+  // a church, or "client" from a conversational intake) is still real,
+  // saved data -- counted here so it never silently disappears from the
+  // summary, rather than hardcoding every new church/industry word as its
+  // own bucket.
+  const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer", "buyer", "seller", "tenant", "landlord"].includes(row.type)).length;
   const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
   const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
   const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
   const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
+  const listings = editable.listings || [];
+  const activeListings = listings.filter(listing => listing.status === "active").length;
+  const pendingListings = listings.filter(listing => listing.status === "pending" || listing.status === "under-contract").length;
+  const soldListings = listings.filter(listing => listing.status === "sold").length;
+  const activeListingValue = listings.filter(listing => listing.status === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
   return {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
-    customers, donors, sponsors, volunteers, others,
+    customers, donors, sponsors, volunteers, buyers, sellers, tenants, landlords, others,
     invoiceTotal, unpaidInvoices,
     grantsRequested, grantsAwarded,
     openTasks, totalTasks: editable.tasks.length,
-    upcomingAppointments
+    upcomingAppointments,
+    totalListings: listings.length, activeListings, pendingListings, soldListings, activeListingValue
   };
 }
 
@@ -367,7 +427,7 @@ function computeBusinessDashboard(editable) {
 // load-bearing -- see each flag's inline note -- and must stay in sync with
 // server.js's legacy nexus_business_assistant handler, which uses this same
 // function (rather than a second, hand-maintained copy of these regexes).
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary"]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "listListings"]);
 
 function classify(command = "") {
   // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
@@ -383,7 +443,7 @@ function classify(command = "") {
     || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
-  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant)\b/i.test(command);
+  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/i.test(command);
   // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
   const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
@@ -400,6 +460,14 @@ function classify(command = "") {
   const wantsUpdateTaskStatus = !wantsAddTask && /\b(?:mark|update|set|change|complete|finish)\b/i.test(command) && /\btask\b/i.test(command);
   const wantsSyncAppointment = /\bsync\b/i.test(command) && /\b(appointment|calendar)\b/i.test(command);
   const wantsAddAppointment = !wantsSyncAppointment && /\b(?:add|schedule|create|book|new)\b/i.test(command) && /\bappointment\b/i.test(command);
+  // Core-essentials real estate support: property listings. "list a
+  // property"/"add a listing" is a creation verb here, distinct from
+  // wantsList's read-only "list my businesses" (a different noun entirely,
+  // so there is no collision) and from wantsListListings below (excluded by
+  // requiring the absence of a read-style word first).
+  const wantsAddListing = /\b(?:add|create|new|list)\b/i.test(command) && /\b(listing|property)\b/i.test(command) && !/\b(?:my|show|what|which)\b/i.test(command);
+  const wantsUpdateListingStatus = !wantsAddListing && /\b(?:mark|update|set|change)\b/i.test(command) && /\b(listing|property)\b/i.test(command);
+  const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
   const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
   const wantsGenerateMarketing = /\b(?:create|generate|make|draft)\b/i.test(command) && /\b(flyer|newsletter|promotional email|marketing email|marketing material|marketing content|marketing draft)\b/i.test(command);
@@ -445,6 +513,9 @@ function classify(command = "") {
   if (wantsUpdateTaskStatus) return "updateTaskStatus";
   if (wantsSyncAppointment) return "syncAppointment";
   if (wantsAddAppointment) return "addAppointment";
+  if (wantsAddListing) return "addListing";
+  if (wantsUpdateListingStatus) return "updateListingStatus";
+  if (wantsListListings) return "listListings";
   if (wantsPerformIntake) return "performIntake";
   if (wantsGenerateDocuments) return "generateDocuments";
   if (wantsGenerateBusinessPlanPdf) return "generateBusinessPlanPdf";
@@ -497,6 +568,12 @@ function precheck(command = "", args = {}) {
   } else if (intent === "addAppointment") {
     const appointment = extractAppointmentArgs(command, args);
     if (!appointment.title) clarification = "What should I call this appointment?";
+  } else if (intent === "addListing") {
+    const listing = extractListingArgs(command, args);
+    if (!listing.address) clarification = "What is the address of the property to list?";
+  } else if (intent === "updateListingStatus") {
+    const listing = extractListingArgs(command, args);
+    if (!listing.status) clarification = "What status should I set this listing to -- active, pending, sold, or off-market?";
   } else if (intent === "createWorkspace") {
     const businessName = extractBusinessName(command, args);
     if (!businessName) clarification = "What should I call this business or nonprofit workspace?";
@@ -525,7 +602,13 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     }
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const dashboard = computeBusinessDashboard(resolved.client.data.editable);
-    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""}); ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""}; $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+    const listingPhrase = dashboard.totalListings
+      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney(dashboard.currency, dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
+      : "";
+    const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
+      ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
+      : "";
+    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
     return { status: "completed", localOnly: true, response, businessDashboard: dashboard, summary: response };
   }
 
@@ -757,6 +840,51 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     return { status: "completed", localOnly: true, response, businessRecord: synced?.body || null, summary: response };
   }
 
+  if (intent === "addListing") {
+    const listing = extractListingArgs(command, args);
+    if (!listing.address) return { status: "needs-input", response: "What is the address of the property to list?", missingInformation: ["address"] };
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business workspace yet. Tell me its name and I can start one before adding a listing.", missingInformation: ["businessName"] };
+    const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    const status = listing.status || "active";
+    const pricePhrase = listing.price ? ` at ${formatMoney("USD", listing.price)}` : "";
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can list ${listing.address}${pricePhrase} in "${workspaceName}" as ${status}. Should I go ahead?` };
+    const editable = { ...resolved.client.data.editable, listings: [...(resolved.client.data.editable.listings || []),
+      { address: listing.address, price: listing.price, propertyType: listing.propertyType, beds: listing.beds, baths: listing.baths, status, notes: "" }] };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
+    const response = `Listed ${listing.address}${pricePhrase} in "${workspaceName}" as ${status}.`;
+    return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
+  }
+
+  if (intent === "updateListingStatus") {
+    const listingArgs = extractListingArgs(command, args);
+    if (!listingArgs.status) return { status: "needs-input", response: "What status should I set this listing to -- active, pending, sold, or off-market?", missingInformation: ["status"] };
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business workspace yet.", missingInformation: ["businessName"] };
+    const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    const listings = resolved.client.data.editable.listings || [];
+    const index = resolveListingIndex(listings, command);
+    if (index === -1) return { status: "needs-input", response: `I could not find a listing matching that address in "${workspaceName}". Name the address exactly as you listed it.`, missingInformation: ["address"] };
+    const target = listings[index];
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can set ${target.address} to ${listingArgs.status} in "${workspaceName}". Should I go ahead?` };
+    const editable = { ...resolved.client.data.editable, listings: listings.map((listing, itemIndex) => itemIndex === index ? { ...listing, status: listingArgs.status } : listing) };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
+    const response = `Set ${target.address} to ${listingArgs.status} in "${workspaceName}".`;
+    return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
+  }
+
+  if (intent === "listListings") {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    const listings = resolved.client?.data?.editable?.listings || [];
+    const workspaceName = resolved.client?.data?.info?.businessName || "your workspace";
+    const response = listings.length
+      ? `"${workspaceName}" has ${listings.length} listing${listings.length === 1 ? "" : "s"}: ${listings.map(listing => `${listing.address} (${listing.status}${listing.price ? `, ${formatMoney("USD", listing.price)}` : ""})`).join("; ")}.`
+      : `"${workspaceName}" has no listings yet. Say something like "list 123 Main Street for $450,000" to add one.`;
+    return { status: "completed", localOnly: true, response, businessListings: listings, summary: response };
+  }
+
   if (intent === "generateDocuments") {
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before generating documents.", missingInformation: ["businessName"] };
@@ -830,5 +958,6 @@ module.exports = Object.freeze({
   extractBusinessName, resolveBusinessClient, extractLeadArgs, extractTransactionArgs,
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
-  extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard
+  extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard,
+  extractListingArgs, resolveListingIndex
 });

@@ -84,6 +84,13 @@ function normalizeEditable(info, input = {}) {
     // appointment is actually synced -- an unsynced row is honestly just a
     // local plan, never mistaken for a real calendar booking.
     appointments: rows(input.appointments === undefined ? starter.appointments : input.appointments, { title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }),
+    // Core-essentials real estate support: property listings. Reuses this
+    // same generic workspace/leads/invoices engine rather than a separate
+    // vertical-specific system -- "leads" already tracks buyer/seller/tenant
+    // people (see extractLeadArgs' typeMatch in voice-dispatch.js), so a
+    // listing only needs to add the one thing leads/tasks/appointments don't
+    // already cover: a property record with an address, price, and status.
+    listings: rows(input.listings === undefined ? starter.listings : input.listings, { address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
     // Tool 1: a real, editable, versioned business plan document -- distinct
