@@ -20867,6 +20867,16 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     }
     const finalText = sanitizeNexusSpokenResponseText(extractResponseText(finalPayload) || toolResults[0]?.result?.response || "Nexus completed the OpenAI-native reasoning turn and returned the available tool result.");
     const citations = toolResults.flatMap(item => item.result?.citations || item.result?.sources || []).slice(0, 8);
+    // A tool (e.g. nexus_deep_research) can attach a real institutional
+    // evidence receipt or research packet to its own result -- this used to
+    // be silently dropped here the same way richData once was: the tool
+    // built it, but nothing downstream forwarded it into the response
+    // envelope's metadata, so the client and any evidence-preservation
+    // check never saw it even though real citations were returned.
+    const evidenceReceipt = toolResults
+      .map(item => item.result?.institutionalEvidenceReceipt || item.result?.evidenceReceipt)
+      .find(Boolean) || null;
+    const evidenceReceiptId = evidenceReceipt?.receiptId || evidenceReceipt?.packetId || evidenceReceipt?.id || "";
     const genesisAction = nexusGenesisWorkspaceAction(command, toolResults);
     // Real tool results carry rich display data (real image results, real
     // catalog/list results, real tracking info) beyond the spoken text —
@@ -20915,6 +20925,8 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
         },
         citations,
         sourceContext: citations.length ? { citations } : null,
+        institutionalEvidenceReceipt: evidenceReceipt,
+        evidenceReceiptId,
         richData: Object.keys(richData).length ? richData : null,
         noExecutionAuthorized: true,
         providerHandoffAuthorized: false,
@@ -52818,12 +52830,12 @@ function handleTwilioPhoneRealtimeStream(ws) {
   };
 
   ws.on("message", async raw => {
-    let msg;
-    try { msg = JSON.parse(raw.toString()); } catch { return; }
-    if (msg.event === "start") {
-      streamSid = msg.start?.streamSid || null;
-      callSid = msg.start?.callSid || null;
-      const params = msg.start?.customParameters || {};
+    let frame;
+    try { frame = JSON.parse(raw.toString()); } catch { return; }
+    if (frame.event === "start") {
+      streamSid = frame.start?.streamSid || null;
+      callSid = frame.start?.callSid || null;
+      const params = frame.start?.customParameters || {};
       const claim = verifyPhoneRealtimeStreamToken(params.token, callSid, Date.now(), process.env);
       if (!claim) return cleanup("unauthorized-stream-token");
       const db = await readDb();
@@ -52853,13 +52865,13 @@ function handleTwilioPhoneRealtimeStream(ws) {
       }
       return;
     }
-    if (msg.event === "media") {
-      if (!transport || transport.status !== "connected" || !msg.media?.payload) return;
-      const buffer = Buffer.from(msg.media.payload, "base64");
+    if (frame.event === "media") {
+      if (!transport || transport.status !== "connected" || !frame.media?.payload) return;
+      const buffer = Buffer.from(frame.media.payload, "base64");
       transport.sendAudio(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength));
       return;
     }
-    if (msg.event === "stop") {
+    if (frame.event === "stop") {
       await cleanup("caller-hung-up");
     }
   });
