@@ -48124,6 +48124,55 @@ async function api(req, res, url) {
     return send(res, 200, state);
   }
 
+  if (url.pathname === "/api/admin/investor-user" && req.method === "POST") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow investor user management" });
+    const body = await readBody(req);
+    ensureOperationsProfile(db.profile);
+    const email = String(body.email || "investor-test@example.com").trim().toLowerCase();
+    const name = String(body.name || "Investor Test User").trim() || "Investor Test User";
+    const password = String(body.password || "Investor2026!").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
+    if (password.length < 8) return send(res, 400, { error: "Password must be at least 8 characters" });
+    const existing = db.users.find(item => String(item.email || "").toLowerCase() === email);
+    // Same guardrail as test-user/admin-user: this creates/resets throwaway
+    // sandbox Investor logins for demoing to a real investor, not general
+    // account management -- it must never overwrite a real, pre-existing
+    // account just because the caller supplied that account's email.
+    if (existing && !existing.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
+    const account = existing || {
+      id: crypto.randomUUID(),
+      email,
+      createdAt: new Date().toISOString(),
+      isSandboxTestAccount: true
+    };
+    account.name = name;
+    // Store a hash in the blob; the plaintext local `password` is used below only
+    // for the real Postgres write and the one-time display to the admin creating it.
+    account.password = pgUsers.hashPassword(password);
+    account.role = "Investor";
+    account.country = String(body.country || account.country || "Nigeria").trim() || "Nigeria";
+    account.language = String(body.language || account.language || COUNTRY_LANGUAGE[account.country.toLowerCase()] || "en").trim() || "en";
+    account.lastUpdatedAt = new Date().toISOString();
+    if (!db.users.some(item => item.id === account.id)) db.users.push(account);
+    if (usingPostgresAuth()) {
+      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password })
+        .catch(error => console.error("[admin] investor-user Postgres shadow-write failed:", error.message));
+    }
+    addUsageEvent(db.profile, { module: "Admin", action: "investor_user.created", detail: `${account.email} Investor-only test login created.` });
+    logIntegration(db, {
+      providerId: "auth-users",
+      module: "Platform",
+      action: "investor_user.created",
+      detail: `${account.email} created with Investor-only permissions.`,
+      metadata: { userId: account.id, role: account.role, country: account.country, language: account.language }
+    });
+    addActivity(db.profile, `Investor test login ready: ${account.email}.`);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.investorUserResult = { name: account.name, email: account.email, password, role: account.role, country: account.country, language: account.language };
+    return send(res, 200, state);
+  }
+
   if (url.pathname === "/api/billing/checkout" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow billing setup" });
     const body = await readBody(req);

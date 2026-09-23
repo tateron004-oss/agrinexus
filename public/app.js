@@ -46527,6 +46527,55 @@ function workflowConfig(workflow, action, element) {
       ]
     });
   }
+  if (workflow === "investor-user") {
+    return simpleWorkflowConfig({
+      eyebrow: "Investor access workflow",
+      title: "Add investor",
+      summary: "Create a personal Investor login for someone previewing the platform. They see every working module (learning, workforce, health, trade, map, Kyro) but never the admin, integrations, or governance panels.",
+      confirmLabel: "Create investor login",
+      path: "/api/admin/investor-user",
+      body: { role: "Investor" },
+      fields: [
+        { name: "name", label: "Investor name", value: "Investor Test User", placeholder: "Example: Jane Investor" },
+        { name: "email", label: "Investor email", value: "investor-test@example.com", placeholder: "name@example.com" },
+        { name: "password", label: "Temporary password", type: "password", value: "Investor2026!", placeholder: "At least 8 characters" },
+        {
+          name: "country",
+          label: "Country",
+          type: "select",
+          value: "Nigeria",
+          options: [
+            { value: "Nigeria", label: "Nigeria" },
+            { value: "Kenya", label: "Kenya" },
+            { value: "DRC", label: "DRC" },
+            { value: "Egypt", label: "Egypt" }
+          ]
+        },
+        {
+          name: "language",
+          label: "Language",
+          type: "select",
+          value: "en",
+          options: [
+            { value: "en", label: "English" },
+            { value: "fr", label: "French" },
+            { value: "ar", label: "Arabic" },
+            { value: "sw", label: "Swahili" },
+            { value: "es", label: "Spanish" },
+            { value: "pt", label: "Portuguese" }
+          ]
+        }
+      ],
+      success: "Investor login created",
+      record: "Investor login account, role permissions, auth provider evidence, and admin audit",
+      provider: "Auth provider records investor_user.created when configured. The backend always forces Investor permissions.",
+      checklist: [
+        { title: "Role locked", detail: "The account is created as Investor only, with full feature access but no admin or integrations controls.", status: "ready", label: "Investor" },
+        { title: "Login test", detail: "Use the email and temporary password on the sign-in screen.", status: "ready", label: "Access" },
+        { title: "Auth audit", detail: data.providers.find(item => item.id === "auth-users")?.status || "Provider audit will record locally until live auth is connected.", status: "ready", label: "Auth" }
+      ]
+    });
+  }
   if (workflow === "profile") {
     return simpleWorkflowConfig({
       eyebrow: "Profile workflow",
@@ -62892,6 +62941,12 @@ function bindStatic() {
       openWorkflowModal(workflowConfig("admin-user", "create", { dataset: {} }));
       return;
     }
+    if (event.target.closest("#addInvestorUserBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("investor-user", "create", { dataset: {} }));
+      return;
+    }
     if (event.target.closest("#liveInvestorDemoBtn")) {
       event.preventDefault();
       event.stopPropagation();
@@ -63256,6 +63311,7 @@ function bindStatic() {
   $("#inviteSubscriberBtn").onclick = () => openWorkflowModal(workflowConfig("subscriber", "invite", { dataset: {} }));
   $("#addTestUserBtn").onclick = () => openWorkflowModal(workflowConfig("test-user", "create", { dataset: {} }));
   $("#addAdminUserBtn").onclick = () => openWorkflowModal(workflowConfig("admin-user", "create", { dataset: {} }));
+  $("#addInvestorUserBtn").onclick = () => openWorkflowModal(workflowConfig("investor-user", "create", { dataset: {} }));
   $("#agentPlanBtn").onclick = createAgentPlan;
   $("#agentExecuteBtn").onclick = executeAgentPlan;
   $("#agentBriefingBtn").onclick = createGovernmentBriefing;
