@@ -1,3 +1,4 @@
+const crypto = require("node:crypto");
 const {
   clean,
   envEnabled,
@@ -264,4 +265,58 @@ async function startConnectCall(body = {}, env = process.env) {
   }
 }
 
-module.exports = { status, sendSms, sendWhatsapp, startCall, startConnectCall, twilioFromNumber };
+// "Kyro, connect me to my supplier and listen" (2026-09-23): like
+// startConnectCall above, but Kyro also transcribes the call afterward so a
+// follow-up request ("now call the delivery driver about that order") can
+// use what was actually said, without repeating it. This is a materially
+// different, LEGALLY SENSITIVE shape of call and must never be reached by
+// the plain "connect me" phrasing above -- most US states and many other
+// countries require ALL parties on a call to consent before it can be
+// recorded/transcribed, not just the person who asked Kyro to do it. The
+// disclosure line spoken to the THIRD PARTY's leg before it joins the
+// conference is what makes this lawful; it is not optional and must never
+// be removed or shortened to just the user's own leg. Two separate real
+// outbound legs join one Twilio Conference (not a plain <Dial><Number>)
+// specifically so each leg can be given its own TwiML -- the user hears a
+// heads-up, the third party hears the required consent disclosure -- before
+// the two are bridged together.
+async function startConnectAndListenCall(body = {}, env = process.env) {
+  const provider = "twilio";
+  const action = "call.connect_and_listen";
+  if (!envEnabled("NEXUS_CALLS_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_CALLS_ENABLED");
+  const missing = [...twilioConfigured(env), ...missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env), ...missingEnv(["PUBLIC_BASE_URL"], env)];
+  if (missing.length && !domainProviderSimulationEnabled(env)) return missingConfigResponse(provider, action, missing);
+  const confirmation = requireConfirmation(body, provider, action);
+  if (confirmation) return confirmation;
+  const phonePattern = /^\+?[0-9][0-9\s().-]{6,}$/;
+  const userError = validateText(body.userPhone, "Your own phone number", { max: 80, pattern: phonePattern });
+  if (userError) return blockedResponse(provider, action, userError);
+  if (!phonePattern.test(clean(body.targetPhone))) {
+    return blockedResponse(provider, action, "I need a real phone number to connect this call to -- saying a saved contact's name for lookup isn't wired up yet, so please give me the number directly.");
+  }
+  if (!clean(body.userId)) return blockedResponse(provider, action, "An account is required to hold onto call context afterward.");
+  if (missing.length) return simulatedTwilioResponse(provider, action, "voice-connect-listen", clean(body.targetPhone));
+  const fromNumber = twilioFromNumber(env);
+  const targetLabel = clean(body.targetName) || "your contact";
+  const conferenceName = `kyro-listen-${crypto.randomUUID()}`;
+  const base = clean(env.PUBLIC_BASE_URL).replace(/\/$/, "");
+  const recordingCallbackUrl = `${base}/api/voice/phone/listen-recording?userId=${encodeURIComponent(clean(body.userId))}&targetName=${encodeURIComponent(targetLabel)}`;
+  const conferenceAttrs = `startConferenceOnEnter="true" record="record-from-start" recordingStatusCallback="${xmlEscape(recordingCallbackUrl)}" recordingStatusCallbackEvent="completed" recordingStatusCallbackMethod="POST"`;
+  const userTwiml = `<Response><Say voice="alice">Connecting you to ${xmlEscape(targetLabel)} now. Kyro will listen to this call so it can help you right after -- this call may be recorded and transcribed.</Say><Dial><Conference ${conferenceAttrs} endConferenceOnExit="true">${xmlEscape(conferenceName)}</Conference></Dial></Response>`;
+  const targetTwiml = `<Response><Say voice="alice">This call may be recorded and transcribed by an AI assistant to help the caller with a follow-up task.</Say><Dial><Conference ${conferenceAttrs} endConferenceOnExit="false">${xmlEscape(conferenceName)}</Conference></Dial></Response>`;
+  try {
+    const userCallResult = await twilioPost("/Calls.json", { To: clean(body.userPhone), From: fromNumber, Twiml: userTwiml }, env);
+    const targetCallResult = await twilioPost("/Calls.json", { To: clean(body.targetPhone), From: fromNumber, Twiml: targetTwiml }, env);
+    return providerResponse({
+      provider,
+      action,
+      status: "completed",
+      message: `Kyro is calling your own phone now to connect you with ${targetLabel}. Answer it and you'll both be connected shortly -- ${targetLabel} will hear that the call may be recorded and transcribed before you're bridged together. Say "I'm on it, coach" style follow-ups afterward and Kyro will use what was discussed.`,
+      data: { userCallSid: userCallResult.sid, targetCallSid: targetCallResult.sid, conferenceName, calledUser: clean(body.userPhone), connectingTo: clean(body.targetPhone), channel: "voice-connect-listen" }
+    });
+  } catch (error) {
+    return failedResponse(provider, action, error);
+  }
+}
+
+module.exports = { status, sendSms, sendWhatsapp, startCall, startConnectCall, startConnectAndListenCall, twilioFromNumber };

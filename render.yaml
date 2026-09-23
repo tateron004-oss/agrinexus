@@ -276,6 +276,12 @@ services:
       # decline. Ships off by default. See .env.example.
       - key: PHONE_SCREENING_ENABLED
         value: "false"
+      # "Connect me and listen" call transcription. LEGALLY SENSITIVE (records
+      # and transcribes a real third party, disclosed to them on the call but
+      # never fully "off the record") -- ships off by default. See
+      # .env.example before ever turning this on here.
+      - key: PHONE_LISTEN_AND_REMEMBER_ENABLED
+        value: "false"
       # Real file uploads (photos, PDFs). Ships off by default. The storage
       # dir is pre-pointed at the mounted persistent disk (see the disk:
       # block above) so it's ready the moment this is turned on. See

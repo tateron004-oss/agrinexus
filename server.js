@@ -18060,7 +18060,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
-    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message.",
+    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message. If the user also asks Kyro to listen, take notes, or remember the call (\"connect me to X and listen\", \"call X and take notes\"), pass mode: \"connect_and_listen\" -- Kyro will transcribe that call (with a real spoken consent disclosure to the other party, which is legally required and never skipped) so a follow-up request can use what was actually discussed. If recentCallContext is present in this turn and the user's request plainly follows up on that recent call (asking to call/message someone else about it, or referencing what was discussed), use those real details instead of asking the user to repeat them.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
@@ -18738,7 +18738,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to create, save, read, or update a checklist or to-do list (e.g. 'create a checklist called X with items A, B, C'), you must call nexus_lists. This is a real, persisted list, not a reminder or a document — never route a checklist request to nexus_automation_reminder or nexus_document_export.",
     "When the user asks to play, pause, resume, or stop music, a song, an artist, an album, or a playlist -- including a plain 'play <artist> <title>' request with no other context -- you must call nexus_general_conversation. This is never a communications request: do not call nexus_communications for a request to play a song just because a person's or artist's name is mentioned in it.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
-    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message.",
+    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message. If the user also asks Kyro to listen, take notes, or remember the call (\"connect me to X and listen\", \"call X and take notes\"), pass mode: \"connect_and_listen\" -- Kyro will transcribe that call (with a real spoken consent disclosure to the other party, which is legally required and never skipped) so a follow-up request can use what was actually discussed. If recentCallContext is present in this turn and the user's request plainly follows up on that recent call (asking to call/message someone else about it, or referencing what was discussed), use those real details instead of asking the user to repeat them.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
@@ -19979,7 +19979,19 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // a participant -- see startConnectCall's comment. Detected from the
     // caller's own unmediated text (not the model's paraphrase) for the same
     // reason context.command is preferred elsewhere in this function.
-    const wantsConnectCall = channel === "call" && (args.mode === "connect" || /\b(connect me|patch me through|put me through|get me on the phone with|let me (?:talk|speak) (?:to|with))\b/i.test(command));
+    const wantsConnectCall = channel === "call" && (args.mode === "connect" || args.mode === "connect_and_listen" || /\b(connect me|patch me through|put me through|get me on the phone with|let me (?:talk|speak) (?:to|with))\b/i.test(command));
+    // A materially different, legally sensitive shape of the connect call --
+    // see startConnectAndListenCall's own comment on why this must never be
+    // reached by the plain connect phrasing above. Only triggers on an
+    // explicit ask to listen/take notes, never inferred silently.
+    // Off by default -- deliberately requires an explicit opt-in beyond just
+    // saying the trigger phrase, since this is the one connect-call variant
+    // that records and transcribes a real conversation with a third party.
+    // Higher legal stakes than any other new telephony feature tonight, so
+    // it gets the same "must be turned on before it can activate" posture
+    // as the realtime bridge and call screening.
+    const wantsListenAndRemember = wantsConnectCall && nexusFlagEnabled(process.env, "PHONE_LISTEN_AND_REMEMBER_ENABLED")
+      && (args.mode === "connect_and_listen" || /\b(and listen|listen in|and take notes|and keep notes|and remember (?:it|that|this)|so you (?:can |)(?:remember|know))\b/i.test(command));
     const verifyRealProviderId = channelLabel => async result => {
       const data = result?.body?.data || {};
       const realId = data.sid || data.providerMessageId;
@@ -19994,13 +20006,19 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           execute: () => nexusRealProviders.twilio.sendWhatsapp({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
           verify: verifyRealProviderId("WhatsApp")
         })
-      : channel === "call" && wantsConnectCall
+      : channel === "call" && wantsListenAndRemember
         ? await withActionLifecycle(db, {
-            provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
-            execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, process.env),
+            provider: "twilio", action: "call.connect_and_listen", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", userId: user?.id || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+            execute: () => nexusRealProviders.twilio.startConnectAndListenCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", userId: user?.id || "", confirmed: args.confirmed }, process.env),
             verify: verifyRealProviderId("Call")
           })
-        : channel === "call"
+        : channel === "call" && wantsConnectCall
+          ? await withActionLifecycle(db, {
+              provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+              execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, process.env),
+              verify: verifyRealProviderId("Call")
+            })
+          : channel === "call"
           ? await withActionLifecycle(db, {
               provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
               execute: () => nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
@@ -20907,11 +20925,22 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     text: sanitizePilotText(turn.response || turn.command || turn.text || "", 500)
   }));
   const toolHint = nexusOpenAiNativeToolChoiceHint(command);
+  // "Connect me and listen" calls (see startConnectAndListenCall) leave a
+  // real, real transcript here for a short window so a follow-up like "now
+  // call the delivery driver about that" can use what was actually said --
+  // but only while it is still fresh and still belongs to THIS user; an
+  // expired or another user's context is never surfaced to the model.
+  const liveCallContext = db.profile?.lastCallContext;
+  const recentCallContext = liveCallContext
+    && liveCallContext.forUserId === user.id
+    && new Date(liveCallContext.expiresAt).getTime() > Date.now()
+    ? { withName: liveCallContext.withName, transcript: liveCallContext.text }
+    : null;
   const firstPayload = {
     model: status.model,
     input: [
       { role: "system", content: nexusOpenAiNativeSystemPrompt() },
-      { role: "user", content: JSON.stringify({ command, language, recentTurns, toolHint, context: { inputMode: body.inputMode || "api", outputMode: body.outputMode || "" } }) }
+      { role: "user", content: JSON.stringify({ command, language, recentTurns, toolHint, recentCallContext, context: { inputMode: body.inputMode || "api", outputMode: body.outputMode || "" } }) }
     ],
     tools: nexusOpenAiNativeToolSchemas().map(({ metadata, ...tool }) => tool),
     tool_choice: "auto",
@@ -47322,6 +47351,65 @@ async function api(req, res, url) {
     }
     await writeDb(db);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`);
+  }
+
+  // Twilio's conference-recording completion callback for "connect and
+  // listen" calls (see startConnectAndListenCall's own comment for why the
+  // consent disclosure spoken on the third party's leg is what makes this
+  // lawful). Downloads the real recording, transcribes it for real, and
+  // holds the result only long enough and only for the narrow purpose
+  // disclosed on the call itself -- a short expiry, not a permanent log --
+  // so a later "now call X about that" can use it without the user
+  // repeating themselves.
+  if (url.pathname === "/api/voice/phone/listen-recording" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const userId = String(url.searchParams.get("userId") || "");
+    const targetName = sanitizePilotText(url.searchParams.get("targetName") || "your contact", 120);
+    const recordingUrl = String(body.RecordingUrl || body.recordingUrl || "");
+    const recordingSid = String(body.RecordingSid || body.recordingSid || "");
+    const owner = db.users.find(item => String(item.id) === userId) || null;
+    logIntegration(db, {
+      providerId: "phone-voice", module: "AI", action: "phone.listen_recording_ready",
+      detail: "A recorded, disclosed call finished; transcribing for real follow-up context.",
+      metadata: { recordingSid, userId, targetName }
+    });
+    try {
+      if (!owner || !recordingUrl) throw new Error("missing owner or recording URL");
+      const audioResponse = await fetchWithTimeout(`${recordingUrl}.mp3`, {
+        headers: { authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64")}` }
+      }, 20000);
+      if (!audioResponse.ok) throw new Error(`could not download recording: ${audioResponse.status}`);
+      const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
+      const transcribed = await openAiTranscribeAudio({
+        audioBase64: `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`,
+        mimeType: "audio/mpeg",
+        filename: "kyro-listened-call.mp3",
+        language: owner.language
+      });
+      const transcript = sanitizePilotText(transcribed?.transcript || "", 4000);
+      if (transcript) {
+        const capturedAt = Date.now();
+        db.profile = db.profile || {};
+        db.profile.lastCallContext = {
+          text: transcript,
+          withName: targetName,
+          capturedAt: new Date(capturedAt).toISOString(),
+          // A short window, not a standing call log: this exists only to
+          // support the immediate follow-up the disclosure promised, not to
+          // become a permanent record of a conversation a third party did
+          // not agree to have kept indefinitely.
+          expiresAt: new Date(capturedAt + 60 * 60_000).toISOString(),
+          forUserId: owner.id
+        };
+      }
+    } catch (error) {
+      recordServerError({ source: "phone-listen-recording-transcribe", message: error.stack || error.message, context: { recordingSid, userId } });
+    }
+    await writeDb(db);
+    return send(res, 200, { ok: true });
   }
 
   if (url.pathname === "/api/voice/phone/gather" && req.method === "POST") {
