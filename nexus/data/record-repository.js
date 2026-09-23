@@ -157,9 +157,13 @@ class RecordRepository {
   // listStaleBusinessWorkspaces avoiding dueDate/deadline).
   async listBusinessWorkspacesWithDueFollowUps({ limit = 50 }) {
     const DUE_LEAD = `l->>'followUpDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (l->>'followUpDate')::date < current_date`;
+    // contact/need are now selected too (2026-09-23): they're what
+    // situational-awareness.lead-followup-sweep needs to offer a real,
+    // confirmation-gated outreach draft when a usable contact exists,
+    // falling back to a self-directed reminder when it doesn't.
     const result = await this.db.query(`select tenant_id, owner_id, record_id,
         data->'info'->>'businessName' as business_name,
-        (select jsonb_agg(jsonb_build_object('name', l->>'name', 'followUpDate', l->>'followUpDate'))
+        (select jsonb_agg(jsonb_build_object('name', l->>'name', 'followUpDate', l->>'followUpDate', 'contact', l->>'contact', 'need', l->>'need'))
           from jsonb_array_elements(coalesce(data->'editable'->'leads','[]'::jsonb)) l
           where ${DUE_LEAD}) as due_leads
       from nexus_records

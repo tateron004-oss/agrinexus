@@ -77,13 +77,78 @@ test("situational-awareness.lead-followup-sweep sends one consolidated reminder 
   assert.match(when, /John Kamau/);
 });
 
-test("situational-awareness.lead-followup-sweep never uses communications.send -- reaching the lead is not this sweep's decision", async () => {
+test("situational-awareness.lead-followup-sweep falls back to a self-directed reminder when no due lead has a usable contact", async () => {
   const { runtime, created } = sweepFixture({
     dueWorkspaces: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "A", due_leads: [{ name: "X", followUpDate: "2026-01-01" }] }]
   });
   const handlers = createHandlers({ runtime });
   await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} } });
   assert.equal(created.tasks[0].steps.every(step => step.toolId !== "communications.send"), true);
+  assert.equal(created.tasks[0].steps[0].toolId, "reminders.schedule");
+});
+
+// 2026-09-23: widened, per an explicit decision, to draft real outreach when
+// a due lead has a usable contact -- always confirmation-gated (communications.send
+// is confirmationRequired), so nothing sends without the owner's explicit approval.
+test("situational-awareness.lead-followup-sweep drafts a real, confirmation-gated outreach message when a due lead has a usable contact", async () => {
+  const { runtime, created } = sweepFixture({
+    dueWorkspaces: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "Grace Chapel",
+      due_leads: [{ name: "Grace Otieno", followUpDate: "2026-01-01", contact: "grace@example.com", need: "the community fund grant" }] }]
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} } });
+  assert.equal(result.created, 1);
+  const taskInput = created.tasks[0];
+  assert.equal(taskInput.riskTier, "regulated");
+  assert.equal(taskInput.steps[0].toolId, "communications.send");
+  assert.equal(taskInput.steps[0].input.channel, "email");
+  assert.equal(taskInput.steps[0].input.to, "grace@example.com");
+  assert.match(taskInput.steps[0].input.message, /Grace Otieno/);
+  assert.match(taskInput.steps[0].input.message, /Grace Chapel/);
+  assert.match(taskInput.steps[0].input.message, /the community fund grant/);
+  assert.equal(created.nudgeRecords[0].data.outreachDrafted, true);
+  assert.equal(created.nudgeRecords[0].data.outreachLeadName, "Grace Otieno");
+});
+
+test("situational-awareness.lead-followup-sweep recognizes a phone-shaped contact as sms, not email", async () => {
+  const { runtime, created } = sweepFixture({
+    dueWorkspaces: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "A",
+      due_leads: [{ name: "John Kamau", followUpDate: "2026-01-01", contact: "+15551234567" }] }]
+  });
+  const handlers = createHandlers({ runtime });
+  await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} } });
+  assert.equal(created.tasks[0].steps[0].toolId, "communications.send");
+  assert.equal(created.tasks[0].steps[0].input.channel, "sms");
+  assert.equal(created.tasks[0].steps[0].input.to, "+15551234567");
+});
+
+test("situational-awareness.lead-followup-sweep ignores an unusable contact value and falls back to a reminder", async () => {
+  const { runtime, created } = sweepFixture({
+    dueWorkspaces: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "A",
+      due_leads: [{ name: "X", followUpDate: "2026-01-01", contact: "ask reception" }] }]
+  });
+  const handlers = createHandlers({ runtime });
+  await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} } });
+  assert.equal(created.tasks[0].steps[0].toolId, "reminders.schedule");
+});
+
+test("situational-awareness.lead-followup-sweep still nudges the owner about OTHER due leads even when one gets an outreach draft instead", async () => {
+  const { runtime, created } = sweepFixture({
+    dueWorkspaces: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "A",
+      due_leads: [
+        { name: "Grace Otieno", followUpDate: "2026-01-01", contact: "grace@example.com" },
+        { name: "John Kamau", followUpDate: "2026-01-02" }
+      ] }]
+  });
+  const handlers = createHandlers({ runtime });
+  await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} } });
+  // One task is created for the workspace this cycle (the outreach draft for
+  // the first contactable lead); John is not silently dropped -- he is
+  // recorded in the same nudge's dueLeads and will surface again on this
+  // sweep's own cooldown if Grace's outreach doesn't resolve things.
+  assert.equal(created.tasks.length, 1);
+  assert.equal(created.tasks[0].steps[0].toolId, "communications.send");
+  assert.deepEqual(created.nudgeRecords[0].data.dueLeads.map(lead => lead.name), ["Grace Otieno", "John Kamau"]);
 });
 
 test("situational-awareness.lead-followup-sweep enforces the per-tenant daily autonomous-task cap", async () => {
