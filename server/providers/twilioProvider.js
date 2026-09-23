@@ -224,4 +224,44 @@ async function startCall(body = {}, env = process.env) {
   }
 }
 
-module.exports = { status, sendSms, sendWhatsapp, startCall, twilioFromNumber };
+// Places a real call to the ACCOUNT OWNER's own phone first; once they pick
+// up, <Dial> bridges in a second real leg to the target number so the two
+// humans talk directly -- Kyro is the dialer, not a participant. This is
+// deliberately a different shape from startCall() above (which has Kyro
+// deliver a one-way spoken announcement): here the TwiML never puts words
+// in Kyro's mouth beyond a one-line "connecting you" heads-up.
+async function startConnectCall(body = {}, env = process.env) {
+  const provider = "twilio";
+  const action = "call.connect";
+  if (!envEnabled("NEXUS_CALLS_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_CALLS_ENABLED");
+  const missing = [...twilioConfigured(env), ...missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env)];
+  if (missing.length && !domainProviderSimulationEnabled(env)) return missingConfigResponse(provider, action, missing);
+  const confirmation = requireConfirmation(body, provider, action);
+  if (confirmation) return confirmation;
+  const phonePattern = /^\+?[0-9][0-9\s().-]{6,}$/;
+  const userError = validateText(body.userPhone, "Your own phone number", { max: 80, pattern: phonePattern });
+  if (userError) return blockedResponse(provider, action, userError);
+  if (!phonePattern.test(clean(body.targetPhone))) {
+    return blockedResponse(provider, action, "I need a real phone number to connect this call to -- saying a saved contact's name for lookup isn't wired up yet, so please give me the number directly.");
+  }
+  if (missing.length) return simulatedTwilioResponse(provider, action, "voice-connect", clean(body.targetPhone));
+  const fromNumber = twilioFromNumber(env);
+  const targetLabel = clean(body.targetName) || "your contact";
+  const twiml = `<Response><Say voice="alice">Connecting you to ${xmlEscape(targetLabel)} now.</Say><Dial callerId="${xmlEscape(fromNumber)}"><Number>${xmlEscape(clean(body.targetPhone))}</Number></Dial></Response>`;
+  try {
+    const result = await twilioPost("/Calls.json", { To: clean(body.userPhone), From: fromNumber, Twiml: twiml }, env);
+    const progress = await twilioMessageProgress(result.sid, result.status, env, "Calls");
+    if (progress.status === "failed") return failedResponse(provider, action, new Error("Twilio reported the call as failed"));
+    return providerResponse({
+      provider,
+      action,
+      status: "completed",
+      message: `Kyro is calling your own phone now to connect you with ${targetLabel}${progress.status ? ` (status: ${progress.status})` : ""}. Answer it and you'll be bridged through once they pick up.`,
+      data: { sid: result.sid, calledUser: clean(body.userPhone), connectingTo: clean(body.targetPhone), channel: "voice-connect", providerStatus: progress.status || "" }
+    });
+  } catch (error) {
+    return failedResponse(provider, action, error);
+  }
+}
+
+module.exports = { status, sendSms, sendWhatsapp, startCall, startConnectCall, twilioFromNumber };

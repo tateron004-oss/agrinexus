@@ -17015,6 +17015,22 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
   return db.users.find(item => item.role === "Admin") || db.users[0] || null;
 }
 
+// The reverse lookup of resolveAuthorizedPhoneCaller: given a user, find the
+// real phone number Kyro should dial to reach THEM (used by the "connect me
+// to someone" call-bridging feature, which has to ring the account owner's
+// own phone before it can bridge in a second party). Reuses the same
+// TWILIO_AUTHORIZED_CALLERS allowlist rather than a separate profile field,
+// since that list is already the source of truth for "which real phone
+// number belongs to which account."
+function nexusOwnPhoneForUser(user, env = process.env) {
+  const authorized = twilioAuthorizedCallers(env);
+  const email = String(user?.email || "").toLowerCase();
+  const byEmail = email && authorized.find(item => item.email === email);
+  if (byEmail) return byEmail.phone;
+  const bare = authorized.find(item => !item.email);
+  return bare ? bare.phone : "";
+}
+
 // Twilio's Media Streams WebSocket handshake carries no headers we control
 // and no webhook signature -- the only identity it hands back is whatever we
 // put in a <Parameter> on the <Stream> element, which round-trips through
@@ -17068,6 +17084,50 @@ function phoneRealtimeStreamUrl(env = process.env) {
   const base = String(env.PUBLIC_BASE_URL || "").trim();
   if (!base) return "";
   return base.replace(/^http/i, "ws").replace(/\/$/, "") + "/api/voice/phone/stream";
+}
+
+// Call screening for unrecognized callers: instead of the flat decline
+// resolveAuthorizedPhoneCaller's callers otherwise give an unauthorized
+// number, an unrecognized caller gets a short screening greeting, then --
+// if today's bridge cap allows it -- is <Dial>-bridged straight to the
+// account owner's own phone, with a real voicemail + push notification
+// fallback if the owner does not pick up. The unrecognized caller NEVER
+// reaches an authenticated identity, real account data, or any tool --
+// this is a pure TwiML dial/record flow with no model or tool-call
+// involvement, so it cannot reopen the access hole PR #570 closed.
+function phoneScreeningEnabled(env = process.env) {
+  return env.PHONE_SCREENING_ENABLED === "true";
+}
+
+function phoneScreeningDailyBridgeCap(env = process.env) {
+  const configured = Number(env.PHONE_SCREENING_DAILY_BRIDGE_CAP);
+  return Number.isFinite(configured) && configured > 0 ? Math.min(configured, 50) : 5;
+}
+
+function phoneScreeningOwner(db) {
+  return db.users.find(item => item.role === "Admin") || db.users[0] || null;
+}
+
+// Returns true (and records the attempt) if today's bridge cap still has
+// room; false if a screened caller has already used up today's cap and must
+// be told to try again rather than ringing the owner's phone yet again --
+// the concrete abuse case this guards is a stranger repeatedly ringing the
+// real owner's real phone all day. Mutates db in place; the caller is still
+// responsible for writeDb(db) afterward, same as every other db mutator in
+// this file.
+function phoneScreeningBridgeAllowed(db, env = process.env) {
+  ensureAiProfile(db.profile);
+  const today = new Date().toISOString().slice(0, 10);
+  const state = db.profile.phoneScreeningState && db.profile.phoneScreeningState.date === today
+    ? db.profile.phoneScreeningState
+    : { date: today, bridgedCount: 0 };
+  if (state.bridgedCount >= phoneScreeningDailyBridgeCap(env)) {
+    db.profile.phoneScreeningState = state;
+    return false;
+  }
+  state.bridgedCount += 1;
+  db.profile.phoneScreeningState = state;
+  return true;
 }
 
 function ensurePhoneVoiceSessions(profile) {
@@ -17999,6 +18059,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
+    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
@@ -18676,6 +18737,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to create, save, read, or update a checklist or to-do list (e.g. 'create a checklist called X with items A, B, C'), you must call nexus_lists. This is a real, persisted list, not a reminder or a document — never route a checklist request to nexus_automation_reminder or nexus_document_export.",
     "When the user asks to play, pause, resume, or stop music, a song, an artist, an album, or a playlist -- including a plain 'play <artist> <title>' request with no other context -- you must call nexus_general_conversation. This is never a communications request: do not call nexus_communications for a request to play a song just because a person's or artist's name is mentioned in it.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
+    "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
     "When the user asks to start, list, check, or manage a business or nonprofit admin-assistant workspace, launch kit, grant proposal, marketing strategy, financial literacy plan, minority-owned/Black-owned/Brown-owned business development, or government/public-sector partnership and technology modernization planning task, or asks to add a customer/donor/lead/sponsor/volunteer, to log or record an expense, income, transaction, payment, donation, or sale, to create an invoice or receipt, add a line item to an invoice, or generate/print an invoice PDF, to add/track a grant or funding opportunity or mark/update a grant's status, to add a project task or mark/complete/update a task's status, to add/schedule an appointment or sync an appointment to their calendar, to create/generate a service agreement, contract, client intake form, or application checklist, to generate/print the business plan PDF, to create/generate a flyer, newsletter, or promotional email, or to check how their business or nonprofit is doing/performing (a performance dashboard/summary), for their business or nonprofit workspace, you must call nexus_business_assistant.",
     "When the user asks to learn about, or wants a self-paced lesson on, financial literacy, marketing strategy, grant writing, minority-owned business development, government partnership readiness, or technology modernization, you must call nexus_workforce_learning — these are real local learning-catalog resources, not fabricated.",
@@ -19904,6 +19966,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const ownerTestRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
     const recipient = contact.to || ownerTestRecipient;
     const channel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : /\b(email|mail)\b/i.test(command) ? "email" : "sms"), 40).toLowerCase();
+    // "Connect me to X" is a different shape of call than the default: the
+    // user wants to personally talk to X, with Kyro only as the dialer, not
+    // a participant -- see startConnectCall's comment. Detected from the
+    // caller's own unmediated text (not the model's paraphrase) for the same
+    // reason context.command is preferred elsewhere in this function.
+    const wantsConnectCall = channel === "call" && (args.mode === "connect" || /\b(connect me|patch me through|put me through|get me on the phone with|let me (?:talk|speak) (?:to|with))\b/i.test(command));
     const verifyRealProviderId = channelLabel => async result => {
       const data = result?.body?.data || {};
       const realId = data.sid || data.providerMessageId;
@@ -19918,13 +19986,19 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           execute: () => nexusRealProviders.twilio.sendWhatsapp({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
           verify: verifyRealProviderId("WhatsApp")
         })
-      : channel === "call"
+      : channel === "call" && wantsConnectCall
         ? await withActionLifecycle(db, {
-            provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
-            execute: () => nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
+            provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+            execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, process.env),
             verify: verifyRealProviderId("Call")
           })
-        : channel === "email"
+        : channel === "call"
+          ? await withActionLifecycle(db, {
+              provider: "twilio", action: "call.start", body: { to: recipient, message: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+              execute: () => nexusRealProviders.twilio.startCall({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
+              verify: verifyRealProviderId("Call")
+            })
+          : channel === "email"
           ? await withActionLifecycle(db, {
               provider: "email", action: "email.send", body: { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
               execute: () => nexusRealProviders.email.send({ to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed }, process.env),
@@ -46960,7 +47034,29 @@ async function api(req, res, url) {
     // Declined here too, not just at /gather: an unauthorized caller gets an
     // immediate, honest decline instead of being led through a pointless
     // "who am I speaking with" round trip before being refused later anyway.
+    // If call screening is enabled, "declined" becomes "screened" instead --
+    // see phoneScreeningEnabled's comment for why this cannot regress the
+    // PR #570 access fix (the caller never reaches an authenticated identity
+    // or a tool, only a plain dial/record TwiML flow).
     if (!resolveAuthorizedPhoneCaller(db, body)) {
+      if (phoneScreeningEnabled(process.env) && process.env.PUBLIC_BASE_URL) {
+        logIntegration(db, {
+          providerId: "phone-voice", module: "AI", action: "phone.screening_started",
+          detail: "An unrecognized caller was offered call screening instead of an outright decline.",
+          metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid: body.CallSid || body.callSid || null }
+        });
+        await writeDb(db);
+        const screeningGreeting = await phoneVoicePrompt("Hi, this is Kyro, an AI assistant. The person you're trying to reach isn't available to answer directly right now. Can I ask who's calling, and what this is about?", "en-US");
+        const screeningActionUrl = `${process.env.PUBLIC_BASE_URL}/api/voice/phone/screening-gather`;
+        const noScreeningResponse = twilioSay("I did not hear a response. Please call back, or reach out another way.", "en-US");
+        return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech" action="${xmlEscape(screeningActionUrl)}" method="POST" language="en-US" speechTimeout="auto" actionOnEmptyResult="true">
+    ${screeningGreeting}
+  </Gather>
+  ${noScreeningResponse}
+</Response>`);
+      }
       logIntegration(db, {
         providerId: "phone-voice", module: "AI", action: "phone.unauthorized_caller",
         detail: "An incoming phone call was declined: the caller's number is not on the authorized list.",
@@ -47032,6 +47128,130 @@ async function api(req, res, url) {
   </Gather>
   ${noCommand}
 </Response>`);
+  }
+
+  if (url.pathname === "/api/voice/phone/screening-gather" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const statement = sanitizePilotText(body.SpeechResult || body.speechResult || "", 400);
+    if (!statement) {
+      const retryPrompt = await phoneVoicePrompt("Sorry, I did not catch that. Who is calling, and what is this about?", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech" action="${xmlEscape(`${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/screening-gather`)}" method="POST" language="en-US" speechTimeout="auto" actionOnEmptyResult="true">
+    ${retryPrompt}
+  </Gather>
+</Response>`);
+    }
+    const callSid = String(body.CallSid || body.callSid || "");
+    if (!phoneScreeningBridgeAllowed(db, process.env)) {
+      await writeDb(db);
+      logIntegration(db, {
+        providerId: "phone-voice", module: "AI", action: "phone.screening_capped",
+        detail: "A screened caller was declined a bridge attempt because today's screening cap was already used.",
+        metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid, statement }
+      });
+      const capped = await phoneVoicePrompt("I'm sorry, we've reached today's limit for connecting calls this way. Please try again tomorrow, or reach out another way.", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${capped}
+  <Hangup/>
+</Response>`);
+    }
+    const owner = phoneScreeningOwner(db);
+    const ownerPhone = owner ? nexusOwnPhoneForUser(owner, process.env) : "";
+    if (!ownerPhone) {
+      await writeDb(db);
+      logIntegration(db, {
+        providerId: "phone-voice", module: "AI", action: "phone.screening_no_owner_phone",
+        detail: "Call screening could not bridge because no owner phone number is configured on the authorized-callers allowlist.",
+        metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid }
+      });
+      const noOwner = await phoneVoicePrompt("I'm sorry, I could not connect this call right now. Please try again another way.", "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${noOwner}
+  <Hangup/>
+</Response>`);
+    }
+    logIntegration(db, {
+      providerId: "phone-voice", module: "AI", action: "phone.screening_bridging",
+      detail: "A screened caller is being bridged to the account owner's phone.",
+      metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid, statement }
+    });
+    await writeDb(db);
+    const connecting = await phoneVoicePrompt("Thank you. Connecting you now -- please hold.", "en-US");
+    const dialResultUrl = `${process.env.PUBLIC_BASE_URL}/api/voice/phone/screening-dial-result?statement=${encodeURIComponent(statement)}`;
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${connecting}
+  <Dial timeout="20" action="${xmlEscape(dialResultUrl)}">
+    <Number>${xmlEscape(ownerPhone)}</Number>
+  </Dial>
+</Response>`);
+  }
+
+  if (url.pathname === "/api/voice/phone/screening-dial-result" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const statement = sanitizePilotText(url.searchParams.get("statement") || "", 400);
+    const dialStatus = String(body.DialCallStatus || body.dialCallStatus || "").toLowerCase();
+    if (dialStatus === "completed") {
+      // The owner answered and the two of them talked directly -- Kyro's job
+      // here is done, nothing more to say.
+      logIntegration(db, {
+        providerId: "phone-voice", module: "AI", action: "phone.screening_bridged",
+        detail: "A screened call was successfully bridged and completed.",
+        metadata: { callSid: body.CallSid || body.callSid || null }
+      });
+      await writeDb(db);
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`);
+    }
+    logIntegration(db, {
+      providerId: "phone-voice", module: "AI", action: "phone.screening_no_answer",
+      detail: `The owner did not answer a screened call (status: ${dialStatus || "unknown"}). Offering the caller a voicemail.`,
+      metadata: { callSid: body.CallSid || body.callSid || null, dialStatus }
+    });
+    await writeDb(db);
+    const voicemailPrompt = await phoneVoicePrompt("Sorry, they're not available right now. Please leave a message after the tone, then hang up when you're done.", "en-US");
+    const voicemailActionUrl = `${process.env.PUBLIC_BASE_URL}/api/voice/phone/screening-voicemail?statement=${encodeURIComponent(statement)}`;
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${voicemailPrompt}
+  <Record maxLength="120" playBeep="true" action="${xmlEscape(voicemailActionUrl)}"/>
+  <Hangup/>
+</Response>`);
+  }
+
+  if (url.pathname === "/api/voice/phone/screening-voicemail" && req.method === "POST") {
+    const body = await readBody(req);
+    if (!validTwilioWebhookSignature(req, url, body)) {
+      return send(res, 403, { ok: false, error: "Invalid Twilio webhook signature", noSecretValues: true });
+    }
+    const statement = sanitizePilotText(url.searchParams.get("statement") || "", 400) || "a caller left a voicemail but did not say why";
+    const recordingSid = String(body.RecordingSid || body.recordingSid || "");
+    const owner = phoneScreeningOwner(db);
+    logIntegration(db, {
+      providerId: "phone-voice", module: "AI", action: "phone.screening_voicemail_left",
+      detail: "A screened caller left a real voicemail after the owner did not answer.",
+      metadata: { callSid: body.CallSid || body.callSid || null, recordingSid, statement }
+    });
+    if (owner) {
+      try {
+        await nexusOpenAiNativeCreatePushReminder(owner, { command: "" }, {
+          title: `check a voicemail from a screened caller: "${statement}"`,
+          when: "in 1 minute"
+        }, owner.language || "en");
+      } catch (error) {
+        recordServerError({ source: "phone-screening-voicemail-notify", message: error.stack || error.message, context: { recordingSid } });
+      }
+    }
+    await writeDb(db);
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`);
   }
 
   if (url.pathname === "/api/voice/phone/gather" && req.method === "POST") {
