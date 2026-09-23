@@ -6,6 +6,7 @@ const net = require("net");
 const tls = require("tls");
 const { WebSocketServer } = require("ws");
 const { OpenAIRealtimeWebSocket } = require("@openai/agents-realtime");
+const nexusUploads = require("./server/uploads.js");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
@@ -19639,11 +19640,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     };
   }
   if (toolName === "nexus_file_document_analysis") {
+    // "Analyze this" / "what's wrong with this photo" never carries a real
+    // fileId from the model -- it has no way to know the random id a real
+    // upload was just given. Falling back to the most recently uploaded
+    // file (per account) is what makes "upload, then ask about it" actually
+    // work as a conversation instead of requiring the user to read out a
+    // UUID.
+    const fileId = args.fileId || args.documentId || args.attachmentId || db.profile?.lastUploadedFileId || "";
     const documentResult = await nexusRealProviders.documents.analyze({
-      fileId: args.fileId || args.documentId || args.attachmentId,
+      fileId,
       text: args.text || args.content,
       command
-    }, process.env);
+    }, process.env, user);
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "file-document-analysis" }, documentResult);
   }
   if (toolName === "nexus_data_code_analysis") {
@@ -40020,14 +40028,18 @@ function nexusLanguageStatus(db, env = process.env) {
 }
 
 function nexusUploadReadiness(db, env = process.env) {
+  const enabled = nexusFlagEnabled(env, "NEXUS_FILE_UPLOAD_ENABLED");
   return {
     ok: true,
-    uploadEnabled: nexusFlagEnabled(env, "NEXUS_FILE_UPLOAD_ENABLED"),
-    acceptedFileTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
-    maxFileSizeMb: Number(env.NEXUS_FILE_UPLOAD_MAX_MB || 10),
-    disabledUploadUiState: !nexusFlagEnabled(env, "NEXUS_FILE_UPLOAD_ENABLED"),
+    uploadEnabled: enabled,
+    acceptedFileTypes: nexusUploads.acceptedTypes(),
+    maxFileSizeMb: Math.round(nexusUploads.maxUploadBytes(env) / (1024 * 1024)),
+    totalQuotaMb: Math.round(nexusUploads.totalQuotaBytes(env) / (1024 * 1024)),
+    uploadEndpoint: "/api/nexus/upload",
+    downloadEndpoint: "/api/nexus/upload/file",
+    disabledUploadUiState: !enabled,
     recordAttachmentModelReady: true,
-    safetyWarning: "Images/files are for future configured review. Nexus does not diagnose images, identify disease, or upload externally without consent and provider configuration.",
+    safetyWarning: "Nexus describes an uploaded image, it does not diagnose a plant disease or a medical condition -- ask a qualified person to confirm.",
     noUnsafeArbitraryUpload: true
   };
 }
@@ -44387,6 +44399,64 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/upload/readiness" && req.method === "GET") {
     return send(res, 200, nexusUploadReadiness(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/upload" && req.method === "POST") {
+    if (!nexusFlagEnabled(process.env, "NEXUS_FILE_UPLOAD_ENABLED")) {
+      return send(res, 403, { ok: false, error: "File uploads are not enabled on this server yet.", noSecretValues: true });
+    }
+    if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
+    if (!rateLimit(req, 20, 10 * 60_000)) return send(res, 429, { ok: false, error: "Too many uploads. Please wait before trying again." });
+    try {
+      const meta = await nexusUploads.parseAndStoreUpload(req, { env: process.env, userId: user.id });
+      db.profile = db.profile || {};
+      db.profile.lastUploadedFileId = meta.fileId;
+      logIntegration(db, {
+        providerId: "nexus-uploads", module: "AI", action: "upload.received",
+        detail: `A real file was uploaded and stored (${meta.mimeType}, ${meta.sizeBytes} bytes).`,
+        metadata: { fileId: meta.fileId, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, userId: user.id }
+      });
+      await writeDb(db);
+      return send(res, 200, { ok: true, fileId: meta.fileId, filename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes });
+    } catch (error) {
+      const code = error?.message || "upload_failed";
+      const status = code === "payload_too_large" || code === "file_too_large" ? 413
+        : code === "unsupported_file_type" || code === "content_does_not_match_declared_type" ? 415
+        : code === "storage_quota_exceeded" ? 507
+        : code === "no_file_in_request" ? 400
+        : 500;
+      const messages = {
+        payload_too_large: "That file is too large.",
+        file_too_large: `That file is larger than the ${Math.round(nexusUploads.maxUploadBytes(process.env) / (1024 * 1024))}MB limit.`,
+        unsupported_file_type: `Only ${nexusUploads.acceptedTypes().join(", ")} are accepted.`,
+        content_does_not_match_declared_type: "The file's contents did not match its declared type.",
+        storage_quota_exceeded: "Nexus file storage is full. Please try again later or contact support.",
+        no_file_in_request: "No file was found in the upload."
+      };
+      if (status === 500) recordServerError({ source: "nexus-upload", message: error.stack || error.message, context: { userId: user.id } });
+      return send(res, status, { ok: false, error: messages[code] || "The upload could not be completed.", noSecretValues: true });
+    }
+  }
+
+  // Real ownership check, not just an unguessable id -- mirrors serveExport's
+  // own comment on this exact class of bug: "unguessable is not authorized."
+  if (url.pathname === "/api/nexus/upload/file" && req.method === "GET") {
+    if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
+    const fileId = String(url.searchParams.get("fileId") || "");
+    const dir = nexusUploads.uploadDir(process.env);
+    const meta = nexusUploads.readMeta(dir, fileId);
+    if (!nexusUploads.canAccessUpload(meta, user)) return send(res, 403, { ok: false, error: "Forbidden" });
+    const filePath = nexusUploads.resolveUploadedFilePath(dir, fileId);
+    if (!filePath || !fs.existsSync(filePath)) return send(res, 404, { ok: false, error: "Not found" });
+    return fs.readFile(filePath, (err, data) => {
+      if (err) return send(res, 404, { ok: false, error: "Not found" });
+      res.writeHead(200, {
+        "content-type": meta.mimeType || "application/octet-stream",
+        "content-disposition": `attachment; filename="${String(meta.originalFilename || fileId).replace(/["\r\n]/g, "")}"`,
+        "cache-control": "no-store"
+      });
+      res.end(data);
+    });
   }
 
   if (url.pathname === "/api/nexus/marketplace/payment-gates" && req.method === "GET") {
