@@ -53,6 +53,44 @@ test("agent.advance-task notifies for approval when a step needs confirmation, w
   assert.equal(notificationsEnqueued[0].channel, "push");
 });
 
+// 2026-09-23: approving a drafted outreach message sight-unseen from a bare
+// "Kyro wants to continue" push would be poor safety UX for an action that
+// reaches a real third party -- the confirmation notification must show the
+// actual recipient/message so the approval is genuinely informed.
+test("agent.advance-task's confirmation notification shows the real recipient and message for a pending communications.send step", async () => {
+  const task = { taskId: "tsk_1", tenantId: "t1", ownerId: "u1", state: "running", autonomous: true, goal: "Draft a follow-up email to Grace" };
+  const taskWithSteps = { ...task, steps: [{ step_id: "stp_1", tool_id: "communications.send",
+    input: { channel: "email", to: "grace@example.com", message: "Hi Grace, this is a follow-up from Grace Chapel." } }] };
+  const { runtime, notificationsEnqueued } = fixture({ task, executeTaskResult: { state: "awaiting_confirmation", pendingStepId: "stp_1" } });
+  runtime.tasks.get = async ({ taskId, includeSteps }) => (taskId === task.taskId ? (includeSteps ? taskWithSteps : task) : null);
+  const handlers = createHandlers({ runtime });
+  await handlers["agent.advance-task"]({ job: { tenant_id: "t1", payload: { taskId: "tsk_1" } } });
+  assert.equal(notificationsEnqueued.length, 1);
+  assert.match(notificationsEnqueued[0].content.body, /grace@example\.com/);
+  assert.match(notificationsEnqueued[0].content.body, /Hi Grace, this is a follow-up from Grace Chapel/);
+  assert.match(notificationsEnqueued[0].content.body, /approve or decline/i);
+});
+
+test("agent.advance-task's confirmation notification falls back to the generic text for a non-communications pending step", async () => {
+  const task = { taskId: "tsk_1", tenantId: "t1", ownerId: "u1", state: "running", autonomous: true, goal: "Buy seed" };
+  const taskWithSteps = { ...task, steps: [{ step_id: "stp_1", tool_id: "reminders.schedule", input: { when: "Tomorrow" } }] };
+  const { runtime, notificationsEnqueued } = fixture({ task, executeTaskResult: { state: "awaiting_confirmation", pendingStepId: "stp_1" } });
+  runtime.tasks.get = async ({ taskId, includeSteps }) => (taskId === task.taskId ? (includeSteps ? taskWithSteps : task) : null);
+  const handlers = createHandlers({ runtime });
+  await handlers["agent.advance-task"]({ job: { tenant_id: "t1", payload: { taskId: "tsk_1" } } });
+  assert.match(notificationsEnqueued[0].content.body, /Kyro is ready to continue "Buy seed"/);
+});
+
+test("agent.advance-task's confirmation notification survives a failed step lookup, falling back to the generic text", async () => {
+  const task = { taskId: "tsk_1", tenantId: "t1", ownerId: "u1", state: "running", autonomous: true, goal: "Buy seed" };
+  const { runtime, notificationsEnqueued } = fixture({ task, executeTaskResult: { state: "awaiting_confirmation", pendingStepId: "stp_1" } });
+  runtime.tasks.get = async ({ includeSteps }) => { if (includeSteps) throw new Error("db unavailable"); return task; };
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["agent.advance-task"]({ job: { tenant_id: "t1", payload: { taskId: "tsk_1" } } });
+  assert.equal(result.state, "awaiting_confirmation");
+  assert.match(notificationsEnqueued[0].content.body, /Kyro is ready to continue "Buy seed"/);
+});
+
 test("agent.advance-task enqueues an outcome notification only for an autonomous task reaching awaiting_render", async () => {
   const autonomousTask = { taskId: "tsk_1", tenantId: "t1", ownerId: "u1", state: "running", autonomous: true, goal: "Water the field" };
   const { runtime, notificationsEnqueued } = fixture({ task: autonomousTask, executeTaskResult: { state: "awaiting_render" } });

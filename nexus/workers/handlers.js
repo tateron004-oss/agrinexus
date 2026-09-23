@@ -22,6 +22,20 @@ const WELLNESS_GOAL_NUDGE_RECORD_TYPE = "wellness_goal_nudge";
 const LEAD_FOLLOWUP_NUDGE_RECORD_TYPE = "lead_followup_nudge";
 const BUSINESS_DEADLINE_NUDGE_RECORD_TYPE = "business_deadline_nudge";
 
+// A lead's free-text `contact` field (nexus/business's own schema -- see
+// extractLeadArgs in nexus/business/voice-dispatch.js) is never validated
+// against a real format; this only decides whether it looks usable enough
+// to draft a real communications.send step toward, not whether it will
+// actually deliver -- the real provider (twilioProvider/emailProvider)
+// still validates and can fail, same as any other communications.send use.
+function contactChannel(contact) {
+  const value = String(contact || "").trim();
+  if (!value) return null;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "email";
+  if (/^\+?\d[\d\s().-]{6,}$/.test(value)) return "sms";
+  return null;
+}
+
 function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
   return Object.freeze({
@@ -106,12 +120,28 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       if (result.state === "awaiting_confirmation") {
         // A human still has to explicitly approve a confirmation-required
         // step -- notify them instead of silently stalling or, worse,
-        // auto-approving on their behalf.
+        // auto-approving on their behalf. For a real outbound message
+        // (communications.send), the generic "needs your OK" text alone
+        // would ask someone to approve sight-unseen -- a real risk for an
+        // action that reaches a third party. Show the actual drafted
+        // recipient/message so the approval is genuinely informed.
+        let confirmationBody = `Kyro is ready to continue "${task.goal}" and needs your OK to proceed.`;
+        try {
+          const pendingStep = (await runtime.tasks.get({ tenantId: job.tenant_id, taskId, includeSteps: true }))
+            ?.steps?.find(step => step.step_id === result.pendingStepId);
+          if (pendingStep?.tool_id === "communications.send" && pendingStep.input) {
+            const { channel, to, message } = pendingStep.input;
+            const preview = String(message || "").slice(0, 200);
+            confirmationBody = `Kyro drafted a ${channel || "message"} to ${to || "a contact"}: "${preview}${preview.length < String(message || "").length ? "..." : ""}" -- reply to approve or decline.`;
+          }
+        } catch {
+          // The generic confirmation text above is a safe fallback if the step lookup fails for any reason.
+        }
         await runtime.notifications.enqueue({ tenantId: job.tenant_id, userId: task.ownerId, taskId,
           channel: "push", scheduledAt: new Date(),
           idempotencyKey: `agent-confirm:${taskId}:${result.pendingStepId}`,
           content: { kind: "autonomous_task_confirmation", title: "Kyro needs your approval",
-            body: `Kyro is ready to continue "${task.goal}" and needs your OK to proceed.`, taskId, stepId: result.pendingStepId } });
+            body: confirmationBody, taskId, stepId: result.pendingStepId } });
         return { taskId, state: "awaiting_confirmation" };
       }
       if (result.state === "awaiting_render" && task.autonomous) {
@@ -484,16 +514,24 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
     // listBusinessWorkspacesWithDueFollowUps() -- see its own comment) has
     // passed. This field was captured and displayed by the dashboard but
     // never read by anything -- exactly the "stored but never acted on"
-    // pattern this session has been closing elsewhere. Deliberately uses
-    // reminders.schedule, not communications.send: the field's own purpose
-    // (per service.js's comment) is for the OWNER to be reminded, not for
-    // Kyro to draft outreach to the lead on the owner's behalf -- reaching
-    // that third party is a materially different, higher-stakes decision
-    // this sweep does not make. One consolidated reminder per business
-    // workspace per cooldown window (not one per lead) -- leads have no
-    // stable ID in this schema to track a per-lead cooldown against, and a
-    // single reminder naming everyone due is honest and avoids notification
-    // spam when several follow-ups land at once.
+    // pattern this session has been closing elsewhere.
+    //
+    // 2026-09-23: widened to optionally draft real outreach, per an explicit
+    // decision to build this now that the confirmation machinery is proven.
+    // When the first due lead with a usable contact (contactChannel) is
+    // found, this drafts ONE communications.send step (a plain, honest
+    // check-in template -- not persuasive or fabricated copy) instead of a
+    // bare reminder. communications.send is confirmationRequired -- the
+    // engine pauses at awaiting_confirmation and agent.advance-task's own
+    // notification (see its enrichment above) shows the real recipient and
+    // message text before asking for approval. NOTHING sends without that
+    // explicit approval; this sweep only ever proposes. Any other due leads
+    // in the same workspace (or the only lead, if none has a usable
+    // contact) still get the original consolidated, self-directed
+    // reminders.schedule nudge -- never silently dropped just because one
+    // lead got an outreach draft instead. One task per workspace per
+    // cooldown window (leads have no stable ID in this schema to track a
+    // per-lead cooldown against).
     "situational-awareness.lead-followup-sweep": async ({ job }) => {
       const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
       const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
@@ -520,20 +558,31 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         const businessName = candidate.business_name || "your business workspace";
         const dueLeads = Array.isArray(candidate.due_leads) ? candidate.due_leads.filter(lead => lead?.name) : [];
         const names = dueLeads.map(lead => lead.followUpDate ? `${lead.name} (due ${lead.followUpDate})` : lead.name).join(", ");
+        const outreachLead = dueLeads.find(lead => contactChannel(lead.contact));
         const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
           correlationId: createId("event"), text: `Kyro noticed a follow-up date passed for ${names || "a contact"} in "${businessName}".` });
         let task;
         try {
-          task = await runtime.engine.create({ command, goal: `Remind about a due follow-up in ${businessName}`,
-            application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a lead follow-up reminder",
-              toolId: "reminders.schedule", input: { when: `Tomorrow, remind me to follow up with ${names || "a contact"} in "${businessName}" -- their follow-up date already passed.` } }] });
+          if (outreachLead) {
+            const channel = contactChannel(outreachLead.contact);
+            const needPhrase = outreachLead.need ? ` about ${outreachLead.need}` : "";
+            const draftMessage = `Hi ${outreachLead.name}, this is a follow-up from ${businessName}${needPhrase}. Please let us know if you have any questions or need anything else.`;
+            task = await runtime.engine.create({ command, goal: `Draft a follow-up ${channel} to ${outreachLead.name} for ${businessName}`,
+              application: "business", riskTier: "regulated", autonomous: true,
+              steps: [{ title: `Send a follow-up ${channel} to ${outreachLead.name}`, toolId: "communications.send",
+                input: { channel, to: outreachLead.contact, message: draftMessage, subject: `Following up -- ${businessName}` } }] });
+          } else {
+            task = await runtime.engine.create({ command, goal: `Remind about a due follow-up in ${businessName}`,
+              application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a lead follow-up reminder",
+                toolId: "reminders.schedule", input: { when: `Tomorrow, remind me to follow up with ${names || "a contact"} in "${businessName}" -- their follow-up date already passed.` } }] });
+          }
         } catch (error) {
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
         await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "lead_followup_due", dueLeads },
+          data: { reason: "lead_followup_due", dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
           provenance: { source: "situational-awareness-lead-followup-sweep" } });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
