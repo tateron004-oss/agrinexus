@@ -4,6 +4,8 @@ const path = require("path");
 const crypto = require("crypto");
 const net = require("net");
 const tls = require("tls");
+const { WebSocketServer } = require("ws");
+const { OpenAIRealtimeWebSocket } = require("@openai/agents-realtime");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
@@ -17013,6 +17015,61 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
   return db.users.find(item => item.role === "Admin") || db.users[0] || null;
 }
 
+// Twilio's Media Streams WebSocket handshake carries no headers we control
+// and no webhook signature -- the only identity it hands back is whatever we
+// put in a <Parameter> on the <Stream> element, which round-trips through
+// Twilio's infrastructure. Rather than trust a bare userId/callSid pulled off
+// that round trip, we sign it (same HMAC pattern as issueDurableAuthToken)
+// with a short TTL, and re-check on WS connect that the callSid still
+// matches -- a token that leaked or was replayed against a different call is
+// rejected instead of granting account access.
+const PHONE_REALTIME_STREAM_TOKEN_TTL_MS = 120_000;
+
+function issuePhoneRealtimeStreamToken(userId, callSid, now = Date.now(), env = process.env) {
+  const secret = durableAuthSecret(env);
+  if (!secret || !userId || !callSid) return "";
+  const payload = Buffer.from(JSON.stringify({
+    userId: String(userId),
+    callSid: String(callSid),
+    issuedAt: now,
+    expiresAt: now + PHONE_REALTIME_STREAM_TOKEN_TTL_MS
+  })).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+function verifyPhoneRealtimeStreamToken(token, callSid, now = Date.now(), env = process.env) {
+  const secret = durableAuthSecret(env);
+  const [payload = "", suppliedSignature = ""] = String(token || "").split(".");
+  if (!secret || !payload || !suppliedSignature) return null;
+  const expectedSignature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  const expectedBuffer = Buffer.from(expectedSignature);
+  const suppliedBuffer = Buffer.from(suppliedSignature);
+  if (expectedBuffer.length !== suppliedBuffer.length
+    || !crypto.timingSafeEqual(expectedBuffer, suppliedBuffer)) return null;
+  try {
+    const claim = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (!claim.userId
+      || !claim.callSid
+      || claim.callSid !== String(callSid || "")
+      || Number(claim.issuedAt || 0) > now + 60_000
+      || Number(claim.expiresAt || 0) <= now) return null;
+    return claim;
+  } catch {
+    return null;
+  }
+}
+
+function phoneRealtimeStreamingEnabled(env = process.env) {
+  return env.PHONE_REALTIME_STREAMING_ENABLED === "true" && genesisRealtimeConfigured(env);
+}
+
+function phoneRealtimeStreamUrl(env = process.env) {
+  const base = String(env.PUBLIC_BASE_URL || "").trim();
+  if (!base) return "";
+  return base.replace(/^http/i, "ws").replace(/\/$/, "") + "/api/voice/phone/stream";
+}
+
 function ensurePhoneVoiceSessions(profile) {
   ensureAiProfile(profile);
   profile.phoneVoiceSessions = profile.phoneVoiceSessions || [];
@@ -18032,6 +18089,26 @@ function openAiAgentsRealtimeClientConfig(user, language = "en", env = process.e
       }
     },
     toolChoice: "auto"
+  };
+}
+
+// Same session shape as openAiAgentsRealtimeClientConfig (browser/WebRTC
+// path), but for a raw server-side OpenAIRealtimeWebSocket connection to a
+// Twilio Media Stream: audio must be explicitly negotiated as 8kHz mu-law
+// (audio/pcmu) in both directions since that is exactly what Twilio sends
+// and expects back -- no transcoding step needed on either side -- and the
+// callable tool schemas must be included directly, since this path never
+// goes through the browser's RealtimeAgent tool wiring.
+function phoneRealtimeWebSocketSessionConfig(user, language = "en", env = process.env) {
+  const clientConfig = openAiAgentsRealtimeClientConfig(user, language, env);
+  const pcmu = { type: "audio/pcmu" };
+  return {
+    ...clientConfig,
+    tools: nexusRealtimeCallableToolSchemas().map(({ metadata, strict, ...tool }) => tool),
+    audio: {
+      input: { ...clientConfig.audio.input, format: pcmu },
+      output: { ...clientConfig.audio.output, format: pcmu }
+    }
   };
 }
 
@@ -20790,6 +20867,16 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     }
     const finalText = sanitizeNexusSpokenResponseText(extractResponseText(finalPayload) || toolResults[0]?.result?.response || "Nexus completed the OpenAI-native reasoning turn and returned the available tool result.");
     const citations = toolResults.flatMap(item => item.result?.citations || item.result?.sources || []).slice(0, 8);
+    // A tool (e.g. nexus_deep_research) can attach a real institutional
+    // evidence receipt or research packet to its own result -- this used to
+    // be silently dropped here the same way richData once was: the tool
+    // built it, but nothing downstream forwarded it into the response
+    // envelope's metadata, so the client and any evidence-preservation
+    // check never saw it even though real citations were returned.
+    const evidenceReceipt = toolResults
+      .map(item => item.result?.institutionalEvidenceReceipt || item.result?.evidenceReceipt)
+      .find(Boolean) || null;
+    const evidenceReceiptId = evidenceReceipt?.receiptId || evidenceReceipt?.packetId || evidenceReceipt?.id || "";
     const genesisAction = nexusGenesisWorkspaceAction(command, toolResults);
     // Real tool results carry rich display data (real image results, real
     // catalog/list results, real tracking info) beyond the spoken text —
@@ -20838,6 +20925,8 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
         },
         citations,
         sourceContext: citations.length ? { citations } : null,
+        institutionalEvidenceReceipt: evidenceReceipt,
+        evidenceReceiptId,
         richData: Object.keys(richData).length ? richData : null,
         noExecutionAuthorized: true,
         providerHandoffAuthorized: false,
@@ -46884,6 +46973,41 @@ async function api(req, res, url) {
   <Hangup/>
 </Response>`);
     }
+    // Opt-in real-time path: full two-way streaming conversation over a
+    // Twilio Media Stream <-> OpenAI Realtime WebSocket bridge, instead of
+    // the turn-based Gather/Speech flow below. Off by default -- unset or
+    // any value other than "true" for PHONE_REALTIME_STREAMING_ENABLED keeps
+    // today's hardened, already-tested turn-based flow exactly as it is, and
+    // requires no change to the Twilio console webhook URL either way.
+    if (phoneRealtimeStreamingEnabled(process.env)) {
+      const callSid = String(body.CallSid || body.callSid || "");
+      const streamUrl = phoneRealtimeStreamUrl(process.env);
+      const authorizedCaller = resolveAuthorizedPhoneCaller(db, body);
+      if (callSid && streamUrl && authorizedCaller) {
+        const token = issuePhoneRealtimeStreamToken(authorizedCaller.id, callSid, Date.now(), process.env);
+        logIntegration(db, {
+          providerId: "phone-voice",
+          module: "AI",
+          action: "phone.realtime_stream_started",
+          detail: "Incoming call connected to the real-time two-way voice bridge.",
+          metadata: { from: redactPhoneNumber(phoneExternalPartyNumber(body)), callSid }
+        });
+        await writeDb(db);
+        return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <Stream url="${xmlEscape(streamUrl)}">
+      <Parameter name="token" value="${xmlEscape(token)}"/>
+      <Parameter name="callSid" value="${xmlEscape(callSid)}"/>
+    </Stream>
+  </Connect>
+</Response>`);
+      }
+      // Falls through to the classic flow below if we couldn't mint a
+      // stream (no PUBLIC_BASE_URL configured, no CallSid on the webhook) --
+      // never leave the caller with dead air because the new path
+      // half-failed.
+    }
     const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
     updatePhoneVoiceSession(db, session, { step: "name", callerName: "", language: "", locale: "en-US" });
     const language = "en-US";
@@ -52618,6 +52742,150 @@ function serveStatic(req, res, url) {
   });
 }
 
+// --- Real-time two-way phone conversation bridge (Twilio Media Streams <->
+// OpenAI Realtime), opt-in via PHONE_REALTIME_STREAMING_ENABLED. See
+// phoneRealtimeStreamingEnabled/phoneRealtimeStreamUrl/
+// issuePhoneRealtimeStreamToken above and the <Connect><Stream> branch in
+// the /api/voice/phone/incoming route. This is genuinely new infrastructure
+// (a raw WebSocket bridge on a real per-minute-billed voice API) that has
+// only been exercised by structural/unit tests here -- it needs a real
+// live phone call against a deployed instance to confirm audio quality and
+// interruption behavior before anyone relies on it.
+const PHONE_REALTIME_MAX_CALL_SECONDS = Math.min(Math.max(Number(process.env.PHONE_REALTIME_MAX_CALL_SECONDS || 600), 60), 1800);
+
+function wirePhoneRealtimeTransportEvents(transport, ws, getStreamSid, getCallSid, getUser) {
+  transport.on("audio", event => {
+    const streamSid = getStreamSid();
+    if (!streamSid || ws.readyState !== ws.OPEN || !event?.data) return;
+    const payload = Buffer.from(event.data).toString("base64");
+    ws.send(JSON.stringify({ event: "media", streamSid, media: { payload } }));
+  });
+
+  // The Realtime API's own VAD detects the caller talking over the assistant
+  // and emits this so the client can stop playback -- here that means
+  // telling Twilio to drop whatever assistant audio it has already queued,
+  // which is what makes barge-in ("talking over each other naturally") work.
+  transport.on("audio_interrupted", () => {
+    const streamSid = getStreamSid();
+    if (!streamSid || ws.readyState !== ws.OPEN) return;
+    ws.send(JSON.stringify({ event: "clear", streamSid }));
+  });
+
+  transport.on("function_call", async event => {
+    const user = getUser();
+    const callSid = getCallSid();
+    let output;
+    try {
+      const args = event.arguments ? JSON.parse(event.arguments) : {};
+      const db = await readDb();
+      const result = await executeNexusOpenAiNativeTool(db, user, event.name, args, {
+        correlationId: callSid || undefined,
+        language: args.language || user?.language || "en",
+        outputMode: "voice"
+      });
+      await writeDb(db);
+      output = JSON.stringify(result);
+    } catch (error) {
+      recordServerError({ source: "phone-realtime-tool-call", message: error.stack || error.message, context: { callSid, tool: event.name } });
+      output = JSON.stringify({ ok: false, response: "That did not complete. Please try again." });
+    }
+    try { transport.sendFunctionCallOutput(event, output, true); } catch {}
+  });
+
+  transport.on("error", errorEvent => {
+    const detail = errorEvent?.error?.stack || errorEvent?.error?.message || JSON.stringify(errorEvent?.error || errorEvent);
+    recordServerError({ source: "phone-realtime-transport", message: detail, context: { callSid: getCallSid() } });
+  });
+}
+
+function handleTwilioPhoneRealtimeStream(ws) {
+  let streamSid = null;
+  let callSid = null;
+  let user = null;
+  let transport = null;
+  let closed = false;
+  let capTimer = null;
+  let goodbyeTimer = null;
+
+  const cleanup = async reason => {
+    if (closed) return;
+    closed = true;
+    if (capTimer) clearTimeout(capTimer);
+    if (goodbyeTimer) clearTimeout(goodbyeTimer);
+    try { transport?.close(); } catch {}
+    try { ws.close(); } catch {}
+    if (user && callSid) {
+      try {
+        const db = await readDb();
+        logIntegration(db, {
+          providerId: "phone-voice",
+          module: "AI",
+          action: "phone.realtime_stream_ended",
+          detail: `Real-time voice call ended (${reason}).`,
+          metadata: { callSid, userId: user.id }
+        });
+        await writeDb(db);
+      } catch {}
+    }
+  };
+
+  ws.on("message", async raw => {
+    let frame;
+    try { frame = JSON.parse(raw.toString()); } catch { return; }
+    if (frame.event === "start") {
+      streamSid = frame.start?.streamSid || null;
+      callSid = frame.start?.callSid || null;
+      const params = frame.start?.customParameters || {};
+      const claim = verifyPhoneRealtimeStreamToken(params.token, callSid, Date.now(), process.env);
+      if (!claim) return cleanup("unauthorized-stream-token");
+      const db = await readDb();
+      user = db.users.find(item => String(item.id) === String(claim.userId)) || null;
+      if (!user) return cleanup("unknown-user");
+      try {
+        const sessionConfig = phoneRealtimeWebSocketSessionConfig(user, user.language || "en", process.env);
+        transport = new OpenAIRealtimeWebSocket({ model: sessionConfig.model, useInsecureApiKey: true });
+        wirePhoneRealtimeTransportEvents(transport, ws, () => streamSid, () => callSid, () => user);
+        await transport.connect({ apiKey: process.env.OPENAI_API_KEY, model: sessionConfig.model, initialSessionConfig: sessionConfig });
+        transport.sendMessage("The caller just connected. Greet them warmly in one short sentence and ask how you can help.", {}, { triggerResponse: true });
+        logIntegration(db, {
+          providerId: "phone-voice",
+          module: "AI",
+          action: "phone.realtime_connected",
+          detail: "Real-time voice bridge connected to OpenAI Realtime.",
+          metadata: { callSid, userId: user.id }
+        });
+        await writeDb(db);
+        capTimer = setTimeout(() => {
+          try { transport.sendMessage("The call time limit has been reached. Say a brief goodbye now.", {}, { triggerResponse: true }); } catch {}
+          goodbyeTimer = setTimeout(() => cleanup("max-duration-reached"), 6000);
+        }, PHONE_REALTIME_MAX_CALL_SECONDS * 1000);
+      } catch (error) {
+        recordServerError({ source: "phone-realtime-connect", message: error.stack || error.message, context: { callSid } });
+        await cleanup("connect-failed");
+      }
+      return;
+    }
+    if (frame.event === "media") {
+      if (!transport || transport.status !== "connected" || !frame.media?.payload) return;
+      const buffer = Buffer.from(frame.media.payload, "base64");
+      transport.sendAudio(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength));
+      return;
+    }
+    if (frame.event === "stop") {
+      await cleanup("caller-hung-up");
+    }
+  });
+
+  ws.on("close", () => cleanup("websocket-closed"));
+  ws.on("error", error => {
+    recordServerError({ source: "phone-realtime-stream-ws", message: error.stack || error.message, context: { callSid } });
+    cleanup("websocket-error");
+  });
+}
+
+const phoneRealtimeWss = new WebSocketServer({ noServer: true });
+phoneRealtimeWss.on("connection", ws => handleTwilioPhoneRealtimeStream(ws));
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
@@ -52640,6 +52908,24 @@ const server = http.createServer(async (req, res) => {
 server.on("error", error => {
   console.error(`AgriNexus server failed: ${error.message}`);
   process.exit(1);
+});
+
+// Twilio's <Connect><Stream> opens a plain WebSocket handshake, not an
+// authenticated HTTP request -- there is no session cookie or webhook
+// signature to check here. Real authorization happens per-connection inside
+// handleTwilioPhoneRealtimeStream, against the signed, call-bound token in
+// the stream's "start" message (see issuePhoneRealtimeStreamToken). This
+// listener only routes the right path to that handler and rejects
+// everything else, including the feature being off.
+server.on("upgrade", (req, socket, head) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname !== "/api/voice/phone/stream" || !phoneRealtimeStreamingEnabled(process.env)) {
+    socket.destroy();
+    return;
+  }
+  phoneRealtimeWss.handleUpgrade(req, socket, head, ws => {
+    phoneRealtimeWss.emit("connection", ws, req);
+  });
 });
 
 server.listen(PORT, HOST, () => {

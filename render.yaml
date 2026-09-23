@@ -264,6 +264,13 @@ services:
       # .env.example for the exact format.
       - key: TWILIO_AUTHORIZED_CALLERS
         sync: false
+      # Opt-in real-time two-way phone conversation bridge (Twilio Media
+      # Streams <-> OpenAI Realtime WebSocket). Ships off by default -- this
+      # is new infrastructure that still needs a live call against this
+      # deployment to verify audio quality and interruption behavior before
+      # it should be turned on here. See .env.example.
+      - key: PHONE_REALTIME_STREAMING_ENABLED
+        value: "false"
       - key: TRANSLATION_PROVIDER
         value: webhook
       - key: TRANSLATION_WEBHOOK_URL

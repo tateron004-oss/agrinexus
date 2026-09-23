@@ -51,7 +51,7 @@ jobs:
           // Reviewed inherited examples, documentation and scanner assertions; only CRLF/LF normalized.
           // Any edit invalidates the exception. New files have no exception.
           const reviewed={
-            ".env.example": "1a6d390c1f769eb50c4b9b9d2094e14d4e355d9dd45f7b4b25a0928d1095677b",
+            ".env.example": "f7308310a9a589db1ca4c8732136510521c3d0149aec7f38f272221b3fe659ac",
             ".github/workflows/nexus-protected-production-deploy.yml": "7e727ab85d435b0a908ff4c616c61d06555db92bfdc3cbe35b58103f272fb142",
             "AGRINEXUS_INVESTOR_DEMO_VIDEO_PACKAGE.md": "39a7f80172177ed7c538c99ff24838aabb66bb94c940691eeac6aaeaea2bd566",
             "AGRINEXUS_STEP_BY_STEP_TRAINING_VIDEO_SCRIPT.md": "3675ded7c2f7017670127ff20fa418c46204cf02b86645b3789adba90e07543f",
