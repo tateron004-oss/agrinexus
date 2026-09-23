@@ -53219,6 +53219,56 @@ function wirePhoneRealtimeTransportEvents(transport, ws, getStreamSid, getCallSi
     try { transport.sendFunctionCallOutput(event, output, true); } catch {}
   });
 
+  // Crisis safety net for the realtime bridge, closing a real gap found
+  // 2026-09-23: executeNexusOpenAiNativeTool's own classifyState/crisisOverride
+  // check (above, via function_call) only runs if the model decides to call a
+  // tool. A caller who says something like "I want to end my life" and gets a
+  // purely conversational reply from the model never reaches that check at
+  // all -- there was no deterministic, code-level safety response on this
+  // path, unlike the classic Gather phone flow (runCompanionSafeAgentCommand)
+  // or typed/browser-voice input. This listens to the Realtime API's own
+  // caller-transcript event (fired independently of whether the model calls
+  // any tool) so crisis language is always caught, then interrupts whatever
+  // the model is saying and forces it to deliver the same safety script via a
+  // per-response instructions override (stronger adherence than a normal
+  // conversational turn) instead of leaving it to the model's own judgment.
+  transport.on("conversation.item.input_audio_transcription.completed", event => {
+    const transcript = String(event?.transcript || "").trim();
+    if (!transcript) return;
+    const user = getUser();
+    const language = user?.language || "en";
+    let signal;
+    try {
+      signal = nexusMentalHealthBehavioralWellness.classifyState(transcript, {});
+    } catch (error) {
+      recordServerError({ source: "phone-realtime-crisis-classify", message: error.stack || error.message, context: { callSid: getCallSid() } });
+      return;
+    }
+    if (signal?.crisisOverride !== true) return;
+    let packet;
+    try {
+      packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(transcript, {
+        language, source: "phone-realtime-transcript",
+        locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(transcript),
+        screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(transcript)
+      });
+    } catch (error) {
+      recordServerError({ source: "phone-realtime-crisis-packet", message: error.stack || error.message, context: { callSid: getCallSid() } });
+      return;
+    }
+    try { transport.interrupt(true); } catch {}
+    try {
+      transport.sendEvent({
+        type: "response.create",
+        response: {
+          instructions: `SAFETY OVERRIDE -- the caller may be in crisis. Say the following to them now, in ${language}, calmly and exactly as written, with nothing added, removed, or paraphrased: "${packet.userVisibleStatus}"`
+        }
+      });
+    } catch (error) {
+      recordServerError({ source: "phone-realtime-crisis-deliver", message: error.stack || error.message, context: { callSid: getCallSid() } });
+    }
+  });
+
   transport.on("error", errorEvent => {
     const detail = errorEvent?.error?.stack || errorEvent?.error?.message || JSON.stringify(errorEvent?.error || errorEvent);
     recordServerError({ source: "phone-realtime-transport", message: detail, context: { callSid: getCallSid() } });
