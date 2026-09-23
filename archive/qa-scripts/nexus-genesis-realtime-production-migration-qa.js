@@ -182,7 +182,7 @@ const requirements = [
   ["Realtime SDP negotiation", server.includes("/api/voice/realtime/call") && server.includes("https://api.openai.com/v1/realtime/calls") && server.includes("application/sdp")],
   ["No-store Realtime responses", server.includes("no-store, no-cache, must-revalidate, private")],
   ["Permanent key server-only", server.includes("Authorization: `Bearer ${process.env.OPENAI_API_KEY}`") && !app.includes("Authorization: `Bearer ${process.env.OPENAI_API_KEY}`") && !app.includes("process.env.OPENAI_API_KEY")],
-  ["Realtime instructions are Nexus-specific", server.includes("You are Nexus Genesis") && server.includes("Ordinary conversation remains conversation") && server.includes("Never claim an action completed")],
+  ["Realtime instructions are Nexus-specific", server.includes("You are Kyro, the live voice companion inside AgriNexus") && server.includes("Ordinary conversation remains conversation") && server.includes("Never claim an action completed")],
   ["Tool schema exists", server.includes("function nexusRealtimeToolSchemas") && server.includes("nexus_capability_router")],
   ["Tool dispatch endpoint exists", server.includes("/api/voice/realtime/tool") && server.includes("dispatchNexusRealtimeTool")],
   ["Tool dispatch uses Nexus envelope", server.includes("normalizeNexusResponseEnvelope") && server.includes("providerAttempted") && server.includes("executionVerified")],
