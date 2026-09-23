@@ -109,6 +109,60 @@ test("a call is force-capped at a clamped duration so a stuck or forgotten call 
   assert.match(handlerBody, /goodbyeTimer = setTimeout\(\(\) => cleanup\("max-duration-reached"\), 6000\);/);
 });
 
+// 2026-09-23: a real gap was found and closed here -- the crisis/mental-
+// health safety net (executeNexusOpenAiNativeTool's classifyState/
+// crisisOverride check) only ran on this bridge if the model chose to call a
+// tool via the function_call listener above. A caller stating suicidal
+// intent who got a purely conversational reply never reached any safety
+// check at all. These tests pin the fix: a second, independent listener on
+// the Realtime API's own caller-transcript event, which fires regardless of
+// whether the model calls a tool.
+test("crisis detection on this bridge does not depend on the model choosing to call a tool -- a second, independent listener classifies every caller transcript", () => {
+  const eventsBody = sliceFunction("wirePhoneRealtimeTransportEvents");
+  assert.match(eventsBody, /transport\.on\("conversation\.item\.input_audio_transcription\.completed", event => \{/,
+    "must listen to the Realtime API's own transcript-completed event, not rely on function_call");
+  const listenerStart = eventsBody.indexOf('transport.on("conversation.item.input_audio_transcription.completed"');
+  const functionCallStart = eventsBody.indexOf('transport.on("function_call"');
+  assert.ok(listenerStart > 0 && functionCallStart > 0 && listenerStart > functionCallStart,
+    "the transcript-based crisis listener must be registered independently of the function_call listener");
+});
+
+test("the transcript-based crisis listener uses the same classifyState/buildSupportPacket module as every other Kyro entry point, not a separate ad hoc check", () => {
+  const eventsBody = sliceFunction("wirePhoneRealtimeTransportEvents");
+  const listenerStart = eventsBody.indexOf('transport.on("conversation.item.input_audio_transcription.completed"');
+  const listener = eventsBody.slice(listenerStart, listenerStart + 1800);
+  assert.match(listener, /nexusMentalHealthBehavioralWellness\.classifyState\(transcript, \{\}\)/);
+  assert.match(listener, /if \(signal\?\.crisisOverride !== true\) return;/, "must gate on crisisOverride, matching every other call site in this codebase");
+  assert.match(listener, /nexusMentalHealthBehavioralWellness\.buildSupportPacket\(transcript, \{/);
+});
+
+test("on a detected crisis, the bridge interrupts whatever the model is currently saying before forcing the safety response", () => {
+  const eventsBody = sliceFunction("wirePhoneRealtimeTransportEvents");
+  const listenerStart = eventsBody.indexOf('transport.on("conversation.item.input_audio_transcription.completed"');
+  const listener = eventsBody.slice(listenerStart, listenerStart + 1800);
+  const interruptIndex = listener.indexOf("transport.interrupt(true)");
+  const deliverIndex = listener.indexOf('type: "response.create"');
+  assert.ok(interruptIndex > 0 && deliverIndex > 0 && interruptIndex < deliverIndex,
+    "must stop any in-progress speech before injecting the safety override, not talk over it");
+});
+
+test("the safety script is delivered via a per-response instructions override (stronger adherence than a normal conversational turn), and it carries the real packet text, not a placeholder", () => {
+  const eventsBody = sliceFunction("wirePhoneRealtimeTransportEvents");
+  const listenerStart = eventsBody.indexOf('transport.on("conversation.item.input_audio_transcription.completed"');
+  const listener = eventsBody.slice(listenerStart, listenerStart + 1800);
+  assert.match(listener, /transport\.sendEvent\(\{\s*type: "response\.create",/);
+  assert.match(listener, /instructions: `SAFETY OVERRIDE/);
+  assert.match(listener, /\$\{packet\.userVisibleStatus\}/);
+});
+
+test("every step of the crisis listener (classify, build packet, deliver) is wrapped so a failure there cannot crash the live call", () => {
+  const eventsBody = sliceFunction("wirePhoneRealtimeTransportEvents");
+  const listenerStart = eventsBody.indexOf('transport.on("conversation.item.input_audio_transcription.completed"');
+  const listener = eventsBody.slice(listenerStart, listenerStart + 1800);
+  const tryCount = (listener.match(/try \{/g) || []).length;
+  assert.ok(tryCount >= 3, `expected classify/packet/deliver to each be wrapped in their own try block, found ${tryCount}`);
+});
+
 test("every connection path (unauthorized, unknown user, connect failure, caller hangup, ws close/error) tears down cleanly via the same cleanup path", () => {
   const handlerBody = sliceFunction("handleTwilioPhoneRealtimeStream");
   const cleanupCalls = handlerBody.match(/cleanup\("[a-z0-9-]+"\)/g) || [];
