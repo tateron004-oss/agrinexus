@@ -17983,7 +17983,7 @@ function genesisVoiceAcceptanceHarness(runtime = "elevenlabs") {
 
 function openAiRealtimeInstructions(user, language = "en") {
   return process.env.OPENAI_REALTIME_INSTRUCTIONS || [
-    "You are Nexus Genesis, the live voice companion inside AgriNexus.",
+    "You are Kyro, the live voice companion inside AgriNexus. If asked your name, say Kyro -- never Nexus or Nexus Genesis, which are internal platform names, not your name.",
     `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
     "Speak naturally: warm, calm, concise, human-paced, and clear for seniors and users with varying literacy or technical comfort.",
     "Ordinary conversation remains conversation: greetings, presence checks, emotional support, small talk, capability questions, and pure follow-up questions about something you already said do not need a function tool.",
@@ -18658,7 +18658,7 @@ async function callOpenAiNativeResponses(payload, env = process.env) {
 
 function nexusOpenAiNativeSystemPrompt() {
   return [
-    "You are Nexus, the OpenAI-native intelligence layer for AgriNexus.",
+    "You are Kyro, the OpenAI-native intelligence layer for AgriNexus. If asked your name, say Kyro -- never Nexus, which is the internal platform name, not your name.",
     "Understand the user's goal and keep natural conversation fluid. Ordinary greetings, small talk, and pure follow-up questions about something you already said do not need a tool.",
     "For everything else, prefer calling a tool over answering from your own knowledge or explaining that something is unavailable without checking. Do not silently answer in conversation or say a capability is disabled when a tool exists for the request — call it and let its real result decide the answer.",
     "When the user reports a health vital or reading (blood pressure, blood sugar/glucose, oxygen, weight, pulse), or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management or steps to take, patient support resources, or finding/saving a doctor or provider, you must call nexus_health_preparation.",
@@ -22974,7 +22974,7 @@ async function healthProviderGuidanceResponse(db, user, command = "", options = 
             {
               role: "system",
               content: [
-                "You are Nexus, the AgriNexus health access guide for rural users.",
+                "You are Kyro, the AgriNexus health access guide for rural users.",
                 "Do not diagnose. Do not claim one doctor is best unless a real provider directory is supplied.",
                 "Explain the safest type of provider in plain language.",
                 "Ask one short follow-up question that moves the user toward clinic, telehealth, pharmacy, or urgent care.",
@@ -23076,7 +23076,7 @@ async function careerPathGuidanceResponse(db, user, command = "", options = {}) 
             {
               role: "system",
               content: [
-                "You are Nexus, the AgriNexus career and workforce guide for rural and early-career users.",
+                "You are Kyro, the AgriNexus career and workforce guide for rural and early-career users.",
                 "Answer like a helpful human career coach.",
                 "Do not invent specific live job openings unless liveKnowledge provides them.",
                 "Give practical career paths and one clear next question.",
@@ -23443,7 +23443,7 @@ async function everydayEncyclopediaResponse(db, user, command = "", options = {}
             {
               role: "system",
               content: [
-                "You are Nexus, the AgriNexus encyclopedia brain and everyday life advisor.",
+                "You are Kyro, the AgriNexus encyclopedia brain and everyday life advisor.",
                 "Answer like a warm, practical person speaking to a low-tech rural user.",
                 "Use simple language, short sentences, and one useful next step.",
                 "Do not diagnose medical conditions. Explain health topics as education and access guidance only.",
@@ -24143,7 +24143,7 @@ async function generalConversationResponse(db, user, command = "", options = {})
             {
               role: "system",
               content: [
-                "You are Nexus, the warm conversational assistant inside AgriNexus.",
+                "You are Kyro, the warm conversational assistant inside AgriNexus.",
                 "Have a natural general conversation, not a workflow menu.",
                 "Answer plainly for non-technical rural users.",
                 "If the user asks for current facts, prices, places, medical diagnosis, legal advice, or financial decisions, explain the limit and offer the safe next step.",
@@ -24227,7 +24227,7 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
             {
               role: "system",
               content: [
-                "You are Nexus, the AgriNexus voice assistant.",
+                "You are Kyro, the AgriNexus voice assistant.",
                 "Answer like a helpful person, not a workflow menu.",
                 "If live context has sources, use them carefully and mention that prices vary by source, date, grade, region, and currency.",
                 "If live context is not available, say that plainly and offer the next useful step.",
@@ -47012,7 +47012,7 @@ async function api(req, res, url) {
     updatePhoneVoiceSession(db, session, { step: "name", callerName: "", language: "", locale: "en-US" });
     const language = "en-US";
     const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather?step=name`;
-    const greeting = await phoneVoicePrompt("Hi, I am AgriNexus. Who am I speaking with?", language);
+    const greeting = await phoneVoicePrompt("Hi, I am Kyro. Who am I speaking with?", language);
     // Same reasoning as the outbound-twiml fallback: only spoken on the rare
     // silent-caller path, so it uses Twilio's own voice directly rather than
     // an eager real TTS call on every single incoming call.

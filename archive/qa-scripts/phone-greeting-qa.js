@@ -93,7 +93,7 @@ async function twilioPost(route, body) {
     assert.equal(unsignedGather.status, 403, "an unsigned /gather request must be rejected -- this is the actual command-execution entry point");
 
     const incoming = await twilioPost("/api/voice/phone/incoming", { From: "+15555550123", CallSid: "CA-phone-greeting" });
-    assert(incoming.includes("Hi, I am AgriNexus"), "incoming call should use short AgriNexus greeting");
+    assert(incoming.includes("Hi, I am Kyro"), "incoming call should use short Kyro greeting");
     assert(incoming.includes("Who am I speaking with"), "incoming call should ask for caller name first");
     assert(incoming.includes("step=name"), "incoming gather should route to name step");
 
