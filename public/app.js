@@ -52487,7 +52487,13 @@ function nexusHomeOrbTapStartsVoice(event) {
 // The orb stage ignores pointer events by design, so the pointer cursor cannot come from CSS on the orb;
 // mark the body while the pointer is over it (only the boolean is written, and only when it changes).
 function nexusPointIsOnHomeOrb(x, y) {
-  if (document.body?.dataset?.nexusGenesisMode !== "home" || !document.body.classList.contains("user-mode")) return false;
+  // Previously also required body.user-mode, which meant tapping the orb
+  // only ever started voice for the "User" persona -- Admin/Investor/
+  // Workspace accounts could see the orb (once .user-workspace's display:
+  // none override was removed) but tapping it did nothing. Requested
+  // explicitly: the orb should work as a tap-to-talk control in every
+  // experience mode, not just User.
+  if (document.body?.dataset?.nexusGenesisMode !== "home") return false;
   const orb = document.querySelector('[data-nexus-genesis-home-orb="true"]');
   if (!orb) return false;
   const rect = orb.getBoundingClientRect();
