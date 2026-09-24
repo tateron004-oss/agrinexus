@@ -59836,18 +59836,34 @@ async function runBackendAgentCommand(command, locationContext = null, options =
       }
     }
     if (result.metadata?.genesisAction && dispatchGenesisWorkspaceAction(result.metadata.genesisAction, result)) {
+      // Always call this, not only when richData is present: it must also
+      // clear a stale card left over from an earlier turn (e.g. a "Suggested
+      // next steps" list from a previous answer) when the current turn has
+      // nothing to show. runUtilityAgentCommand already does this correctly
+      // (unconditional call); this path only ever painted, never cleared.
       if (result.metadata?.richData) window.setTimeout(() => paintNexusRichDataCard(result.metadata.richData), 60);
+      else paintNexusRichDataCard(null);
       return result;
     }
     if (openAgentResultWorkflow(result, command)) {
+      // Always call this, not only when richData is present: it must also
+      // clear a stale card left over from an earlier turn (e.g. a "Suggested
+      // next steps" list from a previous answer) when the current turn has
+      // nothing to show. runUtilityAgentCommand already does this correctly
+      // (unconditional call); this path only ever painted, never cleared.
       if (result.metadata?.richData) window.setTimeout(() => paintNexusRichDataCard(result.metadata.richData), 60);
+      else paintNexusRichDataCard(null);
       return result;
     }
     if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) goSection(result.metadata.redirectSection);
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
+    // Always call this, not only when richData is present -- see the two
+    // earlier branches above for why (must clear a stale card, not just
+    // paint a new one).
     if (result.metadata?.richData) window.setTimeout(() => paintNexusRichDataCard(result.metadata.richData), 60);
+    else paintNexusRichDataCard(null);
     renderLiveVoiceSuggestions(localizedVoiceSuggestionItems(result, contextualVoiceSuggestions(result.metadata?.redirectSection || currentSectionId())));
     if (result.metadata?.frontierCommunication?.nextQuestion) {
       const nextQuestion = result.metadata.frontierCommunication.nextQuestion;
