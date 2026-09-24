@@ -644,6 +644,9 @@ body.user-mode .nexus-command-center-hero::after {
 
 body.user-mode .nexus-command-center-copy,
 body.user-mode .nexus-orb-stage,
+body.admin-mode .nexus-orb-stage,
+body.investor-mode .nexus-orb-stage,
+body.advanced-mode .nexus-orb-stage,
 body.user-mode .nexus-command-composer {
   position: relative;
   z-index: 1;
@@ -674,6 +677,9 @@ body.user-mode .nexus-premium-hero-subtitle {
   letter-spacing: .01em;
 }
 
+body.admin-mode .nexus-orb-stage ,
+body.investor-mode .nexus-orb-stage ,
+body.advanced-mode .nexus-orb-stage ,
 body.user-mode .nexus-orb-stage {
   display: grid;
   place-items: center;
@@ -681,6 +687,9 @@ body.user-mode .nexus-orb-stage {
   overflow: hidden;
 }
 
+body.admin-mode .nexus-orb-stage::before ,
+body.investor-mode .nexus-orb-stage::before ,
+body.advanced-mode .nexus-orb-stage::before ,
 body.user-mode .nexus-orb-stage::before {
   content: "";
   position: absolute;
@@ -694,6 +703,9 @@ body.user-mode .nexus-orb-stage::before {
   opacity: .72;
 }
 
+body.admin-mode .nexus-orb ,
+body.investor-mode .nexus-orb ,
+body.advanced-mode .nexus-orb ,
 body.user-mode .nexus-orb {
   position: relative;
   display: grid;
@@ -708,6 +720,9 @@ body.user-mode .nexus-orb {
   animation: nexusOrbFloat 5.6s ease-in-out infinite;
 }
 
+body.admin-mode .nexus-orb-core ,
+body.investor-mode .nexus-orb-core ,
+body.advanced-mode .nexus-orb-core ,
 body.user-mode .nexus-orb-core {
   display: grid;
   place-items: center;
@@ -722,6 +737,9 @@ body.user-mode .nexus-orb-core {
   box-shadow: inset 0 0 24px rgba(34, 211, 238, .32), 0 0 28px rgba(236, 72, 153, .22);
 }
 
+body.admin-mode .nexus-orb-ring ,
+body.investor-mode .nexus-orb-ring ,
+body.advanced-mode .nexus-orb-ring ,
 body.user-mode .nexus-orb-ring {
   position: absolute;
   inset: -12%;
@@ -731,12 +749,18 @@ body.user-mode .nexus-orb-ring {
   box-shadow: 0 0 28px rgba(34, 211, 238, .2);
 }
 
+body.admin-mode .nexus-orb-ring-two ,
+body.investor-mode .nexus-orb-ring-two ,
+body.advanced-mode .nexus-orb-ring-two ,
 body.user-mode .nexus-orb-ring-two {
   inset: -22%;
   border-color: rgba(236, 72, 153, .3);
   transform: rotateX(62deg) rotateY(18deg) rotateZ(-36deg);
 }
 
+body.admin-mode .nexus-orb-ring-three ,
+body.investor-mode .nexus-orb-ring-three ,
+body.advanced-mode .nexus-orb-ring-three ,
 body.user-mode .nexus-orb-ring-three {
   inset: -34%;
   border-color: rgba(139, 92, 246, .26);
@@ -5393,11 +5417,11 @@ body.investor-mode .admin-only {
 body.investor-mode .advanced-only {
   display: none !important;
 }
-body.advanced-mode .user-workspace,
-body.investor-mode .user-workspace,
-body.admin-mode .user-workspace {
-  display: none;
-}
+/* Previously hidden in every mode except "user" -- the Genesis orb voice
+   home lives inside .user-workspace, so Admin/Investor/Workspace accounts
+   had no way to reach the tap-to-talk orb at all, only the "User" persona
+   toggle did. Requested explicitly: the orb should be testable from any
+   experience mode, not just User. */
 .demo-command {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -11606,6 +11630,9 @@ body.user-mode .user-caption-panel {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  body.admin-mode .nexus-orb ,
+  body.investor-mode .nexus-orb ,
+  body.advanced-mode .nexus-orb ,
   body.user-mode .nexus-orb {
     width: min(220px, 48vw);
   }
@@ -11771,6 +11798,9 @@ body.user-mode .nexus-command-center-copy {
   grid-area: copy;
 }
 
+body.admin-mode .nexus-orb-stage ,
+body.investor-mode .nexus-orb-stage ,
+body.advanced-mode .nexus-orb-stage ,
 body.user-mode .nexus-orb-stage {
   grid-area: orb;
 }
@@ -11825,18 +11855,27 @@ body.user-mode .nexus-command-center-hero p {
   color: #b9d7ec !important;
 }
 
+body.admin-mode .nexus-orb-stage ,
+body.investor-mode .nexus-orb-stage ,
+body.advanced-mode .nexus-orb-stage ,
 body.user-mode .nexus-orb-stage {
   min-height: 272px !important;
   border-radius: 50%;
   overflow: visible;
 }
 
+body.admin-mode .nexus-orb-stage::before ,
+body.investor-mode .nexus-orb-stage::before ,
+body.advanced-mode .nexus-orb-stage::before ,
 body.user-mode .nexus-orb-stage::before {
   width: 330px !important;
   filter: blur(20px);
   opacity: .95 !important;
 }
 
+body.admin-mode .nexus-orb ,
+body.investor-mode .nexus-orb ,
+body.advanced-mode .nexus-orb ,
 body.user-mode .nexus-orb {
   width: min(250px, 26vw) !important;
   border: 1px solid rgba(255, 255, 255, .18);
@@ -11852,6 +11891,12 @@ body.user-mode .nexus-orb {
 }
 
 body.user-mode .nexus-orb::before,
+body.admin-mode .nexus-orb::before,
+body.investor-mode .nexus-orb::before,
+body.advanced-mode .nexus-orb::before,
+body.admin-mode .nexus-orb::after ,
+body.investor-mode .nexus-orb::after ,
+body.advanced-mode .nexus-orb::after ,
 body.user-mode .nexus-orb::after {
   content: "";
   position: absolute;
@@ -11861,12 +11906,18 @@ body.user-mode .nexus-orb::after {
   box-shadow: 0 0 36px rgba(34, 211, 238, .22);
 }
 
+body.admin-mode .nexus-orb::after ,
+body.investor-mode .nexus-orb::after ,
+body.advanced-mode .nexus-orb::after ,
 body.user-mode .nexus-orb::after {
   inset: -34%;
   border-color: rgba(236, 72, 153, .22);
   transform: rotate(36deg) scaleY(.45);
 }
 
+body.admin-mode .nexus-orb-core ,
+body.investor-mode .nexus-orb-core ,
+body.advanced-mode .nexus-orb-core ,
 body.user-mode .nexus-orb-core {
   color: #f8fbff;
   background: radial-gradient(circle, rgba(2, 6, 23, .98), rgba(15, 23, 42, .72)) !important;
@@ -14035,10 +14086,16 @@ body.user-mode .nexus-command-center-hero p {
   line-height: 1.36 !important;
 }
 
+body.admin-mode .nexus-orb-stage ,
+body.investor-mode .nexus-orb-stage ,
+body.advanced-mode .nexus-orb-stage ,
 body.user-mode .nexus-orb-stage {
   min-height: 226px !important;
 }
 
+body.admin-mode .nexus-orb ,
+body.investor-mode .nexus-orb ,
+body.advanced-mode .nexus-orb ,
 body.user-mode .nexus-orb {
   width: min(212px, 22vw) !important;
 }
@@ -14322,6 +14379,9 @@ body.user-mode .nexus-genesis-experience-root .nexus-presence-copy small {
   display: none !important;
 }
 
+body.admin-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+body.investor-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+body.advanced-mode .nexus-genesis-experience-root .nexus-orb-stage ,
 body.user-mode .nexus-genesis-experience-root .nexus-orb-stage {
   grid-area: orb !important;
   justify-self: center !important;
@@ -14329,11 +14389,17 @@ body.user-mode .nexus-genesis-experience-root .nexus-orb-stage {
   min-height: clamp(250px, 30vw, 360px) !important;
 }
 
+body.admin-mode .nexus-genesis-experience-root [data-nexus-genesis-home-orb="true"] ,
+body.investor-mode .nexus-genesis-experience-root [data-nexus-genesis-home-orb="true"] ,
+body.advanced-mode .nexus-genesis-experience-root [data-nexus-genesis-home-orb="true"] ,
 body.user-mode .nexus-genesis-experience-root [data-nexus-genesis-home-orb="true"] {
   cursor: default !important;
   pointer-events: none !important;
 }
 
+body.admin-mode .nexus-genesis-experience-root .nexus-orb ,
+body.investor-mode .nexus-genesis-experience-root .nexus-orb ,
+body.advanced-mode .nexus-genesis-experience-root .nexus-orb ,
 body.user-mode .nexus-genesis-experience-root .nexus-orb {
   width: clamp(210px, 25vw, 300px) !important;
 }
@@ -14539,10 +14605,16 @@ body.user-mode .nexus-genesis-experience-root .nexus-intent-route-status {
     max-width: 100% !important;
   }
 
+  body.admin-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+  body.investor-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+  body.advanced-mode .nexus-genesis-experience-root .nexus-orb-stage ,
   body.user-mode .nexus-genesis-experience-root .nexus-orb-stage {
     min-height: 220px !important;
   }
 
+  body.admin-mode .nexus-genesis-experience-root .nexus-orb ,
+  body.investor-mode .nexus-genesis-experience-root .nexus-orb ,
+  body.advanced-mode .nexus-genesis-experience-root .nexus-orb ,
   body.user-mode .nexus-genesis-experience-root .nexus-orb {
     width: 214px !important;
   }
@@ -14570,10 +14642,16 @@ body.user-mode .nexus-genesis-experience-root .nexus-intent-route-status {
     font-size: 1.28rem !important;
   }
 
+  body.admin-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+  body.investor-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+  body.advanced-mode .nexus-genesis-experience-root .nexus-orb-stage ,
   body.user-mode .nexus-genesis-experience-root .nexus-orb-stage {
     min-height: 190px !important;
   }
 
+  body.admin-mode .nexus-genesis-experience-root .nexus-orb ,
+  body.investor-mode .nexus-genesis-experience-root .nexus-orb ,
+  body.advanced-mode .nexus-genesis-experience-root .nexus-orb ,
   body.user-mode .nexus-genesis-experience-root .nexus-orb {
     width: 184px !important;
   }
@@ -14593,10 +14671,16 @@ body.user-mode .nexus-genesis-experience-root .nexus-intent-route-status {
     padding: 24px !important;
   }
 
+  body.admin-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+  body.investor-mode .nexus-genesis-experience-root .nexus-orb-stage ,
+  body.advanced-mode .nexus-genesis-experience-root .nexus-orb-stage ,
   body.user-mode .nexus-genesis-experience-root .nexus-orb-stage {
     min-height: 300px !important;
   }
 
+  body.admin-mode .nexus-genesis-experience-root .nexus-orb ,
+  body.investor-mode .nexus-genesis-experience-root .nexus-orb ,
+  body.advanced-mode .nexus-genesis-experience-root .nexus-orb ,
   body.user-mode .nexus-genesis-experience-root .nexus-orb {
     width: 250px !important;
   }
@@ -15465,6 +15549,9 @@ body.user-mode .nexus-presence-runtime-badge small {
   line-height: 1.35;
 }
 
+body.admin-mode .nexus-command-orb ,
+body.investor-mode .nexus-command-orb ,
+body.advanced-mode .nexus-command-orb ,
 body.user-mode .nexus-command-orb {
   position: relative;
   width: 52px;
@@ -15482,6 +15569,9 @@ body.user-mode .nexus-command-orb {
     inset 0 0 18px rgba(255, 255, 255, 0.2);
 }
 
+body.admin-mode .nexus-command-orb::before ,
+body.investor-mode .nexus-command-orb::before ,
+body.advanced-mode .nexus-command-orb::before ,
 body.user-mode .nexus-command-orb::before {
   content: "";
   position: absolute;
@@ -15492,6 +15582,9 @@ body.user-mode .nexus-command-orb::before {
   animation: nexusPresenceRotate 7s linear infinite;
 }
 
+body.admin-mode .nexus-command-orb-core ,
+body.investor-mode .nexus-command-orb-core ,
+body.advanced-mode .nexus-command-orb-core ,
 body.user-mode .nexus-command-orb-core {
   position: relative;
   z-index: 2;
@@ -15510,20 +15603,38 @@ body.user-mode .nexus-presence-pulse {
 }
 
 body.user-mode .nexus-orb-listening .nexus-presence-pulse,
+body.admin-mode .nexus-orb-listening .nexus-presence-pulse,
+body.investor-mode .nexus-orb-listening .nexus-presence-pulse,
+body.advanced-mode .nexus-orb-listening .nexus-presence-pulse,
 body.user-mode .nexus-orb-thinking .nexus-presence-pulse,
+body.admin-mode .nexus-orb-thinking .nexus-presence-pulse,
+body.investor-mode .nexus-orb-thinking .nexus-presence-pulse,
+body.advanced-mode .nexus-orb-thinking .nexus-presence-pulse,
 body.user-mode .nexus-orb-speaking .nexus-presence-pulse,
+body.admin-mode .nexus-orb-speaking .nexus-presence-pulse,
+body.investor-mode .nexus-orb-speaking .nexus-presence-pulse,
+body.advanced-mode .nexus-orb-speaking .nexus-presence-pulse,
 body.user-mode .nexus-conversation-active .nexus-presence-pulse {
   animation: nexusPresencePulse 1.9s ease-in-out infinite;
 }
 
+body.admin-mode .nexus-orb-listening ,
+body.investor-mode .nexus-orb-listening ,
+body.advanced-mode .nexus-orb-listening ,
 body.user-mode .nexus-orb-listening {
   box-shadow: 0 0 24px rgba(34, 211, 238, 0.55), 0 0 54px rgba(14, 165, 233, 0.25);
 }
 
+body.admin-mode .nexus-orb-thinking::before ,
+body.investor-mode .nexus-orb-thinking::before ,
+body.advanced-mode .nexus-orb-thinking::before ,
 body.user-mode .nexus-orb-thinking::before {
   animation-duration: 3.4s;
 }
 
+body.admin-mode .nexus-orb-speaking ,
+body.investor-mode .nexus-orb-speaking ,
+body.advanced-mode .nexus-orb-speaking ,
 body.user-mode .nexus-orb-speaking {
   box-shadow: 0 0 24px rgba(217, 70, 239, 0.46), 0 0 54px rgba(34, 211, 238, 0.22);
 }
@@ -15752,7 +15863,13 @@ body.user-mode .nexus-universal-action-review-actions {
   body.user-mode .nexus-presence-layer,
   body.user-mode .nexus-presence-layer::after,
   body.user-mode .nexus-command-orb,
+  body.admin-mode .nexus-command-orb,
+  body.investor-mode .nexus-command-orb,
+  body.advanced-mode .nexus-command-orb,
   body.user-mode .nexus-command-orb::before,
+  body.admin-mode .nexus-command-orb::before,
+  body.investor-mode .nexus-command-orb::before,
+  body.advanced-mode .nexus-command-orb::before,
   body.user-mode .nexus-presence-pulse,
   body.user-mode .nexus-voice-waveform span {
     animation: none !important;
@@ -15811,12 +15928,18 @@ body.user-mode .nexus-true-identity {
   text-shadow: 0 0 18px rgba(34, 211, 238, .34);
 }
 
+body.admin-mode .nexus-true-orb-wrap ,
+body.investor-mode .nexus-true-orb-wrap ,
+body.advanced-mode .nexus-true-orb-wrap ,
 body.user-mode .nexus-true-orb-wrap {
   display: grid;
   justify-items: center;
   gap: 8px;
 }
 
+body.admin-mode .nexus-true-orb-stage ,
+body.investor-mode .nexus-true-orb-stage ,
+body.advanced-mode .nexus-true-orb-stage ,
 body.user-mode .nexus-true-orb-stage {
   width: clamp(230px, 30vw, 360px) !important;
   min-height: clamp(230px, 30vw, 360px) !important;
@@ -15825,6 +15948,9 @@ body.user-mode .nexus-true-orb-stage {
   position: relative !important;
 }
 
+body.admin-mode .nexus-true-orb-wrap.compact .nexus-true-orb-stage ,
+body.investor-mode .nexus-true-orb-wrap.compact .nexus-true-orb-stage ,
+body.advanced-mode .nexus-true-orb-wrap.compact .nexus-true-orb-stage ,
 body.user-mode .nexus-true-orb-wrap.compact .nexus-true-orb-stage {
   width: 112px !important;
   min-height: 112px !important;
@@ -15836,10 +15962,16 @@ body.user-mode .nexus-true-core {
   filter: drop-shadow(0 0 32px rgba(34, 211, 238, .34));
 }
 
+body.admin-mode .nexus-true-orb-wrap.compact .nexus-true-core ,
+body.investor-mode .nexus-true-orb-wrap.compact .nexus-true-core ,
+body.advanced-mode .nexus-true-orb-wrap.compact .nexus-true-core ,
 body.user-mode .nexus-true-orb-wrap.compact .nexus-true-core {
   width: 88px !important;
 }
 
+body.admin-mode .nexus-true-orb-status ,
+body.investor-mode .nexus-true-orb-status ,
+body.advanced-mode .nexus-true-orb-status ,
 body.user-mode .nexus-true-orb-status {
   min-height: 1.2em;
   color: rgba(186, 230, 253, .88);
@@ -15985,6 +16117,9 @@ body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home
     gap: 10px;
   }
 
+  body.admin-mode .nexus-true-orb-stage ,
+  body.investor-mode .nexus-true-orb-stage ,
+  body.advanced-mode .nexus-true-orb-stage ,
   body.user-mode .nexus-true-orb-stage {
     width: clamp(180px, 58vw, 230px) !important;
     min-height: clamp(180px, 58vw, 230px) !important;
@@ -16032,6 +16167,9 @@ body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home
 
   body.user-mode .nexus-true-home .nexus-true-identity { grid-area: id; }
   body.user-mode .nexus-true-home .nexus-true-orb-wrap { grid-area: orb; }
+  body.admin-mode .nexus-true-home .nexus-true-orb-wrap { grid-area: orb; }
+  body.investor-mode .nexus-true-home .nexus-true-orb-wrap { grid-area: orb; }
+  body.advanced-mode .nexus-true-home .nexus-true-orb-wrap { grid-area: orb; }
   body.user-mode .nexus-true-home .nexus-true-greeting { grid-area: greet; text-align: left; justify-self: start; }
   body.user-mode .nexus-true-home .nexus-true-composer { grid-area: composer; }
   body.user-mode .nexus-true-home .nexus-true-secondary { grid-area: secondary; }
@@ -16067,6 +16205,9 @@ body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home
   overflow: hidden !important;
 }
 
+body.admin-mode .nexus-genesis-orb-only-home ,
+body.investor-mode .nexus-genesis-orb-only-home ,
+body.advanced-mode .nexus-genesis-orb-only-home ,
 body.user-mode .nexus-genesis-orb-only-home {
   width: 100%;
   min-height: 100dvh;
@@ -16079,6 +16220,9 @@ body.user-mode .nexus-genesis-orb-only-home {
   box-shadow: none;
 }
 
+body.admin-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home ,
+body.investor-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home ,
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home ,
 body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home {
   position: relative;
   width: min(68vmin, 560px);
@@ -16087,6 +16231,9 @@ body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home {
   place-items: center;
 }
 
+body.admin-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
+body.investor-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
 body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
   width: min(68vmin, 560px) !important;
   min-height: min(68vmin, 560px) !important;
@@ -16100,10 +16247,16 @@ body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
   isolation: isolate;
 }
 
+body.admin-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible ,
+body.investor-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible ,
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible ,
 body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage:focus-visible {
   outline: none;
 }
 
+body.admin-mode .nexus-genesis-orb-only-home .nexus-true-core ,
+body.investor-mode .nexus-genesis-orb-only-home .nexus-true-core ,
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-core ,
 body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {
   width: min(48vmin, 410px) !important;
   border-radius: 999px;
@@ -16120,6 +16273,9 @@ body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {
   animation: nexusGenesisIdleBreath 7.5s ease-in-out infinite;
 }
 
+body.admin-mode .nexus-genesis-orb-only-home .nexus-orb-core ,
+body.investor-mode .nexus-genesis-orb-only-home .nexus-orb-core ,
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-orb-core ,
 body.user-mode .nexus-genesis-orb-only-home .nexus-orb-core {
   width: clamp(86px, 17vmin, 160px);
   height: clamp(86px, 17vmin, 160px);
@@ -16132,6 +16288,9 @@ body.user-mode .nexus-genesis-orb-only-home .nexus-orb-core {
     0 0 78px rgba(168, 85, 247, .42);
 }
 
+body.admin-mode .nexus-genesis-orb-only-home .nexus-orb-ring ,
+body.investor-mode .nexus-genesis-orb-only-home .nexus-orb-ring ,
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-orb-ring ,
 body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring {
   border-color: rgba(125, 211, 252, .58);
   box-shadow:
@@ -16140,8 +16299,17 @@ body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring {
 }
 
 body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring-one { animation: nexusGenesisRingOrbit 15s linear infinite; }
+body.admin-mode .nexus-genesis-orb-only-home .nexus-orb-ring-one { animation: nexusGenesisRingOrbit 15s linear infinite; }
+body.investor-mode .nexus-genesis-orb-only-home .nexus-orb-ring-one { animation: nexusGenesisRingOrbit 15s linear infinite; }
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-orb-ring-one { animation: nexusGenesisRingOrbit 15s linear infinite; }
 body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring-two { animation: nexusGenesisRingOrbitReverse 19s linear infinite; }
+body.admin-mode .nexus-genesis-orb-only-home .nexus-orb-ring-two { animation: nexusGenesisRingOrbitReverse 19s linear infinite; }
+body.investor-mode .nexus-genesis-orb-only-home .nexus-orb-ring-two { animation: nexusGenesisRingOrbitReverse 19s linear infinite; }
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-orb-ring-two { animation: nexusGenesisRingOrbitReverse 19s linear infinite; }
 body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring-three { animation: nexusGenesisRingPulse 8s ease-in-out infinite; }
+body.admin-mode .nexus-genesis-orb-only-home .nexus-orb-ring-three { animation: nexusGenesisRingPulse 8s ease-in-out infinite; }
+body.investor-mode .nexus-genesis-orb-only-home .nexus-orb-ring-three { animation: nexusGenesisRingPulse 8s ease-in-out infinite; }
+body.advanced-mode .nexus-genesis-orb-only-home .nexus-orb-ring-three { animation: nexusGenesisRingPulse 8s ease-in-out infinite; }
 
 body.user-mode .nexus-genesis-particle-field {
   position: absolute;
@@ -16182,7 +16350,16 @@ body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="listen
 }
 
 body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="processing"] .nexus-orb-ring,
+body.admin-mode .nexus-true-experience-root[data-nexus-genesis-core-state="processing"] .nexus-orb-ring,
+body.investor-mode .nexus-true-experience-root[data-nexus-genesis-core-state="processing"] .nexus-orb-ring,
+body.advanced-mode .nexus-true-experience-root[data-nexus-genesis-core-state="processing"] .nexus-orb-ring,
 body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="reasoning"] .nexus-orb-ring,
+body.admin-mode .nexus-true-experience-root[data-nexus-genesis-core-state="reasoning"] .nexus-orb-ring,
+body.investor-mode .nexus-true-experience-root[data-nexus-genesis-core-state="reasoning"] .nexus-orb-ring,
+body.advanced-mode .nexus-true-experience-root[data-nexus-genesis-core-state="reasoning"] .nexus-orb-ring,
+body.admin-mode .nexus-true-experience-root[data-nexus-genesis-core-state="searching"] .nexus-orb-ring ,
+body.investor-mode .nexus-true-experience-root[data-nexus-genesis-core-state="searching"] .nexus-orb-ring ,
+body.advanced-mode .nexus-true-experience-root[data-nexus-genesis-core-state="searching"] .nexus-orb-ring ,
 body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="searching"] .nexus-orb-ring {
   animation-duration: 7s;
 }
@@ -16228,7 +16405,13 @@ body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="error"
 
 @media (prefers-reduced-motion: reduce) {
   body.user-mode .nexus-genesis-orb-only-home .nexus-true-core,
+  body.admin-mode .nexus-genesis-orb-only-home .nexus-true-core,
+  body.investor-mode .nexus-genesis-orb-only-home .nexus-true-core,
+  body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-core,
   body.user-mode .nexus-genesis-orb-only-home .nexus-orb-ring,
+  body.admin-mode .nexus-genesis-orb-only-home .nexus-orb-ring,
+  body.investor-mode .nexus-genesis-orb-only-home .nexus-orb-ring,
+  body.advanced-mode .nexus-genesis-orb-only-home .nexus-orb-ring,
   body.user-mode .nexus-genesis-particle-field i {
     animation: none !important;
   }
@@ -16239,10 +16422,16 @@ body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="error"
 }
 
 @media (forced-colors: active) {
+  body.admin-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
+  body.investor-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
+  body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
   body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
     border: 2px solid ButtonText;
   }
 
+  body.admin-mode .nexus-genesis-orb-only-home .nexus-true-core ,
+  body.investor-mode .nexus-genesis-orb-only-home .nexus-true-core ,
+  body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-core ,
   body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {
     forced-color-adjust: none;
     background: CanvasText;
@@ -16252,11 +16441,20 @@ body.user-mode .nexus-true-experience-root[data-nexus-genesis-core-state="error"
 
 @media (max-width: 520px) {
   body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home,
+  body.admin-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home,
+  body.investor-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home,
+  body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-orb-wrap.home,
+  body.admin-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
+  body.investor-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
+  body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage ,
   body.user-mode .nexus-genesis-orb-only-home .nexus-true-orb-stage {
     width: min(84vmin, 430px) !important;
     min-height: min(84vmin, 430px) !important;
   }
 
+  body.admin-mode .nexus-genesis-orb-only-home .nexus-true-core ,
+  body.investor-mode .nexus-genesis-orb-only-home .nexus-true-core ,
+  body.advanced-mode .nexus-genesis-orb-only-home .nexus-true-core ,
   body.user-mode .nexus-genesis-orb-only-home .nexus-true-core {
     width: min(66vmin, 310px) !important;
   }
@@ -16594,6 +16792,9 @@ body.user-mode[data-nexus-genesis-mode="home"] #nexusPermanentMicrophoneDock:not
   border: 0;
   pointer-events: none;
 }
+body.admin-mode[data-nexus-genesis-mode="home"].nexus-orb-hover ,
+body.investor-mode[data-nexus-genesis-mode="home"].nexus-orb-hover ,
+body.advanced-mode[data-nexus-genesis-mode="home"].nexus-orb-hover ,
 body.user-mode[data-nexus-genesis-mode="home"].nexus-orb-hover {
   cursor: pointer;
 }
