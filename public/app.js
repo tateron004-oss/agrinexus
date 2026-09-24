@@ -47284,15 +47284,27 @@ async function createAgentPlan() {
   }
 }
 
-async function executeAgentPlan() {
+async function executeAgentPlan(planId) {
   const status = $("#agentActionStatus");
   if (status) status.textContent = "Preparing approved agent execution...";
   try {
-    let plan = (data.profile.agentPlans || [])[0];
-    if (!plan) {
-      const goal = $("#agentGoal")?.value?.trim() || "Create an AgriNexus cross-module plan.";
-      data = await request("/api/agent/plan", { method: "POST", body: { goal } });
+    let plan;
+    if (planId) {
+      // A specific plan was already found and validated by the caller (e.g.
+      // resumeNextMission() locating the one actually awaiting approval) --
+      // execute that exact plan, never silently substitute agentPlans[0].
+      // Falling through to the create-a-new-plan branch below on a miss
+      // would be worse: it would fabricate an unrelated plan instead of
+      // reporting that the requested one is gone.
+      plan = (data.profile.agentPlans || []).find(item => item.id === planId);
+      if (!plan) throw new Error("The selected mission plan could not be found.");
+    } else {
       plan = (data.profile.agentPlans || [])[0];
+      if (!plan) {
+        const goal = $("#agentGoal")?.value?.trim() || "Create an AgriNexus cross-module plan.";
+        data = await request("/api/agent/plan", { method: "POST", body: { goal } });
+        plan = (data.profile.agentPlans || [])[0];
+      }
     }
     data = await request("/api/agent/execute", { method: "POST", body: { planId: plan.id, approved: true, note: "Approved from Agent Command Center" } });
     render();
@@ -60481,7 +60493,13 @@ async function resumeNextMission() {
     setVoiceResponse("No mission is waiting. Start an autopilot mission first.", true);
     return;
   }
-  await executeAgentPlan();
+  // Pass this exact plan's id -- executeAgentPlan() with no argument always
+  // targets agentPlans[0], which is only the plan found above when it also
+  // happens to be the most recently created one. If a newer, unrelated plan
+  // (e.g. already completed) sits at index 0, "Run next approved mission"
+  // would otherwise silently re-execute that one instead of the plan it
+  // just validated as actually awaiting approval.
+  await executeAgentPlan(plan.id);
 }
 
 function scheduleVoiceRecovery(message = "I did not hear speech. I am still listening.", options = {}) {
@@ -63319,7 +63337,10 @@ function bindStatic() {
   $("#addAdminUserBtn").onclick = () => openWorkflowModal(workflowConfig("admin-user", "create", { dataset: {} }));
   $("#addInvestorUserBtn").onclick = () => openWorkflowModal(workflowConfig("investor-user", "create", { dataset: {} }));
   $("#agentPlanBtn").onclick = createAgentPlan;
-  $("#agentExecuteBtn").onclick = executeAgentPlan;
+  // Explicitly wrapped: onclick handlers receive the click Event as their
+  // first argument, which would otherwise be passed straight through as
+  // executeAgentPlan's new planId parameter and break this button entirely.
+  $("#agentExecuteBtn").onclick = () => executeAgentPlan();
   $("#agentBriefingBtn").onclick = createGovernmentBriefing;
   $("#agentMissionBtn").onclick = runJarvisFullMission;
   $("#missionResumeBtn").onclick = resumeNextMission;
