@@ -19105,7 +19105,13 @@ function nexusOpenAiNativeExtractWeatherTimeframe(command = "") {
 
 function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
   const text = String(command || "");
-  const toMatch = text.match(/\b(?:to|for)\s+([+()\d\s.-]{7,}|[^\n,.]+?@[^\s,.]+|[A-Z][A-Za-z .'-]{1,60})(?:[\s,.]|$)/);
+  // "Call Ron at 15105019401" -- confirmed live, this exact real phrase --
+  // uses "at" before a phone number, which the original to/for-only match
+  // never recognized at all, leaving the recipient empty. Scoped to just the
+  // phone-number shape (not the email/name alternatives below) so "at" does
+  // not start matching unrelated location phrases like "call at the office".
+  const toMatch = text.match(/\b(?:to|for|at)\s+([+()\d\s.-]{7,})(?:[\s,.]|$)/)
+    || text.match(/\b(?:to|for)\s+([^\n,.]+?@[^\s,.]+|[A-Z][A-Za-z .'-]{1,60})(?:[\s,.]|$)/);
   // Confirmed live: with no structured args.message (the model is expected
   // to supply one, but a real command can still reach here without it --
   // e.g. via the draft path, which needs no provider credentials to test),
@@ -19129,6 +19135,34 @@ function nexusOpenAiNativeExtractContactArgs(command = "", args = {}) {
     message: sanitizePilotText(args.message || args.text || args.body || (messageMatch ? messageMatch[1].trim() : "") || command, 1200),
     subject: sanitizePilotText(args.subject || "Nexus message", 180)
   };
+}
+
+// A confirmation-gated send/call is entirely dependent on the model
+// re-stating the recipient/channel/message on its SECOND (confirmed) tool
+// call -- confirmed live: a bare "I confirm" or "yes, go ahead" carries no
+// phone number or address at all, so nexusOpenAiNativeExtractContactArgs
+// finds nothing on that turn, the recipient ends up empty, and the intended
+// action silently cannot proceed even though the user just confirmed it in
+// good faith. Remembering the pending request server-side, scoped to this
+// account with a short expiry, makes confirmation work regardless of
+// whether the model perfectly restates every detail on the second turn.
+function rememberPendingCommunicationsRequest(db, user, { channel, recipient, message, mode, targetName }) {
+  if (!db?.profile || !user?.id || !recipient) return;
+  db.profile.lastCommunicationsRequest = {
+    channel, recipient, message: message || "", mode: mode || "", targetName: targetName || "",
+    forUserId: user.id, expiresAt: new Date(Date.now() + 5 * 60_000).toISOString()
+  };
+}
+
+function recallPendingCommunicationsRequest(db, user) {
+  const pending = db.profile?.lastCommunicationsRequest;
+  if (!pending || pending.forUserId !== user?.id) return null;
+  if (new Date(pending.expiresAt).getTime() <= Date.now()) return null;
+  return pending;
+}
+
+function clearPendingCommunicationsRequest(db) {
+  if (db.profile) db.profile.lastCommunicationsRequest = null;
 }
 
 function nexusOpenAiNativeOwnerTestRecipient(command = "", args = {}, env = process.env) {
@@ -20068,8 +20102,25 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);
     const ownerTestRecipient = nexusOpenAiNativeOwnerTestRecipient(command, args, process.env);
-    const recipient = contact.to || ownerTestRecipient;
-    const channel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : /\b(email|mail)\b/i.test(command) ? "email" : "sms"), 40).toLowerCase();
+    let recipient = contact.to || ownerTestRecipient;
+    let channel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : /\b(email|mail)\b/i.test(command) ? "email" : "sms"), 40).toLowerCase();
+    let targetNameArg = sanitizePilotText(args.targetName || args.name || "", 160);
+    // This turn's own text/args carry no recipient at all -- most often a
+    // bare confirmation phrase ("I confirm", "yes, go ahead") with nothing
+    // left for nexusOpenAiNativeExtractContactArgs to find. Recover the
+    // request that was actually just asked about instead of proceeding with
+    // an empty target (which would otherwise fail validation silently,
+    // reporting the action as "prepared" without ever placing it).
+    if (!recipient) {
+      const pending = recallPendingCommunicationsRequest(db, user);
+      if (pending) {
+        recipient = pending.recipient;
+        channel = pending.channel;
+        contact.to = pending.recipient;
+        if (!contact.message || contact.message === command) contact.message = pending.message;
+        if (!targetNameArg) targetNameArg = pending.targetName || "";
+      }
+    }
     // "Connect me to X" is a different shape of call than the default: the
     // user wants to personally talk to X, with Kyro only as the dialer, not
     // a participant -- see startConnectCall's comment. Detected from the
@@ -20088,6 +20139,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // as the realtime bridge and call screening.
     const wantsListenAndRemember = wantsConnectCall && nexusFlagEnabled(process.env, "PHONE_LISTEN_AND_REMEMBER_ENABLED")
       && (args.mode === "connect_and_listen" || /\b(and listen|listen in|and take notes|and keep notes|and remember (?:it|that|this)|so you (?:can |)(?:remember|know))\b/i.test(command));
+    // Before this attempt (confirmed or not), remember it -- if this is the
+    // first, unconfirmed turn, this is what a later bare "I confirm" needs
+    // to recover. If confirmed:true and it succeeds/fails for another real
+    // reason, it gets cleared right below once the attempt actually runs.
+    if (!args.confirmed) {
+      rememberPendingCommunicationsRequest(db, user, {
+        channel, recipient, message: contact.message,
+        mode: wantsListenAndRemember ? "connect_and_listen" : wantsConnectCall ? "connect" : "",
+        targetName: targetNameArg
+      });
+    }
     const verifyRealProviderId = channelLabel => async result => {
       const data = result?.body?.data || {};
       const realId = data.sid || data.providerMessageId;
@@ -20104,14 +20166,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         })
       : channel === "call" && wantsListenAndRemember
         ? await withActionLifecycle(db, {
-            provider: "twilio", action: "call.connect_and_listen", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", userId: user?.id || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
-            execute: () => nexusRealProviders.twilio.startConnectAndListenCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", userId: user?.id || "", confirmed: args.confirmed }, process.env),
+            provider: "twilio", action: "call.connect_and_listen", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, userId: user?.id || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+            execute: () => nexusRealProviders.twilio.startConnectAndListenCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, userId: user?.id || "", confirmed: args.confirmed }, process.env),
             verify: verifyRealProviderId("Call")
           })
         : channel === "call" && wantsConnectCall
           ? await withActionLifecycle(db, {
-              provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
-              execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: args.targetName || args.name || "", confirmed: args.confirmed }, process.env),
+              provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+              execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, confirmed: args.confirmed }, process.env),
               verify: verifyRealProviderId("Call")
             })
           : channel === "call"
@@ -20131,6 +20193,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
               execute: () => nexusRealProviders.twilio.sendSms({ to: recipient, message: contact.message, confirmed: args.confirmed }, process.env),
               verify: verifyRealProviderId("SMS")
             });
+    // The pending request has now been acted on -- confirmed and attempted,
+    // whether it succeeded or failed for some other real reason (bad
+    // credentials, provider error). Either way it is resolved and must not
+    // be silently reused by a later, unrelated bare confirmation.
+    if (args.confirmed) clearPendingCommunicationsRequest(db);
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "communications" }, providerResult);
   }
   if (toolName === "nexus_calendar") {

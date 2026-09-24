@@ -18,6 +18,16 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
   const contactArgsEnd = source.indexOf("\nfunction ", contactArgsStart + 10);
   const ownerRecipientStart = source.indexOf("function nexusOpenAiNativeOwnerTestRecipient(");
   const ownerRecipientEnd = source.indexOf("\nfunction ", ownerRecipientStart + 10);
+  // Sits between the two ranges above (added after this test was written) --
+  // executeNexusOpenAiNativeTool's nexus_communications branch calls these to
+  // recover a confirmed action's recipient/channel when the confirming turn
+  // itself carries none. Extracted as its own range rather than mocked: real
+  // pending-request recovery is exactly the behavior worth exercising here
+  // too, not something to stub out.
+  const pendingRequestFnsStart = source.indexOf("function rememberPendingCommunicationsRequest(");
+  const pendingRequestFnsEnd = source.indexOf("\nfunction nexusOpenAiNativeOwnerTestRecipient(");
+  assert.ok(pendingRequestFnsStart > 0 && pendingRequestFnsEnd > pendingRequestFnsStart,
+    "could not locate the pending-communications-request helpers in server.js");
 
   const sandbox = {
     process: { env: {} },
@@ -49,6 +59,7 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
   vm.createContext(sandbox);
   vm.runInContext(
     source.slice(contactArgsStart, contactArgsEnd) + "\n" +
+    source.slice(pendingRequestFnsStart, pendingRequestFnsEnd) + "\n" +
     source.slice(ownerRecipientStart, ownerRecipientEnd) + "\n" +
     source.slice(start, end) +
     "\nthis.run = executeNexusOpenAiNativeTool;",
