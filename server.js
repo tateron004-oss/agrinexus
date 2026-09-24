@@ -1848,6 +1848,7 @@ const mime = {
 
 let pgPool = null;
 let pgStateReady = false;
+let sessionsPostgresReady = false;
 
 function usingPostgresState() {
   return STATE_STORE === "postgres";
@@ -2415,14 +2416,98 @@ function sessionTtlMs(env = process.env) {
 // (e.g. /api/auth/guest-session) can't grow this without bound.
 const SESSIONS_SWEEP_THRESHOLD = 5000;
 
-function issueSession(sid, userId) {
+// Sessions live in memory (the `sessions` Map) for fast, synchronous lookups
+// on every single request via currentUser() below -- that function stays
+// synchronous and untouched by this. The real problem this closes: a plain
+// in-memory Map does not survive a server restart, and this app restarts on
+// every deploy. A user mid-conversation who happened to trigger a redeploy
+// (or whose session simply outlived one) got silently logged out --
+// confirmed live during tonight's testing, more than once, disrupting an
+// active voice conversation. Sessions are additionally mirrored to Postgres
+// (when DATABASE_URL is configured -- independent of AUTH_STORE/
+// usingPostgresAuth(), which is about where USER RECORDS live, not session
+// durability, and has its own incident history worth staying clear of) and
+// reloaded into memory once at server startup, so a restart no longer
+// discards an active login.
+function sessionsPostgresEnabled(env = process.env) {
+  return Boolean(env.DATABASE_URL);
+}
+
+async function ensureSessionsPostgresTable() {
+  if (sessionsPostgresReady) return;
+  const pool = getPgPool();
+  await pool.query(`
+    create table if not exists agrinexus_sessions (
+      sid text primary key,
+      user_id text not null,
+      expires_at timestamptz not null
+    )
+  `);
+  sessionsPostgresReady = true;
+}
+
+async function persistSessionToPostgres(sid, userId, expiresAt) {
+  if (!sessionsPostgresEnabled()) return;
+  try {
+    await ensureSessionsPostgresTable();
+    await getPgPool().query(
+      `insert into agrinexus_sessions (sid, user_id, expires_at) values ($1, $2, $3)
+       on conflict (sid) do update set user_id = excluded.user_id, expires_at = excluded.expires_at`,
+      [sid, userId, new Date(expiresAt).toISOString()]
+    );
+  } catch (error) {
+    console.error("[sessions] Postgres write failed:", error.message);
+    recordServerError({ source: "sessions-postgres-write", message: error.message });
+  }
+}
+
+async function deleteSessionFromPostgres(sid) {
+  if (!sessionsPostgresEnabled()) return;
+  try {
+    await ensureSessionsPostgresTable();
+    await getPgPool().query("delete from agrinexus_sessions where sid = $1", [sid]);
+  } catch (error) {
+    console.error("[sessions] Postgres delete failed:", error.message);
+    recordServerError({ source: "sessions-postgres-delete", message: error.message });
+  }
+}
+
+// Called once, before the server starts accepting connections. A fresh
+// deploy's empty in-memory Map is repopulated from the durable copy, so an
+// account that was genuinely logged in a moment ago stays logged in.
+// Deliberately excludes already-expired rows rather than loading and then
+// immediately evicting them.
+async function hydrateSessionsFromPostgres() {
+  if (!sessionsPostgresEnabled()) return;
+  try {
+    await ensureSessionsPostgresTable();
+    await getPgPool().query("delete from agrinexus_sessions where expires_at <= now()");
+    const result = await getPgPool().query("select sid, user_id, expires_at from agrinexus_sessions");
+    for (const row of result.rows) {
+      sessions.set(row.sid, { userId: row.user_id, expiresAt: new Date(row.expires_at).getTime() });
+    }
+    if (result.rows.length) console.log(`[sessions] restored ${result.rows.length} session(s) from Postgres after restart`);
+  } catch (error) {
+    console.error("[sessions] Postgres hydration failed, starting with an empty session cache:", error.message);
+    recordServerError({ source: "sessions-postgres-hydrate", message: error.message });
+  }
+}
+
+async function issueSession(sid, userId) {
   if (sessions.size > SESSIONS_SWEEP_THRESHOLD) {
     const now = Date.now();
     for (const [key, entry] of sessions) {
       if (entry.expiresAt <= now) sessions.delete(key);
     }
+    // Housekeeping, not correctness-critical to this request -- fire without
+    // blocking the response on it.
+    if (sessionsPostgresEnabled()) {
+      getPgPool().query("delete from agrinexus_sessions where expires_at <= now()").catch(() => {});
+    }
   }
-  sessions.set(sid, { userId, expiresAt: Date.now() + sessionTtlMs() });
+  const expiresAt = Date.now() + sessionTtlMs();
+  sessions.set(sid, { userId, expiresAt });
+  await persistSessionToPostgres(sid, userId, expiresAt);
 }
 
 function currentUser(req, db) {
@@ -46932,7 +47017,7 @@ async function api(req, res, url) {
     await authoritativeRuntimeUser(guest);
     await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
-    issueSession(sid, guest.id);
+    await issueSession(sid, guest.id);
     const durableToken = issueDurableAuthToken(guest.id);
     const cookies = [
       setCookieHeader("agrinexus_sid", sid, {
@@ -46994,7 +47079,7 @@ async function api(req, res, url) {
     }
     if (usersChanged || blobBackfilled || passwordMigrated) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
-    issueSession(sid, found.id);
+    await issueSession(sid, found.id);
     const durableToken = issueDurableAuthToken(found.id);
     const cookies = [
       setCookieHeader("agrinexus_sid", sid, {
@@ -47011,7 +47096,14 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/logout" && req.method === "POST") {
     const sid = parseCookies(req).agrinexus_sid;
-    if (sid) sessions.delete(sid);
+    if (sid) {
+      sessions.delete(sid);
+      // Must also remove the durable Postgres copy -- otherwise an explicit
+      // logout would only be honored until the next restart, at which point
+      // hydrateSessionsFromPostgres() would bring the "logged out" session
+      // right back to life.
+      await deleteSessionFromPostgres(sid);
+    }
     if (user) {
       user.authTokensRevokedAt = Date.now();
       await writeDb(db);
@@ -53416,6 +53508,12 @@ server.on("upgrade", (req, socket, head) => {
   });
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`AgriNexus running at http://${HOST}:${PORT}`);
+// Sessions are restored from Postgres (when configured) before the server
+// starts accepting connections at all, so there is no window where an
+// incoming request could see an empty, freshly-restarted session cache for
+// an account that was genuinely still logged in a moment ago.
+hydrateSessionsFromPostgres().finally(() => {
+  server.listen(PORT, HOST, () => {
+    console.log(`AgriNexus running at http://${HOST}:${PORT}`);
+  });
 });
