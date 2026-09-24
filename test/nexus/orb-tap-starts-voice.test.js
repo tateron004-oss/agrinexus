@@ -46,8 +46,19 @@ test("only real taps on the orb count, never on controls, and never off the audi
   for (const selector of ["#nexusPermanentMicrophoneDock", "a", "button", "input", "textarea", "select", "label"])
     page.tap(200, 200, { target: { closest: probe => (probe.includes(selector) ? {} : null) } });
   assert.equal(page.button.clicks, 0, "a tap that lands on a control is that control's, not the orb's");
-  assert.equal(load({ mode: "workspace" }).tap(200, 200) || 0, 0);
-  for (const other of [load({ mode: "workspace" }), load({ userMode: false }), load({ disabled: true })]) { other.tap(200, 200); assert.equal(other.button.clicks, 0); }
+  for (const other of [load({ mode: "workspace" }), load({ disabled: true })]) { other.tap(200, 200); assert.equal(other.button.clicks, 0); }
+});
+
+test("the orb works as a tap-to-talk control in every experience mode, not only through the 'User' persona toggle", () => {
+  // Explicit fix (2026-09-23): the orb previously only responded to taps
+  // when body carried the "user-mode" class, so Admin/Investor/Workspace
+  // accounts could never use it even after .user-workspace's display:none
+  // override for those modes was removed. Only the "home" screen-state
+  // check (already covered by the "workspace" mode case above) should gate
+  // this, not which persona toggle is active.
+  const nonUserMode = load({ userMode: false });
+  nonUserMode.tap(200, 200);
+  assert.equal(nonUserMode.button.clicks, 1, "a tap on the orb must start voice regardless of the user-mode class");
 });
 
 test("the pointer cursor follows the orb and the page is only touched when that changes", () => {
