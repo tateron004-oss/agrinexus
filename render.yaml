@@ -264,24 +264,25 @@ services:
       # .env.example for the exact format.
       - key: TWILIO_AUTHORIZED_CALLERS
         sync: false
-      # Opt-in real-time two-way phone conversation bridge (Twilio Media
-      # Streams <-> OpenAI Realtime WebSocket). Ships off by default -- this
-      # is new infrastructure that still needs a live call against this
-      # deployment to verify audio quality and interruption behavior before
-      # it should be turned on here. See .env.example.
+      # Real-time two-way phone conversation bridge (Twilio Media Streams
+      # <-> OpenAI Realtime WebSocket), for callers resolveAuthorizedPhoneCaller
+      # recognizes. Turned on 2026-09-24 after the toll-free-number carrier
+      # block was fixed (switched TWILIO_PHONE_NUMBER off the unverified
+      # toll-free number). See .env.example.
       - key: PHONE_REALTIME_STREAMING_ENABLED
-        value: "false"
+        value: "true"
       # Call screening for unrecognized callers -- bridges them to the
-      # owner's real phone (with a voicemail fallback) instead of a flat
-      # decline. Ships off by default. See .env.example.
+      # owner's real phone (with a voicemail + push-notification fallback)
+      # instead of a flat decline. Turned on 2026-09-24. See .env.example.
       - key: PHONE_SCREENING_ENABLED
-        value: "false"
+        value: "true"
       # "Connect me and listen" call transcription. LEGALLY SENSITIVE (records
-      # and transcribes a real third party, disclosed to them on the call but
-      # never fully "off the record") -- ships off by default. See
-      # .env.example before ever turning this on here.
+      # and transcribes a real third party -- the mandatory spoken consent
+      # disclosure to that third party, server.js's startConnectAndListenCall,
+      # must never be removed or shortened). Turned on 2026-09-24. See
+      # .env.example.
       - key: PHONE_LISTEN_AND_REMEMBER_ENABLED
-        value: "false"
+        value: "true"
       # Real file uploads (photos, PDFs). Ships off by default. The storage
       # dir is pre-pointed at the mounted persistent disk (see the disk:
       # block above) so it's ready the moment this is turned on. See
