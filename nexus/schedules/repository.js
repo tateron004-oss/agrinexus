@@ -12,6 +12,14 @@ class ScheduleRepository {
     if (!item.tenantId || !item.ownerId || !item.jobType || !item.timezone || !item.nextRunAt) {
       throw new Error("Schedule tenant, owner, job type, timezone, and next run are required.");
     }
+    // Found live (job-queue/schedule-dispatch follow-up audit): cadence's
+    // shape was never validated here, only inside nextOccurrence() at
+    // dispatch time -- a schedule created with an invalid cadence (e.g.
+    // everySeconds under 60, or non-numeric) would persist successfully and
+    // only fail once it actually became due, at which point (see
+    // dispatchDue below) it could wedge the whole dispatcher. Reject it up
+    // front instead, using the exact same rule nextOccurrence enforces.
+    validateCadence(item.cadence);
     const result = await this.db.query(`insert into nexus_schedules
       (schedule_id,tenant_id,owner_id,task_id,job_type,payload,cadence,timezone,next_run_at,state)
       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'active') returning *`, [item.scheduleId || createId("schedule"),
@@ -31,7 +39,25 @@ class ScheduleRepository {
         const job = await jobs.enqueue({ tenantId: schedule.tenant_id, taskId: schedule.task_id,
           jobType: schedule.job_type, queue: "default", payload: { ...schedule.payload, scheduleId: schedule.schedule_id,
             ownerId: schedule.owner_id, occurrence }, idempotencyKey: `schedule:${schedule.schedule_id}:${occurrence}` });
-        const next = nextOccurrence(schedule.cadence, schedule.next_run_at);
+        // Found live (job-queue/schedule-dispatch follow-up audit): this
+        // whole loop ran inside ONE transaction, so a throw from
+        // nextOccurrence for any single schedule (e.g. a malformed cadence
+        // that create() previously never validated) rolled back every
+        // OTHER schedule's advancement in the same batch too, and left the
+        // poison-pill schedule's own next_run_at unchanged -- so it sorted
+        // first again on every subsequent pass and threw every time,
+        // forever, blocking the dispatcher for every tenant. A schedule
+        // whose cadence can't be computed is paused (not left "active" to
+        // be retried unboundedly) instead of aborting the whole batch.
+        let next;
+        try {
+          next = nextOccurrence(schedule.cadence, schedule.next_run_at);
+        } catch (error) {
+          await trx.query(`update nexus_schedules set state='paused',last_run_at=next_run_at,updated_at=now()
+            where schedule_id=$1`, [schedule.schedule_id]);
+          dispatched.push({ scheduleId: schedule.schedule_id, jobId: job.job_id || job.jobId, occurrence, paused: true, error: error.message });
+          continue;
+        }
         await trx.query(`update nexus_schedules set state=$2,last_run_at=next_run_at,next_run_at=coalesce($3,next_run_at),
           updated_at=now() where schedule_id=$1`, [schedule.schedule_id, next ? "active" : "completed", next]);
         dispatched.push({ scheduleId: schedule.schedule_id, jobId: job.job_id || job.jobId, occurrence });
@@ -48,4 +74,12 @@ function nextOccurrence(cadence, current) {
   return new Date(new Date(current).getTime() + seconds * 1000);
 }
 
-module.exports = Object.freeze({ ScheduleRepository, nextOccurrence });
+// Mirrors nextOccurrence's own rule, applied at creation time instead of
+// only at dispatch time -- see create()'s comment above.
+function validateCadence(cadence) {
+  if (!cadence || cadence.once === true) return;
+  const seconds = Number(cadence.everySeconds || 0);
+  if (!Number.isFinite(seconds) || seconds < 60) throw new Error("Recurring schedules require everySeconds of at least 60.");
+}
+
+module.exports = Object.freeze({ ScheduleRepository, nextOccurrence, validateCadence });

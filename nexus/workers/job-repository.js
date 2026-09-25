@@ -14,15 +14,37 @@ class JobRepository {
     return (result.rows || result)[0];
   }
 
+  // Found live (job-queue/schedule-dispatch follow-up audit): the
+  // stale-lease reclaim this column exists for was dead code -- the
+  // candidate filter was `state in ('scheduled','queued')`, which a
+  // 'leased' row can never match no matter how far in the past its
+  // lease_expires_at is, so `(lease_expires_at is null or
+  // lease_expires_at<now())` never actually filtered anything (every
+  // scheduled/queued row already has a null lease). A worker that crashes
+  // between claim() and complete()/fail() leaves that job permanently
+  // stuck at state='leased' -- no worker, ever, reclaims it. Mirrors the
+  // fix already applied to notifications/repository.js's claim(): a
+  // 'leased' row whose lease has expired is now treated as claimable
+  // again, the same as a fresh 'scheduled'/'queued' one.
   async claim({ workerId, queues = ["default"], leaseSeconds = 60 }) {
     return this.db.transaction(async trx => {
       const result = await trx.query(`with candidate as (select job_id from nexus_worker_jobs
-        where queue=any($1::text[]) and state in ('scheduled','queued') and available_at<=now()
-        and (lease_expires_at is null or lease_expires_at<now()) order by priority,available_at,created_at
+        where queue=any($1::text[]) and (
+          (state in ('scheduled','queued') and available_at<=now())
+          or (state='leased' and lease_expires_at<now())
+        ) order by priority,available_at,created_at
         for update skip locked limit 1) update nexus_worker_jobs j set state='leased',leased_by=$2,
         lease_expires_at=now()+make_interval(secs=>$3),attempts=j.attempts+1,updated_at=now()
         from candidate where j.job_id=candidate.job_id returning j.*`, [queues, workerId, leaseSeconds]);
       const job = (result.rows || result)[0]; if (!job) return null;
+      // A reclaimed expired lease leaves its previous attempt's row
+      // permanently at state='running' (the crashed worker never called
+      // finish()) -- a false audit trail claiming a job is still executing
+      // long after it was reassigned. Close out any such dangling rows
+      // before recording the new attempt; a no-op in the normal case,
+      // since finish() already closes the prior attempt there.
+      await trx.query(`update nexus_job_attempts set state='timed_out',finished_at=now()
+        where job_id=$1 and state='running'`, [job.job_id]);
       await trx.query(`insert into nexus_job_attempts(attempt_id,job_id,attempt,worker_id,state)
         values ($1,$2,$3,$4,'running')`, [createId("attempt"), job.job_id, job.attempts, workerId]);
       return job;

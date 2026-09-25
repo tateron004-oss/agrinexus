@@ -86,8 +86,28 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       return { outcomes };
     },
     "retention.sweep": async ({ job }) => ({ purged: await runtime.dataLifecycle.purgeExpired({ limit: job.payload?.limit || 100 }) }),
-    "deletion.execute": async ({ job }) => runtime.dataLifecycle.executeDeletion({ tenantId: job.tenant_id,
-      requestId: required(job.payload?.requestId, "Deletion request ID") }),
+    // Found live (job-queue/schedule-dispatch follow-up audit): a
+    // deterministically-failing deletion never left state='queued' (the
+    // whole erasure transaction rolls back on any throw), and
+    // deletion.sweep's own listStaleQueued has no way to tell "genuinely
+    // lost job" apart from "already tried and permanently fails" -- so the
+    // same request got re-enqueued as a brand-new job forever, with no
+    // terminal state ever reached despite the schema reserving 'failed' for
+    // exactly this. Only mark it failed once this job has exhausted its own
+    // retry budget, so a single transient failure still retries normally
+    // first; the job itself still fails/dead-letters through the normal
+    // path below regardless (this never swallows the error).
+    "deletion.execute": async ({ job }) => {
+      const requestId = required(job.payload?.requestId, "Deletion request ID");
+      try {
+        return await runtime.dataLifecycle.executeDeletion({ tenantId: job.tenant_id, requestId });
+      } catch (error) {
+        if (job.attempts >= job.max_attempts) {
+          await runtime.dataLifecycle.markFailed({ tenantId: job.tenant_id, requestId, error: error.message }).catch(() => {});
+        }
+        throw error;
+      }
+    },
     // Self-healing sweep for erasure requests, the same shape as agent.sweep-advanceable-tasks: requestDeletion() enqueues
     // "deletion.execute" immediately, so this only ever finds one that was lost (a crash between the insert and the enqueue, a dropped job) --
     // a request must never be able to sit at 'queued' forever. executeDeletion is idempotent (its updates and the memory-items delete are all

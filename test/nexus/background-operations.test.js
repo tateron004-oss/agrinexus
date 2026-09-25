@@ -21,6 +21,44 @@ test("due schedules lock, enqueue idempotently, and advance only after enqueue",
   assert.equal(x.calls[1].params[1], "completed");
 });
 
+// Found live (job-queue/schedule-dispatch follow-up audit): create() never
+// validated cadence's shape at all -- only nextOccurrence() did, at dispatch
+// time -- so a schedule with an invalid cadence (e.g. everySeconds under 60)
+// could be persisted successfully and only fail once it actually became due.
+test("create() rejects an invalid cadence up front, the same rule nextOccurrence enforces at dispatch time", async () => {
+  const x = db([{ rows: [{ schedule_id: "s1" }] }]);
+  await assert.rejects(new ScheduleRepository(x).create({ tenantId: "t", ownerId: "u", jobType: "notifications.deliver",
+    timezone: "UTC", nextRunAt: new Date(), cadence: { everySeconds: 30 } }), /at least 60/);
+  assert.equal(x.calls.length, 0, "an invalid schedule must never be persisted");
+});
+
+// Found live: dispatchDue ran its whole due-batch loop inside ONE
+// transaction, so a throw from nextOccurrence for any single schedule (a
+// poison-pill cadence create() previously never rejected) rolled back every
+// OTHER schedule's advancement in the same batch too, and left the
+// poison-pill's own next_run_at unchanged -- so it sorted first again on
+// every subsequent pass and threw every time, forever, blocking the
+// dispatcher for every tenant sharing that batch.
+test("a schedule with a poison-pill cadence is paused without blocking any other schedule in the same due batch", async () => {
+  const x = db([
+    { rows: [
+      { schedule_id: "bad", tenant_id: "t1", owner_id: "u1", task_id: null, job_type: "notifications.deliver", payload: {}, cadence: { everySeconds: 30 }, next_run_at: "2026-01-01T00:00:00Z" },
+      { schedule_id: "good", tenant_id: "t2", owner_id: "u2", task_id: null, job_type: "notifications.deliver", payload: {}, cadence: { everySeconds: 3600 }, next_run_at: "2026-01-01T00:00:00Z" }
+    ] },
+    { rows: [] }, // the "bad" schedule's pause update
+    { rows: [] }  // the "good" schedule's normal advance update
+  ]);
+  const enqueued = [];
+  const rows = await new ScheduleRepository(x).dispatchDue({ jobs: { enqueue: async job => { enqueued.push(job); return { job_id: `j-${job.tenantId}` }; } }, now: new Date("2026-01-02T00:00:00Z") });
+  assert.equal(enqueued.length, 2, "both schedules must still be enqueued -- the poison pill only breaks computing its OWN next run");
+  assert.equal(rows[0].paused, true);
+  assert.match(rows[0].error, /at least 60/);
+  assert.match(x.calls[1].sql, /state='paused'/, "the bad schedule stops being selected again instead of retrying forever");
+  assert.equal(rows[1].paused, undefined, "the good schedule in the same batch must advance normally, unaffected");
+  assert.match(x.calls[2].sql, /state=\$2/);
+  assert.equal(x.calls[2].params[1], "active");
+});
+
 test("notification delivery never reports success without a verified provider receipt", async () => {
   const failed = []; const delivered = [];
   const runtime = { notifications: { claim: async () => [{ notification_id: "n1", channel: "push" }], failed: async (...args) => failed.push(args), delivered: async id => delivered.push(id) },
@@ -42,6 +80,24 @@ test("retention and deletion jobs use the authoritative lifecycle repository", a
 // "deletion.execute" is internal-only (see control-api.test.js's createSchedule allowlist test): requestDeletion() enqueues it immediately,
 // so this sweep should only ever have to catch a lost one. Confirms it re-enqueues by requestId, not by re-running executeDeletion itself
 // directly (so retries/backoff still go through the normal durable job path), and that an empty scan is a no-op.
+// Found live (job-queue/schedule-dispatch follow-up audit): a deletion
+// request whose executeDeletion() deterministically fails was retried by
+// the job queue's own normal backoff, but once those retries were exhausted
+// the REQUEST itself was left at state='queued' forever -- deletion.sweep
+// had no way to tell it apart from a genuinely lost job, so it got
+// re-enqueued as a brand-new job on every sweep pass, forever.
+test("deletion.execute marks the request permanently failed only once the job's own retries are exhausted, not on an ordinary retryable attempt", async () => {
+  const marked = [];
+  const runtime = { notifications: {}, schedules: {}, jobs: {},
+    dataLifecycle: { executeDeletion: async () => { throw new Error("constraint violation"); }, markFailed: async input => { marked.push(input); } } };
+  const handlers = createHandlers({ runtime });
+  await assert.rejects(handlers["deletion.execute"]({ job: { tenant_id: "t", attempts: 2, max_attempts: 5, payload: { requestId: "r" } } }));
+  assert.equal(marked.length, 0, "a job with attempts remaining must not be marked failed yet");
+  await assert.rejects(handlers["deletion.execute"]({ job: { tenant_id: "t", attempts: 5, max_attempts: 5, payload: { requestId: "r" } } }));
+  assert.equal(marked.length, 1, "the final attempt must mark the request permanently failed");
+  assert.deepEqual(marked[0], { tenantId: "t", requestId: "r", error: "constraint violation" });
+});
+
 test("deletion.sweep re-enqueues stale queued erasure requests, not the ones already picked up", async () => {
   const enqueued = [];
   const runtime = { notifications: {}, schedules: {}, jobs: { enqueue: async job => { enqueued.push(job); return { job_id: "j1" }; } },

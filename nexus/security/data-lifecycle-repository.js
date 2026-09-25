@@ -50,6 +50,25 @@ class DataLifecycleRepository {
       return {state:"verified",verification};
     });
   }
+  // Found live (job-queue/schedule-dispatch follow-up audit): a request
+  // whose executeDeletion() deterministically fails (a real, reproducible
+  // bug, a malformed legacy row, a constraint violation) never left
+  // state='queued' -- the whole erasure transaction rolls back on any
+  // throw. deletion.sweep's own listStaleQueued only checks state='queued',
+  // with no awareness of whether a job for this request already ran and
+  // exhausted its retries, so the same permanently-failing request got
+  // re-enqueued as a brand-new job forever, with unbounded nexus_worker_jobs
+  // row growth and no way for anyone to ever see "this failed" -- despite
+  // the schema's own check constraint already reserving a 'failed' state
+  // for exactly this. Called by the deletion.execute job handler only once
+  // the underlying job has exhausted its own retry budget, so a single
+  // transient failure still gets its normal retries first.
+  async markFailed({tenantId,requestId,error}) {
+    if(!tenantId||!requestId) throw new Error("Deletion tenant and request are required.");
+    const result=await this.db.query(`update nexus_deletion_requests set state='failed',verification=$3
+      where tenant_id=$1 and request_id=$2 and state='queued' returning *`,[tenantId,requestId,{reason:"execution_failed",error:String(error||"").slice(0,500)}]);
+    return (result.rows||result)[0]||null;
+  }
   // Deletion requests that are still 'queued' well after they should have been picked up: the immediate enqueue at request time (see
   // control-api.js's requestDeletion) either never happened or its job was lost. Mirrors AuthoritativeTaskEngine's stale-task sweep for the
   // same reason -- a crashed or missed job must never strand an erasure request forever.

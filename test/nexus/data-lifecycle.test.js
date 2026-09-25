@@ -100,3 +100,23 @@ test("artifact deletion wipes title and metadata, not just the object pointer", 
   assert.ok(artifacts);
   assert.match(artifacts.sql,/title=''/); assert.match(artifacts.sql,/metadata='\{\}'::jsonb/); assert.match(artifacts.sql,/object_key=null/);
 });
+
+// Found live (job-queue/schedule-dispatch follow-up audit): a deletion
+// request whose executeDeletion() deterministically fails never left
+// state='queued', and deletion.sweep's own listStaleQueued has no way to
+// tell "genuinely lost job" apart from "already tried and permanently
+// fails" -- so the same request got re-enqueued forever with no terminal
+// state ever reached, despite the schema reserving 'failed' for exactly
+// this. markFailed() is the missing piece: called only once a job has
+// exhausted its own retries (see the deletion.execute handler test below).
+test("markFailed transitions a still-queued request to the schema's reserved failed state, recording why", async () => {
+  const x = db([{rows:[{request_id:"req_1",state:"failed"}]}]);
+  const result = await new DataLifecycleRepository(x).markFailed({ tenantId: "tenant-a", requestId: "req_1", error: "constraint violation" });
+  assert.equal(result.state, "failed");
+  assert.match(x.calls[0].sql, /state='failed'/);
+  assert.match(x.calls[0].sql, /where tenant_id=\$1 and request_id=\$2 and state='queued'/);
+  assert.deepEqual(x.calls[0].params, ["tenant-a", "req_1", { reason: "execution_failed", error: "constraint violation" }]);
+});
+test("markFailed requires a tenant and request id", async () => {
+  await assert.rejects(new DataLifecycleRepository(db()).markFailed({ requestId: "req_1" }), /tenant and request/);
+});
