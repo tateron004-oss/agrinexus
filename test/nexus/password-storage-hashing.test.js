@@ -101,3 +101,22 @@ test("a brand-new sandbox account created via /api/admin/test-user is stored has
     body: JSON.stringify({ email: "zzverify-password-hashing@example.com", password: "Zzverify2026!" }) });
   assert.equal(newLogin.status, 200);
 });
+
+// Found live (login-security follow-up audit): the blob-mode login path
+// looked the account up FIRST and only ran the deliberately-expensive
+// scrypt comparison when a matching account was found -- so a nonexistent
+// email returned quickly while a wrong password for a real account paid
+// scrypt's real cost, even though both return the identical 401. That
+// timing gap alone lets an attacker enumerate valid emails. Threshold
+// calibrated against this exact machine/test harness: the pre-fix path
+// measured ~8ms (no real hashing), the fixed path measures ~33ms
+// (real scrypt) -- 15ms sits clearly between the two with margin on both
+// sides, without this test depending on a precise timing ratio.
+test("a login attempt for a nonexistent email still pays a real, measurable cryptographic cost, not a fast short-circuit", async () => {
+  const started = process.hrtime.bigint();
+  const res = await fetch(`${base}/api/login`, { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "no-such-account-at-all@example.com", password: "anything" }) });
+  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+  assert.equal(res.status, 401);
+  assert.ok(elapsedMs >= 15, `expected a real scrypt cost (>=15ms), got ${elapsedMs.toFixed(2)}ms -- looks like the lookup short-circuited before hashing`);
+});
