@@ -48,6 +48,7 @@ async function waitFor(url) {
 let server;
 let adminCookie;
 let investorCookie;
+let providerReviewerCookie;
 
 test.before(async () => {
   fs.copyFileSync(dbPath, tempDbPath);
@@ -76,6 +77,28 @@ test.before(async () => {
   });
   assert.equal(investorLogin.status, 200);
   investorCookie = investorLogin.headers.get("set-cookie").split(";")[0];
+
+  // No admin route creates a "Provider Reviewer" login directly -- create an
+  // ordinary test user, then patch its role straight in the JSON store (the
+  // server re-reads db.json from disk on every request, so this takes
+  // effect on the next call with no restart needed).
+  const reviewerEmail = "provider-reviewer-boundary-test@example.com";
+  const reviewerCreated = await fetch(`${base}/api/admin/test-user`, {
+    method: "POST", headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ email: reviewerEmail, password: "Reviewer2026!", name: "Provider Reviewer Boundary Test" })
+  });
+  assert.equal(reviewerCreated.status, 200, JSON.stringify(await reviewerCreated.clone().json()));
+  const tempDb = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  const reviewerUser = tempDb.users.find(u => u.email === reviewerEmail);
+  assert.ok(reviewerUser, "expected the freshly created test user to be in the store");
+  reviewerUser.role = "Provider Reviewer";
+  fs.writeFileSync(tempDbPath, JSON.stringify(tempDb));
+  const reviewerLogin = await fetch(`${base}/api/login`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: reviewerEmail, password: "Reviewer2026!" })
+  });
+  assert.equal(reviewerLogin.status, 200);
+  providerReviewerCookie = reviewerLogin.headers.get("set-cookie").split(";")[0];
 });
 
 test.after(() => {
@@ -141,4 +164,35 @@ test("an Investor account cannot trigger a real Twilio send via buyer-seller mes
   assert.equal(asAdmin.status, 200, JSON.stringify(asAdmin.body));
   const adminThread = asAdmin.body.tradeMessageResult.thread;
   assert.notEqual(adminThread.liveRecipientConfigured, undefined, "a real account must still reach the real-send branch (Twilio itself may be unconfigured in this test env, but the gate must not be the reason)");
+});
+
+// Found live (Provider-Reviewer follow-up): /api/notifications/send is
+// gated only by canUse(user, "notifications") -- which Provider Reviewer
+// holds, unlike "trade" -- and had NO restriction check at all before this
+// fix, unlike every sibling real-send route. It could trigger a real
+// Twilio SMS/WhatsApp send to a client-supplied recipient. This also proves
+// the broader userIsRestrictedFrom() fix: naming "Investor" specifically
+// would have missed this, since Provider Reviewer is a different role that
+// was never named -- the allowlist (Admin/Standard User only) covers it
+// without naming every non-privileged role individually.
+test("/api/notifications/send never reaches the real Twilio branch for a Provider Reviewer account, but still does for Admin", async () => {
+  const asReviewer = await post("/api/notifications/send", { module: "AgriTrade", channel: "sms", message: "review notice" }, providerReviewerCookie);
+  assert.equal(asReviewer.status, 200, JSON.stringify(asReviewer.body));
+  assert.equal(asReviewer.body.profile.notifications[0].deliveryStatus, "local-notification-only", "a Provider Reviewer must never reach the real Twilio send branch");
+
+  const asAdmin = await post("/api/notifications/send", { module: "AgriTrade", channel: "sms", message: "admin notice" }, adminCookie);
+  assert.equal(asAdmin.status, 200, JSON.stringify(asAdmin.body));
+  assert.equal(asAdmin.body.profile.notifications[0].deliveryStatus, "needs-twilio-config", "a real account must still reach the real Twilio branch (unconfigured in this test env, but the gate must not be the reason it stopped)");
+});
+
+test("a Provider Reviewer account is also blocked from the buyer-seller-message and telehealth-intake real-action paths, by the same centralized fix", async () => {
+  const asReviewer = await post("/api/trade/message", { channel: "SMS", message: "please call about the order" }, providerReviewerCookie);
+  // "trade" is not in Provider Reviewer's permission set at all, so this is
+  // refused before the message code even runs -- confirms the route-level
+  // gate, independent of the userIsRestrictedFrom fix this test file is
+  // otherwise about.
+  assert.equal(asReviewer.status, 403);
+
+  const intakeAsReviewer = await post("/api/nexus/tools/telehealth/intake", { confirmed: true, sessionType: "provider_review", reason: "should never be written by a reviewer" }, providerReviewerCookie);
+  assert.equal(intakeAsReviewer.status, 403, JSON.stringify(intakeAsReviewer.body));
 });

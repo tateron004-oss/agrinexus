@@ -5510,9 +5510,26 @@ function canWriteHealth(user) {
 // restricted from the categories that either cause a real external side
 // effect or write real operational data, for the same underlying reason a
 // guest is -- neither is a verified, trusted, write-authorized operator.
+// Found live (Provider-Reviewer follow-up to the Investor-boundary audit):
+// naming Investor specifically here still left a real gap -- Provider
+// Reviewer holds "notifications" but not "trade", so several real-send
+// routes gated only by this function (no canUse(user, area) check at all)
+// were reachable by it too, since it's neither a guest nor literally
+// "Investor". communications-send/external-transaction/health-record-write
+// are real-world side effects (an actual SMS/WhatsApp/call/email dispatch,
+// an actual payment-provider call, a real PHI write) that only a verified,
+// write-authorized operator should ever trigger -- restricting by an
+// ALLOWLIST of those operators (the same Admin/Standard User pair
+// canWriteHealth() already uses) fixes this for every role, current or
+// future, instead of naming one role at a time. account-provider-link has
+// no equivalent real-world-effect reasoning, so it keeps the original,
+// narrower Investor-specific scope.
 function userIsRestrictedFrom(user, restriction) {
   if (user?.restrictions?.includes(restriction)) return true;
-  if (user?.role === "Investor" && ["communications-send", "external-transaction", "health-record-write", "account-provider-link"].includes(restriction)) return true;
+  if (["communications-send", "external-transaction", "health-record-write"].includes(restriction)) {
+    return !(user?.role === "Admin" || user?.role === "Standard User");
+  }
+  if (restriction === "account-provider-link" && user?.role === "Investor") return true;
   return false;
 }
 
@@ -53587,7 +53604,15 @@ async function api(req, res, url) {
     const channel = String(body.channel || "workflow");
     const providerId = /whatsapp/i.test(channel) ? "whatsapp-delivery" : /sms|text/i.test(channel) ? "sms-delivery" : providerByModule[moduleName] || "openai";
     const message = String(body.message || `${moduleName} workflow notification sent.`).trim();
-    const delivery = ["sms-delivery", "whatsapp-delivery"].includes(providerId)
+    // Found live (Provider-Reviewer follow-up to the Investor-boundary
+    // audit): unlike every sibling real-send route in this file
+    // (/api/communications/thread, /api/nexus/tools/sms/send, etc., all
+    // gated by userIsRestrictedFrom(user, "communications-send")), this
+    // route had NO restriction check at all -- any account with
+    // canUse(user,"notifications") (Standard User, Provider Reviewer, Admin)
+    // could trigger a real Twilio SMS/WhatsApp send to a client-supplied
+    // recipient.
+    const delivery = ["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")
       ? await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text: message })
       : { attempted: false, ok: true, status: "local-notification-only" };
     addNotification(db.profile, { module: moduleName, providerId, channel, message, createdBy: user.name, deliveryStatus: delivery.status });
