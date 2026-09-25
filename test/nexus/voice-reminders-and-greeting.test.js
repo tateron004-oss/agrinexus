@@ -29,10 +29,16 @@ test("an account label is never used as a person's name", () => {
   assert.equal(personalFirstName(null), "");
 });
 
-test("the orchestrator context uses the spoken name first and remembers it", () => {
-  assert.match(server, /userName: spokenNameFromGreeting\(command\) \|\| db\.profile\.agentMemory\?\.userName \|\| personalFirstName\(user\)/);
+test("the orchestrator context uses the spoken name first, then this account's own remembered name -- never another account's", () => {
+  // 2026-09-24: db.profile.agentMemory.userName/userModel.name were a single
+  // GLOBAL fallback shared by every account -- once anyone said "this is Ron",
+  // every other account fell back to reading that same field. Fixed by
+  // db.profile.userDisplayNames, keyed by the authenticated user's real id.
+  assert.match(server, /userName: spokenNameFromGreeting\(command\) \|\| db\.profile\.userDisplayNames\?\.\[user\?\.id\] \|\| personalFirstName\(user\)/);
   assert.doesNotMatch(server, /userName: db\.profile\.agentMemory\?\.userName \|\| user\.name\?\.split/);
-  assert.match(server, /if \(spokenGreetingName\) \{ db\.profile\.agentMemory = db\.profile\.agentMemory \|\| \{\}; db\.profile\.agentMemory\.userName = spokenGreetingName; \}/);
+  assert.doesNotMatch(server, /db\.profile\.agentMemory\.userName/, "the shared-global fallback must be fully removed, not just given a better fallback in front of it");
+  assert.doesNotMatch(server, /agentMemory\.userModel\?\.name/, "the shared-global userModel.name fallback must be fully removed");
+  assert.match(server, /if \(spokenGreetingName && user\?\.id\) \{\s*db\.profile\.userDisplayNames = db\.profile\.userDisplayNames \|\| \{\};\s*db\.profile\.userDisplayNames\[user\.id\] = spokenGreetingName;\s*\}/);
 });
 
 // ---- voice reminders -> real push reminders ----------------------------------------------------------------------
