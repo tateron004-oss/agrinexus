@@ -98,8 +98,13 @@ test("an unrelated health question still falls through honestly instead of being
 // falling back to a local catalog) pharmacy locations, but "find a pharmacy
 // near me" always got the static safe-questions draft instead, no matter
 // how explicitly a real location search was asked for.
-test("'find a pharmacy in Nairobi' reaches the real pharmacy location search, not the static question draft", async () => {
-  const result = await callHealthTool("Find a pharmacy in Nairobi.");
+// "Nakuru" (not "Nairobi") deliberately, matching this suite's own existing
+// convention (see location-extraction-routing-gaps.test.js's mobile-clinic
+// test): it's a real local-catalog city here, so this test passes whether
+// the live OSM lookup succeeds or a network failure falls back to the
+// catalog -- CI runs with no outbound internet access at all, only loopback.
+test("'find a pharmacy in Nakuru' reaches the real pharmacy location search, not the static question draft", async () => {
+  const result = await callHealthTool("Find a pharmacy in Nakuru.");
   assert.ok(Array.isArray(result.pharmacyLocations) && result.pharmacyLocations.length > 0, "expected the real pharmacy location search to fire");
   assert.equal(result.pharmacyQuestions, undefined, "a location search must not also produce the unrelated question draft");
 });
