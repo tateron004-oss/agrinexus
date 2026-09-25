@@ -10361,6 +10361,20 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     dispatch: false
   });
   if (type === "settlement") {
+    // Found live (money-logic audit): settlement reused the same generic
+    // "amount" computed for every logistics record type (quote, booking,
+    // pickup, delivery...), which is a freight-cost ESTIMATE -- 12% of the
+    // order total, capped at a $25 floor -- not the sale proceeds. Executed
+    // proof: a real $6,400 order (10 units @ $640) settled for a seller
+    // payout of $748.80, roughly 88% of the real sale value never paid.
+    // The seller is owed order.total, the actual sale amount, the same
+    // real figure /api/trade/advanced's own (already-fixed) "release"
+    // action uses (latestQuote.price/product.price) for its equivalent
+    // payout -- this is a second, separate payment-release path that fix
+    // never reached.
+    if (order.settled) {
+      throw Object.assign(new Error("This order has already been settled -- payment was not credited again."), { httpStatus: 409 });
+    }
     const fee = createPlatformTransactionFee(db, {
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -10369,14 +10383,14 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       buyerName,
       sellerName,
       productName,
-      grossAmount: amount,
+      grossAmount: Number(order.total) || amount,
       currency
     });
     const tx = {
       id: crypto.randomUUID(),
       provider: "AgriNexus settlement",
       amount: fee.sellerNetAmount,
-      grossAmount: amount,
+      grossAmount: fee.grossAmount,
       platformFeeAmount: fee.feeAmount,
       platformFeeId: fee.id,
       currency,
@@ -10390,6 +10404,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     record.sellerNetAmount = fee.sellerNetAmount;
     db.profile.wallet = Number(db.profile.wallet || 0) + fee.sellerNetAmount;
     db.profile.walletTransactions.unshift(tx);
+    order.settled = true;
   }
   addActivity(db.profile, `${record.logisticsNumber} ${record.status} for ${productName}.`);
   return { record, order, trackingResult };
@@ -52055,7 +52070,12 @@ async function api(req, res, url) {
   if (url.pathname === "/api/trade/logistics" && req.method === "POST") {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade logistics workflows" });
     const body = await readBody(req);
-    const result = await createTradeLogisticsWorkflow(db, user, body);
+    let result;
+    try {
+      result = await createTradeLogisticsWorkflow(db, user, body);
+    } catch (error) {
+      return send(res, error.httpStatus || 409, { error: error.message });
+    }
     addWorkflowNote(db.profile, body.note, "Buyer-seller logistics note");
     await writeDb(db);
     const state = publicState(db, user);
