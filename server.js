@@ -12807,7 +12807,11 @@ function runWorkforceActionByAgent(db, user, type) {
       role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
       startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
       status: "scheduled",
-      estimatedEarnings: 64
+      // Found live (calendar/session/export follow-up audit): this was a flat
+      // literal regardless of which role the shift's own `role` field names --
+      // a user placed into a higher-rate role saw the same estimate as one on
+      // the cheapest role. Use the actually-applied role's real rate.
+      estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
     };
     db.profile.shiftSchedule.unshift(shift);
     db.profile.nextShift = `${shift.role} shift scheduled`;
@@ -47317,7 +47321,21 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/zoom/meeting" && req.method === "POST") {
-    return sendProviderResult(res, await nexusRealProviders.zoom.createMeeting(await readBody(req)));
+    // Found live (calendar/session/export follow-up audit): unlike every
+    // other real-external-side-effect action in this file (SMS, calendar,
+    // email), a real Zoom meeting was created with no idempotency
+    // protection at all -- a client retry or double-submit created a second
+    // real, billable Zoom meeting with no dedup.
+    const zoomMeetingBody = await readBody(req);
+    const zoomResult = await withActionLifecycle(db, {
+      provider: "zoom", action: "zoom.meeting", body: zoomMeetingBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.zoom.createMeeting(zoomMeetingBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        return { verified: Boolean(data.id), note: data.id ? "Provider returned a real Zoom meeting id." : "Provider response had no meeting id to verify against." };
+      }
+    });
+    return sendProviderResult(res, zoomResult);
   }
 
   if (url.pathname === "/api/nexus/tools/sessions/status" && req.method === "GET") {
@@ -47329,7 +47347,19 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/sessions/zoom/create" && req.method === "POST") {
-    return sendProviderResult(res, await nexusRealProviders.sessionBridge.createZoom(await readBody(req), db));
+    // Same idempotency gap as /api/nexus/tools/zoom/meeting above -- this
+    // route also creates a real Zoom meeting (via sessionBridge.createZoom ->
+    // zoomProvider.createMeeting) with no dedup protection.
+    const sessionZoomBody = await readBody(req);
+    const sessionZoomResult = await withActionLifecycle(db, {
+      provider: "nexus-session-bridge", action: "sessions.zoom.create", body: sessionZoomBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.sessionBridge.createZoom(sessionZoomBody, db),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        return { verified: Boolean(data.id), note: data.id ? "Provider returned a real Zoom meeting id." : "Provider response had no meeting id to verify against." };
+      }
+    });
+    return sendProviderResult(res, sessionZoomResult);
   }
 
   if (url.pathname === "/api/nexus/tools/sessions/reminder" && req.method === "POST") {
@@ -51021,7 +51051,7 @@ async function api(req, res, url) {
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
         startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
         status: "scheduled",
-        estimatedEarnings: 64
+        estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
       };
       db.profile.shiftSchedule.unshift(shift);
       db.profile.nextShift = `${shift.role} - ${new Date(shift.startsAt).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
