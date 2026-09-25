@@ -2530,6 +2530,11 @@ function currentUser(req, db) {
     && Number(durableSession.issuedAt || 0) <= resolvedUser.authTokensRevokedAt) {
     return null;
   }
+  // Defense in depth for a real account-erasure gap found live: nothing else
+  // in this function checks for an erased account, so a session or durable
+  // token created before erasure (or a bug in eraseUserAccount's own session
+  // cleanup) would otherwise keep authenticating a "deleted" identity.
+  if (resolvedUser?.status === "deleted") return null;
   return resolvedUser;
 }
 
@@ -2544,6 +2549,114 @@ function recordExportOwnership(db, user, exportId) {
   if (!user?.id || !exportId) return;
   db.exportOwners = db.exportOwners || {};
   db.exportOwners[exportId] = { userId: user.id, createdAt: new Date().toISOString() };
+}
+
+// Found live (account-erasure/export audit): "delete my account" and "export
+// my data" had no real implementation anywhere against db.profile -- the
+// only reachable routes (/api/nexus/privacy/export-request, delete-request)
+// are a self-declared local-review sandbox that never touches real records,
+// and the one REAL deletion pipeline (nexus/security/data-lifecycle-
+// repository.js) only ever erases the newer Postgres nexus_* tables, never
+// this JSON blob. db.profile is a single shared, non-per-user object
+// (confirmed at profileForUser's own definition) -- most of its ~90 arrays
+// record who created an item via a `createdBy` or `requestedBy` field set to
+// the acting user's email (communicationThreads, droneMissions,
+// buyerContacts, and roughly 60 other call sites all follow this
+// convention), so a real per-user erasure/export is possible for those
+// without inventing new ownership data. HEALTH_PROFILE_ARRAY_KEYS and
+// `orders`, by contrast, are a genuinely shared clinical/trade record set
+// with NO owner field at all on any item -- there is no way to attribute one
+// of those records to a specific account today, so this generic, convention
+// -based scan correctly (and honestly) leaves them untouched rather than
+// guessing or fabricating ownership.
+const PROFILE_OWNER_FIELDS = ["createdBy", "requestedBy"];
+
+function profileRecordOwnedBy(item, normalizedEmail) {
+  if (!item || typeof item !== "object") return false;
+  return PROFILE_OWNER_FIELDS.some(field => String(item[field] || "").toLowerCase() === normalizedEmail);
+}
+
+// For export: returns a deep-enough snapshot (JSON round-trip, matching how
+// the rest of this file already serializes db.profile for responses) of
+// every record across db.profile that the given email owns.
+function collectOwnedProfileRecords(profile, email) {
+  const normalizedEmail = String(email || "").toLowerCase();
+  const owned = {};
+  if (!normalizedEmail) return owned;
+  for (const [key, value] of Object.entries(profile || {})) {
+    if (!Array.isArray(value)) continue;
+    const matches = value.filter(item => profileRecordOwnedBy(item, normalizedEmail));
+    if (matches.length) owned[key] = JSON.parse(JSON.stringify(matches));
+  }
+  return owned;
+}
+
+// For erasure: removes every record across db.profile that the given email
+// owns, mutating profile in place. communicationMessages is the one
+// confirmed case where a child record (a message) carries no owner field of
+// its own -- only its parent communicationThreads record does -- so once an
+// owned thread is removed, its messages are cascaded out too by threadId;
+// otherwise a deleted user's own message text would silently survive under
+// an orphaned threadId forever. Returns real per-key removal counts so the
+// caller can report exactly what happened instead of a blanket "done".
+function eraseOwnedProfileRecords(profile, email) {
+  const normalizedEmail = String(email || "").toLowerCase();
+  const removedCounts = {};
+  if (!normalizedEmail || !profile) return removedCounts;
+  const removedThreadIds = new Set();
+  if (Array.isArray(profile.communicationThreads)) {
+    for (const thread of profile.communicationThreads) {
+      if (profileRecordOwnedBy(thread, normalizedEmail)) removedThreadIds.add(thread.id);
+    }
+  }
+  for (const [key, value] of Object.entries(profile)) {
+    if (!Array.isArray(value)) continue;
+    const before = value.length;
+    profile[key] = value.filter(item => {
+      if (profileRecordOwnedBy(item, normalizedEmail)) return false;
+      if (key === "communicationMessages" && item && removedThreadIds.has(item.threadId)) return false;
+      return true;
+    });
+    const removed = before - profile[key].length;
+    if (removed > 0) removedCounts[key] = removed;
+  }
+  return removedCounts;
+}
+
+// The categories collectOwnedProfileRecords/eraseOwnedProfileRecords cannot
+// reach, surfaced explicitly in every export/erase response so neither ever
+// implies a completeness it doesn't have.
+function knownUnownedProfileGaps(profile) {
+  const gaps = [];
+  const hasAny = keys => keys.some(key => Array.isArray(profile?.[key]) && profile[key].length > 0);
+  if (hasAny([...HEALTH_PROFILE_ARRAY_KEYS])) {
+    gaps.push("Shared clinical/telehealth records (health intakes, care plans, telehealth encounters, etc.) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["orders"])) {
+    gaps.push("Marketplace trade orders have no per-account owner field today and are not included.");
+  }
+  gaps.push("If you have used AgriNexus's newer Postgres-backed companion/reminders/health-toolkit features, request their erasure separately via /api/nexus/runtime/privacy/deletions.");
+  return gaps;
+}
+
+// Ends every way the erased identity could still authenticate: live sid
+// sessions (the `sessions` Map has no per-user index, so this scans it --
+// acceptable here since this only runs on the rare "erase my account" path,
+// not a hot one), the durable "remember me" token cutoff logout already
+// uses, and the blob row itself via the status gate currentUser()/the login
+// route both check. Scrambling the email frees it for reuse by a new
+// account without a uniqueness collision against the erased row.
+function anonymizeUserRecord(user) {
+  for (const [sid, entry] of sessions) {
+    if (entry.userId === user.id) sessions.delete(sid);
+  }
+  user.status = "deleted";
+  user.deletedAt = new Date().toISOString();
+  user.authTokensRevokedAt = Date.now();
+  user.email = `deleted-${user.id}@erased.invalid`;
+  user.password = pgUsers.hashPassword(crypto.randomBytes(32).toString("hex"));
+  delete user.resetTokenHash;
+  delete user.resetTokenExpiresAt;
 }
 
 function secureCookieAttribute(req) {
@@ -45347,6 +45460,104 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, request: requestItem, audit: db.nexusPilotAuditEvents[0] });
   }
 
+  // Real personal-data export, distinct from the local-review-only
+  // /api/nexus/privacy/export-request above: gathers this signed-in user's
+  // own records out of the actual db.profile blob (plus their own uploaded
+  // files and account summary) and writes a real, downloadable file via the
+  // same exportDocument()/serveExport() path nexus_document_export already
+  // uses, so ownership and access control are enforced the same proven way.
+  if (url.pathname === "/api/account/export" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
+    const ownedRecords = collectOwnedProfileRecords(db.profile, user.email);
+    const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
+      .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
+    const exportPayload = {
+      generatedAt: new Date().toISOString(),
+      account: { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language },
+      profileRecords: ownedRecords,
+      uploadedFiles: ownedUploads,
+      knownGaps: knownUnownedProfileGaps(db.profile)
+    };
+    const exportResult = await nexusRealProviders.exports.exportDocument({
+      title: `AgriNexus data export for ${user.email}`,
+      content: JSON.stringify(exportPayload, null, 2),
+      format: "json",
+      confirmed: true
+    }, process.env);
+    const exportData = exportResult?.body?.data;
+    if (exportResult?.body?.status !== "completed" || !exportData?.downloadPath) {
+      return send(res, 502, { ok: false, error: "Could not create the export file.", detail: exportResult?.body?.message });
+    }
+    recordExportOwnership(db, user, exportData.exportId);
+    await writeDb(db);
+    return send(res, 200, {
+      ok: true,
+      downloadPath: exportData.downloadPath,
+      filename: exportData.filename,
+      bytes: exportData.bytes,
+      generatedAt: exportPayload.generatedAt,
+      recordCounts: Object.fromEntries(Object.entries(ownedRecords).map(([key, items]) => [key, items.length])),
+      uploadedFileCount: ownedUploads.length,
+      knownGaps: exportPayload.knownGaps
+    });
+  }
+
+  // Real account erasure, distinct from the local-review-only
+  // /api/nexus/privacy/delete-request above. Irreversible, so it requires an
+  // explicit confirmed:true the same way this codebase already gates other
+  // irreversible actions (e.g. telehealth video-room creation) rather than
+  // acting on the first POST.
+  if (url.pathname === "/api/account/erase" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account to erase; sign out to end the session." });
+    const body = await readBody(req);
+    if (body.confirmed !== true) {
+      return send(res, 400, { ok: false, status: "confirmation_required", error: "Pass confirmed: true to permanently erase this account. This cannot be undone." });
+    }
+    const removedProfileRecords = eraseOwnedProfileRecords(db.profile, user.email);
+    const uploadDirPath = nexusUploads.uploadDir(process.env);
+    const ownedUploads = nexusUploads.listUploadsForUser(uploadDirPath, user.id);
+    let removedUploadCount = 0;
+    for (const meta of ownedUploads) {
+      if (nexusUploads.deleteUpload(uploadDirPath, meta.fileId)) removedUploadCount += 1;
+    }
+    const gaps = knownUnownedProfileGaps(db.profile);
+    const erasedEmail = user.email;
+    anonymizeUserRecord(user);
+    if (usingPostgresAuth()) {
+      // The blob row's own `id` is NOT the Postgres users.id when this blob
+      // row was auto-backfilled from a Postgres-verified login (see
+      // buildBlobShadowFromPostgresUser -- it mints its own random UUID) --
+      // must look the real row up by email, captured before anonymizeUserRecord
+      // scrambled it on the blob copy.
+      const pool = getPgPool();
+      const pgUser = await pgUsers.findUserByEmail(pool, erasedEmail).catch(() => null);
+      if (pgUser) {
+        await pgUsers.disableUser(pool, pgUser.id).catch(error => {
+          console.error("[account-erase] failed to disable Postgres auth row:", error.message);
+        });
+      }
+    }
+    await writeDb(db);
+    return send(res, 200, {
+      ok: true,
+      status: "erased",
+      verification: {
+        profileRecordsRemoved: removedProfileRecords,
+        uploadedFilesRemoved: removedUploadCount,
+        accountDisabled: true,
+        sessionsRevoked: true
+      },
+      knownGaps: gaps
+    }, {
+      "set-cookie": [
+        `agrinexus_sid=; Max-Age=0; Path=/; SameSite=Lax; HttpOnly${secureCookieAttribute(req)}`,
+        `agrinexus_auth=; Max-Age=0; Path=/; SameSite=Lax; HttpOnly${secureCookieAttribute(req)}`
+      ]
+    });
+  }
+
   if (url.pathname === "/api/nexus/consent-history" && req.method === "GET") {
     // A global audit/consent trail across every session -- must not be
     // readable by an unauthenticated caller.
@@ -47441,6 +47652,12 @@ async function api(req, res, url) {
       const stored = String(candidate?.password || "");
       const isHashed = stored.startsWith("scrypt:");
       const validCredential = stored.length > 0 && (isHashed ? pgUsers.verifyPasswordHash(password, stored) : stored === password);
+      // Found live (account-erasure audit): a real "erase my account" had no
+      // login-time check at all -- an erased account's blob row was left in
+      // db.users, and with an unlucky pre-erasure password guess (or a still
+      // -live session, now separately closed in eraseUserAccount) this login
+      // path would never have refused it. status is set only by erasure.
+      if (candidate?.status === "deleted") return send(res, 401, { error: "Invalid demo credentials" });
       if (!candidate || !validCredential) return send(res, 401, { error: "Invalid demo credentials" });
       if (!isHashed) {
         // A legacy plaintext row from before passwords were hashed here. The

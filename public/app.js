@@ -63449,6 +63449,45 @@ function bindStatic() {
     location.reload();
   };
 
+  // Real personal-data export and account erasure, replacing the only
+  // previously-reachable UI for this (the Production prototype rails panel's
+  // "Request export"/"Request delete review" buttons, which only ever wrote
+  // a local no-op review record and never touched a real record). Erasure is
+  // irreversible, so it requires an explicit typed confirmation on top of the
+  // server's own confirmed:true gate, not just one click.
+  const privacyDataBtn = $("#privacyDataBtn");
+  if (privacyDataBtn) {
+    privacyDataBtn.onclick = async () => {
+      const wantsErase = window.confirm(
+        "Privacy & data for your AgriNexus account.\n\n" +
+        "Click OK to permanently DELETE your account and your data (communications, buyer contacts, drone missions, and other records you created; uploaded files; your login).\n" +
+        "Click Cancel to instead EXPORT a copy of that same data."
+      );
+      if (!wantsErase) {
+        try {
+          const result = await request("/api/account/export", { method: "POST" });
+          window.open(result.downloadPath, "_blank", "noopener");
+          toast(`Export ready: ${Object.values(result.recordCounts || {}).reduce((a, b) => a + b, 0)} record(s), ${result.uploadedFileCount || 0} file(s).`);
+        } catch (error) {
+          toast(error.message || "Could not create your data export.");
+        }
+        return;
+      }
+      const typed = window.prompt('This cannot be undone. Type "DELETE" to permanently erase your account and data.');
+      if (typed !== "DELETE") {
+        toast("Account erasure cancelled.");
+        return;
+      }
+      try {
+        await request("/api/account/erase", { method: "POST", body: { confirmed: true } });
+        toast("Your account and data have been erased.");
+        location.reload();
+      } catch (error) {
+        toast(error.message || "Could not erase your account.");
+      }
+    };
+  }
+
   $("#countrySelect").onchange = async event => {
     const value = event.target.value;
     if (value.startsWith("language:")) {

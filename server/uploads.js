@@ -117,6 +117,48 @@ function canAccessUpload(meta, user) {
   return String(meta.uploadedBy || "") === String(user.id || "");
 }
 
+// Lists every upload owned by a given user by scanning the upload directory's
+// .meta.json sidecars -- there is no separate per-user index, so a full
+// account data export/erasure has no other way to find "this user's files."
+function listUploadsForUser(dir, userId) {
+  const target = String(userId || "");
+  if (!target) return [];
+  let entries;
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return [];
+  }
+  const matches = [];
+  for (const entry of entries) {
+    if (!entry.endsWith(".meta.json")) continue;
+    const fileId = entry.slice(0, -".meta.json".length);
+    const meta = readMeta(dir, fileId);
+    if (meta && String(meta.uploadedBy || "") === target) matches.push(meta);
+  }
+  return matches;
+}
+
+// Real deletion, not just the download/access gate canAccessUpload already
+// provides -- until now nothing in this module could ever remove a stored
+// file or its metadata sidecar, so an uploaded PDF or photo was permanent
+// for the life of the server regardless of who asked. Deletes both the file
+// and its sidecar; returns true only if something was actually removed, so
+// a caller doing account erasure can report real counts instead of assuming
+// success.
+function deleteUpload(dir, fileId) {
+  const filePath = resolveUploadedFilePath(dir, fileId);
+  const sidecarPath = metaPath(dir, fileId);
+  let removed = false;
+  if (filePath) {
+    try { fs.unlinkSync(filePath); removed = true; } catch {}
+  }
+  if (sidecarPath) {
+    try { fs.unlinkSync(sidecarPath); removed = true; } catch {}
+  }
+  return removed;
+}
+
 function readRawRequest(req, maxBytes) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -228,6 +270,8 @@ module.exports = Object.freeze({
   magicBytesMatch,
   resolveUploadedFilePath,
   canAccessUpload,
+  listUploadsForUser,
+  deleteUpload,
   readRawRequest,
   parseAndStoreUpload
 });

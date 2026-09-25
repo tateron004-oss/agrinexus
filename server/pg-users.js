@@ -124,6 +124,23 @@ async function consumeResetToken(pool, email, token, newPassword) {
   return true;
 }
 
+// Real account erasure for AUTH_STORE=postgres: verifyPassword already
+// refuses any user whose status isn't 'active' (see above), so marking a
+// row 'deleted' here is what actually locks the account out, not just a
+// cosmetic flag nobody reads. The email is scrambled too so the now-freed
+// address can be reused to create a new account without a unique-constraint
+// collision against the erased row.
+async function disableUser(pool, userId) {
+  const result = await pool.query(
+    `update users set status = 'deleted', email = 'deleted-' || id || '@erased.invalid',
+       password_hash = $2, password_reset_token_hash = null, password_reset_expires_at = null, updated_at = now()
+     where id = $1
+     returning id`,
+    [userId, hashPassword(crypto.randomBytes(32).toString("hex"))]
+  );
+  return Boolean(result.rowCount);
+}
+
 module.exports = {
   DEMO_TENANT_ID,
   hashPassword,
@@ -133,5 +150,6 @@ module.exports = {
   buildBlobShadowFromPostgresUser,
   createUser,
   setPasswordResetToken,
-  consumeResetToken
+  consumeResetToken,
+  disableUser
 };
