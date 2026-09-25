@@ -199,6 +199,33 @@ test("printable reports in Swahili carry only what was recorded", async () => {
   for (const line of ["Chapisha ripoti ya hali ya hewa", "Chapisha ripoti ya shule", "Tengeneza orodha ya kazi za safari", "Chapisha picha ya mifugo"]) assert.equal(await f.say(line), null, line);
 });
 
+// Found live (business-ledger audit, same bug as the English receipt()): a
+// sale recorded with no parseable quantity has qty:null, so it was
+// silently dropped from both the printed receipt's lines and its total.
+test("a Swahili receipt includes a recorded sale even when it has no parseable quantity", async () => {
+  const f = farmer();
+  await f.say("Nimeuza kilo 200 za mahindi kwa Otieno kwa shilingi 9000");
+  await f.say("Nimeuza maziwa kwa Otieno kwa shilingi 500");
+  const receipt = (await f.say("Chapisha risiti ya Otieno")).report;
+  assert.match(receipt.content, /mahindi/);
+  assert.match(receipt.content, /maziwa/, "the no-quantity sale must appear on the receipt, not be silently dropped");
+  assert.match(receipt.content, /9,500/, "the no-quantity sale must be included in the printed total");
+});
+
+// Found live (business-ledger audit): a party's "history" earned/spent
+// totals summed raw amounts across every currency, mislabeled with
+// whichever record happened to be first -- the same currency-combining bug
+// already fixed in money.js's own report/receipt totals.
+test("a Swahili party history keeps different currencies separate instead of adding them together under one label", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Otieno"); await f.say("skip"); await f.say("skip"); await f.say("skip");
+  await f.say("Nimeuza kilo 10 za mahindi kwa Otieno kwa dola 500");
+  await f.say("Nimeuza kilo 20 za maharage kwa Otieno kwa shilingi 3000");
+  const history = await f.say("Historia ya Otieno");
+  assert.match(history, /\$500(?:\.00)?/, "the USD total must appear on its own");
+  assert.match(history, /3,000/, "the shillings total must appear on its own, separate from the USD total");
+});
+
 test("safety guides in Swahili: emergencies answer at once, the text is conservative, and everyday talk is left alone", async () => {
   const f = farmer();
   for (const line of ["Nimemeza dawa ya kuua wadudu", "Amemeza sumu", "Mtoto amemeza dawa ya kunyunyizia", "Dawa ya wadudu imemwagika machoni"]) { const answer = await f.say(line); assert.match(answer, /Hatua za kwanza: sumu ya dawa ya wadudu/, line); assert.match(answer, /namba ya dharura/); assert.match(answer, /usimfanye atapike/); }

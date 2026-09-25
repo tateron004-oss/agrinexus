@@ -195,6 +195,44 @@ test("reports are built only from what was recorded, in the format asked for", a
   assert.match(await who.say("Print my inventory list"), /nothing recorded/i, "an empty report says so and invents nothing");
 });
 
+// Found live (business-ledger audit): a receipt() line was only kept when
+// record.data.qty was truthy -- a sale recorded with no parseable quantity
+// ("sold milk to Otieno for 500") has qty:null, so it was silently dropped
+// from both the line items and the printed total, or the receipt was
+// refused outright as "no recorded sales" if it was the buyer's only sale.
+test("a receipt includes a recorded sale even when it has no parseable quantity, instead of silently dropping it", async () => {
+  const who = farmer();
+  await who.say("Sold milk to Otieno for 500");
+  const receipt = await who.say("Print a receipt for Otieno");
+  assert.notEqual(receipt, null, "a real recorded sale must never be reported as \"no recorded sales\"");
+  assert.match(receipt.report.content, /milk\s+500/);
+  assert.match(receipt.report.content, /TOTAL:\s+500/);
+
+  const both = farmer();
+  await both.say("Sold 200 kg of maize to Otieno at 45 per kg"); // qty'd sale: 9,000
+  await both.say("Sold milk to Otieno for 500"); // no-qty sale
+  const combined = await both.say("Print a receipt for Otieno");
+  assert.match(combined.report.content, /200 kg of maize\s+9,000/);
+  assert.match(combined.report.content, /milk\s+500/);
+  assert.match(combined.report.content, /TOTAL:\s+9,500/, "the no-qty sale must be included in the printed total, not silently excluded");
+});
+
+// Found live (business-ledger audit): "Business so far" summed raw amounts
+// across every currency a party was ever paid in or paid, then labeled the
+// fabricated total with whichever record happened to be first in store
+// order -- the same currency-combining bug already fixed in money.js's own
+// report/receipt totals, just never applied to party history.
+test("a party's history keeps different currencies separate instead of adding them together under one label", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called Otieno", "skip", "skip", "skip"]);
+  await who.say("Sold 10 kg of maize to Otieno for 500 dollars");
+  await who.say("Sold 20 kg of beans to Otieno for 3000 shillings");
+  const history = await who.say("Show history for Otieno");
+  assert.match(history, /you earned/i);
+  assert.match(history, /\$500(?:\.00)?/, "the USD total must appear on its own, not folded into a single combined number");
+  assert.match(history, /3,000/, "the KES total must appear on its own, separate from the USD total");
+});
+
 test("report words are left alone when they are not about the farm", async () => {
   const empty = farmer();
   for (const text of ["Make a summary of this article", "Give me a summary of the news", "Print my resume", "Create a report about my sleep", "Print my task list"]) assert.equal(await empty.say(text), null, text);

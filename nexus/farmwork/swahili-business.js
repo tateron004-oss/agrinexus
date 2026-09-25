@@ -140,7 +140,11 @@ async function receiptSw(ctx, who) {
   const parties = await ctx.store.list({ ...scope, collection: "party" }); const found = who ? findParty(parties, who) : null; const wanted = (found?.party?.data.name || who || "").toLowerCase(); const same = name => Boolean(wanted) && String(name || "").toLowerCase() === wanted;
   const orders = (await ctx.store.list({ ...scope, collection: "order" })).filter(order => order.data.kind === "sale" && order.data.status === "done" && same(order.data.party));
   const sales = (await ctx.store.list({ ...scope, collection: "money" })).filter(record => record.data.type === "income" && same(record.data.party) && !String(record.data.note || "").startsWith("order "));
-  const lines = [...orders.map(order => ({ day: order.data.doneOn || order.data.day, what: `${unitLabelSw(order.data.qty, order.data.unit)} za ${swahiliItem(order.data.item)}`, amount: round((order.data.price || 0) * order.data.qty), currency: order.data.currency })), ...sales.filter(record => record.data.qty).map(record => ({ day: record.data.day, what: `${unitLabelSw(record.data.qty, record.data.unit)} za ${swahiliItem(record.data.item)}`, amount: record.data.amount, currency: record.data.currency }))];
+  // Found live (business-ledger audit, same bug as the English receipt()):
+  // a sale recorded without a parseable quantity has qty:null, so it was
+  // silently dropped from both the line items and the total instead of
+  // just being described without a unit label.
+  const lines = [...orders.map(order => ({ day: order.data.doneOn || order.data.day, what: `${unitLabelSw(order.data.qty, order.data.unit)} za ${swahiliItem(order.data.item)}`, amount: round((order.data.price || 0) * order.data.qty), currency: order.data.currency })), ...sales.map(record => ({ day: record.data.day, what: record.data.qty ? `${unitLabelSw(record.data.qty, record.data.unit)} za ${swahiliItem(record.data.item)}` : swahiliItem(record.data.item), amount: record.data.amount, currency: record.data.currency }))];
   if (!lines.length) return null;
   const buyer = orders[0]?.data.party || found?.party?.data.name || who || "Mnunuzi"; const cur = lines[0].currency; const total = round(lines.reduce((s, item) => s + item.amount, 0));
   const farm = (await ctx.store.list({ ...scope, collection: "farm" }))[0]; const owner = (ctx.nameOf ? await ctx.nameOf({ tenantId: ctx.tenantId, userId: ctx.userId }).catch(() => "") : "") || "";

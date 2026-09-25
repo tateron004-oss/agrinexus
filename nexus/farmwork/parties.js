@@ -3,7 +3,7 @@
 const { clean, titleCase, parseQuantity, parsePricePer, parseMoney, formatMoney, unitLabel, anyDay, plural, round } = require("./parse.js");
 const { startGuided, askConfirm } = require("./guided.js");
 const { describeDay, addDays } = require("../personal/dates.js");
-const { recordMoney } = require("./money.js");
+const { recordMoney, sum, showTotals } = require("./money.js");
 const { addStock, findItems } = require("./inventory.js");
 
 // The farm's people and the business done with them: buyers, suppliers and customers with their contact details and what they deal in;
@@ -89,10 +89,19 @@ async function handle(ctx) {
       const orders = (await ctx.store.list({ ...scope, collection: "order" })).filter(order => order.data.party === name);
       const money = (await ctx.store.list({ ...scope, collection: "money" })).filter(record => record.data.party === name);
       const follow = (await ctx.store.list({ ...scope, collection: "followup" })).filter(item => item.data.party === name && item.data.status === "open");
-      const earned = money.filter(record => record.data.type === "income").reduce((sum, record) => sum + record.data.amount, 0); const spent = money.filter(record => record.data.type === "expense").reduce((sum, record) => sum + record.data.amount, 0);
+      // Found live (business-ledger audit): this summed raw amounts across
+      // every currency the party was ever paid in or paid, then labeled
+      // the fabricated total with whichever record happened to be first in
+      // store order -- the same currency-combining bug already fixed in
+      // money.js's own report/receipt totals (sum()/showTotals()), just
+      // never applied here. Bucketing by currency first fixes it the same
+      // way.
+      const earned = sum(money, "income"); const spent = sum(money, "expense");
+      const earnedTotal = Object.values(earned).length ? Object.values(earned).reduce((total, amount) => total + amount, 0) : 0;
+      const spentTotal = Object.values(spent).length ? Object.values(spent).reduce((total, amount) => total + amount, 0) : 0;
       return [`${name}${d.role ? ` (${d.role})` : ""}${d.phone ? `, ${d.phone}` : ""}${d.products ? `, ${d.products}` : ""}${d.area ? `, ${d.area}` : ""}.`,
         orders.length ? `${plural(orders.length, "order")}: ${orders.slice(0, 3).map(order => `${order.data.qty ? `${unitLabel(order.data.qty, order.data.unit)} ` : ""}${order.data.item} (${order.data.status})`).join("; ")}.` : "",
-        earned || spent ? `Business so far: ${earned ? `you earned ${formatMoney(earned, money[0]?.data.currency)}` : ""}${earned && spent ? " and " : ""}${spent ? `you spent ${formatMoney(spent, money[0]?.data.currency)}` : ""}.` : "",
+        earnedTotal || spentTotal ? `Business so far: ${earnedTotal ? `you earned ${showTotals(earned)}` : ""}${earnedTotal && spentTotal ? " and " : ""}${spentTotal ? `you spent ${showTotals(spent)}` : ""}.` : "",
         follow.length ? `Follow-up: ${follow.map(item => `${item.data.text || "check in"} (${describeDay(item.data.due, ctx.today)})`).join("; ")}.` : "", notes.length ? `Notes: ${notes.map(note => note.data.text).join(" | ")}.` : ""].filter(Boolean).join(" ");
     }
   }
