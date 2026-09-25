@@ -2339,6 +2339,23 @@ function authRateLimit(req, bucketName, limit = 10, windowMs = 300_000) {
   return rateBucketCheck(key, limit, windowMs);
 }
 
+// Found live (login-security follow-up audit): authRateLimit above is keyed
+// only by source IP, so it resets for every new IP an attacker rotates
+// through -- a distributed brute force against one specific victim account
+// (botnet, proxy pool, or just a slow attacker) is unbounded in aggregate as
+// long as no single IP exceeds 10 attempts in 5 minutes. This is a second,
+// independent budget keyed on the credential being attempted rather than the
+// caller's address, so rotating IPs doesn't reset it. It is deliberately
+// keyed on the raw submitted identifier (not "does this account exist") so
+// it never becomes a second email-enumeration channel alongside the timing
+// fix above -- a nonexistent email and a real one consume the exact same
+// bucket the exact same way. A tighter limit than the per-IP one and a
+// longer window reflect that this budget has to hold across many sources.
+function authRateLimitByAccount(bucketName, accountKey, limit = 6, windowMs = 900_000) {
+  const key = `auth:${bucketName}:account:${accountKey}`;
+  return rateBucketCheck(key, limit, windowMs);
+}
+
 // The AI/agent routes accept free-form text and end every call in a full
 // writeDb() of the single shared application-state blob (one JSON file or
 // one Postgres row, serialized through one write queue -- see the write-path
@@ -47416,6 +47433,7 @@ async function api(req, res, url) {
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
     if (!email || !password.trim()) return send(res, 400, { error: "Email and password are required" });
+    if (!authRateLimitByAccount("login", email, 6, 900_000)) return send(res, 429, { error: "Too many login attempts. Try again in a few minutes." });
     let found;
     let blobBackfilled = false;
     let passwordMigrated = false;
@@ -47440,7 +47458,15 @@ async function api(req, res, url) {
       const candidate = db.users.find(item => String(item.email || "").toLowerCase() === email);
       const stored = String(candidate?.password || "");
       const isHashed = stored.startsWith("scrypt:");
-      const validCredential = stored.length > 0 && (isHashed ? pgUsers.verifyPasswordHash(password, stored) : stored === password);
+      // Found live (login-security follow-up audit): looking the account up
+      // first and only running the deliberately-expensive scrypt comparison
+      // when a real hashed credential was found let response TIMING (not
+      // the identical error message) distinguish "no such account" from
+      // "account exists, wrong password" -- enumerating valid emails.
+      // Always run the real comparison, against the account's own hash when
+      // hashed, or a fixed dummy hash otherwise, so both cases cost the same.
+      const hashMatches = pgUsers.verifyPasswordHash(password, isHashed ? stored : pgUsers.DUMMY_PASSWORD_HASH);
+      const validCredential = stored.length > 0 && (isHashed ? hashMatches : stored === password);
       if (!candidate || !validCredential) return send(res, 401, { error: "Invalid demo credentials" });
       if (!isHashed) {
         // A legacy plaintext row from before passwords were hashed here. The
