@@ -71,9 +71,23 @@
     });
     if (!response.ok) throw new Error(`Authoritative sync failed (${response.status}).`);
     const body = await response.json();
-    const accepted = (body.results || []).filter(result => result.status !== "conflict").map(result => result.operationId || result.clientOperationId).filter(Boolean);
-    await removeOperations(accepted.length ? accepted : operations.map(item => item.operationId));
-    emit("synchronized", { count: accepted.length || operations.length, conflicts: (body.results || []).filter(result => result.status === "conflict") });
+    // Found live (situational-awareness/sync/memory follow-up audit): the
+    // server's real rows (SyncRepository.apply()'s `returning *`) come back
+    // snake_case straight from Postgres -- `state`, `operation_id` -- but
+    // this checked `result.status`/`result.operationId`/`result.clientOperationId`,
+    // fields that never existed on the response at all. Every result was
+    // therefore always treated as "not a conflict" (undefined !== "conflict"),
+    // and the resulting accepted list was always empty (mapping to undefined,
+    // then filtered out) -- which fell through to the old ": operations.map(...)"
+    // fallback and unconditionally deleted EVERY queued operation from the
+    // local outbox, including ones the server had just reported as a real
+    // conflict. A conflicting offline edit was silently discarded with no
+    // retry and no visible error -- the edit was simply lost.
+    const results = body.results || [];
+    const accepted = results.filter(result => result.state !== "conflict").map(result => result.operation_id).filter(Boolean);
+    const conflicts = results.filter(result => result.state === "conflict");
+    await removeOperations(accepted);
+    emit("synchronized", { count: accepted.length, conflicts });
     return { synchronized: true, ...body };
   }
 
