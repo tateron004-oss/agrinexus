@@ -59,6 +59,46 @@ test("guidance announces each turn ahead of time, once, and says when you arrive
   assert.equal(follower.update(onLine(200)).say.length, 0, "nothing more is said after arriving");
 });
 
+// Found live (workforce-matching/acceptance/navigation follow-up audit): two
+// maneuvers only a few meters apart (a "new name" step right after a turn
+// at the same junction, or two closely-spaced turns) previously fell inside
+// upcoming()'s old "+5" buffer, so the closer one could never be selected as
+// "next" at all -- guidance silently skipped straight from the prior
+// instruction to the one two turns ahead, never announcing the one in
+// between, not even a late/urgent warning.
+test("a maneuver following a short (a few meters) segment is never replaced by the NEXT one until reaching its own real position", () => {
+  // Same as straightRoute() (11 m per point) except a single extra point is
+  // inserted 3 m after index 100 for a second, closely-spaced turn -- a
+  // real OSRM pattern (e.g. a jog at a compact junction: turn, then almost
+  // immediately another turn, then a normal-length road to the destination).
+  const coordinates = []; for (let i = 0; i <= 100; i += 1) coordinates.push([36.8, -1.3 + i * 0.0001]);
+  coordinates.push([36.8, -1.3 + 100 * 0.0001 + 0.00003]);
+  for (let i = 101; i <= 200; i += 1) coordinates.push([36.8, -1.3 + i * 0.0001]);
+  const route = buildRoute({ distance: 2200, duration: 300, geometry: { coordinates }, legs: [{ steps: [
+    { name: "First Road", distance: 1100, maneuver: { type: "depart", bearing_after: 0, location: coordinates[0] } },
+    { name: "Second Road", distance: 3, maneuver: { type: "turn", modifier: "left", location: coordinates[100] } },
+    { name: "Third Road", distance: 1097, maneuver: { type: "turn", modifier: "right", location: coordinates[101] } },
+    { name: "", distance: 0, maneuver: { type: "arrive", location: coordinates.at(-1) } }] }] });
+  const follower = nav.createRouteFollower(route, { mode: "drive" });
+  const secondRoadAt = route.steps[1].alongMeters; const thirdRoadAt = route.steps[2].alongMeters;
+  // Found live (workforce-matching/acceptance/navigation follow-up audit):
+  // with the old "+5" buffer, "Third Road" -- the maneuver AFTER a short
+  // segment -- got replaced by "You have arrived" a full ~5 m before the
+  // vehicle had actually reached Third Road's real position, let alone the
+  // true end of the route. Dense sampling (real GPS fixes are far closer
+  // together than the ~44 m stride used elsewhere in this file) so this
+  // narrow few-meter window isn't missed by the TEST's own sampling gap,
+  // as distinct from the bug itself.
+  let arrivedTooEarly = false; let secondRoadTooEarlyDropped = false;
+  for (let i = 0; i <= 2000; i += 1) {
+    const r = follower.update(onLine(i / 10));
+    if (/arrived/i.test(r.next.instruction) && r.along < thirdRoadAt - 0.5) arrivedTooEarly = true;
+    if (/Third Road/.test(r.next.instruction) && r.along < secondRoadAt - 0.5) secondRoadTooEarlyDropped = true;
+  }
+  assert.equal(secondRoadTooEarlyDropped, false, "Second Road's own turn must not be replaced by Third Road before reaching Second Road's real position");
+  assert.equal(arrivedTooEarly, false, "'You have arrived' must never be reported before the vehicle has actually reached Third Road's real turn position");
+});
+
 test("guidance tracks how far is left, what is next, and how long", () => {
   const follower = nav.createRouteFollower(straightRoute(), { mode: "drive" }); const first = follower.update(onLine(0));
   assert.ok(Math.abs(first.remainingMeters - 2220) < 40); assert.equal(first.next.instruction, "Turn left onto Second Road"); assert.ok(Math.abs(first.next.distanceMeters - 1106) < 30); assert.equal(first.offRoute, false);
