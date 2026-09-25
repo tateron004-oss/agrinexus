@@ -16,17 +16,45 @@ const DEFAULTS = Object.freeze({
 });
 const USER_AGENT = "Kyro/1.0 (navigation; contact via the site owner)";
 const PER_MINUTE = 40;
+// Found live (navigation correctness audit): limit() above only ever capped
+// ONE user's own request rate -- there was no cache of identical/near-
+// identical lookups and no cross-user throttle at all. Nominatim's usage
+// policy caps a whole app's shared IP at roughly one request/second; a
+// handful of people in the same place asking "where am I" or searching for
+// the same popular destination within a minute of each other could
+// plausibly get this deployment's shared Nominatim IP rate-limited or
+// banned by the free service, breaking navigation for every user, not just
+// the ones who asked. Caching identical search/reverse lookups for a short
+// window costs nothing in correctness (an address doesn't change minute to
+// minute) and directly cuts the redundant real network calls that class of
+// scenario would otherwise generate.
+const CACHE_TTL_MS = 60_000;
+const CACHE_MAX_ENTRIES = 500;
 const fail = (status, code, message) => Object.assign(new Error(message), { status, code });
 
 const lat = value => { const n = Number(value); if (!Number.isFinite(n) || n < -90 || n > 90) throw fail(400, "invalid_position", "A latitude between -90 and 90 is required."); return n; };
 const lng = value => { const n = Number(value); if (!Number.isFinite(n) || n < -180 || n > 180) throw fail(400, "invalid_position", "A longitude between -180 and 180 is required."); return n; };
 const point = (value, name) => { if (!value || typeof value !== "object") throw fail(400, "invalid_position", `${name} needs a position.`); return { lat: lat(value.lat), lng: lng(value.lng) }; };
 const text = (value, max = 120) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+const clampLat = value => Math.max(-90, Math.min(90, value));
+const clampLng = value => Math.max(-180, Math.min(180, value));
 
 function createNavigationService({ env = process.env, fetchImpl = globalThis.fetch, now = () => Date.now() } = {}) {
   const urls = { geocoder: (env.NEXUS_GEOCODER_URL || DEFAULTS.geocoder).replace(/\/$/, ""), drive: (env.NEXUS_ROUTING_DRIVE_URL || DEFAULTS.drive).replace(/\/$/, ""), walk: (env.NEXUS_ROUTING_WALK_URL || DEFAULTS.walk).replace(/\/$/, "") };
   const enabled = String(env.NEXUS_MAPS_PUBLIC_OSM_ENABLED ?? "true").toLowerCase() !== "false" || Boolean(env.NEXUS_ROUTING_DRIVE_URL);
   const recent = new Map();
+  const searchCache = new Map();
+  const reverseCache = new Map();
+
+  function fromCache(cache, key) {
+    const hit = cache.get(key);
+    return hit && hit.expiresAt > now() ? hit.value : null;
+  }
+
+  function toCache(cache, key, value) {
+    if (cache.size > CACHE_MAX_ENTRIES) for (const [existingKey, entry] of cache) if (entry.expiresAt <= now()) cache.delete(existingKey);
+    cache.set(key, { value, expiresAt: now() + CACHE_TTL_MS });
+  }
 
   function limit(userId) {
     const cutoff = now() - 60000; const list = (recent.get(userId) || []).filter(time => time > cutoff);
@@ -56,23 +84,43 @@ function createNavigationService({ env = process.env, fetchImpl = globalThis.fet
 
   async function search({ query, near }) {
     const q = text(query, 120); if (!q) throw fail(400, "invalid_query", "Say where you want to go.");
-    const url = new URL(`${urls.geocoder}/search`); url.searchParams.set("q", q); url.searchParams.set("format", "jsonv2"); url.searchParams.set("limit", "5"); url.searchParams.set("addressdetails", "1");
     const origin = near ? point(near, "near") : null;
+    const cacheKey = `${q.toLowerCase()}|${origin ? `${origin.lat.toFixed(3)},${origin.lng.toFixed(3)}` : ""}`;
+    const cachedPlaces = fromCache(searchCache, cacheKey);
+    if (cachedPlaces) return cachedPlaces;
+    const url = new URL(`${urls.geocoder}/search`); url.searchParams.set("q", q); url.searchParams.set("format", "jsonv2"); url.searchParams.set("limit", "5"); url.searchParams.set("addressdetails", "1");
     // Prefer what is close to the person (about 1 degree, roughly 110 km), without excluding the rest of the world.
-    if (origin) url.searchParams.set("viewbox", [origin.lng - 1, origin.lat + 1, origin.lng + 1, origin.lat - 1].map(value => value.toFixed(4)).join(","));
+    // Found live (navigation correctness audit): unclamped, this could send
+    // a longitude past +/-180 near the antimeridian or a latitude past
+    // +/-90 near a pole -- Nominatim treats an out-of-range viewbox as a
+    // malformed ranking hint rather than a hard filter (bounded=1 is never
+    // set), so it silently degrades relevance for a real nearby place just
+    // across that boundary instead of erroring.
+    if (origin) url.searchParams.set("viewbox", [clampLng(origin.lng - 1), clampLat(origin.lat + 1), clampLng(origin.lng + 1), clampLat(origin.lat - 1)].map(value => value.toFixed(4)).join(","));
     const payload = await getJson(url.toString());
     const places = (Array.isArray(payload) ? payload : []).filter(item => Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lon)))
       .map(item => ({ label: label(item), lat: Number(item.lat), lng: Number(item.lon), distanceMeters: origin ? Math.round(haversine([origin.lng, origin.lat], [Number(item.lon), Number(item.lat)])) : null }));
     if (origin) places.sort((a, b) => a.distanceMeters - b.distanceMeters);
-    return places.slice(0, 3);
+    const result = places.slice(0, 3);
+    toCache(searchCache, cacheKey, result);
+    return result;
   }
 
   async function reverse({ position }) {
     const at = point(position, "position");
+    // Rounded to ~100m (3 decimal places) rather than exact GPS precision --
+    // reverse()'s label describes the road/neighbourhood a position is in,
+    // not the exact point, so a cache hit at this granularity is still an
+    // honest answer, and it meaningfully raises the hit rate for repeated
+    // "where am I" calls made while roughly stationary despite GPS jitter.
+    const cacheKey = `${at.lat.toFixed(3)},${at.lng.toFixed(3)}`;
+    const cachedPlace = fromCache(reverseCache, cacheKey);
+    if (cachedPlace) return cachedPlace;
     const url = new URL(`${urls.geocoder}/reverse`); url.searchParams.set("lat", at.lat); url.searchParams.set("lon", at.lng); url.searchParams.set("format", "jsonv2"); url.searchParams.set("zoom", "16"); url.searchParams.set("addressdetails", "1");
     const payload = await getJson(url.toString());
-    if (!payload || payload.error) return { label: "" };
-    return { label: label(payload) };
+    const result = (!payload || payload.error) ? { label: "" } : { label: label(payload) };
+    toCache(reverseCache, cacheKey, result);
+    return result;
   }
 
   async function route({ from, to, mode, language }) {
