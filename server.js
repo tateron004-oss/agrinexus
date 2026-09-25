@@ -19750,10 +19750,21 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (toolName === "nexus_provider_readiness") {
     const production = nexusProductionPublicStatus(process.env);
     const openAiNative = nexusOpenAiNativeStatus(process.env);
+    // Found live: this response was always the same fixed sentence, even
+    // though providerLanes already computes real, specific, per-provider
+    // readiness data -- a consumer that only reads the flattened `response`
+    // text (typed chat, most non-realtime callers) never saw which
+    // providers were actually configured, only that a check happened.
+    const lanes = Object.entries(production.providerLanes || {});
+    const configuredLanes = lanes.filter(([, lane]) => lane.configured).map(([name]) => name);
+    const unconfiguredLanes = lanes.filter(([, lane]) => !lane.configured).map(([name]) => name);
+    const readinessSummary = lanes.length
+      ? `${configuredLanes.length} of ${lanes.length} provider lane(s) are configured${configuredLanes.length ? ` (${configuredLanes.join(", ")})` : ""}.${unconfiguredLanes.length ? ` Not configured: ${unconfiguredLanes.join(", ")}.` : ""}`
+      : "No provider lanes are registered.";
     return {
       ...common,
       status: "completed",
-      response: "Nexus checked provider readiness without exposing secrets. Review the missing environment variable names before enabling live provider execution.",
+      response: `Nexus checked provider readiness without exposing secrets. ${readinessSummary} Review the missing environment variable names before enabling live provider execution.`,
       providerReadiness: production.providerLanes || {},
       openAiNative,
       missingEnvVars: Array.from(new Set([...(openAiNative.missingEnv || []), ...(production.missingEnv || [])])).slice(0, 20)
