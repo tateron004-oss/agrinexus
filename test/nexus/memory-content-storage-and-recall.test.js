@@ -93,3 +93,41 @@ test("deleting something that was never saved is honestly reported as not found,
   assert.equal(result.status, "memory-review-prepared");
   assert.match(result.response, /did not find a matching/i);
 });
+
+// Found live: nexus_memory's own success message and tool description
+// promised "correct" as a capability, but nothing implemented it -- a
+// genuine "Correct my saved memory: my farm is in Nakuru" request fell
+// through to the plain search branch, which never changes anything.
+test("a single unambiguous correction actually changes the stored record, verified by a later recall", async () => {
+  await callMemory("Remember that my apiary is called Sunflower Apiary.", { confirmed: true });
+  const corrected = await callMemory("Correct my saved memory about my apiary: it is called Golden Meadow Apiary now.", { confirmed: true });
+  assert.equal(corrected.status, "memory-corrected");
+
+  const after = await callMemory("What do you remember about my apiary?");
+  assert.match(after.response, /Golden Meadow Apiary/);
+});
+
+test("correcting requires explicit confirmation first, and does not alter memory without it", async () => {
+  await callMemory("Remember that my clinic hours are 9 to 5.", { confirmed: true });
+  const result = await callMemory("Correct my saved memory about my clinic hours.");
+  assert.equal(result.status, "confirmation-required");
+  const after = await callMemory("What do you remember about my clinic hours?");
+  assert.match(after.response, /9 to 5/);
+});
+
+test("correcting an ambiguous or nonexistent record is honestly reported, not guessed", async () => {
+  const result = await callMemory("Correct my saved memory about a topic that was never mentioned before.", { confirmed: true });
+  assert.equal(result.status, "memory-review-prepared");
+  assert.match(result.response, /did not find a matching/i);
+});
+
+// Found live: the default inspect/search branch only ever reported a bare
+// count ("I found 1 Nexus memory record(s) related to that"), never the
+// real remembered content, even though searchRecords() already returns each
+// record's full title/payload.
+test("inspecting a memory shows the real remembered content, not just a count", async () => {
+  await callMemory("Remember that my irrigation pump is a Grundfos model CR15.", { confirmed: true });
+  const result = await callMemory("What do you remember about my irrigation pump?");
+  assert.match(result.response, /found 1 Nexus memory record/i);
+  assert.match(result.response, /Grundfos model CR15/);
+});

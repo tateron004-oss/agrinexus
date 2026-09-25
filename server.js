@@ -18602,7 +18602,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
     tool("nexus_data_code_analysis", "Perform controlled calculations, structured-data reasoning, table checks, and code/data analysis using server-side deterministic logic or a configured execution provider.", "controlled-analysis"),
     tool("nexus_visual_analysis", "Analyze user-authorized images, document photos, crop photos, equipment photos, or camera inputs only when a configured visual provider and explicit user-supplied media are present.", "visual-analysis"),
-    tool("nexus_memory", "Inspect, create, correct, export, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls.", "privacy-memory"),
+    tool("nexus_memory", "Inspect, create, correct, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls. Use nexus_document_export to export memory content as a document.", "privacy-memory"),
     tool("nexus_automation_reminder", "Create, inspect, or prepare reminders, recurring monitoring, scheduled tasks, and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated.", "confirmation-gated-automation"),
     tool("nexus_lists", "Create, read, or update a checklist or to-do list through Nexus's real, persisted lists capability. Use the title argument for the list's name and content for its items (one per line or comma-separated).", "local-record-write"),
     tool("nexus_email", "Prepare, read, or send email only through configured authorized email providers. Drafting can occur locally; sending requires credentials, consent, confirmation, and receipts.", "high-risk-confirmation-required"),
@@ -19362,7 +19362,13 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   // record; an all-stopword query (e.g. a topic-less "what do you
   // remember?") falls back to an empty query, matching every record,
   // rather than the original raw sentence, which would never match.
-  const MEMORY_QUERY_STOPWORDS = /\b(what|do|does|did|have|has|you|remember|remembered|know|knew|anything|something|about|tell|me|can|could|would|should|is|are|was|were|the|a|an|my|to|for|of|that|this|i|told|said|mentioned|please|forget|forgot|forgotten|forgetting|delete|deleted|remove|removed|erase|erased|revoke|revoked|save|saved|store|stored)\b/gi;
+  // "correct"/"fix"/"memory"/"record" added alongside the other action verbs
+  // here for the same reason: a correction request ("Correct my saved
+  // memory about my farm: it is in Nakuru, not Kisumu.") otherwise leaves
+  // these as literal query tokens that never appear in the original saved
+  // text, so the token-AND search below could never find the very record
+  // being corrected.
+  const MEMORY_QUERY_STOPWORDS = /\b(what|do|does|did|have|has|you|remember|remembered|know|knew|anything|something|about|tell|me|can|could|would|should|is|are|was|were|the|a|an|my|to|for|of|that|this|i|told|said|mentioned|please|forget|forgot|forgotten|forgetting|delete|deleted|remove|removed|erase|erased|revoke|revoked|save|saved|store|stored|correct|corrected|correcting|fix|fixed|fixing|memory|record)\b/gi;
   const searchQuery = sanitizePilotText(commandText.replace(MEMORY_QUERY_STOPWORDS, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 240);
   const query = sanitizePilotText(args.query || searchQuery, 240);
   // "What do you remember about my farm?" is a genuine recall question, not
@@ -19377,20 +19383,75 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   // any question word, so a polite imperative like "can you save this" is
   // unaffected.
   const isMemoryStatusQuestion = /\b(do|did|does|have|has)\s+you\s+(remember|delet(?:e|ed)|forgot(?:ten)?|forget|remov(?:e|ed)|eras(?:e|ed))\b/i.test(commandText) || /\bwhat\b[^?]*\bremember\b/i.test(commandText);
-  const wantsCreate = !isMemoryStatusQuestion && /\b(remember|save|store)\b/i.test(commandText);
+  // Found live: nexus_memory's own success message and tool description
+  // promise "correct" as a capability, but nothing here ever implemented it
+  // -- a genuine "Correct my saved memory: my farm is in Nakuru, not
+  // Kisumu" fell through to the plain search branch below (which only ever
+  // reports a count, never changes anything). The persistent-memory store
+  // already has a real updateRecord() (used by archiveRecord() already);
+  // this just wires it in, mirroring the delete branch's own
+  // single-unambiguous-match-after-confirmation pattern exactly.
+  const wantsCorrect = !isMemoryStatusQuestion && /\b(correct|fix)\b/i.test(commandText);
+  const wantsCreate = !isMemoryStatusQuestion && !wantsCorrect && /\b(remember|save|store)\b/i.test(commandText);
   const wantsDelete = !isMemoryStatusQuestion && /\b(delete|forget|remove|erase|revoke)\b/i.test(commandText);
   const confirmed = args.confirmed === true || args.confirmation === true;
-  if (wantsCreate || wantsDelete) {
+  if (wantsCreate || wantsDelete || wantsCorrect) {
     if (!confirmed) {
       return nexusOpenAiNativeBlockedToolResult(db, common, {
         status: "confirmation-required",
         response: wantsDelete
           ? "I can help remove or archive a Nexus memory record, but I need explicit confirmation and the memory to change. I did not alter memory."
-          : "I can store that as Nexus memory, but I need explicit confirmation first. I did not save it yet.",
+          : wantsCorrect
+            ? "I can correct a Nexus memory record, but I need explicit confirmation and the corrected memory to change. I did not alter memory."
+            : "I can store that as Nexus memory, but I need explicit confirmation first. I did not save it yet.",
         requiredAuthorization: ["explicit-user-confirmation"],
         did: ["Checked the memory request boundary."],
-        didNot: ["Nexus did not create, delete, export, or share memory."]
+        didNot: ["Nexus did not create, delete, correct, or share memory."]
       });
+    }
+    if (wantsCorrect) {
+      // A natural correction ("Correct my saved memory about my apiary: it
+      // is called Golden Meadow Apiary now.") names the OLD subject and the
+      // NEW content in one sentence -- searching on the whole thing (as
+      // `query` above does) mixes them, and the new content's words can
+      // never match the still-unchanged stored record, so the search would
+      // spuriously come back empty. Split on the first colon, when present,
+      // so the subject clause alone is searched and the replacement clause
+      // alone becomes the corrected value; falls back to the whole sentence
+      // for both when there is no colon to split on.
+      const colonIndex = commandText.indexOf(":");
+      const subjectClause = colonIndex > -1 ? commandText.slice(0, colonIndex) : commandText;
+      const replacementClause = colonIndex > -1 ? commandText.slice(colonIndex + 1).trim() : "";
+      const correctionQuery = args.query
+        ? query
+        : sanitizePilotText(subjectClause.replace(MEMORY_QUERY_STOPWORDS, " ").replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim(), 240);
+      const searchResult = store.searchRecords({ query: correctionQuery, includeArchived: false });
+      const matches = searchResult.records || [];
+      if (matches.length === 1) {
+        const updateResult = store.updateRecord(matches[0].id, { payload: { ...matches[0].payload, value: sanitizePilotText(args.value || replacementClause || commandText, 240) } });
+        db.profile.nexusPersistentMemory = updateResult.state || store.snapshot();
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "memory-corrected",
+          [`Corrected the local Nexus memory record "${matches[0].title}".`],
+          ["Nexus did not share memory externally or expose private values in diagnostics."]);
+        return { ...common, status: "memory-corrected", response: `I corrected the Nexus memory record "${matches[0].title}".`, memory: updateResult, receipt, evidenceReceipt: receipt, executionAttempted: true, executionVerified: true, localOnly: true };
+      }
+      db.profile.nexusPersistentMemory = searchResult.state || store.snapshot();
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "memory-review-prepared",
+        ["Prepared matching memory records for review."],
+        ["Nexus did not share memory externally or expose private values in diagnostics."]);
+      return {
+        ...common,
+        status: "memory-review-prepared",
+        response: matches.length
+          ? `I found ${matches.length} matching memory records. Tell me more specifically which one (e.g. its exact title) and confirm again, so I don't correct the wrong one.`
+          : "I did not find a matching Nexus memory record to correct.",
+        memory: searchResult,
+        receipt,
+        evidenceReceipt: receipt,
+        executionAttempted: true,
+        executionVerified: true,
+        localOnly: true
+      };
     }
     if (wantsDelete) {
       // Previously always stopped here regardless of how many records
@@ -19449,7 +19510,11 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
     return {
       ...common,
       status: "memory-created",
-      response: "I saved that as authorized local Nexus memory. You can ask me to inspect, correct, export, or delete it later.",
+      // "export" was dropped from this message -- nexus_memory itself never
+      // implemented an export path; a real one already exists as a separate
+      // tool (nexus_document_export), so promising it here overclaimed a
+      // capability this tool doesn't have.
+      response: "I saved that as authorized local Nexus memory. You can ask me to inspect, correct, or delete it later.",
       memory: result,
       receipt,
       evidenceReceipt: receipt,
@@ -19459,11 +19524,21 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
     };
   }
   const result = store.searchRecords({ query, includeArchived: false });
+  // Found live: this branch is nexus_memory's own advertised "inspect"
+  // capability, but it only ever reported a bare count -- "What do you
+  // remember about my farm?" answered "I found 1 Nexus memory record(s)
+  // related to that," never the real remembered content, even though
+  // searchRecords() already returns each record's full title/payload. This
+  // exact count-only shape used to be codified as correct by
+  // memory-content-storage-and-recall.test.js; that test only ever asserted
+  // the "found N Nexus memory record" substring, so it still matches with
+  // real content appended after it.
+  const inspectMatches = result.records || [];
   return {
     ...common,
     status: "completed",
-    response: result.records?.length
-      ? `I found ${result.records.length} Nexus memory record(s) related to that. I kept the lookup local and did not share anything externally.`
+    response: inspectMatches.length
+      ? `I found ${inspectMatches.length} Nexus memory record(s) related to that: ${inspectMatches.slice(0, 5).map(record => `"${record.title}" -- ${record.payload?.value || "(no stored detail)"}`).join("; ")}. I kept the lookup local and did not share anything externally.`
       : "I did not find a matching active Nexus memory record. I can save a preference only after you explicitly confirm.",
     memory: result,
     providerAttempted: false,
@@ -20226,9 +20301,73 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "communications" }, providerResult);
   }
   if (toolName === "nexus_calendar") {
+    const calendarCommon = { ...common, capability: "calendar" };
+    // Found live: the shared tool-call schema (nexusOpenAiNativeToolSchemas's
+    // baseParameters) has no start/end field at all, so args.start/
+    // args.startTime/args.when were never populated through the real
+    // tool-calling path -- "schedule a meeting tomorrow at 3pm" always
+    // blocked with "title and start time are required" regardless of what
+    // the user said, because nothing ever parsed the time out of the command
+    // text itself. Reuses the same real, already-tested natural-language
+    // time parser the reminders pipeline already relies on.
+    const explicitStart = String(args.start || args.startTime || args.when || "").trim();
+    const derivedStart = !explicitStart && hasReminderTimePhrase(command) ? parseAssistantReminderTime(command).scheduledAt : "";
+    const lowerCalendarCommand = String(command || "").toLowerCase();
+    // Found live: nexus_calendar's own tool description promises "search,
+    // schedule, change, or cancel calendar events," but the handler only
+    // ever called createEvent no matter what the user asked -- a genuine
+    // "cancel my dentist appointment" or "what's on my calendar" silently
+    // became a bogus attempt to CREATE a new event instead.
+    const wantsCancel = /\b(cancel|delete|remove)\b/.test(lowerCalendarCommand) && /\b(event|meeting|appointment|calendar)\b/.test(lowerCalendarCommand);
+    const wantsUpdate = !wantsCancel && /\b(reschedule|move|change|update)\b/.test(lowerCalendarCommand) && /\b(event|meeting|appointment|calendar)\b/.test(lowerCalendarCommand);
+    const wantsSearch = !wantsCancel && !wantsUpdate && /\b(find|search|show|list|check|what.?s on|what is on)\b/.test(lowerCalendarCommand) && /\b(calendar|event|meeting|appointment|schedule)\b/.test(lowerCalendarCommand);
+
+    if (wantsSearch) {
+      const searchResult = await nexusRealProviders.calendar.searchEvents({ query: args.query || args.title || command }, process.env);
+      const events = searchResult?.body?.data?.events || [];
+      const responseOverride = events.length
+        ? `Found ${events.length} matching calendar event${events.length === 1 ? "" : "s"}: ${events.map(item => `${item.title || "Untitled event"} (${item.start || "no time given"})`).join("; ")}.`
+        : undefined;
+      return nexusOpenAiNativeProviderToolResult(db, calendarCommon, searchResult, { responseOverride });
+    }
+
+    if (wantsCancel || wantsUpdate) {
+      const action = wantsCancel ? "calendar.event.cancel" : "calendar.event.update";
+      // The shared tool schema also has no eventId field, so a real request
+      // ("cancel my dentist appointment") never carries one either -- search
+      // for the named event first, exactly as a person would have to.
+      let eventId = String(args.eventId || "").trim();
+      if (!eventId) {
+        const lookupResult = await nexusRealProviders.calendar.searchEvents({ query: args.title || command }, process.env);
+        const matches = lookupResult?.body?.data?.events || [];
+        if (matches.length === 1) {
+          eventId = matches[0].eventId;
+        } else if (matches.length > 1) {
+          return nexusOpenAiNativeProviderToolResult(db, calendarCommon, { body: { ok: false, provider: "calendar", action, status: "needs-input", data: { events: matches } } },
+            { responseOverride: `I found ${matches.length} matching events -- which one did you mean? ${matches.map(item => `${item.title || "Untitled event"} at ${item.start || "an unknown time"}`).join("; ")}.` });
+        } else {
+          return nexusOpenAiNativeProviderToolResult(db, calendarCommon, { body: { ok: false, provider: "calendar", action, status: "blocked", data: {} } },
+            { responseOverride: `I could not find a matching calendar event to ${wantsCancel ? "cancel" : "change"}.` });
+        }
+      }
+      const actionBody = { eventId, title: args.title, start: explicitStart || derivedStart, end: String(args.end || args.endTime || "").trim(), confirmed: args.confirmed };
+      const actionResult = await withActionLifecycle(db, {
+        provider: "calendar", action, body: actionBody, actorId: user?.id || realUserEmail || "",
+        execute: () => wantsCancel ? nexusRealProviders.calendar.cancelEvent(actionBody, process.env) : nexusRealProviders.calendar.updateEvent(actionBody, process.env),
+        verify: async result => {
+          const data = result?.body?.data || {};
+          return {
+            verified: Boolean(data.eventId) && !data.simulated && result?.body?.status === "completed",
+            note: data.simulated ? "Simulated response -- no real calendar provider was contacted." : data.eventId ? "Provider confirmed the calendar event change." : "Provider response had no event id to verify against."
+          };
+        }
+      });
+      return nexusOpenAiNativeProviderToolResult(db, calendarCommon, actionResult);
+    }
+
     const calendarBody = {
       title: args.title || args.summary || command,
-      start: args.start || args.startTime || args.when,
+      start: explicitStart || derivedStart,
       end: args.end || args.endTime,
       description: args.description,
       confirmed: args.confirmed
@@ -20244,7 +20383,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         };
       }
     });
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "calendar" }, calendarResult);
+    return nexusOpenAiNativeProviderToolResult(db, calendarCommon, calendarResult);
   }
   if (toolName === "nexus_workforce_learning") {
     const learningRequest = /\b(explain|teach|lesson|learn|learning|literacy|course|courses|training|lms|class|quiz|understanding)\b/i.test(command);

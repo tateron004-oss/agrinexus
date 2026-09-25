@@ -34,6 +34,8 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
     sanitizePilotText: value => String(value || ""),
     firstPresentEnvValue: (env, keys) => keys.map(key => env[key]).find(Boolean) || "",
     withActionLifecycle,
+    hasReminderTimePhrase: require("../../nexus/reminders/time-phrase.js").hasReminderTimePhrase,
+    parseAssistantReminderTime: require("../../nexus/reminders/time-phrase.js").parseAssistantReminderTime,
     nexusOpenAiNativeToolChoiceHint: () => "nexus_general_conversation",
     nexusOpenAiNativeToolReceipt: (_db, _tool, _command, status) => ({ testReceipt: true, status }),
     nexusRealProviders: {
