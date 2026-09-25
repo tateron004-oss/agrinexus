@@ -376,6 +376,20 @@ test("every remaining complete gauntlet request has a deterministic governed pla
   assert.equal(completeRemainingWorkspacePlan("Tell me about jobs.", catalog), null);
 });
 
+// Found live: "Find me a job in construction," "Search for jobs near me,"
+// and "Show me available work" all lack a select/listing/sources word and
+// fell through to the free-form AI planner instead of this deterministic
+// fast path. Widened with the natural ways a real job search is phrased.
+test("a natural job-search phrase with no select/listing/sources word still reaches the real jobs.search plan", () => {
+  const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "jobs.search" }] };
+  for (const command of ["Find me a job in construction", "Search for jobs near me", "Show me available work"]) {
+    const plan = completeRemainingWorkspacePlan(command, catalog);
+    assert.equal(plan?.application, "workforce", command);
+    assert.equal(plan?.steps[0].toolId, "jobs.search", command);
+  }
+});
+
 // Confirmed missing: a general youth-education request like "help this youth
 // learn to read" or "give my student a lesson" has no save/progress verb at
 // all, so the original narrower matcher never fired and it fell through to

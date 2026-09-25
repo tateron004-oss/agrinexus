@@ -795,7 +795,11 @@ function completeMediaPlaybackPlan(text, catalog) {
 // "Make my resume", "Create a resume for Amina Wanjiru. Skills: crop planning, irrigation. Experience: 5 years managing a maize farm.":
 // a resume built from what the person says plus what Kyro already knows about them (see resume/executor.js). Questions about resumes
 // ("how do I write a resume?") are not requests to make one, and a resume with nothing to put in it is asked about rather than invented.
-const RESUME_REQUEST = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:make|create|build|write|prepare|draft|generate)\b[^.?!]{0,40}\b(?:resume|résumé|cv|curriculum vitae)\b/i;
+// Found live: "Give me a resume for a warehouse job" and "I need a resume
+// for a construction job" use "give"/"need," which weren't in the verb
+// list, so a real, working request fell through to the free-form AI
+// planner instead of this deterministic fast path.
+const RESUME_REQUEST = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:make|create|build|write|prepare|draft|generate|give me|i need|need)\b[^.?!]{0,40}\b(?:resume|résumé|cv|curriculum vitae)\b/i;
 const RESUME_QUESTION = /^\s*(?:how|what|why|when|where|should|can you explain|tips|is it|do i)\b|\?\s*$/i;
 function resumeField(text, label) {
   const match = new RegExp(`\\b${label}\\s*(?:are|is|include|includes)?\\s*[:\\-]\\s*(.+?)(?=(?:\\.|;|,)?\\s+(?:skills?|experience|education|languages?|phone|email)\\s*[:\\-]|\\.\\s|$)`, "i").exec(text);
@@ -966,7 +970,12 @@ function completeRemainingWorkspacePlan(text, catalog) {
       /\b(lesson|literacy|learning|education|youth|student|homework|study|tutor(?:ing)?|curriculum)\b/i.test(goal))
     return plan("learning", "knowledge.search", "Create and save governed learning content",
       { query: goal, lesson: goal, content: goal, saveProgress: true });
-  if (/\b(find|search|show)\b/i.test(goal) && /\b(jobs?|work|opportunities)\b/i.test(goal) && /\b(select|listing|sources?)\b/i.test(goal))
+  // Found live: "Find me a job in construction," "Search for jobs near me,"
+  // and "Show me available work" all lack a select/listing/sources word and
+  // fell through to the free-form AI planner instead of this deterministic
+  // fast path. Widened with the natural ways a real job search is actually
+  // phrased (a field/location, "near me," "available," "hiring").
+  if (/\b(find|search|show|looking for|apply for)\b/i.test(goal) && /\b(jobs?|work|opportunities)\b/i.test(goal) && /\b(select|listing|sources?|near me|available|openings?|hiring|in\s+\w+|for\s+\w+)\b/i.test(goal))
     return plan("workforce", "jobs.search", "Find governed workforce listings", { query: goal, selectListing: true });
   if (/\b(show|map|route|directions?|get|take|travel)\b/i.test(goal) && /\bfrom\b/i.test(goal) && /\bto\b/i.test(goal)) {
     const endpoints = goal.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+with\b|[,.]|$)/i);

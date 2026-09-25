@@ -43,7 +43,12 @@ test('native visual tool keeps primary search and uses fallback only after no us
  const invoke=()=>sandbox.run({}, {}, 'nexus_visual_analysis',{command:'show images of maize',capability:'visual-search'});
  assert.match((await invoke()).images[0].imageUrl,/primary/);assert.equal(fallbackCalls,0);
  primary=false;assert.match((await invoke()).images[0].imageUrl,/fallback/);assert.equal(fallbackCalls,1);assert.equal(visionCalls,0);
- fallback=false;assert.equal((await invoke()).status,'blocked');assert.equal(visionCalls,1);
+ // Found live: when both primary and fallback search find nothing, this
+ // used to fall through unconditionally into vision.analyze -- a totally
+ // different question ("analyze THIS image I gave you") -- producing the
+ // non-sequitur "A user-supplied image URL is required" for a search
+ // request. Now honestly reports no results instead, and never calls vision.analyze.
+ fallback=false;assert.equal((await invoke()).status,'no-image-results');assert.equal(visionCalls,0);
 });
 
 test('a real image search still runs when the tool-calling model paraphrases away the show/find verb the wantsImages check needs', async () => {

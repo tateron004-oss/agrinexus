@@ -68,3 +68,15 @@ test("the planner turns a plain resume request into the tool, asks when it lacks
   assert.equal(resumePlan("Find farm jobs near Nakuru and make a resume", catalog, { name: "Amina", crops: "maize" }), null, "a multi-step request stays with the planner");
   assert.equal(resumePlan("Make my resume", { tools: [], applications: [] }, { name: "Amina" }), null);
 });
+
+// Found live: "Give me a resume for a warehouse job" and "I need a resume
+// for a construction job" use "give"/"need," which weren't in the verb
+// list, so a real, working request fell through to the free-form AI
+// planner instead of this deterministic fast path.
+test("'give me'/'i need' phrasing is recognized, not just make/create/build/write/prepare/draft/generate", () => {
+  // Neither example gives any skills/experience substance, so -- exactly
+  // like "Make my resume" above -- the real fast path is reached and asks
+  // for substance, rather than falling through to the AI planner as null.
+  assert.match(resumePlan("Give me a resume for a warehouse job", catalog, { name: "Amina" }).clarification, /What should it say/);
+  assert.match(resumePlan("I need a resume for a construction job", catalog, { name: "Amina" }).clarification, /What should it say/);
+});

@@ -90,7 +90,12 @@
     if (/\b(buyer|seller|marketplace|agritrade|sell|sale|offer|trade|market|price|cost|quote)\b/.test(text)) domains.push("marketplace_trade");
     if (/\b(shipment|shipping|logistics|delivery|cold chain|carrier|route|pickup)\b/.test(text)) domains.push("logistics_shipment");
     if (/\b(drone|field scan|field observation|imagery|scouting|flight)\b/.test(text)) domains.push("drone_field_operations");
-    if (/\b(training|learn|learning|literacy|course|class|program|certification)\b/.test(text)) domains.push("learning");
+    // "courses" (plural) added -- \bcourse\b cannot match inside "courses"
+    // (no word boundary before the trailing "s"), so "What courses are
+    // available for beekeeping?" matched no domain at all here even though
+    // the equivalent server-side gate (server.js's nexus_workforce_learning
+    // handler) already includes the plural form -- pure client/server drift.
+    if (/\b(training|learn|learning|literacy|course|courses|class|program|certification)\b/.test(text)) domains.push("learning");
     if (/\b(job|jobs|workforce|employment|employer|resume|career|hiring)\b/.test(text)) domains.push("workforce_jobs");
     if (/\b(admin|provider evidence|review queue|blocked|what is blocked|case so far|what do you know|what can you do|what do you need)\b/.test(text)) domains.push("provider_admin");
     if (!domains.length) domains.push("general_help");
@@ -133,6 +138,17 @@
     // twilioProvider/emailProvider and has its own confirmation gate).
     if (SEND_OPENER.test(text) && (SEND_EMAIL.test(text) || SEND_PHONE.test(text))) return true;
     if (CALL_OPENER.test(text) && SEND_PHONE.test(text)) return true;
+    // Found live: "Find me a job in construction," "Give me a resume for a
+    // warehouse job," and "What courses are available for beekeeping?" each
+    // only ever match ONE domain here (workforce_jobs or learning) -- the
+    // same >=2-domain rejection shape as the bugs above -- so they fell
+    // through past this runtime into a decorative "employment-hiring"/
+    // "learning-workforce-development" workflow card instead of reaching
+    // the real (simulated-but-evidence-based, not fabricated) jobs.search/
+    // resume.create/knowledge.search tools via the authoritative runtime.
+    if (/\b(find|search|show|looking for|apply for)\b.*\b(jobs?|work|employment|opportunit(?:y|ies))\b/.test(text)
+      || /\b(resume|cv|curriculum vitae)\b/.test(text)
+      || /\b(courses?|classes|training|certification)\b.*\b(available|offered|for|on)\b/.test(text)) return true;
     const domains = classifyDomains(text).filter(domain => !["general_help", "provider_admin"].includes(domain));
     return domains.length >= 2;
   }
