@@ -86,6 +86,16 @@
     const text = normalizeText(command).toLowerCase();
     if (!text) return false;
     if (/\b(prepare everything|do everything|show me the plan|create receipts|active mission|case so far|what is blocked|what can you do now|what do you need from me|continue mission|start mission|mission plan|send what is safe)\b/.test(text)) return true;
+    // Found live: "Add a buyer named Jane Doe" (a real business/CRM lead-add
+    // command, real estate reusing the marketplace's own "buyer"/"seller"
+    // words for its own lead types) only ever matches ONE domain here
+    // (marketplace_trade) since DOMAINS has no real-estate/business concept
+    // at all -- the >=2-domain requirement below then rejected it, so it
+    // fell through to the decorative marketplace-trade workflow card instead
+    // of ever reaching nexusBusinessVoiceDispatch.run()'s real addLead.
+    // Mirrors nexus/business/voice-dispatch.js's own wantsAddLead pattern
+    // exactly, so client and server agree on what counts as this command.
+    if (/\b(?:add|create|new|log|track)\b/.test(text) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/.test(text)) return true;
     const domains = classifyDomains(text).filter(domain => !["general_help", "provider_admin"].includes(domain));
     return domains.length >= 2;
   }

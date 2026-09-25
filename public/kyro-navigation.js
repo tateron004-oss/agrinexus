@@ -259,7 +259,7 @@
   const locationProblem = (error, language) => tx(language, error?.code === 1 ? "denied" : error?.code === 3 ? "slow" : "unknown");
 
   // `language` is the app's language ("en" or "sw"); a Swahili command is answered in Swahili whatever the app's language is.
-  function createNavigator({ geolocation, api, speak = () => {}, storage = null, ui = null, wakeLock = null, now = () => Date.now(), language: appLanguage = "en" } = {}) {
+  function createNavigator({ geolocation, api, speak = () => {}, storage = null, ui = null, wakeLock = null, now = () => Date.now(), wait = (fn, ms) => setTimeout(fn, ms), language: appLanguage = "en" } = {}) {
     let active = null; // { route, follower, destination, mode, language, watchId, lastReroute, lastOffRouteNotice, lastFix, release }
     const appLang = languageOf(appLanguage);
 
@@ -306,7 +306,14 @@
         active.route = route; active.follower = createRouteFollower(route, { mode: active.mode, language }); active.follower.resetOffRoute();
         speak(tx(language, "newRoute", { about: about(route.distanceMeters, route.durationSeconds, language) }));
       } catch {
-        if (active && now() - active.lastOffRouteNotice > 60000) { active.lastOffRouteNotice = now(); speak(tx(language, "noConnection"), { interrupt: false }); }
+        if (active && now() - active.lastOffRouteNotice > 60000) {
+          active.lastOffRouteNotice = now();
+          speak(tx(language, "noConnection"), { interrupt: false });
+          // Found live: connectivity loss during active guidance was spoken
+          // only -- a muted phone, blocked audio, or a hard-of-hearing user
+          // had no way to know why rerouting stopped working.
+          ui?.error?.(tx(language, "noConnection"), language);
+        }
       }
     }
 
@@ -341,7 +348,19 @@
       const target = { lat: route.destination.lat, lng: route.destination.lng, label: destination.label || route.destination.label };
       active = { route, follower: createRouteFollower(route, { mode, language }), destination: target, mode, language, watchId: null, lastReroute: 0, lastOffRouteNotice: 0, lastFix: fix, release: null };
       try { const lock = await wakeLock?.(); active.release = lock?.release ? () => lock.release() : null; } catch { /* the screen may sleep; guidance still runs while it is on */ }
-      active.watchId = geolocation.watchPosition(onFix, error => { if (active && error?.code === 1) { speak(locationProblem(error, language), { interrupt: true }); stopGuidance(true); } }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+      active.watchId = geolocation.watchPosition(onFix, error => {
+        if (active && error?.code === 1) {
+          const message = locationProblem(error, language);
+          speak(message, { interrupt: true });
+          // Found live: permission loss mid-guidance was spoken only -- the
+          // floating panel just vanished with no visible explanation.
+          // stopGuidance() unconditionally hides the panel, so the error
+          // text needs a moment on screen before that happens, not an
+          // immediate call right after showing it.
+          ui?.error?.(message, language);
+          wait(() => stopGuidance(true), 4000);
+        }
+      }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
       const first = active.follower.update(fix);
       panel(language, first.next.instruction, first.next.distanceMeters, route.distanceMeters, route.durationSeconds, target.label);
       const told = storage?.getItem?.(DISCLOSED_KEY);
@@ -396,6 +415,25 @@
         panel.querySelector('[data-kn="stop"]').textContent = tx(shown, "panelStop");
         panel.querySelector('[data-kn="instruction"]').textContent = tx(shown, "panelNext", { distance, instruction });
         panel.querySelector('[data-kn="detail"]').textContent = `${destination ? tx(shown, "panelTo", { destination }) : ""}${tx(shown, "panelRemaining", { remaining })}`;
+      },
+      // Found live: permission loss or connectivity loss mid-guidance was
+      // spoken only (speechSynthesis), never shown as visible text -- the
+      // panel just silently vanished. Reuses the same aria-live="polite"
+      // panel element so a screen reader still announces it even when this
+      // is called right before hide(), and works for a hard-of-hearing user
+      // or a muted/blocked-audio browser either way.
+      error(message, shown = language) {
+        if (typeof document === "undefined") return;
+        if (!panel) {
+          panel = document.createElement("div"); panel.setAttribute("role", "status"); panel.setAttribute("aria-live", "polite");
+          panel.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483000;background:#0f2a26;color:#fff;border-radius:12px;padding:12px 14px;font:600 18px/1.3 system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.4)";
+          panel.innerHTML = '<div data-kn="instruction"></div><div data-kn="detail" style="font-weight:400;font-size:15px;opacity:.9;margin-top:4px"></div><button type="button" data-kn="stop" style="margin-top:8px;padding:8px 14px;border-radius:8px;border:0;background:#fff;color:#0f2a26;font:600 15px system-ui"></button>';
+          panel.querySelector('[data-kn="stop"]').addEventListener("click", () => navigator.stop());
+          document.body.appendChild(panel);
+        }
+        panel.querySelector('[data-kn="stop"]').textContent = tx(shown, "panelStop");
+        panel.querySelector('[data-kn="instruction"]').textContent = message;
+        panel.querySelector('[data-kn="detail"]').textContent = "";
       },
       hide() { if (panel) { panel.remove(); panel = null; } }
     };
