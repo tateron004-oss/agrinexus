@@ -114,8 +114,13 @@ async function buildReport(ctx, kind, text) {
   }
   if (kind === "expenses" || kind === "income") {
     const type = kind === "expenses" ? "expense" : "income"; const rows = (await money()).filter(record => record.data.type === type).sort((a, b) => a.data.day.localeCompare(b.data.day)); if (!rows.length) return null;
-    const by = {}; for (const record of rows) by[record.data.category] = round((by[record.data.category] || 0) + record.data.amount); const cur = rows[0].data.currency; const title = kind === "expenses" ? "Ripoti ya matumizi" : "Ripoti ya mapato";
-    return { title: `${title} ${period.label}`, content: `${head(title)}Kipindi: ${period.from} hadi ${period.to}\n\n${table([["Tarehe", "Kiasi", "Kwa nini"], ...rows.map(record => [record.data.day, moneyShown(record.data.amount, record.data.currency), what(record)])], [12, 16])}\n\n${line()}\nKWA AINA\n${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([category, amount]) => `  ${pad(categorySw(category), 18)} ${moneyShown(amount, cur)}`).join("\n")}\n\nJUMLA: ${totalsText(sum(rows, type))}  (maingizo ${rows.length})${FOOT}` };
+    // Found live (real-estate/GPS follow-up audit, mirrors money.js's English
+    // "expenses by kind" fix): bucket by currency before summing, instead of
+    // adding raw amounts across currencies and labeling the total with
+    // whichever row happened to be first.
+    const by = {}; for (const record of rows) { const category = record.data.category; const currency = record.data.currency || ""; by[category] = by[category] || {}; by[category][currency] = round((by[category][currency] || 0) + record.data.amount); } const title = kind === "expenses" ? "Ripoti ya matumizi" : "Ripoti ya mapato";
+    const totalOf = currencies => Object.values(currencies).reduce((a, b) => a + b, 0);
+    return { title: `${title} ${period.label}`, content: `${head(title)}Kipindi: ${period.from} hadi ${period.to}\n\n${table([["Tarehe", "Kiasi", "Kwa nini"], ...rows.map(record => [record.data.day, moneyShown(record.data.amount, record.data.currency), what(record)])], [12, 16])}\n\n${line()}\nKWA AINA\n${Object.entries(by).sort((a, b) => totalOf(b[1]) - totalOf(a[1])).map(([category, currencies]) => `  ${pad(categorySw(category), 18)} ${totalsText(currencies)}`).join("\n")}\n\nJUMLA: ${totalsText(sum(rows, type))}  (maingizo ${rows.length})${FOOT}` };
   }
   if (kind === "statement") {
     const rows = await money(); if (!rows.length) return null;
