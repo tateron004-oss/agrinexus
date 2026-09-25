@@ -306,14 +306,29 @@ async function startConnectAndListenCall(body = {}, env = process.env) {
   const targetTwiml = `<Response><Say voice="alice">This call may be recorded and transcribed by an AI assistant to help the caller with a follow-up task.</Say><Dial><Conference ${conferenceAttrs} endConferenceOnExit="false">${xmlEscape(conferenceName)}</Conference></Dial></Response>`;
   try {
     const userCallResult = await twilioPost("/Calls.json", { To: clean(body.userPhone), From: fromNumber, Twiml: userTwiml }, env);
-    const targetCallResult = await twilioPost("/Calls.json", { To: clean(body.targetPhone), From: fromNumber, Twiml: targetTwiml }, env);
-    return providerResponse({
-      provider,
-      action,
-      status: "completed",
-      message: `Kyro is calling your own phone now to connect you with ${targetLabel}. Answer it and you'll both be connected shortly -- ${targetLabel} will hear that the call may be recorded and transcribed before you're bridged together. Say "I'm on it, coach" style follow-ups afterward and Kyro will use what was discussed.`,
-      data: { userCallSid: userCallResult.sid, targetCallSid: targetCallResult.sid, conferenceName, calledUser: clean(body.userPhone), connectingTo: clean(body.targetPhone), channel: "voice-connect-listen" }
-    });
+    try {
+      const targetCallResult = await twilioPost("/Calls.json", { To: clean(body.targetPhone), From: fromNumber, Twiml: targetTwiml }, env);
+      return providerResponse({
+        provider,
+        action,
+        status: "completed",
+        message: `Kyro is calling your own phone now to connect you with ${targetLabel}. Answer it and you'll both be connected shortly -- ${targetLabel} will hear that the call may be recorded and transcribed before you're bridged together. Say "I'm on it, coach" style follow-ups afterward and Kyro will use what was discussed.`,
+        data: { userCallSid: userCallResult.sid, targetCallSid: targetCallResult.sid, conferenceName, calledUser: clean(body.userPhone), connectingTo: clean(body.targetPhone), channel: "voice-connect-listen" }
+      });
+    } catch (targetError) {
+      // Found live (phone bridge correctness audit): the user's own leg was
+      // already placed above -- by the time the second /Calls.json call
+      // throws (bad target number, a real Twilio 5xx, etc.), the user's
+      // phone may already be ringing or answered and heading into
+      // userTwiml's conference alone. Without this, they'd be dropped into
+      // a real, live, billed conference with no indication the other side
+      // was never dialed, while this function reports the whole attempt as
+      // failed to whoever asked Kyro to place the call. End the user's own
+      // leg immediately rather than leave them waiting on a call that can
+      // never be bridged.
+      await twilioPost(`/Calls/${userCallResult.sid}.json`, { Status: "completed" }, env).catch(() => {});
+      return failedResponse(provider, action, targetError);
+    }
   } catch (error) {
     return failedResponse(provider, action, error);
   }
