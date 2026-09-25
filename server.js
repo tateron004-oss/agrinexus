@@ -43682,6 +43682,26 @@ async function api(req, res, url) {
     return send(res, 200, integrationStatus(db));
   }
 
+  // Found live (final /api/nexus/tools/* sweep): this whole prefix backs
+  // real provider actions (saved field-visit plans/addresses, saved
+  // provider contacts/notes, saved learning resources, drone mission
+  // requests with a real farm location, marketplace listings, workflow
+  // plans, real Zoom meeting creation, real Google Maps Directions calls,
+  // and -- through ten separate sibling routes -- the exact same
+  // db.profile.nexusReminders/offlineQueue arrays the direct
+  // /api/nexus/tools/reminders*/offline/* routes are gated for elsewhere)
+  // with no auth check at all on most of it; only a handful of individual
+  // routes (medicalGetRoutes/medicalPostRoutes, the sms/whatsapp/call
+  // senders) had been fixed one at a time. A single caller-supplied "*"
+  // could read/write real content across all of this while completely
+  // anonymous. Gate the whole prefix at once instead of chasing each
+  // route -- only "/status" (pure capability descriptors, no real content,
+  // matching the exemption medicalGetRoutes' own per-route check already
+  // established) stays reachable without signing in.
+  if (url.pathname.startsWith("/api/nexus/tools/") && !user && !url.pathname.endsWith("/status")) {
+    return send(res, 401, { error: "Sign in required" });
+  }
+
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
   }
