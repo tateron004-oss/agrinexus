@@ -5830,7 +5830,7 @@ function suggestedRepliesForResult(result = {}, behavior = {}) {
 }
 
 function humanizeAgentResult(db, user, result = {}, command = "") {
-  if (command) updateConversationUserModel(db.profile, command);
+  if (command) updateConversationUserModel(db.profile, command, user);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
   const suppressNudge = Boolean(result.metadata?.suppressBehaviorNudge);
@@ -6098,7 +6098,7 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
   const smart = smartNextActions(db, user, providers).items.slice(0, 4);
   const predictive = backendPredictiveAdvisorModel(db, user, command || "what needs attention");
   const { country, route } = activeContext(db);
-  const name = db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
   const reminders = (db.profile.assistantReminders || [])
     .filter(item => item.status !== "canceled")
     .sort((a, b) => Date.parse(a.scheduledAt || a.createdAt || 0) - Date.parse(b.scheduledAt || b.createdAt || 0))
@@ -11164,6 +11164,12 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
 }
 
 function ensureAiProfile(profile) {
+  // Per-account display names captured from spoken/typed greetings ("this is Ron",
+  // "my name is X"). Unlike the rest of agentMemory (genuinely shared across the
+  // single demo db.profile object by design), a name someone states about
+  // themselves must never leak into another account's personalization -- keyed
+  // by the authenticated user's real account id.
+  profile.userDisplayNames = profile.userDisplayNames || {};
   profile.aiRuns = profile.aiRuns || [];
   profile.mapInsights = profile.mapInsights || [];
   profile.farmerLocations = profile.farmerLocations || [];
@@ -16752,7 +16758,7 @@ function commandRecord(db, user, command, result) {
     createdAt: new Date().toISOString()
   };
   memory.rememberedContexts = [remembered, ...(memory.rememberedContexts || [])].slice(0, 12);
-  learnFromAgentCommand(db, command, result);
+  learnFromAgentCommand(db, user, command, result);
   if (result.intent === "conversation.open_reasoning" && Number(memory.conversationQuality.openEndedAnswers || 0) === 0) {
     memory.conversationQuality.openEndedAnswers = 1;
   }
@@ -22862,13 +22868,20 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
   };
 }
 
-function updateConversationUserModel(profile, command) {
+function updateConversationUserModel(profile, command, user) {
   ensureAiProfile(profile);
   const text = String(command || "").trim();
   const lower = text.toLowerCase();
   const model = profile.agentMemory.userModel || {};
   const nameMatch = text.match(/\b(?:my name is|i am|i'm|this is)\s+([A-Z][a-zA-Z'-]{1,30})\b/);
-  if (nameMatch) model.name = nameMatch[1];
+  // A spoken/typed name belongs to the account that said it, not to the shared
+  // global model -- store it per-account instead of on model.name (see
+  // db.profile.userDisplayNames, the per-user store used by every greeting/
+  // personalization read site).
+  if (nameMatch && user?.id) {
+    profile.userDisplayNames = profile.userDisplayNames || {};
+    profile.userDisplayNames[user.id] = nameMatch[1];
+  }
   if (/\bfarmer|crop|field|buyer|sell|farm\b/.test(lower)) model.currentPersona = "farmer-or-trade-operator";
   if (/\b(government|ministry|minister|county|district|public sector|policy|procurement|official|regulator)\b/.test(lower)) model.currentAudience = "government";
   if (/\b(ngo|nonprofit|non-profit|field partner|implementing partner|donor|foundation|aid|relief|community organization|cbo)\b/.test(lower)) model.currentAudience = "ngo";
@@ -22898,7 +22911,7 @@ function updateConversationUserModel(profile, command) {
   };
   model.lastSeenAt = new Date().toISOString();
   profile.agentMemory.userModel = model;
-  if (nameMatch) rememberAgentMemory(profile, `User name is ${model.name}.`, { source: "conversation-user-model", category: "fact", module: "Profile", confidence: 0.94 });
+  if (nameMatch) rememberAgentMemory(profile, `User name is ${nameMatch[1]}.`, { source: "conversation-user-model", category: "fact", module: "Profile", confidence: 0.94 });
   if (model.preferredInteraction) rememberAgentMemory(profile, `User prefers ${model.preferredInteraction} interaction.`, { source: "conversation-user-model", category: "preference", module: "Agent AI", confidence: 0.86 });
   if (model.communicationStyle) rememberAgentMemory(profile, `User needs ${model.communicationStyle} communication.`, { source: "conversation-user-model", category: "preference", module: "Agent AI", confidence: 0.86 });
   if (model.accessibilityMode && model.accessibilityMode !== "standard") rememberAgentMemory(profile, `User needs ${model.accessibilityMode}.`, { source: "conversation-user-model", category: "preference", module: "Healthcare", confidence: 0.9 });
@@ -23942,7 +23955,7 @@ function nexusWorkforceDifferentiatorAnswer() {
 
 function localGeneralConversationAnswer(db, user, command = "", options = {}) {
   const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
-  const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
   const detectedLanguage = detectGeneralConversationLanguage(command);
   const requestedLanguage = normalizeConversationLanguage(options.targetLanguage || user?.language || "en");
   const language = detectedLanguage || requestedLanguage || "en";
@@ -24153,7 +24166,7 @@ function normalizeConversationCoreDecision(decision = {}, fallback = {}) {
 function localNexusConversationCoreDecision(db, user, command = "", options = {}) {
   const text = stripNexusWakeWords(command);
   const lower = text.toLowerCase().replace(/\s+/g, " ").trim();
-  const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
   const decision = (payload) => normalizeConversationCoreDecision({
     provider: "nexus-conversation-core-local",
     reason: "Local Nexus Conversation Core recognized a high-confidence platform intent.",
@@ -24168,8 +24181,9 @@ function localNexusConversationCoreDecision(db, user, command = "", options = {}
   if (/^(hello|hi|hey|good morning|good afternoon|good evening|goodmorning|goodafternoon|goodevening)\b/.test(lower) && !/\b(doctor|medicine|clinic|crop|work|course|map|sell|route)\b/.test(lower)) {
     const spokenName = extractConversationalName(text);
     if (spokenName) {
-      db.profile.agentMemory.userName = spokenName;
-      db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), name: spokenName, preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
+      db.profile.userDisplayNames = db.profile.userDisplayNames || {};
+      if (user?.id) db.profile.userDisplayNames[user.id] = spokenName;
+      db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
       rememberAgentMemory(db.profile, `User name is ${spokenName}.`, { source: "conversation-core", category: "fact", confidence: 0.96 });
     }
     const greetingName = spokenName || name;
@@ -24592,9 +24606,9 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
   };
 }
 
-function learnFromAgentCommand(db, command, result) {
+function learnFromAgentCommand(db, user, command, result) {
   ensureAiProfile(db.profile);
-  updateConversationUserModel(db.profile, command);
+  updateConversationUserModel(db.profile, command, user);
   db.profile.agentMemory.conversationQuality.turns = Number(db.profile.agentMemory.conversationQuality.turns || 0) + 1;
   const lower = String(command || "").toLowerCase();
   if (lower.startsWith("remember ") || lower.includes("remember that")) {
@@ -25921,7 +25935,7 @@ function conversationFollowUpResponse(db, user, text, lower) {
 function socialConversationResponse(db, user, text, lower) {
   ensureAiProfile(db.profile);
   if (/^(hi|hello|hey|good morning|good afternoon|good evening|are you there|can you hear me)\b/.test(lower)) {
-    const name = db.profile.agentMemory.userModel?.name || user.name?.split(/\s+/)[0] || "there";
+    const name = db.profile.userDisplayNames?.[user?.id] || user.name?.split(/\s+/)[0] || "there";
     db.profile.agentMemory.lastStatus = "conversation-ready";
     db.profile.agentMemory.lastSummary = `Hello ${name}. I am listening and ready to guide the next step.`;
     db.profile.agentMemory.updatedAt = new Date().toISOString();
@@ -31089,8 +31103,11 @@ async function moduleGreetingResponse(db, user, text, lower) {
   const extractedName = extractConversationalName(text);
   const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help|track|route|gps|location)\b/.test(lower);
   if (hasActionRequest && !/\b(my name is|call me)\b/.test(lower)) return null;
-  const name = extractedName || db.profile.agentMemory.userName || user.name?.split(/\s+/)[0] || "there";
-  db.profile.agentMemory.userName = name;
+  const name = extractedName || db.profile.userDisplayNames?.[user?.id] || user.name?.split(/\s+/)[0] || "there";
+  if (extractedName && user?.id) {
+    db.profile.userDisplayNames = db.profile.userDisplayNames || {};
+    db.profile.userDisplayNames[user.id] = extractedName;
+  }
   db.profile.agentMemory.activeModule = "AgriTrade";
   db.profile.agentMemory.lastStatus = "agritrade-greeting";
   db.profile.agentMemory.lastSummary = `AgriTrade greeted ${name} and is ready for buyer, crop, order, wallet, drone, and logistics help.`;
@@ -31216,7 +31233,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const conversational = options.conversational === true;
   if (!text) {
-    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.greeting",
       response: `Yes ${name}, how can I assist you?`,
@@ -31307,8 +31324,9 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (spokenName && directNameIntro) {
-    db.profile.agentMemory.userName = spokenName;
-    db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), name: spokenName, preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
+    db.profile.userDisplayNames = db.profile.userDisplayNames || {};
+    if (user?.id) db.profile.userDisplayNames[user.id] = spokenName;
+    db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
     rememberAgentMemory(db.profile, `User name is ${spokenName}.`, { source: "voice-greeting", category: "fact", module: "Profile", confidence: 0.96 });
     return {
       intent: "conversation.greeting",
@@ -31550,7 +31568,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
-    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
@@ -31665,7 +31683,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     }
   }
   if (conversational && /^(good\s*morning|good\s*afternoon|good\s*evening|hello|hi|hey)\b(?:\s+(nexus|agrinexus|agri\s+nexus))?$/i.test(lower)) {
-    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.greeting",
       response: `Good morning ${name}. How can I assist you?`,
@@ -31674,7 +31692,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
-    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
@@ -31707,7 +31725,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home|main menu|main menu home|menu home)$/i.test(lower)
     || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
     || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower))) {
-    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.home",
       response: `Home is open, ${name}. What do you need next?`,
@@ -33826,11 +33844,15 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     memoryScope: db.profile.agentMemory?.memoryScope || "user-controlled",
     accessibilityPreferences: db.profile.agentMemory?.accessibilityPreferences || {},
     // The name the person just said wins ("Hello Nexus, this is Ron"); an account called "Standard User" is not a name.
-    userName: spokenNameFromGreeting(command) || db.profile.agentMemory?.userName || personalFirstName(user)
+    // Falls back to this account's OWN previously-captured display name (never another account's), then the account name.
+    userName: spokenNameFromGreeting(command) || db.profile.userDisplayNames?.[user?.id] || personalFirstName(user)
   });
   {
     const spokenGreetingName = spokenNameFromGreeting(command);
-    if (spokenGreetingName) { db.profile.agentMemory = db.profile.agentMemory || {}; db.profile.agentMemory.userName = spokenGreetingName; }
+    if (spokenGreetingName && user?.id) {
+      db.profile.userDisplayNames = db.profile.userDisplayNames || {};
+      db.profile.userDisplayNames[user.id] = spokenGreetingName;
+    }
   }
   db.profile.agentMemory = db.profile.agentMemory || {};
   db.profile.agentMemory.lastConversationalModeOrchestrator = {
