@@ -44915,6 +44915,14 @@ async function api(req, res, url) {
   // Real ownership check, not just an unguessable id -- mirrors serveExport's
   // own comment on this exact class of bug: "unguessable is not authorized."
   if (url.pathname === "/api/nexus/upload/file" && req.method === "GET") {
+    // Found live (security audit): only the upload POST route checked this
+    // flag -- if an operator disables NEXUS_FILE_UPLOAD_ENABLED after files
+    // were already uploaded (or toggles it at runtime), previously-uploaded
+    // files stayed fully downloadable by their owners. "Off" must mean off
+    // for existing data too, not just for new uploads.
+    if (!nexusFlagEnabled(process.env, "NEXUS_FILE_UPLOAD_ENABLED")) {
+      return send(res, 403, { ok: false, error: "File uploads are not enabled on this server yet.", noSecretValues: true });
+    }
     if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
     const fileId = String(url.searchParams.get("fileId") || "");
     const dir = nexusUploads.uploadDir(process.env);

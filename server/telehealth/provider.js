@@ -309,7 +309,19 @@ async function createVideoRoom(db, body = {}, user = null, env = process.env, op
   if (body.confirmed !== true || body.consentToShare !== true) {
     return { ok: false, status: "blocked-consent-and-confirmation-required", roomCreated: false, encounterId, message: "Video room creation requires explicit confirmation and sharing consent." };
   }
-  if (Array.isArray(encounter.redFlags) && encounter.redFlags.length) {
+  // Found live (telehealth safety audit): this only ever inspected
+  // encounter.redFlags.length, never the encounter's own already-computed
+  // status/urgency -- createEncounter marks status "emergency-guidance"
+  // whenever EITHER redFlags is non-empty OR intake.urgency === "emergency"
+  // (see the "emergency" derivation above), so an encounter created with
+  // urgency: "emergency" but an empty redFlags array correctly became
+  // "emergency-guidance" yet still passed this check, creating a real video
+  // room. Reachable directly via POST /api/nexus/telehealth/create-video-room,
+  // which passes the request body straight through with no re-derivation of
+  // urgency from redFlags. Checking status (which already captures both
+  // conditions at creation time) closes this regardless of which condition
+  // triggered it.
+  if ((Array.isArray(encounter.redFlags) && encounter.redFlags.length) || encounter.status === "emergency-guidance") {
     return { ok: false, status: "blocked-emergency-red-flags", roomCreated: false, encounterId, message: "Red flag symptoms should use local emergency or urgent care guidance, not routine video visit creation." };
   }
   const result = await createVideoForEncounter(encounter, env, options);
