@@ -5492,8 +5492,16 @@ function canUse(user, area) {
   return Boolean(user && permissionsForRole(user.role)[area]);
 }
 
+// Found live (uploads/telehealth/permissions follow-up audit): a guest
+// session is explicitly created with restrictions: ["health-record-write", ...]
+// (see /api/auth/guest-session), and that restriction IS correctly enforced
+// on the sibling "local demo" medicalPostRoutes gate -- but this function,
+// used by every REAL telehealth/pharmacy/mobile-clinic/healthcare-workflow
+// route, checked only user.role, never user.restrictions. A guest session's
+// role is "Standard User", so it passed here despite its own restrictions
+// array explicitly forbidding exactly this.
 function canWriteHealth(user) {
-  return Boolean(user && (user.role === "Admin" || user.role === "Standard User"));
+  return Boolean(user && (user.role === "Admin" || user.role === "Standard User") && !user.restrictions?.includes("health-record-write"));
 }
 
 function assistantBehaviorModel(db, user) {
@@ -19835,7 +19843,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // file (per account) is what makes "upload, then ask about it" actually
     // work as a conversation instead of requiring the user to read out a
     // UUID.
-    const fileId = args.fileId || args.documentId || args.attachmentId || db.profile?.lastUploadedFileId || "";
+    const fileId = args.fileId || args.documentId || args.attachmentId || db.profile?.lastUploadedFileByUser?.[user?.id] || "";
     const documentResult = await nexusRealProviders.documents.analyze({
       fileId,
       text: args.text || args.content,
@@ -44901,7 +44909,17 @@ async function api(req, res, url) {
     try {
       const meta = await nexusUploads.parseAndStoreUpload(req, { env: process.env, userId: user.id });
       db.profile = db.profile || {};
-      db.profile.lastUploadedFileId = meta.fileId;
+      // Found live (uploads/telehealth/permissions follow-up audit): this
+      // was a single global field, not scoped by user, despite the reader
+      // below (nexus_file_document_analysis) explicitly documenting itself
+      // as "per account." Two accounts uploading concurrently on the same
+      // server process would silently point each other at the wrong file --
+      // canAccessUpload's ownership check stops the WRONG file's content
+      // from leaking, but User A's own genuine "what's wrong with this
+      // photo?" follow-up would fail with "no access" instead of analyzing
+      // A's own upload, if User B uploaded in between.
+      db.profile.lastUploadedFileByUser = db.profile.lastUploadedFileByUser || {};
+      db.profile.lastUploadedFileByUser[user.id] = meta.fileId;
       logIntegration(db, {
         providerId: "nexus-uploads", module: "AI", action: "upload.received",
         detail: `A real file was uploaded and stored (${meta.mimeType}, ${meta.sizeBytes} bytes).`,
@@ -46925,10 +46943,37 @@ async function api(req, res, url) {
   if (req.method === "POST" && medicalPostRoutes[url.pathname]) {
     if (!user) return send(res, 401, { error: "Sign in required" });
     const [providerKey, methodName, shouldPersist] = medicalPostRoutes[url.pathname];
-    if (shouldPersist && user.restrictions?.includes("health-record-write")) {
+    // Found live (uploads/telehealth/permissions follow-up audit):
+    // shouldPersist ("does this write a local db.profile record") was also
+    // being used to decide whether the health-record-write restriction
+    // applies -- but telehealth/session/create's videoProvider:"daily" path
+    // creates a REAL external Daily.co video room while writing no local
+    // record at all, so a restricted account (e.g. a guest session) bypassed
+    // the restriction entirely on this one route. The restriction is about
+    // whether the action does something real, not whether it persists.
+    const restrictionApplies = shouldPersist || url.pathname === "/api/nexus/tools/telehealth/session/create";
+    if (restrictionApplies && user.restrictions?.includes("health-record-write")) {
       return send(res, 403, { error: "This account type cannot write health records." });
     }
-    const result = await nexusRealProviders[providerKey][methodName](await readBody(req), db);
+    const medicalPostBody = await readBody(req);
+    // Found live (uploads/telehealth/permissions follow-up audit):
+    // telehealth/session/create's videoProvider:"daily"/"zoom" branches
+    // create a real external video room (dailyProvider.createRoom /
+    // zoomProvider.createMeeting), unlike every other route in this table,
+    // but had no idempotency protection at all -- a retry/double-submit
+    // created a second real, billable room. Every other real-external-effect
+    // action in this file (SMS/calendar/email/Zoom-meeting) already goes
+    // through withActionLifecycle; this one route now does too.
+    const result = url.pathname === "/api/nexus/tools/telehealth/session/create"
+      ? await withActionLifecycle(db, {
+          provider: "telehealth-bridge", action: "telehealth.session.create", body: medicalPostBody, actorId: user.id || user.email || "",
+          execute: () => nexusRealProviders[providerKey][methodName](medicalPostBody, db),
+          verify: async sessionResult => {
+            const session = sessionResult?.body?.data?.session || {};
+            return { verified: Boolean(session.liveRoomCreated), note: session.liveRoomCreated ? "Provider returned a real, live video room." : "No real video room was confirmed." };
+          }
+        })
+      : await nexusRealProviders[providerKey][methodName](medicalPostBody, db);
     if (shouldPersist && result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
   }

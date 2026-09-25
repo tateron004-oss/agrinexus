@@ -20,6 +20,18 @@ function cleanList(value, maxItems = 12, maxLen = 160) {
   return source.map(item => cleanText(item, maxLen)).filter(Boolean).slice(0, maxItems);
 }
 
+// Mirrors server/uploads.js's canAccessUpload -- an Admin (the sanctioned
+// provider-review path already exists separately via enqueueReview/the
+// pilot review queue) may access any encounter; anyone else must be the
+// account that actually created it. Encounters created before this fix have
+// no userId (null): fail closed rather than guess an owner from a display
+// name that was never meant to authorize anything.
+function ownsEncounter(encounter, user) {
+  if (!user) return false;
+  if (user.role === "Admin") return true;
+  return Boolean(encounter.userId) && String(encounter.userId) === String(user.id || "");
+}
+
 function selectedProvider(env = process.env) {
   const selected = cleanText(env.NEXUS_TELEHEALTH_PROVIDER || "local", 40).toLowerCase();
   if (["external_url", "daily", "zoom", "local"].includes(selected)) return selected;
@@ -237,6 +249,12 @@ async function createEncounter(db, body = {}, user = null, env = process.env, op
   const encounter = {
     id,
     createdAt: new Date().toISOString(),
+    // Found live (uploads/telehealth/permissions follow-up audit): every
+    // other function below resolves an encounter by encounterId alone with
+    // no check that it belongs to the caller -- encounterId is only 32 bits
+    // of randomness plus a guessable timestamp, not a real authorization
+    // boundary. userId is the real ownership field checked below.
+    userId: user?.id || null,
     createdBy: cleanText(user?.name || "Standard User", 120),
     status: emergency ? "emergency-guidance" : "queued-for-provider-review",
     conditionArea: intake.conditionArea,
@@ -306,6 +324,7 @@ async function createVideoRoom(db, body = {}, user = null, env = process.env, op
   const encounterId = cleanText(body.encounterId || "", 120);
   const encounter = db.nexusTelehealthEncounters.find(item => item.id === encounterId);
   if (!encounter) return { ok: false, status: "encounter_required", roomCreated: false, message: "Prepare an encounter packet before creating a video room." };
+  if (!ownsEncounter(encounter, user)) return { ok: false, status: "forbidden", roomCreated: false, message: "This encounter does not belong to your account." };
   if (body.confirmed !== true || body.consentToShare !== true) {
     return { ok: false, status: "blocked-consent-and-confirmation-required", roomCreated: false, encounterId, message: "Video room creation requires explicit confirmation and sharing consent." };
   }
@@ -343,6 +362,7 @@ function prepareNotification(db, body = {}, user = null, env = process.env) {
   const encounterId = cleanText(body.encounterId || "", 120);
   const encounter = db.nexusTelehealthEncounters.find(item => item.id === encounterId);
   if (!encounter) return { ok: false, status: "encounter_required", message: "Prepare an encounter packet before notification." };
+  if (!ownsEncounter(encounter, user)) return { ok: false, status: "forbidden", message: "This encounter does not belong to your account." };
   if (body.confirmed !== true || body.consentToShare !== true) {
     return { ok: false, status: "blocked-consent-and-confirmation-required", encounterId, message: "Notification requires explicit confirmation and sharing consent." };
   }
@@ -371,6 +391,7 @@ function createFollowUp(db, body = {}, user = null) {
   const encounterId = cleanText(body.encounterId || "", 120);
   const encounter = db.nexusTelehealthEncounters.find(item => item.id === encounterId);
   if (!encounter) return { ok: false, status: "encounter_required", message: "Prepare an encounter packet before creating follow-up." };
+  if (!ownsEncounter(encounter, user)) return { ok: false, status: "forbidden", message: "This encounter does not belong to your account." };
   if (body.confirmed !== true) return { ok: false, status: "blocked-confirmation-required", message: "Follow-up creation requires explicit confirmation." };
   const followUp = {
     id: `telehealth-follow-up-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
@@ -398,5 +419,6 @@ module.exports = {
   prepareNotification,
   createFollowUp,
   normalizeBody,
-  providerStatus
+  providerStatus,
+  ownsEncounter
 };
