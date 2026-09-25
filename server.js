@@ -10343,7 +10343,16 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     providerDelivery: trackingResult.delivery,
     createdAt: new Date().toISOString()
   };
-  order.stage = type === "delivery-confirm" ? "Delivered" : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  // Found live (drone/logistics follow-up audit): this always overwrote
+  // order.stage unconditionally, with no check that it was already at a
+  // terminal state -- a later call with, say, type:"shipping-booking" on an
+  // already-delivered order silently regressed it from "Delivered" back to
+  // "Booked for pickup". "Delivered" is terminal for this order once
+  // reached, the same way /api/trade/advance's own stage array is now
+  // guarded against advancing (and therefore its derived stage moving)
+  // past it.
+  const nextStage = type === "delivery-confirm" ? "Delivered" : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  order.stage = order.stage === "Delivered" ? order.stage : nextStage;
   order.checkpoint = pickupLocation;
   order.timeline.unshift({ label: record.status, checkpoint: pickupLocation, createdAt: record.createdAt });
   db.profile.activeCheckpoint = pickupLocation;
@@ -10374,6 +10383,15 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     // never reached.
     if (order.settled) {
       throw Object.assign(new Error("This order has already been settled -- payment was not credited again."), { httpStatus: 409 });
+    }
+    // Found live (drone/logistics follow-up audit): record.proof for this
+    // type explicitly says "payment release waits for delivery proof and
+    // buyer confirmation," but nothing enforced that -- a call with
+    // type:"settlement" credited the seller's wallet in full even on a
+    // brand-new order that had never been advanced past its initial stage,
+    // confirmed live against a real spawned server.
+    if (order.stage !== "Delivered") {
+      throw Object.assign(new Error(`This order has not been marked Delivered yet (currently "${order.stage}") -- confirm delivery before settling payment.`), { httpStatus: 409 });
     }
     const fee = createPlatformTransactionFee(db, {
       orderId: order.id,
@@ -52023,6 +52041,18 @@ async function api(req, res, url) {
       ? db.profile.orders.find(item => item.id === body.orderId)
       : db.profile.orders[db.profile.orders.length - 1];
     if (!order) return send(res, 409, { error: "Create an order first" });
+    // Found live (drone/logistics follow-up audit): order.stage and
+    // order.stageIndex are two independently-written fields for the same
+    // order -- createTradeLogisticsWorkflow's "delivery-confirm" sets
+    // order.stage="Delivered" directly without ever touching stageIndex.
+    // A later, completely ordinary call here then advanced the STALE
+    // stageIndex and derived a stage from it, visibly regressing the order
+    // from "Delivered" back to "In transit" -- reproduced live against a
+    // real spawned server. "Delivered" is terminal regardless of which
+    // code path reached it.
+    if (order.stage === "Delivered") {
+      return send(res, 409, { error: `${order.orderNumber} has already been delivered and cannot be advanced further.` });
+    }
     const route = db.routes.find(item => item.id === order.routeId) || activeRoute();
     const stages = ["Order created", "Packed", "In transit", "Quality check", "Delivered"];
     order.stageIndex = Math.min(stages.length - 1, (order.stageIndex || 0) + 1);

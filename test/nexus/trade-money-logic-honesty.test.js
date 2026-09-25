@@ -144,6 +144,9 @@ test("settling an order pays the seller from the real order total, not a freight
   const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
   assert.equal(order.total, product.price * 10, "sanity check on the real order total");
 
+  const confirmed = await post("/api/trade/logistics", { type: "delivery-confirm", orderId: order.id });
+  assert.equal(confirmed.status, 200, JSON.stringify(confirmed.body));
+
   const settleResult = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
   assert.equal(settleResult.status, 200, JSON.stringify(settleResult.body));
   const { record } = settleResult.body.tradeLogisticsResult;
@@ -156,6 +159,7 @@ test("settling the same order twice does not double-credit the wallet", async ()
   const product = (await productsRes.json()).products?.[0];
   const orderResult = await post("/api/trade/order", { productId: product.id, quantity: 3 });
   const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
+  await post("/api/trade/logistics", { type: "delivery-confirm", orderId: order.id });
 
   const first = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
   assert.equal(first.status, 200);
@@ -164,4 +168,47 @@ test("settling the same order twice does not double-credit the wallet", async ()
   const second = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
   assert.equal(second.status, 409, "a repeat settlement of the same order must be refused");
   assert.match(second.body.error, /already been settled/i);
+});
+
+// Found live (drone/logistics follow-up audit): record.proof for the
+// settlement type explicitly claims "payment release waits for delivery
+// proof and buyer confirmation," but nothing enforced that -- a real
+// spawned-server call with type:"settlement" credited the seller's wallet
+// in full on a brand-new order that had never been advanced past its
+// initial stage.
+test("settling an order that has not been marked Delivered is refused, not silently paid out", async () => {
+  const productsRes = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const product = (await productsRes.json()).products?.[0];
+  const orderResult = await post("/api/trade/order", { productId: product.id, quantity: 2 });
+  const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
+  assert.notEqual(order.stage, "Delivered", "sanity check: a freshly created order must not already be Delivered");
+
+  const settleResult = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
+  assert.equal(settleResult.status, 409);
+  assert.match(settleResult.body.error, /not been marked Delivered/i);
+});
+
+// Found live: order.stage and order.stageIndex are two independently
+// -written fields for the same order -- createTradeLogisticsWorkflow's
+// "delivery-confirm" sets order.stage="Delivered" directly without
+// touching stageIndex, so a later, completely ordinary call to
+// /api/trade/advance advanced the stale stageIndex and derived a stage
+// from it, visibly regressing the order from "Delivered" back to
+// "In transit". Reproduced live before the fix; both mutation sites are
+// now guarded so "Delivered" is terminal regardless of which code path
+// reached it.
+test("an order marked Delivered via the logistics workflow cannot be regressed by /api/trade/advance or a later logistics call", async () => {
+  const productsRes = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const product = (await productsRes.json()).products?.[0];
+  const orderResult = await post("/api/trade/order", { productId: product.id, quantity: 4 });
+  const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
+  await post("/api/trade/logistics", { type: "delivery-confirm", orderId: order.id });
+
+  const advanceResult = await post("/api/trade/advance", { orderId: order.id });
+  assert.equal(advanceResult.status, 409, "advancing an already-delivered order must be refused, not regress its stage");
+  assert.match(advanceResult.body.error, /already been delivered/i);
+
+  const regressAttempt = await post("/api/trade/logistics", { type: "shipping-booking", orderId: order.id });
+  assert.equal(regressAttempt.status, 200);
+  assert.equal(regressAttempt.body.tradeLogisticsResult.order.stage, "Delivered", "a later logistics call of a different type must not overwrite a terminal Delivered stage");
 });
