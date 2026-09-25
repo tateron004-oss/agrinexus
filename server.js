@@ -18150,6 +18150,12 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
     "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
     "When the user asks to set, create, or list a reminder, or to queue or sync something for offline use, you must call nexus_automation_reminder.",
+    // Found live: this realtime instruction set (used by both the browser
+    // voice session and the Twilio phone bridge) never mentioned nexus_lists
+    // at all -- only the typed/native prompt did -- so a spoken "create a
+    // checklist called X" had nothing steering the model toward the real,
+    // persisted lists tool over nexus_document_export/nexus_automation_reminder.
+    "When the user asks to create, save, read, or update a checklist or to-do list (e.g. 'create a checklist called X with items A, B, C'), you must call nexus_lists. This is a real, persisted list, not a reminder or a document — never route a checklist request to nexus_automation_reminder or nexus_document_export.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message. If the user also asks Kyro to listen, take notes, or remember the call (\"connect me to X and listen\", \"call X and take notes\"), pass mode: \"connect_and_listen\" -- Kyro will transcribe that call (with a real spoken consent disclosure to the other party, which is legally required and never skipped) so a follow-up request can use what was actually discussed. If recentCallContext is present in this turn and the user's request plainly follows up on that recent call (asking to call/message someone else about it, or referencing what was discussed), use those real details instead of asking the user to repeat them.",
     "When the user asks to plan a field visit or prepare/schedule a session, you must call nexus_workflow.",
@@ -20884,7 +20890,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
     const categoryMatch = /\b(seeds?|fertilizer|tools?|equipment|produce|transport|logistics|training|drone)\b/i.exec(command)?.[1] || "";
     const catalogResult = nexusRealProviders.marketplaceBridge.search({ query: categoryMatch }, db, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, catalogResult);
+    // Found live: catalogResult.body.data.cards genuinely carries real
+    // listing titles/prices/locations, but this call site relied on
+    // nexusOpenAiNativeProviderToolResult's generic fallback (body.message),
+    // which is only ever the count-only summary above -- unlike its sibling
+    // tool handlers (provider search, mobile clinic, patient support), which
+    // all format real names into the response text themselves. A spoken/
+    // typed "what's on AgriTrade" never named a single real listing.
+    const marketplaceCards = catalogResult?.body?.data?.cards || [];
+    const marketplaceResponseOverride = marketplaceCards.length
+      ? `${catalogResult.body.message} ${marketplaceCards.slice(0, 5).map(c => `${c.title}${c.priceText ? ` (${c.priceText})` : ""}${c.location ? ` in ${c.location}` : ""}`).join("; ")}.`
+      : "";
+    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "marketplace-trade" }, catalogResult, marketplaceResponseOverride ? { responseOverride: marketplaceResponseOverride } : {});
   }
   if (toolName === "nexus_workflow") {
     // mapsFieldVisitBridgeProvider already has real, fully-implemented
