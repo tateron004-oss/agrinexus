@@ -45,6 +45,15 @@
     recentMissions: []
   };
 
+  // Mirrors nexus/brain/planner.js's own SEND_OPENER/SEND_PHONE/SEND_EMAIL/
+  // CALL_OPENER patterns exactly, so client and server agree on what counts
+  // as a genuine send/call request with a real recipient (see the bypass
+  // this feeds in isUnifiedBrainCommand below).
+  const SEND_OPENER = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:(text|sms|whatsapp|whats app|e-?mail)\b|send\s+(?:an?\s+|the\s+)?(text(?:\s+message)?|sms|whatsapp(?:\s+message)?|e-?mail|message)\b)/i;
+  const CALL_OPENER = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:call|phone|ring|dial)\b/i;
+  const SEND_PHONE = /\+\d[\d\s().-]{6,18}\d/;
+  const SEND_EMAIL = /[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+/;
+
   let lastResult = null;
 
   function now() {
@@ -96,6 +105,18 @@
     // Mirrors nexus/business/voice-dispatch.js's own wantsAddLead pattern
     // exactly, so client and server agree on what counts as this command.
     if (/\b(?:add|create|new|log|track)\b/.test(text) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/.test(text)) return true;
+    // Found live: a plain "text/email <real recipient> saying <words>" or
+    // "call <real number> and say <words>" command only ever matches ONE
+    // domain here ("communication") -- the same >=2-domain rejection shape
+    // as the real-estate bug above -- so it fell through past this runtime
+    // entirely into the client-side draft-preparation runtimes
+    // (NexusMessagePreparationRuntime/NexusFullCommunicationRuntime, which
+    // only ever draft a message locally and never send anything) instead of
+    // reaching this runtime's real, governed communications.send executor
+    // (nexus/communications/executor.js, which calls the real
+    // twilioProvider/emailProvider and has its own confirmation gate).
+    if (SEND_OPENER.test(text) && (SEND_EMAIL.test(text) || SEND_PHONE.test(text))) return true;
+    if (CALL_OPENER.test(text) && SEND_PHONE.test(text)) return true;
     const domains = classifyDomains(text).filter(domain => !["general_help", "provider_admin"].includes(domain));
     return domains.length >= 2;
   }
