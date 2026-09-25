@@ -3,7 +3,7 @@
 const { clean, titleCase, round, plural } = require("./parse.js");
 const { addDays } = require("../personal/dates.js");
 const { normalizeRecipient } = require("../communications/send-request.js");
-const { recordMoney, NOT_FARM } = require("./money.js");
+const { recordMoney, NOT_FARM, sum } = require("./money.js");
 const { addStock, findItems } = require("./inventory.js");
 const { findParty } = require("./parties.js");
 const { findMember } = require("./coop.js");
@@ -118,10 +118,18 @@ async function handle(ctx) {
       const name = found.party.data.name; const d = found.party.data;
       const notes = (await list("party_note")).filter(note => note.data.party === name).slice(0, 3); const orders = (await list("order")).filter(order => order.data.party === name);
       const money = (await list("money")).filter(record => record.data.party === name); const follow = (await list("followup")).filter(item => item.data.party === name && item.data.status === "open");
-      const earned = money.filter(record => record.data.type === "income").reduce((sum, record) => sum + record.data.amount, 0); const spent = money.filter(record => record.data.type === "expense").reduce((sum, record) => sum + record.data.amount, 0);
+      // Found live (business-ledger audit): this summed raw amounts across
+      // every currency the party was ever paid in or paid, then labeled
+      // the fabricated total with whichever record happened to be first in
+      // store order -- the same currency-combining bug already fixed in
+      // money.js's own report/receipt totals, just never applied here.
+      const earnedBuckets = sum(money, "income"); const spentBuckets = sum(money, "expense");
+      const showTotalsSw = totals => Object.entries(totals).map(([currency, amount]) => moneyShown(amount, currency)).join(" na ");
+      const earned = Object.values(earnedBuckets).reduce((total, amount) => total + amount, 0);
+      const spent = Object.values(spentBuckets).reduce((total, amount) => total + amount, 0);
       return SW.history({ head: `${name}${d.role ? ` (${ROLE_WORDS[d.role] || d.role})` : ""}${d.phone ? `, ${d.phone}` : ""}${d.products ? `, ${listSwahili(d.products)}` : ""}${d.area ? `, ${d.area}` : ""}.`,
         orders: orders.length ? SW.ordersLine({ n: orders.length, lines: orders.slice(0, 3).map(order => `${order.data.qty ? `${unitLabelSw(order.data.qty, order.data.unit)} ` : ""}${swahiliItem(order.data.item)} (${statusOf(order.data.status)})`).join("; ") }) : "",
-        business: earned || spent ? SW.businessLine({ earned: earned ? moneyShown(earned, money[0]?.data.currency) : "", spent: spent ? moneyShown(spent, money[0]?.data.currency) : "" }) : "",
+        business: earned || spent ? SW.businessLine({ earned: earned ? showTotalsSw(earnedBuckets) : "", spent: spent ? showTotalsSw(spentBuckets) : "" }) : "",
         follow: follow.length ? SW.followLine({ lines: follow.map(item => `${item.data.text || "kumtembelea"} (${dayShown(item.data.due, ctx.today)})`).join("; ") }) : "", notes: notes.length ? SW.notesLine({ lines: notes.map(note => note.data.text).join(" | ") }) : "" });
     }
   }
