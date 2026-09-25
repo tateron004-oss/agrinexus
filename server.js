@@ -2573,7 +2573,17 @@ function genesisVoiceGuestUser(session = {}) {
     role: "Standard User",
     language: session.language || "en",
     permissions: permissionsForRole("Standard User"),
-    authType: "genesis-voice-guest"
+    authType: "genesis-voice-guest",
+    // Found live (push/auth/call-screening follow-up audit): this is a
+    // SECOND, separate anonymous guest identity (issued with zero identity
+    // verification -- not even a typed name, unlike /api/auth/guest-session)
+    // that had no restrictions array at all, so every `user?.restrictions
+    // ?.includes(...)` gate this session already hardened for the NAMED
+    // guest (communications-send, health-record-write, etc.) was a silent
+    // no-op here -- an anonymous voice caller could trigger a real
+    // Twilio call/SMS or write a real health reading. Matches the named
+    // guest's own restrictions exactly.
+    restrictions: ["health-record-write", "communications-send", "external-transaction", "account-provider-link"]
   };
 }
 
@@ -47550,14 +47560,36 @@ async function api(req, res, url) {
     const token = String(body.token || "").trim();
     const newPassword = String(body.newPassword || "");
     if (!email || !token || !newPassword.trim()) return send(res, 400, { error: "Email, token, and newPassword are required" });
+    // Found live (push/auth/call-screening follow-up audit): neither path
+    // below touched the victim's live session or durable "remember me"
+    // cookie -- unlike /api/logout, which stamps authTokensRevokedAt and
+    // evicts the session. An attacker holding a stolen active session or
+    // durable token (the exact reason a real user would reset their
+    // password) stayed fully authenticated through and after the reset.
+    // revokeAllSessionsFor mirrors /api/logout's own revocation, but for
+    // every session the target user has (not just the caller's own), since
+    // a password-reset requester isn't necessarily logged in at all.
+    const revokeAllSessionsFor = async targetUser => {
+      if (!targetUser) return;
+      targetUser.authTokensRevokedAt = Date.now();
+      for (const [sid, entry] of sessions) {
+        if (entry.userId === targetUser.id) {
+          sessions.delete(sid);
+          await deleteSessionFromPostgres(sid);
+        }
+      }
+    };
     if (usingPostgresAuth()) {
       const consumed = await pgUsers.consumeResetToken(getPgPool(), email, token, newPassword).catch(() => false);
       if (!consumed) return send(res, 400, { error: "Invalid or expired reset code" });
       // Keep the blob shadow copy in sync too, so a later AUTH_STORE rollback to
       // "blob", or any code path that still reads the blob's password field,
-      // doesn't see the pre-reset value.
+      // doesn't see the pre-reset value. currentUser()'s revocation check and
+      // the session map's userId both key off this same shadow record's id
+      // regardless of AUTH_STORE mode, so revoking here covers both.
       const shadowUser = db.users.find(item => String(item.email || "").toLowerCase() === email);
       if (shadowUser) shadowUser.password = pgUsers.hashPassword(newPassword);
+      await revokeAllSessionsFor(shadowUser);
     } else {
       const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -47574,6 +47606,7 @@ async function api(req, res, url) {
       user.password = pgUsers.hashPassword(newPassword);
       delete user.resetTokenHash;
       delete user.resetTokenExpiresAt;
+      await revokeAllSessionsFor(user);
     }
     addActivity(db.profile, `Password reset completed for ${email}.`);
     await writeDb(db);
