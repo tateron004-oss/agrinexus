@@ -163,10 +163,19 @@ function extractTransactionArgs(command = "", args = {}) {
   // construction is now recognized as an income signal, separate from the
   // other, unambiguous expense words.
   const receivedPayment = /\b(?:paid me|pay me|got paid|was paid|is paying me|payment received|received payment)\b/i.test(text);
+  // Found live: "received" alone sat in the unambiguous-income word list, so
+  // any sentence with "received" was logged as income even when the money
+  // is flowing OUT -- "We received the electricity bill for $340" logged
+  // $340 of INCOME, swinging netIncome by $680 for a single transaction.
+  // "Received a bill/invoice" is the exact same "genuinely ambiguous, needs
+  // its own override" shape "paid" was already fixed for just below:
+  // recognized as an explicit expense signal, checked before the generic
+  // income-word list.
+  const receivedBillOrInvoice = /\breceived\b(?:\s+\w+){0,3}\s+\b(bill|invoice|statement|demand notice)\b/i.test(text);
   const explicitIncomeWord = /\b(income|revenue|donation|donated|sale|sold|earned|received|nimeuza|nimepokea|mapato|mauzo)\b/i.test(text);
   const explicitExpenseWord = /\b(expense|spent|spend|purchase|purchased|bought|cost|nimetumia|nimenunua|nimelipa|matumizi|gharama)\b/i.test(text);
   const ambiguousPaidAsExpense = !receivedPayment && /\bpaid\b/i.test(text);
-  const type = explicitExpenseWord || ambiguousPaidAsExpense ? "expense"
+  const type = explicitExpenseWord || ambiguousPaidAsExpense || receivedBillOrInvoice ? "expense"
     : receivedPayment || explicitIncomeWord ? "income" : "expense";
   // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
   const soldItem = text.match(/\b(?:sold|sell|nimeuza)\s+(.+?)\s+(?:for|at|kwa)\b/i);
