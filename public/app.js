@@ -31147,6 +31147,28 @@ function renderNexusOperationsMemoryWindow() {
   const record = result.record || null;
   const receipt = result.receipt || (ops.recentReceipts || [])[0] || null;
   const audit = result.audit || (ops.recentAudit || [])[0] || null;
+  // Found live: show_hiring_pipeline/show_applicant_timeline/
+  // show_shipment_timeline/show_learning_timeline/show_action_receipts/
+  // show_audit_log all compute real data server-side (result.pipeline,
+  // .timeline, .receipts, .auditLogs) that this renderer never read at all --
+  // only the single employer/party record above ever showed, as a raw JSON
+  // blob, alongside a generic "No operation receipt yet." placeholder.
+  const timelineEntries = result.pipeline || result.timeline || [];
+  const timelineSection = timelineEntries.length ? `
+      <section class="nexus-operations-timeline" data-nexus-operations-timeline="true">
+        <strong>${escapeHtml(translateText(result.pipeline ? "Hiring pipeline" : "Timeline"))}</strong>
+        <ul>${timelineEntries.map(item => `<li>${escapeHtml(translateText(item.title || item.type || "Event"))}${item.occurredAt ? ` — ${escapeHtml(String(item.occurredAt))}` : ""}</li>`).join("")}</ul>
+      </section>` : "";
+  const receiptListSection = Array.isArray(result.receipts) && result.receipts.length ? `
+      <section class="nexus-operations-receipt-list" data-nexus-operations-receipt-list="true">
+        <strong>${escapeHtml(translateText("Action receipts"))}</strong>
+        <ul>${result.receipts.map(item => `<li>${escapeHtml(translateText(`${item.action || "Action"} — ${item.status || ""}`))}${item.createdAt ? ` (${escapeHtml(String(item.createdAt))})` : ""}</li>`).join("")}</ul>
+      </section>` : "";
+  const auditLogListSection = Array.isArray(result.auditLogs) && result.auditLogs.length ? `
+      <section class="nexus-operations-audit-list" data-nexus-operations-audit-list="true">
+        <strong>${escapeHtml(translateText("Audit log"))}</strong>
+        <ul>${result.auditLogs.map(item => `<li>${escapeHtml(translateText(item.summary || item.action || "Audit entry"))}${item.timestamp ? ` — ${escapeHtml(String(item.timestamp))}` : ""}</li>`).join("")}</ul>
+      </section>` : "";
   return `
     <section class="nexus-operations-memory-window" data-nexus-operations-memory-window="true">
       <div class="nexus-operations-status-grid">
@@ -31194,6 +31216,9 @@ function renderNexusOperationsMemoryWindow() {
         <p>${escapeHtml(translateText(result.action ? `Action: ${result.action}` : "Choose an operation or type an operations command."))}</p>
         ${record ? `<pre>${escapeHtml(JSON.stringify(record, null, 2))}</pre>` : ""}
       </section>
+      ${timelineSection}
+      ${receiptListSection}
+      ${auditLogListSection}
       <section class="nexus-action-receipt" data-nexus-action-receipt="true" data-nexus-persistent-action-receipt="true">
         <strong>${escapeHtml(translateText("Nexus did / did not do"))}</strong>
         <div><b>${escapeHtml(translateText("Nexus did:"))}</b><ul>${(receipt?.did || ["No operation receipt yet."]).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul></div>
@@ -37761,7 +37786,19 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
     return true;
   }
   if (isNexusMediaMusicCommand(normalized) || /\b(play|open)\b.*\b(music|r&b|rnb|afrobeats?|african|amapiano|gospel|youtube|spotify|apple music)\b/i.test(normalized)) {
-    return openNexusWorkflow("media", { command: normalized, source: "typed-command" });
+    // Found live: this always opened the decorative "Music/Media" quick-action
+    // panel and never even tried the real, already-working Apple Music/YouTube
+    // playback pipeline (handleNexusUnifiedBrainRuntimeCommand, confirmed
+    // correct end-to-end by provider-neutral-music-playback.test.js) --
+    // window.NexusUnifiedBrainRuntime's own domain classifier never
+    // recognizes music as qualifying for that pipeline, but the pipeline
+    // itself has no such gate, so calling it directly here (bypassing that
+    // caller-side heuristic) is safe. Falls back to the decorative panel only
+    // if the real pipeline genuinely can't handle it.
+    void handleNexusUnifiedBrainRuntimeCommand(normalized, { source: "typed-command" }).then(handled => {
+      if (!handled) openNexusWorkflow("media", { command: normalized, source: "typed-command" });
+    });
+    return true;
   }
   const localHealthAccessResult = buildNexusHealthAccessPreparationResult(normalized);
   if (localHealthAccessResult) {
