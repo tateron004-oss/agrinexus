@@ -33526,9 +33526,51 @@ function renderNexusTrueCommandComposer(options = {}) {
       </button>
       <span id="nexusCommandTypedHint" class="sr-only" data-nexus-primary-typed-hint="true">${escapeHtml(translateText("Press Enter to add this workflow detail. Use Shift+Enter for a new line."))}</span>
     </form>
+    <div class="nexus-true-upload" data-nexus-file-upload-control="true">
+      <button type="button" class="nexus-upload-trigger" data-nexus-file-upload-trigger="true" onclick="document.querySelector('[data-nexus-file-upload-input]')?.click()" aria-label="${escapeHtml(translateText("Upload a document or photo for Nexus to read"))}" title="${escapeHtml(translateText("Upload a document or photo"))}">
+        ${escapeHtml(translateText("Upload"))}
+      </button>
+      <input type="file" data-nexus-file-upload-input="true" accept="application/pdf,image/png,image/jpeg,image/webp" hidden onchange="return handleNexusFileUploadInputChange(event)" />
+      <span class="sr-only" data-nexus-file-upload-status="true" aria-live="polite"></span>
+    </div>
     ${renderNexusVoiceFirstPresenceControls()}
     ${renderNexusBrowserVoiceAvailabilityHint()}
   `;
+}
+
+// Found live (2026-09-25 audit): documentProvider.analyze()'s real PDF text
+// extraction and real vision image analysis had no client UI to reach them
+// from at all -- a user had no way to upload a file in the first place,
+// only ask about one after it somehow existed. Uploads to the already-real,
+// already-tested /api/nexus/upload endpoint; the follow-up "what does this
+// say" question is handled by the existing nexus_file_document_analysis
+// tool, which already falls back to the most recently uploaded file.
+async function handleNexusFileUploadInputChange(event) {
+  const input = event?.target;
+  const file = input?.files?.[0];
+  if (!file) return false;
+  const statusEl = input.closest("[data-nexus-file-upload-control]")?.querySelector("[data-nexus-file-upload-status]");
+  const setStatus = text => { if (statusEl) statusEl.textContent = text; };
+  setStatus(translateText("Uploading..."));
+  try {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    const response = await fetch("/api/nexus/upload", { method: "POST", credentials: "same-origin", body: formData });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || "The upload could not be completed.");
+    const confirmation = `Uploaded "${result.filename}". You can now ask Nexus about it -- for example, "what does this document say?" or "describe this photo."`;
+    setStatus(confirmation);
+    recordNexusOsConversationTurn?.("assistant", confirmation, { source: "nexus-file-upload" });
+    setVoiceResponse?.(confirmation, true, { allowHandoff: false, source: "nexus-file-upload" });
+    renderUserWorkspace?.();
+  } catch (error) {
+    const message = error?.message || "The upload could not be completed.";
+    setStatus(message);
+    setVoiceResponse?.(message, false, { allowHandoff: false, source: "nexus-file-upload" });
+  } finally {
+    input.value = "";
+  }
+  return false;
 }
 
 function renderNexusTrueSecondaryAccess() {

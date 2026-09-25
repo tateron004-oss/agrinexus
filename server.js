@@ -19794,7 +19794,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       text: args.text || args.content,
       command
     }, process.env, user);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "file-document-analysis" }, documentResult);
+    // Found live: the real extracted PDF text / real vision description
+    // lives only in body.data.excerpt / body.data.description --
+    // nexusOpenAiNativeProviderToolResult's generic fallback (body.message)
+    // is just a fixed confirmation sentence ("PDF text extracted and
+    // analyzed..." / "Image described by a real vision model call...").
+    // Without this, only that generic sentence would ever reach the user,
+    // never the actual real content that was extracted/described.
+    const documentData = documentResult?.body?.data || {};
+    const documentResponseOverride = documentData.excerpt
+      ? `${documentResult.body.message} ${documentData.excerpt}`
+      : documentData.description
+        ? `${documentResult.body.message} ${documentData.description}`
+        : "";
+    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "file-document-analysis" }, documentResult, documentResponseOverride ? { responseOverride: documentResponseOverride } : {});
   }
   if (toolName === "nexus_data_code_analysis") {
     const analysis = nexusOpenAiNativeAnalyzeStructuredText(args.query || command);

@@ -26,6 +26,10 @@ output/nexus-exports/
 # Local generated backups and machine state
 backups/
 
+# Local file-upload storage (defaults to ./uploads when NEXUS_FILE_STORAGE_DIR
+# is unset -- production uses the mounted persistent disk instead)
+uploads/
+
 # OS/editor files
 .DS_Store
 Thumbs.db
