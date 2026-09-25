@@ -134,7 +134,19 @@ async function handle(ctx) {
     const party = await partyFor(ctx, order.who, order.kind === "sale" ? "buyer" : "supplier");
     if (!party) return `Which ${order.who}? Say the full name.`;
     const due = anyDay(/\b(?:by|on|before|for)\s+(.+)$/i.exec(order.rest)?.[1] || "", ctx.today);
-    const record = await ctx.store.add({ ...scope, collection: "order", data: { kind: order.kind, party: party.data.name, item, qty: quantity.value, unit: quantity.unit, price: per?.amount || null, currency: per?.currency || "", status: "open", due: due || null, day: ctx.today } });
+    // Found live (money-math audit): a price stated "per kg" was stored
+    // unconditionally even when the order's own quantity was in a
+    // different unit (bags, crates) -- the display line right below
+    // already correctly checked per.per === quantity.unit before showing an
+    // "in all" total, but the STORED price had no such guard, so
+    // delivering the order later (see d.price * d.qty below) blindly
+    // multiplied mismatched units. Executed proof: "order from John: 3 bags
+    // of maize at 40 per kg" then "deliver order 1" recorded income of 120
+    // (3 x 40), when a bag of maize is realistically ~90-100kg. Falling
+    // back to no stored price when units mismatch reuses the existing,
+    // already-honest "no price was given" message at delivery time.
+    const matchedUnitPrice = per && per.per === quantity.unit ? per.amount : null;
+    const record = await ctx.store.add({ ...scope, collection: "order", data: { kind: order.kind, party: party.data.name, item, qty: quantity.value, unit: quantity.unit, price: matchedUnitPrice, currency: per?.currency || "", status: "open", due: due || null, day: ctx.today } });
     return `${order.kind === "sale" ? "Order" : "Purchase order"} ${record.number}: ${unitLabel(quantity.value, quantity.unit)} of ${item} ${order.kind === "sale" ? "for" : "from"} ${party.data.name}${per ? ` at ${formatMoney(per.amount, per.currency)} per ${per.per}${per.per === quantity.unit ? ` (${formatMoney(round(per.amount * quantity.value), per.currency)} in all)` : ""}` : ""}${due ? `, ${describeDay(due, ctx.today)}` : ""}. Say "${order.kind === "sale" ? "deliver" : "received"} order ${record.number}" when it is done.`;
   }
   if (/^(?:show|list|what are) (?:my )?(?:open )?orders$/.test(lower) || /^(?:what|which) orders (?:are|do i have)(?: still)? (?:open|pending|outstanding)$/.test(lower)) {
