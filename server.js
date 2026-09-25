@@ -4585,8 +4585,25 @@ function isInvestorUser(user) {
   return String(user?.role || "").toLowerCase() === "investor";
 }
 
+// Found live (security audit): profileForUser's own outer gate was already
+// patched to route a guest session through this same redaction machinery
+// ("a self-service guest session ... would otherwise see every real
+// chronic-care/telehealth record ever created in this workspace,
+// unredacted"), but every single field-level redaction helper below still
+// gated purely on isInvestorUser(user) -- so for a guest, each helper's own
+// first check (`!isInvestorUser(user)`) was true and returned the record
+// COMPLETELY UNMODIFIED. The outer fix made the loop run for guests; it
+// never made the loop actually redact anything for them. Verified by
+// execution: a guest session's projected healthIntakes/missionTimeline
+// still contained a real, unredacted patient name and HIV status. Every
+// site that decides whether to redact PHI must use this shared check, not
+// isInvestorUser alone.
+function isRestrictedHealthViewer(user) {
+  return isInvestorUser(user) || user?.guest === true;
+}
+
 function projectHealthRecordForUser(record, user, key = "") {
-  if (!isInvestorUser(user) || !record || typeof record !== "object" || Array.isArray(record)) return record;
+  if (!isRestrictedHealthViewer(user) || !record || typeof record !== "object" || Array.isArray(record)) return record;
   const projected = {};
   for (const field of INVESTOR_HEALTH_RECORD_FIELDS) {
     if (record[field] !== undefined) projected[field] = record[field];
@@ -4606,7 +4623,7 @@ function projectHealthRecordForUser(record, user, key = "") {
 }
 
 function projectIntegrationEventForUser(event, user) {
-  if (!isInvestorUser(user) || !event || typeof event !== "object") return event;
+  if (!isRestrictedHealthViewer(user) || !event || typeof event !== "object") return event;
   const providerId = String(event.providerId || "");
   const moduleName = String(event.module || "");
   if (moduleName !== "Healthcare" && !providerId.startsWith("health-")) return event;
@@ -4617,13 +4634,13 @@ function projectIntegrationEventForUser(event, user) {
     action: event.action,
     status: event.status,
     createdAt: event.createdAt,
-    detail: "Healthcare workflow evidence recorded. Patient-level details are redacted for investor view.",
+    detail: "Healthcare workflow evidence recorded. Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
 
 function projectNotificationForUser(notification, user) {
-  if (!isInvestorUser(user) || !notification || typeof notification !== "object") return notification;
+  if (!isRestrictedHealthViewer(user) || !notification || typeof notification !== "object") return notification;
   const moduleName = String(notification.module || "");
   if (moduleName !== "Healthcare") return notification;
   return {
@@ -4632,16 +4649,16 @@ function projectNotificationForUser(notification, user) {
     channel: notification.channel,
     status: notification.status,
     createdAt: notification.createdAt,
-    message: "Healthcare notification recorded. Patient-level details are redacted for investor view.",
+    message: "Healthcare notification recorded. Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
 
 function projectActivityForUser(activity, user) {
-  if (!isInvestorUser(user) || typeof activity !== "string") return activity;
+  if (!isRestrictedHealthViewer(user) || typeof activity !== "string") return activity;
   if (!/health|patient|telehealth|clinic|doctor|vitals|symptom|care|intake|caregiver|pharmacy|medicine/i.test(activity)) return activity;
   const timestamp = activity.match(/^\S+/)?.[0];
-  return `${timestamp || new Date().toISOString()} Healthcare activity recorded. Patient-level details are redacted for investor view.`;
+  return `${timestamp || new Date().toISOString()} Healthcare activity recorded. Patient-level details are redacted for this restricted view.`;
 }
 
 // communicationThreads/communicationMessages are shared across every module
@@ -4653,7 +4670,7 @@ function projectActivityForUser(activity, user) {
 // an Investor just because it happened to travel through the messaging
 // system instead of a health-record array.
 function projectCommunicationThreadForUser(thread, user) {
-  if (!isInvestorUser(user) || !thread || typeof thread !== "object") return thread;
+  if (!isRestrictedHealthViewer(user) || !thread || typeof thread !== "object") return thread;
   if (String(thread.module || "") !== "Healthcare") return thread;
   return {
     id: thread.id,
@@ -4662,10 +4679,10 @@ function projectCommunicationThreadForUser(thread, user) {
     status: thread.status,
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
-    subject: "Healthcare communication recorded. Patient-level details are redacted for investor view.",
+    subject: "Healthcare communication recorded. Patient-level details are redacted for this restricted view.",
     participantName: "Redacted",
     requesterName: "Redacted",
-    lastMessage: "Redacted for investor view.",
+    lastMessage: "Redacted for this restricted view.",
     redacted: true
   };
 }
@@ -4679,11 +4696,11 @@ function projectCommunicationThreadForUser(thread, user) {
 const AGENT_MEMORY_TEXT_ARRAY_KEYS = ["longTermFacts", "preferences", "learnedPatterns", "safetyBoundaries"];
 
 function projectAgentMemoryItemForUser(item, user, textField = "text") {
-  if (!isInvestorUser(user) || !item || typeof item !== "object") return item;
+  if (!isRestrictedHealthViewer(user) || !item || typeof item !== "object") return item;
   if (String(item.module || "") !== "Healthcare") return item;
   return {
     ...item,
-    [textField]: "Healthcare memory recorded. Patient-level details are redacted for investor view.",
+    [textField]: "Healthcare memory recorded. Patient-level details are redacted for this restricted view.",
     normalized: "",
     redacted: true
   };
@@ -4700,20 +4717,20 @@ function projectAgentMemoryItemForUser(item, user, textField = "text") {
 const NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES = new Set(["health_patient_intake", "chronic_condition_record"]);
 
 function projectPersistentMemoryRecordForUser(record, user) {
-  if (!isInvestorUser(user) || !record || typeof record !== "object") return record;
+  if (!isRestrictedHealthViewer(user) || !record || typeof record !== "object") return record;
   if (!NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(record.type)) return record;
   return {
     ...record,
     title: "Healthcare memory record",
     name: "Healthcare memory record",
     payload: { redacted: true },
-    safetyNote: "Patient-level details are redacted for investor view.",
+    safetyNote: "Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
 
 function projectPersistentMemoryForUser(memoryState, user) {
-  if (!isInvestorUser(user) || !memoryState || typeof memoryState !== "object") return memoryState;
+  if (!isRestrictedHealthViewer(user) || !memoryState || typeof memoryState !== "object") return memoryState;
   const projected = { ...memoryState };
   const healthRecordIds = new Set((memoryState.records || []).filter(record => NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(record.type)).map(record => record.id));
   if (Array.isArray(memoryState.records)) {
@@ -4721,7 +4738,7 @@ function projectPersistentMemoryForUser(memoryState, user) {
   }
   if (Array.isArray(memoryState.receipts)) {
     projected.receipts = memoryState.receipts.map(receipt => healthRecordIds.has(receipt.relatedRecordId)
-      ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for investor view." }
+      ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for this restricted view." }
       : receipt);
   }
   // createRecord()/updateRecord() etc. return {state: this.snapshot()}, and
@@ -4735,7 +4752,7 @@ function projectPersistentMemoryForUser(memoryState, user) {
       activeRecords: (ctx.activeRecords || []).map(record => projectPersistentMemoryRecordForUser(record, user)),
       archivedRecords: (ctx.archivedRecords || []).map(record => projectPersistentMemoryRecordForUser(record, user)),
       receipts: (ctx.receipts || []).map(receipt => healthRecordIds.has(receipt.relatedRecordId)
-        ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for investor view." }
+        ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for this restricted view." }
         : receipt),
       signals: (ctx.signals || []).map(signal => NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
         ? { ...signal, title: "Healthcare memory record", missingData: [] }
@@ -4752,38 +4769,38 @@ function projectPersistentMemoryForUser(memoryState, user) {
 // activity log / provider queue derived from one, the same way every
 // other Healthcare-shaped array in this file is redacted.
 function projectAgenticTaskForUser(task, user) {
-  if (!isInvestorUser(user) || !task || typeof task !== "object" || task.type !== "medical_follow_up") return task;
+  if (!isRestrictedHealthViewer(user) || !task || typeof task !== "object" || task.type !== "medical_follow_up") return task;
   return {
     ...task,
     title: "Healthcare task recorded",
-    userGoal: "Patient-level details are redacted for investor view.",
+    userGoal: "Patient-level details are redacted for this restricted view.",
     chronicIntake: task.chronicIntake ? { redacted: true } : null,
     providerReport: task.providerReport ? { redacted: true } : null,
     readings: [],
     rtmNotes: [],
-    reminderRequest: task.reminderRequest ? { ...task.reminderRequest, purpose: "Redacted for investor view." } : task.reminderRequest,
-    history: (task.history || []).map(entry => ({ ...entry, summary: "Healthcare task activity recorded. Redacted for investor view." })),
+    reminderRequest: task.reminderRequest ? { ...task.reminderRequest, purpose: "Redacted for this restricted view." } : task.reminderRequest,
+    history: (task.history || []).map(entry => ({ ...entry, summary: "Healthcare task activity recorded. Redacted for this restricted view." })),
     redacted: true
   };
 }
 
 function projectAgenticTasksStateForUser(state, user) {
-  if (!isInvestorUser(user) || !state || typeof state !== "object") return state;
+  if (!isRestrictedHealthViewer(user) || !state || typeof state !== "object") return state;
   const redactedTaskIds = new Set((state.tasks || []).filter(task => task.type === "medical_follow_up").map(task => task.taskId));
   return {
     ...state,
     tasks: (state.tasks || []).map(task => projectAgenticTaskForUser(task, user)),
     providerQueue: (state.providerQueue || []).map(item => redactedTaskIds.has(item.taskId)
-      ? { ...item, visiblePurpose: "Healthcare provider request recorded. Redacted for investor view." }
+      ? { ...item, visiblePurpose: "Healthcare provider request recorded. Redacted for this restricted view." }
       : item),
     activity: (state.activity || []).map(event => redactedTaskIds.has(event.taskId)
-      ? { ...event, summary: "Healthcare task activity recorded. Redacted for investor view." }
+      ? { ...event, summary: "Healthcare task activity recorded. Redacted for this restricted view." }
       : event)
   };
 }
 
 function projectAgentMemoryForUser(agentMemory, user) {
-  if (!isInvestorUser(user) || !agentMemory || typeof agentMemory !== "object") return agentMemory;
+  if (!isRestrictedHealthViewer(user) || !agentMemory || typeof agentMemory !== "object") return agentMemory;
   const projected = { ...agentMemory };
   for (const key of AGENT_MEMORY_TEXT_ARRAY_KEYS) {
     if (Array.isArray(agentMemory[key])) projected[key] = agentMemory[key].map(item => projectAgentMemoryItemForUser(item, user));
@@ -4817,7 +4834,7 @@ function projectAgentMemoryForUser(agentMemory, user) {
 }
 
 function projectCommunicationMessageForUser(message, user, threadsById) {
-  if (!isInvestorUser(user) || !message || typeof message !== "object") return message;
+  if (!isRestrictedHealthViewer(user) || !message || typeof message !== "object") return message;
   const thread = threadsById?.get(message.threadId);
   if (String(message.module || thread?.module || "") !== "Healthcare") return message;
   return {
@@ -4831,7 +4848,7 @@ function projectCommunicationMessageForUser(message, user, threadsById) {
     createdAt: message.createdAt,
     senderName: "Redacted",
     recipientName: "Redacted",
-    text: "Healthcare message recorded. Patient-level details are redacted for investor view.",
+    text: "Healthcare message recorded. Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
@@ -4844,7 +4861,7 @@ function profileForUser(profile, user) {
   // a full Standard User and would see every real chronic-care/telehealth
   // record ever created in this workspace, unredacted. Route guests
   // through the same projection as investors rather than skipping it.
-  if (!profile || !(isInvestorUser(user) || user?.guest === true)) return profile;
+  if (!profile || !isRestrictedHealthViewer(user)) return profile;
   const projected = { ...profile };
   for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
     if (Array.isArray(profile[key])) projected[key] = profile[key].map(record => projectHealthRecordForUser(record, user, key));
@@ -4879,8 +4896,8 @@ function profileForUser(profile, user) {
     projected.nexusPersistentMemory = projectPersistentMemoryForUser(profile.nexusPersistentMemory, user);
   }
   if (Array.isArray(profile.nexusRuntimeActivity)) {
-    projected.nexusRuntimeActivity = profile.nexusRuntimeActivity.map(event => isInvestorUser(user) && event.domain === "medical"
-      ? { ...event, userGoal: "Redacted for investor view.", safeUserFacingSummary: "Redacted for investor view." }
+    projected.nexusRuntimeActivity = profile.nexusRuntimeActivity.map(event => isRestrictedHealthViewer(user) && event.domain === "medical"
+      ? { ...event, userGoal: "Redacted for this restricted view.", safeUserFacingSummary: "Redacted for this restricted view." }
       : event);
   }
   if (Array.isArray(profile.nexusAgenticTasks) || Array.isArray(profile.nexusProviderQueue) || Array.isArray(profile.nexusAgenticBrainActivity)) {
@@ -4904,7 +4921,7 @@ function profileForUser(profile, user) {
     };
   }
   if (typeof profile.aiActivity === "string" && /health|patient|telehealth|clinic|doctor|vitals|symptom|care/i.test(profile.aiActivity)) {
-    projected.aiActivity = "Healthcare activity recorded. Patient-level details are redacted for investor view.";
+    projected.aiActivity = "Healthcare activity recorded. Patient-level details are redacted for this restricted view.";
   }
   return projected;
 }
@@ -5328,12 +5345,12 @@ function missionTimelineModel(db, user = null) {
   // projectNotificationForUser elsewhere in this file): a Healthcare-module
   // timeline entry must never carry a real patient reference, need summary,
   // or participant name into an Investor's view.
-  const redact = isInvestorUser(user);
+  const redact = isRestrictedHealthViewer(user);
   const add = (module, title, detail, status, createdAt, evidence = "") => items.push({
     id: crypto.randomUUID(),
     module,
     title: redact && module === "Healthcare" ? "Healthcare workflow evidence recorded" : title,
-    detail: redact && module === "Healthcare" ? "Patient-level details are redacted for investor view." : detail,
+    detail: redact && module === "Healthcare" ? "Patient-level details are redacted for this restricted view." : detail,
     status,
     evidence: redact && module === "Healthcare" ? "" : evidence,
     createdAt: createdAt || new Date().toISOString()
@@ -46075,7 +46092,7 @@ async function api(req, res, url) {
           ...predictiveContext,
           activeRecords: predictiveContext.activeRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
           archivedRecords: predictiveContext.archivedRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
-          signals: predictiveContext.signals.map(signal => isInvestorUser(user) && NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
+          signals: predictiveContext.signals.map(signal => isRestrictedHealthViewer(user) && NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
             ? { ...signal, title: "Healthcare memory record", missingData: [] }
             : signal)
         },
