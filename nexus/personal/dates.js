@@ -12,6 +12,26 @@ const pad = value => String(value).padStart(2, "0");
 const toDay = date => date.toISOString().slice(0, 10);
 
 function addDays(day, count) { const date = atNoon(day); date.setUTCDate(date.getUTCDate() + count); return toDay(date); }
+// "In 3 months" means the same day-of-month 3 calendar months later, clamped
+// to the shorter month's real last day (31 Jan + 1 month = 28/29 Feb, not
+// 3 March) -- not a fixed 30-day jump. Found live (health-toolkit follow-up
+// audit): nexus/healthwork/visits.js's follow-up scheduler and
+// immunisation.js's next-dose scheduler both explicitly advertise "in N
+// months" as accepted input, but nothing in this module could ever resolve
+// it -- the only relative-offset pattern below understood days/weeks, so a
+// health worker saying "follow up in 3 months" (a common phrasing for a
+// malnutrition recheck, chronic-care review, or vaccine booster) got no
+// appointment/reminder scheduled at all, with a confusing bounce-back
+// message that never mentioned months were the actual problem.
+function addMonths(day, count) {
+  const date = atNoon(day);
+  const targetIndex = date.getUTCMonth() + count;
+  const targetYear = date.getUTCFullYear() + Math.floor(targetIndex / 12);
+  const targetMonth = ((targetIndex % 12) + 12) % 12;
+  const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const clampedDate = Math.min(date.getUTCDate(), daysInTargetMonth);
+  return toDay(new Date(Date.UTC(targetYear, targetMonth, clampedDate, 12)));
+}
 function weekdayOf(day) { return atNoon(day).getUTCDay(); }
 function monthIndex(name) { const lower = String(name).toLowerCase(); return MONTH_NAMES.findIndex(full => full === lower || full.slice(0, 3) === lower.slice(0, 3)); }
 
@@ -40,7 +60,7 @@ const DAY_FORMS = [
   { pattern: /\byesterday\b/i, read: (m, today) => addDays(today, -1) },
   { pattern: /\btomorrow\b/i, read: (m, today) => addDays(today, 1) },
   { pattern: /\b(?:today|tonight)\b/i, read: (m, today) => today },
-  { pattern: /\bin (\d{1,2}) (day|days|week|weeks)\b/i, read: (m, today) => addDays(today, Number(m[1]) * (/^week/i.test(m[2]) ? 7 : 1)) },
+  { pattern: /\bin (\d{1,2}) (day|days|week|weeks|month|months)\b/i, read: (m, today) => /^month/i.test(m[2]) ? addMonths(today, Number(m[1])) : addDays(today, Number(m[1]) * (/^week/i.test(m[2]) ? 7 : 1)) },
   { pattern: new RegExp(`\\b(?:(?:on|next|this)\\s+)?${WEEKDAY_PATTERN}\\b`, "i"),
     read: (m, today) => { const ahead = (WEEKDAYS.indexOf(m[1].toLowerCase()) - weekdayOf(today) + 7) % 7; return addDays(today, ahead === 0 ? 7 : ahead); } }
 ];
@@ -118,4 +138,4 @@ function extractPeriod(text, today) {
   return null;
 }
 
-module.exports = Object.freeze({ extractDay, extractTime, tidyTitle, extractRange, extractPeriod, describeDay, addDays, weekdayOf, makeDay });
+module.exports = Object.freeze({ extractDay, extractTime, tidyTitle, extractRange, extractPeriod, describeDay, addDays, addMonths, weekdayOf, makeDay });
