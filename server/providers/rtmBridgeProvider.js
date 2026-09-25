@@ -51,10 +51,16 @@ function activityEntry(body = {}, db, env = process.env) {
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
   const activityType = safeText(body.activityType || body.type || "therapy_activity", 80);
+  // Found live (RPM/RTM adherence-math audit): same case-sensitivity gap as
+  // rpmBridgeProvider's metric check -- "Fitness_Training" failed the raw
+  // ACTIVITY_TYPES.has() check and was silently relabeled "therapy_activity"
+  // (also a valid member), so a real logged workout vanished entirely from
+  // fitnessProgress()'s exact-case "fitness_training" filter below.
+  const normalizedActivityType = activityType.toLowerCase().trim().replace(/\s+/g, "_");
   const blocked = guardMedicalText(PROVIDER, action, [body.notes, body.activityDescription], false);
   if (blocked) return blocked;
   const record = saveRecord(db, ENTRIES, localRecord("rtm-entry", body, {
-    activityType: ACTIVITY_TYPES.has(activityType) ? activityType : "therapy_activity",
+    activityType: ACTIVITY_TYPES.has(normalizedActivityType) ? normalizedActivityType : "therapy_activity",
     activityDescription: safeText(body.activityDescription || body.description || "participation entry", 240),
     completed: body.completed === true || String(body.completed).toLowerCase() === "true",
     dateTimeText: safeText(body.dateTimeText || body.dueAt || "not provided", 120),
@@ -118,6 +124,26 @@ function trainingPlans(db) {
   return response(PROVIDER, "rtm.training_plans", "completed", "Training plans loaded.", { plans: ensureProfileStore(db, PLANS) });
 }
 
+// Found live: entries are stored in SUBMISSION order (saveRecord unshifts),
+// not the order of the workout's own dateTimeText -- backfilling an older
+// workout after today's already-logged one made the older one report as
+// "most recent" simply because it was inserted later. Picks the entry with
+// the latest PARSEABLE dateTimeText; falls back to submission order only
+// when no entry has one, preserving the old behavior for that edge case
+// rather than reporting nothing.
+function mostRecentByDateTime(entries) {
+  let best = null;
+  let bestTime = -Infinity;
+  for (const entry of entries) {
+    const time = Date.parse(entry.dateTimeText);
+    if (Number.isFinite(time) && time > bestTime) {
+      bestTime = time;
+      best = entry;
+    }
+  }
+  return best || entries[0] || null;
+}
+
 function fitnessProgress(body = {}, db) {
   const entries = ensureProfileStore(db, ENTRIES).filter(item => item.activityType === "fitness_training");
   const totalMinutes = entries.reduce((sum, item) => sum + (Number(item.participationMinutes) || 0), 0);
@@ -125,7 +151,7 @@ function fitnessProgress(body = {}, db) {
     summary: {
       sessionCount: entries.length,
       totalMinutes,
-      mostRecentActivity: entries[0]?.activityDescription || null,
+      mostRecentActivity: mostRecentByDateTime(entries)?.activityDescription || null,
       missingData: entries.length ? [] : ["No workouts logged yet"]
     }
   });
