@@ -76,4 +76,26 @@ test("a stranded 'delivering' notification (worker crashed, lease expired) is re
   const delivered = await repo.delivered(recoveredClaim[0].notification_id);
   assert.equal(delivered.state, "delivered");
 });
+
+// Found live (delivery-reliability follow-up audit): failed() requeued a
+// notification with scheduled_at untouched, so retries were only ever
+// paced by the worker's fixed poll interval, not real backoff -- a
+// transient outage burned through all 5 attempts in about two and a half
+// minutes, then permanently and silently dropped the notification with no
+// further retry. This asserts on the real SQL text failed() sends (the
+// same convention this file already uses for claim()'s "for update skip
+// locked" clause just above) rather than a fake that could compute its own
+// answer regardless of what the real query actually says -- a fake keyed
+// only on the query's shared "state=case when attempts>=5" prefix can't
+// tell the pre-fix and post-fix SQL apart, since the new clause is
+// additional text, not a change to that shared prefix.
+test("a failed delivery is scheduled with real exponential backoff (30s, 60s, 120s, 240s), capped at 5 minutes, and the cap/terminal-failure behavior is unchanged", async () => {
+  const x = db([{ rows: [{ notification_id: "n", state: "queued", attempts: 1 }] }]);
+  const repo = new NotificationRepository(x);
+  await repo.failed("n", { code: "delivery_failed", message: "simulated transient outage" });
+  const sql = x.calls[0].sql.replace(/\s+/g, " ");
+  assert.match(sql, /state=case when attempts>=5 then 'failed' else 'queued' end/, "the attempt cap and terminal state must be unchanged from before this fix");
+  assert.match(sql, /scheduled_at=case when attempts>=5 then scheduled_at else now\(\)\+make_interval\(secs=>least\(30\*power\(2,greatest\(attempts-1,0\)\),300\)\) end/,
+    "must add real exponential backoff (30 * 2^(attempts-1) seconds, capped at 300s) rather than leaving scheduled_at untouched");
+});
 test("listPushable reads real push secrets that list()/PUBLIC_COLUMNS deliberately withholds from client-facing calls",async()=>{const x=db([{rows:[{device_id:"phone",push_provider:"webpush",push_endpoint:"https://push.example/ep",push_key_ciphertext:"v1.iv.tag.data"}]}]);const repo=new DeviceRepository(x);const rows=await repo.listPushable({tenantId:"t",userId:"u"});assert.equal(rows[0].push_endpoint,"https://push.example/ep");assert.equal(rows[0].push_key_ciphertext,"v1.iv.tag.data");assert.match(x.calls[0].sql,/push_key_ciphertext/);assert.match(x.calls[0].sql,/state='active'/);assert.match(x.calls[0].sql,/push_state='registered'/);});

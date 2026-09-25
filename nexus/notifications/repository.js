@@ -29,7 +29,22 @@ class NotificationRepository{
   // Whether a notification with this idempotency key already exists for the tenant (used so a daily brief is queued at most once per local day).
   async existsByKey({tenantId,idempotencyKey}){if(!tenantId||!idempotencyKey)return false;const r=await this.db.query("select 1 from nexus_notifications where tenant_id=$1 and idempotency_key=$2 limit 1",[tenantId,idempotencyKey]);return (r.rows||r).length>0;}
   async delivered(notificationId){const r=await this.db.query("update nexus_notifications set state='delivered',delivered_at=now(),last_error=null,lease_expires_at=null where notification_id=$1 and state='delivering' returning *",[notificationId]);return (r.rows||r)[0]||null;}
-  async failed(notificationId,error){const r=await this.db.query("update nexus_notifications set state=case when attempts>=5 then 'failed' else 'queued' end,last_error=$2,lease_expires_at=null where notification_id=$1 and state='delivering' returning *",[notificationId,error]);return (r.rows||r)[0]||null;}
+  // Found live (delivery-reliability follow-up audit): a retried
+  // notification was requeued with scheduled_at left untouched, so it was
+  // only ever paced by the worker's fixed poll interval (default 30s), not
+  // real backoff -- a transient outage (a push-service blip, a network
+  // error) burned through all 5 attempts in roughly two and a half minutes,
+  // then silently and permanently dropped the notification (a medication
+  // reminder, a task confirmation, etc) with no further retry and no
+  // second channel. Adding exponential backoff (30s, 60s, 120s, 240s,
+  // capped at 5 minutes) between attempts gives a real transient outage a
+  // realistic window to recover before the notification is given up on,
+  // without changing the attempt cap or terminal-failure behavior itself.
+  async failed(notificationId,error){const r=await this.db.query(`update nexus_notifications set
+    state=case when attempts>=5 then 'failed' else 'queued' end,
+    scheduled_at=case when attempts>=5 then scheduled_at else now()+make_interval(secs=>least(30*power(2,greatest(attempts-1,0)),300)) end,
+    last_error=$2,lease_expires_at=null
+    where notification_id=$1 and state='delivering' returning *`,[notificationId,error]);return (r.rows||r)[0]||null;}
 }
 module.exports=Object.freeze({NotificationRepository});
 
