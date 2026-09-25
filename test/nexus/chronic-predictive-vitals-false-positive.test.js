@@ -70,6 +70,52 @@ test("a real blood-pressure report with the trigger word still parses correctly"
   assert.equal(result.modeler.conditionFocus, "hypertension");
 });
 
+// Found live (health-data audit): "trajectory" only ever checked "do I have
+// >=2 readings" -- it never inspected the actual values, so a
+// monotonically worsening BP sequence and the exact reverse, improving
+// sequence produced byte-for-byte identical output. Chains three real
+// readings across sequential calls (via the endpoint's own state
+// round-tripping) to prove a real direction is now computed.
+async function evaluateChained(commands) {
+  let state = {};
+  let result;
+  for (const command of commands) {
+    const res = await fetch(`${base}/api/nexus/chronic-predictive/evaluate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ command, state })
+    });
+    result = await res.json();
+    state = result.modeler;
+  }
+  return result;
+}
+
+test("a real worsening blood-pressure trend is reported as worsening, not a fixed 'variable'", async () => {
+  const result = await evaluateChained(["My blood pressure was 130/85.", "My blood pressure was 145/92.", "My blood pressure was 160/98."]);
+  assert.equal(result.modeler.trends.hypertension.trajectory, "worsening");
+});
+
+test("the exact reverse, improving blood-pressure sequence is reported as improving -- not identical to the worsening case", async () => {
+  const result = await evaluateChained(["My blood pressure was 160/98.", "My blood pressure was 145/92.", "My blood pressure was 130/85."]);
+  assert.equal(result.modeler.trends.hypertension.trajectory, "improving");
+});
+
+test("a stable blood-pressure sequence is reported as stable", async () => {
+  const result = await evaluateChained(["My blood pressure was 120/80.", "My blood pressure was 121/80.", "My blood pressure was 120/81."]);
+  assert.equal(result.modeler.trends.hypertension.trajectory, "stable");
+});
+
+// Found live: "yesterday" wasn't a recognized connector word -- "my blood
+// pressure yesterday was 160/98" failed to match at all, so a real reading
+// was never saved.
+test("'my blood pressure yesterday was X/Y' is recognized, not silently dropped", async () => {
+  const result = await evaluate("My blood pressure yesterday was 160/98.");
+  assert.equal(result.modeler.readings.bloodPressure.length, 1);
+  assert.equal(result.modeler.readings.bloodPressure[0].systolic, 160);
+  assert.equal(result.modeler.readings.bloodPressure[0].diastolic, 98);
+});
+
 test("an unrelated use of 'missed' with no medication context does not fabricate a medication-adherence signal", async () => {
   const bus = await evaluate("I missed the bus this morning.");
   assert.equal(bus.modeler.readings.adherence.length, 0);
