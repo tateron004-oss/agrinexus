@@ -122,7 +122,18 @@ async function handleMoney(ctx) {
   if ((m = /^(?:i |we )?(?:bought|purchased|got) (.+)$/i.exec(t)) && parseMoney(m[1]) && !/\b(?:sold|selling)\b/i.test(t)) {
     const rest = m[1]; const money = parseMoney(rest); const quantity = parseQuantity(rest); const per = parsePricePer(rest);
     let amount = money.amount; let currency = money.currency;
-    if (quantity && per && quantity.unit === per.per && !/\bfor\s+[\d$]/i.test(rest.replace(per.currency ? "" : "", ""))) { amount = round(quantity.value * per.amount); currency = per.currency || currency; }
+    // Found live (export/invoice/farm-toolkit follow-up audit): the old guard
+    // regexed for the literal word "for" followed by a digit to decide
+    // whether a genuine separate total was stated -- but parsePricePer's own
+    // connector list also accepts "for" to introduce the per-unit price
+    // itself ("bought 5 bags for 3000 per bag"), so completely ordinary
+    // phrasing tripped the guard and left `amount` at the per-unit price
+    // (3000) instead of the real total (15,000). Mirrors the "sold" branch's
+    // own, already-correct echo check a few lines up: parseMoney only ever
+    // echoes the SAME number back when there is no separately-stated total,
+    // so comparing money.amount to per.amount (not scanning for the word
+    // "for") is what actually distinguishes the two cases.
+    if (quantity && per && quantity.unit === per.per && money.amount === per.amount) { amount = round(quantity.value * per.amount); currency = per.currency || currency; }
     const itemMatch = quantity ? new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:for|at|from|@)\\b.*)?$`, "i").exec(rest) : /^(?:some |a |an )?(.+?)(?:\s+(?:for|at|from|@)\b.*)?$/i.exec(rest);
     const item = clean(itemMatch?.[1] || "").toLowerCase();
     if (!item || item.length > 60) return null;

@@ -76,7 +76,13 @@ async function build(ctx, kind, text) {
   if (kind === "coop") {
     const c = (await ctx.store.list({ ...scope, collection: "coop" }))[0]; const members = await ctx.store.list({ ...scope, collection: "member" }); if (!members.length) return null;
     const pays = (await ctx.store.list({ ...scope, collection: "coop_payment" })).filter(pay => pay.data.day >= period.from && pay.data.day <= period.to);
-    return { title: `Cooperative statement ${period.label}`, content: `${head(`${c?.data.name || "Cooperative"} statement`)}Period: ${period.from} to ${period.to}\n\n${table([["Member", "Dues paid", "Contributions", "Paid out"], ...members.map(member => { const mine = pays.filter(pay => pay.data.member === member.data.name); const total = kind2 => formatMoney(round(mine.filter(pay => pay.data.kind === kind2).reduce((s, pay) => s + pay.data.amount, 0)), c?.data.currency || ""); return [member.data.name, total("dues"), total("contribution"), total("payout")]; })], [22, 14, 16])}${foot}` };
+    // Found live (export/invoice/farm-toolkit follow-up audit): each cell
+    // used to sum every matching payment regardless of currency, under one
+    // column header implicitly denominated in the coop's own single
+    // currency (c?.data.currency). Excludes a payment recorded in a
+    // different currency from that cell's total instead of silently mixing
+    // it in, matching coop.js's own dues-target fix.
+    return { title: `Cooperative statement ${period.label}`, content: `${head(`${c?.data.name || "Cooperative"} statement`)}Period: ${period.from} to ${period.to}\n\n${table([["Member", "Dues paid", "Contributions", "Paid out"], ...members.map(member => { const mine = pays.filter(pay => pay.data.member === member.data.name && (!pay.data.currency || !c?.data.currency || pay.data.currency === c.data.currency)); const total = kind2 => formatMoney(round(mine.filter(pay => pay.data.kind === kind2).reduce((s, pay) => s + pay.data.amount, 0)), c?.data.currency || ""); return [member.data.name, total("dues"), total("contribution"), total("payout")]; })], [22, 14, 16])}${foot}` };
   }
   return null;
 }
