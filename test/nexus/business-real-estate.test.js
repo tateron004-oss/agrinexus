@@ -131,6 +131,70 @@ test("adding a listing extracts address, price, beds/baths and property type, an
     ["123 Main Street", 450000, 3, 2, "house", "active"]);
 });
 
+// Found live (real-estate/GPS follow-up audit): only $/k-suffix/"dollars"
+// prices were recognized -- a listing priced in any of this app's own
+// primary-market local currencies (the exact vocabulary
+// extractTransactionArgs already recognizes for the farm/business ledger)
+// matched no price pattern at all and silently saved with price: 0.
+test("extractListingArgs recognizes a local-currency price, not just dollars, and records which currency it was", () => {
+  const kes = voiceDispatch.extractListingArgs("List 500 Elm St for 4,500,000 shillings", {});
+  assert.deepEqual([kes.price, kes.currency], [4500000, "KES"]);
+  const ngn = voiceDispatch.extractListingArgs("List 12 Lagos Rd for 90,000,000 naira", {});
+  assert.deepEqual([ngn.price, ngn.currency], [90000000, "NGN"]);
+  const usd = voiceDispatch.extractListingArgs("List 789 Pine Rd for $450,000", {});
+  assert.equal(usd.currency, "USD");
+});
+
+test("adding a listing priced in a local currency displays and stores that real currency, not a fabricated dollar amount", async () => {
+  let saved;
+  const client = listingClient();
+  const businessRequest = async ({ method, body }) => {
+    if (method === "GET") return { body: { clients: [client] } };
+    saved = body; return { body: { ...client, data: { ...client.data, editable: body.editable } } };
+  };
+  const confirmed = await run({ command: "List 500 Elm St for 4,500,000 shillings", confirmed: true, businessRequest });
+  assert.equal(confirmed.status, "completed");
+  assert.match(confirmed.response, /KES\s*4,500,000/);
+  assert.doesNotMatch(confirmed.response, /\$4,500,000/, "must not display a KES price as dollars");
+  assert.equal(saved.editable.listings[0].currency, "KES");
+});
+
+test("listing listings shows each listing's own real currency, not a hardcoded dollar sign", async () => {
+  const result = await run({ command: "Show me my listings", businessRequest: async () => ({ body: { clients: [listingClient([{ address: "500 Elm St", price: 4500000, currency: "KES", status: "active" }])] } }) });
+  assert.match(result.response, /KES\s*4,500,000/);
+  assert.doesNotMatch(result.response, /\$4,500,000/);
+});
+
+test("the dashboard reports active listing value under the listings' own currency, not the workspace's unrelated transaction currency", () => {
+  const dashboard = computeBusinessDashboard({
+    transactions: [{ type: "income", amount: 100, currency: "KES", day: "2026-09-01" }], invoiceItems: [], invoices: [], grants: [], tasks: [], appointments: [], leads: [],
+    listings: [{ status: "active", price: 450000, currency: "USD" }]
+  });
+  assert.equal(dashboard.currency, "KES", "the workspace's transaction currency is unrelated to the listing's own currency");
+  assert.equal(dashboard.activeListingCurrency, "USD");
+  assert.equal(dashboard.activeListingValue, 450000);
+});
+
+test("the dashboard buckets active listing value by currency instead of summing different currencies into one fabricated number", () => {
+  const dashboard = computeBusinessDashboard({
+    transactions: [], invoiceItems: [], invoices: [], grants: [], tasks: [], appointments: [], leads: [],
+    listings: [{ status: "active", price: 450000, currency: "USD" }, { status: "active", price: 300000, currency: "USD" }, { status: "active", price: 4500000, currency: "KES" }]
+  });
+  // Which currency is reported as "the" dominant one is an arbitrary
+  // ordering choice (currencies aren't comparable without exchange rates) --
+  // the bug this guards against is combining them into one number, not the
+  // ordering, so accept either as dominant as long as the two USD listings
+  // are summed together and the KES one is kept, and reported, separately.
+  if (dashboard.activeListingCurrency === "USD") {
+    assert.equal(dashboard.activeListingValue, 750000);
+    assert.deepEqual(dashboard.otherListingCurrencies, ["KES"]);
+  } else {
+    assert.equal(dashboard.activeListingCurrency, "KES");
+    assert.equal(dashboard.activeListingValue, 4500000);
+    assert.deepEqual(dashboard.otherListingCurrencies, ["USD"]);
+  }
+});
+
 test("updating a listing's status resolves it by address and persists the new status", async () => {
   let saved;
   const client = listingClient([{ address: "123 Main Street", price: 450000, propertyType: "house", beds: 3, baths: 2, status: "active", notes: "" }]);
@@ -192,7 +256,7 @@ test("service.js's real workspace-write validation (normalizeEditable) accepts a
     listings: [{ address: "123 Main Street", price: 450000, propertyType: "house", beds: 3, baths: 2, status: "active", notes: "Corner lot" }]
   });
   assert.equal(editable.listings.length, 1);
-  assert.deepEqual(editable.listings[0], { address: "123 Main Street", price: 450000, propertyType: "house", beds: 3, baths: 2, status: "active", notes: "Corner lot" });
+  assert.deepEqual(editable.listings[0], { address: "123 Main Street", price: 450000, currency: "USD", propertyType: "house", beds: 3, baths: 2, status: "active", notes: "Corner lot" });
 });
 
 test("normalizeEditable still rejects a malformed listings entry, same discipline as every other row type", () => {

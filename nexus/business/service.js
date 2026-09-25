@@ -90,7 +90,12 @@ function normalizeEditable(info, input = {}) {
     // people (see extractLeadArgs' typeMatch in voice-dispatch.js), so a
     // listing only needs to add the one thing leads/tasks/appointments don't
     // already cover: a property record with an address, price, and status.
-    listings: rows(input.listings === undefined ? starter.listings : input.listings, { address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }),
+    // Found live (real-estate/GPS follow-up audit): a listing's price was
+    // always assumed to be USD -- extractListingArgs now records the real
+    // currency a local-currency price was stated in, but this shape's
+    // allowlist (rows()/strings() keep only keys present in the shape
+    // template) would have silently stripped that field on every write.
+    listings: rows(input.listings === undefined ? starter.listings : input.listings, { address: "", price: 0, currency: "USD", propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
     // Tool 1: a real, editable, versioned business plan document -- distinct

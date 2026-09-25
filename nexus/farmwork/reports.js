@@ -46,9 +46,13 @@ async function build(ctx, kind, text) {
   if (kind === "expenses" || kind === "income") {
     const type = kind === "expenses" ? "expense" : "income"; const rows = (await money()).filter(record => record.data.type === type).sort((a, b) => a.data.day.localeCompare(b.data.day));
     if (!rows.length) return null;
-    const by = {}; for (const record of rows) by[record.data.category] = round((by[record.data.category] || 0) + record.data.amount);
-    const cur = rows[0].data.currency;
-    return { title: `${kind === "expenses" ? "Expense" : "Income"} report ${period.label}`, content: `${head(`${kind === "expenses" ? "Expense" : "Income"} report`)}Period: ${period.from} to ${period.to}\n\n${table([["Date", "Amount", "What"], ...rows.map(record => [record.data.day, formatMoney(record.data.amount, record.data.currency), `${record.data.note || record.data.item || record.data.category}${record.data.party ? ` (${record.data.party})` : ""}${record.data.field ? ` [${record.data.field}]` : ""}`])], [12, 14])}\n\n${line()}\nBY KIND\n${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([category, amount]) => `  ${pad(category, 14)} ${formatMoney(amount, cur)}`).join("\n")}\n\nTOTAL: ${showTotals(sum(rows, type))}  (${plural(rows.length, "entry", "entries")})${foot}` };
+    // Found live (real-estate/GPS follow-up audit): this used to sum every
+    // row's raw amount together regardless of currency, then label the
+    // whole total with whichever row happened to be first. Bucket by
+    // currency first, like showTotals()/sum() already do everywhere else.
+    const by = {}; for (const record of rows) { const category = record.data.category; const currency = record.data.currency || ""; by[category] = by[category] || {}; by[category][currency] = round((by[category][currency] || 0) + record.data.amount); }
+    const totalOf = currencies => Object.values(currencies).reduce((a, b) => a + b, 0);
+    return { title: `${kind === "expenses" ? "Expense" : "Income"} report ${period.label}`, content: `${head(`${kind === "expenses" ? "Expense" : "Income"} report`)}Period: ${period.from} to ${period.to}\n\n${table([["Date", "Amount", "What"], ...rows.map(record => [record.data.day, formatMoney(record.data.amount, record.data.currency), `${record.data.note || record.data.item || record.data.category}${record.data.party ? ` (${record.data.party})` : ""}${record.data.field ? ` [${record.data.field}]` : ""}`])], [12, 14])}\n\n${line()}\nBY KIND\n${Object.entries(by).sort((a, b) => totalOf(b[1]) - totalOf(a[1])).map(([category, currencies]) => `  ${pad(category, 14)} ${showTotals(currencies)}`).join("\n")}\n\nTOTAL: ${showTotals(sum(rows, type))}  (${plural(rows.length, "entry", "entries")})${foot}` };
   }
   if (kind === "statement") {
     const rows = await money(); if (!rows.length) return null;
@@ -89,9 +93,14 @@ async function receipt(ctx, who, orderNumber) {
   const sales = orderNumber ? [] : (await ctx.store.list({ ...scope, collection: "money" })).filter(record => record.data.type === "income" && same(record.data.party) && !String(record.data.note || "").startsWith("order "));
   const lines = [...orders.map(order => ({ day: order.data.doneOn || order.data.day, what: `${unitLabel(order.data.qty, order.data.unit)} of ${order.data.item}`, amount: round((order.data.price || 0) * order.data.qty), currency: order.data.currency })), ...sales.filter(record => record.data.qty).map(record => ({ day: record.data.day, what: `${unitLabel(record.data.qty, record.data.unit)} of ${record.data.item}`, amount: record.data.amount, currency: record.data.currency }))];
   if (!lines.length) return null;
-  const buyer = orders[0]?.data.party || found?.party?.data.name || who || "Buyer"; const cur = lines[0].currency; const total = round(lines.reduce((s, item) => s + item.amount, 0));
+  const buyer = orders[0]?.data.party || found?.party?.data.name || who || "Buyer"; const cur = lines[0].currency;
+  // Found live (real-estate/GPS follow-up audit): order lines and money-sale
+  // lines can carry different currencies, but the total used to sum them
+  // flatly and label it with whichever line happened to be first. Bucket by
+  // currency, matching how every other total in this file already works.
+  const totals = {}; for (const item of lines) { const currency = item.currency || cur || ""; totals[currency] = round((totals[currency] || 0) + item.amount); }
   const farm = (await ctx.store.list({ ...scope, collection: "farm" }))[0]; const owner = (ctx.nameOf ? await ctx.nameOf({ tenantId: ctx.tenantId, userId: ctx.userId }).catch(() => "") : "") || "";
-  return { title: `Receipt - ${buyer}`, content: `RECEIPT\n${farm?.data.farmName || owner || "Farm"}\nDate: ${ctx.today}\nReceived from: ${buyer}\n${line()}\n${table([["Date", "Item", "Amount"], ...lines.map(item => [item.day, item.what, formatMoney(item.amount, item.currency || cur)])], [12, 30])}\n${line()}\nTOTAL: ${formatMoney(total, cur)}\n\nThank you.\n\nPrepared by Kyro from the sales you recorded.` };
+  return { title: `Receipt - ${buyer}`, content: `RECEIPT\n${farm?.data.farmName || owner || "Farm"}\nDate: ${ctx.today}\nReceived from: ${buyer}\n${line()}\n${table([["Date", "Item", "Amount"], ...lines.map(item => [item.day, item.what, formatMoney(item.amount, item.currency || cur)])], [12, 30])}\n${line()}\nTOTAL: ${showTotals(totals)}\n\nThank you.\n\nPrepared by Kyro from the sales you recorded.` };
 }
 
 async function handle(ctx) {

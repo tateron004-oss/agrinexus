@@ -182,9 +182,15 @@ async function handleMoney(ctx) {
     const period = periodOf(m[1] || "", ctx.today, "this year");
     const rows = (await recordsOf()).filter(record => record.data.type === "expense" && inPeriod(record, period));
     if (!rows.length) return `I have no spending recorded for ${period.label}.`;
-    const by = {}; for (const record of rows) by[record.data.category] = round((by[record.data.category] || 0) + record.data.amount);
-    const cur = rows[0].data.currency;
-    return `Spending ${period.label} by kind: ${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([category, amount]) => `${category} ${formatMoney(amount, cur)}`).join("; ")}.`;
+    // Found live (real-estate/GPS follow-up audit): this used to sum every
+    // row's raw amount together regardless of currency, then label the
+    // whole total with whichever row happened to be first -- a KES entry
+    // and a USD entry in the same category silently became one fabricated
+    // number under one wrong currency. Bucket by currency first, like
+    // sum()/showTotals() already do everywhere else in this file.
+    const by = {}; for (const record of rows) { const category = record.data.category; const currency = record.data.currency || ""; by[category] = by[category] || {}; by[category][currency] = round((by[category][currency] || 0) + record.data.amount); }
+    const totalOf = currencies => Object.values(currencies).reduce((a, b) => a + b, 0);
+    return `Spending ${period.label} by kind: ${Object.entries(by).sort((a, b) => totalOf(b[1]) - totalOf(a[1])).map(([category, currencies]) => `${category} ${showTotals(currencies)}`).join("; ")}.`;
   }
   if (/^(?:show|list) (?:me )?my (?:recent )?(?:money|expenses|income|sales)(?: records| entries)?$/.test(lower)) {
     const rows = (await recordsOf()).slice(0, 8);

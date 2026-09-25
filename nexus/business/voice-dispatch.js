@@ -363,8 +363,16 @@ function extractListingArgs(command = "", args = {}) {
   const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/)
     || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/)
     || text.match(/\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s+dollars?\b/i);
-  const priceRaw = priceMatch ? Number(priceMatch[1].replace(/,/g, "")) : NaN;
-  const price = Number.isFinite(priceRaw) ? (/[kK]/.test(priceMatch[0]) ? priceRaw * 1000 : priceRaw) : NaN;
+  // Found live (real-estate/GPS follow-up audit): only $/k-suffix/"dollars"
+  // prices were recognized at all -- a listing priced in any of this app's
+  // own primary-market local currencies (KES, UGX, NGN, etc., the exact
+  // vocabulary extractTransactionArgs already recognizes) matched nothing
+  // and was silently saved with price: 0. Falls back to the same
+  // amountWithCurrency() helper the ledger uses when no $/k/dollars match.
+  const localPrice = !priceMatch ? amountWithCurrency(text) : null;
+  const priceRaw = priceMatch ? Number(priceMatch[1].replace(/,/g, "")) : localPrice ? localPrice.amount : NaN;
+  const price = Number.isFinite(priceRaw) ? (priceMatch && /[kK]/.test(priceMatch[0]) ? priceRaw * 1000 : priceRaw) : NaN;
+  const priceCurrency = args.currency ? String(args.currency).toUpperCase().slice(0, 3) : (localPrice ? localPrice.currency : "USD");
   const bedsMatch = text.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms|br)\b/i);
   const bathsMatch = text.match(/\b(\d+(?:\.\d)?)\s*(?:bath|baths|bathroom|bathrooms|ba)\b/i);
   const typeMatch = text.match(new RegExp(`\\b(${PROPERTY_TYPE_WORDS.join("|")})\\b`, "i"));
@@ -372,6 +380,7 @@ function extractListingArgs(command = "", args = {}) {
   return {
     address: sanitizeText(args.address || (addressMatch ? addressMatch[1].trim() : ""), 200),
     price: args.price !== undefined ? Number(args.price) : (Number.isFinite(price) ? price : 0),
+    currency: priceCurrency || "USD",
     propertyType: sanitizeText(args.propertyType || (typeMatch ? typeMatch[1].toLowerCase() : ""), 40),
     beds: args.beds !== undefined ? Number(args.beds) : (bedsMatch ? Number(bedsMatch[1]) : 0),
     baths: args.baths !== undefined ? Number(args.baths) : (bathsMatch ? Number(bathsMatch[1]) : 0),
@@ -462,7 +471,24 @@ function computeBusinessDashboard(editable) {
   const activeListings = listings.filter(listing => listingStatus(listing) === "active").length;
   const pendingListings = listings.filter(listing => listingStatus(listing) === "pending" || listingStatus(listing) === "under-contract").length;
   const soldListings = listings.filter(listing => listingStatus(listing) === "sold").length;
-  const activeListingValue = listings.filter(listing => listingStatus(listing) === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
+  // Found live: this used to sum every active listing's price together
+  // regardless of currency, then the caller labeled the whole total with the
+  // WORKSPACE'S TRANSACTION currency (an unrelated field) -- a $450,000 USD
+  // listing next to a KES-priced one, or a listing worth-total displayed
+  // under a currency with no bearing on any listing's actual price. Bucket
+  // by each listing's own currency (defaulting missing/legacy data to USD,
+  // its prior implicit assumption) and report the dominant one plus any
+  // others, matching the transaction currency/otherCurrencies pattern above.
+  const activeListingTotals = {};
+  for (const listing of listings) {
+    if (listingStatus(listing) !== "active") continue;
+    const listingCurrency = String(listing.currency || "USD").toUpperCase();
+    activeListingTotals[listingCurrency] = Math.round(((activeListingTotals[listingCurrency] || 0) + (Number(listing.price) || 0)) * 100) / 100;
+  }
+  const listingCurrencyEntries = Object.entries(activeListingTotals).sort((a, b) => b[1] - a[1]);
+  const activeListingCurrency = listingCurrencyEntries[0]?.[0] || "USD";
+  const activeListingValue = listingCurrencyEntries[0]?.[1] || 0;
+  const otherListingCurrencies = listingCurrencyEntries.slice(1).map(([entryCurrency]) => entryCurrency);
   return {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
     customers, donors, sponsors, volunteers, buyers, sellers, tenants, landlords, others,
@@ -470,7 +496,7 @@ function computeBusinessDashboard(editable) {
     grantsRequested, grantsAwarded,
     openTasks, totalTasks: editable.tasks.length,
     upcomingAppointments,
-    totalListings: listings.length, activeListings, pendingListings, soldListings, activeListingValue
+    totalListings: listings.length, activeListings, pendingListings, soldListings, activeListingValue, activeListingCurrency, otherListingCurrencies
   };
 }
 
@@ -672,7 +698,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const dashboard = computeBusinessDashboard(resolved.client.data.editable);
     const listingPhrase = dashboard.totalListings
-      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney(dashboard.currency, dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
+      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney(dashboard.activeListingCurrency, dashboard.activeListingValue)}${dashboard.otherListingCurrencies.length ? `, not counting listings in ${dashboard.otherListingCurrencies.join(", ")}` : ""}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
       : "";
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
@@ -916,10 +942,13 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business workspace yet. Tell me its name and I can start one before adding a listing.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const status = listing.status || "active";
-    const pricePhrase = listing.price ? ` at ${formatMoney("USD", listing.price)}` : "";
+    // Found live: only $ was ever recognized, so a local-currency price (see
+    // extractListingArgs' currency fix) was formatted and stored as if it
+    // were dollars -- "4,500,000 shillings" displayed as "$4,500,000".
+    const pricePhrase = listing.price ? ` at ${formatMoney(listing.currency, listing.price)}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can list ${listing.address}${pricePhrase} in "${workspaceName}" as ${status}. Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, listings: [...(resolved.client.data.editable.listings || []),
-      { address: listing.address, price: listing.price, propertyType: listing.propertyType, beds: listing.beds, baths: listing.baths, status, notes: "" }] };
+      { address: listing.address, price: listing.price, currency: listing.currency, propertyType: listing.propertyType, beds: listing.beds, baths: listing.baths, status, notes: "" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Listed ${listing.address}${pricePhrase} in "${workspaceName}" as ${status}.`;
@@ -949,7 +978,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const listings = resolved.client?.data?.editable?.listings || [];
     const workspaceName = resolved.client?.data?.info?.businessName || "your workspace";
     const response = listings.length
-      ? `"${workspaceName}" has ${listings.length} listing${listings.length === 1 ? "" : "s"}: ${listings.map(listing => `${listing.address} (${listing.status}${listing.price ? `, ${formatMoney("USD", listing.price)}` : ""})`).join("; ")}.`
+      ? `"${workspaceName}" has ${listings.length} listing${listings.length === 1 ? "" : "s"}: ${listings.map(listing => `${listing.address} (${listing.status}${listing.price ? `, ${formatMoney(listing.currency || "USD", listing.price)}` : ""})`).join("; ")}.`
       : `"${workspaceName}" has no listings yet. Say something like "list 123 Main Street for $450,000" to add one.`;
     return { status: "completed", localOnly: true, response, businessListings: listings, summary: response };
   }
