@@ -13,7 +13,7 @@ function createReminderScheduleExecutor({ notifications }) {
     const hasOffset = Number.isFinite(offsetMinutes) && offsetMinutes > 0 && offsetMinutes <= 60 * 24 * 365;
     const { scheduledAt, whenLabel } = hasOffset
       ? { scheduledAt: new Date(Date.now() + offsetMinutes * 60 * 1000).toISOString(), whenLabel: `in ${offsetMinutes} minute${offsetMinutes === 1 ? "" : "s"}` }
-      : parseAssistantReminderTime(rawText);
+      : parseAssistantReminderTime(rawText, { timeZone: context.timeZone });
     const task = extractAssistantReminderTask(String(input?.reminder || input?.title || rawText).trim());
     const notification = await notifications.enqueue({
       tenantId: context.tenantId,
