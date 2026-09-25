@@ -93,3 +93,31 @@ test("an unrelated health question still falls through honestly instead of being
   assert.equal(result.pharmacyQuestions, undefined);
   assert.equal(result.patientSupportResources, undefined);
 });
+
+// Found live: pharmacyBridge.search() genuinely searches real (OSM-backed,
+// falling back to a local catalog) pharmacy locations, but "find a pharmacy
+// near me" always got the static safe-questions draft instead, no matter
+// how explicitly a real location search was asked for.
+test("'find a pharmacy in Nairobi' reaches the real pharmacy location search, not the static question draft", async () => {
+  const result = await callHealthTool("Find a pharmacy in Nairobi.");
+  assert.ok(Array.isArray(result.pharmacyLocations) && result.pharmacyLocations.length > 0, "expected the real pharmacy location search to fire");
+  assert.equal(result.pharmacyQuestions, undefined, "a location search must not also produce the unrelated question draft");
+});
+
+test("a plain safety question with no location intent still gets the question draft, not a location search", async () => {
+  const result = await callHealthTool("What should I ask my pharmacist about drug interactions?");
+  assert.ok(Array.isArray(result.pharmacyQuestions) && result.pharmacyQuestions.length > 0);
+  assert.equal(result.pharmacyLocations, undefined);
+});
+
+// Found live: a real saved BP/glucose reading had no natural-language
+// read-back path at all -- "what's my blood pressure trend?" fell through
+// to the generic fallback despite the reading genuinely being saved moments
+// earlier in the very same account.
+test("a real saved chronic-care reading can be read back by asking for the trend/history", async () => {
+  const saveResult = await callHealthTool("My blood pressure is 150 over 95.");
+  assert.equal(saveResult.status, "health-reading-saved");
+  const historyResult = await callHealthTool("What's my blood pressure trend?");
+  assert.ok(Array.isArray(historyResult.chronicCareReadings) && historyResult.chronicCareReadings.length > 0, "expected the real saved reading to be read back");
+  assert.match(historyResult.response, /150\/95|150\s*\/\s*95/, "the real saved value should appear in the response");
+});

@@ -20523,6 +20523,24 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       || /\b(medication|prescription|insulin|drug interaction)s?\b/i.test(command)
       || (/\b(?:medicine|dosage)\b/i.test(command)
         && /\b(?:medication|prescription|insulin|pill|tablet|dose|refill|side effect|interaction|doctor|pharmacist|pharmacy)\b/i.test(command));
+    // pharmacyBridge.search() genuinely geocodes and searches real OSM
+    // pharmacy locations, but the branch below only ever called
+    // questionDraft() (a static list of safe questions) -- "find a pharmacy
+    // near me in Nairobi" never reached the real search, even though it is
+    // one function call away and already used by the raw dev-testing route.
+    // Scoped to an explicit find/search/near-me phrasing so a plain safety
+    // question ("what should I know about drug interactions") still gets
+    // the question draft, not a location search with no location.
+    const wantsPharmacyLocationSearch = wantsPharmacy
+      && /\b(find|search for|look up|locate|show me|near me|nearby|closest)\b/i.test(command);
+    // chronicDiseaseBridge.readings()/trendSummary() genuinely read back real
+    // saved BP/glucose history, but nothing in natural language ever called
+    // them -- "what's my blood pressure trend?" fell through to the generic
+    // fallback below despite real saved readings existing. The bp/glucose
+    // regexes above require actual numeric values, so a trend/history
+    // question (no numbers) never matches the reading-save branch either.
+    const wantsChronicHistory = /\b(trend|history|progress|readings?)\b/i.test(command)
+      && /\b(blood pressure|bp|glucose|blood sugar|chronic care|hypertension|diabetes)\b/i.test(command);
     const patientSupportMatch = command.match(/\b(community health worker|chw|transport(?:ation)?|support resource|patient support)\b/i);
     const patientSupportQuery = patientSupportMatch && /^(support resource|patient support)$/i.test(patientSupportMatch[1]) ? "" : patientSupportMatch?.[1];
     // patientSupportBridge's real catalog already includes plain-language
@@ -20693,14 +20711,40 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const searchResult = await nexusRealProviders.mobileClinicBridge.search({ location: locationMatch?.[1]?.trim() || "" });
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { mobileClinics: cards };
+      // A real live OSM result has an address but no region/services (the
+      // opposite shape of a catalog entry) -- the old unconditional template
+      // rendered "St. Mary's Clinic in Nairobi,  ()" for real results and
+      // mislabeled them "starter listings" even when they were genuinely live.
       response = cards.length
-        ? `I found ${cards.length} mobile clinic option(s): ${cards.map(c => `${c.name} in ${c.city}, ${c.region} (${c.services.join(", ")})`).join("; ")}. These are local starter listings, not a live booking; nothing has been scheduled or contacted.`
+        ? `I found ${cards.length} mobile clinic option(s): ${cards.map(c => {
+            const location = c.address || [c.city, c.region].filter(Boolean).join(", ");
+            const services = c.services?.length ? ` (${c.services.join(", ")})` : "";
+            return `${c.name} in ${location}${services}`;
+          }).join("; ")}. ${cards.every(c => c.source === "OpenStreetMap (live)") ? "This is a live OpenStreetMap directory lookup, not a booking; nothing has been scheduled or contacted." : "These are local starter listings, not a live booking; nothing has been scheduled or contacted."}`
         : "I did not find a matching mobile clinic in the local catalog. Tell me a city or region and I will check again.";
+    } else if (wantsPharmacyLocationSearch) {
+      const locationMatch = command.match(/\bin\s+([a-z\s]+?)[.,!?]*$/i);
+      const searchResult = await nexusRealProviders.pharmacyBridge.search({ location: locationMatch?.[1]?.trim() || "" });
+      const cards = searchResult?.body?.data?.cards || [];
+      extraData = { pharmacyLocations: cards };
+      response = cards.length
+        ? `I found ${cards.length} pharmacy option(s): ${cards.map(c => `${c.name} in ${c.address || c.city}`).join("; ")}. This is a directory lookup only; I did not request a refill, transfer, or contact anyone.`
+        : "I did not find a matching pharmacy nearby. Tell me a city or region and I will check again.";
     } else if (wantsPharmacy) {
       const draftResult = nexusRealProviders.pharmacyBridge.questionDraft({ questionTopic: args.summary || command });
       const questions = draftResult?.body?.data?.draft?.questions || [];
       extraData = { pharmacyQuestions: questions };
       response = `Here are safe questions to bring to a pharmacist: ${questions.join(" ")} I did not request a refill, transfer, dosage change, or contact a pharmacy.`;
+    } else if (wantsChronicHistory) {
+      const readingsResult = nexusRealProviders.chronicDiseaseBridge.readings(db);
+      const savedReadings = readingsResult?.body?.data?.readings || [];
+      extraData = { chronicCareReadings: savedReadings };
+      response = savedReadings.length
+        ? `You have ${savedReadings.length} saved chronic-care reading(s): ${savedReadings.slice(0, 5).map(r => {
+            const value = r.systolic && r.diastolic ? `${r.systolic}/${r.diastolic}` : r.glucose ? `glucose ${r.glucose}` : "reading";
+            return `${value}${r.dateTimeText ? ` on ${r.dateTimeText}` : ""}`;
+          }).join("; ")}. This is your saved history, not a diagnosis or trend interpretation -- discuss patterns with a qualified healthcare professional.`
+        : "I don't have any saved chronic-care readings yet. Tell me a blood pressure or glucose reading to start tracking your history.";
     } else if (patientSupportMatch || wantsVisitPrepSupport) {
       const supportResult = nexusRealProviders.patientSupportBridge.resources({ q: patientSupportMatch ? patientSupportQuery : "" });
       const cards = supportResult?.body?.data?.cards || [];
