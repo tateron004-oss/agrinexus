@@ -36,6 +36,15 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
     withActionLifecycle,
     nexusOpenAiNativeToolChoiceHint: () => "nexus_general_conversation",
     nexusOpenAiNativeToolReceipt: (_db, _tool, _command, status) => ({ testReceipt: true, status }),
+    // Real implementation (not a stub) -- executeNexusOpenAiNativeTool's
+    // restrictedToolCategory gate calls this directly (see server.js), added
+    // when a guest-only restrictions check was widened to also cover the
+    // Investor role.
+    userIsRestrictedFrom: (user, restriction) => {
+      if (user?.restrictions?.includes(restriction)) return true;
+      if (user?.role === "Investor" && ["communications-send", "external-transaction", "health-record-write", "account-provider-link"].includes(restriction)) return true;
+      return false;
+    },
     nexusRealProviders: {
       twilio: twilio || {},
       email: email || {},
