@@ -46081,7 +46081,16 @@ async function api(req, res, url) {
     // auth check, letting an unauthenticated caller read and write real
     // record content (patient name/diagnosis/etc. if a caller chose to store
     // it there) belonging to every session that has ever used this feature.
+    // Found in a later IDOR follow-up pass (same shape as the Nexus
+    // Operations/records/communications/knowledge fixes): requiring auth
+    // was not enough on its own -- every authenticated user still shared the
+    // same records, since nothing tagged who created what. Every record is
+    // now tagged with the real creator's ownerId at creation and checked via
+    // nexusPilotRecordOwned on every read/lookup; a real Admin still sees
+    // everything. ownerId is explicitly stripped from update bodies so a
+    // PATCH can never reassign a record's ownership.
     if (!user) return send(res, 401, { error: "Sign in required" });
+    const nexusPersistentMemoryRecordOwnedById = id => nexusPilotRecordOwned(store.readRecord(id).record, user);
     if (url.pathname === "/api/nexus/persistent-memory/records" && req.method === "GET") {
       const searchResult = store.searchRecords({
         type: url.searchParams.get("type") || "",
@@ -46089,65 +46098,91 @@ async function api(req, res, url) {
         query: url.searchParams.get("query") || "",
         includeArchived: url.searchParams.get("activeOnly") !== "true"
       });
+      const records = (canUse(user, "admin") ? searchResult.records : searchResult.records.filter(record => nexusPilotRecordOwned(record, user)))
+        .map(record => projectPersistentMemoryRecordForUser(record, user));
       return send(res, 200, {
         ok: true,
         ...searchResult,
-        records: searchResult.records.map(record => projectPersistentMemoryRecordForUser(record, user)),
+        records,
+        count: records.length,
         persistenceScope: store.status().persistenceScope,
         noExternalExecutionAuthorized: true
       });
     }
     if (url.pathname === "/api/nexus/persistent-memory/records" && req.method === "POST") {
       const body = await readBody(req);
-      const result = await persist(store.createRecord(body));
+      const result = await persist(store.createRecord({ ...body, ownerId: user.id }));
       return send(res, 200, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
     }
     const recordMatch = url.pathname.match(/^\/api\/nexus\/persistent-memory\/records\/([^/]+)$/);
     if (recordMatch && req.method === "GET") {
-      const readResult = store.readRecord(decodeURIComponent(recordMatch[1]));
+      const id = decodeURIComponent(recordMatch[1]);
+      const readResult = nexusPersistentMemoryRecordOwnedById(id) ? store.readRecord(id) : { ok: false, record: null, status: "not_found" };
       return send(res, 200, { ...readResult, record: projectPersistentMemoryRecordForUser(readResult.record, user), noExternalExecutionAuthorized: true });
     }
     if (recordMatch && (req.method === "PATCH" || req.method === "POST")) {
-      const body = await readBody(req);
-      const result = await persist(store.updateRecord(decodeURIComponent(recordMatch[1]), body));
+      const id = decodeURIComponent(recordMatch[1]);
+      if (!nexusPersistentMemoryRecordOwnedById(id)) return send(res, 404, { ok: false, status: "not_found", noExternalExecutionAuthorized: true });
+      const { ownerId, ...updates } = await readBody(req);
+      const result = await persist(store.updateRecord(id, updates));
       return send(res, result.ok ? 200 : 404, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
     }
     const archiveMatch = url.pathname.match(/^\/api\/nexus\/persistent-memory\/records\/([^/]+)\/archive$/);
     if (archiveMatch && (req.method === "PATCH" || req.method === "POST")) {
+      const id = decodeURIComponent(archiveMatch[1]);
+      if (!nexusPersistentMemoryRecordOwnedById(id)) return send(res, 404, { ok: false, status: "not_found", noExternalExecutionAuthorized: true });
       const body = await readBody(req);
-      const result = await persist(store.archiveRecord(decodeURIComponent(archiveMatch[1]), body.status || "archived", body.reason || ""));
+      const result = await persist(store.archiveRecord(id, body.status || "archived", body.reason || ""));
       return send(res, result.ok ? 200 : 404, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
     }
     const clearMatch = url.pathname.match(/^\/api\/nexus\/persistent-memory\/records\/([^/]+)\/clear-local$/);
     if (clearMatch && req.method === "POST") {
+      const id = decodeURIComponent(clearMatch[1]);
+      if (!nexusPersistentMemoryRecordOwnedById(id)) return send(res, 404, { ok: false, status: "not_found", noExternalExecutionAuthorized: true });
       const body = await readBody(req);
-      const result = await persist(store.deleteLocalRecord(decodeURIComponent(clearMatch[1]), body.confirmedLocalClear === true));
+      const result = await persist(store.deleteLocalRecord(id, body.confirmedLocalClear === true));
       return send(res, result.ok ? 200 : 409, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
     }
     if (url.pathname === "/api/nexus/persistent-memory/receipts" && req.method === "GET") {
+      const canViewAllMemoryReceipts = canUse(user, "admin");
+      const ownedRecordIds = new Set(store.snapshot().records.filter(record => nexusPilotRecordOwned(record, user)).map(record => record.id));
+      const receipts = projectPersistentMemoryForUser(store.snapshot(), user).receipts
+        .filter(receipt => canViewAllMemoryReceipts || ownedRecordIds.has(receipt.relatedRecordId));
       return send(res, 200, {
         ok: true,
-        receipts: projectPersistentMemoryForUser(store.snapshot(), user).receipts,
+        receipts,
         persistenceScope: store.status().persistenceScope,
         noExternalExecutionAuthorized: true
       });
     }
     if (url.pathname === "/api/nexus/persistent-memory/receipts" && req.method === "POST") {
       const body = await readBody(req);
+      if (body.relatedRecordId && !nexusPersistentMemoryRecordOwnedById(body.relatedRecordId)) {
+        return send(res, 404, { ok: false, status: "not_found", noExternalExecutionAuthorized: true });
+      }
       const result = await persist(store.createReceipt(body));
       return send(res, 200, { ...result, noExternalExecutionAuthorized: true, noSecretsExposed: true });
     }
     if (url.pathname === "/api/nexus/persistent-memory/predictive-context" && req.method === "GET") {
+      const canViewAllMemory = canUse(user, "admin");
       const predictiveContext = store.predictiveContext();
+      const activeRecords = (canViewAllMemory ? predictiveContext.activeRecords : predictiveContext.activeRecords.filter(record => nexusPilotRecordOwned(record, user)))
+        .map(record => projectPersistentMemoryRecordForUser(record, user));
+      const archivedRecords = (canViewAllMemory ? predictiveContext.archivedRecords : predictiveContext.archivedRecords.filter(record => nexusPilotRecordOwned(record, user)))
+        .map(record => projectPersistentMemoryRecordForUser(record, user));
+      const ownedRecordIds = new Set([...activeRecords, ...archivedRecords].map(record => record.id));
       return send(res, 200, {
         ok: true,
         predictiveContext: {
           ...predictiveContext,
-          activeRecords: predictiveContext.activeRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
-          archivedRecords: predictiveContext.archivedRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
-          signals: predictiveContext.signals.map(signal => isRestrictedHealthViewer(user) && NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
-            ? { ...signal, title: "Healthcare memory record", missingData: [] }
-            : signal)
+          activeRecords,
+          archivedRecords,
+          receipts: predictiveContext.receipts.filter(receipt => canViewAllMemory || ownedRecordIds.has(receipt.relatedRecordId)),
+          signals: predictiveContext.signals
+            .filter(signal => canViewAllMemory || ownedRecordIds.has(signal.recordId))
+            .map(signal => isRestrictedHealthViewer(user) && NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
+              ? { ...signal, title: "Healthcare memory record", missingData: [] }
+              : signal)
         },
         persistenceScope: store.status().persistenceScope,
         noExternalExecutionAuthorized: true
