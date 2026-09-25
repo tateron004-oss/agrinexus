@@ -57148,6 +57148,18 @@ function nexusAuthoritativeCapabilityId(outcome = {}) {
   }[outcome.workspace] || "ask-nexus";
 }
 
+// Found live: a generic summary row over an array of real objects (list
+// items, document records, business customers) called Array.prototype.join,
+// which silently calls each object's default toString() -- producing literal
+// "Images: [object Object], [object Object]" text over real, already-fetched
+// content instead of the actual item text/title/name.
+function describeNexusAuthoritativeArrayItem(item) {
+  if (item === null || item === undefined) return "";
+  if (typeof item !== "object") return String(item);
+  const label = item.text || item.title || item.name || item.label;
+  return label !== undefined ? String(label) : JSON.stringify(item);
+}
+
 function renderNexusAuthoritativeData(outcome = {}) {
   const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
   if (!host) return null;
@@ -57166,7 +57178,7 @@ function renderNexusAuthoritativeData(outcome = {}) {
     const row = document.createElement("p");
     const label = key.replace(/([A-Z])/g, " $1").replace(/^./, letter => letter.toUpperCase());
     row.dataset.nexusAuthoritativeField = key;
-    row.textContent = `${label}: ${Array.isArray(value) ? value.join(", ") : typeof value === "object" ? JSON.stringify(value) : value}`;
+    row.textContent = `${label}: ${Array.isArray(value) ? value.map(describeNexusAuthoritativeArrayItem).join(", ") : typeof value === "object" ? JSON.stringify(value) : value}`;
     surface.append(row);
   });
   host.prepend(surface);
@@ -57238,6 +57250,41 @@ async function renderNexusAuthoritativeVideos(outcome = {}) {
     gallery.append(figure);
   }
   surface.append(gallery);
+  return surface;
+}
+
+// Found live: nexus/lists/executor.js genuinely creates/reads/updates a real,
+// persisted checklist (real record write, real item text) -- but its
+// "checklist" presentation kind was never registered in the outer adapter
+// registry below, so NexusAuthoritativeOutcomeRenderer.render() threw
+// immediately for every real list result, before this renderer (or the
+// generic fallback) was ever reached. The list was genuinely saved; the user
+// saw nothing and the task was never even acknowledged.
+async function renderNexusAuthoritativeChecklist(outcome = {}) {
+  const data = outcome?.data || {};
+  const flatSingle = Array.isArray(data.items) ? { title: data.title, items: data.items } : null;
+  const singleFromReadOrUpdate = data.list && Array.isArray(data.list.items) ? data.list : null;
+  const lists = Array.isArray(data.lists) ? data.lists : [flatSingle || singleFromReadOrUpdate].filter(Boolean);
+  if (!lists.length) throw new Error("The authoritative lists provider returned no checklist.");
+  const surface = renderNexusAuthoritativeData(outcome);
+  if (!surface) return null;
+  surface.dataset.nexusChecklist = "true";
+  for (const entry of lists) {
+    const section = document.createElement("div");
+    section.dataset.nexusAuthoritativeChecklist = "true";
+    const title = document.createElement("h4");
+    title.textContent = String(entry.title || "Untitled list");
+    section.append(title);
+    const itemList = document.createElement("ul");
+    for (const item of Array.isArray(entry.items) ? entry.items : []) {
+      const li = document.createElement("li");
+      li.dataset.nexusChecklistItemDone = String(Boolean(item?.done));
+      li.textContent = `${item?.done ? "[x] " : "[ ] "}${item?.text || ""}`;
+      itemList.append(li);
+    }
+    section.append(itemList);
+    surface.append(section);
+  }
   return surface;
 }
 
@@ -57592,6 +57639,8 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
         ? await renderNexusAuthoritativeImages(outcome)
       : presentation.kind === "video-gallery"
         ? await renderNexusAuthoritativeVideos(outcome)
+      : presentation.kind === "checklist"
+        ? await renderNexusAuthoritativeChecklist(outcome)
         : renderNexusAuthoritativeData(outcome);
   const visible = presentation.kind === "map"
     ? nexusMapOutcomeVerified(outcome, data)
@@ -57775,7 +57824,12 @@ window.__NEXUS_CAPTURE_PRODUCTION_OUTCOME__ = async function captureNexusProduct
 async function nexusAuthoritativeOutcomeRenderer() {
   if (window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__) return window.__NEXUS_AUTHORITATIVE_OUTCOME_RENDERER__;
   const Renderer = await loadNexusAuthoritativeOutcomeRenderer();
-  const presentationKinds = ["assessment", "health-support", "form", "location-list", "learning-plan", "document", "listing", "map", "media-player", "image-gallery", "reminder", "task-list", "source-answer", "communication", "operation"];
+  // Found live: "checklist" (real lists) and "video-gallery" (real video
+  // search) both had working, correctly-implemented renderers below that
+  // were simply never reachable -- NexusAuthoritativeOutcomeRenderer.render()
+  // throws immediately for any presentation kind missing from this list,
+  // before the renderer for it is ever called.
+  const presentationKinds = ["assessment", "health-support", "form", "location-list", "learning-plan", "document", "listing", "map", "media-player", "image-gallery", "video-gallery", "checklist", "reminder", "task-list", "source-answer", "communication", "operation"];
   const adapters = Object.fromEntries(presentationKinds.map(kind => [kind, {
     render: async (data, context) => {
       recordNexusMapCommandBoundRenderTrace("adapter-before", context.outcome, data, { presentationKind: kind });
