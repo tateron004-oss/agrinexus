@@ -74,6 +74,23 @@ test("reading computes BMI correctly for recognized units (cm)", async () => {
   assert.equal(created[0].data.bmiInformational, 22.9);
 });
 
+// Found live (health toolkit/LMS follow-up audit): this exact bug was
+// already fixed in the sibling, no-longer-live
+// server/providers/chronicDiseaseBridgeProvider.js -- only the exact
+// singular "lb" was recognized, so "lbs"/"pounds" (the spellings this
+// codebase's own natural-language extractors actually produce) silently
+// fell through to "assume already kg," inflating a real, normal BMI into a
+// fabricated morbid-obesity reading -- but the fix was never ported to this
+// file, the REAL currently-wired executor.
+test("reading converts pounds to kg for BMI regardless of spelling (lb/lbs/pounds/POUNDS), not just the exact singular 'lb'", async () => {
+  const { records, created } = fixture();
+  const execute = createChronicDiseaseReadingExecutor({ records });
+  for (const weightUnit of ["lb", "lbs", "pounds", "POUNDS", "Lb"]) {
+    await execute({ input: { weight: 180, weightUnit, height: 175, heightUnit: "cm" }, context: { tenantId: "t1", userId: "u1" } });
+    assert.equal(created[created.length - 1].data.bmiInformational, 26.7, weightUnit);
+  }
+});
+
 test("reading refuses emergency/diagnosis-shaped notes without writing anything", async () => {
   const { records, created } = fixture();
   const execute = createChronicDiseaseReadingExecutor({ records });
