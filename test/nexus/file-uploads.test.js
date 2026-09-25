@@ -160,6 +160,46 @@ test("exceeding the total storage quota refuses the upload and cleans up, even t
   assert.deepEqual(fs.readdirSync(dir).filter(name => name !== "existing.pdf"), [], "the rejected upload must leave no trace");
 });
 
+// Added for real account erasure/export (2026-09-25): until now nothing in
+// this module could find "all of one user's uploads" or remove one -- an
+// account-erasure feature has no other way to reach uploaded files at all,
+// since there is no separate per-user upload index anywhere in the app.
+test("listUploadsForUser finds only the matching uploader's files, by scanning .meta.json sidecars", () => {
+  const dir = tmpDir();
+  fs.writeFileSync(path.join(dir, "a.png.meta.json"), JSON.stringify({ fileId: "a.png", uploadedBy: "u_farmer" }));
+  fs.writeFileSync(path.join(dir, "a.png"), Buffer.alloc(10));
+  fs.writeFileSync(path.join(dir, "b.pdf.meta.json"), JSON.stringify({ fileId: "b.pdf", uploadedBy: "u_someone_else" }));
+  fs.writeFileSync(path.join(dir, "b.pdf"), Buffer.alloc(10));
+  const found = uploads.listUploadsForUser(dir, "u_farmer");
+  assert.equal(found.length, 1);
+  assert.equal(found[0].fileId, "a.png");
+  assert.deepEqual(uploads.listUploadsForUser(dir, ""), [], "an empty/missing userId must never match every file");
+  assert.deepEqual(uploads.listUploadsForUser(path.join(dir, "does-not-exist"), "u_farmer"), []);
+});
+
+test("deleteUpload removes both the real file and its metadata sidecar, and reports whether anything was actually removed", () => {
+  const dir = tmpDir();
+  fs.writeFileSync(path.join(dir, "a.png"), Buffer.alloc(10));
+  fs.writeFileSync(path.join(dir, "a.png.meta.json"), JSON.stringify({ fileId: "a.png" }));
+  assert.equal(uploads.deleteUpload(dir, "a.png"), true);
+  assert.equal(fs.existsSync(path.join(dir, "a.png")), false, "the real file must be gone");
+  assert.equal(fs.existsSync(path.join(dir, "a.png.meta.json")), false, "the metadata sidecar must be gone too, not just the file");
+  assert.equal(uploads.deleteUpload(dir, "does-not-exist.png"), false, "deleting a file that was never there must report false, not a false success");
+});
+
+test("deleteUpload cannot be tricked into deleting outside the upload directory via a path-traversal fileId", () => {
+  const dir = path.resolve(tmpDir());
+  const parentDir = path.dirname(dir);
+  const plantedPath = path.join(parentDir, "planted-sibling.txt");
+  fs.writeFileSync(plantedPath, "must survive");
+  try {
+    uploads.deleteUpload(dir, "../planted-sibling.txt");
+    assert.ok(fs.existsSync(plantedPath), "a traversal fileId must never let deleteUpload escape the upload directory");
+  } finally {
+    fs.rmSync(plantedPath, { force: true });
+  }
+});
+
 // Structural: the HTTP routes and documentProvider wiring in server.js.
 const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
 
