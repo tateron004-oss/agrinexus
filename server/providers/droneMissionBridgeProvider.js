@@ -12,12 +12,18 @@ const DEFAULT_SURVEY_SPEED_MPS = 8;
 const DEFAULT_IMAGE_INTERVAL_METERS = 15;
 const HECTARES_PER_ACRE = 0.404686;
 
+// Found live (drone/logistics follow-up audit): the original regex had no
+// sign handling, so it matched only the digits after a leading "-" and
+// silently dropped it -- "-5 hectares" parsed as a valid, positive 5
+// hectares instead of being rejected as invalid input. Now captures the
+// sign and explicitly rejects a non-positive result rather than correcting
+// it.
 function parseAreaHectares(text) {
   const value = String(text || "");
-  const hectareMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:hectares?|ha)\b/i);
-  if (hectareMatch) return Number(hectareMatch[1]);
-  const acreMatch = value.match(/(\d+(?:\.\d+)?)\s*acres?\b/i);
-  if (acreMatch) return Number(acreMatch[1]) * HECTARES_PER_ACRE;
+  const hectareMatch = value.match(/(-?\d+(?:\.\d+)?)\s*(?:hectares?|ha)\b/i);
+  if (hectareMatch) { const num = Number(hectareMatch[1]); return num > 0 ? num : null; }
+  const acreMatch = value.match(/(-?\d+(?:\.\d+)?)\s*acres?\b/i);
+  if (acreMatch) { const num = Number(acreMatch[1]); return num > 0 ? num * HECTARES_PER_ACRE : null; }
   return null;
 }
 
