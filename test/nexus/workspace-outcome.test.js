@@ -40,7 +40,7 @@ test("server outcome retains both map endpoints", () => {
 test("server outcome registers lists as a real workspace, not a mock or a throw", () => {
   const created = createWorkspaceOutcome({
     command: command("Create a checklist called Farm Chores with feed goats and water crops."),
-    plan: { application: "lists", steps: [{ input: { title: "Farm Chores", items: ["feed goats", "water crops"] } }] },
+    plan: { application: "lists", steps: [{ toolId: "lists.create", input: { title: "Farm Chores", items: ["feed goats", "water crops"] } }] },
     task: { taskId: "tsk_3", steps: [{ output: { listId: "rec_1", itemCount: 2, persisted: true } }] },
     state: "completed", outcome: { verified: true }
   });
@@ -51,11 +51,36 @@ test("server outcome registers lists as a real workspace, not a mock or a throw"
 
   const updated = createWorkspaceOutcome({
     command: command("Add bring feed to my Farm Chores list."),
-    plan: { application: "lists", steps: [{ input: { listId: "rec_1", addItems: ["bring feed"] } }] },
+    plan: { application: "lists", steps: [{ toolId: "lists.update", input: { listId: "rec_1", addItems: ["bring feed"] } }] },
     task: { taskId: "tsk_4", steps: [{ output: { updated: true, listId: "rec_1" } }] },
     state: "completed", outcome: { verified: true }
   });
   assert.equal(updated.operation, "update_list");
+});
+
+// Found live: a real lists.read outcome (real executor in
+// nexus/lists/executor.js) was always mislabeled "update_list" (when the
+// merged input happened to carry a listId) or "create_list" (otherwise,
+// including a genuine "show me all my lists" request with no single listId
+// at all) -- telling the user their checklist was created/updated when they
+// only asked to see it. The step's own toolId is now the signal used
+// instead of guessing from the input shape.
+test("server outcome reports a real lists.read as read_list, not create_list/update_list", () => {
+  const singleLookup = createWorkspaceOutcome({
+    command: command("What's on my Farm Chores checklist?"),
+    plan: { application: "lists", steps: [{ toolId: "lists.read", input: { listId: "rec_1" } }] },
+    task: { taskId: "tsk_5", steps: [{ output: { found: true, listId: "rec_1", list: { listId: "rec_1", title: "Farm Chores", items: [{ text: "feed goats" }] } } }] },
+    state: "completed", outcome: { verified: true }
+  });
+  assert.equal(singleLookup.operation, "read_list");
+
+  const allLookup = createWorkspaceOutcome({
+    command: command("Show me all my checklists."),
+    plan: { application: "lists", steps: [{ toolId: "lists.read", input: {} }] },
+    task: { taskId: "tsk_6", steps: [{ output: { found: true, lists: [{ listId: "rec_1", title: "Farm Chores", items: [] }] } }] },
+    state: "completed", outcome: { verified: true }
+  });
+  assert.equal(allLookup.operation, "read_list");
 });
 
 test("workspace selection is server-owned and rejects unknown applications", () => {

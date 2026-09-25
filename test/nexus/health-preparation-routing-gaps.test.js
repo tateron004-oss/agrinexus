@@ -94,6 +94,36 @@ test("an unrelated health question still falls through honestly instead of being
   assert.equal(result.patientSupportResources, undefined);
 });
 
+// Found live: this tool's own fallback text promises "provider-ready
+// summaries," and a real providerReport() already exists in
+// chronicDiseaseBridgeProvider.js (already used elsewhere, already tested),
+// but nothing ever called it from natural language -- "Prepare a provider
+// summary of my chronic care readings" fell through to the generic
+// capability menu even though real saved readings and a real report-builder
+// both already existed.
+test("a real provider-summary request reaches the real report-builder, showing actual saved readings", async () => {
+  await callHealthTool("My blood pressure is 132 over 84.");
+  const result = await callHealthTool("Prepare a provider summary of my chronic care readings.");
+  assert.equal(result.status, "provider-summary-prepared");
+  assert.match(result.response, /132\/84/);
+  assert.equal(result.report.readingTableSummary.length > 0, true);
+});
+
+// A "provider summary" request also matches the broader trend/history gate
+// (both look for "readings" + a condition word) -- the more specific
+// request must win, reaching the real report-builder instead of the plain
+// reading-history listing.
+test("provider-summary phrasing takes priority over the broader chronic-history trend gate", async () => {
+  const result = await callHealthTool("Give me a provider-ready report to bring to my doctor about my chronic care readings.");
+  assert.equal(result.status, "provider-summary-prepared");
+});
+
+test("the existing broader chronic-history trend question still works exactly as before, unaffected by the new provider-summary branch", async () => {
+  const result = await callHealthTool("What is the trend in my blood pressure readings?");
+  assert.equal(result.status, "health-preparation-ready");
+  assert.ok(Array.isArray(result.chronicCareReadings));
+});
+
 // Found live: pharmacyBridge.search() genuinely searches real (OSM-backed,
 // falling back to a local catalog) pharmacy locations, but "find a pharmacy
 // near me" always got the static safe-questions draft instead, no matter

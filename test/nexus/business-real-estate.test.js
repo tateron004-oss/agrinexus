@@ -36,6 +36,15 @@ test("classify() routes listing commands correctly, and never collides with the 
   assert.equal(classify("What businesses do I have"), "list");
 });
 
+// Found live: the single most natural real-estate phrasing -- naming a
+// street address with a price -- uses neither the word "listing" nor
+// "property" at all, so it fell through to the generic create-workspace
+// fallback ("What should I call this business or nonprofit workspace?").
+test("classify() recognizes a listing named only by a real street address, with no 'listing'/'property' word at all", () => {
+  for (const text of ["List 123 Main Street for $450,000", "Add 456 Oak Avenue for $300k"])
+    assert.equal(classify(text), "addListing", text);
+});
+
 test("classify() and extractLeadArgs recognize buyer/seller/tenant/landlord as real lead types, not just 'customer'", () => {
   assert.equal(classify("Add a buyer named Jane Doe"), "addLead");
   const buyer = voiceDispatch.extractLeadArgs("Add a buyer named Jane Doe", {});

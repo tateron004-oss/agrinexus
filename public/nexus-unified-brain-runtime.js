@@ -105,6 +105,16 @@
     // Mirrors nexus/business/voice-dispatch.js's own wantsAddLead pattern
     // exactly, so client and server agree on what counts as this command.
     if (/\b(?:add|create|new|log|track)\b/.test(text) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/.test(text)) return true;
+    // Found live: "Schedule a video visit with a doctor for my rash" only
+    // ever matches ONE domain here ("healthcare", via "doctor") -- the same
+    // >=2-domain rejection shape as the real-estate/communications bugs
+    // above -- so it fell through past this runtime into
+    // NexusHealthcareCollaborationRuntime's decorative "prepared locally,
+    // execution disabled" simulator, instead of reaching this runtime's
+    // real, working telehealth-video capability (nexus_health_preparation's
+    // wantsTelehealthVideo, which creates a real video room and has its own
+    // confirmation gate). Mirrors that same server-side regex exactly.
+    if (/\b(video\s*call|video\s*visit|video\s*appointment|video\s*consult(?:ation)?|virtual\s+(?:visit|appointment))\b/.test(text)) return true;
     // Found live: a plain "text/email <real recipient> saying <words>" or
     // "call <real number> and say <words>" command only ever matches ONE
     // domain here ("communication") -- the same >=2-domain rejection shape

@@ -296,6 +296,28 @@ test("nexus_lists creates a real list through the authoritative runtime and repo
   assert.equal(result.executionVerified, true);
 });
 
+// Found live: a real lists.read outcome was always mislabeled "created" or
+// "updated" -- "What's on my Farm Chores checklist?" told the user their
+// checklist was created/updated when they only asked to see it.
+test("nexus_lists reports a real read as found content, not a bogus create/update claim", async () => {
+  const run = loadExecuteTool({
+    authoritativeRuntimeUser: async () => ({ id: "auth-user-1", tenantId: "tenant-1" }),
+    authoritativeNexusRuntime: {
+      behaviorTurnRequest: async () => ({
+        state: "render_required", taskId: "task-2", commandId: "cmd-2", correlationId: "corr-2",
+        render: { workspace: "lists", operation: "read_list", data: { found: true, listId: "list-1", list: { listId: "list-1", title: "Farm Chores", items: [{ text: "feed goats" }, { text: "water crops" }] } } }
+      }),
+      behaviorAcknowledgeRequest: async () => ({ completed: true })
+    }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_lists", { command: "What's on my Farm Chores checklist?" });
+  assert.equal(result.status, "completed");
+  assert.doesNotMatch(result.response, /I (created|updated)/);
+  assert.match(result.response, /Farm Chores/);
+  assert.match(result.response, /feed goats/);
+});
+
 test("nexus_lists reports a needed confirmation instead of silently completing", async () => {
   const run = loadExecuteTool({
     authoritativeRuntimeUser: async () => ({ id: "auth-user-1", tenantId: "tenant-1" }),

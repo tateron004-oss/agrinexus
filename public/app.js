@@ -5126,6 +5126,15 @@ function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
 
 function nexusOpenDialogueRealCapabilityOverlap(normalizedText = "") {
   const text = String(normalizedText || "");
+  // Found live: nexus_health_preparation's own wantsTelehealthVideo regex
+  // (server.js) already handles "schedule/book a video visit" for real —
+  // creating an actual video room, with its own confirmation gate — but the
+  // broader \bcall\b/"schedule an appointment" exclusion just below would
+  // otherwise catch this exact phrasing first and route it to
+  // NexusHealthcareCollaborationRuntime's decorative "prepared locally,
+  // execution disabled" simulator instead. Checked first, mirroring the
+  // real backend's own regex, so it isn't shadowed by the general exclusion.
+  if (/\b(video\s*call|video\s*visit|video\s*appointment|video\s*consult(?:ation)?|virtual\s+(?:visit|appointment))\b/i.test(text)) return true;
   // Explicit unsafe/consequential actions still need Open Dialogue's (or the
   // relevant collaboration runtime's) prepare-then-confirm safety gate —
   // route those there, not straight to the real backend.
