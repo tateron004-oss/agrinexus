@@ -97,6 +97,22 @@ test("Twilio recording/config errors are surfaced truthfully, not silently swall
   });
 });
 
+test("found live (phone bridge correctness audit): when the user's leg is placed but the target's leg fails, the user's already-ringing leg is hung up rather than left connecting into a lonely conference", async () => {
+  let call = 0;
+  await withFetch((url, options) => {
+    call += 1;
+    if (call === 1) return reply({ sid: "CA-USER-1", status: "queued" });
+    if (call === 2) return { ok: false, status: 400, text: async () => JSON.stringify({ message: "invalid target number" }) };
+    return reply({ sid: "CA-USER-1", status: "completed" });
+  }, async requests => {
+    const result = await twilioProvider.startConnectAndListenCall({ userPhone: "+15105019401", targetPhone: "+15559990000", userId: "u1", confirmed: true }, env);
+    assert.equal(result.body.ok, false, "the overall attempt must still be reported as failed");
+    assert.equal(requests.length, 3, "must issue a third request to end the user's own already-placed leg");
+    assert.match(requests[2].url, /\/Calls\/CA-USER-1\.json$/, "must target the user's own call sid for hangup");
+    assert.match(decodedBody(requests[2]), /Status=completed/, "must set the call status to completed to end it");
+  });
+});
+
 test("with calling disabled, no real call is placed", async () => {
   await withFetch(() => { throw new Error("must not call Twilio"); }, async () => {
     const disabled = await twilioProvider.startConnectAndListenCall({ userPhone: "+15105019401", targetPhone: "+15559990000", userId: "u1", confirmed: true }, { ...env, NEXUS_CALLS_ENABLED: "false" });

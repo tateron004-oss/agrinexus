@@ -47713,6 +47713,28 @@ async function api(req, res, url) {
     }
     const statement = sanitizePilotText(body.SpeechResult || body.speechResult || "", 400);
     if (!statement) {
+      // Found live (phone bridge correctness audit): unlike the authorized-
+      // caller /gather flow (which tracks turnCount per call via
+      // getPhoneVoiceSession/PHONE_CALL_MAX_TURNS), this unauthenticated
+      // screening flow's empty-speech retry had no cap or session tracking
+      // at all -- a caller who never speaks (dead air, a bad line, or
+      // deliberately) can keep this Gather looping forever, each iteration
+      // issuing a real OpenAI TTS call and keeping a real Twilio call open
+      // indefinitely, with no authorization check gating this path at all.
+      const screeningSession = getPhoneVoiceSession(db, phoneSessionKey(body, "screening"));
+      const silentTurnCount = Number(screeningSession.turnCount || 0) + 1;
+      if (silentTurnCount > PHONE_CALL_MAX_TURNS) {
+        updatePhoneVoiceSession(db, screeningSession, { turnCount: silentTurnCount });
+        await writeDb(db);
+        const limitPrompt = await phoneVoicePrompt("This call has reached its maximum length. Please try again another way. Goodbye.", "en-US");
+        return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${limitPrompt}
+  <Hangup/>
+</Response>`);
+      }
+      updatePhoneVoiceSession(db, screeningSession, { turnCount: silentTurnCount });
+      await writeDb(db);
       const retryPrompt = await phoneVoicePrompt("Sorry, I did not catch that. Who is calling, and what is this about?", "en-US");
       return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -47922,6 +47944,26 @@ async function api(req, res, url) {
     const commandLower = command.toLowerCase();
     const skippedNameWithCommand = step === "name" && /\b(start|open|run|apply|track|contact|call|telehealth|intake|job|delivery|mission|buyer|provider|doctor|pharmacy|course|map)\b/.test(commandLower);
     if (!command) {
+      // Found live (phone bridge correctness audit): the turn cap just below
+      // (PHONE_CALL_MAX_TURNS) is only ever reached on the branch where
+      // Twilio DID recognize speech/digits -- this empty-result branch
+      // (background noise, a bad line, or a caller who says nothing) never
+      // touched session.turnCount at all, so it could re-issue a fresh
+      // <Gather> (and a real OpenAI TTS retry prompt call) forever, keeping
+      // a real Twilio call open indefinitely with no automatic termination.
+      const silentTurnCount = Number(session.turnCount || 0) + 1;
+      if (silentTurnCount > PHONE_CALL_MAX_TURNS) {
+        updatePhoneVoiceSession(db, session, { step: "command", turnCount: silentTurnCount });
+        await writeDb(db);
+        const limitPrompt = await phoneVoicePrompt("This call has reached its maximum length. Please call back, or use the AgriNexus app to continue. Goodbye.", session.locale || language);
+        return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${limitPrompt}
+  <Hangup/>
+</Response>`);
+      }
+      updatePhoneVoiceSession(db, session, { turnCount: silentTurnCount });
+      await writeDb(db);
       const retryText = step === "name"
         ? "Please say your name."
         : step === "language"
