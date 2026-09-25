@@ -141,6 +141,38 @@ test("nexus_calendar routes real event creation through withActionLifecycle and 
   assert.equal(ledger[0].verified, true);
 });
 
+// Found live (calendar/session/export follow-up audit): calendarProvider.js
+// only ever exports createEvent -- there is no real update/cancel against
+// any configured provider -- but nexus_calendar's own tool description
+// promised "change, or cancel," and the router sends reschedule/cancel
+// phrasing here. Silently calling createEvent for a cancel/reschedule
+// request created a nonsensical, unrelated new event instead of refusing
+// honestly.
+test("nexus_calendar honestly refuses a cancel/reschedule request instead of silently creating an unrelated new event", async () => {
+  let calls = 0;
+  const run = loadExecuteTool({
+    calendar: { createEvent: async () => { calls += 1; return ok({ eventId: "EVT1" }); } }
+  });
+  const db = {};
+  const cancelled = await run(db, {}, "nexus_calendar", { command: "cancel my 3pm meeting", confirmed: true });
+  assert.equal(cancelled.status, "unsupported");
+  assert.match(cancelled.response, /can't yet change or cancel/i);
+  const rescheduled = await run(db, {}, "nexus_calendar", { command: "reschedule my dentist appointment to 5pm", confirmed: true });
+  assert.equal(rescheduled.status, "unsupported");
+  assert.equal(calls, 0, "no real event may be created for a cancel/reschedule request");
+});
+
+test("nexus_calendar still creates a real event for genuine scheduling language, unaffected by the cancel/reschedule refusal", async () => {
+  let calls = 0;
+  const run = loadExecuteTool({
+    calendar: { createEvent: async () => { calls += 1; return ok({ eventId: "EVT1" }); } }
+  });
+  const db = {};
+  const result = await run(db, {}, "nexus_calendar", { command: "schedule a meeting", title: "Farm visit", start: "2026-10-01T10:00:00Z", confirmed: true });
+  assert.equal(result.body.data.eventId, "EVT1");
+  assert.equal(calls, 1);
+});
+
 test("nexus_calendar records verified: false when the provider response has no real event id", async () => {
   const run = loadExecuteTool({
     calendar: { createEvent: async () => ok({}) }

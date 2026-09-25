@@ -12588,7 +12588,11 @@ function runWorkforceActionByAgent(db, user, type) {
       role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
       startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
       status: "scheduled",
-      estimatedEarnings: 64
+      // Found live (calendar/session/export follow-up audit): this was a flat
+      // literal regardless of which role the shift's own `role` field names --
+      // a user placed into a higher-rate role saw the same estimate as one on
+      // the cheapest role. Use the actually-applied role's real rate.
+      estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
     };
     db.profile.shiftSchedule.unshift(shift);
     db.profile.nextShift = `${shift.role} shift scheduled`;
@@ -18631,7 +18635,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_automation_reminder", "Create, inspect, cancel, or prepare one-time reminders and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated. Does not support recurring/repeating schedules -- only a single one-time reminder can be set.", "confirmation-gated-automation"),
     tool("nexus_lists", "Create, read, or update a checklist or to-do list through Nexus's real, persisted lists capability. Use the title argument for the list's name and content for its items (one per line or comma-separated).", "local-record-write"),
     tool("nexus_email", "Prepare or send email only through configured authorized email providers. Drafting can occur locally; sending requires credentials, consent, confirmation, and receipts. Cannot read or check an inbox.", "high-risk-confirmation-required"),
-    tool("nexus_calendar", "Search, schedule, change, or cancel calendar events only through configured authorized calendar providers. Local preparation is allowed; real calendar writes require confirmation and provider receipts.", "high-risk-confirmation-required"),
+    tool("nexus_calendar", "Schedule a new calendar event only through configured authorized calendar providers. Local preparation is allowed; real calendar writes require confirmation and provider receipts. Cannot search existing events, and cannot change or cancel an event already on the calendar.", "high-risk-confirmation-required"),
     tool("nexus_browser_computer_action", "Use browser or computer actions only through an authorized connector when no direct API exists. Never performs hidden external execution.", "high-risk-confirmation-required"),
     tool("nexus_document_export", "Create or prepare documents, reports, tables, presentation outlines, exports, and receipts through Nexus export/document-generation capabilities.", "document-export"),
     tool("nexus_receipts", "Inspect Nexus receipts, audit evidence, provider confirmations, source evidence, and outcome verification without exposing secrets.", "read-only-history")
@@ -20350,6 +20354,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "communications" }, providerResult);
   }
   if (toolName === "nexus_calendar") {
+    // Found live (calendar/session/export follow-up audit): the tool's own
+    // description promises "change, or cancel," and the router explicitly
+    // sends reschedule/cancel phrasing here, but calendarProvider.js only
+    // ever exports createEvent -- there is no real update/cancel against the
+    // configured provider anywhere in the codebase. Silently calling
+    // createEvent for "cancel my 3pm meeting" created a nonsensical new
+    // event (titled after the cancel request itself) instead of touching
+    // any real existing event -- give an honest refusal instead.
+    if (/\b(cancel\w*|reschedul\w*|move|change\w*|update\w*|delete\w*|remove\w*)\b/i.test(command) && !/\b(create|schedule|add|book|set up|new)\b/i.test(command)) {
+      return { ...common, capability: "calendar", status: "unsupported", response: "I can create a new calendar event, but I can't yet change or cancel one you already have -- please do that directly in your calendar app." };
+    }
     const calendarBody = {
       title: args.title || args.summary || command,
       start: args.start || args.startTime || args.when,
@@ -46644,7 +46659,21 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/zoom/meeting" && req.method === "POST") {
-    return sendProviderResult(res, await nexusRealProviders.zoom.createMeeting(await readBody(req)));
+    // Found live (calendar/session/export follow-up audit): unlike every
+    // other real-external-side-effect action in this file (SMS, calendar,
+    // email), a real Zoom meeting was created with no idempotency
+    // protection at all -- a client retry or double-submit created a second
+    // real, billable Zoom meeting with no dedup.
+    const zoomMeetingBody = await readBody(req);
+    const zoomResult = await withActionLifecycle(db, {
+      provider: "zoom", action: "zoom.meeting", body: zoomMeetingBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.zoom.createMeeting(zoomMeetingBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        return { verified: Boolean(data.id), note: data.id ? "Provider returned a real Zoom meeting id." : "Provider response had no meeting id to verify against." };
+      }
+    });
+    return sendProviderResult(res, zoomResult);
   }
 
   if (url.pathname === "/api/nexus/tools/sessions/status" && req.method === "GET") {
@@ -46656,7 +46685,19 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/sessions/zoom/create" && req.method === "POST") {
-    return sendProviderResult(res, await nexusRealProviders.sessionBridge.createZoom(await readBody(req), db));
+    // Same idempotency gap as /api/nexus/tools/zoom/meeting above -- this
+    // route also creates a real Zoom meeting (via sessionBridge.createZoom ->
+    // zoomProvider.createMeeting) with no dedup protection.
+    const sessionZoomBody = await readBody(req);
+    const sessionZoomResult = await withActionLifecycle(db, {
+      provider: "nexus-session-bridge", action: "sessions.zoom.create", body: sessionZoomBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.sessionBridge.createZoom(sessionZoomBody, db),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        return { verified: Boolean(data.id), note: data.id ? "Provider returned a real Zoom meeting id." : "Provider response had no meeting id to verify against." };
+      }
+    });
+    return sendProviderResult(res, sessionZoomResult);
   }
 
   if (url.pathname === "/api/nexus/tools/sessions/reminder" && req.method === "POST") {
@@ -50288,7 +50329,7 @@ async function api(req, res, url) {
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
         startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
         status: "scheduled",
-        estimatedEarnings: 64
+        estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
       };
       db.profile.shiftSchedule.unshift(shift);
       db.profile.nextShift = `${shift.role} - ${new Date(shift.startsAt).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
