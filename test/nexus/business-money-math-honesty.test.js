@@ -24,6 +24,31 @@ test("'I paid X for Y' (money going out) still correctly logs as an expense, una
   }
 });
 
+// Found live (income/expense ledger audit): bare "received" sat in the
+// unambiguous-income word list, so "We received the electricity bill for
+// $340" -- money flowing OUT -- was logged as $340 of INCOME, swinging
+// netIncome by $680 for a single transaction. The same "genuinely
+// ambiguous, needs its own override" shape as the "paid" bug just above.
+test("'received a bill/invoice' (money owed, not received) correctly logs as an expense", () => {
+  for (const text of [
+    "We received the electricity bill for $340",
+    "We received an invoice for $200 from the supplier",
+    "Received a water bill for 150 dollars"
+  ]) {
+    assert.equal(voiceDispatch.extractTransactionArgs(text, {}).type, "expense", text);
+  }
+});
+
+test("a genuine 'received' income statement still correctly logs as income, unaffected by the received-bill fix", () => {
+  for (const text of [
+    "We received payment for the maize order, $500",
+    "Received $500 for the maize sale",
+    "We received a donation of $500"
+  ]) {
+    assert.equal(voiceDispatch.extractTransactionArgs(text, {}).type, "income", text);
+  }
+});
+
 // Found live: a negative unitPrice (reachable via direct tool-call
 // arguments) silently reduced an invoice's total by any amount a caller
 // supplied.
