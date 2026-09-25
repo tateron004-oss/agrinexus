@@ -25,7 +25,8 @@ function harness({ task, existingConsent = null, grantError = null, withConsents
     ...(withConsents ? { consents: {
       active: async input => { calls.push(["active", input.scope]); return existingConsent; },
       grant: async input => { calls.push(["grant", input]); if (grantError) throw grantError; return { consent_id: "cns_1" }; }
-    } } : {})
+    } } : {}),
+    audit: { record: async event => { calls.push(["audit", event]); return event; } }
   };
   const spine = new BehaviorSpine({ agent: { command: async () => assert.fail("not used") }, engine,
     tasks: { get: async () => task }, conversations: { append: async () => {} },
@@ -57,11 +58,18 @@ test("every other confirmation keeps its generic wording, including sending a me
 test("the owner's yes records a consent for that task and scope, after approval and before the write", async () => {
   const { spine, calls } = harness({ task: ownerTask([step("telehealth.prepare", { concern: "BP concern" })]) });
   const result = await spine.confirm({ input: confirmInput, context: ctx() });
-  assert.deepEqual(calls.map(call => call[0]), ["approve", "active", "grant", "execute"], "approve, then consent, then the write");
+  assert.deepEqual(calls.map(call => call[0]), ["approve", "active", "grant", "audit", "execute"], "approve, then consent, then a real audit record of the grant, then the write");
   const grant = calls.find(call => call[0] === "grant")[1];
   assert.equal(grant.tenantId, "tenant-1"); assert.equal(grant.subjectId, "user-1"); assert.equal(grant.taskId, "tsk_1"); assert.equal(grant.scope, "health:telehealth-intake:write");
   assert.equal(grant.policyVersion, POLICIES["health:telehealth-intake:write"].policyVersion); assert.match(grant.purpose, /your own health records/);
   assert.equal(grant.receipt.source, "user-confirmation"); assert.equal(grant.receipt.stepId, "stp_1"); assert.equal(grant.receipt.confirmation, "Yes, save it."); assert.equal(grant.receipt.channel, "typed");
+  // Found live (record-repository/consent follow-up audit): the actual
+  // moment of informed consent was never written to nexus_audit_events --
+  // only the resulting tool.completed event was, leaving no trace of when
+  // or how consent was obtained for an auditor reviewing that feed.
+  const auditEvent = calls.find(call => call[0] === "audit")[1];
+  assert.equal(auditEvent.eventType, "consent.granted"); assert.equal(auditEvent.outcome, "success");
+  assert.equal(auditEvent.metadata.consentId, "cns_1"); assert.equal(auditEvent.metadata.scope, "health:telehealth-intake:write");
   assert.ok(result.state === "render_required" || result.state === "completed" || result.state === "confirmation_required", "the write proceeded");
   const health = harness({ task: ownerTask([step("health.record", { systolic: 128, diastolic: 82 })], { application: "health" }) });
   await health.spine.confirm({ input: confirmInput, context: ctx() });
