@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const pgUsers = require("../../server/pg-users.js");
 
 function stubPool(handlers) {
@@ -50,6 +51,40 @@ test("verifyPassword accepts the correct password and records last_login_at, rej
   const rejected = await pgUsers.verifyPassword(pool2, "demo@agrinexus.org", "wrong-password");
   assert.equal(rejected, null);
   assert.equal(pool2.calls.length, 1, "a failed login must not update last_login_at");
+});
+
+// Found live (login-security follow-up audit): verifyPassword looked the
+// account up FIRST and only ran the deliberately-expensive scrypt
+// comparison when a real hashed credential was found -- so a nonexistent
+// email returned near-instantly while a wrong password for a real account
+// paid scrypt's real cost, even though both return the identical result
+// (null). That timing difference alone lets an attacker enumerate valid
+// emails, the exact leak the password-reset endpoint already explicitly
+// guards against. Spying on the real crypto.scryptSync call count (rather
+// than measuring wall-clock time, which would make this test flaky) proves
+// the fix deterministically: both cases must now pay the same real cost.
+test("verifyPassword always runs a real scrypt comparison, even for a nonexistent account, so response timing can't enumerate emails", async () => {
+  const original = crypto.scryptSync;
+  let calls = 0;
+  crypto.scryptSync = (...args) => { calls += 1; return original(...args); };
+  try {
+    const noSuchAccount = stubPool([[/^select id, tenant_id, email, display_name, password_hash, status from users/, () => ({ rows: [] })]]);
+    calls = 0;
+    const result = await pgUsers.verifyPassword(noSuchAccount, "no-such-account@example.com", "anything");
+    assert.equal(result, null);
+    assert.equal(calls, 1, "a nonexistent account must still pay the real scrypt cost, exactly once");
+
+    const storedHash = pgUsers.hashPassword("Correct-Horse-1");
+    const wrongPassword = stubPool([[/^select id, tenant_id, email, display_name, password_hash, status from users/, () => ({
+      rows: [{ id: "user-1", tenant_id: "tenant-1", email: "demo@agrinexus.org", display_name: "Demo", password_hash: storedHash, status: "active" }]
+    })]]);
+    calls = 0;
+    const rejected = await pgUsers.verifyPassword(wrongPassword, "demo@agrinexus.org", "wrong-password");
+    assert.equal(rejected, null);
+    assert.equal(calls, 1, "a wrong password for a real account must pay the same real scrypt cost, exactly once");
+  } finally {
+    crypto.scryptSync = original;
+  }
 });
 
 test("verifyPassword still returns the user when the last_login_at bookkeeping update fails (e.g. migration 017 not applied yet)", async () => {
