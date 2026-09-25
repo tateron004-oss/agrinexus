@@ -101,10 +101,10 @@ function phone({ start = { lat: -1.3, lng: 36.8, accuracy: 12 }, failure = null 
 }
 const memoryStorage = () => { const map = new Map(); return { map, getItem: key => (map.has(key) ? map.get(key) : null), setItem: (key, value) => map.set(key, String(value)) }; };
 function setup({ handler, ...options } = {}) {
-  const p = phone(options.phone); const calls = []; const spoken = []; const panel = { shows: [], hides: 0 }; const released = []; let clock = 1000000; const storage = options.storage || memoryStorage();
+  const p = phone(options.phone); const calls = []; const spoken = []; const panel = { shows: [], errors: [], hides: 0 }; const released = []; let clock = 1000000; const storage = options.storage || memoryStorage();
   const route = straightRoute(); route.destination = { label: "Kibera Health Centre", lat: -1.28, lng: 36.8 }; route.mode = "drive";
   const api = async body => { calls.push(body); if (handler) return handler(body, route); if (body.action === "reverse") return { place: { label: "Haile Selassie Avenue, Nairobi" } }; if (body.action === "route") return { route }; return {}; };
-  const navigator = nav.createNavigator({ geolocation: p.geolocation, api, speak: (text, opts) => spoken.push({ text, ...opts }), storage, ui: { show: value => panel.shows.push(value), hide: () => { panel.hides += 1; } }, wakeLock: async () => ({ release: () => released.push(true) }), now: () => clock });
+  const navigator = nav.createNavigator({ geolocation: p.geolocation, api, speak: (text, opts) => spoken.push({ text, ...opts }), storage, ui: { show: value => panel.shows.push(value), error: value => panel.errors.push(value), hide: () => { panel.hides += 1; } }, wakeLock: async () => ({ release: () => released.push(true) }), now: () => clock, wait: fn => fn() });
   return { navigator, p, calls, spoken, panel, released, storage, route, tick: ms => { clock += ms; } };
 }
 
@@ -188,6 +188,11 @@ test("repeat, how far, stop and losing permission while guiding", async () => {
   assert.equal(await t.navigator.handle("stop navigation"), "Navigation stopped."); assert.equal(t.navigator.active, false); assert.deepEqual(t.p.cleared, [7]);
   const denied = setup(); await denied.navigator.handle("take me to Kibera Health Centre"); denied.spoken.length = 0; denied.p.deny();
   assert.match(denied.spoken[0].text, /Allow location/); assert.equal(denied.navigator.active, false);
+  // Found live: this was spoken only -- the floating panel just vanished
+  // with no visible text, a real gap for a muted phone or a hard-of-hearing
+  // user. Confirm the same message also reaches the visible panel now.
+  assert.equal(denied.panel.errors.length, 1, "the permission-lost error must also reach the visible panel, not just speech");
+  assert.match(denied.panel.errors[0], /Allow location/);
 });
 
 test("the page loads the GPS, the offline shell caches it, and the words are handled on the phone before anything is sent", () => {

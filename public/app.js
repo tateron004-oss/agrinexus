@@ -2934,6 +2934,11 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (handleNexusGenesisPredictiveWorkforceCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "standard-user-safe-typed-command" })) return true;
+  // Found live (dispatch-wiring audit): this dispatcher (the global command
+  // box, and via runGlobalCommand/caption-panel Send) had no path to voice
+  // troubleshooting at all, direct or indirect -- its own fallback chain
+  // never reaches handleVoiceCommand either.
+  if (handleNexusVoiceTroubleshootingCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusAgenticBrainTypedCommand(command)) return true;
   if (handleNexusProductionRuntimeTypedCommand(command)) return true;
   if (handleNexusOpenDialogueAgentCommand(command)) return true;
@@ -30911,26 +30916,14 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     });
     return true;
   }
-  if (routeNexusIntentDrivenWorkflowCommand(command, { source })) {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    event?.stopImmediatePropagation?.();
-    if (input) input.value = command;
-    setCommandInputs(command);
-    return true;
-  }
-  const predictiveCommand = isNexusMultiDomainPredictiveCommand(routedCommand)
-    || isNexusAgriculturePredictiveModelerCommand(routedCommand)
-    || isNexusChronicPredictiveModelerCommand(routedCommand)
-    || isNexusPredictiveMaturityCommand(routedCommand);
-  if (predictiveCommand && runNexusAgenticCommandRuntime(routedCommand, { source, originalCommand: command })) {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    event?.stopImmediatePropagation?.();
-    if (input) input.value = command;
-    setCommandInputs(command);
-    return true;
-  }
+  // Found live (maps/health audit): the same generic-classifier-preemption
+  // shape as the crisis-safety and farm/marketplace/workforce/trade bugs
+  // above was also possible here for maps.view/health.record/
+  // telehealth.prepare/clinic.find/pharmacy.find -- these real search-style
+  // handlers are only reachable through the authoritative runtime below,
+  // which ran AFTER the decorative generic classifier instead of before it.
+  // Moved ahead of routeNexusIntentDrivenWorkflowCommand, matching the same
+  // fix already applied to handleNexusPresenceCommandSendSubmit.
   if (window.NexusUnifiedBrainRuntime?.shouldHandleBeforeLegacy?.(command, { language: languageCode(), inputType: "typed_chat" })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -30974,6 +30967,26 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     if (input) input.value = command;
     setCommandInputs(command);
     void handleNexusFullCommunicationRuntimeCommand(command, { source });
+    return true;
+  }
+  if (routeNexusIntentDrivenWorkflowCommand(command, { source })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    return true;
+  }
+  const predictiveCommand = isNexusMultiDomainPredictiveCommand(routedCommand)
+    || isNexusAgriculturePredictiveModelerCommand(routedCommand)
+    || isNexusChronicPredictiveModelerCommand(routedCommand)
+    || isNexusPredictiveMaturityCommand(routedCommand);
+  if (predictiveCommand && runNexusAgenticCommandRuntime(routedCommand, { source, originalCommand: command })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
     return true;
   }
   return false;
@@ -58166,6 +58179,13 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // Local support and visit preparation cannot authorize or execute provider actions.
   // These explicit requests remain available even when the durable runtime is unavailable.
   if (handleNexusMentalHealthBehavioralWellnessCommand(text, { ...options, source: "unified-brain-mental-health-priority" })) return true;
+  // Found live (dispatch-wiring audit): this function is the ONLY thing
+  // handleVoiceCommand -- the real entry point for actual spoken voice --
+  // delegates to, and it never checked voice-troubleshooting at all. "Can
+  // you hear me" / mic-trouble phrasing was unreachable from real speech,
+  // only working when typed through two specific composer boxes that call
+  // this check directly themselves.
+  if (handleNexusVoiceTroubleshootingCommand(text, options)) return true;
   // The GPS: "where am I", "save this place as home", "take me to ...", "stop navigation" (see kyro-navigation.js). The phone's location is read only when asked.
   if (typeof handleKyroNavigationCommand === "function" && await handleKyroNavigationCommand(text, options)) return true;
   if (handleNexusVisualProviderQuestionReportCommand(text, options)) return true;
