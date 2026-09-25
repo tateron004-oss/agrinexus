@@ -18,9 +18,18 @@ function createWebPushProvider({ env = process.env, devices, deviceTokens, webPu
       url: notification.content?.url || "/",
       tag: notification.notification_id
     });
-    let delivered = false;
+    // Found live (delivery-pipeline audit): devicesDelivered was hardcoded
+    // to targets.length regardless of how many sends actually succeeded --
+    // a user with 2 devices where only 1 received the push still got a
+    // receipt claiming both did, with the second device's real failure
+    // (lastError) simply discarded once the first one succeeded. The
+    // caller (nexus/workers/handlers.js) trusts `verified: true` alone to
+    // mark the whole notification "delivered," so a real per-device miss
+    // had no log line, no retry, and no trace anywhere.
+    let deliveredCount = 0;
     let lastError = null;
     let stage = "decrypt";
+    const failedDeviceIds = [];
     for (const device of targets) {
       stage = "decrypt";
       try {
@@ -31,7 +40,7 @@ function createWebPushProvider({ env = process.env, devices, deviceTokens, webPu
           vapidDetails: { subject: VAPID_SUBJECT, publicKey: VAPID_PUBLIC_KEY, privateKey: VAPID_PRIVATE_KEY },
           TTL: 300
         });
-        delivered = true;
+        deliveredCount += 1;
       } catch (error) {
         // 404/410 means the browser/OS revoked the subscription -- clear it
         // so future reminders don't keep failing against a dead endpoint.
@@ -39,9 +48,10 @@ function createWebPushProvider({ env = process.env, devices, deviceTokens, webPu
           await devices.revoke({ tenantId: notification.tenant_id, userId: notification.user_id, deviceId: device.device_id }).catch(() => {});
         }
         lastError = error;
+        failedDeviceIds.push(device.device_id);
       }
     }
-    if (!delivered) {
+    if (deliveredCount === 0) {
       // web-push's WebPushError carries the push service's answer in statusCode/body ("invalid JWT",
       // "VAPID credentials do not correspond", ...). Keeping only .message hid why every send failed.
       const status = lastError?.statusCode ? `status ${lastError.statusCode}` : "";
@@ -49,7 +59,13 @@ function createWebPushProvider({ env = process.env, devices, deviceTokens, webPu
       const detail = [`stage ${stage}`, status, reason].filter(Boolean).join("; ");
       throw coded(lastError?.code || "webpush_delivery_failed", lastError ? `Push delivery failed (${detail})` : "No push subscription could be delivered to.");
     }
-    return { verified: true, method: "webpush_delivery", devicesDelivered: targets.length };
+    return {
+      verified: true,
+      method: "webpush_delivery",
+      devicesDelivered: deliveredCount,
+      devicesAttempted: targets.length,
+      devicesFailed: failedDeviceIds.length ? failedDeviceIds : undefined
+    };
   };
 }
 

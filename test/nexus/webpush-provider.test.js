@@ -64,3 +64,52 @@ test("no registered device throws a clear error", async () => {
   const provider = createWebPushProvider({ env, devices, deviceTokens: tokens, webPush: { sendNotification: async () => {} } });
   await assert.rejects(() => provider(notification), error => error.code === "webpush_subscription_missing");
 });
+
+// Found live (delivery-pipeline audit): devicesDelivered was hardcoded to
+// targets.length regardless of how many sends actually succeeded -- a user
+// with 2 devices where only 1 received the push still got a receipt
+// claiming both did, and the second device's real failure was silently
+// discarded once the first one succeeded (lastError only ever surfaced when
+// EVERY device failed).
+test("a multi-device fan-out reports the real per-device outcome, not the total device count, when one device fails", async () => {
+  const { notification, tokens } = fixture();
+  const ciphertext1 = tokens.encrypt({ p256dh: "pub-1", auth: "auth-1" }, "tenant-1:user-1:device-1");
+  const ciphertext2 = tokens.encrypt({ p256dh: "pub-2", auth: "auth-2" }, "tenant-1:user-1:device-2");
+  const devices = {
+    listPushable: async () => [
+      { device_id: "device-1", push_provider: "webpush", push_endpoint: "https://push.example/ep-1", push_key_ciphertext: ciphertext1 },
+      { device_id: "device-2", push_provider: "webpush", push_endpoint: "https://push.example/ep-2", push_key_ciphertext: ciphertext2 }
+    ],
+    revoke: async () => true
+  };
+  const webPush = {
+    sendNotification: async subscription => {
+      if (subscription.endpoint.endsWith("ep-2")) throw Object.assign(new Error("connection reset"), { statusCode: 500 });
+    }
+  };
+  const provider = createWebPushProvider({ env, devices, deviceTokens: tokens, webPush });
+  const result = await provider(notification);
+
+  assert.equal(result.verified, true, "reaching at least one device is still a real success");
+  assert.equal(result.devicesDelivered, 1, "must report the real number of devices that actually received the push, not the total attempted");
+  assert.equal(result.devicesAttempted, 2);
+  assert.deepEqual(result.devicesFailed, ["device-2"], "the failing device must be identifiable, not silently discarded");
+});
+
+test("a multi-device fan-out where every device succeeds reports no failures", async () => {
+  const { notification, tokens } = fixture();
+  const ciphertext1 = tokens.encrypt({ p256dh: "pub-1", auth: "auth-1" }, "tenant-1:user-1:device-1");
+  const ciphertext2 = tokens.encrypt({ p256dh: "pub-2", auth: "auth-2" }, "tenant-1:user-1:device-2");
+  const devices = {
+    listPushable: async () => [
+      { device_id: "device-1", push_provider: "webpush", push_endpoint: "https://push.example/ep-1", push_key_ciphertext: ciphertext1 },
+      { device_id: "device-2", push_provider: "webpush", push_endpoint: "https://push.example/ep-2", push_key_ciphertext: ciphertext2 }
+    ]
+  };
+  const webPush = { sendNotification: async () => {} };
+  const provider = createWebPushProvider({ env, devices, deviceTokens: tokens, webPush });
+  const result = await provider(notification);
+  assert.equal(result.devicesDelivered, 2);
+  assert.equal(result.devicesAttempted, 2);
+  assert.equal(result.devicesFailed, undefined);
+});

@@ -72,6 +72,17 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           if (!receipt?.verified) throw Object.assign(new Error("Delivery provider returned no verified receipt."), { code: "delivery_unverified" });
           await runtime.notifications.delivered(notification.notification_id);
           await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
+          // Found live: a multi-device fan-out (webpush-provider.js) can
+          // reach some of a user's devices and not others while still
+          // returning verified: true (reaching at least one device is a
+          // real, reasonable definition of "delivered") -- but the partial
+          // miss was previously invisible anywhere. Surface it here so it's
+          // at least observable, without changing the overall delivered
+          // verdict.
+          if (receipt.devicesFailed?.length) {
+            logger?.warn?.("notifications.delivered_partial", { notificationId: notification.notification_id, channel: notification.channel,
+              devicesDelivered: receipt.devicesDelivered, devicesAttempted: receipt.devicesAttempted, devicesFailed: receipt.devicesFailed });
+          }
           logger?.info?.("notifications.delivered", { notificationId: notification.notification_id, channel: notification.channel, method: receipt.method });
           outcomes.push({ notificationId: notification.notification_id, delivered: true, receipt });
         } catch (error) {
