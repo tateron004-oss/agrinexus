@@ -113,3 +113,16 @@ test("a chained expression (symbol form) also declines, unaffected by word-vs-sy
   assert.doesNotMatch(result.response, /10 - 3 = 7/);
   assert.match(result.response, /Sum: 15; average: 5/);
 });
+
+// Found live: this tool's own success message and receipt used to describe
+// two capabilities that don't exist anywhere in this codebase -- "a
+// configured execution provider" and "a configured dataset reference" --
+// even though the actual implementation only ever does single-operator
+// arithmetic and a flat number extraction, with no table/CSV parsing and no
+// code analysis or execution of any kind.
+test("a request with no numbers at all is honestly refused, without inventing a 'configured dataset reference' capability", async () => {
+  const result = await callCalc("Please review this table and tell me if the totals check out.");
+  assert.doesNotMatch(result.response, /configured dataset reference/i);
+  assert.doesNotMatch(result.response, /configured execution provider/i);
+  assert.match(result.response, /cannot parse tables or analyze code/i);
+});

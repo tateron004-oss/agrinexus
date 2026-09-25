@@ -18600,7 +18600,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
     tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
-    tool("nexus_data_code_analysis", "Perform controlled calculations, structured-data reasoning, table checks, and code/data analysis using server-side deterministic logic or a configured execution provider.", "controlled-analysis"),
+    tool("nexus_data_code_analysis", "Perform arithmetic calculations and simple number extraction/summary (count, min, max, sum, average) from plain text using server-side deterministic logic. Does not parse tables, analyze or execute code, or use any execution provider.", "controlled-analysis"),
     tool("nexus_visual_analysis", "Analyze user-authorized images, document photos, crop photos, equipment photos, or camera inputs only when a configured visual provider and explicit user-supplied media are present.", "visual-analysis"),
     tool("nexus_memory", "Inspect, create, correct, export, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls.", "privacy-memory"),
     tool("nexus_automation_reminder", "Create, inspect, cancel, or prepare one-time reminders and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated. Does not support recurring/repeating schedules -- only a single one-time reminder can be set.", "confirmation-gated-automation"),
@@ -19811,9 +19811,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_data_code_analysis") {
     const analysis = nexusOpenAiNativeAnalyzeStructuredText(args.query || command);
+    // Found live: this tool's own success message and receipt used to
+    // describe two capabilities that don't exist anywhere in this codebase
+    // -- "a configured execution provider" (no such provider, config flag,
+    // or conditional branch exists at all) and "a configured dataset
+    // reference" (this phrase appeared nowhere else). The actual
+    // implementation only ever does single-operator arithmetic and a flat
+    // regex extraction of numbers from raw text -- no table/CSV parsing, no
+    // code analysis or execution of any kind.
     const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "analysis-completed", [
-      "Ran deterministic local text, number, and arithmetic analysis.",
-      "Kept code execution disabled unless a configured execution provider is present."
+      "Ran deterministic local text, number, and single-operator arithmetic analysis.",
+      "Did not parse tables, analyze code, or execute anything -- this tool has no code-execution capability."
     ], [
       "Nexus did not run arbitrary code, download packages, access files, or call external systems."
     ]);
@@ -19827,7 +19835,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           ? "Division by zero is undefined -- there is no numeric answer to that calculation."
           : analysis.numericCount
             ? `I found ${analysis.numericCount} number(s). Sum: ${analysis.sum}; average: ${analysis.average}. I did not run arbitrary code.`
-            : "I can help reason through the calculation or data, but I need numbers, a table, or a configured dataset reference.",
+            : "I can help with a calculation or a plain number summary, but I did not find any numbers in that. I cannot parse tables or analyze code -- tell me the calculation, or list the numbers directly.",
       analysis,
       receipt,
       evidenceReceipt: receipt,
@@ -19951,13 +19959,35 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-videos", [`Retrieved ${pendingVideos.length} real video result(s); no matching image results were found.`], ["Nexus did not analyze an unseen image or video, open the camera, or claim ownership of source media."]);
         return { ...common, capability: "video-search", status: "source-backed-videos", response: `I could not find image results for ${imageQuery}, but I found ${pendingVideos.length} real video result(s).`, videos: pendingVideos, sources: pendingVideos.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
       }
+      // Found live: when both real search providers (Wikimedia Commons,
+      // Openverse) and the pending-videos fallback all come up empty, this
+      // request unconditionally fell through into the vision.analyze
+      // branch below -- but that branch answers a completely different
+      // question ("analyze THIS image I gave you"), not "search for
+      // images." Since a search request never carries args.imageUrl/url,
+      // the result was the non-sequitur "A user-supplied image URL is
+      // required. Nexus will not open the camera." for a request that had
+      // nothing to do with a camera or an upload.
+      const searchReceipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "no-image-results",
+        [`Searched Wikimedia Commons and Openverse for "${imageQuery}" and found no usable results.`],
+        ["Nexus did not fabricate an image result or open the camera."]);
+      return { ...common, capability: "visual-search", status: "no-image-results", response: `I searched for images of ${imageQuery} but did not find any usable results.`, providerAttempted: true, providerSucceeded: false, executionAttempted: true, executionVerified: false, receipt: searchReceipt, evidenceReceipt: searchReceipt };
     }
     const visionResult = await nexusRealProviders.vision.analyze({
       imageUrl: args.imageUrl || args.url,
       prompt: args.prompt || args.query || command,
       command
     }, process.env);
+    // Found live: the real vision-model description lives only in
+    // body.data.analysis -- nexusOpenAiNativeProviderToolResult's generic
+    // fallback (body.message) is just the fixed sentence "Vision provider
+    // analyzed the user-supplied image with safety limits." Without this,
+    // only that generic sentence would ever reach the user, never the
+    // actual description a real vision-model call produced. Mirrors the
+    // identical fix already applied to nexus_file_document_analysis above.
+    const visionAnalysis = visionResult?.body?.data?.analysis;
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "visual-analysis" }, visionResult, {
+      ...(visionAnalysis ? { responseOverride: `${visionResult.body.message} ${visionAnalysis}` } : {}),
       didNot: ["Nexus did not open the camera, capture an image, diagnose health conditions, prescribe treatment, or prescribe pesticide/fertilizer."]
     });
   }
