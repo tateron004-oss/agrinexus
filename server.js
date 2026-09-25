@@ -44635,7 +44635,21 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, response, notification: db.nexusNotifications[0], audit: db.nexusPilotAuditEvents[0] });
   }
 
+  // Found live (IDOR/access-control audit): unlike every sibling route that
+  // reads this exact array (/api/nexus/records/:id/responses and
+  // /api/nexus/responses/:id are both gated by canUse(user,"provider-queue")
+  // just above; /api/nexus/records* itself requires sign-in for the same
+  // reason -- "a single shared, non-per-user collection that can hold real
+  // chronic-care/telehealth intake content"), this route had NO auth check
+  // at all. Its path doesn't match any of the prefixes gated above, so it
+  // fell through completely open: any caller, signed in or not, could read
+  // every provider/admin review response ever published in the workspace,
+  // including the linked recordId and up to 1200 characters of reviewer
+  // free text. Sign-in only (not provider-queue) is the correct gate here --
+  // this route's whole purpose is letting a Standard User see responses
+  // made visible to them, the mirror image of the provider-queue routes.
   if (url.pathname === "/api/nexus/my-responses" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
     return send(res, 200, { ok: true, responses: db.nexusProviderResponses.filter(item => item.visibleToUser), label: "My Nexus Activity responses" });
   }
@@ -45602,7 +45616,14 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, queueItem: item, record, audit });
   }
 
+  // Found live (IDOR/access-control audit): this returns the exact same
+  // db.nexusPilotAuditEvents array as /api/nexus/consent-history, which
+  // already requires sign-in with an explicit comment that it is "a global
+  // audit/consent trail across every session -- must not be readable by an
+  // unauthenticated caller." This route was an unguarded second door onto
+  // the same data.
   if (url.pathname === "/api/nexus/audit" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
     return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents });
   }
