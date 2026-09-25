@@ -114,6 +114,12 @@
     const persistenceScope = input.persistenceScope || options.persistenceScope || "local_browser";
     return {
       id: input.id || id("nexus-memory-record"),
+      // Optional: the server tags this with the real authenticated user's id
+      // at creation and enforces it on every later read/lookup (see
+      // nexusPilotRecordOwned in server.js) -- this module itself has no
+      // concept of "current user" since it also runs client-side, so it
+      // only ever preserves whatever ownerId a caller already set.
+      ownerId: input.ownerId ?? options.ownerId ?? null,
       type: normalizeType(input.type || options.type),
       title: input.title || input.name || "Nexus memory record",
       name: input.name || input.title || "Nexus memory record",
