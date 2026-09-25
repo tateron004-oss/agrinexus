@@ -1927,7 +1927,19 @@ function renderNexusMentalHealthSupportCard(packet = {}) {
   const safety = packet.safety || {};
   const screening = packet.screeningGovernance || {};
   const escalation = packet.jurisdictionEscalation || {};
+  const escalationDetail = escalation.escalation || {};
+  const escalationNumbers = (escalationDetail.displayRules || []).filter(rule => /^\d+$/.test(rule));
+  const escalationLine = escalation.jurisdictionId
+    ? `Jurisdiction escalation: ${escalation.jurisdictionId}${escalationNumbers.length ? ` -- contact ${escalationDetail.resourceTypes.join(", ")} (${escalationNumbers.join(" or ")})` : ""}`
+    : "Jurisdiction escalation: not active";
   const safetyPlan = packet.safetyPlan || {};
+  // Previously this only reported a count ("Safety plan steps: 4") and the
+  // jurisdiction id alone ("us") -- real crisis numbers/steps existed in the
+  // packet but never actually reached the card a user reads. Show the real
+  // text instead of a count/id whenever it's actually there.
+  const safetyStepBullets = Array.isArray(safetyPlan.steps) && safetyPlan.steps.length
+    ? safetyPlan.steps.map(step => `Safety step: ${step}`)
+    : ["Safety plan steps: 0"];
   return {
     type: "mental_health_behavioral_wellness",
     title: "Mental Health & Behavioral Wellness",
@@ -1944,8 +1956,8 @@ function renderNexusMentalHealthSupportCard(packet = {}) {
       `Action: ${classification.action || "supportive_dialogue"}`,
       `Professional review required: ${classification.professionalReviewRequired ? "yes" : "no"}`,
       `Screening governance: ${screening.instrumentId || "not requested"}`,
-      `Jurisdiction escalation: ${escalation.jurisdictionId || "not active"}`,
-      `Safety plan steps: ${Array.isArray(safetyPlan.steps) ? safetyPlan.steps.length : 0}`,
+      escalationLine,
+      ...safetyStepBullets,
       `No diagnosis: ${safety.noDiagnosis ? "yes" : "required"}`,
       `No provider contacted: ${safety.noProviderContacted ? "yes" : "required"}`,
       `Memory mode: ${packet.privacy?.defaultMemoryMode || "session_only"}`
@@ -1979,6 +1991,8 @@ function handleNexusMentalHealthBehavioralWellnessCommand(command = "", options 
       openedAt: Date.now(),
       agenticMission: {
         title: "Mental Health & Behavioral Wellness",
+        mode: "mental_health_behavioral_wellness",
+        goal: "Provide mental-health and behavioral wellness support",
         status: packet.classification?.riskTier || "support",
         safetyState: packet.classification?.state || "emotional_support"
       }
@@ -30819,6 +30833,19 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     return true;
   }
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
+  // Found live: this dispatcher was the one command-entry point that never
+  // checked mental-health/crisis safety before routing to the generic
+  // intent classifier -- every other dispatcher (handleNexusPresenceCommandSendSubmit,
+  // handleNexusStandardUserSafeTypedCommand, executeGenesisWorkspaceFromFinalTranscript,
+  // etc.) already calls this first.
+  if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
     event?.stopImmediatePropagation?.();
