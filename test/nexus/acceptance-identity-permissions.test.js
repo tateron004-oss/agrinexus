@@ -24,7 +24,7 @@ test("the acceptance identity gains ordinary task permissions without losing or 
 test("the migration is the next one in an unbroken sequence and is idempotent", () => {
   const names = fs.readdirSync(dir).filter(name => /^\d+_.+\.sql$/.test(name)).sort();
   names.forEach((name, index) => assert.equal(Number(name.match(/^(\d+)_/)[1]), index + 1, `gap or duplicate at ${name}`));
-  assert.equal(names.at(-1), "021_acceptance_identity_task_permissions.sql");
+  assert.equal(names.at(-1), "022_nexus_notifications_delivery_lease.sql");
   assert.ok(migration.includes("not (p = any(permissions))"), "already-granted permissions are not appended again");
   assert.ok(migration.includes("and not ('tasks:read' = any(permissions) and 'tasks:execute' = any(permissions))"), "a fully-granted row is left untouched");
 });
