@@ -42700,36 +42700,68 @@ function buildNexusPredictiveIntelligenceSummary(history = buildNexusPredictiveM
   };
 }
 
-function latestChronicCareProfile(store) {
-  return store.chronicCareProfiles.find(item => !/archived|deceased/.test(item.status || "")) || store.chronicCareProfiles[0] || null;
+// Found live (IDOR follow-up audit): every collection in Nexus Operations'
+// "local operations memory" sandbox was a single flat array shared by the
+// entire app, with no ownerId/tenant field at all -- an authenticated
+// Standard User could read or mutate ANY other user's real chronic-care,
+// transaction, or applicant/employer record just by supplying its ID, and
+// every "latest" fallback below (used whenever an action omits an ID) chose
+// the single most-recently-created record ACROSS ALL USERS, so even a
+// caller who supplied no ID at all landed on a stranger's record. ownerId
+// gives every real user their own private partition; anonymous callers
+// (this sandbox intentionally allows anonymous demo actions -- see the
+// existing PHI-disclosure smoke test) share one "anonymous" bucket, since
+// there is no stable identity to partition an anonymous caller by and the
+// existing QA suite's anonymous-continuation flows depend on that sharing.
+// An Admin still sees and can act on everything, matching
+// redactSensitiveAuditEntry's existing admin-sees-all pattern for this same
+// subsystem's audit log.
+function nexusOperationsOwnerKey(user) {
+  return user?.id || "anonymous";
 }
 
-function latestShipment(store) {
-  return store.shipments.find(item => !/cancelled|delivered/.test(item.status || "")) || store.shipments[0] || null;
+function nexusOperationsOwned(item, user) {
+  return Boolean(item) && (item.ownerId === nexusOperationsOwnerKey(user) || canUse(user, "admin"));
 }
 
-function latestTransaction(store) {
-  return store.transactions.find(item => !/cancelled|completed|paid/.test(item.status || "")) || store.transactions[0] || null;
+function latestChronicCareProfile(store, user) {
+  const mine = store.chronicCareProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/archived|deceased/.test(item.status || "")) || mine[0] || null;
 }
 
-function latestParty(store, type = "") {
-  return store.parties.find(item => !type || item.type === type || item.type === "both") || store.parties[0] || null;
+function latestShipment(store, user) {
+  const mine = store.shipments.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/cancelled|delivered/.test(item.status || "")) || mine[0] || null;
 }
 
-function latestLearningProfile(store) {
-  return store.learningProfiles.find(item => !/archived|deleted/.test(item.status || "")) || store.learningProfiles[0] || null;
+function latestTransaction(store, user) {
+  const mine = store.transactions.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/cancelled|completed|paid/.test(item.status || "")) || mine[0] || null;
 }
 
-function latestApplicantProfile(store) {
-  return store.applicantProfiles.find(item => !/archived|no-contact|deleted/.test(item.status || "")) || store.applicantProfiles[0] || null;
+function latestParty(store, type = "", user) {
+  const mine = store.parties.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !type || item.type === type || item.type === "both") || mine[0] || null;
 }
 
-function latestEmployerProfile(store) {
-  return store.employerProfiles.find(item => !/closed|archived/.test(item.status || "")) || store.employerProfiles[0] || null;
+function latestLearningProfile(store, user) {
+  const mine = store.learningProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/archived|deleted/.test(item.status || "")) || mine[0] || null;
 }
 
-function latestDroneMission(store) {
-  return store.droneMissionRequests.find(item => !/cancelled|archived|completed/.test(item.status || "")) || store.droneMissionRequests[0] || null;
+function latestApplicantProfile(store, user) {
+  const mine = store.applicantProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/archived|no-contact|deleted/.test(item.status || "")) || mine[0] || null;
+}
+
+function latestEmployerProfile(store, user) {
+  const mine = store.employerProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/closed|archived/.test(item.status || "")) || mine[0] || null;
+}
+
+function latestDroneMission(store, user) {
+  const mine = store.droneMissionRequests.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/cancelled|archived|completed/.test(item.status || "")) || mine[0] || null;
 }
 
 function parseNexusOperationsCommand(command = "") {
@@ -42852,6 +42884,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const conditionArea = cleanOpsText(body.conditionArea || (/diabetes/i.test(command) ? "diabetes" : /obesity/i.test(command) ? "obesity" : /hypertension|blood pressure|bp/i.test(command) ? "hypertension" : "general chronic care"), 40).replace(/\s+/g, "-");
     const profile = {
       chronicCareId: nexusOperationId("NX-CC"),
+      ownerId: nexusOperationsOwnerKey(user),
       patientId: cleanOpsText(body.patientId || body.patientName || "standard-user-local-patient", 120),
       conditionArea: ["diabetes", "hypertension", "obesity", "multiple", "other"].includes(conditionArea) ? conditionArea : conditionArea === "general-chronic-care" ? "other" : conditionArea,
       status: cleanOpsText(body.status || "active", 40),
@@ -42876,7 +42909,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_rpm_reading") {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
     const reading = {
       readingId: nexusOperationId("NX-RPM"),
       chronicCareId: profile.chronicCareId,
@@ -42895,7 +42928,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_rtm_activity") {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
     const activity = {
       activityId: nexusOperationId("NX-RTM"),
       chronicCareId: profile.chronicCareId,
@@ -42913,12 +42946,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "show_chronic_care_timeline") {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store);
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user);
     return { ok: true, action, record: profile, timeline: nexusChronicCareTimeline(store, profile?.chronicCareId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (["create_provider_review_packet", "create_pharmacy_referral", "create_mobile_clinic_follow_up", "create_telehealth_encounter"].includes(action)) {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
     const lane = action === "create_pharmacy_referral" ? "pharmacy" : action === "create_mobile_clinic_follow_up" ? "mobile-clinic" : action === "create_telehealth_encounter" ? "telehealth" : "physician-review";
     const caseItem = {
       caseId: nexusOperationId("NX-CASE"),
@@ -42939,8 +42972,9 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (action === "create_intake") {
     const intake = {
       intakeId: nexusOperationId("NX-INTAKE"),
+      ownerId: nexusOperationsOwnerKey(user),
       patientId: cleanOpsText(body.patientId || "standard-user-local-patient", 120),
-      chronicCareId: cleanOpsText(body.chronicCareId || latestChronicCareProfile(store)?.chronicCareId || "", 120),
+      chronicCareId: cleanOpsText(body.chronicCareId || latestChronicCareProfile(store, user)?.chronicCareId || "", 120),
       status: "active",
       reason: cleanOpsText(body.reason || command || "Healthcare intake created.", 300),
       noContact: false,
@@ -42954,7 +42988,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["archive_intake", "delete_intake_if_allowed"].includes(action)) {
-    const intake = store.healthcareIntakes.find(item => item.intakeId === body.intakeId) || store.healthcareIntakes[0];
+    const intake = store.healthcareIntakes.find(item => item.intakeId === body.intakeId && nexusOperationsOwned(item, user)) || store.healthcareIntakes.find(item => nexusOperationsOwned(item, user));
     if (!intake) return { ok: false, error: "intake_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...intake };
     intake.status = action === "archive_intake" ? "archived" : "deactivated-delete-review";
@@ -42966,7 +43000,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "mark_deceased_stop_outreach") {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId) || latestChronicCareProfile(store);
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user);
     if (!profile) return { ok: false, error: "chronic_care_profile_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...profile };
     profile.status = "deceased-stop-outreach";
@@ -42985,6 +43019,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const type = action === "add_pharmacy_provider" ? "pharmacy" : action === "add_mobile_clinic_provider" ? "mobile-clinic" : action === "add_training_provider" ? "training-provider" : cleanOpsText(body.type || "clinic", 60);
     const provider = {
       providerId: nexusOperationId("NX-PROV"),
+      ownerId: nexusOperationsOwnerKey(user),
       type,
       name: cleanOpsText(body.name || `${type} provider`, 160),
       status: cleanOpsText(body.status || "active", 60),
@@ -43006,6 +43041,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (["add_buyer", "add_seller"].includes(action)) {
     const party = {
       partyId: nexusOperationId("NX-PARTY"),
+      ownerId: nexusOperationsOwnerKey(user),
       type: action === "add_buyer" ? "buyer" : "seller",
       businessName: cleanOpsText(body.businessName || body.name || `${action === "add_buyer" ? "Buyer" : "Seller"} business`, 160),
       contactName: cleanOpsText(body.contactName || "", 120),
@@ -43028,7 +43064,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "mark_party_closed") {
-    const party = store.parties.find(item => item.partyId === body.partyId) || latestParty(store, "seller");
+    const party = store.parties.find(item => item.partyId === body.partyId && nexusOperationsOwned(item, user)) || latestParty(store, "seller", user);
     if (!party) return { ok: false, error: "party_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...party };
     party.status = "closed";
@@ -43043,8 +43079,9 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (action === "create_shipment") {
     const shipment = {
       shipmentId: nexusOperationId("NX-SHIP"),
-      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer")?.partyId || "", 120),
-      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller")?.partyId || "", 120),
+      ownerId: nexusOperationsOwnerKey(user),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer", user)?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller", user)?.partyId || "", 120),
       origin: cleanOpsText(body.origin || "farm", 160),
       destination: cleanOpsText(body.destination || "market", 160),
       productType: cleanOpsText(body.productType || "produce", 120),
@@ -43063,7 +43100,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_tracking_event") {
-    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store) || runNexusOperationsAction(db, { action: "create_shipment" }, user).record;
+    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId && nexusOperationsOwned(item, user)) || latestShipment(store, user) || runNexusOperationsAction(db, { action: "create_shipment" }, user).record;
     const eventStatus = cleanOpsText(body.status || (/delivered/i.test(command) ? "delivered" : /delayed/i.test(command) ? "delayed" : /temperature/i.test(command) ? "temperature-issue" : /in[- ]?transit/i.test(command) ? "in-transit" : "picked-up"), 80);
     const event = { eventId: nexusOperationId("NX-TRK"), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
     store.trackingEvents.unshift(event);
@@ -43076,13 +43113,13 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "show_shipment_timeline") {
-    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store);
+    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId && nexusOperationsOwned(item, user)) || latestShipment(store, user);
     const timeline = store.trackingEvents.filter(item => item.shipmentId === shipment?.shipmentId);
     return { ok: true, action, record: shipment, timeline, operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "cancel_shipment") {
-    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId) || latestShipment(store);
+    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId && nexusOperationsOwned(item, user)) || latestShipment(store, user);
     if (!shipment) return { ok: false, error: "shipment_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...shipment };
     shipment.status = "cancelled";
@@ -43095,9 +43132,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (action === "create_transaction") {
     const transaction = {
       transactionId: nexusOperationId("NX-TXN"),
-      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer")?.partyId || "", 120),
-      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller")?.partyId || "", 120),
-      shipmentId: cleanOpsText(body.shipmentId || latestShipment(store)?.shipmentId || "", 120),
+      ownerId: nexusOperationsOwnerKey(user),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer", user)?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller", user)?.partyId || "", 120),
+      shipmentId: cleanOpsText(body.shipmentId || latestShipment(store, user)?.shipmentId || "", 120),
       amount: cleanOpsText(body.amount || "0", 80),
       currency: cleanOpsText(body.currency || "USD", 12),
       country: cleanOpsText(body.country || db.profile.activeCountryId || "", 40).toLowerCase(),
@@ -43116,7 +43154,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_transaction_item") {
-    const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store) || runNexusOperationsAction(db, { action: "create_transaction" }, user).record;
+    const transaction = store.transactions.find(item => item.transactionId === body.transactionId && nexusOperationsOwned(item, user)) || latestTransaction(store, user) || runNexusOperationsAction(db, { action: "create_transaction" }, user).record;
     if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db, user) };
     if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db, user) };
     const before = { ...transaction, items: [...(transaction.items || [])] };
@@ -43130,7 +43168,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "cancel_transaction") {
-    const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store);
+    const transaction = store.transactions.find(item => item.transactionId === body.transactionId && nexusOperationsOwned(item, user)) || latestTransaction(store, user);
     if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db, user) };
     if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db, user) };
     const before = { ...transaction };
@@ -43142,7 +43180,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "settle_transaction") {
-    const transaction = store.transactions.find(item => item.transactionId === body.transactionId) || latestTransaction(store);
+    const transaction = store.transactions.find(item => item.transactionId === body.transactionId && nexusOperationsOwned(item, user)) || latestTransaction(store, user);
     if (!transaction) return { ok: false, error: "transaction_not_found", operations: nexusOperationsSummary(db, user) };
     if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db, user) };
     if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db, user) };
@@ -43170,6 +43208,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (action === "create_learning_profile") {
     const profile = {
       learningProfileId: nexusOperationId("NX-LRN"),
+      ownerId: nexusOperationsOwnerKey(user),
       learnerId: cleanOpsText(body.learnerId || body.learnerName || "standard-user-local-learner", 120),
       status: "active",
       learningGoals: cleanOpsArray(body.learningGoals || "digital literacy, workforce readiness, agriculture training"),
@@ -43189,7 +43228,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["prepare_training_referral", "prepare_lms_handoff", "create_learning_plan", "create_skill_assessment_packet", "track_training_interest", "track_enrollment_status", "create_drone_training_referral"].includes(action)) {
-    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store) || runNexusOperationsAction(db, { action: "create_learning_profile" }, user).record;
+    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId && nexusOperationsOwned(item, user)) || latestLearningProfile(store, user) || runNexusOperationsAction(db, { action: "create_learning_profile" }, user).record;
     const status = action === "track_enrollment_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "track_training_interest" ? "interest-recorded" : "prepared";
     const record = {
       trainingRecordId: nexusOperationId("NX-TRN"),
@@ -43217,7 +43256,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["archive_learning_profile", "delete_training_data_if_allowed"].includes(action)) {
-    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store);
+    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId && nexusOperationsOwned(item, user)) || latestLearningProfile(store, user);
     if (!profile) return { ok: false, error: "learning_profile_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...profile };
     profile.status = action === "archive_learning_profile" ? "archived" : "deactivated-delete-review";
@@ -43229,13 +43268,14 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "show_learning_timeline") {
-    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store);
+    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId && nexusOperationsOwned(item, user)) || latestLearningProfile(store, user);
     return { ok: true, action, record: profile, timeline: nexusLearningTimeline(store, profile?.learningProfileId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "create_applicant_profile") {
     const applicant = {
       applicantId: nexusOperationId("NX-APP"),
+      ownerId: nexusOperationsOwnerKey(user),
       applicantName: cleanOpsText(body.applicantName || body.name || "standard-user-local-applicant", 160),
       status: "active",
       targetRoles: cleanOpsArray(body.targetRoles || "farm work, community health support, logistics, training"),
@@ -43255,7 +43295,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "prepare_resume_packet") {
-    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user)) || latestApplicantProfile(store, user) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
     const packet = {
       resumePacketId: nexusOperationId("NX-RES"),
       applicantId: applicant.applicantId,
@@ -43278,6 +43318,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (["create_employer_profile", "add_employer"].includes(action)) {
     const employer = {
       employerId: nexusOperationId("NX-EMP"),
+      ownerId: nexusOperationsOwnerKey(user),
       companyName: cleanOpsText(body.companyName || body.name || "Hiring company", 160),
       status: cleanOpsText(body.status || "active", 60),
       region: cleanOpsText(body.region || "", 160),
@@ -43294,9 +43335,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_job_opportunity") {
-    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user)) || latestEmployerProfile(store, user) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
     const job = {
       jobOpportunityId: nexusOperationId("NX-JOB"),
+      ownerId: nexusOperationsOwnerKey(user),
       employerId: employer.employerId,
       title: cleanOpsText(body.title || "Job opportunity", 160),
       status: "draft",
@@ -43318,9 +43360,9 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["prepare_application_packet", "track_application_status", "add_interview_follow_up"].includes(action)) {
-    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
-    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
-    const job = store.jobOpportunities.find(item => item.jobOpportunityId === body.jobOpportunityId) || store.jobOpportunities[0] || runNexusOperationsAction(db, { action: "add_job_opportunity", employerId: employer.employerId }, user).record;
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user)) || latestApplicantProfile(store, user) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user)) || latestEmployerProfile(store, user) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
+    const job = store.jobOpportunities.find(item => item.jobOpportunityId === body.jobOpportunityId && nexusOperationsOwned(item, user)) || store.jobOpportunities.find(item => nexusOperationsOwned(item, user)) || runNexusOperationsAction(db, { action: "add_job_opportunity", employerId: employer.employerId }, user).record;
     const status = action === "track_application_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "add_interview_follow_up" ? "follow-up-prepared" : "prepared";
     const application = {
       applicationId: nexusOperationId(action === "add_interview_follow_up" ? "NX-INTV" : "NX-APPL"),
@@ -43348,7 +43390,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "mark_employer_closed") {
-    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store);
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user)) || latestEmployerProfile(store, user);
     if (!employer) return { ok: false, error: "employer_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...employer };
     employer.status = "closed";
@@ -43361,7 +43403,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["archive_applicant", "no_contact_applicant", "delete_applicant_data_if_allowed"].includes(action)) {
-    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store);
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user)) || latestApplicantProfile(store, user);
     if (!applicant) return { ok: false, error: "applicant_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...applicant };
     applicant.status = action === "no_contact_applicant" ? "no-contact" : action === "archive_applicant" ? "archived" : "deactivated-delete-review";
@@ -43374,18 +43416,19 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "show_applicant_timeline") {
-    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store);
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user)) || latestApplicantProfile(store, user);
     return { ok: true, action, record: applicant, timeline: nexusApplicantTimeline(store, applicant?.applicantId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (action === "show_hiring_pipeline") {
-    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store);
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user)) || latestEmployerProfile(store, user);
     return { ok: true, action, record: employer, pipeline: nexusHiringPipeline(store, employer?.employerId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
   if (["add_drone_provider"].includes(action)) {
     const provider = {
       droneProviderId: nexusOperationId("NX-DRP"),
+      ownerId: nexusOperationsOwnerKey(user),
       name: cleanOpsText(body.name || body.providerName || "Drone provider", 160),
       status: cleanOpsText(body.status || "candidate", 80),
       serviceRegion: cleanOpsText(body.serviceRegion || body.region || "", 160),
@@ -43404,7 +43447,8 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (action === "add_drone_equipment") {
     const equipment = {
       droneEquipmentId: nexusOperationId("NX-DRE"),
-      providerId: cleanOpsText(body.providerId || store.droneProviders[0]?.droneProviderId || "", 120),
+      ownerId: nexusOperationsOwnerKey(user),
+      providerId: cleanOpsText(body.providerId || store.droneProviders.find(item => nexusOperationsOwned(item, user))?.droneProviderId || "", 120),
       equipmentName: cleanOpsText(body.equipmentName || body.name || "Drone equipment", 160),
       status: "inventory-review",
       capabilities: cleanOpsArray(body.capabilities || "imagery, scouting"),
@@ -43422,6 +43466,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const mission = action === "create_drone_mission_request"
       ? {
           droneMissionId: nexusOperationId("NX-DRN"),
+          ownerId: nexusOperationsOwnerKey(user),
           status: "draft",
           missionType: cleanOpsText(body.missionType || "crop scouting", 120),
           locationText: cleanOpsText(body.locationText || body.location || "user-provided field location required", 180),
@@ -43433,7 +43478,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
           createdAt: now,
           updatedAt: now
         }
-      : (store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store) || runNexusOperationsAction(db, { action: "create_drone_mission_request" }, user).record);
+      : (store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId && nexusOperationsOwned(item, user)) || latestDroneMission(store, user) || runNexusOperationsAction(db, { action: "create_drone_mission_request" }, user).record);
     if (action === "create_drone_mission_request") store.droneMissionRequests.unshift(mission);
     const before = action === "create_drone_mission_request" ? null : { ...mission };
     if (action === "prepare_drone_mission_packet") mission.status = "packet-prepared";
@@ -43469,7 +43514,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["cancel_drone_mission", "archive_drone_record"].includes(action)) {
-    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store);
+    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId && nexusOperationsOwned(item, user)) || latestDroneMission(store, user);
     if (!mission) return { ok: false, error: "drone_mission_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...mission };
     mission.status = action === "cancel_drone_mission" ? "cancelled" : "archived";
@@ -43481,7 +43526,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "show_drone_mission_timeline") {
-    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store);
+    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId && nexusOperationsOwned(item, user)) || latestDroneMission(store, user);
     return { ok: true, action, record: mission, timeline: nexusDroneMissionTimeline(store, mission?.droneMissionId), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
   }
 
@@ -43493,7 +43538,22 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     return nexusOperationResponse(db, user, action, report, audit, receipt);
   }
 
-  if (action === "show_action_receipts") return { ok: true, action, receipts: store.actionReceipts.slice(0, 50), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
+  if (action === "show_action_receipts") {
+    // Found live (IDOR follow-up audit): unlike show_audit_log just below
+    // (which redacts before/after for a non-admin caller via
+    // redactSensitiveAuditEntry), this had NO redaction at all -- any
+    // caller, including a fully anonymous one, got the last 50 real action
+    // receipts for EVERY user of the whole app, each carrying a real
+    // entityId (chronicCareId/transactionId/applicantId/...) usable as the
+    // missing piece to look up or act on another user's record above. A
+    // caller's own receipt is already returned directly in their own
+    // action's response, so there is no legitimate need for a non-admin to
+    // see another user's entityId here. Matches show_audit_log's shape
+    // exactly (still ok:true, just redacted) rather than rejecting outright.
+    const canViewAllReceipts = canUse(user, "admin");
+    const receipts = store.actionReceipts.slice(0, 50).map(entry => canViewAllReceipts ? entry : { ...entry, entityId: null });
+    return { ok: true, action, receipts, operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
+  }
   if (action === "show_audit_log") return { ok: true, action, auditLogs: store.auditLogs.slice(0, 50).map(entry => redactSensitiveAuditEntry(entry, canUse(user, "admin"))), operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
 
   return { ok: false, error: "unsupported_operations_action", action, operations: nexusOperationsSummary(db, user) };
