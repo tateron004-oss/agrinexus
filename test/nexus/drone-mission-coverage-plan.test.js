@@ -9,6 +9,16 @@ test("parseAreaHectares reads hectares and converts acres, and returns null with
   assert.equal(droneBridge.parseAreaHectares("the north field"), null);
 });
 
+// Found live (drone/logistics follow-up audit): the original regex had no
+// sign handling, so it matched only the digits after a leading "-" and
+// silently dropped it -- "-5 hectares" parsed as a valid, positive 5
+// hectares instead of being rejected as invalid input.
+test("parseAreaHectares rejects a negative area instead of silently dropping the sign", () => {
+  assert.equal(droneBridge.parseAreaHectares("-5 hectares"), null);
+  assert.equal(droneBridge.parseAreaHectares("-2.5 acres"), null);
+  assert.equal(droneBridge.parseAreaHectares("0 hectares"), null);
+});
+
 test("planCoverage computes a deterministic, honestly-labeled simulated estimate", () => {
   const plan = droneBridge.planCoverage({ areaHectares: 4 });
   assert.equal(plan.areaHectares, 4);
