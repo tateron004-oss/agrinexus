@@ -118,10 +118,15 @@
     // voice/chat "show my listings") had no editor-page dashboard row or
     // rows() section at all, unlike every other tracked collection here.
     const listings = editable.listings || [];
-    const activeListings = listings.filter(listing => listing.status === "active").length;
-    const pendingListings = listings.filter(listing => listing.status === "pending" || listing.status === "under-contract").length;
-    const soldListings = listings.filter(listing => listing.status === "sold").length;
-    const activeListingValue = listings.filter(listing => listing.status === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
+    // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
+    // fix exactly: case-insensitive status matching, so a listing status
+    // saved with any capitalization (e.g. "Active") is never silently
+    // dropped from these counts/totals.
+    const listingStatus = listing => String(listing.status || "").toLowerCase();
+    const activeListings = listings.filter(listing => listingStatus(listing) === "active").length;
+    const pendingListings = listings.filter(listing => listingStatus(listing) === "pending" || listingStatus(listing) === "under-contract").length;
+    const soldListings = listings.filter(listing => listingStatus(listing) === "sold").length;
+    const activeListingValue = listings.filter(listing => listingStatus(listing) === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
     const rows = [
       ["Net income", currencies.map(code => `${code} ${(money[code].income - money[code].expenses).toFixed(2)} (income ${money[code].income.toFixed(2)} / expenses ${money[code].expenses.toFixed(2)})`).join("; ")],
       ["Customers & donors", `${customers} customers, ${donors} donors, ${sponsors} sponsors, ${volunteers} volunteers${others ? `, ${others} other (members, clients, and similar)` : ""}`],
