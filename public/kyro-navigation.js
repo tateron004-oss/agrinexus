@@ -161,7 +161,21 @@
       return best;
     }
 
-    const upcoming = along => route.steps.findIndex((step, index) => index > 0 && step.alongMeters > along + 5 && !/^exit (?:roundabout|rotary)$/.test(step.type));
+    // Found live (workforce-matching/acceptance/navigation follow-up audit):
+    // the old "+5" buffer cut off every maneuver's "upcoming" window 5 m
+    // before the traveler actually reached its real position, switching to
+    // the NEXT maneuver early. For a normal-length segment this is a
+    // harmless few meters of slack -- but real routes commonly place two
+    // maneuvers only a few meters apart (e.g. a "new name" step right after
+    // a turn at the same junction, or a jog at a compact intersection), and
+    // when a maneuver follows a segment shorter than 5 m, this could cut it
+    // off before the vehicle had actually reached IT either -- in the worst
+    // case skipping straight to "You have arrived" a few real meters before
+    // the vehicle had made the final turn, let alone reached the true end
+    // of the route. A tiny epsilon (not a real distance buffer) is kept
+    // only to avoid re-selecting the step the traveler's own position
+    // estimate is floating-point-equal to.
+    const upcoming = along => route.steps.findIndex((step, index) => index > 0 && step.alongMeters > along + 0.01 && !/^exit (?:roundabout|rotary)$/.test(step.type));
     const startLine = () => `${route.steps[0].instruction}.`;
 
     return {
