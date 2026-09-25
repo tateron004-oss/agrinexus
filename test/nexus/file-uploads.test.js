@@ -189,7 +189,11 @@ test("the document-analysis tool falls back to the most recently uploaded file w
   const start = source.indexOf('if (toolName === "nexus_file_document_analysis")');
   assert.ok(start > 0);
   const body = source.slice(start, start + 1000);
-  assert.match(body, /db\.profile\?\.lastUploadedFileId/);
+  // Found live (uploads/telehealth/permissions follow-up audit): this
+  // fallback used to be a single global field, not scoped per user, despite
+  // this exact comment already documenting the intent as "per account" --
+  // fixed to key off the calling user's own id.
+  assert.match(body, /db\.profile\?\.lastUploadedFileByUser\?\.\[user\?\.id\]/);
   assert.match(body, /nexusRealProviders\.documents\.analyze\(\{/);
   assert.match(body, /\}, process\.env, user\);/, "the real user must be passed through for the ownership check in documentProvider.analyze");
 });
