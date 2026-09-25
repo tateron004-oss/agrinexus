@@ -40,13 +40,27 @@ function totalQuotaBytes(env = process.env) {
   return Math.min(Math.max(Number(env.NEXUS_FILE_UPLOAD_TOTAL_QUOTA_MB) || 500, 10), 4000) * 1024 * 1024;
 }
 
+// Found live (security audit): unlike resolveUploadedFilePath just below,
+// this never basename()'d fileId or checked the result stayed inside dir --
+// a fileId like "../planted" resolved metaPath OUTSIDE the upload
+// directory. Currently contained (the bytes actually served always go
+// through the sanitized resolveUploadedFilePath, so this alone isn't a full
+// file-read primitive), but a metadata read escaping the upload directory
+// is a real, latent path-traversal defect that becomes exploitable the
+// moment any future code trusts this path more directly. Sanitized the same
+// way resolveUploadedFilePath already is.
 function metaPath(dir, fileId) {
-  return path.join(dir, `${fileId}.meta.json`);
+  const safeName = path.basename(String(fileId || ""));
+  const candidate = path.resolve(dir, `${safeName}.meta.json`);
+  if (!candidate.startsWith(dir)) return null;
+  return candidate;
 }
 
 function readMeta(dir, fileId) {
   try {
-    return JSON.parse(fs.readFileSync(metaPath(dir, fileId), "utf8"));
+    const resolved = metaPath(dir, fileId);
+    if (!resolved) return null;
+    return JSON.parse(fs.readFileSync(resolved, "utf8"));
   } catch {
     return null;
   }

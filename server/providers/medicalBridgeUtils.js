@@ -13,7 +13,22 @@ const remindersProvider = require("./reminderProvider");
 const offlineSyncProvider = require("./offlineSyncProvider");
 
 const FORBIDDEN_MEDICAL_EXECUTION = /\b(diagnos(?:e|is)|prescrib\w*|dosage|dose|insulin dose|change medication|stop medication|start medication|refill|transfer prescription|dispens\w*|book appointment|schedule appointment|confirmed appointment|insurance claim|eligibility|payment|checkout|medical record|fhir write|ehr write|emergency dispatch|dispatch ambulance|call now|message now|whatsapp now|email now|share location|geolocation|camera|microphone|secret|token|password)\b/i;
-const EMERGENCY_WORDS = /\b(chest pain|cannot breathe|not breathing|stroke|seizure|unconscious|suicidal|severe bleeding|emergency|911|112|999)\b/i;
+// Found live (telehealth safety audit): this was the ONLY symptom-safety
+// gate on telehealthBridgeProvider.js's real Daily.co room-creation path,
+// but it was narrower than this codebase's own canonical red-flag
+// vocabulary used elsewhere (server.js's redFlags list: "trouble breathing,"
+// "heavy bleeding," "severe dehydration," "confusion," "very young child
+// with danger signs"). Executed proof: five reason strings taken almost
+// verbatim from that canonical list -- "trouble breathing and turning
+// blue," "heavy bleeding from a wound that will not stop," "severe
+// dehydration, cannot keep any fluids down," "very confused and not making
+// sense," "child with danger signs, very weak" -- ALL created a real video
+// room, because none of them matched the old, narrower phrases ("cannot
+// breathe"/"not breathing", not "trouble breathing"; "severe bleeding", not
+// "heavy bleeding"; no "confusion"/"dehydration"/"danger sign" at all).
+// Widened to match every phrase this codebase's own red-flag lists already
+// use, so a real danger sign can never bypass this gate through a synonym.
+const EMERGENCY_WORDS = /\b(chest pain|cannot breathe|can't breathe|not breathing|trouble breathing|shortness of breath|stroke|seizure|unconscious|passed out|suicidal|severe bleeding|heavy bleeding|severe dehydration|dehydrat\w*|confus\w*|face droop|slurred speech|one-sided weakness|danger signs?|emergency|911|112|999)\b/i;
 
 function now() {
   return new Date().toISOString();
