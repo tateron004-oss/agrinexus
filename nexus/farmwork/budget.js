@@ -77,6 +77,14 @@ async function handle(ctx) {
     const price = parsePricePer(rest); const be = cost / expected.value;
     const base = `To cover ${formatMoney(cost, currency)} of costs from ${unitLabel(expected.value, expected.unit)}${field ? ` (${field.data.name})` : ""}, you need to sell at about ${formatMoney(round(be, 2), currency)} per ${expected.unit}.`;
     if (!price) return `${base} Tell me a selling price and I'll work out the profit.`;
+    // Found live (money-math audit): a price stated "per bag" was multiplied
+    // straight against a yield expressed in kg (or vice versa) with no unit
+    // check, fabricating a nonsense profit/loss figure a farmer could
+    // genuinely be misled by -- executed proof: "expected 800 kg, at 5000
+    // per bag" reported a 6567% profit. Ask for a matching unit instead of
+    // guessing at a conversion Kyro cannot know (bag sizes vary by crop and
+    // region).
+    if (price.per !== expected.unit) return `${base} Tell me the selling price per ${expected.unit} (not per ${price.per}) and I'll work out the profit -- a bag/crate isn't a fixed weight, so I can't convert it myself.`;
     const revenue = price.amount * expected.value;
     return `${base} At ${formatMoney(price.amount, price.currency || currency)} per ${price.per}, you'd take in ${formatMoney(round(revenue, 0), price.currency || currency)}, a ${revenue >= cost ? "profit" : "loss"} of ${formatMoney(round(Math.abs(revenue - cost), 0), price.currency || currency)} (${Math.round(((revenue - cost) / cost) * 100)}% on cost). Prices and yields change, so treat this as a plan, not a promise.`;
   }
@@ -89,7 +97,12 @@ async function handle(ctx) {
     const cost = items.reduce((sum, item) => sum + item.amount, 0); const cur = parseMoney(body)?.currency || "";
     const lines = [`Budget${m[1] ? ` for ${clean(m[1])}` : ""}: ${items.map(item => `${item.name} ${formatMoney(item.amount, cur)}`).join(", ")} — ${formatMoney(cost, cur)} in all.`];
     if (yieldQty) lines.push(`Expecting ${unitLabel(yieldQty.value, yieldQty.unit)}, you need to sell at about ${formatMoney(round(cost / yieldQty.value, 2), cur)} per ${yieldQty.unit} to break even.`);
-    if (yieldQty && price) { const revenue = yieldQty.value * price.amount; lines.push(`At ${formatMoney(price.amount, price.currency || cur)} per ${price.per} that is ${formatMoney(round(revenue, 0), price.currency || cur)}, a ${revenue >= cost ? "profit" : "loss"} of ${formatMoney(round(Math.abs(revenue - cost), 0), price.currency || cur)}.`); }
+    // Same unit-mismatch guard as the break-even branch above: a price "per
+    // bag" multiplied against a yield in kg (or vice versa) fabricates a
+    // revenue figure with no real meaning. Skip the extra line rather than
+    // show a wrong number -- the break-even-per-unit line just above
+    // already gives useful information regardless.
+    if (yieldQty && price && price.per === yieldQty.unit) { const revenue = yieldQty.value * price.amount; lines.push(`At ${formatMoney(price.amount, price.currency || cur)} per ${price.per} that is ${formatMoney(round(revenue, 0), price.currency || cur)}, a ${revenue >= cost ? "profit" : "loss"} of ${formatMoney(round(Math.abs(revenue - cost), 0), price.currency || cur)}.`); }
     lines.push("A plan, not a promise: weather, prices and pests move every number.");
     return lines.join(" ");
   }

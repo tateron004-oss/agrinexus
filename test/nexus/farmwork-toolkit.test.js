@@ -108,6 +108,38 @@ test("money is recorded in plain words, totalled, and never guessed", async () =
   assert.match(await who.say("What is my profit this year"), /4,000/);
 });
 
+// Found live (money-math audit): a quantity given in one unit (bags,
+// crates) with a price stated "per" a different unit (usually kg) was
+// multiplied anyway -- "sold 5 crates of tomatoes at 200 per kg" recorded
+// 1,000 (5 x 200), treating crates as if they were kg. A bag/crate isn't a
+// fixed weight, so Kyro can't convert it -- selling now refuses rather than
+// guessing, the same way the sibling break-even/budget/order-delivery
+// money math was fixed.
+test("a quantity in one unit and a price per a different unit is refused, not silently multiplied together", async () => {
+  const who = farmer();
+  assert.equal(await who.say("Sold 5 crates of tomatoes at 200 per kg"), null, "must not record a fabricated total from mismatched units");
+  assert.equal(who.store.rows.filter(row => row.collection === "money").length, 0, "no money record must be created at all");
+
+  assert.match(await who.say("Sold 5 crates of tomatoes for 1000, at 200 per kg"), /sold 5 crates of tomatoes for 1,000/i, "a genuinely separate, explicitly stated total is still used correctly even when the per-unit price is a different unit");
+});
+
+test("break-even and budget planning refuse to invent a revenue figure from a mismatched unit price", async () => {
+  const who = farmer();
+  const beResult = await who.say("break even: costs 60000, expected 800 kg, at 5000 per bag");
+  assert.match(beResult, /tell me the selling price per kg/i);
+  assert.doesNotMatch(beResult, /take in|a profit of|a loss of/i, "must not compute a fabricated revenue/profit/loss figure from mismatched units");
+
+  const budgetResult = await who.say("plan a budget: seed 5000, fertilizer 8000, labour 12000, expect 800 kg at 5000 per bag");
+  assert.doesNotMatch(budgetResult, /profit|loss/i, "the revenue/profit line must be omitted, not fabricated, when the price's unit doesn't match the expected yield's unit");
+});
+
+test("delivering an order with a mismatched-unit price honestly reports no money was recorded, instead of a fabricated total", async () => {
+  const who = farmer();
+  assert.match(await who.say("order from John: 3 bags of maize at 40 per kg"), /Order 1: 3 bags of maize for John at 40 per kg/);
+  assert.match(await who.say("deliver order 1"), /no price was given, so I did not record any money/i);
+  assert.equal(who.store.rows.filter(row => row.collection === "money").length, 0);
+});
+
 test("someone with no farm records is not given farm books for ordinary buying and selling", async () => {
   const who = farmer();
   assert.equal(await who.say("Sold my old car for 500000"), null);

@@ -185,6 +185,22 @@ test("loans, break-even and budgets in Swahili do the same arithmetic as English
   assert.equal(await f.say("Panga bajeti"), null); // "panga bajeti" alone is not a plan
 });
 
+// Found live (money-math audit): the same unit-mismatch bug as the English
+// break-even/budget path -- a price "kwa gunia" (per bag) multiplied
+// against a yield in kilo fabricated a nonsense profit figure. Fixed to ask
+// for a matching unit instead, reusing the existing "tell me the selling
+// price" message rather than new Swahili copy.
+test("break-even and budget planning in Swahili also refuse to invent a revenue figure from a mismatched unit price", async () => {
+  const f = farmer();
+  const be = await f.say("Bei ya kuvunja hasara: gharama 60000, natarajia kilo 800 kwa shilingi 5000 kwa gunia");
+  assert.match(be, /takriban 75 kwa kilo/);
+  assert.match(be, /Niambie bei ya kuuza/);
+  assert.doesNotMatch(be, /faida ya|hasara ya/, "must not compute a fabricated profit/loss figure from mismatched units");
+
+  const budget = await f.say("Panga bajeti: mbegu 5000, mbolea 8000, vibarua 12000, natarajia kilo 800 kwa shilingi 5000 kwa gunia");
+  assert.doesNotMatch(budget, /faida ya|hasara ya/, "the revenue/profit line must be omitted, not fabricated, when the price's unit doesn't match the expected yield's unit");
+});
+
 test("printable reports in Swahili carry only what was recorded", async () => {
   const f = farmer();
   await f.say("Nimenunua gunia 2 za mbolea kwa shilingi 30000 kutoka kwa Juma"); await f.say("Nimeuza kilo 200 za mahindi kwa Amina kwa shilingi 90000"); await f.say("Ongeza shamba linaloitwa Kaskazini, ekari 2, mahindi"); await f.say("Ongeza kazi: kupalilia kwa Juma kesho"); await f.say("Ongeza ng'ombe anayeitwa Bella, jike");

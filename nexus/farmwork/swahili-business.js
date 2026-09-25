@@ -200,7 +200,13 @@ async function handle(ctx) {
     const priceMatch = new RegExp(`kwa\\s+((?:shilingi|sh|ksh|tsh|ush)\\s*)?(${NUMBER})\\s*(shilingi|sh|ksh|tsh|ush)?\\s*(?:kwa|kila|/)\\s*(${UNIT_WORD})\\b`, "i").exec(rest); const price = priceMatch ? { amount: Number(priceMatch[2].replace(/,/g, "")), currency: /shilingi/i.test(`${priceMatch[1] || ""}${priceMatch[3] || ""}`) ? "shillings" : "", per: parseQuantitySw(`1 ${priceMatch[4]}`)?.unit } : null;
     const be = cost / expected.value;
     const base = SW.beBase({ cost: moneyShown(cost, currency), qty: unitLabelSw(expected.value, expected.unit), field: field?.data.name, price: `${moneyShown(round(be, 2), currency)} kwa ${unitLabelSw(1, expected.unit).split(" ")[0]}` });
-    if (!price) return `${base} ${SW.beAsk}`;
+    // Found live (money-math audit): same unit-mismatch bug as the English
+    // break-even path (budget.js) -- a price "per bag" multiplied against a
+    // yield in kg fabricated a nonsense profit figure. Reuses the existing
+    // "tell me the selling price" message rather than inventing new
+    // Swahili copy, since a mismatched-unit price is functionally the same
+    // as no usable price yet.
+    if (!price || price.per !== expected.unit) return `${base} ${SW.beAsk}`;
     const revenue = price.amount * expected.value; const cur = price.currency || currency;
     return `${base} ${SW.beProfit({ price: `${moneyShown(price.amount, cur)} kwa ${unitLabelSw(1, price.per || expected.unit).split(" ")[0]}`, revenue: moneyShown(round(revenue, 0), cur), gain: revenue >= cost, amount: moneyShown(round(Math.abs(revenue - cost), 0), cur), pct: Math.round(((revenue - cost) / cost) * 100) })}`;
   }
@@ -219,7 +225,8 @@ async function handle(ctx) {
     const cost = items.reduce((total, item) => total + item.amount, 0); const cur = parseMoneySw(body.replace(/kwa\s+(?:shilingi\s+)?\d[\d,.]*\s*(?:shilingi\s*)?(?:kwa|kila)\s+\p{L}+/giu, ""))?.currency || (/shilingi/i.test(body) ? "shillings" : "");
     const lines = [SW.budgetHead({ what: m[1] ? clean(m[1]) : "", lines: items.map(item => `${item.name} ${moneyShown(item.amount, cur)}`).join(", "), total: moneyShown(cost, cur) })];
     if (yieldQty) lines.push(SW.budgetBreak({ qty: unitLabelSw(yieldQty.value, yieldQty.unit), price: `${moneyShown(round(cost / yieldQty.value, 2), cur)} kwa ${unitLabelSw(1, yieldQty.unit).split(" ")[0]}` }));
-    if (yieldQty && price) { const revenue = yieldQty.value * price.amount; lines.push(SW.budgetProfit({ price: `${moneyShown(price.amount, price.currency || cur)} kwa ${unitLabelSw(1, price.per || yieldQty.unit).split(" ")[0]}`, revenue: moneyShown(round(revenue, 0), price.currency || cur), gain: revenue >= cost, amount: moneyShown(round(Math.abs(revenue - cost), 0), price.currency || cur) })); }
+    // Same unit-mismatch guard as the break-even branch above.
+    if (yieldQty && price && price.per === yieldQty.unit) { const revenue = yieldQty.value * price.amount; lines.push(SW.budgetProfit({ price: `${moneyShown(price.amount, price.currency || cur)} kwa ${unitLabelSw(1, price.per || yieldQty.unit).split(" ")[0]}`, revenue: moneyShown(round(revenue, 0), price.currency || cur), gain: revenue >= cost, amount: moneyShown(round(Math.abs(revenue - cost), 0), price.currency || cur) })); }
     lines.push(SW.budgetNote);
     return lines.join(" ");
   }

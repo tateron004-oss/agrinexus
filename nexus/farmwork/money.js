@@ -77,8 +77,27 @@ async function handleMoney(ctx) {
     const itemMatch = quantity ? new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:for|at|to|@)\\b.*)?$`, "i").exec(rest) : /^(?:some |my )?(.+?)(?:\s+(?:for|at|to|@)\b.*)?$/i.exec(rest);
     const item = clean(itemMatch?.[1] || "").toLowerCase().replace(/^(?:some|my|the)\s+/, "");
     let amount = money?.amount; let currency = money?.currency || "";
-    if (quantity && per && !money) { amount = round(quantity.value * per.amount); currency = per.currency; }
-    else if (quantity && per && money && money.amount === per.amount) { amount = round(quantity.value * per.amount); currency = per.currency || money.currency; }
+    // Found live (money-math audit): neither branch checked that the
+    // quantity's unit (bags, crates, sacks) matched the price's "per" unit
+    // (usually kg) before multiplying -- unlike the "bought" branch below,
+    // which already has this exact guard. Executed proof: "sold 5 crates of
+    // tomatoes at 200 per kg" recorded 1,000 (5 x 200), treating crates as
+    // if they were kg. A bag/crate isn't a fixed weight, so this can't be
+    // silently converted -- only multiply when the units genuinely match.
+    if (quantity && per && !money && quantity.unit === per.per) { amount = round(quantity.value * per.amount); currency = per.currency; }
+    else if (quantity && per && money && money.amount === per.amount) {
+      // money.amount === per.amount here almost always means parseMoney
+      // read the SAME number out of "at 200 per kg" that parsePricePer
+      // also read -- not a genuine separate flat total (confirmed live:
+      // parseMoney("5 crates of tomatoes at 200 per kg") returns {amount:
+      // 200}, an echo of the per-unit price, not a real total). Only trust
+      // it as real money when the units actually match; otherwise there is
+      // no usable total at all, so amount must stay unset rather than
+      // silently recording that echoed per-unit number as if it were the
+      // whole sale.
+      amount = quantity.unit === per.per ? round(quantity.value * per.amount) : undefined;
+      currency = per.currency || money.currency;
+    }
     if (!(amount > 0) || !item || item.length > 50) return null;
     const buyer = /\bto (?:my |the )?([A-Za-z][A-Za-z' -]{1,30}?)(?:\s+(?:for|at|@)\b|$)/.exec(rest)?.[1];
     const fields = await ctx.store.list({ ...scope, collection: "field" }); const field = fieldIn(fields, t);
