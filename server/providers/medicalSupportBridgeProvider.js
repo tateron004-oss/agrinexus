@@ -25,10 +25,19 @@ function status(env = process.env) {
   });
 }
 
+// Found live (bridge-provider case-sensitivity sweep): comparing the raw,
+// un-normalized supportType against SUPPORT_TYPES meant a differently-cased
+// value (e.g. "Mobile_Clinic_Visit") failed the membership check and was
+// silently RELABELED as "health_access" -- itself a valid SUPPORT_TYPES
+// member -- so a real mobile-clinic intake vanished from any
+// mobile_clinic_visit-filtered view and its own suggested-next-steps
+// branch. Same shape already found and fixed in chronicDiseaseBridge-
+// Provider.js/rpmBridgeProvider.js/rtmBridgeProvider.js this session.
 function normalizeIntake(body = {}) {
   const supportType = safeText(body.supportType || body.type || "health_access", 80);
+  const normalizedSupportType = supportType.toLowerCase().trim().replace(/\s+/g, "_");
   return localRecord("medical-support-intake", body, {
-    supportType: SUPPORT_TYPES.has(supportType) ? supportType : "health_access",
+    supportType: SUPPORT_TYPES.has(normalizedSupportType) ? normalizedSupportType : "health_access",
     concern: safeText(body.concern || body.reason || "health access preparation", 500),
     questions: safeList(body.questions || body.questionsToAsk),
     preferredDateTime: safeText(body.preferredDateTime || body.dueAt, 120),
