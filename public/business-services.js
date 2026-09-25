@@ -99,10 +99,17 @@
     // church workspace, "client" from a conversational intake) still counts here
     // instead of silently disappearing from the summary.
     const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer"].includes(row.type)).length;
-    const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
+    // fix exactly: rounds each line to the cent before summing, and matches
+    // grant status case-insensitively -- see that file for the found-live
+    // detail (a fractional-cent unit price could make this total silently
+    // drift from the generated invoice PDF; a capitalized "Awarded" status,
+    // exactly how natural phrasing stores it, never matched the exact-
+    // lowercase check and silently dropped that grant's amount).
+    const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
     const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
     const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
-    const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
+    const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
     const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
     const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
     // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's

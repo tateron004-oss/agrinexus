@@ -154,8 +154,20 @@ function extractTransactionArgs(command = "", args = {}) {
   const bare = withCurrency ? null : new RegExp(`\\b(?:of|for|worth)\\s+(${NUMBER})`, "i").exec(text);
   const rawAmount = args.amount !== undefined ? Number(args.amount) : withCurrency ? withCurrency.amount : bare ? Number(bare[1].replace(/,/g, "")) : NaN;
   const currency = String(args.currency || withCurrency?.currency || "").toUpperCase().slice(0, 3);
-  const type = /\b(expense|spent|spend|paid|purchase|purchased|bought|cost|nimetumia|nimenunua|nimelipa|matumizi|gharama)\b/i.test(text) ? "expense"
-    : /\b(income|revenue|donation|donated|sale|sold|payment received|earned|received|nimeuza|nimepokea|mapato|mauzo)\b/i.test(text) ? "income" : "expense";
+  // Found live: bare "paid" was an unconditional expense signal, checked
+  // before income words, even overriding an explicit "income" label --
+  // "record income: client paid me $500" logged an EXPENSE, swinging
+  // netIncome by $1,000 in the wrong direction for a single payment
+  // received. "Paid" is genuinely ambiguous (I paid someone = expense;
+  // someone paid me / I got paid = income) -- the passive/received-money
+  // construction is now recognized as an income signal, separate from the
+  // other, unambiguous expense words.
+  const receivedPayment = /\b(?:paid me|pay me|got paid|was paid|is paying me|payment received|received payment)\b/i.test(text);
+  const explicitIncomeWord = /\b(income|revenue|donation|donated|sale|sold|earned|received|nimeuza|nimepokea|mapato|mauzo)\b/i.test(text);
+  const explicitExpenseWord = /\b(expense|spent|spend|purchase|purchased|bought|cost|nimetumia|nimenunua|nimelipa|matumizi|gharama)\b/i.test(text);
+  const ambiguousPaidAsExpense = !receivedPayment && /\bpaid\b/i.test(text);
+  const type = explicitExpenseWord || ambiguousPaidAsExpense ? "expense"
+    : receivedPayment || explicitIncomeWord ? "income" : "expense";
   // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
   const soldItem = text.match(/\b(?:sold|sell|nimeuza)\s+(.+?)\s+(?:for|at|kwa)\b/i);
   const spentOn = text.match(/\b(?:on|for|kwa)\s+(?![\d$€₦]|shilingi\b)([^\n,.]{2,60})/i);
@@ -239,7 +251,12 @@ function extractInvoiceItemArgs(command = "", args = {}) {
     invoiceNumber: sanitizeText(args.invoiceNumber || (invoiceMatch ? invoiceMatch[1].toUpperCase() : ""), 40),
     description: sanitizeText(args.description || (lineMatch ? lineMatch[2].trim() : body), 300),
     quantity: Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1,
-    unitPrice: Number.isFinite(rawPrice) ? rawPrice : null
+    // Found live: a negative unitPrice (reachable via direct tool-call
+    // arguments, not through text parsing, which can never produce a
+    // negative number here) silently reduced an invoice's total by any
+    // amount a caller supplied, with only the spoken/typed confirmation
+    // text as a safeguard. Rejected the same way a non-finite price already is.
+    unitPrice: Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : null
   };
 }
 
@@ -400,10 +417,18 @@ function computeBusinessDashboard(editable) {
   // summary, rather than hardcoding every new church/industry word as its
   // own bucket.
   const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer", "buyer", "seller", "tenant", "landlord"].includes(row.type)).length;
-  const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  // Rounds each line to the cent before summing (matches the invoice PDF
+  // export's own fix) so this total can never drift from what a generated
+  // invoice actually shows, even by a cent, for a fractional-cent unit price.
+  const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
   const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
   const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
-  const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
+  // Found live: grant.status is freeform text with no normalization --
+  // "Awarded" (capitalized, exactly how a natural "set the grant status to
+  // Awarded" phrase gets stored) never matches this exact-lowercase check,
+  // so a correctly-marked grant's amount silently vanishes from the
+  // awarded total with no error or indication.
+  const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
   const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
   const listings = editable.listings || [];

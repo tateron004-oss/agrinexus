@@ -19724,7 +19724,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       waypoints: routeArgs.waypoints,
       confirmed: args.confirmed
     }, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, common, routeResult);
+    // Found live: the real computed distance/duration lives only in
+    // body.data.distanceMeters/durationSeconds -- the generic fallback
+    // response is a fixed sentence naming the data SOURCE ("computed using
+    // public OpenStreetMap/Nominatim plus OSRM") but never the actual
+    // numbers, even though a real route was genuinely calculated. Mirrors
+    // the identical, already-fixed pattern for nexus_file_document_analysis/
+    // nexus_visual_analysis.
+    const routeData = routeResult?.body?.data || {};
+    const routeResponseOverride = Number.isFinite(routeData.distanceMeters)
+      ? `${routeResult.body.message} From ${routeData.originResolved || routeArgs.origin} to ${routeData.destinationResolved || routeArgs.destination}: ${(routeData.distanceMeters / 1000).toFixed(1)} km, about ${Math.round((routeData.durationSeconds || 0) / 60)} minute(s).`
+      : "";
+    return nexusOpenAiNativeProviderToolResult(db, common, routeResult, routeResponseOverride ? { responseOverride: routeResponseOverride } : {});
   }
   if (toolName === "nexus_live_knowledge") {
     const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
@@ -21167,7 +21178,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       url: args.url,
       confirmed: args.confirmed
     }, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "browser-computer-actions" }, browserResult);
+    // Found live: a real connector's concrete outcome lives only in
+    // body.data.outcome -- the generic fallback response is a fixed
+    // confirmation sentence that never says what actually happened.
+    const browserOutcome = browserResult?.body?.data?.outcome;
+    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "browser-computer-actions" }, browserResult,
+      browserOutcome ? { responseOverride: `${browserResult.body.message} Outcome: ${browserOutcome}` } : {});
   }
   if (toolName === "nexus_document_export") {
     const extractedExport = nexusOpenAiNativeExtractExportArgs(command, args);
