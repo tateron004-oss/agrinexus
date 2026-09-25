@@ -170,7 +170,14 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const cutover = new WorkspaceCutoverPolicy({ migrations: workspaceMigrations, applications, authorityCoverage });
   const engine = new AuthoritativeTaskEngine({ conversations, tasks, tools, executions, consents,
     audit, observability, executors: governedExecutors, verifier: verifyOutcome, authority, jobs, autonomyControl });
-  const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model }) : null);
+  // Found live (record-repository/consent follow-up audit): this is one of
+  // the two highest-frequency real, metered OpenAI call sites in the whole
+  // app (invoked on nearly every conversational turn that doesn't match a
+  // deterministic intent matcher), but it was never given the observability
+  // instance the per-tool cost_limit_cents check in AuthoritativeTaskEngine
+  // .execute() relies on -- so NEXUS_DAILY_COST_LIMIT_CENTS never applied to
+  // it at all, unlike every tool executed through the engine.
+  const model = planningModel || (config.ai.openaiApiKey ? new OpenAiPlanningModel({ apiKey: config.ai.openaiApiKey, model: config.ai.model, observability }) : null);
   const farmRecords = new FarmRecordRepository(db);
   const healthRecords = new HealthRecordRepository(db);
   // Exposed on the runtime alongside farmRecords/healthRecords, not just handed

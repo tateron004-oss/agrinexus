@@ -125,6 +125,18 @@ class BehaviorSpine {
       purpose: policy.purpose, policyVersion: policy.policyVersion, recipient: consentRecipient(tool.consent_scope, step),
       receipt: { source: "user-confirmation", channel: channel || "api", sendChannel: consentSendChannel(tool.consent_scope, step), taskId: priorTask.taskId, stepId, commandId: command.commandId,
         correlationId: command.correlationId, confirmation: String(text || "").slice(0, 200), grantedAt: new Date().toISOString() } });
+    // Found live (record-repository/consent follow-up audit): the actual
+    // moment of informed consent -- a real person hearing/reading the
+    // prompt and saying yes -- was never written to the audit trail here,
+    // even though the codebase's own acceptance self-test probe
+    // (server-runtime-adapter.js) already audits consent.granted/revoked
+    // for its synthetic grant/revoke. The grant itself persists in
+    // nexus_consents regardless, but an auditor reviewing nexus_audit_events
+    // (documented as "everything Kyro did") saw only the resulting
+    // tool.completed event, with no trace of when/how consent was obtained.
+    if (this.engine.audit) await this.engine.audit.record({ tenantId: context.tenantId, actorId: context.userId,
+      correlationId: command.correlationId, taskId: priorTask.taskId, eventType: "consent.granted", outcome: "success",
+      metadata: { consentId: granted.consent_id, scope: tool.consent_scope, stepId } });
     return { ...granted, justGranted: true };
   }
 

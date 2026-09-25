@@ -138,6 +138,45 @@ test("production planning model requests strict structured output and returns no
   await assert.rejects(() => new OpenAiPlanningModel({ apiKey: "bad", fetchFn: async () => ({ ok: false, json: async () => ({ error: { code: "quota", message: "Unavailable" } }) }) }).plan({}), error => error.code === "quota");
 });
 
+// Found live (record-repository/consent follow-up audit): this is one of
+// the two highest-frequency real, metered OpenAI call sites in the whole
+// app -- invoked on nearly every conversational turn that doesn't match a
+// deterministic intent matcher -- but it had no cost governance connected
+// at all, unlike every tool executed through AuthoritativeTaskEngine.
+test("plan() and respond() check the tenant's cost budget before calling the provider, and record the real cost afterward", async () => {
+  const calls = [];
+  const observability = {
+    assertCostAllowed: async input => { calls.push(["assert", input]); },
+    recordCost: async input => { calls.push(["record", input]); }
+  };
+  const model = new OpenAiPlanningModel({ apiKey: "test-key", observability,
+    fetchFn: async (_url, options) => {
+      const body = JSON.parse(options.body);
+      assert.ok(!body.input.includes("tenant-1"), "tenantId must never leak into the provider prompt");
+      return { ok: true, json: async () => ({ output_text: JSON.stringify({ goal: "Help", application: "live-knowledge", riskTier: "low", clarification: null, steps: [] }),
+        usage: { input_tokens: 500, output_tokens: 100 } }) };
+    } });
+  await model.plan({ goal: "Help", catalog: {}, tenantId: "tenant-1" });
+  assert.deepEqual(calls[0], ["assert", { tenantId: "tenant-1", estimatedCostCents: 0 }]);
+  assert.equal(calls[1][0], "record");
+  assert.equal(calls[1][1].tenantId, "tenant-1");
+  assert.ok(calls[1][1].estimatedCostCents > 0, "a real response's own token usage must produce a nonzero recorded cost");
+
+  calls.length = 0;
+  const respondModel = new OpenAiPlanningModel({ apiKey: "test-key", observability,
+    fetchFn: async () => ({ ok: true, json: async () => ({ output_text: "Hi!", usage: { input_tokens: 50, output_tokens: 10 } }) }) });
+  await respondModel.respond({ goal: "hi", tenantId: "tenant-2" });
+  assert.deepEqual(calls[0], ["assert", { tenantId: "tenant-2", estimatedCostCents: 0 }]);
+  assert.equal(calls[1][1].tenantId, "tenant-2");
+
+  // A tenant that has already exceeded its daily budget must be refused
+  // before the real provider is ever called.
+  const overBudget = new OpenAiPlanningModel({ apiKey: "test-key",
+    observability: { assertCostAllowed: async () => { throw Object.assign(new Error("over budget"), { code: "cost_limit_exceeded" }); } },
+    fetchFn: async () => { throw new Error("must not call the real provider once the budget check refuses"); } });
+  await assert.rejects(overBudget.plan({ goal: "Help", tenantId: "tenant-3" }), /over budget/);
+});
+
 test("planning catalog separates execution permission from regulated consent", async () => {
   let observed;
   const planner = new OpenEndedPlanner({ model: { plan: async request => { observed = request; return {

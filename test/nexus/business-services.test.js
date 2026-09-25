@@ -352,6 +352,28 @@ test("AI outline planning is disabled by default and never executes proposed ste
   assert.equal(fallback.mode,'template-fallback');assert.equal(fallback.executed,false);assert.ok(fallback.plan.every(step=>step.agent!=='shell'));
 });
 
+// Found live (record-repository/consent follow-up audit): this real,
+// metered OpenAI call had no cost governance at all -- an authenticated
+// workspace owner could call assistant()/plan() repeatedly with only the
+// generic, cost-unaware 180/min-per-IP anti-abuse limiter as a ceiling.
+test("assistant() and plan() check the tenant's cost budget before calling the provider, and record the real cost afterward", async () => {
+  const calls = [];
+  const observability = { assertCostAllowed: async input => { calls.push(["assert", input]); },
+    recordCost: async input => { calls.push(["record", input]); } };
+  const env = { NEXUS_REAL_PROVIDER_EXECUTION_ENABLED: "true", NEXUS_BUSINESS_AI_ENABLED: "true", OPENAI_API_KEY: "fake-test-only" };
+  const providers = createBusinessProviders({ env, observability, fetchFn: async () => ({ ok: true,
+    json: async () => ({ choices: [{ message: { content: "A real, honest draft reply." } }], usage: { prompt_tokens: 400, completion_tokens: 80 } }) }) });
+  const workspace = templates.defaultClientWorkspace(templates.inferBusiness({ businessName: "Test" }));
+  await providers.assistant({ workspace, message: "hi", tenantId: "tenant-1" });
+  assert.deepEqual(calls[0], ["assert", { tenantId: "tenant-1", estimatedCostCents: 0 }]);
+  assert.equal(calls[1][0], "record"); assert.equal(calls[1][1].tenantId, "tenant-1");
+  assert.ok(calls[1][1].estimatedCostCents > 0, "a real response's own token usage must produce a nonzero recorded cost");
+
+  const overBudget = createBusinessProviders({ env, fetchFn: async () => { throw new Error("must not call the real provider once the budget check refuses"); },
+    observability: { assertCostAllowed: async () => { throw Object.assign(new Error("over budget"), { code: "cost_limit_exceeded" }); } } });
+  await assert.rejects(overBudget.assistant({ workspace, message: "hi", tenantId: "tenant-2" }), /over budget/);
+});
+
 test("AI business planning requires consent, confirmation and current record version", async () => {
   let calls=0; const f=fixture({plan:async()=>{calls++;return {mode:'provider-plan',plan:[],executed:false}}});
   const row=await f.service.create(f.context,{businessName:'Test',consent:true});

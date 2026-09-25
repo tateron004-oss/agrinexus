@@ -54,6 +54,25 @@ async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }
 
+// Found live (record-repository/consent follow-up audit): a permission/role/
+// confirmation/consent DENIAL threw straight out of execute() with no
+// audit.record() anywhere in the call chain -- only a successful completion
+// or a genuine provider failure were ever audited, so a revoked-consent
+// refusal (or a pattern of repeated unauthorized attempts) was invisible on
+// the audit review surface.
+test("a confirmation/permission/consent denial is recorded on the audit trail, not just thrown", async () => {
+  const { engine, store } = fixture();
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Save report" });
+  const task = await engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }] });
+  const context = { tenantId: command.tenantId, userId: command.actorId, can: permission => permission === "tasks:execute", hasRole: () => false };
+  await expectCode(() => engine.execute({ context, taskId: task.taskId, stepId: task.steps[0].stepId }), "confirmation_required");
+  const denial = store.audits.find(event => event.eventType === "tool.denied");
+  assert.ok(denial, "the denial must produce a real audit event");
+  assert.equal(denial.outcome, "denied");
+  assert.equal(denial.metadata.code, "confirmation_required");
+});
+
 test("canonical engine gates confirmation, verifies outcomes, and suppresses duplicate execution", async () => {
   const { engine, store } = fixture();
   const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",

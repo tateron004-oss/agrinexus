@@ -309,7 +309,7 @@ class BusinessService {
     await this.consent(context, body.consent === true, "business:ai");
     const record = await this.owned(context, recordId);
     if (!this.providers.assistant) fail("business_provider_unavailable", "Business AI is unavailable.", 503);
-    return this.providers.assistant({ workspace: { ...record.data.editable, businessName: record.data.info.businessName }, message: String(body.message || "").slice(0, 8000) });
+    return this.providers.assistant({ workspace: { ...record.data.editable, businessName: record.data.info.businessName }, message: String(body.message || "").slice(0, 8000), tenantId: context.tenantId });
   }
   async plan(context, recordId, body) {
     await this.authorize(context, true);
@@ -318,7 +318,7 @@ class BusinessService {
     const record = await this.owned(context, recordId);
     if (record.version !== body.expectedVersion) fail("business_version_conflict", "Reload before planning.", 409);
     if (!this.providers.plan) fail("business_provider_unavailable", "Business AI planning is unavailable.", 503);
-    const planning = await this.providers.plan({ info: record.data.info });
+    const planning = await this.providers.plan({ info: record.data.info, tenantId: context.tenantId });
     return this.repository.update({ tenantId: context.tenantId, recordId, actorId: context.userId, expectedVersion: record.version,
       data: { ...record.data, planning }, provenance: { source: "owner-requested-business-plan", externalAction: false, providerInvoked: true } });
   }

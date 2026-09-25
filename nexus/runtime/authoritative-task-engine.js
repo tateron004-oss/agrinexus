@@ -105,9 +105,24 @@ class AuthoritativeTaskEngine {
       if (!tool || tool.availability !== "available" || (!authorityOwnsTool && typeof executor !== "function")) {
         lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} has no available authoritative execution owner.`, 503); continue;
       }
-      authorize(context, tool, step);
-      if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
-        if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
+      // Found live (record-repository/consent follow-up audit): a
+      // permission/role/confirmation/consent DENIAL threw straight out of
+      // execute() with no audit.record() anywhere in the call chain -- only
+      // a successful completion (below) or a genuine provider failure
+      // (the catch block below) were ever audited. A revoked-consent
+      // refusal, or a pattern of repeated unauthorized attempts, was
+      // invisible on the audit review surface that's explicitly documented
+      // as "everything Kyro did, for a human to actually look at."
+      try {
+        authorize(context, tool, step);
+        if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
+          if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
+      } catch (denied) {
+        await this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
+          correlationId: taskWithSteps?.correlationId, taskId, eventType: "tool.denied", outcome: "denied",
+          metadata: { toolId: tool.tool_id, code: denied.code, message: denied.message } });
+        throw denied;
+      }
       if (retryOrdinal > Number(tool.max_attempts || 1)) { lastError = new NexusRuntimeError("retry_exhausted", `Tool ${toolId} exhausted its governed retry limit.`, 409,
         { toolId, attempts: Number(step.attempt_count || 0), maxAttempts: Number(tool.max_attempts || 1) }); continue; }
       const baseKey = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;

@@ -290,7 +290,7 @@ class OpenEndedPlanner {
     if (personalRecord) return Object.freeze({ ...personalRecord, planningAttempts: 0 });
     // Jokes and riddles are not web searches ("Tell me a joke" returned a stitched-together search snippet).
     if (isLightChatRequest(command.text) && typeof this.model.respond === "function") {
-      const answer = await this.model.respond({ goal: command.text, locale,
+      const answer = await this.model.respond({ goal: command.text, locale, tenantId: command.tenantId,
         interactionProfile: createInteractionProfile({ locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
         conversationHistory: conversationHistory.slice(-24).map(safeTurn), memories: known.memories, capabilities: [] }).catch(() => null);
       if (typeof answer === "string" && answer.trim()) {
@@ -366,7 +366,7 @@ class OpenEndedPlanner {
     if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
-      interactionProfile,
+      interactionProfile, tenantId: command.tenantId,
       conversationHistory: conversationHistory.slice(-24).map(safeTurn),
       memories: memories.map(safeMemory), catalog };
     let feedback = [];
@@ -380,7 +380,7 @@ class OpenEndedPlanner {
     // That is not an error for the person asking: answer it directly, without tools and without claiming any
     // action or live data (see OpenAiPlanningModel.respond). Only if that also fails is the original error raised.
     if (typeof this.model.respond === "function") {
-      const answer = await this.model.respond({ goal: command.text, locale: interactionProfile.locale, interactionProfile,
+      const answer = await this.model.respond({ goal: command.text, locale: interactionProfile.locale, interactionProfile, tenantId: command.tenantId,
         conversationHistory: request.conversationHistory, memories: request.memories,
         capabilities: catalog.applications.map(app => app.applicationId) }).catch(() => null);
       if (typeof answer === "string" && answer.trim()) {
