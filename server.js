@@ -36060,6 +36060,7 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
   }
   const queryRecord = {
     id: crypto.randomUUID(),
+    ownerId: user?.id || null,
     questionSummary: sanitizePilotText(question, 180),
     category,
     categoryLabel: source.label,
@@ -36929,6 +36930,7 @@ async function nexusLiveKnowledgeAllModesQuery(db, body = {}, user = null, env =
 
   const queryRecord = {
     id: packet.packetId,
+    ownerId: user?.id || null,
     questionSummary: query.slice(0, 180),
     category,
     categoryLabel: NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category]?.label || "Live Knowledge",
@@ -39315,6 +39317,7 @@ function nexusKnowledgeSaveResult(db, body = {}, user = null) {
   };
   const saved = {
     id: crypto.randomUUID(),
+    ownerId: user?.id || null,
     queryId,
     recordId: record.id,
     category,
@@ -39398,6 +39401,7 @@ function nexusKnowledgePrepareReviewSummary(db, body = {}, user = null) {
   const source = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category] || NEXUS_KNOWLEDGE_TRUSTED_SOURCES.general;
   const summary = {
     id: crypto.randomUUID(),
+    ownerId: user?.id || null,
     queryId: sanitizePilotText(body.queryId || "", 120),
     originalQuestion: sanitizePilotText(body.question || "", 500),
     category,
@@ -40383,7 +40387,7 @@ function nexusProviderPathwayRoute(db, requestId, body = {}, user = null) {
   return { ok: true, providerPathwayRequest: requestItem, routing, audit: db.nexusPilotAuditEvents[0] };
 }
 
-function normalizeCommunication(body = {}, existing = {}) {
+function normalizeCommunication(body = {}, existing = {}, user = null) {
   const now = new Date().toISOString();
   const channel = NEXUS_COMMUNICATION_CHANNELS.includes(body.channel) ? body.channel : existing.channel || "in_app_notification";
   const consent = body.consentConfirmed === true || existing.consentConfirmed === true;
@@ -40391,6 +40395,7 @@ function normalizeCommunication(body = {}, existing = {}) {
   const status = body.status || existing.status || (channel === "in_app_notification" ? "prepared" : !consent ? "blocked_missing_consent" : !configured ? "blocked_missing_config" : "prepared");
   return {
     id: existing.id || body.id || crypto.randomUUID(),
+    ownerId: existing.ownerId || user?.id || null,
     channel,
     recipientType: sanitizePilotText(body.recipientType || existing.recipientType || "user_or_provider_pending", 100),
     linkedRecordId: sanitizePilotText(body.linkedRecordId || existing.linkedRecordId || body.recordId || "", 120),
@@ -40405,10 +40410,11 @@ function normalizeCommunication(body = {}, existing = {}) {
   };
 }
 
-function normalizeNotification(body = {}, existing = {}) {
+function normalizeNotification(body = {}, existing = {}, user = null) {
   const now = new Date().toISOString();
   return {
     id: existing.id || body.id || crypto.randomUUID(),
+    ownerId: existing.ownerId || user?.id || null,
     title: sanitizePilotText(body.title || existing.title || "Nexus update", 160),
     message: sanitizePilotText(body.message || existing.message || "A Nexus preparation item has an update.", 600),
     caseId: sanitizePilotText(body.caseId || existing.caseId || "", 120),
@@ -40419,12 +40425,13 @@ function normalizeNotification(body = {}, existing = {}) {
   };
 }
 
-function normalizeOutcome(body = {}, existing = {}) {
+function normalizeOutcome(body = {}, existing = {}, user = null) {
   const now = new Date().toISOString();
   const allowed = ["resolved", "improved", "referred", "no_response", "needs_follow_up", "user_cancelled", "provider_declined", "unavailable", "unknown"];
   const outcomeType = allowed.includes(body.outcomeType) ? body.outcomeType : existing.outcomeType || "unknown";
   return {
     id: existing.id || body.id || crypto.randomUUID(),
+    ownerId: existing.ownerId || user?.id || null,
     caseId: sanitizePilotText(body.caseId || existing.caseId || "", 120),
     recordId: sanitizePilotText(body.recordId || existing.recordId || "", 120),
     outcomeType,
@@ -44728,7 +44735,13 @@ async function api(req, res, url) {
   // non-per-user collections that can carry real free-text content
   // (message previews, notification bodies, outcome feedback up to 900
   // chars) -- none of these routes (through /api/nexus/outcomes below) had
-  // any auth check. Uses exact/regex path matches rather than a prefix so
+  // any auth check, and (found in a later IDOR follow-up pass, same shape
+  // as the Nexus Operations and /api/nexus/records fixes) no ownership
+  // check either once signed in -- any authenticated user could list every
+  // other user's messages/notifications/outcome feedback, or mutate one by
+  // id. Every item below is now tagged with ownerId at creation and checked
+  // via nexusPilotRecordOwned on every read/lookup; a real Admin still sees
+  // everything. Uses exact/regex path matches rather than a prefix so
   // the separately-reviewed-safe /communications/status and
   // /communications/send-message routes elsewhere in this file are
   // unaffected.
@@ -44746,12 +44759,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/communications" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, communications: db.nexusCommunications, channels: NEXUS_COMMUNICATION_CHANNELS });
+    const communications = canUse(user, "admin") ? db.nexusCommunications : db.nexusCommunications.filter(item => nexusPilotRecordOwned(item, user));
+    return send(res, 200, { ok: true, communications, channels: NEXUS_COMMUNICATION_CHANNELS });
   }
 
   if (url.pathname === "/api/nexus/communications/prepare" && req.method === "POST") {
     ensureNexusProductionRailsState(db);
-    const communication = normalizeCommunication(await readBody(req));
+    const communication = normalizeCommunication(await readBody(req), {}, user);
     db.nexusCommunications.unshift(communication);
     addNexusPilotAuditEvent(db, "communication_prepared", {
       actor: user?.name || "Standard User",
@@ -44765,9 +44779,9 @@ async function api(req, res, url) {
   const nexusCommunicationMatch = url.pathname.match(/^\/api\/nexus\/communications\/([^/]+)$/);
   if (nexusCommunicationMatch && req.method === "PATCH") {
     ensureNexusProductionRailsState(db);
-    const index = db.nexusCommunications.findIndex(item => item.id === nexusCommunicationMatch[1]);
+    const index = db.nexusCommunications.findIndex(item => item.id === nexusCommunicationMatch[1] && nexusPilotRecordOwned(item, user));
     if (index < 0) return send(res, 404, { ok: false, error: "communication_not_found" });
-    db.nexusCommunications[index] = normalizeCommunication(await readBody(req), db.nexusCommunications[index]);
+    db.nexusCommunications[index] = normalizeCommunication(await readBody(req), db.nexusCommunications[index], user);
     await writeDb(db);
     return send(res, 200, { ok: true, communication: db.nexusCommunications[index] });
   }
@@ -44775,7 +44789,7 @@ async function api(req, res, url) {
   const nexusCommunicationAttemptMatch = url.pathname.match(/^\/api\/nexus\/communications\/([^/]+)\/attempt$/);
   if (nexusCommunicationAttemptMatch && req.method === "POST") {
     ensureNexusProductionRailsState(db);
-    const communication = db.nexusCommunications.find(item => item.id === nexusCommunicationAttemptMatch[1]);
+    const communication = db.nexusCommunications.find(item => item.id === nexusCommunicationAttemptMatch[1] && nexusPilotRecordOwned(item, user));
     if (!communication) return send(res, 404, { ok: false, error: "communication_not_found" });
     communication.status = communication.channel === "in_app_notification" ? "prepared" : communication.consentConfirmed ? "blocked_missing_config" : "blocked_missing_consent";
     communication.updatedAt = new Date().toISOString();
@@ -44790,12 +44804,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/notifications" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, notifications: db.nexusNotifications });
+    const notifications = canUse(user, "admin") ? db.nexusNotifications : db.nexusNotifications.filter(item => nexusPilotRecordOwned(item, user));
+    return send(res, 200, { ok: true, notifications });
   }
 
   if (url.pathname === "/api/nexus/notifications" && req.method === "POST") {
     ensureNexusProductionRailsState(db);
-    const notification = normalizeNotification(await readBody(req));
+    const notification = normalizeNotification(await readBody(req), {}, user);
     db.nexusNotifications.unshift(notification);
     await writeDb(db);
     return send(res, 200, { ok: true, notification });
@@ -44804,7 +44819,7 @@ async function api(req, res, url) {
   const nexusNotificationReadMatch = url.pathname.match(/^\/api\/nexus\/notifications\/([^/]+)\/read$/);
   if (nexusNotificationReadMatch && req.method === "PATCH") {
     ensureNexusProductionRailsState(db);
-    const notification = db.nexusNotifications.find(item => item.id === nexusNotificationReadMatch[1]);
+    const notification = db.nexusNotifications.find(item => item.id === nexusNotificationReadMatch[1] && nexusPilotRecordOwned(item, user));
     if (!notification) return send(res, 404, { ok: false, error: "notification_not_found" });
     notification.read = true;
     notification.updatedAt = new Date().toISOString();
@@ -44814,12 +44829,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/outcomes" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, outcomes: db.nexusOutcomes });
+    const outcomes = canUse(user, "admin") ? db.nexusOutcomes : db.nexusOutcomes.filter(item => nexusPilotRecordOwned(item, user));
+    return send(res, 200, { ok: true, outcomes });
   }
 
   if (url.pathname === "/api/nexus/outcomes" && req.method === "POST") {
     ensureNexusProductionRailsState(db);
-    const outcome = normalizeOutcome(await readBody(req));
+    const outcome = normalizeOutcome(await readBody(req), {}, user);
     db.nexusOutcomes.unshift(outcome);
     addNexusPilotAuditEvent(db, "outcome_recorded", {
       actor: user?.name || "Standard User",
@@ -45084,18 +45100,28 @@ async function api(req, res, url) {
   // db.nexusKnowledgeQueries et al. are shared, non-per-user collections of
   // every question ever asked through this feature (potentially containing
   // sensitive free-text, e.g. a health question) -- neither history route
-  // had an auth check.
+  // had an auth check, and (found in a later IDOR follow-up pass, same
+  // shape as the Nexus Operations/records/communications fixes) no
+  // ownership check either once signed in. queries/savedResults/
+  // reviewSummaries are now tagged with ownerId at creation and filtered
+  // via nexusPilotRecordOwned; a real Admin still sees everything.
+  // nexusInstitutionalEvidenceReceipts is NOT yet scoped this way (its
+  // creation is scattered across several call sites without a consistently
+  // available user identity) -- flagged as a remaining, lower-severity gap
+  // since it holds institutional/citation evidence rather than the
+  // caller's own raw question text.
   if (!user && (url.pathname === "/api/nexus/knowledge/history" || /^\/api\/nexus\/knowledge\/history\/[^/]+$/.test(url.pathname))) {
     return send(res, 401, { error: "Sign in required" });
   }
 
   if (url.pathname === "/api/nexus/knowledge/history" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
+    const canViewAllKnowledgeHistory = canUse(user, "admin");
     return send(res, 200, {
       ok: true,
-      queries: db.nexusKnowledgeQueries.slice(0, 50),
-      savedResults: db.nexusKnowledgeSavedResults.slice(0, 50),
-      reviewSummaries: db.nexusKnowledgeReviewSummaries.slice(0, 50),
+      queries: (canViewAllKnowledgeHistory ? db.nexusKnowledgeQueries : db.nexusKnowledgeQueries.filter(item => nexusPilotRecordOwned(item, user))).slice(0, 50),
+      savedResults: (canViewAllKnowledgeHistory ? db.nexusKnowledgeSavedResults : db.nexusKnowledgeSavedResults.filter(item => nexusPilotRecordOwned(item, user))).slice(0, 50),
+      reviewSummaries: (canViewAllKnowledgeHistory ? db.nexusKnowledgeReviewSummaries : db.nexusKnowledgeReviewSummaries.filter(item => nexusPilotRecordOwned(item, user))).slice(0, 50),
       institutionalEvidenceReceipts: db.nexusInstitutionalEvidenceReceipts.slice(0, 50)
     });
   }
@@ -45104,7 +45130,7 @@ async function api(req, res, url) {
   if (nexusKnowledgeHistoryDetailMatch && req.method === "GET") {
     ensureNexusProductionRailsState(db);
     const id = sanitizePilotText(decodeURIComponent(nexusKnowledgeHistoryDetailMatch[1] || ""), 120);
-    const query = db.nexusKnowledgeQueries.find(item => item.id === id);
+    const query = db.nexusKnowledgeQueries.find(item => item.id === id && nexusPilotRecordOwned(item, user));
     if (!query) return send(res, 404, { ok: false, error: "knowledge_history_not_found" });
     const savedResults = db.nexusKnowledgeSavedResults.filter(item => item.queryId === id);
     const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => item.originalQuestion === query.questionSummary || item.queryId === id);
