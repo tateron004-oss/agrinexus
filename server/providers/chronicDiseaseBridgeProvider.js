@@ -28,7 +28,13 @@ function status(env = process.env) {
 }
 
 function normalizeIntake(body = {}) {
-  const conditionFocus = safeText(body.conditionFocus || body.condition || "unknown_provider_review_needed", 80);
+  // Found live (health-data audit): CONDITIONS.has() was a case-sensitive
+  // Set lookup -- "Diabetes"/"DIABETES" (exactly how a natural-language
+  // caller or a differently-cased tool argument would send it) silently
+  // reclassified to "unknown_provider_review_needed" and, worse,
+  // trendSummary/providerReport's own exact-case filter then silently
+  // excluded that reading from a condition-specific trend view entirely.
+  const conditionFocus = safeText(body.conditionFocus || body.condition || "unknown_provider_review_needed", 80).toLowerCase();
   return localRecord("chronic-disease-intake", body, {
     conditionFocus: CONDITIONS.has(conditionFocus) ? conditionFocus : "unknown_provider_review_needed",
     userRole: safeText(body.userRole || "patient", 80),
@@ -65,14 +71,21 @@ function bmi(weightValue, weightUnit, heightValue, heightUnit) {
   const weight = numberOrNull(weightValue);
   const height = numberOrNull(heightValue);
   if (!weight || !height) return null;
-  const kg = weightUnit === "lb" ? weight * 0.45359237 : weight;
+  // Found live (health-data audit): only the exact singular "lb" was
+  // recognized -- "lbs" (the natural plural; the natural-language extractor
+  // elsewhere in this codebase captures "lbs?|pounds") silently fell
+  // through to "assume already kg," inflating a real, normal BMI (e.g. 26.7
+  // for a 180 lb / 175 cm person) into a fabricated morbid-obesity reading
+  // (58.8) purely from the missing "s". Case-insensitive, and recognizes
+  // every unit spelling this codebase's own extractors produce.
+  const kg = /^(lbs?|pounds?)$/i.test(String(weightUnit || "").trim()) ? weight * 0.45359237 : weight;
   const meters = heightUnit === "ft_in" ? height * 0.3048 : heightUnit === "cm" ? height / 100 : null;
   if (!meters) return null;
   return Math.round((kg / (meters * meters)) * 10) / 10;
 }
 
 function normalizeReading(body = {}) {
-  const conditionFocus = safeText(body.conditionFocus || body.condition || "diabetes", 80);
+  const conditionFocus = safeText(body.conditionFocus || body.condition || "diabetes", 80).toLowerCase();
   return localRecord("chronic-reading", body, {
     conditionFocus: CONDITIONS.has(conditionFocus) ? conditionFocus : "unknown_provider_review_needed",
     dateTimeText: safeText(body.dateTimeText || body.dueAt || "not provided", 120),
@@ -112,8 +125,11 @@ function readings(db) {
 }
 
 function trendSummary(body = {}, db) {
-  const focus = safeText(body.conditionFocus || "cardiometabolic", 80);
-  const readingsList = ensureProfileStore(db, READINGS).filter(item => focus === "cardiometabolic" || item.conditionFocus === focus).slice(0, 30);
+  // Case-insensitive match, mirroring normalizeReading's own storage
+  // normalization -- without this, a differently-cased conditionFocus
+  // silently excluded real, already-saved readings from this summary.
+  const focus = safeText(body.conditionFocus || "cardiometabolic", 80).toLowerCase();
+  const readingsList = ensureProfileStore(db, READINGS).filter(item => focus === "cardiometabolic" || String(item.conditionFocus || "").toLowerCase() === focus).slice(0, 30);
   return response(PROVIDER, "chronic_disease.trend_summary", "prepared", "Trend summary prepared for provider review only.", {
     summary: {
       conditionFocus: focus,
@@ -126,8 +142,8 @@ function trendSummary(body = {}, db) {
 }
 
 function providerReport(body = {}, db) {
-  const focus = safeText(body.conditionFocus || "cardiometabolic", 80);
-  const readingsList = ensureProfileStore(db, READINGS).filter(item => focus === "cardiometabolic" || item.conditionFocus === focus).slice(0, 20);
+  const focus = safeText(body.conditionFocus || "cardiometabolic", 80).toLowerCase();
+  const readingsList = ensureProfileStore(db, READINGS).filter(item => focus === "cardiometabolic" || String(item.conditionFocus || "").toLowerCase() === focus).slice(0, 20);
   return response(PROVIDER, "chronic_disease.provider_report", "prepared", "Chronic disease provider-review report prepared without diagnosis, prescription, or treatment recommendations.", {
     report: {
       conditionFocus: focus,

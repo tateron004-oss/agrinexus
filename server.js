@@ -10269,7 +10269,10 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       stageIndex: 0,
       trackingNumber: `AN-TRK-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
       buyerInterest: product?.buyerInterest || 70,
-      total: product ? Number(product.price || 0) * 20 : Number(body.amount || 1200),
+      // Found live (money-logic audit): this always assumed exactly 20
+      // units regardless of body.quantity ("5 bags", "10kg", etc.) --
+      // extracts the leading real number instead of hardcoding 20.
+      total: product ? Number(product.price || 0) * (Number.parseFloat(String(body.quantity || "")) || 20) : Number(body.amount || 1200),
       timeline: [{ label: "Shipping workflow opened", checkpoint: route.checkpoints?.[0] || db.profile.activeCheckpoint, createdAt: new Date().toISOString() }],
       createdAt: new Date().toISOString()
     };
@@ -16389,7 +16392,12 @@ async function executeAgentTool(db, user, step) {
       stageIndex: 1,
       checkpoint: db.profile.activeCheckpoint,
       buyerInterest: product.buyerInterest || 70,
-      amount: Number(product.price || 100) * 10,
+      // Found live (money-logic audit): this set "amount", but every other
+      // order-creation path (and the dashboard's own tradeValue aggregator,
+      // server.js's `orders.reduce((sum, order) => sum + Number(order.total
+      // || 0), 0)`) uses "total" -- an agent-created order's value was
+      // silently excluded from the dashboard's trade-value total entirely.
+      total: Number(product.price || 100) * 10,
       timeline: [{ label: "Agent market review", checkpoint: db.profile.activeCheckpoint, createdAt: new Date().toISOString() }],
       createdAt: new Date().toISOString()
     };
@@ -20589,7 +20597,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // set of real connector words (is/was/of/reads/at/today/right now/etc,
     // chainable so "temp today is 101" still works) -- never an arbitrary
     // noun like "file"/"item"/"tank"/"sensor model".
-    const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
+    // Found live (health-data audit): "yesterday" wasn't a recognized
+    // connector word -- "my blood pressure yesterday was 160/98" failed to
+    // match at all, so a real reading was never saved rather than merely
+    // mistimed. ("Yesterday" after the value already matched via the
+    // generic \b(?:over|\/)\b tail, but was discarded entirely rather than
+    // resolved to a real date -- a separate, deeper gap this fix does not
+    // resolve, since no relative-date resolver exists in this codebase.)
+    const VITAL_VALUE_CONNECTOR = "(?:(?:today|yesterday|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
     // Confirmed live: unlike every other vital below, this pattern had no
     // trigger-word gate at all -- ANY two 2-3 digit numbers joined by "/" or
     // "over" matched, so "Split the harvest 60/40 with my partner" or "a
@@ -42052,7 +42067,11 @@ function parseNexusChronicPredictiveApiReadings(command = "") {
   // season") fabricated a blood-pressure reading into this predictive
   // model's state. Require the trigger word, matching the same fix applied
   // to the nexus_health_preparation vitals gate.
-  const bpPattern = /\b(?:blood\s*pressure|bp)\s*(?:is|was|=|:)?\s*(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/gi;
+  // Found live (health-data audit): "yesterday"/"today"/"this morning" were
+  // not recognized connectors here -- "My blood pressure yesterday was
+  // 160/98" failed to match at all, so a real reading was silently never
+  // captured into this predictive model's state.
+  const bpPattern = /\b(?:blood\s*pressure|bp)\s*(?:yesterday|today|this morning|is|was|=|:)?\s*(?:is|was|=|:)?\s*(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/gi;
   let bpMatch;
   while ((bpMatch = bpPattern.exec(text)) !== null) {
     const systolic = Number(bpMatch[1]);
@@ -42085,6 +42104,32 @@ function parseNexusChronicPredictiveApiReadings(command = "") {
   if (symptoms.length) readings.push({ id: `api-symptom-${Date.now()}`, type: "symptom", parsedValue: symptoms.join(", "), symptoms, context: "symptom escalation check", timestamp: now, source: "natural_command", localOnly: true });
   if (!readings.length) readings.push({ id: `api-query-${Date.now()}`, type: "query", parsedValue: "predictive modeler query", context: "modeler view request", timestamp: now, source: "natural_command", localOnly: true });
   return readings;
+}
+
+// Found live (health-data audit): this "trajectory" field's name and API
+// shape imply real trend analysis, but the value only ever checked "do I
+// have >=2 readings" -- it never inspected the actual values, so a
+// monotonically worsening BP sequence (130/85 -> 145/92 -> 160/98) and the
+// exact reverse, improving sequence produced byte-for-byte identical
+// output. Compares the average of the earlier half of readings against the
+// later half (readings are pushed in chronological order, oldest first) to
+// report a real direction; `higherIsWorse` lets a signed value (e.g. weight
+// change, already signed +/- for gain/loss) invert the comparison.
+function computeReadingTrajectory(readingsList, valueFn, { higherIsWorse = true } = {}) {
+  if (readingsList.length < 2) return "unknown";
+  const values = readingsList.map(valueFn).filter(Number.isFinite);
+  if (values.length < 2) return "unknown";
+  const mid = Math.ceil(values.length / 2);
+  const earlier = values.slice(0, mid);
+  const later = values.slice(mid);
+  const avg = list => list.reduce((sum, value) => sum + value, 0) / list.length;
+  const earlierAvg = avg(earlier);
+  const laterAvg = later.length ? avg(later) : values[values.length - 1];
+  const delta = laterAvg - earlierAvg;
+  const threshold = Math.max(Math.abs(earlierAvg) * 0.02, 0.5);
+  if (Math.abs(delta) < threshold) return "stable";
+  const worsened = higherIsWorse ? delta > 0 : delta < 0;
+  return worsened ? "worsening" : "improving";
 }
 
 function buildNexusChronicPredictiveRiskSignal(condition, signalName, riskLevel, trajectory, explanation, contributingFactors, missingData) {
@@ -42129,22 +42174,28 @@ function evaluateNexusChronicPredictiveApiState(command = "", incomingState = {}
   const adherence = state.readings.adherence || [];
   if (!symptoms.length) missing.add("Symptoms or absence of symptoms");
   if (!adherence.length) missing.add("Medication/adherence context");
+  const bpTrajectory = computeReadingTrajectory(bp, item => item.systolic + item.diastolic);
   if (bp.length) {
     const elevated = bp.filter(item => item.systolic >= 140 || item.diastolic >= 90);
-    signals.push(buildNexusChronicPredictiveRiskSignal("hypertension", "Hypertension predictive support signal", elevated.length >= 2 ? "high" : elevated.length ? "elevated" : "stable", bp.length >= 2 ? "variable" : "unknown", "Patient-reported BP readings were checked for repeated elevation and symptom context.", elevated.map(item => `Elevated BP: ${item.parsedValue}`), Array.from(missing)));
+    signals.push(buildNexusChronicPredictiveRiskSignal("hypertension", "Hypertension predictive support signal", elevated.length >= 2 ? "high" : elevated.length ? "elevated" : "stable", bpTrajectory, "Patient-reported BP readings were checked for repeated elevation and symptom context.", elevated.map(item => `Elevated BP: ${item.parsedValue}`), Array.from(missing)));
   }
+  const glucoseTrajectory = computeReadingTrajectory(glucose, item => item.glucose);
   if (glucose.length || labs.length) {
     if (!labs.length) missing.add("A1C");
     if (glucose.some(item => /context missing/i.test(item.context))) missing.add("Fasting/post-meal/random glucose context");
     const highGlucose = glucose.filter(item => item.glucose >= 180 || (/fasting/i.test(item.context) && item.glucose >= 126));
     const highA1c = labs.some(item => Number.parseFloat(item.parsedValue) >= 8);
-    signals.push(buildNexusChronicPredictiveRiskSignal("diabetes", "Diabetes predictive support signal", highGlucose.length >= 2 || highA1c ? "high" : highGlucose.length ? "elevated" : "watch", glucose.length >= 2 ? "variable" : "unknown", "Glucose/A1C readings were checked for pattern, context, and missing clinical data.", [...highGlucose.map(item => `High glucose: ${item.parsedValue}`), ...labs.map(item => `A1C: ${item.parsedValue}`)], Array.from(missing)));
+    signals.push(buildNexusChronicPredictiveRiskSignal("diabetes", "Diabetes predictive support signal", highGlucose.length >= 2 || highA1c ? "high" : highGlucose.length ? "elevated" : "watch", glucoseTrajectory, "Glucose/A1C readings were checked for pattern, context, and missing clinical data.", [...highGlucose.map(item => `High glucose: ${item.parsedValue}`), ...labs.map(item => `A1C: ${item.parsedValue}`)], Array.from(missing)));
   }
+  // weight readings are already signed (+gain/-loss, see the "decreased"
+  // check where they're parsed), so a rising signed value is worsening for
+  // cardiometabolic risk -- higherIsWorse stays true (the default).
+  const weightTrajectory = computeReadingTrajectory(weight, item => item.weight);
   if (weight.length || (bp.length && glucose.length)) {
     missing.add("Height/BMI context");
     missing.add("Diet/activity/sleep context");
     const rapidGain = weight.some(item => item.weight >= 5);
-    signals.push(buildNexusChronicPredictiveRiskSignal("cardiometabolic", "Obesity/cardiometabolic predictive support signal", rapidGain && bp.length && glucose.length ? "high" : rapidGain || (bp.length && glucose.length) ? "elevated" : "watch", "variable", "Weight trend and cardiometabolic overlap were checked without diagnosing obesity or prescribing treatment.", [rapidGain ? "Weight increased by 5+ pounds" : "", bp.length && glucose.length ? "BP/glucose overlap present" : ""].filter(Boolean), Array.from(missing)));
+    signals.push(buildNexusChronicPredictiveRiskSignal("cardiometabolic", "Obesity/cardiometabolic predictive support signal", rapidGain && bp.length && glucose.length ? "high" : rapidGain || (bp.length && glucose.length) ? "elevated" : "watch", weight.length ? weightTrajectory : "unknown", "Weight trend and cardiometabolic overlap were checked without diagnosing obesity or prescribing treatment.", [rapidGain ? "Weight increased by 5+ pounds" : "", bp.length && glucose.length ? "BP/glucose overlap present" : ""].filter(Boolean), Array.from(missing)));
   }
   if (adherence.length) signals.push(buildNexusChronicPredictiveRiskSignal("adherence", "Medication adherence predictive support signal", adherence.length >= 1 ? "high" : "watch", "variable", "Missed medication reports were flagged for clinician/pharmacist review.", adherence.map(item => item.parsedValue), ["Medication name", ...Array.from(missing)]));
   if (symptoms.some(item => /chest pain|shortness of breath|fainting|stroke/i.test(item.parsedValue))) signals.unshift(buildNexusChronicPredictiveRiskSignal("symptoms", "Symptom escalation signal", "urgent_review", "worsening", "Potentially serious symptoms were reported. Nexus does not diagnose or dispatch; local urgent/emergency care guidance should be followed.", symptoms.map(item => `Reported symptom: ${item.parsedValue}`), ["Onset time", "Current severity", "Emergency contact/care access"]));
@@ -42153,7 +42204,7 @@ function evaluateNexusChronicPredictiveApiState(command = "", incomingState = {}
   state.conditionFocus = signals[0]?.condition || "insufficient_data";
   state.missingData = [...new Set(signals.flatMap(signal => signal.missingData || []))];
   state.confidence = { label: state.missingData.length > 4 ? "low" : "moderate", dataQuality: state.missingData.length ? "partial patient-reported context" : "usable patient-reported context" };
-  state.trends = { hypertension: { trajectory: bp.length >= 2 ? "variable" : "unknown" }, diabetes: { trajectory: glucose.length >= 2 ? "variable" : "unknown" }, obesity: { trajectory: weight.length >= 2 ? "variable" : "unknown" }, careGaps: { missingCount: state.missingData.length } };
+  state.trends = { hypertension: { trajectory: bpTrajectory }, diabetes: { trajectory: glucoseTrajectory }, obesity: { trajectory: weight.length ? weightTrajectory : "unknown" }, careGaps: { missingCount: state.missingData.length } };
   state.scenarioSimulations = buildNexusChronicPredictiveApiScenarios(state);
   state.physicianChecklist = buildNexusChronicPredictiveApiChecklist(state);
   state.reasoningTrace = buildNexusChronicPredictiveApiReasoningTrace(state);
@@ -51882,7 +51933,13 @@ async function api(req, res, url) {
       stageIndex: 1,
       trackingNumber: `AN-TRK-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
       buyerInterest: product?.buyerInterest || 50,
-      total: product ? product.price * 20 : 1200,
+      // Found live (money-logic audit): this always assumed exactly 20
+      // units regardless of what was actually requested -- body.quantity
+      // was never read for the total, only for an unrelated display
+      // string default. Executed proof: a real 5-unit order at $30/unit
+      // (expected total $150) instead silently produced $600 (30*20).
+      quantity: Number.isFinite(Number(body.quantity)) && Number(body.quantity) > 0 ? Number(body.quantity) : 20,
+      total: product ? product.price * (Number.isFinite(Number(body.quantity)) && Number(body.quantity) > 0 ? Number(body.quantity) : 20) : 1200,
       timeline: [
         { label: "Order created", checkpoint, createdAt: new Date().toISOString() },
         { label: "Packed", checkpoint, createdAt: new Date().toISOString() }
@@ -51916,7 +51973,15 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade workflows" });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
-    const order = db.profile.orders[db.profile.orders.length - 1];
+    // Found live (money-logic audit): this ignored body.orderId entirely
+    // and always advanced the LAST order, unlike its sibling endpoints
+    // (/api/trade/tracking, createTradeLogisticsWorkflow) which both
+    // already respect an explicit orderId. With two open orders, a request
+    // explicitly targeting order-1 silently advanced order-2 instead,
+    // leaving order-1 unchanged with no indication of the mismatch.
+    const order = body.orderId
+      ? db.profile.orders.find(item => item.id === body.orderId)
+      : db.profile.orders[db.profile.orders.length - 1];
     if (!order) return send(res, 409, { error: "Create an order first" });
     const route = db.routes.find(item => item.id === order.routeId) || activeRoute();
     const stages = ["Order created", "Packed", "In transit", "Quality check", "Delivered"];
@@ -51998,7 +52063,17 @@ async function api(req, res, url) {
       status: "posted",
       createdAt: new Date().toISOString()
     };
-    db.profile.wallet += tx.amount;
+    // Found live (money-logic audit): no balance floor existed anywhere in
+    // this codebase -- a single debit request could push the wallet
+    // arbitrarily negative with a plain 200 response, even though this
+    // represents real settled funds elsewhere in the UI ("M-Pesa credit,"
+    // "escrow release"). Executed proof: starting balance $50, one debit of
+    // -$5000 was accepted, yielding wallet: -4950.
+    const currentWallet = Number(db.profile.wallet || 0);
+    if (currentWallet + tx.amount < 0) {
+      return send(res, 409, { error: `Insufficient wallet balance: $${currentWallet.toFixed(2)} available, $${Math.abs(tx.amount).toFixed(2)} requested.` });
+    }
+    db.profile.wallet = currentWallet + tx.amount;
     db.profile.walletTransactions.unshift(tx);
     addTradeEvent(db.profile, { type: "wallet.transaction", label: `${tx.provider} ${tx.type} posted for $${Math.abs(tx.amount)}` });
     logIntegration(db, {
@@ -52193,6 +52268,19 @@ async function api(req, res, url) {
       },
       release: () => {
         const latestQuote = db.profile.tradeQuotes[0];
+        // Found live (money-logic audit): nothing marked a quote as
+        // "already released" -- the same quote could be released an
+        // unlimited number of times (a double-click, a client retry, or a
+        // replayed request), crediting the wallet again in full every time.
+        // Executed proof: three identical release calls against the same
+        // quote credited $650 three times (wallet: 650 -> 1300 -> 1950)
+        // with the quote's own status field never even read. Guards the
+        // same way nexus/farmwork/parties.js's delivery/payment recording
+        // already does elsewhere in this codebase (refuse a second
+        // transition once a record leaves its initial state).
+        if (latestQuote && latestQuote.status === "released") {
+          throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
+        }
         const record = {
           id: crypto.randomUUID(),
           releaseNumber: `AN-REL-${String(db.profile.paymentReleases.length + 1).padStart(3, "0")}`,
@@ -52202,6 +52290,7 @@ async function api(req, res, url) {
           createdAt: now
         };
         db.profile.paymentReleases.unshift(record);
+        if (latestQuote) latestQuote.status = "released";
         db.profile.wallet = Number(db.profile.wallet || 0) + record.amount;
         db.profile.walletTransactions.unshift({
           id: crypto.randomUUID(),
@@ -52216,7 +52305,13 @@ async function api(req, res, url) {
     };
     const handler = actions[type];
     if (!handler) return send(res, 400, { error: "Unsupported advanced trade action" });
-    const [providerId, action, detail, record] = handler();
+    let handlerResult;
+    try {
+      handlerResult = handler();
+    } catch (error) {
+      return send(res, error.httpStatus || 409, { error: error.message });
+    }
+    const [providerId, action, detail, record] = handlerResult;
     addTradeEvent(db.profile, { type: action, label: detail });
     logIntegration(db, { providerId, module: "AgriTrade", action, detail, metadata: { recordId: record.id, type, productId: product?.id || null } });
     addActivity(db.profile, detail);
