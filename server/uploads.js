@@ -207,7 +207,20 @@ function parseAndStoreUpload(req, { env = process.env, userId } = {}) {
           reject(error);
         }
       });
-      writeStream.on("error", error => { handled = true; reject(error); });
+      // Found live (upload robustness audit): unlike the "finish" handler's
+      // own catch block just above, this sibling error path never cleaned
+      // up tmpPath -- a mid-write disk fault (ENOSPC, a permission error, a
+      // transient FS fault) left a partial .tmp-<uuid> file on disk forever.
+      // Worse, currentUsageBytes() above counts every file except
+      // *.meta.json, so these orphaned tmp files count against
+      // totalQuotaBytes -- a handful of failed writes during real disk
+      // pressure permanently wastes quota and outlives the original fault,
+      // requiring manual cleanup.
+      writeStream.on("error", error => {
+        handled = true;
+        try { fs.rmSync(tmpPath, { force: true }); } catch {}
+        reject(error);
+      });
     });
 
     bb.on("error", error => { if (!handled) { handled = true; reject(error); } });
