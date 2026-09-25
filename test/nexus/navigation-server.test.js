@@ -122,6 +122,39 @@ test("each person is limited in how often they can ask, and the provider can be 
   await assert.rejects(off.route({ from: here, to: { lat: -1.2, lng: 36.8 } }), { code: "navigation_unavailable", status: 503 });
 });
 
+// Found live (navigation correctness audit): limit() only ever capped one
+// user's own request rate -- there was no cache of identical/near-identical
+// lookups at all, so several people asking "where am I" or searching for
+// the same popular destination within a minute could send that many real,
+// separate requests to the shared, rate-limited public Nominatim service --
+// enough real-world concurrent use to plausibly get the deployment's shared
+// IP rate-limited or banned, breaking navigation for every user.
+test("identical search/reverse lookups within a short window are served from cache, not repeated against the real provider", async () => {
+  let clock = 2000000; const net = fakeNetwork(); const service = createNavigationService({ env: {}, fetchImpl: net.fetchImpl, now: () => clock });
+  const firstSearch = await service.handle({ context: { userId: "u1" }, body: { action: "search", query: "Kibera clinic", near: here } });
+  const secondSearch = await service.handle({ context: { userId: "u2" }, body: { action: "search", query: "Kibera clinic", near: here } });
+  assert.equal(net.calls.length, 1, "a second user's identical search must not repeat the real network call");
+  assert.deepEqual(secondSearch.body.places, firstSearch.body.places);
+
+  const firstReverse = await service.handle({ context: { userId: "u1" }, body: { action: "reverse", position: here } });
+  const secondReverse = await service.handle({ context: { userId: "u2" }, body: { action: "reverse", position: here } });
+  assert.equal(net.calls.length, 2, "a second user's identical reverse lookup must not repeat the real network call");
+  assert.deepEqual(secondReverse.body.place, firstReverse.body.place);
+
+  clock += 61000;
+  await service.handle({ context: { userId: "u1" }, body: { action: "search", query: "Kibera clinic", near: here } });
+  assert.equal(net.calls.length, 3, "a lookup past the cache window must hit the real provider again");
+});
+
+test("the viewbox sent to Nominatim is clamped to valid lat/lng ranges near the antimeridian and the poles", async () => {
+  const net = fakeNetwork(); const service = createNavigationService({ env: {}, fetchImpl: net.fetchImpl });
+  await service.handle({ context: { userId: "u1" }, body: { action: "search", query: "shop", near: { lat: 89.5, lng: 179.5 } } });
+  const viewbox = decodeURIComponent(net.calls[0].url.match(/viewbox=([^&]+)/)[1]);
+  const [minLng, maxLat, maxLng, minLat] = viewbox.split(",").map(Number);
+  for (const value of [minLng, maxLng]) assert.ok(value >= -180 && value <= 180, `longitude ${value} out of range`);
+  for (const value of [minLat, maxLat]) assert.ok(value >= -90 && value <= 90, `latitude ${value} out of range`);
+});
+
 test("the endpoint is wired behind sign-in, and a position is never written anywhere", () => {
   const adapter = fs.readFileSync(path.join(__dirname, "..", "..", "nexus", "compat", "server-runtime-adapter.js"), "utf8");
   assert.match(adapter, /url\.pathname === "\/api\/nexus\/runtime\/navigation" && req\.method === "POST"\) result = await navigation\.handle\(request\)/);
