@@ -117,6 +117,18 @@ test("follow-ups keep the patient's number, not the name, on the calendar, and c
   assert.equal(await who.say("See you tomorrow"), null);
 });
 
+// Found live (health-toolkit follow-up audit): this route's own trigger
+// regex explicitly accepts "in N months" as valid phrasing, but nothing
+// underneath could resolve it -- it silently fell through to the "When
+// should I have you see X again?" rejection, as if no day had been said at
+// all. "In N months" is exactly how a malnutrition recheck or chronic-care
+// review is normally phrased, not "in 90 days".
+test("a follow-up can be scheduled in months, not just days or weeks", async () => {
+  const who = worker(); await registerMary(who);
+  const scheduled = await who.say("Follow up Mary in 3 months");
+  assert.match(scheduled, /Follow-up 1: Mary Akinyi \(#1\), .*20 December/, `expected a real 3-calendar-month jump to 20 December, got: ${scheduled}`);
+});
+
 // ---------- immunisation ----------
 test("immunisations are recorded with the worker's own next-dose date; nothing is scheduled by Kyro", async () => {
   const who = worker(); await run(who, ["Register patient Baby Otieno", "3 weeks", "male", "skip", "skip"]);
@@ -130,6 +142,16 @@ test("immunisations are recorded with the worker's own next-dose date; nothing i
   assert.match(await who.say("What vaccinations are due"), /1 vaccination due: Baby Otieno \(#1\) — Polio, Friday 25 September/);
   assert.equal(await who.say("Baby Otieno received a gift"), null); assert.equal(await who.say("Baby Otieno got the news"), null);
   assert.match(await who.say("Baby Otieno received BCG, next dose in banana"), /couldn't read/);
+});
+
+// Found live (health-toolkit follow-up audit): same gap as the follow-up
+// scheduler above -- "next dose in N months" is exactly how an MR/vitamin-A
+// booster or a 6-month chronic-review dose is normally phrased, but the
+// underlying date parser had no month support at all.
+test("a next vaccination dose can be scheduled in months, not just days or weeks", async () => {
+  const who = worker(); await run(who, ["Register patient Baby Otieno", "3 weeks", "male", "skip", "skip"]);
+  const dose = await who.say("Baby Otieno received measles vaccine, next dose in 6 months");
+  assert.match(dose, /received Measles today\. Next dose .*20 March 2027/, `expected a real 6-calendar-month jump, got: ${dose}`);
 });
 
 // ---------- pregnancy ----------
