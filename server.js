@@ -7,6 +7,7 @@ const tls = require("tls");
 const { WebSocketServer } = require("ws");
 const { OpenAIRealtimeWebSocket } = require("@openai/agents-realtime");
 const nexusUploads = require("./server/uploads.js");
+const nexusJobSearchProvider = require("./server/nexus-job-search-source-provider.js");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
@@ -20450,11 +20451,41 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "lesson-ready", ["Prepared a relevant plain-language learning response and one understanding check."], ["Nexus did not enroll the user, issue a certificate, or claim completion of an external course."]);
       return { ...common, capability: "learning-training", status: "lesson-ready", response: lesson, receipt, evidenceReceipt: receipt, localOnly: true, matchedResources: cards.slice(0, 5) };
     }
-    const lmsRequest = /\b(course|courses|training|lms|class|learning)\b/i.test(command);
-    if (lmsRequest) {
-      const courses = await nexusRealProviders.lmsLiveBridge.courses({ q: command }, process.env);
-      return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "learning-training" }, courses);
+    // Found live: this tool's own description and routing hint
+    // (server.js:18869-ish) explicitly promise "jobs, workforce pathways" and
+    // send job-search commands here, but until now jobsRequest was used only
+    // to SUPPRESS the learning branch above -- there was no branch that
+    // actually searched for a job. A real, already-built, feature-flag-gated
+    // job-search provider (server/nexus-job-search-source-provider.js, a
+    // free public Remotive lookup with an honest fixture/mock/live ladder)
+    // existed but was required by nothing reachable anywhere in server.js.
+    if (jobsRequest) {
+      const locationMatch = command.match(/\b(?:in|near|around)\s+([a-z][a-z\s]{1,40}?)(?:[.?!]|$)/i);
+      const jobQuery = command
+        .replace(/\b(please|can you|could you|i want to|i'd like to|find|search for|looking for|apply for|apply to|near me|available|openings?|hiring|jobs?|employment|vacanc(?:y|ies)|position|the|a|an|for|to|of)\b/gi, " ")
+        .replace(/[^\w\s-]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const jobResult = await nexusJobSearchProvider.getJobSearchSourceResultAsync({
+        query: jobQuery || "job",
+        locationText: locationMatch ? locationMatch[1].trim() : ""
+      }, process.env);
+      const found = jobResult.sourceStatus === "source-result-available";
+      const response = found
+        ? `${jobResult.resultSummary} Apply directly at the source: ${jobResult.applicationUrl}. ${jobResult.limitationNotes}`
+        : jobResult.resultSummary;
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, jobResult.sourceStatus,
+        [response], [jobResult.limitationNotes]);
+      return { ...common, capability: "workforce-jobs", status: jobResult.sourceStatus, response, receipt, evidenceReceipt: receipt, localOnly: jobResult.providerMode !== "live", jobResult };
     }
+    // A `lmsRequest` fallback branch used to live here (a second, less
+    // capable lookup via nexusRealProviders.lmsLiveBridge.courses). It was
+    // provably dead code: lmsRequest's own trigger words (course, courses,
+    // training, lms, class, learning) are a strict subset of learningRequest's
+    // trigger words just above, so lmsRequest true always implies
+    // learningRequest true -- the only way to reach it was learningRequest &&
+    // jobsRequest both true, and that exact case now returns from the real
+    // job-search branch above instead. Removed rather than left unreachable.
   }
   if (toolName === "nexus_agriculture") {
     // droneMissionBridge.missionRequests() (a real listing of saved intake
