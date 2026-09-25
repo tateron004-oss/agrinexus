@@ -40,7 +40,14 @@ function safeText(value, max = 500) {
 
 function safeList(value) {
   if (Array.isArray(value)) return value.map(item => safeText(item, 160)).filter(Boolean).slice(0, 12);
-  return safeText(value, 500).split(/[;,|]/).map(item => safeText(item, 160)).filter(Boolean).slice(0, 12);
+  // Found live (medicalBridgeUtils audit): truncating the WHOLE joined
+  // string to 500 chars before splitting on delimiters cut a long
+  // comma/semicolon-separated list off mid-item and silently dropped every
+  // item past the truncation point. Each item is already capped to 160
+  // chars below, and the result is capped to 12 items, so the combined
+  // output size is already bounded (<=1920 chars) without truncating the
+  // source string first.
+  return clean(value).replace(/\s+/g, " ").split(/[;,|]/).map(item => safeText(item, 160)).filter(Boolean).slice(0, 12);
 }
 
 function ensureProfileStore(db, key) {
@@ -111,7 +118,15 @@ function createReminder(provider, action, body, db, titlePrefix) {
 function queueOffline(provider, action, body, db, type, summary) {
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
-  const blocked = guardMedicalText(provider, action, [summary, body.title, body.summary, body.concern, body.notes]);
+  // Found live (medicalBridgeUtils audit): this is the only one of 15
+  // guardMedicalText call sites in the codebase that omitted the 4th
+  // argument, so allowEmergencyLanguage defaulted to true and EMERGENCY_WORDS
+  // was never checked here -- the exact same crisis wording ("chest pain",
+  // "cannot breathe", "suicidal") that every consult/symptom-log/request
+  // action in these same provider files correctly blocks sailed straight
+  // through this "queue for offline review" path and got persisted to local
+  // storage with no emergency notice attached.
+  const blocked = guardMedicalText(provider, action, [summary, body.title, body.summary, body.concern, body.notes], false);
   if (blocked) return blocked;
   const result = offlineSyncProvider.queueItem({
     confirmed: true,
