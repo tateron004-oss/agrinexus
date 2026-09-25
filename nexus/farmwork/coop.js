@@ -3,6 +3,7 @@
 const { clean, titleCase, parseMoney, parseQuantity, formatMoney, unitLabel, anyDay, plural, round } = require("./parse.js");
 const { startGuided, askConfirm } = require("./guided.js");
 const { describeDay, addDays, extractPeriod, extractRange } = require("../personal/dates.js");
+const { showTotals } = require("./money.js");
 
 // A cooperative's books, kept by whoever looks after them: members, dues and contributions, payouts, shared equipment and who has it when,
 // and what each member delivered. Amounts are what the keeper says; Kyro adds nothing up except what was recorded, and it messages no one.
@@ -52,6 +53,20 @@ function findMember(members, query) {
   return loose.length === 1 ? { member: loose[0] } : loose.length > 1 ? { ambiguous: loose } : null;
 }
 const periodFor = (coop, today) => extractPeriod(coop?.data.period === "weekly" ? "this week" : coop?.data.period === "yearly" ? "this year" : "this month", today);
+// Found live (export/invoice/farm-toolkit follow-up audit): dues owed/paid-up
+// checks used to sum EVERY matching payment's raw amount regardless of
+// currency, then compare that fabricated total against the coop's single,
+// fixed dues amount (one currency) -- a member who once paid dues in a
+// different currency (e.g. a rare USD payment into an otherwise-KES coop)
+// would silently count toward, or clear, a dues target denominated in an
+// entirely different currency. Dues are inherently one fixed currency (set
+// once when the cooperative itself is set up), so -- unlike a report that
+// can legitimately show several currencies side by side -- the correct fix
+// here is to only count payments actually made in that same currency
+// (or with no currency recorded at all, for older rows) toward the total.
+const paidTowardDues = (payments, coop) => round(payments
+  .filter(pay => !pay.data.currency || !coop?.data.currency || pay.data.currency === coop.data.currency)
+  .reduce((total, pay) => total + pay.data.amount, 0));
 const NAME = "([A-Za-z][A-Za-z'-]+(?: (?!(?:paid|contributed|delivered|for|on|to|has|booked|pays|gave)\\b)[A-Za-z][A-Za-z'-]+)?)";
 
 async function handle(ctx) {
@@ -83,7 +98,7 @@ async function handle(ctx) {
       const currency = money.currency || c?.data.currency || "";
       await ctx.store.add({ ...scope, collection: "coop_payment", data: { member: found.member.data.name, kind, amount: money.amount, currency, purpose: purpose.slice(0, 80), day: ctx.today } });
       const period = periodFor(c, ctx.today);
-      const paid = (await ctx.store.list({ ...scope, collection: "coop_payment" })).filter(pay => pay.data.member === found.member.data.name && pay.data.kind === "dues" && pay.data.day >= period.from && pay.data.day <= period.to).reduce((sum, pay) => sum + pay.data.amount, 0);
+      const paid = paidTowardDues((await ctx.store.list({ ...scope, collection: "coop_payment" })).filter(pay => pay.data.member === found.member.data.name && pay.data.kind === "dues" && pay.data.day >= period.from && pay.data.day <= period.to), c);
       const owed = kind === "dues" && c?.data.dues ? round(c.data.dues - paid) : 0;
       return `Recorded: ${found.member.data.name} ${kind === "dues" ? "paid dues of" : "contributed"} ${formatMoney(money.amount, currency)}${purpose ? ` (${purpose})` : ""}.${kind === "dues" && c?.data.dues ? (owed > 0 ? ` ${formatMoney(owed, currency)} still owed ${period.label}.` : ` Dues are paid up ${period.label}.`) : ""}`;
     }
@@ -103,16 +118,21 @@ async function handle(ctx) {
     if (!list.length) return "You have no members yet.";
     const period = periodFor(c, ctx.today);
     const payments = (await ctx.store.list({ ...scope, collection: "coop_payment" })).filter(pay => pay.data.kind === "dues" && pay.data.day >= period.from && pay.data.day <= period.to);
-    const owing = list.map(member => ({ member, owed: round(c.data.dues - payments.filter(pay => pay.data.member === member.data.name).reduce((sum, pay) => sum + pay.data.amount, 0)) })).filter(item => item.owed > 0);
+    const owing = list.map(member => ({ member, owed: round(c.data.dues - paidTowardDues(payments.filter(pay => pay.data.member === member.data.name), c)) })).filter(item => item.owed > 0);
     return owing.length ? `${plural(owing.length, "member owes", "members owe")} dues ${period.label}: ${owing.slice(0, 15).map(item => `${item.member.data.name} ${formatMoney(item.owed, c.data.currency)}`).join("; ")}.` : `Everyone has paid their dues ${period.label}.`;
   }
   if ((m = /^(?:show|what are|how much are) (?:our |the )?(?:co-?op(?:erative)? )?(?:contributions|payments|dues collected|collections)(?: (this (?:week|month|year)|last (?:month|year)))?$/i.exec(t))) {
     const period = extractPeriod(m[1] || "", ctx.today) || extractPeriod("this year", ctx.today);
     const rows = (await ctx.store.list({ ...scope, collection: "coop_payment" })).filter(pay => pay.data.day >= period.from && pay.data.day <= period.to);
     if (!rows.length) return `No cooperative payments recorded ${period.label}.`;
-    const cur = rows[0].data.currency; const sum = kind => round(rows.filter(pay => pay.data.kind === kind).reduce((total, pay) => total + pay.data.amount, 0));
-    const top = Object.entries(rows.filter(pay => pay.data.kind !== "payout").reduce((acc, pay) => { acc[pay.data.member] = round((acc[pay.data.member] || 0) + pay.data.amount); return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    return `${period.label[0].toUpperCase()}${period.label.slice(1)}: dues ${formatMoney(sum("dues"), cur)}, contributions ${formatMoney(sum("contribution"), cur)}, paid out ${formatMoney(sum("payout"), cur)}.${top.length ? ` Most paid in: ${top.map(([name, amount]) => `${name} ${formatMoney(amount, cur)}`).join(", ")}.` : ""}`;
+    // Found live (export/invoice/farm-toolkit follow-up audit): this used to
+    // sum every payment's raw amount together regardless of currency, then
+    // label the whole total with whichever payment happened to be first.
+    // Bucket by currency first, like sum()/showTotals() already do
+    // everywhere else in the farm toolkit.
+    const totalsFor = kind => { const totals = {}; for (const pay of rows) { if (pay.data.kind !== kind) continue; const currency = pay.data.currency || ""; totals[currency] = round((totals[currency] || 0) + pay.data.amount); } return totals; };
+    const top = Object.entries(rows.filter(pay => pay.data.kind !== "payout").reduce((acc, pay) => { const key = `${pay.data.member}|${pay.data.currency || ""}`; acc[key] = round((acc[key] || 0) + pay.data.amount); return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    return `${period.label[0].toUpperCase()}${period.label.slice(1)}: dues ${showTotals(totalsFor("dues"))}, contributions ${showTotals(totalsFor("contribution"))}, paid out ${showTotals(totalsFor("payout"))}.${top.length ? ` Most paid in: ${top.map(([key, amount]) => { const [name, currency] = key.split("|"); return `${name} ${formatMoney(amount, currency)}`; }).join(", ")}.` : ""}`;
   }
 
   // ---- shared equipment ----
@@ -172,7 +192,7 @@ async function handle(ctx) {
     if (!c && !list.length) return 'Nothing set up yet. Say "set up our cooperative called …".';
     const period = periodFor(c, ctx.today);
     const pays = (await ctx.store.list({ ...scope, collection: "coop_payment" })); const dues = pays.filter(pay => pay.data.kind === "dues" && pay.data.day >= period.from && pay.data.day <= period.to);
-    const paidUp = c?.data.dues ? list.filter(member => dues.filter(pay => pay.data.member === member.data.name).reduce((sum, pay) => sum + pay.data.amount, 0) >= c.data.dues).length : null;
+    const paidUp = c?.data.dues ? list.filter(member => paidTowardDues(dues.filter(pay => pay.data.member === member.data.name), c) >= c.data.dues).length : null;
     const equipment = await ctx.store.list({ ...scope, collection: "coop_equipment" });
     return `${c?.data.name || "Your cooperative"}: ${plural(list.length, "member")}${paidUp !== null ? `, ${paidUp} paid up on dues ${period.label}` : ""}, ${plural(equipment.length, "piece")} of shared equipment. Say "who hasn't paid dues" or "show cooperative production".`;
   }

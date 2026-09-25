@@ -108,6 +108,22 @@ test("money is recorded in plain words, totalled, and never guessed", async () =
   assert.match(await who.say("What is my profit this year"), /4,000/);
 });
 
+// Found live (export/invoice/farm-toolkit follow-up audit): "bought" used a
+// literal-word regex ("does the sentence contain the word 'for' followed by
+// a digit?") to decide whether a genuine separate total was stated -- but
+// "for" is also parsePricePer's own connector word for introducing a
+// per-unit price, so completely ordinary phrasing ("bought 5 bags ... for
+// 3000 per bag") tripped the guard and recorded only 3,000 (the per-unit
+// price) instead of the real 15,000 total. The "sold" branch a few lines up
+// already handles the identical ambiguity correctly via an echo check
+// (money.amount === per.amount); "bought" now matches it.
+test("'bought N units for X per unit' records the real total (quantity times price), not just the per-unit price", async () => {
+  const who = farmer();
+  const reply = await who.say("Bought 5 bags of fertilizer for 3000 per bag");
+  assert.match(reply, /bought 5 bags of fertilizer for 15,000/i, reply);
+  assert.match(await who.say("How much did I spend this month"), /15,000/);
+});
+
 test("someone with no farm records is not given farm books for ordinary buying and selling", async () => {
   const who = farmer();
   assert.equal(await who.say("Sold my old car for 500000"), null);
