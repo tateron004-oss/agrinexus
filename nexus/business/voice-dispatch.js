@@ -357,7 +357,12 @@ function extractListingArgs(command = "", args = {}) {
   // words, stopping before a price/status/bed-bath clause rather than
   // swallowing the rest of the sentence.
   const addressMatch = text.match(/\b(\d{1,6}\s+[A-Za-z0-9][A-Za-z0-9 .,'-]{2,80}?)(?=\s+(?:for|at|priced|listed|status|with|is|as)\b|[,.]|$)/i);
-  const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/) || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/);
+  // "dollars" (no $ sign, no k/K suffix) added: "List 789 Pine Rd for
+  // 450,000 dollars" previously matched nothing at all and silently saved
+  // the listing with price: 0, with no error or clarification shown.
+  const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/)
+    || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/)
+    || text.match(/\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s+dollars?\b/i);
   const priceRaw = priceMatch ? Number(priceMatch[1].replace(/,/g, "")) : NaN;
   const price = Number.isFinite(priceRaw) ? (/[kK]/.test(priceMatch[0]) ? priceRaw * 1000 : priceRaw) : NaN;
   const bedsMatch = text.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms|br)\b/i);
@@ -370,14 +375,32 @@ function extractListingArgs(command = "", args = {}) {
     propertyType: sanitizeText(args.propertyType || (typeMatch ? typeMatch[1].toLowerCase() : ""), 40),
     beds: args.beds !== undefined ? Number(args.beds) : (bedsMatch ? Number(bedsMatch[1]) : 0),
     baths: args.baths !== undefined ? Number(args.baths) : (bathsMatch ? Number(bathsMatch[1]) : 0),
-    status: sanitizeText(args.status || (statusMatch ? statusMatch[1].toLowerCase().replace(/\s+/g, "-") : ""), 30)
+    // Found live: only the text-parsed branch normalized to lowercase --
+    // args.status (a structured tool-call argument, e.g. "Active") was
+    // stored verbatim, and computeBusinessDashboard's exact-case status
+    // filters then silently dropped that listing from active/pending/sold
+    // counts and total value, with no error. Mirrors the identical,
+    // already-fixed case-sensitivity bug for grant.status.
+    status: sanitizeText(String(args.status || (statusMatch ? statusMatch[1] : "")).toLowerCase().replace(/\s+/g, "-"), 30)
   };
 }
 
 function resolveListingIndex(listings, command = "") {
   const text = String(command || "").toLowerCase();
-  const named = listings.findIndex(listing => listing.address && text.includes(String(listing.address).toLowerCase()));
-  if (named !== -1) return named;
+  // Found live: findIndex picked whichever matching address came FIRST in
+  // the array, not the most specific one -- when one listing's address is a
+  // literal prefix of another's (e.g. two units at the same street, "500
+  // Elm St" and "500 Elm St Apt 2"), a command naming the more specific
+  // address ("mark 500 Elm St Apt 2 as sold") could still resolve to the
+  // wrong, shorter-address listing depending purely on array order. Now
+  // picks the LONGEST matching address (the most specific one), not the
+  // first one encountered.
+  const matches = listings.map((listing, index) => ({ listing, index }))
+    .filter(entry => entry.listing.address && text.includes(String(entry.listing.address).toLowerCase()));
+  if (matches.length) {
+    matches.sort((a, b) => String(b.listing.address).length - String(a.listing.address).length);
+    return matches[0].index;
+  }
   // Only fall back to "the one active listing" when the caller didn't name
   // an address-shaped token at all (real estate addresses are effectively
   // always digit-led, e.g. "123 Main St"). If they named a specific address
@@ -385,7 +408,7 @@ function resolveListingIndex(listings, command = "") {
   // falling back to a different property would risk marking the wrong one
   // sold/pending, unlike resolveAppointmentIndex's lower-stakes equivalent.
   if (/\d/.test(text)) return -1;
-  const active = listings.map((listing, index) => ({ listing, index })).filter(entry => entry.listing.status === "active");
+  const active = listings.map((listing, index) => ({ listing, index })).filter(entry => String(entry.listing.status || "").toLowerCase() === "active");
   return active.length === 1 ? active[0].index : -1;
 }
 
@@ -432,10 +455,14 @@ function computeBusinessDashboard(editable) {
   const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
   const listings = editable.listings || [];
-  const activeListings = listings.filter(listing => listing.status === "active").length;
-  const pendingListings = listings.filter(listing => listing.status === "pending" || listing.status === "under-contract").length;
-  const soldListings = listings.filter(listing => listing.status === "sold").length;
-  const activeListingValue = listings.filter(listing => listing.status === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
+  // Case-insensitive, matching extractListingArgs' own normalization fix --
+  // a defense-in-depth for any already-saved or externally-written record
+  // whose status wasn't normalized at write time (e.g. a direct API write).
+  const listingStatus = listing => String(listing.status || "").toLowerCase();
+  const activeListings = listings.filter(listing => listingStatus(listing) === "active").length;
+  const pendingListings = listings.filter(listing => listingStatus(listing) === "pending" || listingStatus(listing) === "under-contract").length;
+  const soldListings = listings.filter(listing => listingStatus(listing) === "sold").length;
+  const activeListingValue = listings.filter(listing => listingStatus(listing) === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
   return {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
     customers, donors, sponsors, volunteers, buyers, sellers, tenants, landlords, others,

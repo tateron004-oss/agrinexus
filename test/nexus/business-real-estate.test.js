@@ -45,6 +45,53 @@ test("classify() recognizes a listing named only by a real street address, with 
     assert.equal(classify(text), "addListing", text);
 });
 
+// Found live: only $/k-suffixed prices were recognized -- "List 789 Pine Rd
+// for 450,000 dollars" matched no price pattern at all and silently saved
+// the listing with price: 0, with no error or clarification shown.
+test("extractListingArgs recognizes a price spelled out with the word 'dollars', not just $ or k suffix", () => {
+  assert.equal(voiceDispatch.extractListingArgs("List 789 Pine Rd for 450,000 dollars", {}).price, 450000);
+  assert.equal(voiceDispatch.extractListingArgs("List 22 Elm St for 450000 dollars", {}).price, 450000);
+});
+
+// Found live: only the text-parsed status branch normalized to lowercase --
+// a structured args.status (e.g. "Active") was stored verbatim, and the
+// dashboard's exact-case status filters then silently dropped that listing.
+test("extractListingArgs normalizes args.status to lowercase, not just the text-parsed branch", () => {
+  assert.equal(voiceDispatch.extractListingArgs("mark listing status", { address: "500 Elm St", status: "Active" }).status, "active");
+});
+
+// Found live: resolveListingIndex used findIndex, which picks whichever
+// matching address comes FIRST in the array, not the most specific one --
+// when one listing's address is a literal prefix of another's (two units
+// on the same street), a command naming the more specific address could
+// still resolve to the wrong, shorter-address listing purely by array order.
+test("resolveListingIndex picks the most specific (longest) matching address, not just the first one in array order", () => {
+  const listings = [
+    { address: "500 Elm St", price: 100000, status: "active" },
+    { address: "500 Elm St Apt 2", price: 200000, status: "active" }
+  ];
+  assert.equal(voiceDispatch.resolveListingIndex(listings, "mark 500 Elm St Apt 2 as sold"), 1);
+  assert.equal(voiceDispatch.resolveListingIndex(listings, "mark 500 Elm St as sold"), 0);
+  // Unaffected when the array order is reversed.
+  const reversed = [listings[1], listings[0]];
+  assert.equal(voiceDispatch.resolveListingIndex(reversed, "mark 500 Elm St Apt 2 as sold"), 0);
+});
+
+// Found live: a listing's status filters compared exact-case against
+// "active"/"pending"/"sold" -- a naturally-capitalized "Active" status
+// silently vanished from the dashboard's counts and total value.
+test("computeBusinessDashboard's listing counts/value match status case-insensitively", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard({
+    leads: [], transactions: [], invoices: [], invoiceItems: [], grants: [], tasks: [], appointments: [],
+    listings: [
+      { address: "100 Main St", price: 100000, status: "active" },
+      { address: "200 Main St", price: 200000, status: "Active" }
+    ]
+  });
+  assert.equal(dashboard.activeListings, 2, "both differently-cased 'active' listings must count");
+  assert.equal(dashboard.activeListingValue, 300000);
+});
+
 test("classify() and extractLeadArgs recognize buyer/seller/tenant/landlord as real lead types, not just 'customer'", () => {
   assert.equal(classify("Add a buyer named Jane Doe"), "addLead");
   const buyer = voiceDispatch.extractLeadArgs("Add a buyer named Jane Doe", {});
