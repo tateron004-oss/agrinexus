@@ -51,3 +51,45 @@ test("buildSupportPacket for a crisis message returns a real safety response, no
   assert.equal(packet.safety.noEmergencyDispatch, true);
   assert.equal(packet.safety.noProviderContacted, true);
 });
+
+// Found live 2026-09-25: the exact real phrase "I've been feeling really
+// down lately and don't see the point in anything" matched NONE of the
+// existing patterns (no literal "hopeless", "depressed", "suicide", etc.),
+// so shouldHandle() returned false and the whole safety module never
+// engaged. This is real, classic passive-hopelessness/anhedonia language,
+// not an edge case.
+test("hopelessness/anhedonia phrasing with no literal crisis word still engages the safety module", () => {
+  const realWorldPhrase = "I've been feeling really down lately and don't see the point in anything";
+  assert.equal(mh.shouldHandle(realWorldPhrase), true);
+  const classification = mh.classifyState(realWorldPhrase);
+  assert.equal(classification.crisisOverride, true);
+  assert.equal(classification.state, "elevated_concern");
+  for (const text of [
+    "I don't see the point in trying anymore",
+    "nothing matters to me anymore",
+    "I'm giving up",
+    "what's the point",
+    "I don't want to exist"
+  ]) {
+    assert.equal(mh.shouldHandle(text), true, text);
+    assert.equal(mh.classifyState(text).crisisOverride, true, text);
+  }
+});
+
+// Found live: even a correctly-classified crisis never produced a real,
+// dialable phone number anywhere in the response -- only "contact local
+// emergency services", with the actual 988/911 numbers sitting unused in
+// JURISDICTION_ESCALATION_REGISTRY. A real number must actually appear in
+// the text a person reads/hears when the jurisdiction has one configured.
+test("a real, verified jurisdiction's crisis contact numbers actually appear in the spoken/written response", () => {
+  const packet = mh.buildSupportPacket("I want to end my life", { jurisdiction: "california" });
+  assert.equal(packet.jurisdictionEscalation.jurisdictionId, "us");
+  assert.match(packet.userVisibleStatus, /988/);
+  assert.match(packet.userVisibleStatus, /911/);
+});
+
+test("an unverified jurisdiction still does not fabricate a specific resource number", () => {
+  const packet = mh.buildSupportPacket("I want to end my life", { jurisdiction: "some unlisted country" });
+  assert.equal(packet.jurisdictionEscalation.jurisdictionId, "generic");
+  assert.equal(/\b\d{3,}\b/.test(packet.userVisibleStatus), false);
+});

@@ -143,6 +143,31 @@
     /\b(my child|my mother|older adult|vulnerable adult).*\b(abused|neglected|unsafe|hurt)\b/i
   ];
 
+  // Passive hopelessness / anhedonia language -- real signals of risk that
+  // don't contain any literal crisis word ("suicide", "kill myself", etc.).
+  // Found live: "I've been feeling really down lately and don't see the
+  // point in anything" matched NONE of the patterns above or in
+  // MENTAL_HEALTH_PATTERNS below, so shouldHandle() returned false and the
+  // whole safety module never engaged for a real hopelessness statement.
+  // Treated as crisisOverride (not just MENTAL_HEALTH_PATTERNS) because
+  // several of these phrases ("don't see the point", "don't want to be
+  // here", "why bother") are classic passive suicidal-ideation markers, not
+  // ordinary low mood -- err toward surfacing real resources too often
+  // rather than missing a genuine one.
+  const HOPELESSNESS_PATTERNS = [
+    /\bfeel(?:ing)?\s+(?:really\s+|so\s+|very\s+|pretty\s+)?down\b/i,
+    /\b(?:don'?t|do not|didn'?t|did not) see (?:the |any )?point\b/i,
+    /\bno point in (?:anything|trying|it|life|going on)\b/i,
+    /\bnothing (?:matters|feels worth it|seems worth it)\b/i,
+    /\b(?:not|isn'?t) worth it\b/i,
+    /\b(?:giving up|given up)\b/i,
+    /\b(?:empty|numb) inside\b/i,
+    /\bwhat'?s the point\b/i,
+    /\bwhy bother\b/i,
+    /\bdon'?t want to (?:be here|exist|go on)\b/i,
+    /\bcan'?t (?:go on|do this anymore|keep going)\b/i
+  ];
+
   // Previously only checked inline inside classifyState(), never in
   // shouldHandle() -- a medical-emergency phrase like "chest pain" or
   // "cannot breathe" would classify correctly (crisisOverride: true) if
@@ -173,6 +198,7 @@
     return CRISIS_PATTERNS.some(pattern => pattern.test(text))
       || SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text))
       || MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text))
+      || HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text))
       || MENTAL_HEALTH_PATTERNS.some(pattern => pattern.test(text));
   }
 
@@ -360,6 +386,21 @@
       };
     }
 
+    if (HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text))) {
+      matchedSignals.push("hopelessness_or_passive_risk_language");
+      return {
+        capabilityId: CAPABILITY_ID,
+        state: "elevated_concern",
+        riskTier: "elevated",
+        action,
+        matchedSignals,
+        confidence: 0.85,
+        crisisOverride: true,
+        professionalReviewRequired: true,
+        providerExecutionAllowed: false
+      };
+    }
+
     let state = "emotional_support";
     let riskTier = "support";
     if (/\b(grief|lost someone|bereavement)\b/.test(text)) state = "grief_support";
@@ -403,6 +444,9 @@
     if (classification.state === "medical_emergency") {
       return "This may need urgent medical help. Please contact local emergency services or go to the nearest emergency care location now. Nexus can provide support text, but it cannot dispatch or replace emergency care.";
     }
+    if (classification.state === "elevated_concern" && classification.crisisOverride) {
+      return "I'm really glad you told me that. Feeling like there's no point, or like giving up, is a serious sign worth taking seriously -- you don't have to carry it alone. If you're ever thinking about hurting yourself, please reach out to a crisis line or trusted person right away. I can stay with you in support mode and help you think through next steps, but I cannot replace a real person or professional.";
+    }
     if (classification.state === "location_required") {
       return "I can help look for verified behavioral-health or social-care resources, but I need a city, region, or approved location text first. I will not request browser location permission or contact a provider automatically.";
     }
@@ -425,6 +469,23 @@
       return "I can prepare a provider-ready summary with what you are feeling, what changed, safety concerns, questions, and support needs. Nothing will be sent without your review and approval.";
     }
     return "I'm here with you. I can listen, help you name what is happening, suggest a simple coping step, or prepare questions for a qualified professional. I cannot diagnose, prescribe, or replace a clinician.";
+  }
+
+  // The registry has a `label`/`resourceTypes` for every jurisdiction, but
+  // only entries with verified, real, dialable numbers in `displayRules`
+  // (currently just "us": 988/911) should ever be spoken/shown as an actual
+  // contact -- unconfigured jurisdictions (kenya/nigeria/generic) keep their
+  // deliberate "ask for city/region" caution instead of a fabricated number.
+  // Previously the real 988/911 numbers existed only in this registry and
+  // were never surfaced anywhere in the spoken response or the UI card --
+  // even a correctly-classified crisis never produced a real phone number
+  // for the user to see or hear.
+  function describeRealCrisisContacts(jurisdictionEscalation) {
+    const escalation = jurisdictionEscalation?.escalation;
+    if (!escalation) return "";
+    const realNumbers = (escalation.displayRules || []).filter(rule => /^\d+$/.test(rule));
+    if (!realNumbers.length) return "";
+    return ` You can also contact: ${escalation.resourceTypes.join(", ")} -- call or text ${realNumbers.join(" or call ")}.`;
   }
 
   function buildSupportPacket(input = "", context = {}) {
@@ -452,7 +513,7 @@
       command: String(input || ""),
       generatedAt: now,
       classification,
-      userVisibleStatus: responseForState(classification),
+      userVisibleStatus: responseForState(classification) + describeRealCrisisContacts(jurisdictionEscalation),
       supportOptions: [
         "supportive_dialogue",
         "coping_tool",
