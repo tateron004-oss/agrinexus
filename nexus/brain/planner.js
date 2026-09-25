@@ -724,7 +724,18 @@ function completeVideoSearchPlan(text, catalog) {
 
 function completeLiveKnowledgePlan(text, catalog) {
   const goal = String(text || "").trim();
-  if (!/[?]|\b(why|what|how|when|where|who)\b/i.test(goal) || !/\b(current|latest|live|sources?)\b/i.test(goal)) return null;
+  // Found live: this detector was narrower than the client's own definition
+  // of a live-knowledge question (isNexusLiveKnowledgeQuestion in
+  // public/app.js) -- "What's the market price for maize?" satisfies the
+  // client's definition ("market price") but not this one (no
+  // current/latest/live/sources), so any caller relying on this server-side
+  // planner alone (without a client-side pre-check) never resolved it to a
+  // real search. Added only these two specific phrases from that real
+  // example -- "today"/"now"/"recent" were tried first and reverted: they
+  // collided with completeWeatherForecastPlan's own bare "today"/"now"
+  // phrasing (confirmed by two real test failures), so this stays narrow
+  // rather than broadly matching the client's full vocabulary.
+  if (!/[?]|\b(why|what|how|when|where|who)\b/i.test(goal) || !/\b(current|latest|live|sources?|market price|price for)\b/i.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "knowledge.search") ||
       !catalog.applications.some(app => app.applicationId === "live-knowledge")) return null;
   return { goal, application: "live-knowledge", riskTier: "low", clarification: null,
