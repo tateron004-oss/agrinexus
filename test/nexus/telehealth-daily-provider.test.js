@@ -24,14 +24,15 @@ test("createRoom still reports ok:true for a genuine success", async () => {
 
 test("createVideoRoom propagates a real provider failure to its own top-level ok field, instead of hardcoding success", async () => {
   const db = {};
+  const user = { id: "u1", name: "QA" };
   const created = await telehealthProvider.createEncounter(db, {
     conditionArea: "general", confirmed: true, consentToPreparePacket: true
-  }, { name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "local" });
+  }, user, { NEXUS_TELEHEALTH_PROVIDER: "local" });
 
   const fetchImpl = async () => ({ ok: false, status: 500, text: async () => JSON.stringify({ error: "server_error" }) });
   const result = await telehealthProvider.createVideoRoom(db, {
     encounterId: created.encounter.id, confirmed: true, consentToShare: true
-  }, { name: "QA" }, env, { fetchImpl });
+  }, user, env, { fetchImpl });
 
   assert.equal(result.ok, false, "a real Daily.co failure must not be reported as ok:true at the outer level");
   assert.equal(result.video.status, "provider_error");
