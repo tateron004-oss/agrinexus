@@ -22,7 +22,15 @@ function readVitals(text) {
   take(/\b(?:resp(?:iratory)? rate|rr|breaths?)\s*(?:is|of|was|:|=)?\s*(\d{1,2})\b/i, "respiratoryRate", null, m => (between(Number(m[1]), 5, 90) ? Number(m[1]) : null));
   take(/\b(?:spo2|sp02|sats?|oxygen(?: saturation)?)\s*(?:is|of|was|:|=)?\s*(\d{2,3})\s*%?/i, "oxygen", null, m => (between(Number(m[1]), 50, 100) ? Number(m[1]) : null));
   take(/\b(?:weight|wt|weighs|weighed)\s*(?:is|of|was|:|=)?\s*(\d{1,3}(?:[.,]\d+)?)\s*kgs?\b/i, "weightKg", null, m => (between(num(m[1]), 0.3, 300) ? num(m[1]) : null));
-  take(/\bmuac\s*(?:is|of|was|:|=)?\s*(\d{1,3}(?:[.,]\d+)?)\s*(mm|cm)?/i, "muacMm", null, m => { const value = num(m[1]); const mm = m[2] ? (m[2].toLowerCase() === "cm" ? value * 10 : value) : (value < 40 ? value * 10 : value); return between(mm, 50, 400) ? Math.round(mm) : null; });
+  // Found live (health-toolkit audit): the unitless guess ("value < 40 means
+  // cm") and the final acceptance range (between(mm, 50, 400), i.e. 5-40cm)
+  // disagreed at their own shared boundary -- a bare "39" guessed as cm
+  // (390mm) passed, but a bare "40" one unit higher fell into neither
+  // branch cleanly (guessed as already-mm, giving 40, which then failed the
+  // same between() check) and was silently discarded as unreadable instead
+  // of being treated the same consistent way. <=40 aligns the guess with
+  // the range's own upper bound (40cm == 400mm, the top of what's accepted).
+  take(/\bmuac\s*(?:is|of|was|:|=)?\s*(\d{1,3}(?:[.,]\d+)?)\s*(mm|cm)?/i, "muacMm", null, m => { const value = num(m[1]); const mm = m[2] ? (m[2].toLowerCase() === "cm" ? value * 10 : value) : (value <= 40 ? value * 10 : value); return between(mm, 50, 400) ? Math.round(mm) : null; });
   return { vitals, unread };
 }
 

@@ -92,6 +92,17 @@ test("readings are recorded exactly as given, never judged, and a slip is not st
   assert.equal(conditionOf("diagnosis: malaria, gave tablets"), "malaria");
 });
 
+// Found live (health-toolkit audit): the unitless MUAC guess ("under 40
+// means cm") and the final acceptance range (5-40cm) disagreed at their own
+// shared boundary -- "muac 39" was accepted (guessed as cm, 390mm) but
+// "muac 40" fell through as unreadable, even though 40cm is exactly the top
+// of the same accepted range.
+test("an unlabeled MUAC reading is guessed consistently right up to the accepted range's own boundary", () => {
+  assert.equal(readVitals("muac 39").vitals.muacMm, 390);
+  assert.equal(readVitals("muac 40").vitals.muacMm, 400, "40, guessed as cm, is exactly the top of the accepted 5-40cm range and must not be discarded");
+  assert.deepEqual(readVitals("muac 41"), { vitals: {}, unread: ["muacMm"] }, "a genuinely ambiguous unlabeled value just past the boundary is still correctly refused, not guessed at");
+});
+
 test("a visit is kept as said, says nothing about what a reading means, and closes the follow-up it was waiting for", async () => {
   const who = worker(); await registerMary(who);
   await who.say("Follow up Mary tomorrow: check fever");
