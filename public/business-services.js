@@ -105,13 +105,24 @@
     const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
     const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
     const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
+    // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
+    // listing metrics exactly -- found live: this real data (real listing
+    // count/status/value, already computed server-side and read back by
+    // voice/chat "show my listings") had no editor-page dashboard row or
+    // rows() section at all, unlike every other tracked collection here.
+    const listings = editable.listings || [];
+    const activeListings = listings.filter(listing => listing.status === "active").length;
+    const pendingListings = listings.filter(listing => listing.status === "pending" || listing.status === "under-contract").length;
+    const soldListings = listings.filter(listing => listing.status === "sold").length;
+    const activeListingValue = listings.filter(listing => listing.status === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
     const rows = [
       ["Net income", currencies.map(code => `${code} ${(money[code].income - money[code].expenses).toFixed(2)} (income ${money[code].income.toFixed(2)} / expenses ${money[code].expenses.toFixed(2)})`).join("; ")],
       ["Customers & donors", `${customers} customers, ${donors} donors, ${sponsors} sponsors, ${volunteers} volunteers${others ? `, ${others} other (members, clients, and similar)` : ""}`],
       ["Invoiced (all line items)", `${invoiceTotal.toFixed(2)}, ${unpaidInvoices} invoice(s) not marked paid`],
       ["Grants & funding", `${grantsRequested.toFixed(2)} tracked, ${grantsAwarded.toFixed(2)} awarded`],
       ["Open tasks", `${openTasks} of ${editable.tasks.length} not yet done`],
-      ["Appointments", `${upcomingAppointments} active`]
+      ["Appointments", `${upcomingAppointments} active`],
+      ...(listings.length ? [["Listings", `${listings.length} total: ${activeListings} active (value ${activeListingValue.toFixed(2)}), ${pendingListings} pending, ${soldListings} sold`]] : [])
     ];
     byId("dashboard-summary").innerHTML = rows.map(([label, value]) => `<div class="fields"><strong>${label}</strong><span>${value}</span></div>`).join("");
   }
@@ -123,6 +134,7 @@
     const business = byId("business-fields"); business.replaceChildren();
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
     rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"]]);
+    rows("listings", editable.listings, [["address", "Address"], ["price", "Price"], ["propertyType", "Property type"], ["beds", "Beds"], ["baths", "Baths"], ["status", "Status (active, pending, under-contract, sold)"], ["notes", "Notes"]]);
     rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"]]);
     const money = moneyByCurrency(editable.transactions);
     byId("finance-summary").textContent = Object.keys(money).length ? Object.entries(money).map(([code, t]) => `${code}: Income ${t.income.toFixed(2)}  |  Expenses ${t.expenses.toFixed(2)}  |  Net ${(t.income - t.expenses).toFixed(2)}`).join("   ||   ") : "Income: 0.00  |  Expenses: 0.00  |  Net: 0.00";
@@ -177,6 +189,7 @@
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
+  byId("add-listing").addEventListener("click", () => { current.data.editable.listings.push({ address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }); render(); });
   byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, currency: "USD", description: "" }); render(); });
   byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: `INV-${String(current.data.editable.invoices.length + 1001)}`, clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });

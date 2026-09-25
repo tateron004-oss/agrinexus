@@ -75,3 +75,41 @@ test("dashboard on a brand-new, empty workspace shows real zeros, not missing/un
   assert.match(html, /0\.00 \(income 0\.00 \/ expenses 0\.00\)/);
   assert.match(html, /0 customers, 0 donors, 0 sponsors, 0 volunteers/);
 });
+
+// Found live: real property listings (a real, saved backend collection --
+// the same "list 123 Main Street for $450,000" data voice/chat commands
+// create and read) had no dashboard row at all, unlike every other tracked
+// collection in this workspace, even though nexus/business/voice-dispatch.js's
+// computeBusinessDashboard() already computes these exact real metrics
+// server-side.
+test("dashboard shows real listing counts/status/value, mirroring computeBusinessDashboard exactly", () => {
+  const html = loadRenderDashboard(workspace({ listings: [
+    { address: "123 Main Street", price: 450000, status: "active" },
+    { address: "45 Oak Ave", price: 300000, status: "active" },
+    { address: "9 Pine Road", price: 200000, status: "pending" },
+    { address: "2 Elm Court", price: 500000, status: "sold" }
+  ] }));
+  assert.match(html, /Listings/);
+  assert.match(html, /4 total: 2 active \(value 750000\.00\), 1 pending, 1 sold/);
+});
+
+test("a workspace with no listings at all shows no Listings row, rather than a fake zero row", () => {
+  const html = loadRenderDashboard(workspace());
+  assert.doesNotMatch(html, /Listings/);
+});
+
+// The dashboard row above proves the numbers are real, but a user still
+// needs a way to actually see/edit each real listing -- confirm render()
+// wires up the same rows() row-editor every other collection gets, and that
+// the page has a matching container/button for it.
+test("render() wires listings through the same rows() editor every other collection uses", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../public/business-services.js"), "utf8");
+  assert.match(source, /rows\("listings", editable\.listings,/);
+  assert.match(source, /byId\("add-listing"\)\.addEventListener\("click"/);
+});
+
+test("business-services.html has a listings container and an Add listing button", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../../public/business-services.html"), "utf8");
+  assert.match(html, /id="listings" class="rows"/);
+  assert.match(html, /id="add-listing" type="button">Add listing</);
+});
