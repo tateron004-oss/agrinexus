@@ -30884,6 +30884,33 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     setCommandInputs("");
     return true;
   }
+  // Found live: a farm/marketplace/workforce/trade command matching the
+  // generic classifier's keywords below (e.g. "add job opportunity", "create
+  // transaction") was being intercepted into a decorative workflow card
+  // instead of ever reaching the real action -- the same failure shape as
+  // the crisis-safety bug, just for these four areas. The real dispatcher
+  // must run first, matching how every other real-action call site in this
+  // file (e.g. app.js:61258) already prioritizes it over generic routing.
+  if (isNexusPersistentOperationsCommand(command)) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    runNexusPersistentOperationsCommand(command, { source }).catch(error => {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_operations_memory_error",
+        mode: "Operations Memory",
+        message: error.message || "Operations memory needs attention.",
+        preparedCards: [],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    });
+    return true;
+  }
   if (routeNexusIntentDrivenWorkflowCommand(command, { source })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -32693,6 +32720,48 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     return true;
   }
   const routedCommand = normalizeNexusPresenceRoutableCommand(command);
+  // Found live: the same "generic classifier wins before the real handler
+  // ever runs" bug as the crisis-safety fix, and a second, separate gap --
+  // this flagship home-screen composer (the primary typed fallback whenever
+  // voice is unavailable) never called the real farm/marketplace/workforce/
+  // trade action dispatcher OR the real knowledge-search handler at all, and
+  // tried the decorative routeNexusIntentDrivenWorkflowCommand classifier
+  // before the real authoritative backend below. All three real handlers now
+  // run first, matching the priority every correctly-wired dispatcher in
+  // this file already gives real actions over decorative/generic routing.
+  if (isNexusPersistentOperationsCommand(command)) {
+    if (input) input.value = command;
+    setCommandInputs(command);
+    runNexusPersistentOperationsCommand(command, { source }).catch(error => {
+      nexusAgenticBrainLastResult = {
+        ok: false,
+        status: "nexus_operations_memory_error",
+        mode: "Operations Memory",
+        message: error.message || "Operations memory needs attention.",
+        preparedCards: [],
+        noExecutionAuthorized: true,
+        localOnly: true
+      };
+      renderUserWorkspace();
+    });
+    return true;
+  }
+  if (isNexusLiveKnowledgeQuestion(command)) {
+    if (input) input.value = command;
+    setCommandInputs(command);
+    runNexusKnowledgeQuery(command).catch(error => {
+      nexusKnowledgeActionStatus = error.message || "Knowledge rail action needs attention.";
+      renderUserWorkspace();
+    });
+    return true;
+  }
+  if (await handleNexusUnifiedBrainRuntimeCommand(command, { source })) {
+    const directExperienceCommand = isNexusExperienceHelpCommand(command) || isNexusExperienceStatusCommand(command);
+    if (input) input.value = directExperienceCommand ? "" : command;
+    setCommandInputs(directExperienceCommand ? "" : command);
+    renderUserWorkspace();
+    return true;
+  }
   if (routeNexusIntentDrivenWorkflowCommand(command, { source })) {
     if (input) input.value = command;
     setCommandInputs(command);
@@ -32705,13 +32774,6 @@ async function handleNexusPresenceCommandSendSubmit(event) {
   if (predictiveCommand && runNexusAgenticCommandRuntime(routedCommand, { source, originalCommand: command })) {
     if (input) input.value = "";
     setCommandInputs(command);
-    return true;
-  }
-  if (await handleNexusUnifiedBrainRuntimeCommand(command, { source })) {
-    const directExperienceCommand = isNexusExperienceHelpCommand(command) || isNexusExperienceStatusCommand(command);
-    if (input) input.value = directExperienceCommand ? "" : command;
-    setCommandInputs(directExperienceCommand ? "" : command);
-    renderUserWorkspace();
     return true;
   }
   const fallbackResponse = "I'm here. Tell me the goal, and I will ask for only the missing details before opening the right workflow.";
