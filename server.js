@@ -18706,10 +18706,19 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
   if (/\b(translate|translation|change language|speak in|say .* in (?:swahili|french|spanish|arabic|portuguese))\b/.test(lower)) return "nexus_translation";
   if (/\b(deep research|research brief|multi-source|compare sources|evidence review|literature|institutional evidence)\b/.test(lower)) return "nexus_deep_research";
-  if (/\b(file|document|pdf|word|spreadsheet|excel|csv|presentation|powerpoint|upload|attachment)\b/.test(lower)) return "nexus_file_document_analysis";
+  // "export ... memory/records" excluded: a natural "Export my memory as a
+  // document" otherwise matched the bare word "document" here first and
+  // was routed to file/document ANALYSIS (a completely different job --
+  // reading an uploaded file) instead of nexus_document_export, which is
+  // checked further below and has the real memory-export integration.
+  if (!(/\bexport\b/.test(lower) && /\bmemor(?:y|ies)\b/.test(lower)) && /\b(file|document|pdf|word|spreadsheet|excel|csv|presentation|powerpoint|upload|attachment)\b/.test(lower)) return "nexus_file_document_analysis";
   if (/\b(calculate|calculation|compute|analyze data|table|dataset|code|script|formula|statistics)\b/.test(lower)) return "nexus_data_code_analysis";
   if (/\b(image|photo|picture|camera|visual|scan|document photo|crop photo|equipment photo)\b/.test(lower)) return "nexus_visual_analysis";
-  if (/\b(remember|memory|forget|delete memory|correct memory|export memory|what do you remember|preferences)\b/.test(lower)) return "nexus_memory";
+  // "export memory" excluded from this gate: nexus_document_export (the
+  // tool that actually has a real, working memory-export integration) is
+  // checked below and should win for that specific phrasing instead --
+  // otherwise the bare "memory" keyword here would still catch it first.
+  if (!/\bexport\b/.test(lower) && /\b(remember|memory|forget|delete memory|correct memory|what do you remember|preferences)\b/.test(lower)) return "nexus_memory";
   if (/\b(remind|reminder|scheduled task|recurring|monitor|notification|notify me|follow up)\b/.test(lower)) return "nexus_automation_reminder";
   if (/\b(checklist|to-?do list)\b/.test(lower)) return "nexus_lists";
   if (/\b(receipt|receipts|audit history|audit trail|audit log)\b/.test(lower)) return "nexus_receipts";
@@ -21191,6 +21200,23 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_document_export") {
     const extractedExport = nexusOpenAiNativeExtractExportArgs(command, args);
+    // Found live: nexus_memory's own success message points here for
+    // "export it later," but this handler had no integration with memory
+    // content at all -- an "Export my memory" request (with no explicit
+    // content given) fell back to using the raw command text itself as the
+    // export content, so the resulting file literally contained the words
+    // "Export my memory," not the user's actual saved records. Detected
+    // narrowly (export/download + memory/record(s)) so an unrelated export
+    // request naming its own content is unaffected.
+    const wantsMemoryExport = !args.content && !args.text && /\b(export|download|save as a (?:file|document))\b/i.test(command) && /\bmemor(?:y|ies)\b/i.test(command);
+    if (wantsMemoryExport) {
+      const memoryStore = nexusPersistentMemoryStore(db, process.env);
+      const memoryRecords = memoryStore.searchRecords({ includeArchived: false }).records || [];
+      extractedExport.content = memoryRecords.length
+        ? memoryRecords.map(record => `${record.title}: ${record.payload?.value || "(no stored detail)"}`).join("\n")
+        : "No Nexus memory records are saved yet.";
+      if (!args.title && extractedExport.title === "Nexus export") extractedExport.title = "Nexus Memory Export";
+    }
     const exportTitle = extractedExport.title;
     const exportFormat = extractedExport.format;
     const exportResult = await nexusRealProviders.exports.exportDocument({
