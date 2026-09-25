@@ -34638,6 +34638,24 @@ function addNexusPilotAuditEvent(db, eventType, options = {}) {
   return event;
 }
 
+// Found live (IDOR follow-up audit, same shape as the Nexus Operations
+// sandbox's cross-user IDOR): db.nexusPilotRecords is a single shared array
+// used by /api/nexus/records* and the knowledge-attach flow, and can hold
+// real chronic-care/telehealth intake content (patient name, diagnosis,
+// medication -- see NEXUS_PILOT_SENSITIVE_TYPES). The route gate at
+// /api/nexus/records* only ever checked "is anyone signed in at all," never
+// whether the caller owns the record being read/updated -- so any two
+// authenticated users shared the exact same ID space, and GET
+// /api/nexus/records returned the ENTIRE global array (no ID even needed).
+// Tagging every record with the real creator's user id at creation lets
+// every later lookup enforce ownership; a real Admin can still see/act on
+// everything, and callers that reach a record through an already
+// access-controlled path (the provider/admin review queue) explicitly opt
+// out of the ownership check via requireOwnership:false.
+function nexusPilotRecordOwned(record, user) {
+  return Boolean(record) && (record.ownerId === user?.id || canUse(user, "admin"));
+}
+
 function buildNexusPilotRecord(db, body = {}, user = null) {
   ensureNexusPilotState(db);
   const now = new Date().toISOString();
@@ -34647,6 +34665,7 @@ function buildNexusPilotRecord(db, body = {}, user = null) {
   const summary = nexusPilotSafeSummary({ ...body, payload }, "Nexus pilot record prepared locally.");
   const record = {
     id: crypto.randomUUID(),
+    ownerId: user?.id || null,
     type,
     profileId: sanitizePilotText(body.profileId || "standard-user-local", 120),
     profileLabel: sanitizePilotText(body.profileLabel || user?.name || "Standard User", 120),
@@ -34673,14 +34692,17 @@ function buildNexusPilotRecord(db, body = {}, user = null) {
   return record;
 }
 
-function findNexusPilotRecord(db, id = "") {
+function findNexusPilotRecord(db, id = "", user = null, { requireOwnership = true } = {}) {
   ensureNexusPilotState(db);
-  return db.nexusPilotRecords.find(record => record.id === id);
+  const record = db.nexusPilotRecords.find(record => record.id === id);
+  if (!requireOwnership) return record || null;
+  return nexusPilotRecordOwned(record, user) ? record : null;
 }
 
-function latestNexusPilotRecord(db) {
+function latestNexusPilotRecord(db, user = null, { requireOwnership = true } = {}) {
   ensureNexusPilotState(db);
-  return db.nexusPilotRecords[0] || null;
+  if (!requireOwnership) return db.nexusPilotRecords[0] || null;
+  return db.nexusPilotRecords.find(record => nexusPilotRecordOwned(record, user)) || null;
 }
 
 function nexusPilotQueueRecordForReview(db, record, user = null) {
@@ -39341,7 +39363,7 @@ function nexusKnowledgeSaveResult(db, body = {}, user = null) {
 
 function nexusKnowledgeAttachToRecord(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
-  const record = findNexusPilotRecord(db, body.recordId);
+  const record = findNexusPilotRecord(db, body.recordId, user);
   if (!record) return { ok: false, error: "record_not_found" };
   const citations = Array.isArray(body.citations) ? body.citations.slice(0, 5) : [];
   record.knowledgeResearch = {
@@ -45402,7 +45424,8 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/records" && req.method === "GET") {
     ensureNexusPilotState(db);
-    return send(res, 200, { ok: true, records: db.nexusPilotRecords, recordTypes: NEXUS_PILOT_RECORD_TYPES, statuses: NEXUS_PILOT_RECORD_STATUSES });
+    const records = canUse(user, "admin") ? db.nexusPilotRecords : db.nexusPilotRecords.filter(record => record.ownerId === user?.id);
+    return send(res, 200, { ok: true, records, recordTypes: NEXUS_PILOT_RECORD_TYPES, statuses: NEXUS_PILOT_RECORD_STATUSES });
   }
 
   if (url.pathname === "/api/nexus/records" && req.method === "POST") {
@@ -45414,7 +45437,7 @@ async function api(req, res, url) {
   const nexusRecordMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)$/);
   if (nexusRecordMatch && req.method === "PATCH") {
     ensureNexusPilotState(db);
-    const record = findNexusPilotRecord(db, nexusRecordMatch[1]);
+    const record = findNexusPilotRecord(db, nexusRecordMatch[1], user);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     const body = await readBody(req);
     if (body.status && NEXUS_PILOT_RECORD_STATUSES.includes(body.status)) record.status = body.status;
@@ -45436,7 +45459,7 @@ async function api(req, res, url) {
   const nexusRecordSummaryMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/summary$/);
   if (nexusRecordSummaryMatch && req.method === "POST") {
     ensureNexusPilotState(db);
-    const record = findNexusPilotRecord(db, nexusRecordSummaryMatch[1]) || latestNexusPilotRecord(db);
+    const record = findNexusPilotRecord(db, nexusRecordSummaryMatch[1], user) || latestNexusPilotRecord(db, user);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     record.status = record.status === "draft" ? "draft" : record.status;
     record.updatedAt = new Date().toISOString();
@@ -45454,7 +45477,7 @@ async function api(req, res, url) {
   const nexusRecordConsentMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/consent$/);
   if (nexusRecordConsentMatch && req.method === "POST") {
     ensureNexusPilotState(db);
-    const record = findNexusPilotRecord(db, nexusRecordConsentMatch[1]) || latestNexusPilotRecord(db);
+    const record = findNexusPilotRecord(db, nexusRecordConsentMatch[1], user) || latestNexusPilotRecord(db, user);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     const now = new Date().toISOString();
     const consent = {
@@ -45485,7 +45508,7 @@ async function api(req, res, url) {
   const nexusRecordQueueMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/queue-review$/);
   if (nexusRecordQueueMatch && req.method === "POST") {
     ensureNexusPilotState(db);
-    const record = findNexusPilotRecord(db, nexusRecordQueueMatch[1]) || latestNexusPilotRecord(db);
+    const record = findNexusPilotRecord(db, nexusRecordQueueMatch[1], user) || latestNexusPilotRecord(db, user);
     const result = nexusPilotQueueRecordForReview(db, record, user);
     if (result.error === "record_not_found") return send(res, 404, { ok: false, error: result.error });
     if (result.error === "consent_required") return send(res, 409, { ok: false, error: result.error, consentCopy: result.consentCopy });
@@ -45496,7 +45519,7 @@ async function api(req, res, url) {
   const nexusRecordArchiveMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/archive$/);
   if (nexusRecordArchiveMatch && req.method === "POST") {
     ensureNexusProductionRailsState(db);
-    const record = findNexusPilotRecord(db, nexusRecordArchiveMatch[1]);
+    const record = findNexusPilotRecord(db, nexusRecordArchiveMatch[1], user);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     record.status = "archived";
     record.updatedAt = new Date().toISOString();
@@ -45514,7 +45537,7 @@ async function api(req, res, url) {
   const nexusRecordExportMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/export$/);
   if (nexusRecordExportMatch && req.method === "GET") {
     ensureNexusProductionRailsState(db);
-    const record = findNexusPilotRecord(db, nexusRecordExportMatch[1]);
+    const record = findNexusPilotRecord(db, nexusRecordExportMatch[1], user);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     return send(res, 200, {
       ok: true,
@@ -45530,7 +45553,7 @@ async function api(req, res, url) {
   const nexusRecordDeleteRequestMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/delete-request$/);
   if (nexusRecordDeleteRequestMatch && req.method === "POST") {
     ensureNexusProductionRailsState(db);
-    const record = findNexusPilotRecord(db, nexusRecordDeleteRequestMatch[1]);
+    const record = findNexusPilotRecord(db, nexusRecordDeleteRequestMatch[1], user);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     const requestItem = nexusCreateExportDeleteRequest(db, { reason: `Delete request for record ${record.id}` }, user, "delete");
     requestItem.recordId = record.id;
@@ -45585,7 +45608,11 @@ async function api(req, res, url) {
     const status = NEXUS_PILOT_RECORD_STATUSES.includes(body.status) ? body.status : "reviewed";
     item.status = status;
     item.updatedAt = new Date().toISOString();
-    const record = findNexusPilotRecord(db, item.recordId);
+    // Reached only via a route already gated on canUse(user, "provider-queue")
+    // above -- a provider/admin acting on a record explicitly submitted to the
+    // shared review queue by its owner, so the ownership check is intentionally
+    // bypassed here rather than duplicated.
+    const record = findNexusPilotRecord(db, item.recordId, user, { requireOwnership: false });
     if (record) {
       record.reviewStatus = status;
       record.status = status;
