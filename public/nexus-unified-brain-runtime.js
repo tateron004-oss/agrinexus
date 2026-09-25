@@ -81,7 +81,13 @@
     if (/\b(mobile clinic|mobile care|clinic van|field clinic)\b/.test(text)) domains.push("mobile_health");
     if (/\b(pharmacy|medicine|medication|prescription|refill|drug store)\b/.test(text)) domains.push("pharmacy");
     if (/\b(farm|farmer|crop|tomato|maize|plants|soil|irrigation|pest|disease|livestock|extension|agriculture)\b/.test(text)) domains.push("agriculture");
-    if (/\b(buyer|seller|marketplace|agritrade|sell|sale|offer|trade|market)\b/.test(text)) domains.push("marketplace_trade");
+    // "price"/"cost"/"quote" added: the decorative routeNexusIntentDrivenWorkflowCommand
+    // classifier in app.js already treats these as marketplace-trade signals,
+    // but this real classifier didn't -- so "What is the price of maize?"
+    // matched only "agriculture" here (single domain, rejected by the
+    // >=2-domain rule below) while still guaranteed to match the decorative
+    // router's own marketplace-trade rule, letting it win by default.
+    if (/\b(buyer|seller|marketplace|agritrade|sell|sale|offer|trade|market|price|cost|quote)\b/.test(text)) domains.push("marketplace_trade");
     if (/\b(shipment|shipping|logistics|delivery|cold chain|carrier|route|pickup)\b/.test(text)) domains.push("logistics_shipment");
     if (/\b(drone|field scan|field observation|imagery|scouting|flight)\b/.test(text)) domains.push("drone_field_operations");
     if (/\b(training|learn|learning|literacy|course|class|program|certification)\b/.test(text)) domains.push("learning");
