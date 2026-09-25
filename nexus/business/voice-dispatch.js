@@ -1006,7 +1006,25 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
   // caller has already decided is business-related (e.g. the model chose
   // this tool) but this classifier didn't otherwise recognize.
   const businessName = extractBusinessName(command, args);
-  if (!businessName) return { status: "needs-input", response: "What should I call this business or nonprofit workspace?", missingInformation: ["businessName"] };
+  if (!businessName) {
+    // Found live (business/CRM follow-up audit): a request this classifier
+    // genuinely doesn't recognize at all (e.g. "mark invoice paid" -- there
+    // is no such action yet) always landed here and asked "what should I
+    // call this workspace," even when a real workspace already exists.
+    // That's actively misleading, not just unhelpful -- it implies no
+    // workspace was ever created. Check for an existing workspace first and
+    // give an honest "I didn't understand that" response instead. If the
+    // lookup itself fails (e.g. the workspace store is unreachable), that's
+    // unrelated to this unrecognized command -- fall through to the
+    // original "name a new workspace" prompt rather than surfacing the
+    // lookup failure as if it were the answer to what was asked.
+    const existing = await resolveBusinessClient(businessRequest, command).catch(() => ({ client: null }));
+    if (existing.client) {
+      const workspaceName = existing.client.data?.info?.businessName || "your workspace";
+      return { status: "needs-input", response: `I didn't understand that as a request for "${workspaceName}". Try logging income or an expense, adding or updating a lead/listing/grant/task, or asking for your dashboard.`, missingInformation: [] };
+    }
+    return { status: "needs-input", response: "What should I call this business or nonprofit workspace?", missingInformation: ["businessName"] };
+  }
   if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can start a new business or nonprofit workspace called "${businessName}" and save it to your account. Should I go ahead?` };
   const created = await businessRequest({ method: "POST", pathname: "/api/nexus/runtime/business/clients", body: { businessName, consent: true } });
   const response = `Started a business/nonprofit workspace called "${businessName}". Open Business services anytime to keep building it out.`;

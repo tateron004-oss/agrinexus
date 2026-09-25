@@ -42,6 +42,38 @@ test("logging keeps the currency, the item and the type, and reads the money bac
   assert.equal(noCurrency.status, "needs-input"); assert.deepEqual(noCurrency.missingInformation, ["currency"]);
 });
 
+// Found live (business/CRM follow-up audit): a genuinely unrecognized
+// request (e.g. "mark invoice paid" -- no such action exists yet) always
+// fell through to the workspace-creation fallback and asked "what should I
+// call this workspace," even when a real workspace already exists --
+// actively misleading, since it implies no workspace was ever created.
+test("an unrecognized request for an EXISTING workspace gets an honest 'I didn't understand' response, not a request to name a new one", async () => {
+  const client = { record_id: "rec_1", version: 1, data: { info: { businessName: "Amina Farm" }, editable: {} } };
+  const businessRequest = async ({ method }) => (method === "GET" ? { body: { clients: [client] } } : { body: client });
+  const result = await run({ command: "mark invoice paid", confirmed: true, businessRequest });
+  assert.equal(result.status, "needs-input");
+  assert.match(result.response, /didn't understand that|Amina Farm/i);
+  assert.doesNotMatch(result.response, /what should I call this/i, "must not imply no workspace exists");
+});
+
+test("an unrecognized request with no workspace at all still asks what to call one, unaffected by the fix", async () => {
+  const result = await run({ command: "mark invoice paid", confirmed: true, businessRequest: async () => ({ body: { clients: [] } }) });
+  assert.equal(result.status, "needs-input");
+  assert.match(result.response, /what should I call this/i);
+});
+
+// Found live (full-suite run after the fix above): the honest-workspace-check
+// itself does a real lookup, and when that lookup throws (e.g. no live
+// Postgres) the error must not surface as a "blocked" response for what is
+// really just an unrecognized command -- it should fall back to the original
+// "name a new workspace" prompt exactly as if no workspace lookup had been
+// attempted at all.
+test("an unrecognized request whose workspace lookup itself fails still asks what to call a workspace, instead of surfacing the lookup error", async () => {
+  const result = await run({ command: "mark invoice paid", confirmed: true, businessRequest: async () => { throw new Error("PostgreSQL is not configured"); } });
+  assert.equal(result.status, "needs-input");
+  assert.match(result.response, /what should I call this/i);
+});
+
 function ledgerClient(transactions) {
   return { record_id: "rec_1", version: 1, data: { info: { businessName: "Amina Farm" }, editable: { transactions } } };
 }
