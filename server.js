@@ -2489,6 +2489,30 @@ async function deleteSessionFromPostgres(sid) {
   }
 }
 
+// Found live (login-security follow-up audit): unlike /api/logout (which
+// deletes the caller's own sid session and sets authTokensRevokedAt),
+// completing a password reset touched neither -- an attacker holding a
+// stolen sid cookie or durable "remember me" token stayed fully
+// authenticated straight through, and after, the victim's own reset. A
+// password reset has no "current sid" in scope the way logout does, so this
+// revokes every sid-keyed session for the account (not just one) in memory
+// and in the Postgres mirror, plus sets the same authTokensRevokedAt cutoff
+// logout already uses to invalidate every outstanding durable token.
+async function revokeAllSessionsForUser(userId) {
+  for (const [sid, entry] of sessions) {
+    if (entry.userId === userId) sessions.delete(sid);
+  }
+  if (sessionsPostgresEnabled()) {
+    try {
+      await ensureSessionsPostgresTable();
+      await getPgPool().query("delete from agrinexus_sessions where user_id = $1", [userId]);
+    } catch (error) {
+      console.error("[sessions] Postgres bulk delete failed:", error.message);
+      recordServerError({ source: "sessions-postgres-bulk-delete", message: error.message });
+    }
+  }
+}
+
 // Called once, before the server starts accepting connections. A fresh
 // deploy's empty in-memory Map is repopulated from the durable copy, so an
 // account that was genuinely logged in a moment ago stays logged in.
@@ -47521,6 +47545,13 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     if (!email) return send(res, 400, { error: "Email is required" });
+    // Found live (login-security follow-up audit): the per-IP budget above resets
+    // for every new IP an attacker rotates through, so a distributed caller could
+    // still email-bomb one specific victim's reset flow indefinitely. Same
+    // account-keyed defense /api/login already has (see authRateLimitByAccount's
+    // own comment) -- shares "password-reset" with /confirm below, matching the
+    // per-IP budget's existing shared-bucket design.
+    if (!authRateLimitByAccount("password-reset", email, 5, 900_000)) return send(res, 429, { error: "Too many reset requests. Try again in a few minutes." });
     const rawToken = crypto.randomBytes(24).toString("hex");
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -47555,6 +47586,7 @@ async function api(req, res, url) {
     const token = String(body.token || "").trim();
     const newPassword = String(body.newPassword || "");
     if (!email || !token || !newPassword.trim()) return send(res, 400, { error: "Email, token, and newPassword are required" });
+    if (!authRateLimitByAccount("password-reset", email, 5, 900_000)) return send(res, 429, { error: "Too many reset attempts. Try again in a few minutes." });
     if (usingPostgresAuth()) {
       const consumed = await pgUsers.consumeResetToken(getPgPool(), email, token, newPassword).catch(() => false);
       if (!consumed) return send(res, 400, { error: "Invalid or expired reset code" });
@@ -47562,7 +47594,15 @@ async function api(req, res, url) {
       // "blob", or any code path that still reads the blob's password field,
       // doesn't see the pre-reset value.
       const shadowUser = db.users.find(item => String(item.email || "").toLowerCase() === email);
-      if (shadowUser) shadowUser.password = pgUsers.hashPassword(newPassword);
+      if (shadowUser) {
+        shadowUser.password = pgUsers.hashPassword(newPassword);
+        // Found live (login-security follow-up audit): completing a reset
+        // must invalidate any session/durable-token an attacker who no
+        // longer knows the password might be holding -- see
+        // revokeAllSessionsForUser's own comment above.
+        shadowUser.authTokensRevokedAt = Date.now();
+        await revokeAllSessionsForUser(shadowUser.id);
+      }
     } else {
       const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -47579,6 +47619,8 @@ async function api(req, res, url) {
       user.password = pgUsers.hashPassword(newPassword);
       delete user.resetTokenHash;
       delete user.resetTokenExpiresAt;
+      user.authTokensRevokedAt = Date.now();
+      await revokeAllSessionsForUser(user.id);
     }
     addActivity(db.profile, `Password reset completed for ${email}.`);
     await writeDb(db);
