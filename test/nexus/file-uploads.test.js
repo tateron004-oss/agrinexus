@@ -160,6 +160,39 @@ test("exceeding the total storage quota refuses the upload and cleans up, even t
   assert.deepEqual(fs.readdirSync(dir).filter(name => name !== "existing.pdf"), [], "the rejected upload must leave no trace");
 });
 
+// Found live (upload robustness audit): the "finish" handler's own catch
+// block cleans up tmpPath on a post-write failure (bad content-type,
+// over quota), but the sibling writeStream "error" event -- a real
+// mid-write disk fault (ENOSPC, a permission error, a transient FS fault)
+// -- never did. currentUsageBytes() counts every file except *.meta.json,
+// so an orphaned .tmp-<uuid> file also permanently counts against the
+// total quota, outliving the disk fault that created it.
+test("a mid-write disk fault cleans up the partial tmp file, instead of leaving it on disk counted against quota forever", async () => {
+  const dir = tmpDir();
+  const env = { NEXUS_FILE_STORAGE_DIR: dir };
+  const originalCreateWriteStream = fs.createWriteStream;
+  let capturedTmpPath = null;
+  fs.createWriteStream = (targetPath, ...args) => {
+    capturedTmpPath = targetPath;
+    // Let the real file actually get created on disk (like a real write
+    // stream does on open), then simulate a fault partway through -- exactly
+    // like a real ENOSPC/EACCES mid-write failure, not just a mocked stream
+    // that never touched the filesystem at all.
+    const real = originalCreateWriteStream(targetPath, ...args);
+    real.on("open", () => real.destroy(Object.assign(new Error("simulated disk fault"), { code: "ENOSPC" })));
+    return real;
+  };
+  try {
+    const { boundary, buffer } = multipartBody("file", "leaf.png", "image/png", REAL_PNG_1X1);
+    const req = fakeRequest({ "content-type": `multipart/form-data; boundary=${boundary}` }, [buffer]);
+    await assert.rejects(() => uploads.parseAndStoreUpload(req, { env, userId: "u1" }), /simulated disk fault/);
+  } finally {
+    fs.createWriteStream = originalCreateWriteStream;
+  }
+  assert.ok(capturedTmpPath, "createWriteStream should have been called with the real tmp path");
+  assert.equal(fs.existsSync(capturedTmpPath), false, "the partial tmp file must be cleaned up after a write-stream error, not left on disk forever");
+});
+
 // Structural: the HTTP routes and documentProvider wiring in server.js.
 const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
 
