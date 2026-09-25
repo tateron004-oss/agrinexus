@@ -12089,7 +12089,13 @@ function createVideoSessionWorkflow(db, user, body = {}) {
     ? (db.products || []).find(item => item.id === order.productId)
     : (db.products || []).find(item => item.id === body.productId) || (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   let intake = db.profile.healthIntakes[0] || null;
-  if (isHealth && !intake) {
+  // Found live (restriction-bypass follow-up audit): unlike the dedicated
+  // /api/video/session route (which checks canWriteHealth before ever
+  // reaching this function), the legacy runAgentCommand dispatcher's
+  // "video + injury/patient/doctor" branches call this function directly
+  // with no restriction check at all, letting a guest/restricted account
+  // write a real health intake record via natural-language commands.
+  if (isHealth && !intake && !user?.restrictions?.includes("health-record-write")) {
     intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-VIDEO`,
@@ -12840,7 +12846,13 @@ async function createCommunicationThread(db, user, body = {}) {
     createdAt: thread.createdAt
   };
   let delivery = { attempted: false, ok: true, status: "local-thread-only", channel };
-  if (["sms-delivery", "whatsapp-delivery"].includes(providerId)) {
+  // Found live (restriction-bypass follow-up audit): unlike its sibling
+  // createBuyerSellerMessage, this had no restriction check at all -- a
+  // guest/restricted account reaching this function through ANY caller
+  // (several dedicated communication routes, or the legacy runAgentCommand
+  // dispatcher's own "message/notify/sms/whatsapp" branches, which have no
+  // restriction check of their own) could send a real Twilio SMS/WhatsApp.
+  if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !user?.restrictions?.includes("communications-send")) {
     delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
     outbound.status = delivery.ok ? "sent-live" : "sent-local";
     outbound.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
@@ -17005,7 +17017,16 @@ async function createOutboundCallWorkflow(db, user, body = {}) {
   const purpose = String(body.purpose || body.context || body.module || "AgriNexus outbound support").trim();
   const recipient = outboundCallRecipientForPurpose(purpose, body);
   const message = String(body.message || `This is AgriNexus calling about ${purpose}. You can speak after the greeting and the AI assistant will help route the next step.`).trim();
-  const delivery = await startTwilioOutboundCall({ to: recipient, message, context: purpose });
+  // Found live (restriction-bypass follow-up audit): unlike createBuyerSellerMessage
+  // (the sibling function this idiom comes from), this had no restriction check at
+  // all -- a guest/restricted account reaching this function through ANY caller
+  // (the dedicated /api/voice/phone/outbound-call route, or the legacy
+  // runAgentCommand natural-language dispatcher's own "call the doctor/buyer"
+  // branches, which have no restriction check of their own) could place a real
+  // Twilio call. Fixing it here, once, closes every current and future caller.
+  const delivery = user?.restrictions?.includes("communications-send")
+    ? { attempted: false, ok: false, status: "restricted-account-no-real-call" }
+    : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
   const record = {
     id: crypto.randomUUID(),
     callNumber: `CALL-${String((db.profile.outboundCalls || []).length + 1).padStart(3, "0")}`,
@@ -53503,6 +53524,14 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/phone/outbound-call" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow outbound calls" });
+    // Found live (restriction-bypass follow-up audit): this route had no
+    // restriction check at all, unlike every sibling real-send route
+    // (/api/nexus/tools/sms/send, /api/communications/thread, etc.).
+    // createOutboundCallWorkflow now also refuses the real call internally
+    // (closing every other caller, e.g. the legacy agent dispatcher), but
+    // this route gets the same explicit, honest 403 its siblings give
+    // instead of a confusing "call needs setup" response.
+    if (user.restrictions?.includes("communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
     const body = await readBody(req);
     const record = await createOutboundCallWorkflow(db, user, body);
     await writeDb(db);
