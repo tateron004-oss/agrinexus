@@ -23,6 +23,18 @@ function verifyPasswordHash(password, stored, pepper = process.env.PASSWORD_PEPP
   return derived.length === expected.length && crypto.timingSafeEqual(derived, expected);
 }
 
+// Found live (login-security follow-up audit): both login paths looked the
+// account up FIRST and only ran the deliberately-expensive scrypt
+// comparison when a real hashed credential was found -- so "no such
+// account" returned near-instantly while "account exists, wrong password"
+// took tens of milliseconds (scrypt's real cost), even though both cases
+// return the identical error message. That timing difference alone lets an
+// attacker enumerate valid emails, the exact class of leak the password-
+// reset endpoint already explicitly guards against. A fixed, valid-format
+// dummy hash lets both login paths always pay the same scrypt cost, computed
+// once at module load rather than per request.
+const DUMMY_PASSWORD_HASH = hashPassword("nexus-login-timing-safety-dummy-password");
+
 async function findUserByEmail(pool, email) {
   const result = await pool.query(
     "select id, tenant_id, email, display_name, password_hash, status from users where lower(email) = lower($1)",
@@ -33,7 +45,10 @@ async function findUserByEmail(pool, email) {
 
 async function verifyPassword(pool, email, password) {
   const user = await findUserByEmail(pool, email);
-  if (!user || user.status !== "active" || !verifyPasswordHash(password, user.password_hash)) return null;
+  // Always run the real scrypt comparison, even when no account matches --
+  // see DUMMY_PASSWORD_HASH's comment above.
+  const hashMatches = verifyPasswordHash(password, user?.password_hash || DUMMY_PASSWORD_HASH);
+  if (!user || user.status !== "active" || !hashMatches) return null;
   try {
     await pool.query("update users set last_login_at = now() where id = $1", [user.id]);
   } catch (error) {
@@ -128,6 +143,7 @@ module.exports = {
   DEMO_TENANT_ID,
   hashPassword,
   verifyPasswordHash,
+  DUMMY_PASSWORD_HASH,
   findUserByEmail,
   verifyPassword,
   buildBlobShadowFromPostgresUser,
