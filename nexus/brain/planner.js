@@ -337,6 +337,23 @@ class OpenEndedPlanner {
     if (resume) return Object.freeze({ ...resume, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
+    // Found live: completeBusinessPlan delegates its own matching entirely to
+    // businessVoiceDispatch.precheck() and returns null (a clean no-op) for
+    // anything it doesn't recognize as genuine business/nonprofit intent --
+    // so checking it AFTER the generic lists/"remaining workspace" matchers
+    // below let those two broader gates permanently intercept real business
+    // requests first. Confirmed live: "Create an application checklist for
+    // my nonprofit" (this tool's own advertised example phrase) matched
+    // completeListsPlan's bare /\b(list|checklist)\b/ + /\b(create|...)\b/
+    // gate and silently created an empty generic to-do checklist instead of
+    // the real service-agreement/intake-form/checklist document bundle;
+    // "Help with a financial literacy plan for my business" matched
+    // completeRemainingWorkspacePlan's "learning" bucket and was routed to a
+    // generic lesson-content search instead of the real Financial Literacy
+    // Agent. Moved ahead of both, matching the "real handler before generic
+    // classifier" fix already applied throughout this codebase.
+    const completeBusiness = completeBusinessPlan(command.text, catalog);
+    if (completeBusiness) return Object.freeze({ ...completeBusiness, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
     if (completeLists) return Object.freeze({ ...completeLists, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
@@ -347,8 +364,6 @@ class OpenEndedPlanner {
     if (placeCall) return Object.freeze({ ...withContactName(placeCall, named?.contactName), planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
     if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
-    const completeBusiness = completeBusinessPlan(command.text, catalog);
-    if (completeBusiness) return Object.freeze({ ...completeBusiness, planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile,
@@ -536,7 +551,16 @@ function followUpGoalFrom(text, history) {
 function agricultureAdvicePlan(text, catalog) {
   const goal = String(text || "").trim();
   const agricultureSubject = /\b(maize|corn|cassava|rice|wheat|sorghum|millet|beans?|crop|farm|farmer|soil|irrigation|pest|plant disease|livestock|harvest)\b/i.test(goal);
-  const adviceRequest = /[?]|\b(why|what|how|when|where|help|advise|advice|assess|diagnose|inspect|treat|prevent|manage|improve|yellow|wilting|spots?|dying)\b/i.test(goal);
+  // Found live: "Check my maize crop for pests, the leaves have holes and I
+  // see caterpillars" -- a plain, real crop-issue report with no question
+  // word, "?", or any of the original symptom words -- matched
+  // agricultureSubject (via "crop") but not adviceRequest, so it never
+  // reached this real knowledge.search-backed plan and instead fell through
+  // to a decorative classifier. Widened with concrete pest/disease-report
+  // words from that exact example, not a blanket verb like "check" (which
+  // would risk misrouting an unrelated "check the weather for my farm"
+  // question here instead of to the weather tool).
+  const adviceRequest = /[?]|\b(why|what|how|when|where|help|advise|advice|assess|diagnose|inspect|treat|prevent|manage|improve|yellow|wilting|spots?|dying|pests?|infestation|infested|damage|damaged|diseased|caterpillars?|worms?|insects?|holes? in)\b/i.test(goal);
   if (!agricultureSubject || !adviceRequest) return null;
   // Confirmed live: "Why do maize leaves turn yellow? Answer with current
   // sources." was misrouted to agriculture -- this matcher runs first in

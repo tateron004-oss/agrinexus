@@ -89,7 +89,7 @@ function createWorkspaceOutcome({ command, plan, task, state, response, outcome 
     channel: required(command?.channel, "Command channel"),
     application,
     workspace,
-    operation: operationFor(application, inputs),
+    operation: operationFor(application, inputs, plan?.steps),
     state,
     completed: state === "completed",
     data: Object.freeze({ ...inputs, ...outputs }),
@@ -118,7 +118,7 @@ function mergeStepObjects(steps = [], key) {
   }, {});
 }
 
-function operationFor(application, input) {
+function operationFor(application, input, steps = []) {
   if (application === "maps") return input.origin && input.destination ? "show_route" : "show_location";
   if (application === "music-media") return input.action || "play_media";
   if (application === "health") return input.intakeType === "blood-pressure" ? "record_blood_pressure" : "health_support";
@@ -128,7 +128,22 @@ function operationFor(application, input) {
   if (application === "images") return "show_images";
   if (application === "videos") return "show_videos";
   if (application === "logistics") return "estimate_delivery";
-  if (application === "lists") return input.listId ? "update_list" : "create_list";
+  // Found live: a real lists.read plan (real executor exists in
+  // nexus/lists/executor.js, registered in create-runtime.js) was always
+  // mislabeled "update_list" (when the plan happened to carry a listId) or
+  // "create_list" (otherwise, including a genuine "show me all my lists"
+  // request with no single listId at all) -- "What's on my grocery
+  // checklist?" told the user "I updated/created your checklist" for a
+  // request that changed nothing. The step's own toolId (lists.create/
+  // lists.read/lists.update) is the one signal that actually distinguishes
+  // these, unlike guessing from whether the merged input happens to carry a
+  // listId.
+  if (application === "lists") {
+    const listToolId = (steps || []).map(step => step?.toolId).find(toolId => String(toolId || "").startsWith("lists."));
+    if (listToolId === "lists.read") return "read_list";
+    if (listToolId === "lists.update") return "update_list";
+    return "create_list";
+  }
   if (application === "business") return "business_workspace_action";
   return "show_result";
 }

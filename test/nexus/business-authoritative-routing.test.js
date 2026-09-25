@@ -40,6 +40,21 @@ test("classify() recognizes a strategy-document request, distinct from the other
   assert.equal(voiceDispatch.classify("Create a marketing flyer"), "generateMarketing");
 });
 
+// Found live: this only recognized a literal compound "X strategy" (or a
+// handful of other exact nouns), rejecting the tool's own marquee phrases
+// and the natural way a person actually names each of strategy.js's 12 real
+// agent profiles -- all five of these returned null and fell to a
+// non-sequitur "what should I call this workspace?" fallback.
+test("classify() recognizes the natural phrasing for every strategy.js agent profile, not just the 'X strategy' compound form", () => {
+  for (const text of [
+    "Draft a grant proposal for the Ford Foundation",
+    "Help with a financial literacy plan for my business",
+    "I need help with a Black-owned business development plan",
+    "Create a government partnership plan",
+    "Draft a donor stewardship plan"
+  ]) assert.equal(voiceDispatch.classify(text), "generateStrategy", text);
+});
+
 test("inferStrategyProfile maps request language onto strategy.js's real agent profiles", () => {
   assert.equal(voiceDispatch.inferStrategyProfile("Draft an investor pitch"), "investor");
   assert.equal(voiceDispatch.inferStrategyProfile("Help with a grant strategy"), "grants");
@@ -145,6 +160,51 @@ test("completeBusinessPlan asks a clarification instead of proceeding when a req
 test("completeBusinessPlan returns null for unrelated text and when the catalog lacks the business tools", () => {
   assert.equal(completeBusinessPlan("What is the weather in Lagos", fakeCatalog()), null);
   assert.equal(completeBusinessPlan("Add a donor named Maria Chen", { tools: [], applications: [] }), null);
+});
+
+// Found live: completeListsPlan (a bare /\b(list|checklist)\b/ +
+// /\b(create|make|start|save)\b/ gate) and completeRemainingWorkspacePlan's
+// "learning" bucket both ran BEFORE completeBusinessPlan in the planner's
+// dispatch chain -- so "Create an application checklist for my nonprofit"
+// (this tool's own advertised example phrase) silently created an empty
+// generic to-do checklist instead of the real service-agreement/intake-
+// form/checklist document bundle, and "Help with a financial literacy plan
+// for my business" was routed to a generic lesson-content search instead of
+// the real Financial Literacy Agent. completeBusinessPlan only ever matches
+// genuine business/nonprofit intent (it delegates to
+// businessVoiceDispatch.precheck and returns null otherwise), so moving it
+// first is safe and does not change behavior for non-business lists/
+// learning requests.
+test("a business-flavored checklist/document request reaches the real business workspace, not the generic lists/learning matchers", async () => {
+  const model = { plan: async () => { throw new Error("must not reach the AI planning model"); } };
+  const tools = { list: async () => [
+    ...fakeCatalog().tools.map(tool => ({ tool_id: tool.toolId, domain: tool.domain, risk_tier: tool.riskTier, confirmation_required: tool.confirmationRequired })),
+    { tool_id: "lists.create", domain: "lists", risk_tier: "low", confirmation_required: false },
+    { tool_id: "knowledge.search", domain: "learning", risk_tier: "low", confirmation_required: false }
+  ] };
+  const applications = { list: () => [...fakeCatalog().applications, { applicationId: "lists" }, { applicationId: "learning" }] };
+  const planner = new OpenEndedPlanner({ model, tools, applications });
+
+  const checklist = await planner.plan({ command: { text: "Create an application checklist for my nonprofit", tenantId: "t1", actorId: "u1", locale: "en", channel: "typed" }, context: {} });
+  assert.equal(checklist.application, "business");
+  assert.equal(checklist.steps[0].toolId, "business.manage");
+
+  const literacy = await planner.plan({ command: { text: "Help with a financial literacy plan for my business", tenantId: "t1", actorId: "u1", locale: "en", channel: "typed" }, context: {} });
+  assert.equal(literacy.application, "business");
+  assert.equal(literacy.steps[0].toolId, "business.manage");
+});
+
+test("a genuine, non-business checklist request is unaffected by the business-plan reordering", async () => {
+  const model = { plan: async () => { throw new Error("must not reach the AI planning model"); } };
+  const tools = { list: async () => [
+    ...fakeCatalog().tools.map(tool => ({ tool_id: tool.toolId, domain: tool.domain, risk_tier: tool.riskTier, confirmation_required: tool.confirmationRequired })),
+    { tool_id: "lists.create", domain: "lists", risk_tier: "low", confirmation_required: false }
+  ] };
+  const applications = { list: () => [...fakeCatalog().applications, { applicationId: "lists" }] };
+  const planner = new OpenEndedPlanner({ model, tools, applications });
+  const plan = await planner.plan({ command: { text: "Create a checklist called Farm Chores with feed goats and water crops", tenantId: "t1", actorId: "u1", locale: "en", channel: "typed" }, context: {} });
+  assert.equal(plan.application, "lists");
+  assert.equal(plan.steps[0].toolId, "lists.create");
 });
 
 test("the full OpenEndedPlanner resolves a business command deterministically, not through the AI model", async () => {

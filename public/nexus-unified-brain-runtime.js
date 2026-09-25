@@ -81,7 +81,13 @@
     if (/\b(mobile clinic|mobile care|clinic van|field clinic)\b/.test(text)) domains.push("mobile_health");
     if (/\b(pharmacy|medicine|medication|prescription|refill|drug store)\b/.test(text)) domains.push("pharmacy");
     if (/\b(farm|farmer|crop|tomato|maize|plants|soil|irrigation|pest|disease|livestock|extension|agriculture)\b/.test(text)) domains.push("agriculture");
-    if (/\b(buyer|seller|marketplace|agritrade|sell|sale|offer|trade|market)\b/.test(text)) domains.push("marketplace_trade");
+    // "price"/"cost"/"quote" added: the decorative routeNexusIntentDrivenWorkflowCommand
+    // classifier in app.js already treats these as marketplace-trade signals,
+    // but this real classifier didn't -- so "What is the price of maize?"
+    // matched only "agriculture" here (single domain, rejected by the
+    // >=2-domain rule below) while still guaranteed to match the decorative
+    // router's own marketplace-trade rule, letting it win by default.
+    if (/\b(buyer|seller|marketplace|agritrade|sell|sale|offer|trade|market|price|cost|quote)\b/.test(text)) domains.push("marketplace_trade");
     if (/\b(shipment|shipping|logistics|delivery|cold chain|carrier|route|pickup)\b/.test(text)) domains.push("logistics_shipment");
     if (/\b(drone|field scan|field observation|imagery|scouting|flight)\b/.test(text)) domains.push("drone_field_operations");
     if (/\b(training|learn|learning|literacy|course|class|program|certification)\b/.test(text)) domains.push("learning");
@@ -105,6 +111,16 @@
     // Mirrors nexus/business/voice-dispatch.js's own wantsAddLead pattern
     // exactly, so client and server agree on what counts as this command.
     if (/\b(?:add|create|new|log|track)\b/.test(text) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/.test(text)) return true;
+    // Found live: "Schedule a video visit with a doctor for my rash" only
+    // ever matches ONE domain here ("healthcare", via "doctor") -- the same
+    // >=2-domain rejection shape as the real-estate/communications bugs
+    // above -- so it fell through past this runtime into
+    // NexusHealthcareCollaborationRuntime's decorative "prepared locally,
+    // execution disabled" simulator, instead of reaching this runtime's
+    // real, working telehealth-video capability (nexus_health_preparation's
+    // wantsTelehealthVideo, which creates a real video room and has its own
+    // confirmation gate). Mirrors that same server-side regex exactly.
+    if (/\b(video\s*call|video\s*visit|video\s*appointment|video\s*consult(?:ation)?|virtual\s+(?:visit|appointment))\b/.test(text)) return true;
     // Found live: a plain "text/email <real recipient> saying <words>" or
     // "call <real number> and say <words>" command only ever matches ONE
     // domain here ("communication") -- the same >=2-domain rejection shape

@@ -18603,9 +18603,9 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_data_code_analysis", "Perform controlled calculations, structured-data reasoning, table checks, and code/data analysis using server-side deterministic logic or a configured execution provider.", "controlled-analysis"),
     tool("nexus_visual_analysis", "Analyze user-authorized images, document photos, crop photos, equipment photos, or camera inputs only when a configured visual provider and explicit user-supplied media are present.", "visual-analysis"),
     tool("nexus_memory", "Inspect, create, correct, export, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls.", "privacy-memory"),
-    tool("nexus_automation_reminder", "Create, inspect, or prepare reminders, recurring monitoring, scheduled tasks, and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated.", "confirmation-gated-automation"),
+    tool("nexus_automation_reminder", "Create, inspect, cancel, or prepare one-time reminders and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated. Does not support recurring/repeating schedules -- only a single one-time reminder can be set.", "confirmation-gated-automation"),
     tool("nexus_lists", "Create, read, or update a checklist or to-do list through Nexus's real, persisted lists capability. Use the title argument for the list's name and content for its items (one per line or comma-separated).", "local-record-write"),
-    tool("nexus_email", "Prepare, read, or send email only through configured authorized email providers. Drafting can occur locally; sending requires credentials, consent, confirmation, and receipts.", "high-risk-confirmation-required"),
+    tool("nexus_email", "Prepare or send email only through configured authorized email providers. Drafting can occur locally; sending requires credentials, consent, confirmation, and receipts. Cannot read or check an inbox.", "high-risk-confirmation-required"),
     tool("nexus_calendar", "Search, schedule, change, or cancel calendar events only through configured authorized calendar providers. Local preparation is allowed; real calendar writes require confirmation and provider receipts.", "high-risk-confirmation-required"),
     tool("nexus_browser_computer_action", "Use browser or computer actions only through an authorized connector when no direct API exists. Never performs hidden external execution.", "high-risk-confirmation-required"),
     tool("nexus_document_export", "Create or prepare documents, reports, tables, presentation outlines, exports, and receipts through Nexus export/document-generation capabilities.", "document-export"),
@@ -20048,11 +20048,25 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       db.nexusPilotReminders = db.nexusPilotReminders.filter(reminder => reminder.id !== match.id);
       return { ...common, capability: "automation-reminder", status: "reminder-canceled", response: `I canceled the reminder "${match.title}".`, localOnly: true };
     }
+    // Found live: this tool's own description promises "recurring
+    // monitoring, scheduled tasks," but no recurrence mechanism exists
+    // anywhere in this codebase (reminderProvider.js/manage-executor.js only
+    // ever create a single one-shot reminder) -- "Remind me every morning
+    // at 6am to check the pump" silently created exactly one reminder whose
+    // stored time field is literally the string "every morning at 6am"
+    // (which the time parser cannot resolve to a recurring schedule), and
+    // the user was never told it would not actually recur.
+    const wantsRecurring = /\b(every day|every morning|every night|every week|every (?:sun|mon|tues|wednes|thurs|fri|satur)day|daily|weekly|each morning|each day|each week|recurring|repeat(?:ing|s)? (?:this|every))\b/i.test(command);
+    const recurringCaveat = " Nexus can only set a one-time reminder right now, not a recurring one -- I will remind you this one time, not every day.";
+    let reminderResult;
     if (args.confirmed === true || args.confirmation === true) {
-      const pushed = await nexusOpenAiNativeCreatePushReminder(user, common, args, language);
-      if (pushed) return pushed;
+      reminderResult = await nexusOpenAiNativeCreatePushReminder(user, common, args, language);
     }
-    return nexusOpenAiNativeCreateLocalReminder(db, user, common, args);
+    if (!reminderResult) reminderResult = nexusOpenAiNativeCreateLocalReminder(db, user, common, args);
+    if (wantsRecurring && reminderResult?.response && !/one-time/i.test(reminderResult.response)) {
+      reminderResult = { ...reminderResult, response: `${reminderResult.response}${recurringCaveat}` };
+    }
+    return reminderResult;
   }
   if (toolName === "nexus_lists") {
     // Real lists persistence only exists in the modern nexus/ runtime
@@ -20086,11 +20100,32 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         user: authoritativeUser
       });
       const listData = turn.render.data || {};
-      const itemCount = Array.isArray(listData.items) ? listData.items.length : 0;
-      const verb = listData.listId && turn.render.operation === "update_list" ? "updated" : "created";
-      const response = acknowledgement.completed
-        ? `I ${verb} your "${listData.title || "list"}" checklist${itemCount ? ` with ${itemCount} item${itemCount === 1 ? "" : "s"}` : ""}.`
-        : "I prepared the checklist but could not confirm it saved. Please try again.";
+      // Found live: a real lists.read outcome was always mislabeled
+      // "updated" (if it happened to carry a listId) or "created" (a
+      // "show me all my lists" read has no single listId at all) -- telling
+      // the user their checklist was created/updated when they only asked
+      // to see it. turn.render.operation now honestly distinguishes
+      // read_list from create_list/update_list (see workspace-outcome.js).
+      let response;
+      if (turn.render.operation === "read_list") {
+        if (Array.isArray(listData.lists)) {
+          response = listData.lists.length
+            ? `You have ${listData.lists.length} checklist${listData.lists.length === 1 ? "" : "s"}: ${listData.lists.slice(0, 5).map(item => `"${item.title || "Untitled list"}" (${Array.isArray(item.items) ? item.items.length : 0} item${Array.isArray(item.items) && item.items.length === 1 ? "" : "s"})`).join("; ")}.`
+            : "You do not have any checklists saved yet.";
+        } else {
+          const list = listData.list || listData;
+          const items = Array.isArray(list.items) ? list.items : [];
+          response = listData.found === false
+            ? "I could not find that checklist."
+            : `Your "${list.title || "list"}" checklist has ${items.length} item${items.length === 1 ? "" : "s"}${items.length ? `: ${items.slice(0, 10).map(item => item.text || item).join(", ")}` : ""}.`;
+        }
+      } else {
+        const itemCount = Array.isArray(listData.items) ? listData.items.length : 0;
+        const verb = turn.render.operation === "update_list" ? "updated" : "created";
+        response = acknowledgement.completed
+          ? `I ${verb} your "${listData.title || "list"}" checklist${itemCount ? ` with ${itemCount} item${itemCount === 1 ? "" : "s"}` : ""}.`
+          : "I prepared the checklist but could not confirm it saved. Please try again.";
+      }
       return { ...common, capability: "lists", status: acknowledgement.completed ? "completed" : "blocked", response,
         executionAttempted: true, executionVerified: acknowledgement.completed === true, list: listData };
     } catch (error) {
@@ -20099,6 +20134,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     }
   }
   if (toolName === "nexus_email") {
+    // Found live: this tool's own description ("Prepare, read, or send
+    // email") and the tool-choice hint router (which explicitly maps
+    // "inbox" here) both promise reading email, but emailProvider.js only
+    // ever exported {status, send} -- there is no inbox/IMAP/read
+    // capability anywhere in this codebase. A genuine "Check my inbox for
+    // new messages" used to fall straight into the send logic below, find
+    // no valid recipient, and return a confusing "a valid recipient email
+    // address is required" error for a request that had nothing to do with
+    // sending. Now reports the real limitation honestly instead.
+    if (/\b(check|read|view|show|any new|do i have)\b/i.test(command) && /\b(inbox|emails?|messages?)\b/i.test(command) && !/\bsend\b/i.test(command)) {
+      return { ...common, capability: "email", status: "not-supported", response: "Nexus cannot read or check an email inbox yet -- I can only prepare and send email through a configured provider. Tell me who to email and what to say, and I can send it." };
+    }
     const contact = nexusOpenAiNativeExtractContactArgs(command, args);
     const emailBody = { to: contact.to, subject: contact.subject, text: contact.message, confirmed: args.confirmed };
     const emailResult = await withActionLifecycle(db, {
@@ -20585,6 +20632,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // There was never a way for a voice-created "intake" to produce a real
     // encounter a video room could attach to.
     const wantsTelehealthVideo = /\b(video\s*call|video\s*visit|video\s*appointment|video\s*consult(?:ation)?|start\s+(?:a\s+|my\s+)?video|join\s+(?:a\s+|the\s+)?video|virtual\s+(?:visit|appointment)|see\s+a\s+doctor\s+(?:on|by|via)\s+video)\b/i.test(command);
+    // Found live: this tool's own description and fallback text both
+    // promise "provider-ready summaries," and real providerReport()
+    // functions already exist in chronicDiseaseBridgeProvider.js/
+    // rpmBridgeProvider.js/rtmBridgeProvider.js (already exposed over REST,
+    // already tested by archived QA scripts) -- genuinely computing a
+    // real report from saved BP/glucose/RPM/RTM readings. But nothing in
+    // this natural-language dispatch chain ever called them, so "Prepare a
+    // provider summary of my chronic care readings" fell through to the
+    // generic capability menu even though the real data and a real
+    // report-builder both already existed.
+    const wantsProviderSummary = /\b(provider[\s-]?(?:summary|report|review)|provider[\s-]?ready (?:summary|report)|summary (?:for|to bring to) (?:my |the )?(?:doctor|provider|clinician)|report (?:for|to bring to) (?:my |the )?(?:doctor|provider|clinician))\b/i.test(command);
     // Two real gaps confirmed live: (1) the bare `$` anchor meant any
     // trailing punctuation ("find a doctor.") made the whole gate fail
     // silently, falling through to the generic menu instead of the real NPI
@@ -20754,6 +20812,26 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const questions = draftResult?.body?.data?.draft?.questions || [];
       extraData = { pharmacyQuestions: questions };
       response = `Here are safe questions to bring to a pharmacist: ${questions.join(" ")} I did not request a refill, transfer, dosage change, or contact a pharmacy.`;
+    } else if (wantsProviderSummary) {
+      // Checked before wantsChronicHistory -- a deliberate "provider
+      // summary/report" request also matches that broader trend/history
+      // gate (both look for "readings" + a condition word), and the more
+      // specific request must win so it reaches the real report-builder
+      // instead of the plain reading-history listing.
+      const bridge = /\brpm\b/i.test(command) ? nexusRealProviders.rpmBridge
+        : /\brtm\b/i.test(command) ? nexusRealProviders.rtmBridge
+        : nexusRealProviders.chronicDiseaseBridge;
+      const reportResult = bridge.providerReport({}, db);
+      const report = reportResult?.body?.data?.report || {};
+      const rows = report.readingTableSummary || [];
+      const summaryResponse = rows.length
+        ? `Here is a provider-ready summary from ${rows.length} saved reading${rows.length === 1 ? "" : "s"}: ${rows.slice(0, 5).map(row => `${row.dateTimeText || "undated"}${row.bloodPressure ? ` BP ${row.bloodPressure}` : ""}${row.glucose ? ` glucose ${row.glucose}` : ""}${row.pulse ? ` pulse ${row.pulse}` : ""}`).join("; ")}. Bring this to your provider for review -- Nexus did not diagnose or prescribe.`
+        : "I did not find any saved readings yet to build a provider summary from. Save a blood pressure, glucose, or activity reading first, and then I can prepare a report.";
+      const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "provider-summary-prepared",
+        [`Prepared a provider-review report from ${rows.length} saved reading(s).`],
+        ["Nexus did not diagnose, prescribe, or contact a provider -- this is for the patient to bring to their own review."]);
+      return { ...common, capability: "nexus_health_preparation", status: "provider-summary-prepared", response: summaryResponse,
+        receipt, evidenceReceipt: receipt, localOnly: true, executionAttempted: true, executionVerified: true, report };
     } else if (wantsChronicHistory) {
       const readingsResult = nexusRealProviders.chronicDiseaseBridge.readings(db);
       const savedReadings = readingsResult?.body?.data?.readings || [];
@@ -53579,25 +53657,17 @@ function handleTwilioPhoneRealtimeStream(ws) {
       streamSid = frame.start?.streamSid || null;
       callSid = frame.start?.callSid || null;
       const params = frame.start?.customParameters || {};
-      const claim = verifyPhoneRealtimeStreamToken(params.token, callSid, Date.now(), process.env);
-      if (!claim) return cleanup("unauthorized-stream-token");
-      const db = await readDb();
-      user = db.users.find(item => String(item.id) === String(claim.userId)) || null;
-      if (!user) return cleanup("unknown-user");
       try {
+        const claim = verifyPhoneRealtimeStreamToken(params.token, callSid, Date.now(), process.env);
+        if (!claim) return cleanup("unauthorized-stream-token");
+        const db = await readDb();
+        user = db.users.find(item => String(item.id) === String(claim.userId)) || null;
+        if (!user) return cleanup("unknown-user");
         const sessionConfig = phoneRealtimeWebSocketSessionConfig(user, user.language || "en", process.env);
         transport = new OpenAIRealtimeWebSocket({ model: sessionConfig.model, useInsecureApiKey: true });
         wirePhoneRealtimeTransportEvents(transport, ws, () => streamSid, () => callSid, () => user);
         await transport.connect({ apiKey: process.env.OPENAI_API_KEY, model: sessionConfig.model, initialSessionConfig: sessionConfig });
         transport.sendMessage("The caller just connected. Greet them warmly in one short sentence and ask how you can help.", {}, { triggerResponse: true });
-        logIntegration(db, {
-          providerId: "phone-voice",
-          module: "AI",
-          action: "phone.realtime_connected",
-          detail: "Real-time voice bridge connected to OpenAI Realtime.",
-          metadata: { callSid, userId: user.id }
-        });
-        await writeDb(db);
         capTimer = setTimeout(() => {
           try { transport.sendMessage("The call time limit has been reached. Say a brief goodbye now.", {}, { triggerResponse: true }); } catch {}
           goodbyeTimer = setTimeout(() => cleanup("max-duration-reached"), 6000);
@@ -53605,6 +53675,33 @@ function handleTwilioPhoneRealtimeStream(ws) {
       } catch (error) {
         recordServerError({ source: "phone-realtime-connect", message: error.stack || error.message, context: { callSid } });
         await cleanup("connect-failed");
+        return;
+      }
+      // Found live (not yet confirmed against a real call, but a plausible,
+      // well-supported root cause for "greeting plays, then the call hangs
+      // up before the caller can speak"): this audit-log write has nothing
+      // to do with the OpenAI connection, which has already succeeded and
+      // is already streaming greeting audio to the caller by this point.
+      // It used to share the same try/catch as the connection setup above,
+      // so a transient failure here (disk hiccup, a Postgres blip) tore
+      // down an already-live, already-talking call and mislabeled it
+      // "connect-failed" -- a misleading reason for a call that had, in
+      // fact, connected. A bookkeeping failure must never hang up a call
+      // that's already in progress.
+      if (user && callSid) {
+        try {
+          const db = await readDb();
+          logIntegration(db, {
+            providerId: "phone-voice",
+            module: "AI",
+            action: "phone.realtime_connected",
+            detail: "Real-time voice bridge connected to OpenAI Realtime.",
+            metadata: { callSid, userId: user.id }
+          });
+          await writeDb(db);
+        } catch (error) {
+          recordServerError({ source: "phone-realtime-connected-log", message: error.stack || error.message, context: { callSid } });
+        }
       }
       return;
     }

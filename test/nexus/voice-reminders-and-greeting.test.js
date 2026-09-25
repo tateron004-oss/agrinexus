@@ -123,7 +123,7 @@ test("listing includes the real push reminders and fails soft", async () => {
 
 test("the tool creates a push reminder only after confirmation, lists them, and otherwise behaves as before", () => {
   const branch = server.slice(server.indexOf('if (toolName === "nexus_automation_reminder") {'), server.indexOf('if (toolName === "nexus_lists") {'));
-  assert.match(branch, /if \(args\.confirmed === true \|\| args\.confirmation === true\) \{\s*const pushed = await nexusOpenAiNativeCreatePushReminder\(user, common, args, language\);\s*if \(pushed\) return pushed;\s*\}\s*return nexusOpenAiNativeCreateLocalReminder\(db, user, common, args\);/);
+  assert.match(branch, /if \(args\.confirmed === true \|\| args\.confirmation === true\) \{\s*reminderResult = await nexusOpenAiNativeCreatePushReminder\(user, common, args, language\);\s*\}\s*if \(!reminderResult\) reminderResult = nexusOpenAiNativeCreateLocalReminder\(db, user, common, args\);/);
   assert.match(branch, /const pushCards = await nexusOpenAiNativeListPushReminders\(user, language\);\s*const cards = \[\.\.\.pushCards, \.\.\.pilotCards, \.\.\.providerCards\];/);
   assert.match(server, /I need your explicit confirmation before I create it in Nexus memory/, "the confirmation gate for unconfirmed creation is unchanged");
 });

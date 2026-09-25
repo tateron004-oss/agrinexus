@@ -163,6 +163,32 @@ test("every step of the crisis listener (classify, build packet, deliver) is wra
   assert.ok(tryCount >= 3, `expected classify/packet/deliver to each be wrapped in their own try block, found ${tryCount}`);
 });
 
+// Found live (a well-supported hypothesis for a reported but not-yet-
+// pinpointed bug: a real call connected, played the greeting, then hung up
+// before the caller could speak): the "phone.realtime_connected" audit-log
+// write used to share the same try/catch as transport.connect() and the
+// greeting trigger. A transient failure in that unrelated bookkeeping write
+// (disk hiccup, a Postgres blip) tore down an already-connected,
+// already-talking call and mislabeled it "connect-failed" -- a misleading
+// reason for a call that had, in fact, connected and started speaking.
+test("a failure while writing the connected-call audit log does not tear down an already-connected call", () => {
+  const handlerBody = sliceFunction("handleTwilioPhoneRealtimeStream");
+  const connectIndex = handlerBody.indexOf("await transport.connect(");
+  const connectFailedCatchIndex = handlerBody.indexOf('await cleanup("connect-failed");');
+  const logWriteIndex = handlerBody.indexOf('action: "phone.realtime_connected"');
+  assert.ok(connectIndex > 0 && connectFailedCatchIndex > 0 && logWriteIndex > 0, "expected all three markers to be present");
+  // The audit-log write must be AFTER the connect-failed catch block (i.e.
+  // outside the try/catch that guards the connection itself), not between
+  // transport.connect() and that catch.
+  assert.ok(logWriteIndex > connectFailedCatchIndex,
+    "the connected-call audit-log write must live outside the try/catch that can call cleanup(\"connect-failed\"), so its own failure cannot hang up an already-connected call");
+  // And its own failure must be swallowed locally, not re-thrown into
+  // something that tears the call down.
+  const afterLog = handlerBody.slice(logWriteIndex, logWriteIndex + 400);
+  assert.match(afterLog, /catch \(error\) \{\s*recordServerError\(\{ source: "phone-realtime-connected-log"/,
+    "a failure writing the connected-call audit log must be recorded and swallowed, not allowed to hang up the call");
+});
+
 test("every connection path (unauthorized, unknown user, connect failure, caller hangup, ws close/error) tears down cleanly via the same cleanup path", () => {
   const handlerBody = sliceFunction("handleTwilioPhoneRealtimeStream");
   const cleanupCalls = handlerBody.match(/cleanup\("[a-z0-9-]+"\)/g) || [];

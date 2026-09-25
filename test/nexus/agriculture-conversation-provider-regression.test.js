@@ -39,6 +39,25 @@ test("first maize advice question requires filtered authoritative retrieval", ()
   assert.deepEqual(plan.steps[0].input.includeDomains, ["fao.org", "cgiar.org", "cimmyt.org", "extension.org", "edu"]);
 });
 
+// Found live: a plain, real crop-issue report with no question word, "?",
+// or any of the original symptom words ("Check my maize crop for pests, the
+// leaves have holes and I see caterpillars") matched agricultureSubject (via
+// "crop") but not adviceRequest, so it never reached this real
+// knowledge.search-backed plan and instead fell through to a decorative
+// classifier in the client dispatch chain.
+test("a plain pest/damage report with no question word still reaches the real agriculture advice plan", () => {
+  const plan = agricultureAdvicePlan("Check my maize crop for pests, the leaves have holes and I see caterpillars.", catalog);
+  assert.equal(plan.application, "agriculture");
+  assert.equal(plan.steps[0].toolId, "knowledge.search");
+});
+
+// A weather question naming a farm must not be swept into agriculture just
+// because "check" was widened above -- adviceRequest's new words are
+// specific pest/disease-report terms, not a generic verb like "check" alone.
+test("a weather question naming a farm is unaffected by the pest/damage widening", () => {
+  assert.equal(agricultureAdvicePlan("Check the weather for my farm today.", catalog), null);
+});
+
 test("provider failure record is sanitized and retains status, code, stage, and request ID", () => {
   const failure = sanitizeProviderFailure({ status: 502, code: "upstream_timeout", stage: "provider-execution-knowledge-search",
     message: "secret internal endpoint and credential" }, { requestId: "request-123" });

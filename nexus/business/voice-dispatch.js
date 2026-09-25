@@ -465,7 +465,12 @@ function classify(command = "") {
   // wantsList's read-only "list my businesses" (a different noun entirely,
   // so there is no collision) and from wantsListListings below (excluded by
   // requiring the absence of a read-style word first).
-  const wantsAddListing = /\b(?:add|create|new|list)\b/i.test(command) && /\b(listing|property)\b/i.test(command) && !/\b(?:my|show|what|which)\b/i.test(command);
+  // Found live: the single most natural real-estate phrasing -- "List 123
+  // Main Street for $450,000" -- names neither "listing" nor "property" at
+  // all, so it fell through to the generic create-workspace fallback.
+  // Widened with a real street-address pattern as an alternate noun signal.
+  const looksLikeStreetAddress = /\b\d+\s+[a-z0-9.'-]+(?:\s+[a-z0-9.'-]+){0,4}\s+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|way|court|ct|boulevard|blvd|place|pl)\b/i.test(command);
+  const wantsAddListing = /\b(?:add|create|new|list)\b/i.test(command) && (/\b(listing|property)\b/i.test(command) || looksLikeStreetAddress) && !/\b(?:my|show|what|which)\b/i.test(command);
   const wantsUpdateListingStatus = !wantsAddListing && /\b(?:mark|update|set|change)\b/i.test(command) && /\b(listing|property)\b/i.test(command);
   const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
@@ -481,9 +486,21 @@ function classify(command = "") {
   // investor pitch strategy" had no route to it at all. Excludes the other
   // generate-* intents' own phrasing (an "intake form"/"business plan pdf"/
   // "marketing flyer" request should still resolve to those, not this).
+  // Found live: this only ever matched a literal compound "X strategy" (or a
+  // handful of other exact nouns), rejecting the tool's own marquee phrases
+  // and the natural way a person actually names each of strategy.js's 12
+  // real agent profiles -- "Draft a grant proposal", "Help with a financial
+  // literacy plan for my business", "Create a government partnership plan",
+  // "Draft a donor stewardship plan" all returned null and fell to a
+  // non-sequitur "what should I call this workspace?" fallback. Widened to
+  // the real profile names/purposes (grant writing, donor relations,
+  // volunteer coordination, financial literacy, minority/women/black/brown-
+  // owned business development, government/public-sector partnership,
+  // investor/product/operations/research/technical/content) rather than
+  // only their "X strategy" form.
   const wantsGenerateStrategy = !wantsGenerateDocuments && !wantsGenerateBusinessPlanPdf && !wantsGenerateMarketing &&
     /\b(?:create|generate|draft|write|make|help (?:me )?(?:with|write|draft))\b/i.test(command) &&
-    /\b(strategy|strategic plan|pitch|investor pitch|pitch deck|business plan outline|marketing strategy|grant strategy|donor strategy|fundraising strategy|volunteer strategy|financial plan|partnership strategy|launch plan|launch kit)\b/i.test(command);
+    /\b(strategy|strategic plan|pitch|investor pitch|pitch deck|business plan outline|marketing strategy|grant strategy|grant proposal|grant writing|donor strategy|donor relations|donor stewardship|fundraising strategy|fundraising plan|volunteer strategy|volunteer coordination|financial plan|financial literacy|partnership strategy|partnership plan|government partnership|public[\s-]?sector partnership|minority[\s-]?owned|women[\s-]?owned|black[\s-]?owned|brown[\s-]?owned|business development plan|launch plan|launch kit|product (?:plan|roadmap)|operations plan|research plan|technical plan|content (?:plan|strategy))\b/i.test(command);
   // A real, conversational client/customer/congregant intake -- captures a
   // name, contact and stated need as a persisted lead row -- is distinct from
   // wantsGenerateDocuments' "create an intake form" (a blank, unfilled
