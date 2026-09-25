@@ -214,14 +214,23 @@ class BusinessService {
     // renderer -- not a security issue (this never reaches a database
     // query or shell), but it would silently corrupt the printed invoice.
     const cell = value => String(value ?? "").replace(/\|/g, "/");
-    const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    // Found live: the footer total summed the raw, unrounded
+    // quantity*unitPrice products, while each row displayed its OWN
+    // independently-rounded total -- these can legitimately disagree by a
+    // cent whenever a unit price has a fractional-cent component (e.g. fuel
+    // at $3.999/gal, an entirely ordinary real-world price), producing a
+    // client-facing invoice PDF that doesn't add up to itself. Standard
+    // accounting practice: round each line to the cent first, then sum the
+    // already-rounded cent values for the total.
+    const rowTotals = items.map(item => Math.round(item.quantity * item.unitPrice * 100) / 100);
+    const total = rowTotals.reduce((sum, rowTotal) => sum + rowTotal, 0);
     const content = [
       `Bill to: ${cell(invoice.clientName || "Client")}`,
       `Date: ${cell(invoice.date)}    Due: ${cell(invoice.dueDate)}`,
       "",
       "| Description | Qty | Unit Price | Total |",
       "|---|---|---|---|",
-      ...items.map(item => `| ${cell(item.description)} | ${item.quantity} | ${item.unitPrice.toFixed(2)} | ${(item.quantity * item.unitPrice).toFixed(2)} |`),
+      ...items.map((item, index) => `| ${cell(item.description)} | ${item.quantity} | ${item.unitPrice.toFixed(2)} | ${rowTotals[index].toFixed(2)} |`),
       "",
       `Total due: ${total.toFixed(2)}`,
       invoice.notes ? invoice.notes : ""

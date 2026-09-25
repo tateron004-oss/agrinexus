@@ -80,7 +80,13 @@
     if (/\b(health|patient|blood pressure|hypertension|diabetes|glucose|obesity|weight|chronic|rpm|rtm|clinic|doctor|provider|care team|telehealth|medical)\b/.test(text)) domains.push("healthcare");
     if (/\b(mobile clinic|mobile care|clinic van|field clinic)\b/.test(text)) domains.push("mobile_health");
     if (/\b(pharmacy|medicine|medication|prescription|refill|drug store)\b/.test(text)) domains.push("pharmacy");
-    if (/\b(farm|farmer|crop|tomato|maize|plants|soil|irrigation|pest|disease|livestock|extension|agriculture)\b/.test(text)) domains.push("agriculture");
+    // "fertilizer|seed|pesticide|urea" added: "What's the current price of
+    // fertilizer with sources?" matched only "marketplace_trade" (via
+    // "price") -- a single domain -- and fell through to the decorative
+    // marketplace-trade card instead of nexus_live_knowledge's real, cited
+    // price lookup. Farm-input words are as much "agriculture" as a crop
+    // name is.
+    if (/\b(farm|farmer|crop|tomato|maize|plants|soil|irrigation|pest|disease|livestock|extension|agriculture|fertilizer|seed|seeds|pesticide|urea|agrochemical)\b/.test(text)) domains.push("agriculture");
     // "price"/"cost"/"quote" added: the decorative routeNexusIntentDrivenWorkflowCommand
     // classifier in app.js already treats these as marketplace-trade signals,
     // but this real classifier didn't -- so "What is the price of maize?"
@@ -149,6 +155,15 @@
     if (/\b(find|search|show|looking for|apply for)\b.*\b(jobs?|work|employment|opportunit(?:y|ies))\b/.test(text)
       || /\b(resume|cv|curriculum vitae)\b/.test(text)
       || /\b(courses?|classes|training|certification)\b.*\b(available|offered|for|on)\b/.test(text)) return true;
+    // Found live: DOMAINS has no maps/routing concept at all, so "Route
+    // from Nairobi to Mombasa" or "Directions to the nearest clinic" only
+    // ever matched "logistics_shipment" (via "route") -- a single domain,
+    // rejected by the >=2-domain rule below -- and fell through into the
+    // decorative "logistics-maps-shipments" workflow card instead of
+    // reaching the real nexus_maps_route tool (real OSRM/Google routing,
+    // with its own honest no-fabrication guarantees). Mirrors the real
+    // handler's own mapOnlyRequest detection (server.js).
+    if (/\b(route|directions?|navigate|navigation)\b/.test(text) || /\bfrom\s+.+\s+to\b/.test(text) || /\b(take me to|how do i get to|way to)\b/.test(text)) return true;
     const domains = classifyDomains(text).filter(domain => !["general_help", "provider_admin"].includes(domain));
     return domains.length >= 2;
   }
