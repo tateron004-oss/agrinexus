@@ -45628,12 +45628,20 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents });
   }
 
+  // Found live (missing-auth sweep): the identical db.nexusPilotReminders
+  // array (linkedRecordId + up to 320 chars of free-text notes) is already
+  // returned, redacted-by-role, inside GET /api/nexus/cases/:id -- which is
+  // gated by canUse(user, "provider-queue") above. This direct route had no
+  // gate at all, letting anyone read every reminder's notes, or inject a
+  // fabricated one that later shows up linked into a real case.
   if (url.pathname === "/api/nexus/reminders" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
     return send(res, 200, { ok: true, reminders: db.nexusPilotReminders });
   }
 
   if (url.pathname === "/api/nexus/reminders" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
     const body = await readBody(req);
     const reminder = {
@@ -45659,12 +45667,20 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, reminder, audit });
   }
 
+  // Found live (missing-auth sweep): queueNexusEmailFallback() pushes a real,
+  // unmasked recipient email address into this exact array whenever the
+  // sign-in-required /api/nexus/email/send-packet route falls back because
+  // the email provider isn't configured -- this route had no gate at all,
+  // letting anyone read every such address, plus every other queued item's
+  // free-text summary.
   if (url.pathname === "/api/nexus/offline-queue" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
     return send(res, 200, { ok: true, offlineQueue: db.nexusPilotOfflineQueue });
   }
 
   if (url.pathname === "/api/nexus/offline-queue" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
     const body = await readBody(req);
     const item = {
@@ -46796,7 +46812,13 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, ...nexusRealProviders.offlineSync.status(), queueCount: (db.profile?.offlineQueue || []).length });
   }
 
+  // Found live (missing-auth sweep): every medicalPostRoutes "offline"
+  // sub-route (chronic-disease/offline, telehealth/offline, etc., gated by
+  // sign-in below) writes into this exact db.profile.offlineQueue via
+  // queueOffline()/offlineSyncProvider.queueItem() -- this direct route
+  // called the same queueItem() with no gate at all.
   if (url.pathname === "/api/nexus/tools/offline/queue" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const result = nexusRealProviders.offlineSync.queueItem(await readBody(req), db);
     if (result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
@@ -46812,11 +46834,18 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, ...nexusRealProviders.offlineExpansionBridge.status() });
   }
 
+  // Found live (missing-auth sweep): returns up to 50 raw
+  // db.profile.offlineQueue items (title/summary free text) with no
+  // redaction and no auth check at all -- the exact array the sign-in-gated
+  // medicalPostRoutes "offline" sub-routes below write real queued health
+  // -workflow content into.
   if (url.pathname === "/api/nexus/tools/offline/bridge/items" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     return sendProviderResult(res, nexusRealProviders.offlineExpansionBridge.items(db));
   }
 
   if (url.pathname === "/api/nexus/tools/offline/bridge/queue" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const result = nexusRealProviders.offlineExpansionBridge.queue(await readBody(req), db);
     if (result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
@@ -46958,11 +46987,18 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, ...nexusRealProviders.reminders.status(), count: (db.profile?.nexusReminders || []).length });
   }
 
+  // Found live (missing-auth sweep): every medicalPostRoutes "reminder"
+  // sub-route (chronic-disease/reminder, telehealth/reminder, etc., gated by
+  // sign-in below) calls createReminder() -> the same reminders.create()
+  // this route calls directly with no auth check, writing/reading real
+  // titles and free-text notes from db.profile.nexusReminders either way.
   if (url.pathname === "/api/nexus/tools/reminders" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     return sendProviderResult(res, nexusRealProviders.reminders.list(db));
   }
 
   if (url.pathname === "/api/nexus/tools/reminders/create" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const result = nexusRealProviders.reminders.create(await readBody(req), db);
     if (result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);

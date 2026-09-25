@@ -99,3 +99,63 @@ test("/api/nexus/audit requires sign-in, matching the protection already on /api
   assert.equal(authed.status, 200);
   assert.ok(Array.isArray((await authed.json()).audit));
 });
+
+// Found live in the same sweep: db.nexusPilotReminders (linkedRecordId + up
+// to 320 chars of free-text notes) is already returned, role-redacted,
+// inside the provider-queue-gated GET /api/nexus/cases/:id -- but the
+// direct GET/POST /api/nexus/reminders routes had no auth check at all.
+test("/api/nexus/reminders (GET and POST) requires sign-in", async () => {
+  const unauthGet = await fetch(`${base}/api/nexus/reminders`);
+  assert.equal(unauthGet.status, 401);
+  const authedGet = await fetch(`${base}/api/nexus/reminders`, { headers: { cookie: adminCookie } });
+  assert.equal(authedGet.status, 200);
+
+  const unauthPost = await fetch(`${base}/api/nexus/reminders`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  assert.equal(unauthPost.status, 401);
+});
+
+// Found live: queueNexusEmailFallback() pushes a real, unmasked recipient
+// email address into db.nexusPilotOfflineQueue whenever the sign-in-gated
+// /api/nexus/email/send-packet route falls back -- but this direct
+// GET/POST route had no auth check at all.
+test("/api/nexus/offline-queue (GET and POST) requires sign-in", async () => {
+  const unauthGet = await fetch(`${base}/api/nexus/offline-queue`);
+  assert.equal(unauthGet.status, 401);
+  const authedGet = await fetch(`${base}/api/nexus/offline-queue`, { headers: { cookie: adminCookie } });
+  assert.equal(authedGet.status, 200);
+
+  const unauthPost = await fetch(`${base}/api/nexus/offline-queue`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  assert.equal(unauthPost.status, 401);
+});
+
+// Found live: every medicalPostRoutes "reminder" sub-route (e.g.
+// chronic-disease/reminder, gated by sign-in) writes into
+// db.profile.nexusReminders via the exact same reminders.create() this
+// direct route calls -- but /api/nexus/tools/reminders (GET/POST) had no
+// auth check at all.
+test("/api/nexus/tools/reminders (GET and POST) requires sign-in", async () => {
+  const unauthGet = await fetch(`${base}/api/nexus/tools/reminders`);
+  assert.equal(unauthGet.status, 401);
+  const authedGet = await fetch(`${base}/api/nexus/tools/reminders`, { headers: { cookie: adminCookie } });
+  assert.equal(authedGet.status, 200);
+
+  const unauthPost = await fetch(`${base}/api/nexus/tools/reminders/create`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  assert.equal(unauthPost.status, 401);
+});
+
+// Found live: the sign-in-gated medicalPostRoutes "offline" sub-routes write
+// into db.profile.offlineQueue via the exact same offlineSync.queueItem()/
+// offlineExpansionBridge.queue() these direct routes call -- but they, and
+// the GET that reads the same array back, had no auth check at all.
+test("/api/nexus/tools/offline/queue, /offline/bridge/items, and /offline/bridge/queue require sign-in", async () => {
+  const unauthQueue = await fetch(`${base}/api/nexus/tools/offline/queue`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  assert.equal(unauthQueue.status, 401);
+
+  const unauthItems = await fetch(`${base}/api/nexus/tools/offline/bridge/items`);
+  assert.equal(unauthItems.status, 401);
+  const authedItems = await fetch(`${base}/api/nexus/tools/offline/bridge/items`, { headers: { cookie: adminCookie } });
+  assert.equal(authedItems.status, 200);
+
+  const unauthBridgeQueue = await fetch(`${base}/api/nexus/tools/offline/bridge/queue`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  assert.equal(unauthBridgeQueue.status, 401);
+});
