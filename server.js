@@ -36079,6 +36079,12 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
   db.nexusKnowledgeQueries = db.nexusKnowledgeQueries || [];
   db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
   db.nexusKnowledgeQueries.unshift(queryRecord);
+  // Found live (rate-limiting audit): unlike nexusInstitutionalEvidenceReceipts
+  // right below (already capped), this array had no size cap on either of
+  // its two write sites -- combined with this route previously having no
+  // auth check either, an anonymous caller could grow it, and the shared
+  // db.json file, without bound.
+  db.nexusKnowledgeQueries.splice(500);
   db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
   db.nexusInstitutionalEvidenceReceipts.splice(100);
   addNexusPilotAuditEvent(db, "knowledge_query_checked", {
@@ -36931,6 +36937,7 @@ async function nexusLiveKnowledgeAllModesQuery(db, body = {}, user = null, env =
   };
   db.nexusKnowledgeQueries = db.nexusKnowledgeQueries || [];
   db.nexusKnowledgeQueries.unshift(queryRecord);
+  db.nexusKnowledgeQueries.splice(500);
   addNexusPilotAuditEvent(db, "live_knowledge_research_packet_prepared", {
     actor: user?.name || "Standard User",
     role: user?.role || "Standard User",
@@ -45052,6 +45059,18 @@ async function api(req, res, url) {
     return send(res, 200, nexusInstitutionalEvidenceStatus(db, process.env));
   }
 
+  // Found live (rate-limiting audit): these four routes can each trigger a
+  // real, paid OpenAI/Tavily call (nexusInternetAgenticResponse,
+  // runNexusKnowledgeProviderQuery) but had no auth check and no
+  // route-specific rate limit at all -- an anonymous caller was bounded
+  // only by the generic 180 req/min/IP+path blanket, unlike every sibling
+  // /api/agent/* route (all sign-in + aiAgentRateLimit gated). Brought in
+  // line with that established pattern.
+  if (["/api/nexus/intelligence/ask", "/api/nexus/knowledge/query", "/api/nexus/live-knowledge/query", "/api/nexus/live-knowledge/test"].includes(url.pathname) && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+  }
+
   if (url.pathname === "/api/nexus/intelligence/ask" && req.method === "POST") {
     const result = await nexusIntelligenceAsk(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
@@ -46455,6 +46474,18 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/africa-ag-opportunity/completion-classification" && req.method === "POST") {
     const body = await readBody(req);
     return send(res, 200, nexusGenesisAfricaAgOpportunity.buildCompletionClassificationPacket(body?.text || body?.command || ""));
+  }
+
+  // Found live (rate-limiting audit): every real Twilio send/call route
+  // below had no route-specific rate limit at all -- only the generic 180
+  // req/min/IP+path blanket. A single authorized account could otherwise
+  // script real SMS/WhatsApp/voice-call sends to arbitrary third-party
+  // numbers up to that blanket ceiling indefinitely, a real, uncapped
+  // Twilio cost and a real spam/harassment vector.
+  if (["/api/nexus/tools/sms/send", "/api/nexus/tools/whatsapp/send", "/api/nexus/tools/call/start",
+    "/api/nexus/tools/communications/sms/send", "/api/nexus/tools/communications/whatsapp/send", "/api/nexus/tools/communications/call/start"]
+    .includes(url.pathname) && req.method === "POST" && !authRateLimit(req, "real-communications-send", 20, 600_000)) {
+    return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
   }
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
@@ -53503,6 +53534,10 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/voice/phone/outbound-call" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow outbound calls" });
+    // Found live (rate-limiting audit): this real Twilio outbound-call
+    // route had no route-specific rate limit, unlike the /api/nexus/tools/*
+    // real-send routes now gated -- same real per-call Twilio cost.
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const body = await readBody(req);
     const record = await createOutboundCallWorkflow(db, user, body);
     await writeDb(db);
