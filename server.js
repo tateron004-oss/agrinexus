@@ -19772,7 +19772,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       status: research.status,
       providerAttempted: Boolean(research.status === "source-backed" || research.status === "provider-error"),
       providerSucceeded: research.status === "source-backed",
-      response: research.summary || research.answer || "Nexus completed the available research pass.",
+      // Found live: real citations (title + real source URL) are computed
+      // here and placed in the sibling `citations` field, but nothing in the
+      // actual channel this tool is invoked through (typed chat, realtime
+      // voice) ever reads that field back out -- the only client-side
+      // renderer for citations is driven by a completely different,
+      // dedicated "Live Knowledge" workspace flow, not this tool-call
+      // gateway. "Never fabricates sources" is the whole point of this
+      // tool, so the real sources must actually reach the response text.
+      response: `${research.summary || research.answer || "Nexus completed the available research pass."}${(research.citations || []).length ? ` Sources: ${research.citations.slice(0, 5).map(c => `${c.title}${c.url ? ` (${c.url})` : ""}`).join("; ")}.` : ""}`,
       citations: research.citations || [],
       sources: research.sources || [],
       missingEnvVars: research.missingEnvVars || [],
@@ -21013,7 +21021,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       context: args.context || args.summary || command,
       confirmed: args.confirmed
     }, db, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "workflow" }, workflow);
+    // Found live: workflowOrchestratorBridgeProvider.workflowPlan() genuinely
+    // computes a real, specific step list per workflow type (e.g.
+    // workforce-learning -> "learning resource, save course, reminder,
+    // session preparation, offline queue") into data.plan.steps, but this
+    // call site never passed a responseOverride -- the response fell back to
+    // one of two fixed disclaimer sentences regardless of workflow type, so
+    // the real step list never reached the user. Same shape and fix pattern
+    // already applied to nexus_file_document_analysis and the marketplace
+    // branch of nexus_marketplace_logistics.
+    const workflowPlanData = workflow?.body?.data?.plan;
+    const workflowResponseOverride = workflowPlanData?.steps?.length
+      ? `${workflow.body.message} "${workflowPlanData.title}" steps: ${workflowPlanData.steps.map(step => step.label).join("; ")}.`
+      : "";
+    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "workflow" }, workflow, workflowResponseOverride ? { responseOverride: workflowResponseOverride } : {});
   }
   if (toolName === "nexus_business_assistant") {
     const authoritativeUser = await authoritativeRuntimeUser(user);
