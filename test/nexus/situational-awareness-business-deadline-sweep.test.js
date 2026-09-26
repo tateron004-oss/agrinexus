@@ -29,16 +29,18 @@ test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDat
   assert.deepEqual(db.calls[0].params, [10]);
 });
 
-function sweepFixture({ candidates = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
+// Found live: record_id ("rec_<uuid>") is not a real uuid and can never be sent as subjectId (a real Postgres
+// `uuid` column) -- claimCooldown's recordKey scopes the cooldown to one specific business record instead.
+function sweepFixture({ candidates = [], recentNudgesByRecord = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
   const created = { tasks: [], nudgeRecords: [], removed: [] };
   let seq = 0;
   const runtime = {
     records: {
       listBusinessWorkspacesWithDatedDeadlines: async () => candidates,
-      claimCooldown: async ({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
-        const last = (recentNudgesBySubject[`${tenantId}:${subjectId}`] || [])[0];
+      claimCooldown: async ({ tenantId, ownerId, subjectId, recordKey, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
+        const last = (recentNudgesByRecord[`${tenantId}:${recordKey}`] || [])[0];
         if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;
-        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, workspaceId, recordType, classification, data, provenance };
+        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, recordKey, workspaceId, recordType, classification, data, provenance };
         created.nudgeRecords.push(record);
         return record;
       },
@@ -71,6 +73,11 @@ test("situational-awareness.business-deadline-sweep creates a real autonomous re
   assert.equal(taskInput.steps.every(step => step.toolId !== "communications.send"), true);
   assert.equal(created.nudgeRecords[0].recordType, BUSINESS_DEADLINE_NUDGE_RECORD_TYPE);
   assert.equal(created.nudgeRecords[0].workspaceId, SITUATIONAL_AWARENESS_WORKSPACE_ID);
+  // Found live: record_id is a "rec_<uuid>" business-record id, not a real
+  // uuid -- it must never be sent as subjectId, only saved into
+  // data.recordId, which the cooldown check matches against instead.
+  assert.equal(created.nudgeRecords[0].subjectId, undefined, "record_id must never be sent as subjectId");
+  assert.equal(created.nudgeRecords[0].data.recordId, "rec_biz");
 });
 
 test("situational-awareness.business-deadline-sweep names an approaching grant deadline too, in the same consolidated reminder", async () => {

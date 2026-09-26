@@ -476,10 +476,18 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       let created = 0; let skippedPaused = 0;
       for (const candidate of candidates) {
         const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
-        // The "subject" of this nudge is the specific business RECORD, not the
-        // owner -- an owner with several workspaces must get an independent
-        // cooldown per workspace, not one shared across all of them.
-        const subjectId = candidate.record_id;
+        // Found live: this used to pass candidate.record_id (a "rec_<uuid>"
+        // business-record id, from nexus/contracts/identifiers.js's
+        // createId()) as subjectId straight into nexus_records.subject_id,
+        // a real `uuid` column -- Postgres rejects that string outright
+        // ("invalid input syntax for type uuid"), so this whole sweep threw
+        // and produced zero nudges as soon as it hit any real due
+        // candidate, every cycle, forever. The "subject" of this nudge is
+        // still meant to be the specific business RECORD, not the owner --
+        // an owner with several workspaces must get an independent cooldown
+        // per workspace, not one shared across all of them -- so instead of
+        // a (non-existent) subject-record uuid, claimCooldown's recordKey
+        // matches against the recordId saved into each nudge's own `data`.
         if (!tenantPaused.has(tenantId)) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
@@ -488,7 +496,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
-        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, subjectId,
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, recordKey: candidate.record_id,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
           data: { reason: "business_workspace_stale", recordId: candidate.record_id, updatedAt: candidate.updated_at },
           provenance: { source: "situational-awareness-business-sweep" } });
@@ -602,7 +610,10 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       let created = 0; let skippedPaused = 0;
       for (const candidate of candidates) {
         const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
-        const subjectId = candidate.record_id;
+        // Found live: same invalid-uuid-subjectId bug as
+        // situational-awareness.business-sweep above (candidate.record_id
+        // is a "rec_<uuid>" business-record id, not a real uuid) -- fixed
+        // the same way, via claimCooldown's recordKey.
         if (!tenantPaused.has(tenantId)) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
@@ -615,9 +626,9 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         const dueLeads = Array.isArray(candidate.due_leads) ? candidate.due_leads.filter(lead => lead?.name) : [];
         const names = dueLeads.map(lead => lead.followUpDate ? `${lead.name} (due ${lead.followUpDate})` : lead.name).join(", ");
         const outreachLead = dueLeads.find(lead => contactChannel(lead.contact));
-        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, subjectId,
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, recordKey: candidate.record_id,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
-          data: { reason: "lead_followup_due", dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
+          data: { reason: "lead_followup_due", recordId: candidate.record_id, dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
           provenance: { source: "situational-awareness-lead-followup-sweep" } });
         if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
@@ -668,7 +679,8 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       let created = 0; let skippedPaused = 0;
       for (const candidate of candidates) {
         const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
-        const subjectId = candidate.record_id;
+        // Found live: same invalid-uuid-subjectId bug as the other two
+        // business-domain sweeps above -- fixed the same way.
         if (!tenantPaused.has(tenantId)) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
@@ -687,9 +699,9 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           ...overdueInvoices.map(item => `unpaid invoice ${item.invoiceNumber}${item.clientName ? ` for ${item.clientName}` : ""} (due ${item.dueDate})`)
         ];
         const summary = parts.join(", ") || "an approaching deadline";
-        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, subjectId,
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, recordKey: candidate.record_id,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
-          data: { reason: "business_deadline_due", overdueTasks, approachingGrants, overdueInvoices },
+          data: { reason: "business_deadline_due", recordId: candidate.record_id, overdueTasks, approachingGrants, overdueInvoices },
           provenance: { source: "situational-awareness-business-deadline-sweep" } });
         if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
