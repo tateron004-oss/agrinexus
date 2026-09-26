@@ -23,7 +23,12 @@ class AuthoritativeTaskEngine {
     if (autonomous && this.autonomyControl && await this.autonomyControl.isPaused({ tenantId: command.tenantId })) {
       throw new NexusRuntimeError("autonomy_paused", "Autonomous task creation is paused for this tenant.", 409);
     }
-    await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    // ensure() now returns null when conversationId already belongs to a
+    // different owner (see its own comment) -- surfacing that loudly here
+    // protects every current and future caller of create(), not just the
+    // ones that remember to pre-check ownership themselves.
+    const conversation = await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    if (!conversation) throw new NexusRuntimeError("conversation_owner_mismatch", "This conversation belongs to a different user.", 403);
     const normalized = [];
     const stepIds = new Map(steps.map((raw, index) => [String(raw.clientStepId || raw.stepId || `step_${index + 1}`), raw.stepId || createId("step")]));
     for (const raw of steps) {
