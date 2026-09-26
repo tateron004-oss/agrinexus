@@ -104,7 +104,19 @@ function parseAssistantReminderTime(text = "", options = {}) {
   }
 
   const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  const weekdayIndex = dayNames.findIndex(day => lower.includes(day));
+  // Found live: findIndex() picked whichever day name comes first in this
+  // FIXED Sun-Sat array, not whichever day the caller actually meant --
+  // "remind me to submit the report by friday, not sunday" resolved to
+  // Sunday (index 0) purely because "sunday" sits earlier in this array
+  // than "friday" (index 5), the exact day the caller said NOT to use, with
+  // no error and a confirmation that echoed the wrong day back as correct.
+  // Any phrase naming two weekdays (a deadline plus an exception, "X or Y",
+  // "not X") is silently steered to whichever happens to be earlier in this
+  // array. Picking the weekday that appears EARLIEST IN THE TEXT itself
+  // (not earliest in this array) matches what a person actually said first.
+  const weekdayPositions = dayNames.map(day => lower.indexOf(day)).map((position, index) => ({ index, position }));
+  const earliestWeekday = weekdayPositions.filter(hit => hit.position >= 0).sort((a, b) => a.position - b.position)[0];
+  const weekdayIndex = earliestWeekday ? earliestWeekday.index : -1;
   if (weekdayIndex >= 0) {
     const daysAhead = (weekdayIndex - now.weekdayIndex + 7) % 7 || 7;
     const scheduled = atLocalDay(daysAhead, false);
