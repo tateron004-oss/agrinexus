@@ -2569,7 +2569,15 @@ function recordExportOwnership(db, user, exportId) {
 // of those records to a specific account today, so this generic, convention
 // -based scan correctly (and honestly) leaves them untouched rather than
 // guessing or fabricating ownership.
-const PROFILE_OWNER_FIELDS = ["createdBy", "requestedBy"];
+// Found live: musicConnections (the Spotify integration,
+// /api/music/spotify/callback) predates this scan and never followed the
+// createdBy/requestedBy convention -- it records ownership as `userEmail`
+// instead (the only db.profile array that does; confirmed no other array
+// sets this field). Without it here, a "permanent" account erasure left a
+// live third-party OAuth refresh token behind forever, under an internal
+// userId with no UI or API path left to find or revoke it -- there is no
+// separate Spotify-disconnect endpoint anywhere in the codebase.
+const PROFILE_OWNER_FIELDS = ["createdBy", "requestedBy", "userEmail"];
 
 function profileRecordOwnedBy(item, normalizedEmail) {
   if (!item || typeof item !== "object") return false;
