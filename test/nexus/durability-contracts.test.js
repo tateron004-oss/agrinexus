@@ -40,3 +40,14 @@ test("workers claim transactionally with skip-locked leases and idempotent enque
   assert.match(db.calls[0].sql, /on conflict \(tenant_id,idempotency_key\)/);
   assert.match(db.calls[2].sql, /for update skip locked/);
 });
+
+// Found live: enqueue() used `job.priority || 3` and `job.maxAttempts || 5` -- the same falsy-zero-default shape
+// already found and fixed repeatedly elsewhere in this codebase (a real 0, meaning "highest priority" or "no
+// retries, dead-letter on first failure", would be silently discarded and replaced with the fallback).
+test("enqueue honors an explicit priority or maxAttempts of zero instead of silently discarding it", async () => {
+  const db = fakeDb([{ rows: [{ job_id: "job_1" }] }]);
+  const jobs = new JobRepository(db);
+  await jobs.enqueue({ tenantId: "tenant", jobType: "tool", idempotencyKey: "task:step", payload: {}, priority: 0, maxAttempts: 0 });
+  assert.equal(db.calls[0].params[6], 0, "an explicit priority of 0 (highest) must not become the default 3");
+  assert.equal(db.calls[0].params[10], 0, "an explicit maxAttempts of 0 (dead-letter on first failure) must not become the default 5");
+});
