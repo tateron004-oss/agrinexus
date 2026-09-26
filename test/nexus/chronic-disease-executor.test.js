@@ -38,6 +38,26 @@ test("intake writes a real, workspace-scoped record with a verified outcome", as
   assert.equal(verifyChronicDiseaseIntakeOutcome({ result }).verified, true);
 });
 
+// Found live (cross-user IDOR audit): "subjectId: input.subjectId || context.userId"
+// let the CALLER pick whose record this was, with nothing checking any
+// relationship between the caller and that subject -- any signed-in user
+// could forge a chronic-disease intake/reading attributed to an arbitrary
+// other patient's real subjectId.
+test("a caller-supplied subjectId is ignored -- the subject is always the caller", async () => {
+  const { records: intakeRecords, created: intakeCreated } = fixture();
+  await createChronicDiseaseIntakeExecutor({ records: intakeRecords })({
+    input: { conditionFocus: "diabetes", subjectId: "victim-user-id" }, context: { tenantId: "t1", userId: "attacker-user-id" }
+  });
+  assert.equal(intakeCreated[0].ownerId, "attacker-user-id");
+  assert.equal(intakeCreated[0].subjectId, "attacker-user-id", "the forged subjectId must never be used");
+
+  const { records: readingRecords, created: readingCreated } = fixture();
+  await createChronicDiseaseReadingExecutor({ records: readingRecords })({
+    input: { systolic: 140, diastolic: 90, subjectId: "victim-user-id" }, context: { tenantId: "t1", userId: "attacker-user-id" }
+  });
+  assert.equal(readingCreated[0].subjectId, "attacker-user-id");
+});
+
 test("intake defaults an invalid conditionFocus to unknown_provider_review_needed", async () => {
   const { records, created } = fixture();
   const execute = createChronicDiseaseIntakeExecutor({ records });
