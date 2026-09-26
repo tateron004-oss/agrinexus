@@ -112,7 +112,18 @@ class BehaviorSpine {
     const tool = step?.tool_id ? await this.engine.tools.get(step.tool_id) : null;
     const policy = userConfirmableConsent(tool?.consent_scope, step);
     if (!policy) return null;
-    const existing = await consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId: priorTask.taskId });
+    // Found live: this used to reuse ANY active consent for the (task, scope) pair, regardless of which step it was
+    // granted for. Several canonical tools share one consent_scope (health.record, health.chronic-intake, and
+    // health.chronic-reading all use "health:record:write") -- so a compound request planned as two steps in one
+    // task ("log my blood pressure and also my glucose reading") would have its SECOND step's own genuine
+    // confirmation silently discarded: the person still had to say yes again (confirmation_state is per-step and
+    // still enforced below), but the audit trail's stored receipt -- what they actually typed/said, its stepId,
+    // commandId -- only ever recorded the FIRST step's confirmation, never the second's. Filtering by stepId keeps
+    // a genuine RETRY of the same step idempotent (no duplicate grant, no extra count against a daily cap) while
+    // giving every distinct step its own real, separately-receipted consent. Deliberately not passed at the
+    // execute()-time consent gate in authoritative-task-engine.js -- that check only needs to know SOME step's
+    // confirmation already covers this scope for this task, which stays correctly task+scope-scoped.
+    const existing = await consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId: priorTask.taskId, stepId });
     if (existing) return existing;
     // A capped scope (message sends, calls) stops the action rather than consenting once the person's daily allowance is used.
     if (consents.countGrantedSince) {
