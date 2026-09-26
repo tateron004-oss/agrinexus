@@ -49984,7 +49984,13 @@ async function api(req, res, url) {
     }
     enrollment.progress = Math.min(100, enrollment.progress + 35);
     enrollment.score = Math.min(100, enrollment.score + 25);
-    db.profile.quizScore = Math.max(db.profile.quizScore, enrollment.score);
+    // Found live: this was the one call site (of 5) missing the `|| 0`
+    // fallback every sibling has -- a learner's very first quiz has
+    // db.profile.quizScore still undefined, so Math.max(undefined, 25) is
+    // NaN, and Math.max(NaN, anything) is always NaN -- permanently
+    // poisoning quizScore for every quiz attempt from then on, with no way
+    // to recover.
+    db.profile.quizScore = Math.max(db.profile.quizScore || 0, enrollment.score);
     db.profile.learningHours = Number((db.profile.learningHours + 0.75).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + 6);
     recalcReadiness(db.profile);
@@ -50135,12 +50141,19 @@ async function api(req, res, url) {
         return ["learning-courses", "learning.assignment_created", `${record.assignmentNumber} assignment created for ${course.title}.`, record];
       },
       "quiz-attempt": () => {
+        // Found live (money-logic audit follow-up to the /api/learning/quiz
+        // NaN-poisoning fix): the same falsy-zero-override gap on a
+        // sibling learning-quiz route -- an explicit score:0 (a genuinely
+        // failed attempt) was silently replaced with a fabricated passing
+        // score, and fed straight into enrollment.score/progress and the
+        // real persisted quizScore below.
+        const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
           attemptNumber: `AN-QUIZ-${String(db.profile.quizAttempts.length + 1).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
-          score: Number(body.score || Math.max(72, Math.min(96, (enrollment.score || 60) + 18))),
+          score: body.score !== undefined && Number.isFinite(requestedScore) ? Math.min(100, Math.max(0, requestedScore)) : Math.max(72, Math.min(96, (enrollment.score || 60) + 18)),
           status: "submitted",
           feedback: "Review missed concepts, then proceed toward certificate readiness.",
           createdAt: now

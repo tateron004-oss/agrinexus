@@ -444,7 +444,12 @@ function computeBusinessDashboard(editable) {
   // export's own fix) so this total can never drift from what a generated
   // invoice actually shows, even by a cent, for a fractional-cent unit price.
   const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
-  const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
+  // Found live: unlike grants.status/listings.status (already fixed to
+  // compare case-insensitively), invoice.status is set through a plain
+  // free-text field with no format hint and no voice/typed "mark paid"
+  // command exists at all -- typing the natural "Paid" created an invoice
+  // that stayed counted as unpaid forever, since "Paid" !== "paid".
+  const unpaidInvoices = editable.invoices.filter(invoice => String(invoice.status || "").toLowerCase() !== "paid").length;
   const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
   // Found live: grant.status is freeform text with no normalization --
   // "Awarded" (capitalized, exactly how a natural "set the grant status to
@@ -452,7 +457,11 @@ function computeBusinessDashboard(editable) {
   // so a correctly-marked grant's amount silently vanishes from the
   // awarded total with no error or indication.
   const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
-  const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
+  // Found live: same free-text-field, no-format-hint shape as invoice
+  // status above -- task status is edited through a plain text input with
+  // no lowercase enforcement, so a task marked "Done" stayed counted as
+  // open forever.
+  const openTasks = editable.tasks.filter(task => { const status = String(task.status || "").toLowerCase(); return status !== "done" && status !== "complete"; }).length;
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
   const listings = editable.listings || [];
   // Case-insensitive, matching extractListingArgs' own normalization fix --
