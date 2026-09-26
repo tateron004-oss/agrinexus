@@ -52,6 +52,19 @@ test("adding a field asks plain questions, saves the answers and remembers the f
   assert.match(await who.say("Show my fields"), /North Plot/);
 });
 
+// Found live: the loose field-name-match fallback did a raw substring test
+// after normalization strips "plot"/"field" down to just the number, and
+// "1" is a substring of "10" -- a yield expectation (or planting/scheduling/
+// removal) aimed at a non-existent "Plot 1" could silently land on the
+// real, different "Plot 10" instead of saying no such field exists.
+test("naming a field that does not exist by a similar number never silently attaches to a real, different field", async () => {
+  const who = farmer();
+  await run(who, ["Add a field called Plot 10, 2 acres of maize", "skip", "skip", "skip"]);
+  const reply = await who.say("expect 500 kg from Plot 1");
+  assert.doesNotMatch(reply ?? "", /plot 10/i, "a request for the non-existent 'Plot 1' must never resolve to the real 'Plot 10'");
+  assert.match(await who.say("How are my yields doing"), /no expected yield set/i, "Plot 10's own yield expectation must be untouched by the request for a different, non-existent field");
+});
+
 test("a guided question never traps someone: asking something else, or a whole new request, drops it and is handled normally", async () => {
   const who = farmer();
   await who.say("Add a worker called Juma"); // asks for a phone number
@@ -86,6 +99,20 @@ test("stock goes in and out in ordinary words and warns when it runs low", async
   assert.match(await who.say("I used 1 bag of fertilizer on North Plot"), /7 bags left/);
   assert.match(await who.say("Take 1 bag of fertilizer out of stock"), /6 bags left/);
   assert.match(await who.say("How much fertilizer do I have"), /6 bags/);
+});
+
+// Found live: the loose name-match fallback did a raw substring test
+// ("lot 1".includes/"lot 12".includes each other after normalization
+// strips filler words down to just "lot 1"/"lot 12", and "1" is a
+// substring of "12"), so a typo'd or non-existent stock name could
+// silently resolve to a real, different item and deduct from it.
+test("using stock by a lot number that does not exist never silently deducts from a similarly-numbered real lot", async () => {
+  const who = farmer();
+  assert.match(await who.say("Add 200 kg of maize seed lot 12 to stock"), /You now have 200 kg/);
+  const reply = await who.say("I used 5 kg of maize seed lot 1");
+  assert.doesNotMatch(reply ?? "", /lot 12/i, "a request for the non-existent 'lot 1' must never resolve to the real 'lot 12'");
+  const stillFull = await who.say("How much maize seed lot 12 do I have");
+  assert.match(stillFull, /200 kg/, "the real lot's quantity must be untouched by the request for a different, non-existent lot");
 });
 
 // ---------- animals ----------
