@@ -845,9 +845,18 @@ function completeDocumentPlan(text, catalog) {
       !catalog.applications.some(app => app.applicationId === "documents")) return null;
   const namedTitle = goal.match(/(?:called|titled|named)\s+["']?(.+?)(?=["']?(?:,|\s+then\b|\s+and\s+(?:save|open|reopen)\b|\.|$))/i)?.[1]?.trim();
   const format = requestedDocumentFormat(goal);
+  // Found live: this fast path (unlike the LLM planning path, and unlike
+  // nexusOpenAiNativeExtractExportArgs's own 4000-char sanitizePilotText cap)
+  // put the ENTIRE raw command straight into documents.create's content with
+  // no length limit at all -- a multi-megabyte command (well within the
+  // request body's own 20MB cap) reaches exportProvider's synchronous
+  // PDF/DOCX rendering with no row/length cap of its own, tying up the
+  // single Node event loop for the whole process. Matches the same 4000-char
+  // ceiling already used for free-text document content elsewhere.
+  const content = goal.length > 4000 ? goal.slice(0, 4000) : goal;
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "create-document", title: "Create, save, and verify document",
-      toolId: "documents.create", input: { title: namedTitle || "Nexus document", content: goal, reopenAfterSave: true, ...(format ? { format } : {}) },
+      toolId: "documents.create", input: { title: namedTitle || "Nexus document", content, reopenAfterSave: true, ...(format ? { format } : {}) },
       dependsOn: [], fallbackToolIds: [] }] };
 }
 

@@ -35,6 +35,31 @@ test("defaults title/content/format when not provided", async () => {
   });
 });
 
+// Found live: the deterministic fast-path matcher (completeDocumentPlan)
+// already caps its own content, but that fast path never produces
+// genuinely long content -- the general LLM planning fallback has no
+// output-token cap and no content-length validation before a documents.create
+// step reaches this executor, which then drives synchronous PDF/DOCX
+// rendering on the full string with no limit of its own. Capped here, the
+// one choke-point both planning paths funnel through.
+test("an unbounded document content string is capped before reaching the real export provider", async () => {
+  await withPatched(exportProvider, "exportDocument", async body => {
+    assert.ok(body.content.length <= 50000, `expected capped content, got ${body.content.length} chars`);
+    return { httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-cap", bytes: body.content.length } } };
+  }, async () => {
+    const execute = createDocumentsCreateExecutor({ env: {} });
+    await execute({ input: { title: "Long report", content: "x".repeat(2_000_000), format: "pdf" } });
+  });
+
+  await withPatched(exportProvider, "exportDocument", async body => {
+    assert.equal(body.content, "a normal short document", "a normal-length document must be carried through unchanged");
+    return { httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-normal", bytes: body.content.length } } };
+  }, async () => {
+    const execute = createDocumentsCreateExecutor({ env: {} });
+    await execute({ input: { title: "x", content: "a normal short document", format: "txt" } });
+  });
+});
+
 test("a failed export does not verify", async () => {
   await withPatched(exportProvider, "exportDocument", async () => ({
     httpStatus: 400, body: { ok: false, status: "failed", data: {} }

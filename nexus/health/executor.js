@@ -54,8 +54,11 @@ function createHealthRecordExecutor({ records }) {
       // the engine only reaches this executor once a human has explicitly
       // approved the step, so the subject defaults to the user themselves
       // (recording on behalf of someone else isn't a surfaced capability
-      // today).
-      subjectId: input.subjectId || context.userId,
+      // today). Found live (cross-user IDOR audit): this comment describes
+      // the intent, but "input.subjectId ||" let the CALLER override it --
+      // any signed-in user could forge a health observation attributed to
+      // an arbitrary other patient. The subject is always the caller.
+      subjectId: context.userId,
       workspaceId: WORKSPACE_ID,
       taskId,
       recordType: input.recordType || "health_observation",
