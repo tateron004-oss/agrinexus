@@ -28,12 +28,20 @@ test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDat
 });
 
 function sweepFixture({ candidates = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
-  const created = { tasks: [], nudgeRecords: [] };
+  const created = { tasks: [], nudgeRecords: [], removed: [] };
+  let seq = 0;
   const runtime = {
     records: {
       listBusinessWorkspacesWithDatedDeadlines: async () => candidates,
-      list: async ({ tenantId, subjectId }) => recentNudgesBySubject[`${tenantId}:${subjectId}`] || [],
-      create: async item => { created.nudgeRecords.push(item); return { record_id: "rec_1" }; }
+      claimCooldown: async ({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
+        const last = (recentNudgesBySubject[`${tenantId}:${subjectId}`] || [])[0];
+        if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;
+        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, workspaceId, recordType, classification, data, provenance };
+        created.nudgeRecords.push(record);
+        return record;
+      },
+      attachTask: async () => {},
+      remove: async ({ recordId }) => { created.removed.push(recordId); return true; }
     },
     tasks: { countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0 },
     engine: { create: engineCreate || (async input => { created.tasks.push(input); return { taskId: `tsk_${created.tasks.length}` }; }) }

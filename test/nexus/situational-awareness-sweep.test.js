@@ -36,13 +36,23 @@ test("countAutonomousCreatedSince counts only autonomous tasks via the real crea
   assert.deepEqual(db.calls[0].params, ["t1", since]);
 });
 
-function sweepFixture({ staleSubjects = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
-  const created = { tasks: [], nudgeRecords: [] };
+function sweepFixture({ staleSubjects = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null, claimCooldown = null } = {}) {
+  const created = { tasks: [], nudgeRecords: [], removed: [], attached: [] };
+  let seq = 0;
   const runtime = {
     records: {
       listStaleHealthSubjects: async () => staleSubjects,
-      list: async ({ tenantId, subjectId }) => recentNudgesBySubject[`${tenantId}:${subjectId}`] || [],
-      create: async item => { created.nudgeRecords.push(item); return { record_id: "rec_1" }; }
+      // Mirrors RecordRepository.claimCooldown()'s real contract: re-checks the cooldown and reserves it in one
+      // step, returning null (no side effect at all) when a recent-enough marker already exists.
+      claimCooldown: claimCooldown || (async ({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
+        const last = (recentNudgesBySubject[`${tenantId}:${subjectId}`] || [])[0];
+        if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;
+        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, workspaceId, recordType, classification, data, provenance };
+        created.nudgeRecords.push(record);
+        return record;
+      }),
+      attachTask: async ({ recordId, taskId }) => { created.attached.push({ recordId, taskId }); },
+      remove: async ({ recordId }) => { created.removed.push(recordId); return true; }
     },
     tasks: {
       countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0
@@ -148,18 +158,18 @@ test("situational-awareness.sweep tracks cap and cooldown independently per tena
 });
 
 test("situational-awareness.sweep skips a paused tenant entirely, without even checking cooldown or the cap", async () => {
-  const listCalls = [];
+  const claimCalls = [];
   const { runtime, created } = sweepFixture({
     staleSubjects: [{ tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" }],
     pausedTenants: { t1: true }
   });
-  runtime.records.list = async input => { listCalls.push(input); return []; };
+  runtime.records.claimCooldown = async input => { claimCalls.push(input); return null; };
   const handlers = createHandlers({ runtime });
   const result = await handlers["situational-awareness.sweep"]({ job: { payload: {} } });
   assert.equal(result.created, 0);
   assert.equal(result.skippedPaused, 1);
   assert.equal(created.tasks.length, 0);
-  assert.equal(listCalls.length, 0);
+  assert.equal(claimCalls.length, 0);
 });
 
 test("situational-awareness.sweep still creates for an unpaused tenant while another tenant stays paused", async () => {
@@ -177,7 +187,7 @@ test("situational-awareness.sweep still creates for an unpaused tenant while ano
   assert.equal(created.tasks[0].command.tenantId, "t2");
 });
 
-test("situational-awareness.sweep defers to the engine's own guard when a pause races the cached check", async () => {
+test("situational-awareness.sweep defers to the engine's own guard when a pause races the cached check, and gives the cooldown window back", async () => {
   const { runtime, created } = sweepFixture({
     staleSubjects: [
       { tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" },
@@ -195,15 +205,48 @@ test("situational-awareness.sweep defers to the engine's own guard when a pause 
   assert.equal(result.created, 0);
   assert.equal(result.skippedPaused, 2);
   assert.equal(created.tasks.length, 0);
+  // Found live: a reservation made before this failure must not silently block a future genuine nudge for the
+  // whole cooldown period over a task that was never actually created. Only the FIRST candidate ever reaches
+  // claimCooldown() here -- once its engine.create() throws autonomy_paused, the tenant is cached as paused and
+  // the second candidate is skipped before claiming anything at all.
+  assert.equal(created.removed.length, 1, "the one reserved cooldown window must be given back since no real task exists for it");
 });
 
-test("situational-awareness.sweep re-throws an unrelated engine.create failure instead of swallowing it as a pause", async () => {
-  const { runtime } = sweepFixture({
+test("situational-awareness.sweep re-throws an unrelated engine.create failure, but still gives the cooldown window back first", async () => {
+  const { runtime, created } = sweepFixture({
     staleSubjects: [{ tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" }],
     engineCreate: async () => { throw new Error("database unavailable"); }
   });
   const handlers = createHandlers({ runtime });
   await assert.rejects(() => handlers["situational-awareness.sweep"]({ job: { payload: {} } }), /database unavailable/);
+  assert.equal(created.removed.length, 1);
+});
+
+// Found live: two concurrent sweeps racing for the same subject both used to pass a plain list()-then-create()
+// check before either had written its marker, both creating a real duplicate autonomous task. claimCooldown()'s
+// job is to make that impossible by construction (the real repository does this with an advisory lock); this
+// proves the handler actually calls it BEFORE creating the task, not after, so a losing claim never reaches
+// engine.create() at all.
+test("situational-awareness.sweep never creates a task when the cooldown claim is refused, and never claims twice for one candidate", async () => {
+  const claimCalls = [];
+  let claimedOnce = false;
+  const { runtime, created } = sweepFixture({
+    staleSubjects: [{ tenant_id: "t1", subject_id: "sub1", last_health_record_at: "2026-08-01T00:00:00.000Z" }]
+  });
+  runtime.records.claimCooldown = async input => {
+    claimCalls.push(input);
+    if (claimedOnce) return null; // a second claim attempt for the same candidate must be refused
+    claimedOnce = true;
+    return { record_id: "rec_1" };
+  };
+  const handlers = createHandlers({ runtime });
+  const [first, second] = await Promise.all([
+    handlers["situational-awareness.sweep"]({ job: { payload: {} } }),
+    handlers["situational-awareness.sweep"]({ job: { payload: {} } })
+  ]);
+  assert.equal(claimCalls.length, 2, "both sweeps must attempt the claim");
+  assert.equal(first.created + second.created, 1, "exactly one of the two racing sweeps may create the real task");
+  assert.equal(created.tasks.length, 1, "only one real autonomous task may exist for this candidate, not two");
 });
 
 test("listUnacknowledgedNudges joins real delivery state and excludes already-escalated nudges, never guessing the freeform data shape", async () => {
@@ -227,7 +270,9 @@ function escalationFixture({ unacknowledgedNudges = [], autonomousCountsByTenant
   const runtime = {
     records: {
       listUnacknowledgedNudges: async () => unacknowledgedNudges,
-      update: updateImpl || (async item => { created.updates.push(item); return { ...item }; })
+      // Mirrors RecordRepository.update()'s real optimistic-concurrency contract: a successful update bumps the
+      // row's version by one, which the caller must use as the expectedVersion for its next write.
+      update: updateImpl || (async item => { created.updates.push(item); return { ...item, version: item.expectedVersion + 1 }; })
     },
     tasks: {
       countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0
@@ -254,12 +299,17 @@ test("situational-awareness.escalate-unacknowledged-nudges escalates a delivered
   assert.equal(taskInput.command.tenantId, "t1");
   assert.equal(taskInput.command.actorId, "sub1");
   assert.equal(taskInput.steps[0].toolId, "reminders.schedule");
-  assert.equal(created.updates.length, 1);
+  // Found live: the claim (marking escalatedAt) must happen BEFORE the task is created, as its own write --
+  // not bundled into one update alongside escalationTaskId after the fact, which left no way to back off before
+  // a duplicate real task existed.
+  assert.equal(created.updates.length, 2, "the claim and the taskId attachment are two separate writes");
   assert.equal(created.updates[0].recordId, "rec_1");
   assert.equal(created.updates[0].expectedVersion, 1);
   assert.equal(created.updates[0].data.reason, "health_checkin_stale");
   assert.ok(created.updates[0].data.escalatedAt);
-  assert.equal(created.updates[0].data.escalationTaskId, "tsk_1");
+  assert.equal(created.updates[0].data.escalationTaskId, undefined, "the claim write must not already assume a task exists");
+  assert.equal(created.updates[1].expectedVersion, 2, "the taskId attachment must use the claim's own bumped version");
+  assert.equal(created.updates[1].data.escalationTaskId, "tsk_1");
 });
 
 test("situational-awareness.escalate-unacknowledged-nudges enforces the per-tenant daily autonomous-task cap", async () => {
@@ -301,22 +351,65 @@ test("situational-awareness.escalate-unacknowledged-nudges defers to the engine'
   assert.equal(created.tasks.length, 0);
 });
 
-test("situational-awareness.escalate-unacknowledged-nudges still counts the escalation even when marking the nudge record loses a concurrent update race", async () => {
+// Found live: two concurrent escalation sweeps racing for the SAME already-existing nudge record used to both
+// read it, both create a duplicate real escalation task, and only THEN race on the version-checked update -- so
+// the optimistic-concurrency check only ever prevented a duplicate bookkeeping write, never the duplicate task.
+// Claiming (the escalatedAt update) BEFORE creating the task means the loser's own claim throws a version
+// conflict and it backs off before calling engine.create() at all.
+test("situational-awareness.escalate-unacknowledged-nudges refuses to escalate the same nudge twice when the claim loses a version race", async () => {
+  let claimed = false;
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
+    updateImpl: async item => {
+      created.updates.push(item);
+      if (item.data.escalatedAt && !("escalationTaskId" in item.data)) {
+        if (claimed) throw new Error("Record rec_1 was changed by another operation.");
+        claimed = true;
+      }
+      return { ...item, version: item.expectedVersion + 1 };
+    }
+  });
+  const handlers = createHandlers({ runtime });
+  await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
+  await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
+  assert.equal(created.tasks.length, 1, "only one escalation task may exist for this nudge, not two");
+});
+
+test("situational-awareness.escalate-unacknowledged-nudges still counts the escalation even when attaching the taskId loses a concurrent update race", async () => {
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
+    updateImpl: async item => {
+      created.updates.push(item);
+      if ("escalationTaskId" in item.data) throw new Error("Record rec_1 was changed by another operation.");
+      return { ...item, version: item.expectedVersion + 1 };
+    }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
+  assert.equal(result.escalated, 1, "the escalation task was genuinely created and must still count even if attaching its id lost a race");
+  assert.equal(created.tasks.length, 1);
+});
+
+test("situational-awareness.escalate-unacknowledged-nudges skips a nudge whose claim already lost a version race, without creating a task", async () => {
   const { runtime, created } = escalationFixture({
     unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
     updateImpl: async () => { throw new Error("Record rec_1 was changed by another operation."); }
   });
   const handlers = createHandlers({ runtime });
   const result = await handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } });
-  assert.equal(result.escalated, 1, "the escalation task was genuinely created and must still count even if the marker update lost a race");
-  assert.equal(created.tasks.length, 1);
+  assert.equal(result.escalated, 0, "a claim that loses its version race must not create a duplicate escalation task");
+  assert.equal(created.tasks.length, 0);
 });
 
-test("situational-awareness.escalate-unacknowledged-nudges re-throws an unrelated engine.create failure instead of swallowing it as a pause", async () => {
+test("situational-awareness.escalate-unacknowledged-nudges re-throws an unrelated engine.create failure, but reverts its claim first", async () => {
+  const updates = [];
   const { runtime } = escalationFixture({
-    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: {} }],
-    engineCreate: async () => { throw new Error("database unavailable"); }
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "sub1", version: 1, data: { reason: "x" } }],
+    engineCreate: async () => { throw new Error("database unavailable"); },
+    updateImpl: async item => { updates.push(item); return { ...item, version: item.expectedVersion + 1 }; }
   });
   const handlers = createHandlers({ runtime });
   await assert.rejects(() => handlers["situational-awareness.escalate-unacknowledged-nudges"]({ job: { payload: {} } }), /database unavailable/);
+  assert.equal(updates.length, 2, "the claim, then its revert");
+  assert.equal(updates[1].data.escalatedAt, undefined, "the revert must restore the nudge's original data, with no escalatedAt");
 });
