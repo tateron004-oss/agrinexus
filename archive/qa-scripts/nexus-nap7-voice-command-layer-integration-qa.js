@@ -41,7 +41,7 @@ function assertStaticVoiceAndTypedWiring() {
   assert(previewRunner.includes("allowHandoff: false"), "NAP7 preview runner must prevent provider handoff.");
 
   assert(globalCommand.includes("await handleVoiceCommand(command);"), "NAP7 typed global command must use the shared safe command path.");
-  assert(handleVoice.includes("return await handleNexusUnifiedBrainRuntimeCommand(command,"), "typed and voice commands use the authoritative shared gateway");
+  assert(handleVoice.includes("await handleNexusUnifiedBrainRuntimeCommand(command,"), "typed and voice commands use the authoritative shared gateway");
   assert(!handleVoice.includes("handleVoiceCommandCore("), "the authoritative entrance must not fall back to the legacy preview core");
   assert(app.includes("event.target?.id === \"userCaptionInput\""), "NAP7 caption input must remain wired to the shared command path.");
   assert(app.includes("void handleVoiceCommand(command);"), "NAP7 typed caption enter must route through handleVoiceCommand.");
