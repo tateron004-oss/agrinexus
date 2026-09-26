@@ -203,6 +203,42 @@ test("export and erase end-to-end: real owned records are exported and erased; s
   assert.equal(afterOwnSession.status, 401, "the erasing session must be logged out as part of erasure, not just the password");
 });
 
+// Found live: musicConnections (the Spotify integration) predates this
+// erasure scan and never followed the createdBy/requestedBy ownership
+// convention every other db.profile array uses -- it records ownership as
+// `userEmail` instead. Without recognizing that field, a "permanent"
+// account erasure left a live third-party OAuth refresh token behind
+// forever, under an internal userId with no UI or API path left to find or
+// revoke it (there is no separate Spotify-disconnect endpoint anywhere).
+// Injecting the record directly into the temp db.json (readDb() re-reads
+// fresh on every request in JSON-file mode, per this file's own convention
+// elsewhere) since populating it for real would require a live Spotify
+// OAuth round-trip.
+test("account erasure removes a Spotify music connection and its refresh token, not just createdBy/requestedBy-owned records", async () => {
+  const email = "erasure-spotify-subject@example.com";
+  const cookie = await createTestUser(email);
+  const beforeDb = readTempDb();
+  const userId = beforeDb.users.find(u => String(u.email || "").toLowerCase() === email).id;
+  beforeDb.profile.musicConnections = beforeDb.profile.musicConnections || [];
+  beforeDb.profile.musicConnections.push({
+    id: "spotify-conn-test", provider: "spotify", userId,
+    refreshToken: "LIVE-SPOTIFY-REFRESH-TOKEN", scope: "user-modify-playback-state",
+    tokenType: "Bearer", userEmail: email, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+  });
+  fs.writeFileSync(tempDbPath, JSON.stringify(beforeDb));
+
+  const exportResult = await post("/api/account/export", {}, cookie);
+  assert.equal(exportResult.status, 200, JSON.stringify(exportResult.body));
+  assert.equal(exportResult.body.recordCounts.musicConnections, 1, "the export must include the owned Spotify connection");
+
+  const erased = await post("/api/account/erase", { confirmed: true }, cookie);
+  assert.equal(erased.status, 200, JSON.stringify(erased.body));
+  assert.equal(erased.body.verification.profileRecordsRemoved.musicConnections, 1, "erasure must remove the Spotify connection, including its live refresh token");
+
+  const afterDb = readTempDb();
+  assert.ok(!afterDb.profile.musicConnections.some(item => item.id === "spotify-conn-test"), "the Spotify connection and its refresh token must be gone after erasure");
+});
+
 test("guest sessions get a clear refusal, not a silent no-op or a crash, from export/erase", async () => {
   const guestRes = await fetch(`${base}/api/auth/guest-session`, {
     method: "POST",
