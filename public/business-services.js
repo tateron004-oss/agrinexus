@@ -107,10 +107,15 @@
     // exactly how natural phrasing stores it, never matched the exact-
     // lowercase check and silently dropped that grant's amount).
     const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
-    const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
+    // Found live: mirrors the same fix in nexus/business/voice-dispatch.js's
+    // computeBusinessDashboard -- invoice/task status are plain free-text
+    // fields with no format hint, so "Paid"/"Done" (the natural way to type
+    // them) never matched the exact-lowercase check and stayed counted as
+    // unpaid/open forever.
+    const unpaidInvoices = editable.invoices.filter(invoice => String(invoice.status || "").toLowerCase() !== "paid").length;
     const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
     const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
-    const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
+    const openTasks = editable.tasks.filter(task => { const status = String(task.status || "").toLowerCase(); return status !== "done" && status !== "complete"; }).length;
     const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
     // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
     // listing metrics exactly -- found live: this real data (real listing

@@ -75,3 +75,24 @@ test("computeBusinessDashboard's grantsAwarded matches grant status case-insensi
   assert.equal(dashboard.grantsRequested, 85000);
   assert.equal(dashboard.grantsAwarded, 75000, "both differently-cased 'awarded' grants must count");
 });
+
+// Found live: same free-text-field, no-format-hint shape as grant status
+// above, missed for invoices -- unlike grants/listings status, no fix had
+// been applied here yet, and there is no voice/typed "mark paid" command at
+// all, so the free-text editor field is the ONLY way an invoice ever gets
+// marked paid.
+test("computeBusinessDashboard's unpaidInvoices matches invoice status case-insensitively", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    invoices: [{ invoiceNumber: "INV-1", status: "Paid" }, { invoiceNumber: "INV-2", status: "sent" }]
+  }));
+  assert.equal(dashboard.unpaidInvoices, 1, "the capitalized 'Paid' invoice must not still count as unpaid");
+});
+
+// Found live: same shape, missed for tasks -- a task marked "Done" through
+// the free-text status field stayed counted as open forever.
+test("computeBusinessDashboard's openTasks matches task status case-insensitively", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    tasks: [{ title: "Finish report", status: "Done" }, { title: "Call vendor", status: "todo" }]
+  }));
+  assert.equal(dashboard.openTasks, 1, "the capitalized 'Done' task must not still count as open");
+});

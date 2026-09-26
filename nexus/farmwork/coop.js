@@ -127,7 +127,18 @@ async function handle(ctx) {
     return items.length ? `Shared equipment: ${items.slice().reverse().map(item => item.data.name).join(", ")}.` : 'No shared equipment yet. Say "add shared equipment: tractor".';
   }
   if ((m = /^(?:please )?book (?:the )?(.+?)(?: for (.+?))? (?:on|for) (.+)$/i.exec(t))) {
-    const items = await ctx.store.list({ ...scope, collection: "coop_equipment" }); const item = items.find(entry => entry.data.name === clean(m[1]).toLowerCase() || entry.data.name.split(" ").includes(clean(m[1]).toLowerCase()));
+    const items = await ctx.store.list({ ...scope, collection: "coop_equipment" });
+    // Found live: the loose fallback picked whichever item happened to come
+    // first in storage order whenever a one-word name matched more than one
+    // real piece of equipment ("pump" matching both "water pump" and
+    // "sprayer pump") -- silently booking the wrong shared item with a
+    // fully-confirmed message, no disambiguation. findMember() a few lines
+    // above already gets this right (exact match, else exactly-one-loose-
+    // match, else refuse); applied the same discipline here.
+    const wanted = clean(m[1]).toLowerCase();
+    const exact = items.find(entry => entry.data.name === wanted);
+    const loose = items.filter(entry => entry.data.name.split(" ").includes(wanted));
+    const item = exact || (loose.length === 1 ? loose[0] : null);
     const day = anyDay(m[3], ctx.today);
     if (item && day) {
       if (day < ctx.today) return "That day has already passed. Give me a day that is still ahead.";

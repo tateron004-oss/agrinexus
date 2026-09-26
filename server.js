@@ -49984,7 +49984,13 @@ async function api(req, res, url) {
     }
     enrollment.progress = Math.min(100, enrollment.progress + 35);
     enrollment.score = Math.min(100, enrollment.score + 25);
-    db.profile.quizScore = Math.max(db.profile.quizScore, enrollment.score);
+    // Found live: this was the one call site (of 5) missing the `|| 0`
+    // fallback every sibling has -- a learner's very first quiz has
+    // db.profile.quizScore still undefined, so Math.max(undefined, 25) is
+    // NaN, and Math.max(NaN, anything) is always NaN -- permanently
+    // poisoning quizScore for every quiz attempt from then on, with no way
+    // to recover.
+    db.profile.quizScore = Math.max(db.profile.quizScore || 0, enrollment.score);
     db.profile.learningHours = Number((db.profile.learningHours + 0.75).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + 6);
     recalcReadiness(db.profile);
