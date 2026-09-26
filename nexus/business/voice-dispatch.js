@@ -224,6 +224,25 @@ function describeFinances(totals, { label, focus, workspaceName }) {
   return `${label === "so far" ? "So far" : label.charAt(0).toUpperCase() + label.slice(1)}, in "${workspaceName}": ${parts.join("; ")}.`;
 }
 
+// Found live: invoice numbers were derived from "invoices.length + 1001" at
+// creation time, not a persistent monotonic counter. Since deleting an
+// invoice (the only mechanism is the generic row-remove UI, a plain splice
+// with no cross-array cleanup) shrinks invoices.length without renumbering
+// or removing that invoice's now-orphaned invoiceItems rows, the very next
+// invoice created could be assigned a number that's ALREADY in use by a
+// still-existing invoice -- exportInvoice's lookup joins invoices and
+// invoiceItems purely by this string, so the new invoice's header gets
+// printed with a mix of its own AND the other client's line items on one
+// PDF. Scanning every invoiceNumber ever seen (in both arrays, so an
+// orphaned line item still "reserves" its number) and picking one past the
+// highest ever used can never collide, even across deletions.
+function nextInvoiceNumber(editable) {
+  const used = [...(editable.invoices || []), ...(editable.invoiceItems || [])]
+    .map(item => Number(String(item.invoiceNumber || "").replace(/^INV-/i, "")))
+    .filter(Number.isFinite);
+  return `INV-${(used.length ? Math.max(...used) : 1000) + 1}`;
+}
+
 function extractInvoiceArgs(command = "", args = {}) {
   const text = String(command || "");
   const clientMatch = text.match(/\bfor\s+["']?([^"'.,\n]{2,80})["']?/i);
@@ -814,7 +833,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before creating an invoice.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
-    const invoiceNumber = `INV-${resolved.client.data.editable.invoices.length + 1001}`;
+    const invoiceNumber = nextInvoiceNumber(resolved.client.data.editable);
     const clientPhrase = invoiceArgs.clientName ? ` for ${invoiceArgs.clientName}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can create invoice ${invoiceNumber}${clientPhrase} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, invoices: [...resolved.client.data.editable.invoices,
@@ -1057,5 +1076,5 @@ module.exports = Object.freeze({
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
   extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard,
-  extractListingArgs, resolveListingIndex
+  extractListingArgs, resolveListingIndex, nextInvoiceNumber
 });
