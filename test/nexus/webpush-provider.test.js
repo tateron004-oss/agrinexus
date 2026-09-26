@@ -11,6 +11,18 @@ test("returns null (no provider registered) when VAPID keys aren't configured --
   assert.equal(createWebPushProvider({ env: { VAPID_PUBLIC_KEY: "pub" }, devices: {}, deviceTokens: {} }), null);
 });
 
+// Found live: with valid VAPID keys but no device-token vault (NEXUS_DEVICE_TOKEN_KEY missing -- runtime.deviceTokens
+// is then null), this used to THROW instead of returning null. nexus/workers/process.js's main() calls
+// createWebPushProvider() with no try/catch, so that throw took down the ENTIRE worker process (every scheduled
+// sweep, not just push) via main()'s top-level .catch()+process.exit(1) -- a single missing/rotated env var
+// crash-looping all background automation for every tenant. Must degrade the same way a missing VAPID key already
+// does: push disabled, everything else keeps working.
+test("returns null, does not throw, when VAPID keys are configured but the device vault is not", () => {
+  assert.equal(createWebPushProvider({ env, devices: {}, deviceTokens: null }), null);
+  assert.equal(createWebPushProvider({ env, devices: null, deviceTokens: {} }), null);
+  assert.equal(createWebPushProvider({ env, devices: {}, deviceTokens: {} }), null, "deviceTokens with no decrypt method is not a usable vault either");
+});
+
 function fixture() {
   const tokens = new DeviceTokenVault("test-secret");
   const notification = {
