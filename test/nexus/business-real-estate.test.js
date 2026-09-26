@@ -77,6 +77,25 @@ test("resolveListingIndex picks the most specific (longest) matching address, no
   assert.equal(voiceDispatch.resolveListingIndex(reversed, "mark 500 Elm St Apt 2 as sold"), 0);
 });
 
+// Found live: nothing stops two listings from sharing the exact same address
+// (e.g. re-listed for a new buyer after an earlier deal fell through, without
+// editing the old row), and Array.sort is stable -- a tie in address length
+// always resolved to whichever identical-address listing was added FIRST,
+// silently updating a stale, already-sold record instead of the real active one.
+test("resolveListingIndex prefers the active listing when two listings share the exact same address", () => {
+  const staleFirst = [
+    { address: "123 Main St", status: "sold" },
+    { address: "123 Main St", status: "active" }
+  ];
+  assert.equal(voiceDispatch.resolveListingIndex(staleFirst, "mark 123 Main St as pending"), 1, "must resolve to the active listing, not the stale sold one added first");
+  // Order-independence: the active one still wins even when it comes first.
+  const activeFirst = [staleFirst[1], staleFirst[0]];
+  assert.equal(voiceDispatch.resolveListingIndex(activeFirst, "mark 123 Main St as pending"), 0);
+  // Genuinely ambiguous (two identical-address, identically-active listings) refuses rather than guessing.
+  const bothActive = [{ address: "123 Main St", status: "active" }, { address: "123 Main St", status: "active" }];
+  assert.equal(voiceDispatch.resolveListingIndex(bothActive, "mark 123 Main St as sold"), -1);
+});
+
 // Found live: a listing's status filters compared exact-case against
 // "active"/"pending"/"sold" -- a naturally-capitalized "Active" status
 // silently vanished from the dashboard's counts and total value.
@@ -225,4 +244,28 @@ test("service.js's real workspace-write validation (normalizeEditable) accepts a
 test("normalizeEditable still rejects a malformed listings entry, same discipline as every other row type", () => {
   const info = templates.inferBusiness({ businessName: "Sunrise Realty" });
   assert.throws(() => businessService.normalizeEditable(info, { listings: [{ address: "123 Main Street", price: "not-a-number" }] }));
+});
+
+// Found live: nothing checked a new appointment's time against existing ones
+// -- two showings for the same property could be booked for the identical
+// slot with zero warning, a real double-booking risk for an agent juggling
+// multiple buyers.
+test("booking a second appointment for the same time surfaces a double-booking note, and a genuinely different time does not", async () => {
+  const client = { record_id: "rec_1", version: 1, data: { info: { businessName: "Sunrise Realty" }, editable: { appointments: [], leads: [] } } };
+  const businessRequest = async ({ method, body }) => {
+    if (method === "GET") return { body: { clients: [client] } };
+    client.data = { ...client.data, editable: body.editable };
+    return { body: { ...client, data: client.data } };
+  };
+  const first = await run({ command: "Schedule an appointment for a showing at 123 Main St on Friday 2pm", confirmed: true, businessRequest });
+  assert.equal(first.status, "completed");
+  assert.doesNotMatch(first.response, /double-booking/, "the very first appointment at a time has nothing to conflict with");
+
+  const second = await run({ command: "Book an appointment for a showing at 123 Main St on Friday 2pm", confirmed: true, businessRequest });
+  assert.equal(second.status, "completed");
+  assert.match(second.response, /already scheduled for the same time.*double-booking/);
+  assert.equal(client.data.editable.appointments.length, 2, "the second appointment must still be added -- this is a warning, not a refusal");
+
+  const third = await run({ command: "Schedule an appointment for a showing at 456 Oak Ave on Friday 4pm", confirmed: true, businessRequest });
+  assert.doesNotMatch(third.response, /double-booking/, "a genuinely different time must not be flagged");
 });
