@@ -52080,11 +52080,19 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow wallet workflows" });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
+    const requestedAmount = Number(body.amount || 0);
+    // Found live (money-logic audit): Number("Infinity") is the finite-looking
+    // value Infinity, which is >= 0 (so it was accepted as a "credit") and is
+    // never < 0 no matter what it's added to, so the balance-floor check below
+    // silently let it through and permanently corrupted the stored wallet
+    // balance to Infinity (and it self-perpetuates, since Number(Infinity||0)
+    // stays Infinity on every later read, unlike NaN which resets to 0).
+    if (!Number.isFinite(requestedAmount)) return send(res, 400, { error: "Wallet amount must be a finite number." });
     const tx = {
       id: crypto.randomUUID(),
       provider: body.provider || "Wallet",
-      amount: Number(body.amount || 0),
-      type: Number(body.amount || 0) >= 0 ? "credit" : "debit",
+      amount: requestedAmount,
+      type: requestedAmount >= 0 ? "credit" : "debit",
       status: "posted",
       createdAt: new Date().toISOString()
     };
@@ -52226,6 +52234,14 @@ async function api(req, res, url) {
     const type = body.type || "quote";
     const actions = {
       quote: () => {
+        // Found live (money-logic audit): Number("Infinity") is a truthy,
+        // finite-looking value that survives `body.price || ...` untouched,
+        // letting a quote (and, once released, a wallet credit) be created
+        // for an infinite amount.
+        const requestedPrice = Number(body.price);
+        if (body.price !== undefined && !Number.isFinite(requestedPrice)) {
+          throw Object.assign(new Error("Quote price must be a finite number."), { httpStatus: 400 });
+        }
         const record = {
           id: crypto.randomUUID(),
           quoteNumber: `AN-QTE-${String(db.profile.tradeQuotes.length + 1).padStart(3, "0")}`,
@@ -52305,6 +52321,13 @@ async function api(req, res, url) {
         // transition once a record leaves its initial state).
         if (latestQuote && latestQuote.status === "released") {
           throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
+        }
+        // Found live (money-logic audit): same Infinity-bypass shape as
+        // quote() above -- an explicit non-finite amount would be credited
+        // to the wallet as-is, permanently corrupting the stored balance.
+        const requestedAmount = Number(body.amount);
+        if (body.amount !== undefined && !Number.isFinite(requestedAmount)) {
+          throw Object.assign(new Error("Release amount must be a finite number."), { httpStatus: 400 });
         }
         const record = {
           id: crypto.randomUUID(),
