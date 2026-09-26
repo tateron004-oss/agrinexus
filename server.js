@@ -43120,7 +43120,19 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     if (transaction.status === "settled") return { ok: false, error: "transaction_already_settled", operations: nexusOperationsSummary(db, user) };
     if (transaction.status === "cancelled") return { ok: false, error: "transaction_cancelled", operations: nexusOperationsSummary(db, user) };
     const before = { ...transaction, items: [...(transaction.items || [])] };
-    const item = { itemId: nexusOperationId("NX-ITEM"), name: cleanOpsText(body.name || body.item || "Transaction item", 120), quantity: cleanOpsText(body.quantity || "1", 80), amount: cleanOpsText(body.amount || "0", 80), createdAt: now };
+    // Found live: a negative amount here passed straight through as text
+    // (amount is a display string, only later parsed by settle_transaction's
+    // Number(item.amount) || 0) and, unlike a non-numeric value (which
+    // already correctly falls back to 0 at settlement), silently drove the
+    // transaction's real, persisted, displayed settledAmount negative --
+    // "Settled the transaction with a simulated payment of -4800 USD" makes
+    // no sense for a sale/purchase line item. Non-numeric text is left
+    // exactly as before (settle_transaction's own fallback already treats
+    // it as a $0 contribution honestly); only a genuinely negative number
+    // is rejected.
+    const rawAmount = Number(body.amount);
+    const amountText = Number.isFinite(rawAmount) && rawAmount < 0 ? "0" : (body.amount || "0");
+    const item = { itemId: nexusOperationId("NX-ITEM"), name: cleanOpsText(body.name || body.item || "Transaction item", 120), quantity: cleanOpsText(body.quantity || "1", 80), amount: cleanOpsText(amountText, 80), createdAt: now };
     transaction.items = [item, ...(transaction.items || [])];
     transaction.status = "prepared";
     transaction.updatedAt = now;
