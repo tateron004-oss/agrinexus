@@ -23,17 +23,30 @@ function normalizeEditable(info, input = {}) {
   const object = value => value && typeof value === "object" && !Array.isArray(value);
   if (!object(input) || JSON.stringify(input).length > 150000) invalid();
   const starter = templates.defaultClientWorkspace(info);
-  function strings(value, defaults) {
+  // Found live: this only ever checked type and finiteness on a numeric
+  // field, never sign -- a negative quantity/unitPrice/amount/price passed
+  // straight through, reachable via the direct PUT .../clients/:id API even
+  // though voice-dispatch.js's extractInvoiceItemArgs() already rejects a
+  // negative unitPrice for the conversational path. Two negatives (e.g.
+  // quantity: -100, unitPrice: -50) multiply back into a fabricated
+  // POSITIVE invoice total with no relationship to any real transaction,
+  // and a single negative produces a negative "Total due" on a real
+  // client-facing PDF (exportInvoice() renders these rows directly).
+  // nonNegativeKeys names which of this row shape's numeric fields must be
+  // >= 0; every other field (including intentionally-signed ones, if any
+  // are ever added) is unaffected.
+  function strings(value, defaults, nonNegativeKeys = null) {
     if (!object(value)) invalid();
     return Object.fromEntries(Object.keys(defaults).map(key => {
       const item = value[key] === undefined ? defaults[key] : value[key];
       if (typeof item !== typeof defaults[key] || (typeof item === "string" && item.length > 8000) || (typeof item === "number" && !Number.isFinite(item))) invalid();
+      if (typeof item === "number" && nonNegativeKeys?.has(key) && item < 0) invalid();
       return [key, item];
     }));
   }
-  function rows(value, shape, limit = 200) {
+  function rows(value, shape, limit = 200, nonNegativeKeys = null) {
     if (!Array.isArray(value) || value.length > limit) invalid();
-    return value.map(row => strings(row, shape));
+    return value.map(row => strings(row, shape, nonNegativeKeys));
   }
   const studioInput = input.assistantStudio === undefined ? {} : input.assistantStudio;
   if (!object(studioInput)) invalid();
@@ -62,7 +75,7 @@ function normalizeEditable(info, input = {}) {
     // tracking. "amount" is the first numeric field in this workspace --
     // the Number.isFinite guard above exists specifically so a stray
     // NaN/Infinity here can never silently corrupt a summed total.
-    transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, currency: "USD", description: "" }),
+    transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, currency: "USD", description: "" }, 200, new Set(["amount"])),
     // Tool 3: invoices/receipts. An invoice header (client, dates, status)
     // is stored separately from its line items, joined by "invoiceNumber" --
     // the same flat-row validation this workspace already uses for every
@@ -70,12 +83,12 @@ function normalizeEditable(info, input = {}) {
     // real one-to-many relationship has to be modeled as two flat lists
     // rather than one row holding an embedded line-items array.
     invoices: rows(input.invoices === undefined ? starter.invoices : input.invoices, { invoiceNumber: "", clientName: "", date: "", dueDate: "", notes: "", status: "draft" }),
-    invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }),
+    invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }, 200, new Set(["quantity", "unitPrice"])),
     // Tool 4: grant and funding tracking. The existing "Grant Writing Agent"
     // (strategy.js) only ever produced a one-shot text template -- nothing
     // persisted an actual funding opportunity, its deadline, or its
     // application status across visits.
-    grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }),
+    grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }, 200, new Set(["amount"])),
     // Tool 5 of the small-business/nonprofit suite: appointment scheduling.
     // A real Google Calendar integration already exists (server/providers/
     // calendarProvider.js, createEvent()) but was only reachable through
@@ -90,7 +103,7 @@ function normalizeEditable(info, input = {}) {
     // people (see extractLeadArgs' typeMatch in voice-dispatch.js), so a
     // listing only needs to add the one thing leads/tasks/appointments don't
     // already cover: a property record with an address, price, and status.
-    listings: rows(input.listings === undefined ? starter.listings : input.listings, { address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }),
+    listings: rows(input.listings === undefined ? starter.listings : input.listings, { address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }, 200, new Set(["price", "beds", "baths"])),
     assistantScripts: strings(input.assistantScripts === undefined ? starter.assistantScripts : input.assistantScripts, starter.assistantScripts),
     landingPage: strings(input.landingPage === undefined ? starter.landingPage : input.landingPage, starter.landingPage),
     // Tool 1: a real, editable, versioned business plan document -- distinct

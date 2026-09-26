@@ -37,6 +37,26 @@ test("a genuine positive unit price still works exactly as before", () => {
   assert.equal(result.unitPrice, 50);
 });
 
+// Found live: extractTransactionArgs' amount had no sign check at all -- a
+// negative amount (reachable via direct tool-call arguments) would silently
+// flip the meaning of "type", since the dashboard summary always adds
+// amount into the matching income/expense bucket, never subtracts.
+test("a negative transaction amount is rejected, not silently accepted", () => {
+  const result = voiceDispatch.extractTransactionArgs("record an expense", { amount: -40, type: "expense" });
+  assert.equal(result.amount, null);
+});
+
+test("a genuine positive transaction amount still works exactly as before", () => {
+  const result = voiceDispatch.extractTransactionArgs("record an expense", { amount: 40, type: "expense" });
+  assert.equal(result.amount, 40);
+});
+
+// Found live: extractGrantArgs' amount had no sign check at all.
+test("a negative grant amount is rejected, not silently accepted", () => {
+  const result = voiceDispatch.extractGrantArgs("add a grant from USDA", { amount: -50000 });
+  assert.equal(result.amount, 0);
+});
+
 function dashboardCatalog(overrides = {}) {
   return {
     leads: [], transactions: [], invoices: [], invoiceItems: [], grants: [], tasks: [], appointments: [], listings: [],
