@@ -57,10 +57,24 @@ class CheckinStateRepository {
       values ($1,$2,$3,'domain','checkin',$4,$5,$6::vector,'none',$7,0.6,0.9,'user_confirmed','sensitive')`,
     [createId("memory"), tenantId, userId, { kind: "checkin", ...content }, `checkin: ${content.day}`, PLACEHOLDER_VECTOR, { source: "companion", capturedAt: new Date().toISOString() }]);
   }
-  async update({ tenantId, memoryId, content }) {
+  // Pass `expectedStatus` for a compare-and-swap update -- the write only
+  // takes effect if the row's current status still matches. Found live: the
+  // worker sweep's follow-up loop read a check-in row once at the top of
+  // its iteration, then (several awaits and real push sends later) wrote
+  // back a spread of that SAME STALE snapshot -- if the person answered in
+  // between (via answer(), a separate fresh read-then-write), the worker's
+  // final write silently clobbered their real "ok"/"low" answer back to
+  // "alerted"/"missed", after already having sent a now-false "check-in
+  // missed" alert to their circle. The CAS lets the caller detect that race
+  // and skip the write (and, if checked before sending, the push) instead.
+  async update({ tenantId, memoryId, content, expectedStatus }) {
     const { memoryId: _ignored, ...rest } = content;
-    const result = await this.db.query(`update nexus_memory_items set content=$3,updated_at=now()
-      where tenant_id=$1 and memory_id=$2 and purpose='checkin' and deleted_at is null returning memory_id`, [tenantId, memoryId, { kind: "checkin", ...rest }]);
+    const params = [tenantId, memoryId, { kind: "checkin", ...rest }];
+    let sql = `update nexus_memory_items set content=$3,updated_at=now()
+      where tenant_id=$1 and memory_id=$2 and purpose='checkin' and deleted_at is null`;
+    if (expectedStatus !== undefined) { sql += ` and coalesce(content->>'status','') = $4`; params.push(expectedStatus); }
+    sql += ` returning memory_id`;
+    const result = await this.db.query(sql, params);
     return Boolean((result.rows || result)[0]);
   }
   // Every check-in still waiting for an answer, across communities, for the worker's sweep.
