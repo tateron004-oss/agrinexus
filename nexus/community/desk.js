@@ -65,7 +65,16 @@ async function communityTurn({ text, store, notifications, tenantId, userId, nam
         return `Thank you. I've logged report #${number}: "${request.text.slice(0, 120)}". The community team can see it, along with your name. I'll tell you when it's updated, or ask "what is the status of my reports?".`;
       }
       case "my-reports": {
-        const mine = (await store.listReports({ tenantId, userId })).filter(row => row.content.status !== "closed" || row.content.day >= dateWords(new Date(now.getTime() - 30 * 86400000).toISOString()));
+        // Found live: this compared against content.day, the report's
+        // CREATION day, never refreshed when it's later closed -- so a
+        // report open for more than 30 days vanished from "my reports"
+        // the instant staff closed it, right when the reporter was just
+        // pushed "your report was updated" and told to check this exact
+        // list. Falls back to content.day for a record closed before this
+        // fix (no updatedDay recorded yet), preserving its existing
+        // visibility rather than changing it retroactively.
+        const since = dateWords(new Date(now.getTime() - 30 * 86400000).toISOString());
+        const mine = (await store.listReports({ tenantId, userId })).filter(row => row.content.status !== "closed" || (row.content.updatedDay || row.content.day) >= since);
         if (!mine.length) return 'You have no reports. Say "report: the borehole in ward 3 is broken" to send one.';
         return `Your reports: ${mine.slice(0, 8).map(row => `#${row.content.number} ${STATUS_WORDS[row.content.status] || row.content.status} — ${row.content.text.slice(0, 60)}${row.content.note ? ` (${row.content.note})` : ""}`).join("; ")}.`;
       }
@@ -85,7 +94,7 @@ async function communityTurn({ text, store, notifications, tenantId, userId, nam
         }
         const found = await store.getReport({ tenantId, number: request.number });
         if (!found) return `I can't find report #${request.number}.`;
-        await store.updateReport({ tenantId, memoryId: found.memoryId, content: { ...found.content, status: request.status, note: request.note || found.content.note || "", updatedAt: now.toISOString(), updatedBy: clean(userName).slice(0, 60) } });
+        await store.updateReport({ tenantId, memoryId: found.memoryId, content: { ...found.content, status: request.status, note: request.note || found.content.note || "", updatedAt: now.toISOString(), updatedDay: today, updatedBy: clean(userName).slice(0, 60) } });
         if (found.userId && found.userId !== userId) await push(found.userId, "Your report was updated", `Report #${request.number} is now ${STATUS_WORDS[request.status]}${request.note ? `: ${request.note}` : "."}`, `report:${request.number}:${tenantId}:${request.status}:${now.getTime() - (now.getTime() % 60000)}`);
         return `Done. Report #${request.number} is now ${STATUS_WORDS[request.status]}${found.userId !== userId ? ", and the person who reported it has been told" : ""}.`;
       }
