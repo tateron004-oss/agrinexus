@@ -173,7 +173,13 @@ function extractTransactionArgs(command = "", args = {}) {
   const spentOn = text.match(/\b(?:on|for|kwa)\s+(?![\d$€₦]|shilingi\b)([^\n,.]{2,60})/i);
   const category = (soldItem ? soldItem[1] : spentOn ? spentOn[1] : "").replace(/\s+(?:today|yesterday|this (?:week|month|year))\s*$/i, "").trim();
   return {
-    amount: Number.isFinite(rawAmount) ? rawAmount : null,
+    // Found live: a negative amount (reachable via direct tool-call
+    // arguments) silently flipped the meaning of "type" -- an "expense"
+    // logged with a negative amount reduced the expenses total instead of
+    // increasing it, and vice versa for "income" (the summary always adds
+    // amount into the matching bucket, never subtracts). Sign is carried
+    // entirely by "type"; amount itself is always a non-negative magnitude.
+    amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : null,
     currency,
     type: sanitizeText(args.type || type, 20),
     category: sanitizeText(args.category || category, 160),
@@ -271,7 +277,10 @@ function extractGrantArgs(command = "", args = {}) {
   return {
     funderName: sanitizeText(args.funderName || (funderMatch ? funderMatch[1].trim() : ""), 160),
     program: sanitizeText(args.program || (programMatch ? programMatch[1].trim() : ""), 160),
-    amount: Number.isFinite(rawAmount) ? rawAmount : 0,
+    // Found live: a negative amount (reachable via direct tool-call
+    // arguments) passed straight through with no sign check, the same gap
+    // already fixed for invoice-item unitPrice/quantity.
+    amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : 0,
     deadline: sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40)
   };
 }
@@ -371,7 +380,10 @@ function extractListingArgs(command = "", args = {}) {
   const statusMatch = text.match(new RegExp(`\\bstatus\\s+(?:to|as)\\s+["']?${LISTING_STATUS_WORDS}["']?`, "i")) || text.match(new RegExp(`\\b${LISTING_STATUS_WORDS}\\b`, "i"));
   return {
     address: sanitizeText(args.address || (addressMatch ? addressMatch[1].trim() : ""), 200),
-    price: args.price !== undefined ? Number(args.price) : (Number.isFinite(price) ? price : 0),
+    // Found live: the args.price branch (a direct tool-call argument, not
+    // the text-parsed branch) had no finite/sign check at all, the same gap
+    // already fixed for invoice-item unitPrice/quantity and grant amount.
+    price: args.price !== undefined ? (Number.isFinite(Number(args.price)) && Number(args.price) >= 0 ? Number(args.price) : 0) : (Number.isFinite(price) ? price : 0),
     propertyType: sanitizeText(args.propertyType || (typeMatch ? typeMatch[1].toLowerCase() : ""), 40),
     beds: args.beds !== undefined ? Number(args.beds) : (bedsMatch ? Number(bedsMatch[1]) : 0),
     baths: args.baths !== undefined ? Number(args.baths) : (bathsMatch ? Number(bathsMatch[1]) : 0),
