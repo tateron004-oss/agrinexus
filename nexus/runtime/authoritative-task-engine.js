@@ -173,6 +173,15 @@ class AuthoritativeTaskEngine {
         correlationId: taskWithSteps.correlationId, taskId, eventType: "provider.failed", outcome: "failed",
         metadata: error });
         if (this.observability) {
+          // Found live: recordCost() was only ever called on the SUCCESS path. The real, billable provider call
+          // already happened above (result = await withTimeout(...executor...)) before outcome verification --
+          // an outcome_unverified failure, a late timeout, or any other post-call exception meant a real charge
+          // could have been incurred but was never written to the cost ledger, understating actual spend against
+          // both the per-tool ceiling and the tenant's daily budget. Falls back to the pre-execution estimate,
+          // the same way the success path falls back to it when an executor doesn't report its own actual cost.
+          await observeSafely(() => this.observability.recordCost({ tenantId: context.tenantId, taskId,
+            toolId: tool.tool_id, provider: providerId, estimatedCostCents: cause?.costCents ?? estimatedCostCents,
+            metadata: { executionId: started.execution.execution_id, outcome: "failed" } }));
           await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
             providerId, successful: false, latencyMs: Date.now() - observedAt, errorCode: error.code }));
           if (span) await observeSafely(() => this.observability.finishSpan(span, { state: "error", error }));
