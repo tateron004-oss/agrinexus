@@ -56,6 +56,13 @@ test("extractListingArgs recognizes a price spelled out with the word 'dollars',
 // Found live: only the text-parsed status branch normalized to lowercase --
 // a structured args.status (e.g. "Active") was stored verbatim, and the
 // dashboard's exact-case status filters then silently dropped that listing.
+// Found live: the args.price branch (a direct tool-call argument) had no
+// finite/sign check at all, unlike the text-parsed branch.
+test("extractListingArgs rejects a negative args.price, the direct tool-call branch", () => {
+  assert.equal(voiceDispatch.extractListingArgs("list a property", { address: "500 Elm St", price: -450000 }).price, 0);
+  assert.equal(voiceDispatch.extractListingArgs("list a property", { address: "500 Elm St", price: 450000 }).price, 450000);
+});
+
 test("extractListingArgs normalizes args.status to lowercase, not just the text-parsed branch", () => {
   assert.equal(voiceDispatch.extractListingArgs("mark listing status", { address: "500 Elm St", status: "Active" }).status, "active");
 });
@@ -332,4 +339,15 @@ test("booking a second appointment for the same time surfaces a double-booking n
 
   const third = await run({ command: "Schedule an appointment for a showing at 456 Oak Ave on Friday 4pm", confirmed: true, businessRequest });
   assert.doesNotMatch(third.response, /double-booking/, "a genuinely different time must not be flagged");
+});
+
+// Found live: price/beds/baths passed type/finiteness checks with no sign
+// check, reachable via the direct PUT .../clients/:id API -- a negative
+// price silently produced a fabricated "active listings worth $X" figure on
+// the business dashboard.
+test("normalizeEditable rejects a negative listing price, beds, or baths", () => {
+  const info = templates.inferBusiness({ businessName: "Sunrise Realty" });
+  assert.throws(() => businessService.normalizeEditable(info, { listings: [{ address: "123 Main Street", price: -450000 }] }), error => error.code === "business_workspace_invalid");
+  assert.throws(() => businessService.normalizeEditable(info, { listings: [{ address: "123 Main Street", beds: -1 }] }), error => error.code === "business_workspace_invalid");
+  assert.throws(() => businessService.normalizeEditable(info, { listings: [{ address: "123 Main Street", baths: -1 }] }), error => error.code === "business_workspace_invalid");
 });
