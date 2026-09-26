@@ -66,6 +66,18 @@ test("adding, changing, listing and removing a medicine, with the honest limits 
   assert.match(await s.say("Add medication onemore at 8am"), /most medicines I can keep reminders for/);
 });
 
+// Found live: the substring match let a spoken name for one real medicine
+// silently resolve to a different, distinct one whenever one name was a
+// plain substring of the other -- "vitamin d" is a substring of the real,
+// different "vitamin d3".
+test("a spoken medicine name never silently matches a different, distinct medicine it happens to be a substring of", async () => {
+  const s = setup();
+  await s.say("Add medication vitamin d3 at 8am");
+  assert.equal(await s.say("I took my vitamin d"), null, "'vitamin d' must not silently resolve to the different, real 'vitamin d3'");
+  assert.equal(await s.say("Stop reminding me about vitamin d"), null, "same for removal");
+  assert.match(await s.say("What medications do I take?"), /vitamin d3/, "the real medicine must be untouched");
+});
+
 test("Kyro reminds at each dose time once, and never for a phone that cannot be reached", async () => {
   const s = setup();
   await s.say("Add medication metformin 500mg at 8am and 8pm");
