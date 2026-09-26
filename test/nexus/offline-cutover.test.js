@@ -2,7 +2,7 @@
 const test=require("node:test");const assert=require("node:assert/strict");
 const {SyncRepository}=require("../../nexus/sync/repository.js");
 const {WorkspaceCutoverPolicy}=require("../../nexus/apps/cutover-policy.js");
-const {createSyncApi}=require("../../nexus/compat/sync-api.js");
+const {createSyncApi,applyRecord}=require("../../nexus/compat/sync-api.js");
 const {registerLegacyTools}=require("../../nexus/compat/legacy-provider-adapter.js");
 function db(results=[]){const calls=[];const value={calls,async query(sql,params){calls.push({sql,params});return results.shift()||{rows:[]};},async transaction(work){return work(value);}};return value;}
 const context={tenantId:"tenant-1",userId:"user-1",can:p=>["sync:write","sync:read"].includes(p),hasRole:()=>false};
@@ -13,6 +13,46 @@ test("offline sync is idempotent and records version conflicts without overwriti
 // baseVersion was omitted), so a stale/buggy client could silently overwrite
 // a server record that had changed since it was last seen.
 test("a missing baseVersion against an existing record is treated as a conflict, not silently applied",async()=>{const store=db([{rows:[]},{rows:[{record_id:"rec-1",version:3}]},{rows:[{sync_id:"syn-2",state:"conflict"}]}]);const repo=new SyncRepository(store);let applied=false;const result=await repo.apply({tenantId:"tenant-1",userId:"user-1",deviceId:"device-1",operationId:"op-2",entityType:"record",entityId:"rec-1",action:"update",payload:{}},async({trx,phase})=>{if(phase==="apply")applied=true;return phase==="inspect"?(await trx.query("record",[])).rows[0]:null;});assert.equal(result.state,"conflict");assert.equal(applied,false);});
+// Found live (cross-user IDOR audit): applyRecord's inspect/update/delete
+// queries were scoped only by tenant_id + record_id, never by owner -- a
+// tenant member who knew or guessed another member's record_id could
+// sync-delete or sync-update it via /api/nexus/runtime/sync/push with no
+// relationship to that record at all. (This route is currently unreachable
+// in production -- sync:write/sync:read are not granted to any role today
+// -- so hardening it now is defense-in-depth for whenever that's enabled,
+// not a currently-live exploit.)
+function fakeRecordsTrx(row) {
+  return { async query(sql, params) {
+    if (/select .* from nexus_records/i.test(sql)) {
+      const [tenantId, entityId, ownerId] = params;
+      return row && row.tenant_id === tenantId && row.record_id === entityId && row.owner_id === ownerId ? { rows: [row] } : { rows: [] };
+    }
+    if (/update nexus_records set state='deleted'/i.test(sql)) {
+      const [tenantId, entityId, ownerId] = params;
+      if (row && row.tenant_id === tenantId && row.record_id === entityId && row.owner_id === ownerId) { row.state = "deleted"; row.version += 1; return { rows: [row] }; }
+      return { rows: [] };
+    }
+    if (/update nexus_records set data=/i.test(sql)) {
+      const [tenantId, entityId, data, , ownerId] = params;
+      if (row && row.tenant_id === tenantId && row.record_id === entityId && row.owner_id === ownerId) { row.data = data; row.version += 1; return { rows: [row] }; }
+      return { rows: [] };
+    }
+    return { rows: [] };
+  } };
+}
+test("applyRecord (offline sync) never inspects, updates, or deletes a record owned by a different user", async () => {
+  const row = { tenant_id: "t1", record_id: "rec-x", owner_id: "owner-a", version: 1, data: {} };
+  const asOwner = await applyRecord({ trx: fakeRecordsTrx({ ...row }), phase: "inspect", operation: { tenantId: "t1", entityId: "rec-x", userId: "owner-a", entityType: "record" } });
+  assert.ok(asOwner, "the real owner must still be able to inspect their own record");
+
+  const asAttacker = await applyRecord({ trx: fakeRecordsTrx({ ...row }), phase: "inspect", operation: { tenantId: "t1", entityId: "rec-x", userId: "owner-b", entityType: "record" } });
+  assert.equal(asAttacker, null, "a different tenant member must never be able to inspect someone else's record via sync");
+
+  await assert.rejects(() => applyRecord({ trx: fakeRecordsTrx({ ...row }), phase: "apply", current: null,
+    operation: { tenantId: "t1", entityId: "rec-x", userId: "owner-b", entityType: "record", action: "delete" } }), /does not exist/,
+    "a non-owner's delete must be refused as 'does not exist', not silently applied to someone else's record");
+});
+
 test("a create action with no baseVersion (there is nothing prior to base it on) is unaffected and still applies",async()=>{const store=db([{rows:[]},{rows:[{sync_id:"syn-3",state:"applied"}]}]);const repo=new SyncRepository(store);let applied=false;const result=await repo.apply({tenantId:"tenant-1",userId:"user-1",deviceId:"device-1",operationId:"op-3",entityType:"record",action:"create",payload:{}},async({trx,phase})=>{if(phase==="apply"){applied=true;return{version:1};}return null;});assert.equal(result.state,"applied");assert.equal(applied,true);});
 test("pull and conflict resolution remain tenant user and device scoped",async()=>{const store=db([{rows:[{sync_id:"syn-1"}]},{rows:[{sync_id:"syn-1",state:"pending"}]}]);const repo=new SyncRepository(store);assert.equal((await repo.changes({tenantId:"t",userId:"u",deviceId:"d"})).length,1);await repo.resolve({tenantId:"t",userId:"u",deviceId:"d",syncId:"syn-1",resolution:"retry-client",expectedServerVersion:4});assert.match(store.calls[1].sql,/tenant_id=\$1 and user_id=\$2 and device_id=\$3/);});
 

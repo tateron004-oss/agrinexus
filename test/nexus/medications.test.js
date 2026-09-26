@@ -32,6 +32,12 @@ function fakeStore() {
   return { rows,
     async addMedication({ tenantId, userId, content }) { rows.push({ memoryId: `m${++n}`, tenantId, userId, content }); },
     async createDose({ tenantId, userId, content }) { rows.push({ memoryId: `d${++n}`, tenantId, userId, content: { kind: "dose", ...content } }); },
+    async claimDoseSlot({ tenantId, userId, medId, day, time, content }) {
+      if (rows.find(item => item.userId === userId && item.content.kind === "dose" && item.content.medId === medId && item.content.day === day && item.content.time === time)) return null;
+      const row = { memoryId: `d${++n}`, tenantId, userId, content: { kind: "dose", ...content } };
+      rows.push(row);
+      return { memoryId: row.memoryId, ...row.content };
+    },
     async listMedications({ tenantId, userId }) { return rows.filter(row => row.tenantId === tenantId && row.userId === userId && row.content.kind === "medication" && row.content.active !== false && !row.removed).map(row => ({ memoryId: row.memoryId, content: row.content })); },
     async updateMedication({ memoryId, content }) { rows.find(row => row.memoryId === memoryId).content = content; return true; },
     async removeMedication({ memoryId }) { rows.find(row => row.memoryId === memoryId).removed = true; return true; },
@@ -80,6 +86,22 @@ test("Kyro reminds at each dose time once, and never for a phone that cannot be 
   assert.equal((await noDevice.service.sendDue({ at: noDevice.clock })).skippedNoDevice, 1); assert.equal(noDevice.store.rows.filter(row => row.content.kind === "dose").length, 0, "no dose recorded that nobody could see");
   const paused = setup({ paused: true }); await paused.say("Add medication metformin at 8am");
   assert.equal((await paused.service.sendDue({ at: paused.clock })).skippedPaused, 1);
+});
+
+// Found live: sendDue()'s check-then-act (getDose(), then createDose()
+// moments later) had no lock, so two workers ticking the same due dose
+// within the same race window could both see "no dose yet" and both create
+// one -- a duplicate "time for your medicine" push, and a stray extra
+// pending row that never gets marked taken (only the newest one does),
+// which later crosses GRACE_HOURS and falsely tells the person's trusted
+// circle they missed a dose they actually took.
+test("two concurrent sendDue sweeps for the same due dose only prompt once, not twice", async () => {
+  const s = setup();
+  await s.say("Add medication metformin 500mg at 8am");
+  const [first, second] = await Promise.all([s.service.sendDue({ at: s.clock }), s.service.sendDue({ at: s.clock })]);
+  assert.equal(first.prompted + second.prompted, 1, "exactly one of the two racing sweeps must have prompted");
+  assert.equal(s.pushes.length, 1, "the person must only be pushed once, not twice, for the same dose");
+  assert.equal(s.store.rows.filter(row => row.content.kind === "dose").length, 1, "only one dose row must exist for this slot");
 });
 
 test("saying the dose was taken records it, answers 'did I', and words that match no medicine are just talk", async () => {
