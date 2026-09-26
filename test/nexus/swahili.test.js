@@ -64,8 +64,15 @@ const USERS = [
 ];
 function circleDb() {
   const rows = []; const db = { rows, async transaction(fn) { return fn(db); }, async query(sql, params) {
+    if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
     if (/from users where tenant_id=\$1 and lower\(email\)/.test(sql)) return { rows: USERS.filter(user => user.tenant_id === params[0] && user.email === String(params[1]).toLowerCase()).map(user => ({ id: user.id, display_name: user.display_name })) };
     if (/from users where tenant_id=\$1 and id=\$2/.test(sql)) return { rows: USERS.filter(user => user.tenant_id === params[0] && user.id === params[1]).map(user => ({ display_name: user.display_name })) };
+    if (/select 1 from nexus_memory_items/.test(sql)) {
+      const [tenantId, personId, memberId] = params;
+      const match = rows.some(row => row.tenant_id === tenantId && row.purpose === "circle" && !row.deleted && row.principal_id === personId
+        && row.content.kind === "circle" && row.content.role === "person" && row.content.otherId === memberId && row.content.status !== "ended");
+      return { rows: match ? [{ "?column?": 1 }] : [] };
+    }
     if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) return { rows: rows.filter(row => row.tenant_id === params[0] && row.purpose === "circle" && !row.deleted && (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
     if (/insert into nexus_memory_items/.test(sql) && /'circle'/.test(sql)) { rows.push({ memory_id: params[0], tenant_id: params[1], principal_id: params[2], purpose: "circle", content: params[3] }); return { rows: [] }; }
     if (/update nexus_memory_items set content=\$3/.test(sql) && /purpose='circle'/.test(sql)) { const row = rows.find(item => item.tenant_id === params[0] && item.memory_id === params[1]); if (row) row.content = params[2]; return { rows: [] }; }

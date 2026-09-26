@@ -15,12 +15,19 @@ class DataLifecycleRepository {
       const request=(locked.rows||locked)[0]; if(!request) throw new Error("Deletion request not found.");
       const holds=await trx.query(`select hold_id from nexus_legal_holds where tenant_id=$1 and state='active' and (subject_id is null or subject_id=$2) limit 1`,[tenantId,request.subject_id]);
       if((holds.rows||holds)[0]) { await trx.query(`update nexus_deletion_requests set state='blocked',verification=$3 where tenant_id=$1 and request_id=$2`,[tenantId,requestId,{reason:"legal_hold"}]); return {state:"blocked",reason:"legal_hold"}; }
-      await trx.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and subject_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
+      // Found live: some record writers (e.g. WorkspaceStateRepository.stage(),
+      // now fixed) left subject_id NULL for a "standard"-classification record
+      // instead of defaulting it to the owner -- and NULL never equals a real
+      // subject_id in SQL, so those rows silently survived a subject-scoped
+      // erasure. Also catching (subject_id is null and owner_id=$2) here is
+      // defense-in-depth against any future writer that makes the same
+      // mistake, on top of fixing it at the source.
+      await trx.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and (subject_id=$2 or (subject_id is null and owner_id=$2)) and deleted_at is null`,[tenantId,request.subject_id]);
       // title/metadata wiped too, not just the object pointer -- a title like "Mum's biopsy results.pdf" is
       // itself personal data, and leaving it behind after "deletion" while only nulling object_key was a gap.
       await trx.query(`update nexus_artifacts set state='deleted',title='',metadata='{}'::jsonb,object_key=null,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
       await trx.query(`update nexus_record_versions v set data='{}'::jsonb,provenance='{}'::jsonb
-        from nexus_records r where v.record_id=r.record_id and r.tenant_id=$1 and r.subject_id=$2`,[tenantId,request.subject_id]);
+        from nexus_records r where v.record_id=r.record_id and r.tenant_id=$1 and (r.subject_id=$2 or (r.subject_id is null and r.owner_id=$2))`,[tenantId,request.subject_id]);
       // The newer nexus/ runtime (companion, farm and health toolkits, navigation, reminders) keeps its data here, not in nexus_records, so an
       // erasure that skipped this table would leave most of what a person actually built with Kyro behind. No legal-hold carve-out here (unlike
       // the health toolkit's own "erase my records" self-service, which keeps a small name-free log): an account-level erasure is total.
@@ -39,12 +46,25 @@ class DataLifecycleRepository {
       const documentVersions=await trx.query(`update nexus_document_versions v set content='{}'::jsonb,object_key=null
         from nexus_documents d where v.document_id=d.document_id and d.tenant_id=$1 and d.owner_id=$2`,[tenantId,request.subject_id]);
       const notifications=await trx.query(`delete from nexus_notifications where tenant_id=$1 and user_id=$2 returning notification_id`,[tenantId,request.subject_id]);
+      // Found live: nexus_devices (a real webpush/FCM/APNs endpoint URL and
+      // an encrypted push auth secret, per registered device) and
+      // nexus_device_events were entirely absent from this erasure sweep --
+      // the only path that ever cleared them was revoke(), one device at a
+      // time, by the person's own explicit choice. An account erasure left
+      // every device a person never manually revoked fully wired to receive
+      // push forever. Revoked (not hard-deleted) the same way explicit
+      // single-device revoke() already does, so the row's own history stays
+      // consistent; the secret-bearing columns are nulled either way.
+      const devices=await trx.query(`update nexus_devices set state='revoked',push_endpoint=null,push_key_ciphertext=null,push_provider=null,push_state='revoked',updated_at=now() where tenant_id=$1 and user_id=$2 and state<>'revoked' returning device_id`,[tenantId,request.subject_id]);
+      const deviceEvents=await trx.query(`delete from nexus_device_events where tenant_id=$1 and user_id=$2 returning event_id`,[tenantId,request.subject_id]);
       const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,memoryItemsErased:true,memoryItemsCount:(memoryItems.rows||memoryItems).length,
         conversationsErased:true,conversationsCount:(conversations.rows||conversations).length,
         messagesErased:true,
         documentsErased:true,documentsCount:(documents.rows||documents).length,
         documentVersionsErased:true,
         notificationsErased:true,notificationsCount:(notifications.rows||notifications).length,
+        devicesErased:true,devicesCount:(devices.rows||devices).length,
+        deviceEventsErased:true,deviceEventsCount:(deviceEvents.rows||deviceEvents).length,
         verifiedAt:new Date().toISOString()};
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};

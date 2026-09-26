@@ -13,13 +13,41 @@ const { createHandlers } = require("../../nexus/workers/handlers.js");
 // ---------- an in-memory database that understands exactly the statements the circle repository issues ----------
 function circleDb(users) {
   const rows = []; const calls = [];
+  const locks = new Map(); // lock key -> the tail of the queue waiting on it, so a real DB's blocking lock is reproduced across concurrent transactions
   const db = {
     rows, calls,
-    async transaction(fn) { return fn(db); },
+    // A held advisory lock only releases when its OWN transaction's work finishes -- not the instant the lock
+    // query returns -- so two concurrent transactions racing for the same key are genuinely serialized, the
+    // way pg_advisory_xact_lock actually blocks a second session until the first commits or rolls back.
+    async transaction(fn) {
+      let release = null;
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          calls.push({ sql, params });
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          release = myRelease;
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
     async query(sql, params) {
       calls.push({ sql, params });
+      if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
       if (/from users where tenant_id=\$1 and lower\(email\)/.test(sql)) return { rows: users.filter(user => user.tenant_id === params[0] && user.email.toLowerCase() === String(params[1]).toLowerCase() && user.status === "active").map(user => ({ id: user.id, display_name: user.display_name })) };
       if (/from users where tenant_id=\$1 and id=\$2/.test(sql)) return { rows: users.filter(user => user.tenant_id === params[0] && user.id === params[1]).map(user => ({ display_name: user.display_name })) };
+      if (/select 1 from nexus_memory_items/.test(sql)) {
+        const [tenantId, personId, memberId] = params;
+        const match = rows.some(row => row.tenant_id === tenantId && row.purpose === "circle" && !row.deleted && row.principal_id === personId
+          && row.content.kind === "circle" && row.content.role === "person" && row.content.otherId === memberId && row.content.status !== "ended");
+        return { rows: match ? [{ "?column?": 1 }] : [] };
+      }
       if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) {
         return { rows: rows.filter(row => row.tenant_id === params[0] && row.purpose === "circle" && !row.deleted && (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
       }
@@ -49,7 +77,7 @@ function world({ now = new Date("2026-09-20T05:00:00Z") } = {}) {
     async get({ userId }) { return schedules.find(item => item.userId === userId) || null; }, async listActive() { return schedules.slice(); } };
   const state = { async get({ userId, day }) { const row = checkinRows.find(item => item.userId === userId && item.day === day); return row ? { ...row } : null; },
     async create({ tenantId, userId, content }) { checkinRows.push({ memoryId: `c${++n}`, tenantId, userId, ...content }); },
-    async update({ memoryId, content }) { const i = checkinRows.findIndex(item => item.memoryId === memoryId); checkinRows[i] = { ...content, memoryId, tenantId: checkinRows[i].tenantId, userId: checkinRows[i].userId }; return true; },
+    async update({ memoryId, content, expectedStatus }) { const i = checkinRows.findIndex(item => item.memoryId === memoryId); if (expectedStatus !== undefined && checkinRows[i].status !== expectedStatus) return false; checkinRows[i] = { ...content, memoryId, tenantId: checkinRows[i].tenantId, userId: checkinRows[i].userId }; return true; },
     async listPending() { return checkinRows.filter(row => row.status === "pending").map(row => ({ ...row })); },
     async hasActivitySince({ userId }) { return messages.has(userId); } };
   const devices = { async listPushable() { return [{ id: 1 }]; } };
@@ -70,6 +98,24 @@ test("emergencies and self-harm are recognised in the person's own words, and no
   for (const text of ["help", "Please help me", "I need help"]) assert.equal(readSafety(text), "ask", text);
   for (const text of ["I want to die", "I want to kill myself", "I'm suicidal", "I really do not want to be here", "I sometimes think about ending it all", "I feel like I'm better off dead", "I keep thinking about suicide"]) assert.equal(readSafety(text), "self_harm", text);
   for (const text of ["how do I help a friend who is suicidal", "my brother said he wants to die", "What is suicide prevention?", "I could kill that deadline", "help with my maize", "emergency contact list", "I need help with my maize", "What should I do in an emergency?", "Good morning"]) assert.equal(readSafety(text), null, text);
+});
+
+// Found live (safety-critical): every IMMEDIATE pattern used to require the
+// ENTIRE message to match exactly (`^...$`) and was gated behind a 70-char
+// cap, so any real elaboration at all -- describing where they fell, what
+// hurts, or just saying "please send help" -- silently failed the match and
+// fell through to ordinary conversation, with no alert and no acknowledgment.
+// "cannot"/"can not" (not just "can't"/"cant") also had to be recognized.
+test("a real fall or danger is still recognised even with natural elaboration, longer phrasing, or 'cannot' instead of 'can't'", () => {
+  const stillAnEmergency = [
+    "This is an emergency, I have fallen in the kitchen and cannot get up, please send help",
+    "I have fallen and cannot get up",
+    "I have fallen and I cannot get up, my chest hurts too",
+    "please alert my circle, I fell and hurt my leg badly",
+    "I have fallen and can not get up",
+    "I have fallen"
+  ];
+  for (const text of stillAnEmergency) assert.equal(readSafety(text), "emergency", text);
 });
 
 test("an emergency alerts every member who said yes, once per five minutes, and tells the person exactly who", async () => {
@@ -180,6 +226,25 @@ test("you cannot invite yourself or the same person twice, and the circle has a 
   const person = { id: "u-baba", name: "Baba Kamau" };
   for (let i = 0; i < 8; i += 1) assert.ok((await circle.invite({ tenantId: "t1", person, member: { id: `x${i}`, name: `Person ${i}` } })).link);
   assert.deepEqual(await circle.invite({ tenantId: "t1", person, member: { id: "x8", name: "Person 8" } }), { refused: "full" });
+});
+
+// Found live: every check in invite() (the duplicate check included) reads
+// before any of them commit, so two near-simultaneous invite() calls for
+// the same (person, member) pair could both pass every check and both
+// insert -- two independent links with independently-settable, conflicting
+// share states for what should be one relationship.
+test("two concurrent invitations to the same person only create one link, not two", async () => {
+  const db = circleDb(USERS); const circle = new CircleRepository(db);
+  const person = { id: "u-baba", name: "Baba Kamau" }; const member = { id: "u-amina", name: "Amina Wanjiru" };
+  const [first, second] = await Promise.all([
+    circle.invite({ tenantId: "t1", person, member }),
+    circle.invite({ tenantId: "t1", person, member })
+  ]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(result => result.link).length, 1, "exactly one of the two racing invitations must succeed");
+  assert.equal(outcomes.filter(result => result.refused === "duplicate").length, 1, "the loser must see it as a duplicate, not also create a link");
+  const links = (await circle.listFor({ tenantId: "t1", userId: "u-baba" })).filter(link => link.otherId === "u-amina");
+  assert.equal(links.length, 1, "only one link to Amina must exist, not two");
 });
 
 test("a member can decline, and either side can leave or remove at any time, and it takes effect for both", async () => {
@@ -303,6 +368,42 @@ test("a missed check-in tells only the members the person chose, once, tells the
   const cleared = await say("I'm okay");
   assert.match(cleared, /^Glad to hear it, Baba\. I've let your circle know you're fine\. Have a good day\.$/);
   assert.ok(w.pushes.some(push => push.userId === "u-amina" && push.content.body === "Baba Kamau has checked in and is okay."));
+});
+
+// Found live: the worker sweep's follow-up loop read a check-in row ONCE
+// at the top of its iteration, then (several awaits and real push sends
+// later) wrote back a spread of that SAME STALE snapshot. If the person
+// answered in between (a genuinely concurrent event on a real deployment --
+// simulated here by having a reply arrive while the sweep is still fetching
+// the circle to notify), the worker's old code would still send a false
+// "check-in missed" alert to the circle, then clobber the person's real
+// "ok" answer back to "alerted" in storage. The fix claims the transition
+// atomically before telling anyone, so the race is closed at both points.
+test("a check-in answered mid-sweep is never falsely reported as missed, and the real answer is never clobbered", async () => {
+  let clock = new Date("2026-09-20T05:00:00Z");
+  const w = world(); w.now = clock;
+  const companion = createCompanion({ circle: w.circle, checkinSettings: w.settings, checkinState: w.state, notifications: w.notifications, devices: w.devices, now: () => clock });
+  const say = (text, userId = "u-baba") => companion.turn({ command: { text, tenantId: "t1", actorId: userId }, context: { timeZone: "Africa/Nairobi" } });
+  await say("Add amina@example.com to my circle as my daughter"); await say("Accept the invitation from Baba", "u-amina");
+  await say("Share my check-ins with Amina");
+  await say("Check in on me every morning at 8"); w.pushes.length = 0;
+  await companion.sendDue({ at: clock });
+  clock = new Date("2026-09-20T08:10:00Z"); // past the grace period, nothing heard yet
+
+  const realActiveMembers = w.circle.activeMembers.bind(w.circle);
+  let answered = false;
+  w.circle.activeMembers = async (...args) => {
+    // Simulates the person's real "I'm okay" reply landing in the moment
+    // between the sweep's hasActivitySince() check and its final
+    // claim-and-notify step, which is exactly what activeMembers() is
+    // called right before in the real sendDue().
+    if (!answered) { answered = true; await say("I'm okay"); }
+    return realActiveMembers(...args);
+  };
+  const swept = await companion.sendDue({ at: clock });
+  assert.equal(swept.alerted, 0, "a check-in answered mid-sweep must never be reported as missed");
+  assert.equal(w.pushes.filter(push => push.content.title === "Check-in missed").length, 0, "the circle must never be falsely told the check-in was missed");
+  assert.equal(w.checkinRows[0].status, "ok", "the person's real answer must survive, not be clobbered back to 'alerted'");
 });
 
 test("saying anything to Kyro counts as being there; with nobody chosen, a miss is recorded quietly", async () => {
