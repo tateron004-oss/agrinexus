@@ -127,6 +127,55 @@ test("a wallet debit within the available balance still works exactly as before"
   assert.equal(debit.status, 200);
 });
 
+// Found live: "delivery-confirm" unconditionally set order.stage to
+// "Delivered" regardless of what stage the order was actually at -- a
+// brand-new order (stage "Packed") could jump straight to "Delivered" with
+// zero real "In transit"/"Quality check" progress, even though the same
+// record's own "proof" field says a delivery photo/signature/receiver
+// confirmation is required. That fabricated "Delivered" status then
+// satisfies the settlement gate elsewhere in this same file, letting
+// payment release fire right behind it.
+test("delivery cannot be confirmed before the order has actually reached Quality check", async () => {
+  const productsRes = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const product = (await productsRes.json()).products?.[0];
+  const created = await post("/api/trade/order", { productId: product.id });
+  const order = created.body.profile.orders[created.body.profile.orders.length - 1];
+  assert.equal(order.stage, "Packed");
+
+  const tooEarly = await post("/api/trade/logistics", { type: "delivery-confirm", orderId: order.id });
+  assert.equal(tooEarly.status, 200);
+  const stillPacked = tooEarly.body.profile.orders.find(item => item.id === order.id);
+  assert.equal(stillPacked.stage, "Packed", "delivery must not be confirmed before Quality check");
+  assert.match(tooEarly.body.tradeLogisticsResult.record.status, /refused/i);
+
+  await post("/api/trade/advance", { orderId: order.id }); // Packed -> In transit
+  await post("/api/trade/advance", { orderId: order.id }); // In transit -> Quality check
+  const nowReady = await post("/api/trade/logistics", { type: "delivery-confirm", orderId: order.id });
+  const delivered = nowReady.body.profile.orders.find(item => item.id === order.id);
+  assert.equal(delivered.stage, "Delivered", "delivery confirmation must still succeed once the order has genuinely reached Quality check");
+});
+
+// Found live: hours and minutes used to be computed independently
+// (floor(seconds/3600) and round((seconds%3600)/60)) -- rounding the
+// minutes remainder up to 60 never carried into the hour, printing "60m"
+// for a 59m59s route instead of "1h", or "1h 60m" instead of "2h" for a
+// 1h59m59s route. server.js has no module exports (it starts a real HTTP
+// listener at load time), so this extracts the actual shipped function's
+// source and evaluates it directly, rather than re-implementing the logic
+// in the test and only proving the reimplementation is correct.
+test("formatDurationHuman never prints a 60-minute remainder; a rollover always lands in the hour", () => {
+  const source = fs.readFileSync(path.join(root, "server.js"), "utf8");
+  const match = /function formatDurationHuman\(totalSeconds\) \{[\s\S]*?\n\}/.exec(source);
+  assert.ok(match, "formatDurationHuman must exist in server.js");
+  const body = match[0].replace(/^function formatDurationHuman\(totalSeconds\) \{/, "").replace(/\}$/, "");
+  const formatDurationHuman = new Function("totalSeconds", body);
+  assert.equal(formatDurationHuman(3599), "1h", "59m59s must round up into the hour, not read '60m'");
+  assert.equal(formatDurationHuman(7199), "2h", "1h59m59s must round up into the next hour, not read '1h 60m'");
+  assert.equal(formatDurationHuman(3600), "1h");
+  assert.equal(formatDurationHuman(90), "2m");
+  assert.equal(formatDurationHuman(5400), "1h 30m");
+});
+
 // Found live (money-logic audit): Number("Infinity") is a finite-looking
 // truthy value that is always >= 0 and never < anything, so it silently
 // passed both the credit-type check and the balance-floor check, permanently
