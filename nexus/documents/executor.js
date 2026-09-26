@@ -15,12 +15,29 @@
 const exportProvider = require("../../server/providers/exportProvider.js");
 const crypto = require("node:crypto");
 
+// Found live: the deterministic fast-path matcher (completeDocumentPlan)
+// already caps its own content at 4000 chars, but that's just an echo of
+// the raw command text -- the ONLY path that produces genuinely long,
+// AI-authored document content is the general LLM planning fallback, whose
+// model call has no output-token cap and whose JSON-schema "input" field
+// has no length limit. A documents.create step from that path could carry
+// an unbounded content string straight into exportProvider's synchronous
+// PDF/DOCX rendering, tying up the process's single event loop -- the same
+// shape already fixed for the fast-path matcher, just reachable through
+// this shared executor instead. Capped here (the one choke-point both
+// planning paths funnel through) rather than per-matcher, so any future
+// caller is covered too. The ceiling is generous -- large enough for a
+// genuinely long report/business plan/analysis -- unlike the fast-path's
+// tight 4000-char echo-text cap, since real long-form content is exactly
+// what this executor is for.
+const MAX_DOCUMENT_CONTENT_LENGTH = 50000;
 function createDocumentsCreateExecutor({ env = process.env, documents = null } = {}) {
   return async function execute({ input = {}, context, taskId }) {
+    const rawContent = String(input.content || input.text || input.command || "");
     const body = {
       confirmed: true,
       title: input.title || "Nexus document",
-      content: input.content || input.text || input.command || "",
+      content: rawContent.length > MAX_DOCUMENT_CONTENT_LENGTH ? rawContent.slice(0, MAX_DOCUMENT_CONTENT_LENGTH) : rawContent,
       format: String(input.format || "txt").toLowerCase()
     };
     const result = await exportProvider.exportDocument(body, env);
