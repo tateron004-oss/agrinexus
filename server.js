@@ -12582,6 +12582,12 @@ function runWorkforceActionByAgent(db, user, type) {
     return "Assigned a mentor and created a readiness coaching note.";
   }
   if (type === "shift") {
+    // Found live (drone/workforce audit): same unbounded-replay gap as the
+    // REST /api/workforce/action "shift" handler -- refuse a second shift
+    // while one is already scheduled and hasn't started yet.
+    if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+      return "A shift is already scheduled. Wait until it starts before scheduling another.";
+    }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
     const shift = {
       id: crypto.randomUUID(),
@@ -39910,10 +39916,26 @@ function assignFieldAgentDispatch(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const requestedAgentId = sanitizePilotText(body.agentId || "", 120);
   const region = sanitizePilotText(body.region || "", 80);
+  const taskType = sanitizePilotText(body.taskType || "field-visit", 80);
+  // Found live (drone/workforce audit): every seeded field agent carries a
+  // real `skills` list, but auto-matching never consulted it -- a
+  // drone-support task in a region whose only available agent has no
+  // drone-support skill was still matched and dispatched, then recorded (and
+  // audited) as staffed by a "qualified agent". Skill now outranks region --
+  // an unqualified local agent is worse than a qualified one from elsewhere,
+  // since the former produces a task falsely recorded as properly staffed --
+  // and region is still used first to break ties among equally-skilled
+  // candidates, then as a last-resort fallback so this never fails to
+  // dispatch someone the way a hard skill requirement would.
+  const available = agent => agent.status === "available";
+  const inRegion = agent => !region || agent.region.toLowerCase() === region.toLowerCase();
+  const hasSkill = agent => Array.isArray(agent.skills) && agent.skills.includes(taskType);
   const candidate = requestedAgentId
-    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && agent.status === "available")
-    : db.nexusFieldAgents.find(agent => agent.status === "available" && (!region || agent.region.toLowerCase() === region.toLowerCase()))
-      || db.nexusFieldAgents.find(agent => agent.status === "available");
+    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && available(agent))
+    : db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent))
+      || db.nexusFieldAgents.find(agent => available(agent));
   if (!candidate) {
     return { ok: false, error: requestedAgentId ? "requested_agent_unavailable" : "no_available_field_agent" };
   }
@@ -44676,6 +44698,14 @@ async function api(req, res, url) {
 
   const fieldDispatchStatusMatch = url.pathname.match(/^\/api\/field-agents\/dispatch\/([^/]+)\/status$/);
   if (fieldDispatchStatusMatch && req.method === "PATCH") {
+    // Found live (drone/workforce audit): unlike its GET/POST siblings on this
+    // same resource, this route had no `if (!user)` check at all. The
+    // ownership check below falls back to the literal string "Standard
+    // User" when there is no signed-in user -- which is exactly the seeded
+    // demo account's real display name -- so any unauthenticated caller
+    // could cancel (or otherwise change the status of) a dispatch that
+    // account had requested, with no cookie or login at all.
+    if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
     const body = await readBody(req);
     const dispatch = db.nexusFieldDispatches.find(item => item.id === fieldDispatchStatusMatch[1]);
     if (!dispatch) return send(res, 404, { ok: false, error: "dispatch_not_found" });
@@ -50291,6 +50321,16 @@ async function api(req, res, url) {
       addActivity(db.profile, "Mentor assigned for role readiness coaching.");
     } else if (body.type === "shift") {
       if (db.profile.interviews < 1) return send(res, 409, { error: "Schedule an interview before starting a shift" });
+      // Found live (drone/workforce audit): this action was fully
+      // unconditionally repeatable -- calling it in a loop stacked unlimited
+      // "scheduled" shifts onto essentially the same real-world time slot
+      // (all ~36 hours out) and credited db.profile.earnings every single
+      // time, with no overlap check and no cap. Refusing a second shift
+      // while one is already scheduled and hasn't started yet closes the
+      // unbounded-replay path without blocking the normal one-at-a-time flow.
+      if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+        return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
+      }
       const shift = {
         id: crypto.randomUUID(),
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
