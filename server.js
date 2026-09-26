@@ -50408,11 +50408,18 @@ async function api(req, res, url) {
         return ["workforce-hris", "documents.verified", `${record.documentNumber} workforce documents verified.`, record];
       },
       timesheet: () => {
+        // Found live (money-logic audit): `Number(body.hours || 6)` used the
+        // fallback whenever body.hours was falsy -- not just missing, but
+        // also an explicit 0 (correcting a timesheet to zero hours), and
+        // accepted a negative or non-finite value outright with no check at
+        // all. Explicit 0 must be honored; a negative or unusable value
+        // falls back to the same default as an omitted one.
+        const requestedHours = Number(body.hours);
         const record = {
           id: crypto.randomUUID(),
           timesheetNumber: `AN-TIME-${String(db.profile.timesheets.length + 1).padStart(3, "0")}`,
           role,
-          hours: Number(body.hours || 6),
+          hours: body.hours !== undefined && Number.isFinite(requestedHours) && requestedHours >= 0 ? requestedHours : 6,
           status: "submitted",
           submittedAt: now
         };
@@ -50421,11 +50428,19 @@ async function api(req, res, url) {
       },
       payroll: () => {
         const latestTimesheet = db.profile.timesheets[0] || { hours: 6, timesheetNumber: "AN-TIME-AUTO" };
+        // Found live (money-logic audit): the same falsy-zero-override gap
+        // as timesheet.hours above, but on a real, persisted money ledger --
+        // an explicit amount:0 (a payroll correction) was silently replaced
+        // with a fabricated positive amount, and a negative or non-finite
+        // amount was accepted outright with no check, corrupting
+        // db.profile.earnings below (including permanently NaN-poisoning it
+        // for a non-numeric amount).
+        const requestedAmount = Number(body.amount);
         const record = {
           id: crypto.randomUUID(),
           payrollNumber: `AN-PAY-${String(db.profile.payrollApprovals.length + 1).padStart(3, "0")}`,
           timesheetNumber: latestTimesheet.timesheetNumber,
-          amount: Number(body.amount || latestTimesheet.hours * 12),
+          amount: body.amount !== undefined && Number.isFinite(requestedAmount) && requestedAmount >= 0 ? requestedAmount : latestTimesheet.hours * 12,
           status: "approved",
           approvedAt: now
         };
@@ -50434,11 +50449,17 @@ async function api(req, res, url) {
         return ["workforce-hris", "payroll.approved", `${record.payrollNumber} payroll approved for $${record.amount}.`, record];
       },
       evaluation: () => {
+        // Found live (money-logic audit): same falsy-zero-override gap --
+        // an explicit score:0 (recording a genuinely failing review) was
+        // silently replaced with a strong passing 92, while readiness was
+        // still bumped upward below as if a good review had occurred. Also
+        // had no upper bound, unlike readiness/quizScore's own 100 caps.
+        const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
           reviewNumber: `AN-REV-${String(db.profile.performanceReviews.length + 1).padStart(3, "0")}`,
           role,
-          score: Number(body.score || 92),
+          score: body.score !== undefined && Number.isFinite(requestedScore) ? Math.min(100, Math.max(0, requestedScore)) : 92,
           strengths: ["attendance", "mobile workflow", "community handoff"],
           nextCoaching: "advance to route coordination and farmer support quality checks",
           status: "completed",
