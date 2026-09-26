@@ -24838,7 +24838,8 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
     retrievedAt: live.checkedAt,
     limitation: live.ok
       ? "Source-backed current knowledge still requires local context and review before action."
-      : live.reason || "Live source retrieval is not configured or did not return citable sources."
+      : live.reason || "Live source retrieval is not configured or did not return citable sources.",
+    ownerId: user?.id || null
   });
   db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
   db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -29765,7 +29766,8 @@ async function utilityWeatherAnswer(db, text, options = {}) {
       route: "/api/agent/command",
       geography: locationText,
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
-      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions.",
+      ownerId: options.user?.id || null
     });
     db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -30446,7 +30448,8 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
       route: "/api/agent/command",
       geography: locationText,
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
-      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions.",
+      ownerId: user?.id || null
     });
     db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -30870,7 +30873,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   if (!kind) return null;
   if (kind === "music") return await musicProviderCommandResponse(db, user, text, options);
   const preProviderModel = kind === "pre-provider-readiness" ? nexusPreProviderHardeningModel(db, user, text) : null;
-  const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, options) : null;
+  const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, { ...options, user }) : null;
   const response = kind === "time"
     ? utilityTimeAnswer(options)
     : kind === "weather"
@@ -35751,6 +35754,14 @@ function createInstitutionalEvidenceReceipt(payload = {}) {
       payload.limitation || "Evidence receipts do not authorize provider contact, payment, dispatch, diagnosis, prescribing, legal advice, or other high-risk execution.",
       citations.length ? "Citations are source records, not a guarantee that every downstream decision is safe or locally valid." : "No fake citation was generated."
     ],
+    // Found live (cross-user-IDOR audit): unlike its sibling collections
+    // (nexusKnowledgeQueries/nexusKnowledgeSavedResults/
+    // nexusKnowledgeReviewSummaries), these receipts carry the caller's own
+    // raw question (up to 600 chars, potentially a sensitive free-text
+    // health question) and the AI's answer, but had no owner tag at all --
+    // /api/nexus/knowledge/history exposed every user's receipts to every
+    // other signed-in user.
+    ownerId: payload.ownerId ?? null,
     noSecretValuesReturned: true,
     noExecutionAuthorized: true,
     noProviderContactAuthorized: true,
@@ -36082,7 +36093,8 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
     route: "/api/nexus/knowledge/query",
     jurisdiction: classification?.trustedSourceCategory?.jurisdiction || "not specified",
     retrievedAt: result.retrievalCheckedAt || result.retrievedAt || new Date().toISOString(),
-    limitation: Array.isArray(result.limitations) ? result.limitations[0] : result.safetyNote
+    limitation: Array.isArray(result.limitations) ? result.limitations[0] : result.safetyNote,
+    ownerId: user?.id || null
   });
   result.institutionalEvidenceReceipt = institutionalEvidenceReceipt;
   result.evidenceReceiptId = institutionalEvidenceReceipt.receiptId;
@@ -45105,6 +45117,14 @@ async function api(req, res, url) {
     return send(res, 401, { error: "Sign in required" });
   }
 
+  // Found live (cross-user-IDOR audit): institutionalEvidenceReceipts carries
+  // the caller's own raw question (up to 600 chars -- potentially a
+  // sensitive free-text health question, per this route's own comment about
+  // its sibling collections) and the AI's answer, but had no owner tag and
+  // no per-owner filtering at all, unlike its siblings' already-flagged
+  // cross-user-IDOR fix on another branch (which explicitly excluded this
+  // collection). A real Admin still sees every receipt.
+  const ownReceiptsOnly = list => (canUse(user, "admin") ? list : list.filter(item => (item.ownerId ?? null) === (user?.id ?? null) && item.ownerId !== null));
   if (url.pathname === "/api/nexus/knowledge/history" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
     return send(res, 200, {
@@ -45112,7 +45132,7 @@ async function api(req, res, url) {
       queries: db.nexusKnowledgeQueries.slice(0, 50),
       savedResults: db.nexusKnowledgeSavedResults.slice(0, 50),
       reviewSummaries: db.nexusKnowledgeReviewSummaries.slice(0, 50),
-      institutionalEvidenceReceipts: db.nexusInstitutionalEvidenceReceipts.slice(0, 50)
+      institutionalEvidenceReceipts: ownReceiptsOnly(db.nexusInstitutionalEvidenceReceipts).slice(0, 50)
     });
   }
 
@@ -45125,7 +45145,7 @@ async function api(req, res, url) {
     const savedResults = db.nexusKnowledgeSavedResults.filter(item => item.queryId === id);
     const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => item.originalQuestion === query.questionSummary || item.queryId === id);
     const providerRequests = db.nexusProviderPathwayRequests.filter(item => item.userQuestion === query.questionSummary || item.knowledgeQueryId === id);
-    const institutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts.filter(item => item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary);
+    const institutionalEvidenceReceipts = ownReceiptsOnly(db.nexusInstitutionalEvidenceReceipts.filter(item => item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary));
     return send(res, 200, {
       ok: true,
       query,
