@@ -10127,8 +10127,16 @@ function logisticsPointForOrder(route, order) {
 function formatDurationHuman(totalSeconds) {
   const seconds = Number(totalSeconds);
   if (!Number.isFinite(seconds) || seconds <= 0) return "";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
+  // Found live: hours and minutes used to be computed independently
+  // (floor(seconds/3600) and round((seconds%3600)/60)) -- rounding the
+  // minutes remainder up to 60 (e.g. 3599 seconds, 59m59s) never carried
+  // into the hour, printing "60m" instead of "1h", or "1h 60m" instead of
+  // "2h" for a 1h59m59s route. Rounding the TOTAL minutes first, then
+  // splitting that into hours/minutes, makes a 60-minute rollover always
+  // land in the hour it belongs to.
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (hours && minutes) return `${hours}h ${minutes}m`;
   if (hours) return `${hours}h`;
   return `${minutes}m`;
@@ -10315,6 +10323,20 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     settlement: "settlement prepared"
   };
   const trackingResult = await refreshOrderLogisticsTracking(db, order, user, `logistics.${type}`, { pickupLocation, deliveryLocation });
+  // Found live: "delivery-confirm" unconditionally set order.stage to
+  // "Delivered" regardless of what stage the order was actually at -- a
+  // brand-new order (stageIndex 0/1) could jump straight to "Delivered"
+  // with zero real "In transit"/"Quality check" progress, even though this
+  // very record's own "proof" field says a delivery photo/signature/
+  // receiver confirmation is required. That fabricated "Delivered" status
+  // then satisfies the already-fixed settlement gate (which only checks
+  // stage === "Delivered"), letting payment release fire right behind it.
+  // Requiring the order to have already reached "Quality check" (via the
+  // real, incremental /api/trade/advance stageIndex -- the same field that
+  // gate trusts) closes this without inventing a second, conflicting
+  // notion of progress.
+  const ORDER_STAGES = ["Order created", "Packed", "In transit", "Quality check", "Delivered"];
+  const deliveryReadyForConfirmation = type !== "delivery-confirm" || Number(order.stageIndex || 0) >= ORDER_STAGES.indexOf("Quality check");
   const record = {
     id: crypto.randomUUID(),
     logisticsNumber: `AN-SHIP-${String(db.profile.tradeLogisticsRecords.length + 1).padStart(4, "0")}`,
@@ -10334,7 +10356,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     routeId: route.id,
     routeName: route.name,
     checkpoint: order.checkpoint,
-    status: statusMap[type] || "logistics recorded",
+    status: type === "delivery-confirm" && !deliveryReadyForConfirmation ? "delivery confirmation refused: order has not reached Quality check yet" : (statusMap[type] || "logistics recorded"),
     amount,
     currency,
     eta: String(body.eta || trackingResult.tracking?.eta || "route conditions pending"),
@@ -10343,7 +10365,8 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     providerDelivery: trackingResult.delivery,
     createdAt: new Date().toISOString()
   };
-  order.stage = type === "delivery-confirm" ? "Delivered" : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  order.stage = type === "delivery-confirm" ? (deliveryReadyForConfirmation ? "Delivered" : order.stage || "Shipping planned") : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  if (type === "delivery-confirm" && deliveryReadyForConfirmation) order.stageIndex = ORDER_STAGES.length - 1;
   order.checkpoint = pickupLocation;
   order.timeline.unshift({ label: record.status, checkpoint: pickupLocation, createdAt: record.createdAt });
   db.profile.activeCheckpoint = pickupLocation;
