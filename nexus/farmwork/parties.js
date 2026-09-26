@@ -146,17 +146,24 @@ async function handle(ctx) {
     if (!orderRecord) return `I can't find order ${m[1]}.`;
     const d = orderRecord.data;
     if (d.status !== "open") return `Order ${orderRecord.number} is already ${d.status}.`;
+    // Claim the order atomically before recording money or moving stock, so two concurrent "deliver
+    // order N" requests for the same order (a double-click, a client retry) can't both pass the
+    // status !== "open" check above and each double-record the income/expense and stock movement for
+    // one physical delivery. Only the request that wins this compare-and-swap proceeds; the loser sees
+    // the order already done. If the money recording is refused, the claim is released back to "open"
+    // so the delivery can still be completed later.
+    const claimed = await ctx.store.update({ ...scope, record: { ...orderRecord, data: { ...d, status: "done", doneOn: ctx.today } }, expectedStatus: "open" });
+    if (!claimed) return `Order ${orderRecord.number} is already done.`;
     const notes = [];
     if (d.price) {
       const amount = round(d.price * d.qty);
       const result = await recordMoney(ctx, { type: d.kind === "sale" ? "income" : "expense", category: d.kind === "sale" ? "crops" : "other", amount, currency: d.currency, party: d.party, item: d.item, qty: d.qty, unit: d.unit, note: `order ${orderRecord.number}` });
-      if (result.refused) return result.refused;
+      if (result.refused) { await ctx.store.update({ ...scope, record: { ...orderRecord, data: d } }); return result.refused; }
       notes.push(`${d.kind === "sale" ? "income" : "spending"} of ${formatMoney(amount, result.record.data.currency)} recorded`);
     } else notes.push("no price was given, so I did not record any money — say \"sold ... for ...\" to add it");
     const stock = await ctx.store.list({ ...scope, collection: "stock" });
     if (d.kind === "sale") { const found = findItems(stock, d.item).filter(entry => entry.data.unit === d.unit); if (found.length === 1) { const left = round(Math.max(0, found[0].data.qty - d.qty), 3); await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } } }); notes.push(`${unitLabel(left, d.unit)} of ${found[0].data.name} left in stock`); } }
     else { const added = await addStock(ctx, d.item, { value: d.qty, unit: d.unit }); if (added) notes.push(`added to stock (${unitLabel(added.data.qty, added.data.unit)} of ${added.data.name})`); }
-    await ctx.store.update({ ...scope, record: { ...orderRecord, data: { ...d, status: "done", doneOn: ctx.today } } });
     return `Order ${orderRecord.number} ${d.kind === "sale" ? "delivered" : "received"}: ${notes.join("; ")}.`;
   }
   if ((m = /^(?:please )?cancel order #?(\d{1,5})$/i.exec(t))) {

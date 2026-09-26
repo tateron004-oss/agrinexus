@@ -31,6 +31,31 @@ test("notification delivery never reports success without a verified provider re
   assert.equal(verified.outcomes[0].delivered, true); assert.deepEqual(delivered, ["n1"]); assert.equal(failed.length, 1);
 });
 
+// Found live (notifications-pipeline audit): a real push/SMS/email send had
+// already happened (provider() succeeded with a verified receipt) by the
+// time delivered() ran to record it. If that bookkeeping write then threw
+// (a transient DB error), the old code fell into the same catch that calls
+// failed(), which requeues the notification (state -> 'queued') whenever
+// attempts<5 -- so the very next poll would claim and re-send the SAME
+// message a second time, even though it was already genuinely delivered.
+test("a bookkeeping failure after a confirmed real send never requeues the notification for a duplicate resend", async () => {
+  const failed = []; let sendCount = 0;
+  const runtime = {
+    notifications: {
+      claim: async () => [{ notification_id: "n1", channel: "push" }],
+      failed: async (...args) => { failed.push(args); return { state: "queued" }; },
+      delivered: async () => { throw new Error("connection reset"); }
+    },
+    schedules: {}, jobs: {}, dataLifecycle: {}
+  };
+  const handlers = createHandlers({ runtime, deliveryProviders: { push: async () => { sendCount += 1; return { verified: true, providerReceiptId: "p1" }; } } });
+  const result = await handlers["notifications.deliver"]({ job: { payload: {} }, heartbeat: async () => {} });
+  assert.equal(sendCount, 1, "the provider must only be called once");
+  assert.equal(failed.length, 0, "failed() -- which can requeue for a resend -- must never be called after a confirmed send");
+  assert.equal(result.outcomes[0].delivered, true);
+  assert.equal(result.outcomes[0].bookkeepingError, true);
+});
+
 test("retention and deletion jobs use the authoritative lifecycle repository", async () => {
   const calls = []; const runtime = { notifications: {}, schedules: {}, jobs: {}, dataLifecycle: { purgeExpired: async input => { calls.push(input); return ["a"]; }, executeDeletion: async input => { calls.push(input); return { state: "verified" }; } } };
   const handlers = createHandlers({ runtime });
