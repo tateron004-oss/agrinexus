@@ -98,3 +98,16 @@ test("a brand-new learner's very first quiz never permanently poisons quizScore 
   assert.ok(Number.isFinite(secondQuiz.json.profile.quizScore), "quizScore must stay a real number after a second quiz, never permanently poisoned to NaN");
   assert.ok(secondQuiz.json.profile.quizScore >= firstQuiz.json.profile.quizScore, "quizScore must be able to improve, not get stuck");
 });
+
+// Found live (follow-up sweep after the NaN fix above): the sibling
+// /api/learning/advanced "quiz-attempt" action had the same falsy-zero-
+// override gap as the workforce/timesheet/payroll bug fixed elsewhere this
+// session -- an explicit score:0 (a genuinely failed attempt) was silently
+// replaced with a fabricated passing score.
+test("a genuinely failed quiz attempt (score: 0) via /api/learning/advanced is honored, not silently replaced with a passing score", async () => {
+  const learnerCookie = await login("zz-fresh-learner@example.com", "FreshLearner2026!");
+  const result = await post(learnerCookie, "/api/learning/advanced", { type: "quiz-attempt", score: 0 });
+  assert.equal(result.status, 200);
+  const attempt = result.json.learningAdvancedResult?.record || result.json.profile.quizAttempts[0];
+  assert.equal(attempt.score, 0, "an explicit 0 score must not be replaced with a fabricated passing score");
+});
