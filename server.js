@@ -42729,6 +42729,27 @@ function latestChronicCareProfile(store, user) {
   return mine.find(item => !/archived|deceased/.test(item.status || "")) || mine[0] || null;
 }
 
+// Found live (drone-mission-terminal-reopen follow-up audit): the same
+// "reopen a terminal record via ID or via the latest-record fallback" bug
+// found in drone missions also applies here -- mark_deceased_stop_outreach
+// explicitly archives a chronic-care profile's linked intakes/care tasks
+// and marks noContact so nothing further touches that patient's record,
+// but add_rpm_reading/add_rtm_activity/the provider-packet block below had
+// no check on the profile's own status before writing to it, and
+// latestChronicCareProfile()'s own arr[0] fallback can return that same
+// archived/deceased profile when the caller has no other active one. A
+// caller supplying that patient's real chronicCareId (or none at all, if
+// it's their only profile) could silently add new vitals/therapy/provider-
+// packet activity to a profile explicitly marked "stop outreach." This
+// stricter variant is for those write paths; latestChronicCareProfile()
+// itself is unchanged for the read-only timeline view and for
+// mark_deceased_stop_outreach, which must find the current profile
+// regardless of status to mark it deceased in the first place.
+function latestActiveChronicCareProfile(store, user) {
+  const mine = store.chronicCareProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/archived|deceased/.test(item.status || "")) || null;
+}
+
 function latestShipment(store, user) {
   const mine = store.shipments.filter(item => nexusOperationsOwned(item, user));
   return mine.find(item => !/cancelled|delivered/.test(item.status || "")) || mine[0] || null;
@@ -42909,7 +42930,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_rpm_reading") {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
     const reading = {
       readingId: nexusOperationId("NX-RPM"),
       chronicCareId: profile.chronicCareId,
@@ -42928,7 +42949,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_rtm_activity") {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
     const activity = {
       activityId: nexusOperationId("NX-RTM"),
       chronicCareId: profile.chronicCareId,
@@ -42951,7 +42972,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["create_provider_review_packet", "create_pharmacy_referral", "create_mobile_clinic_follow_up", "create_telehealth_encounter"].includes(action)) {
-    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user)) || latestChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
+    const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
     const lane = action === "create_pharmacy_referral" ? "pharmacy" : action === "create_mobile_clinic_follow_up" ? "mobile-clinic" : action === "create_telehealth_encounter" ? "telehealth" : "physician-review";
     const caseItem = {
       caseId: nexusOperationId("NX-CASE"),
@@ -42974,7 +42995,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       intakeId: nexusOperationId("NX-INTAKE"),
       ownerId: nexusOperationsOwnerKey(user),
       patientId: cleanOpsText(body.patientId || "standard-user-local-patient", 120),
-      chronicCareId: cleanOpsText(body.chronicCareId || latestChronicCareProfile(store, user)?.chronicCareId || "", 120),
+      chronicCareId: cleanOpsText(body.chronicCareId || latestActiveChronicCareProfile(store, user)?.chronicCareId || "", 120),
       status: "active",
       reason: cleanOpsText(body.reason || command || "Healthcare intake created.", 300),
       noContact: false,
