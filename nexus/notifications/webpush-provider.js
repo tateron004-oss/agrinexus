@@ -3,10 +3,26 @@
 // Fail-closed like createNotificationProviders() -- no configured VAPID
 // keypair means no "push" delivery provider is registered at all, rather
 // than a provider that silently no-ops or fabricates a delivered receipt.
+//
+// Found live: a missing/cleared NEXUS_DEVICE_TOKEN_KEY (a separate, manually-
+// managed env var from the VAPID keys -- an easy admin mistake to make while
+// rotating one but not the other) leaves runtime.deviceTokens null even when
+// VAPID_PUBLIC_KEY/PRIVATE_KEY/SUBJECT are all set. This used to THROW here
+// instead of returning null, and nexus/workers/process.js's main() calls this
+// with no try/catch around it -- the throw propagated all the way to main()'s
+// own top-level .catch(), which logs "worker.fatal" and calls process.exit(1).
+// That takes down the ENTIRE worker process, not just push delivery: every
+// other scheduled sweep (brief.send-due, companion.checkin-sweep, weekly
+// summaries, weather alerts, every situational-awareness sweep,
+// deletion.sweep, retention.sweep, schedules.dispatch) stops running for
+// every tenant, and a process supervisor restarting it just crash-loops on
+// the same env gap. A device-vault misconfiguration must degrade the same
+// way a VAPID misconfiguration already does -- push disabled, everything
+// else keeps working -- not take the whole worker down.
 function createWebPushProvider({ env = process.env, devices, deviceTokens, webPush = require("web-push") } = {}) {
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = env;
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !VAPID_SUBJECT) return null;
-  if (!devices?.listPushable || !deviceTokens?.decrypt) throw new Error("Push delivery requires a device repository and token vault.");
+  if (!devices?.listPushable || !deviceTokens?.decrypt) return null;
 
   return async function pushProvider(notification) {
     const targets = await devices.listPushable({ tenantId: notification.tenant_id, userId: notification.user_id });

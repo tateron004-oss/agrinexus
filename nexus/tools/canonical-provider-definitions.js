@@ -88,13 +88,27 @@ function canonicalProviderTools({ receiptSecret, providerBaseUrl }) {
     confirmationRequired: Boolean(tool.confirmationRequired) }));
 }
 
+// Found live: this only ever diffed the SET of toolIds -- if a canonical tool later gained (or changed) a
+// consentScope/confirmationRequired/riskTier requirement without the deployed NEXUS_TOOL_PROVIDERS_JSON being
+// regenerated to match (a manual edit, or a stale redeploy), the toolId set would still line up and this would
+// keep passing, silently leaving that tool running with no consent check / no confirmation gate / the wrong risk
+// tier -- with no error, no test failure, no CI signal. Now also fails closed on a governance-field mismatch, not
+// just a missing or extra tool.
 function assertCanonicalProviderBindings(definitions) {
-  const configured = new Set((definitions || []).map(item => item.toolId));
+  const configuredById = new Map((definitions || []).map(item => [item.toolId, item]));
   const expected = new Set(CANONICAL_PROVIDER_TOOLS.map(item => item.toolId));
-  const missing = [...expected].filter(id => !configured.has(id));
-  const extra = [...configured].filter(id => !expected.has(id));
+  const missing = [...expected].filter(id => !configuredById.has(id));
+  const extra = [...configuredById.keys()].filter(id => !expected.has(id));
   if (missing.length || extra.length) throw coded("provider_catalog_drift",
     `Provider catalog drift detected (missing: ${missing.join(",") || "none"}; extra: ${extra.join(",") || "none"}).`);
+  const mismatched = CANONICAL_PROVIDER_TOOLS.filter(canonical => {
+    const actual = configuredById.get(canonical.toolId);
+    return (actual.consentScope || null) !== (canonical.consentScope || null)
+      || Boolean(actual.confirmationRequired) !== Boolean(canonical.confirmationRequired)
+      || (actual.riskTier || "low") !== (canonical.riskTier || "low");
+  }).map(canonical => canonical.toolId);
+  if (mismatched.length) throw coded("provider_catalog_drift",
+    `Provider catalog governance drift detected (consentScope/confirmationRequired/riskTier mismatch: ${mismatched.join(",")}).`);
   return true;
 }
 

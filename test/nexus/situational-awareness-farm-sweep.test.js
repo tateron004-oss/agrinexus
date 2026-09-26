@@ -53,12 +53,20 @@ test("listUnacknowledgedMemoryNudges checks freshness against nexus_memory_items
 });
 
 function sweepFixture({ staleSubjects = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
-  const created = { tasks: [], nudgeRecords: [] };
+  const created = { tasks: [], nudgeRecords: [], removed: [] };
+  let seq = 0;
   const runtime = {
     farmRecords: { listStalePrincipals: async () => staleSubjects },
     records: {
-      list: async ({ tenantId, subjectId }) => recentNudgesBySubject[`${tenantId}:${subjectId}`] || [],
-      create: async item => { created.nudgeRecords.push(item); return { record_id: "rec_1" }; }
+      claimCooldown: async ({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
+        const last = (recentNudgesBySubject[`${tenantId}:${subjectId}`] || [])[0];
+        if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;
+        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, workspaceId, recordType, classification, data, provenance };
+        created.nudgeRecords.push(record);
+        return record;
+      },
+      attachTask: async () => {},
+      remove: async ({ recordId }) => { created.removed.push(recordId); return true; }
     },
     tasks: { countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0 },
     engine: { create: engineCreate || (async input => { created.tasks.push(input); return { taskId: `tsk_${created.tasks.length}` }; }) }
@@ -153,7 +161,7 @@ function escalationFixture({ unacknowledgedNudges = [], autonomousCountsByTenant
   const runtime = {
     records: {
       listUnacknowledgedMemoryNudges: async () => unacknowledgedNudges,
-      update: updateImpl || (async item => { created.updates.push(item); return { ...item }; })
+      update: updateImpl || (async item => { created.updates.push(item); return { ...item, version: item.expectedVersion + 1 }; })
     },
     tasks: { countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0 },
     engine: { create: engineCreate || (async input => { created.tasks.push(input); return { taskId: `tsk_${created.tasks.length}` }; }) }
@@ -175,10 +183,13 @@ test("situational-awareness.escalate-unacknowledged-farm-nudges escalates a deli
   assert.equal(taskInput.application, "farm");
   assert.equal(taskInput.command.actorId, "p1");
   assert.equal(taskInput.steps[0].toolId, "reminders.schedule");
+  assert.equal(created.updates.length, 2, "the claim and the taskId attachment are two separate writes");
   assert.equal(created.updates[0].recordId, "rec_1");
   assert.equal(created.updates[0].expectedVersion, 1);
   assert.ok(created.updates[0].data.escalatedAt);
-  assert.equal(created.updates[0].data.escalationTaskId, "tsk_1");
+  assert.equal(created.updates[0].data.escalationTaskId, undefined, "the claim write must not already assume a task exists");
+  assert.equal(created.updates[1].expectedVersion, 2);
+  assert.equal(created.updates[1].data.escalationTaskId, "tsk_1");
 });
 
 test("situational-awareness.escalate-unacknowledged-farm-nudges enforces the per-tenant daily autonomous-task cap", async () => {
@@ -207,15 +218,49 @@ test("situational-awareness.escalate-unacknowledged-farm-nudges skips a paused t
   assert.equal(created.tasks.length, 0);
 });
 
-test("situational-awareness.escalate-unacknowledged-farm-nudges still counts the escalation even when marking the nudge record loses a concurrent update race", async () => {
+test("situational-awareness.escalate-unacknowledged-farm-nudges refuses to escalate the same nudge twice when the claim loses a version race", async () => {
+  let claimed = false;
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "p1", version: 1, data: {} }],
+    updateImpl: async item => {
+      created.updates.push(item);
+      if (item.data.escalatedAt && !("escalationTaskId" in item.data)) {
+        if (claimed) throw new Error("Record rec_1 was changed by another operation.");
+        claimed = true;
+      }
+      return { ...item, version: item.expectedVersion + 1 };
+    }
+  });
+  const handlers = createHandlers({ runtime });
+  await handlers["situational-awareness.escalate-unacknowledged-farm-nudges"]({ job: { payload: {} } });
+  await handlers["situational-awareness.escalate-unacknowledged-farm-nudges"]({ job: { payload: {} } });
+  assert.equal(created.tasks.length, 1, "only one escalation task may exist for this nudge, not two");
+});
+
+test("situational-awareness.escalate-unacknowledged-farm-nudges still counts the escalation even when attaching the taskId loses a concurrent update race", async () => {
+  const { runtime, created } = escalationFixture({
+    unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "p1", version: 1, data: {} }],
+    updateImpl: async item => {
+      created.updates.push(item);
+      if ("escalationTaskId" in item.data) throw new Error("Record rec_1 was changed by another operation.");
+      return { ...item, version: item.expectedVersion + 1 };
+    }
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.escalate-unacknowledged-farm-nudges"]({ job: { payload: {} } });
+  assert.equal(result.escalated, 1, "the escalation task was genuinely created and must still count even if attaching its id lost a race");
+  assert.equal(created.tasks.length, 1);
+});
+
+test("situational-awareness.escalate-unacknowledged-farm-nudges skips a nudge whose claim already lost a version race, without creating a task", async () => {
   const { runtime, created } = escalationFixture({
     unacknowledgedNudges: [{ record_id: "rec_1", tenant_id: "t1", subject_id: "p1", version: 1, data: {} }],
     updateImpl: async () => { throw new Error("Record rec_1 was changed by another operation."); }
   });
   const handlers = createHandlers({ runtime });
   const result = await handlers["situational-awareness.escalate-unacknowledged-farm-nudges"]({ job: { payload: {} } });
-  assert.equal(result.escalated, 1, "the escalation task was genuinely created and must still count even if the marker update lost a race");
-  assert.equal(created.tasks.length, 1);
+  assert.equal(result.escalated, 0, "a claim that loses its version race must not create a duplicate escalation task");
+  assert.equal(created.tasks.length, 0);
 });
 
 test("situational-awareness.escalate-unacknowledged-farm-nudges re-throws an unrelated engine.create failure instead of swallowing it as a pause", async () => {

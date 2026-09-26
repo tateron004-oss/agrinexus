@@ -12,11 +12,15 @@ class ConsentRepository {
     return (result.rows || result)[0];
   }
 
-  async active({ tenantId, subjectId, scope, taskId = null }) {
+  // `stepId`, when passed, narrows the match to a consent whose own receipt was granted for that exact step --
+  // otherwise (task, scope) alone can match a DIFFERENT step's grant when several tools share one consent scope
+  // (see behavior-spine.js's recordConfirmedConsent(), which relies on this to give each step its own receipt).
+  async active({ tenantId, subjectId, scope, taskId = null, stepId = null }) {
     const result = await this.db.query(`select * from nexus_consents where tenant_id=$1 and subject_id=$2
-      and scope=$3 and ($4::text is null or task_id=$4) and state='granted' and revoked_at is null
+      and scope=$3 and ($4::text is null or task_id=$4) and ($5::text is null or receipt->>'stepId'=$5)
+      and state='granted' and revoked_at is null
       and (expires_at is null or expires_at > now()) order by granted_at desc limit 1`,
-    [tenantId, subjectId, scope, taskId]);
+    [tenantId, subjectId, scope, taskId, stepId]);
     return (result.rows || result)[0] || null;
   }
 
