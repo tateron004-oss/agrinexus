@@ -291,6 +291,23 @@ test("a document request naming a format carries it through to the plan's input,
     "no format named -- must not invent one, documents.create's own default still applies");
 });
 
+// Found live (uploads/exports audit): this fast path put the ENTIRE raw
+// command into documents.create's content with no length limit at all,
+// unlike every other free-text-to-document path in this codebase (a 4000-char
+// sanitizePilotText cap, a 600-char resumePlan rejection). A multi-megabyte
+// command reaches exportProvider's synchronous PDF/DOCX rendering with no cap
+// of its own, tying up the process's single event loop.
+test("a document request's content is capped, not passed through at unbounded length", () => {
+  const { completeDocumentPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "documents.create" }] };
+  const huge = `Create and save a document, then reopen it: ${"x".repeat(50000)}`;
+  const plan = completeDocumentPlan(huge, catalog);
+  assert.ok(plan.steps[0].input.content.length <= 4000, `expected capped content, got ${plan.steps[0].input.content.length} chars`);
+
+  const short = "Create and save a farming plan document, then reopen it.";
+  assert.equal(completeDocumentPlan(short, catalog).steps[0].input.content, short, "a short command must still be carried through in full, unchanged");
+});
+
 // Item 18 of the 2026-09-22 capability audit: "show me videos of X" had no path at all through the
 // authoritative runtime -- only images.search existed. completeVideoSearchPlan closes that gap.
 test("a complete video-search request has an executable Videos plan, distinct from image search and media playback", () => {

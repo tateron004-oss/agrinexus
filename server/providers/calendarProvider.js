@@ -46,6 +46,14 @@ async function createEvent(body = {}, env = process.env) {
   const title = clean(body.title || body.summary || body.command);
   const start = clean(body.start || body.startTime || body.when);
   if (!title || !start) return blockedResponse(selected, action, "Calendar title and start time are required.");
+  // Found live: start/end are bare, offset-less timestamps ("2026-09-26T15:00:00")
+  // with no way for the calendar provider to know whose "3pm" that is -- without
+  // an explicit zone, Google Calendar's API treats a dateTime with no UTC offset
+  // and no timeZone field as UTC, silently landing the event hours off from what
+  // the caller actually asked for. Falls back to this app's own default operating
+  // time zone (matching nexus/reminders' own DEFAULT_TIME_ZONE) when the caller's
+  // real zone isn't available (e.g. a phone call with no client-supplied zone).
+  const timeZone = clean(body.timeZone) || "Africa/Nairobi";
   if (readiness.missingConfig.length) {
     return simulatedProviderResponse(selected, action, {
       idField: "eventId",
@@ -64,15 +72,15 @@ async function createEvent(body = {}, env = process.env) {
         body: JSON.stringify({
           summary: title,
           description: clean(body.description || "Created by Nexus after explicit confirmation."),
-          start: { dateTime: start },
-          end: { dateTime: clean(body.end || body.endTime) || new Date(new Date(start).getTime() + 30 * 60000).toISOString() }
+          start: { dateTime: start, timeZone },
+          end: { dateTime: clean(body.end || body.endTime) || new Date(new Date(start).getTime() + 30 * 60000).toISOString(), timeZone }
         })
       });
     } else {
       response = await fetch(clean(env.NEXUS_CALENDAR_PROVIDER_ENDPOINT), {
         method: "POST",
         headers: { authorization: `Bearer ${env.NEXUS_CALENDAR_PROVIDER_API_KEY}`, "content-type": "application/json" },
-        body: JSON.stringify({ action: "create", title, start, end: clean(body.end || body.endTime), metadata: { source: "nexus-openai-native" } })
+        body: JSON.stringify({ action: "create", title, start, end: clean(body.end || body.endTime), timeZone, metadata: { source: "nexus-openai-native" } })
       });
     }
     const payload = await safeJson(response);
