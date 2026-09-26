@@ -4,6 +4,13 @@ const templates = require("./templates");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
 const { renderPdfBuffer } = require("../../server/providers/exportProvider");
 const DATA_SCOPE = "business:client-data";
+const AI_SCOPE = "business:ai";
+const BILLING_SCOPE = "business:billing";
+// Every distinct consent scope this service ever grants. Found live: revokeConsent() only ever revoked DATA_SCOPE --
+// assistant()/plan() grant AI_SCOPE and checkout()/refreshSubscription() grant BILLING_SCOPE, but nothing anywhere
+// could revoke those two. A person calling the one and only "/consent/revoke" endpoint, expecting it to withdraw
+// their business consent, would find AI-sharing and billing consent silently still active forever.
+const ALL_SCOPES = [DATA_SCOPE, AI_SCOPE, BILLING_SCOPE];
 const ALLOWED_OPERATIONS = new Set(["launch-kit", "landing-page", "assistant-package", "workflow", "strategy", "documents", "marketing"]);
 const INPUT_FIELDS = ["businessName", "industry", "location", "customer", "problem", "request", "objective", "audience"];
 
@@ -327,7 +334,7 @@ class BusinessService {
   async assistant(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm sharing this draft with the AI provider.", 409);
-    await this.consent(context, body.consent === true, "business:ai");
+    await this.consent(context, body.consent === true, AI_SCOPE);
     const record = await this.owned(context, recordId);
     if (!this.providers.assistant) fail("business_provider_unavailable", "Business AI is unavailable.", 503);
     return this.providers.assistant({ workspace: { ...record.data.editable, businessName: record.data.info.businessName }, message: String(body.message || "").slice(0, 8000) });
@@ -335,7 +342,7 @@ class BusinessService {
   async plan(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm sharing business details with the AI planner.", 409);
-    await this.consent(context); await this.consent(context, body.consent === true, "business:ai");
+    await this.consent(context); await this.consent(context, body.consent === true, AI_SCOPE);
     const record = await this.owned(context, recordId);
     if (record.version !== body.expectedVersion) fail("business_version_conflict", "Reload before planning.", 409);
     if (!this.providers.plan) fail("business_provider_unavailable", "Business AI planning is unavailable.", 503);
@@ -346,7 +353,7 @@ class BusinessService {
   async checkout(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm creating a provider checkout.", 409);
-    await this.consent(context, body.consent === true, "business:billing");
+    await this.consent(context, body.consent === true, BILLING_SCOPE);
     const record = await this.owned(context, recordId);
     if (record.version !== body.expectedVersion) fail("business_version_conflict", "Reload before creating checkout.", 409);
     if (record.data.subscription?.state === "active") fail("business_subscription_active", "This workspace already has a verified paid subscription.", 409);
@@ -356,7 +363,7 @@ class BusinessService {
       data: { ...record.data, subscription }, provenance: { source: "stripe-checkout", paid: false } });
   }
   async refreshSubscription(context, recordId) {
-    await this.authorize(context, true); await this.consent(context, false, "business:billing");
+    await this.authorize(context, true); await this.consent(context, false, BILLING_SCOPE);
     const record = await this.owned(context, recordId);
     if (!this.providers.refresh) fail("business_provider_unavailable", "Business billing is unavailable.", 503);
     const verified = await this.providers.refresh({ tenantId: context.tenantId, ownerId: context.userId, recordId, sessionId: record.data.subscription?.sessionId });
@@ -371,9 +378,12 @@ class BusinessService {
   }
   async revokeConsent(context) {
     await this.authorize(context);
-    const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: DATA_SCOPE });
-    if (consent) await this.consents.revoke({ tenantId: context.tenantId, subjectId: context.userId, consentId: consent.consent_id });
-    return { revoked: true, scope: DATA_SCOPE };
+    const revoked = [];
+    for (const scope of ALL_SCOPES) {
+      const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope });
+      if (consent) { await this.consents.revoke({ tenantId: context.tenantId, subjectId: context.userId, consentId: consent.consent_id }); revoked.push(scope); }
+    }
+    return { revoked: true, scopes: revoked };
   }
   async webhook(raw, signature) {
     if (!this.providers.verifyWebhook) fail("business_provider_unavailable", "Business billing webhooks are unavailable.", 503);

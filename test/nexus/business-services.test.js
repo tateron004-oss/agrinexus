@@ -80,6 +80,20 @@ test("assistant and checkout require independent explicit confirmation before pr
   assert.equal(preview.externalAction, false); assert.equal(preview.mode, "template-preview"); assert.equal(calls, 0);
 });
 
+// Found live: revokeConsent() only ever revoked "business:client-data" -- assistant()/plan() grant "business:ai" and
+// checkout()/refreshSubscription() grant "business:billing", but nothing anywhere could revoke those two, so a person
+// calling the one and only "/consent/revoke" endpoint would find AI-sharing and billing consent still silently active.
+test("revoking business consent withdraws every scope it ever granted, not just client-data storage", async () => {
+  const f = fixture({ assistant: async () => ({ reply: "ok" }), checkout: async () => ({ state: "pending" }) });
+  const row = await f.service.create(f.context, { businessName: "Cooperative", consent: true });
+  await f.service.assistant(f.context, row.record_id, { confirmed: true, consent: true, message: "hi" });
+  await f.service.checkout(f.context, row.record_id, { confirmed: true, consent: true, expectedVersion: 1, plan: "pro" });
+  assert.equal(f.grants.size, 3, "client-data, AI and billing consent must all have been granted along the way");
+  const result = await f.service.revokeConsent(f.context);
+  assert.deepEqual(new Set(result.scopes), new Set(["business:client-data", "business:ai", "business:billing"]));
+  assert.equal(f.grants.size, 0, "revoking business consent must withdraw every scope, not leave AI/billing consent active forever");
+});
+
 test("disabled business providers cannot fetch even when methods are invoked", async () => {
   let calls = 0; const providers = createBusinessProviders({ env: {}, fetchFn: async () => { calls++; throw Error("Network forbidden"); } });
   await assert.rejects(() => providers.assistant({}), error => error.code === "business_provider_unavailable");
