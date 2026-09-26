@@ -12582,6 +12582,12 @@ function runWorkforceActionByAgent(db, user, type) {
     return "Assigned a mentor and created a readiness coaching note.";
   }
   if (type === "shift") {
+    // Found live (drone/workforce audit): same unbounded-replay gap as the
+    // REST /api/workforce/action "shift" handler -- refuse a second shift
+    // while one is already scheduled and hasn't started yet.
+    if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+      return "A shift is already scheduled. Wait until it starts before scheduling another.";
+    }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
     const shift = {
       id: crypto.randomUUID(),
@@ -20355,7 +20361,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       start: args.start || args.startTime || args.when,
       end: args.end || args.endTime,
       description: args.description,
-      confirmed: args.confirmed
+      confirmed: args.confirmed,
+      // Found live: the model's start/end are bare, offset-less timestamps
+      // ("2026-09-26T15:00:00") with no way to know whose "3pm" that is --
+      // threaded through from the caller's own request (see this function's
+      // call sites) so calendarProvider.createEvent can tell the real
+      // provider which zone that clock time is in, instead of letting the
+      // provider silently default to UTC and land the event hours off.
+      timeZone: context.timeZone || args.timeZone
     };
     const calendarResult = await withActionLifecycle(db, {
       provider: "calendar", action: "calendar.event.create", body: calendarBody, actorId: user?.id || realUserEmail || "",
@@ -21367,7 +21380,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
           ...call.arguments,
           command: call.arguments.command || command,
           language: call.arguments.language || language
-        }, { correlationId, command, language, outputMode: body.outputMode || "" });
+        }, { correlationId, command, language, outputMode: body.outputMode || "", timeZone: body.timeZone });
         toolResults.push({ call, result });
       }
       const toolOutputs = toolResults.map(item => ({
@@ -39903,10 +39916,26 @@ function assignFieldAgentDispatch(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const requestedAgentId = sanitizePilotText(body.agentId || "", 120);
   const region = sanitizePilotText(body.region || "", 80);
+  const taskType = sanitizePilotText(body.taskType || "field-visit", 80);
+  // Found live (drone/workforce audit): every seeded field agent carries a
+  // real `skills` list, but auto-matching never consulted it -- a
+  // drone-support task in a region whose only available agent has no
+  // drone-support skill was still matched and dispatched, then recorded (and
+  // audited) as staffed by a "qualified agent". Skill now outranks region --
+  // an unqualified local agent is worse than a qualified one from elsewhere,
+  // since the former produces a task falsely recorded as properly staffed --
+  // and region is still used first to break ties among equally-skilled
+  // candidates, then as a last-resort fallback so this never fails to
+  // dispatch someone the way a hard skill requirement would.
+  const available = agent => agent.status === "available";
+  const inRegion = agent => !region || agent.region.toLowerCase() === region.toLowerCase();
+  const hasSkill = agent => Array.isArray(agent.skills) && agent.skills.includes(taskType);
   const candidate = requestedAgentId
-    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && agent.status === "available")
-    : db.nexusFieldAgents.find(agent => agent.status === "available" && (!region || agent.region.toLowerCase() === region.toLowerCase()))
-      || db.nexusFieldAgents.find(agent => agent.status === "available");
+    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && available(agent))
+    : db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent))
+      || db.nexusFieldAgents.find(agent => available(agent));
   if (!candidate) {
     return { ok: false, error: requestedAgentId ? "requested_agent_unavailable" : "no_available_field_agent" };
   }
@@ -44669,6 +44698,14 @@ async function api(req, res, url) {
 
   const fieldDispatchStatusMatch = url.pathname.match(/^\/api\/field-agents\/dispatch\/([^/]+)\/status$/);
   if (fieldDispatchStatusMatch && req.method === "PATCH") {
+    // Found live (drone/workforce audit): unlike its GET/POST siblings on this
+    // same resource, this route had no `if (!user)` check at all. The
+    // ownership check below falls back to the literal string "Standard
+    // User" when there is no signed-in user -- which is exactly the seeded
+    // demo account's real display name -- so any unauthenticated caller
+    // could cancel (or otherwise change the status of) a dispatch that
+    // account had requested, with no cookie or login at all.
+    if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
     const body = await readBody(req);
     const dispatch = db.nexusFieldDispatches.find(item => item.id === fieldDispatchStatusMatch[1]);
     if (!dispatch) return send(res, 404, { ok: false, error: "dispatch_not_found" });
@@ -45005,7 +45042,8 @@ async function api(req, res, url) {
       correlationId: body.correlationId,
       command: body.command || body.arguments?.command || "",
       language: body.language || body.arguments?.language || user.language || "en",
-      outputMode: body.outputMode || ""
+      outputMode: body.outputMode || "",
+      timeZone: body.timeZone || body.arguments?.timeZone
     }, user.email || null);
     await writeDb(db);
     return send(res, 200, result, {
@@ -50283,6 +50321,16 @@ async function api(req, res, url) {
       addActivity(db.profile, "Mentor assigned for role readiness coaching.");
     } else if (body.type === "shift") {
       if (db.profile.interviews < 1) return send(res, 409, { error: "Schedule an interview before starting a shift" });
+      // Found live (drone/workforce audit): this action was fully
+      // unconditionally repeatable -- calling it in a loop stacked unlimited
+      // "scheduled" shifts onto essentially the same real-world time slot
+      // (all ~36 hours out) and credited db.profile.earnings every single
+      // time, with no overlap check and no cap. Refusing a second shift
+      // while one is already scheduled and hasn't started yet closes the
+      // unbounded-replay path without blocking the normal one-at-a-time flow.
+      if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+        return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
+      }
       const shift = {
         id: crypto.randomUUID(),
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
@@ -52080,11 +52128,19 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow wallet workflows" });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
+    const requestedAmount = Number(body.amount || 0);
+    // Found live (money-logic audit): Number("Infinity") is the finite-looking
+    // value Infinity, which is >= 0 (so it was accepted as a "credit") and is
+    // never < 0 no matter what it's added to, so the balance-floor check below
+    // silently let it through and permanently corrupted the stored wallet
+    // balance to Infinity (and it self-perpetuates, since Number(Infinity||0)
+    // stays Infinity on every later read, unlike NaN which resets to 0).
+    if (!Number.isFinite(requestedAmount)) return send(res, 400, { error: "Wallet amount must be a finite number." });
     const tx = {
       id: crypto.randomUUID(),
       provider: body.provider || "Wallet",
-      amount: Number(body.amount || 0),
-      type: Number(body.amount || 0) >= 0 ? "credit" : "debit",
+      amount: requestedAmount,
+      type: requestedAmount >= 0 ? "credit" : "debit",
       status: "posted",
       createdAt: new Date().toISOString()
     };
@@ -52226,6 +52282,14 @@ async function api(req, res, url) {
     const type = body.type || "quote";
     const actions = {
       quote: () => {
+        // Found live (money-logic audit): Number("Infinity") is a truthy,
+        // finite-looking value that survives `body.price || ...` untouched,
+        // letting a quote (and, once released, a wallet credit) be created
+        // for an infinite amount.
+        const requestedPrice = Number(body.price);
+        if (body.price !== undefined && !Number.isFinite(requestedPrice)) {
+          throw Object.assign(new Error("Quote price must be a finite number."), { httpStatus: 400 });
+        }
         const record = {
           id: crypto.randomUUID(),
           quoteNumber: `AN-QTE-${String(db.profile.tradeQuotes.length + 1).padStart(3, "0")}`,
@@ -52305,6 +52369,13 @@ async function api(req, res, url) {
         // transition once a record leaves its initial state).
         if (latestQuote && latestQuote.status === "released") {
           throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
+        }
+        // Found live (money-logic audit): same Infinity-bypass shape as
+        // quote() above -- an explicit non-finite amount would be credited
+        // to the wallet as-is, permanently corrupting the stored balance.
+        const requestedAmount = Number(body.amount);
+        if (body.amount !== undefined && !Number.isFinite(requestedAmount)) {
+          throw Object.assign(new Error("Release amount must be a finite number."), { httpStatus: 400 });
         }
         const record = {
           id: crypto.randomUUID(),
@@ -53322,7 +53393,8 @@ async function api(req, res, url) {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
         language: args.language || body.language || authContext.user.language || "en",
-        outputMode: "voice"
+        outputMode: "voice",
+        timeZone: body.timeZone || args.timeZone
       });
       const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);
