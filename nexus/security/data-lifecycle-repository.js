@@ -58,9 +58,20 @@ class DataLifecycleRepository {
       order by requested_at limit $2`,[staleBefore,Math.min(Math.max(limit,1),500)]);
     return result.rows||result;
   }
+  // Found live: the legal-hold check here only matched tenant_id, unlike
+  // executeDeletion()'s own hold check a few lines above, which correctly
+  // scopes to "(subject_id is null or subject_id=<the specific person>)".
+  // A hold placed on ONE specific subject (subject_id set, not tenant-wide)
+  // silently blocked retention purging of every OTHER subject's artifacts
+  // in the same tenant, not just the held subject's -- as soon as any
+  // artifact anywhere in the tenant had a past retention_until, the
+  // correlated "not exists" subquery found the (irrelevant) hold and
+  // skipped purging tenant-wide. Fixed to match owner_id (nexus_artifacts'
+  // own ownership column) against the hold's subject_id, the same
+  // null-means-tenant-wide semantics executeDeletion() already uses.
   async purgeExpired({limit=100}) {
     const result=await this.db.query(`with expired as (select artifact_id from nexus_artifacts where retention_until<now() and deleted_at is null
-      and not exists (select 1 from nexus_legal_holds h where h.tenant_id=nexus_artifacts.tenant_id and h.state='active')
+      and not exists (select 1 from nexus_legal_holds h where h.tenant_id=nexus_artifacts.tenant_id and h.state='active' and (h.subject_id is null or h.subject_id=nexus_artifacts.owner_id))
       order by retention_until for update skip locked limit $1) update nexus_artifacts a set state='deleted',object_key=null,deleted_at=now(),updated_at=now()
       from expired where a.artifact_id=expired.artifact_id returning a.artifact_id`,[Math.min(Math.max(limit,1),500)]);
     return result.rows||result;

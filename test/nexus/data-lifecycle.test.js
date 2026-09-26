@@ -22,6 +22,10 @@ test("a legal hold blocks the memory-items erasure too, not just nexus_records",
   assert.equal(held.calls.some(call=>/delete from nexus_memory_items/.test(call.sql)),false);
 });
 test("retention sweeps skip legal holds and use locked bounded batches",async()=>{const x=db([{rows:[{artifact_id:"art"}]}]);const rows=await new DataLifecycleRepository(x).purgeExpired({limit:900});assert.equal(rows.length,1);assert.match(x.calls[0].sql,/not exists/);assert.match(x.calls[0].sql,/for update skip locked/);assert.equal(x.calls[0].params[0],500);});
+// Found live: the legal-hold check only matched tenant_id, unlike executeDeletion()'s own hold check just above
+// (which correctly scopes to "subject_id is null or subject_id=<the specific person>") -- a hold on ONE subject
+// silently blocked retention purging of every OTHER subject's artifacts in the same tenant.
+test("retention sweeps' legal-hold check is scoped to the held subject's own artifacts, not the whole tenant",async()=>{const x=db([{rows:[{artifact_id:"art"}]}]);await new DataLifecycleRepository(x).purgeExpired({limit:10});const sql=x.calls[0].sql;assert.match(sql,/h\.subject_id is null or h\.subject_id=nexus_artifacts\.owner_id/,"a per-subject hold must only block that subject's own artifacts, matching executeDeletion's own (subject_id is null or subject_id=$2) pattern");});
 test("backup evidence rejects unverifiable claims",async()=>{const repo=new DataLifecycleRepository(db());await assert.rejects(repo.recordBackupEvidence({releaseSha:"sha",backupId:"id",state:"restore_verified"}),/Valid backup evidence/);});
 test("listStaleQueued finds only requests still queued past the staleness cutoff, bounded and ordered",async()=>{
   const x=db([{rows:[{tenant_id:"t1",request_id:"req_1"}]}]);
