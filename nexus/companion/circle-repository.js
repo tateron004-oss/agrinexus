@@ -95,12 +95,31 @@ class CircleRepository {
     if ((await this.listFor({ tenantId, userId: member.id })).filter(link => link.role === "member").length >= MAX_LINKS_AS_MEMBER) return { refused: "member_full" };
     const linkId = `lnk_${crypto.randomUUID()}`; const invitedAt = new Date().toISOString(); const rel = clean(relationship).slice(0, 40);
     const base = { kind: "circle", linkId, relationship: rel, status: "invited", shares: {}, invitedAt };
+    // Found live: every check above (this duplicate check included) reads
+    // before any of them commit, so two near-simultaneous invite() calls
+    // for the same (person, member) pair -- from either direction -- could
+    // both pass every check and both insert, creating two independent
+    // links with independently-settable, conflicting share states (and
+    // double-counting against both sides' MAX_MEMBERS/MAX_LINKS_AS_MEMBER
+    // caps). Re-checking for a duplicate under the same transaction-scoped
+    // advisory lock as the insert -- keyed symmetrically so it doesn't
+    // matter which side initiates -- closes the window entirely.
     const write = async db => {
+      const existing = await db.query(`select 1 from nexus_memory_items where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='circle'
+        and deleted_at is null and content->>'kind'='circle' and content->>'role'='person' and content->>'otherId'=$3 and content->>'status'<>'ended' limit 1`,
+      [tenantId, person.id, member.id]);
+      if ((existing.rows || existing)[0]) return null;
       await this.insertRow(db, { tenantId, userId: person.id, content: { ...base, role: "person", otherId: member.id, otherName: member.name } });
       await this.insertRow(db, { tenantId, userId: member.id, content: { ...base, role: "member", otherId: person.id, otherName: person.name } });
+      return { linkId, status: "invited", relationship: rel };
     };
-    if (typeof this.db.transaction === "function") await this.db.transaction(write); else await write(this.db);
-    return { link: { linkId, status: "invited", relationship: rel } };
+    const link = typeof this.db.transaction === "function"
+      ? await this.db.transaction(async trx => {
+          await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`circle-invite:${tenantId}:${[person.id, member.id].sort().join(":")}`]);
+          return write(trx);
+        })
+      : await write(this.db);
+    return link ? { link } : { refused: "duplicate" };
   }
 
   async updateBoth({ tenantId, linkId, change }) {

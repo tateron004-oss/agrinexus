@@ -167,8 +167,14 @@ test("through the companion, sharing medication reminders is a choice the person
   const rows = []; let seq = 0;
   const db = { async transaction(fn) { return fn(db); },
     async query(sql, params) {
+      if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
       if (/from users where tenant_id=\$1 and lower\(email\)/.test(sql)) return { rows: [{ id: "u-amina", display_name: "Amina Wanjiru" }] };
       if (/from users where tenant_id=\$1 and id=\$2/.test(sql)) return { rows: [{ display_name: users.find(user => user.id === params[1]).name }] };
+      if (/select 1 from nexus_memory_items/.test(sql)) {
+        const [, personId, memberId] = params;
+        const match = rows.some(row => row.principal_id === personId && row.content.kind === "circle" && row.content.role === "person" && row.content.otherId === memberId && row.content.status !== "ended");
+        return { rows: match ? [{ "?column?": 1 }] : [] };
+      }
       if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) return { rows: rows.filter(row => (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
       if (/insert into nexus_memory_items/.test(sql)) { rows.push({ memory_id: `r${++seq}`, principal_id: params[2], content: params[3] }); return { rows: [] }; }
       if (/update nexus_memory_items set content=\$3/.test(sql)) { rows.find(row => row.memory_id === params[1]).content = params[2]; return { rows: [] }; }
