@@ -50,9 +50,46 @@ test("canonical engine self-corrects through an explicit governed fallback with 
   assert.equal(result.receipt.verification.selectedTool, "provider.backup"); assert.equal(result.receipt.verification.fallbackAttempt, 1);
 });
 
+// Found live: confirmation_state is computed once from only the PRIMARY tool at task-creation time. When the
+// primary fails and the loop advances to a fallback that itself requires confirmation, authorize()'s hard throw
+// used to abort the ENTIRE candidate loop immediately -- unlike an unavailable or retry-exhausted candidate,
+// which is skipped so the loop can try the NEXT fallback. That meant a perfectly usable later fallback never even
+// got a chance, purely because an earlier, unrelated fallback happened to need confirmation. Must fail closed
+// (the unapproved fallback itself never runs) while still trying whatever comes after it.
+test("a fallback tool that itself requires confirmation is skipped, not left to abort the whole candidate loop, so a later usable fallback still gets its chance", async () => {
+  const { engine, store } = fixture();
+  let backupCalls = 0;
+  engine.tools.get = async id => id === "provider.gated"
+    ? { tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: true, consent_scope: null, timeout_ms: 1000 }
+    : { tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: false, consent_scope: null, timeout_ms: 1000 };
+  engine.executors["provider.primary"] = async () => { throw new Error("provider outage"); };
+  engine.executors["provider.gated"] = async () => { throw new Error("must never run without confirmation"); };
+  engine.executors["provider.backup"] = async () => { backupCalls += 1; return { persisted: true }; };
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.primary", fallback_tool_ids: ["provider.gated", "provider.backup"],
+    confirmation_state: "not_required", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  const result = await engine.execute({ context, taskId: "tsk", stepId: "stp_1" });
+  assert.equal(result.receipt.verification.selectedTool, "provider.backup", "the unapproved gated fallback must be skipped, letting the next usable fallback run");
+  assert.equal(backupCalls, 1);
+});
+
 async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }
+
+// Found live: create() called conversations.ensure() but never checked its
+// return value -- ensure() now returns null when the caller-supplied
+// conversationId belongs to a different owner (see its own comment), and
+// create() must surface that loudly rather than silently proceeding to link
+// the new task to someone else's conversation.
+test("create() refuses to create a task when the conversation it would attach to belongs to a different user", async () => {
+  const { engine } = fixture();
+  engine.conversations.ensure = async () => null;
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Save report", conversationId: "cnv_victim" });
+  await expectCode(() => engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }] }), "conversation_owner_mismatch");
+});
 
 test("canonical engine gates confirmation, verifies outcomes, and suppresses duplicate execution", async () => {
   const { engine, store } = fixture();
@@ -189,6 +226,25 @@ test("budget refusal precedes execution and telemetry outages never erase verifi
   engine.observability.assertCostAllowed=fail;
   assert.equal((await engine.execute({context,taskId:"task",stepId:"s"})).duplicate,true);
   assert.equal(store.calls,1);
+});
+
+// Found live: recordCost() was only ever called on the SUCCESS path -- the real, billable provider call already
+// happens before outcome verification, so a failure AFTER that call (an unverifiable result, a late timeout, an
+// executor throw) meant a real charge could have been incurred but was never written to the cost ledger at all,
+// silently understating spend against both the per-tool ceiling and the tenant's daily budget.
+test("a failed tool execution still records its cost, since a real charge may already have happened", async () => {
+  const { engine, store } = fixture();
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  store.steps = [{ step_id: "s", tool_id: "documents.save", confirmation_state: "approved", idempotency_key: "one", state: "pending", input: {} }];
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  engine.executors["documents.save"] = async () => { throw new Error("provider outage"); };
+  const costEvents = [];
+  engine.observability = { assertCostAllowed: async () => {}, recordCost: async input => { costEvents.push(input); },
+    recordProviderHealth: async () => {}, alert: async () => {} };
+  await assert.rejects(() => engine.execute({ context, taskId: "task", stepId: "s" }));
+  assert.equal(costEvents.length, 1, "a failed execution must still be recorded to the cost ledger, not silently dropped");
+  assert.equal(costEvents[0].toolId, "documents.save");
+  assert.equal(costEvents[0].metadata.outcome, "failed");
 });
 
 test('completed execution cannot be replayed as success without a verified receipt',async()=>{

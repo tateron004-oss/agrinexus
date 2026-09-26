@@ -23,7 +23,12 @@ class AuthoritativeTaskEngine {
     if (autonomous && this.autonomyControl && await this.autonomyControl.isPaused({ tenantId: command.tenantId })) {
       throw new NexusRuntimeError("autonomy_paused", "Autonomous task creation is paused for this tenant.", 409);
     }
-    await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    // ensure() now returns null when conversationId already belongs to a
+    // different owner (see its own comment) -- surfacing that loudly here
+    // protects every current and future caller of create(), not just the
+    // ones that remember to pre-check ownership themselves.
+    const conversation = await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    if (!conversation) throw new NexusRuntimeError("conversation_owner_mismatch", "This conversation belongs to a different user.", 403);
     const normalized = [];
     const stepIds = new Map(steps.map((raw, index) => [String(raw.clientStepId || raw.stepId || `step_${index + 1}`), raw.stepId || createId("step")]));
     for (const raw of steps) {
@@ -105,7 +110,17 @@ class AuthoritativeTaskEngine {
       if (!tool || tool.availability !== "available" || (!authorityOwnsTool && typeof executor !== "function")) {
         lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} has no available authoritative execution owner.`, 503); continue;
       }
-      authorize(context, tool, step);
+      authorize(context, tool);
+      // Found live: step.confirmation_state is computed ONCE, from only the PRIMARY tool, when the task is
+      // created (create()'s `confirmationRequired: Boolean(tool?.confirmation_required)` never looks at
+      // fallbackToolIds). A fallback tool that itself requires confirmation but was never separately approved
+      // used to hit authorize()'s hard throw here -- OUTSIDE the per-candidate try/catch below -- crashing
+      // execute() and executeTask() entirely with an unhandled error instead of degrading to the next candidate
+      // (or a clear final failure) the same way an unavailable/retry-exhausted candidate already does. This
+      // still fails CLOSED (the unconfirmed fallback never runs), it just no longer takes the whole task down.
+      if (tool.confirmation_required && step.confirmation_state !== "approved") {
+        lastError = new NexusRuntimeError("confirmation_required", `Tool ${toolId} requires confirmation that was never given for this step.`, 409); continue;
+      }
       if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
         if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
       if (retryOrdinal > Number(tool.max_attempts || 1)) { lastError = new NexusRuntimeError("retry_exhausted", `Tool ${toolId} exhausted its governed retry limit.`, 409,
@@ -168,6 +183,15 @@ class AuthoritativeTaskEngine {
         correlationId: taskWithSteps.correlationId, taskId, eventType: "provider.failed", outcome: "failed",
         metadata: error });
         if (this.observability) {
+          // Found live: recordCost() was only ever called on the SUCCESS path. The real, billable provider call
+          // already happened above (result = await withTimeout(...executor...)) before outcome verification --
+          // an outcome_unverified failure, a late timeout, or any other post-call exception meant a real charge
+          // could have been incurred but was never written to the cost ledger, understating actual spend against
+          // both the per-tool ceiling and the tenant's daily budget. Falls back to the pre-execution estimate,
+          // the same way the success path falls back to it when an executor doesn't report its own actual cost.
+          await observeSafely(() => this.observability.recordCost({ tenantId: context.tenantId, taskId,
+            toolId: tool.tool_id, provider: providerId, estimatedCostCents: cause?.costCents ?? estimatedCostCents,
+            metadata: { executionId: started.execution.execution_id, outcome: "failed" } }));
           await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
             providerId, successful: false, latencyMs: Date.now() - observedAt, errorCode: error.code }));
           if (span) await observeSafely(() => this.observability.finishSpan(span, { state: "error", error }));
@@ -277,10 +301,9 @@ function sanitizeProviderFailure(cause, context = {}) {
     stage: safe(cause?.stage || "provider-execution"), requestId: safe(context.requestId || context.correlationId || "unavailable") });
 }
 
-function authorize(context, tool, step) {
+function authorize(context, tool) {
   if (tool.required_permission && !context.can(tool.required_permission)) throw new NexusRuntimeError("permission_denied", `Missing permission: ${tool.required_permission}`, 403);
   if (tool.required_role && !context.hasRole(tool.required_role)) throw new NexusRuntimeError("role_required", `Required role: ${tool.required_role}`, 403);
-  if (tool.confirmation_required && step.confirmation_state !== "approved") throw new NexusRuntimeError("confirmation_required", "Explicit confirmation is required.", 409);
 }
 function required(value, name) { if (!String(value || "").trim()) throw new NexusRuntimeError("invalid_input", `${name} is required.`); return value.trim(); }
 function validateDependencies(steps) {
