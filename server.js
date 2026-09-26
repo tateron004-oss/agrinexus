@@ -4534,6 +4534,26 @@ function createTelehealthEncounter(profile, intake = {}, options = {}) {
   return encounter;
 }
 
+// Found live: a completed (or escalation-resolved / provider-declined)
+// telehealth encounter could be silently reopened. Several health-action
+// call sites (consent, vitals, referral, followup, accessibility, the
+// video-session workflow, and /api/health/advanced) reuse
+// db.profile.healthIntakes[0] -- the most recently touched intake -- and
+// unconditionally pass lifecycleState: "intake-started" here, on every
+// call, even when that intake's encounter has already reached a terminal
+// state via the provider workflow's "complete-visit" action. Because
+// updateTelehealthEncounter() unconditionally overwrites lifecycleState
+// from whatever is passed, an entirely ordinary follow-on action (a new
+// vitals reading, a fresh referral, a consent update) on the SAME patient
+// silently flipped an already-completed case back to an active state --
+// reappearing in the provider queue's "waiting" count and reachable again
+// by further provider actions, exactly the "terminal record silently
+// reopened" shape already fixed elsewhere this session for chronic-care,
+// drone missions, shipments, and learning/applicant/employer profiles.
+// Matching that same precedent: once an encounter is terminal, a new
+// health action gets a FRESH encounter for the same intake (like starting
+// a new episode of care) instead of reviving the closed one.
+const TELEHEALTH_TERMINAL_LIFECYCLE_STATES = new Set(["completed", "escalation-resolved", "provider-declined"]);
 function ensureTelehealthEncounterForIntake(profile, intake = {}, options = {}) {
   ensureHealthProfile(profile);
   const existing = findTelehealthEncounter(profile, {
@@ -4541,7 +4561,7 @@ function ensureTelehealthEncounterForIntake(profile, intake = {}, options = {}) 
     intakeId: options.intakeId || intake.id,
     patientRef: options.patientRef || intake.patientRef
   });
-  if (existing) {
+  if (existing && !TELEHEALTH_TERMINAL_LIFECYCLE_STATES.has(existing.lifecycleState)) {
     if (intake && intake.id) intake.encounterId = existing.encounterId;
     if (options.lifecycleState || options.status || options.defaultFields || options.source || options.demoRecord || options.simulation) {
       return updateTelehealthEncounter(profile, existing, options);
