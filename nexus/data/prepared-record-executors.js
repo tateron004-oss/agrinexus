@@ -16,9 +16,12 @@ function createTelehealthPrepareExecutor({ records }) {
     if (!concern) throw coded("telehealth_concern_required", "A telehealth intake needs a concern to save.");
     // telehealth.prepare is confirmationRequired with consent scope health:telehealth-intake:write; the engine only
     // reaches this executor after the person approved it, and the subject is the person themselves.
+    // Found live (cross-user IDOR audit): "input.subjectId ||" let the caller
+    // override this, contradicting the comment above -- any signed-in user
+    // could forge a telehealth intake attributed to an arbitrary other patient.
     const intake = { concern, requestedNextStep: input.requestedNextStep === true, status: "saved_not_shared", preparedAt: new Date().toISOString() };
     const inserted = await records.create({
-      tenantId: context.tenantId, ownerId: context.userId, subjectId: input.subjectId || context.userId,
+      tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       workspaceId: "telehealth-intakes", taskId, recordType: "telehealth_intake", classification: "health",
       data: intake, provenance: { source: "nexus-agent", tool: "telehealth.prepare" }
     });
@@ -45,7 +48,7 @@ function createOperationPlanExecutor({ records }) {
     const plan = { operation, approvalRequested: input.recordApproval === true, approvalState: "pending_approval", dispatched: false,
       status: "planned_not_dispatched", preparedAt: new Date().toISOString() };
     const inserted = await records.create({
-      tenantId: context.tenantId, ownerId: context.userId, subjectId: input.subjectId || context.userId,
+      tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       workspaceId: "field-operations", taskId, recordType: "field_operation_plan", classification: "standard",
       data: plan, provenance: { source: "nexus-agent", tool: "drone.plan" }
     });

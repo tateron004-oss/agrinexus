@@ -63,7 +63,14 @@ function createChronicDiseaseIntakeExecutor({ records }) {
       questionsForProvider: safeList(input.questionsForProvider || input.questions),
       monitoringGoal: safeText(input.monitoringGoal || "prepare_for_visit", 120)
     };
-    const inserted = await records.create({ tenantId: context.tenantId, ownerId: context.userId, subjectId: input.subjectId || context.userId,
+    // Found live (cross-user IDOR audit): input.subjectId let the CALLER
+    // pick whose record this was, with nothing checking any relationship
+    // between the caller and that subject -- any signed-in user could
+    // forge a chronic-disease intake attributed to an arbitrary other
+    // patient's subjectId. "Recording on behalf of someone else isn't a
+    // surfaced capability today" (see health.record's own executor) --
+    // the subject is always the caller, full stop.
+    const inserted = await records.create({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       workspaceId: WORKSPACE_ID, taskId, recordType: INTAKE_RECORD_TYPE, classification: "health", data,
       provenance: { source: "nexus-agent", command: input.command || "" } });
     return { recordId: inserted.record_id, version: inserted.version, persisted: true, safetyNote: PROVIDER_SAFETY_NOTE, ...data };
@@ -102,7 +109,7 @@ function createChronicDiseaseReadingExecutor({ records }) {
       deviceSource: safeText(input.deviceSource || input.source || "manual", 80),
       notes: safeText(input.notes || input.symptoms, 240)
     };
-    const inserted = await records.create({ tenantId: context.tenantId, ownerId: context.userId, subjectId: input.subjectId || context.userId,
+    const inserted = await records.create({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       workspaceId: WORKSPACE_ID, taskId, recordType: READING_RECORD_TYPE, classification: "health", data,
       provenance: { source: "nexus-agent", command: input.command || "" } });
     return { recordId: inserted.record_id, version: inserted.version, persisted: true, safetyNote: PROVIDER_SAFETY_NOTE, ...data };
@@ -120,10 +127,10 @@ function createChronicDiseaseSummaryExecutor({ records }) {
   if (!records?.list) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context }) {
     const focus = input.conditionFocus && CONDITIONS.has(input.conditionFocus) ? input.conditionFocus : "cardiometabolic";
-    const allReadings = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: input.subjectId || context.userId,
+    const allReadings = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       workspaceId: WORKSPACE_ID, recordType: READING_RECORD_TYPE, limit: 100 });
     const readingsList = allReadings.filter(row => focus === "cardiometabolic" || row.data?.conditionFocus === focus).slice(0, 30);
-    const allIntakes = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: input.subjectId || context.userId,
+    const allIntakes = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       workspaceId: WORKSPACE_ID, recordType: INTAKE_RECORD_TYPE, limit: 10 });
     const latestIntake = allIntakes.find(row => focus === "cardiometabolic" || row.data?.conditionFocus === focus) || null;
     return {

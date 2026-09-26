@@ -30,8 +30,13 @@ test("a telehealth intake is really saved as a health record for the person, and
   assert.match(result.nextStep, /nothing was shared with or sent to any provider/);
   assert.equal(verifyTelehealthPrepareOutcome({ result }).verified, true);
   assert.equal(created[0].subjectId, "u1");
-  await createTelehealthPrepareExecutor({ records })({ input: { concern: "x", subjectId: "child-7" }, context, taskId: "t" });
-  assert.equal(created[1].subjectId, "child-7", "an explicit subject is honored");
+  // Found live (cross-user IDOR audit): a caller-supplied subjectId used to
+  // be honored outright -- any signed-in user could forge a telehealth
+  // intake attributed to an arbitrary other patient. The subject is always
+  // the caller (this same file's own comment already said so; the code
+  // didn't enforce it).
+  await createTelehealthPrepareExecutor({ records })({ input: { concern: "x", subjectId: "victim-patient" }, context, taskId: "t" });
+  assert.equal(created[1].subjectId, "u1", "the forged subjectId must never be used");
 });
 
 test("a telehealth intake with no concern is refused, not saved empty", async () => {
@@ -57,6 +62,8 @@ test("a field operation plan is really saved awaiting approval, and nothing is d
   assert.equal(created.length, 1);
   for (const bad of [{}, { ...result, dispatched: true }, { ...result, persisted: false }, { ...result, receipt: { recordId: "different" } }, { ...result, version: 0 }])
     assert.equal(verifyOperationPlanOutcome({ result: bad }).verified, false);
+  await createOperationPlanExecutor({ records })({ input: { operation: "y", subjectId: "someone-else" }, context, taskId: "t" });
+  assert.equal(created[1].subjectId, "u1", "a caller-supplied subjectId must never be used here either");
 });
 
 test("the results satisfy the production completion contracts that gate every deploy", async () => {
