@@ -42755,6 +42755,20 @@ function latestShipment(store, user) {
   return mine.find(item => !/cancelled|delivered/.test(item.status || "")) || mine[0] || null;
 }
 
+// Same terminal-state-reopen shape as latestActiveChronicCareProfile above:
+// cancel_shipment explicitly sets status "cancelled" to stop further tracking
+// activity, but add_tracking_event's exact-ID lookup had no status filter and
+// latestShipment()'s own mine[0] fallback could return that same
+// cancelled/delivered shipment when it's the caller's only one -- silently
+// reopening (overwriting shipment.status back to in-transit/etc.) a shipment
+// that was explicitly finalized. latestShipment() itself is unchanged for the
+// read-only timeline view and for cancel_shipment, which must find the
+// current shipment regardless of status to cancel it in the first place.
+function latestActiveShipment(store, user) {
+  const mine = store.shipments.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/cancelled|delivered/.test(item.status || "")) || null;
+}
+
 function latestTransaction(store, user) {
   const mine = store.transactions.filter(item => nexusOperationsOwned(item, user));
   return mine.find(item => !/cancelled|completed|paid/.test(item.status || "")) || mine[0] || null;
@@ -42770,14 +42784,42 @@ function latestLearningProfile(store, user) {
   return mine.find(item => !/archived|deleted/.test(item.status || "")) || mine[0] || null;
 }
 
+// Same shape: archive_learning_profile/delete_training_data_if_allowed
+// explicitly stop further training activity on a profile, but the referral/
+// plan/assessment/enrollment block's exact-ID lookup had no status filter and
+// latestLearningProfile()'s mine[0] fallback could reopen that same profile.
+function latestActiveLearningProfile(store, user) {
+  const mine = store.learningProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/archived|deleted/.test(item.status || "")) || null;
+}
+
 function latestApplicantProfile(store, user) {
   const mine = store.applicantProfiles.filter(item => nexusOperationsOwned(item, user));
   return mine.find(item => !/archived|no-contact|deleted/.test(item.status || "")) || mine[0] || null;
 }
 
+// Same shape: archive_applicant/no_contact_applicant explicitly stop further
+// outreach on an applicant, but prepare_resume_packet/prepare_application_
+// packet/track_application_status/add_interview_follow_up had no status
+// filter and latestApplicantProfile()'s mine[0] fallback could reopen that
+// same archived/no-contact applicant.
+function latestActiveApplicantProfile(store, user) {
+  const mine = store.applicantProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/archived|no-contact|deleted/.test(item.status || "")) || null;
+}
+
 function latestEmployerProfile(store, user) {
   const mine = store.employerProfiles.filter(item => nexusOperationsOwned(item, user));
   return mine.find(item => !/closed|archived/.test(item.status || "")) || mine[0] || null;
+}
+
+// Same shape: mark_employer_closed explicitly stops outreach to an employer,
+// but add_job_opportunity/prepare_application_packet had no status filter and
+// latestEmployerProfile()'s mine[0] fallback could reopen that same closed
+// employer.
+function latestActiveEmployerProfile(store, user) {
+  const mine = store.employerProfiles.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => !/closed|archived/.test(item.status || "")) || null;
 }
 
 function latestDroneMission(store, user) {
@@ -43121,7 +43163,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_tracking_event") {
-    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId && nexusOperationsOwned(item, user)) || latestShipment(store, user) || runNexusOperationsAction(db, { action: "create_shipment" }, user).record;
+    const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId && nexusOperationsOwned(item, user) && !/cancelled|delivered/.test(item.status || "")) || latestActiveShipment(store, user) || runNexusOperationsAction(db, { action: "create_shipment" }, user).record;
     const eventStatus = cleanOpsText(body.status || (/delivered/i.test(command) ? "delivered" : /delayed/i.test(command) ? "delayed" : /temperature/i.test(command) ? "temperature-issue" : /in[- ]?transit/i.test(command) ? "in-transit" : "picked-up"), 80);
     const event = { eventId: nexusOperationId("NX-TRK"), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
     store.trackingEvents.unshift(event);
@@ -43156,7 +43198,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       ownerId: nexusOperationsOwnerKey(user),
       buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer", user)?.partyId || "", 120),
       sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller", user)?.partyId || "", 120),
-      shipmentId: cleanOpsText(body.shipmentId || latestShipment(store, user)?.shipmentId || "", 120),
+      shipmentId: cleanOpsText(body.shipmentId || latestActiveShipment(store, user)?.shipmentId || "", 120),
       amount: cleanOpsText(body.amount || "0", 80),
       currency: cleanOpsText(body.currency || "USD", 12),
       country: cleanOpsText(body.country || db.profile.activeCountryId || "", 40).toLowerCase(),
@@ -43249,7 +43291,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["prepare_training_referral", "prepare_lms_handoff", "create_learning_plan", "create_skill_assessment_packet", "track_training_interest", "track_enrollment_status", "create_drone_training_referral"].includes(action)) {
-    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId && nexusOperationsOwned(item, user)) || latestLearningProfile(store, user) || runNexusOperationsAction(db, { action: "create_learning_profile" }, user).record;
+    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId && nexusOperationsOwned(item, user) && !/archived|deleted/.test(item.status || "")) || latestActiveLearningProfile(store, user) || runNexusOperationsAction(db, { action: "create_learning_profile" }, user).record;
     const status = action === "track_enrollment_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "track_training_interest" ? "interest-recorded" : "prepared";
     const record = {
       trainingRecordId: nexusOperationId("NX-TRN"),
@@ -43316,7 +43358,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "prepare_resume_packet") {
-    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user)) || latestApplicantProfile(store, user) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user) && !/archived|no-contact|deleted/.test(item.status || "")) || latestActiveApplicantProfile(store, user) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
     const packet = {
       resumePacketId: nexusOperationId("NX-RES"),
       applicantId: applicant.applicantId,
@@ -43356,7 +43398,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "add_job_opportunity") {
-    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user)) || latestEmployerProfile(store, user) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user) && !/closed|archived/.test(item.status || "")) || latestActiveEmployerProfile(store, user) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
     const job = {
       jobOpportunityId: nexusOperationId("NX-JOB"),
       ownerId: nexusOperationsOwnerKey(user),
@@ -43381,8 +43423,8 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["prepare_application_packet", "track_application_status", "add_interview_follow_up"].includes(action)) {
-    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user)) || latestApplicantProfile(store, user) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
-    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user)) || latestEmployerProfile(store, user) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user) && !/archived|no-contact|deleted/.test(item.status || "")) || latestActiveApplicantProfile(store, user) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user) && !/closed|archived/.test(item.status || "")) || latestActiveEmployerProfile(store, user) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
     const job = store.jobOpportunities.find(item => item.jobOpportunityId === body.jobOpportunityId && nexusOperationsOwned(item, user)) || store.jobOpportunities.find(item => nexusOperationsOwned(item, user)) || runNexusOperationsAction(db, { action: "add_job_opportunity", employerId: employer.employerId }, user).record;
     const status = action === "track_application_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "add_interview_follow_up" ? "follow-up-prepared" : "prepared";
     const application = {
