@@ -37,7 +37,7 @@ test("account deletion clears version history within the same tenant and subject
   const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
   const historical = x.calls.find(call => /update nexus_record_versions/.test(call.sql));
   assert.ok(historical); assert.deepEqual(historical.params,['tenant-a','owner-a']);
-  assert.match(historical.sql,/v.record_id=r.record_id and r.tenant_id=\$1 and r.subject_id=\$2/);
+  assert.match(historical.sql,/v.record_id=r.record_id and r.tenant_id=\$1 and \(r.subject_id=\$2 or \(r.subject_id is null and r.owner_id=\$2\)\)/);
   assert.match(historical.sql,/provenance='\{\}'::jsonb/);
   assert.equal(result.verification.recordVersionsErased,true);
   const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
@@ -89,6 +89,50 @@ test("a legal hold blocks conversations/messages/documents/notifications erasure
   const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
   await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
   for (const pattern of [/update nexus_conversations/,/update nexus_messages/,/update nexus_documents/,/update nexus_document_versions/,/delete from nexus_notifications/]) {
+    assert.equal(held.calls.some(call=>pattern.test(call.sql)),false);
+  }
+});
+
+// Found live: WorkspaceStateRepository.stage() (nexus/apps/workspace-state-repository.js) used to create records
+// with no subjectId at all, silently leaving subject_id=NULL for "standard"-classification rows -- and SQL's NULL
+// never equals anything, including itself, so a subject-scoped erasure query never matched those rows. Now fixed
+// at the source, plus this defense-in-depth broadening so any future writer with the same mistake is still caught.
+test("record and record-version erasure also catches rows with a NULL subject_id owned by the erasing account", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);
+  await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  const records = x.calls.find(call => /update nexus_records set state='deleted'/.test(call.sql));
+  assert.match(records.sql, /\(subject_id=\$2 or \(subject_id is null and owner_id=\$2\)\)/);
+  const versions = x.calls.find(call => /update nexus_record_versions/.test(call.sql));
+  assert.match(versions.sql, /\(r\.subject_id=\$2 or \(r\.subject_id is null and r\.owner_id=\$2\)\)/);
+});
+
+// Found live: nexus_devices (a real push endpoint URL + encrypted push key per registered device) and
+// nexus_device_events were entirely absent from account erasure -- the only path that ever cleared them was the
+// person explicitly revoking one device at a time. An account erasure left every never-manually-revoked device
+// fully wired to receive push forever.
+test("account deletion also revokes every device and erases device events", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[{device_id:'dev1'},{device_id:'dev2'}]},{rows:[{event_id:'evt1'}]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+
+  const devices = x.calls.find(call => /update nexus_devices/.test(call.sql));
+  assert.ok(devices); assert.deepEqual(devices.params,['tenant-a','owner-a']);
+  assert.match(devices.sql,/state='revoked'/); assert.match(devices.sql,/push_endpoint=null/); assert.match(devices.sql,/push_key_ciphertext=null/);
+  assert.equal(result.verification.devicesErased,true);
+  assert.equal(result.verification.devicesCount,2);
+
+  const deviceEvents = x.calls.find(call => /delete from nexus_device_events/.test(call.sql));
+  assert.ok(deviceEvents); assert.deepEqual(deviceEvents.params,['tenant-a','owner-a']);
+  assert.equal(result.verification.deviceEventsErased,true);
+  assert.equal(result.verification.deviceEventsCount,1);
+});
+
+test("a legal hold blocks device erasure too, not just the older tables", async () => {
+  const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+  for (const pattern of [/update nexus_devices/,/delete from nexus_device_events/]) {
     assert.equal(held.calls.some(call=>pattern.test(call.sql)),false);
   }
 });

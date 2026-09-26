@@ -76,9 +76,16 @@ async function handle(ctx) {
   if ((m = new RegExp(`^${NAME} (?:paid|pays|has paid|contributed|gave|donated) (.+?)(?: for (.+))?$`, "i").exec(t)) || (m = new RegExp(`^(?:received|got) (.+?) from ${NAME}(?: for (.+))?$`, "i").exec(t))) {
     const swapped = /^(?:received|got)/i.test(t); const who = swapped ? m[2] : m[1]; const amountText = swapped ? m[1] : m[2]; const purpose = clean((swapped ? m[3] : m[3]) || "");
     const found = findMember(await members(), who);
+    // Found live: found.member and found.ambiguous can never both be truthy
+    // (findMember's return shape is one or the other), so the old
+    // "if (found.ambiguous) return null" nested inside "if (found?.member...)"
+    // was dead code -- a genuinely ambiguous name ("John" matching both John
+    // Otieno and John Kamau) made the outer check false, silently skipping
+    // this whole branch with no record added and no feedback at all. The
+    // payment the treasurer thought they'd recorded just never happened.
+    if (found?.ambiguous) return `Which one: ${found.ambiguous.map(member => member.data.name).join(" or ")}?`;
     const money = parseMoney(`paid ${amountText}`) || parseMoney(amountText);
     if (found?.member && money) {
-      if (found.ambiguous) return null;
       const c = await coop(); const kind = /\b(?:dues|subscription|fee|fees|monthly|weekly|annual)\b/i.test(`${amountText} ${purpose}`) ? "dues" : "contribution";
       const currency = money.currency || c?.data.currency || "";
       await ctx.store.add({ ...scope, collection: "coop_payment", data: { member: found.member.data.name, kind, amount: money.amount, currency, purpose: purpose.slice(0, 80), day: ctx.today } });
@@ -90,7 +97,9 @@ async function handle(ctx) {
   }
   if ((m = new RegExp(`^(?:co-?op(?:erative)? )?payout (?:to )?${NAME}\\s*[:,-]?\\s*(.+)$`, "i").exec(t)) || (m = new RegExp(`^(?:paid out|pay out) (.+?) to ${NAME}(?: from the co-?op(?:erative)?)?(?: for (.+))?$`, "i").exec(t))) {
     const first = /^(?:co-?op)?.*?payout/i.test(t) && !/^(?:paid out|pay out)/i.test(t); const who = first ? m[1] : m[2]; const rest = first ? m[2] : `${m[1]} ${m[3] ? `for ${m[3]}` : ""}`;
-    const found = findMember(await members(), who); const money = parseMoney(`paid ${rest}`) || parseMoney(rest);
+    const found = findMember(await members(), who);
+    if (found?.ambiguous) return `Which one: ${found.ambiguous.map(member => member.data.name).join(" or ")}?`;
+    const money = parseMoney(`paid ${rest}`) || parseMoney(rest);
     if (found?.member && money) {
       const c = await coop(); const currency = money.currency || c?.data.currency || ""; const purpose = clean(/\bfor (.+)$/i.exec(rest)?.[1] || "").slice(0, 80);
       await ctx.store.add({ ...scope, collection: "coop_payment", data: { member: found.member.data.name, kind: "payout", amount: money.amount, currency, purpose, day: ctx.today } });
@@ -131,7 +140,17 @@ async function handle(ctx) {
     const day = anyDay(m[3], ctx.today);
     if (item && day) {
       if (day < ctx.today) return "That day has already passed. Give me a day that is still ahead.";
-      const who = m[2] ? findMember(await members(), m[2]) : null; const name = who?.member ? who.member.data.name : m[2] ? titleCase(m[2]) : "";
+      const who = m[2] ? findMember(await members(), m[2]) : null;
+      // Found live: when the named person didn't resolve to exactly one
+      // registered co-op member (no match, or an ambiguous match), this
+      // silently fell back to booking the shared equipment for whatever
+      // free-text name was typed anyway -- reserving it for someone who was
+      // never actually added as a member, with no check at all.
+      if (m[2] && !who?.member) {
+        return who?.ambiguous ? `Which one: ${who.ambiguous.map(member => member.data.name).join(" or ")}?`
+          : `I don't have a cooperative member called ${clean(m[2])}. Say "add cooperative member ${titleCase(m[2])}" first, or book it with no name to just reserve the day.`;
+      }
+      const name = who?.member ? who.member.data.name : "";
       const clash = (await ctx.store.list({ ...scope, collection: "coop_booking" })).find(booking => booking.data.equipment === item.data.name && booking.data.day === day && booking.data.status !== "cancelled");
       if (clash) return `The ${item.data.name} is already booked ${describeDay(day, ctx.today)}${clash.data.member ? ` for ${clash.data.member}` : ""}. Pick another day.`;
       await ctx.store.add({ ...scope, collection: "coop_booking", data: { equipment: item.data.name, member: name, day, status: "booked" } });
@@ -151,7 +170,9 @@ async function handle(ctx) {
 
   // ---- what members delivered ----
   if ((m = new RegExp(`^${NAME} delivered (.+?) to the co-?op(?:erative)?$`, "i").exec(t))) {
-    const found = findMember(await members(), m[1]); const quantity = parseQuantity(m[2]);
+    const found = findMember(await members(), m[1]);
+    if (found?.ambiguous) return `Which one: ${found.ambiguous.map(member => member.data.name).join(" or ")}?`;
+    const quantity = parseQuantity(m[2]);
     const item = clean(m[2].replace(quantity?.matched || "", "").replace(/^\s*of\s+/i, "")).toLowerCase();
     if (found?.member && quantity && item) {
       await ctx.store.add({ ...scope, collection: "coop_production", data: { member: found.member.data.name, item, qty: quantity.value, unit: quantity.unit, day: ctx.today } });
