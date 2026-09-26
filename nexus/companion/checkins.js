@@ -108,16 +108,23 @@ function createCheckinService({ settings, state, circle, push, notifications, de
         const promptedAt = new Date(pending.promptedAt);
         if (Number.isNaN(promptedAt.getTime()) || at.getTime() < promptedAt.getTime() + setting.graceHours * 3600 * 1000) continue;
         if (await state.hasActivitySince({ tenantId: pending.tenantId, userId: pending.userId, since: promptedAt.toISOString() }).catch(() => false)) {
-          await state.update({ tenantId: pending.tenantId, memoryId: pending.memoryId, content: { ...pending, status: "active", answeredAt: at.toISOString() } });
+          await state.update({ tenantId: pending.tenantId, memoryId: pending.memoryId, content: { ...pending, status: "active", answeredAt: at.toISOString() }, expectedStatus: "pending" });
           result.cleared += 1; continue;
         }
         const members = await sharing({ tenantId: pending.tenantId, userId: pending.userId }).catch(() => []);
-        if (!members.length) { await state.update({ tenantId: pending.tenantId, memoryId: pending.memoryId, content: { ...pending, status: "missed", alertedAt: at.toISOString() } }); continue; }
+        if (!members.length) { await state.update({ tenantId: pending.tenantId, memoryId: pending.memoryId, content: { ...pending, status: "missed", alertedAt: at.toISOString() }, expectedStatus: "pending" }); continue; }
+        // Claim the "pending" -> "alerted" transition BEFORE telling anyone,
+        // so a person who answers (via answer(), a separate fresh
+        // read-then-write) in the moments between hasActivitySince()'s check
+        // above and here can never have a false "check-in missed" alert
+        // sent about them, and their real answer is never clobbered by this
+        // loop's stale snapshot.
+        const claimed = await state.update({ tenantId: pending.tenantId, memoryId: pending.memoryId, content: { ...pending, status: "alerted", alertedAt: at.toISOString() }, expectedStatus: "pending" });
+        if (!claimed) continue;
         const name = await nameOf({ tenantId: pending.tenantId, userId: pending.userId });
         for (const link of members) { try { await push({ tenantId: pending.tenantId, userId: link.otherId, title: "Check-in missed", body: `${name} hasn't answered their Kyro check-in today. You may want to give them a call.`, key: `checkin-miss:${pending.userId}:${link.otherId}:${pending.day}` }); } catch { /* the others still go */ } }
         try { await notifications.enqueue({ tenantId: pending.tenantId, userId: pending.userId, channel: "push", scheduledAt: at, idempotencyKey: `checkin-missed-self:${pending.userId}:${pending.day}`,
           content: { title: "Kyro check-in", body: `I couldn't reach you today, so I let ${members.map(link => link.otherName).join(", ")} know. Say "I'm okay" and I'll tell them you're fine.`, kind: "checkin" } }); } catch { /* best effort */ }
-        await state.update({ tenantId: pending.tenantId, memoryId: pending.memoryId, content: { ...pending, status: "alerted", alertedAt: at.toISOString() } });
         logger?.info?.("checkin.missed", { userId: pending.userId, day: pending.day });
         result.alerted += 1;
       }
