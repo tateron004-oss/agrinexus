@@ -204,6 +204,25 @@ test("budget refusal precedes execution and telemetry outages never erase verifi
   assert.equal(store.calls,1);
 });
 
+// Found live: recordCost() was only ever called on the SUCCESS path -- the real, billable provider call already
+// happens before outcome verification, so a failure AFTER that call (an unverifiable result, a late timeout, an
+// executor throw) meant a real charge could have been incurred but was never written to the cost ledger at all,
+// silently understating spend against both the per-tool ceiling and the tenant's daily budget.
+test("a failed tool execution still records its cost, since a real charge may already have happened", async () => {
+  const { engine, store } = fixture();
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  store.steps = [{ step_id: "s", tool_id: "documents.save", confirmation_state: "approved", idempotency_key: "one", state: "pending", input: {} }];
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  engine.executors["documents.save"] = async () => { throw new Error("provider outage"); };
+  const costEvents = [];
+  engine.observability = { assertCostAllowed: async () => {}, recordCost: async input => { costEvents.push(input); },
+    recordProviderHealth: async () => {}, alert: async () => {} };
+  await assert.rejects(() => engine.execute({ context, taskId: "task", stepId: "s" }));
+  assert.equal(costEvents.length, 1, "a failed execution must still be recorded to the cost ledger, not silently dropped");
+  assert.equal(costEvents[0].toolId, "documents.save");
+  assert.equal(costEvents[0].metadata.outcome, "failed");
+});
+
 test('completed execution cannot be replayed as success without a verified receipt',async()=>{
  const {engine,store}=fixture();store.task={tenantId:'tenant'};
  store.steps=[{step_id:'step',tool_id:'documents.save',idempotency_key:'key',state:'completed'}];
