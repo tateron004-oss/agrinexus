@@ -6,13 +6,31 @@ function createTaskApi(engine) {
     async list(request) { return respond(() => engine.tasks.list({ tenantId: request.context.tenantId,
       ownerId: request.context.userId, state: request.query?.state, limit: request.query?.limit })); },
     async create(request) {
-      return respond(async () => engine.create({
-        command: createCommand({ correlationId: request.context.requestId, tenantId: request.context.tenantId,
-          actorId: request.context.userId, channel: request.channel || "api", locale: request.locale || "en",
-          text: request.body?.goal, conversationId: request.body?.conversationId }),
-        goal: request.body?.goal, application: request.body?.application, riskTier: request.body?.riskTier,
-        priority: request.body?.priority, dueAt: request.body?.dueAt, steps: request.body?.steps
-      }), 201);
+      return respond(async () => {
+        // Found live: a caller-supplied conversationId was passed straight
+        // through to engine.create() with no ownership pre-check -- unlike
+        // agent-service.js's chat path, which already discards a foreign
+        // conversationId here. Without this, any tenant member could point
+        // at another member's real conversationId (returned in plaintext
+        // elsewhere) and durably link their own task's confirmation/outcome
+        // messages into that other person's private conversation history.
+        // Treat a foreign conversationId exactly like an absent one; the
+        // engine's own ensure()/create() now also reject this as a hard
+        // backstop, but resolving it here keeps a stale/foreign id from
+        // ever failing the whole request.
+        const requestedConversationId = request.body?.conversationId || null;
+        const conversationOwnerId = requestedConversationId
+          ? await engine.conversations?.owner?.({ tenantId: request.context.tenantId, conversationId: requestedConversationId })
+          : null;
+        const ownConversationId = conversationOwnerId && conversationOwnerId !== request.context.userId ? null : requestedConversationId;
+        return engine.create({
+          command: createCommand({ correlationId: request.context.requestId, tenantId: request.context.tenantId,
+            actorId: request.context.userId, channel: request.channel || "api", locale: request.locale || "en",
+            text: request.body?.goal, conversationId: ownConversationId }),
+          goal: request.body?.goal, application: request.body?.application, riskTier: request.body?.riskTier,
+          priority: request.body?.priority, dueAt: request.body?.dueAt, steps: request.body?.steps
+        });
+      }, 201);
     },
     async get(request) { return respond(() => assertTaskOwner(engine, request.context, request.params.taskId)); },
     async transition(request) { return respond(async () => { await assertTaskOwner(engine, request.context, request.params.taskId);

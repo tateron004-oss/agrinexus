@@ -54,6 +54,19 @@ async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }
 
+// Found live: create() called conversations.ensure() but never checked its
+// return value -- ensure() now returns null when the caller-supplied
+// conversationId belongs to a different owner (see its own comment), and
+// create() must surface that loudly rather than silently proceeding to link
+// the new task to someone else's conversation.
+test("create() refuses to create a task when the conversation it would attach to belongs to a different user", async () => {
+  const { engine } = fixture();
+  engine.conversations.ensure = async () => null;
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Save report", conversationId: "cnv_victim" });
+  await expectCode(() => engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }] }), "conversation_owner_mismatch");
+});
+
 test("canonical engine gates confirmation, verifies outcomes, and suppresses duplicate execution", async () => {
   const { engine, store } = fixture();
   const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
