@@ -13,9 +13,9 @@ const PLACEHOLDER_VECTOR = `[1${",0".repeat(1535)}]`;
 class CommunityRepository {
   constructor(db) { if (!db?.query) throw new Error("A database runtime is required."); this.db = db; }
 
-  async insert({ tenantId, userId, purpose, content, sensitivity = "internal" }) {
+  async insert({ tenantId, userId, purpose, content, sensitivity = "internal" }, db = this.db) {
     const memoryId = createId("memory");
-    await this.db.query(`insert into nexus_memory_items
+    await db.query(`insert into nexus_memory_items
       (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
       values ($1,$2,$3,'domain',$4,$5,$6,$7::vector,'none',$8,0.5,0.9,'user_confirmed',$9)`,
     [memoryId, tenantId, userId, purpose, content, `${content.kind}: ${String(content.text || "").slice(0, 80)}`, PLACEHOLDER_VECTOR, { source: "community-desk", capturedAt: new Date().toISOString() }, sensitivity]);
@@ -34,12 +34,24 @@ class CommunityRepository {
   }
 
   // ---- reports ----
+  // Found live: the number was computed with a plain select-max, then
+  // inserted in a separate query -- no transaction, no lock, no unique
+  // constraint. Two reports submitted by different citizens in the same
+  // tenant close enough together could both read the same max and both be
+  // assigned the same number, so a later "close report N" could land on the
+  // wrong citizen's problem while the other's identically-numbered report
+  // silently never gets touched. A transaction-scoped advisory lock, keyed
+  // per tenant, serializes concurrent number allocation for this tenant's
+  // reports without needing a real per-tenant counter row or table.
   async addReport({ tenantId, userId, content }) {
-    const result = await this.db.query(`select coalesce(max((content->>'number')::int),0) as n from nexus_memory_items
-      where tenant_id=$1 and purpose='community_reports' and content->>'kind'='report'`, [tenantId]);
-    const number = Number((result.rows || result)[0]?.n || 0) + 1;
-    await this.insert({ tenantId, userId, purpose: "community_reports", content: { ...content, number }, sensitivity: "sensitive" });
-    return number;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`community_reports:${tenantId}`]);
+      const result = await trx.query(`select coalesce(max((content->>'number')::int),0) as n from nexus_memory_items
+        where tenant_id=$1 and purpose='community_reports' and content->>'kind'='report'`, [tenantId]);
+      const number = Number((result.rows || result)[0]?.n || 0) + 1;
+      await this.insert({ tenantId, userId, purpose: "community_reports", content: { ...content, number }, sensitivity: "sensitive" }, trx);
+      return number;
+    });
   }
   // A person's own reports, or (no userId) every report in the community, newest first.
   listReports({ tenantId, userId = null, limit = 500 }) { return this.select({ tenantId, userId, purpose: "community_reports", kind: "report", limit }); }

@@ -233,8 +233,10 @@ async function handle(ctx) {
   }
   // money in and out
   if ((m = new RegExp(`^${NAME} (?:amelipa|amechangia|ametoa mchango wa) (.+?)(?: kwa (.+))?$`, "i").exec(t))) {
-    const found = findMember(await members(), m[1]); const money = parseMoneySw(m[2]);
-    if (found?.member && money && !found.ambiguous) {
+    const found = findMember(await members(), m[1]);
+    if (found?.ambiguous) return SW.whichParty({ names: found.ambiguous.map(member => member.data.name).join(" au ") });
+    const money = parseMoneySw(m[2]);
+    if (found?.member && money) {
       const c = await coop(); const purpose = clean(m[3] || "").replace(/^ajili ya /i, "");
       const dues = /(?:\bada\b|mchango wa kawaida|kila mwezi|kila wiki|kila mwaka)/i.test(`${m[2]} ${purpose}`) || /amelipa/i.test(t) && !purpose; const currency = money.currency || c?.data.currency || "";
       await ctx.store.add({ ...scope, collection: "coop_payment", data: { member: found.member.data.name, kind: dues ? "dues" : "contribution", amount: money.amount, currency, purpose: purpose.slice(0, 80), day: ctx.today } });
@@ -245,7 +247,9 @@ async function handle(ctx) {
     }
   }
   if ((m = new RegExp(`^(?:malipo ya ushirika kwa|ushirika umemlipa)\\s+${NAME}\\s*[:,-]?\\s*(.+?)(?: kwa (.+))?$`, "i").exec(t))) {
-    const found = findMember(await members(), m[1]); const money = parseMoneySw(m[2]);
+    const found = findMember(await members(), m[1]);
+    if (found?.ambiguous) return SW.whichParty({ names: found.ambiguous.map(member => member.data.name).join(" au ") });
+    const money = parseMoneySw(m[2]);
     if (found?.member && money) { const c = await coop(); const currency = money.currency || c?.data.currency || ""; const purpose = clean(m[3] || "").slice(0, 80); await ctx.store.add({ ...scope, collection: "coop_payment", data: { member: found.member.data.name, kind: "payout", amount: money.amount, currency, purpose, day: ctx.today } }); return SW.payout({ name: found.member.data.name, amount: moneyShown(money.amount, currency), purpose }); }
   }
   if (/^(?:nani hajalipa ada|nani anadaiwa ada|nani hakulipa ada)(?: (?:wiki hii|mwezi huu|mwaka huu|wiki iliyopita|mwezi uliopita))?$/.test(lower)) {
@@ -276,7 +280,11 @@ async function handle(ctx) {
     const day = dayFromSw(tail, ctx.today);
     if (item && day) {
       if (day < ctx.today) return SW.dayPassed;
-      const who = m[2] ? findMember(await members(), m[2]) : null; const name = who?.member ? who.member.data.name : m[2] ? titleCase(m[2]) : "";
+      const who = m[2] ? findMember(await members(), m[2]) : null;
+      if (m[2] && !who?.member) {
+        return who?.ambiguous ? SW.whichParty({ names: who.ambiguous.map(member => member.data.name).join(" au ") }) : SW.noParty({ name: clean(m[2]) });
+      }
+      const name = who?.member ? who.member.data.name : "";
       const clash = (await list("coop_booking")).find(booking => booking.data.equipment === item.data.name && booking.data.day === day && booking.data.status !== "cancelled");
       if (clash) return SW.clash({ name: item.data.name, when: dayShown(day, ctx.today), who: clash.data.member });
       await ctx.store.add({ ...scope, collection: "coop_booking", data: { equipment: item.data.name, member: name, day, status: "booked" } });
@@ -294,7 +302,9 @@ async function handle(ctx) {
   }
   // deliveries
   if ((m = new RegExp(`^${NAME} amewasilisha (.+?) (?:kwenye|kwa) (?:ushirika|chama)$`, "i").exec(t))) {
-    const found = findMember(await members(), m[1]); const quantity = parseQuantitySw(m[2]);
+    const found = findMember(await members(), m[1]);
+    if (found?.ambiguous) return SW.whichParty({ names: found.ambiguous.map(member => member.data.name).join(" au ") });
+    const quantity = parseQuantitySw(m[2]);
     if (found?.member && quantity) {
       const item = englishItem(itemOf(stripQuantity(m[2], quantity)));
       if (item) {
