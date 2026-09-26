@@ -127,6 +127,30 @@ test("buyers keep notes, follow-ups and orders, and a delivered order records th
   assert.match(await who.say("What is my profit this year"), /9,000/);
 });
 
+// Found live (trade/marketplace audit): FarmRecordRepository.update() was an
+// unconditional overwrite with no compare-and-swap on the record's prior
+// status. Two near-simultaneous "deliver order N" requests for the same
+// order (a double-click, a client retry) could both read status "open"
+// before either wrote back "done", so both would record the income AND
+// deduct the stock -- one physical delivery double-counted as revenue and
+// double-depleted stock. Fixed by claiming the order atomically (a
+// compare-and-swap update requiring status still be "open") before any
+// money/stock side effect runs, so only the request that wins the swap
+// proceeds; the loser sees the order already done.
+test("two concurrent 'deliver order' requests for the same order only record the sale once, not twice", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
+  await who.say("Add an order from Amina Traders for 200 kg maize at 45 per kg");
+
+  const [first, second] = await Promise.all([who.say("Deliver order 1"), who.say("Deliver order 1")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /income of 9,000 recorded/.test(text)).length, 1, "exactly one request must have recorded the sale");
+  assert.equal(outcomes.filter(text => /already done/.test(text)).length, 1, "exactly one request must have lost the race and seen the order already done");
+
+  const money = await who.store.list({ tenantId: "t1", userId: "u1", collection: "money" });
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the income must only be recorded once, not once per racing request");
+});
+
 test("a note to a calendar or list is not taken for a buyer note", async () => {
   const who = farmer();
   await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);

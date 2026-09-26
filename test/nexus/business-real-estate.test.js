@@ -181,6 +181,33 @@ test("the dashboard counts buyers/sellers/tenants/landlords explicitly and summa
     [4, 2, 1, 1, 750000]);
 });
 
+// Found live: listings have no currency of their own and are always
+// created/shown as USD elsewhere, but the spoken dashboard summary labeled
+// activeListingValue with dashboard.currency -- picked from whichever
+// currency the business's own transaction ledger uses most -- so a
+// real-estate business that logs its day-to-day income in KES had its
+// $250,000 USD listing spoken back as "worth KES 250,000".
+test("the dashboard's spoken listing value is always USD, never mislabeled with the transaction ledger's currency", async () => {
+  const client = {
+    record_id: "rec_1", version: 1,
+    data: {
+      info: { businessName: "Sunrise Realty" },
+      editable: {
+        listings: [{ address: "123 Main Street", price: 250000, status: "active" }],
+        leads: [], invoiceItems: [], invoices: [], grants: [], tasks: [], appointments: [],
+        transactions: [
+          { type: "income", amount: 6000, currency: "KES" },
+          { type: "income", amount: 4000, currency: "KES" }
+        ]
+      }
+    }
+  };
+  const result = await run({ command: "How's my business doing", businessRequest: async () => ({ body: { clients: [client] } }) });
+  assert.equal(result.status, "completed");
+  assert.match(result.response, /worth \$250000\.00/);
+  assert.doesNotMatch(result.response, /worth KES/);
+});
+
 test("computeBusinessDashboard tolerates a workspace with no listings field at all (an existing, pre-real-estate workspace)", () => {
   const dashboard = computeBusinessDashboard({ transactions: [], invoiceItems: [], invoices: [], grants: [], tasks: [], appointments: [], leads: [] });
   assert.deepEqual([dashboard.totalListings, dashboard.activeListings, dashboard.activeListingValue], [0, 0, 0]);

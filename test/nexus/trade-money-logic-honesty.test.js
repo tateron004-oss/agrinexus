@@ -126,3 +126,33 @@ test("a wallet debit within the available balance still works exactly as before"
   const debit = await post("/api/trade/wallet", { amount: -30 });
   assert.equal(debit.status, 200);
 });
+
+// Found live (money-logic audit): Number("Infinity") is a finite-looking
+// truthy value that is always >= 0 and never < anything, so it silently
+// passed both the credit-type check and the balance-floor check, permanently
+// corrupting the stored wallet balance to Infinity.
+test("a non-finite wallet amount is refused, not silently credited", async () => {
+  const before = await post("/api/trade/wallet", { amount: 1 });
+  const balanceBefore = before.body.profile.wallet;
+
+  const infinite = await post("/api/trade/wallet", { amount: "Infinity" });
+  assert.equal(infinite.status, 400);
+  assert.match(infinite.body.error, /finite/i);
+
+  const after = await post("/api/trade/wallet", { amount: 0.01 });
+  assert.ok(Number.isFinite(after.body.profile.wallet), "the wallet balance must not have been corrupted to Infinity");
+  assert.ok(after.body.profile.wallet < balanceBefore + 1000, "the infinite request must not have been credited");
+});
+
+// Same Infinity-bypass shape in /api/trade/advanced's quote and release
+// actions, which also feed straight into the wallet balance on release.
+test("a non-finite quote price is refused, and a non-finite release amount is refused", async () => {
+  const badQuote = await post("/api/trade/advanced", { type: "quote", price: "Infinity" });
+  assert.equal(badQuote.status, 400);
+  assert.match(badQuote.body.error, /finite/i);
+
+  await post("/api/trade/advanced", { type: "quote", price: 650 });
+  const badRelease = await post("/api/trade/advanced", { type: "release", amount: "Infinity" });
+  assert.equal(badRelease.status, 400);
+  assert.match(badRelease.body.error, /finite/i);
+});

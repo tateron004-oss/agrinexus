@@ -89,12 +89,19 @@ class FarmRecordRepository {
     return (result.rows || result).filter(row => row.content && row.content.kind === "record").map(toRecord);
   }
 
-  // Only the owner of a record can change or remove it.
-  async update({ tenantId, userId, record }) {
-    const result = await this.db.query(`update nexus_memory_items set content=$4,searchable_text=$5,updated_at=now()
-      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='${this.purpose}' and deleted_at is null returning memory_id`,
-    [tenantId, userId, record.memoryId, { kind: "record", collection: record.collection, number: record.number, data: record.data, createdAt: record.createdAt, updatedAt: new Date().toISOString() },
-      this.searchable(record.collection, record.data)]);
+  // Only the owner of a record can change or remove it. Pass `expectedStatus` for a compare-and-swap
+  // update -- the write only takes effect if the record's current data.status still matches, so two
+  // concurrent callers racing to transition the same record (e.g. "deliver order 12" sent twice) can't
+  // both see it as still-open and both apply their side effects; only the one that wins the swap should
+  // proceed with any money/stock effects that go with the transition.
+  async update({ tenantId, userId, record, expectedStatus }) {
+    const params = [tenantId, userId, record.memoryId, { kind: "record", collection: record.collection, number: record.number, data: record.data, createdAt: record.createdAt, updatedAt: new Date().toISOString() },
+      this.searchable(record.collection, record.data)];
+    let sql = `update nexus_memory_items set content=$4,searchable_text=$5,updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='${this.purpose}' and deleted_at is null`;
+    if (expectedStatus !== undefined) { sql += ` and coalesce(content->'data'->>'status','') = $6`; params.push(expectedStatus); }
+    sql += ` returning memory_id`;
+    const result = await this.db.query(sql, params);
     return Boolean((result.rows || result)[0]);
   }
   async remove({ tenantId, userId, memoryId }) {
