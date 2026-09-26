@@ -414,17 +414,26 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       let created = 0; let skippedPaused = 0;
       for (const candidate of candidates) {
         const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
-        // The "subject" of this nudge is the specific business RECORD, not the
-        // owner -- an owner with several workspaces must get an independent
-        // cooldown per workspace, not one shared across all of them.
-        const subjectId = candidate.record_id;
+        // Found live: this used to pass candidate.record_id (a "rec_<uuid>"
+        // business-record id, from nexus/contracts/identifiers.js's
+        // createId()) as subjectId straight into nexus_records.subject_id,
+        // a real `uuid` column -- Postgres rejects that string outright
+        // ("invalid input syntax for type uuid"), so this whole sweep threw
+        // and produced zero nudges as soon as it hit any real due
+        // candidate, every cycle, forever. The "subject" of this nudge is
+        // still meant to be the specific business RECORD, not the owner --
+        // an owner with several workspaces must get an independent cooldown
+        // per workspace, not one shared across all of them -- so instead of
+        // a (non-existent) subject-record uuid, the record id is matched in
+        // JS against the recordId this sweep already saves into each
+        // nudge's own `data` below.
         if (!tenantPaused.has(tenantId)) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
+        const recentNudges = await runtime.records.list({ tenantId, ownerId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 25 });
+        const lastNudge = recentNudges.find(row => row.data?.recordId === candidate.record_id);
         if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
@@ -448,7 +457,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
+        await runtime.records.create({ tenantId, ownerId, taskId: task.taskId,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, classification: "standard",
           data: { reason: "business_workspace_stale", recordId: candidate.record_id, updatedAt: candidate.updated_at },
           provenance: { source: "situational-awareness-business-sweep" } });
@@ -542,14 +551,18 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       let created = 0; let skippedPaused = 0;
       for (const candidate of candidates) {
         const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
-        const subjectId = candidate.record_id;
+        // Found live: same invalid-uuid-subjectId bug as
+        // situational-awareness.business-sweep above (candidate.record_id
+        // is a "rec_<uuid>" business-record id, not a real uuid) -- fixed
+        // the same way, matching the per-workspace-record cooldown in JS
+        // against the recordId saved into each nudge's own `data` below.
         if (!tenantPaused.has(tenantId)) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
+        const recentNudges = await runtime.records.list({ tenantId, ownerId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 25 });
+        const lastNudge = recentNudges.find(row => row.data?.recordId === candidate.record_id);
         if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
@@ -580,9 +593,9 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
+        await runtime.records.create({ tenantId, ownerId, taskId: task.taskId,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "lead_followup_due", dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
+          data: { reason: "lead_followup_due", recordId: candidate.record_id, dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
           provenance: { source: "situational-awareness-lead-followup-sweep" } });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
@@ -607,14 +620,15 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       let created = 0; let skippedPaused = 0;
       for (const candidate of candidates) {
         const tenantId = candidate.tenant_id; const ownerId = candidate.owner_id;
-        const subjectId = candidate.record_id;
+        // Found live: same invalid-uuid-subjectId bug as the other two
+        // business-domain sweeps above -- fixed the same way.
         if (!tenantPaused.has(tenantId)) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
+        const recentNudges = await runtime.records.list({ tenantId, ownerId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, limit: 25 });
+        const lastNudge = recentNudges.find(row => row.data?.recordId === candidate.record_id);
         if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
@@ -639,9 +653,9 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
+        await runtime.records.create({ tenantId, ownerId, taskId: task.taskId,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "business_deadline_due", overdueTasks, approachingGrants },
+          data: { reason: "business_deadline_due", recordId: candidate.record_id, overdueTasks, approachingGrants },
           provenance: { source: "situational-awareness-business-deadline-sweep" } });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;

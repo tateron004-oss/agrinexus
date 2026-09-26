@@ -27,12 +27,16 @@ test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDat
   assert.deepEqual(db.calls[0].params, [10]);
 });
 
-function sweepFixture({ candidates = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
+function sweepFixture({ candidates = [], recentNudgesByOwner = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
   const created = { tasks: [], nudgeRecords: [] };
   const runtime = {
     records: {
       listBusinessWorkspacesWithDatedDeadlines: async () => candidates,
-      list: async ({ tenantId, subjectId }) => recentNudgesBySubject[`${tenantId}:${subjectId}`] || [],
+      // Found live: record_id ("rec_<uuid>") is not a real uuid and can
+      // never be a subjectId (a real Postgres `uuid` column) -- the real
+      // repository is queried by ownerId, and the handler matches the
+      // specific record via data.recordId.
+      list: async ({ tenantId, ownerId }) => recentNudgesByOwner[`${tenantId}:${ownerId}`] || [],
       create: async item => { created.nudgeRecords.push(item); return { record_id: "rec_1" }; }
     },
     tasks: { countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0 },
@@ -61,6 +65,11 @@ test("situational-awareness.business-deadline-sweep creates a real autonomous re
   assert.equal(taskInput.steps.every(step => step.toolId !== "communications.send"), true);
   assert.equal(created.nudgeRecords[0].recordType, BUSINESS_DEADLINE_NUDGE_RECORD_TYPE);
   assert.equal(created.nudgeRecords[0].workspaceId, SITUATIONAL_AWARENESS_WORKSPACE_ID);
+  // Found live: record_id is a "rec_<uuid>" business-record id, not a real
+  // uuid -- it must never be sent as subjectId, only saved into
+  // data.recordId, which the cooldown check matches against instead.
+  assert.equal(created.nudgeRecords[0].subjectId, undefined, "record_id must never be sent as subjectId");
+  assert.equal(created.nudgeRecords[0].data.recordId, "rec_biz");
 });
 
 test("situational-awareness.business-deadline-sweep names an approaching grant deadline too, in the same consolidated reminder", async () => {

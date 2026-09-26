@@ -27,12 +27,16 @@ test("listBusinessWorkspacesWithDueFollowUps only matches a real YYYY-MM-DD foll
   assert.deepEqual(db.calls[0].params, [10]);
 });
 
-function sweepFixture({ dueWorkspaces = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
+function sweepFixture({ dueWorkspaces = [], recentNudgesByOwner = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
   const created = { tasks: [], nudgeRecords: [] };
   const runtime = {
     records: {
       listBusinessWorkspacesWithDueFollowUps: async () => dueWorkspaces,
-      list: async ({ tenantId, subjectId }) => recentNudgesBySubject[`${tenantId}:${subjectId}`] || [],
+      // Found live: record_id ("rec_<uuid>") is not a real uuid and can
+      // never be a subjectId (a real Postgres `uuid` column) -- the real
+      // repository is queried by ownerId, and the handler matches the
+      // specific record via data.recordId.
+      list: async ({ tenantId, ownerId }) => recentNudgesByOwner[`${tenantId}:${ownerId}`] || [],
       create: async item => { created.nudgeRecords.push(item); return { record_id: "rec_1" }; }
     },
     tasks: { countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0 },
@@ -61,7 +65,11 @@ test("situational-awareness.lead-followup-sweep creates a real autonomous remind
   assert.match(taskInput.steps[0].input.when, /2026-01-01/);
   assert.equal(created.nudgeRecords[0].workspaceId, SITUATIONAL_AWARENESS_WORKSPACE_ID);
   assert.equal(created.nudgeRecords[0].recordType, LEAD_FOLLOWUP_NUDGE_RECORD_TYPE);
-  assert.equal(created.nudgeRecords[0].subjectId, "rec_biz");
+  // Found live: record_id is a "rec_<uuid>" business-record id, not a real
+  // uuid -- it must never be sent as subjectId, only saved into
+  // data.recordId, which the cooldown check matches against instead.
+  assert.equal(created.nudgeRecords[0].subjectId, undefined, "record_id must never be sent as subjectId");
+  assert.equal(created.nudgeRecords[0].data.recordId, "rec_biz");
 });
 
 test("situational-awareness.lead-followup-sweep sends one consolidated reminder naming every due lead in a workspace", async () => {
