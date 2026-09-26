@@ -8759,12 +8759,30 @@ function upsertPhoneContact(db, user, { name, phone, relationship = "saved conta
   return record;
 }
 
+// Found live: the loose fallback here (and in callContactCandidates below)
+// was a raw, bidirectional substring test -- a spoken name for a contact
+// that does NOT exist could be a plain substring of a real, different
+// saved contact's name ("jane".includes("jan") for a saved "Jan"), so "call
+// Jane" silently resolved to Jan and staged a real outbound call to the
+// wrong person, with only the yes/no confirmation's spoken-back name as a
+// safeguard against an inattentive "yes." Word-token matching (every word
+// of one name must be a whole word of the other, the same pattern already
+// proven correct for stock/field/reminder/medication lookups elsewhere)
+// still resolves a genuine partial name (e.g. "Amina" against a saved
+// "Amina Wanjiru") without this hazard.
+function contactLookupMatches(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const wordsA = a.split(" ");
+  const wordsB = b.split(" ");
+  return wordsA.every(word => wordsB.includes(word)) || wordsB.every(word => wordsA.includes(word));
+}
 function findPhoneContact(db, name = "") {
   const contacts = ensurePhoneContactBook(db);
   const lookup = contactLookupKey(name);
   if (!lookup) return null;
   return contacts.find(item => item.lookup === lookup)
-    || contacts.find(item => item.lookup.includes(lookup) || lookup.includes(item.lookup))
+    || contacts.find(item => contactLookupMatches(item.lookup, lookup))
     || null;
 }
 
@@ -9025,7 +9043,7 @@ function callContactCandidates(db, target = {}) {
   const lookup = contactLookupKey(target.displayName || target.rawName || "");
   if (!lookup) return [];
   return records
-    .filter(item => item.lookup === lookup || item.lookup.includes(lookup) || lookup.includes(item.lookup) || normalizeSpeechForIntent(item.relationship).includes(lookup))
+    .filter(item => contactLookupMatches(item.lookup, lookup) || normalizeSpeechForIntent(item.relationship).includes(lookup))
     .map(item => ({
       id: item.id,
       displayName: item.name || target.displayName,
@@ -9081,7 +9099,7 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   const targetLookup = contactLookupKey(target?.displayName || target?.rawName || "");
   const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).some(item => {
     const reminderLookup = contactLookupKey(`${item.contactName || ""} ${item.task || ""}`);
-    return reminderLookup === targetLookup || reminderLookup.includes(targetLookup);
+    return contactLookupMatches(reminderLookup, targetLookup);
   });
   if (reminderContactMatch) return null;
   const resolution = callIntentResolution(db, { target, provider });
