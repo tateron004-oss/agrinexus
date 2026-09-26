@@ -52,6 +52,32 @@ class MedicationRepository {
     const row = (result.rows || result)[0];
     return row ? { memoryId: row.memory_id, ...row.content } : null;
   }
+  // Found live: the worker sweep's own check-then-act (getDose(), then
+  // createDose() moments later) has no lock, so two workers ticking the same
+  // due dose within the same race window could both see "no dose yet" and
+  // both create one -- a duplicate "time for your medicine" push, and a
+  // stray extra pending row that never gets marked taken (only the newest
+  // one does), which later crosses GRACE_HOURS and falsely tells the
+  // person's trusted circle they missed a dose they actually took. A
+  // transaction-scoped advisory lock, keyed to this exact dose slot,
+  // serializes the recheck-and-insert across concurrent workers so only one
+  // ever wins; returns the dose it created, or null if another worker
+  // already claimed this slot.
+  async claimDoseSlot({ tenantId, userId, medId, day, time, content }) {
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`medication-dose:${tenantId}:${userId}:${medId}:${day}:${time}`]);
+      const existing = await trx.query(`select memory_id from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and purpose='medications' and deleted_at is null and content->>'kind'='dose'
+        and content->>'medId'=$3 and content->>'day'=$4 and content->>'time'=$5 limit 1`, [tenantId, userId, medId, day, time]);
+      if ((existing.rows || existing)[0]) return null;
+      const memoryId = createId("memory");
+      await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','medications',$4,$5,$6::vector,'none',$7,0.8,0.9,'user_confirmed','health')`,
+      [memoryId, tenantId, userId, { kind: "dose", ...content }, `dose: ${content.name}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { memoryId, ...content };
+    });
+  }
   async dosesForDay({ tenantId, userId, day }) {
     const result = await this.db.query(`select memory_id,content from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and purpose='medications' and deleted_at is null and content->>'kind'='dose' and content->>'day'=$3

@@ -10127,8 +10127,16 @@ function logisticsPointForOrder(route, order) {
 function formatDurationHuman(totalSeconds) {
   const seconds = Number(totalSeconds);
   if (!Number.isFinite(seconds) || seconds <= 0) return "";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
+  // Found live: hours and minutes used to be computed independently
+  // (floor(seconds/3600) and round((seconds%3600)/60)) -- rounding the
+  // minutes remainder up to 60 (e.g. 3599 seconds, 59m59s) never carried
+  // into the hour, printing "60m" instead of "1h", or "1h 60m" instead of
+  // "2h" for a 1h59m59s route. Rounding the TOTAL minutes first, then
+  // splitting that into hours/minutes, makes a 60-minute rollover always
+  // land in the hour it belongs to.
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (hours && minutes) return `${hours}h ${minutes}m`;
   if (hours) return `${hours}h`;
   return `${minutes}m`;
@@ -10315,6 +10323,20 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     settlement: "settlement prepared"
   };
   const trackingResult = await refreshOrderLogisticsTracking(db, order, user, `logistics.${type}`, { pickupLocation, deliveryLocation });
+  // Found live: "delivery-confirm" unconditionally set order.stage to
+  // "Delivered" regardless of what stage the order was actually at -- a
+  // brand-new order (stageIndex 0/1) could jump straight to "Delivered"
+  // with zero real "In transit"/"Quality check" progress, even though this
+  // very record's own "proof" field says a delivery photo/signature/
+  // receiver confirmation is required. That fabricated "Delivered" status
+  // then satisfies the already-fixed settlement gate (which only checks
+  // stage === "Delivered"), letting payment release fire right behind it.
+  // Requiring the order to have already reached "Quality check" (via the
+  // real, incremental /api/trade/advance stageIndex -- the same field that
+  // gate trusts) closes this without inventing a second, conflicting
+  // notion of progress.
+  const ORDER_STAGES = ["Order created", "Packed", "In transit", "Quality check", "Delivered"];
+  const deliveryReadyForConfirmation = type !== "delivery-confirm" || Number(order.stageIndex || 0) >= ORDER_STAGES.indexOf("Quality check");
   const record = {
     id: crypto.randomUUID(),
     logisticsNumber: `AN-SHIP-${String(db.profile.tradeLogisticsRecords.length + 1).padStart(4, "0")}`,
@@ -10334,7 +10356,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     routeId: route.id,
     routeName: route.name,
     checkpoint: order.checkpoint,
-    status: statusMap[type] || "logistics recorded",
+    status: type === "delivery-confirm" && !deliveryReadyForConfirmation ? "delivery confirmation refused: order has not reached Quality check yet" : (statusMap[type] || "logistics recorded"),
     amount,
     currency,
     eta: String(body.eta || trackingResult.tracking?.eta || "route conditions pending"),
@@ -10343,7 +10365,8 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     providerDelivery: trackingResult.delivery,
     createdAt: new Date().toISOString()
   };
-  order.stage = type === "delivery-confirm" ? "Delivered" : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  order.stage = type === "delivery-confirm" ? (deliveryReadyForConfirmation ? "Delivered" : order.stage || "Shipping planned") : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  if (type === "delivery-confirm" && deliveryReadyForConfirmation) order.stageIndex = ORDER_STAGES.length - 1;
   order.checkpoint = pickupLocation;
   order.timeline.unshift({ label: record.status, checkpoint: pickupLocation, createdAt: record.createdAt });
   db.profile.activeCheckpoint = pickupLocation;
@@ -12582,6 +12605,12 @@ function runWorkforceActionByAgent(db, user, type) {
     return "Assigned a mentor and created a readiness coaching note.";
   }
   if (type === "shift") {
+    // Found live (drone/workforce audit): same unbounded-replay gap as the
+    // REST /api/workforce/action "shift" handler -- refuse a second shift
+    // while one is already scheduled and hasn't started yet.
+    if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+      return "A shift is already scheduled. Wait until it starts before scheduling another.";
+    }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
     const shift = {
       id: crypto.randomUUID(),
@@ -20355,7 +20384,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       start: args.start || args.startTime || args.when,
       end: args.end || args.endTime,
       description: args.description,
-      confirmed: args.confirmed
+      confirmed: args.confirmed,
+      // Found live: the model's start/end are bare, offset-less timestamps
+      // ("2026-09-26T15:00:00") with no way to know whose "3pm" that is --
+      // threaded through from the caller's own request (see this function's
+      // call sites) so calendarProvider.createEvent can tell the real
+      // provider which zone that clock time is in, instead of letting the
+      // provider silently default to UTC and land the event hours off.
+      timeZone: context.timeZone || args.timeZone
     };
     const calendarResult = await withActionLifecycle(db, {
       provider: "calendar", action: "calendar.event.create", body: calendarBody, actorId: user?.id || realUserEmail || "",
@@ -21367,7 +21403,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
           ...call.arguments,
           command: call.arguments.command || command,
           language: call.arguments.language || language
-        }, { correlationId, command, language, outputMode: body.outputMode || "" });
+        }, { correlationId, command, language, outputMode: body.outputMode || "", timeZone: body.timeZone });
         toolResults.push({ call, result });
       }
       const toolOutputs = toolResults.map(item => ({
@@ -24825,7 +24861,8 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
     retrievedAt: live.checkedAt,
     limitation: live.ok
       ? "Source-backed current knowledge still requires local context and review before action."
-      : live.reason || "Live source retrieval is not configured or did not return citable sources."
+      : live.reason || "Live source retrieval is not configured or did not return citable sources.",
+    ownerId: user?.id || null
   });
   db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
   db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -29752,7 +29789,8 @@ async function utilityWeatherAnswer(db, text, options = {}) {
       route: "/api/agent/command",
       geography: locationText,
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
-      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions.",
+      ownerId: options.user?.id || null
     });
     db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -30433,7 +30471,8 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
       route: "/api/agent/command",
       geography: locationText,
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
-      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions.",
+      ownerId: user?.id || null
     });
     db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -30857,7 +30896,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   if (!kind) return null;
   if (kind === "music") return await musicProviderCommandResponse(db, user, text, options);
   const preProviderModel = kind === "pre-provider-readiness" ? nexusPreProviderHardeningModel(db, user, text) : null;
-  const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, options) : null;
+  const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, { ...options, user }) : null;
   const response = kind === "time"
     ? utilityTimeAnswer(options)
     : kind === "weather"
@@ -35738,6 +35777,14 @@ function createInstitutionalEvidenceReceipt(payload = {}) {
       payload.limitation || "Evidence receipts do not authorize provider contact, payment, dispatch, diagnosis, prescribing, legal advice, or other high-risk execution.",
       citations.length ? "Citations are source records, not a guarantee that every downstream decision is safe or locally valid." : "No fake citation was generated."
     ],
+    // Found live (cross-user-IDOR audit): unlike its sibling collections
+    // (nexusKnowledgeQueries/nexusKnowledgeSavedResults/
+    // nexusKnowledgeReviewSummaries), these receipts carry the caller's own
+    // raw question (up to 600 chars, potentially a sensitive free-text
+    // health question) and the AI's answer, but had no owner tag at all --
+    // /api/nexus/knowledge/history exposed every user's receipts to every
+    // other signed-in user.
+    ownerId: payload.ownerId ?? null,
     noSecretValuesReturned: true,
     noExecutionAuthorized: true,
     noProviderContactAuthorized: true,
@@ -36069,7 +36116,8 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
     route: "/api/nexus/knowledge/query",
     jurisdiction: classification?.trustedSourceCategory?.jurisdiction || "not specified",
     retrievedAt: result.retrievalCheckedAt || result.retrievedAt || new Date().toISOString(),
-    limitation: Array.isArray(result.limitations) ? result.limitations[0] : result.safetyNote
+    limitation: Array.isArray(result.limitations) ? result.limitations[0] : result.safetyNote,
+    ownerId: user?.id || null
   });
   result.institutionalEvidenceReceipt = institutionalEvidenceReceipt;
   result.evidenceReceiptId = institutionalEvidenceReceipt.receiptId;
@@ -39903,10 +39951,26 @@ function assignFieldAgentDispatch(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const requestedAgentId = sanitizePilotText(body.agentId || "", 120);
   const region = sanitizePilotText(body.region || "", 80);
+  const taskType = sanitizePilotText(body.taskType || "field-visit", 80);
+  // Found live (drone/workforce audit): every seeded field agent carries a
+  // real `skills` list, but auto-matching never consulted it -- a
+  // drone-support task in a region whose only available agent has no
+  // drone-support skill was still matched and dispatched, then recorded (and
+  // audited) as staffed by a "qualified agent". Skill now outranks region --
+  // an unqualified local agent is worse than a qualified one from elsewhere,
+  // since the former produces a task falsely recorded as properly staffed --
+  // and region is still used first to break ties among equally-skilled
+  // candidates, then as a last-resort fallback so this never fails to
+  // dispatch someone the way a hard skill requirement would.
+  const available = agent => agent.status === "available";
+  const inRegion = agent => !region || agent.region.toLowerCase() === region.toLowerCase();
+  const hasSkill = agent => Array.isArray(agent.skills) && agent.skills.includes(taskType);
   const candidate = requestedAgentId
-    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && agent.status === "available")
-    : db.nexusFieldAgents.find(agent => agent.status === "available" && (!region || agent.region.toLowerCase() === region.toLowerCase()))
-      || db.nexusFieldAgents.find(agent => agent.status === "available");
+    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && available(agent))
+    : db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent))
+      || db.nexusFieldAgents.find(agent => available(agent));
   if (!candidate) {
     return { ok: false, error: requestedAgentId ? "requested_agent_unavailable" : "no_available_field_agent" };
   }
@@ -44669,6 +44733,14 @@ async function api(req, res, url) {
 
   const fieldDispatchStatusMatch = url.pathname.match(/^\/api\/field-agents\/dispatch\/([^/]+)\/status$/);
   if (fieldDispatchStatusMatch && req.method === "PATCH") {
+    // Found live (drone/workforce audit): unlike its GET/POST siblings on this
+    // same resource, this route had no `if (!user)` check at all. The
+    // ownership check below falls back to the literal string "Standard
+    // User" when there is no signed-in user -- which is exactly the seeded
+    // demo account's real display name -- so any unauthenticated caller
+    // could cancel (or otherwise change the status of) a dispatch that
+    // account had requested, with no cookie or login at all.
+    if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
     const body = await readBody(req);
     const dispatch = db.nexusFieldDispatches.find(item => item.id === fieldDispatchStatusMatch[1]);
     if (!dispatch) return send(res, 404, { ok: false, error: "dispatch_not_found" });
@@ -45005,7 +45077,8 @@ async function api(req, res, url) {
       correlationId: body.correlationId,
       command: body.command || body.arguments?.command || "",
       language: body.language || body.arguments?.language || user.language || "en",
-      outputMode: body.outputMode || ""
+      outputMode: body.outputMode || "",
+      timeZone: body.timeZone || body.arguments?.timeZone
     }, user.email || null);
     await writeDb(db);
     return send(res, 200, result, {
@@ -45067,6 +45140,14 @@ async function api(req, res, url) {
     return send(res, 401, { error: "Sign in required" });
   }
 
+  // Found live (cross-user-IDOR audit): institutionalEvidenceReceipts carries
+  // the caller's own raw question (up to 600 chars -- potentially a
+  // sensitive free-text health question, per this route's own comment about
+  // its sibling collections) and the AI's answer, but had no owner tag and
+  // no per-owner filtering at all, unlike its siblings' already-flagged
+  // cross-user-IDOR fix on another branch (which explicitly excluded this
+  // collection). A real Admin still sees every receipt.
+  const ownReceiptsOnly = list => (canUse(user, "admin") ? list : list.filter(item => (item.ownerId ?? null) === (user?.id ?? null) && item.ownerId !== null));
   if (url.pathname === "/api/nexus/knowledge/history" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
     return send(res, 200, {
@@ -45074,7 +45155,7 @@ async function api(req, res, url) {
       queries: db.nexusKnowledgeQueries.slice(0, 50),
       savedResults: db.nexusKnowledgeSavedResults.slice(0, 50),
       reviewSummaries: db.nexusKnowledgeReviewSummaries.slice(0, 50),
-      institutionalEvidenceReceipts: db.nexusInstitutionalEvidenceReceipts.slice(0, 50)
+      institutionalEvidenceReceipts: ownReceiptsOnly(db.nexusInstitutionalEvidenceReceipts).slice(0, 50)
     });
   }
 
@@ -45087,7 +45168,7 @@ async function api(req, res, url) {
     const savedResults = db.nexusKnowledgeSavedResults.filter(item => item.queryId === id);
     const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => item.originalQuestion === query.questionSummary || item.queryId === id);
     const providerRequests = db.nexusProviderPathwayRequests.filter(item => item.userQuestion === query.questionSummary || item.knowledgeQueryId === id);
-    const institutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts.filter(item => item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary);
+    const institutionalEvidenceReceipts = ownReceiptsOnly(db.nexusInstitutionalEvidenceReceipts.filter(item => item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary));
     return send(res, 200, {
       ok: true,
       query,
@@ -50283,6 +50364,16 @@ async function api(req, res, url) {
       addActivity(db.profile, "Mentor assigned for role readiness coaching.");
     } else if (body.type === "shift") {
       if (db.profile.interviews < 1) return send(res, 409, { error: "Schedule an interview before starting a shift" });
+      // Found live (drone/workforce audit): this action was fully
+      // unconditionally repeatable -- calling it in a loop stacked unlimited
+      // "scheduled" shifts onto essentially the same real-world time slot
+      // (all ~36 hours out) and credited db.profile.earnings every single
+      // time, with no overlap check and no cap. Refusing a second shift
+      // while one is already scheduled and hasn't started yet closes the
+      // unbounded-replay path without blocking the normal one-at-a-time flow.
+      if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+        return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
+      }
       const shift = {
         id: crypto.randomUUID(),
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
@@ -52080,11 +52171,19 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow wallet workflows" });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
+    const requestedAmount = Number(body.amount || 0);
+    // Found live (money-logic audit): Number("Infinity") is the finite-looking
+    // value Infinity, which is >= 0 (so it was accepted as a "credit") and is
+    // never < 0 no matter what it's added to, so the balance-floor check below
+    // silently let it through and permanently corrupted the stored wallet
+    // balance to Infinity (and it self-perpetuates, since Number(Infinity||0)
+    // stays Infinity on every later read, unlike NaN which resets to 0).
+    if (!Number.isFinite(requestedAmount)) return send(res, 400, { error: "Wallet amount must be a finite number." });
     const tx = {
       id: crypto.randomUUID(),
       provider: body.provider || "Wallet",
-      amount: Number(body.amount || 0),
-      type: Number(body.amount || 0) >= 0 ? "credit" : "debit",
+      amount: requestedAmount,
+      type: requestedAmount >= 0 ? "credit" : "debit",
       status: "posted",
       createdAt: new Date().toISOString()
     };
@@ -52226,6 +52325,14 @@ async function api(req, res, url) {
     const type = body.type || "quote";
     const actions = {
       quote: () => {
+        // Found live (money-logic audit): Number("Infinity") is a truthy,
+        // finite-looking value that survives `body.price || ...` untouched,
+        // letting a quote (and, once released, a wallet credit) be created
+        // for an infinite amount.
+        const requestedPrice = Number(body.price);
+        if (body.price !== undefined && !Number.isFinite(requestedPrice)) {
+          throw Object.assign(new Error("Quote price must be a finite number."), { httpStatus: 400 });
+        }
         const record = {
           id: crypto.randomUUID(),
           quoteNumber: `AN-QTE-${String(db.profile.tradeQuotes.length + 1).padStart(3, "0")}`,
@@ -52305,6 +52412,13 @@ async function api(req, res, url) {
         // transition once a record leaves its initial state).
         if (latestQuote && latestQuote.status === "released") {
           throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
+        }
+        // Found live (money-logic audit): same Infinity-bypass shape as
+        // quote() above -- an explicit non-finite amount would be credited
+        // to the wallet as-is, permanently corrupting the stored balance.
+        const requestedAmount = Number(body.amount);
+        if (body.amount !== undefined && !Number.isFinite(requestedAmount)) {
+          throw Object.assign(new Error("Release amount must be a finite number."), { httpStatus: 400 });
         }
         const record = {
           id: crypto.randomUUID(),
@@ -53322,7 +53436,8 @@ async function api(req, res, url) {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
         language: args.language || body.language || authContext.user.language || "en",
-        outputMode: "voice"
+        outputMode: "voice",
+        timeZone: body.timeZone || args.timeZone
       });
       const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);
