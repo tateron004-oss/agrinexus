@@ -671,8 +671,15 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     }
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const dashboard = computeBusinessDashboard(resolved.client.data.editable);
+    // Found live: listings have no currency field of their own and are
+    // always created/shown as USD elsewhere (see the other formatMoney("USD",
+    // listing.price) call sites in this file) -- but this line was labeling
+    // activeListingValue with dashboard.currency, which is picked from the
+    // business's transaction ledger and can be a completely different
+    // currency (e.g. a business that logs its day-to-day income in KES would
+    // have a $250,000 USD listing spoken back as "worth KES 250,000").
     const listingPhrase = dashboard.totalListings
-      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney(dashboard.currency, dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
+      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney("USD", dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
       : "";
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
