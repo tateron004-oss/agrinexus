@@ -19,6 +19,19 @@ test("parseAreaHectares rejects a negative area instead of silently dropping the
   assert.equal(droneBridge.parseAreaHectares("0 hectares"), null);
 });
 
+// Found live (drone/logistics follow-up audit): the parser only ever
+// matched the FIRST hectare/acre mention and returned immediately -- a
+// real multi-field description silently dropped every mention after the
+// first, understating the combined area the coverage plan is computed for.
+test("parseAreaHectares sums every field mentioned, not just the first", () => {
+  assert.equal(droneBridge.parseAreaHectares("I have 5 hectares in the north field and 3 hectares in the south field, please survey both"), 8);
+  assert.equal(droneBridge.parseAreaHectares("2 hectares plus a 10 acre plot"), 2 + 10 * 0.404686, "must sum across mixed units");
+  // A negative mention among otherwise-valid ones is still excluded from the
+  // sum, matching this parser's own existing "reject a non-positive area"
+  // rule, rather than being silently included or aborting the whole parse.
+  assert.equal(droneBridge.parseAreaHectares("5 hectares in the north field and -3 hectares somewhere else"), 5);
+});
+
 test("planCoverage computes a deterministic, honestly-labeled simulated estimate", () => {
   const plan = droneBridge.planCoverage({ areaHectares: 4 });
   assert.equal(plan.areaHectares, 4);
