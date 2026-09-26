@@ -69,7 +69,26 @@ function readMedicationRequest(text) {
 }
 
 // Which of the person's medications a spoken name means.
-const matches = (meds, query) => (GENERIC.test(query) ? meds : meds.filter(item => item.name === query || item.name.includes(query) || query.includes(item.name)));
+// Found live: the raw item.name.includes(query)/query.includes(item.name)
+// substring test let a spoken name that means one real medication silently
+// match a different, distinct one whenever one name was a plain substring
+// of the other -- "Vitamin D" is a substring of the real, different
+// "Vitamin D3" -- so "I took my Vitamin D" could silently log a dose (or
+// "stop reminding me about Vitamin D" could silently remove the reminder)
+// for the wrong supplement. Word-token matching (every word of the shorter
+// name must be a WHOLE word of the longer one, the same pattern already
+// proven correct for stock/field/reminder lookups elsewhere) still resolves
+// a genuine partial reference (e.g. "amoxicillin" against the stored
+// "amoxicillin clavulanate") without this hazard.
+const matches = (meds, query) => {
+  if (GENERIC.test(query)) return meds;
+  const queryWords = query.split(" ").filter(Boolean);
+  return meds.filter(item => {
+    if (item.name === query) return true;
+    const nameWords = item.name.split(" ").filter(Boolean);
+    return queryWords.every(word => nameWords.includes(word)) || nameWords.every(word => queryWords.includes(word));
+  });
+};
 
 function describe(item) {
   return `${item.name}${item.dose ? ` ${item.dose}` : ""}`;
