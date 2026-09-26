@@ -39,6 +39,20 @@ test("immunisations in Swahili: recorded as told, the next dose only when the wo
   assert.match(await p.health("Show vaccinations for Baby"), /BCG.*Pentavalent|Pentavalent.*BCG/s);
 });
 
+// Found live: the natural Swahili copula "ni" ("is") -- "joto ni 38.5", not
+// just "joto 38.5" -- broke the shared English-only vitals reader entirely,
+// since "ni" wasn't a connector word it recognized. A vitals reading silently
+// vanished with no "couldn't read" warning at all, and a diagnosis using "ni"
+// got its condition text polluted with the leading "ni " left stuck on
+// ("ni malaria" instead of "malaria").
+test("recording a visit in Swahili with the natural 'ni' ('is') still reads the vitals and a clean condition", async () => {
+  const p = await registered();
+  const visit = await p.health("Ziara ya Mary: joto ni 38.5, mapigo ni 80, uchunguzi ni malaria");
+  assert.match(visit, /joto 38\.5°C, mapigo 80/, "vitals must not be silently lost when 'ni' is used");
+  assert.doesNotMatch(visit, /Sikuweza kusoma/, "a reading using 'ni' is not a typing slip and must not be reported as unread");
+  assert.match(visit, /Hali \(kama ulivyosema\): malaria\./, "the condition must not carry a leading 'ni '");
+});
+
 test("pregnancies in Swahili: the expected date is the worker's own, nothing is worked out", async () => {
   const p = await registered();
   assert.match(await p.health("Mary ni mjamzito"), /Tarehe ya kujifungua ya Mary ni lini/);
