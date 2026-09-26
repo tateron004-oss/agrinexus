@@ -278,6 +278,54 @@ test("invoice/receipt generator: a real, printable PDF is produced from an invoi
   await assert.rejects(() => f.service.exportInvoice(f.context, row.record_id, { invoiceNumber: 'INV-1001', expectedVersion: 1 }), error => error.code === 'business_version_conflict');
 });
 
+// Found live: an invoice line's quantity and unitPrice only had to be
+// individually finite, never checked for magnitude -- two such fields could
+// pass validation yet their product overflow to Infinity, producing a
+// client-facing PDF with "Total due: Infinity" and no error anywhere.
+test("an invoice line item with an extreme quantity/price that would overflow to Infinity is rejected", () => {
+  const { normalizeEditable } = require('../../nexus/business/service');
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  assert.throws(() => normalizeEditable(info, { invoiceItems: [{ invoiceNumber: 'INV-1001', description: 'x', quantity: 1e200, unitPrice: 1e200 }] }));
+  // A genuinely large, but real-world, invoice line still works.
+  const editable = normalizeEditable(info, { invoiceItems: [{ invoiceNumber: 'INV-1001', description: 'x', quantity: 100, unitPrice: 5000 }] });
+  assert.equal(editable.invoiceItems[0].unitPrice, 5000);
+});
+
+// Found live: invoiceNumber was the only link between an invoice header and
+// its line items (two independent flat arrays), but nothing rejected two
+// invoices sharing the same number -- a client that (re)computed a number
+// from a stale/shrunk invoices.length (e.g. after deleting an earlier
+// invoice) could silently collide with a real, still-existing invoice, and
+// exportInvoice's PDF would then mix a different client's line items onto
+// the wrong invoice by that shared string.
+test("two invoices sharing the same invoiceNumber are rejected, not silently allowed to collide", () => {
+  const { normalizeEditable } = require('../../nexus/business/service');
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  assert.throws(() => normalizeEditable(info, { invoices: [
+    { invoiceNumber: 'INV-1003', clientName: 'Gamma', date: '2026-01-01', dueDate: '', notes: '', status: 'sent' },
+    { invoiceNumber: 'INV-1003', clientName: 'Delta', date: '2026-01-02', dueDate: '', notes: '', status: 'draft' }
+  ] }));
+  const editable = normalizeEditable(info, { invoices: [{ invoiceNumber: 'INV-1001', clientName: 'Acme', date: '', dueDate: '', notes: '', status: 'draft' }] });
+  assert.equal(editable.invoices[0].invoiceNumber, 'INV-1001');
+});
+
+// Found live: nextInvoiceNumber() used to be "invoices.length + 1001",
+// which recycles a number after a deletion shrinks the array. Scanning
+// every invoiceNumber ever seen -- including a still-present, orphaned
+// invoiceItems row whose own invoice header was deleted -- prevents that.
+test("nextInvoiceNumber never reuses a number still referenced by an existing invoice or line item", () => {
+  const { nextInvoiceNumber } = require('../../nexus/business/voice-dispatch');
+  // Invoice A (INV-1001) was deleted, but its line item (an orphan) remains; invoice C (INV-1003) still exists.
+  const editable = {
+    invoices: [{ invoiceNumber: 'INV-1003', clientName: 'Gamma' }],
+    invoiceItems: [{ invoiceNumber: 'INV-1001', description: 'orphaned from a deleted invoice' }]
+  };
+  // The naive "invoices.length + 1001" formula (length=1) would produce INV-1002 -- not a collision here,
+  // but scanning the actual numbers used (1001 and 1003) is what correctly skips past both to 1004.
+  assert.equal(nextInvoiceNumber(editable), 'INV-1004');
+  assert.equal(nextInvoiceNumber({ invoices: [], invoiceItems: [] }), 'INV-1001');
+});
+
 test("malformed business editor shapes are rejected before draft generation", () => {
   const { normalizeEditable } = require('../../nexus/business/service');
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
