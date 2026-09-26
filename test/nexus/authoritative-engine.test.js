@@ -50,6 +50,30 @@ test("canonical engine self-corrects through an explicit governed fallback with 
   assert.equal(result.receipt.verification.selectedTool, "provider.backup"); assert.equal(result.receipt.verification.fallbackAttempt, 1);
 });
 
+// Found live: confirmation_state is computed once from only the PRIMARY tool at task-creation time. When the
+// primary fails and the loop advances to a fallback that itself requires confirmation, authorize()'s hard throw
+// used to abort the ENTIRE candidate loop immediately -- unlike an unavailable or retry-exhausted candidate,
+// which is skipped so the loop can try the NEXT fallback. That meant a perfectly usable later fallback never even
+// got a chance, purely because an earlier, unrelated fallback happened to need confirmation. Must fail closed
+// (the unapproved fallback itself never runs) while still trying whatever comes after it.
+test("a fallback tool that itself requires confirmation is skipped, not left to abort the whole candidate loop, so a later usable fallback still gets its chance", async () => {
+  const { engine, store } = fixture();
+  let backupCalls = 0;
+  engine.tools.get = async id => id === "provider.gated"
+    ? { tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: true, consent_scope: null, timeout_ms: 1000 }
+    : { tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: false, consent_scope: null, timeout_ms: 1000 };
+  engine.executors["provider.primary"] = async () => { throw new Error("provider outage"); };
+  engine.executors["provider.gated"] = async () => { throw new Error("must never run without confirmation"); };
+  engine.executors["provider.backup"] = async () => { backupCalls += 1; return { persisted: true }; };
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.primary", fallback_tool_ids: ["provider.gated", "provider.backup"],
+    confirmation_state: "not_required", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  const result = await engine.execute({ context, taskId: "tsk", stepId: "stp_1" });
+  assert.equal(result.receipt.verification.selectedTool, "provider.backup", "the unapproved gated fallback must be skipped, letting the next usable fallback run");
+  assert.equal(backupCalls, 1);
+});
+
 async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }
