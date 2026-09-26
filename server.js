@@ -39703,6 +39703,18 @@ const NEXUS_CASE_STATUSES = Object.freeze([
   "blocked"
 ]);
 
+// Found live (follow-up to the terminal-state-reopen bug class already fixed
+// for chronic-care/shipment/learning/applicant/employer records): unlike
+// those, a case's status here was a flat NEXUS_CASE_STATUSES whitelist check
+// with no terminal-state concept at all -- a case already "closed" or
+// "archived" could be silently moved back to any other status by the exact
+// same unguarded PATCH/status call that closed it, and link-record kept
+// accepting new records into a closed case with no error. Once a case is
+// closed/archived it is now frozen (normalizeCase keeps the existing status
+// and link-record refuses), matching the "a terminal record needs a real,
+// explicit reopen step, not an incidental write" precedent set elsewhere.
+const NEXUS_CASE_TERMINAL_STATUSES = Object.freeze(["closed", "archived"]);
+
 const NEXUS_PROVIDER_RESPONSE_TYPES = Object.freeze([
   "note",
   "request_more_info",
@@ -40160,7 +40172,9 @@ function caseTimelineEvent(db, caseId, eventType, description, refs = {}) {
 
 function normalizeCase(db, body = {}, existing = {}, user = null) {
   const now = new Date().toISOString();
-  const status = NEXUS_CASE_STATUSES.includes(body.status) ? body.status : existing.status || "open";
+  const status = NEXUS_CASE_TERMINAL_STATUSES.includes(existing.status || "")
+    ? existing.status
+    : (NEXUS_CASE_STATUSES.includes(body.status) ? body.status : existing.status || "open");
   return {
     id: existing.id || body.id || crypto.randomUUID(),
     profileId: sanitizePilotText(body.profileId || existing.profileId || db.nexusPilotProfiles[0]?.id || "standard-user-local", 120),
@@ -44555,6 +44569,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const caseItem = db.nexusCases.find(item => item.id === nexusCaseLinkRecordMatch[1]);
     if (!caseItem) return send(res, 404, { ok: false, error: "case_not_found" });
+    if (NEXUS_CASE_TERMINAL_STATUSES.includes(caseItem.status)) return send(res, 409, { ok: false, error: "case_closed", case: caseItem });
     const record = getRecordById(db, body.recordId);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     if (!caseItem.recordIds.includes(record.id)) caseItem.recordIds.unshift(record.id);
@@ -44570,6 +44585,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const caseItem = db.nexusCases.find(item => item.id === nexusCaseStatusMatch[1]);
     if (!caseItem) return send(res, 404, { ok: false, error: "case_not_found" });
+    if (NEXUS_CASE_TERMINAL_STATUSES.includes(caseItem.status)) return send(res, 409, { ok: false, error: "case_closed", case: caseItem });
     caseItem.status = NEXUS_CASE_STATUSES.includes(body.status) ? body.status : caseItem.status;
     caseItem.updatedAt = new Date().toISOString();
     caseTimelineEvent(db, caseItem.id, "status_changed", `Case status changed to ${caseItem.status}.`, { actor: user?.name || "Standard User" });
