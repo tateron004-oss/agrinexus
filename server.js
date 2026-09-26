@@ -20355,7 +20355,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       start: args.start || args.startTime || args.when,
       end: args.end || args.endTime,
       description: args.description,
-      confirmed: args.confirmed
+      confirmed: args.confirmed,
+      // Found live: the model's start/end are bare, offset-less timestamps
+      // ("2026-09-26T15:00:00") with no way to know whose "3pm" that is --
+      // threaded through from the caller's own request (see this function's
+      // call sites) so calendarProvider.createEvent can tell the real
+      // provider which zone that clock time is in, instead of letting the
+      // provider silently default to UTC and land the event hours off.
+      timeZone: context.timeZone || args.timeZone
     };
     const calendarResult = await withActionLifecycle(db, {
       provider: "calendar", action: "calendar.event.create", body: calendarBody, actorId: user?.id || realUserEmail || "",
@@ -21367,7 +21374,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
           ...call.arguments,
           command: call.arguments.command || command,
           language: call.arguments.language || language
-        }, { correlationId, command, language, outputMode: body.outputMode || "" });
+        }, { correlationId, command, language, outputMode: body.outputMode || "", timeZone: body.timeZone });
         toolResults.push({ call, result });
       }
       const toolOutputs = toolResults.map(item => ({
@@ -45005,7 +45012,8 @@ async function api(req, res, url) {
       correlationId: body.correlationId,
       command: body.command || body.arguments?.command || "",
       language: body.language || body.arguments?.language || user.language || "en",
-      outputMode: body.outputMode || ""
+      outputMode: body.outputMode || "",
+      timeZone: body.timeZone || body.arguments?.timeZone
     }, user.email || null);
     await writeDb(db);
     return send(res, 200, result, {
@@ -53345,7 +53353,8 @@ async function api(req, res, url) {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
         language: args.language || body.language || authContext.user.language || "en",
-        outputMode: "voice"
+        outputMode: "voice",
+        timeZone: body.timeZone || args.timeZone
       });
       const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);
