@@ -26,7 +26,16 @@ function findItems(items, query) {
   const wanted = keyOf(query); if (!wanted) return [];
   const exact = items.filter(item => keyOf(item.data.name) === wanted);
   if (exact.length) return exact;
-  return items.filter(item => { const have = keyOf(item.data.name); return have.includes(wanted) || wanted.includes(have) || wanted.split(" ").every(word => have.split(" ").includes(word)); });
+  // Found live: the raw have.includes(wanted)/wanted.includes(have) substring
+  // fallback let a query for a NON-EXISTENT item silently match a real,
+  // different item whenever one name is a plain substring of the other after
+  // normalization -- "lot 1" is a substring of "lot 12", so "used 5kg of
+  // maize seed lot 1" (a typo/mis-remembered/removed lot) silently deducted
+  // from the real "Maize Seed Lot 12" instead of saying no such item exists.
+  // Word-token matching alone (used by findSupply/findAnimal in the sibling
+  // health/livestock modules) already covers every legitimate loose match
+  // (a single word like "seed" against "maize seed") without this hazard.
+  return items.filter(item => { const have = keyOf(item.data.name).split(" "); return wanted.split(" ").every(word => have.includes(word)); });
 }
 const lowNote = item => (item.data.low !== undefined && item.data.low !== null && item.data.qty <= item.data.low ? ` Heads up: that is at or below your low level of ${unitLabel(item.data.low, item.data.unit)}.` : "");
 
