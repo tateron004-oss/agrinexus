@@ -99,6 +99,32 @@ test("a failed consent write stops the action, and a runtime without consents be
   assert.deepEqual(bare.calls.map(call => call[0]), ["approve", "execute"]);
 });
 
+// Found live: health.record, health.chronic-intake and health.chronic-reading all share the consent_scope
+// "health:record:write" -- a compound request planned as two steps in one task ("log my blood pressure and also my
+// glucose reading") would have its second step's genuine "yes" silently produce no receipt of its own: the old
+// active({scope, taskId}) lookup (with no stepId) found the FIRST step's already-granted consent and reused it,
+// discarding the audit trail for what the person actually confirmed for the second, different action.
+test("each step of a compound task gets its own consent receipt, even when two steps share one scope", async () => {
+  const grants = []; // a realistic fake ConsentRepository -- filters by stepId exactly like the real SQL does
+  const consents = {
+    active: async ({ scope, taskId, stepId }) => grants.find(g => g.scope === scope && g.taskId === taskId && (stepId == null || g.receipt.stepId === stepId)) || null,
+    grant: async input => { const row = { ...input, consent_id: `cns_${grants.length + 1}` }; grants.push(row); return row; }
+  };
+  const task = ownerTask([step("health.record", { systolic: 140, diastolic: 90 }, { step_id: "stp_1" }), step("health.chronic-reading", { glucose: 110 }, { step_id: "stp_2" })], { application: "health" });
+  const engine = { tools: { get: async id => TOOLS[id] || { tool_id: "health.chronic-reading", consent_scope: "health:record:write" } },
+    approve: async () => {}, transition: async () => ({ taskId: "tsk_1", state: "cancelled" }), executeTask: async () => ({ state: "awaiting_render", receipts: [] }), consents };
+  const spine = new BehaviorSpine({ agent: { command: async () => assert.fail("not used") }, engine,
+    tasks: { get: async () => task }, conversations: { append: async () => {} }, workspaceStates: { stage: async () => {}, acknowledge: async () => {} } });
+  await spine.confirm({ input: { taskId: "tsk_1", stepId: "stp_1", approved: true, text: "Yes, the blood pressure one.", channel: "typed" }, context: ctx() });
+  await spine.confirm({ input: { taskId: "tsk_1", stepId: "stp_2", approved: true, text: "Yes, the glucose one too.", channel: "typed" }, context: ctx() });
+  assert.equal(grants.length, 2, "each distinct step must get its own consent grant, not share the first step's");
+  assert.equal(grants[0].receipt.stepId, "stp_1"); assert.equal(grants[0].receipt.confirmation, "Yes, the blood pressure one.");
+  assert.equal(grants[1].receipt.stepId, "stp_2"); assert.equal(grants[1].receipt.confirmation, "Yes, the glucose one too.", "the second step's own words must be in its own receipt, not lost to the first step's");
+  // Re-confirming the SAME step again (e.g. a client retry) must stay idempotent -- no duplicate grant for it.
+  await spine.confirm({ input: { taskId: "tsk_1", stepId: "stp_1", approved: true, text: "Yes again.", channel: "typed" }, context: ctx() });
+  assert.equal(grants.length, 2, "re-confirming an already-granted step must not create a duplicate consent");
+});
+
 test("the policy is a short allow-list: own-record health writes and one confirmed message", () => {
   assert.deepEqual(Object.keys(POLICIES).sort(), ["communications:send:write", "health:record:write", "health:telehealth-intake:write"]);
   for (const scope of ["communications:send:write", "acceptance:identity", "", undefined, "__proto__", "constructor"]) assert.equal(userConfirmableConsent(scope), null, String(scope));

@@ -23,7 +23,12 @@ class AuthoritativeTaskEngine {
     if (autonomous && this.autonomyControl && await this.autonomyControl.isPaused({ tenantId: command.tenantId })) {
       throw new NexusRuntimeError("autonomy_paused", "Autonomous task creation is paused for this tenant.", 409);
     }
-    await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    // ensure() now returns null when conversationId already belongs to a
+    // different owner (see its own comment) -- surfacing that loudly here
+    // protects every current and future caller of create(), not just the
+    // ones that remember to pre-check ownership themselves.
+    const conversation = await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    if (!conversation) throw new NexusRuntimeError("conversation_owner_mismatch", "This conversation belongs to a different user.", 403);
     const normalized = [];
     const stepIds = new Map(steps.map((raw, index) => [String(raw.clientStepId || raw.stepId || `step_${index + 1}`), raw.stepId || createId("step")]));
     for (const raw of steps) {
@@ -168,6 +173,15 @@ class AuthoritativeTaskEngine {
         correlationId: taskWithSteps.correlationId, taskId, eventType: "provider.failed", outcome: "failed",
         metadata: error });
         if (this.observability) {
+          // Found live: recordCost() was only ever called on the SUCCESS path. The real, billable provider call
+          // already happened above (result = await withTimeout(...executor...)) before outcome verification --
+          // an outcome_unverified failure, a late timeout, or any other post-call exception meant a real charge
+          // could have been incurred but was never written to the cost ledger, understating actual spend against
+          // both the per-tool ceiling and the tenant's daily budget. Falls back to the pre-execution estimate,
+          // the same way the success path falls back to it when an executor doesn't report its own actual cost.
+          await observeSafely(() => this.observability.recordCost({ tenantId: context.tenantId, taskId,
+            toolId: tool.tool_id, provider: providerId, estimatedCostCents: cause?.costCents ?? estimatedCostCents,
+            metadata: { executionId: started.execution.execution_id, outcome: "failed" } }));
           await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
             providerId, successful: false, latencyMs: Date.now() - observedAt, errorCode: error.code }));
           if (span) await observeSafely(() => this.observability.finishSpan(span, { state: "error", error }));

@@ -212,6 +212,45 @@ class RecordRepository {
       where tenant_id=$1 and record_id=$2 and deleted_at is null returning record_id`,[tenantId,recordId,actorId]);
     return Boolean((result.rows||result)[0]);
   }
+
+  // Found live: every proactive-nudge worker sweep (nexus/workers/handlers.js) checked for a recent nudge via a
+  // plain list(), then -- after independently creating a real autonomous task -- called create() to record the
+  // cooldown marker. Two concurrent sweeps (two worker processes, or two overlapping ticks right after a deploy)
+  // racing for the same subject could both pass the list() check before either had written its marker, both
+  // create a duplicate real autonomous task (a duplicate reminders.schedule reminder, documents.create summary,
+  // or communications.send draft), and only then both write a marker. This closes that window by re-checking the
+  // cooldown AND reserving it in one atomic, advisory-locked step -- taken BEFORE the real task is created, not
+  // after -- so a losing racer backs off before doing anything real. task_id is not known yet at reservation
+  // time; see attachTask() below for filling it in once the real task exists, and remove() for giving the window
+  // back if creating the task then fails. Returns the reserved record, or null when a marker already exists
+  // within the cooldown.
+  async claimCooldown({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification = "standard", data = {}, provenance = {} }) {
+    if (!tenantId || !ownerId || !workspaceId || !recordType) throw new Error("Record tenant, owner, workspace, and type are required.");
+    const lockKey = `record-cooldown:${tenantId}:${workspaceId}:${recordType}:${subjectId || ownerId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const values = [tenantId]; let where = "tenant_id=$1 and deleted_at is null";
+      for (const [column, value] of [["subject_id", subjectId], ["owner_id", ownerId], ["workspace_id", workspaceId], ["record_type", recordType]])
+        if (value) { values.push(value); where += ` and ${column}=$${values.length}`; }
+      const recent = await trx.query(`select updated_at from nexus_records where ${where} order by updated_at desc limit 1`, values);
+      const last = (recent.rows || recent)[0];
+      if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;
+      const recordId = createId("record");
+      const inserted = await trx.query(`insert into nexus_records
+        (record_id,tenant_id,subject_id,owner_id,task_id,workspace_id,record_type,classification,state,data,provenance,retention_until)
+        values ($1,$2,$3,$4,null,$5,$6,$7,'active',$8,$9,null) returning *`,
+      [recordId, tenantId, subjectId || null, ownerId, workspaceId, recordType, classification, data, provenance]);
+      await trx.query(`insert into nexus_record_versions(version_id,record_id,version,data,provenance,changed_by)
+        values ($1,$2,1,$3,$4,$5)`, [createId("recordVersion"), recordId, data, provenance, ownerId]);
+      return (inserted.rows || inserted)[0];
+    });
+  }
+
+  // Fills in the real task once claimCooldown() above has reserved the window and the task actually exists. No
+  // lock needed here: the reservation itself is what kept a concurrent claimCooldown() out, not this column.
+  async attachTask({ tenantId, recordId, taskId }) {
+    await this.db.query(`update nexus_records set task_id=$3,updated_at=now() where tenant_id=$1 and record_id=$2 and deleted_at is null`, [tenantId, recordId, taskId]);
+  }
 }
 module.exports=Object.freeze({RecordRepository,CLASSIFICATIONS});
 

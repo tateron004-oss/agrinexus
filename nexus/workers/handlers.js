@@ -67,13 +67,10 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           outcomes.push({ notificationId: notification.notification_id, delivered: false, code: "delivery_provider_unavailable" });
           continue;
         }
+        let receipt;
         try {
-          const receipt = await provider(notification);
+          receipt = await provider(notification);
           if (!receipt?.verified) throw Object.assign(new Error("Delivery provider returned no verified receipt."), { code: "delivery_unverified" });
-          await runtime.notifications.delivered(notification.notification_id);
-          await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
-          logger?.info?.("notifications.delivered", { notificationId: notification.notification_id, channel: notification.channel, method: receipt.method });
-          outcomes.push({ notificationId: notification.notification_id, delivered: true, receipt });
         } catch (error) {
           const failedRow = await runtime.notifications.failed(notification.notification_id, { code: error.code || "delivery_failed", message: error.message });
           if (failedRow?.state === "failed") await blockStalledAutonomousTaskIfApplicable({ runtime, notification,
@@ -81,6 +78,23 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           logger?.warn?.("notifications.delivery_failed", { notificationId: notification.notification_id, channel: notification.channel,
             code: error.code || "delivery_failed", detail: String(error.message || "").slice(0, 300) });
           outcomes.push({ notificationId: notification.notification_id, delivered: false, code: error.code || "delivery_failed" });
+          continue;
+        }
+        // Found live (notifications-pipeline audit): the real send (provider(notification), above) had already
+        // happened by this point -- a push/SMS/email genuinely reached the recipient. If the bookkeeping below
+        // (marking the row delivered) then threw on a transient DB error, this used to fall into the same catch
+        // that calls failed(), which requeues the notification (state -> 'queued') whenever attempts<5. The next
+        // poll would then claim and re-deliver it, sending the SAME push/SMS/email a second time. A bookkeeping
+        // failure after a confirmed send must never trigger a resend, so it gets its own non-requeuing catch.
+        try {
+          await runtime.notifications.delivered(notification.notification_id);
+          await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
+          logger?.info?.("notifications.delivered", { notificationId: notification.notification_id, channel: notification.channel, method: receipt.method });
+          outcomes.push({ notificationId: notification.notification_id, delivered: true, receipt });
+        } catch (error) {
+          logger?.error?.("notifications.post_delivery_bookkeeping_failed", { notificationId: notification.notification_id, channel: notification.channel,
+            detail: String(error.message || "").slice(0, 300) });
+          outcomes.push({ notificationId: notification.notification_id, delivered: true, bookkeepingError: true });
         }
       }
       return { outcomes };
@@ -199,14 +213,16 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
-        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        // Reserved BEFORE creating the real task: see claimCooldown()'s own comment for why the order matters.
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId: subjectId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
+          data: { reason: "health_checkin_stale", lastHealthRecordAt: candidate.last_health_record_at },
+          provenance: { source: "situational-awareness-sweep" } });
+        if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
           correlationId: createId("event"), text: "Kyro noticed no recent health check-in and scheduled a reminder." });
         let task;
@@ -215,15 +231,14 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
             application: "health", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a health check-in reminder",
               toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a quick health check-in with Kyro." } }] });
         } catch (error) {
+          // Give the cooldown window back -- nothing real happened, so a future sweep must be able to retry.
+          await runtime.records.remove({ tenantId, recordId: claim.record_id, actorId: subjectId }).catch(() => {});
           // A toggle can race the cached check above; the engine's own guard
           // is the authoritative one and always wins.
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId: subjectId, subjectId, taskId: task.taskId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: HEALTH_CHECKIN_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "health_checkin_stale", lastHealthRecordAt: candidate.last_health_record_at },
-          provenance: { source: "situational-awareness-sweep" } });
+        await runtime.records.attachTask({ tenantId, recordId: claim.record_id, taskId: task.taskId });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
       }
@@ -266,6 +281,16 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        // Found live: this used to create the escalation task FIRST and only afterward try to mark the nudge
+        // escalated (with expectedVersion catching a lost race) -- but by then the duplicate task already
+        // existed; the version check only ever prevented a duplicate BOOKKEEPING write, not the duplicate real
+        // side effect. Claiming first (via the same optimistic-concurrency check, just reordered) means a
+        // losing racer backs off before creating anything.
+        let claimed;
+        try {
+          claimed = await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: nudge.version, actorId: subjectId,
+            data: { ...nudge.data, escalatedAt: new Date().toISOString() }, provenance: { source: "situational-awareness-escalate" } });
+        } catch { continue; } // another worker already claimed this exact nudge for escalation
         const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
           correlationId: createId("event"), text: "Kyro's first health check-in reminder went unacknowledged, so it followed up again." });
         let task;
@@ -274,19 +299,18 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
             application: "health", riskTier: "low", autonomous: true, steps: [{ title: "Send a follow-up health check-in reminder",
               toolId: "reminders.schedule", input: { when: "Tomorrow, remind me again to log a quick health check-in with Kyro -- the last reminder didn't get a new entry." } }] });
         } catch (error) {
+          // Give the claim back -- nothing real happened, so a future sweep must be able to retry this nudge.
+          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: claimed.version, actorId: subjectId,
+            data: nudge.data, provenance: { source: "situational-awareness-escalate-reverted" } }).catch(() => {});
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
         try {
-          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: nudge.version, actorId: subjectId,
-            data: { ...nudge.data, escalatedAt: new Date().toISOString(), escalationTaskId: task.taskId },
-            provenance: { source: "situational-awareness-escalate" } });
+          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: claimed.version, actorId: subjectId,
+            data: { ...claimed.data, escalationTaskId: task.taskId }, provenance: { source: "situational-awareness-escalate" } });
         } catch {
-          // A concurrent update to this exact nudge record (another worker,
-          // or the subject's own action) losing this race must not fail the
-          // whole sweep -- the escalation task itself was already created
-          // successfully either way. Worst case, an unlucky repeat run
-          // re-escalates the same nudge once more next cycle.
+          // Only the escalationTaskId bookkeeping write is at risk here (someone else touched the record after
+          // our claim) -- the escalation task itself was already created successfully either way.
         }
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         escalated += 1;
@@ -312,14 +336,15 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: FARM_LOG_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
-        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId: subjectId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: FARM_LOG_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
+          data: { reason: "farm_log_stale", lastFarmRecordAt: candidate.last_record_at },
+          provenance: { source: "situational-awareness-farm-sweep" } });
+        if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
           correlationId: createId("event"), text: "Kyro noticed no recent farm log activity and scheduled a reminder." });
         let task;
@@ -328,13 +353,11 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
             application: "farm", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a farm log reminder",
               toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a quick farm update with Kyro." } }] });
         } catch (error) {
+          await runtime.records.remove({ tenantId, recordId: claim.record_id, actorId: subjectId }).catch(() => {});
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId: subjectId, subjectId, taskId: task.taskId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: FARM_LOG_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "farm_log_stale", lastFarmRecordAt: candidate.last_record_at },
-          provenance: { source: "situational-awareness-farm-sweep" } });
+        await runtime.records.attachTask({ tenantId, recordId: claim.record_id, taskId: task.taskId });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
       }
@@ -364,6 +387,13 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        // Same reordering as the health escalation's own fix: claim (via the existing optimistic-concurrency
+        // check) BEFORE creating the real task, so a losing racer backs off before creating a duplicate.
+        let claimed;
+        try {
+          claimed = await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: nudge.version, actorId: subjectId,
+            data: { ...nudge.data, escalatedAt: new Date().toISOString() }, provenance: { source: "situational-awareness-escalate-farm" } });
+        } catch { continue; }
         const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
           correlationId: createId("event"), text: "Kyro's first farm log reminder went unacknowledged, so it followed up again." });
         let task;
@@ -372,16 +402,17 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
             application: "farm", riskTier: "low", autonomous: true, steps: [{ title: "Send a follow-up farm log reminder",
               toolId: "reminders.schedule", input: { when: "Tomorrow, remind me again to log a quick farm update with Kyro -- the last reminder didn't get a new entry." } }] });
         } catch (error) {
+          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: claimed.version, actorId: subjectId,
+            data: nudge.data, provenance: { source: "situational-awareness-escalate-farm-reverted" } }).catch(() => {});
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
         try {
-          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: nudge.version, actorId: subjectId,
-            data: { ...nudge.data, escalatedAt: new Date().toISOString(), escalationTaskId: task.taskId },
-            provenance: { source: "situational-awareness-escalate-farm" } });
+          await runtime.records.update({ tenantId, recordId: nudge.record_id, expectedVersion: claimed.version, actorId: subjectId,
+            data: { ...claimed.data, escalationTaskId: task.taskId }, provenance: { source: "situational-awareness-escalate-farm" } });
         } catch {
-          // Same reasoning as the health escalation's own update: a lost race here must not fail the sweep --
-          // the escalation task itself was already created successfully either way.
+          // Same reasoning as the health escalation's own update: only the escalationTaskId bookkeeping write is
+          // at risk here -- the escalation task itself was already created successfully either way.
         }
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         escalated += 1;
@@ -422,14 +453,15 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
-        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
+          data: { reason: "business_workspace_stale", recordId: candidate.record_id, updatedAt: candidate.updated_at },
+          provenance: { source: "situational-awareness-business-sweep" } });
+        if (!claim) continue;
         const businessName = candidate.business_name || "your business workspace";
         const openTasks = Array.isArray(candidate.open_task_titles) ? candidate.open_task_titles.filter(Boolean) : [];
         const openGrants = Array.isArray(candidate.open_grant_labels) ? candidate.open_grant_labels.filter(Boolean) : [];
@@ -445,13 +477,11 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
             application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Save a business follow-up summary document",
               toolId: "documents.create", input: { title: `Business Follow-Up -- ${businessName}`, content: lines.join("\n"), format: "md" } }] });
         } catch (error) {
+          await runtime.records.remove({ tenantId, recordId: claim.record_id, actorId: ownerId }).catch(() => {});
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "business_workspace_stale", recordId: candidate.record_id, updatedAt: candidate.updated_at },
-          provenance: { source: "situational-awareness-business-sweep" } });
+        await runtime.records.attachTask({ tenantId, recordId: claim.record_id, taskId: task.taskId });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
       }
@@ -481,14 +511,15 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: WELLNESS_GOAL_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
-        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId: subjectId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: WELLNESS_GOAL_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
+          data: { reason: "wellness_goal_stale", lastWorkoutAt: candidate.last_workout_at },
+          provenance: { source: "situational-awareness-wellness-sweep" } });
+        if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: subjectId,
           correlationId: createId("event"), text: "Kyro noticed no recent workout logged against a weekly goal and scheduled a reminder." });
         let task;
@@ -497,13 +528,11 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
             application: "wellness", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a workout reminder",
               toolId: "reminders.schedule", input: { when: "Tomorrow, remind me to log a workout with Kyro -- it's been quiet against my weekly goal." } }] });
         } catch (error) {
+          await runtime.records.remove({ tenantId, recordId: claim.record_id, actorId: subjectId }).catch(() => {});
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId: subjectId, subjectId, taskId: task.taskId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: WELLNESS_GOAL_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "wellness_goal_stale", lastWorkoutAt: candidate.last_workout_at },
-          provenance: { source: "situational-awareness-wellness-sweep" } });
+        await runtime.records.attachTask({ tenantId, recordId: claim.record_id, taskId: task.taskId });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
       }
@@ -547,10 +576,6 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
-        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
@@ -559,6 +584,11 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         const dueLeads = Array.isArray(candidate.due_leads) ? candidate.due_leads.filter(lead => lead?.name) : [];
         const names = dueLeads.map(lead => lead.followUpDate ? `${lead.name} (due ${lead.followUpDate})` : lead.name).join(", ");
         const outreachLead = dueLeads.find(lead => contactChannel(lead.contact));
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
+          data: { reason: "lead_followup_due", dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
+          provenance: { source: "situational-awareness-lead-followup-sweep" } });
+        if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
           correlationId: createId("event"), text: `Kyro noticed a follow-up date passed for ${names || "a contact"} in "${businessName}".` });
         let task;
@@ -577,13 +607,11 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
                 toolId: "reminders.schedule", input: { when: `Tomorrow, remind me to follow up with ${names || "a contact"} in "${businessName}" -- their follow-up date already passed.` } }] });
           }
         } catch (error) {
+          await runtime.records.remove({ tenantId, recordId: claim.record_id, actorId: ownerId }).catch(() => {});
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "lead_followup_due", dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
-          provenance: { source: "situational-awareness-lead-followup-sweep" } });
+        await runtime.records.attachTask({ tenantId, recordId: claim.record_id, taskId: task.taskId });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
       }
@@ -612,10 +640,6 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           tenantPaused.set(tenantId, runtime.autonomyControl ? await runtime.autonomyControl.isPaused({ tenantId }) : false);
         }
         if (tenantPaused.get(tenantId)) { skippedPaused += 1; continue; }
-        const recentNudges = await runtime.records.list({ tenantId, subjectId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, limit: 1 });
-        const lastNudge = recentNudges[0];
-        if (lastNudge && Date.now() - new Date(lastNudge.updated_at).getTime() < cooldownMs) continue;
         if (!tenantCounts.has(tenantId)) {
           tenantCounts.set(tenantId, await runtime.tasks.countAutonomousCreatedSince({ tenantId, since: new Date(Date.now() - 24 * 60 * 60 * 1000) }));
         }
@@ -628,6 +652,11 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           ...approachingGrants.map(item => `the "${item.label}" grant deadline (${item.deadline})`)
         ];
         const summary = parts.join(", ") || "an approaching deadline";
+        const claim = await runtime.records.claimCooldown({ tenantId, ownerId, subjectId,
+          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
+          data: { reason: "business_deadline_due", overdueTasks, approachingGrants },
+          provenance: { source: "situational-awareness-business-deadline-sweep" } });
+        if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
           correlationId: createId("event"), text: `Kyro noticed a real deadline in "${businessName}": ${summary}.` });
         let task;
@@ -636,13 +665,11 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
             application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a deadline reminder",
               toolId: "reminders.schedule", input: { when: `Tomorrow, remind me about ${summary} in "${businessName}".` } }] });
         } catch (error) {
+          await runtime.records.remove({ tenantId, recordId: claim.record_id, actorId: ownerId }).catch(() => {});
           if (error.code === "autonomy_paused") { tenantPaused.set(tenantId, true); skippedPaused += 1; continue; }
           throw error;
         }
-        await runtime.records.create({ tenantId, ownerId, subjectId, taskId: task.taskId,
-          workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, classification: "standard",
-          data: { reason: "business_deadline_due", overdueTasks, approachingGrants },
-          provenance: { source: "situational-awareness-business-deadline-sweep" } });
+        await runtime.records.attachTask({ tenantId, recordId: claim.record_id, taskId: task.taskId });
         tenantCounts.set(tenantId, tenantCounts.get(tenantId) + 1);
         created += 1;
       }
