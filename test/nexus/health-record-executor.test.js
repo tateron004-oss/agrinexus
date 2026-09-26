@@ -58,11 +58,17 @@ test("defaults recordType and subjectId when not provided", async () => {
   assert.deepEqual(created[0].data, { note: "feeling fine" });
 });
 
-test("an explicit subjectId is honored instead of defaulting to the caller", async () => {
+// Found live (cross-user IDOR audit): a caller-supplied subjectId used to be
+// honored outright -- any signed-in user could forge a health observation
+// attributed to an arbitrary other patient, since nothing checked any
+// relationship between the caller and the claimed subject. "Recording on
+// behalf of someone else isn't a surfaced capability today" (this
+// executor's own comment) -- the subject is always the caller.
+test("a caller-supplied subjectId is ignored -- the subject is always the caller", async () => {
   const { records, created } = fixture();
   const execute = createHealthRecordExecutor({ records });
-  await execute({ input: { subjectId: "patient-99", data: { weight: 150 } }, context: { tenantId: "t1", userId: "u3" }, taskId: "task-3" });
-  assert.equal(created[0].subjectId, "patient-99");
+  await execute({ input: { subjectId: "victim-patient-99", data: { weight: 150 } }, context: { tenantId: "t1", userId: "u3" }, taskId: "task-3" });
+  assert.equal(created[0].subjectId, "u3", "the forged subjectId must never be used");
 });
 
 test("a missing recordId or non-positive version does not verify", () => {
