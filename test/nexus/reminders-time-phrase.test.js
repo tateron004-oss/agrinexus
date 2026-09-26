@@ -68,6 +68,20 @@ test("no recognizable time phrase falls back to ~24 hours out, never in the past
   assert.ok(new Date(scheduledAt).getTime() > Date.now());
 });
 
+// Found live: naming two weekdays picked whichever came first in the fixed
+// Sun-Sat dayNames array, not whichever the caller actually meant -- "by
+// friday, not sunday" resolved to Sunday (array index 0), the exact day the
+// caller said NOT to use, with the confirmation echoing the wrong day back
+// as if it were correct. Fixed to pick whichever weekday name appears
+// EARLIEST IN THE TEXT ITSELF.
+test("naming two weekdays resolves to the one mentioned first in the text, not whichever is earlier in the internal Sun-Sat array", () => {
+  const now = new Date("2026-09-21T12:00:00Z"); // a Monday
+  const deadlineThenException = parseAssistantReminderTime("remind me to submit the report by friday, not sunday", { timeZone: "Africa/Nairobi", now });
+  assert.equal(deadlineThenException.whenLabel, "friday", "the day named first (friday) must win, not sunday just because it's array index 0");
+  const eitherOr = parseAssistantReminderTime("remind me to call the vet wednesday or tuesday", { timeZone: "Africa/Nairobi", now });
+  assert.equal(eitherOr.whenLabel, "wednesday", "wednesday is named first in the text, even though tuesday comes earlier in the internal array");
+});
+
 test("extractAssistantReminderTask strips the lead-in phrase when it directly precedes the task", () => {
   assert.equal(extractAssistantReminderTask("remind me to check irrigation tomorrow at 9am"), "check irrigation");
   assert.equal(extractAssistantReminderTask("set a reminder to call the vet in 2 hours"), "call the vet");
