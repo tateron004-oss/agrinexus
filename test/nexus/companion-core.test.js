@@ -72,6 +72,24 @@ test("emergencies and self-harm are recognised in the person's own words, and no
   for (const text of ["how do I help a friend who is suicidal", "my brother said he wants to die", "What is suicide prevention?", "I could kill that deadline", "help with my maize", "emergency contact list", "I need help with my maize", "What should I do in an emergency?", "Good morning"]) assert.equal(readSafety(text), null, text);
 });
 
+// Found live (safety-critical): every IMMEDIATE pattern used to require the
+// ENTIRE message to match exactly (`^...$`) and was gated behind a 70-char
+// cap, so any real elaboration at all -- describing where they fell, what
+// hurts, or just saying "please send help" -- silently failed the match and
+// fell through to ordinary conversation, with no alert and no acknowledgment.
+// "cannot"/"can not" (not just "can't"/"cant") also had to be recognized.
+test("a real fall or danger is still recognised even with natural elaboration, longer phrasing, or 'cannot' instead of 'can't'", () => {
+  const stillAnEmergency = [
+    "This is an emergency, I have fallen in the kitchen and cannot get up, please send help",
+    "I have fallen and cannot get up",
+    "I have fallen and I cannot get up, my chest hurts too",
+    "please alert my circle, I fell and hurt my leg badly",
+    "I have fallen and can not get up",
+    "I have fallen"
+  ];
+  for (const text of stillAnEmergency) assert.equal(readSafety(text), "emergency", text);
+});
+
 test("an emergency alerts every member who said yes, once per five minutes, and tells the person exactly who", async () => {
   const w = world();
   await inCircle(w, { member: "u-amina", relationship: "daughter" }); await inCircle(w, { member: "u-joseph", relationship: "son", share: false });
