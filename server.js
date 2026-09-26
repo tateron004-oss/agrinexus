@@ -39930,6 +39930,20 @@ function updateFieldDispatchStatus(db, dispatchId, body = {}, user = null) {
   if (!dispatch) return { ok: false, error: "dispatch_not_found" };
   const nextStatus = NEXUS_FIELD_DISPATCH_STATUSES.includes(body.status) ? body.status : null;
   if (!nextStatus) return { ok: false, error: "invalid_status" };
+  // Found live (drone/field-agent dispatch audit): this set dispatch.status
+  // to ANY valid status value with no check on the dispatch's CURRENT
+  // status -- a completed or cancelled dispatch could be moved back to
+  // "assigned"/"en_route" by an ordinary requester. Since completing/
+  // cancelling a dispatch frees the assigned agent for a NEW dispatch (just
+  // below), reopening the old one left both dispatches pointing at the
+  // same agent while nexusFieldAgents.activeDispatchId only tracked the
+  // newer one -- a real double-booking with no re-validation of the
+  // agent's actual availability. A terminal dispatch (completed/cancelled)
+  // is now final, exactly like a delivered/settled order elsewhere in this
+  // codebase.
+  if (["completed", "cancelled"].includes(dispatch.status)) {
+    return { ok: false, error: "dispatch_already_finalized", status: dispatch.status };
+  }
   dispatch.status = nextStatus;
   dispatch.updatedAt = new Date().toISOString();
   if (["completed", "cancelled"].includes(nextStatus)) {
@@ -42732,6 +42746,22 @@ function latestDroneMission(store) {
   return store.droneMissionRequests.find(item => !/cancelled|archived|completed/.test(item.status || "")) || store.droneMissionRequests[0] || null;
 }
 
+// Found live (drone/field-agent dispatch audit): latestDroneMission()'s own
+// fallback-to-most-recent-regardless-of-status defeats the exact-ID guard
+// just added above -- when the caller has no OTHER active mission besides
+// the one just cancelled, latestDroneMission(store) falls back to
+// store.droneMissionRequests[0], which (since new missions are unshifted to
+// the front) is very often that same just-cancelled mission, silently
+// reviving it through the "latest" path instead of the exact-ID path. This
+// stricter variant is for the WRITE-oriented call sites (advancing a
+// mission's status, or cancelling/archiving one) where reviving a terminal
+// mission would be wrong; latestDroneMission() itself is left unchanged for
+// the read-only timeline view, where showing the caller's last mission for
+// context even if it's cancelled is still reasonable.
+function latestActiveDroneMission(store) {
+  return store.droneMissionRequests.find(item => !/cancelled|archived|completed/.test(item.status || "")) || null;
+}
+
 function parseNexusOperationsCommand(command = "") {
   const text = cleanOpsText(command, 500).toLowerCase();
   if (/\b(create|add|start).*(chronic care|hypertension|diabetes|obesity)\b/.test(text)) return "create_chronic_care_profile";
@@ -43433,7 +43463,20 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
           createdAt: now,
           updatedAt: now
         }
-      : (store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store) || runNexusOperationsAction(db, { action: "create_drone_mission_request" }, user).record);
+      // Found live (drone/field-agent dispatch audit): this exact-ID lookup
+      // had no status filter at all, unlike latestDroneMission() just below
+      // (which already correctly excludes cancelled/archived/completed
+      // missions) -- passing a cancelled or archived mission's real
+      // droneMissionId to any of these forward-moving actions silently
+      // revived it (e.g. queue_drone_mission set status back to
+      // "queued-for-review"), resurrecting a terminal record with no new
+      // consent/audit trail distinguishing "reopened after cancellation"
+      // from a fresh mission, while store.archiveRecords still shows it as
+      // archived. Matches latestDroneMission()'s own exclusion so a
+      // terminal mission is never found by either path -- falling through
+      // to the caller's latest active mission (or creating a fresh one)
+      // instead, exactly like an unrecognized/stale ID already would.
+      : (store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId && !/cancelled|archived|completed/.test(item.status || "")) || latestActiveDroneMission(store) || runNexusOperationsAction(db, { action: "create_drone_mission_request" }, user).record);
     if (action === "create_drone_mission_request") store.droneMissionRequests.unshift(mission);
     const before = action === "create_drone_mission_request" ? null : { ...mission };
     if (action === "prepare_drone_mission_packet") mission.status = "packet-prepared";
@@ -43469,7 +43512,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (["cancel_drone_mission", "archive_drone_record"].includes(action)) {
-    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store);
+    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestActiveDroneMission(store);
     if (!mission) return { ok: false, error: "drone_mission_not_found", operations: nexusOperationsSummary(db, user) };
     const before = { ...mission };
     mission.status = action === "cancel_drone_mission" ? "cancelled" : "archived";

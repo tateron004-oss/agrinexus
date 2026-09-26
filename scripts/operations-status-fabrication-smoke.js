@@ -118,6 +118,30 @@ async function call(route, { method, body, cookie } = {}) {
     assert.equal(droneStatus.json.nexusOperationsResult.record.status, "manual-status-review",
       "a caller-supplied manualConfirmation flag must not fabricate a flown drone-mission outcome");
 
+    // Found live (drone/field-agent dispatch audit): the exact-ID lookup for
+    // prepare/match/queue/track/create-packet actions had no status filter
+    // at all, unlike the "latest mission" fallback (which already correctly
+    // excludes cancelled/archived/completed missions) -- passing a
+    // cancelled mission's real droneMissionId to any of these silently
+    // revived it. Confirm cancelling a mission, then trying to advance the
+    // SAME mission ID, no longer resurrects it.
+    const cancelled = await call("/api/nexus/operations/action", {
+      body: { action: "cancel_drone_mission", droneMissionId: drone.json.nexusOperationsResult.record.droneMissionId },
+      cookie: userCookie
+    });
+    assert.equal(cancelled.json.nexusOperationsResult.record.status, "cancelled");
+    const reopenAttempt = await call("/api/nexus/operations/action", {
+      body: { action: "queue_drone_mission", droneMissionId: drone.json.nexusOperationsResult.record.droneMissionId },
+      cookie: userCookie
+    });
+    assert.notEqual(reopenAttempt.json.nexusOperationsResult.record.droneMissionId, drone.json.nexusOperationsResult.record.droneMissionId,
+      "queuing must never resolve back to the cancelled mission's own id -- it must fall through to the caller's latest active mission or create a fresh one");
+    const stillCancelled = await call("/api/nexus/operations/action", {
+      body: { action: "show_drone_mission_timeline", droneMissionId: drone.json.nexusOperationsResult.record.droneMissionId },
+      cookie: userCookie
+    });
+    assert.equal(stillCancelled.json.nexusOperationsResult.record.status, "cancelled", "the original mission must remain cancelled, not silently revived");
+
     console.log("Operations status fabrication smoke test passed");
   } finally {
     server.kill();
