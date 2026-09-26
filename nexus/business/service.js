@@ -23,11 +23,20 @@ function normalizeEditable(info, input = {}) {
   const object = value => value && typeof value === "object" && !Array.isArray(value);
   if (!object(input) || JSON.stringify(input).length > 150000) invalid();
   const starter = templates.defaultClientWorkspace(info);
+  // Found live: a numeric field only had to be individually finite -- two
+  // such fields (e.g. an invoice line's quantity and unitPrice) could each
+  // pass this check yet their PRODUCT overflow to Infinity (IEEE-754 double
+  // range), so exportInvoice's PDF could print "Total due: Infinity" with no
+  // error surfaced anywhere. A generous cap on any single field, well above
+  // any real quantity/price/amount this workspace deals in, keeps every
+  // product of two such fields safely finite.
+  const MAX_WORKSPACE_NUMBER = 1e9;
   function strings(value, defaults) {
     if (!object(value)) invalid();
     return Object.fromEntries(Object.keys(defaults).map(key => {
       const item = value[key] === undefined ? defaults[key] : value[key];
-      if (typeof item !== typeof defaults[key] || (typeof item === "string" && item.length > 8000) || (typeof item === "number" && !Number.isFinite(item))) invalid();
+      if (typeof item !== typeof defaults[key] || (typeof item === "string" && item.length > 8000)
+        || (typeof item === "number" && (!Number.isFinite(item) || Math.abs(item) > MAX_WORKSPACE_NUMBER))) invalid();
       return [key, item];
     }));
   }
@@ -47,6 +56,18 @@ function normalizeEditable(info, input = {}) {
     workflows: rows(studioInput.workflows === undefined ? base.workflows : studioInput.workflows, { name: "", trigger: "", steps: "", status: "draft" }, 100),
     deployment: rows(studioInput.deployment === undefined ? base.deployment : studioInput.deployment, { item: "", done: false }, 100)
   };
+  // Found live: invoiceNumber is the only link between an invoice header
+  // and its line items (two independent flat arrays), but nothing ever
+  // checked that two invoices didn't share the same number -- a client that
+  // (re)computes a number from a stale/shrunk invoices.length (e.g. after
+  // deleting an earlier invoice) could silently collide with a real,
+  // still-existing invoice, and exportInvoice's PDF would then mix a
+  // different client's line items onto the wrong invoice by that shared
+  // string. Rejecting the write here is defense-in-depth on top of fixing
+  // the number-generation itself at both places that create one.
+  const invoices = rows(input.invoices === undefined ? starter.invoices : input.invoices, { invoiceNumber: "", clientName: "", date: "", dueDate: "", notes: "", status: "draft" });
+  const invoiceNumbers = invoices.map(item => item.invoiceNumber).filter(Boolean);
+  if (new Set(invoiceNumbers).size !== invoiceNumbers.length) invalid();
   return {
     // "type" turns this into a combined customer/donor/sponsor tracker
     // rather than a leads-only list; "followUpDate" is a real date field
@@ -69,7 +90,7 @@ function normalizeEditable(info, input = {}) {
     // other list has no concept of a nested array within one row, so a
     // real one-to-many relationship has to be modeled as two flat lists
     // rather than one row holding an embedded line-items array.
-    invoices: rows(input.invoices === undefined ? starter.invoices : input.invoices, { invoiceNumber: "", clientName: "", date: "", dueDate: "", notes: "", status: "draft" }),
+    invoices,
     invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }),
     // Tool 4: grant and funding tracking. The existing "Grant Writing Agent"
     // (strategy.js) only ever produced a one-shot text template -- nothing

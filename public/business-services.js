@@ -203,7 +203,22 @@
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
   byId("add-listing").addEventListener("click", () => { current.data.editable.listings.push({ address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }); render(); });
   byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, currency: "USD", description: "" }); render(); });
-  byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: `INV-${String(current.data.editable.invoices.length + 1001)}`, clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
+  // Found live: "invoices.length + 1001" recycles a number once an invoice
+  // is deleted (this row-remove button is a plain splice, with no cleanup
+  // of that invoice's now-orphaned invoiceItems) -- the next invoice created
+  // could collide with a still-existing one's number, and the server's PDF
+  // export joins invoices/invoiceItems purely by that shared string, mixing
+  // a different client's line items onto the wrong invoice. Scanning every
+  // invoiceNumber ever seen (including orphaned line items, which still
+  // "reserve" their number) and picking one past the highest ever used can
+  // never collide, even across deletions.
+  function nextInvoiceNumber(editable) {
+    const used = [...(editable.invoices || []), ...(editable.invoiceItems || [])]
+      .map(item => Number(String(item.invoiceNumber || "").replace(/^INV-/i, "")))
+      .filter(Number.isFinite);
+    return `INV-${(used.length ? Math.max(...used) : 1000) + 1}`;
+  }
+  byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: nextInvoiceNumber(current.data.editable), clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
   byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }); render(); });
   byId("add-appointment").addEventListener("click", () => { current.data.editable.appointments.push({ title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }); render(); });
