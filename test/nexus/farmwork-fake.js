@@ -15,7 +15,7 @@ function fakeFarmStore() {
     async list({ tenantId, userId, collection }) { return live().filter(row => row.tenantId === tenantId && row.userId === userId && row.collection === collection).map(shape); },
     async listAll({ tenantId, userId }) { return live().filter(row => row.tenantId === tenantId && row.userId === userId).map(shape); },
     async listPublic({ tenantId, collection }) { return PUBLIC_COLLECTIONS.includes(collection) ? live().filter(row => row.tenantId === tenantId && row.collection === collection).map(shape) : []; },
-    async update({ tenantId, userId, record }) { const row = live().find(item => item.tenantId === tenantId && item.userId === userId && item.memoryId === record.memoryId); if (!row) return false; row.data = JSON.parse(JSON.stringify(record.data)); row.updatedAt = new Date().toISOString(); return true; },
+    async update({ tenantId, userId, record, expectedStatus }) { const row = live().find(item => item.tenantId === tenantId && item.userId === userId && item.memoryId === record.memoryId); if (!row) return false; if (expectedStatus !== undefined && (row.data.status || "") !== expectedStatus) return false; row.data = JSON.parse(JSON.stringify(record.data)); row.updatedAt = new Date().toISOString(); return true; },
     async remove({ tenantId, userId, memoryId }) { const row = live().find(item => item.tenantId === tenantId && item.userId === userId && item.memoryId === memoryId); if (!row) return false; row.deleted = true; return true; },
     async getSession({ tenantId, userId }) { return sessions.get(`${tenantId}:${userId}`) || null; },
     async setSession({ tenantId, userId, session }) { sessions.set(`${tenantId}:${userId}`, { memoryId: "s", kind: "session", ...session }); },
