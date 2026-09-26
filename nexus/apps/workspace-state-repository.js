@@ -18,7 +18,17 @@ class WorkspaceStateRepository {
       return this.records.update({ tenantId, recordId: existing.record_id, expectedVersion: existing.version,
         actorId: ownerId, data, provenance: provenance(outcome, "workspace.render_required") });
     }
-    return this.records.create({ tenantId, ownerId, taskId, workspaceId: outcome.application,
+    // Found live (erasure audit): this record was created with no subjectId
+    // at all, so RecordRepository.create() (which only requires a subject
+    // for health/regulated classification) silently stored subject_id=NULL.
+    // Account erasure's record-wipe is scoped by subject_id, and SQL's NULL
+    // never equals anything -- including a NULL compared against a real
+    // subject_id -- so these rows (created for EVERY task that reaches
+    // render_required, across every application including health/telehealth/
+    // pharmacy, and holding the real rendered content of that interaction)
+    // permanently survived "erase my account". A workspace-state row is
+    // always about the acting user's own task, so the subject is the owner.
+    return this.records.create({ tenantId, ownerId, subjectId: ownerId, taskId, workspaceId: outcome.application,
       recordType: "authoritative-workspace-state", classification: "standard", state: "active", data,
       provenance: provenance(outcome, "workspace.render_required") });
   }

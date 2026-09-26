@@ -169,7 +169,12 @@ function createMedicationService({ store, circle = null, push, notifications, de
           let found = [];
           try { found = devices?.listPushable ? await devices.listPushable({ tenantId: med.tenantId, userId: med.userId }) : [{}]; } catch { found = []; }
           if (!found.length) { result.skippedNoDevice += 1; continue; } // no way to remind, so no dose that could be "missed"
-          await store.createDose({ tenantId: med.tenantId, userId: med.userId, content: { medId: med.memoryId, name: med.content.name, day: today, time, status: "pending", promptedAt: at.toISOString() } });
+          // claimDoseSlot() atomically rechecks-and-creates under a lock, so
+          // two workers racing on the same due dose can never both create a
+          // row and both push -- only the winner proceeds.
+          const claimed = await store.claimDoseSlot({ tenantId: med.tenantId, userId: med.userId, medId: med.memoryId, day: today, time,
+            content: { medId: med.memoryId, name: med.content.name, day: today, time, status: "pending", promptedAt: at.toISOString() } });
+          if (!claimed) continue;
           await push({ tenantId: med.tenantId, userId: med.userId, title: "Time for your medicine", body: `It's ${formatTimeOfDay(time)}: time for your ${describe(med.content)}. Say "I took my ${med.content.name}" once you have.`, key: `dose:${med.memoryId}:${today}:${time}` });
           result.prompted += 1;
         }

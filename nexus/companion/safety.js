@@ -18,15 +18,26 @@ const { t, both, languageOf } = require("../i18n/index.js");
 // Languages: English and Swahili. A person is answered in the language they spoke (a Swahili trigger gets a Swahili reply even if the app is in English),
 // else in the app's language. An alert goes to another person's phone, whose language Kyro does not know, so it is sent in both languages.
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
+// Found live (safety-critical): every one of these used to be `^...$`-anchored
+// AND gated behind a 70-char cap (see readSafetyDetailed below), so any real
+// elaboration at all -- "I have fallen in the kitchen and cannot get up,
+// please send help" -- failed the match entirely and got treated as ordinary
+// chat, with no alert and no acknowledgment. The unambiguous, first-person
+// declarations below (a fall, being unable to get up, being in danger, or
+// asking to alert the circle) are now matched anywhere in the message, the
+// same way SELF_HARM below already does -- a false trigger just costs a
+// recoverable "false alarm" (see safeTurn), but a missed real one does not.
+// "emergency" alone and "help ... now" alone stay tightly anchored, since
+// unanchoring those specific short, generic phrases would trigger on
+// unrelated mentions ("emergency contact list", "I need help with my maize").
 const IMMEDIATE = [
   /^(?:this is (?:an )?)?emergency$/,
   /^i need (?:urgent |emergency )?help (?:now|right now|immediately)$/,
-  /^i(?:'ve| have) fallen(?: and (?:i )?can'?t get up)?$/,
-  /^i (?:fell|have fallen) and (?:i )?can'?t get up$/,
-  /^i can'?t get up$/,
-  /^i(?:'m| am) (?:in danger|badly hurt|hurt badly|seriously hurt|having a (?:heart attack|stroke))$/,
-  /^(?:please )?(?:alert|call|tell|notify|message|contact) my (?:trusted )?circle$/,
-  /^(?:please )?send (?:an )?(?:emergency )?alert to my (?:trusted )?circle$/
+  /\bi(?:'ve| have) fallen\b/,
+  /\bi (?:can'?t|cannot|can not) get up\b/,
+  /\bi(?:'m| am) (?:in danger|badly hurt|hurt badly|seriously hurt|having a (?:heart attack|stroke))\b/,
+  /\b(?:please )?(?:alert|call|tell|notify|message|contact) my (?:trusted )?circle\b/,
+  /\b(?:please )?send (?:an )?(?:emergency )?alert to my (?:trusted )?circle\b/
 ];
 const ASK_FIRST = /^(?:please )?(?:help|help me|i need help|i need some help)$/;
 const SELF_HARM = [
@@ -42,17 +53,20 @@ const SELF_HARM = [
 ];
 
 // Kiswahili. First person only, like the English ones ("nataka kufa" is about the person; a news story about "kujiua" is not).
+// Same fix as IMMEDIATE above, mirrored onto the already-existing Swahili
+// phrases (no new wording added -- just removing the same whole-string
+// anchoring that broke on any elaboration).
 const IMMEDIATE_SW = [
   /^(?:hii ni )?dharura$/,
   /^(?:nahitaji|ninahitaji) msaada (?:wa haraka )?(?:sasa|sasa hivi|mara moja|haraka|haraka sana)$/,
   /^(?:tafadhali )?(?:nisaidie|nisaidieni) (?:sasa|sasa hivi|haraka|mara moja)$/,
-  /^nimeanguka(?: na (?:siwezi|siwezi tena) kuamka)?$/,
-  /^siwezi kuamka$/,
-  /^niko hatarini$/,
-  /^nimejeruhiwa (?:vibaya|sana)$/,
-  /^nina (?:shambulio la moyo|kiharusi)$/,
-  /^(?:tafadhali )?(?:arifu|mwambie|wasiliana na|mjulishe|waarifu|wajulishe) (?:mzunguko wangu|watu wangu wa karibu)$/,
-  /^(?:tafadhali )?tuma tahadhari (?:ya dharura )?kwa mzunguko wangu$/
+  /\bnimeanguka\b/,
+  /\bsiwezi(?: tena)? kuamka\b/,
+  /\bniko hatarini\b/,
+  /\bnimejeruhiwa (?:vibaya|sana)\b/,
+  /\bnina (?:shambulio la moyo|kiharusi)\b/,
+  /\b(?:tafadhali )?(?:arifu|mwambie|wasiliana na|mjulishe|waarifu|wajulishe) (?:mzunguko wangu|watu wangu wa karibu)\b/,
+  /\b(?:tafadhali )?tuma tahadhari (?:ya dharura )?kwa mzunguko wangu\b/
 ];
 const ASK_FIRST_SW = /^(?:tafadhali )?(?:msaada|nisaidie|naomba msaada|nahitaji msaada|ninahitaji msaada)$/;
 const SELF_HARM_SW = [
@@ -69,8 +83,13 @@ function readSafetyDetailed(text) {
   const raw = clean(text);
   if (!raw || raw.length > 400) return null;
   const lower = raw.toLowerCase().replace(/[.!?]+$/g, "");
-  if (lower.length <= 70 && IMMEDIATE.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "en" };
-  if (lower.length <= 70 && IMMEDIATE_SW.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "sw" };
+  // Found live (safety-critical): this 70-char cap, combined with the
+  // whole-string-anchored patterns above, silently dropped any real
+  // first-person emergency that included even a little elaboration -- see
+  // the IMMEDIATE comment above. The patterns themselves are now the only
+  // gate (still bounded by this function's own 400-char overall cap above).
+  if (IMMEDIATE.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "en" };
+  if (IMMEDIATE_SW.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "sw" };
   if (ASK_FIRST.test(lower)) return { kind: "ask", language: "en" };
   if (ASK_FIRST_SW.test(lower)) return { kind: "ask", language: "sw" };
   if (SELF_HARM.some(pattern => pattern.test(raw))) return { kind: "self_harm", language: "en" };
