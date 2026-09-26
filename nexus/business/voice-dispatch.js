@@ -224,6 +224,25 @@ function describeFinances(totals, { label, focus, workspaceName }) {
   return `${label === "so far" ? "So far" : label.charAt(0).toUpperCase() + label.slice(1)}, in "${workspaceName}": ${parts.join("; ")}.`;
 }
 
+// Found live: invoice numbers were derived from "invoices.length + 1001" at
+// creation time, not a persistent monotonic counter. Since deleting an
+// invoice (the only mechanism is the generic row-remove UI, a plain splice
+// with no cross-array cleanup) shrinks invoices.length without renumbering
+// or removing that invoice's now-orphaned invoiceItems rows, the very next
+// invoice created could be assigned a number that's ALREADY in use by a
+// still-existing invoice -- exportInvoice's lookup joins invoices and
+// invoiceItems purely by this string, so the new invoice's header gets
+// printed with a mix of its own AND the other client's line items on one
+// PDF. Scanning every invoiceNumber ever seen (in both arrays, so an
+// orphaned line item still "reserves" its number) and picking one past the
+// highest ever used can never collide, even across deletions.
+function nextInvoiceNumber(editable) {
+  const used = [...(editable.invoices || []), ...(editable.invoiceItems || [])]
+    .map(item => Number(String(item.invoiceNumber || "").replace(/^INV-/i, "")))
+    .filter(Number.isFinite);
+  return `INV-${(used.length ? Math.max(...used) : 1000) + 1}`;
+}
+
 function extractInvoiceArgs(command = "", args = {}) {
   const text = String(command || "");
   const clientMatch = text.match(/\bfor\s+["']?([^"'.,\n]{2,80})["']?/i);
@@ -399,7 +418,19 @@ function resolveListingIndex(listings, command = "") {
     .filter(entry => entry.listing.address && text.includes(String(entry.listing.address).toLowerCase()));
   if (matches.length) {
     matches.sort((a, b) => String(b.listing.address).length - String(a.listing.address).length);
-    return matches[0].index;
+    const longestLength = String(matches[0].listing.address).length;
+    const longestMatches = matches.filter(entry => String(entry.listing.address).length === longestLength);
+    if (longestMatches.length === 1) return longestMatches[0].index;
+    // Found live: nothing stops two listings from sharing the exact same
+    // address (e.g. a property re-listed for a new buyer after an earlier
+    // deal fell through, without editing the old row), and Array.sort is
+    // stable -- a tie in address length always resolved to whichever
+    // identical-address listing was added FIRST, not the one the caller
+    // meant. Prefer the active one among an identical-address tie (that's
+    // almost always the one a "mark X as sold/pending" command means);
+    // only give up and ask when that's still ambiguous.
+    const activeAmongLongest = longestMatches.filter(entry => String(entry.listing.status || "").toLowerCase() === "active");
+    return activeAmongLongest.length === 1 ? activeAmongLongest[0].index : -1;
   }
   // Only fall back to "the one active listing" when the caller didn't name
   // an address-shaped token at all (real estate addresses are effectively
@@ -671,8 +702,15 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     }
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const dashboard = computeBusinessDashboard(resolved.client.data.editable);
+    // Found live: listings have no currency field of their own and are
+    // always created/shown as USD elsewhere (see the other formatMoney("USD",
+    // listing.price) call sites in this file) -- but this line was labeling
+    // activeListingValue with dashboard.currency, which is picked from the
+    // business's transaction ledger and can be a completely different
+    // currency (e.g. a business that logs its day-to-day income in KES would
+    // have a $250,000 USD listing spoken back as "worth KES 250,000").
     const listingPhrase = dashboard.totalListings
-      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney(dashboard.currency, dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
+      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney("USD", dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
       : "";
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
@@ -795,7 +833,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before creating an invoice.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
-    const invoiceNumber = `INV-${resolved.client.data.editable.invoices.length + 1001}`;
+    const invoiceNumber = nextInvoiceNumber(resolved.client.data.editable);
     const clientPhrase = invoiceArgs.clientName ? ` for ${invoiceArgs.clientName}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can create invoice ${invoiceNumber}${clientPhrase} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, invoices: [...resolved.client.data.editable.invoices,
@@ -881,12 +919,22 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding appointments.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const startPhrase = appointment.start ? ` on ${appointment.start}` : "";
-    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan. This does not book anything on a real calendar until you sync it. Should I go ahead?` };
+    // Found live: nothing checked a new appointment's time against existing
+    // ones -- two showings for the same property could be booked for the
+    // identical slot with zero warning. This tool never books a real
+    // calendar event on its own (the user has to explicitly "sync" it), so
+    // a match here surfaces as a heads-up rather than a refusal -- a real
+    // double-booking for two different things at the same clock time is a
+    // legitimate use of this tool, but the caller should still be told.
+    const conflict = appointment.start && (resolved.client.data.editable.appointments || [])
+      .find(item => item.status !== "cancelled" && String(item.start || "").trim().toLowerCase() === appointment.start.trim().toLowerCase());
+    const conflictNote = conflict ? ` Note: "${conflict.title}" is already scheduled for the same time -- check this isn't a double-booking.` : "";
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan.${conflictNote} This does not book anything on a real calendar until you sync it. Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, appointments: [...resolved.client.data.editable.appointments,
       { title: appointment.title, start: appointment.start, end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
-    const response = `Added an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan. Say "sync it to my calendar" when you want a real calendar event created.`;
+    const response = `Added an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan.${conflictNote} Say "sync it to my calendar" when you want a real calendar event created.`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 
@@ -1028,5 +1076,5 @@ module.exports = Object.freeze({
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
   extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard,
-  extractListingArgs, resolveListingIndex
+  extractListingArgs, resolveListingIndex, nextInvoiceNumber
 });

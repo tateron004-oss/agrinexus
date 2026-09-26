@@ -4,6 +4,13 @@ const templates = require("./templates");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
 const { renderPdfBuffer } = require("../../server/providers/exportProvider");
 const DATA_SCOPE = "business:client-data";
+const AI_SCOPE = "business:ai";
+const BILLING_SCOPE = "business:billing";
+// Every distinct consent scope this service ever grants. Found live: revokeConsent() only ever revoked DATA_SCOPE --
+// assistant()/plan() grant AI_SCOPE and checkout()/refreshSubscription() grant BILLING_SCOPE, but nothing anywhere
+// could revoke those two. A person calling the one and only "/consent/revoke" endpoint, expecting it to withdraw
+// their business consent, would find AI-sharing and billing consent silently still active forever.
+const ALL_SCOPES = [DATA_SCOPE, AI_SCOPE, BILLING_SCOPE];
 const ALLOWED_OPERATIONS = new Set(["launch-kit", "landing-page", "assistant-package", "workflow", "strategy", "documents", "marketing"]);
 const INPUT_FIELDS = ["businessName", "industry", "location", "customer", "problem", "request", "objective", "audience"];
 
@@ -23,11 +30,20 @@ function normalizeEditable(info, input = {}) {
   const object = value => value && typeof value === "object" && !Array.isArray(value);
   if (!object(input) || JSON.stringify(input).length > 150000) invalid();
   const starter = templates.defaultClientWorkspace(info);
+  // Found live: a numeric field only had to be individually finite -- two
+  // such fields (e.g. an invoice line's quantity and unitPrice) could each
+  // pass this check yet their PRODUCT overflow to Infinity (IEEE-754 double
+  // range), so exportInvoice's PDF could print "Total due: Infinity" with no
+  // error surfaced anywhere. A generous cap on any single field, well above
+  // any real quantity/price/amount this workspace deals in, keeps every
+  // product of two such fields safely finite.
+  const MAX_WORKSPACE_NUMBER = 1e9;
   function strings(value, defaults) {
     if (!object(value)) invalid();
     return Object.fromEntries(Object.keys(defaults).map(key => {
       const item = value[key] === undefined ? defaults[key] : value[key];
-      if (typeof item !== typeof defaults[key] || (typeof item === "string" && item.length > 8000) || (typeof item === "number" && !Number.isFinite(item))) invalid();
+      if (typeof item !== typeof defaults[key] || (typeof item === "string" && item.length > 8000)
+        || (typeof item === "number" && (!Number.isFinite(item) || Math.abs(item) > MAX_WORKSPACE_NUMBER))) invalid();
       return [key, item];
     }));
   }
@@ -47,6 +63,18 @@ function normalizeEditable(info, input = {}) {
     workflows: rows(studioInput.workflows === undefined ? base.workflows : studioInput.workflows, { name: "", trigger: "", steps: "", status: "draft" }, 100),
     deployment: rows(studioInput.deployment === undefined ? base.deployment : studioInput.deployment, { item: "", done: false }, 100)
   };
+  // Found live: invoiceNumber is the only link between an invoice header
+  // and its line items (two independent flat arrays), but nothing ever
+  // checked that two invoices didn't share the same number -- a client that
+  // (re)computes a number from a stale/shrunk invoices.length (e.g. after
+  // deleting an earlier invoice) could silently collide with a real,
+  // still-existing invoice, and exportInvoice's PDF would then mix a
+  // different client's line items onto the wrong invoice by that shared
+  // string. Rejecting the write here is defense-in-depth on top of fixing
+  // the number-generation itself at both places that create one.
+  const invoices = rows(input.invoices === undefined ? starter.invoices : input.invoices, { invoiceNumber: "", clientName: "", date: "", dueDate: "", notes: "", status: "draft" });
+  const invoiceNumbers = invoices.map(item => item.invoiceNumber).filter(Boolean);
+  if (new Set(invoiceNumbers).size !== invoiceNumbers.length) invalid();
   return {
     // "type" turns this into a combined customer/donor/sponsor tracker
     // rather than a leads-only list; "followUpDate" is a real date field
@@ -69,7 +97,7 @@ function normalizeEditable(info, input = {}) {
     // other list has no concept of a nested array within one row, so a
     // real one-to-many relationship has to be modeled as two flat lists
     // rather than one row holding an embedded line-items array.
-    invoices: rows(input.invoices === undefined ? starter.invoices : input.invoices, { invoiceNumber: "", clientName: "", date: "", dueDate: "", notes: "", status: "draft" }),
+    invoices,
     invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }),
     // Tool 4: grant and funding tracking. The existing "Grant Writing Agent"
     // (strategy.js) only ever produced a one-shot text template -- nothing
@@ -306,7 +334,7 @@ class BusinessService {
   async assistant(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm sharing this draft with the AI provider.", 409);
-    await this.consent(context, body.consent === true, "business:ai");
+    await this.consent(context, body.consent === true, AI_SCOPE);
     const record = await this.owned(context, recordId);
     if (!this.providers.assistant) fail("business_provider_unavailable", "Business AI is unavailable.", 503);
     return this.providers.assistant({ workspace: { ...record.data.editable, businessName: record.data.info.businessName }, message: String(body.message || "").slice(0, 8000) });
@@ -314,7 +342,7 @@ class BusinessService {
   async plan(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm sharing business details with the AI planner.", 409);
-    await this.consent(context); await this.consent(context, body.consent === true, "business:ai");
+    await this.consent(context); await this.consent(context, body.consent === true, AI_SCOPE);
     const record = await this.owned(context, recordId);
     if (record.version !== body.expectedVersion) fail("business_version_conflict", "Reload before planning.", 409);
     if (!this.providers.plan) fail("business_provider_unavailable", "Business AI planning is unavailable.", 503);
@@ -325,7 +353,7 @@ class BusinessService {
   async checkout(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm creating a provider checkout.", 409);
-    await this.consent(context, body.consent === true, "business:billing");
+    await this.consent(context, body.consent === true, BILLING_SCOPE);
     const record = await this.owned(context, recordId);
     if (record.version !== body.expectedVersion) fail("business_version_conflict", "Reload before creating checkout.", 409);
     if (record.data.subscription?.state === "active") fail("business_subscription_active", "This workspace already has a verified paid subscription.", 409);
@@ -335,7 +363,7 @@ class BusinessService {
       data: { ...record.data, subscription }, provenance: { source: "stripe-checkout", paid: false } });
   }
   async refreshSubscription(context, recordId) {
-    await this.authorize(context, true); await this.consent(context, false, "business:billing");
+    await this.authorize(context, true); await this.consent(context, false, BILLING_SCOPE);
     const record = await this.owned(context, recordId);
     if (!this.providers.refresh) fail("business_provider_unavailable", "Business billing is unavailable.", 503);
     const verified = await this.providers.refresh({ tenantId: context.tenantId, ownerId: context.userId, recordId, sessionId: record.data.subscription?.sessionId });
@@ -350,9 +378,12 @@ class BusinessService {
   }
   async revokeConsent(context) {
     await this.authorize(context);
-    const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: DATA_SCOPE });
-    if (consent) await this.consents.revoke({ tenantId: context.tenantId, subjectId: context.userId, consentId: consent.consent_id });
-    return { revoked: true, scope: DATA_SCOPE };
+    const revoked = [];
+    for (const scope of ALL_SCOPES) {
+      const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope });
+      if (consent) { await this.consents.revoke({ tenantId: context.tenantId, subjectId: context.userId, consentId: consent.consent_id }); revoked.push(scope); }
+    }
+    return { revoked: true, scopes: revoked };
   }
   async webhook(raw, signature) {
     if (!this.providers.verifyWebhook) fail("business_provider_unavailable", "Business billing webhooks are unavailable.", 503);

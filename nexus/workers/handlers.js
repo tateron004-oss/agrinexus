@@ -67,13 +67,10 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           outcomes.push({ notificationId: notification.notification_id, delivered: false, code: "delivery_provider_unavailable" });
           continue;
         }
+        let receipt;
         try {
-          const receipt = await provider(notification);
+          receipt = await provider(notification);
           if (!receipt?.verified) throw Object.assign(new Error("Delivery provider returned no verified receipt."), { code: "delivery_unverified" });
-          await runtime.notifications.delivered(notification.notification_id);
-          await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
-          logger?.info?.("notifications.delivered", { notificationId: notification.notification_id, channel: notification.channel, method: receipt.method });
-          outcomes.push({ notificationId: notification.notification_id, delivered: true, receipt });
         } catch (error) {
           const failedRow = await runtime.notifications.failed(notification.notification_id, { code: error.code || "delivery_failed", message: error.message });
           if (failedRow?.state === "failed") await blockStalledAutonomousTaskIfApplicable({ runtime, notification,
@@ -81,6 +78,23 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           logger?.warn?.("notifications.delivery_failed", { notificationId: notification.notification_id, channel: notification.channel,
             code: error.code || "delivery_failed", detail: String(error.message || "").slice(0, 300) });
           outcomes.push({ notificationId: notification.notification_id, delivered: false, code: error.code || "delivery_failed" });
+          continue;
+        }
+        // Found live (notifications-pipeline audit): the real send (provider(notification), above) had already
+        // happened by this point -- a push/SMS/email genuinely reached the recipient. If the bookkeeping below
+        // (marking the row delivered) then threw on a transient DB error, this used to fall into the same catch
+        // that calls failed(), which requeues the notification (state -> 'queued') whenever attempts<5. The next
+        // poll would then claim and re-deliver it, sending the SAME push/SMS/email a second time. A bookkeeping
+        // failure after a confirmed send must never trigger a resend, so it gets its own non-requeuing catch.
+        try {
+          await runtime.notifications.delivered(notification.notification_id);
+          await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
+          logger?.info?.("notifications.delivered", { notificationId: notification.notification_id, channel: notification.channel, method: receipt.method });
+          outcomes.push({ notificationId: notification.notification_id, delivered: true, receipt });
+        } catch (error) {
+          logger?.error?.("notifications.post_delivery_bookkeeping_failed", { notificationId: notification.notification_id, channel: notification.channel,
+            detail: String(error.message || "").slice(0, 300) });
+          outcomes.push({ notificationId: notification.notification_id, delivered: true, bookkeepingError: true });
         }
       }
       return { outcomes };
