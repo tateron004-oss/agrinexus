@@ -174,20 +174,26 @@ class RecordRepository {
     return result.rows || result;
   }
 
-  // The task/grant counterpart to listBusinessWorkspacesWithDueFollowUps():
-  // a task's dueDate already passed (and it's not done), or a grant's
-  // deadline is within the next 7 days (and it's not yet awarded/declined).
-  // Both fields are also real dashboard date inputs (public/business-
-  // services.js's field() renders "dueDate"/"deadline" as type="date", same
-  // as "followUpDate"), so the identical strict YYYY-MM-DD guard applies:
-  // voice/chat's extractTaskArgs/extractGrantArgs store whatever
-  // natural-language phrase was spoken instead, and those rows are safely
-  // skipped here rather than misparsed. A grant's deadline is checked for
+  // The task/grant/invoice counterpart to listBusinessWorkspacesWithDueFollowUps():
+  // a task's dueDate already passed (and it's not done), a grant's deadline
+  // is within the next 7 days (and it's not yet awarded/declined), or an
+  // invoice's dueDate already passed (and it's not paid). All three fields
+  // are also real dashboard date inputs (public/business-services.js's
+  // field() renders "dueDate"/"deadline" as type="date", same as
+  // "followUpDate"), so the identical strict YYYY-MM-DD guard applies:
+  // voice/chat's extractTaskArgs/extractGrantArgs/extractInvoiceArgs store
+  // whatever natural-language phrase was spoken instead (createInvoice
+  // itself never even sets a dueDate), and those rows are safely skipped
+  // here rather than misparsed. A grant's deadline is checked for
   // "approaching," not "already passed" -- a grant can't be submitted after
   // its deadline, so the useful moment to nudge is before it, not after.
+  // "not paid" matches computeBusinessDashboard's own unpaidInvoices
+  // definition (status !== 'paid') exactly, so this sweep's idea of an
+  // unpaid invoice never drifts from what the dashboard already shows.
   async listBusinessWorkspacesWithDatedDeadlines({ limit = 50 }) {
     const OVERDUE_TASK = `t->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (t->>'dueDate')::date < current_date and coalesce(t->>'status','') not in ('done','complete')`;
     const APPROACHING_GRANT = `g->>'deadline' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'deadline')::date between current_date and current_date + 7 and coalesce(g->>'status','') not in ('awarded','declined')`;
+    const OVERDUE_INVOICE = `i->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (i->>'dueDate')::date < current_date and coalesce(i->>'status','') != 'paid'`;
     const result = await this.db.query(`select tenant_id, owner_id, record_id,
         data->'info'->>'businessName' as business_name,
         (select jsonb_agg(jsonb_build_object('title', t->>'title', 'dueDate', t->>'dueDate'))
@@ -195,12 +201,16 @@ class RecordRepository {
           where ${OVERDUE_TASK}) as overdue_tasks,
         (select jsonb_agg(jsonb_build_object('label', coalesce(g->>'funderName', g->>'program'), 'deadline', g->>'deadline'))
           from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g
-          where ${APPROACHING_GRANT}) as approaching_grants
+          where ${APPROACHING_GRANT}) as approaching_grants,
+        (select jsonb_agg(jsonb_build_object('invoiceNumber', i->>'invoiceNumber', 'clientName', i->>'clientName', 'dueDate', i->>'dueDate'))
+          from jsonb_array_elements(coalesce(data->'editable'->'invoices','[]'::jsonb)) i
+          where ${OVERDUE_INVOICE}) as overdue_invoices
       from nexus_records
       where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
         and (
           exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t where ${OVERDUE_TASK})
           or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g where ${APPROACHING_GRANT})
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'invoices','[]'::jsonb)) i where ${OVERDUE_INVOICE})
         )
       order by updated_at
       limit $1`, [Math.min(Math.max(limit, 1), 200)]);
