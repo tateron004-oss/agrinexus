@@ -617,14 +617,16 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
       }
       return { scanned: candidates.length, created, skippedPaused };
     },
-    // The task/grant counterpart to situational-awareness.lead-followup-sweep:
-    // a task's own dueDate already passed, or a grant's own deadline is
-    // within the next 7 days (nexus/data/record-repository.js's new
+    // The task/grant/invoice counterpart to situational-awareness.lead-followup-sweep:
+    // a task's own dueDate already passed, a grant's own deadline is within
+    // the next 7 days, or an invoice's own dueDate already passed while
+    // still unpaid (nexus/data/record-repository.js's new
     // listBusinessWorkspacesWithDatedDeadlines() -- see its own comment on
     // why this is safe alongside listStaleBusinessWorkspaces's coarser,
     // date-agnostic signal). Same reminders.schedule-only, owner-directed
-    // shape as every other business-domain sweep -- no third party is ever
-    // contacted by this sweep.
+    // shape as every other business-domain sweep -- no third party (not
+    // even the client who owes the invoice) is ever contacted by this
+    // sweep; it only ever reminds the workspace owner.
     "situational-awareness.business-deadline-sweep": async ({ job }) => {
       const cooldownMs = Number(job.payload?.cooldownMs || 7 * 24 * 60 * 60 * 1000);
       const dailyAutonomousTaskCapPerTenant = Number(job.payload?.dailyAutonomousTaskCapPerTenant || 10);
@@ -647,14 +649,16 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         const businessName = candidate.business_name || "your business workspace";
         const overdueTasks = Array.isArray(candidate.overdue_tasks) ? candidate.overdue_tasks.filter(item => item?.title) : [];
         const approachingGrants = Array.isArray(candidate.approaching_grants) ? candidate.approaching_grants.filter(item => item?.label) : [];
+        const overdueInvoices = Array.isArray(candidate.overdue_invoices) ? candidate.overdue_invoices.filter(item => item?.invoiceNumber) : [];
         const parts = [
           ...overdueTasks.map(item => `"${item.title}" (due ${item.dueDate})`),
-          ...approachingGrants.map(item => `the "${item.label}" grant deadline (${item.deadline})`)
+          ...approachingGrants.map(item => `the "${item.label}" grant deadline (${item.deadline})`),
+          ...overdueInvoices.map(item => `unpaid invoice ${item.invoiceNumber}${item.clientName ? ` for ${item.clientName}` : ""} (due ${item.dueDate})`)
         ];
         const summary = parts.join(", ") || "an approaching deadline";
         const claim = await runtime.records.claimCooldown({ tenantId, ownerId, subjectId,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
-          data: { reason: "business_deadline_due", overdueTasks, approachingGrants },
+          data: { reason: "business_deadline_due", overdueTasks, approachingGrants, overdueInvoices },
           provenance: { source: "situational-awareness-business-deadline-sweep" } });
         if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
