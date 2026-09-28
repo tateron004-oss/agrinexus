@@ -21579,7 +21579,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // question, instead of answering it.
     const wantsListingStatus = /\b(do|did|does|have|has)\s+you\s+(sell|sold|list(?:ed)?|post(?:ed)?|publish(?:ed)?|creat(?:e|ed))\b/i.test(command);
     if (!wantsBrowseListings && !wantsListingStatus && /\b(create|post|publish|list|sell)\b/i.test(command)) {
-      const listingResult = nexusRealProviders.marketplace.createListing({
+      // Found live (marketplace/real-estate audit): this create path called
+      // the legacy nexusRealProviders.marketplace.createListing, which has
+      // no content-safety check at all -- unlike marketplaceBridge's own
+      // createListing (the one exposed at the REST endpoint), which blocks
+      // payment/health/credential content via SENSITIVE_MARKETPLACE_PATTERN.
+      // Both read/write the identical db.profile.marketplaceListings array
+      // and are both echoed verbatim in future browse responses, so a
+      // listing created through natural-language voice/typed dispatch could
+      // carry sensitive content the same request would be refused for via
+      // the REST endpoint. Routed through marketplaceBridge instead so
+      // every listing-creation path enforces the same safety check.
+      const listingResult = nexusRealProviders.marketplaceBridge.createListing({
         title: args.title || command,
         crop: args.crop || args.product || "",
         quantity: args.quantity || "",
