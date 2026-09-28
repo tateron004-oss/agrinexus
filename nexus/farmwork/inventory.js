@@ -71,7 +71,13 @@ async function handle(ctx) {
     const item = found[0];
     if (quantity.value > item.data.qty) return `You only have ${unitLabel(item.data.qty, item.data.unit)} of ${item.data.name}, so I haven't changed anything. If the count is wrong, tell me "add ${unitLabel(quantity.value - item.data.qty, item.data.unit)} of ${item.data.name} to inventory" first.`;
     const next = { ...item, data: { ...item.data, qty: Math.round((item.data.qty - quantity.value) * 1000) / 1000 } };
-    await ctx.store.update({ ...scope, record: next });
+    // Found live: this read qty, checked it, then wrote a new qty with no guard that it was still
+    // current -- two concurrent "used X of Y" requests could each read the same starting qty, each
+    // pass the "not more than we have" check above, and each write their own deduction, silently
+    // losing one instead of the safety check (stock can never go negative) it was supposed to trip.
+    // casField/casValue only applies the write if qty still matches what was just read.
+    const applied = await ctx.store.update({ ...scope, record: next, casField: "qty", casValue: item.data.qty });
+    if (!applied) return `${item.data.name}'s stock just changed. Say that again so I can check the current amount first.`;
     return `Used ${unitLabel(quantity.value, quantity.unit)} of ${item.data.name}. ${unitLabel(next.data.qty, next.data.unit)} left.${lowNote(next)}`;
   }
 

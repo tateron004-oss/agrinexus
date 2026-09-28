@@ -63,7 +63,18 @@ async function handle(ctx) {
 
   // ---- people ----
   if ((m = /^(?:please )?(?:add|register|save) (?:a |another |a new |new )?(buyer|customer|client|supplier|seller|vendor)(?: called| named)?\s*(.*)$/i.exec(t)) && !/\b(?:to|in) (?:my )?(?:list|calendar|inventory)\b/i.test(t)) {
-    const role = /supplier|seller|vendor/i.test(m[1]) ? "supplier" : "buyer"; const named = clean(m[2]);
+    const role = /supplier|seller|vendor/i.test(m[1]) ? "supplier" : "buyer";
+    // Found live (capability-testing the orb): a name given together with
+    // contact info in the same sentence ("...called Jane Doe, contact
+    // +254712345678") was rejected entirely -- the digit-guard below checked
+    // the WHOLE rest of the sentence for any digit, not just the name
+    // itself, so a perfectly valid name silently vanished whenever a phone
+    // number followed it in the same utterance, and the guided flow asked
+    // for the name again even though it was right there. Take only the part
+    // before the first comma/semicolon or a contact-intro word as the
+    // candidate name, then apply the same digit-guard to just that.
+    const rawNamed = clean(m[2]);
+    const named = rawNamed.split(/[,;]|\b(?:contact|phone|number|call|reach(?:able)? at)\b/i)[0].trim();
     return startGuided(ctx, templates.party, { role, ...(named && named.length <= 40 && !/\d/.test(named) ? { name: titleCase(named) } : {}) });
   }
   if ((m = /^(?:show|list|who are) (?:me )?my (buyers|customers|clients|suppliers|sellers|vendors|contacts on the farm)$/i.exec(t))) {
@@ -75,7 +86,16 @@ async function handle(ctx) {
     const known = await parties();
     if (!known.length || /^(?:my|the|our)\b|\b(?:calendar|reminders?|phone|diary|journal|list)\b/i.test(m[1])) return null; // "add a note to my calendar" is not about a buyer
     const found = findParty(known, m[1]);
-    if (!found) return `I don't have ${clean(m[1])} on your list. Say "add a buyer ${titleCase(m[1])}" first.`;
+    // Found live (capability-testing the orb): once a farmer has saved even
+    // one buyer/supplier, this used to claim EVERY "note about X: Y" phrase
+    // whose subject wasn't a known party -- rejecting it outright ("I don't
+    // have X on your list") instead of returning null and letting a plain
+    // personal note (nexus/personal/items.js) save it. A genuinely unrelated
+    // note ("note about water tank: it's leaking") was silently discarded,
+    // never saved anywhere. Only claim this pattern when the subject
+    // actually resolves to a known party; otherwise fall through so the note
+    // is still saved, just as a normal one instead of a party note.
+    if (!found) return null;
     if (found.ambiguous) return `Which one: ${found.ambiguous.map(party => party.data.name).join(" or ")}?`;
     await ctx.store.add({ ...scope, collection: "party_note", data: { party: found.party.data.name, text: clean(m[2]).slice(0, 300), day: ctx.today } });
     return `Noted about ${found.party.data.name}: ${clean(m[2]).slice(0, 120)}.`;

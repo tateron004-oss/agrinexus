@@ -155,3 +155,18 @@ test("deleting or removing something that is not a contact is never read as forg
   assert.deepEqual(extractContactRequest("Delete contact Otieno"), { action: "forget", name: "Otieno" });
   assert.deepEqual(extractContactRequest("Remove Otieno from my contacts"), { action: "forget", name: "Otieno" });
 });
+
+// Found live (calendar/notes audit): the bare "forget X" form (deliberately
+// allowed without a "contact" qualifier, unlike delete/remove/erase above)
+// had no domain-noun exclusions, so "forget my rent reminder"/"forget my
+// vet visit"/"forget my dentist appointment" all parsed as a plausible
+// 1-3-word contact name -- intercepting reminders' own "forget my ...
+// reminder" cancel phrasing (planner.js dispatches contacts before
+// reminders) and answering "I don't have a contact called Rent Reminder"
+// instead of ever reaching the reminder-cancel handler.
+test("'forget' about a reminder, meeting, appointment, visit, note, or event is never read as forgetting a contact", () => {
+  for (const text of ["Forget my rent reminder", "Forget my reminder", "Forget my vet visit", "Forget my dentist appointment", "Forget my meeting", "Forget my note about the pump", "Forget my shopping list"]) {
+    assert.equal(extractContactRequest(text), null, text);
+  }
+  assert.deepEqual(extractContactRequest("Forget Otieno"), { action: "forget", name: "Otieno" }, "a genuine bare-name forget is unaffected by the domain-noun exclusions");
+});

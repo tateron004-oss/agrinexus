@@ -77,10 +77,17 @@ function createBriefService({ notifications, settings = null, memory = null, far
         if (!devicesFound.length) { result.skippedNoDevice += 1; continue; }
         const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
         const text = await composeFor({ tenantId: setting.tenantId, userId: setting.userId, known, timeZone: setting.timeZone });
-        handledToday.add(key);
-        if (!text) { result.skippedNothingToSay += 1; continue; }
+        // Found live (worker-sweep reliability audit): handledToday used to be marked BEFORE the real
+        // notifications.enqueue() call below, which does a real DB insert that can throw on any transient
+        // failure (connection blip, timeout, pool exhaustion). An uncaught throw there left the key
+        // permanently marked handled with nothing ever actually queued -- the person's brief was silently
+        // skipped for the rest of the local day, with no retry and no per-user signal, only a generic
+        // "brief_sweep_failed" log line. Only mark handled once the real work is actually done (or once
+        // there is genuinely nothing to say, a stable outcome that's safe to mark immediately).
+        if (!text) { handledToday.add(key); result.skippedNothingToSay += 1; continue; }
         await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
           content: { title: "Your morning brief", body: text, kind: "daily_brief" } });
+        handledToday.add(key);
         logger?.info?.("brief.queued", { userId: setting.userId, day: clock.day });
         result.sent += 1;
       }

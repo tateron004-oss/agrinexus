@@ -203,11 +203,20 @@ function createMedicationService({ store, circle = null, push, notifications, de
         if (Number.isNaN(promptedAt.getTime()) || at.getTime() < promptedAt.getTime() + GRACE_HOURS * 3600 * 1000) continue;
         if (await isPaused(dose.tenantId)) continue;
         const members = await sharing({ tenantId: dose.tenantId, userId: dose.userId }).catch(() => []);
-        if (!members.length) { await store.updateDose({ tenantId: dose.tenantId, memoryId: dose.memoryId, content: { ...dose, status: "missed", alertedAt: at.toISOString() } }); result.missed += 1; continue; }
+        if (!members.length) {
+          const claimedMissed = await store.updateDose({ tenantId: dose.tenantId, memoryId: dose.memoryId, content: { ...dose, status: "missed", alertedAt: at.toISOString() }, expectedStatus: "pending" });
+          if (claimedMissed) result.missed += 1;
+          continue;
+        }
+        // Claim the "pending" -> "alerted" transition BEFORE telling anyone, so a person who confirms the
+        // dose (via turn()'s own separate fresh read-then-write) in the moments between listPendingDoses()'s
+        // stale snapshot and here can never have a false "a dose is waiting" alert sent about them, and their
+        // real "taken" record is never clobbered by this loop's stale write.
+        const claimed = await store.updateDose({ tenantId: dose.tenantId, memoryId: dose.memoryId, content: { ...dose, status: "alerted", alertedAt: at.toISOString() }, expectedStatus: "pending" });
+        if (!claimed) continue;
         const name = await nameOf({ tenantId: dose.tenantId, userId: dose.userId });
         for (const link of members) { try { await push({ tenantId: dose.tenantId, userId: link.otherId, title: "A dose is waiting", body: `${name} asked Kyro to remind them about a dose, and it hasn't been confirmed. You may want to check in.`, key: `dose-miss:${dose.medId}:${dose.day}:${dose.time}:${link.otherId}` }); } catch { /* the others still go */ } }
         try { await push({ tenantId: dose.tenantId, userId: dose.userId, title: "Kyro", body: `You haven't confirmed your ${formatTimeOfDay(dose.time)} dose, so I let ${members.map(link => link.otherName).join(", ")} know. Say "I took my ${dose.name}" and I'll tell them it's done.`, key: `dose-miss-self:${dose.medId}:${dose.day}:${dose.time}` }); } catch { /* best effort */ }
-        await store.updateDose({ tenantId: dose.tenantId, memoryId: dose.memoryId, content: { ...dose, status: "alerted", alertedAt: at.toISOString() } });
         logger?.info?.("dose.unconfirmed", { userId: dose.userId, day: dose.day });
         result.alerted += 1;
       }

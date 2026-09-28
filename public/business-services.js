@@ -113,7 +113,11 @@
     // exactly how natural phrasing stores it, never matched the exact-
     // lowercase check and silently dropped that grant's amount).
     const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
-    const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
+    // Found live: same case-sensitivity bug already fixed for grant.status
+    // above -- a naturally typed "Paid" (capital P) never matched this
+    // exact-lowercase check and that invoice silently stayed counted as
+    // unpaid forever.
+    const unpaidInvoices = editable.invoices.filter(invoice => String(invoice.status || "").toLowerCase() !== "paid").length;
     const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
     const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
     // Found live: same case-sensitivity bug already fixed above for

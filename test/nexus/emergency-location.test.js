@@ -147,6 +147,36 @@ test("a member who leaves, or is not chosen any more, stops receiving it at once
   await w.join("u-late", "friend"); await w.say("share my location in emergencies"); assert.deepEqual((await w.locate(alert.alertId)).body.shared, ["Joseph Otieno"], "choosing everyone again includes Joseph, but not the person who joined after the alert");
 });
 
+// Found live: recipients was computed once at the top of share(), then the send loop does N real, sequential
+// awaited pushes -- if the person revoked a member (left the circle, or turned off sharing location with
+// them) while an EARLIER push in that same loop was still in flight, the stale recipients list would still
+// send the real GPS position to them, violating this file's own documented rule 2 ("leaving the circle stops
+// it at once"). Re-verifies each recipient's membership immediately before their own send, not once per batch.
+test("a member revoked while an earlier recipient's push in the SAME batch is still in flight never receives it", async () => {
+  const { createEmergencyLocation } = require("../../nexus/companion/emergency-location.js");
+  let activeMembers = [
+    { otherId: "u-amina", otherName: "Amina Wanjiru", shares: { emergencyLocation: true } },
+    { otherId: "u-joseph", otherName: "Joseph Otieno", shares: { emergencyLocation: true } }
+  ];
+  const alert = { alertId: "alt_1", ended: false, lastUpdateAt: null, updates: 0, alerted: [{ id: "u-amina" }, { id: "u-joseph" }], language: "en", memoryId: "m1" };
+  const circle = {
+    async latestAlert() { return alert; },
+    async activeMembers() { return activeMembers; },
+    async updateAlert({ change }) { Object.assign(alert, change(alert)); }
+  };
+  const pushed = [];
+  const pushWithLink = async ({ toUserId }) => {
+    pushed.push(toUserId);
+    // Simulate the real race: the person revokes Joseph's location-sharing consent while Amina's push
+    // (earlier in this same loop) is still being awaited -- a separate, concurrent circle action.
+    if (toUserId === "u-amina") activeMembers = activeMembers.filter(member => member.otherId !== "u-joseph");
+  };
+  const location = createEmergencyLocation({ circle, pushWithLink, now: () => new Date("2026-09-20T05:00:00Z") });
+  const result = await location.share({ tenantId: "t1", userId: "u-baba", userName: "Baba Kamau", alertId: "alt_1", position: { lat: -1.2921, lng: 36.8219 } });
+  assert.deepEqual(pushed, ["u-amina"], "Joseph must never receive a push once revoked mid-batch, even though he was in the original recipients list");
+  assert.deepEqual(result.body.shared, ["Amina Wanjiru"]);
+});
+
 // ---------- "I'm safe" ----------
 test("saying they are safe closes the alert, tells everyone who was alerted, and stops the location; an ordinary 'fine' does nothing", async () => {
   const w = await world({ optIn: ["Amina"] }); const { emergency: alert } = await w.handle("I need help now");

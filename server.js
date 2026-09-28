@@ -170,22 +170,38 @@ async function authoritativeRuntimeUser(user) {
     // data" request was rejected with a 403, so #549/#550's fix to actually
     // run and correctly erase a deletion request was unreachable by anyone.
     : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write", "devices:write", "privacy:delete"];
+  let resolvedId = authoritativeUserId;
   if (usingPostgresState()) {
     const pool = getPgPool();
     const email = String(user.email || `${user.id}@local.agrinexus.invalid`).toLowerCase();
+    // Found live (production outage): authoritativeUserId is deterministically derived from the legacy
+    // user.id, but a real row can already exist under a DIFFERENT id for the same (tenant_id, email) --
+    // e.g. from before this derivation existed, or any other historical identity mismatch. The insert's
+    // ON CONFLICT(id) only guarded against the SAME id already existing, not this email collision, so
+    // every authenticated /api/nexus/runtime/* call for that real account threw an uncaught
+    // "duplicate key value violates unique constraint users_tenant_id_email_key" that escaped this
+    // function (it isn't wrapped by any of the route handlers' own try/catch) all the way to the
+    // server's generic 500 handler -- taking down the ENTIRE authoritative runtime (behavior/turn,
+    // tasks, devices, everything) for that account, with every request looking identical: a generic
+    // client-side fallback response and no visible error. Look up any existing row by email first and
+    // reuse ITS id rather than blindly inserting under the freshly-computed one -- a real users.id may
+    // already be referenced by other rows (tasks, memory, devices) created under it, so an existing
+    // identity's id must never be repointed.
+    const existing = await pool.query(`select id from users where tenant_id=$1 and lower(email)=$2 limit 1`, [NEXUS_AUTHORITATIVE_TENANT_ID, email]);
+    resolvedId = existing.rows[0]?.id || authoritativeUserId;
     await pool.query(`insert into users(id,tenant_id,email,display_name,password_hash,status)
       values($1,$2,$3,$4,$5,'active') on conflict(id) do update set
       display_name=excluded.display_name,status='active',updated_at=now()`,
-    [authoritativeUserId, NEXUS_AUTHORITATIVE_TENANT_ID, email, user.name || "Nexus User", "legacy-auth-bound"]);
+    [resolvedId, NEXUS_AUTHORITATIVE_TENANT_ID, email, user.name || "Nexus User", "legacy-auth-bound"]);
     await pool.query(`insert into nexus_organization_memberships(tenant_id,user_id,role,permissions,state)
       values($1,$2,$3,$4,'active') on conflict(tenant_id,user_id,role) do update set
       permissions=excluded.permissions,state='active',updated_at=now()`,
-    [NEXUS_AUTHORITATIVE_TENANT_ID, authoritativeUserId, role, permissions]);
+    [NEXUS_AUTHORITATIVE_TENANT_ID, resolvedId, role, permissions]);
   }
   return {
     ...user,
     legacyUserId: user.id,
-    id: authoritativeUserId,
+    id: resolvedId,
     tenantId: NEXUS_AUTHORITATIVE_TENANT_ID,
     organizationId: NEXUS_AUTHORITATIVE_TENANT_ID,
     roles: [role],
@@ -21563,7 +21579,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // question, instead of answering it.
     const wantsListingStatus = /\b(do|did|does|have|has)\s+you\s+(sell|sold|list(?:ed)?|post(?:ed)?|publish(?:ed)?|creat(?:e|ed))\b/i.test(command);
     if (!wantsBrowseListings && !wantsListingStatus && /\b(create|post|publish|list|sell)\b/i.test(command)) {
-      const listingResult = nexusRealProviders.marketplace.createListing({
+      // Found live (marketplace/real-estate audit): this create path called
+      // the legacy nexusRealProviders.marketplace.createListing, which has
+      // no content-safety check at all -- unlike marketplaceBridge's own
+      // createListing (the one exposed at the REST endpoint), which blocks
+      // payment/health/credential content via SENSITIVE_MARKETPLACE_PATTERN.
+      // Both read/write the identical db.profile.marketplaceListings array
+      // and are both echoed verbatim in future browse responses, so a
+      // listing created through natural-language voice/typed dispatch could
+      // carry sensitive content the same request would be refused for via
+      // the REST endpoint. Routed through marketplaceBridge instead so
+      // every listing-creation path enforces the same safety check.
+      const listingResult = nexusRealProviders.marketplaceBridge.createListing({
         title: args.title || command,
         crop: args.crop || args.product || "",
         quantity: args.quantity || "",
@@ -33362,8 +33389,16 @@ async function runAgentCommand(db, user, command, options = {}) {
     return trustedOperatingSystemCommandResponse(db, user, text, options);
   }
   if (/\b(approve|confirm|run paused|continue paused)\b/.test(lower) && /\b(cloud agent|cloud-agent|cloud mission|autonomous agent|agent queue)\b/.test(lower)) {
-    const run = (db.profile.cloudAgentRuns || []).find(item => item.status === "needs-approval" || (item.steps || []).some(step => step.approvalStatus === "needed"))
-      || (db.profile.cloudAgentRuns || [])[0];
+    // Found live: this used to fall back to the most recently created run
+    // (regardless of status) whenever none was currently awaiting approval --
+    // so saying "approve the cloud agent mission" after the last mission had
+    // already finished silently re-executed that same completed mission's
+    // steps a second time (double wallet credit, duplicate trade order,
+    // duplicate course-progress advance, duplicate drone mission). A run's
+    // per-step approvalStatus can also stay "needed" forever even after the
+    // step itself has executed, so only the run's own authoritative status is
+    // trusted here, not that stale per-step flag.
+    const run = (db.profile.cloudAgentRuns || []).find(item => item.status === "needs-approval");
     if (!run) {
       return {
         intent: "cloud_agent.no_run",
@@ -40751,7 +40786,14 @@ function normalizeRoutingRule(body = {}, existing = {}) {
   };
 }
 
-function normalizeProviderResponse(db, recordId, body = {}, existing = {}) {
+// Found live (review-queue/cases audit): reviewerId/reviewerLabel used to
+// trust body.reviewerId/body.reviewerLabel ahead of anything derived from the
+// authenticated session -- any signed-in provider-queue user could POST an
+// arbitrary reviewer name, which was then stored as the durable attribution
+// on the response, used as the actor on the "provider_response_created"
+// audit event, and shown to the end user once the response is published.
+// Attribution must come only from the real session, never client input.
+function normalizeProviderResponse(db, recordId, body = {}, existing = {}, user = null) {
   const now = new Date().toISOString();
   const responseType = NEXUS_PROVIDER_RESPONSE_TYPES.includes(body.responseType) ? body.responseType : existing.responseType || "note";
   const providerOrganizationId = sanitizePilotText(body.providerOrganizationId || existing.providerOrganizationId || "provider-org-internal-review", 120);
@@ -40759,8 +40801,8 @@ function normalizeProviderResponse(db, recordId, body = {}, existing = {}) {
     id: existing.id || body.id || crypto.randomUUID(),
     recordId: sanitizePilotText(recordId || body.recordId || existing.recordId || "", 120),
     providerOrganizationId,
-    reviewerId: sanitizePilotText(body.reviewerId || existing.reviewerId || "provider-reviewer-internal-admin", 120),
-    reviewerLabel: sanitizePilotText(body.reviewerLabel || existing.reviewerLabel || "Nexus reviewer", 160),
+    reviewerId: sanitizePilotText(existing.reviewerId || user?.id || "provider-reviewer-internal-admin", 120),
+    reviewerLabel: sanitizePilotText(existing.reviewerLabel || user?.name || "Nexus reviewer", 160),
     responseType,
     responseText: sanitizePilotText(body.responseText || existing.responseText || "Provider/admin review note prepared locally.", 1200),
     safeLimitations: sanitizeList(body.safeLimitations || existing.safeLimitations || ["Review-only response. No diagnosis, prescription, payment, emergency dispatch, call, message, or live provider action is implied."], 8, 240),
@@ -40861,6 +40903,7 @@ function normalizeProviderPathwayRequest(db, body = {}, user = null, existing = 
   const status = existing.status || (consentStatus !== "confirmed" ? "awaiting_consent" : providerConfigured ? "draft" : "queued_locally");
   return {
     id: existing.id || body.id || crypto.randomUUID(),
+    ownerId: existing.ownerId || user?.id || null,
     userQuestion: sanitizePilotText(body.userQuestion || body.question || existing.userQuestion || "", 500),
     category,
     answerSummary: sanitizePilotText(body.answerSummary || body.answer || existing.answerSummary || "", 1200),
@@ -40922,7 +40965,7 @@ function nexusProviderPathwayRequest(db, body = {}, user = null) {
 
 function nexusProviderPathwayConsent(db, requestId, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
-  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId);
+  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId && nexusPilotRecordOwned(item, user));
   if (!requestItem) return { ok: false, error: "provider_pathway_request_not_found" };
   requestItem.consentStatus = "confirmed";
   requestItem.status = requestItem.providerConfigured ? "draft" : "queued_locally";
@@ -40952,7 +40995,7 @@ function nexusProviderPathwayConsent(db, requestId, body = {}, user = null) {
 
 function nexusProviderPathwayRoute(db, requestId, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
-  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId);
+  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId && nexusPilotRecordOwned(item, user));
   if (!requestItem) return { ok: false, error: "provider_pathway_request_not_found" };
   if (requestItem.consentStatus !== "confirmed") {
     requestItem.status = "blocked_missing_consent";
@@ -45414,7 +45457,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const record = getRecordById(db, nexusRecordResponsesMatch[1]);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
-    const response = normalizeProviderResponse(db, record.id, await readBody(req));
+    const response = normalizeProviderResponse(db, record.id, await readBody(req), {}, user);
     db.nexusProviderResponses.unshift(response);
     record.providerResponseIds = [response.id, ...(record.providerResponseIds || [])];
     record.updatedAt = response.updatedAt;
@@ -45433,7 +45476,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const index = db.nexusProviderResponses.findIndex(item => item.id === nexusResponseMatch[1]);
     if (index < 0) return send(res, 404, { ok: false, error: "response_not_found" });
-    db.nexusProviderResponses[index] = normalizeProviderResponse(db, db.nexusProviderResponses[index].recordId, await readBody(req), db.nexusProviderResponses[index]);
+    db.nexusProviderResponses[index] = normalizeProviderResponse(db, db.nexusProviderResponses[index].recordId, await readBody(req), db.nexusProviderResponses[index], user);
     await writeDb(db);
     return send(res, 200, { ok: true, response: db.nexusProviderResponses[index] });
   }
@@ -45977,8 +46020,13 @@ async function api(req, res, url) {
     const query = db.nexusKnowledgeQueries.find(item => item.id === id && nexusPilotRecordOwned(item, user));
     if (!query) return send(res, 404, { ok: false, error: "knowledge_history_not_found" });
     const savedResults = db.nexusKnowledgeSavedResults.filter(item => item.queryId === id);
-    const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => item.originalQuestion === query.questionSummary || item.queryId === id);
-    const providerRequests = db.nexusProviderPathwayRequests.filter(item => item.userQuestion === query.questionSummary || item.knowledgeQueryId === id);
+    // Found live (cross-user-IDOR audit, same shape as institutionalEvidenceReceipts
+    // below): matching by free-text question equality alone, with no ownership
+    // check ANDed in, let another user's review summary or provider-pathway
+    // request (which can carry their own userNotes/answerSummary) leak into this
+    // response whenever two different users happened to ask the same question.
+    const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => (item.originalQuestion === query.questionSummary || item.queryId === id) && nexusPilotRecordOwned(item, user));
+    const providerRequests = db.nexusProviderPathwayRequests.filter(item => (item.userQuestion === query.questionSummary || item.knowledgeQueryId === id) && nexusPilotRecordOwned(item, user));
     const institutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts.filter(item => (item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary) && nexusPilotRecordOwned(item, user));
     return send(res, 200, {
       ok: true,
@@ -46085,7 +46133,25 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/telehealth/create-video-room" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth video rooms" });
-    const result = await nexusTelehealthProvider.createVideoRoom(db, await readBody(req), user, process.env);
+    const body = await readBody(req);
+    // Found live (telehealth audit): this real Daily.co/Zoom room creation
+    // had no idempotency protection at all -- unlike the sibling
+    // /api/nexus/tools/telehealth/session/create route, fixed earlier for
+    // the identical issue ("a retry/double-submit created a second real,
+    // billable room"). createVideoRoom() has no top-level `status` on
+    // success, so one is added only in that case, for withActionLifecycle's
+    // own success detection; a blocked/failed result is passed through with
+    // its real status string unchanged.
+    const wrapped = await withActionLifecycle(db, {
+      provider: "nexus-telehealth", action: "telehealth.video-room.create", body, actorId: user.id || user.email || "",
+      execute: async () => {
+        const created = await nexusTelehealthProvider.createVideoRoom(db, body, user, process.env);
+        return { httpStatus: created.ok ? 200 : 400, body: created.ok ? { ...created, status: "created" } : created };
+      },
+      verify: async created => ({ verified: Boolean(created?.body?.video?.roomCreated), note: created?.body?.video?.roomCreated ? "Provider returned a real, live video room." : "No real video room was confirmed." }
+      )
+    });
+    const result = wrapped.body;
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
@@ -46094,30 +46160,45 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/telehealth/notify" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth notifications" });
     const body = await readBody(req);
+    // Found live (telehealth audit): this real SMS/WhatsApp/email send had
+    // no idempotency protection at all -- unlike the generic nexus_email/
+    // nexus_communications NL-tool dispatch paths, which already wrap the
+    // same kind of real send in withActionLifecycle specifically for this.
+    // Only the actual provider send is wrapped (not the local `prepared`
+    // preparation step), matching the shape every other real-send call
+    // site in this file uses.
     const prepared = nexusTelehealthProvider.prepareNotification(db, body, user, process.env);
     let providerResult = null;
     if (prepared.ok && prepared.status === "prepared") {
       const channel = prepared.channel;
       if (channel === "email") {
-        providerResult = await nexusEmailSendPacket(db, {
-          to: body.to || body.contactValue || "",
-          subject: body.subject || "Nexus virtual care packet",
-          packetId: prepared.encounterId,
-          domain: "telehealth",
-          message: prepared.message,
-          confirmed: body.confirmed === true,
-          consent: body.consentToShare === true
-        }, user, process.env);
+        const wrapped = await withActionLifecycle(db, {
+          provider: "nexus-telehealth", action: "telehealth.notify.email", body, actorId: user.id || user.email || "",
+          execute: () => nexusEmailSendPacket(db, {
+            to: body.to || body.contactValue || "",
+            subject: body.subject || "Nexus virtual care packet",
+            packetId: prepared.encounterId,
+            domain: "telehealth",
+            message: prepared.message,
+            confirmed: body.confirmed === true,
+            consent: body.consentToShare === true
+          }, user, process.env)
+        });
+        providerResult = wrapped;
       } else if (channel === "sms" || channel === "whatsapp") {
-        providerResult = await nexusCommunicationsSendMessage(db, {
-          channel,
-          recipient: body.recipient || body.contactValue || "",
-          packetId: prepared.encounterId,
-          domain: "telehealth",
-          message: prepared.message,
-          confirmed: body.confirmed === true,
-          consent: body.consentToShare === true
-        }, user, process.env);
+        const wrapped = await withActionLifecycle(db, {
+          provider: "nexus-telehealth", action: `telehealth.notify.${channel}`, body, actorId: user.id || user.email || "",
+          execute: () => nexusCommunicationsSendMessage(db, {
+            channel,
+            recipient: body.recipient || body.contactValue || "",
+            packetId: prepared.encounterId,
+            domain: "telehealth",
+            message: prepared.message,
+            confirmed: body.confirmed === true,
+            consent: body.consentToShare === true
+          }, user, process.env)
+        });
+        providerResult = wrapped;
       }
     }
     // prepared.ok only reflects local preparation; a genuine send failure
@@ -46301,7 +46382,26 @@ async function api(req, res, url) {
     for (const meta of ownedUploads) {
       if (nexusUploads.deleteUpload(uploadDirPath, meta.fileId)) removedUploadCount += 1;
     }
-    const gaps = knownUnownedProfileGaps(db.profile);
+    // Found live: this route only ever erased the legacy db.profile blob. A
+    // real user's authoritative Postgres/nexus data (companion memory, tasks,
+    // conversations, health/farm records, reminders/schedules, registered
+    // push devices) was only reachable via the separate
+    // /api/nexus/runtime/privacy/deletions API, which public/app.js's real
+    // "Delete my account" button never called -- so it toasted "erased" while
+    // that data silently survived. Request it here too, same action.
+    let nexusDeletionRequested = false;
+    let nexusDeletionRequestId = null;
+    try {
+      const authoritativeUser = await authoritativeRuntimeUser(user);
+      if (authoritativeUser) {
+        const request = await authoritativeNexusRuntime.requestDeletionRequest({ user: authoritativeUser });
+        nexusDeletionRequested = true;
+        nexusDeletionRequestId = request?.request_id || null;
+      }
+    } catch (error) {
+      console.error("[account-erase] failed to request authoritative nexus deletion:", error.message);
+    }
+    const gaps = knownUnownedProfileGaps(db.profile).filter(gap => !nexusDeletionRequested || !/privacy\/deletions/.test(gap));
     const erasedEmail = user.email;
     anonymizeUserRecord(user);
     if (usingPostgresAuth()) {
@@ -46325,6 +46425,8 @@ async function api(req, res, url) {
       verification: {
         profileRecordsRemoved: removedProfileRecords,
         uploadedFilesRemoved: removedUploadCount,
+        nexusDeletionRequested,
+        nexusDeletionRequestId,
         accountDisabled: true,
         sessionsRevoked: true
       },
@@ -46546,10 +46648,16 @@ async function api(req, res, url) {
     const item = db.nexusPilotReviewQueue.find(queueItem => queueItem.id === nexusReviewNoteMatch[1]);
     if (!item) return send(res, 404, { ok: false, error: "queue_item_not_found" });
     const body = await readBody(req);
+    // Found live: this used to trust a client-supplied body.actor ahead of
+    // the authenticated user's real name, so any signed-in provider-queue
+    // user could forge a different reviewer's name onto the note AND the
+    // permanent audit trail below. The sibling status-change handler just
+    // below already gets this right (actor: user?.name || "Provider/Admin",
+    // no client input) -- mirror it here.
     const note = {
       id: crypto.randomUUID(),
       note: sanitizePilotText(body.note || "Provider/admin review note added.", 600),
-      actor: sanitizePilotText(body.actor || user?.name || "Provider/Admin", 120),
+      actor: sanitizePilotText(user?.name || "Provider/Admin", 120),
       createdAt: new Date().toISOString(),
       localReviewOnly: true
     };
@@ -51616,9 +51724,23 @@ async function api(req, res, url) {
       metadata: { applicationId: application.id, roleId: role.id }
     });
     db.profile.placements = db.profile.applications.length;
-    db.profile.interviews = Math.max(db.profile.interviews, 1);
-    db.profile.candidateStage = db.profile.placements > 1 ? "Placement Pool" : "Interview";
-    db.profile.earnings = Math.max(db.profile.earnings, 180 + role.rate);
+    // Found live (case-review/workforce audit): applying used to
+    // unconditionally set interviews>=1, candidateStage="Interview", and
+    // fabricate earnings from the mere act of applying -- with no readiness
+    // check at all. /api/workforce/action's own "interview" type correctly
+    // requires readiness>=50 before it will do any of this, and "shift"
+    // requires interviews>=1 before it will schedule a paid shift; applying
+    // for a role only requires readiness>=role.minReadiness (real roles go
+    // as low as 45%), so a candidate well below the interview threshold
+    // could apply, have interviews/stage/earnings fabricated as a side
+    // effect, and then schedule and get paid for a shift immediately --
+    // without ever passing the real interview gate a direct "interview"
+    // action would have refused them. Applying only records the
+    // application now; interviews/candidateStage/earnings only advance
+    // through the real, gated actions. A stage already reached further
+    // along the pipeline (via a genuine interview/shift) is preserved, not
+    // regressed, by a later application to a different role.
+    if (!["Interview", "Placement Pool"].includes(db.profile.candidateStage)) db.profile.candidateStage = "Applied";
     addActivity(db.profile, `Applied to ${role.title}.`);
     addWorkflowNote(db.profile, body.note, "Application note");
     await writeDb(db);
@@ -53956,6 +54078,17 @@ async function api(req, res, url) {
     if (body.runId) {
       const run = db.profile.cloudAgentRuns.find(item => item.id === body.runId);
       if (!run) return send(res, 404, { error: "Cloud agent run not found" });
+      // Found live: executeCloudAgentRun has no re-entrancy guard of its own --
+      // it always re-runs every step in run.steps from scratch. Without this
+      // check, approving the same runId twice (double-click, client retry, a
+      // replayed request) re-applied every side effect a second time: another
+      // wallet credit, another duplicate trade order, another course-progress
+      // advance, another drone mission, all counted again as if it were a new
+      // approved run. Only a run genuinely still awaiting approval may be
+      // (re-)approved.
+      if (!["awaiting-approval", "queued", "needs-approval"].includes(run.status)) {
+        return send(res, 409, { error: `This cloud agent run is already ${run.status} and cannot be approved again.`, status: run.status });
+      }
       approvalResult = await executeCloudAgentRun(db, user, run, { approved: true });
     }
     if (!approvalResult) return send(res, 400, { error: "Provide runId or templateId to approve." });

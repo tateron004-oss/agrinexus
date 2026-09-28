@@ -143,3 +143,14 @@ test("computeBusinessDashboard's openTasks matches task status case-insensitivel
   }));
   assert.equal(dashboard.openTasks, 1, "both differently-cased 'done'/'complete' tasks must be excluded from the open count");
 });
+
+// Found live: the same case-sensitivity bug as grantsAwarded above, on
+// invoice.status -- a naturally typed "Paid" (capital P) never matched an
+// exact-lowercase "paid" check, so that invoice stayed counted as unpaid
+// forever.
+test("computeBusinessDashboard's unpaidInvoices matches invoice status case-insensitively", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    invoices: [{ status: "Paid" }, { status: "paid" }, { status: "sent" }]
+  }));
+  assert.equal(dashboard.unpaidInvoices, 1, "both differently-cased 'paid' invoices must be excluded from the unpaid count");
+});

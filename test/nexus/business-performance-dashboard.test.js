@@ -63,6 +63,16 @@ test("dashboard sums real invoice line items and counts unpaid invoices", () => 
   assert.match(html, /125\.00, 2 invoice\(s\) not marked paid/);
 });
 
+// Found live: mirrors the already-fixed grant.status case-sensitivity bug --
+// a naturally typed "Paid" (capital P) never matched an exact-lowercase
+// check, so that invoice stayed counted as unpaid forever.
+test("dashboard matches invoice status case-insensitively, so a naturally-capitalized 'Paid' still counts", () => {
+  const html = loadRenderDashboard(workspace({
+    invoices: [{ status: "Paid" }, { status: "paid" }, { status: "sent" }]
+  }));
+  assert.match(html, /1 invoice\(s\) not marked paid/);
+});
+
 test("dashboard sums grant amounts requested vs. actually awarded", () => {
   const html = loadRenderDashboard(workspace({ grants: [
     { amount: 10000, status: "drafting" }, { amount: 5000, status: "awarded" }, { amount: 2000, status: "declined" }

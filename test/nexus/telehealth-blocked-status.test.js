@@ -89,6 +89,22 @@ test("create-encounter with confirmation and consent actually completes", async 
   return result.body.encounter.id;
 });
 
+// Found live (telehealth audit): the same real external video-room creation
+// createVideoRoom explicitly gates on `consentToShare === true` ("Video room
+// creation requires explicit confirmation and sharing consent") had no such
+// check when bundled into create-encounter's own `createVideo: true` branch.
+test("create-encounter with createVideo:true but no consentToShare does not create a real video room", async () => {
+  const result = await post("/api/nexus/telehealth/create-encounter", { conditionArea: "general", confirmed: true, consentToPreparePacket: true, createVideo: true });
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.encounter.video, undefined, "no video must be created without explicit sharing consent, matching createVideoRoom's own policy");
+});
+
+test("create-encounter with createVideo:true and consentToShare:true still creates a video, unaffected by the consent-gate fix", async () => {
+  const result = await post("/api/nexus/telehealth/create-encounter", { conditionArea: "general", confirmed: true, consentToPreparePacket: true, createVideo: true, consentToShare: true });
+  assert.equal(result.body.ok, true);
+  assert.ok(result.body.encounter.video, "a video must still be created once real sharing consent is given");
+});
+
 test("create-video-room against a missing encounter is reported as blocked", async () => {
   const result = await post("/api/nexus/telehealth/create-video-room", { encounterId: "does-not-exist", confirmed: true, consentToShare: true });
   assert.equal(result.body.ok, false);

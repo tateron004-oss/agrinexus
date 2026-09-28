@@ -45,19 +45,45 @@ class FarmRecordRepository {
   // touched. A transaction-scoped advisory lock, keyed per tenant+collection (and per-user for the
   // non-wide case, since numbering is otherwise scoped to one person's own records), serializes concurrent
   // number allocation without needing a real per-scope counter row.
+  async insertRecord(trx, { tenantId, userId, collection, data }) {
+    const number = await this.nextNumber({ tenantId, userId, collection }, trx);
+    const now = new Date().toISOString();
+    const memoryId = createId("memory");
+    await trx.query(`insert into nexus_memory_items
+      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+      values ($1,$2,$3,'domain','${this.purpose}',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','${this.sensitivity}')`,
+    [memoryId, tenantId, userId, { kind: "record", collection, number, data, createdAt: now, updatedAt: now }, this.searchable(collection, data), PLACEHOLDER_VECTOR, { source: "farm-toolkit", capturedAt: now }]);
+    return { memoryId, userId, number, collection, data, createdAt: now, updatedAt: now };
+  }
+
   async add({ tenantId, userId, collection, data }) {
     const wide = PUBLIC_COLLECTIONS.includes(collection);
     const lockKey = `${this.purpose}:${tenantId}:${collection}:${wide ? "*" : userId}`;
     return this.db.transaction(async trx => {
       await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
-      const number = await this.nextNumber({ tenantId, userId, collection }, trx);
-      const now = new Date().toISOString();
-      const memoryId = createId("memory");
-      await trx.query(`insert into nexus_memory_items
-        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
-        values ($1,$2,$3,'domain','${this.purpose}',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','${this.sensitivity}')`,
-      [memoryId, tenantId, userId, { kind: "record", collection, number, data, createdAt: now, updatedAt: now }, this.searchable(collection, data), PLACEHOLDER_VECTOR, { source: "farm-toolkit", capturedAt: now }]);
-      return { memoryId, userId, number, collection, data, createdAt: now, updatedAt: now };
+      return this.insertRecord(trx, { tenantId, userId, collection, data });
+    });
+  }
+
+  // Found live (drone/field-visit audit): coop.js's shared-equipment booking read existing
+  // bookings for a clash, then -- as a SEPARATE later call -- added the new booking, with no
+  // lock or transaction spanning both. Two near-simultaneous bookings for the same equipment
+  // and day could each read "no clash" before either had written, and both succeed, silently
+  // double-booking a shared resource instead of the second one being refused. This runs the
+  // clash check and the insert under one advisory-lock-guarded transaction (`lockKey` should
+  // be scoped to the actual collision axis, e.g. equipment+day, not just tenant+collection),
+  // closing the window: a second concurrent caller either blocks until the first commits and
+  // then correctly sees the clash, or the lock serializes them outright.
+  async addUnlessClash({ tenantId, userId, collection, data, lockKey, findClash }) {
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const existing = await trx.query(`select memory_id,principal_id,content from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='${this.purpose}' and deleted_at is null and content->>'collection'=$3
+        order by created_at desc, memory_id desc`, [tenantId, userId, collection]);
+      const rows = (existing.rows || existing).filter(row => row.content && row.content.kind === "record").map(toRecord);
+      const clash = findClash(rows);
+      if (clash) return { clash };
+      return { record: await this.insertRecord(trx, { tenantId, userId, collection, data }) };
     });
   }
 
@@ -108,12 +134,20 @@ class FarmRecordRepository {
   // concurrent callers racing to transition the same record (e.g. "deliver order 12" sent twice) can't
   // both see it as still-open and both apply their side effects; only the one that wins the swap should
   // proceed with any money/stock effects that go with the transition.
-  async update({ tenantId, userId, record, expectedStatus }) {
+  // `casField`/`casValue` generalizes the same compare-and-swap to any other single numeric field in
+  // `data` (e.g. `qty`). Found live: inventory.js's stock deduction read a quantity, checked it wasn't
+  // more than was in stock, then wrote a new quantity with no such guard -- two concurrent "used X of Y"
+  // requests could each read the same starting qty, each pass the same "not more than we have" check,
+  // and each write their own qty-quantity, so one deduction was silently lost instead of the safety
+  // check (stock can never go negative) it was supposed to trip.
+  async update({ tenantId, userId, record, expectedStatus, casField, casValue }) {
+    if (casField !== undefined && !/^[a-z]+$/.test(casField)) throw new Error("Invalid casField.");
     const params = [tenantId, userId, record.memoryId, { kind: "record", collection: record.collection, number: record.number, data: record.data, createdAt: record.createdAt, updatedAt: new Date().toISOString() },
       this.searchable(record.collection, record.data)];
     let sql = `update nexus_memory_items set content=$4,searchable_text=$5,updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='${this.purpose}' and deleted_at is null`;
-    if (expectedStatus !== undefined) { sql += ` and coalesce(content->'data'->>'status','') = $6`; params.push(expectedStatus); }
+    if (expectedStatus !== undefined) { sql += ` and coalesce(content->'data'->>'status','') = $${params.length + 1}`; params.push(expectedStatus); }
+    if (casField !== undefined) { sql += ` and (content->'data'->>'${casField}')::numeric = $${params.length + 1}`; params.push(casValue); }
     sql += ` returning memory_id`;
     const result = await this.db.query(sql, params);
     return Boolean((result.rows || result)[0]);

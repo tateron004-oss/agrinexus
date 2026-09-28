@@ -156,6 +156,25 @@ test("using stock by a lot number that does not exist never silently deducts fro
   assert.match(stillFull, /200 kg/, "the real lot's quantity must be untouched by the request for a different, non-existent lot");
 });
 
+// Found live (drone/field-visit audit): this read the stock item's qty, checked it wasn't
+// more than what's on hand, then wrote a new qty with no guard the read was still current.
+// Two concurrent "used X of Y" requests against the same balance could each read the same
+// starting qty, each pass the same "not more than we have" check, and each write their own
+// deduction -- silently losing one instead of the safety check (stock can never go negative)
+// it was supposed to trip.
+test("two concurrent 'used X of Y' requests against the same stock only deduct once, not both", async () => {
+  const who = farmer();
+  await who.say("Add 40 kg of urea to stock");
+
+  const [first, second] = await Promise.all([who.say("Used 30 kg of urea"), who.say("Used 30 kg of urea")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Used 30 kg of urea/.test(text)).length, 1, "exactly one request must have won the race and deducted stock");
+  assert.equal(outcomes.filter(text => /just changed/.test(text)).length, 1, "exactly one request must have lost the race and been told to try again, not silently succeed");
+
+  const stillHave = await who.say("How much urea do I have");
+  assert.match(stillHave, /10 kg/, "stock must reflect exactly one 30 kg deduction from 40 kg, never both (which would go negative) and never neither");
+});
+
 // ---------- animals ----------
 test("animals keep a history, and a treatment is only recorded for an animal the person actually has", async () => {
   const who = farmer();
@@ -233,6 +252,18 @@ test("someone with no farm records is not given farm books for ordinary buying a
 });
 
 // ---------- buyers and suppliers ----------
+// Found live (capability-testing the orb): the name-extraction digit-guard
+// checked the WHOLE rest of the sentence for any digit, not just the name
+// itself, so a perfectly valid name silently vanished whenever a phone
+// number followed it in the SAME utterance ("...called Jane Doe, contact
+// +254712345678", an entirely natural way to phrase this) -- the guided flow
+// asked for the name again even though it was right there.
+test("a name given together with a phone number in the same sentence is still recognized, not asked for again", async () => {
+  const who = farmer();
+  const replies = await run(who, ["Add a buyer called Jane Doe, contact +254712345678", "skip", "skip", "skip"]);
+  assert.doesNotMatch(replies[0], /What is their name/i, "the name must not be asked for again when it was already given");
+  assert.match(replies[replies.length - 1], /Added Jane Doe/);
+});
 test("buyers keep notes, follow-ups and orders, and a delivered order records the sale", async () => {
   const who = farmer();
   await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
@@ -271,6 +302,20 @@ test("a note to a calendar or list is not taken for a buyer note", async () => {
   const who = farmer();
   await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
   assert.equal(await who.say("Add a note to my calendar: dentist"), null);
+});
+
+// Found live (capability-testing the orb): once a farmer has saved even one
+// buyer/supplier, "note about X: Y" used to claim EVERY such phrase, even
+// when X was not actually a known party -- rejecting it outright ("I don't
+// have X on your list") instead of falling through to a plain personal
+// note. A genuinely unrelated note was silently discarded, never saved
+// anywhere.
+test("a note about a topic that is not a known party falls through instead of being wrongly rejected", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
+  assert.equal(await who.say("Note about water tank: it's leaking"), null, "must fall through, not be rejected, when the subject is not a known party");
+  // A note about the real, known party is still correctly claimed and saved.
+  assert.match(await who.say("Note about Amina Traders: wants 500 kg maize"), /Noted about Amina Traders/);
 });
 
 // ---------- loans and budgets ----------

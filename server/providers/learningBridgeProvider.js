@@ -386,10 +386,21 @@ function markProgress(body = {}, db, env = process.env) {
   const now = new Date().toISOString();
   let entry = progress.find(item => item.resourceId === record.resourceId);
   if (entry) {
-    entry.status = status;
-    entry.updatedAt = now;
-    if (status === "completed" && !entry.startedAt) entry.startedAt = now;
-    if (status === "completed") entry.completedAt = now;
+    // Found live: this unconditionally overwrote status with no protection
+    // against regressing an already-completed entry back to "started" --
+    // completedAt is only ever set here, never cleared, so the persisted
+    // record could end up simultaneously "started" (not completed) and
+    // already finished in the past. There is no retake/reopen action in this
+    // API, so "completed" is treated as terminal: a later, lesser status
+    // report is ignored rather than silently regressing it. Re-affirming
+    // "completed" again still refreshes updatedAt as before.
+    const regressingFromCompleted = entry.status === "completed" && status !== "completed";
+    if (!regressingFromCompleted) {
+      entry.status = status;
+      entry.updatedAt = now;
+      if (status === "completed" && !entry.startedAt) entry.startedAt = now;
+      if (status === "completed") entry.completedAt = now;
+    }
   } else {
     entry = {
       id: `learning-progress-${Date.now()}`,
@@ -404,11 +415,14 @@ function markProgress(body = {}, db, env = process.env) {
     progress.unshift(entry);
     db.profile.nexusLearningProgress = progress.slice(0, 100);
   }
+  // entry.status (not the requested status above) so the message reflects
+  // what was actually persisted -- a regression-from-completed request above
+  // leaves entry.status as "completed" even though status is "started".
   return providerResponse({
     provider,
     action,
     status: "completed",
-    message: `Nexus marked "${entry.title}" as ${status} in your own local learning progress list. This is Nexus's own internal record -- it does not enroll you in, or claim completion of, any external course or LMS, and no certificate was issued.`,
+    message: `Nexus marked "${entry.title}" as ${entry.status} in your own local learning progress list. This is Nexus's own internal record -- it does not enroll you in, or claim completion of, any external course or LMS, and no certificate was issued.`,
     data: { progress: entry }
   });
 }
