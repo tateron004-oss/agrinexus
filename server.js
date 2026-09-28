@@ -40861,6 +40861,7 @@ function normalizeProviderPathwayRequest(db, body = {}, user = null, existing = 
   const status = existing.status || (consentStatus !== "confirmed" ? "awaiting_consent" : providerConfigured ? "draft" : "queued_locally");
   return {
     id: existing.id || body.id || crypto.randomUUID(),
+    ownerId: existing.ownerId || user?.id || null,
     userQuestion: sanitizePilotText(body.userQuestion || body.question || existing.userQuestion || "", 500),
     category,
     answerSummary: sanitizePilotText(body.answerSummary || body.answer || existing.answerSummary || "", 1200),
@@ -40922,7 +40923,7 @@ function nexusProviderPathwayRequest(db, body = {}, user = null) {
 
 function nexusProviderPathwayConsent(db, requestId, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
-  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId);
+  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId && nexusPilotRecordOwned(item, user));
   if (!requestItem) return { ok: false, error: "provider_pathway_request_not_found" };
   requestItem.consentStatus = "confirmed";
   requestItem.status = requestItem.providerConfigured ? "draft" : "queued_locally";
@@ -40952,7 +40953,7 @@ function nexusProviderPathwayConsent(db, requestId, body = {}, user = null) {
 
 function nexusProviderPathwayRoute(db, requestId, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
-  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId);
+  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId && nexusPilotRecordOwned(item, user));
   if (!requestItem) return { ok: false, error: "provider_pathway_request_not_found" };
   if (requestItem.consentStatus !== "confirmed") {
     requestItem.status = "blocked_missing_consent";
@@ -45977,8 +45978,13 @@ async function api(req, res, url) {
     const query = db.nexusKnowledgeQueries.find(item => item.id === id && nexusPilotRecordOwned(item, user));
     if (!query) return send(res, 404, { ok: false, error: "knowledge_history_not_found" });
     const savedResults = db.nexusKnowledgeSavedResults.filter(item => item.queryId === id);
-    const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => item.originalQuestion === query.questionSummary || item.queryId === id);
-    const providerRequests = db.nexusProviderPathwayRequests.filter(item => item.userQuestion === query.questionSummary || item.knowledgeQueryId === id);
+    // Found live (cross-user-IDOR audit, same shape as institutionalEvidenceReceipts
+    // below): matching by free-text question equality alone, with no ownership
+    // check ANDed in, let another user's review summary or provider-pathway
+    // request (which can carry their own userNotes/answerSummary) leak into this
+    // response whenever two different users happened to ask the same question.
+    const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => (item.originalQuestion === query.questionSummary || item.queryId === id) && nexusPilotRecordOwned(item, user));
+    const providerRequests = db.nexusProviderPathwayRequests.filter(item => (item.userQuestion === query.questionSummary || item.knowledgeQueryId === id) && nexusPilotRecordOwned(item, user));
     const institutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts.filter(item => (item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary) && nexusPilotRecordOwned(item, user));
     return send(res, 200, {
       ok: true,
