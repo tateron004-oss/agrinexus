@@ -205,7 +205,7 @@ includes(qaSuite, "archive/qa-scripts/nexus-connect-everything-provider-activati
   excludes(readinessReport, secretPattern, `report should not include ${secretPattern}`);
 });
 
-function requestJson(port, method, route, body) {
+function requestJson(port, method, route, body, cookie) {
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : "";
     const req = http.request({
@@ -215,7 +215,8 @@ function requestJson(port, method, route, body) {
       method,
       headers: {
         "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload)
+        "Content-Length": Buffer.byteLength(payload),
+        ...(cookie ? { Cookie: cookie } : {})
       }
     }, res => {
       let data = "";
@@ -223,7 +224,7 @@ function requestJson(port, method, route, body) {
       res.on("data", chunk => { data += chunk; });
       res.on("end", () => {
         try {
-          resolve({ status: res.statusCode, body: data ? JSON.parse(data) : null });
+          resolve({ status: res.statusCode, headers: res.headers, body: data ? JSON.parse(data) : null });
         } catch (error) {
           reject(new Error(`Invalid JSON from ${route}: ${error.message}\n${data.slice(0, 400)}`));
         }
@@ -287,6 +288,13 @@ async function runRuntimeQa() {
   try {
     await waitForServer(port, child);
 
+    // Found live (rate-limiting audit, already merged): /api/nexus/intelligence/ask now requires sign-in like
+    // every sibling /api/agent/* route -- log in first so those calls below carry a real session.
+    const login = await requestJson(port, "POST", "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
+    assert.strictEqual(login.status, 200, "admin login should succeed");
+    const cookie = (login.headers["set-cookie"] || []).map(item => item.split(";")[0]).join("; ");
+    assert(cookie, "admin login should set a session cookie");
+
     const readiness = await requestJson(port, "GET", "/api/nexus/provider-readiness", null);
     assert.strictEqual(readiness.status, 200, "readiness endpoint should return 200");
     assert(readiness.body.totalProviderLanes > 20, "readiness should include provider lanes");
@@ -323,11 +331,11 @@ async function runRuntimeQa() {
     assert(receipts.body.receipts.length >= 1, "receipts endpoint should include test receipts");
     assertNoSecretValues(receipts.body, "provider receipts");
 
-    const askStatus = await requestJson(port, "POST", "/api/nexus/intelligence/ask", { command: "Nexus, what is connected?" });
+    const askStatus = await requestJson(port, "POST", "/api/nexus/intelligence/ask", { command: "Nexus, what is connected?" }, cookie);
     assert.strictEqual(askStatus.status, 200, "Ask Nexus connected command should return 200");
     assertNoSecretValues(askStatus.body, "Ask Nexus connected response");
 
-    const askMissing = await requestJson(port, "POST", "/api/nexus/intelligence/ask", { command: "Nexus, what credentials are missing?" });
+    const askMissing = await requestJson(port, "POST", "/api/nexus/intelligence/ask", { command: "Nexus, what credentials are missing?" }, cookie);
     assert.strictEqual(askMissing.status, 200, "Ask Nexus missing credentials command should return 200");
     assertNoSecretValues(askMissing.body, "Ask Nexus missing credentials response");
   } finally {

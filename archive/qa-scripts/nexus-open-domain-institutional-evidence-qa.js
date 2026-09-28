@@ -201,7 +201,20 @@ async function routeAssertions() {
       NEXUS_LIVE_KNOWLEDGE_API_KEY: "test-only-api-key",
       NEXUS_LIVE_KNOWLEDGE_SAFE_MODE: "true"
     }, async baseUrl => {
+      // Found live (rate-limiting audit, already merged): /api/nexus/knowledge/query now requires sign-in like
+      // every sibling /api/agent/* route -- log in first so this and the status check below carry a real session.
+      const login = await requestJson(`${baseUrl}/api/login`, {
+        body: {
+          email: "admin@agrinexus.org",
+          password: "Admin2026!"
+        }
+      });
+      assert.equal(login.status, 200, "normal login should succeed before the gated knowledge query");
+      const cookie = Array.isArray(login.setCookie) ? String(login.setCookie[0]).split(";")[0] : "";
+      assert(cookie, "login should return a session cookie");
+
       const knowledge = await requestJson(`${baseUrl}/api/nexus/knowledge/query`, {
+        cookie,
         body: {
           question: "What are current best practices for climate-smart agriculture?",
           category: "agriculture"
@@ -219,7 +232,7 @@ async function routeAssertions() {
       assert(knowledge.body.result.institutionalEvidenceReceipt.claimSupport.some(item => item.sourceUrlOrInternalId.includes("climatehubs.usda.gov")), "receipt should support USDA source");
       assertNoSecretValues(knowledge.body, "knowledge query result");
 
-      const status = await requestJson(`${baseUrl}/api/nexus/institutional-evidence/status`);
+      const status = await requestJson(`${baseUrl}/api/nexus/institutional-evidence/status`, { cookie });
       assert.equal(status.status, 200, "institutional evidence status should return HTTP 200");
       assert.equal(status.body.ok, true, "institutional evidence status should be ok");
       assert.equal(status.body.receiptSchema, "nexus.institutionalEvidenceReceipt.v1", "status should expose receipt schema");
@@ -228,16 +241,6 @@ async function routeAssertions() {
       assert(status.body.resources.some(item => item.id === "maps-routing"), "status should inventory maps routing resource");
       assert(status.body.recentReceipts.some(item => item.receiptId === knowledge.body.result.evidenceReceiptId), "status should include recent receipt summary");
       assertNoSecretValues(status.body, "institutional evidence status");
-
-      const login = await requestJson(`${baseUrl}/api/login`, {
-        body: {
-          email: "admin@agrinexus.org",
-          password: "Admin2026!"
-        }
-      });
-      assert.equal(login.status, 200, "normal login should succeed before agent command");
-      const cookie = Array.isArray(login.setCookie) ? String(login.setCookie[0]).split(";")[0] : "";
-      assert(cookie, "login should return a session cookie");
 
       const agent = await requestJson(`${baseUrl}/api/agent/command`, {
         cookie,
