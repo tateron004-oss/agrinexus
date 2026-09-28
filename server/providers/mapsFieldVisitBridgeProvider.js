@@ -71,8 +71,12 @@ function validateVisitPlanInput({ title, origin, destinations = [] }, action) {
   if (!clean(title)) return "Visit plan title is required.";
   if (!clean(origin)) return "Typed origin is required. Nexus will not use browser geolocation.";
   if (!Array.isArray(destinations) || destinations.length === 0) return "At least one typed or selected destination is required.";
+  // Found live: every destination reaching here has already gone through
+  // buildPlan()'s normalizeDestination(), which always defaults an empty
+  // label to "Field visit destination" -- so a "label is required" check
+  // here can never fire; it was dead validation. addressText has no such
+  // default, so its own check below is real and still enforced.
   for (const destination of destinations) {
-    if (!clean(destination.label)) return "Each destination needs a visible label.";
     if (!clean(destination.addressText)) return "Each destination needs user-provided address or location text.";
   }
   const joined = [title, origin, ...destinations.flatMap(destination => [destination.label, destination.addressText, destination.source])].join(" ");

@@ -171,9 +171,17 @@ async function handle(ctx) {
           : `I don't have a cooperative member called ${clean(m[2])}. Say "add cooperative member ${titleCase(m[2])}" first, or book it with no name to just reserve the day.`;
       }
       const name = who?.member ? who.member.data.name : "";
-      const clash = (await ctx.store.list({ ...scope, collection: "coop_booking" })).find(booking => booking.data.equipment === item.data.name && booking.data.day === day && booking.data.status !== "cancelled");
-      if (clash) return `The ${item.data.name} is already booked ${describeDay(day, ctx.today)}${clash.data.member ? ` for ${clash.data.member}` : ""}. Pick another day.`;
-      await ctx.store.add({ ...scope, collection: "coop_booking", data: { equipment: item.data.name, member: name, day, status: "booked" } });
+      // Found live: the clash check and the booking used to be two separate calls (list() then
+      // add()), with a real window between them for two near-simultaneous bookings of the same
+      // equipment and day to both read "no clash" and both succeed. addUnlessClash() runs both
+      // under one lock so the second request correctly sees the first's booking.
+      const booked = await ctx.store.addUnlessClash({
+        ...scope, collection: "coop_booking",
+        lockKey: `coop_booking:${scope.tenantId}:${scope.userId}:${item.data.name}:${day}`,
+        findClash: rows => rows.find(booking => booking.data.equipment === item.data.name && booking.data.day === day && booking.data.status !== "cancelled"),
+        data: { equipment: item.data.name, member: name, day, status: "booked" }
+      });
+      if (booked.clash) return `The ${item.data.name} is already booked ${describeDay(day, ctx.today)}${booked.clash.data.member ? ` for ${booked.clash.data.member}` : ""}. Pick another day.`;
       if (ctx.personal?.add) await ctx.personal.add({ kind: "event", text: `${item.data.name} booked${name ? ` for ${name}` : ""}`, day, time: "" });
       return `Booked the ${item.data.name}${name ? ` for ${name}` : ""} ${describeDay(day, ctx.today)}. It's on your calendar.`;
     }

@@ -156,6 +156,25 @@ test("using stock by a lot number that does not exist never silently deducts fro
   assert.match(stillFull, /200 kg/, "the real lot's quantity must be untouched by the request for a different, non-existent lot");
 });
 
+// Found live (drone/field-visit audit): this read the stock item's qty, checked it wasn't
+// more than what's on hand, then wrote a new qty with no guard the read was still current.
+// Two concurrent "used X of Y" requests against the same balance could each read the same
+// starting qty, each pass the same "not more than we have" check, and each write their own
+// deduction -- silently losing one instead of the safety check (stock can never go negative)
+// it was supposed to trip.
+test("two concurrent 'used X of Y' requests against the same stock only deduct once, not both", async () => {
+  const who = farmer();
+  await who.say("Add 40 kg of urea to stock");
+
+  const [first, second] = await Promise.all([who.say("Used 30 kg of urea"), who.say("Used 30 kg of urea")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Used 30 kg of urea/.test(text)).length, 1, "exactly one request must have won the race and deducted stock");
+  assert.equal(outcomes.filter(text => /just changed/.test(text)).length, 1, "exactly one request must have lost the race and been told to try again, not silently succeed");
+
+  const stillHave = await who.say("How much urea do I have");
+  assert.match(stillHave, /10 kg/, "stock must reflect exactly one 30 kg deduction from 40 kg, never both (which would go negative) and never neither");
+});
+
 // ---------- animals ----------
 test("animals keep a history, and a treatment is only recorded for an animal the person actually has", async () => {
   const who = farmer();
