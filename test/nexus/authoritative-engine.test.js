@@ -74,6 +74,39 @@ test("a fallback tool that itself requires confirmation is skipped, not left to 
   assert.equal(backupCalls, 1);
 });
 
+// Found live: when execute() exhausts every candidate tool (or no remaining step's dependencies can ever be
+// satisfied), executeTask() let that throw propagate straight out with no transition of the task itself out of
+// "running" -- the task was left permanently frozen at "running" forever. Since agent.sweep-advanceable-tasks
+// re-enqueues any autonomous task still "running" past its staleness window with a freshly-randomized (never
+// deduped) idempotency key, this created an unbounded, forever-repeating job storm: every sweep re-tries the same
+// already-exhausted step, hits the same failure, and never self-corrects. Must transition to "blocked" (the same
+// terminal state blockStalledAutonomousTaskIfApplicable() already uses for the sibling stuck-"verifying" case)
+// before re-throwing, so a later sweep no longer matches this task at all.
+test("executeTask blocks the task itself when every candidate tool is exhausted, instead of leaving it frozen at running forever", async () => {
+  const { engine, store } = fixture();
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.missing", fallback_tool_ids: [], confirmation_state: "not_required", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { schema: "nexus.task.v1", tenantId: "tenant", correlationId: "trace", ownerId: "user", state: "running", version: 1, history: [] };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  await assert.rejects(() => engine.executeTask({ context, taskId: "tsk" }), error => error.code === "tool_unavailable");
+  assert.equal(store.task.state, "blocked", "the task itself must be marked blocked, not left frozen at running");
+  const transitionAudit = store.audits.find(event => event.eventType === "task.transition" && event.outcome === "blocked");
+  assert.ok(transitionAudit, "the transition to blocked must itself be audited");
+});
+
+// Same fix, the "no ready step" path: every remaining step is unable to proceed (e.g. its own dependency
+// permanently failed), which previously threw task_execution_blocked without ever actually blocking the task.
+test("executeTask blocks the task itself when no remaining step can ever become ready, instead of leaving it frozen at running forever", async () => {
+  const { engine, store } = fixture();
+  // stp_1's own dependency ("stp_missing") can never complete (no such step exists), so stp_1 itself can never
+  // become ready -- and stp_2 depends on stp_1, so neither step in `remaining` can ever proceed.
+  store.steps = [{ step_id: "stp_1", tool_id: "documents.save", fallback_tool_ids: [], confirmation_state: "approved", idempotency_key: "key", state: "pending", input: {}, depends_on: ["stp_missing"] },
+    { step_id: "stp_2", tool_id: "documents.save", fallback_tool_ids: [], confirmation_state: "approved", idempotency_key: "key2", state: "pending", input: {}, depends_on: ["stp_1"] }];
+  store.task = { schema: "nexus.task.v1", tenantId: "tenant", correlationId: "trace", ownerId: "user", state: "running", version: 1, history: [] };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  await assert.rejects(() => engine.executeTask({ context, taskId: "tsk" }), error => error.code === "task_execution_blocked");
+  assert.equal(store.task.state, "blocked");
+});
+
 async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }

@@ -32,7 +32,10 @@ function createTask(input = {}, now = () => new Date()) {
     commandId: required(input.commandId, "Command ID"),
     correlationId: required(input.correlationId, "Correlation ID"), goal: required(input.goal, "Task goal"),
     application: input.application || "general", riskTier: input.riskTier || "low",
-    priority: Math.min(Math.max(Number(input.priority || 3), 1), 5), state: "draft", version: 1,
+    // Found live: input.priority || 3 treated an explicit priority: 0 (the highest priority, per this same
+    // Math.max(...,1) floor -- 0 clamps up to 1) as "not provided" and silently substituted the default 3
+    // instead, the same falsy-zero-default bug already found and fixed in job-repository.js's enqueue().
+    priority: Math.min(Math.max(Number(input.priority ?? 3), 1), 5), state: "draft", version: 1,
     dueAt: input.dueAt || null, recurrence: input.recurrence || null, outcome: null,
     // A task created without a live person watching (autonomous:true) can never
     // satisfy acknowledgeRender()'s requirement that a UI actually showed/spoke
