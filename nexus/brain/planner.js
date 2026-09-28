@@ -366,6 +366,15 @@ class OpenEndedPlanner {
     // to completeDocumentPlan below, unaffected.
     const completeBusiness = completeBusinessPlan(command.text, catalog);
     if (completeBusiness) return Object.freeze({ ...completeBusiness, planningAttempts: 1 });
+    // Ahead of completeDocumentPlan for the same reason completeBusinessPlan is:
+    // "save this conversation as a document" contains "save"+"document" and would
+    // otherwise match completeDocumentPlan's generic gate, which just echoes the raw
+    // command sentence as file content -- producing a document whose "content" is
+    // literally the words "save this conversation as a document", not the actual
+    // conversation. This matcher needs the real conversationHistory the generic one
+    // never receives, so it must run first and own this phrasing outright.
+    const completeSaveConversation = completeSaveConversationPlan(command.text, catalog, conversationHistory);
+    if (completeSaveConversation) return Object.freeze({ ...completeSaveConversation, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
@@ -851,6 +860,38 @@ function requestedDocumentFormat(goal) {
   return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] : null;
 }
 
+// "Can you save this conversation?" / "export our chat as a PDF" / "get me a copy of
+// this discussion". Confirmed with the user (2026-09-28) that no such feature existed:
+// Kyro genuinely keeps recent conversation history (nexus/data/conversation-repository.js,
+// read back into every plan() call as conversationHistory), but nothing ever turned that
+// history into a document the person could keep. The gate is two-part -- an action verb
+// and a target noun -- specifically so it doesn't fire on unrelated "save"/"export"
+// requests (save a reminder, export a report) that don't mention the conversation itself.
+const SAVE_CONVERSATION_ACTION = /\b(save|export|download|keep(?:\s+a)?\s+copy\s+of|get\s+me\s+a\s+copy\s+of|give\s+me\s+a\s+copy\s+of)\b/i;
+const SAVE_CONVERSATION_TARGET = /\b(conversation|chat|discussion|transcript)\b/i;
+function formatConversationTranscript(history) {
+  return history.map(turn => {
+    const who = turn.role === "assistant" ? "Nexus" : turn.role === "user" ? "You" : String(turn.role || "Note");
+    const when = turn.created_at || turn.occurredAt;
+    const timestamp = when ? new Date(when).toISOString() : null;
+    return `${timestamp ? `[${timestamp}] ` : ""}${who}: ${String(turn.content || "").trim()}`;
+  }).join("\n\n");
+}
+function completeSaveConversationPlan(text, catalog, conversationHistory = []) {
+  const goal = String(text || "").trim();
+  if (!SAVE_CONVERSATION_ACTION.test(goal) || !SAVE_CONVERSATION_TARGET.test(goal)) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "documents.create") ||
+      !catalog.applications.some(app => app.applicationId === "documents")) return null;
+  if (!conversationHistory.length) return { goal, application: "conversation", riskTier: "low", clarification: null,
+    steps: [], response: "There's no conversation history yet in this session to save.", sourceRequired: false };
+  const format = requestedDocumentFormat(goal);
+  const content = formatConversationTranscript(conversationHistory);
+  return { goal, application: "documents", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "save-conversation", title: "Save this conversation",
+      toolId: "documents.create", input: { title: "Nexus conversation transcript", content, reopenAfterSave: true, ...(format ? { format } : {}) },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeDocumentPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(create|write|draft|make)\b/i.test(goal) || !/\b(document|plan|report|resume|résumé)\b/i.test(goal) ||
@@ -1224,5 +1265,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
