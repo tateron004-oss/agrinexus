@@ -13,6 +13,28 @@ const {
   simulatedProviderResponse
 } = require("./providerUtils");
 
+// Found live (calendar/notes audit): the Google branch's default-end
+// fallback used `new Date(start).getTime() + 30*60000` then `.toISOString()`
+// -- but `start` is a bare, offset-less wall-clock string ("15:00" meant in
+// the caller's `timeZone`), and per spec `new Date("...T15:00:00")` (no
+// offset) parses as LOCAL TIME OF THE NODE PROCESS, not the caller's zone.
+// `.toISOString()` then stamps a "Z" (absolute UTC instant) on the result,
+// so unlike `start` (sent offset-less, correctly reinterpreted by Google via
+// the paired `timeZone` field), the computed `end` carries its own baked-in
+// offset that Google uses directly -- the two ends of one event end up
+// computed in two different reference frames whenever the server's local
+// zone differs from `timeZone`. Adds minutes to the wall-clock digits
+// directly (never through Date's local-timezone parsing) and returns
+// another bare, offset-less string paired with the same `timeZone` field.
+function addMinutesToNaiveDateTime(naive, minutes) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(naive);
+  if (!match) return new Date(new Date(naive).getTime() + minutes * 60000).toISOString();
+  const [, y, mo, d, h, mi, s] = match;
+  const shifted = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s || 0)) + minutes * 60000);
+  const pad = n => String(n).padStart(2, "0");
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}`;
+}
+
 function provider(env = process.env) {
   return clean(env.NEXUS_CALENDAR_PROVIDER || (env.GOOGLE_CALENDAR_ACCESS_TOKEN ? "google" : "generic"));
 }
@@ -73,7 +95,7 @@ async function createEvent(body = {}, env = process.env) {
           summary: title,
           description: clean(body.description || "Created by Nexus after explicit confirmation."),
           start: { dateTime: start, timeZone },
-          end: { dateTime: clean(body.end || body.endTime) || new Date(new Date(start).getTime() + 30 * 60000).toISOString(), timeZone }
+          end: { dateTime: clean(body.end || body.endTime) || addMinutesToNaiveDateTime(start, 30), timeZone }
         })
       });
     } else {
