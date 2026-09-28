@@ -52,7 +52,13 @@ function circleDb(users) {
         return { rows: rows.filter(row => row.tenant_id === params[0] && row.purpose === "circle" && !row.deleted && (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
       }
       if (/insert into nexus_memory_items/.test(sql) && /'circle'/.test(sql)) { rows.push({ memory_id: params[0], tenant_id: params[1], principal_id: params[2], purpose: "circle", content: params[3] }); return { rows: [] }; }
-      if (/update nexus_memory_items set content=\$3/.test(sql) && /purpose='circle'/.test(sql)) { const row = rows.find(item => item.tenant_id === params[0] && item.memory_id === params[1]); if (row) row.content = params[2]; return { rows: [] }; }
+      if (/update nexus_memory_items set content=\$3/.test(sql) && /purpose='circle'/.test(sql)) {
+        const row = rows.find(item => item.tenant_id === params[0] && item.memory_id === params[1]);
+        if (!row) return { rows: [] };
+        if (/coalesce\(\(content->>'updates'\)::int,0\) = \$4/.test(sql) && (row.content.updates || 0) !== params[3]) return { rows: [] };
+        row.content = params[2];
+        return { rows: [{ memory_id: row.memory_id }] };
+      }
       throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
     }
   };
