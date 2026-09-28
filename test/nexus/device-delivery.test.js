@@ -2,6 +2,7 @@
 function db(results=[]){const calls=[];return{calls,async query(sql,params){calls.push({sql,params});return results.shift()||{rows:[]};}};}
 test("device delivery migration persists native capabilities and reliable notifications",()=>{const sql=fs.readFileSync(path.join(__dirname,"../../foundation/migrations/008_nexus_device_delivery.sql"),"utf8");assert.match(sql,/create table if not exists nexus_devices/);assert.match(sql,/push_key_ciphertext/);assert.match(sql,/nexus_notifications_idempotency_idx/);});
 test("the notifications delivery-lease migration adds the recovery column and its supporting index",()=>{const sql=fs.readFileSync(path.join(__dirname,"../../foundation/migrations/022_nexus_notifications_delivery_lease.sql"),"utf8");assert.match(sql,/alter table nexus_notifications add column if not exists lease_expires_at timestamptz/);assert.match(sql,/nexus_notifications_stale_delivering_idx/);});
+test("the notifications leased_by migration adds the fencing column",()=>{const sql=fs.readFileSync(path.join(__dirname,"../../foundation/migrations/023_nexus_notifications_leased_by.sql"),"utf8");assert.match(sql,/alter table nexus_notifications add column if not exists leased_by text/);});
 test("device registration is tenant-owned and revocation erases delivery secrets",async()=>{const x=db([{rows:[{device_id:"phone"}]},{rows:[{device_id:"phone"}]}]);const repo=new DeviceRepository(x);await repo.register({deviceId:"phone",tenantId:"t",userId:"u",platform:"android",capabilities:["push","gps"]});await repo.revoke({tenantId:"t",userId:"u",deviceId:"phone"});assert.match(x.calls[0].sql,/on conflict/);assert.match(x.calls[1].sql,/push_endpoint=null,push_key_ciphertext=null/);});
 test("notifications are idempotent and claimed with skip-locked delivery",async()=>{const x=db([{rows:[{notification_id:"n"}]},{rows:[]}]);const repo=new NotificationRepository(x);await repo.enqueue({tenantId:"t",userId:"u",channel:"push",content:{title:"Reminder"},idempotencyKey:"task:1"});await repo.claim();assert.match(x.calls[0].sql,/on conflict \(tenant_id,idempotency_key\)/);assert.match(x.calls[1].sql,/for update skip locked/);});
 
@@ -17,12 +18,12 @@ function fakeNotificationsTable() {
     rows,
     async query(sql, params) {
       if (/^insert into nexus_notifications/.test(sql)) {
-        const row = { notification_id: params[0], tenant_id: params[1], user_id: params[2], state: "queued", attempts: 0, scheduled_at: params[7], lease_expires_at: null };
+        const row = { notification_id: params[0], tenant_id: params[1], user_id: params[2], state: "queued", attempts: 0, scheduled_at: params[7], lease_expires_at: null, leased_by: null };
         rows.push(row);
         return { rows: [row] };
       }
       if (/^update nexus_notifications n set state='delivering'/.test(sql)) {
-        const [limit, leaseSeconds] = params;
+        const [limit, leaseSeconds, workerId] = params;
         const now = Date.now();
         const claimable = rows.filter(row =>
           (row.state === "queued" && new Date(row.scheduled_at || 0).getTime() <= now) ||
@@ -32,14 +33,23 @@ function fakeNotificationsTable() {
           row.state = "delivering";
           row.attempts += 1;
           row.lease_expires_at = new Date(now + leaseSeconds * 1000).toISOString();
+          row.leased_by = workerId ?? null;
         }
         return { rows: claimable };
       }
       if (/^update nexus_notifications set state='delivered'/.test(sql)) {
-        const [id] = params;
-        const row = rows.find(item => item.notification_id === id && item.state === "delivering");
+        const [id, workerId] = params;
+        const row = rows.find(item => item.notification_id === id && item.state === "delivering" && (item.leased_by ?? null) === (workerId ?? null));
         if (!row) return { rows: [] };
-        row.state = "delivered"; row.lease_expires_at = null;
+        row.state = "delivered"; row.lease_expires_at = null; row.leased_by = null;
+        return { rows: [row] };
+      }
+      if (/^update nexus_notifications set\s+state=case when attempts>=5/.test(sql)) {
+        const [id, error, workerId] = params;
+        const row = rows.find(item => item.notification_id === id && item.state === "delivering" && (item.leased_by ?? null) === (workerId ?? null));
+        if (!row) return { rows: [] };
+        row.state = row.attempts >= 5 ? "failed" : "queued";
+        row.last_error = error; row.lease_expires_at = null; row.leased_by = null;
         return { rows: [row] };
       }
       return { rows: [] };
@@ -74,6 +84,46 @@ test("a stranded 'delivering' notification (worker crashed, lease expired) is re
   assert.equal(recoveredClaim[0].attempts, 2, "a real retry attempt, not a silent loss");
 
   const delivered = await repo.delivered(recoveredClaim[0].notification_id);
+  assert.equal(delivered.state, "delivered");
+});
+
+// Found live (delivery-pipeline audit, follow-up to the lease-recovery fix
+// above): claim() had no ownership/fencing token at all (unlike
+// job-repository.js's leased_by), so once a stranded row was reclaimed by a
+// SECOND worker, the FIRST worker's eventual delivered()/failed() call (its
+// slow send finally resolving after its lease had already expired) could
+// still land -- silently overwriting whatever the second worker was doing,
+// with no ownership check. notifications.deliver runs off every worker
+// instance's own local poll loop (not the durable per-tenant job queue), so
+// this is reachable in any multi-instance deployment.
+test("a worker whose lease already expired and was reclaimed by another worker can never close out that other worker's delivery", async () => {
+  const table = fakeNotificationsTable();
+  const repo = new NotificationRepository(table);
+  await repo.enqueue({ tenantId: "t", userId: "u", channel: "push", content: { title: "Reminder" }, idempotencyKey: "task:1" });
+
+  // Worker A claims with a 1s lease and starts a slow send that will not
+  // resolve until long after the lease has expired.
+  const claimedByA = await repo.claim(25, 1, "worker-A");
+  assert.equal(claimedByA[0].leased_by, "worker-A");
+
+  // The lease expires and worker B reclaims the same row before A's slow
+  // send finishes.
+  await new Promise(resolve => setTimeout(resolve, 1100));
+  const claimedByB = await repo.claim(25, 60, "worker-B");
+  assert.equal(claimedByB.length, 1);
+  assert.equal(claimedByB[0].leased_by, "worker-B");
+
+  // A's slow send now finally fails. Its failed() call must be refused --
+  // the row is no longer A's to close out -- and must NOT flip the row out
+  // from under B's still-in-flight delivery.
+  const staleFailure = await repo.failed(claimedByA[0].notification_id, { code: "timeout" }, "worker-A");
+  assert.equal(staleFailure, null, "a worker that lost its lease must not be able to mark the row failed");
+  assert.equal(table.rows[0].state, "delivering", "the row must still belong to worker B, unaffected by A's stale call");
+  assert.equal(table.rows[0].leased_by, "worker-B");
+
+  // B's send genuinely succeeds and must be able to close the row out.
+  const delivered = await repo.delivered(claimedByB[0].notification_id, "worker-B");
+  assert.ok(delivered, "the worker that actually holds the lease must still be able to mark it delivered");
   assert.equal(delivered.state, "delivered");
 });
 

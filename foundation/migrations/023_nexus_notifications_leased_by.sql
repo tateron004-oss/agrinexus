@@ -1,0 +1,15 @@
+-- Found live (delivery-pipeline audit, follow-up to 022): claim() has no
+-- ownership/fencing token, unlike nexus_worker_jobs' leased_by column --
+-- delivered()/failed() only checked state='delivering', never who currently
+-- holds the lease. notifications.deliver deliberately bypasses the durable
+-- per-tenant job queue and instead runs off every worker instance's own
+-- local poll loop (see process.js), so in any multi-instance deployment
+-- (horizontal scaling, or the brief overlap during a rolling deploy) two
+-- workers can independently claim the same row across a lease-expiry
+-- reclaim: if worker A's in-flight send outlives the lease, worker B
+-- reclaims and redelivers, and whichever of A's or B's delivered()/failed()
+-- lands last silently overwrites the other's bookkeeping with no ownership
+-- check at all -- a genuinely delivered notification can be left marked
+-- failed/requeued, or a duplicate send can go out. Purely additive (a
+-- nullable column) -- no data change, safe to apply to a populated table.
+alter table nexus_notifications add column if not exists leased_by text;
