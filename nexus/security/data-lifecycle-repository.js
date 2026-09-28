@@ -28,6 +28,22 @@ class DataLifecycleRepository {
       await trx.query(`update nexus_artifacts set state='deleted',title='',metadata='{}'::jsonb,object_key=null,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
       await trx.query(`update nexus_record_versions v set data='{}'::jsonb,provenance='{}'::jsonb
         from nexus_records r where v.record_id=r.record_id and r.tenant_id=$1 and (r.subject_id=$2 or (r.subject_id is null and r.owner_id=$2))`,[tenantId,request.subject_id]);
+      // Found live: nexus_tasks/nexus_task_steps/nexus_tool_executions were entirely absent from this sweep --
+      // every task a person ever asked Kyro to do (task_document holds the original goal text and outcome;
+      // step input/output and the raw tool-execution request/response carry the real PII passed to and from
+      // every executor: message content, phone numbers dialed, addresses, health data) survived a "verified"
+      // erasure in full. Tasks have no 'deleted' state in their FSM (see tasks/state-machine.js), so the
+      // content columns are wiped in place instead, the same treatment nexus_record_versions gets above.
+      const tasks=await trx.query(`update nexus_tasks set goal='[erased]',task_document='{}'::jsonb,outcome=null,updated_at=now() where tenant_id=$1 and owner_id=$2 returning task_id`,[tenantId,request.subject_id]);
+      await trx.query(`update nexus_task_steps s set title='[erased]',input='{}'::jsonb,output=null,error=null
+        from nexus_tasks t where s.task_id=t.task_id and t.tenant_id=$1 and t.owner_id=$2`,[tenantId,request.subject_id]);
+      await trx.query(`update nexus_tool_executions e set request='{}'::jsonb,response=null,error=null,receipt=null,provider_request_id=null
+        from nexus_tasks t where e.task_id=t.task_id and t.tenant_id=$1 and t.owner_id=$2`,[tenantId,request.subject_id]);
+      // Found live: a recurring schedule (weather/daily-brief/weekly-brief/check-in, or a person's own reminder)
+      // kept dispatching -- ScheduleRepository.dispatchDue only ever looks at state='active' -- regardless of an
+      // erasure, since nothing here ever touched nexus_schedules. Cancelling stops all future dispatch and wipes
+      // the payload, which can carry arbitrary user-supplied reminder text.
+      const schedules=await trx.query(`update nexus_schedules set state='cancelled',payload='{}'::jsonb,updated_at=now() where tenant_id=$1 and owner_id=$2 and state<>'cancelled' returning schedule_id`,[tenantId,request.subject_id]);
       // The newer nexus/ runtime (companion, farm and health toolkits, navigation, reminders) keeps its data here, not in nexus_records, so an
       // erasure that skipped this table would leave most of what a person actually built with Kyro behind. No legal-hold carve-out here (unlike
       // the health toolkit's own "erase my records" self-service, which keeps a small name-free log): an account-level erasure is total.
@@ -65,6 +81,9 @@ class DataLifecycleRepository {
         notificationsErased:true,notificationsCount:(notifications.rows||notifications).length,
         devicesErased:true,devicesCount:(devices.rows||devices).length,
         deviceEventsErased:true,deviceEventsCount:(deviceEvents.rows||deviceEvents).length,
+        tasksErased:true,tasksCount:(tasks.rows||tasks).length,
+        taskStepsErased:true,toolExecutionsErased:true,
+        schedulesCancelled:true,schedulesCount:(schedules.rows||schedules).length,
         verifiedAt:new Date().toISOString()};
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};
