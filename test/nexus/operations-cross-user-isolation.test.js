@@ -17,7 +17,7 @@ const path = require("node:path");
 // landing on whatever A had most recently touched. This pins that two real,
 // distinct authenticated accounts are now each scoped to their own records.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4623;
+const port = 4654;
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-operations-cross-user-isolation-db.json");
