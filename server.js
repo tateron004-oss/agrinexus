@@ -16776,12 +16776,22 @@ async function executeAgentTool(db, user, step) {
 
   if (step.tool === "trade.wallet_payment") {
     ensureTradeProfile(db.profile);
-    const tx = { id: crypto.randomUUID(), provider: "M-Pesa", amount: 120, type: "credit", status: "posted", createdAt: new Date().toISOString() };
-    db.profile.wallet = Number(db.profile.wallet || 0) + tx.amount;
-    db.profile.walletTransactions.unshift(tx);
-    addTradeEvent(db.profile, { type: "agent.wallet_payment", label: `M-Pesa credit posted for $${tx.amount}.` });
-    logIntegration(db, { providerId: "trade-payments", module: "AgriTrade", action: "agent.wallet_payment", detail: "Voice agent posted wallet payment.", metadata: { transactionId: tx.id, amount: tx.amount } });
-    return `Posted M-Pesa wallet credit for ${tx.amount}.`;
+    // Found live (GPS/cloud-agent audit): this unconditionally credited a fixed, fabricated $120 "M-Pesa"
+    // transaction -- never tied to any real order, order.total, delivery status, or idempotency guard.
+    // Reachable both by voice ("make a payment") and as a step in the default autopilot mission plan, each
+    // confirmed call added another fabricated $120, and a user could later ALSO legitimately settle the
+    // same order for real once marked Delivered, i.e. double payment for one order. Reusing the real,
+    // already-guarded settlement path (createTradeLogisticsWorkflow's type:"settlement" -- requires a real
+    // order, requires it be Delivered, refuses a second settlement, and pays the actual order.total-based
+    // amount) closes this instead of patching the fabricated number.
+    const order = db.profile.orders[db.profile.orders.length - 1];
+    if (!order) return "There's no trade order to post a payment for yet. Create or advance an order first.";
+    try {
+      const { record } = await createTradeLogisticsWorkflow(db, user, { type: "settlement", orderId: order.id });
+      return `Posted a real settlement payout of ${record.currency} ${record.sellerNetAmount} for ${order.orderNumber}.`;
+    } catch (error) {
+      return error.message || "I couldn't post a payment for that order.";
+    }
   }
 
   if (step.tool === "trade.advance_order") {
