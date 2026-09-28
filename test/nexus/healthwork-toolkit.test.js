@@ -27,7 +27,8 @@ const registerMary = who => run(who, ["Register a patient called Mary Akinyi, 34
 // ---------- the store ----------
 function recordingDb() {
   const calls = [];
-  return { calls, async query(sql, params) { calls.push({ sql, params }); if (/coalesce\(max/.test(sql)) return { rows: [{ n: 0 }] }; if (/returning memory_id/.test(sql)) return { rows: [{ memory_id: "m1" }] }; return { rows: [] }; } };
+  const db = { calls, async query(sql, params) { calls.push({ sql, params }); if (/coalesce\(max/.test(sql)) return { rows: [{ n: 0 }] }; if (/returning memory_id/.test(sql)) return { rows: [{ memory_id: "m1" }] }; return { rows: [] }; }, async transaction(work) { return work(db); } };
+  return db;
 }
 
 test("health records live apart from farm records, at the health sensitivity level, with no searchable text and never public", async () => {
@@ -40,7 +41,7 @@ test("health records live apart from farm records, at the health sensitivity lev
   assert.equal(inserts.length, 2);
   for (const call of inserts) { assert.match(call.sql, /'health'\)/); assert.match(call.sql, /'health_(?:records|session)'/); assert.doesNotMatch(JSON.stringify(call.params.slice(4, 5)), /Mary/, "no patient name in the searchable text"); }
   for (const call of db.calls) { assert.doesNotMatch(call.sql, /farm_records|farm_session/); assert.doesNotMatch(call.sql, /\$\d::text is null/); }
-  for (const call of db.calls.filter(item => !/insert|coalesce\(max/.test(item.sql))) assert.match(call.sql, /principal_id=\$2/, call.sql);
+  for (const call of db.calls.filter(item => !/insert|coalesce\(max|pg_advisory_xact_lock/.test(item.sql))) assert.match(call.sql, /principal_id=\$2/, call.sql);
   const before = db.calls.length; assert.deepEqual(await store.listPublic({ tenantId: "t1", collection: "listing" }), []); assert.equal(db.calls.length, before);
   const update = db.calls.find(call => /update nexus_memory_items set content/.test(call.sql)); assert.equal(update.params[4], "patient", "the update writes no name either");
   assert.throws(() => new FarmRecordRepository(db, { purpose: "x; drop table y" }), /Invalid/); assert.throws(() => new FarmRecordRepository(db, { sensitivity: "public" }), /Invalid/);

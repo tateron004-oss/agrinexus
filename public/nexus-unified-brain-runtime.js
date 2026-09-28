@@ -80,7 +80,13 @@
     if (/\b(health|patient|blood pressure|hypertension|diabetes|glucose|obesity|weight|chronic|rpm|rtm|clinic|doctor|provider|care team|telehealth|medical)\b/.test(text)) domains.push("healthcare");
     if (/\b(mobile clinic|mobile care|clinic van|field clinic)\b/.test(text)) domains.push("mobile_health");
     if (/\b(pharmacy|medicine|medication|prescription|refill|drug store)\b/.test(text)) domains.push("pharmacy");
-    if (/\b(farm|farmer|crop|tomato|maize|plants|soil|irrigation|pest|disease|livestock|extension|agriculture)\b/.test(text)) domains.push("agriculture");
+    // "fertilizer|seed|pesticide|urea" added: "What's the current price of
+    // fertilizer with sources?" matched only "marketplace_trade" (via
+    // "price") -- a single domain -- and fell through to the decorative
+    // marketplace-trade card instead of nexus_live_knowledge's real, cited
+    // price lookup. Farm-input words are as much "agriculture" as a crop
+    // name is.
+    if (/\b(farm|farmer|crop|tomato|maize|plants|soil|irrigation|pest|disease|livestock|extension|agriculture|fertilizer|seed|seeds|pesticide|urea|agrochemical)\b/.test(text)) domains.push("agriculture");
     // "price"/"cost"/"quote" added: the decorative routeNexusIntentDrivenWorkflowCommand
     // classifier in app.js already treats these as marketplace-trade signals,
     // but this real classifier didn't -- so "What is the price of maize?"
@@ -90,7 +96,12 @@
     if (/\b(buyer|seller|marketplace|agritrade|sell|sale|offer|trade|market|price|cost|quote)\b/.test(text)) domains.push("marketplace_trade");
     if (/\b(shipment|shipping|logistics|delivery|cold chain|carrier|route|pickup)\b/.test(text)) domains.push("logistics_shipment");
     if (/\b(drone|field scan|field observation|imagery|scouting|flight)\b/.test(text)) domains.push("drone_field_operations");
-    if (/\b(training|learn|learning|literacy|course|class|program|certification)\b/.test(text)) domains.push("learning");
+    // "courses" (plural) added -- \bcourse\b cannot match inside "courses"
+    // (no word boundary before the trailing "s"), so "What courses are
+    // available for beekeeping?" matched no domain at all here even though
+    // the equivalent server-side gate (server.js's nexus_workforce_learning
+    // handler) already includes the plural form -- pure client/server drift.
+    if (/\b(training|learn|learning|literacy|course|courses|class|program|certification)\b/.test(text)) domains.push("learning");
     if (/\b(job|jobs|workforce|employment|employer|resume|career|hiring)\b/.test(text)) domains.push("workforce_jobs");
     if (/\b(admin|provider evidence|review queue|blocked|what is blocked|case so far|what do you know|what can you do|what do you need)\b/.test(text)) domains.push("provider_admin");
     if (!domains.length) domains.push("general_help");
@@ -133,6 +144,26 @@
     // twilioProvider/emailProvider and has its own confirmation gate).
     if (SEND_OPENER.test(text) && (SEND_EMAIL.test(text) || SEND_PHONE.test(text))) return true;
     if (CALL_OPENER.test(text) && SEND_PHONE.test(text)) return true;
+    // Found live: "Find me a job in construction," "Give me a resume for a
+    // warehouse job," and "What courses are available for beekeeping?" each
+    // only ever match ONE domain here (workforce_jobs or learning) -- the
+    // same >=2-domain rejection shape as the bugs above -- so they fell
+    // through past this runtime into a decorative "employment-hiring"/
+    // "learning-workforce-development" workflow card instead of reaching
+    // the real (simulated-but-evidence-based, not fabricated) jobs.search/
+    // resume.create/knowledge.search tools via the authoritative runtime.
+    if (/\b(find|search|show|looking for|apply for)\b.*\b(jobs?|work|employment|opportunit(?:y|ies))\b/.test(text)
+      || /\b(resume|cv|curriculum vitae)\b/.test(text)
+      || /\b(courses?|classes|training|certification)\b.*\b(available|offered|for|on)\b/.test(text)) return true;
+    // Found live: DOMAINS has no maps/routing concept at all, so "Route
+    // from Nairobi to Mombasa" or "Directions to the nearest clinic" only
+    // ever matched "logistics_shipment" (via "route") -- a single domain,
+    // rejected by the >=2-domain rule below -- and fell through into the
+    // decorative "logistics-maps-shipments" workflow card instead of
+    // reaching the real nexus_maps_route tool (real OSRM/Google routing,
+    // with its own honest no-fabrication guarantees). Mirrors the real
+    // handler's own mapOnlyRequest detection (server.js).
+    if (/\b(route|directions?|navigate|navigation)\b/.test(text) || /\bfrom\s+.+\s+to\b/.test(text) || /\b(take me to|how do i get to|way to)\b/.test(text)) return true;
     const domains = classifyDomains(text).filter(domain => !["general_help", "provider_admin"].includes(domain));
     return domains.length >= 2;
   }

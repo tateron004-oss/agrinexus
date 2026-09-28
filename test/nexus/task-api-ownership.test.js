@@ -76,3 +76,39 @@ test("a nonexistent task returns 404 for get/transition/approve/execute, not a 4
   assert.equal((await api.approve(missing)).status, 404);
   assert.equal((await api.execute(missing)).status, 404);
 });
+
+// Found live: create() passed a caller-supplied conversationId straight into
+// engine.create() with no ownership pre-check at all -- unlike
+// agent-service.js's chat path, which already discards a foreign
+// conversationId before ever touching conversations.ensure()/append(). Any
+// tenant member who learned another member's real conversationId (returned
+// in plaintext elsewhere) could durably link their own task's messages into
+// that other person's private conversation history.
+test("create() discards a caller-supplied conversationId that belongs to a different user, instead of reusing it", async () => {
+  let createInput;
+  const engine = {
+    conversations: { owner: async ({ conversationId }) => (conversationId === "cnv_victim" ? "victim" : null) },
+    create: async input => { createInput = input; return { taskId: "tsk_new", ...input }; }
+  };
+  const api = createTaskApi(engine);
+  const attacker = { context: { tenantId: "tenant", userId: "attacker", requestId: "req_1" },
+    body: { goal: "Do something", application: "general", riskTier: "low", steps: [{ title: "Step", toolId: "knowledge.search" }], conversationId: "cnv_victim" } };
+
+  const result = await api.create(attacker);
+  assert.equal(result.status, 201);
+  assert.notEqual(createInput.command.conversationId, "cnv_victim", "a foreign conversationId must never be reused for another user's task");
+});
+
+test("create() still reuses a caller-supplied conversationId the caller genuinely owns", async () => {
+  let createInput;
+  const engine = {
+    conversations: { owner: async ({ conversationId }) => (conversationId === "cnv_mine" ? "owner" : null) },
+    create: async input => { createInput = input; return { taskId: "tsk_new", ...input }; }
+  };
+  const api = createTaskApi(engine);
+  const request = { context: { tenantId: "tenant", userId: "owner", requestId: "req_1" },
+    body: { goal: "Do something", application: "general", riskTier: "low", steps: [{ title: "Step", toolId: "knowledge.search" }], conversationId: "cnv_mine" } };
+
+  await api.create(request);
+  assert.equal(createInput.command.conversationId, "cnv_mine", "the caller's own conversationId must still be reused, not always replaced");
+});

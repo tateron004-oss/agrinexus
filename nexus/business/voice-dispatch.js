@@ -154,8 +154,20 @@ function extractTransactionArgs(command = "", args = {}) {
   const bare = withCurrency ? null : new RegExp(`\\b(?:of|for|worth)\\s+(${NUMBER})`, "i").exec(text);
   const rawAmount = args.amount !== undefined ? Number(args.amount) : withCurrency ? withCurrency.amount : bare ? Number(bare[1].replace(/,/g, "")) : NaN;
   const currency = String(args.currency || withCurrency?.currency || "").toUpperCase().slice(0, 3);
-  const type = /\b(expense|spent|spend|paid|purchase|purchased|bought|cost|nimetumia|nimenunua|nimelipa|matumizi|gharama)\b/i.test(text) ? "expense"
-    : /\b(income|revenue|donation|donated|sale|sold|payment received|earned|received|nimeuza|nimepokea|mapato|mauzo)\b/i.test(text) ? "income" : "expense";
+  // Found live: bare "paid" was an unconditional expense signal, checked
+  // before income words, even overriding an explicit "income" label --
+  // "record income: client paid me $500" logged an EXPENSE, swinging
+  // netIncome by $1,000 in the wrong direction for a single payment
+  // received. "Paid" is genuinely ambiguous (I paid someone = expense;
+  // someone paid me / I got paid = income) -- the passive/received-money
+  // construction is now recognized as an income signal, separate from the
+  // other, unambiguous expense words.
+  const receivedPayment = /\b(?:paid me|pay me|got paid|was paid|is paying me|payment received|received payment)\b/i.test(text);
+  const explicitIncomeWord = /\b(income|revenue|donation|donated|sale|sold|earned|received|nimeuza|nimepokea|mapato|mauzo)\b/i.test(text);
+  const explicitExpenseWord = /\b(expense|spent|spend|purchase|purchased|bought|cost|nimetumia|nimenunua|nimelipa|matumizi|gharama)\b/i.test(text);
+  const ambiguousPaidAsExpense = !receivedPayment && /\bpaid\b/i.test(text);
+  const type = explicitExpenseWord || ambiguousPaidAsExpense ? "expense"
+    : receivedPayment || explicitIncomeWord ? "income" : "expense";
   // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
   const soldItem = text.match(/\b(?:sold|sell|nimeuza)\s+(.+?)\s+(?:for|at|kwa)\b/i);
   const spentOn = text.match(/\b(?:on|for|kwa)\s+(?![\d$€₦]|shilingi\b)([^\n,.]{2,60})/i);
@@ -212,6 +224,25 @@ function describeFinances(totals, { label, focus, workspaceName }) {
   return `${label === "so far" ? "So far" : label.charAt(0).toUpperCase() + label.slice(1)}, in "${workspaceName}": ${parts.join("; ")}.`;
 }
 
+// Found live: invoice numbers were derived from "invoices.length + 1001" at
+// creation time, not a persistent monotonic counter. Since deleting an
+// invoice (the only mechanism is the generic row-remove UI, a plain splice
+// with no cross-array cleanup) shrinks invoices.length without renumbering
+// or removing that invoice's now-orphaned invoiceItems rows, the very next
+// invoice created could be assigned a number that's ALREADY in use by a
+// still-existing invoice -- exportInvoice's lookup joins invoices and
+// invoiceItems purely by this string, so the new invoice's header gets
+// printed with a mix of its own AND the other client's line items on one
+// PDF. Scanning every invoiceNumber ever seen (in both arrays, so an
+// orphaned line item still "reserves" its number) and picking one past the
+// highest ever used can never collide, even across deletions.
+function nextInvoiceNumber(editable) {
+  const used = [...(editable.invoices || []), ...(editable.invoiceItems || [])]
+    .map(item => Number(String(item.invoiceNumber || "").replace(/^INV-/i, "")))
+    .filter(Number.isFinite);
+  return `INV-${(used.length ? Math.max(...used) : 1000) + 1}`;
+}
+
 function extractInvoiceArgs(command = "", args = {}) {
   const text = String(command || "");
   const clientMatch = text.match(/\bfor\s+["']?([^"'.,\n]{2,80})["']?/i);
@@ -239,7 +270,12 @@ function extractInvoiceItemArgs(command = "", args = {}) {
     invoiceNumber: sanitizeText(args.invoiceNumber || (invoiceMatch ? invoiceMatch[1].toUpperCase() : ""), 40),
     description: sanitizeText(args.description || (lineMatch ? lineMatch[2].trim() : body), 300),
     quantity: Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1,
-    unitPrice: Number.isFinite(rawPrice) ? rawPrice : null
+    // Found live: a negative unitPrice (reachable via direct tool-call
+    // arguments, not through text parsing, which can never produce a
+    // negative number here) silently reduced an invoice's total by any
+    // amount a caller supplied, with only the spoken/typed confirmation
+    // text as a safeguard. Rejected the same way a non-finite price already is.
+    unitPrice: Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : null
   };
 }
 
@@ -340,7 +376,12 @@ function extractListingArgs(command = "", args = {}) {
   // words, stopping before a price/status/bed-bath clause rather than
   // swallowing the rest of the sentence.
   const addressMatch = text.match(/\b(\d{1,6}\s+[A-Za-z0-9][A-Za-z0-9 .,'-]{2,80}?)(?=\s+(?:for|at|priced|listed|status|with|is|as)\b|[,.]|$)/i);
-  const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/) || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/);
+  // "dollars" (no $ sign, no k/K suffix) added: "List 789 Pine Rd for
+  // 450,000 dollars" previously matched nothing at all and silently saved
+  // the listing with price: 0, with no error or clarification shown.
+  const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/)
+    || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/)
+    || text.match(/\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s+dollars?\b/i);
   const priceRaw = priceMatch ? Number(priceMatch[1].replace(/,/g, "")) : NaN;
   const price = Number.isFinite(priceRaw) ? (/[kK]/.test(priceMatch[0]) ? priceRaw * 1000 : priceRaw) : NaN;
   const bedsMatch = text.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms|br)\b/i);
@@ -353,14 +394,44 @@ function extractListingArgs(command = "", args = {}) {
     propertyType: sanitizeText(args.propertyType || (typeMatch ? typeMatch[1].toLowerCase() : ""), 40),
     beds: args.beds !== undefined ? Number(args.beds) : (bedsMatch ? Number(bedsMatch[1]) : 0),
     baths: args.baths !== undefined ? Number(args.baths) : (bathsMatch ? Number(bathsMatch[1]) : 0),
-    status: sanitizeText(args.status || (statusMatch ? statusMatch[1].toLowerCase().replace(/\s+/g, "-") : ""), 30)
+    // Found live: only the text-parsed branch normalized to lowercase --
+    // args.status (a structured tool-call argument, e.g. "Active") was
+    // stored verbatim, and computeBusinessDashboard's exact-case status
+    // filters then silently dropped that listing from active/pending/sold
+    // counts and total value, with no error. Mirrors the identical,
+    // already-fixed case-sensitivity bug for grant.status.
+    status: sanitizeText(String(args.status || (statusMatch ? statusMatch[1] : "")).toLowerCase().replace(/\s+/g, "-"), 30)
   };
 }
 
 function resolveListingIndex(listings, command = "") {
   const text = String(command || "").toLowerCase();
-  const named = listings.findIndex(listing => listing.address && text.includes(String(listing.address).toLowerCase()));
-  if (named !== -1) return named;
+  // Found live: findIndex picked whichever matching address came FIRST in
+  // the array, not the most specific one -- when one listing's address is a
+  // literal prefix of another's (e.g. two units at the same street, "500
+  // Elm St" and "500 Elm St Apt 2"), a command naming the more specific
+  // address ("mark 500 Elm St Apt 2 as sold") could still resolve to the
+  // wrong, shorter-address listing depending purely on array order. Now
+  // picks the LONGEST matching address (the most specific one), not the
+  // first one encountered.
+  const matches = listings.map((listing, index) => ({ listing, index }))
+    .filter(entry => entry.listing.address && text.includes(String(entry.listing.address).toLowerCase()));
+  if (matches.length) {
+    matches.sort((a, b) => String(b.listing.address).length - String(a.listing.address).length);
+    const longestLength = String(matches[0].listing.address).length;
+    const longestMatches = matches.filter(entry => String(entry.listing.address).length === longestLength);
+    if (longestMatches.length === 1) return longestMatches[0].index;
+    // Found live: nothing stops two listings from sharing the exact same
+    // address (e.g. a property re-listed for a new buyer after an earlier
+    // deal fell through, without editing the old row), and Array.sort is
+    // stable -- a tie in address length always resolved to whichever
+    // identical-address listing was added FIRST, not the one the caller
+    // meant. Prefer the active one among an identical-address tie (that's
+    // almost always the one a "mark X as sold/pending" command means);
+    // only give up and ask when that's still ambiguous.
+    const activeAmongLongest = longestMatches.filter(entry => String(entry.listing.status || "").toLowerCase() === "active");
+    return activeAmongLongest.length === 1 ? activeAmongLongest[0].index : -1;
+  }
   // Only fall back to "the one active listing" when the caller didn't name
   // an address-shaped token at all (real estate addresses are effectively
   // always digit-led, e.g. "123 Main St"). If they named a specific address
@@ -368,7 +439,7 @@ function resolveListingIndex(listings, command = "") {
   // falling back to a different property would risk marking the wrong one
   // sold/pending, unlike resolveAppointmentIndex's lower-stakes equivalent.
   if (/\d/.test(text)) return -1;
-  const active = listings.map((listing, index) => ({ listing, index })).filter(entry => entry.listing.status === "active");
+  const active = listings.map((listing, index) => ({ listing, index })).filter(entry => String(entry.listing.status || "").toLowerCase() === "active");
   return active.length === 1 ? active[0].index : -1;
 }
 
@@ -400,17 +471,29 @@ function computeBusinessDashboard(editable) {
   // summary, rather than hardcoding every new church/industry word as its
   // own bucket.
   const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer", "buyer", "seller", "tenant", "landlord"].includes(row.type)).length;
-  const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  // Rounds each line to the cent before summing (matches the invoice PDF
+  // export's own fix) so this total can never drift from what a generated
+  // invoice actually shows, even by a cent, for a fractional-cent unit price.
+  const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
   const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
   const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
-  const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
+  // Found live: grant.status is freeform text with no normalization --
+  // "Awarded" (capitalized, exactly how a natural "set the grant status to
+  // Awarded" phrase gets stored) never matches this exact-lowercase check,
+  // so a correctly-marked grant's amount silently vanishes from the
+  // awarded total with no error or indication.
+  const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
   const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
   const listings = editable.listings || [];
-  const activeListings = listings.filter(listing => listing.status === "active").length;
-  const pendingListings = listings.filter(listing => listing.status === "pending" || listing.status === "under-contract").length;
-  const soldListings = listings.filter(listing => listing.status === "sold").length;
-  const activeListingValue = listings.filter(listing => listing.status === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
+  // Case-insensitive, matching extractListingArgs' own normalization fix --
+  // a defense-in-depth for any already-saved or externally-written record
+  // whose status wasn't normalized at write time (e.g. a direct API write).
+  const listingStatus = listing => String(listing.status || "").toLowerCase();
+  const activeListings = listings.filter(listing => listingStatus(listing) === "active").length;
+  const pendingListings = listings.filter(listing => listingStatus(listing) === "pending" || listingStatus(listing) === "under-contract").length;
+  const soldListings = listings.filter(listing => listingStatus(listing) === "sold").length;
+  const activeListingValue = listings.filter(listing => listingStatus(listing) === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
   return {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
     customers, donors, sponsors, volunteers, buyers, sellers, tenants, landlords, others,
@@ -619,8 +702,15 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     }
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const dashboard = computeBusinessDashboard(resolved.client.data.editable);
+    // Found live: listings have no currency field of their own and are
+    // always created/shown as USD elsewhere (see the other formatMoney("USD",
+    // listing.price) call sites in this file) -- but this line was labeling
+    // activeListingValue with dashboard.currency, which is picked from the
+    // business's transaction ledger and can be a completely different
+    // currency (e.g. a business that logs its day-to-day income in KES would
+    // have a $250,000 USD listing spoken back as "worth KES 250,000").
     const listingPhrase = dashboard.totalListings
-      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney(dashboard.currency, dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
+      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney("USD", dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
       : "";
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
@@ -743,7 +833,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before creating an invoice.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
-    const invoiceNumber = `INV-${resolved.client.data.editable.invoices.length + 1001}`;
+    const invoiceNumber = nextInvoiceNumber(resolved.client.data.editable);
     const clientPhrase = invoiceArgs.clientName ? ` for ${invoiceArgs.clientName}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can create invoice ${invoiceNumber}${clientPhrase} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, invoices: [...resolved.client.data.editable.invoices,
@@ -829,12 +919,22 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding appointments.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const startPhrase = appointment.start ? ` on ${appointment.start}` : "";
-    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan. This does not book anything on a real calendar until you sync it. Should I go ahead?` };
+    // Found live: nothing checked a new appointment's time against existing
+    // ones -- two showings for the same property could be booked for the
+    // identical slot with zero warning. This tool never books a real
+    // calendar event on its own (the user has to explicitly "sync" it), so
+    // a match here surfaces as a heads-up rather than a refusal -- a real
+    // double-booking for two different things at the same clock time is a
+    // legitimate use of this tool, but the caller should still be told.
+    const conflict = appointment.start && (resolved.client.data.editable.appointments || [])
+      .find(item => item.status !== "cancelled" && String(item.start || "").trim().toLowerCase() === appointment.start.trim().toLowerCase());
+    const conflictNote = conflict ? ` Note: "${conflict.title}" is already scheduled for the same time -- check this isn't a double-booking.` : "";
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan.${conflictNote} This does not book anything on a real calendar until you sync it. Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, appointments: [...resolved.client.data.editable.appointments,
       { title: appointment.title, start: appointment.start, end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
-    const response = `Added an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan. Say "sync it to my calendar" when you want a real calendar event created.`;
+    const response = `Added an appointment "${appointment.title}"${startPhrase} to "${workspaceName}" as a local plan.${conflictNote} Say "sync it to my calendar" when you want a real calendar event created.`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 
@@ -976,5 +1076,5 @@ module.exports = Object.freeze({
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
   extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard,
-  extractListingArgs, resolveListingIndex
+  extractListingArgs, resolveListingIndex, nextInvoiceNumber
 });

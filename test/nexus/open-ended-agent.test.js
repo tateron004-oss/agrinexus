@@ -291,6 +291,23 @@ test("a document request naming a format carries it through to the plan's input,
     "no format named -- must not invent one, documents.create's own default still applies");
 });
 
+// Found live (uploads/exports audit): this fast path put the ENTIRE raw
+// command into documents.create's content with no length limit at all,
+// unlike every other free-text-to-document path in this codebase (a 4000-char
+// sanitizePilotText cap, a 600-char resumePlan rejection). A multi-megabyte
+// command reaches exportProvider's synchronous PDF/DOCX rendering with no cap
+// of its own, tying up the process's single event loop.
+test("a document request's content is capped, not passed through at unbounded length", () => {
+  const { completeDocumentPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "documents.create" }] };
+  const huge = `Create and save a document, then reopen it: ${"x".repeat(50000)}`;
+  const plan = completeDocumentPlan(huge, catalog);
+  assert.ok(plan.steps[0].input.content.length <= 4000, `expected capped content, got ${plan.steps[0].input.content.length} chars`);
+
+  const short = "Create and save a farming plan document, then reopen it.";
+  assert.equal(completeDocumentPlan(short, catalog).steps[0].input.content, short, "a short command must still be carried through in full, unchanged");
+});
+
 // Item 18 of the 2026-09-22 capability audit: "show me videos of X" had no path at all through the
 // authoritative runtime -- only images.search existed. completeVideoSearchPlan closes that gap.
 test("a complete video-search request has an executable Videos plan, distinct from image search and media playback", () => {
@@ -374,6 +391,20 @@ test("every remaining complete gauntlet request has a deterministic governed pla
   }
   assert.equal(completeRemainingWorkspacePlan("Tell me about offline work.", catalog), null);
   assert.equal(completeRemainingWorkspacePlan("Tell me about jobs.", catalog), null);
+});
+
+// Found live: "Find me a job in construction," "Search for jobs near me,"
+// and "Show me available work" all lack a select/listing/sources word and
+// fell through to the free-form AI planner instead of this deterministic
+// fast path. Widened with the natural ways a real job search is phrased.
+test("a natural job-search phrase with no select/listing/sources word still reaches the real jobs.search plan", () => {
+  const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: [{ toolId: "jobs.search" }] };
+  for (const command of ["Find me a job in construction", "Search for jobs near me", "Show me available work"]) {
+    const plan = completeRemainingWorkspacePlan(command, catalog);
+    assert.equal(plan?.application, "workforce", command);
+    assert.equal(plan?.steps[0].toolId, "jobs.search", command);
+  }
 });
 
 // Confirmed missing: a general youth-education request like "help this youth

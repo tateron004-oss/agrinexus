@@ -50,9 +50,79 @@ test("canonical engine self-corrects through an explicit governed fallback with 
   assert.equal(result.receipt.verification.selectedTool, "provider.backup"); assert.equal(result.receipt.verification.fallbackAttempt, 1);
 });
 
+// Found live: confirmation_state is computed once from only the PRIMARY tool at task-creation time. When the
+// primary fails and the loop advances to a fallback that itself requires confirmation, authorize()'s hard throw
+// used to abort the ENTIRE candidate loop immediately -- unlike an unavailable or retry-exhausted candidate,
+// which is skipped so the loop can try the NEXT fallback. That meant a perfectly usable later fallback never even
+// got a chance, purely because an earlier, unrelated fallback happened to need confirmation. Must fail closed
+// (the unapproved fallback itself never runs) while still trying whatever comes after it.
+test("a fallback tool that itself requires confirmation is skipped, not left to abort the whole candidate loop, so a later usable fallback still gets its chance", async () => {
+  const { engine, store } = fixture();
+  let backupCalls = 0;
+  engine.tools.get = async id => id === "provider.gated"
+    ? { tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: true, consent_scope: null, timeout_ms: 1000 }
+    : { tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: false, consent_scope: null, timeout_ms: 1000 };
+  engine.executors["provider.primary"] = async () => { throw new Error("provider outage"); };
+  engine.executors["provider.gated"] = async () => { throw new Error("must never run without confirmation"); };
+  engine.executors["provider.backup"] = async () => { backupCalls += 1; return { persisted: true }; };
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.primary", fallback_tool_ids: ["provider.gated", "provider.backup"],
+    confirmation_state: "not_required", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  const result = await engine.execute({ context, taskId: "tsk", stepId: "stp_1" });
+  assert.equal(result.receipt.verification.selectedTool, "provider.backup", "the unapproved gated fallback must be skipped, letting the next usable fallback run");
+  assert.equal(backupCalls, 1);
+});
+
+// Found live: when execute() exhausts every candidate tool (or no remaining step's dependencies can ever be
+// satisfied), executeTask() let that throw propagate straight out with no transition of the task itself out of
+// "running" -- the task was left permanently frozen at "running" forever. Since agent.sweep-advanceable-tasks
+// re-enqueues any autonomous task still "running" past its staleness window with a freshly-randomized (never
+// deduped) idempotency key, this created an unbounded, forever-repeating job storm: every sweep re-tries the same
+// already-exhausted step, hits the same failure, and never self-corrects. Must transition to "blocked" (the same
+// terminal state blockStalledAutonomousTaskIfApplicable() already uses for the sibling stuck-"verifying" case)
+// before re-throwing, so a later sweep no longer matches this task at all.
+test("executeTask blocks the task itself when every candidate tool is exhausted, instead of leaving it frozen at running forever", async () => {
+  const { engine, store } = fixture();
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.missing", fallback_tool_ids: [], confirmation_state: "not_required", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { schema: "nexus.task.v1", tenantId: "tenant", correlationId: "trace", ownerId: "user", state: "running", version: 1, history: [] };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  await assert.rejects(() => engine.executeTask({ context, taskId: "tsk" }), error => error.code === "tool_unavailable");
+  assert.equal(store.task.state, "blocked", "the task itself must be marked blocked, not left frozen at running");
+  const transitionAudit = store.audits.find(event => event.eventType === "task.transition" && event.outcome === "blocked");
+  assert.ok(transitionAudit, "the transition to blocked must itself be audited");
+});
+
+// Same fix, the "no ready step" path: every remaining step is unable to proceed (e.g. its own dependency
+// permanently failed), which previously threw task_execution_blocked without ever actually blocking the task.
+test("executeTask blocks the task itself when no remaining step can ever become ready, instead of leaving it frozen at running forever", async () => {
+  const { engine, store } = fixture();
+  // stp_1's own dependency ("stp_missing") can never complete (no such step exists), so stp_1 itself can never
+  // become ready -- and stp_2 depends on stp_1, so neither step in `remaining` can ever proceed.
+  store.steps = [{ step_id: "stp_1", tool_id: "documents.save", fallback_tool_ids: [], confirmation_state: "approved", idempotency_key: "key", state: "pending", input: {}, depends_on: ["stp_missing"] },
+    { step_id: "stp_2", tool_id: "documents.save", fallback_tool_ids: [], confirmation_state: "approved", idempotency_key: "key2", state: "pending", input: {}, depends_on: ["stp_1"] }];
+  store.task = { schema: "nexus.task.v1", tenantId: "tenant", correlationId: "trace", ownerId: "user", state: "running", version: 1, history: [] };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  await assert.rejects(() => engine.executeTask({ context, taskId: "tsk" }), error => error.code === "task_execution_blocked");
+  assert.equal(store.task.state, "blocked");
+});
+
 async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }
+
+// Found live: create() called conversations.ensure() but never checked its
+// return value -- ensure() now returns null when the caller-supplied
+// conversationId belongs to a different owner (see its own comment), and
+// create() must surface that loudly rather than silently proceeding to link
+// the new task to someone else's conversation.
+test("create() refuses to create a task when the conversation it would attach to belongs to a different user", async () => {
+  const { engine } = fixture();
+  engine.conversations.ensure = async () => null;
+  const command = createCommand({ correlationId: "trace", tenantId: "00000000-0000-0000-0000-000000000001",
+    actorId: "00000000-0000-0000-0000-000000000002", channel: "typed", text: "Save report", conversationId: "cnv_victim" });
+  await expectCode(() => engine.create({ command, goal: "Persist report", steps: [{ title: "Save", toolId: "documents.save" }] }), "conversation_owner_mismatch");
+});
 
 test("canonical engine gates confirmation, verifies outcomes, and suppresses duplicate execution", async () => {
   const { engine, store } = fixture();
@@ -189,6 +259,25 @@ test("budget refusal precedes execution and telemetry outages never erase verifi
   engine.observability.assertCostAllowed=fail;
   assert.equal((await engine.execute({context,taskId:"task",stepId:"s"})).duplicate,true);
   assert.equal(store.calls,1);
+});
+
+// Found live: recordCost() was only ever called on the SUCCESS path -- the real, billable provider call already
+// happens before outcome verification, so a failure AFTER that call (an unverifiable result, a late timeout, an
+// executor throw) meant a real charge could have been incurred but was never written to the cost ledger at all,
+// silently understating spend against both the per-tool ceiling and the tenant's daily budget.
+test("a failed tool execution still records its cost, since a real charge may already have happened", async () => {
+  const { engine, store } = fixture();
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  store.steps = [{ step_id: "s", tool_id: "documents.save", confirmation_state: "approved", idempotency_key: "one", state: "pending", input: {} }];
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  engine.executors["documents.save"] = async () => { throw new Error("provider outage"); };
+  const costEvents = [];
+  engine.observability = { assertCostAllowed: async () => {}, recordCost: async input => { costEvents.push(input); },
+    recordProviderHealth: async () => {}, alert: async () => {} };
+  await assert.rejects(() => engine.execute({ context, taskId: "task", stepId: "s" }));
+  assert.equal(costEvents.length, 1, "a failed execution must still be recorded to the cost ledger, not silently dropped");
+  assert.equal(costEvents[0].toolId, "documents.save");
+  assert.equal(costEvents[0].metadata.outcome, "failed");
 });
 
 test('completed execution cannot be replayed as success without a verified receipt',async()=>{

@@ -99,10 +99,17 @@
     // church workspace, "client" from a conversational intake) still counts here
     // instead of silently disappearing from the summary.
     const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer"].includes(row.type)).length;
-    const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
+    // fix exactly: rounds each line to the cent before summing, and matches
+    // grant status case-insensitively -- see that file for the found-live
+    // detail (a fractional-cent unit price could make this total silently
+    // drift from the generated invoice PDF; a capitalized "Awarded" status,
+    // exactly how natural phrasing stores it, never matched the exact-
+    // lowercase check and silently dropped that grant's amount).
+    const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
     const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
     const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
-    const grantsAwarded = editable.grants.filter(grant => grant.status === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
+    const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
     const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
     const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
     // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
@@ -111,10 +118,15 @@
     // voice/chat "show my listings") had no editor-page dashboard row or
     // rows() section at all, unlike every other tracked collection here.
     const listings = editable.listings || [];
-    const activeListings = listings.filter(listing => listing.status === "active").length;
-    const pendingListings = listings.filter(listing => listing.status === "pending" || listing.status === "under-contract").length;
-    const soldListings = listings.filter(listing => listing.status === "sold").length;
-    const activeListingValue = listings.filter(listing => listing.status === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
+    // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
+    // fix exactly: case-insensitive status matching, so a listing status
+    // saved with any capitalization (e.g. "Active") is never silently
+    // dropped from these counts/totals.
+    const listingStatus = listing => String(listing.status || "").toLowerCase();
+    const activeListings = listings.filter(listing => listingStatus(listing) === "active").length;
+    const pendingListings = listings.filter(listing => listingStatus(listing) === "pending" || listingStatus(listing) === "under-contract").length;
+    const soldListings = listings.filter(listing => listingStatus(listing) === "sold").length;
+    const activeListingValue = listings.filter(listing => listingStatus(listing) === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
     const rows = [
       ["Net income", currencies.map(code => `${code} ${(money[code].income - money[code].expenses).toFixed(2)} (income ${money[code].income.toFixed(2)} / expenses ${money[code].expenses.toFixed(2)})`).join("; ")],
       ["Customers & donors", `${customers} customers, ${donors} donors, ${sponsors} sponsors, ${volunteers} volunteers${others ? `, ${others} other (members, clients, and similar)` : ""}`],
@@ -191,7 +203,22 @@
   byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
   byId("add-listing").addEventListener("click", () => { current.data.editable.listings.push({ address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }); render(); });
   byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, currency: "USD", description: "" }); render(); });
-  byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: `INV-${String(current.data.editable.invoices.length + 1001)}`, clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
+  // Found live: "invoices.length + 1001" recycles a number once an invoice
+  // is deleted (this row-remove button is a plain splice, with no cleanup
+  // of that invoice's now-orphaned invoiceItems) -- the next invoice created
+  // could collide with a still-existing one's number, and the server's PDF
+  // export joins invoices/invoiceItems purely by that shared string, mixing
+  // a different client's line items onto the wrong invoice. Scanning every
+  // invoiceNumber ever seen (including orphaned line items, which still
+  // "reserve" their number) and picking one past the highest ever used can
+  // never collide, even across deletions.
+  function nextInvoiceNumber(editable) {
+    const used = [...(editable.invoices || []), ...(editable.invoiceItems || [])]
+      .map(item => Number(String(item.invoiceNumber || "").replace(/^INV-/i, "")))
+      .filter(Number.isFinite);
+    return `INV-${(used.length ? Math.max(...used) : 1000) + 1}`;
+  }
+  byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: nextInvoiceNumber(current.data.editable), clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
   byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }); render(); });
   byId("add-appointment").addEventListener("click", () => { current.data.editable.appointments.push({ title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }); render(); });

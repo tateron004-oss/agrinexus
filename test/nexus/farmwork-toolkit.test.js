@@ -21,25 +21,66 @@ const run = async (who, lines) => { const out = []; for (const line of lines) ou
 // ---------- the store's SQL ----------
 function recordingDb() {
   const calls = []; const rows = [];
-  return { calls, rows, async query(sql, params) { calls.push({ sql, params }); if (/coalesce\(max/.test(sql)) return { rows: [{ n: rows.filter(row => /farm_records/.test(row.sql)).length }] }; if (/returning memory_id/.test(sql)) return { rows: [{ memory_id: params[params.length > 3 ? 2 : 2] }] }; if (/insert into/.test(sql)) rows.push({ sql, params }); return { rows: [] }; } };
+  const db = { calls, rows, async query(sql, params) { calls.push({ sql, params }); if (/coalesce\(max/.test(sql)) return { rows: [{ n: rows.filter(row => /farm_records/.test(row.sql)).length }] }; if (/returning memory_id/.test(sql)) return { rows: [{ memory_id: params[params.length > 3 ? 2 : 2] }] }; if (/insert into/.test(sql)) rows.push({ sql, params }); return { rows: [] }; }, async transaction(work) { return work(db); } };
+  return db;
 }
 
 test("the store scopes every private read and write to the person and keeps the market board the only shared collection", async () => {
   const db = recordingDb(); const store = new FarmRecordRepository(db);
   const record = await store.add({ tenantId: "t1", userId: "u1", collection: "field", data: { name: "North Plot" } });
   assert.equal(record.number, 1); assert.equal(record.data.name, "North Plot");
+  assert.ok(db.calls.some(call => /pg_advisory_xact_lock/.test(call.sql)), "concurrent record numbering must be serialized per tenant+collection+owner with an advisory lock");
   await store.list({ tenantId: "t1", userId: "u1", collection: "field" });
   await store.listAll({ tenantId: "t1", userId: "u1" });
   await store.update({ tenantId: "t1", userId: "u1", record });
   await store.remove({ tenantId: "t1", userId: "u1", memoryId: record.memoryId });
   await store.getSession({ tenantId: "t1", userId: "u1" });
-  for (const call of db.calls.filter(item => !/coalesce\(max/.test(item.sql) && !/insert into/.test(item.sql))) assert.match(call.sql, /principal_id=\$2/, call.sql);
+  for (const call of db.calls.filter(item => !/coalesce\(max/.test(item.sql) && !/insert into/.test(item.sql) && !/pg_advisory_xact_lock/.test(item.sql))) assert.match(call.sql, /principal_id=\$2/, call.sql);
   const before = db.calls.length;
   assert.deepEqual(await store.listPublic({ tenantId: "t1", collection: "field" }), []); // a private collection is never listed publicly
   assert.equal(db.calls.length, before, "no query is even issued for a private collection");
   await store.listPublic({ tenantId: "t1", collection: "listing" });
   assert.doesNotMatch(db.calls.at(-1).sql, /principal_id=/);
   for (const call of db.calls) assert.doesNotMatch(call.sql, /\$\d::text is null/);
+});
+
+// A fake db whose advisory lock genuinely serializes concurrent transactions (a held lock only releases when its
+// OWN transaction's work finishes, matching real Postgres blocking behavior), and whose nexus_memory_items table
+// is a real in-memory array evaluated against nextNumber()'s actual WHERE clause -- not just a canned response
+// queue -- so this proves the real repository method, not a mock of it, closes the numbering race.
+function lockingFarmDb() {
+  const rows = []; const locks = new Map();
+  const db = { rows,
+    async transaction(fn) {
+      let release = null; const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0]; const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held)); await ahead; release = myRelease; return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
+    async query(sql, params) {
+      if (/coalesce\(max/.test(sql)) {
+        const [tenantId, userId, collection] = params;
+        const n = Math.max(0, ...rows.filter(row => row.tenant_id === tenantId && row.principal_id === userId && row.content.collection === collection).map(row => row.content.number));
+        return { rows: [{ n }] };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) { rows.push({ tenant_id: params[1], principal_id: params[2], content: params[3] }); return { rows: [] }; }
+      throw new Error("unexpected SQL: " + sql.slice(0, 80));
+    } };
+  return db;
+}
+
+test("two concurrent add() calls for the same person's same collection are numbered sequentially, never both #1", async () => {
+  const db = lockingFarmDb(); const store = new FarmRecordRepository(db);
+  const add = () => store.add({ tenantId: "t1", userId: "u1", collection: "task", data: { title: "Weed the north plot" } });
+  const [first, second] = await Promise.all([add(), add()]);
+  assert.deepEqual([first.number, second.number].sort(), [1, 2], "each concurrent add must get its own number, not a duplicate");
+  assert.equal(db.rows.length, 2, "both records must actually exist");
 });
 
 // ---------- guided conversations ----------
@@ -125,6 +166,30 @@ test("buyers keep notes, follow-ups and orders, and a delivered order records th
   assert.match(await who.say("Add an order from Amina Traders for 200 kg maize at 45 per kg"), /Order 1: 200 kg of maize for Amina Traders at 45 per kg \(9,000 in all\)/);
   assert.match(await who.say("Deliver order 1"), /income of 9,000 recorded/);
   assert.match(await who.say("What is my profit this year"), /9,000/);
+});
+
+// Found live (trade/marketplace audit): FarmRecordRepository.update() was an
+// unconditional overwrite with no compare-and-swap on the record's prior
+// status. Two near-simultaneous "deliver order N" requests for the same
+// order (a double-click, a client retry) could both read status "open"
+// before either wrote back "done", so both would record the income AND
+// deduct the stock -- one physical delivery double-counted as revenue and
+// double-depleted stock. Fixed by claiming the order atomically (a
+// compare-and-swap update requiring status still be "open") before any
+// money/stock side effect runs, so only the request that wins the swap
+// proceeds; the loser sees the order already done.
+test("two concurrent 'deliver order' requests for the same order only record the sale once, not twice", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
+  await who.say("Add an order from Amina Traders for 200 kg maize at 45 per kg");
+
+  const [first, second] = await Promise.all([who.say("Deliver order 1"), who.say("Deliver order 1")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /income of 9,000 recorded/.test(text)).length, 1, "exactly one request must have recorded the sale");
+  assert.equal(outcomes.filter(text => /already done/.test(text)).length, 1, "exactly one request must have lost the race and seen the order already done");
+
+  const money = await who.store.list({ tenantId: "t1", userId: "u1", collection: "money" });
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the income must only be recorded once, not once per racing request");
 });
 
 test("a note to a calendar or list is not taken for a buyer note", async () => {

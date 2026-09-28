@@ -23,7 +23,12 @@ class AuthoritativeTaskEngine {
     if (autonomous && this.autonomyControl && await this.autonomyControl.isPaused({ tenantId: command.tenantId })) {
       throw new NexusRuntimeError("autonomy_paused", "Autonomous task creation is paused for this tenant.", 409);
     }
-    await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    // ensure() now returns null when conversationId already belongs to a
+    // different owner (see its own comment) -- surfacing that loudly here
+    // protects every current and future caller of create(), not just the
+    // ones that remember to pre-check ownership themselves.
+    const conversation = await this.conversations.ensure({ conversationId: command.conversationId, tenantId: command.tenantId, ownerId: command.actorId, title: goal });
+    if (!conversation) throw new NexusRuntimeError("conversation_owner_mismatch", "This conversation belongs to a different user.", 403);
     const normalized = [];
     const stepIds = new Map(steps.map((raw, index) => [String(raw.clientStepId || raw.stepId || `step_${index + 1}`), raw.stepId || createId("step")]));
     for (const raw of steps) {
@@ -98,6 +103,12 @@ class AuthoritativeTaskEngine {
         { stepId, dependencies: [...dependencies], incomplete: incomplete.map(candidate => candidate.step_id) });
     }
     const candidates = [step.tool_id, ...(step.fallback_tool_ids || [])]; let lastError = null;
+    // Tracks whether ANY candidate this call actually reached executions.start() (a real, billable attempt) --
+    // as opposed to every candidate being turned away by a pre-flight guard (unavailable, unconfirmed, or
+    // already retry-exhausted) before ever trying. executeTask() uses this to tell "a real attempt just failed
+    // and a legitimate future retry may still succeed" (leave the task running) apart from "nothing can ever
+    // progress with the current configuration" (see the throw below, and executeTask()'s own comment).
+    let attemptedExecution = false;
     const retryOrdinal = step.state === "failed" ? Number(step.attempt_count || 1) + 1 : 1;
     for (const [attempt, toolId] of candidates.entries()) {
       const tool = await this.tools.get(toolId); const executor = tool && this.executors[tool.tool_id];
@@ -105,7 +116,17 @@ class AuthoritativeTaskEngine {
       if (!tool || tool.availability !== "available" || (!authorityOwnsTool && typeof executor !== "function")) {
         lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} has no available authoritative execution owner.`, 503); continue;
       }
-      authorize(context, tool, step);
+      authorize(context, tool);
+      // Found live: step.confirmation_state is computed ONCE, from only the PRIMARY tool, when the task is
+      // created (create()'s `confirmationRequired: Boolean(tool?.confirmation_required)` never looks at
+      // fallbackToolIds). A fallback tool that itself requires confirmation but was never separately approved
+      // used to hit authorize()'s hard throw here -- OUTSIDE the per-candidate try/catch below -- crashing
+      // execute() and executeTask() entirely with an unhandled error instead of degrading to the next candidate
+      // (or a clear final failure) the same way an unavailable/retry-exhausted candidate already does. This
+      // still fails CLOSED (the unconfirmed fallback never runs), it just no longer takes the whole task down.
+      if (tool.confirmation_required && step.confirmation_state !== "approved") {
+        lastError = new NexusRuntimeError("confirmation_required", `Tool ${toolId} requires confirmation that was never given for this step.`, 409); continue;
+      }
       if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
         if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
       if (retryOrdinal > Number(tool.max_attempts || 1)) { lastError = new NexusRuntimeError("retry_exhausted", `Tool ${toolId} exhausted its governed retry limit.`, 409,
@@ -121,6 +142,7 @@ class AuthoritativeTaskEngine {
       const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
         toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
       if (started.duplicate) return verifiedDuplicate(started.execution);
+      attemptedExecution = true;
       const observedAt = Date.now();
       const span = this.observability ? await observeSafely(() => this.observability.startSpan({
         traceId: context.requestId, tenantId: context.tenantId, taskId, operation: "tool.execute",
@@ -168,6 +190,15 @@ class AuthoritativeTaskEngine {
         correlationId: taskWithSteps.correlationId, taskId, eventType: "provider.failed", outcome: "failed",
         metadata: error });
         if (this.observability) {
+          // Found live: recordCost() was only ever called on the SUCCESS path. The real, billable provider call
+          // already happened above (result = await withTimeout(...executor...)) before outcome verification --
+          // an outcome_unverified failure, a late timeout, or any other post-call exception meant a real charge
+          // could have been incurred but was never written to the cost ledger, understating actual spend against
+          // both the per-tool ceiling and the tenant's daily budget. Falls back to the pre-execution estimate,
+          // the same way the success path falls back to it when an executor doesn't report its own actual cost.
+          await observeSafely(() => this.observability.recordCost({ tenantId: context.tenantId, taskId,
+            toolId: tool.tool_id, provider: providerId, estimatedCostCents: cause?.costCents ?? estimatedCostCents,
+            metadata: { executionId: started.execution.execution_id, outcome: "failed" } }));
           await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
             providerId, successful: false, latencyMs: Date.now() - observedAt, errorCode: error.code }));
           if (span) await observeSafely(() => this.observability.finishSpan(span, { state: "error", error }));
@@ -177,7 +208,9 @@ class AuthoritativeTaskEngine {
         lastError = cause;
       }
     }
-    throw lastError || new NexusRuntimeError("tool_unavailable", "No governed tool was available; nothing was executed.", 503);
+    const finalError = lastError || new NexusRuntimeError("tool_unavailable", "No governed tool was available; nothing was executed.", 503);
+    finalError.attemptedExecution = attemptedExecution;
+    throw finalError;
   }
 
   async executeTask({ context, taskId }) {
@@ -191,6 +224,20 @@ class AuthoritativeTaskEngine {
     if (task.state === "queued") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
       nextState: "running", reason: "Governed task execution started" });
 
+    // Found live: neither throw below (an unrecoverable step, or execute() exhausting every candidate tool) ever
+    // transitioned the task itself out of "running" -- both propagated straight out of executeTask() uncaught,
+    // leaving the task frozen at "running" forever. Since agent.sweep-advanceable-tasks re-enqueues any autonomous
+    // task still in "running" past its staleness window with a freshly-randomized (never deduped) idempotency
+    // key, this created an unbounded, forever-repeating job storm: every sweep cycle re-tries the exact same
+    // already-exhausted step, hits the exact same failure, and never self-corrects. A live-conversation task hit
+    // the milder half of the same bug -- it just permanently misreports itself as "running" to any later query.
+    // Mirrors blockStalledAutonomousTaskIfApplicable() in nexus/workers/handlers.js, the established convention
+    // for this codebase's other "permanently stuck, stop treating it as in-flight" case (a stalled "verifying"
+    // task) -- blocked() is used there for the same reason: terminal, so nothing ever revives it by accident.
+    const blockOnUnrecoverableFailure = async cause => {
+      await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+        nextState: "blocked", reason: `Task execution permanently stalled: ${cause.code || cause.message || "unknown error"}` }).catch(() => {});
+    };
     const receipts = [];
     while (true) {
       task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
@@ -198,10 +245,25 @@ class AuthoritativeTaskEngine {
       if (!remaining.length) break;
       const completed = new Set((task.steps || []).filter(step => step.state === "completed").map(step => step.step_id));
       const ready = remaining.find(step => (step.depends_on || []).every(id => completed.has(id)));
-      if (!ready) throw new NexusRuntimeError("task_execution_blocked", "No task step can proceed; prerequisites or prior failures require attention.", 409,
-        { remaining: remaining.map(step => ({ stepId: step.step_id, state: step.state, dependsOn: step.depends_on || [] })) });
+      if (!ready) {
+        const blocked = new NexusRuntimeError("task_execution_blocked", "No task step can proceed; prerequisites or prior failures require attention.", 409,
+          { remaining: remaining.map(step => ({ stepId: step.step_id, state: step.state, dependsOn: step.depends_on || [] })) });
+        await blockOnUnrecoverableFailure(blocked);
+        throw blocked;
+      }
       if (ready.confirmation_state === "required") return { task, state: "awaiting_confirmation", pendingStepId: ready.step_id, receipts, completed: false };
-      const result = await this.execute({ context, taskId, stepId: ready.step_id });
+      let result;
+      try {
+        result = await this.execute({ context, taskId, stepId: ready.step_id });
+      } catch (cause) {
+        // A genuine attempt (cause.attemptedExecution) means the step's own attempt_count just advanced and a
+        // legitimate future executeTask() call may still retry it successfully -- leave the task "running" for
+        // that, matching the existing, deliberate retry-then-resume behavior. Only block when NO candidate ever
+        // even reached executions.start() this call (every one was turned away by availability/confirmation/
+        // retry-exhaustion first) -- nothing about that will ever change on its own, so retrying is pointless.
+        if (!cause.attemptedExecution) await blockOnUnrecoverableFailure(cause);
+        throw cause;
+      }
       if (result.receipt) receipts.push(result.receipt);
     }
 
@@ -277,10 +339,9 @@ function sanitizeProviderFailure(cause, context = {}) {
     stage: safe(cause?.stage || "provider-execution"), requestId: safe(context.requestId || context.correlationId || "unavailable") });
 }
 
-function authorize(context, tool, step) {
+function authorize(context, tool) {
   if (tool.required_permission && !context.can(tool.required_permission)) throw new NexusRuntimeError("permission_denied", `Missing permission: ${tool.required_permission}`, 403);
   if (tool.required_role && !context.hasRole(tool.required_role)) throw new NexusRuntimeError("role_required", `Required role: ${tool.required_role}`, 403);
-  if (tool.confirmation_required && step.confirmation_state !== "approved") throw new NexusRuntimeError("confirmation_required", "Explicit confirmation is required.", 409);
 }
 function required(value, name) { if (!String(value || "").trim()) throw new NexusRuntimeError("invalid_input", `${name} is required.`); return value.trim(); }
 function validateDependencies(steps) {

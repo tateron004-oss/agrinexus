@@ -11,9 +11,9 @@ function fakeDb(results = []) {
   return db;
 }
 
-test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDate or an approaching grant deadline, both strictly YYYY-MM-DD", async () => {
+test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDate, an approaching grant deadline, and an overdue unpaid invoice, all strictly YYYY-MM-DD", async () => {
   const db = fakeDb([{ rows: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "A",
-    overdue_tasks: [{ title: "File taxes", dueDate: "2026-01-01" }], approaching_grants: [] }] }]);
+    overdue_tasks: [{ title: "File taxes", dueDate: "2026-01-01" }], approaching_grants: [], overdue_invoices: [] }] }]);
   const repo = new RecordRepository(db);
   const result = await repo.listBusinessWorkspacesWithDatedDeadlines({ limit: 10 });
   assert.equal(result.length, 1);
@@ -24,16 +24,26 @@ test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDat
   assert.match(sql, /between current_date and current_date \+ 7/);
   assert.match(sql, /not in \('done','complete'\)/);
   assert.match(sql, /not in \('awarded','declined'\)/);
+  assert.match(sql, /!= 'paid'/);
+  assert.match(sql, /invoices/);
   assert.deepEqual(db.calls[0].params, [10]);
 });
 
 function sweepFixture({ candidates = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
-  const created = { tasks: [], nudgeRecords: [] };
+  const created = { tasks: [], nudgeRecords: [], removed: [] };
+  let seq = 0;
   const runtime = {
     records: {
       listBusinessWorkspacesWithDatedDeadlines: async () => candidates,
-      list: async ({ tenantId, subjectId }) => recentNudgesBySubject[`${tenantId}:${subjectId}`] || [],
-      create: async item => { created.nudgeRecords.push(item); return { record_id: "rec_1" }; }
+      claimCooldown: async ({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
+        const last = (recentNudgesBySubject[`${tenantId}:${subjectId}`] || [])[0];
+        if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;
+        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, workspaceId, recordType, classification, data, provenance };
+        created.nudgeRecords.push(record);
+        return record;
+      },
+      attachTask: async () => {},
+      remove: async ({ recordId }) => { created.removed.push(recordId); return true; }
     },
     tasks: { countAutonomousCreatedSince: async ({ tenantId }) => autonomousCountsByTenant[tenantId] || 0 },
     engine: { create: engineCreate || (async input => { created.tasks.push(input); return { taskId: `tsk_${created.tasks.length}` }; }) }
@@ -75,6 +85,23 @@ test("situational-awareness.business-deadline-sweep names an approaching grant d
   assert.match(when, /File taxes/);
   assert.match(when, /Community Fund/);
   assert.match(when, /2026-09-25/);
+});
+
+test("situational-awareness.business-deadline-sweep names an overdue unpaid invoice, and never contacts the client who owes it", async () => {
+  const { runtime, created } = sweepFixture({
+    candidates: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "Grace Chapel",
+      overdue_tasks: [], approaching_grants: [],
+      overdue_invoices: [{ invoiceNumber: "INV-1001", clientName: "Kamau Traders", dueDate: "2026-08-01" }] }]
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.business-deadline-sweep"]({ job: { payload: {} } });
+  assert.equal(result.created, 1);
+  const when = created.tasks[0].steps[0].input.when;
+  assert.match(when, /INV-1001/);
+  assert.match(when, /Kamau Traders/);
+  assert.match(when, /2026-08-01/);
+  assert.equal(created.tasks[0].command.actorId, "u1", "the reminder is for the workspace owner, not the client owing the invoice");
+  assert.equal(created.tasks[0].steps.every(step => step.toolId !== "communications.send"), true);
 });
 
 test("situational-awareness.business-deadline-sweep enforces the per-tenant daily autonomous-task cap", async () => {

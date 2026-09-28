@@ -4585,8 +4585,25 @@ function isInvestorUser(user) {
   return String(user?.role || "").toLowerCase() === "investor";
 }
 
+// Found live (security audit): profileForUser's own outer gate was already
+// patched to route a guest session through this same redaction machinery
+// ("a self-service guest session ... would otherwise see every real
+// chronic-care/telehealth record ever created in this workspace,
+// unredacted"), but every single field-level redaction helper below still
+// gated purely on isInvestorUser(user) -- so for a guest, each helper's own
+// first check (`!isInvestorUser(user)`) was true and returned the record
+// COMPLETELY UNMODIFIED. The outer fix made the loop run for guests; it
+// never made the loop actually redact anything for them. Verified by
+// execution: a guest session's projected healthIntakes/missionTimeline
+// still contained a real, unredacted patient name and HIV status. Every
+// site that decides whether to redact PHI must use this shared check, not
+// isInvestorUser alone.
+function isRestrictedHealthViewer(user) {
+  return isInvestorUser(user) || user?.guest === true;
+}
+
 function projectHealthRecordForUser(record, user, key = "") {
-  if (!isInvestorUser(user) || !record || typeof record !== "object" || Array.isArray(record)) return record;
+  if (!isRestrictedHealthViewer(user) || !record || typeof record !== "object" || Array.isArray(record)) return record;
   const projected = {};
   for (const field of INVESTOR_HEALTH_RECORD_FIELDS) {
     if (record[field] !== undefined) projected[field] = record[field];
@@ -4606,7 +4623,7 @@ function projectHealthRecordForUser(record, user, key = "") {
 }
 
 function projectIntegrationEventForUser(event, user) {
-  if (!isInvestorUser(user) || !event || typeof event !== "object") return event;
+  if (!isRestrictedHealthViewer(user) || !event || typeof event !== "object") return event;
   const providerId = String(event.providerId || "");
   const moduleName = String(event.module || "");
   if (moduleName !== "Healthcare" && !providerId.startsWith("health-")) return event;
@@ -4617,13 +4634,13 @@ function projectIntegrationEventForUser(event, user) {
     action: event.action,
     status: event.status,
     createdAt: event.createdAt,
-    detail: "Healthcare workflow evidence recorded. Patient-level details are redacted for investor view.",
+    detail: "Healthcare workflow evidence recorded. Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
 
 function projectNotificationForUser(notification, user) {
-  if (!isInvestorUser(user) || !notification || typeof notification !== "object") return notification;
+  if (!isRestrictedHealthViewer(user) || !notification || typeof notification !== "object") return notification;
   const moduleName = String(notification.module || "");
   if (moduleName !== "Healthcare") return notification;
   return {
@@ -4632,16 +4649,16 @@ function projectNotificationForUser(notification, user) {
     channel: notification.channel,
     status: notification.status,
     createdAt: notification.createdAt,
-    message: "Healthcare notification recorded. Patient-level details are redacted for investor view.",
+    message: "Healthcare notification recorded. Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
 
 function projectActivityForUser(activity, user) {
-  if (!isInvestorUser(user) || typeof activity !== "string") return activity;
+  if (!isRestrictedHealthViewer(user) || typeof activity !== "string") return activity;
   if (!/health|patient|telehealth|clinic|doctor|vitals|symptom|care|intake|caregiver|pharmacy|medicine/i.test(activity)) return activity;
   const timestamp = activity.match(/^\S+/)?.[0];
-  return `${timestamp || new Date().toISOString()} Healthcare activity recorded. Patient-level details are redacted for investor view.`;
+  return `${timestamp || new Date().toISOString()} Healthcare activity recorded. Patient-level details are redacted for this restricted view.`;
 }
 
 // communicationThreads/communicationMessages are shared across every module
@@ -4653,7 +4670,7 @@ function projectActivityForUser(activity, user) {
 // an Investor just because it happened to travel through the messaging
 // system instead of a health-record array.
 function projectCommunicationThreadForUser(thread, user) {
-  if (!isInvestorUser(user) || !thread || typeof thread !== "object") return thread;
+  if (!isRestrictedHealthViewer(user) || !thread || typeof thread !== "object") return thread;
   if (String(thread.module || "") !== "Healthcare") return thread;
   return {
     id: thread.id,
@@ -4662,10 +4679,10 @@ function projectCommunicationThreadForUser(thread, user) {
     status: thread.status,
     createdAt: thread.createdAt,
     updatedAt: thread.updatedAt,
-    subject: "Healthcare communication recorded. Patient-level details are redacted for investor view.",
+    subject: "Healthcare communication recorded. Patient-level details are redacted for this restricted view.",
     participantName: "Redacted",
     requesterName: "Redacted",
-    lastMessage: "Redacted for investor view.",
+    lastMessage: "Redacted for this restricted view.",
     redacted: true
   };
 }
@@ -4679,11 +4696,11 @@ function projectCommunicationThreadForUser(thread, user) {
 const AGENT_MEMORY_TEXT_ARRAY_KEYS = ["longTermFacts", "preferences", "learnedPatterns", "safetyBoundaries"];
 
 function projectAgentMemoryItemForUser(item, user, textField = "text") {
-  if (!isInvestorUser(user) || !item || typeof item !== "object") return item;
+  if (!isRestrictedHealthViewer(user) || !item || typeof item !== "object") return item;
   if (String(item.module || "") !== "Healthcare") return item;
   return {
     ...item,
-    [textField]: "Healthcare memory recorded. Patient-level details are redacted for investor view.",
+    [textField]: "Healthcare memory recorded. Patient-level details are redacted for this restricted view.",
     normalized: "",
     redacted: true
   };
@@ -4700,20 +4717,20 @@ function projectAgentMemoryItemForUser(item, user, textField = "text") {
 const NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES = new Set(["health_patient_intake", "chronic_condition_record"]);
 
 function projectPersistentMemoryRecordForUser(record, user) {
-  if (!isInvestorUser(user) || !record || typeof record !== "object") return record;
+  if (!isRestrictedHealthViewer(user) || !record || typeof record !== "object") return record;
   if (!NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(record.type)) return record;
   return {
     ...record,
     title: "Healthcare memory record",
     name: "Healthcare memory record",
     payload: { redacted: true },
-    safetyNote: "Patient-level details are redacted for investor view.",
+    safetyNote: "Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
 
 function projectPersistentMemoryForUser(memoryState, user) {
-  if (!isInvestorUser(user) || !memoryState || typeof memoryState !== "object") return memoryState;
+  if (!isRestrictedHealthViewer(user) || !memoryState || typeof memoryState !== "object") return memoryState;
   const projected = { ...memoryState };
   const healthRecordIds = new Set((memoryState.records || []).filter(record => NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(record.type)).map(record => record.id));
   if (Array.isArray(memoryState.records)) {
@@ -4721,7 +4738,7 @@ function projectPersistentMemoryForUser(memoryState, user) {
   }
   if (Array.isArray(memoryState.receipts)) {
     projected.receipts = memoryState.receipts.map(receipt => healthRecordIds.has(receipt.relatedRecordId)
-      ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for investor view." }
+      ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for this restricted view." }
       : receipt);
   }
   // createRecord()/updateRecord() etc. return {state: this.snapshot()}, and
@@ -4735,7 +4752,7 @@ function projectPersistentMemoryForUser(memoryState, user) {
       activeRecords: (ctx.activeRecords || []).map(record => projectPersistentMemoryRecordForUser(record, user)),
       archivedRecords: (ctx.archivedRecords || []).map(record => projectPersistentMemoryRecordForUser(record, user)),
       receipts: (ctx.receipts || []).map(receipt => healthRecordIds.has(receipt.relatedRecordId)
-        ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for investor view." }
+        ? { ...receipt, result: "Healthcare memory record activity recorded. Redacted for this restricted view." }
         : receipt),
       signals: (ctx.signals || []).map(signal => NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
         ? { ...signal, title: "Healthcare memory record", missingData: [] }
@@ -4752,38 +4769,38 @@ function projectPersistentMemoryForUser(memoryState, user) {
 // activity log / provider queue derived from one, the same way every
 // other Healthcare-shaped array in this file is redacted.
 function projectAgenticTaskForUser(task, user) {
-  if (!isInvestorUser(user) || !task || typeof task !== "object" || task.type !== "medical_follow_up") return task;
+  if (!isRestrictedHealthViewer(user) || !task || typeof task !== "object" || task.type !== "medical_follow_up") return task;
   return {
     ...task,
     title: "Healthcare task recorded",
-    userGoal: "Patient-level details are redacted for investor view.",
+    userGoal: "Patient-level details are redacted for this restricted view.",
     chronicIntake: task.chronicIntake ? { redacted: true } : null,
     providerReport: task.providerReport ? { redacted: true } : null,
     readings: [],
     rtmNotes: [],
-    reminderRequest: task.reminderRequest ? { ...task.reminderRequest, purpose: "Redacted for investor view." } : task.reminderRequest,
-    history: (task.history || []).map(entry => ({ ...entry, summary: "Healthcare task activity recorded. Redacted for investor view." })),
+    reminderRequest: task.reminderRequest ? { ...task.reminderRequest, purpose: "Redacted for this restricted view." } : task.reminderRequest,
+    history: (task.history || []).map(entry => ({ ...entry, summary: "Healthcare task activity recorded. Redacted for this restricted view." })),
     redacted: true
   };
 }
 
 function projectAgenticTasksStateForUser(state, user) {
-  if (!isInvestorUser(user) || !state || typeof state !== "object") return state;
+  if (!isRestrictedHealthViewer(user) || !state || typeof state !== "object") return state;
   const redactedTaskIds = new Set((state.tasks || []).filter(task => task.type === "medical_follow_up").map(task => task.taskId));
   return {
     ...state,
     tasks: (state.tasks || []).map(task => projectAgenticTaskForUser(task, user)),
     providerQueue: (state.providerQueue || []).map(item => redactedTaskIds.has(item.taskId)
-      ? { ...item, visiblePurpose: "Healthcare provider request recorded. Redacted for investor view." }
+      ? { ...item, visiblePurpose: "Healthcare provider request recorded. Redacted for this restricted view." }
       : item),
     activity: (state.activity || []).map(event => redactedTaskIds.has(event.taskId)
-      ? { ...event, summary: "Healthcare task activity recorded. Redacted for investor view." }
+      ? { ...event, summary: "Healthcare task activity recorded. Redacted for this restricted view." }
       : event)
   };
 }
 
 function projectAgentMemoryForUser(agentMemory, user) {
-  if (!isInvestorUser(user) || !agentMemory || typeof agentMemory !== "object") return agentMemory;
+  if (!isRestrictedHealthViewer(user) || !agentMemory || typeof agentMemory !== "object") return agentMemory;
   const projected = { ...agentMemory };
   for (const key of AGENT_MEMORY_TEXT_ARRAY_KEYS) {
     if (Array.isArray(agentMemory[key])) projected[key] = agentMemory[key].map(item => projectAgentMemoryItemForUser(item, user));
@@ -4817,7 +4834,7 @@ function projectAgentMemoryForUser(agentMemory, user) {
 }
 
 function projectCommunicationMessageForUser(message, user, threadsById) {
-  if (!isInvestorUser(user) || !message || typeof message !== "object") return message;
+  if (!isRestrictedHealthViewer(user) || !message || typeof message !== "object") return message;
   const thread = threadsById?.get(message.threadId);
   if (String(message.module || thread?.module || "") !== "Healthcare") return message;
   return {
@@ -4831,7 +4848,7 @@ function projectCommunicationMessageForUser(message, user, threadsById) {
     createdAt: message.createdAt,
     senderName: "Redacted",
     recipientName: "Redacted",
-    text: "Healthcare message recorded. Patient-level details are redacted for investor view.",
+    text: "Healthcare message recorded. Patient-level details are redacted for this restricted view.",
     redacted: true
   };
 }
@@ -4844,7 +4861,7 @@ function profileForUser(profile, user) {
   // a full Standard User and would see every real chronic-care/telehealth
   // record ever created in this workspace, unredacted. Route guests
   // through the same projection as investors rather than skipping it.
-  if (!profile || !(isInvestorUser(user) || user?.guest === true)) return profile;
+  if (!profile || !isRestrictedHealthViewer(user)) return profile;
   const projected = { ...profile };
   for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
     if (Array.isArray(profile[key])) projected[key] = profile[key].map(record => projectHealthRecordForUser(record, user, key));
@@ -4879,8 +4896,8 @@ function profileForUser(profile, user) {
     projected.nexusPersistentMemory = projectPersistentMemoryForUser(profile.nexusPersistentMemory, user);
   }
   if (Array.isArray(profile.nexusRuntimeActivity)) {
-    projected.nexusRuntimeActivity = profile.nexusRuntimeActivity.map(event => isInvestorUser(user) && event.domain === "medical"
-      ? { ...event, userGoal: "Redacted for investor view.", safeUserFacingSummary: "Redacted for investor view." }
+    projected.nexusRuntimeActivity = profile.nexusRuntimeActivity.map(event => isRestrictedHealthViewer(user) && event.domain === "medical"
+      ? { ...event, userGoal: "Redacted for this restricted view.", safeUserFacingSummary: "Redacted for this restricted view." }
       : event);
   }
   if (Array.isArray(profile.nexusAgenticTasks) || Array.isArray(profile.nexusProviderQueue) || Array.isArray(profile.nexusAgenticBrainActivity)) {
@@ -4904,7 +4921,7 @@ function profileForUser(profile, user) {
     };
   }
   if (typeof profile.aiActivity === "string" && /health|patient|telehealth|clinic|doctor|vitals|symptom|care/i.test(profile.aiActivity)) {
-    projected.aiActivity = "Healthcare activity recorded. Patient-level details are redacted for investor view.";
+    projected.aiActivity = "Healthcare activity recorded. Patient-level details are redacted for this restricted view.";
   }
   return projected;
 }
@@ -5328,12 +5345,12 @@ function missionTimelineModel(db, user = null) {
   // projectNotificationForUser elsewhere in this file): a Healthcare-module
   // timeline entry must never carry a real patient reference, need summary,
   // or participant name into an Investor's view.
-  const redact = isInvestorUser(user);
+  const redact = isRestrictedHealthViewer(user);
   const add = (module, title, detail, status, createdAt, evidence = "") => items.push({
     id: crypto.randomUUID(),
     module,
     title: redact && module === "Healthcare" ? "Healthcare workflow evidence recorded" : title,
-    detail: redact && module === "Healthcare" ? "Patient-level details are redacted for investor view." : detail,
+    detail: redact && module === "Healthcare" ? "Patient-level details are redacted for this restricted view." : detail,
     status,
     evidence: redact && module === "Healthcare" ? "" : evidence,
     createdAt: createdAt || new Date().toISOString()
@@ -10110,8 +10127,16 @@ function logisticsPointForOrder(route, order) {
 function formatDurationHuman(totalSeconds) {
   const seconds = Number(totalSeconds);
   if (!Number.isFinite(seconds) || seconds <= 0) return "";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.round((seconds % 3600) / 60);
+  // Found live: hours and minutes used to be computed independently
+  // (floor(seconds/3600) and round((seconds%3600)/60)) -- rounding the
+  // minutes remainder up to 60 (e.g. 3599 seconds, 59m59s) never carried
+  // into the hour, printing "60m" instead of "1h", or "1h 60m" instead of
+  // "2h" for a 1h59m59s route. Rounding the TOTAL minutes first, then
+  // splitting that into hours/minutes, makes a 60-minute rollover always
+  // land in the hour it belongs to.
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (hours && minutes) return `${hours}h ${minutes}m`;
   if (hours) return `${hours}h`;
   return `${minutes}m`;
@@ -10269,7 +10294,10 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       stageIndex: 0,
       trackingNumber: `AN-TRK-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
       buyerInterest: product?.buyerInterest || 70,
-      total: product ? Number(product.price || 0) * 20 : Number(body.amount || 1200),
+      // Found live (money-logic audit): this always assumed exactly 20
+      // units regardless of body.quantity ("5 bags", "10kg", etc.) --
+      // extracts the leading real number instead of hardcoding 20.
+      total: product ? Number(product.price || 0) * (Number.parseFloat(String(body.quantity || "")) || 20) : Number(body.amount || 1200),
       timeline: [{ label: "Shipping workflow opened", checkpoint: route.checkpoints?.[0] || db.profile.activeCheckpoint, createdAt: new Date().toISOString() }],
       createdAt: new Date().toISOString()
     };
@@ -10295,6 +10323,20 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     settlement: "settlement prepared"
   };
   const trackingResult = await refreshOrderLogisticsTracking(db, order, user, `logistics.${type}`, { pickupLocation, deliveryLocation });
+  // Found live: "delivery-confirm" unconditionally set order.stage to
+  // "Delivered" regardless of what stage the order was actually at -- a
+  // brand-new order (stageIndex 0/1) could jump straight to "Delivered"
+  // with zero real "In transit"/"Quality check" progress, even though this
+  // very record's own "proof" field says a delivery photo/signature/
+  // receiver confirmation is required. That fabricated "Delivered" status
+  // then satisfies the already-fixed settlement gate (which only checks
+  // stage === "Delivered"), letting payment release fire right behind it.
+  // Requiring the order to have already reached "Quality check" (via the
+  // real, incremental /api/trade/advance stageIndex -- the same field that
+  // gate trusts) closes this without inventing a second, conflicting
+  // notion of progress.
+  const ORDER_STAGES = ["Order created", "Packed", "In transit", "Quality check", "Delivered"];
+  const deliveryReadyForConfirmation = type !== "delivery-confirm" || Number(order.stageIndex || 0) >= ORDER_STAGES.indexOf("Quality check");
   const record = {
     id: crypto.randomUUID(),
     logisticsNumber: `AN-SHIP-${String(db.profile.tradeLogisticsRecords.length + 1).padStart(4, "0")}`,
@@ -10314,7 +10356,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     routeId: route.id,
     routeName: route.name,
     checkpoint: order.checkpoint,
-    status: statusMap[type] || "logistics recorded",
+    status: type === "delivery-confirm" && !deliveryReadyForConfirmation ? "delivery confirmation refused: order has not reached Quality check yet" : (statusMap[type] || "logistics recorded"),
     amount,
     currency,
     eta: String(body.eta || trackingResult.tracking?.eta || "route conditions pending"),
@@ -10323,7 +10365,8 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     providerDelivery: trackingResult.delivery,
     createdAt: new Date().toISOString()
   };
-  order.stage = type === "delivery-confirm" ? "Delivered" : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  order.stage = type === "delivery-confirm" ? (deliveryReadyForConfirmation ? "Delivered" : order.stage || "Shipping planned") : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  if (type === "delivery-confirm" && deliveryReadyForConfirmation) order.stageIndex = ORDER_STAGES.length - 1;
   order.checkpoint = pickupLocation;
   order.timeline.unshift({ label: record.status, checkpoint: pickupLocation, createdAt: record.createdAt });
   db.profile.activeCheckpoint = pickupLocation;
@@ -12562,6 +12605,12 @@ function runWorkforceActionByAgent(db, user, type) {
     return "Assigned a mentor and created a readiness coaching note.";
   }
   if (type === "shift") {
+    // Found live (drone/workforce audit): same unbounded-replay gap as the
+    // REST /api/workforce/action "shift" handler -- refuse a second shift
+    // while one is already scheduled and hasn't started yet.
+    if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+      return "A shift is already scheduled. Wait until it starts before scheduling another.";
+    }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
     const shift = {
       id: crypto.randomUUID(),
@@ -16389,7 +16438,12 @@ async function executeAgentTool(db, user, step) {
       stageIndex: 1,
       checkpoint: db.profile.activeCheckpoint,
       buyerInterest: product.buyerInterest || 70,
-      amount: Number(product.price || 100) * 10,
+      // Found live (money-logic audit): this set "amount", but every other
+      // order-creation path (and the dashboard's own tradeValue aggregator,
+      // server.js's `orders.reduce((sum, order) => sum + Number(order.total
+      // || 0), 0)`) uses "total" -- an agent-created order's value was
+      // silently excluded from the dashboard's trade-value total entirely.
+      total: Number(product.price || 100) * 10,
       timeline: [{ label: "Agent market review", checkpoint: db.profile.activeCheckpoint, createdAt: new Date().toISOString() }],
       createdAt: new Date().toISOString()
     };
@@ -18600,7 +18654,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_provider_readiness", "Inspect Nexus provider, credential, connector, missing-env, and blocked-state information without exposing secrets.", "read-only-provider-status"),
     tool("nexus_deep_research", "Run multi-source Nexus research through the existing live knowledge and evidence pipeline. Returns citations or a truthful missing-provider state; never fabricates sources.", "read-only-source"),
     tool("nexus_file_document_analysis", "Analyze uploaded or referenced files, PDFs, Word documents, spreadsheets, presentations, and structured documents when an uploaded-file provider or local document store is available.", "document-analysis"),
-    tool("nexus_data_code_analysis", "Perform controlled calculations, structured-data reasoning, table checks, and code/data analysis using server-side deterministic logic or a configured execution provider.", "controlled-analysis"),
+    tool("nexus_data_code_analysis", "Perform arithmetic calculations and simple number extraction/summary (count, min, max, sum, average) from plain text using server-side deterministic logic. Does not parse tables, analyze or execute code, or use any execution provider.", "controlled-analysis"),
     tool("nexus_visual_analysis", "Analyze user-authorized images, document photos, crop photos, equipment photos, or camera inputs only when a configured visual provider and explicit user-supplied media are present.", "visual-analysis"),
     tool("nexus_memory", "Inspect, create, correct, export, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls.", "privacy-memory"),
     tool("nexus_automation_reminder", "Create, inspect, cancel, or prepare one-time reminders and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated. Does not support recurring/repeating schedules -- only a single one-time reminder can be set.", "confirmation-gated-automation"),
@@ -19724,7 +19778,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       waypoints: routeArgs.waypoints,
       confirmed: args.confirmed
     }, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, common, routeResult);
+    // Found live: the real computed distance/duration lives only in
+    // body.data.distanceMeters/durationSeconds -- the generic fallback
+    // response is a fixed sentence naming the data SOURCE ("computed using
+    // public OpenStreetMap/Nominatim plus OSRM") but never the actual
+    // numbers, even though a real route was genuinely calculated. Mirrors
+    // the identical, already-fixed pattern for nexus_file_document_analysis/
+    // nexus_visual_analysis.
+    const routeData = routeResult?.body?.data || {};
+    const routeResponseOverride = Number.isFinite(routeData.distanceMeters)
+      ? `${routeResult.body.message} From ${routeData.originResolved || routeArgs.origin} to ${routeData.destinationResolved || routeArgs.destination}: ${(routeData.distanceMeters / 1000).toFixed(1)} km, about ${Math.round((routeData.durationSeconds || 0) / 60)} minute(s).`
+      : "";
+    return nexusOpenAiNativeProviderToolResult(db, common, routeResult, routeResponseOverride ? { responseOverride: routeResponseOverride } : {});
   }
   if (toolName === "nexus_live_knowledge") {
     const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
@@ -19750,10 +19815,21 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   if (toolName === "nexus_provider_readiness") {
     const production = nexusProductionPublicStatus(process.env);
     const openAiNative = nexusOpenAiNativeStatus(process.env);
+    // Found live: this response was always the same fixed sentence, even
+    // though providerLanes already computes real, specific, per-provider
+    // readiness data -- a consumer that only reads the flattened `response`
+    // text (typed chat, most non-realtime callers) never saw which
+    // providers were actually configured, only that a check happened.
+    const lanes = Object.entries(production.providerLanes || {});
+    const configuredLanes = lanes.filter(([, lane]) => lane.configured).map(([name]) => name);
+    const unconfiguredLanes = lanes.filter(([, lane]) => !lane.configured).map(([name]) => name);
+    const readinessSummary = lanes.length
+      ? `${configuredLanes.length} of ${lanes.length} provider lane(s) are configured${configuredLanes.length ? ` (${configuredLanes.join(", ")})` : ""}.${unconfiguredLanes.length ? ` Not configured: ${unconfiguredLanes.join(", ")}.` : ""}`
+      : "No provider lanes are registered.";
     return {
       ...common,
       status: "completed",
-      response: "Nexus checked provider readiness without exposing secrets. Review the missing environment variable names before enabling live provider execution.",
+      response: `Nexus checked provider readiness without exposing secrets. ${readinessSummary} Review the missing environment variable names before enabling live provider execution.`,
       providerReadiness: production.providerLanes || {},
       openAiNative,
       missingEnvVars: Array.from(new Set([...(openAiNative.missingEnv || []), ...(production.missingEnv || [])])).slice(0, 20)
@@ -19811,9 +19887,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_data_code_analysis") {
     const analysis = nexusOpenAiNativeAnalyzeStructuredText(args.query || command);
+    // Found live: this tool's own success message and receipt used to
+    // describe two capabilities that don't exist anywhere in this codebase
+    // -- "a configured execution provider" (no such provider, config flag,
+    // or conditional branch exists at all) and "a configured dataset
+    // reference" (this phrase appeared nowhere else). The actual
+    // implementation only ever does single-operator arithmetic and a flat
+    // regex extraction of numbers from raw text -- no table/CSV parsing, no
+    // code analysis or execution of any kind.
     const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "analysis-completed", [
-      "Ran deterministic local text, number, and arithmetic analysis.",
-      "Kept code execution disabled unless a configured execution provider is present."
+      "Ran deterministic local text, number, and single-operator arithmetic analysis.",
+      "Did not parse tables, analyze code, or execute anything -- this tool has no code-execution capability."
     ], [
       "Nexus did not run arbitrary code, download packages, access files, or call external systems."
     ]);
@@ -19827,7 +19911,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           ? "Division by zero is undefined -- there is no numeric answer to that calculation."
           : analysis.numericCount
             ? `I found ${analysis.numericCount} number(s). Sum: ${analysis.sum}; average: ${analysis.average}. I did not run arbitrary code.`
-            : "I can help reason through the calculation or data, but I need numbers, a table, or a configured dataset reference.",
+            : "I can help with a calculation or a plain number summary, but I did not find any numbers in that. I cannot parse tables or analyze code -- tell me the calculation, or list the numbers directly.",
       analysis,
       receipt,
       evidenceReceipt: receipt,
@@ -19951,13 +20035,35 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "source-backed-videos", [`Retrieved ${pendingVideos.length} real video result(s); no matching image results were found.`], ["Nexus did not analyze an unseen image or video, open the camera, or claim ownership of source media."]);
         return { ...common, capability: "video-search", status: "source-backed-videos", response: `I could not find image results for ${imageQuery}, but I found ${pendingVideos.length} real video result(s).`, videos: pendingVideos, sources: pendingVideos.map(item => ({ title: item.title, url: item.sourceUrl })), providerAttempted: true, providerSucceeded: true, executionAttempted: true, executionVerified: true, receipt, evidenceReceipt: receipt };
       }
+      // Found live: when both real search providers (Wikimedia Commons,
+      // Openverse) and the pending-videos fallback all come up empty, this
+      // request unconditionally fell through into the vision.analyze
+      // branch below -- but that branch answers a completely different
+      // question ("analyze THIS image I gave you"), not "search for
+      // images." Since a search request never carries args.imageUrl/url,
+      // the result was the non-sequitur "A user-supplied image URL is
+      // required. Nexus will not open the camera." for a request that had
+      // nothing to do with a camera or an upload.
+      const searchReceipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "no-image-results",
+        [`Searched Wikimedia Commons and Openverse for "${imageQuery}" and found no usable results.`],
+        ["Nexus did not fabricate an image result or open the camera."]);
+      return { ...common, capability: "visual-search", status: "no-image-results", response: `I searched for images of ${imageQuery} but did not find any usable results.`, providerAttempted: true, providerSucceeded: false, executionAttempted: true, executionVerified: false, receipt: searchReceipt, evidenceReceipt: searchReceipt };
     }
     const visionResult = await nexusRealProviders.vision.analyze({
       imageUrl: args.imageUrl || args.url,
       prompt: args.prompt || args.query || command,
       command
     }, process.env);
+    // Found live: the real vision-model description lives only in
+    // body.data.analysis -- nexusOpenAiNativeProviderToolResult's generic
+    // fallback (body.message) is just the fixed sentence "Vision provider
+    // analyzed the user-supplied image with safety limits." Without this,
+    // only that generic sentence would ever reach the user, never the
+    // actual description a real vision-model call produced. Mirrors the
+    // identical fix already applied to nexus_file_document_analysis above.
+    const visionAnalysis = visionResult?.body?.data?.analysis;
     return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "visual-analysis" }, visionResult, {
+      ...(visionAnalysis ? { responseOverride: `${visionResult.body.message} ${visionAnalysis}` } : {}),
       didNot: ["Nexus did not open the camera, capture an image, diagnose health conditions, prescribe treatment, or prescribe pesticide/fertilizer."]
     });
   }
@@ -20278,7 +20384,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       start: args.start || args.startTime || args.when,
       end: args.end || args.endTime,
       description: args.description,
-      confirmed: args.confirmed
+      confirmed: args.confirmed,
+      // Found live: the model's start/end are bare, offset-less timestamps
+      // ("2026-09-26T15:00:00") with no way to know whose "3pm" that is --
+      // threaded through from the caller's own request (see this function's
+      // call sites) so calendarProvider.createEvent can tell the real
+      // provider which zone that clock time is in, instead of letting the
+      // provider silently default to UTC and land the event hours off.
+      timeZone: context.timeZone || args.timeZone
     };
     const calendarResult = await withActionLifecycle(db, {
       provider: "calendar", action: "calendar.event.create", body: calendarBody, actorId: user?.id || realUserEmail || "",
@@ -20537,7 +20650,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // set of real connector words (is/was/of/reads/at/today/right now/etc,
     // chainable so "temp today is 101" still works) -- never an arbitrary
     // noun like "file"/"item"/"tank"/"sensor model".
-    const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
+    // Found live (health-data audit): "yesterday" wasn't a recognized
+    // connector word -- "my blood pressure yesterday was 160/98" failed to
+    // match at all, so a real reading was never saved rather than merely
+    // mistimed. ("Yesterday" after the value already matched via the
+    // generic \b(?:over|\/)\b tail, but was discarded entirely rather than
+    // resolved to a real date -- a separate, deeper gap this fix does not
+    // resolve, since no relative-date resolver exists in this codebase.)
+    const VITAL_VALUE_CONNECTOR = "(?:(?:today|yesterday|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
     // Confirmed live: unlike every other vital below, this pattern had no
     // trigger-word gate at all -- ANY two 2-3 digit numbers joined by "/" or
     // "over" matched, so "Split the harvest 60/40 with my partner" or "a
@@ -21126,7 +21246,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       url: args.url,
       confirmed: args.confirmed
     }, process.env);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "browser-computer-actions" }, browserResult);
+    // Found live: a real connector's concrete outcome lives only in
+    // body.data.outcome -- the generic fallback response is a fixed
+    // confirmation sentence that never says what actually happened.
+    const browserOutcome = browserResult?.body?.data?.outcome;
+    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "browser-computer-actions" }, browserResult,
+      browserOutcome ? { responseOverride: `${browserResult.body.message} Outcome: ${browserOutcome}` } : {});
   }
   if (toolName === "nexus_document_export") {
     const extractedExport = nexusOpenAiNativeExtractExportArgs(command, args);
@@ -21278,7 +21403,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
           ...call.arguments,
           command: call.arguments.command || command,
           language: call.arguments.language || language
-        }, { correlationId, command, language, outputMode: body.outputMode || "" });
+        }, { correlationId, command, language, outputMode: body.outputMode || "", timeZone: body.timeZone });
         toolResults.push({ call, result });
       }
       const toolOutputs = toolResults.map(item => ({
@@ -24736,7 +24861,8 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
     retrievedAt: live.checkedAt,
     limitation: live.ok
       ? "Source-backed current knowledge still requires local context and review before action."
-      : live.reason || "Live source retrieval is not configured or did not return citable sources."
+      : live.reason || "Live source retrieval is not configured or did not return citable sources.",
+    ownerId: user?.id || null
   });
   db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
   db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -29663,7 +29789,8 @@ async function utilityWeatherAnswer(db, text, options = {}) {
       route: "/api/agent/command",
       geography: locationText,
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
-      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions.",
+      ownerId: options.user?.id || null
     });
     db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -30344,7 +30471,8 @@ async function genesisWeatherResponse(db, user, text = "", options = {}) {
       route: "/api/agent/command",
       geography: locationText,
       retrievedAt: sourceResult.retrievedAt || new Date().toISOString(),
-      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions."
+      limitation: "Weather is source-backed for the requested location, but it does not authorize travel, dispatch, or clinical decisions.",
+      ownerId: user?.id || null
     });
     db.nexusInstitutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts || [];
     db.nexusInstitutionalEvidenceReceipts.unshift(institutionalEvidenceReceipt);
@@ -30768,7 +30896,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   if (!kind) return null;
   if (kind === "music") return await musicProviderCommandResponse(db, user, text, options);
   const preProviderModel = kind === "pre-provider-readiness" ? nexusPreProviderHardeningModel(db, user, text) : null;
-  const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, options) : null;
+  const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, { ...options, user }) : null;
   const response = kind === "time"
     ? utilityTimeAnswer(options)
     : kind === "weather"
@@ -35649,6 +35777,14 @@ function createInstitutionalEvidenceReceipt(payload = {}) {
       payload.limitation || "Evidence receipts do not authorize provider contact, payment, dispatch, diagnosis, prescribing, legal advice, or other high-risk execution.",
       citations.length ? "Citations are source records, not a guarantee that every downstream decision is safe or locally valid." : "No fake citation was generated."
     ],
+    // Found live (cross-user-IDOR audit): unlike its sibling collections
+    // (nexusKnowledgeQueries/nexusKnowledgeSavedResults/
+    // nexusKnowledgeReviewSummaries), these receipts carry the caller's own
+    // raw question (up to 600 chars, potentially a sensitive free-text
+    // health question) and the AI's answer, but had no owner tag at all --
+    // /api/nexus/knowledge/history exposed every user's receipts to every
+    // other signed-in user.
+    ownerId: payload.ownerId ?? null,
     noSecretValuesReturned: true,
     noExecutionAuthorized: true,
     noProviderContactAuthorized: true,
@@ -35980,7 +36116,8 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
     route: "/api/nexus/knowledge/query",
     jurisdiction: classification?.trustedSourceCategory?.jurisdiction || "not specified",
     retrievedAt: result.retrievalCheckedAt || result.retrievedAt || new Date().toISOString(),
-    limitation: Array.isArray(result.limitations) ? result.limitations[0] : result.safetyNote
+    limitation: Array.isArray(result.limitations) ? result.limitations[0] : result.safetyNote,
+    ownerId: user?.id || null
   });
   result.institutionalEvidenceReceipt = institutionalEvidenceReceipt;
   result.evidenceReceiptId = institutionalEvidenceReceipt.receiptId;
@@ -39814,10 +39951,26 @@ function assignFieldAgentDispatch(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const requestedAgentId = sanitizePilotText(body.agentId || "", 120);
   const region = sanitizePilotText(body.region || "", 80);
+  const taskType = sanitizePilotText(body.taskType || "field-visit", 80);
+  // Found live (drone/workforce audit): every seeded field agent carries a
+  // real `skills` list, but auto-matching never consulted it -- a
+  // drone-support task in a region whose only available agent has no
+  // drone-support skill was still matched and dispatched, then recorded (and
+  // audited) as staffed by a "qualified agent". Skill now outranks region --
+  // an unqualified local agent is worse than a qualified one from elsewhere,
+  // since the former produces a task falsely recorded as properly staffed --
+  // and region is still used first to break ties among equally-skilled
+  // candidates, then as a last-resort fallback so this never fails to
+  // dispatch someone the way a hard skill requirement would.
+  const available = agent => agent.status === "available";
+  const inRegion = agent => !region || agent.region.toLowerCase() === region.toLowerCase();
+  const hasSkill = agent => Array.isArray(agent.skills) && agent.skills.includes(taskType);
   const candidate = requestedAgentId
-    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && agent.status === "available")
-    : db.nexusFieldAgents.find(agent => agent.status === "available" && (!region || agent.region.toLowerCase() === region.toLowerCase()))
-      || db.nexusFieldAgents.find(agent => agent.status === "available");
+    ? db.nexusFieldAgents.find(agent => agent.id === requestedAgentId && available(agent))
+    : db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && hasSkill(agent))
+      || db.nexusFieldAgents.find(agent => available(agent) && inRegion(agent))
+      || db.nexusFieldAgents.find(agent => available(agent));
   if (!candidate) {
     return { ok: false, error: requestedAgentId ? "requested_agent_unavailable" : "no_available_field_agent" };
   }
@@ -41995,7 +42148,11 @@ function parseNexusChronicPredictiveApiReadings(command = "") {
   // season") fabricated a blood-pressure reading into this predictive
   // model's state. Require the trigger word, matching the same fix applied
   // to the nexus_health_preparation vitals gate.
-  const bpPattern = /\b(?:blood\s*pressure|bp)\s*(?:is|was|=|:)?\s*(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/gi;
+  // Found live (health-data audit): "yesterday"/"today"/"this morning" were
+  // not recognized connectors here -- "My blood pressure yesterday was
+  // 160/98" failed to match at all, so a real reading was silently never
+  // captured into this predictive model's state.
+  const bpPattern = /\b(?:blood\s*pressure|bp)\s*(?:yesterday|today|this morning|is|was|=|:)?\s*(?:is|was|=|:)?\s*(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/gi;
   let bpMatch;
   while ((bpMatch = bpPattern.exec(text)) !== null) {
     const systolic = Number(bpMatch[1]);
@@ -42028,6 +42185,32 @@ function parseNexusChronicPredictiveApiReadings(command = "") {
   if (symptoms.length) readings.push({ id: `api-symptom-${Date.now()}`, type: "symptom", parsedValue: symptoms.join(", "), symptoms, context: "symptom escalation check", timestamp: now, source: "natural_command", localOnly: true });
   if (!readings.length) readings.push({ id: `api-query-${Date.now()}`, type: "query", parsedValue: "predictive modeler query", context: "modeler view request", timestamp: now, source: "natural_command", localOnly: true });
   return readings;
+}
+
+// Found live (health-data audit): this "trajectory" field's name and API
+// shape imply real trend analysis, but the value only ever checked "do I
+// have >=2 readings" -- it never inspected the actual values, so a
+// monotonically worsening BP sequence (130/85 -> 145/92 -> 160/98) and the
+// exact reverse, improving sequence produced byte-for-byte identical
+// output. Compares the average of the earlier half of readings against the
+// later half (readings are pushed in chronological order, oldest first) to
+// report a real direction; `higherIsWorse` lets a signed value (e.g. weight
+// change, already signed +/- for gain/loss) invert the comparison.
+function computeReadingTrajectory(readingsList, valueFn, { higherIsWorse = true } = {}) {
+  if (readingsList.length < 2) return "unknown";
+  const values = readingsList.map(valueFn).filter(Number.isFinite);
+  if (values.length < 2) return "unknown";
+  const mid = Math.ceil(values.length / 2);
+  const earlier = values.slice(0, mid);
+  const later = values.slice(mid);
+  const avg = list => list.reduce((sum, value) => sum + value, 0) / list.length;
+  const earlierAvg = avg(earlier);
+  const laterAvg = later.length ? avg(later) : values[values.length - 1];
+  const delta = laterAvg - earlierAvg;
+  const threshold = Math.max(Math.abs(earlierAvg) * 0.02, 0.5);
+  if (Math.abs(delta) < threshold) return "stable";
+  const worsened = higherIsWorse ? delta > 0 : delta < 0;
+  return worsened ? "worsening" : "improving";
 }
 
 function buildNexusChronicPredictiveRiskSignal(condition, signalName, riskLevel, trajectory, explanation, contributingFactors, missingData) {
@@ -42072,22 +42255,28 @@ function evaluateNexusChronicPredictiveApiState(command = "", incomingState = {}
   const adherence = state.readings.adherence || [];
   if (!symptoms.length) missing.add("Symptoms or absence of symptoms");
   if (!adherence.length) missing.add("Medication/adherence context");
+  const bpTrajectory = computeReadingTrajectory(bp, item => item.systolic + item.diastolic);
   if (bp.length) {
     const elevated = bp.filter(item => item.systolic >= 140 || item.diastolic >= 90);
-    signals.push(buildNexusChronicPredictiveRiskSignal("hypertension", "Hypertension predictive support signal", elevated.length >= 2 ? "high" : elevated.length ? "elevated" : "stable", bp.length >= 2 ? "variable" : "unknown", "Patient-reported BP readings were checked for repeated elevation and symptom context.", elevated.map(item => `Elevated BP: ${item.parsedValue}`), Array.from(missing)));
+    signals.push(buildNexusChronicPredictiveRiskSignal("hypertension", "Hypertension predictive support signal", elevated.length >= 2 ? "high" : elevated.length ? "elevated" : "stable", bpTrajectory, "Patient-reported BP readings were checked for repeated elevation and symptom context.", elevated.map(item => `Elevated BP: ${item.parsedValue}`), Array.from(missing)));
   }
+  const glucoseTrajectory = computeReadingTrajectory(glucose, item => item.glucose);
   if (glucose.length || labs.length) {
     if (!labs.length) missing.add("A1C");
     if (glucose.some(item => /context missing/i.test(item.context))) missing.add("Fasting/post-meal/random glucose context");
     const highGlucose = glucose.filter(item => item.glucose >= 180 || (/fasting/i.test(item.context) && item.glucose >= 126));
     const highA1c = labs.some(item => Number.parseFloat(item.parsedValue) >= 8);
-    signals.push(buildNexusChronicPredictiveRiskSignal("diabetes", "Diabetes predictive support signal", highGlucose.length >= 2 || highA1c ? "high" : highGlucose.length ? "elevated" : "watch", glucose.length >= 2 ? "variable" : "unknown", "Glucose/A1C readings were checked for pattern, context, and missing clinical data.", [...highGlucose.map(item => `High glucose: ${item.parsedValue}`), ...labs.map(item => `A1C: ${item.parsedValue}`)], Array.from(missing)));
+    signals.push(buildNexusChronicPredictiveRiskSignal("diabetes", "Diabetes predictive support signal", highGlucose.length >= 2 || highA1c ? "high" : highGlucose.length ? "elevated" : "watch", glucoseTrajectory, "Glucose/A1C readings were checked for pattern, context, and missing clinical data.", [...highGlucose.map(item => `High glucose: ${item.parsedValue}`), ...labs.map(item => `A1C: ${item.parsedValue}`)], Array.from(missing)));
   }
+  // weight readings are already signed (+gain/-loss, see the "decreased"
+  // check where they're parsed), so a rising signed value is worsening for
+  // cardiometabolic risk -- higherIsWorse stays true (the default).
+  const weightTrajectory = computeReadingTrajectory(weight, item => item.weight);
   if (weight.length || (bp.length && glucose.length)) {
     missing.add("Height/BMI context");
     missing.add("Diet/activity/sleep context");
     const rapidGain = weight.some(item => item.weight >= 5);
-    signals.push(buildNexusChronicPredictiveRiskSignal("cardiometabolic", "Obesity/cardiometabolic predictive support signal", rapidGain && bp.length && glucose.length ? "high" : rapidGain || (bp.length && glucose.length) ? "elevated" : "watch", "variable", "Weight trend and cardiometabolic overlap were checked without diagnosing obesity or prescribing treatment.", [rapidGain ? "Weight increased by 5+ pounds" : "", bp.length && glucose.length ? "BP/glucose overlap present" : ""].filter(Boolean), Array.from(missing)));
+    signals.push(buildNexusChronicPredictiveRiskSignal("cardiometabolic", "Obesity/cardiometabolic predictive support signal", rapidGain && bp.length && glucose.length ? "high" : rapidGain || (bp.length && glucose.length) ? "elevated" : "watch", weight.length ? weightTrajectory : "unknown", "Weight trend and cardiometabolic overlap were checked without diagnosing obesity or prescribing treatment.", [rapidGain ? "Weight increased by 5+ pounds" : "", bp.length && glucose.length ? "BP/glucose overlap present" : ""].filter(Boolean), Array.from(missing)));
   }
   if (adherence.length) signals.push(buildNexusChronicPredictiveRiskSignal("adherence", "Medication adherence predictive support signal", adherence.length >= 1 ? "high" : "watch", "variable", "Missed medication reports were flagged for clinician/pharmacist review.", adherence.map(item => item.parsedValue), ["Medication name", ...Array.from(missing)]));
   if (symptoms.some(item => /chest pain|shortness of breath|fainting|stroke/i.test(item.parsedValue))) signals.unshift(buildNexusChronicPredictiveRiskSignal("symptoms", "Symptom escalation signal", "urgent_review", "worsening", "Potentially serious symptoms were reported. Nexus does not diagnose or dispatch; local urgent/emergency care guidance should be followed.", symptoms.map(item => `Reported symptom: ${item.parsedValue}`), ["Onset time", "Current severity", "Emergency contact/care access"]));
@@ -42096,7 +42285,7 @@ function evaluateNexusChronicPredictiveApiState(command = "", incomingState = {}
   state.conditionFocus = signals[0]?.condition || "insufficient_data";
   state.missingData = [...new Set(signals.flatMap(signal => signal.missingData || []))];
   state.confidence = { label: state.missingData.length > 4 ? "low" : "moderate", dataQuality: state.missingData.length ? "partial patient-reported context" : "usable patient-reported context" };
-  state.trends = { hypertension: { trajectory: bp.length >= 2 ? "variable" : "unknown" }, diabetes: { trajectory: glucose.length >= 2 ? "variable" : "unknown" }, obesity: { trajectory: weight.length >= 2 ? "variable" : "unknown" }, careGaps: { missingCount: state.missingData.length } };
+  state.trends = { hypertension: { trajectory: bpTrajectory }, diabetes: { trajectory: glucoseTrajectory }, obesity: { trajectory: weight.length ? weightTrajectory : "unknown" }, careGaps: { missingCount: state.missingData.length } };
   state.scenarioSimulations = buildNexusChronicPredictiveApiScenarios(state);
   state.physicianChecklist = buildNexusChronicPredictiveApiChecklist(state);
   state.reasoningTrace = buildNexusChronicPredictiveApiReasoningTrace(state);
@@ -44544,6 +44733,14 @@ async function api(req, res, url) {
 
   const fieldDispatchStatusMatch = url.pathname.match(/^\/api\/field-agents\/dispatch\/([^/]+)\/status$/);
   if (fieldDispatchStatusMatch && req.method === "PATCH") {
+    // Found live (drone/workforce audit): unlike its GET/POST siblings on this
+    // same resource, this route had no `if (!user)` check at all. The
+    // ownership check below falls back to the literal string "Standard
+    // User" when there is no signed-in user -- which is exactly the seeded
+    // demo account's real display name -- so any unauthenticated caller
+    // could cancel (or otherwise change the status of) a dispatch that
+    // account had requested, with no cookie or login at all.
+    if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
     const body = await readBody(req);
     const dispatch = db.nexusFieldDispatches.find(item => item.id === fieldDispatchStatusMatch[1]);
     if (!dispatch) return send(res, 404, { ok: false, error: "dispatch_not_found" });
@@ -44807,6 +45004,14 @@ async function api(req, res, url) {
   // Real ownership check, not just an unguessable id -- mirrors serveExport's
   // own comment on this exact class of bug: "unguessable is not authorized."
   if (url.pathname === "/api/nexus/upload/file" && req.method === "GET") {
+    // Found live (security audit): only the upload POST route checked this
+    // flag -- if an operator disables NEXUS_FILE_UPLOAD_ENABLED after files
+    // were already uploaded (or toggles it at runtime), previously-uploaded
+    // files stayed fully downloadable by their owners. "Off" must mean off
+    // for existing data too, not just for new uploads.
+    if (!nexusFlagEnabled(process.env, "NEXUS_FILE_UPLOAD_ENABLED")) {
+      return send(res, 403, { ok: false, error: "File uploads are not enabled on this server yet.", noSecretValues: true });
+    }
     if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
     const fileId = String(url.searchParams.get("fileId") || "");
     const dir = nexusUploads.uploadDir(process.env);
@@ -44872,7 +45077,8 @@ async function api(req, res, url) {
       correlationId: body.correlationId,
       command: body.command || body.arguments?.command || "",
       language: body.language || body.arguments?.language || user.language || "en",
-      outputMode: body.outputMode || ""
+      outputMode: body.outputMode || "",
+      timeZone: body.timeZone || body.arguments?.timeZone
     }, user.email || null);
     await writeDb(db);
     return send(res, 200, result, {
@@ -44934,6 +45140,14 @@ async function api(req, res, url) {
     return send(res, 401, { error: "Sign in required" });
   }
 
+  // Found live (cross-user-IDOR audit): institutionalEvidenceReceipts carries
+  // the caller's own raw question (up to 600 chars -- potentially a
+  // sensitive free-text health question, per this route's own comment about
+  // its sibling collections) and the AI's answer, but had no owner tag and
+  // no per-owner filtering at all, unlike its siblings' already-flagged
+  // cross-user-IDOR fix on another branch (which explicitly excluded this
+  // collection). A real Admin still sees every receipt.
+  const ownReceiptsOnly = list => (canUse(user, "admin") ? list : list.filter(item => (item.ownerId ?? null) === (user?.id ?? null) && item.ownerId !== null));
   if (url.pathname === "/api/nexus/knowledge/history" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
     return send(res, 200, {
@@ -44941,7 +45155,7 @@ async function api(req, res, url) {
       queries: db.nexusKnowledgeQueries.slice(0, 50),
       savedResults: db.nexusKnowledgeSavedResults.slice(0, 50),
       reviewSummaries: db.nexusKnowledgeReviewSummaries.slice(0, 50),
-      institutionalEvidenceReceipts: db.nexusInstitutionalEvidenceReceipts.slice(0, 50)
+      institutionalEvidenceReceipts: ownReceiptsOnly(db.nexusInstitutionalEvidenceReceipts).slice(0, 50)
     });
   }
 
@@ -44954,7 +45168,7 @@ async function api(req, res, url) {
     const savedResults = db.nexusKnowledgeSavedResults.filter(item => item.queryId === id);
     const reviewSummaries = db.nexusKnowledgeReviewSummaries.filter(item => item.originalQuestion === query.questionSummary || item.queryId === id);
     const providerRequests = db.nexusProviderPathwayRequests.filter(item => item.userQuestion === query.questionSummary || item.knowledgeQueryId === id);
-    const institutionalEvidenceReceipts = db.nexusInstitutionalEvidenceReceipts.filter(item => item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary);
+    const institutionalEvidenceReceipts = ownReceiptsOnly(db.nexusInstitutionalEvidenceReceipts.filter(item => item.receiptId === query.evidenceReceiptId || item.question === query.questionSummary));
     return send(res, 200, {
       ok: true,
       query,
@@ -45959,7 +46173,7 @@ async function api(req, res, url) {
           ...predictiveContext,
           activeRecords: predictiveContext.activeRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
           archivedRecords: predictiveContext.archivedRecords.map(record => projectPersistentMemoryRecordForUser(record, user)),
-          signals: predictiveContext.signals.map(signal => isInvestorUser(user) && NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
+          signals: predictiveContext.signals.map(signal => isRestrictedHealthViewer(user) && NEXUS_PERSISTENT_MEMORY_HEALTH_TYPES.has(signal.type)
             ? { ...signal, title: "Healthcare memory record", missingData: [] }
             : signal)
         },
@@ -50150,6 +50364,16 @@ async function api(req, res, url) {
       addActivity(db.profile, "Mentor assigned for role readiness coaching.");
     } else if (body.type === "shift") {
       if (db.profile.interviews < 1) return send(res, 409, { error: "Schedule an interview before starting a shift" });
+      // Found live (drone/workforce audit): this action was fully
+      // unconditionally repeatable -- calling it in a loop stacked unlimited
+      // "scheduled" shifts onto essentially the same real-world time slot
+      // (all ~36 hours out) and credited db.profile.earnings every single
+      // time, with no overlap check and no cap. Refusing a second shift
+      // while one is already scheduled and hasn't started yet closes the
+      // unbounded-replay path without blocking the normal one-at-a-time flow.
+      if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+        return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
+      }
       const shift = {
         id: crypto.randomUUID(),
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
@@ -51825,7 +52049,13 @@ async function api(req, res, url) {
       stageIndex: 1,
       trackingNumber: `AN-TRK-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
       buyerInterest: product?.buyerInterest || 50,
-      total: product ? product.price * 20 : 1200,
+      // Found live (money-logic audit): this always assumed exactly 20
+      // units regardless of what was actually requested -- body.quantity
+      // was never read for the total, only for an unrelated display
+      // string default. Executed proof: a real 5-unit order at $30/unit
+      // (expected total $150) instead silently produced $600 (30*20).
+      quantity: Number.isFinite(Number(body.quantity)) && Number(body.quantity) > 0 ? Number(body.quantity) : 20,
+      total: product ? product.price * (Number.isFinite(Number(body.quantity)) && Number(body.quantity) > 0 ? Number(body.quantity) : 20) : 1200,
       timeline: [
         { label: "Order created", checkpoint, createdAt: new Date().toISOString() },
         { label: "Packed", checkpoint, createdAt: new Date().toISOString() }
@@ -51859,7 +52089,15 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade workflows" });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
-    const order = db.profile.orders[db.profile.orders.length - 1];
+    // Found live (money-logic audit): this ignored body.orderId entirely
+    // and always advanced the LAST order, unlike its sibling endpoints
+    // (/api/trade/tracking, createTradeLogisticsWorkflow) which both
+    // already respect an explicit orderId. With two open orders, a request
+    // explicitly targeting order-1 silently advanced order-2 instead,
+    // leaving order-1 unchanged with no indication of the mismatch.
+    const order = body.orderId
+      ? db.profile.orders.find(item => item.id === body.orderId)
+      : db.profile.orders[db.profile.orders.length - 1];
     if (!order) return send(res, 409, { error: "Create an order first" });
     const route = db.routes.find(item => item.id === order.routeId) || activeRoute();
     const stages = ["Order created", "Packed", "In transit", "Quality check", "Delivered"];
@@ -51933,15 +52171,33 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow wallet workflows" });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
+    const requestedAmount = Number(body.amount || 0);
+    // Found live (money-logic audit): Number("Infinity") is the finite-looking
+    // value Infinity, which is >= 0 (so it was accepted as a "credit") and is
+    // never < 0 no matter what it's added to, so the balance-floor check below
+    // silently let it through and permanently corrupted the stored wallet
+    // balance to Infinity (and it self-perpetuates, since Number(Infinity||0)
+    // stays Infinity on every later read, unlike NaN which resets to 0).
+    if (!Number.isFinite(requestedAmount)) return send(res, 400, { error: "Wallet amount must be a finite number." });
     const tx = {
       id: crypto.randomUUID(),
       provider: body.provider || "Wallet",
-      amount: Number(body.amount || 0),
-      type: Number(body.amount || 0) >= 0 ? "credit" : "debit",
+      amount: requestedAmount,
+      type: requestedAmount >= 0 ? "credit" : "debit",
       status: "posted",
       createdAt: new Date().toISOString()
     };
-    db.profile.wallet += tx.amount;
+    // Found live (money-logic audit): no balance floor existed anywhere in
+    // this codebase -- a single debit request could push the wallet
+    // arbitrarily negative with a plain 200 response, even though this
+    // represents real settled funds elsewhere in the UI ("M-Pesa credit,"
+    // "escrow release"). Executed proof: starting balance $50, one debit of
+    // -$5000 was accepted, yielding wallet: -4950.
+    const currentWallet = Number(db.profile.wallet || 0);
+    if (currentWallet + tx.amount < 0) {
+      return send(res, 409, { error: `Insufficient wallet balance: $${currentWallet.toFixed(2)} available, $${Math.abs(tx.amount).toFixed(2)} requested.` });
+    }
+    db.profile.wallet = currentWallet + tx.amount;
     db.profile.walletTransactions.unshift(tx);
     addTradeEvent(db.profile, { type: "wallet.transaction", label: `${tx.provider} ${tx.type} posted for $${Math.abs(tx.amount)}` });
     logIntegration(db, {
@@ -52069,6 +52325,14 @@ async function api(req, res, url) {
     const type = body.type || "quote";
     const actions = {
       quote: () => {
+        // Found live (money-logic audit): Number("Infinity") is a truthy,
+        // finite-looking value that survives `body.price || ...` untouched,
+        // letting a quote (and, once released, a wallet credit) be created
+        // for an infinite amount.
+        const requestedPrice = Number(body.price);
+        if (body.price !== undefined && !Number.isFinite(requestedPrice)) {
+          throw Object.assign(new Error("Quote price must be a finite number."), { httpStatus: 400 });
+        }
         const record = {
           id: crypto.randomUUID(),
           quoteNumber: `AN-QTE-${String(db.profile.tradeQuotes.length + 1).padStart(3, "0")}`,
@@ -52136,6 +52400,26 @@ async function api(req, res, url) {
       },
       release: () => {
         const latestQuote = db.profile.tradeQuotes[0];
+        // Found live (money-logic audit): nothing marked a quote as
+        // "already released" -- the same quote could be released an
+        // unlimited number of times (a double-click, a client retry, or a
+        // replayed request), crediting the wallet again in full every time.
+        // Executed proof: three identical release calls against the same
+        // quote credited $650 three times (wallet: 650 -> 1300 -> 1950)
+        // with the quote's own status field never even read. Guards the
+        // same way nexus/farmwork/parties.js's delivery/payment recording
+        // already does elsewhere in this codebase (refuse a second
+        // transition once a record leaves its initial state).
+        if (latestQuote && latestQuote.status === "released") {
+          throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
+        }
+        // Found live (money-logic audit): same Infinity-bypass shape as
+        // quote() above -- an explicit non-finite amount would be credited
+        // to the wallet as-is, permanently corrupting the stored balance.
+        const requestedAmount = Number(body.amount);
+        if (body.amount !== undefined && !Number.isFinite(requestedAmount)) {
+          throw Object.assign(new Error("Release amount must be a finite number."), { httpStatus: 400 });
+        }
         const record = {
           id: crypto.randomUUID(),
           releaseNumber: `AN-REL-${String(db.profile.paymentReleases.length + 1).padStart(3, "0")}`,
@@ -52145,6 +52429,7 @@ async function api(req, res, url) {
           createdAt: now
         };
         db.profile.paymentReleases.unshift(record);
+        if (latestQuote) latestQuote.status = "released";
         db.profile.wallet = Number(db.profile.wallet || 0) + record.amount;
         db.profile.walletTransactions.unshift({
           id: crypto.randomUUID(),
@@ -52159,7 +52444,13 @@ async function api(req, res, url) {
     };
     const handler = actions[type];
     if (!handler) return send(res, 400, { error: "Unsupported advanced trade action" });
-    const [providerId, action, detail, record] = handler();
+    let handlerResult;
+    try {
+      handlerResult = handler();
+    } catch (error) {
+      return send(res, error.httpStatus || 409, { error: error.message });
+    }
+    const [providerId, action, detail, record] = handlerResult;
     addTradeEvent(db.profile, { type: action, label: detail });
     logIntegration(db, { providerId, module: "AgriTrade", action, detail, metadata: { recordId: record.id, type, productId: product?.id || null } });
     addActivity(db.profile, detail);
@@ -53145,7 +53436,8 @@ async function api(req, res, url) {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
         language: args.language || body.language || authContext.user.language || "en",
-        outputMode: "voice"
+        outputMode: "voice",
+        timeZone: body.timeZone || args.timeZone
       });
       const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);

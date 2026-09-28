@@ -9,7 +9,7 @@ test("workspace state is staged durably and completed only by a verified rendere
     async list() { return rows; },
     async create(input) {
       const row = { record_id: "record-1", task_id: input.taskId, version: 1,
-        data: input.data, provenance: input.provenance };
+        data: input.data, provenance: input.provenance, subjectId: input.subjectId };
       rows.unshift(row); return row;
     },
     async update(input) {
@@ -23,6 +23,11 @@ test("workspace state is staged durably and completed only by a verified rendere
     correlationId: "cor-1", application: "maps", workspace: "map",
     completed: false, verification: { providerVerified: true, renderRequired: true, renderVerified: false } };
   const staged = await repository.stage({ tenantId: "tenant-1", ownerId: "user-1", taskId: "task-1", outcome });
+  // Found live (erasure audit): this record used to be created with no
+  // subjectId at all, so it was stored with subject_id=NULL -- which never
+  // matches a subject-scoped account-erasure query, permanently leaving the
+  // record's real rendered content behind after "erase my account".
+  assert.equal(rows[0].subjectId, "user-1", "the record must carry the owner as its subject so account erasure can find it");
   assert.equal(staged.data.lifecycle, "render_required");
   assert.equal(staged.data.verification.renderVerified, false);
   await assert.rejects(() => repository.acknowledge({ tenantId: "tenant-1", actorId: "user-1",

@@ -113,12 +113,13 @@ test("a prepared announcement can be cancelled and expires, and three a day is t
 
 test("the repository keeps reports and notices inside one tenant, numbers reports per community, and only soft-deletes", async () => {
   const calls = [];
-  const db = { async query(sql, params) { calls.push({ sql, params }); if (/max\(\(content/.test(sql)) return { rows: [{ n: 4 }] }; if (/select distinct user_id/.test(sql)) return { rows: [{ user_id: "u1" }, { user_id: "u2" }] }; return { rows: [{ memory_id: "m1", principal_id: "u1", content: { kind: "report", number: 5 } }] }; } };
+  const db = { async query(sql, params) { calls.push({ sql, params }); if (/max\(\(content/.test(sql)) return { rows: [{ n: 4 }] }; if (/select distinct user_id/.test(sql)) return { rows: [{ user_id: "u1" }, { user_id: "u2" }] }; return { rows: [{ memory_id: "m1", principal_id: "u1", content: { kind: "report", number: 5 } }] }; }, async transaction(work) { return work(db); } };
   const repo = new CommunityRepository(db);
   assert.equal(await repo.addReport({ tenantId: "t1", userId: "u1", content: { kind: "report", text: "x", status: "open" } }), 5);
   const insert = calls.find(call => /insert into nexus_memory_items/.test(call.sql));
   assert.equal(insert.params[3], "community_reports"); assert.equal(insert.params[8], "sensitive"); assert.equal(insert.params[4].number, 5);
-  assert.match(calls[0].sql, /where tenant_id=\$1 and purpose='community_reports'/);
+  assert.match(calls.find(call => /max\(\(content/.test(call.sql)).sql, /where tenant_id=\$1 and purpose='community_reports'/);
+  assert.ok(calls.some(call => /pg_advisory_xact_lock/.test(call.sql)), "concurrent report numbering must be serialized per tenant with an advisory lock");
   assert.deepEqual(await repo.pushRecipients({ tenantId: "t1" }), ["u1", "u2"]);
   assert.match(calls.at(-1).sql, /from nexus_devices\s+where tenant_id=\$1/);
   await repo.listReports({ tenantId: "t1", userId: "u1" }); assert.equal(calls.at(-1).params[0], "t1"); assert.equal(calls.at(-1).params[1], "u1");

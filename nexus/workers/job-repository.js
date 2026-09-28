@@ -10,7 +10,7 @@ class JobRepository {
       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,case when $10>now() then 'scheduled' else 'queued' end)
       on conflict (tenant_id,idempotency_key) do update set idempotency_key=excluded.idempotency_key returning *`,
     [jobId, job.tenantId, job.taskId || null, job.stepId || null, job.jobType, job.queue || "default",
-      job.priority || 3, job.idempotencyKey, job.payload || {}, job.availableAt || new Date(), job.maxAttempts || 5]);
+      job.priority ?? 3, job.idempotencyKey, job.payload || {}, job.availableAt || new Date(), job.maxAttempts ?? 5]);
     return (result.rows || result)[0];
   }
 

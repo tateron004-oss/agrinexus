@@ -59984,25 +59984,41 @@ function voiceCrashRecoveryMessage(command = "") {
   return "I reset the voice route. Say it again in your own words, and I will keep the next answer short.";
 }
 
+function recoverFromSilentVoiceFailure(rawCommand) {
+  clearAgentProgressTimers();
+  abortActiveAgentCommand();
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  activeConversationIntake = null;
+  clearLevelOneAgentActionSuggestionLabel();
+  setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
+  updateNexusBehaviorLayer("ready", "Nexus recovered from a voice route error and is ready for a simpler retry.");
+  setVoiceResponse(voiceCrashRecoveryMessage(rawCommand), true, { allowHandoff: false });
+}
+
 async function handleVoiceCommand(rawCommand, options = {}) {
   try {
     const command = String(rawCommand || "").trim();
     if (!command) return null;
-    return await handleNexusUnifiedBrainRuntimeCommand(command, {
+    const result = await handleNexusUnifiedBrainRuntimeCommand(command, {
       ...options,
       source: options.source || "typed"
     });
+    // Found live: handleNexusUnifiedBrainRuntimeCommand catches its own
+    // internal errors (a network blip, a 90s timeout, a schema mismatch, a
+    // client-side render failure) and returns false instead of throwing --
+    // so this function's own try/catch below never fires for those cases.
+    // The caller (processFinalVoiceCommand) doesn't await or branch on this
+    // return value at all, so a bare `false` here previously meant the
+    // person speaking to Nexus got total silence: no spoken response, and
+    // the mic UI stuck showing "thinking" until they spoke again. Reuses
+    // the exact same recovery the catch block below already does for a
+    // thrown error, just also triggered for this silently-swallowed case.
+    if (!result) recoverFromSilentVoiceFailure(rawCommand);
+    return result;
   } catch (error) {
     console.error("Nexus voice command failed", error);
-    clearAgentProgressTimers();
-    abortActiveAgentCommand();
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    activeConversationIntake = null;
-    clearLevelOneAgentActionSuggestionLabel();
-    setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
-    updateNexusBehaviorLayer("ready", "Nexus recovered from a voice route error and is ready for a simpler retry.");
-    setVoiceResponse(voiceCrashRecoveryMessage(rawCommand), true, { allowHandoff: false });
+    recoverFromSilentVoiceFailure(rawCommand);
     return null;
   }
 }

@@ -114,6 +114,26 @@ test("create-video-room against an encounter with red flags is reported as block
   assert.equal(result.body.status, "blocked-emergency-red-flags");
 });
 
+// Found live (telehealth safety audit): createEncounter marks status
+// "emergency-guidance" whenever EITHER redFlags is non-empty OR
+// intake.urgency === "emergency" -- but createVideoRoom's own emergency
+// check only ever inspected encounter.redFlags.length, never the
+// encounter's own already-computed status. An encounter created with
+// urgency: "emergency" but an empty redFlags array became
+// "emergency-guidance" (correctly) yet still passed the video-room check,
+// creating a real room for a declared emergency.
+test("create-video-room against an encounter created with urgency: emergency (but an empty redFlags array) is blocked", async () => {
+  const created = await post("/api/nexus/telehealth/create-encounter", {
+    conditionArea: "general", confirmed: true, consentToPreparePacket: true, urgency: "emergency"
+  });
+  assert.equal(created.body.encounter.redFlags.length, 0, "this encounter must have no populated redFlags array, exercising the exact gap");
+  assert.equal(created.body.encounter.status, "emergency-guidance");
+  const result = await post("/api/nexus/telehealth/create-video-room", { encounterId: created.body.encounter.id, confirmed: true, consentToShare: true });
+  assert.equal(result.body.ok, false);
+  assert.equal(result.status, 400);
+  assert.equal(result.body.status, "blocked-emergency-red-flags");
+});
+
 test("follow-up without confirmation is reported as blocked (not ok, not 200)", async () => {
   const created = await post("/api/nexus/telehealth/create-encounter", { conditionArea: "general", confirmed: true, consentToPreparePacket: true });
   const result = await post("/api/nexus/telehealth/follow-up", { encounterId: created.body.encounter.id });

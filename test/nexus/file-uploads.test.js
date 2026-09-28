@@ -59,6 +59,27 @@ test("resolveUploadedFilePath refuses to escape the upload directory (path trave
   assert.ok(result.startsWith(dir));
 });
 
+// Found live (security audit): unlike resolveUploadedFilePath just above,
+// readMeta's own path builder never basename()'d fileId or checked the
+// result stayed inside dir -- "../planted" resolved OUTSIDE the upload
+// directory. Planting a real .meta.json one directory above dir and reading
+// it back with a traversal fileId proves the escape; after the fix, that
+// same read must come back empty (no file exists at the safely-clamped path).
+test("readMeta refuses to escape the upload directory (path traversal)", () => {
+  const dir = path.resolve(tmpDir());
+  const parentDir = path.dirname(dir);
+  const plantedPath = path.join(parentDir, "planted.meta.json");
+  fs.writeFileSync(plantedPath, JSON.stringify({ uploadedBy: "attacker", planted: true }));
+  try {
+    assert.equal(uploads.readMeta(dir, "../planted"), null, "must not read a meta file planted outside the upload directory");
+  } finally {
+    fs.rmSync(plantedPath, { force: true });
+  }
+  const real = { fileId: "real-file.pdf.meta.json", uploadedBy: "u_farmer" };
+  fs.writeFileSync(path.join(dir, "real-file.pdf.meta.json"), JSON.stringify(real));
+  assert.deepEqual(uploads.readMeta(dir, "real-file.pdf"), real, "a real, in-directory meta file must still read correctly");
+});
+
 test("canAccessUpload requires the real uploader, or an Admin -- an unguessable id alone is not access control", () => {
   const meta = { uploadedBy: "u_farmer" };
   assert.equal(uploads.canAccessUpload(meta, { id: "u_farmer" }), true);
@@ -154,12 +175,14 @@ test("the upload route requires sign-in and the feature flag before parsing anyt
 test("the download route enforces real per-uploader ownership via canAccessUpload before ever reading the file", () => {
   const start = source.indexOf('if (url.pathname === "/api/nexus/upload/file" && req.method === "GET")');
   assert.ok(start > 0, "download route not found");
-  const body = source.slice(start, start + 700);
+  const body = source.slice(start, start + 1300);
+  const flagIndex = body.indexOf('nexusFlagEnabled(process.env, "NEXUS_FILE_UPLOAD_ENABLED")');
   const authIndex = body.indexOf("if (!user)");
   const canAccessIndex = body.indexOf("nexusUploads.canAccessUpload(meta, user)");
   const readIndex = body.indexOf("fs.readFile(filePath");
+  assert.ok(flagIndex !== -1, "the download route must also honor the file-upload feature flag, not just the upload route");
   assert.ok(authIndex !== -1 && canAccessIndex !== -1 && readIndex !== -1, "expected auth check, ownership check, and file read all present");
-  assert.ok(authIndex < canAccessIndex && canAccessIndex < readIndex, "ownership must be checked before the file is ever read");
+  assert.ok(flagIndex < authIndex && authIndex < canAccessIndex && canAccessIndex < readIndex, "the flag, then auth, then ownership must all be checked before the file is ever read");
 });
 
 test("the document-analysis tool falls back to the most recently uploaded file when the model supplies no fileId", () => {

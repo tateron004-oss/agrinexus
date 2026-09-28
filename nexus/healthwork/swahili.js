@@ -79,7 +79,18 @@ function inlineSw(rest, today) {
 
 // ---- reading vitals in Swahili: the words are turned into the English names the shared reader knows, then read as exactly what was said ----
 const VITAL_WORDS = [[/\bshinikizo la damu\b/gi, "blood pressure"], [/\bshinikizo\b/gi, "bp"], [/\bjoto(?: la mwili)?\b/gi, "temp"], [/\bmapigo(?: ya moyo)?\b/gi, "pulse"], [/\bkiwango cha kupumua\b|\bkupumua\b/gi, "resp rate"], [/\boksijeni\b/gi, "oxygen"], [/\buzito\b/gi, "weight"], [/\b(?:uchunguzi|utambuzi)\b/gi, "diagnosis"]];
-const toEnglish = text => VITAL_WORDS.reduce((acc, [pattern, english]) => acc.replace(pattern, english), String(text || ""));
+// Found live: Swahili's natural copula "ni" ("is") right after one of the
+// words just translated above ("joto ni 38.5" -> "temp ni 38.5") isn't a
+// connector word visits.js's shared English-only regexes know -- for a
+// vitals reading this silently broke the match entirely (the reading was
+// lost with no "couldn't read" warning at all, unlike a genuine typing
+// slip), and for a diagnosis it was still captured, but with "ni " left
+// stuck onto the front of the stored condition text ("ni malaria" instead
+// of "malaria"). Normalized to "is", the connector the shared regexes
+// already recognize -- the same courtesy this module already gives "ni"
+// elsewhere (dayFrom() and the expiry-date regex in swahili-more.js).
+const toEnglish = text => VITAL_WORDS.reduce((acc, [pattern, english]) => acc.replace(pattern, english), String(text || ""))
+  .replace(/\b(temp|bp|blood pressure|pulse|resp rate|oxygen|weight|diagnosis)\s+ni\b/gi, "$1 is");
 const vitalWordsSw = vitals => {
   const out = [];
   if (vitals.temperature) out.push(`joto ${vitals.temperature.value}°${vitals.temperature.unit}`);

@@ -30,3 +30,13 @@ test("one task lifecycle enforces attributed transitions, pause/resume, retry, a
   task = transitionTask(task, "completed", { actorId: "verifier", reason: "outcome visible" }, fixedNow);
   assert.equal(isTerminal(task), true); assert.throws(() => transitionTask(task, "running", { actorId: "x", reason: "retry" }), /Illegal/);
 });
+
+// Found live: priority: Math.min(Math.max(Number(input.priority || 3), 1), 5) treated an explicit priority: 0
+// (the highest priority, per this same clamp -- 0 floors up to 1) as "not provided" and silently substituted the
+// default 3 instead, the same falsy-zero-default bug already found and fixed in job-repository.js's enqueue().
+test("createTask honors an explicit priority of 0 instead of silently defaulting to 3", () => {
+  const base = { tenantId: "00000000-0000-0000-0000-000000000001", ownerId: "00000000-0000-0000-0000-000000000002",
+    conversationId: "cnv_123", commandId: "cmd_123", correlationId: "trace-1", goal: "Prepare a field visit" };
+  assert.equal(createTask({ ...base, priority: 0 }, fixedNow).priority, 1, "priority 0 must clamp to the floor of 1, not silently become the default 3");
+  assert.equal(createTask({ ...base }, fixedNow).priority, 3, "an actually-omitted priority still defaults to 3");
+});

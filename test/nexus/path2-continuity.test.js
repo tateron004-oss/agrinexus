@@ -30,7 +30,13 @@ test("owner() looks up the conversation's owner scoped by tenant, and returns nu
 });
 
 test("conversation content and provenance cross the PostgreSQL boundary explicitly", async () => { let observed;
-  const repository = new ConversationRepository({ query: async (sql, params) => { observed = { sql, params }; return { rows: [{}] }; } });
+  // append() now checks the conversation's real owner first (see its own
+  // comment) -- this fake conversation was never ensure()'d, so owner()
+  // correctly returns no row (null), and the append proceeds as before.
+  const repository = new ConversationRepository({ query: async (sql, params) => {
+    if (/select owner_id/.test(sql)) return { rows: [] };
+    observed = { sql, params }; return { rows: [{}] };
+  } });
   await repository.append({ tenantId: "tenant-a", conversationId: "cnv_test", actorId: "user-a", role: "user", content: "hello", provenance: { channel: "voice" } });
   assert.match(observed.sql, /to_jsonb\(\$6::text\)/); assert.match(observed.sql, /\$7::jsonb/);
   assert.equal(observed.params[5], "hello"); assert.equal(observed.params[6], '{"channel":"voice"}');

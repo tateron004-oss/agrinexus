@@ -85,3 +85,27 @@ test("calendarProvider.createEvent reports missing config as before when simulat
   const result = await calendarProvider.createEvent({ title: "Farm visit", start: "2026-10-01T10:00:00Z", confirmed: true }, unconfiguredEnv({ NEXUS_SIMULATE_DOMAIN_PROVIDERS: "false" }));
   assert.equal(result.body.status, "missing_config");
 });
+
+// Found live: start/end were sent to Google Calendar with no timeZone field at
+// all -- a bare, offset-less "2026-09-26T15:00:00" (what the model naturally
+// produces for "tomorrow at 3pm") is interpreted as UTC by Google, landing a
+// Nairobi caller's 3pm event hours off from what they actually asked for.
+test("calendarProvider.createEvent sends an explicit timeZone to the real Google Calendar API, using the caller's own zone when given", async () => {
+  const originalFetch = global.fetch;
+  let sentBody;
+  global.fetch = async (url, init) => { sentBody = JSON.parse(init.body); return { ok: true, text: async () => JSON.stringify({ id: "evt_real1" }) }; };
+  try {
+    const withZone = await calendarProvider.createEvent(
+      { title: "Vet visit", start: "2026-09-26T15:00:00", timeZone: "America/Los_Angeles", confirmed: true },
+      unconfiguredEnv({ GOOGLE_CALENDAR_ACCESS_TOKEN: "token" })
+    );
+    assert.equal(withZone.body.data.providerVerified, true);
+    assert.equal(sentBody.start.timeZone, "America/Los_Angeles");
+    assert.equal(sentBody.end.timeZone, "America/Los_Angeles");
+
+    await calendarProvider.createEvent({ title: "Vet visit", start: "2026-09-26T15:00:00", confirmed: true }, unconfiguredEnv({ GOOGLE_CALENDAR_ACCESS_TOKEN: "token" }));
+    assert.equal(sentBody.start.timeZone, "Africa/Nairobi", "a caller with no known zone must still get an explicit zone, not UTC by omission");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
