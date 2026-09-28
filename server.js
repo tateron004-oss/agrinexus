@@ -17472,11 +17472,25 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
 // TWILIO_AUTHORIZED_CALLERS allowlist rather than a separate profile field,
 // since that list is already the source of truth for "which real phone
 // number belongs to which account."
+// Found live (phone/realtime bridge audit): the bare-entry fallback below
+// used to apply to ANY caller whose email wasn't separately listed -- not
+// just the account owner it's meant for. A real, non-owner "Standard User"
+// teammate account (legitimately allowed to use real communications; this
+// function has no ownership check of its own) asking to "connect me to
+// <number>" got the bare entry's phone -- the real account owner's personal
+// number -- silently substituted as "their own phone", with the response
+// text falsely telling them Kyro was calling "your own phone". The owner's
+// real phone rang and, once answered, was bridged live to an arbitrary
+// third-party number the non-owner teammate chose, with no owner consent.
+// Restricting the fallback to the actual owner tier (Admin) means a
+// non-owner caller with no listed number instead gets startConnectCall's own
+// existing, honest "Your own phone number is required" refusal.
 function nexusOwnPhoneForUser(user, env = process.env) {
   const authorized = twilioAuthorizedCallers(env);
   const email = String(user?.email || "").toLowerCase();
   const byEmail = email && authorized.find(item => item.email === email);
   if (byEmail) return byEmail.phone;
+  if (user?.role !== "Admin") return "";
   const bare = authorized.find(item => !item.email);
   return bare ? bare.phone : "";
 }
