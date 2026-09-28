@@ -13,7 +13,22 @@ const nameOfVaccine = raw => {
   const text = clean(raw).replace(/\b(?:the|a|her|his|their|first|second|third)\b/gi, m => (/first|second|third/i.test(m) ? m : "")).replace(/\s+(?:vaccine|vaccination|dose|shot|jab|injection)$/i, "").replace(/^\s*(?:the|a)\s+/i, "").trim().slice(0, 40);
   return ACRONYM.test(text) ? text.toUpperCase() : text.charAt(0).toUpperCase() + text.slice(1);
 };
-const family = vaccine => clean(vaccine).toLowerCase().replace(/\s*\d+$/, "").replace(/\s*(?:dose|booster)$/, "");
+// Found live: nameOfVaccine deliberately keeps "first"/"second"/"third" in the
+// stored vaccine name (e.g. "First dose of Penta", "Second dose of Penta") so
+// it reads naturally, but family() only ever stripped a trailing digit or a
+// trailing "dose"/"booster" word -- it never recognized that ordinal-phrased
+// shape at all, so "First dose of Penta" and "Second dose of Penta" never
+// reduced to the same family. A dose recorded via natural ordinal phrasing
+// (a very common way to describe a DPT/Penta/OPV series) never had its
+// earlier dose's "next due" cleared, so the patient kept showing up
+// indefinitely in "who is due for vaccination" after already receiving it.
+const family = vaccine => clean(vaccine).toLowerCase()
+  .replace(/\bfirst\b|\bsecond\b|\bthird\b/g, "")
+  .replace(/\bdose\b|\bbooster\b/g, "")
+  .replace(/\bof\b/g, "")
+  .replace(/\s*\d+\s*$/, "")
+  .replace(/\s+/g, " ")
+  .trim();
 
 // A dose's "next due" is answered once a later dose of the same vaccine is recorded.
 const outstanding = doses => doses.filter(dose => dose.data.nextDue && !doses.some(other => other.data.pid === dose.data.pid && family(other.data.vaccine) === family(dose.data.vaccine) && other.data.day > dose.data.day));
