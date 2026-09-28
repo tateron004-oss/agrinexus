@@ -84,10 +84,24 @@ class MedicationRepository {
       order by created_at limit 100`, [tenantId, userId, day]);
     return (result.rows || result).map(row => ({ memoryId: row.memory_id, ...row.content }));
   }
-  async updateDose({ tenantId, memoryId, content }) {
+  // Pass `expectedStatus` for a compare-and-swap update -- the write only
+  // takes effect if the row's current status still matches. Found live: the
+  // worker sweep's follow-up loop (sendDue() in medications.js) read a dose
+  // row once at the top of its iteration, then (several awaits and real push
+  // sends later) wrote back a spread of that SAME STALE snapshot -- if the
+  // person confirmed the dose in between (via turn()'s own separate
+  // fresh read-then-write), the sweep's final write silently clobbered their
+  // real "taken" record back to "alerted", after already having sent a now-
+  // false "a dose is waiting" alert to their circle. Mirrors the identical
+  // fix already applied to checkin-store.js's update().
+  async updateDose({ tenantId, memoryId, content, expectedStatus }) {
     const { memoryId: _ignored, ...rest } = content;
-    const result = await this.db.query(`update nexus_memory_items set content=$3,updated_at=now()
-      where tenant_id=$1 and memory_id=$2 and purpose='medications' and deleted_at is null returning memory_id`, [tenantId, memoryId, { kind: "dose", ...rest }]);
+    const params = [tenantId, memoryId, { kind: "dose", ...rest }];
+    let sql = `update nexus_memory_items set content=$3,updated_at=now()
+      where tenant_id=$1 and memory_id=$2 and purpose='medications' and deleted_at is null`;
+    if (expectedStatus !== undefined) { sql += ` and coalesce(content->>'status','') = $4`; params.push(expectedStatus); }
+    sql += ` returning memory_id`;
+    const result = await this.db.query(sql, params);
     return Boolean((result.rows || result)[0]);
   }
   // Doses still waiting for the person to confirm, across communities.

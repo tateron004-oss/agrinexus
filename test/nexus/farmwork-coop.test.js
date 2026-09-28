@@ -74,3 +74,21 @@ test("booking shared equipment for someone who isn't a registered co-op member i
   const anonymous = await who.say("Book the tractor on Saturday");
   assert.match(anonymous, /Booked the tractor Saturday/);
 });
+
+// Found live (drone/field-visit audit): the clash check and the booking used to be two
+// separate store calls (list() then add()), with a real window between them for two
+// near-simultaneous bookings of the same equipment and day to both read "no clash" and
+// both succeed, silently double-booking a shared resource.
+test("two concurrent bookings for the same equipment and day only succeed once, not both", async () => {
+  const who = farmer();
+  await coopWithTwoJohns(who);
+  await who.say("Add shared equipment: tractor");
+
+  const [first, second] = await Promise.all([who.say("Book the tractor for John Otieno on Friday"), who.say("Book the tractor for John Kamau on Friday")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Booked the tractor for/.test(text)).length, 1, "exactly one request must have won the race and booked the tractor");
+  assert.equal(outcomes.filter(text => /already booked Friday/.test(text)).length, 1, "exactly one request must have lost the race and been refused");
+
+  const bookings = await who.store.list({ tenantId: "t1", userId: "u1", collection: "coop_booking" });
+  assert.equal(bookings.filter(booking => booking.data.equipment === "tractor" && booking.data.day === bookings[0].data.day).length, 1, "the tractor must only be booked once for that day, not twice");
+});

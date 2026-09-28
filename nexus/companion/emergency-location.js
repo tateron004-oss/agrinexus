@@ -57,8 +57,18 @@ function createEmergencyLocation({ circle, pushWithLink, now = () => new Date() 
       const name = userName || t(language, "safety.someone");
       const say = key => languages.map(chosen => t(chosen, key, { name, code, lat: lat.toFixed(5), lng: lng.toFixed(5), acc: accuracy !== null ? t(chosen, "loc.acc", { m: Math.max(5, Math.round(accuracy)) }) : "", age: ageSeconds > 60 ? t(chosen, "loc.age", { n: Math.round(ageSeconds / 60) }) : "" })).join("\n");
       const body = say(number_ === 1 ? "loc.first" : "loc.update"); const title = languages.map(chosen => t(chosen, "loc.title", { name })).join(" / ");
+      // Found live: recipients was computed once, then this loop does N real, sequential awaited pushes -- if
+      // the person revoked a member (left the circle, or turned off sharing location with them) while an
+      // earlier push in this same loop was still in flight, the stale `recipients` list would still send to
+      // them, violating this file's own documented rule 2 ("leaving the circle stops it at once"). Re-verify
+      // each recipient is still an active, consenting member immediately before their own send, not once for
+      // the whole batch -- this can't close the window to zero without a lock, but it shrinks it from "the
+      // whole loop's duration" to "one push's duration."
       const shared = [];
       for (const member of recipients) {
+        const stillCurrent = circle.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }) : current;
+        const stillValid = stillCurrent.some(entry => entry.otherId === member.otherId && alertedIds.has(entry.otherId) && entry.shares?.emergencyLocation === true);
+        if (!stillValid) continue;
         try { await pushWithLink({ toUserId: member.otherId, title, body, url: mapLink(lat, lng), key: `emergency-location:${alert.alertId}:${member.otherId}:${number_}` }); shared.push(member.otherName); }
         catch { /* one failed push must not stop the others */ }
       }

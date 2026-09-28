@@ -5,7 +5,17 @@ const { normalizeRecipient } = require("../communications/send-request.js");
 // People the person has told Kyro about ("Save Otieno's number as +254712345678"), so "Text Otieno the delivery is ready" and "Call my
 // brother" work by name. Only what the person plainly says; nothing is imported or guessed; only ever used when they name the person.
 const NOT_A_NAME = new Set(["me", "my", "your", "his", "her", "their", "our", "the", "a", "an", "this", "that", "it", "number", "phone", "email", "contact", "anyone", "someone", "everyone",
-  "whatever", "mine", "yours", "own", "new", "mobile", "cell", "address", "name", "who", "what", "which", "and", "or", "to", "from"]);
+  "whatever", "mine", "yours", "own", "new", "mobile", "cell", "address", "name", "who", "what", "which", "and", "or", "to", "from",
+  // Found live (calendar/notes audit): contactName() gates every "forget X"
+  // request, including the bare (no "contact" qualifier needed) form -- but
+  // with no domain-noun exclusions, "forget my rent reminder"/"forget my vet
+  // visit"/"forget my dentist appointment" all parsed as a plausible 1-3-word
+  // name and were intercepted here, ahead of reminders' own "forget my ...
+  // reminder" cancel matcher (nexus/brain/planner.js dispatches contacts
+  // before reminders), replying "I don't have a contact called Rent
+  // Reminder" instead of ever cancelling the reminder.
+  "reminder", "reminders", "meeting", "meetings", "appointment", "appointments", "visit", "visits", "note", "notes",
+  "event", "events", "list", "lists", "todo", "todos", "task", "tasks", "alarm", "alarms", "calendar", "schedule"]);
 const clean = value => String(value ?? "").replace(/\s+/g, " ").trim();
 
 // "otieno", "amina wanjiru", "brother" (from "my brother"): 1-3 short words, no digits or symbols, none of them filler.

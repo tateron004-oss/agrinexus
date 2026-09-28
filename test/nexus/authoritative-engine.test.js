@@ -228,9 +228,15 @@ test("task workflow pauses for confirmation and requires renderer acknowledgemen
   const context = { tenantId: command.tenantId, userId: command.actorId, can: () => true, hasRole: () => false };
   const paused = await engine.executeTask({ context, taskId: task.taskId });
   assert.equal(paused.state, "awaiting_confirmation"); assert.equal(store.calls, 0);
+  // Found live: this used to return "awaiting_confirmation" without ever persisting it -- the task's real state
+  // stayed "running" the whole time a step genuinely waited on the user, which agent.sweep-advanceable-tasks then
+  // treated as stuck and re-drove forever. The task's REAL stored state (not just the return value) must reflect
+  // this, and resuming after approval must transition it back through queued -> running like a fresh task does.
+  assert.equal(store.task.state, "awaiting_confirmation", "the task's real persisted state must reflect the pending confirmation, not silently stay 'running'");
   await engine.approve({ tenantId: command.tenantId, taskId: task.taskId, stepId: task.steps[0].stepId, actorId: command.actorId, approved: true });
   const pending = await engine.executeTask({ context, taskId: task.taskId });
   assert.equal(pending.state, "awaiting_render");
+  assert.equal(store.task.state, "verifying", "resuming after approval must carry the task through running to its real post-execution state");
   await expectCode(() => engine.acknowledgeRender({ context, taskId: task.taskId,
     commandId: "command_wrong", correlationId: command.correlationId, workspace: "documents",
     rendered: true, visible: true }), "command_acknowledgement_mismatch");

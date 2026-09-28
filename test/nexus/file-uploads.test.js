@@ -160,6 +160,23 @@ test("exceeding the total storage quota refuses the upload and cleans up, even t
   assert.deepEqual(fs.readdirSync(dir).filter(name => name !== "existing.pdf"), [], "the rejected upload must leave no trace");
 });
 
+// Found live (uploads/document-handling audit): by the time the quota check ran, the upload's own tmp
+// file already existed on disk in the same directory currentUsageBytes(dir) scans -- so its bytes were
+// counted once via the disk scan AND a second time via the explicit "+ bytesWritten", double-counting
+// every upload's own size against the quota by up to its own size. A genuinely within-quota upload near
+// the boundary was wrongly rejected.
+test("an upload that would keep total usage within quota is accepted, not double-counted against its own size", async () => {
+  const dir = tmpDir();
+  const env = { NEXUS_FILE_STORAGE_DIR: dir, NEXUS_FILE_UPLOAD_TOTAL_QUOTA_MB: "10" };
+  // 6MB already stored; uploading ~3MB more keeps real total usage at ~9MB, safely within the 10MB quota.
+  fs.writeFileSync(path.join(dir, "existing.pdf"), Buffer.alloc(6 * 1024 * 1024));
+  const threeMbPng = Buffer.concat([REAL_PNG_1X1, Buffer.alloc(3 * 1024 * 1024 - REAL_PNG_1X1.length)]);
+  const { boundary, buffer } = multipartBody("file", "leaf.png", "image/png", threeMbPng);
+  const req = fakeRequest({ "content-type": `multipart/form-data; boundary=${boundary}` }, [buffer]);
+  const meta = await uploads.parseAndStoreUpload(req, { env, userId: "u1" });
+  assert.ok(meta.fileId, "a genuinely within-quota upload must succeed, not be rejected from double-counting its own bytes");
+});
+
 // Added for real account erasure/export (2026-09-25): until now nothing in
 // this module could find "all of one user's uploads" or remove one -- an
 // account-erasure feature has no other way to reach uploaded files at all,

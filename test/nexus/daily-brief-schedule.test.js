@@ -79,6 +79,28 @@ test("a person is never sent two briefs in a day, even across restarts", async (
   assert.equal(nextDay.enqueued.length, 1, "tomorrow is a new day");
 });
 
+// Found live (worker-sweep reliability audit): handledToday used to be marked BEFORE the real
+// notifications.enqueue() call, which does a real DB insert that can throw on any transient failure. An
+// uncaught throw there left the key permanently marked handled with nothing ever actually queued -- the
+// person's brief was silently skipped for the rest of the local day, with no retry.
+test("a transient enqueue failure is retried on the next tick, not silently marked handled forever", async () => {
+  const enqueued = [];
+  const settings = { listActive: async () => [{ scheduleId: "s1", tenantId: "t1", userId: "u1", timeOfDay: "07:00", timeZone: "Africa/Nairobi" }] };
+  let fail = true;
+  const notifications = { async enqueue(item) { if (fail) throw new Error("connection reset"); enqueued.push(item); return item; }, async existsByKey() { return false; },
+    async listReminders() { return [{ content: { reminderText: "Spray the tomatoes" }, scheduled_at: "2026-09-21T06:00:00Z" }]; } };
+  const devices = { async listPushable() { return [{ device_id: "d1" }]; } };
+  const memory = { async profile() { return [{ content: { kind: "name", value: "Amina" } }]; } };
+  const service = createBriefService({ notifications, settings, memory, devices, autonomyControl: { async isPaused() { return false; } },
+    fetchImpl: async () => ({ ok: false }), now: () => new Date("2026-09-21T04:05:00Z") });
+  await assert.rejects(() => service.sendDue({ at: new Date("2026-09-21T04:05:00Z") }), /connection reset/);
+  assert.equal(enqueued.length, 0, "nothing was actually queued");
+  fail = false;
+  const retried = await service.sendDue({ at: new Date("2026-09-21T04:06:00Z") });
+  assert.equal(retried.sent, 1, "the same local day must still retry, not skip forever because handledToday was marked prematurely");
+  assert.equal(enqueued.length, 1);
+});
+
 test("nothing is sent before the time, when paused, with no push device, or with nothing to say", async () => {
   assert.equal((await sweepHarness().service.sendDue({ at: new Date("2026-09-21T01:00:00Z") })).sent, 0, "before 07:00 Nairobi");
   const paused = sweepHarness({ paused: true }); assert.deepEqual([(await paused.service.sendDue({ at: new Date("2026-09-21T04:05:00Z") })).skippedPaused, paused.enqueued.length], [1, 0]);

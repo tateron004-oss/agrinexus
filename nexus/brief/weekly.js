@@ -115,10 +115,16 @@ function createWeeklySummaryService({ notifications, settings = null, memory = n
         if (!found.length) { result.skippedNoDevice += 1; continue; }
         const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
         const text = await composeFor({ tenantId: setting.tenantId, userId: setting.userId, known, timeZone: zone });
-        handled.add(key);
-        if (!text) { result.skippedNothingToSay += 1; continue; }
+        // Found live (worker-sweep reliability audit): same shape as brief/service.js's daily sweep --
+        // `handled` used to be marked BEFORE the real notifications.enqueue() call below, which does a real
+        // DB insert that can throw on any transient failure. An uncaught throw there left the key
+        // permanently marked handled with nothing ever actually queued -- since `handled` is keyed per
+        // calendar week and only clears past 5000 entries, a single transient blip cost that person their
+        // entire weekly summary with no retry until the following week's send window, silently.
+        if (!text) { handled.add(key); result.skippedNothingToSay += 1; continue; }
         await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
           content: { title: "Your weekly summary", body: text, kind: "weekly_summary" } });
+        handled.add(key);
         logger?.info?.("weekly_summary.queued", { userId: setting.userId, day: today });
         result.sent += 1;
       }
