@@ -41,6 +41,24 @@ test("marking the same resource again updates the existing entry instead of crea
   assert.ok(second.body.data.progress.completedAt, "a completed entry must record when it was completed");
 });
 
+// Found live: markProgress unconditionally overwrote status with no guard
+// against regressing an already-completed entry back to "started" -- and
+// completedAt was only ever set, never cleared, so the persisted record
+// could end up simultaneously "started" (not completed) and already
+// finished in the past, with the reply message even claiming it was marked
+// "started" despite nothing having changed.
+test("a completed course cannot be silently regressed back to 'started', and its completedAt is never left stale under a wrong status", () => {
+  const db = freshDb();
+  learningBridge.markProgress({ ...RESOURCE, progressStatus: "completed", confirmed: true }, db, { NEXUS_LEARNING_BRIDGE_ENABLED: "true" });
+  const completedAt = db.profile.nexusLearningProgress[0].completedAt;
+  assert.ok(completedAt);
+  const again = learningBridge.markProgress({ ...RESOURCE, progressStatus: "started", confirmed: true }, db, { NEXUS_LEARNING_BRIDGE_ENABLED: "true" });
+  assert.equal(db.profile.nexusLearningProgress.length, 1);
+  assert.equal(again.body.data.progress.status, "completed", "an already-completed entry must not regress to 'started'");
+  assert.equal(again.body.data.progress.completedAt, completedAt, "the original completion timestamp must be preserved, not stale-dated by an ignored regression");
+  assert.match(again.body.message, /marked "Irrigation basics" as completed/, "the reply must describe what was actually persisted, not the ignored requested status");
+});
+
 test("markProgress is distinct from saveResource's bookmark list -- the two never share storage", () => {
   const db = freshDb();
   learningBridge.saveResource({ ...RESOURCE, confirmed: true }, db);
