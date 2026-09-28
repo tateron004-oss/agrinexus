@@ -46133,7 +46133,25 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/telehealth/create-video-room" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth video rooms" });
-    const result = await nexusTelehealthProvider.createVideoRoom(db, await readBody(req), user, process.env);
+    const body = await readBody(req);
+    // Found live (telehealth audit): this real Daily.co/Zoom room creation
+    // had no idempotency protection at all -- unlike the sibling
+    // /api/nexus/tools/telehealth/session/create route, fixed earlier for
+    // the identical issue ("a retry/double-submit created a second real,
+    // billable room"). createVideoRoom() has no top-level `status` on
+    // success, so one is added only in that case, for withActionLifecycle's
+    // own success detection; a blocked/failed result is passed through with
+    // its real status string unchanged.
+    const wrapped = await withActionLifecycle(db, {
+      provider: "nexus-telehealth", action: "telehealth.video-room.create", body, actorId: user.id || user.email || "",
+      execute: async () => {
+        const created = await nexusTelehealthProvider.createVideoRoom(db, body, user, process.env);
+        return { httpStatus: created.ok ? 200 : 400, body: created.ok ? { ...created, status: "created" } : created };
+      },
+      verify: async created => ({ verified: Boolean(created?.body?.video?.roomCreated), note: created?.body?.video?.roomCreated ? "Provider returned a real, live video room." : "No real video room was confirmed." }
+      )
+    });
+    const result = wrapped.body;
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
@@ -46142,30 +46160,45 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/telehealth/notify" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow telehealth notifications" });
     const body = await readBody(req);
+    // Found live (telehealth audit): this real SMS/WhatsApp/email send had
+    // no idempotency protection at all -- unlike the generic nexus_email/
+    // nexus_communications NL-tool dispatch paths, which already wrap the
+    // same kind of real send in withActionLifecycle specifically for this.
+    // Only the actual provider send is wrapped (not the local `prepared`
+    // preparation step), matching the shape every other real-send call
+    // site in this file uses.
     const prepared = nexusTelehealthProvider.prepareNotification(db, body, user, process.env);
     let providerResult = null;
     if (prepared.ok && prepared.status === "prepared") {
       const channel = prepared.channel;
       if (channel === "email") {
-        providerResult = await nexusEmailSendPacket(db, {
-          to: body.to || body.contactValue || "",
-          subject: body.subject || "Nexus virtual care packet",
-          packetId: prepared.encounterId,
-          domain: "telehealth",
-          message: prepared.message,
-          confirmed: body.confirmed === true,
-          consent: body.consentToShare === true
-        }, user, process.env);
+        const wrapped = await withActionLifecycle(db, {
+          provider: "nexus-telehealth", action: "telehealth.notify.email", body, actorId: user.id || user.email || "",
+          execute: () => nexusEmailSendPacket(db, {
+            to: body.to || body.contactValue || "",
+            subject: body.subject || "Nexus virtual care packet",
+            packetId: prepared.encounterId,
+            domain: "telehealth",
+            message: prepared.message,
+            confirmed: body.confirmed === true,
+            consent: body.consentToShare === true
+          }, user, process.env)
+        });
+        providerResult = wrapped;
       } else if (channel === "sms" || channel === "whatsapp") {
-        providerResult = await nexusCommunicationsSendMessage(db, {
-          channel,
-          recipient: body.recipient || body.contactValue || "",
-          packetId: prepared.encounterId,
-          domain: "telehealth",
-          message: prepared.message,
-          confirmed: body.confirmed === true,
-          consent: body.consentToShare === true
-        }, user, process.env);
+        const wrapped = await withActionLifecycle(db, {
+          provider: "nexus-telehealth", action: `telehealth.notify.${channel}`, body, actorId: user.id || user.email || "",
+          execute: () => nexusCommunicationsSendMessage(db, {
+            channel,
+            recipient: body.recipient || body.contactValue || "",
+            packetId: prepared.encounterId,
+            domain: "telehealth",
+            message: prepared.message,
+            confirmed: body.confirmed === true,
+            consent: body.consentToShare === true
+          }, user, process.env)
+        });
+        providerResult = wrapped;
       }
     }
     // prepared.ok only reflects local preparation; a genuine send failure
