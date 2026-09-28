@@ -17,6 +17,16 @@ test("days and times are read from everyday words in the person's own calendar",
   assert.equal(extractDay("field day September 5th", TODAY).day, "2027-09-05", "a date already past means next year");
   assert.equal(extractDay("meet on friday", TODAY).day, "2026-09-25");
   assert.equal(extractDay("thing in 2 weeks", TODAY).day, "2026-10-04");
+  // Found live (health-toolkit follow-up audit): nexus/healthwork/visits.js's
+  // follow-up scheduler and immunisation.js's next-dose scheduler both
+  // explicitly advertise "in N months" as valid input, but this module had
+  // no month support at all -- "months" fell through every DAY_FORMS
+  // pattern and returned null, silently breaking scheduling for a phrasing
+  // common to malnutrition rechecks, chronic-care reviews, and vaccine
+  // boosters (all commonly expressed in months, not weeks).
+  assert.equal(extractDay("recheck in 3 months", TODAY).day, "2026-12-20", "a real calendar-month jump, not a fixed ~90-day one");
+  assert.equal(extractDay("booster in 1 month", "2027-01-31").day, "2027-02-28", "clamped to the shorter month's real last day, not rolled into March");
+  assert.equal(extractDay("dose in 6 months", TODAY).day, "2027-03-20", "correctly rolls over the year boundary");
   assert.equal(extractDay("party on 30 February", TODAY), null, "not a real day");
   assert.equal(extractTime("at 2pm").time, "14:00"); assert.equal(extractTime("at 12:30 pm").time, "12:30"); assert.equal(extractTime("at 12 am").time, "00:00");
   assert.equal(extractTime("at 14:05").time, "14:05"); assert.equal(extractTime("lunch at noon").time, "12:00"); assert.equal(extractTime("at 3 sharp"), null);

@@ -29,16 +29,19 @@ test("listStaleBusinessWorkspaces checks record staleness and open tasks/grants,
   assert.deepEqual(db.calls[0].params, [staleBefore, 10]);
 });
 
-function sweepFixture({ staleWorkspaces = [], recentNudgesBySubject = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
+// Found live: record_id ("rec_<uuid>") is not a real uuid and can never be sent as subjectId (a real Postgres
+// `uuid` column) -- claimCooldown's recordKey scopes the cooldown to one specific business record (matched
+// against data.recordId under the hood) instead, so this fake mirrors that exact contract via recordKey.
+function sweepFixture({ staleWorkspaces = [], recentNudgesByRecord = {}, autonomousCountsByTenant = {}, pausedTenants = null, engineCreate = null } = {}) {
   const created = { tasks: [], nudgeRecords: [], removed: [] };
   let seq = 0;
   const runtime = {
     records: {
       listStaleBusinessWorkspaces: async () => staleWorkspaces,
-      claimCooldown: async ({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
-        const last = (recentNudgesBySubject[`${tenantId}:${subjectId}`] || [])[0];
+      claimCooldown: async ({ tenantId, ownerId, subjectId, recordKey, workspaceId, recordType, cooldownMs, classification, data, provenance }) => {
+        const last = (recentNudgesByRecord[`${tenantId}:${recordKey}`] || [])[0];
         if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;
-        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, workspaceId, recordType, classification, data, provenance };
+        const record = { record_id: `rec_${++seq}`, tenantId, ownerId, subjectId, recordKey, workspaceId, recordType, classification, data, provenance };
         created.nudgeRecords.push(record);
         return record;
       },
@@ -74,7 +77,12 @@ test("situational-awareness.business-sweep creates a real autonomous documents.c
   assert.match(content, /Community Fund/);
   assert.equal(created.nudgeRecords[0].workspaceId, SITUATIONAL_AWARENESS_WORKSPACE_ID);
   assert.equal(created.nudgeRecords[0].recordType, BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE);
-  assert.equal(created.nudgeRecords[0].subjectId, "rec_biz", "cooldown is scoped to the specific business record, not the owner");
+  // Found live: record_id is a "rec_<uuid>" business-record id, not a real
+  // uuid -- it must never be sent as subjectId (a real Postgres `uuid`
+  // column), only saved into data.recordId, which the cooldown check
+  // matches against instead.
+  assert.equal(created.nudgeRecords[0].subjectId, undefined, "record_id must never be sent as subjectId");
+  assert.equal(created.nudgeRecords[0].data.recordId, "rec_biz", "cooldown is scoped to the specific business record, via data.recordId, not the owner");
   assert.equal(created.nudgeRecords[0].ownerId, "u1");
 });
 
@@ -84,7 +92,7 @@ test("situational-awareness.business-sweep scopes cooldown per business record, 
       { tenant_id: "t1", owner_id: "u1", record_id: "rec_a", updated_at: "2026-08-01T00:00:00.000Z", business_name: "Farm Co", open_task_titles: ["A"], open_grant_labels: [] },
       { tenant_id: "t1", owner_id: "u1", record_id: "rec_b", updated_at: "2026-08-01T00:00:00.000Z", business_name: "Side Hustle", open_task_titles: ["B"], open_grant_labels: [] }
     ],
-    recentNudgesBySubject: { "t1:rec_a": [{ updated_at: new Date().toISOString() }] }
+    recentNudgesByRecord: { "t1:rec_a": [{ updated_at: new Date().toISOString(), data: { recordId: "rec_a" } }] }
   });
   const handlers = createHandlers({ runtime });
   const result = await handlers["situational-awareness.business-sweep"]({ job: { payload: {} } });

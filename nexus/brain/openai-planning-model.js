@@ -1,13 +1,54 @@
 "use strict";
 
+// Rough, clearly-approximate per-token rate used only to turn a real
+// response's own reported token usage into a cost figure for budget
+// tracking -- not a claim of the provider's actual current pricing (which
+// this codebase has no authoritative source for). Erring toward a slight
+// overestimate is the safer direction for a budget guard.
+const APPROX_INPUT_CENTS_PER_1K_TOKENS = 0.02;
+const APPROX_OUTPUT_CENTS_PER_1K_TOKENS = 0.08;
+
+function approximateCostCents(usage) {
+  if (!usage) return 0;
+  const inputTokens = Number(usage.input_tokens ?? usage.prompt_tokens ?? 0);
+  const outputTokens = Number(usage.output_tokens ?? usage.completion_tokens ?? 0);
+  return Math.round((inputTokens / 1000) * APPROX_INPUT_CENTS_PER_1K_TOKENS * 100
+    + (outputTokens / 1000) * APPROX_OUTPUT_CENTS_PER_1K_TOKENS * 100) / 100;
+}
+
 class OpenAiPlanningModel {
-  constructor({ apiKey, model = "gpt-5.4-mini", fetchFn = globalThis.fetch }) {
+  constructor({ apiKey, model = "gpt-5.4-mini", fetchFn = globalThis.fetch, observability = null }) {
     if (!apiKey) throw new Error("OPENAI_API_KEY is required for the production planning model.");
     if (typeof fetchFn !== "function") throw new Error("A fetch implementation is required.");
-    Object.assign(this, { apiKey, model, fetchFn });
+    Object.assign(this, { apiKey, model, fetchFn, observability });
+  }
+
+  // Found live (record-repository/consent follow-up audit): this is one of
+  // the two highest-frequency real, metered OpenAI call sites in the whole
+  // app -- invoked on nearly every conversational turn that doesn't match a
+  // deterministic intent matcher, and plan() specifically can fire up to
+  // (maxRepairAttempts+1) times per turn -- but neither this nor
+  // recordCost()/assertCostAllowed() were ever wired to it, so
+  // NEXUS_DAILY_COST_LIMIT_CENTS (the one governance knob this codebase
+  // has) never applied here at all, unlike every tool executed through
+  // AuthoritativeTaskEngine. Gates on already-recorded spend (no
+  // speculative per-call pre-estimate, since real cost isn't known until
+  // the response's own token usage comes back), then records the real cost
+  // afterward so it counts toward the very next call's check.
+  async assertBudget(tenantId) {
+    if (!this.observability) return;
+    await this.observability.assertCostAllowed({ tenantId, estimatedCostCents: 0 });
+  }
+
+  async recordSpend(tenantId, category, usage) {
+    if (!this.observability) return;
+    const estimatedCostCents = approximateCostCents(usage);
+    await this.observability.recordCost({ tenantId, provider: "openai", category, estimatedCostCents,
+      metadata: { model: this.model, usage: usage || null } }).catch(() => {});
   }
 
   async respond(request) {
+    await this.assertBudget(request.tenantId);
     const response = await this.fetchFn("https://api.openai.com/v1/responses", { method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({ model: this.model, instructions: RESPOND_INSTRUCTIONS, max_output_tokens: 700,
@@ -16,11 +57,19 @@ class OpenAiPlanningModel {
           availableCapabilities: request.capabilities || [] }) }) });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) { const error = new Error(body.error?.message || "Conversation provider request failed."); error.code = body.error?.code || "conversation_provider_failed"; throw error; }
+    await this.recordSpend(request.tenantId, "planning.respond", body.usage);
     const text = body.output_text || (body.output || []).flatMap(item => item.content || []).map(item => item.text || "").join("");
     return String(text || "").trim() || null;
   }
 
   async plan(request) {
+    // tenantId is destructured out rather than left in `rest` -- it's only
+    // used for cost bookkeeping here, and unlike respond() (which hand-picks
+    // its own request fields), plan() serializes its whole request as the
+    // model's prompt input, so an unstripped field would otherwise leak
+    // straight into what's sent to the provider.
+    const { tenantId, ...planRequest } = request;
+    await this.assertBudget(tenantId);
     const response = await this.fetchFn("https://api.openai.com/v1/responses", { method: "POST",
       headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({ model: this.model,
@@ -33,9 +82,10 @@ class OpenAiPlanningModel {
         // question (which can't be fully enumerated) still reaches this
         // model directly, so it needs its own explicit boundary here too.
         instructions: "Plan the user's open-ended goal using only the supplied application and tool catalog. Use conversation history, the prior task, and verified memories to resolve follow-ups and corrections. Follow the supplied interaction profile across every step: preserve its language, accessibility requirements, names and identifiers, and safety meaning. For each step, copy requiredPermission only from that tool's requiredPermission field; consentScope is a governed consent requirement and must never be used as requiredPermission. Preserve confirmationRequired and consentScope through execution by selecting the tool, not by inventing extra permissions or tools. Use concise plain language when requested. Ask exactly one concise clarification only when essential; a clarification plan may have zero steps. The people using this are mostly farmers and rural communities in Africa: when you need a location, ask for their town, county or region, never a US zone or ZIP code, and use their currency and units. Memories of kind profile are facts the person told you about themselves (name, place, crops, livestock, language): use them as background, but a place, language or name stated in the request itself always overrides them, and never ask the person to confirm a place they just named. Never claim execution or invent a provider result. Only select health.emergency-guidance when the user describes a genuine red-flag emergency (e.g. chest pain, difficulty breathing, sudden one-sided weakness, slurred speech, loss of consciousness, uncontrolled bleeding, or explicitly says it is a medical emergency) -- a common, non-severe symptom question (e.g. a headache, mild pain, fatigue, a cold) is not an emergency and must use knowledge.search or telehealth.prepare instead, never health.emergency-guidance. Return JSON matching the schema.",
-        input: JSON.stringify(request), text: { format: { type: "json_schema", name: "nexus_task_plan", strict: true, schema: PLAN_SCHEMA } } }) });
+        input: JSON.stringify(planRequest), text: { format: { type: "json_schema", name: "nexus_task_plan", strict: true, schema: PLAN_SCHEMA } } }) });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) { const error = new Error(body.error?.message || "Planning provider request failed."); error.code = body.error?.code || "planning_provider_failed"; throw error; }
+    await this.recordSpend(tenantId, "planning.plan", body.usage);
     const text = body.output_text || (body.output || []).flatMap(item => item.content || []).map(item => item.text || "").join("");
     if (!text) throw new Error("Planning provider returned no structured plan.");
     try { return normalizePlan(JSON.parse(text)); } catch { const error = new Error("Planning provider returned invalid JSON."); error.code = "planning_response_invalid"; throw error; }

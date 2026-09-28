@@ -415,7 +415,11 @@ async function routeAssertions() {
         }
       });
       assert.equal(communication.status, 200);
-      assert(["confirmation_required", "blocked", "missing_config", "disabled", "provider-not-configured"].some(token => JSON.stringify(communication.body).includes(token)), "communication should require confirmation or report a specific missing provider");
+      // "restricted" is the real, correct outcome for a guest account here (see the systemic
+      // restriction-bypass fix in nexus/farmwork's legacy dispatcher and the Genesis account-type
+      // gate) -- a guest is refused the action outright with a clear, honest message, distinct from
+      // (but just as safe as) "confirmation required" or "provider not configured".
+      assert(["confirmation_required", "blocked", "missing_config", "disabled", "provider-not-configured", "restricted"].some(token => JSON.stringify(communication.body).includes(token)), "communication should require confirmation, be restricted by account type, or report a specific missing provider");
       assert.notEqual(communication.body.category, "application-authentication");
       assert.equal(communication.body.executionVerified, false);
       assertNoSecrets(communication.body, "guest communication result");

@@ -21,6 +21,7 @@ function seedDb() {
     { id: "call-smoke-marie", name: "Marie", lookup: "marie", phone: "+15555550103", relationship: "saved contact", source: "call-intent-smoke" },
     { id: "call-smoke-amina", name: "Amina", lookup: "amina", phone: "+15555550104", relationship: "saved contact", source: "call-intent-smoke" },
     { id: "call-smoke-mohammed", name: "محمد", lookup: "محمد", phone: "+15555550105", relationship: "saved contact", source: "call-intent-smoke" },
+    { id: "call-smoke-jan", name: "Jan", lookup: "jan", phone: "+15555550109", relationship: "saved contact", source: "call-intent-smoke" },
     { id: "call-smoke-john-a", name: "John", lookup: "john", phone: "+15555550106", relationship: "saved contact", source: "call-intent-smoke-a" },
     { id: "call-smoke-john-b", name: "John", lookup: "john", phone: "+15555550107", relationship: "saved contact", source: "call-intent-smoke-b" }
   ];
@@ -137,6 +138,14 @@ function assertStagedCall(state, label, provider = "twilio") {
     assert.equal(unknown.commandResult.intent, "call.number_needed", "unknown name should ask for number");
     assert.equal(unknown.commandResult.status, "needs-input", "unknown name should need input");
     assert(!unknown.profile.agentPendingAction, "unknown name should not stage executable call");
+
+    // Found live: "Jane" (no such contact) is a substring of the real,
+    // different "Jan" -- the loose contact match used to resolve this
+    // straight to Jan instead of honestly asking for a number.
+    const substringMiss = await command("call Jane");
+    assert.equal(substringMiss.commandResult.intent, "call.number_needed", "'Jane' must never silently resolve to the real, different 'Jan'");
+    assert.equal(substringMiss.commandResult.status, "needs-input");
+    assert(!substringMiss.profile.agentPendingAction, "the substring collision must not stage a call to the wrong contact");
 
     const duplicate = await command("call John");
     assert.equal(duplicate.commandResult.intent, "call.multiple_matches", "duplicate contact should ask for a choice");

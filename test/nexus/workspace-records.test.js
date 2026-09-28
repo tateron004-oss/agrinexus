@@ -31,6 +31,22 @@ test("claimCooldown refuses the window and inserts nothing when a recent marker 
   assert.equal(db.calls.filter(call=>/insert/.test(call.sql)).length,0,"a refused claim must never write anything");
 });
 
+// Found live: the business situational-awareness sweeps passed candidate.record_id (a "rec_<uuid>" business-record
+// id from createId(), not a real uuid) straight in as subjectId -- a real Postgres `uuid` column -- and every
+// sweep threw on its first real candidate. recordKey scopes the cooldown to one specific record via data->>'recordId'
+// instead, without ever touching the subject_id column, so a non-uuid record identity can still get its own
+// independent cooldown window.
+test("claimCooldown scopes by recordKey (matched via data->>'recordId') instead of subjectId, for callers whose record identity isn't a real user uuid",async()=>{
+  const db=fakeDb([{rows:[]},{rows:[]},{rows:[{record_id:"rec_1",tenant_id:"t",subject_id:null,owner_id:"u",workspace_id:"w",record_type:"nudge",classification:"standard",data:{recordId:"rec_biz"},provenance:{}}]},{rows:[]}]);
+  const repo=new RecordRepository(db);
+  const result=await repo.claimCooldown({tenantId:"t",ownerId:"u",recordKey:"rec_biz",workspaceId:"w",recordType:"nudge",cooldownMs:1000,data:{recordId:"rec_biz"}});
+  assert.equal(result.record_id,"rec_1");
+  assert.deepEqual(db.calls[0].params,["record-cooldown:t:w:nudge:rec_biz"],"the lock key uses recordKey when there is no subjectId");
+  assert.match(db.calls[1].sql,/data->>'recordId'=\$/,"the lookup must match on data->>'recordId', not a real column");
+  assert.doesNotMatch(db.calls[1].sql,/subject_id=\$/,"recordKey must never be sent as subject_id");
+  assert.equal(db.calls[2].params[2],null,"subjectId stays null -- the non-uuid record identity never reaches the real uuid column");
+});
+
 test("attachTask fills in the real task once claimCooldown has already reserved the window",async()=>{
   const db=fakeDb([{rows:[]}]);
   const repo=new RecordRepository(db);

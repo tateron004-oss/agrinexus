@@ -38,7 +38,18 @@ function bmi(weightValue, weightUnit, heightValue, heightUnit) {
   const weight = numberOrNull(weightValue);
   const height = numberOrNull(heightValue);
   if (!weight || !height) return null;
-  const kg = weightUnit === "lb" ? weight * 0.45359237 : weight;
+  // Found live (health toolkit/LMS follow-up audit): this exact bug was
+  // already found and fixed in the legacy, no-longer-live
+  // server/providers/chronicDiseaseBridgeProvider.js (only the exact
+  // singular "lb" was recognized -- "lbs"/"pounds", the spellings this
+  // codebase's own natural-language extractors actually produce, silently
+  // fell through to "assume already kg," inflating a real, normal BMI into
+  // a fabricated morbid-obesity reading) but the fix was never ported to
+  // this file, which is the REAL, currently-wired executor
+  // (nexus/runtime/create-runtime.js's "health.chronic-reading").
+  // Case-insensitive, and recognizes every unit spelling this codebase's
+  // own extractors produce.
+  const kg = /^(lbs?|pounds?)$/i.test(String(weightUnit || "").trim()) ? weight * 0.45359237 : weight;
   const meters = heightUnit === "ft_in" ? height * 0.3048 : heightUnit === "cm" ? height / 100 : null;
   if (!meters) return null;
   return Math.round((kg / (meters * meters)) * 10) / 10;

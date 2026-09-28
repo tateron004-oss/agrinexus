@@ -185,6 +185,22 @@ test("loans, break-even and budgets in Swahili do the same arithmetic as English
   assert.equal(await f.say("Panga bajeti"), null); // "panga bajeti" alone is not a plan
 });
 
+// Found live (money-math audit): the same unit-mismatch bug as the English
+// break-even/budget path -- a price "kwa gunia" (per bag) multiplied
+// against a yield in kilo fabricated a nonsense profit figure. Fixed to ask
+// for a matching unit instead, reusing the existing "tell me the selling
+// price" message rather than new Swahili copy.
+test("break-even and budget planning in Swahili also refuse to invent a revenue figure from a mismatched unit price", async () => {
+  const f = farmer();
+  const be = await f.say("Bei ya kuvunja hasara: gharama 60000, natarajia kilo 800 kwa shilingi 5000 kwa gunia");
+  assert.match(be, /takriban 75 kwa kilo/);
+  assert.match(be, /Niambie bei ya kuuza/);
+  assert.doesNotMatch(be, /faida ya|hasara ya/, "must not compute a fabricated profit/loss figure from mismatched units");
+
+  const budget = await f.say("Panga bajeti: mbegu 5000, mbolea 8000, vibarua 12000, natarajia kilo 800 kwa shilingi 5000 kwa gunia");
+  assert.doesNotMatch(budget, /faida ya|hasara ya/, "the revenue/profit line must be omitted, not fabricated, when the price's unit doesn't match the expected yield's unit");
+});
+
 test("printable reports in Swahili carry only what was recorded", async () => {
   const f = farmer();
   await f.say("Nimenunua gunia 2 za mbolea kwa shilingi 30000 kutoka kwa Juma"); await f.say("Nimeuza kilo 200 za mahindi kwa Amina kwa shilingi 90000"); await f.say("Ongeza shamba linaloitwa Kaskazini, ekari 2, mahindi"); await f.say("Ongeza kazi: kupalilia kwa Juma kesho"); await f.say("Ongeza ng'ombe anayeitwa Bella, jike");
@@ -197,6 +213,33 @@ test("printable reports in Swahili carry only what was recorded", async () => {
   assert.match((await f.say("Chapisha ripoti ya matumizi ya shamba langu kama pdf")).report.format, /pdf/);
   assert.match((await f.say("Chapisha ripoti ya matumizi ya shamba langu kwa Kiingereza")).report.content, /EXPENSE REPORT/);
   for (const line of ["Chapisha ripoti ya hali ya hewa", "Chapisha ripoti ya shule", "Tengeneza orodha ya kazi za safari", "Chapisha picha ya mifugo"]) assert.equal(await f.say(line), null, line);
+});
+
+// Found live (business-ledger audit, same bug as the English receipt()): a
+// sale recorded with no parseable quantity has qty:null, so it was
+// silently dropped from both the printed receipt's lines and its total.
+test("a Swahili receipt includes a recorded sale even when it has no parseable quantity", async () => {
+  const f = farmer();
+  await f.say("Nimeuza kilo 200 za mahindi kwa Otieno kwa shilingi 9000");
+  await f.say("Nimeuza maziwa kwa Otieno kwa shilingi 500");
+  const receipt = (await f.say("Chapisha risiti ya Otieno")).report;
+  assert.match(receipt.content, /mahindi/);
+  assert.match(receipt.content, /maziwa/, "the no-quantity sale must appear on the receipt, not be silently dropped");
+  assert.match(receipt.content, /9,500/, "the no-quantity sale must be included in the printed total");
+});
+
+// Found live (business-ledger audit): a party's "history" earned/spent
+// totals summed raw amounts across every currency, mislabeled with
+// whichever record happened to be first -- the same currency-combining bug
+// already fixed in money.js's own report/receipt totals.
+test("a Swahili party history keeps different currencies separate instead of adding them together under one label", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Otieno"); await f.say("skip"); await f.say("skip"); await f.say("skip");
+  await f.say("Nimeuza kilo 10 za mahindi kwa Otieno kwa dola 500");
+  await f.say("Nimeuza kilo 20 za maharage kwa Otieno kwa shilingi 3000");
+  const history = await f.say("Historia ya Otieno");
+  assert.match(history, /\$500(?:\.00)?/, "the USD total must appear on its own");
+  assert.match(history, /3,000/, "the shillings total must appear on its own, separate from the USD total");
 });
 
 test("safety guides in Swahili: emergencies answer at once, the text is conservative, and everyday talk is left alone", async () => {

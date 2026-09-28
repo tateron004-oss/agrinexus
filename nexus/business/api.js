@@ -7,7 +7,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
 function createBusinessApi(runtime, options = {}) {
   const service = new BusinessService({ repository: options.repository || new BusinessRepository(runtime.db),
     access: runtime.access, consents: runtime.consents, agent: runtime.agent,
-    providers: options.providers || createBusinessProviders(options) });
+    providers: options.providers || createBusinessProviders({ ...options, observability: runtime.observability }) });
   return Object.freeze({
     async handle({ method, pathname, context, body = {} }) {
       const root = "/api/nexus/runtime/business";

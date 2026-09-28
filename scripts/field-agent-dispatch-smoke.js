@@ -115,6 +115,22 @@ async function call(route, { method, body, cookie } = {}) {
     assert.equal(noAgentAvailable.status, 200);
     assert.equal(noAgentAvailable.json.agent.id, kenyaAgentId);
 
+    // Found live (drone/field-agent dispatch audit): a completed/cancelled
+    // dispatch had no guard against being moved BACK to an active status --
+    // the very first dispatch (dispatchId) is already "cancelled" above,
+    // and cancelling freed kenyaAgentId, who has since been reassigned to
+    // noAgentAvailable's dispatch. Reopening the old, already-cancelled
+    // dispatch back to "assigned" would silently double-book that same
+    // agent across two active dispatches with no re-check of availability.
+    const reopenCancelled = await call(`/api/field-agents/dispatch/${dispatchId}/status`, { method: "PATCH", body: { status: "assigned" }, cookie: userCookie });
+    assert.equal(reopenCancelled.status, 400, "a cancelled dispatch must not be reopenable");
+    assert.equal(reopenCancelled.json.error, "dispatch_already_finalized");
+    const stillCancelled = await call("/api/field-agents/dispatches", { cookie: userCookie });
+    assert.equal(stillCancelled.json.dispatches.find(item => item.id === dispatchId).status, "cancelled", "the dispatch must remain cancelled, not silently reopened");
+
+    const reopenCompleted = await call(`/api/field-agents/dispatch/${secondDispatchId}/status`, { method: "PATCH", body: { status: "en_route" }, cookie: adminCookie });
+    assert.equal(reopenCompleted.status, 400, "a completed dispatch must not be reopenable either");
+
     console.log("Field agent dispatch smoke test passed");
   } finally {
     server.kill();

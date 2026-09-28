@@ -22,6 +22,10 @@ test("a legal hold blocks the memory-items erasure too, not just nexus_records",
   assert.equal(held.calls.some(call=>/delete from nexus_memory_items/.test(call.sql)),false);
 });
 test("retention sweeps skip legal holds and use locked bounded batches",async()=>{const x=db([{rows:[{artifact_id:"art"}]}]);const rows=await new DataLifecycleRepository(x).purgeExpired({limit:900});assert.equal(rows.length,1);assert.match(x.calls[0].sql,/not exists/);assert.match(x.calls[0].sql,/for update skip locked/);assert.equal(x.calls[0].params[0],500);});
+// Found live: the legal-hold check only matched tenant_id, unlike executeDeletion()'s own hold check just above
+// (which correctly scopes to "subject_id is null or subject_id=<the specific person>") -- a hold on ONE subject
+// silently blocked retention purging of every OTHER subject's artifacts in the same tenant.
+test("retention sweeps' legal-hold check is scoped to the held subject's own artifacts, not the whole tenant",async()=>{const x=db([{rows:[{artifact_id:"art"}]}]);await new DataLifecycleRepository(x).purgeExpired({limit:10});const sql=x.calls[0].sql;assert.match(sql,/h\.subject_id is null or h\.subject_id=nexus_artifacts\.owner_id/,"a per-subject hold must only block that subject's own artifacts, matching executeDeletion's own (subject_id is null or subject_id=$2) pattern");});
 test("backup evidence rejects unverifiable claims",async()=>{const repo=new DataLifecycleRepository(db());await assert.rejects(repo.recordBackupEvidence({releaseSha:"sha",backupId:"id",state:"restore_verified"}),/Valid backup evidence/);});
 test("listStaleQueued finds only requests still queued past the staleness cutoff, bounded and ordered",async()=>{
   const x=db([{rows:[{tenant_id:"t1",request_id:"req_1"}]}]);
@@ -197,4 +201,24 @@ test("artifact deletion wipes title and metadata, not just the object pointer", 
   const artifacts = x.calls.find(call => /update nexus_artifacts/.test(call.sql));
   assert.ok(artifacts);
   assert.match(artifacts.sql,/title=''/); assert.match(artifacts.sql,/metadata='\{\}'::jsonb/); assert.match(artifacts.sql,/object_key=null/);
+});
+
+// Found live (job-queue/schedule-dispatch follow-up audit): a deletion
+// request whose executeDeletion() deterministically fails never left
+// state='queued', and deletion.sweep's own listStaleQueued has no way to
+// tell "genuinely lost job" apart from "already tried and permanently
+// fails" -- so the same request got re-enqueued forever with no terminal
+// state ever reached, despite the schema reserving 'failed' for exactly
+// this. markFailed() is the missing piece: called only once a job has
+// exhausted its own retries (see the deletion.execute handler test below).
+test("markFailed transitions a still-queued request to the schema's reserved failed state, recording why", async () => {
+  const x = db([{rows:[{request_id:"req_1",state:"failed"}]}]);
+  const result = await new DataLifecycleRepository(x).markFailed({ tenantId: "tenant-a", requestId: "req_1", error: "constraint violation" });
+  assert.equal(result.state, "failed");
+  assert.match(x.calls[0].sql, /state='failed'/);
+  assert.match(x.calls[0].sql, /where tenant_id=\$1 and request_id=\$2 and state='queued'/);
+  assert.deepEqual(x.calls[0].params, ["tenant-a", "req_1", { reason: "execution_failed", error: "constraint violation" }]);
+});
+test("markFailed requires a tenant and request id", async () => {
+  await assert.rejects(new DataLifecycleRepository(db()).markFailed({ requestId: "req_1" }), /tenant and request/);
 });

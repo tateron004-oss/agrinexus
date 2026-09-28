@@ -71,6 +71,20 @@ test("staff triage: only the admin role can list, summarise and update, and the 
   assert.equal(await d.say("Show open reports", { userId: "staff", roles: ["admin"], tenantId: "t2" }), "There are no open reports.", "another community sees nothing");
 });
 
+// Found live: "my reports" kept a closed report visible only if content.day
+// (the report's CREATION day, never refreshed on close) was within the last
+// 30 days -- a report open for more than 30 days vanished from the
+// reporter's own list the instant staff closed it, even though they were
+// just told "the person who reported it has been told" and pointed at this
+// exact list.
+test("a report open for more than 30 days is still visible to its reporter the moment it's closed", async () => {
+  const d = desk();
+  const openedLongAgo = new Date(NOW.getTime() - 40 * 86400000);
+  await d.say("Report: the borehole in ward 3 is broken", { at: openedLongAgo });
+  await d.say("Close report 1: pump repaired", { userId: "staff", roles: ["admin"] });
+  assert.match(await d.say("What is the status of my reports?"), /#1 closed — the borehole in ward 3 is broken \(pump repaired\)/, "a report closed today must stay visible today, regardless of how long it was open");
+});
+
 test("a person cannot flood the desk", async () => {
   const d = desk();
   for (let i = 0; i < 10; i += 1) assert.match(await d.say(`Report: broken pipe number ${i} on the street`), /logged report/);

@@ -12,13 +12,33 @@ const DEFAULT_SURVEY_SPEED_MPS = 8;
 const DEFAULT_IMAGE_INTERVAL_METERS = 15;
 const HECTARES_PER_ACRE = 0.404686;
 
+// Found live (drone/logistics follow-up audit): the original regex had no
+// sign handling, so it matched only the digits after a leading "-" and
+// silently dropped it -- "-5 hectares" parsed as a valid, positive 5
+// hectares instead of being rejected as invalid input. Now captures the
+// sign and explicitly rejects a non-positive result rather than correcting
+// it.
+// Found live (drone/logistics follow-up audit): the sign-fix above only
+// ever matched the FIRST hectare/acre mention in the text and returned
+// immediately -- a real multi-field description ("5 hectares in the north
+// field and 3 hectares in the south field, please survey both") silently
+// dropped every mention after the first, understating the true combined
+// area the resulting coveragePlan (passes/flight-minutes/images) is
+// computed for. Now sums every valid (positive) hectare and acre mention
+// in the text instead of stopping at the first.
 function parseAreaHectares(text) {
   const value = String(text || "");
-  const hectareMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:hectares?|ha)\b/i);
-  if (hectareMatch) return Number(hectareMatch[1]);
-  const acreMatch = value.match(/(\d+(?:\.\d+)?)\s*acres?\b/i);
-  if (acreMatch) return Number(acreMatch[1]) * HECTARES_PER_ACRE;
-  return null;
+  let total = 0;
+  let found = false;
+  for (const match of value.matchAll(/(-?\d+(?:\.\d+)?)\s*(?:hectares?|ha)\b/gi)) {
+    const num = Number(match[1]);
+    if (num > 0) { total += num; found = true; }
+  }
+  for (const match of value.matchAll(/(-?\d+(?:\.\d+)?)\s*acres?\b/gi)) {
+    const num = Number(match[1]);
+    if (num > 0) { total += num * HECTARES_PER_ACRE; found = true; }
+  }
+  return found ? total : null;
 }
 
 function planCoverage({ areaHectares, swathMeters = DEFAULT_SWATH_METERS, speedMps = DEFAULT_SURVEY_SPEED_MPS } = {}) {

@@ -9,6 +9,7 @@ test('recovered owner-recipient call coverage preserves explicit identity and co
  const context={process:{env},sanitizePilotText:v=>String(v||''),firstPresentEnvValue:(e,keys)=>keys.map(k=>e[k]).find(Boolean)||'',
  nexusRealProviders:{twilio:{startCall:async args=>{calls.push(args);return {status:args.confirmed===true?'mock-confirmed':'needs-confirmation'};}}},
  nexusOpenAiNativeProviderToolResult:(_db,_common,result)=>result,
+ userIsRestrictedFrom:(user,restriction)=>Boolean(user?.restrictions?.includes(restriction))||(user?.role==='Investor'&&['communications-send','external-transaction','health-record-write','account-provider-link'].includes(restriction)),
  withActionLifecycle:async(_db,{execute})=>execute(),
  nexusMentalHealthBehavioralWellness:require('../../public/nexus-mental-health-behavioral-wellness.js')};
  vm.createContext(context);vm.runInContext(source.slice(a,b)+'\n'+source.slice(start,end)+'\nthis.run=executeNexusOpenAiNativeTool;this.owner=nexusOpenAiNativeOwnerTestRecipient;',context);

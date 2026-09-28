@@ -16,7 +16,18 @@ function pickByName(records, query, get = record => record.data.name) {
   if (!wanted) return null;
   const exact = records.filter(record => nameKey(get(record)) === wanted);
   if (exact.length) return { record: exact[0] };
-  const loose = records.filter(record => nameKey(get(record)).includes(wanted));
+  // Found live: the raw have.includes(wanted) substring fallback let a
+  // query for a NON-EXISTENT field silently resolve to a real, different
+  // field whenever one normalized name is a substring of the other -- "1"
+  // is a substring of "10", so "Plot 1" (no such field) resolved straight to
+  // the real "Plot 10" with no "ambiguous"/"not found" signal, and this
+  // backs nearly every field-name command (yield, planting, crop calendar,
+  // scheduling, even field removal). Word-token matching alone (the pattern
+  // findSupply/findAnimal already use in the sibling health/livestock
+  // modules) still resolves a genuine partial name like "north" against
+  // "north field" without this hazard.
+  const wantedWords = wanted.split(" ");
+  const loose = records.filter(record => { const have = nameKey(get(record)).split(" "); return wantedWords.every(word => have.includes(word)); });
   return loose.length === 1 ? { record: loose[0] } : loose.length > 1 ? { ambiguous: loose } : null;
 }
 

@@ -77,8 +77,27 @@ async function handleMoney(ctx) {
     const itemMatch = quantity ? new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:for|at|to|@)\\b.*)?$`, "i").exec(rest) : /^(?:some |my )?(.+?)(?:\s+(?:for|at|to|@)\b.*)?$/i.exec(rest);
     const item = clean(itemMatch?.[1] || "").toLowerCase().replace(/^(?:some|my|the)\s+/, "");
     let amount = money?.amount; let currency = money?.currency || "";
-    if (quantity && per && !money) { amount = round(quantity.value * per.amount); currency = per.currency; }
-    else if (quantity && per && money && money.amount === per.amount) { amount = round(quantity.value * per.amount); currency = per.currency || money.currency; }
+    // Found live (money-math audit): neither branch checked that the
+    // quantity's unit (bags, crates, sacks) matched the price's "per" unit
+    // (usually kg) before multiplying -- unlike the "bought" branch below,
+    // which already has this exact guard. Executed proof: "sold 5 crates of
+    // tomatoes at 200 per kg" recorded 1,000 (5 x 200), treating crates as
+    // if they were kg. A bag/crate isn't a fixed weight, so this can't be
+    // silently converted -- only multiply when the units genuinely match.
+    if (quantity && per && !money && quantity.unit === per.per) { amount = round(quantity.value * per.amount); currency = per.currency; }
+    else if (quantity && per && money && money.amount === per.amount) {
+      // money.amount === per.amount here almost always means parseMoney
+      // read the SAME number out of "at 200 per kg" that parsePricePer
+      // also read -- not a genuine separate flat total (confirmed live:
+      // parseMoney("5 crates of tomatoes at 200 per kg") returns {amount:
+      // 200}, an echo of the per-unit price, not a real total). Only trust
+      // it as real money when the units actually match; otherwise there is
+      // no usable total at all, so amount must stay unset rather than
+      // silently recording that echoed per-unit number as if it were the
+      // whole sale.
+      amount = quantity.unit === per.per ? round(quantity.value * per.amount) : undefined;
+      currency = per.currency || money.currency;
+    }
     if (!(amount > 0) || !item || item.length > 50) return null;
     const buyer = /\bto (?:my |the )?([A-Za-z][A-Za-z' -]{1,30}?)(?:\s+(?:for|at|@)\b|$)/.exec(rest)?.[1];
     const fields = await ctx.store.list({ ...scope, collection: "field" }); const field = fieldIn(fields, t);
@@ -122,7 +141,18 @@ async function handleMoney(ctx) {
   if ((m = /^(?:i |we )?(?:bought|purchased|got) (.+)$/i.exec(t)) && parseMoney(m[1]) && !/\b(?:sold|selling)\b/i.test(t)) {
     const rest = m[1]; const money = parseMoney(rest); const quantity = parseQuantity(rest); const per = parsePricePer(rest);
     let amount = money.amount; let currency = money.currency;
-    if (quantity && per && quantity.unit === per.per && !/\bfor\s+[\d$]/i.test(rest.replace(per.currency ? "" : "", ""))) { amount = round(quantity.value * per.amount); currency = per.currency || currency; }
+    // Found live (export/invoice/farm-toolkit follow-up audit): the old guard
+    // regexed for the literal word "for" followed by a digit to decide
+    // whether a genuine separate total was stated -- but parsePricePer's own
+    // connector list also accepts "for" to introduce the per-unit price
+    // itself ("bought 5 bags for 3000 per bag"), so completely ordinary
+    // phrasing tripped the guard and left `amount` at the per-unit price
+    // (3000) instead of the real total (15,000). Mirrors the "sold" branch's
+    // own, already-correct echo check a few lines up: parseMoney only ever
+    // echoes the SAME number back when there is no separately-stated total,
+    // so comparing money.amount to per.amount (not scanning for the word
+    // "for") is what actually distinguishes the two cases.
+    if (quantity && per && quantity.unit === per.per && money.amount === per.amount) { amount = round(quantity.value * per.amount); currency = per.currency || currency; }
     const itemMatch = quantity ? new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:for|at|from|@)\\b.*)?$`, "i").exec(rest) : /^(?:some |a |an )?(.+?)(?:\s+(?:for|at|from|@)\b.*)?$/i.exec(rest);
     const item = clean(itemMatch?.[1] || "").toLowerCase();
     if (!item || item.length > 60) return null;
@@ -182,9 +212,15 @@ async function handleMoney(ctx) {
     const period = periodOf(m[1] || "", ctx.today, "this year");
     const rows = (await recordsOf()).filter(record => record.data.type === "expense" && inPeriod(record, period));
     if (!rows.length) return `I have no spending recorded for ${period.label}.`;
-    const by = {}; for (const record of rows) by[record.data.category] = round((by[record.data.category] || 0) + record.data.amount);
-    const cur = rows[0].data.currency;
-    return `Spending ${period.label} by kind: ${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([category, amount]) => `${category} ${formatMoney(amount, cur)}`).join("; ")}.`;
+    // Found live (real-estate/GPS follow-up audit): this used to sum every
+    // row's raw amount together regardless of currency, then label the
+    // whole total with whichever row happened to be first -- a KES entry
+    // and a USD entry in the same category silently became one fabricated
+    // number under one wrong currency. Bucket by currency first, like
+    // sum()/showTotals() already do everywhere else in this file.
+    const by = {}; for (const record of rows) { const category = record.data.category; const currency = record.data.currency || ""; by[category] = by[category] || {}; by[category][currency] = round((by[category][currency] || 0) + record.data.amount); }
+    const totalOf = currencies => Object.values(currencies).reduce((a, b) => a + b, 0);
+    return `Spending ${period.label} by kind: ${Object.entries(by).sort((a, b) => totalOf(b[1]) - totalOf(a[1])).map(([category, currencies]) => `${category} ${showTotals(currencies)}`).join("; ")}.`;
   }
   if (/^(?:show|list) (?:me )?my (?:recent )?(?:money|expenses|income|sales)(?: records| entries)?$/.test(lower)) {
     const rows = (await recordsOf()).slice(0, 8);

@@ -226,9 +226,14 @@ function normalizeRemotivePayload(query, payload) {
     jobTitle: title,
     employerName: company,
     employerType: "public-job-board",
+    // Found live (workforce follow-up audit): the Remotive API call below
+    // never actually filters by query.locationText -- only queryText is sent
+    // as `search` -- so labeling country/cityOrRegion with the user's
+    // REQUESTED location fabricated a match that was never verified. Use the
+    // listing's own real location field, exactly like jobLocation does.
     jobLocation: location,
-    country: query.locationText || location,
-    cityOrRegion: query.locationText || location,
+    country: location,
+    cityOrRegion: location,
     remoteOrOnsite: "remote-or-unspecified",
     employmentType: hasText(first.job_type) ? first.job_type : "not listed",
     salaryOrCompensation: hasText(first.salary) ? first.salary : "not listed",
