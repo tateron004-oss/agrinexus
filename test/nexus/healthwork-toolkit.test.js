@@ -9,6 +9,7 @@ const { FarmRecordRepository } = require("../../nexus/farmwork/store.js");
 const { healthWorkLine } = require("../../nexus/healthwork/brief.js");
 const { readVitals, conditionOf } = require("../../nexus/healthwork/visits.js");
 const { parseAge, ageWords } = require("../../nexus/healthwork/common.js");
+const { family, outstanding } = require("../../nexus/healthwork/immunisation.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { farmWorkTurn } = require("../../nexus/farmwork/index.js");
 const notes = require("../../public/kyro-offline-notes.js");
@@ -164,6 +165,28 @@ test("a next vaccination dose can be scheduled in months, not just days or weeks
   const who = worker(); await run(who, ["Register patient Baby Otieno", "3 weeks", "male", "skip", "skip"]);
   const dose = await who.say("Baby Otieno received measles vaccine, next dose in 6 months");
   assert.match(dose, /received Measles today\. Next dose .*20 March 2027/, `expected a real 6-calendar-month jump, got: ${dose}`);
+});
+
+// Found live (health-toolkit follow-up audit): nameOfVaccine deliberately keeps "first"/"second"/"third" in the
+// stored vaccine name (e.g. "First dose of Penta", "Second dose of Penta") so it reads naturally, but family()
+// only ever stripped a trailing digit or a trailing "dose"/"booster" word -- it never recognized that
+// ordinal-phrased shape, so a later dose recorded via natural ordinal phrasing never cleared an earlier dose's
+// due reminder the way the numeric "Penta 1"/"Penta 2" style already did. The patient kept showing up
+// indefinitely in "who is due for vaccination" after already receiving the later dose.
+test("family() groups a vaccine by name regardless of ordinal vs numeric dose phrasing", () => {
+  assert.equal(family("First dose of Penta"), family("Second dose of Penta"));
+  assert.equal(family("First dose of Penta"), family("Penta 1"));
+  assert.equal(family("Penta 1"), family("Penta 2"));
+  assert.equal(family("OPV 1"), family("OPV 2"));
+  assert.notEqual(family("First dose of Penta"), family("First dose of BCG"));
+});
+
+test("outstanding() clears an earlier dose's due reminder once a later dose of the same vaccine is recorded via natural ordinal phrasing, not just numeric", () => {
+  const doses = [
+    { data: { pid: "p1", vaccine: "First dose of Penta", day: "2026-09-01", nextDue: "2026-09-15" } },
+    { data: { pid: "p1", vaccine: "Second dose of Penta", day: "2026-09-15", nextDue: null } }
+  ];
+  assert.deepEqual(outstanding(doses), [], "the first dose's due reminder must clear once the second dose is logged, even though it was phrased as 'Second dose of Penta' rather than 'Penta 2'");
 });
 
 // ---------- pregnancy ----------
