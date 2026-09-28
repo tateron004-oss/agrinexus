@@ -29,8 +29,22 @@ class ConversationRepository {
     // append into a conversation this tenant/actor doesn't actually own,
     // even if some future caller reaches append() without going through
     // ensure() first.
+    // Found live (production outage): actorId: null is Nexus's own trusted,
+    // hardcoded signal for a system/assistant-authored message -- every
+    // real caller (agent-service.js, behavior-spine.js) either passes the
+    // real context.userId for a user's own message, or the literal `null`
+    // for its own reply; it is never derived from request input, so it
+    // cannot be forged by a caller impersonating "the system". Without this
+    // exemption, EVERY assistant reply into a conversation ensure() had
+    // just given a real owner (which is every conversation, always) hit
+    // this guard and threw -- so every single conversational turn that
+    // produced any response at all (a plain answer, a clarifying question,
+    // or a created plan) failed with conversation_owner_mismatch, the
+    // moment the conversation had a real owner. A genuine cross-user
+    // mismatch (a real, non-null actorId that differs from the owner)
+    // still correctly throws.
     const ownerId = await this.owner({ tenantId, conversationId });
-    if (ownerId !== null && ownerId !== actorId) {
+    if (ownerId !== null && actorId !== null && ownerId !== actorId) {
       throw Object.assign(new Error("Cannot append to a conversation owned by a different user."), { code: "conversation_owner_mismatch" });
     }
     const messageId = createId("message");

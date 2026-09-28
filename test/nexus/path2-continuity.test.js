@@ -42,6 +42,30 @@ test("conversation content and provenance cross the PostgreSQL boundary explicit
   assert.equal(observed.params[5], "hello"); assert.equal(observed.params[6], '{"channel":"voice"}');
 });
 
+// Found live (production outage): actorId: null is Nexus's own trusted,
+// hardcoded signal for a system/assistant-authored message -- every real
+// caller (agent-service.js, behavior-spine.js) either passes the real
+// user's own id for their own message, or the literal `null` for its own
+// reply. Without this exemption, EVERY assistant reply into a conversation
+// ensure() had just given a real owner (which is every conversation,
+// always) hit the ownership guard and threw conversation_owner_mismatch --
+// so every single conversational turn that produced any response at all
+// failed, the moment the conversation had a real owner.
+test("append() allows a system/assistant reply (actorId: null) into a conversation with a real owner, but still rejects a genuine cross-user mismatch", async () => {
+  const repository = new ConversationRepository({ query: async (sql, params) => {
+    if (/select owner_id/.test(sql)) return { rows: [{ owner_id: "user-a" }] };
+    return { rows: [{}] };
+  } });
+  await assert.doesNotReject(() => repository.append({ tenantId: "tenant-a", conversationId: "cnv_test", actorId: null, role: "assistant", content: "reply", provenance: {} }),
+    "a system/assistant message must be allowed into a conversation that already has a real owner");
+
+  await assert.rejects(
+    () => repository.append({ tenantId: "tenant-a", conversationId: "cnv_test", actorId: "user-b", role: "user", content: "hi", provenance: {} }),
+    error => { assert.equal(error.code, "conversation_owner_mismatch"); return true; },
+    "a genuinely different real user must still be rejected"
+  );
+});
+
 test("planning memory search stays purpose scoped and hides health memory by default", async () => {
   let observed;
   const repository = new MemoryRepository({ query: async (sql, params) => { observed = { sql, params }; return { rows: [] }; } });
