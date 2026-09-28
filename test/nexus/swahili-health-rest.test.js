@@ -93,6 +93,30 @@ test("the clinic's medicines and supplies in Swahili, without disturbing the far
   assert.equal(await p.farm("Nina mbolea kiasi gani"), "Una gunia 2 za mbolea.");
 });
 
+// Same bug as the English dispense handler, same fix, duplicated by hand in Swahili.
+test("two concurrent Swahili dispense requests for the same medicine only deduct once, not both", async () => {
+  const p = await registered();
+  await p.health("Ongeza vidonge 40 vya amoxicillin kwenye stoo ya kliniki");
+  const [first, second] = await Promise.all([p.health("Nimetoa vidonge 30 vya amoxicillin"), p.health("Nimetoa vidonge 30 vya amoxicillin")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Nimerekodi: umetoa amoxicillin/.test(text)).length, 1, "exactly one request must have won the race and deducted stock");
+  assert.equal(outcomes.filter(text => /imebadilika/.test(text)).length, 1, "exactly one request must have lost the race and been told to try again");
+  assert.match(await p.health("Nina amoxicillin kiasi gani"), /vidonge 10/, "stock must reflect exactly one 30-tablet deduction from 40, never both");
+});
+
+// Same bug as the English allergy handler, same fix, duplicated by hand in Swahili.
+test("two concurrent Swahili allergy statements for the same patient both survive, not one silently dropped", async () => {
+  const p = await registered();
+  const requests = [["Mary ana mzio wa penicillin", "Mary ana mzio wa penicillin"], ["Mary ana mzio wa aspirin", "Mary ana mzio wa aspirin"]];
+  const [first, second] = await Promise.all(requests.map(([text]) => p.health(text)));
+  const outcomes = [first, second];
+  const loserIndex = outcomes.findIndex(text => /imebadilika/.test(text));
+  assert.notEqual(loserIndex, -1, "exactly one request must have lost the race and been told to try again");
+  await p.health(requests[loserIndex][0]);
+  const record = (await p.health("Chapisha rekodi ya Mary")).report.content;
+  assert.match(record, /penicillin/); assert.match(record, /aspirin/);
+});
+
 test("referral letters and reports in Swahili carry only what was recorded; the monthly report is counts only", async () => {
   const p = await registered();
   await p.health("Ziara ya Mary: joto 38.5, mapigo 80, uchunguzi: malaria");

@@ -22,6 +22,7 @@ const SW = {
   allergy: ({ name, number, allergy }) => `Nimeandika kwa ${name} (#${number}): ana mzio wa ${allergy}. Ninarekodi tu unachoniambia.`,
   allergyHave: ({ name, allergy }) => `${name} tayari ana ${allergy} kwenye rekodi.`,
   allergyFull: "Mizio 20 tayari imeandikwa; iondoe kwa kuhariri rekodi na timu ya kliniki yako.",
+  recordChanged: ({ name }) => `Rekodi ya ${name} imebadilika. Sema tena ili niangalie mizio ya sasa kwanza.`,
   noted: ({ name, number, text }) => `Nimeandika kwa ${name} (#${number}): ${text}.`,
   visit: ({ n, who, when, read, condition, unread, done, first }) => `Nimerekodi ziara ${n} ya ${who}${when ? ` ${when}` : ""}${read ? `: ${read}` : ""}.${condition ? ` Hali (kama ulivyosema): ${condition}.` : ""}${unread ? ` Sikuweza kusoma ${unread} ulichotoa kama namba, tafadhali sema tena ikiwa ni muhimu.` : ""}${done ? " Nimeweka alama kuwa ufuatiliaji umekamilika." : ""} Kumwona tena, sema "mwone ${first} tena baada ya siku 3".`,
   askWhen: ({ name, first }) => `Nikuandikie umwone ${name} lini tena? Sema "mwone ${first} tena baada ya siku 3" au "Ijumaa".`,
@@ -161,9 +162,12 @@ async function handle(ctx) {
     if (!found) return null;
     const allergy = clean(m[2]).toLowerCase().slice(0, 60); if (!allergy) return null;
     const d = found.patient.data;
-    if ((d.allergies || []).includes(allergy)) return SW.allergyHave({ name: d.name, allergy });
-    if ((d.allergies || []).length >= 20) return SW.allergyFull;
-    await ctx.store.update({ ...scope, record: { ...found.patient, data: { ...d, allergies: [...(d.allergies || []), allergy] } } });
+    const existingAllergies = d.allergies || [];
+    if (existingAllergies.includes(allergy)) return SW.allergyHave({ name: d.name, allergy });
+    if (existingAllergies.length >= 20) return SW.allergyFull;
+    // Same bug as patients.js's English allergy handler, same fix, duplicated by hand in Swahili.
+    const applied = await ctx.store.update({ ...scope, record: { ...found.patient, data: { ...d, allergies: [...existingAllergies, allergy] } }, casArrayField: "allergies", casArrayLength: existingAllergies.length });
+    if (!applied) return SW.recordChanged({ name: d.name });
     return SW.allergy({ name: d.name, number: found.patient.number, allergy });
   }
 

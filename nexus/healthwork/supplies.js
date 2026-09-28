@@ -33,7 +33,7 @@ async function handle(ctx) {
   // The clinic stock is only read once a message has matched one of the patterns below, so ordinary messages cost no lookup at all.
   let cache = null; const load = async () => (cache || (cache = await listOf(ctx, "supply")));
   let items = [];
-  const update = (item, patch) => ctx.store.update({ ...scope, record: { ...item, data: { ...item.data, ...patch, updatedOn: ctx.today } } });
+  const update = (item, patch, cas) => ctx.store.update({ ...scope, record: { ...item, data: { ...item.data, ...patch, updatedOn: ctx.today } }, ...(cas ? { casField: cas.field, casValue: cas.value } : {}) });
 
   // ---- stock coming in ----
   let expiry = null;
@@ -73,7 +73,13 @@ async function handle(ctx) {
       let attach = null; let note = "";
       if (m[5]) { const found = await resolvePatient(ctx, m[5], { quiet: true }); if (found?.reply) return found.reply; if (found?.patient) attach = found.patient; else note = ` (${clean(m[5])} isn't one of your registered patients, so it isn't attached to a record.)`; }
       const left = Math.round((item.data.qty - qty) * 1000) / 1000;
-      await update(item, { qty: left });
+      // Found live (healthwork audit): this read qty, checked it above, then wrote a new qty with no
+      // guard that it was still current -- two "gave out"/"dispensed" messages for the same item close
+      // together (a retried/duplicated message, or two people texting from the same clinic account)
+      // could each read the same starting qty, each pass the "have only X recorded" check above, and
+      // each write their own deduction, silently over-dispensing a finite medicine supply undetected.
+      const applied = await update(item, { qty: left }, { field: "qty", value: item.data.qty });
+      if (!applied) return `${item.data.name}'s stock just changed. Say that again so I can check the current amount first.`;
       await record(ctx, "dispense", { item: item.data.name, qty, unit: item.data.unit, day: ctx.today, ...(attach ? { pid: attach.memoryId } : {}) });
       const low = item.data.low !== null && item.data.low !== undefined && left <= item.data.low;
       return `Recorded: ${unitLabel(qty, item.data.unit)} of ${item.data.name} given out${attach ? ` to ${attach.data.name} (#${attach.number})` : ""}. ${unitLabel(left, item.data.unit)} left.${left === 0 ? " That's the last of it." : low ? " That's at or below your low level." : ""}${note}`;
