@@ -27,6 +27,13 @@ test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDat
   assert.match(sql, /!= 'paid'/);
   assert.match(sql, /invoices/);
   assert.deepEqual(db.calls[0].params, [10]);
+  // Found live: grant.status and invoice.status are freeform text a person
+  // can type in any case ("Awarded", "Paid") -- without lower(), a
+  // capitalized grant never matched 'awarded'/'declined' and kept showing as
+  // still-approaching after being awarded, and a capitalized invoice never
+  // matched 'paid' and kept showing as overdue forever.
+  assert.match(sql, /lower\(coalesce\(g->>'status',''\)\) not in \('awarded','declined'\)/);
+  assert.match(sql, /lower\(coalesce\(i->>'status',''\)\) != 'paid'/);
 });
 
 // Found live: record_id ("rec_<uuid>") is not a real uuid and can never be sent as subjectId (a real Postgres
