@@ -762,7 +762,21 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const context = requestContext({ headers: {} }, user);
     return active.behavior.confirm({ input: { correlationId: context.requestId, taskId, stepId, approved: approved === true, channel, text }, context });
   }
-  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest });
+  // Mirrors POST /api/nexus/runtime/privacy/deletions in-process: lets the
+  // legacy /api/account/erase flow (server.js) request real erasure of this
+  // user's authoritative Postgres/nexus data (memory, tasks, records,
+  // schedules, devices, etc. -- see data-lifecycle-repository.js's
+  // executeDeletion) as part of the same "Delete my account" action, instead
+  // of leaving it reachable only via a separate API the real client never
+  // calls. Reuses createControlApi's requestDeletion so the permission check
+  // and deletion.execute job enqueue stay identical to the HTTP path.
+  async function requestDeletionRequest({ user }) {
+    const active = await runtime(); await active.ready;
+    const context = requestContext({ headers: {} }, user);
+    const result = await createControlApi(active).requestDeletion({ context, body: {} });
+    return result.body;
+  }
+  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {

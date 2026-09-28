@@ -12,10 +12,21 @@ function fakeFarmStore() {
   return {
     rows, sessions,
     async add({ tenantId, userId, collection, data }) { const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; rows.unshift(row); return shape(row); },
+    // No `await` between the clash check and the insert, so -- like the real store's advisory-lock-guarded
+    // transaction -- this is atomic from the caller's point of view: two concurrent calls can never both
+    // read "no clash" before either has written, closing the same race the real repository closes.
+    async addUnlessClash({ tenantId, userId, collection, data, findClash }) {
+      const existing = live().filter(row => row.tenantId === tenantId && row.userId === userId && row.collection === collection).map(shape);
+      const clash = findClash(existing);
+      if (clash) return { clash };
+      const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      rows.unshift(row);
+      return { record: shape(row) };
+    },
     async list({ tenantId, userId, collection }) { return live().filter(row => row.tenantId === tenantId && row.userId === userId && row.collection === collection).map(shape); },
     async listAll({ tenantId, userId }) { return live().filter(row => row.tenantId === tenantId && row.userId === userId).map(shape); },
     async listPublic({ tenantId, collection }) { return PUBLIC_COLLECTIONS.includes(collection) ? live().filter(row => row.tenantId === tenantId && row.collection === collection).map(shape) : []; },
-    async update({ tenantId, userId, record, expectedStatus }) { const row = live().find(item => item.tenantId === tenantId && item.userId === userId && item.memoryId === record.memoryId); if (!row) return false; if (expectedStatus !== undefined && (row.data.status || "") !== expectedStatus) return false; row.data = JSON.parse(JSON.stringify(record.data)); row.updatedAt = new Date().toISOString(); return true; },
+    async update({ tenantId, userId, record, expectedStatus, casField, casValue }) { const row = live().find(item => item.tenantId === tenantId && item.userId === userId && item.memoryId === record.memoryId); if (!row) return false; if (expectedStatus !== undefined && (row.data.status || "") !== expectedStatus) return false; if (casField !== undefined && Number(row.data[casField]) !== Number(casValue)) return false; row.data = JSON.parse(JSON.stringify(record.data)); row.updatedAt = new Date().toISOString(); return true; },
     async remove({ tenantId, userId, memoryId }) { const row = live().find(item => item.tenantId === tenantId && item.userId === userId && item.memoryId === memoryId); if (!row) return false; row.deleted = true; return true; },
     async getSession({ tenantId, userId }) { return sessions.get(`${tenantId}:${userId}`) || null; },
     async setSession({ tenantId, userId, session }) { sessions.set(`${tenantId}:${userId}`, { memoryId: "s", kind: "session", ...session }); },

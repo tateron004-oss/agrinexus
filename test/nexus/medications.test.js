@@ -44,7 +44,11 @@ function fakeStore() {
     async listAllActiveMedications() { return rows.filter(row => row.content.kind === "medication" && !row.removed).map(row => ({ memoryId: row.memoryId, tenantId: row.tenantId, userId: row.userId, content: row.content })); },
     async getDose({ userId, medId, day, time }) { const row = rows.find(item => item.userId === userId && item.content.kind === "dose" && item.content.medId === medId && item.content.day === day && item.content.time === time); return row ? { memoryId: row.memoryId, ...row.content } : null; },
     async dosesForDay({ userId, day }) { return rows.filter(row => row.userId === userId && row.content.kind === "dose" && row.content.day === day).map(row => ({ memoryId: row.memoryId, ...row.content })); },
-    async updateDose({ memoryId, content }) { const row = rows.find(item => item.memoryId === memoryId); const { memoryId: _ignored, ...rest } = content; row.content = { kind: "dose", ...rest }; return true; },
+    async updateDose({ memoryId, content, expectedStatus }) {
+      const row = rows.find(item => item.memoryId === memoryId);
+      if (expectedStatus !== undefined && row.content.status !== expectedStatus) return false;
+      const { memoryId: _ignored, ...rest } = content; row.content = { kind: "dose", ...rest }; return true;
+    },
     async listPendingDoses() { return rows.filter(row => row.content.kind === "dose" && row.content.status === "pending").map(row => ({ memoryId: row.memoryId, tenantId: row.tenantId, userId: row.userId, ...row.content })); }
   };
 }
@@ -148,6 +152,42 @@ test("an unconfirmed dose tells only the members the person chose, never which m
   s.set(new Date("2026-09-20T07:30:00Z"));
   assert.equal(await s.say("I took my metformin"), "Thank you. I've logged metformin as taken.");
   assert.ok(s.pushes.some(push => push.userId === "u-amina" && push.body === "Baba Kamau has taken the dose that was waiting."));
+});
+
+// Found live: sendDue()'s follow-up loop read a dose row once (listPendingDoses()), then -- several real
+// awaits later (sharing(), nameOf(), push sends) -- wrote back a spread of that SAME STALE snapshot. If the
+// person confirmed the dose in that window (via turn()'s own separate fresh read-then-write), the sweep's
+// final write silently clobbered their real "taken" record back to "alerted", after already having sent a
+// now-false "a dose is waiting" alert to their trusted circle. Fixed by claiming the pending->alerted
+// transition (a real CAS write) BEFORE telling anyone, mirroring checkin-store.js's identical fix.
+test("a dose confirmed mid-sweep is never clobbered back to alerted, and no false alert is sent", async () => {
+  const members = [{ otherId: "u-amina", otherName: "Amina Wanjiru", shares: { medications: true } }];
+  const store = fakeStore(); const pushes = []; let clock = new Date("2026-09-20T05:00:00Z");
+  let armed = false; let confirmedDuringSweep = false;
+  const circle = { async activeMembers() {
+    // Simulate the real race: the person's own turn() confirms the dose in the window between the sweep's
+    // stale read and its final write -- a separate, fresh read-then-write, exactly like the real concurrent
+    // path. Only armed for the sweep's own call (sharing() is also called earlier, while adding the medicine
+    // and composing its confirmation message -- that earlier call must not trigger this).
+    if (armed && !confirmedDuringSweep) {
+      confirmedDuringSweep = true;
+      await service.turn({ tenantId: "t1", userId: "u1", text: "I took my metformin", timeZone: "Africa/Nairobi", at: clock });
+    }
+    return members;
+  } };
+  const service = createMedicationService({ store, circle, notifications: { enqueue: async () => {} }, devices: { listPushable: async () => [{ id: 1 }] }, autonomyControl: { isPaused: async () => false },
+    push: async row => { pushes.push(row); }, memoryUserName: async () => "Baba Kamau", now: () => clock });
+  const say = text => service.turn({ tenantId: "t1", userId: "u1", text, timeZone: "Africa/Nairobi", at: clock });
+  await say("Add medication metformin 500mg at 8am");
+  await service.sendDue({ at: clock }); pushes.length = 0;
+  clock = new Date("2026-09-20T07:10:00Z"); // past the two-hour grace window
+  armed = true;
+  const swept = await service.sendDue({ at: clock });
+  assert.equal(swept.alerted, 0, "the claim must lose the race to the real confirmation, so no alert fires");
+  assert.equal(pushes.filter(push => push.userId === "u-amina").length, 0, "the circle must never be falsely told a dose is waiting once it was actually taken");
+  const dose = store.rows.find(row => row.content.kind === "dose");
+  assert.equal(dose.content.status, "taken", "the real 'taken' record must survive, not be clobbered back to 'alerted'");
+  assert.ok(dose.content.takenAt, "the real confirmation's takenAt must still be present");
 });
 
 test("with nobody chosen, a missed dose is recorded quietly and nobody is told", async () => {

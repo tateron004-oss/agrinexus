@@ -40,6 +40,32 @@ test("searchEvents returns real events for Google Calendar", async () => {
   assert.equal(result.body.data.events[0].start, "2026-09-27T14:00:00Z");
 });
 
+// Found live (calendar/notes audit): the Google branch's default-end
+// fallback used `new Date(start).getTime() + 30*60000` then `.toISOString()`
+// -- but `start` is a bare, offset-less wall-clock string, and `new
+// Date("...T15:00:00")` (no offset) parses as local time of the NODE
+// PROCESS, not the caller's own `timeZone`. `.toISOString()` then stamps an
+// absolute UTC instant on the result, so unlike `start` (offset-less,
+// reinterpreted by Google via the paired `timeZone` field), the computed
+// `end` carries its own baked-in offset that Google uses directly -- the
+// two ends of one event ended up computed in two different reference
+// frames whenever the server's local zone differed from `timeZone`.
+test("createEvent's default 30-minute end is computed on the wall-clock digits, independent of the server's own local timezone", async () => {
+  const originalTZ = process.env.TZ;
+  process.env.TZ = "America/Los_Angeles"; // deliberately different from the event's own timeZone below
+  const originalFetch = global.fetch;
+  let sentBody;
+  global.fetch = async (url, init) => { sentBody = JSON.parse(init.body); return { ok: true, text: async () => JSON.stringify({ id: "evt_real2" }) }; };
+  try {
+    await calendarProvider.createEvent({ title: "Vet visit", start: "2026-09-26T15:00:00", timeZone: "Africa/Nairobi", confirmed: true }, googleEnv);
+    assert.equal(sentBody.end.dateTime, "2026-09-26T15:30:00", "the default end must be 30 wall-clock minutes after start, not shifted by the server's own local timezone");
+    assert.equal(sentBody.end.timeZone, "Africa/Nairobi");
+  } finally {
+    global.fetch = originalFetch;
+    if (originalTZ === undefined) delete process.env.TZ; else process.env.TZ = originalTZ;
+  }
+});
+
 test("searchEvents honestly reports zero matches instead of fabricating one", async () => {
   const result = await withFetch(
     async () => ({ ok: true, text: async () => JSON.stringify({ events: [] }) }),

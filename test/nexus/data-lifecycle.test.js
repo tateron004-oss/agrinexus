@@ -143,6 +143,36 @@ test("a legal hold blocks device erasure too, not just the older tables", async 
   }
 });
 
+// Found live (export/compliance follow-up audit): nexus_consents was entirely absent from account erasure --
+// recordConfirmedConsent() (behavior-spine.js) stores the real recipient address (phone/email a message or
+// call was actually sent to) and up to 200 characters of the person's own literal confirmation text (which
+// routinely echoes the outbound message content itself, per the confirmation prompt's own design). An account
+// erasure left every consent record's PII-bearing columns live indefinitely under a nominally "erased" subject.
+test("account deletion also revokes consents and wipes the recipient address and confirmation text", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},
+    {rows:[{consent_id:'con1'},{consent_id:'con2'}]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+
+  const consents = x.calls.find(call => /update nexus_consents/.test(call.sql));
+  assert.ok(consents); assert.deepEqual(consents.params,['tenant-a','owner-a']);
+  assert.match(consents.sql,/state='revoked'/); assert.match(consents.sql,/revoked_at=now\(\)/);
+  assert.match(consents.sql,/recipient=null/); assert.match(consents.sql,/receipt='\{\}'::jsonb/);
+  assert.match(consents.sql,/state<>'revoked'/);
+  assert.equal(result.verification.consentsErased,true);
+  assert.equal(result.verification.consentsCount,2);
+});
+
+test("a legal hold blocks consent erasure too, not just the older tables", async () => {
+  const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+  assert.equal(held.calls.some(call=>/update nexus_consents/.test(call.sql)),false);
+});
+
 // Found live: nexus_tasks/nexus_task_steps/nexus_tool_executions were entirely absent from account erasure --
 // every task_document (a person's own goal text and outcome), step input/output, and raw tool-execution
 // request/response (the real PII passed to and from every executor) survived a "verified" erasure in full.

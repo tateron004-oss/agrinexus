@@ -149,3 +149,14 @@ test("computeBusinessDashboard buckets grantsRequested/grantsAwarded by currency
   assert.equal(dashboard.grantsAwarded, 5000000);
   assert.deepEqual(dashboard.otherGrantAwardedCurrencies, ["USD"], "only the awarded USD grant (50000) counts here, not the pending one");
 });
+
+// Found live: the same case-sensitivity bug as grantsAwarded above, on
+// invoice.status -- a naturally typed "Paid" (capital P) never matched an
+// exact-lowercase "paid" check, so that invoice stayed counted as unpaid
+// forever.
+test("computeBusinessDashboard's unpaidInvoices matches invoice status case-insensitively", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    invoices: [{ status: "Paid" }, { status: "paid" }, { status: "sent" }]
+  }));
+  assert.equal(dashboard.unpaidInvoices, 1, "both differently-cased 'paid' invoices must be excluded from the unpaid count");
+});

@@ -108,6 +108,37 @@ test("a multi-device fan-out reports the real per-device outcome, not the total 
   assert.deepEqual(result.devicesFailed, ["device-2"], "the failing device must be identifiable, not silently discarded");
 });
 
+// Found live (delivery-pipeline audit): targets was one snapshot fetched
+// once, then the loop made a real, potentially slow network call per device
+// -- a device revoked (e.g. "remove this device" after it's lost/stolen)
+// while an EARLIER device's send in the SAME batch was still in flight still
+// received the push, because the loop kept using the stale snapshot's
+// ciphertext/endpoint with no re-check before sending.
+test("a device revoked while an earlier device's send in the same batch is still in flight never receives the push", async () => {
+  const { notification, tokens } = fixture();
+  const ciphertext1 = tokens.encrypt({ p256dh: "pub-1", auth: "auth-1" }, "tenant-1:user-1:device-1");
+  const ciphertext2 = tokens.encrypt({ p256dh: "pub-2", auth: "auth-2" }, "tenant-1:user-1:device-2");
+  let activeDevices = [
+    { device_id: "device-1", push_provider: "webpush", push_endpoint: "https://push.example/ep-1", push_key_ciphertext: ciphertext1 },
+    { device_id: "device-2", push_provider: "webpush", push_endpoint: "https://push.example/ep-2", push_key_ciphertext: ciphertext2 }
+  ];
+  const devices = { listPushable: async () => activeDevices, revoke: async () => true };
+  const sent = [];
+  const webPush = {
+    sendNotification: async subscription => {
+      sent.push(subscription.endpoint);
+      // Device 1's send is the one still "in flight" -- while it's happening,
+      // the user revokes device 2 from a different session/tab.
+      if (subscription.endpoint.endsWith("ep-1")) activeDevices = activeDevices.filter(item => item.device_id !== "device-2");
+    }
+  };
+  const provider = createWebPushProvider({ env, devices, deviceTokens: tokens, webPush });
+  const result = await provider(notification);
+
+  assert.deepEqual(sent, ["https://push.example/ep-1"], "the revoked device must never actually receive the push");
+  assert.equal(result.devicesDelivered, 1);
+});
+
 test("a multi-device fan-out where every device succeeds reports no failures", async () => {
   const { notification, tokens } = fixture();
   const ciphertext1 = tokens.encrypt({ p256dh: "pub-1", auth: "auth-1" }, "tenant-1:user-1:device-1");

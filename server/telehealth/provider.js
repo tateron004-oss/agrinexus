@@ -282,7 +282,15 @@ async function createEncounter(db, body = {}, user = null, env = process.env, op
     noEmergencyDispatch: true
   };
 
-  if (intake.createVideo && !emergency) {
+  // Found live (telehealth audit): this real external call (the same one
+  // the dedicated createVideoRoom below explicitly gates on
+  // `body.consentToShare === true`, with the stated policy "Video room
+  // creation requires explicit confirmation and sharing consent") had no
+  // consent check at all when bundled into encounter creation -- a real
+  // video room could be created via create-encounter with createVideo:true
+  // and consentToShare omitted/false, bypassing the same gate its sibling
+  // route enforces for the identical action.
+  if (intake.createVideo && !emergency && intake.consentToShare) {
     encounter.video = await createVideoForEncounter(encounter, env, options);
     db.nexusTelehealthVideoAttempts.unshift({
       id: `video-${encounter.id}`,

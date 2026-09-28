@@ -510,7 +510,11 @@ function computeBusinessDashboard(editable) {
   // export's own fix) so this total can never drift from what a generated
   // invoice actually shows, even by a cent, for a fractional-cent unit price.
   const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
-  const unpaidInvoices = editable.invoices.filter(invoice => invoice.status !== "paid").length;
+  // Found live: same case-sensitivity bug already fixed below for
+  // grant.status -- invoice.status is also freeform text, so a naturally
+  // typed "Paid" (capital P) never matched this exact-lowercase check and
+  // that invoice silently stayed counted as unpaid forever.
+  const unpaidInvoices = editable.invoices.filter(invoice => String(invoice.status || "").toLowerCase() !== "paid").length;
   // Found live (business/CRM audit): both totals used to sum grant.amount across ALL grants with no
   // per-currency bucketing, then the caller hard-prefixed both with a literal "$" -- a real dollar
   // amount mixed with an unrelated currency's magnitude under one mislabeled total, the same shape

@@ -36,7 +36,7 @@ function contactChannel(contact) {
   return null;
 }
 
-function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
+function createHandlers({ runtime, deliveryProviders = {}, logger = null, workerId = null }) {
   if (!runtime) throw new Error("The authoritative runtime is required.");
   return Object.freeze({
     "acceptance.canary": async ({ job }) => ({ accepted: true, releaseSha: process.env.RENDER_GIT_COMMIT || process.env.GIT_SHA || "development",
@@ -52,14 +52,14 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
     "schedules.dispatch": async ({ job }) => ({ dispatched: await runtime.schedules.dispatchDue({ jobs: runtime.jobs,
       limit: job.payload?.limit || 100 }) }),
     "notifications.deliver": async ({ job, heartbeat }) => {
-      const claimed = await runtime.notifications.claim(job.payload?.limit || 25);
+      const claimed = await runtime.notifications.claim(job.payload?.limit || 25, undefined, workerId);
       const outcomes = [];
       for (const notification of claimed) {
         await heartbeat();
         const provider = deliveryProviders[notification.channel];
         if (typeof provider !== "function") {
           const failedRow = await runtime.notifications.failed(notification.notification_id, { code: "delivery_provider_unavailable",
-            message: `No ${notification.channel} delivery provider is configured.` });
+            message: `No ${notification.channel} delivery provider is configured.` }, workerId);
           if (failedRow?.state === "failed") await blockStalledAutonomousTaskIfApplicable({ runtime, notification,
             error: { code: "delivery_provider_unavailable" } });
           logger?.warn?.("notifications.delivery_unavailable", { notificationId: notification.notification_id, channel: notification.channel,
@@ -72,7 +72,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
           receipt = await provider(notification);
           if (!receipt?.verified) throw Object.assign(new Error("Delivery provider returned no verified receipt."), { code: "delivery_unverified" });
         } catch (error) {
-          const failedRow = await runtime.notifications.failed(notification.notification_id, { code: error.code || "delivery_failed", message: error.message });
+          const failedRow = await runtime.notifications.failed(notification.notification_id, { code: error.code || "delivery_failed", message: error.message }, workerId);
           if (failedRow?.state === "failed") await blockStalledAutonomousTaskIfApplicable({ runtime, notification,
             error: { code: error.code || "delivery_failed" } });
           logger?.warn?.("notifications.delivery_failed", { notificationId: notification.notification_id, channel: notification.channel,
@@ -87,7 +87,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null }) {
         // poll would then claim and re-deliver it, sending the SAME push/SMS/email a second time. A bookkeeping
         // failure after a confirmed send must never trigger a resend, so it gets its own non-requeuing catch.
         try {
-          await runtime.notifications.delivered(notification.notification_id);
+          await runtime.notifications.delivered(notification.notification_id, workerId);
           await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
           // Found live: a multi-device fan-out (webpush-provider.js) can
           // reach some of a user's devices and not others while still
