@@ -73,6 +73,13 @@ class DataLifecycleRepository {
       // consistent; the secret-bearing columns are nulled either way.
       const devices=await trx.query(`update nexus_devices set state='revoked',push_endpoint=null,push_key_ciphertext=null,push_provider=null,push_state='revoked',updated_at=now() where tenant_id=$1 and user_id=$2 and state<>'revoked' returning device_id`,[tenantId,request.subject_id]);
       const deviceEvents=await trx.query(`delete from nexus_device_events where tenant_id=$1 and user_id=$2 returning event_id`,[tenantId,request.subject_id]);
+      // Found live (export/compliance follow-up audit): nexus_consents was entirely absent from this sweep --
+      // recordConfirmedConsent() (behavior-spine.js) stores the real recipient address (phone/email the person
+      // actually sent a message or placed a call to) and up to 200 characters of the person's own literal
+      // confirmation text (which, per the confirmation prompt's own design, routinely echoes the outbound
+      // message content itself) in `recipient`/`receipt`. Revoked the same way nexus_devices is above, and the
+      // PII-bearing columns are nulled either way so the row's own audit history stays consistent.
+      const consents=await trx.query(`update nexus_consents set state='revoked',revoked_at=now(),recipient=null,receipt='{}'::jsonb where tenant_id=$1 and subject_id=$2 and state<>'revoked' returning consent_id`,[tenantId,request.subject_id]);
       const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,memoryItemsErased:true,memoryItemsCount:(memoryItems.rows||memoryItems).length,
         conversationsErased:true,conversationsCount:(conversations.rows||conversations).length,
         messagesErased:true,
@@ -84,6 +91,7 @@ class DataLifecycleRepository {
         tasksErased:true,tasksCount:(tasks.rows||tasks).length,
         taskStepsErased:true,toolExecutionsErased:true,
         schedulesCancelled:true,schedulesCount:(schedules.rows||schedules).length,
+        consentsErased:true,consentsCount:(consents.rows||consents).length,
         verifiedAt:new Date().toISOString()};
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};
