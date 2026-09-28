@@ -170,22 +170,38 @@ async function authoritativeRuntimeUser(user) {
     // data" request was rejected with a 403, so #549/#550's fix to actually
     // run and correctly erase a deletion request was unreachable by anyone.
     : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write", "devices:write", "privacy:delete"];
+  let resolvedId = authoritativeUserId;
   if (usingPostgresState()) {
     const pool = getPgPool();
     const email = String(user.email || `${user.id}@local.agrinexus.invalid`).toLowerCase();
+    // Found live (production outage): authoritativeUserId is deterministically derived from the legacy
+    // user.id, but a real row can already exist under a DIFFERENT id for the same (tenant_id, email) --
+    // e.g. from before this derivation existed, or any other historical identity mismatch. The insert's
+    // ON CONFLICT(id) only guarded against the SAME id already existing, not this email collision, so
+    // every authenticated /api/nexus/runtime/* call for that real account threw an uncaught
+    // "duplicate key value violates unique constraint users_tenant_id_email_key" that escaped this
+    // function (it isn't wrapped by any of the route handlers' own try/catch) all the way to the
+    // server's generic 500 handler -- taking down the ENTIRE authoritative runtime (behavior/turn,
+    // tasks, devices, everything) for that account, with every request looking identical: a generic
+    // client-side fallback response and no visible error. Look up any existing row by email first and
+    // reuse ITS id rather than blindly inserting under the freshly-computed one -- a real users.id may
+    // already be referenced by other rows (tasks, memory, devices) created under it, so an existing
+    // identity's id must never be repointed.
+    const existing = await pool.query(`select id from users where tenant_id=$1 and lower(email)=$2 limit 1`, [NEXUS_AUTHORITATIVE_TENANT_ID, email]);
+    resolvedId = existing.rows[0]?.id || authoritativeUserId;
     await pool.query(`insert into users(id,tenant_id,email,display_name,password_hash,status)
       values($1,$2,$3,$4,$5,'active') on conflict(id) do update set
       display_name=excluded.display_name,status='active',updated_at=now()`,
-    [authoritativeUserId, NEXUS_AUTHORITATIVE_TENANT_ID, email, user.name || "Nexus User", "legacy-auth-bound"]);
+    [resolvedId, NEXUS_AUTHORITATIVE_TENANT_ID, email, user.name || "Nexus User", "legacy-auth-bound"]);
     await pool.query(`insert into nexus_organization_memberships(tenant_id,user_id,role,permissions,state)
       values($1,$2,$3,$4,'active') on conflict(tenant_id,user_id,role) do update set
       permissions=excluded.permissions,state='active',updated_at=now()`,
-    [NEXUS_AUTHORITATIVE_TENANT_ID, authoritativeUserId, role, permissions]);
+    [NEXUS_AUTHORITATIVE_TENANT_ID, resolvedId, role, permissions]);
   }
   return {
     ...user,
     legacyUserId: user.id,
-    id: authoritativeUserId,
+    id: resolvedId,
     tenantId: NEXUS_AUTHORITATIVE_TENANT_ID,
     organizationId: NEXUS_AUTHORITATIVE_TENANT_ID,
     roles: [role],
