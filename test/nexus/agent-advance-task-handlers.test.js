@@ -1,7 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND } = require("../../nexus/workers/handlers.js");
+const { createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND, AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND } = require("../../nexus/workers/handlers.js");
 
 function fixture({ task, executeTaskResult, transitionCalls = [] } = {}) {
   const notificationsEnqueued = [];
@@ -194,6 +194,35 @@ test("notifications.deliver blocks the task once outcome delivery fails permanen
   assert.equal(calls.transition.length, 1);
   assert.equal(calls.transition[0].nextState, "blocked");
   assert.equal(calls.transition[0].taskId, "tsk_1");
+});
+
+// Found live (notifications audit): blockStalledAutonomousTaskIfApplicable only ever recognized
+// AUTONOMOUS_OUTCOME_NOTIFICATION_KIND -- when a confirmation notification ("Kyro needs your approval")
+// permanently failed to deliver, the task was left in awaiting_confirmation forever, since
+// agent.sweep-advanceable-tasks deliberately never re-drives that state (only a real user reply can) and
+// nothing else notified again or blocked it. Unlike the outcome/verifying case, there was no signal to
+// the user at all that Kyro was waiting on them.
+test("notifications.deliver blocks the task once a confirmation-request delivery fails permanently", async () => {
+  const task = { taskId: "tsk_1", tenantId: "t1", ownerId: "u1", state: "awaiting_confirmation", autonomous: true };
+  const notification = { notification_id: "ntf_1", tenant_id: "t1", task_id: "tsk_1", channel: "push", content: { kind: AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND } };
+  const { runtime, deliveryProviders, calls } = deliveryFixture({ notification, task, deliverySucceeds: false });
+  runtime.notifications.failed = async (id, error) => { calls.failed.push({ id, error }); return { state: "failed" }; };
+  const handlers = createHandlers({ runtime, deliveryProviders });
+  await handlers["notifications.deliver"]({ job: { payload: {} }, heartbeat: async () => {} });
+  assert.equal(calls.transition.length, 1);
+  assert.equal(calls.transition[0].nextState, "blocked");
+  assert.equal(calls.transition[0].taskId, "tsk_1");
+  assert.match(calls.transition[0].reason, /confirmation/i);
+});
+
+test("notifications.deliver does not block a confirmation-request task that has since moved on (e.g. the user already replied)", async () => {
+  const task = { taskId: "tsk_1", tenantId: "t1", ownerId: "u1", state: "running", autonomous: true };
+  const notification = { notification_id: "ntf_1", tenant_id: "t1", task_id: "tsk_1", channel: "push", content: { kind: AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND } };
+  const { runtime, deliveryProviders, calls } = deliveryFixture({ notification, task, deliverySucceeds: false });
+  runtime.notifications.failed = async (id, error) => { calls.failed.push({ id, error }); return { state: "failed" }; };
+  const handlers = createHandlers({ runtime, deliveryProviders });
+  await handlers["notifications.deliver"]({ job: { payload: {} }, heartbeat: async () => {} });
+  assert.equal(calls.transition.length, 0, "a task no longer in awaiting_confirmation must not be blocked by a stale notification's failure");
 });
 
 test("notifications.deliver does not block the task on a transient (still-retrying) delivery failure", async () => {

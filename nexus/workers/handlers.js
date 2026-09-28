@@ -10,6 +10,17 @@ const { createCommand } = require("../contracts/command.js");
 // payload, which is content the user asked for, not evidence the task itself
 // was delivered).
 const AUTONOMOUS_OUTCOME_NOTIFICATION_KIND = "autonomous_task_outcome";
+// The notification that asks a human to approve an autonomous task's next
+// step. Found live (notifications audit): blockStalledAutonomousTaskIfApplicable
+// below only ever recognized AUTONOMOUS_OUTCOME_NOTIFICATION_KIND -- when this
+// confirmation notification permanently failed to deliver (no registered push
+// device, a sustained outage, 5 exhausted attempts), the task was left in
+// awaiting_confirmation forever: agent.sweep-advanceable-tasks deliberately
+// never re-drives that state (only the user's own reply can resolve it, see
+// its own comment), so there was no retry, no second notification, and no
+// transition to blocked -- unlike the symmetric outcome/verifying case this
+// mechanism was built to protect. The person never learned Kyro was waiting.
+const AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND = "autonomous_task_confirmation";
 
 // situational-awareness.sweep's own cooldown marker: a plain (non-health-
 // classified) nexus_records row, reusing RecordRepository rather than adding
@@ -185,7 +196,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
         await runtime.notifications.enqueue({ tenantId: job.tenant_id, userId: task.ownerId, taskId,
           channel: "push", scheduledAt: new Date(),
           idempotencyKey: `agent-confirm:${taskId}:${result.pendingStepId}`,
-          content: { kind: "autonomous_task_confirmation", title: "Kyro needs your approval",
+          content: { kind: AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND, title: "Kyro needs your approval",
             body: confirmationBody, taskId, stepId: result.pendingStepId } });
         return { taskId, state: "awaiting_confirmation" };
       }
@@ -748,23 +759,31 @@ async function acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification,
   }
 }
 
+// The task state each autonomous notification kind's permanent delivery failure must block from -- the
+// state the task genuinely can't progress out of without that notification having reached someone.
+const AUTONOMOUS_STALL_STATE_BY_NOTIFICATION_KIND = {
+  [AUTONOMOUS_OUTCOME_NOTIFICATION_KIND]: "verifying",
+  [AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND]: "awaiting_confirmation"
+};
+
 async function blockStalledAutonomousTaskIfApplicable({ runtime, notification, error }) {
-  if (notification.content?.kind !== AUTONOMOUS_OUTCOME_NOTIFICATION_KIND || !notification.task_id) return;
+  const kind = notification.content?.kind;
+  const expectedState = AUTONOMOUS_STALL_STATE_BY_NOTIFICATION_KIND[kind];
+  if (!expectedState || !notification.task_id) return;
   const task = await runtime.tasks.get({ tenantId: notification.tenant_id, taskId: notification.task_id, includeSteps: false });
-  if (!task || !task.autonomous || task.state !== "verifying") return;
+  if (!task || !task.autonomous || task.state !== expectedState) return;
   try {
     await runtime.engine.transition({ tenantId: task.tenantId, taskId: task.taskId, actorId: "nexus-autonomy",
-      nextState: "blocked", reason: `Autonomous outcome delivery failed permanently: ${error.code || "delivery_failed"}` });
+      nextState: "blocked", reason: `Autonomous ${kind === AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND ? "confirmation" : "outcome"} delivery failed permanently: ${error.code || "delivery_failed"}` });
   } catch {
-    // Best-effort -- a task stuck at verifying is still visible via the
-    // audit trail and the review surface even if this particular transition
-    // loses a race.
+    // Best-effort -- a task stuck at verifying/awaiting_confirmation is still visible via the audit
+    // trail and the review surface even if this particular transition loses a race.
   }
 }
 
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
 
-module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND,
+module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND, AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND,
   SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE, FARM_LOG_NUDGE_RECORD_TYPE,
   BUSINESS_FOLLOWUP_NUDGE_RECORD_TYPE, WELLNESS_GOAL_NUDGE_RECORD_TYPE, LEAD_FOLLOWUP_NUDGE_RECORD_TYPE,
   BUSINESS_DEADLINE_NUDGE_RECORD_TYPE });
