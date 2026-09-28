@@ -16,7 +16,7 @@ const path = require("node:path");
 // === id)`. This pins that two real, distinct authenticated users are now
 // each scoped to their own records.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4624;
+const port = 4631;
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-pilot-records-cross-user-isolation-db.json");
