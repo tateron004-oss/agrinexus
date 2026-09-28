@@ -40775,7 +40775,14 @@ function normalizeRoutingRule(body = {}, existing = {}) {
   };
 }
 
-function normalizeProviderResponse(db, recordId, body = {}, existing = {}) {
+// Found live (review-queue/cases audit): reviewerId/reviewerLabel used to
+// trust body.reviewerId/body.reviewerLabel ahead of anything derived from the
+// authenticated session -- any signed-in provider-queue user could POST an
+// arbitrary reviewer name, which was then stored as the durable attribution
+// on the response, used as the actor on the "provider_response_created"
+// audit event, and shown to the end user once the response is published.
+// Attribution must come only from the real session, never client input.
+function normalizeProviderResponse(db, recordId, body = {}, existing = {}, user = null) {
   const now = new Date().toISOString();
   const responseType = NEXUS_PROVIDER_RESPONSE_TYPES.includes(body.responseType) ? body.responseType : existing.responseType || "note";
   const providerOrganizationId = sanitizePilotText(body.providerOrganizationId || existing.providerOrganizationId || "provider-org-internal-review", 120);
@@ -40783,8 +40790,8 @@ function normalizeProviderResponse(db, recordId, body = {}, existing = {}) {
     id: existing.id || body.id || crypto.randomUUID(),
     recordId: sanitizePilotText(recordId || body.recordId || existing.recordId || "", 120),
     providerOrganizationId,
-    reviewerId: sanitizePilotText(body.reviewerId || existing.reviewerId || "provider-reviewer-internal-admin", 120),
-    reviewerLabel: sanitizePilotText(body.reviewerLabel || existing.reviewerLabel || "Nexus reviewer", 160),
+    reviewerId: sanitizePilotText(existing.reviewerId || user?.id || "provider-reviewer-internal-admin", 120),
+    reviewerLabel: sanitizePilotText(existing.reviewerLabel || user?.name || "Nexus reviewer", 160),
     responseType,
     responseText: sanitizePilotText(body.responseText || existing.responseText || "Provider/admin review note prepared locally.", 1200),
     safeLimitations: sanitizeList(body.safeLimitations || existing.safeLimitations || ["Review-only response. No diagnosis, prescription, payment, emergency dispatch, call, message, or live provider action is implied."], 8, 240),
@@ -45439,7 +45446,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const record = getRecordById(db, nexusRecordResponsesMatch[1]);
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
-    const response = normalizeProviderResponse(db, record.id, await readBody(req));
+    const response = normalizeProviderResponse(db, record.id, await readBody(req), {}, user);
     db.nexusProviderResponses.unshift(response);
     record.providerResponseIds = [response.id, ...(record.providerResponseIds || [])];
     record.updatedAt = response.updatedAt;
@@ -45458,7 +45465,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const index = db.nexusProviderResponses.findIndex(item => item.id === nexusResponseMatch[1]);
     if (index < 0) return send(res, 404, { ok: false, error: "response_not_found" });
-    db.nexusProviderResponses[index] = normalizeProviderResponse(db, db.nexusProviderResponses[index].recordId, await readBody(req), db.nexusProviderResponses[index]);
+    db.nexusProviderResponses[index] = normalizeProviderResponse(db, db.nexusProviderResponses[index].recordId, await readBody(req), db.nexusProviderResponses[index], user);
     await writeDb(db);
     return send(res, 200, { ok: true, response: db.nexusProviderResponses[index] });
   }
@@ -46597,10 +46604,16 @@ async function api(req, res, url) {
     const item = db.nexusPilotReviewQueue.find(queueItem => queueItem.id === nexusReviewNoteMatch[1]);
     if (!item) return send(res, 404, { ok: false, error: "queue_item_not_found" });
     const body = await readBody(req);
+    // Found live: this used to trust a client-supplied body.actor ahead of
+    // the authenticated user's real name, so any signed-in provider-queue
+    // user could forge a different reviewer's name onto the note AND the
+    // permanent audit trail below. The sibling status-change handler just
+    // below already gets this right (actor: user?.name || "Provider/Admin",
+    // no client input) -- mirror it here.
     const note = {
       id: crypto.randomUUID(),
       note: sanitizePilotText(body.note || "Provider/admin review note added.", 600),
-      actor: sanitizePilotText(body.actor || user?.name || "Provider/Admin", 120),
+      actor: sanitizePilotText(user?.name || "Provider/Admin", 120),
       createdAt: new Date().toISOString(),
       localReviewOnly: true
     };
