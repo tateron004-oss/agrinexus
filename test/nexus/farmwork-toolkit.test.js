@@ -273,6 +273,20 @@ test("a note to a calendar or list is not taken for a buyer note", async () => {
   assert.equal(await who.say("Add a note to my calendar: dentist"), null);
 });
 
+// Found live (capability-testing the orb): once a farmer has saved even one
+// buyer/supplier, "note about X: Y" used to claim EVERY such phrase, even
+// when X was not actually a known party -- rejecting it outright ("I don't
+// have X on your list") instead of falling through to a plain personal
+// note. A genuinely unrelated note was silently discarded, never saved
+// anywhere.
+test("a note about a topic that is not a known party falls through instead of being wrongly rejected", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
+  assert.equal(await who.say("Note about water tank: it's leaking"), null, "must fall through, not be rejected, when the subject is not a known party");
+  // A note about the real, known party is still correctly claimed and saved.
+  assert.match(await who.say("Note about Amina Traders: wants 500 kg maize"), /Noted about Amina Traders/);
+});
+
 // ---------- loans and budgets ----------
 test("a loan is worked out exactly and labelled as arithmetic, not a lender's terms", async () => {
   const text = await farmer().say("Calculate a loan of 100000 at 12 percent for 12 months");

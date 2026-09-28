@@ -75,7 +75,16 @@ async function handle(ctx) {
     const known = await parties();
     if (!known.length || /^(?:my|the|our)\b|\b(?:calendar|reminders?|phone|diary|journal|list)\b/i.test(m[1])) return null; // "add a note to my calendar" is not about a buyer
     const found = findParty(known, m[1]);
-    if (!found) return `I don't have ${clean(m[1])} on your list. Say "add a buyer ${titleCase(m[1])}" first.`;
+    // Found live (capability-testing the orb): once a farmer has saved even
+    // one buyer/supplier, this used to claim EVERY "note about X: Y" phrase
+    // whose subject wasn't a known party -- rejecting it outright ("I don't
+    // have X on your list") instead of returning null and letting a plain
+    // personal note (nexus/personal/items.js) save it. A genuinely unrelated
+    // note ("note about water tank: it's leaking") was silently discarded,
+    // never saved anywhere. Only claim this pattern when the subject
+    // actually resolves to a known party; otherwise fall through so the note
+    // is still saved, just as a normal one instead of a party note.
+    if (!found) return null;
     if (found.ambiguous) return `Which one: ${found.ambiguous.map(party => party.data.name).join(" or ")}?`;
     await ctx.store.add({ ...scope, collection: "party_note", data: { party: found.party.data.name, text: clean(m[2]).slice(0, 300), day: ctx.today } });
     return `Noted about ${found.party.data.name}: ${clean(m[2]).slice(0, 120)}.`;
