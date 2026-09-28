@@ -100,6 +100,59 @@ test("/api/nexus/audit requires sign-in, matching the protection already on /api
   assert.ok(Array.isArray((await authed.json()).audit));
 });
 
+// Found live (review-queue/cases audit): reviewerId/reviewerLabel used to
+// trust body.reviewerId/body.reviewerLabel ahead of the authenticated
+// session, so any signed-in provider-queue user could forge a different
+// reviewer's name onto a response -- stored durably, used as the audit
+// actor, and eventually shown to the end user once published.
+test("a provider response's reviewerLabel is always the real signed-in user, never a client-supplied forged name", async () => {
+  const createdRecord = await fetch(`${base}/api/nexus/records`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ sourceMode: "telehealth_intake", payload: { note: "attribution test subject" } })
+  });
+  const recordId = (await createdRecord.json()).record.id;
+
+  const created = await fetch(`${base}/api/nexus/records/${recordId}/responses`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ responseText: "note", reviewerLabel: "Dr. Someone Else", reviewerId: "forged-reviewer-id" })
+  });
+  assert.equal(created.status, 200, JSON.stringify(await created.clone().json()));
+  const body = await created.json();
+  assert.equal(body.response.reviewerLabel, "Platform Admin", "the forged reviewerLabel must be ignored in favor of the real signed-in user's name");
+  assert.notEqual(body.response.reviewerId, "forged-reviewer-id", "the forged reviewerId must be ignored");
+  assert.equal(body.audit.actor, "Platform Admin", "the durable audit trail must record the real user too");
+});
+
+// Found live (same review-queue/cases audit): the note route trusted a
+// client-supplied body.actor ahead of the authenticated user's real name --
+// the sibling status-change route already got this right (no client input
+// at all), this one didn't.
+test("a review-queue note's actor is always the real signed-in user, never a client-supplied forged name", async () => {
+  const createdRecord = await fetch(`${base}/api/nexus/records`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ sourceMode: "telehealth_intake", payload: { note: "note-attribution test subject" }, consentConfirmed: true })
+  });
+  const recordId = (await createdRecord.json()).record.id;
+  const queued = await fetch(`${base}/api/nexus/records/${recordId}/queue-review`, {
+    method: "POST", headers: { "content-type": "application/json", cookie: adminCookie }, body: "{}"
+  });
+  assert.equal(queued.status, 200, JSON.stringify(await queued.clone().json()));
+  const queueItemId = (await queued.json()).queueItem.id;
+
+  const noted = await fetch(`${base}/api/nexus/review-queue/${queueItemId}/note`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ note: "looks fine", actor: "Dr. Someone Else" })
+  });
+  assert.equal(noted.status, 200, JSON.stringify(await noted.clone().json()));
+  const notedBody = await noted.json();
+  assert.equal(notedBody.note.actor, "Platform Admin", "the forged actor must be ignored in favor of the real signed-in user's name");
+  assert.equal(notedBody.audit.actor, "Platform Admin", "the durable audit trail must record the real user too");
+});
+
 // Found live in the same sweep: db.nexusPilotReminders (linkedRecordId + up
 // to 320 chars of free-text notes) is already returned, role-redacted,
 // inside the provider-queue-gated GET /api/nexus/cases/:id -- but the
