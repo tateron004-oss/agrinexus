@@ -47,6 +47,18 @@ function createWebPushProvider({ env = process.env, devices, deviceTokens, webPu
     let stage = "decrypt";
     const failedDeviceIds = [];
     for (const device of targets) {
+      // Found live (delivery-pipeline audit): targets is one snapshot fetched
+      // once above, then this loop makes a real, potentially slow network
+      // call per device -- if the user revokes THIS device (e.g. "remove
+      // this device" after it's lost/stolen) while an earlier device's send
+      // in the SAME batch is still in flight, the stale snapshot's ciphertext/
+      // endpoint would otherwise still be used, delivering one more push to a
+      // device the user just revoked. Mirrors emergency-location.js's
+      // per-recipient re-verification fix for the identical shape of race.
+      stage = "revocation-check";
+      const stillActive = (await devices.listPushable({ tenantId: notification.tenant_id, userId: notification.user_id }))
+        .some(current => current.device_id === device.device_id);
+      if (!stillActive) continue;
       stage = "decrypt";
       try {
         const keys = deviceTokens.decrypt(device.push_key_ciphertext, `${notification.tenant_id}:${notification.user_id}:${device.device_id}`);

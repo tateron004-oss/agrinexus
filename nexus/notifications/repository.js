@@ -13,9 +13,13 @@ class NotificationRepository{
   // lease has expired is treated as claimable again, the same as a fresh
   // 'queued' one, so a crashed worker's in-flight notifications recover on
   // the next poll cycle instead of vanishing.
-  async claim(limit=25,leaseSeconds=120){const r=await this.db.query(`update nexus_notifications n set state='delivering',attempts=attempts+1,lease_expires_at=now()+make_interval(secs=>$2) from
+  // workerId is a fencing token (mirrors job-repository.js's leased_by): a
+  // worker whose in-flight send outlives the lease and gets reclaimed by
+  // another worker must never be able to overwrite that other worker's
+  // eventual delivered()/failed() call. See migration 023 for why.
+  async claim(limit=25,leaseSeconds=120,workerId=null){const r=await this.db.query(`update nexus_notifications n set state='delivering',attempts=attempts+1,lease_expires_at=now()+make_interval(secs=>$2),leased_by=$3 from
     (select notification_id from nexus_notifications where (state='queued' and coalesce(scheduled_at,now())<=now()) or (state='delivering' and lease_expires_at<now()) order by scheduled_at,created_at for update skip locked limit $1) q
-    where n.notification_id=q.notification_id returning n.*`,[Math.min(Math.max(limit,1),100),Math.max(leaseSeconds,1)]);return r.rows||r;}
+    where n.notification_id=q.notification_id returning n.*`,[Math.min(Math.max(limit,1),100),Math.max(leaseSeconds,1),workerId]);return r.rows||r;}
   // Upcoming reminders only: still queued, and specifically reminders (other
   // notification kinds share this table but carry no content.reminderText).
   // Scoped to the owner -- a user can never list or cancel another user's.
@@ -28,7 +32,11 @@ class NotificationRepository{
     where notification_id=$1 and tenant_id=$2 and user_id=$3 and state='queued' and (content->>'reminderText') is not null returning notification_id,content,scheduled_at`,[notificationId,tenantId,userId]);return (r.rows||r)[0]||null;}
   // Whether a notification with this idempotency key already exists for the tenant (used so a daily brief is queued at most once per local day).
   async existsByKey({tenantId,idempotencyKey}){if(!tenantId||!idempotencyKey)return false;const r=await this.db.query("select 1 from nexus_notifications where tenant_id=$1 and idempotency_key=$2 limit 1",[tenantId,idempotencyKey]);return (r.rows||r).length>0;}
-  async delivered(notificationId){const r=await this.db.query("update nexus_notifications set state='delivered',delivered_at=now(),last_error=null,lease_expires_at=null where notification_id=$1 and state='delivering' returning *",[notificationId]);return (r.rows||r)[0]||null;}
+  // leased_by is not distinct from $2: a strict match when workerId is
+  // given, or matches a legacy/never-fenced row (leased_by null) when it
+  // isn't -- either way, a DIFFERENT worker's lease can never be closed out
+  // from under it.
+  async delivered(notificationId,workerId=null){const r=await this.db.query("update nexus_notifications set state='delivered',delivered_at=now(),last_error=null,lease_expires_at=null,leased_by=null where notification_id=$1 and state='delivering' and leased_by is not distinct from $2 returning *",[notificationId,workerId]);return (r.rows||r)[0]||null;}
   // Found live (delivery-reliability follow-up audit): a retried
   // notification was requeued with scheduled_at left untouched, so it was
   // only ever paced by the worker's fixed poll interval (default 30s), not
@@ -40,11 +48,11 @@ class NotificationRepository{
   // capped at 5 minutes) between attempts gives a real transient outage a
   // realistic window to recover before the notification is given up on,
   // without changing the attempt cap or terminal-failure behavior itself.
-  async failed(notificationId,error){const r=await this.db.query(`update nexus_notifications set
+  async failed(notificationId,error,workerId=null){const r=await this.db.query(`update nexus_notifications set
     state=case when attempts>=5 then 'failed' else 'queued' end,
     scheduled_at=case when attempts>=5 then scheduled_at else now()+make_interval(secs=>least(30*power(2,greatest(attempts-1,0)),300)) end,
-    last_error=$2,lease_expires_at=null
-    where notification_id=$1 and state='delivering' returning *`,[notificationId,error]);return (r.rows||r)[0]||null;}
+    last_error=$2,lease_expires_at=null,leased_by=null
+    where notification_id=$1 and state='delivering' and leased_by is not distinct from $3 returning *`,[notificationId,error,workerId]);return (r.rows||r)[0]||null;}
 }
 module.exports=Object.freeze({NotificationRepository});
 
