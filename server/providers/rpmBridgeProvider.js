@@ -51,10 +51,19 @@ function deviceReading(body = {}, db, env = process.env) {
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
   const metric = safeText(body.metric || body.type || "blood_pressure", 80);
+  // Found live (RPM/RTM adherence-math audit): comparing the raw, un-
+  // normalized metric against METRICS meant any differently-cased or
+  // space-separated metric (e.g. "Blood_Glucose", "Pulse") failed the
+  // membership check and was silently RELABELED as "blood_pressure" -- not
+  // dropped, actively mislabeled -- because blood_pressure is also a valid
+  // METRICS member, so the fallback looked like a real, matching reading.
+  // Normalize case/spacing the same way chronicDiseaseBridgeProvider.js's
+  // CONDITIONS check was fixed to do.
+  const normalizedMetric = metric.toLowerCase().trim().replace(/\s+/g, "_");
   const blocked = guardMedicalText(PROVIDER, action, [body.notes], false);
   if (blocked) return blocked;
   const record = saveRecord(db, READINGS, localRecord("rpm-reading", body, {
-    metric: METRICS.has(metric) ? metric : "blood_pressure",
+    metric: METRICS.has(normalizedMetric) ? normalizedMetric : "blood_pressure",
     value: safeText(body.value || body.reading || "", 80),
     unit: safeText(body.unit || "", 40),
     systolic: Number(body.systolic) || null,

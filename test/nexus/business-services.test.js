@@ -163,6 +163,9 @@ test("grant/funding tracker: opportunities, deadlines and status persist and val
   assert.equal(editable.grants[0].status, 'drafting');
   assert.deepEqual(normalizeEditable(info, {}).grants, [], 'a record created before this field existed must still normalize');
   assert.throws(() => normalizeEditable(info, { grants: [{ amount: NaN }] }), error => error.code === 'business_workspace_invalid');
+  // Found live: a negative amount passed type/finiteness checks with no
+  // sign check, reachable via the direct PUT .../clients/:id API.
+  assert.throws(() => normalizeEditable(info, { grants: [{ amount: -50000 }] }), error => error.code === 'business_workspace_invalid');
 });
 
 test("income/expense tracker: transactions are typed, numeric amounts are validated, and older rows without the field default cleanly", () => {
@@ -181,6 +184,11 @@ test("income/expense tracker: transactions are typed, numeric amounts are valida
   for (const bad of [NaN, Infinity, -Infinity]) {
     assert.throws(() => normalizeEditable(info, { transactions: [{ amount: bad }] }), error => error.code === 'business_workspace_invalid');
   }
+  // Found live: a negative amount passed type/finiteness checks with no
+  // sign check -- direction (income vs. expense) is carried entirely by
+  // "type", so a negative amount would silently reduce the wrong bucket's
+  // total in the dashboard summary instead of increasing it.
+  assert.throws(() => normalizeEditable(info, { transactions: [{ type: 'expense', amount: -40 }] }), error => error.code === 'business_workspace_invalid');
 });
 
 test("customer/donor tracker: leads carry a type and a real follow-up date, backward-compatible with older rows", () => {
@@ -340,6 +348,21 @@ test("nextInvoiceNumber never reuses a number still referenced by an existing in
   assert.equal(nextInvoiceNumber({ invoices: [], invoiceItems: [] }), 'INV-1001');
 });
 
+// Found live: quantity/unitPrice passed type/finiteness checks with no sign
+// check, reachable via the direct PUT .../clients/:id API -- two negatives
+// (quantity: -100, unitPrice: -50) multiplied back into a fabricated
+// POSITIVE total ($5,000) with no relationship to any real transaction, and
+// a single negative unitPrice produced a negative "Total due" on the real
+// client-facing invoice PDF exportInvoice() renders.
+test('invoice line items reject a negative quantity or unit price, even though the two together would multiply back to a positive total', () => {
+  const { normalizeEditable } = require('../../nexus/business/service');
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  assert.throws(() => normalizeEditable(info, { invoiceItems: [{ invoiceNumber: 'INV-1', quantity: -100, unitPrice: -50 }] }), error => error.code === 'business_workspace_invalid');
+  assert.throws(() => normalizeEditable(info, { invoiceItems: [{ invoiceNumber: 'INV-1', quantity: 10, unitPrice: -5 }] }), error => error.code === 'business_workspace_invalid');
+  const editable = normalizeEditable(info, { invoiceItems: [{ invoiceNumber: 'INV-1', quantity: 2, unitPrice: 50 }] });
+  assert.equal(editable.invoiceItems[0].quantity, 2);
+});
+
 test("malformed business editor shapes are rejected before draft generation", () => {
   const { normalizeEditable } = require('../../nexus/business/service');
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
@@ -412,6 +435,28 @@ test("AI outline planning is disabled by default and never executes proposed ste
   value = { plan:[{agent:'shell',action:'run an arbitrary command'}] };
   const fallback = await providers.plan({info:{businessName:'Test'}});
   assert.equal(fallback.mode,'template-fallback');assert.equal(fallback.executed,false);assert.ok(fallback.plan.every(step=>step.agent!=='shell'));
+});
+
+// Found live (record-repository/consent follow-up audit): this real,
+// metered OpenAI call had no cost governance at all -- an authenticated
+// workspace owner could call assistant()/plan() repeatedly with only the
+// generic, cost-unaware 180/min-per-IP anti-abuse limiter as a ceiling.
+test("assistant() and plan() check the tenant's cost budget before calling the provider, and record the real cost afterward", async () => {
+  const calls = [];
+  const observability = { assertCostAllowed: async input => { calls.push(["assert", input]); },
+    recordCost: async input => { calls.push(["record", input]); } };
+  const env = { NEXUS_REAL_PROVIDER_EXECUTION_ENABLED: "true", NEXUS_BUSINESS_AI_ENABLED: "true", OPENAI_API_KEY: "fake-test-only" };
+  const providers = createBusinessProviders({ env, observability, fetchFn: async () => ({ ok: true,
+    json: async () => ({ choices: [{ message: { content: "A real, honest draft reply." } }], usage: { prompt_tokens: 400, completion_tokens: 80 } }) }) });
+  const workspace = templates.defaultClientWorkspace(templates.inferBusiness({ businessName: "Test" }));
+  await providers.assistant({ workspace, message: "hi", tenantId: "tenant-1" });
+  assert.deepEqual(calls[0], ["assert", { tenantId: "tenant-1", estimatedCostCents: 0 }]);
+  assert.equal(calls[1][0], "record"); assert.equal(calls[1][1].tenantId, "tenant-1");
+  assert.ok(calls[1][1].estimatedCostCents > 0, "a real response's own token usage must produce a nonzero recorded cost");
+
+  const overBudget = createBusinessProviders({ env, fetchFn: async () => { throw new Error("must not call the real provider once the budget check refuses"); },
+    observability: { assertCostAllowed: async () => { throw Object.assign(new Error("over budget"), { code: "cost_limit_exceeded" }); } } });
+  await assert.rejects(overBudget.assistant({ workspace, message: "hi", tenantId: "tenant-2" }), /over budget/);
 });
 
 test("AI business planning requires consent, confirmation and current record version", async () => {

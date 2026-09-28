@@ -114,8 +114,13 @@ async function buildReport(ctx, kind, text) {
   }
   if (kind === "expenses" || kind === "income") {
     const type = kind === "expenses" ? "expense" : "income"; const rows = (await money()).filter(record => record.data.type === type).sort((a, b) => a.data.day.localeCompare(b.data.day)); if (!rows.length) return null;
-    const by = {}; for (const record of rows) by[record.data.category] = round((by[record.data.category] || 0) + record.data.amount); const cur = rows[0].data.currency; const title = kind === "expenses" ? "Ripoti ya matumizi" : "Ripoti ya mapato";
-    return { title: `${title} ${period.label}`, content: `${head(title)}Kipindi: ${period.from} hadi ${period.to}\n\n${table([["Tarehe", "Kiasi", "Kwa nini"], ...rows.map(record => [record.data.day, moneyShown(record.data.amount, record.data.currency), what(record)])], [12, 16])}\n\n${line()}\nKWA AINA\n${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([category, amount]) => `  ${pad(categorySw(category), 18)} ${moneyShown(amount, cur)}`).join("\n")}\n\nJUMLA: ${totalsText(sum(rows, type))}  (maingizo ${rows.length})${FOOT}` };
+    // Found live (real-estate/GPS follow-up audit, mirrors money.js's English
+    // "expenses by kind" fix): bucket by currency before summing, instead of
+    // adding raw amounts across currencies and labeling the total with
+    // whichever row happened to be first.
+    const by = {}; for (const record of rows) { const category = record.data.category; const currency = record.data.currency || ""; by[category] = by[category] || {}; by[category][currency] = round((by[category][currency] || 0) + record.data.amount); } const title = kind === "expenses" ? "Ripoti ya matumizi" : "Ripoti ya mapato";
+    const totalOf = currencies => Object.values(currencies).reduce((a, b) => a + b, 0);
+    return { title: `${title} ${period.label}`, content: `${head(title)}Kipindi: ${period.from} hadi ${period.to}\n\n${table([["Tarehe", "Kiasi", "Kwa nini"], ...rows.map(record => [record.data.day, moneyShown(record.data.amount, record.data.currency), what(record)])], [12, 16])}\n\n${line()}\nKWA AINA\n${Object.entries(by).sort((a, b) => totalOf(b[1]) - totalOf(a[1])).map(([category, currencies]) => `  ${pad(categorySw(category), 18)} ${totalsText(currencies)}`).join("\n")}\n\nJUMLA: ${totalsText(sum(rows, type))}  (maingizo ${rows.length})${FOOT}` };
   }
   if (kind === "statement") {
     const rows = await money(); if (!rows.length) return null;
@@ -140,7 +145,11 @@ async function receiptSw(ctx, who) {
   const parties = await ctx.store.list({ ...scope, collection: "party" }); const found = who ? findParty(parties, who) : null; const wanted = (found?.party?.data.name || who || "").toLowerCase(); const same = name => Boolean(wanted) && String(name || "").toLowerCase() === wanted;
   const orders = (await ctx.store.list({ ...scope, collection: "order" })).filter(order => order.data.kind === "sale" && order.data.status === "done" && same(order.data.party));
   const sales = (await ctx.store.list({ ...scope, collection: "money" })).filter(record => record.data.type === "income" && same(record.data.party) && !String(record.data.note || "").startsWith("order "));
-  const lines = [...orders.map(order => ({ day: order.data.doneOn || order.data.day, what: `${unitLabelSw(order.data.qty, order.data.unit)} za ${swahiliItem(order.data.item)}`, amount: round((order.data.price || 0) * order.data.qty), currency: order.data.currency })), ...sales.filter(record => record.data.qty).map(record => ({ day: record.data.day, what: `${unitLabelSw(record.data.qty, record.data.unit)} za ${swahiliItem(record.data.item)}`, amount: record.data.amount, currency: record.data.currency }))];
+  // Found live (business-ledger audit, same bug as the English receipt()):
+  // a sale recorded without a parseable quantity has qty:null, so it was
+  // silently dropped from both the line items and the total instead of
+  // just being described without a unit label.
+  const lines = [...orders.map(order => ({ day: order.data.doneOn || order.data.day, what: `${unitLabelSw(order.data.qty, order.data.unit)} za ${swahiliItem(order.data.item)}`, amount: round((order.data.price || 0) * order.data.qty), currency: order.data.currency })), ...sales.map(record => ({ day: record.data.day, what: record.data.qty ? `${unitLabelSw(record.data.qty, record.data.unit)} za ${swahiliItem(record.data.item)}` : swahiliItem(record.data.item), amount: record.data.amount, currency: record.data.currency }))];
   if (!lines.length) return null;
   const buyer = orders[0]?.data.party || found?.party?.data.name || who || "Mnunuzi"; const cur = lines[0].currency; const total = round(lines.reduce((s, item) => s + item.amount, 0));
   const farm = (await ctx.store.list({ ...scope, collection: "farm" }))[0]; const owner = (ctx.nameOf ? await ctx.nameOf({ tenantId: ctx.tenantId, userId: ctx.userId }).catch(() => "") : "") || "";
@@ -200,7 +209,13 @@ async function handle(ctx) {
     const priceMatch = new RegExp(`kwa\\s+((?:shilingi|sh|ksh|tsh|ush)\\s*)?(${NUMBER})\\s*(shilingi|sh|ksh|tsh|ush)?\\s*(?:kwa|kila|/)\\s*(${UNIT_WORD})\\b`, "i").exec(rest); const price = priceMatch ? { amount: Number(priceMatch[2].replace(/,/g, "")), currency: /shilingi/i.test(`${priceMatch[1] || ""}${priceMatch[3] || ""}`) ? "shillings" : "", per: parseQuantitySw(`1 ${priceMatch[4]}`)?.unit } : null;
     const be = cost / expected.value;
     const base = SW.beBase({ cost: moneyShown(cost, currency), qty: unitLabelSw(expected.value, expected.unit), field: field?.data.name, price: `${moneyShown(round(be, 2), currency)} kwa ${unitLabelSw(1, expected.unit).split(" ")[0]}` });
-    if (!price) return `${base} ${SW.beAsk}`;
+    // Found live (money-math audit): same unit-mismatch bug as the English
+    // break-even path (budget.js) -- a price "per bag" multiplied against a
+    // yield in kg fabricated a nonsense profit figure. Reuses the existing
+    // "tell me the selling price" message rather than inventing new
+    // Swahili copy, since a mismatched-unit price is functionally the same
+    // as no usable price yet.
+    if (!price || price.per !== expected.unit) return `${base} ${SW.beAsk}`;
     const revenue = price.amount * expected.value; const cur = price.currency || currency;
     return `${base} ${SW.beProfit({ price: `${moneyShown(price.amount, cur)} kwa ${unitLabelSw(1, price.per || expected.unit).split(" ")[0]}`, revenue: moneyShown(round(revenue, 0), cur), gain: revenue >= cost, amount: moneyShown(round(Math.abs(revenue - cost), 0), cur), pct: Math.round(((revenue - cost) / cost) * 100) })}`;
   }
@@ -219,7 +234,8 @@ async function handle(ctx) {
     const cost = items.reduce((total, item) => total + item.amount, 0); const cur = parseMoneySw(body.replace(/kwa\s+(?:shilingi\s+)?\d[\d,.]*\s*(?:shilingi\s*)?(?:kwa|kila)\s+\p{L}+/giu, ""))?.currency || (/shilingi/i.test(body) ? "shillings" : "");
     const lines = [SW.budgetHead({ what: m[1] ? clean(m[1]) : "", lines: items.map(item => `${item.name} ${moneyShown(item.amount, cur)}`).join(", "), total: moneyShown(cost, cur) })];
     if (yieldQty) lines.push(SW.budgetBreak({ qty: unitLabelSw(yieldQty.value, yieldQty.unit), price: `${moneyShown(round(cost / yieldQty.value, 2), cur)} kwa ${unitLabelSw(1, yieldQty.unit).split(" ")[0]}` }));
-    if (yieldQty && price) { const revenue = yieldQty.value * price.amount; lines.push(SW.budgetProfit({ price: `${moneyShown(price.amount, price.currency || cur)} kwa ${unitLabelSw(1, price.per || yieldQty.unit).split(" ")[0]}`, revenue: moneyShown(round(revenue, 0), price.currency || cur), gain: revenue >= cost, amount: moneyShown(round(Math.abs(revenue - cost), 0), price.currency || cur) })); }
+    // Same unit-mismatch guard as the break-even branch above.
+    if (yieldQty && price && price.per === yieldQty.unit) { const revenue = yieldQty.value * price.amount; lines.push(SW.budgetProfit({ price: `${moneyShown(price.amount, price.currency || cur)} kwa ${unitLabelSw(1, price.per || yieldQty.unit).split(" ")[0]}`, revenue: moneyShown(round(revenue, 0), price.currency || cur), gain: revenue >= cost, amount: moneyShown(round(Math.abs(revenue - cost), 0), price.currency || cur) })); }
     lines.push(SW.budgetNote);
     return lines.join(" ");
   }

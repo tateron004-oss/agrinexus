@@ -138,7 +138,7 @@ assert.strictEqual(status.provider.videoCreationAllowed, false, "zoom execution 
     symptoms: "high morning glucose",
     consentToPreparePacket: true,
     confirmed: false
-  }, { name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "local" });
+  }, { id: "qa-user-1", name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "local" });
   assert.strictEqual(result.status, "blocked-confirmation-required", "encounter should block without confirmation");
   assert.strictEqual(db.nexusTelehealthEncounters.length, 0, "blocked encounter should not create a packet");
 
@@ -149,7 +149,7 @@ assert.strictEqual(status.provider.videoCreationAllowed, false, "zoom execution 
     consentToPreparePacket: true,
     consentToShare: false,
     confirmed: true
-  }, { name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "local" });
+  }, { id: "qa-user-1", name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "local" });
   assert.strictEqual(result.encounterCreated, true, "confirmed packet should create local encounter");
   assert.strictEqual(result.encounter.providerSubmissionStatus, "not_submitted", "encounter should not submit externally by default");
   assert(result.packet.summary.join(" ").includes("hypertension"), "packet should include condition area");
@@ -159,7 +159,7 @@ assert.strictEqual(status.provider.videoCreationAllowed, false, "zoom execution 
     encounterId: result.encounter.id,
     confirmed: true,
     consentToShare: true
-  }, { name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "local" });
+  }, { id: "qa-user-1", name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "local" });
   assert.strictEqual(video.video.status, "local_queue_only", "local provider should not fake video room creation");
   assert.strictEqual(video.video.roomCreated, false, "local provider should not create video room");
 
@@ -170,7 +170,7 @@ assert.strictEqual(status.provider.videoCreationAllowed, false, "zoom execution 
     consentToPreparePacket: true,
     consentToShare: true,
     confirmed: true
-  }, { name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "daily", DAILY_API_KEY: "test_daily_key", DAILY_ROOM_DOMAIN: "nexus.daily.co" });
+  }, { id: "qa-user-1", name: "QA" }, { NEXUS_TELEHEALTH_PROVIDER: "daily", DAILY_API_KEY: "test_daily_key", DAILY_ROOM_DOMAIN: "nexus.daily.co" });
   assert.strictEqual(urgent.status, "emergency-guidance", "red flags should trigger emergency guidance");
   assert.strictEqual(urgent.encounter.noEmergencyDispatch, true, "red flags should not dispatch emergency services");
 

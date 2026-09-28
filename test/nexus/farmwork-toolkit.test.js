@@ -93,6 +93,19 @@ test("adding a field asks plain questions, saves the answers and remembers the f
   assert.match(await who.say("Show my fields"), /North Plot/);
 });
 
+// Found live: the loose field-name-match fallback did a raw substring test
+// after normalization strips "plot"/"field" down to just the number, and
+// "1" is a substring of "10" -- a yield expectation (or planting/scheduling/
+// removal) aimed at a non-existent "Plot 1" could silently land on the
+// real, different "Plot 10" instead of saying no such field exists.
+test("naming a field that does not exist by a similar number never silently attaches to a real, different field", async () => {
+  const who = farmer();
+  await run(who, ["Add a field called Plot 10, 2 acres of maize", "skip", "skip", "skip"]);
+  const reply = await who.say("expect 500 kg from Plot 1");
+  assert.doesNotMatch(reply ?? "", /plot 10/i, "a request for the non-existent 'Plot 1' must never resolve to the real 'Plot 10'");
+  assert.match(await who.say("How are my yields doing"), /no expected yield set/i, "Plot 10's own yield expectation must be untouched by the request for a different, non-existent field");
+});
+
 test("a guided question never traps someone: asking something else, or a whole new request, drops it and is handled normally", async () => {
   const who = farmer();
   await who.say("Add a worker called Juma"); // asks for a phone number
@@ -129,6 +142,20 @@ test("stock goes in and out in ordinary words and warns when it runs low", async
   assert.match(await who.say("How much fertilizer do I have"), /6 bags/);
 });
 
+// Found live: the loose name-match fallback did a raw substring test
+// ("lot 1".includes/"lot 12".includes each other after normalization
+// strips filler words down to just "lot 1"/"lot 12", and "1" is a
+// substring of "12"), so a typo'd or non-existent stock name could
+// silently resolve to a real, different item and deduct from it.
+test("using stock by a lot number that does not exist never silently deducts from a similarly-numbered real lot", async () => {
+  const who = farmer();
+  assert.match(await who.say("Add 200 kg of maize seed lot 12 to stock"), /You now have 200 kg/);
+  const reply = await who.say("I used 5 kg of maize seed lot 1");
+  assert.doesNotMatch(reply ?? "", /lot 12/i, "a request for the non-existent 'lot 1' must never resolve to the real 'lot 12'");
+  const stillFull = await who.say("How much maize seed lot 12 do I have");
+  assert.match(stillFull, /200 kg/, "the real lot's quantity must be untouched by the request for a different, non-existent lot");
+});
+
 // ---------- animals ----------
 test("animals keep a history, and a treatment is only recorded for an animal the person actually has", async () => {
   const who = farmer();
@@ -147,6 +174,54 @@ test("money is recorded in plain words, totalled, and never guessed", async () =
   assert.match(await who.say("Sold 200 kg of maize to Otieno at 45 per kg"), /sold 200 kg of maize to Otieno for 9,000/);
   assert.match(await who.say("How much did I spend this month"), /5,000/);
   assert.match(await who.say("What is my profit this year"), /4,000/);
+});
+
+// Found live (money-math audit): a quantity given in one unit (bags,
+// crates) with a price stated "per" a different unit (usually kg) was
+// multiplied anyway -- "sold 5 crates of tomatoes at 200 per kg" recorded
+// 1,000 (5 x 200), treating crates as if they were kg. A bag/crate isn't a
+// fixed weight, so Kyro can't convert it -- selling now refuses rather than
+// guessing, the same way the sibling break-even/budget/order-delivery
+// money math was fixed.
+test("a quantity in one unit and a price per a different unit is refused, not silently multiplied together", async () => {
+  const who = farmer();
+  assert.equal(await who.say("Sold 5 crates of tomatoes at 200 per kg"), null, "must not record a fabricated total from mismatched units");
+  assert.equal(who.store.rows.filter(row => row.collection === "money").length, 0, "no money record must be created at all");
+
+  assert.match(await who.say("Sold 5 crates of tomatoes for 1000, at 200 per kg"), /sold 5 crates of tomatoes for 1,000/i, "a genuinely separate, explicitly stated total is still used correctly even when the per-unit price is a different unit");
+});
+
+test("break-even and budget planning refuse to invent a revenue figure from a mismatched unit price", async () => {
+  const who = farmer();
+  const beResult = await who.say("break even: costs 60000, expected 800 kg, at 5000 per bag");
+  assert.match(beResult, /tell me the selling price per kg/i);
+  assert.doesNotMatch(beResult, /take in|a profit of|a loss of/i, "must not compute a fabricated revenue/profit/loss figure from mismatched units");
+
+  const budgetResult = await who.say("plan a budget: seed 5000, fertilizer 8000, labour 12000, expect 800 kg at 5000 per bag");
+  assert.doesNotMatch(budgetResult, /profit|loss/i, "the revenue/profit line must be omitted, not fabricated, when the price's unit doesn't match the expected yield's unit");
+});
+
+test("delivering an order with a mismatched-unit price honestly reports no money was recorded, instead of a fabricated total", async () => {
+  const who = farmer();
+  assert.match(await who.say("order from John: 3 bags of maize at 40 per kg"), /Order 1: 3 bags of maize for John at 40 per kg/);
+  assert.match(await who.say("deliver order 1"), /no price was given, so I did not record any money/i);
+  assert.equal(who.store.rows.filter(row => row.collection === "money").length, 0);
+});
+
+// Found live (export/invoice/farm-toolkit follow-up audit): "bought" used a
+// literal-word regex ("does the sentence contain the word 'for' followed by
+// a digit?") to decide whether a genuine separate total was stated -- but
+// "for" is also parsePricePer's own connector word for introducing a
+// per-unit price, so completely ordinary phrasing ("bought 5 bags ... for
+// 3000 per bag") tripped the guard and recorded only 3,000 (the per-unit
+// price) instead of the real 15,000 total. The "sold" branch a few lines up
+// already handles the identical ambiguity correctly via an echo check
+// (money.amount === per.amount); "bought" now matches it.
+test("'bought N units for X per unit' records the real total (quantity times price), not just the per-unit price", async () => {
+  const who = farmer();
+  const reply = await who.say("Bought 5 bags of fertilizer for 3000 per bag");
+  assert.match(reply, /bought 5 bags of fertilizer for 15,000/i, reply);
+  assert.match(await who.say("How much did I spend this month"), /15,000/);
 });
 
 test("someone with no farm records is not given farm books for ordinary buying and selling", async () => {
@@ -258,6 +333,44 @@ test("reports are built only from what was recorded, in the format asked for", a
   assert.match((await who.say("Print my expense report")).report.content, /fertilizer for North Plot/);
   assert.match((await who.say("Print a receipt for Otieno")).report.content, /200 kg of maize\s+9,000/);
   assert.match(await who.say("Print my inventory list"), /nothing recorded/i, "an empty report says so and invents nothing");
+});
+
+// Found live (business-ledger audit): a receipt() line was only kept when
+// record.data.qty was truthy -- a sale recorded with no parseable quantity
+// ("sold milk to Otieno for 500") has qty:null, so it was silently dropped
+// from both the line items and the printed total, or the receipt was
+// refused outright as "no recorded sales" if it was the buyer's only sale.
+test("a receipt includes a recorded sale even when it has no parseable quantity, instead of silently dropping it", async () => {
+  const who = farmer();
+  await who.say("Sold milk to Otieno for 500");
+  const receipt = await who.say("Print a receipt for Otieno");
+  assert.notEqual(receipt, null, "a real recorded sale must never be reported as \"no recorded sales\"");
+  assert.match(receipt.report.content, /milk\s+500/);
+  assert.match(receipt.report.content, /TOTAL:\s+500/);
+
+  const both = farmer();
+  await both.say("Sold 200 kg of maize to Otieno at 45 per kg"); // qty'd sale: 9,000
+  await both.say("Sold milk to Otieno for 500"); // no-qty sale
+  const combined = await both.say("Print a receipt for Otieno");
+  assert.match(combined.report.content, /200 kg of maize\s+9,000/);
+  assert.match(combined.report.content, /milk\s+500/);
+  assert.match(combined.report.content, /TOTAL:\s+9,500/, "the no-qty sale must be included in the printed total, not silently excluded");
+});
+
+// Found live (business-ledger audit): "Business so far" summed raw amounts
+// across every currency a party was ever paid in or paid, then labeled the
+// fabricated total with whichever record happened to be first in store
+// order -- the same currency-combining bug already fixed in money.js's own
+// report/receipt totals, just never applied to party history.
+test("a party's history keeps different currencies separate instead of adding them together under one label", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called Otieno", "skip", "skip", "skip"]);
+  await who.say("Sold 10 kg of maize to Otieno for 500 dollars");
+  await who.say("Sold 20 kg of beans to Otieno for 3000 shillings");
+  const history = await who.say("Show history for Otieno");
+  assert.match(history, /you earned/i);
+  assert.match(history, /\$500(?:\.00)?/, "the USD total must appear on its own, not folded into a single combined number");
+  assert.match(history, /3,000/, "the KES total must appear on its own, separate from the USD total");
 });
 
 test("report words are left alone when they are not about the farm", async () => {

@@ -234,14 +234,21 @@ class RecordRepository {
   // time; see attachTask() below for filling it in once the real task exists, and remove() for giving the window
   // back if creating the task then fails. Returns the reserved record, or null when a marker already exists
   // within the cooldown.
-  async claimCooldown({ tenantId, ownerId, subjectId, workspaceId, recordType, cooldownMs, classification = "standard", data = {}, provenance = {} }) {
+  // recordKey scopes the cooldown to one specific record within a workspace (e.g. one business client/listing
+  // among many an owner has), for callers whose real subject isn't a user at all -- candidate.record_id is a
+  // "rec_<...>" string from createId(), not a real uuid, so it can never be passed as subjectId (a genuine
+  // `uuid` column). Matched against data->>'recordId' (which the caller must also put in `data`) instead of a
+  // dedicated column, folded into both the lock key and the lookup so two workspaces for the same owner get
+  // independent cooldowns without a schema change.
+  async claimCooldown({ tenantId, ownerId, subjectId, recordKey, workspaceId, recordType, cooldownMs, classification = "standard", data = {}, provenance = {} }) {
     if (!tenantId || !ownerId || !workspaceId || !recordType) throw new Error("Record tenant, owner, workspace, and type are required.");
-    const lockKey = `record-cooldown:${tenantId}:${workspaceId}:${recordType}:${subjectId || ownerId}`;
+    const lockKey = `record-cooldown:${tenantId}:${workspaceId}:${recordType}:${subjectId || recordKey || ownerId}`;
     return this.db.transaction(async trx => {
       await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
       const values = [tenantId]; let where = "tenant_id=$1 and deleted_at is null";
       for (const [column, value] of [["subject_id", subjectId], ["owner_id", ownerId], ["workspace_id", workspaceId], ["record_type", recordType]])
         if (value) { values.push(value); where += ` and ${column}=$${values.length}`; }
+      if (recordKey) { values.push(recordKey); where += ` and data->>'recordId'=$${values.length}`; }
       const recent = await trx.query(`select updated_at from nexus_records where ${where} order by updated_at desc limit 1`, values);
       const last = (recent.rows || recent)[0];
       if (last && Date.now() - new Date(last.updated_at).getTime() < cooldownMs) return null;

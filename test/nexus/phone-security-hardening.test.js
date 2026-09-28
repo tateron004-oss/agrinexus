@@ -97,6 +97,44 @@ test("a phone call has a real, enforced maximum turn count before real command d
   assert.match(body.slice(capIndex, dispatchIndex), /<Hangup\/>/, "exceeding the cap must end the call, not loop forever");
 });
 
+// Found live (phone bridge correctness audit): the turn cap above is only
+// ever reached when Twilio recognized speech/digits (the `command` branch).
+// The `!command` branch -- hit on background noise, a bad line, or a caller
+// who says nothing -- returned a fresh <Gather> immediately without ever
+// touching session.turnCount, so it could loop forever with no cap at all,
+// keeping a real Twilio call open indefinitely and billing a real OpenAI
+// TTS retry-prompt call every turn.
+test("the empty-speech/no-command retry branch also increments and checks the same turn cap, not just the recognized-command branch", () => {
+  const body = gatherRouteBody();
+  const emptyBranchStart = body.indexOf("if (!command) {");
+  assert.notEqual(emptyBranchStart, -1, "could not find the empty-command retry branch");
+  const emptyBranchEnd = body.indexOf('if (step === "name" && !skippedNameWithCommand) {', emptyBranchStart);
+  assert.notEqual(emptyBranchEnd, -1);
+  const emptyBranch = body.slice(emptyBranchStart, emptyBranchEnd);
+  assert.match(emptyBranch, /silentTurnCount = Number\(session\.turnCount \|\| 0\) \+ 1/, "the empty-command branch must track its own turn count");
+  assert.match(emptyBranch, /if \(silentTurnCount > PHONE_CALL_MAX_TURNS\)/, "the empty-command branch must check the same cap");
+  assert.match(emptyBranch, /<Hangup\/>/, "exceeding the cap on silent turns must end the call, not loop forever");
+  assert.match(emptyBranch, /updatePhoneVoiceSession\(db, session, \{ turnCount: silentTurnCount \}\)/, "a silent turn under the cap must still persist its incremented count for the next request");
+});
+
+// --- The unauthenticated call-screening flow had no cap at all ---
+
+test("the unauthenticated call-screening flow's empty-speech retry also has a real turn cap, not an unbounded loop", () => {
+  const start = source.indexOf('url.pathname === "/api/voice/phone/screening-gather" && req.method === "POST"');
+  assert.notEqual(start, -1, "could not locate the screening-gather route");
+  const end = source.indexOf('url.pathname === "/api/voice/phone/screening-dial-result"', start);
+  assert.notEqual(end, -1);
+  const body = source.slice(start, end);
+  const emptyBranchStart = body.indexOf("if (!statement) {");
+  assert.notEqual(emptyBranchStart, -1);
+  const emptyBranchEnd = body.indexOf("const callSid = String(body.CallSid", emptyBranchStart);
+  assert.notEqual(emptyBranchEnd, -1);
+  const emptyBranch = body.slice(emptyBranchStart, emptyBranchEnd);
+  assert.match(emptyBranch, /getPhoneVoiceSession\(db, phoneSessionKey\(body, "screening"\)\)/, "the screening flow must track turns per call, like the authorized gather flow does");
+  assert.match(emptyBranch, /if \(silentTurnCount > PHONE_CALL_MAX_TURNS\)/, "must check the same cap");
+  assert.match(emptyBranch, /<Hangup\/>/, "exceeding the cap must end the call, not loop forever");
+});
+
 // --- A dispatcher exception must produce valid TwiML, never the generic JSON 500 ---
 
 test("an exception from either dispatcher is caught locally and answered with real TwiML, not left to the global JSON error handler", () => {

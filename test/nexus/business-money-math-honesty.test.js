@@ -24,6 +24,31 @@ test("'I paid X for Y' (money going out) still correctly logs as an expense, una
   }
 });
 
+// Found live (income/expense ledger audit): bare "received" sat in the
+// unambiguous-income word list, so "We received the electricity bill for
+// $340" -- money flowing OUT -- was logged as $340 of INCOME, swinging
+// netIncome by $680 for a single transaction. The same "genuinely
+// ambiguous, needs its own override" shape as the "paid" bug just above.
+test("'received a bill/invoice' (money owed, not received) correctly logs as an expense", () => {
+  for (const text of [
+    "We received the electricity bill for $340",
+    "We received an invoice for $200 from the supplier",
+    "Received a water bill for 150 dollars"
+  ]) {
+    assert.equal(voiceDispatch.extractTransactionArgs(text, {}).type, "expense", text);
+  }
+});
+
+test("a genuine 'received' income statement still correctly logs as income, unaffected by the received-bill fix", () => {
+  for (const text of [
+    "We received payment for the maize order, $500",
+    "Received $500 for the maize sale",
+    "We received a donation of $500"
+  ]) {
+    assert.equal(voiceDispatch.extractTransactionArgs(text, {}).type, "income", text);
+  }
+});
+
 // Found live: a negative unitPrice (reachable via direct tool-call
 // arguments) silently reduced an invoice's total by any amount a caller
 // supplied.
@@ -35,6 +60,26 @@ test("a negative unit price is rejected, not silently accepted", () => {
 test("a genuine positive unit price still works exactly as before", () => {
   const result = voiceDispatch.extractInvoiceItemArgs("add a line item to INV-1001", { unitPrice: 50, quantity: 2, description: "normal item" });
   assert.equal(result.unitPrice, 50);
+});
+
+// Found live: extractTransactionArgs' amount had no sign check at all -- a
+// negative amount (reachable via direct tool-call arguments) would silently
+// flip the meaning of "type", since the dashboard summary always adds
+// amount into the matching income/expense bucket, never subtracts.
+test("a negative transaction amount is rejected, not silently accepted", () => {
+  const result = voiceDispatch.extractTransactionArgs("record an expense", { amount: -40, type: "expense" });
+  assert.equal(result.amount, null);
+});
+
+test("a genuine positive transaction amount still works exactly as before", () => {
+  const result = voiceDispatch.extractTransactionArgs("record an expense", { amount: 40, type: "expense" });
+  assert.equal(result.amount, 40);
+});
+
+// Found live: extractGrantArgs' amount had no sign check at all.
+test("a negative grant amount is rejected, not silently accepted", () => {
+  const result = voiceDispatch.extractGrantArgs("add a grant from USDA", { amount: -50000 });
+  assert.equal(result.amount, 0);
 });
 
 function dashboardCatalog(overrides = {}) {

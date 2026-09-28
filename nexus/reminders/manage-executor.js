@@ -20,6 +20,23 @@ function normalize(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Found live: a raw substring test (haystack.includes(subject)) let a
+// request naming a reminder that does NOT exist silently match a real,
+// different reminder whenever the requested text happened to be a
+// character-for-character prefix of the stored one -- "invoice 2" (no such
+// reminder) is a substring of the real "...invoice 23", so cancelling
+// "invoice 2" silently cancelled the real "invoice 23" reminder instead of
+// reporting not_found. Because the collision produces exactly one match,
+// the matches.length>1 "ambiguous" guard below never sees it. Word-token
+// matching (every word of the request must be a whole word in the stored
+// text, the same pattern nexus/personal/items.js findItem and
+// nexus/farmwork's findParty/findAnimal already use) closes this without
+// requiring the two texts to match exactly.
+function subjectMatches(storedText, subject) {
+  const words = storedText.split(" ");
+  return subject.split(" ").every(word => words.includes(word));
+}
+
 function createRemindersListExecutor({ notifications }) {
   if (!notifications?.listReminders) throw new Error("A notification repository is required.");
   return async function execute({ context }) {
@@ -58,7 +75,7 @@ function createRemindersCancelExecutor({ notifications }) {
     const subject = rawSubject.trim() ? normalize(extractAssistantReminderTask(rawSubject)) : "";
     let matches;
     if (wantedId) matches = rows.filter(row => row.notification_id === wantedId);
-    else if (subject.length >= 3) matches = rows.filter(row => normalize((row.content || {}).reminderText || (row.content || {}).body).includes(subject));
+    else if (subject.length >= 3) matches = rows.filter(row => subjectMatches(normalize((row.content || {}).reminderText || (row.content || {}).body), subject));
     else matches = [];
     const unresolved = reason => ({ cancelled: false, reason, matches: matches.length,
       candidates: rows.map(describe), candidateIds: rows.map(row => row.notification_id) });

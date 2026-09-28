@@ -285,6 +285,13 @@ async function runRuntimeQa() {
   try {
     await waitForServer(child);
 
+    // Found live (rate-limiting audit, already merged): /api/nexus/intelligence/ask now requires sign-in like
+    // every sibling /api/agent/* route -- log in first so that call below carries a real session.
+    const login = await request("POST", "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
+    assert.strictEqual(login.status, 200, "admin login should succeed");
+    const cookie = (login.headers["set-cookie"] || []).map(item => item.split(";")[0]).join("; ");
+    assert(cookie, "admin login should set a session cookie");
+
     const services = await request("GET", "/api/nexus/internet-services");
     assert.strictEqual(services.status, 200, "internet services endpoint should respond");
     assert.strictEqual(services.body.ok, true, "internet services endpoint should be ok");
@@ -314,7 +321,7 @@ async function runRuntimeQa() {
     assert(search.body.receipt.receiptId, "search should create receipt");
     assert.strictEqual(search.body.noExecutionAuthorized, true, "search should not authorize downstream execution");
 
-    const ask = await request("POST", "/api/nexus/intelligence/ask", { question: "Nexus, what internet services are active?" });
+    const ask = await request("POST", "/api/nexus/intelligence/ask", { question: "Nexus, what internet services are active?" }, cookie);
     assert.strictEqual(ask.status, 200, "Ask Nexus internet status should respond");
     assert.strictEqual(ask.body.ok, true, "Ask Nexus internet status should be ok");
     assert.strictEqual(ask.body.intelligence.router, "nexus-full-internet-services-activation-runtime", "Ask Nexus should route to internet activation runtime");
@@ -324,11 +331,6 @@ async function runRuntimeQa() {
     assert.strictEqual(liveStatus.status, 200, "live execution status should respond");
     assert(liveStatus.body.internetServices, "live execution status should include internet services");
     assert(Array.isArray(liveStatus.body.internetServiceAdapters), "live execution status should include internet service adapters");
-
-    const login = await request("POST", "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
-    assert.strictEqual(login.status, 200, "admin login should succeed");
-    const cookie = (login.headers["set-cookie"] || []).map(item => item.split(";")[0]).join("; ");
-    assert(cookie, "admin login should set a session cookie");
 
     const receipts = await request("GET", "/api/nexus/operation-receipts", null, cookie);
     assert.strictEqual(receipts.status, 200, "receipts endpoint should respond");

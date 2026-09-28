@@ -160,6 +160,79 @@ test("exceeding the total storage quota refuses the upload and cleans up, even t
   assert.deepEqual(fs.readdirSync(dir).filter(name => name !== "existing.pdf"), [], "the rejected upload must leave no trace");
 });
 
+// Added for real account erasure/export (2026-09-25): until now nothing in
+// this module could find "all of one user's uploads" or remove one -- an
+// account-erasure feature has no other way to reach uploaded files at all,
+// since there is no separate per-user upload index anywhere in the app.
+test("listUploadsForUser finds only the matching uploader's files, by scanning .meta.json sidecars", () => {
+  const dir = tmpDir();
+  fs.writeFileSync(path.join(dir, "a.png.meta.json"), JSON.stringify({ fileId: "a.png", uploadedBy: "u_farmer" }));
+  fs.writeFileSync(path.join(dir, "a.png"), Buffer.alloc(10));
+  fs.writeFileSync(path.join(dir, "b.pdf.meta.json"), JSON.stringify({ fileId: "b.pdf", uploadedBy: "u_someone_else" }));
+  fs.writeFileSync(path.join(dir, "b.pdf"), Buffer.alloc(10));
+  const found = uploads.listUploadsForUser(dir, "u_farmer");
+  assert.equal(found.length, 1);
+  assert.equal(found[0].fileId, "a.png");
+  assert.deepEqual(uploads.listUploadsForUser(dir, ""), [], "an empty/missing userId must never match every file");
+  assert.deepEqual(uploads.listUploadsForUser(path.join(dir, "does-not-exist"), "u_farmer"), []);
+});
+
+test("deleteUpload removes both the real file and its metadata sidecar, and reports whether anything was actually removed", () => {
+  const dir = tmpDir();
+  fs.writeFileSync(path.join(dir, "a.png"), Buffer.alloc(10));
+  fs.writeFileSync(path.join(dir, "a.png.meta.json"), JSON.stringify({ fileId: "a.png" }));
+  assert.equal(uploads.deleteUpload(dir, "a.png"), true);
+  assert.equal(fs.existsSync(path.join(dir, "a.png")), false, "the real file must be gone");
+  assert.equal(fs.existsSync(path.join(dir, "a.png.meta.json")), false, "the metadata sidecar must be gone too, not just the file");
+  assert.equal(uploads.deleteUpload(dir, "does-not-exist.png"), false, "deleting a file that was never there must report false, not a false success");
+});
+
+test("deleteUpload cannot be tricked into deleting outside the upload directory via a path-traversal fileId", () => {
+  const dir = path.resolve(tmpDir());
+  const parentDir = path.dirname(dir);
+  const plantedPath = path.join(parentDir, "planted-sibling.txt");
+  fs.writeFileSync(plantedPath, "must survive");
+  try {
+    uploads.deleteUpload(dir, "../planted-sibling.txt");
+    assert.ok(fs.existsSync(plantedPath), "a traversal fileId must never let deleteUpload escape the upload directory");
+  } finally {
+    fs.rmSync(plantedPath, { force: true });
+  }
+});
+
+// Found live (upload robustness audit): the "finish" handler's own catch
+// block cleans up tmpPath on a post-write failure (bad content-type,
+// over quota), but the sibling writeStream "error" event -- a real
+// mid-write disk fault (ENOSPC, a permission error, a transient FS fault)
+// -- never did. currentUsageBytes() counts every file except *.meta.json,
+// so an orphaned .tmp-<uuid> file also permanently counts against the
+// total quota, outliving the disk fault that created it.
+test("a mid-write disk fault cleans up the partial tmp file, instead of leaving it on disk counted against quota forever", async () => {
+  const dir = tmpDir();
+  const env = { NEXUS_FILE_STORAGE_DIR: dir };
+  const originalCreateWriteStream = fs.createWriteStream;
+  let capturedTmpPath = null;
+  fs.createWriteStream = (targetPath, ...args) => {
+    capturedTmpPath = targetPath;
+    // Let the real file actually get created on disk (like a real write
+    // stream does on open), then simulate a fault partway through -- exactly
+    // like a real ENOSPC/EACCES mid-write failure, not just a mocked stream
+    // that never touched the filesystem at all.
+    const real = originalCreateWriteStream(targetPath, ...args);
+    real.on("open", () => real.destroy(Object.assign(new Error("simulated disk fault"), { code: "ENOSPC" })));
+    return real;
+  };
+  try {
+    const { boundary, buffer } = multipartBody("file", "leaf.png", "image/png", REAL_PNG_1X1);
+    const req = fakeRequest({ "content-type": `multipart/form-data; boundary=${boundary}` }, [buffer]);
+    await assert.rejects(() => uploads.parseAndStoreUpload(req, { env, userId: "u1" }), /simulated disk fault/);
+  } finally {
+    fs.createWriteStream = originalCreateWriteStream;
+  }
+  assert.ok(capturedTmpPath, "createWriteStream should have been called with the real tmp path");
+  assert.equal(fs.existsSync(capturedTmpPath), false, "the partial tmp file must be cleaned up after a write-stream error, not left on disk forever");
+});
+
 // Structural: the HTTP routes and documentProvider wiring in server.js.
 const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
 
@@ -189,7 +262,11 @@ test("the document-analysis tool falls back to the most recently uploaded file w
   const start = source.indexOf('if (toolName === "nexus_file_document_analysis")');
   assert.ok(start > 0);
   const body = source.slice(start, start + 1000);
-  assert.match(body, /db\.profile\?\.lastUploadedFileId/);
+  // Found live (uploads/telehealth/permissions follow-up audit): this
+  // fallback used to be a single global field, not scoped per user, despite
+  // this exact comment already documenting the intent as "per account" --
+  // fixed to key off the calling user's own id.
+  assert.match(body, /db\.profile\?\.lastUploadedFileByUser\?\.\[user\?\.id\]/);
   assert.match(body, /nexusRealProviders\.documents\.analyze\(\{/);
   assert.match(body, /\}, process\.env, user\);/, "the real user must be passed through for the ownership check in documentProvider.analyze");
 });

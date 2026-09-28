@@ -56,6 +56,21 @@ test("reminders.cancel never guesses: several matches, none, or no subject all c
   for (const result of [ambiguous, missing, vague]) assert.equal(verifyRemindersCancelOutcome({ result }).verified, true);
 });
 
+// Found live: a raw substring test (storedText.includes(subject)) let a
+// request naming a reminder that does NOT exist silently match a real,
+// different reminder whenever the requested text was a character-for-
+// character prefix of the stored one -- "invoice 2" (no such reminder) is a
+// substring of the real "...invoice 23", so cancelling by "invoice 2"
+// silently cancelled the real "invoice 23" reminder. Because that collision
+// produces exactly one match, the ambiguous-match guard never sees it.
+test("cancelling by a subject that does not exist never silently matches a different, similarly-worded real reminder", async () => {
+  const notifications = fakeNotifications([row("ntf_1", "call the vendor about invoice 23", null)]);
+  const result = await createRemindersCancelExecutor({ notifications })({ context, input: { reminder: "call the vendor about invoice 2" } });
+  assert.equal(result.cancelled, false);
+  assert.equal(result.reason, "not_found", "a request for the non-existent 'invoice 2' must never resolve to the real 'invoice 23'");
+  assert.deepEqual(notifications.state.cancelled, [], "the real, different reminder must not be cancelled");
+});
+
 test("reminders.cancel by id resolves an otherwise ambiguous pair", async () => {
   const notifications = fakeNotifications([row("ntf_1", "call the vendor", null), row("ntf_2", "call the vendor", null)]);
   const result = await createRemindersCancelExecutor({ notifications })({ context, input: { reminderId: "ntf_2" } });

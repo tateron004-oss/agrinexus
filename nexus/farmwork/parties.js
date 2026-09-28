@@ -3,7 +3,7 @@
 const { clean, titleCase, parseQuantity, parsePricePer, parseMoney, formatMoney, unitLabel, anyDay, plural, round } = require("./parse.js");
 const { startGuided, askConfirm } = require("./guided.js");
 const { describeDay, addDays } = require("../personal/dates.js");
-const { recordMoney } = require("./money.js");
+const { recordMoney, sum, showTotals } = require("./money.js");
 const { addStock, findItems } = require("./inventory.js");
 
 // The farm's people and the business done with them: buyers, suppliers and customers with their contact details and what they deal in;
@@ -89,10 +89,17 @@ async function handle(ctx) {
       const orders = (await ctx.store.list({ ...scope, collection: "order" })).filter(order => order.data.party === name);
       const money = (await ctx.store.list({ ...scope, collection: "money" })).filter(record => record.data.party === name);
       const follow = (await ctx.store.list({ ...scope, collection: "followup" })).filter(item => item.data.party === name && item.data.status === "open");
-      const earned = money.filter(record => record.data.type === "income").reduce((sum, record) => sum + record.data.amount, 0); const spent = money.filter(record => record.data.type === "expense").reduce((sum, record) => sum + record.data.amount, 0);
+      // Found live (export/invoice/farm-toolkit follow-up audit): this used
+      // to sum every income/expense record's raw amount together regardless
+      // of currency, then label the whole total with whichever record
+      // happened to be first -- a KES sale and a USD sale to the same party
+      // became one fabricated number under one wrong currency. Bucket by
+      // currency first, like sum()/showTotals() already do everywhere else.
+      const earnedTotals = sum(money, "income"); const spentTotals = sum(money, "expense");
+      const earned = Object.keys(earnedTotals).length > 0; const spent = Object.keys(spentTotals).length > 0;
       return [`${name}${d.role ? ` (${d.role})` : ""}${d.phone ? `, ${d.phone}` : ""}${d.products ? `, ${d.products}` : ""}${d.area ? `, ${d.area}` : ""}.`,
         orders.length ? `${plural(orders.length, "order")}: ${orders.slice(0, 3).map(order => `${order.data.qty ? `${unitLabel(order.data.qty, order.data.unit)} ` : ""}${order.data.item} (${order.data.status})`).join("; ")}.` : "",
-        earned || spent ? `Business so far: ${earned ? `you earned ${formatMoney(earned, money[0]?.data.currency)}` : ""}${earned && spent ? " and " : ""}${spent ? `you spent ${formatMoney(spent, money[0]?.data.currency)}` : ""}.` : "",
+        earned || spent ? `Business so far: ${earned ? `you earned ${showTotals(earnedTotals)}` : ""}${earned && spent ? " and " : ""}${spent ? `you spent ${showTotals(spentTotals)}` : ""}.` : "",
         follow.length ? `Follow-up: ${follow.map(item => `${item.data.text || "check in"} (${describeDay(item.data.due, ctx.today)})`).join("; ")}.` : "", notes.length ? `Notes: ${notes.map(note => note.data.text).join(" | ")}.` : ""].filter(Boolean).join(" ");
     }
   }
@@ -134,7 +141,19 @@ async function handle(ctx) {
     const party = await partyFor(ctx, order.who, order.kind === "sale" ? "buyer" : "supplier");
     if (!party) return `Which ${order.who}? Say the full name.`;
     const due = anyDay(/\b(?:by|on|before|for)\s+(.+)$/i.exec(order.rest)?.[1] || "", ctx.today);
-    const record = await ctx.store.add({ ...scope, collection: "order", data: { kind: order.kind, party: party.data.name, item, qty: quantity.value, unit: quantity.unit, price: per?.amount || null, currency: per?.currency || "", status: "open", due: due || null, day: ctx.today } });
+    // Found live (money-math audit): a price stated "per kg" was stored
+    // unconditionally even when the order's own quantity was in a
+    // different unit (bags, crates) -- the display line right below
+    // already correctly checked per.per === quantity.unit before showing an
+    // "in all" total, but the STORED price had no such guard, so
+    // delivering the order later (see d.price * d.qty below) blindly
+    // multiplied mismatched units. Executed proof: "order from John: 3 bags
+    // of maize at 40 per kg" then "deliver order 1" recorded income of 120
+    // (3 x 40), when a bag of maize is realistically ~90-100kg. Falling
+    // back to no stored price when units mismatch reuses the existing,
+    // already-honest "no price was given" message at delivery time.
+    const matchedUnitPrice = per && per.per === quantity.unit ? per.amount : null;
+    const record = await ctx.store.add({ ...scope, collection: "order", data: { kind: order.kind, party: party.data.name, item, qty: quantity.value, unit: quantity.unit, price: matchedUnitPrice, currency: per?.currency || "", status: "open", due: due || null, day: ctx.today } });
     return `${order.kind === "sale" ? "Order" : "Purchase order"} ${record.number}: ${unitLabel(quantity.value, quantity.unit)} of ${item} ${order.kind === "sale" ? "for" : "from"} ${party.data.name}${per ? ` at ${formatMoney(per.amount, per.currency)} per ${per.per}${per.per === quantity.unit ? ` (${formatMoney(round(per.amount * quantity.value), per.currency)} in all)` : ""}` : ""}${due ? `, ${describeDay(due, ctx.today)}` : ""}. Say "${order.kind === "sale" ? "deliver" : "received"} order ${record.number}" when it is done.`;
   }
   if (/^(?:show|list|what are) (?:my )?(?:open )?orders$/.test(lower) || /^(?:what|which) orders (?:are|do i have)(?: still)? (?:open|pending|outstanding)$/.test(lower)) {

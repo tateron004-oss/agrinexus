@@ -163,17 +163,32 @@ function extractTransactionArgs(command = "", args = {}) {
   // construction is now recognized as an income signal, separate from the
   // other, unambiguous expense words.
   const receivedPayment = /\b(?:paid me|pay me|got paid|was paid|is paying me|payment received|received payment)\b/i.test(text);
+  // Found live: "received" alone sat in the unambiguous-income word list, so
+  // any sentence with "received" was logged as income even when the money
+  // is flowing OUT -- "We received the electricity bill for $340" logged
+  // $340 of INCOME, swinging netIncome by $680 for a single transaction.
+  // "Received a bill/invoice" is the exact same "genuinely ambiguous, needs
+  // its own override" shape "paid" was already fixed for just below:
+  // recognized as an explicit expense signal, checked before the generic
+  // income-word list.
+  const receivedBillOrInvoice = /\breceived\b(?:\s+\w+){0,3}\s+\b(bill|invoice|statement|demand notice)\b/i.test(text);
   const explicitIncomeWord = /\b(income|revenue|donation|donated|sale|sold|earned|received|nimeuza|nimepokea|mapato|mauzo)\b/i.test(text);
   const explicitExpenseWord = /\b(expense|spent|spend|purchase|purchased|bought|cost|nimetumia|nimenunua|nimelipa|matumizi|gharama)\b/i.test(text);
   const ambiguousPaidAsExpense = !receivedPayment && /\bpaid\b/i.test(text);
-  const type = explicitExpenseWord || ambiguousPaidAsExpense ? "expense"
+  const type = explicitExpenseWord || ambiguousPaidAsExpense || receivedBillOrInvoice ? "expense"
     : receivedPayment || explicitIncomeWord ? "income" : "expense";
   // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
   const soldItem = text.match(/\b(?:sold|sell|nimeuza)\s+(.+?)\s+(?:for|at|kwa)\b/i);
   const spentOn = text.match(/\b(?:on|for|kwa)\s+(?![\d$€₦]|shilingi\b)([^\n,.]{2,60})/i);
   const category = (soldItem ? soldItem[1] : spentOn ? spentOn[1] : "").replace(/\s+(?:today|yesterday|this (?:week|month|year))\s*$/i, "").trim();
   return {
-    amount: Number.isFinite(rawAmount) ? rawAmount : null,
+    // Found live: a negative amount (reachable via direct tool-call
+    // arguments) silently flipped the meaning of "type" -- an "expense"
+    // logged with a negative amount reduced the expenses total instead of
+    // increasing it, and vice versa for "income" (the summary always adds
+    // amount into the matching bucket, never subtracts). Sign is carried
+    // entirely by "type"; amount itself is always a non-negative magnitude.
+    amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : null,
     currency,
     type: sanitizeText(args.type || type, 20),
     category: sanitizeText(args.category || category, 160),
@@ -290,7 +305,10 @@ function extractGrantArgs(command = "", args = {}) {
   return {
     funderName: sanitizeText(args.funderName || (funderMatch ? funderMatch[1].trim() : ""), 160),
     program: sanitizeText(args.program || (programMatch ? programMatch[1].trim() : ""), 160),
-    amount: Number.isFinite(rawAmount) ? rawAmount : 0,
+    // Found live: a negative amount (reachable via direct tool-call
+    // arguments) passed straight through with no sign check, the same gap
+    // already fixed for invoice-item unitPrice/quantity.
+    amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : 0,
     deadline: sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40)
   };
 }
@@ -382,15 +400,27 @@ function extractListingArgs(command = "", args = {}) {
   const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/)
     || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/)
     || text.match(/\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s+dollars?\b/i);
-  const priceRaw = priceMatch ? Number(priceMatch[1].replace(/,/g, "")) : NaN;
-  const price = Number.isFinite(priceRaw) ? (/[kK]/.test(priceMatch[0]) ? priceRaw * 1000 : priceRaw) : NaN;
+  // Found live (real-estate/GPS follow-up audit): only $/k-suffix/"dollars"
+  // prices were recognized at all -- a listing priced in any of this app's
+  // own primary-market local currencies (KES, UGX, NGN, etc., the exact
+  // vocabulary extractTransactionArgs already recognizes) matched nothing
+  // and was silently saved with price: 0. Falls back to the same
+  // amountWithCurrency() helper the ledger uses when no $/k/dollars match.
+  const localPrice = !priceMatch ? amountWithCurrency(text) : null;
+  const priceRaw = priceMatch ? Number(priceMatch[1].replace(/,/g, "")) : localPrice ? localPrice.amount : NaN;
+  const price = Number.isFinite(priceRaw) ? (priceMatch && /[kK]/.test(priceMatch[0]) ? priceRaw * 1000 : priceRaw) : NaN;
+  const priceCurrency = args.currency ? String(args.currency).toUpperCase().slice(0, 3) : (localPrice ? localPrice.currency : "USD");
   const bedsMatch = text.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms|br)\b/i);
   const bathsMatch = text.match(/\b(\d+(?:\.\d)?)\s*(?:bath|baths|bathroom|bathrooms|ba)\b/i);
   const typeMatch = text.match(new RegExp(`\\b(${PROPERTY_TYPE_WORDS.join("|")})\\b`, "i"));
   const statusMatch = text.match(new RegExp(`\\bstatus\\s+(?:to|as)\\s+["']?${LISTING_STATUS_WORDS}["']?`, "i")) || text.match(new RegExp(`\\b${LISTING_STATUS_WORDS}\\b`, "i"));
   return {
     address: sanitizeText(args.address || (addressMatch ? addressMatch[1].trim() : ""), 200),
-    price: args.price !== undefined ? Number(args.price) : (Number.isFinite(price) ? price : 0),
+    // Found live: the args.price branch (a direct tool-call argument, not
+    // the text-parsed branch) had no finite/sign check at all, the same gap
+    // already fixed for invoice-item unitPrice/quantity and grant amount.
+    price: args.price !== undefined ? (Number.isFinite(Number(args.price)) && Number(args.price) >= 0 ? Number(args.price) : 0) : (Number.isFinite(price) ? price : 0),
+    currency: priceCurrency || "USD",
     propertyType: sanitizeText(args.propertyType || (typeMatch ? typeMatch[1].toLowerCase() : ""), 40),
     beds: args.beds !== undefined ? Number(args.beds) : (bedsMatch ? Number(bedsMatch[1]) : 0),
     baths: args.baths !== undefined ? Number(args.baths) : (bathsMatch ? Number(bathsMatch[1]) : 0),
@@ -493,7 +523,24 @@ function computeBusinessDashboard(editable) {
   const activeListings = listings.filter(listing => listingStatus(listing) === "active").length;
   const pendingListings = listings.filter(listing => listingStatus(listing) === "pending" || listingStatus(listing) === "under-contract").length;
   const soldListings = listings.filter(listing => listingStatus(listing) === "sold").length;
-  const activeListingValue = listings.filter(listing => listingStatus(listing) === "active").reduce((sum, listing) => sum + (Number(listing.price) || 0), 0);
+  // Found live: this used to sum every active listing's price together
+  // regardless of currency, then the caller labeled the whole total with the
+  // WORKSPACE'S TRANSACTION currency (an unrelated field) -- a $450,000 USD
+  // listing next to a KES-priced one, or a listing worth-total displayed
+  // under a currency with no bearing on any listing's actual price. Bucket
+  // by each listing's own currency (defaulting missing/legacy data to USD,
+  // its prior implicit assumption) and report the dominant one plus any
+  // others, matching the transaction currency/otherCurrencies pattern above.
+  const activeListingTotals = {};
+  for (const listing of listings) {
+    if (listingStatus(listing) !== "active") continue;
+    const listingCurrency = String(listing.currency || "USD").toUpperCase();
+    activeListingTotals[listingCurrency] = Math.round(((activeListingTotals[listingCurrency] || 0) + (Number(listing.price) || 0)) * 100) / 100;
+  }
+  const listingCurrencyEntries = Object.entries(activeListingTotals).sort((a, b) => b[1] - a[1]);
+  const activeListingCurrency = listingCurrencyEntries[0]?.[0] || "USD";
+  const activeListingValue = listingCurrencyEntries[0]?.[1] || 0;
+  const otherListingCurrencies = listingCurrencyEntries.slice(1).map(([entryCurrency]) => entryCurrency);
   return {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
     customers, donors, sponsors, volunteers, buyers, sellers, tenants, landlords, others,
@@ -501,7 +548,7 @@ function computeBusinessDashboard(editable) {
     grantsRequested, grantsAwarded,
     openTasks, totalTasks: editable.tasks.length,
     upcomingAppointments,
-    totalListings: listings.length, activeListings, pendingListings, soldListings, activeListingValue
+    totalListings: listings.length, activeListings, pendingListings, soldListings, activeListingValue, activeListingCurrency, otherListingCurrencies
   };
 }
 
@@ -710,7 +757,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     // currency (e.g. a business that logs its day-to-day income in KES would
     // have a $250,000 USD listing spoken back as "worth KES 250,000").
     const listingPhrase = dashboard.totalListings
-      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney("USD", dashboard.activeListingValue)}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
+      ? ` ${dashboard.activeListings} active listing${dashboard.activeListings === 1 ? "" : "s"} worth ${formatMoney(dashboard.activeListingCurrency, dashboard.activeListingValue)}${dashboard.otherListingCurrencies.length ? `, not counting listings in ${dashboard.otherListingCurrencies.join(", ")}` : ""}, ${dashboard.pendingListings} pending, ${dashboard.soldListings} sold;`
       : "";
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
@@ -964,10 +1011,13 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business workspace yet. Tell me its name and I can start one before adding a listing.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const status = listing.status || "active";
-    const pricePhrase = listing.price ? ` at ${formatMoney("USD", listing.price)}` : "";
+    // Found live: only $ was ever recognized, so a local-currency price (see
+    // extractListingArgs' currency fix) was formatted and stored as if it
+    // were dollars -- "4,500,000 shillings" displayed as "$4,500,000".
+    const pricePhrase = listing.price ? ` at ${formatMoney(listing.currency, listing.price)}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can list ${listing.address}${pricePhrase} in "${workspaceName}" as ${status}. Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, listings: [...(resolved.client.data.editable.listings || []),
-      { address: listing.address, price: listing.price, propertyType: listing.propertyType, beds: listing.beds, baths: listing.baths, status, notes: "" }] };
+      { address: listing.address, price: listing.price, currency: listing.currency, propertyType: listing.propertyType, beds: listing.beds, baths: listing.baths, status, notes: "" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Listed ${listing.address}${pricePhrase} in "${workspaceName}" as ${status}.`;
@@ -997,7 +1047,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const listings = resolved.client?.data?.editable?.listings || [];
     const workspaceName = resolved.client?.data?.info?.businessName || "your workspace";
     const response = listings.length
-      ? `"${workspaceName}" has ${listings.length} listing${listings.length === 1 ? "" : "s"}: ${listings.map(listing => `${listing.address} (${listing.status}${listing.price ? `, ${formatMoney("USD", listing.price)}` : ""})`).join("; ")}.`
+      ? `"${workspaceName}" has ${listings.length} listing${listings.length === 1 ? "" : "s"}: ${listings.map(listing => `${listing.address} (${listing.status}${listing.price ? `, ${formatMoney(listing.currency || "USD", listing.price)}` : ""})`).join("; ")}.`
       : `"${workspaceName}" has no listings yet. Say something like "list 123 Main Street for $450,000" to add one.`;
     return { status: "completed", localOnly: true, response, businessListings: listings, summary: response };
   }
@@ -1054,7 +1104,25 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
   // caller has already decided is business-related (e.g. the model chose
   // this tool) but this classifier didn't otherwise recognize.
   const businessName = extractBusinessName(command, args);
-  if (!businessName) return { status: "needs-input", response: "What should I call this business or nonprofit workspace?", missingInformation: ["businessName"] };
+  if (!businessName) {
+    // Found live (business/CRM follow-up audit): a request this classifier
+    // genuinely doesn't recognize at all (e.g. "mark invoice paid" -- there
+    // is no such action yet) always landed here and asked "what should I
+    // call this workspace," even when a real workspace already exists.
+    // That's actively misleading, not just unhelpful -- it implies no
+    // workspace was ever created. Check for an existing workspace first and
+    // give an honest "I didn't understand that" response instead. If the
+    // lookup itself fails (e.g. the workspace store is unreachable), that's
+    // unrelated to this unrecognized command -- fall through to the
+    // original "name a new workspace" prompt rather than surfacing the
+    // lookup failure as if it were the answer to what was asked.
+    const existing = await resolveBusinessClient(businessRequest, command).catch(() => ({ client: null }));
+    if (existing.client) {
+      const workspaceName = existing.client.data?.info?.businessName || "your workspace";
+      return { status: "needs-input", response: `I didn't understand that as a request for "${workspaceName}". Try logging income or an expense, adding or updating a lead/listing/grant/task, or asking for your dashboard.`, missingInformation: [] };
+    }
+    return { status: "needs-input", response: "What should I call this business or nonprofit workspace?", missingInformation: ["businessName"] };
+  }
   if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can start a new business or nonprofit workspace called "${businessName}" and save it to your account. Should I go ahead?` };
   const created = await businessRequest({ method: "POST", pathname: "/api/nexus/runtime/business/clients", body: { businessName, consent: true } });
   const response = `Started a business/nonprofit workspace called "${businessName}". Open Business services anytime to keep building it out.`;

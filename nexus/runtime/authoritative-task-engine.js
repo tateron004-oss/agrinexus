@@ -116,19 +116,33 @@ class AuthoritativeTaskEngine {
       if (!tool || tool.availability !== "available" || (!authorityOwnsTool && typeof executor !== "function")) {
         lastError = new NexusRuntimeError("tool_unavailable", `Tool ${toolId} has no available authoritative execution owner.`, 503); continue;
       }
-      authorize(context, tool);
+      // Found live (record-repository/consent follow-up audit): a permission/role/confirmation/consent DENIAL
+      // threw straight out of execute() with no audit.record() anywhere in the call chain -- only a successful
+      // completion (below) or a genuine provider failure (the catch block below) were ever audited. A
+      // revoked-consent refusal, or a pattern of repeated unauthorized attempts, was invisible on the audit
+      // review surface that's explicitly documented as "everything Kyro did, for a human to actually look at."
+      const auditDenial = denied => this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
+        correlationId: taskWithSteps?.correlationId, taskId, eventType: "tool.denied", outcome: "denied",
+        metadata: { toolId: tool.tool_id, code: denied.code, message: denied.message } });
+      try {
+        authorize(context, tool);
+      } catch (denied) { await auditDenial(denied); throw denied; }
       // Found live: step.confirmation_state is computed ONCE, from only the PRIMARY tool, when the task is
       // created (create()'s `confirmationRequired: Boolean(tool?.confirmation_required)` never looks at
       // fallbackToolIds). A fallback tool that itself requires confirmation but was never separately approved
       // used to hit authorize()'s hard throw here -- OUTSIDE the per-candidate try/catch below -- crashing
       // execute() and executeTask() entirely with an unhandled error instead of degrading to the next candidate
       // (or a clear final failure) the same way an unavailable/retry-exhausted candidate already does. This
-      // still fails CLOSED (the unconfirmed fallback never runs), it just no longer takes the whole task down.
+      // still fails CLOSED (the unconfirmed fallback never runs), it just no longer takes the whole task down --
+      // still audited as a denial either way.
       if (tool.confirmation_required && step.confirmation_state !== "approved") {
-        lastError = new NexusRuntimeError("confirmation_required", `Tool ${toolId} requires confirmation that was never given for this step.`, 409); continue;
+        const denied = new NexusRuntimeError("confirmation_required", `Tool ${toolId} requires confirmation that was never given for this step.`, 409);
+        await auditDenial(denied); lastError = denied; continue;
       }
-      if (tool.consent_scope) { const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
-        if (!consent) throw new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); }
+      if (tool.consent_scope) {
+        const consent = await this.consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId });
+        if (!consent) { const denied = new NexusRuntimeError("consent_required", `Active consent is required for ${tool.consent_scope}.`, 403); await auditDenial(denied); throw denied; }
+      }
       if (retryOrdinal > Number(tool.max_attempts || 1)) { lastError = new NexusRuntimeError("retry_exhausted", `Tool ${toolId} exhausted its governed retry limit.`, 409,
         { toolId, attempts: Number(step.attempt_count || 0), maxAttempts: Number(tool.max_attempts || 1) }); continue; }
       const baseKey = attempt ? `${step.idempotency_key}:fallback:${toolId}` : step.idempotency_key;

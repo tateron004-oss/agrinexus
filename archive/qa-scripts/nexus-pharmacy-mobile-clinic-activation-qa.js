@@ -228,11 +228,11 @@ async function runRouteChecks() {
     }, cookie, { allowBlocked: true });
     assert.strictEqual(mobileSendNoConsent.status, "blocked-consent-required", "mobile clinic external send should require share consent");
 
-    const askPharmacy = await request(port, "/api/nexus/intelligence/ask", { question: "What is blocking pharmacy referrals?" });
+    const askPharmacy = await request(port, "/api/nexus/intelligence/ask", { question: "What is blocking pharmacy referrals?" }, cookie);
     assert.strictEqual(askPharmacy.intelligence.router, "nexus-pharmacy-mobile-clinic-activation", "Ask Nexus should route pharmacy commands");
     assert(/Missing:/i.test(askPharmacy.result.answer), "pharmacy Ask Nexus answer should explain missing config");
 
-    const askMobile = await request(port, "/api/nexus/intelligence/ask", { question: "Prepare a mobile clinic request." });
+    const askMobile = await request(port, "/api/nexus/intelligence/ask", { question: "Prepare a mobile clinic request." }, cookie);
     assert.strictEqual(askMobile.intelligence.router, "nexus-pharmacy-mobile-clinic-activation", "Ask Nexus should route mobile clinic commands");
     assert(/does not dispatch|red flags/i.test(JSON.stringify(askMobile.result)), "mobile clinic Ask Nexus answer should keep safety boundary");
   } finally {

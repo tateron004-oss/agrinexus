@@ -128,9 +128,14 @@ test("a real citation from an African government health domain (.gov.ng) is clas
   });
   try {
     await waitFor(`${altBase}/api/healthz`);
+    const loginRes = await fetch(`${altBase}/api/login`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: "admin@agrinexus.org", password: "Admin2026!" })
+    });
+    const altCookie = loginRes.headers.get("set-cookie").split(";")[0];
     const res = await fetch(`${altBase}/api/nexus/knowledge/query`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", cookie: altCookie },
       body: JSON.stringify({ question: "What are current best practices to monitor hypertension at home?", category: "chronicCare" })
     });
     const body = await res.json();

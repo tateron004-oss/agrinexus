@@ -26,6 +26,17 @@ const FLAG = "NEXUS_TELEHEALTH_BRIDGE_ENABLED";
 const INTAKES = "nexusTelehealthBridgeIntakes";
 const SESSIONS = "nexusTelehealthBridgeSessions";
 const SESSION_TYPES = new Set(["provider_review", "chronic_care_review", "RPM_review", "RTM_review", "health_access_preparation", "pharmacy_follow_up_questions", "mobile_clinic_follow_up", "agriculture_worker_health_support", "community_support", "workforce_coaching", "agriculture_expert_review"]);
+// SESSION_TYPES itself mixes case ("RPM_review"/"RTM_review" keep their
+// abbreviation uppercase), so a caller can't simply .toLowerCase() the
+// input and compare against the Set directly the way the sibling bridge
+// providers' all-lowercase enums do -- this lookup normalizes BOTH sides so
+// a differently-cased match (e.g. "rpm_review", "Chronic_Care_Review")
+// still resolves to the canonical stored casing.
+const SESSION_TYPES_BY_LOWER = new Map(Array.from(SESSION_TYPES, type => [type.toLowerCase(), type]));
+
+function canonicalSessionType(raw) {
+  return SESSION_TYPES_BY_LOWER.get(String(raw || "").trim().toLowerCase().replace(/\s+/g, "_")) || null;
+}
 
 function videoStatuses(env = process.env) {
   return {
@@ -46,10 +57,17 @@ function status(env = process.env) {
   });
 }
 
+// Found live (bridge-provider case-sensitivity sweep): comparing the raw,
+// un-normalized sessionType against SESSION_TYPES meant a differently-cased
+// value (e.g. "Chronic_Care_Review") failed the membership check and was
+// silently RELABELED as "health_access_preparation" -- itself a valid
+// SESSION_TYPES member -- so a real chronic-care telehealth intake vanished
+// from any chronic_care_review-filtered view. Same shape already found and
+// fixed in the sibling bridge providers this session.
 function normalizeIntake(body = {}) {
   const sessionType = safeText(body.sessionType || body.type || "health_access_preparation", 80);
   return localRecord("telehealth-intake", body, {
-    sessionType: SESSION_TYPES.has(sessionType) ? sessionType : "health_access_preparation",
+    sessionType: canonicalSessionType(sessionType) || "health_access_preparation",
     videoProvider: safeText(body.videoProvider || "local", 40),
     selectedProviderReference: safeText(body.selectedProviderReference || body.providerReference, 180),
     title: safeText(body.title || "Telehealth preparation", 160),
