@@ -194,6 +194,41 @@ test("a business-flavored checklist/document request reaches the real business w
   assert.equal(literacy.steps[0].toolId, "business.manage");
 });
 
+// Found live (business/CRM audit): completeBusinessPlan was moved ahead of
+// completeListsPlan/completeRemainingWorkspacePlan (see the test above), but
+// never ahead of completeDocumentPlan -- so "Create a service agreement
+// document for my landscaping business and save it" (create + document +
+// save) still matched completeDocumentPlan's generic gate first, routing to
+// a plain documents.create call with the raw spoken sentence as file
+// content instead of ever reaching wantsGenerateDocuments' real,
+// business-specific document templates.
+test("a business document-generation request that also matches the generic document-save phrasing reaches the real business workspace, not a blank generic document", async () => {
+  const model = { plan: async () => { throw new Error("must not reach the AI planning model"); } };
+  const tools = { list: async () => [
+    ...fakeCatalog().tools.map(tool => ({ tool_id: tool.toolId, domain: tool.domain, risk_tier: tool.riskTier, confirmation_required: tool.confirmationRequired })),
+    { tool_id: "documents.create", domain: "documents", risk_tier: "low", confirmation_required: false }
+  ] };
+  const applications = { list: () => [...fakeCatalog().applications, { applicationId: "documents" }] };
+  const planner = new OpenEndedPlanner({ model, tools, applications });
+
+  const plan = await planner.plan({ command: { text: "Create a service agreement document for my landscaping business and save it", tenantId: "t1", actorId: "u1", locale: "en", channel: "typed" }, context: {} });
+  assert.equal(plan.application, "business");
+  assert.equal(plan.steps[0].toolId, "business.manage");
+});
+
+test("a genuine, non-business document-save request is unaffected by the completeDocumentPlan reordering", async () => {
+  const model = { plan: async () => { throw new Error("must not reach the AI planning model"); } };
+  const tools = { list: async () => [
+    ...fakeCatalog().tools.map(tool => ({ tool_id: tool.toolId, domain: tool.domain, risk_tier: tool.riskTier, confirmation_required: tool.confirmationRequired })),
+    { tool_id: "documents.create", domain: "documents", risk_tier: "low", confirmation_required: false }
+  ] };
+  const applications = { list: () => [...fakeCatalog().applications, { applicationId: "documents" }] };
+  const planner = new OpenEndedPlanner({ model, tools, applications });
+  const plan = await planner.plan({ command: { text: "Create and save a farming plan document, then reopen it.", tenantId: "t1", actorId: "u1", locale: "en", channel: "typed" }, context: {} });
+  assert.equal(plan.application, "documents");
+  assert.equal(plan.steps[0].toolId, "documents.create");
+});
+
 test("a genuine, non-business checklist request is unaffected by the business-plan reordering", async () => {
   const model = { plan: async () => { throw new Error("must not reach the AI planning model"); } };
   const tools = { list: async () => [

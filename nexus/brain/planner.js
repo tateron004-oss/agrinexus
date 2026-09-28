@@ -335,8 +335,6 @@ class OpenEndedPlanner {
     if (completeMediaPlayback) return Object.freeze({ ...completeMediaPlayback, planningAttempts: 1 });
     const resume = resumePlan(command.text, catalog, known.byKind);
     if (resume) return Object.freeze({ ...resume, planningAttempts: 1 });
-    const completeDocument = completeDocumentPlan(command.text, catalog);
-    if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     // Found live: completeBusinessPlan delegates its own matching entirely to
     // businessVoiceDispatch.precheck() and returns null (a clean no-op) for
     // anything it doesn't recognize as genuine business/nonprofit intent --
@@ -352,8 +350,24 @@ class OpenEndedPlanner {
     // generic lesson-content search instead of the real Financial Literacy
     // Agent. Moved ahead of both, matching the "real handler before generic
     // classifier" fix already applied throughout this codebase.
+    // Found live (business/CRM audit): completeDocumentPlan was never
+    // included in that same reordering, so a request like "Create a service
+    // agreement document for my landscaping business and save it" (create +
+    // document + save) still matched completeDocumentPlan's generic gate
+    // first, routing to a plain documents.create call with the raw spoken
+    // sentence as file content -- never reaching wantsGenerateDocuments'
+    // real, business-specific Service_Agreement.md/Client_Intake_Form.md/
+    // Application_Checklist.md templates, or wantsGenerateBusinessPlanPdf's
+    // real filled-in business-plan PDF export. completeBusinessPlan's own
+    // gates (wantsGenerateDocuments requires "service agreement"/"contract"/
+    // "intake form"/"client intake"/"application checklist"; the business
+    // plan PDF path requires the literal phrase "business plan") are narrow
+    // enough that an unrelated generic document request still falls through
+    // to completeDocumentPlan below, unaffected.
     const completeBusiness = completeBusinessPlan(command.text, catalog);
     if (completeBusiness) return Object.freeze({ ...completeBusiness, planningAttempts: 1 });
+    const completeDocument = completeDocumentPlan(command.text, catalog);
+    if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
     if (completeLists) return Object.freeze({ ...completeLists, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);

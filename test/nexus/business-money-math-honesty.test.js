@@ -121,6 +121,35 @@ test("computeBusinessDashboard's grantsAwarded matches grant status case-insensi
   assert.equal(dashboard.grantsAwarded, 75000, "both differently-cased 'awarded' grants must count");
 });
 
+// Found live (business/CRM audit): unlike extractTransactionArgs/extractListingArgs, extractGrantArgs
+// only ever matched a literal "$" prefix -- a grant amount stated in a local currency was silently
+// parsed as amount: 0. Separately, grantsRequested/grantsAwarded summed across ALL grants with no
+// per-currency bucketing, then the caller hard-prefixed both with a literal "$" -- the same
+// currency-mixing shape already fixed for activeListingTotals.
+test("extractGrantArgs recognizes a local-currency amount, not just a literal dollar sign", () => {
+  const result = voiceDispatch.extractGrantArgs("Track a grant from the county government worth 5,000,000 shillings", {});
+  assert.equal(result.amount, 5000000, "a KES-denominated amount must not be silently parsed as 0");
+  assert.equal(result.currency, "KES");
+});
+
+test("computeBusinessDashboard buckets grantsRequested/grantsAwarded by currency instead of mixing them under one label", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    grants: [
+      { amount: 50000, currency: "USD", status: "awarded" },
+      { amount: 5000000, currency: "KES", status: "awarded" },
+      { amount: 10000, currency: "USD", status: "pending" }
+    ]
+  }));
+  // Bucketed by raw numeric total, same convention as otherListingCurrencies/otherCurrencies elsewhere
+  // in this file (no real currency-value conversion) -- KES's larger raw number sorts first here.
+  assert.equal(dashboard.grantsRequestedCurrency, "KES");
+  assert.equal(dashboard.grantsRequested, 5000000);
+  assert.deepEqual(dashboard.otherGrantRequestedCurrencies, ["USD"], "the USD grants (50000+10000=60000) must be tracked separately, not combined with KES's larger raw number");
+  assert.equal(dashboard.grantsAwardedCurrency, "KES");
+  assert.equal(dashboard.grantsAwarded, 5000000);
+  assert.deepEqual(dashboard.otherGrantAwardedCurrencies, ["USD"], "only the awarded USD grant (50000) counts here, not the pending one");
+});
+
 // Found live: extractLeadArgs only lowercases the regex-fallback branch -- a
 // structured tool-call arg (args.type: "Donor") is stored verbatim, so a
 // naturally-capitalized lead type fell into "others" instead of its real

@@ -298,10 +298,14 @@ function extractGrantArgs(command = "", args = {}) {
   const text = String(command || "");
   const funderMatch = text.match(/\b(?:from|with)\s+(?:the\s+)?([^"'.,\n]{2,80}?)(?=\s+for\b|[,.]|$)/i);
   const programMatch = text.match(/\b(?:called|named|titled)\s+["']?([^"'.,\n]{2,80})["']?/i);
-  const amountMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)/);
+  // Found live (business/CRM audit): unlike extractTransactionArgs/extractListingArgs, this only ever
+  // matched a literal "$" prefix -- a grant amount stated in a local currency (KES/UGX/NGN/GHS/ZAR/...)
+  // was silently parsed as amount: 0, with no clarification prompt and no amount even mentioned in the
+  // confirmation message, since precheck() only checks that a funder/program name exists.
+  const withCurrency = amountWithCurrency(text);
   const deadlineMatch = text.match(/\bdeadline\s+(?:is\s+|of\s+)?["']?([^"'.,\n]{3,40})["']?/i)
     || text.match(/\bdue\s+(?:by\s+|on\s+)?["']?([^"'.,\n]{3,40})["']?/i);
-  const rawAmount = args.amount !== undefined ? Number(args.amount) : (amountMatch ? Number(amountMatch[1].replace(/,/g, "")) : NaN);
+  const rawAmount = args.amount !== undefined ? Number(args.amount) : (withCurrency ? withCurrency.amount : NaN);
   return {
     funderName: sanitizeText(args.funderName || (funderMatch ? funderMatch[1].trim() : ""), 160),
     program: sanitizeText(args.program || (programMatch ? programMatch[1].trim() : ""), 160),
@@ -309,6 +313,7 @@ function extractGrantArgs(command = "", args = {}) {
     // arguments) passed straight through with no sign check, the same gap
     // already fixed for invoice-item unitPrice/quantity.
     amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : 0,
+    currency: String(args.currency || withCurrency?.currency || "USD").toUpperCase().slice(0, 3),
     deadline: sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40)
   };
 }
@@ -516,13 +521,32 @@ function computeBusinessDashboard(editable) {
   // typed "Paid" (capital P) never matched this exact-lowercase check and
   // that invoice silently stayed counted as unpaid forever.
   const unpaidInvoices = editable.invoices.filter(invoice => String(invoice.status || "").toLowerCase() !== "paid").length;
-  const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
-  // Found live: grant.status is freeform text with no normalization --
-  // "Awarded" (capitalized, exactly how a natural "set the grant status to
-  // Awarded" phrase gets stored) never matches this exact-lowercase check,
-  // so a correctly-marked grant's amount silently vanishes from the
-  // awarded total with no error or indication.
-  const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
+  // Found live (business/CRM audit): both totals used to sum grant.amount across ALL grants with no
+  // per-currency bucketing, then the caller hard-prefixed both with a literal "$" -- a real dollar
+  // amount mixed with an unrelated currency's magnitude under one mislabeled total, the same shape
+  // already fixed for activeListingTotals just below. Bucket by each grant's own currency (defaulting
+  // missing/legacy data to USD) and report the dominant one plus any others.
+  const grantRequestedTotals = {}; const grantAwardedTotals = {};
+  for (const grant of editable.grants) {
+    const grantCurrency = String(grant.currency || "USD").toUpperCase();
+    grantRequestedTotals[grantCurrency] = Math.round(((grantRequestedTotals[grantCurrency] || 0) + (Number(grant.amount) || 0)) * 100) / 100;
+    // Found live: grant.status is freeform text with no normalization --
+    // "Awarded" (capitalized, exactly how a natural "set the grant status to
+    // Awarded" phrase gets stored) never matches this exact-lowercase check,
+    // so a correctly-marked grant's amount silently vanishes from the
+    // awarded total with no error or indication.
+    if (String(grant.status || "").toLowerCase() === "awarded") {
+      grantAwardedTotals[grantCurrency] = Math.round(((grantAwardedTotals[grantCurrency] || 0) + (Number(grant.amount) || 0)) * 100) / 100;
+    }
+  }
+  const grantRequestedEntries = Object.entries(grantRequestedTotals).sort((a, b) => b[1] - a[1]);
+  const grantsRequestedCurrency = grantRequestedEntries[0]?.[0] || "USD";
+  const grantsRequested = grantRequestedEntries[0]?.[1] || 0;
+  const otherGrantRequestedCurrencies = grantRequestedEntries.slice(1).map(([entryCurrency]) => entryCurrency);
+  const grantAwardedEntries = Object.entries(grantAwardedTotals).sort((a, b) => b[1] - a[1]);
+  const grantsAwardedCurrency = grantAwardedEntries[0]?.[0] || "USD";
+  const grantsAwarded = grantAwardedEntries[0]?.[1] || 0;
+  const otherGrantAwardedCurrencies = grantAwardedEntries.slice(1).map(([entryCurrency]) => entryCurrency);
   // Found live: same case-sensitivity bug already fixed above for
   // unpaidInvoices/grantsAwarded -- task.status is also freeform text (see
   // extractTaskStatusArgs), so a naturally typed "Done"/"Complete" (capital)
@@ -560,7 +584,8 @@ function computeBusinessDashboard(editable) {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
     customers, donors, sponsors, volunteers, buyers, sellers, tenants, landlords, others,
     invoiceTotal, unpaidInvoices,
-    grantsRequested, grantsAwarded,
+    grantsRequested, grantsRequestedCurrency, otherGrantRequestedCurrencies,
+    grantsAwarded, grantsAwardedCurrency, otherGrantAwardedCurrencies,
     openTasks, totalTasks: editable.tasks.length,
     upcomingAppointments,
     totalListings: listings.length, activeListings, pendingListings, soldListings, activeListingValue, activeListingCurrency, otherListingCurrencies
@@ -777,7 +802,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
       : "";
-    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; $${dashboard.grantsRequested.toFixed(2)} in grants tracked, $${dashboard.grantsAwarded.toFixed(2)} awarded; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; ${formatMoney(dashboard.grantsRequestedCurrency, dashboard.grantsRequested)} in grants tracked${dashboard.otherGrantRequestedCurrencies.length ? `, not counting grants in ${dashboard.otherGrantRequestedCurrencies.join(", ")}` : ""}, ${formatMoney(dashboard.grantsAwardedCurrency, dashboard.grantsAwarded)} awarded${dashboard.otherGrantAwardedCurrencies.length ? `, not counting awarded grants in ${dashboard.otherGrantAwardedCurrencies.join(", ")}` : ""}; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
     return { status: "completed", localOnly: true, response, businessDashboard: dashboard, summary: response };
   }
 
@@ -913,9 +938,9 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before tracking a grant.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const grantLabel = grant.funderName || grant.program;
-    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add a${grant.amount ? ` $${grant.amount.toFixed(2)}` : ""} grant or funding opportunity from "${grantLabel}" to "${workspaceName}". Should I go ahead?` };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add a${grant.amount ? ` ${formatMoney(grant.currency, grant.amount)}` : ""} grant or funding opportunity from "${grantLabel}" to "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, grants: [...resolved.client.data.editable.grants,
-      { funderName: grant.funderName, program: grant.program, amount: grant.amount, deadline: grant.deadline, status: "researching", notes: "" }] };
+      { funderName: grant.funderName, program: grant.program, amount: grant.amount, currency: grant.currency, deadline: grant.deadline, status: "researching", notes: "" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Added a grant or funding opportunity from "${grantLabel}" to "${workspaceName}".`;
