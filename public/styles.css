@@ -16205,6 +16205,21 @@ body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home
   overflow: hidden !important;
 }
 
+/* When voice is unavailable, renderUserWorkspace also renders a typed
+   microphone-fallback section (.nexus-true-conversation) right after the
+   orb-only home card in the same fixed, single-viewport shell above. That
+   pushes real content past one viewport with nowhere for a mouse/keyboard
+   user to scroll, stranding the one input a mic-denied user has to reach
+   Nexus at all. Let this specific shell scroll instead of clipping. */
+body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home"][data-nexus-microphone-fallback-active="true"] {
+  overflow-y: auto !important;
+}
+
+body.user-mode .nexus-true-experience-root[data-nexus-true-experience-mode="home"][data-nexus-microphone-fallback-active="true"] .nexus-command-main {
+  overflow-y: auto !important;
+  place-items: start center !important;
+}
+
 body.admin-mode .nexus-genesis-orb-only-home ,
 body.investor-mode .nexus-genesis-orb-only-home ,
 body.advanced-mode .nexus-genesis-orb-only-home ,
