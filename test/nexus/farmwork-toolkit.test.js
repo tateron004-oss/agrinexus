@@ -233,6 +233,18 @@ test("someone with no farm records is not given farm books for ordinary buying a
 });
 
 // ---------- buyers and suppliers ----------
+// Found live (capability-testing the orb): the name-extraction digit-guard
+// checked the WHOLE rest of the sentence for any digit, not just the name
+// itself, so a perfectly valid name silently vanished whenever a phone
+// number followed it in the SAME utterance ("...called Jane Doe, contact
+// +254712345678", an entirely natural way to phrase this) -- the guided flow
+// asked for the name again even though it was right there.
+test("a name given together with a phone number in the same sentence is still recognized, not asked for again", async () => {
+  const who = farmer();
+  const replies = await run(who, ["Add a buyer called Jane Doe, contact +254712345678", "skip", "skip", "skip"]);
+  assert.doesNotMatch(replies[0], /What is their name/i, "the name must not be asked for again when it was already given");
+  assert.match(replies[replies.length - 1], /Added Jane Doe/);
+});
 test("buyers keep notes, follow-ups and orders, and a delivered order records the sale", async () => {
   const who = farmer();
   await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
