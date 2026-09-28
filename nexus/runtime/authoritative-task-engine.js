@@ -234,6 +234,14 @@ class AuthoritativeTaskEngine {
     if (["completed", "cancelled", "blocked", "expired"].includes(task.state)) throw new NexusRuntimeError("task_not_executable", `A ${task.state} task cannot execute.`, 409);
     if (task.state === "planned") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
       nextState: "queued", reason: "Governed task execution requested" });
+    // Found live: a task returning here to resume after the user answered a
+    // pending confirmation (see the awaiting_confirmation persistence below)
+    // was never routed back through queued -- resume it the same two-hop way
+    // a freshly planned task starts, so the same "queued" transition audit
+    // trail exists for both paths.
+    task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
+    if (task.state === "awaiting_confirmation") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+      nextState: "queued", reason: "Confirmation resolved; resuming task execution" });
     task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
     if (task.state === "queued") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
       nextState: "running", reason: "Governed task execution started" });
@@ -265,7 +273,24 @@ class AuthoritativeTaskEngine {
         await blockOnUnrecoverableFailure(blocked);
         throw blocked;
       }
-      if (ready.confirmation_state === "required") return { task, state: "awaiting_confirmation", pendingStepId: ready.step_id, receipts, completed: false };
+      if (ready.confirmation_state === "required") {
+        // Found live: this returned state: "awaiting_confirmation" to the
+        // caller but never persisted it -- the task's real DB state stayed
+        // "running" for as long as the person took to respond (could be
+        // hours for an autonomous task's push confirmation). Since
+        // agent.sweep-advanceable-tasks re-drives any autonomous task still
+        // sitting in "running" past its staleness window, this created an
+        // unbounded, indefinitely-repeating agent.advance-task job every
+        // sweep cycle for the entire wait -- pure waste, since nothing about
+        // a pending human confirmation is fixed by retrying; only the
+        // person's own reply (which calls approve() then executeTask()
+        // directly) can ever resolve it. It also made task.state externally
+        // report "running" instead of the real "awaiting your approval"
+        // status to any dashboard or service reading it directly.
+        const persisted = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+          nextState: "awaiting_confirmation", reason: "Step requires user confirmation before proceeding" });
+        return { task: persisted, state: "awaiting_confirmation", pendingStepId: ready.step_id, receipts, completed: false };
+      }
       let result;
       try {
         result = await this.execute({ context, taskId, stepId: ready.step_id });

@@ -11,7 +11,7 @@ const TRANSITIONS = Object.freeze({
   awaiting_consent: ["awaiting_confirmation", "queued", "paused", "cancelled", "blocked", "expired"],
   awaiting_confirmation: ["queued", "paused", "cancelled", "blocked", "expired"],
   queued: ["running", "paused", "cancelled", "blocked", "failed", "expired"],
-  running: ["paused", "verifying", "cancelled", "blocked", "failed"],
+  running: ["awaiting_confirmation", "paused", "verifying", "cancelled", "blocked", "failed"],
   paused: ["queued", "cancelled", "blocked", "expired"],
   verifying: ["completed", "queued", "blocked", "failed"],
   failed: ["queued", "cancelled", "blocked", "expired"],
