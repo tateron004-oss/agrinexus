@@ -16,7 +16,7 @@ const path = require("node:path");
 // threshold, well before the per-IP budget would, and blocking one email
 // never blocks a different one from the same IP.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4621;
+const port = 4623;
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-login-account-rate-limit-db.json");
