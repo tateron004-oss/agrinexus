@@ -46317,7 +46317,26 @@ async function api(req, res, url) {
     for (const meta of ownedUploads) {
       if (nexusUploads.deleteUpload(uploadDirPath, meta.fileId)) removedUploadCount += 1;
     }
-    const gaps = knownUnownedProfileGaps(db.profile);
+    // Found live: this route only ever erased the legacy db.profile blob. A
+    // real user's authoritative Postgres/nexus data (companion memory, tasks,
+    // conversations, health/farm records, reminders/schedules, registered
+    // push devices) was only reachable via the separate
+    // /api/nexus/runtime/privacy/deletions API, which public/app.js's real
+    // "Delete my account" button never called -- so it toasted "erased" while
+    // that data silently survived. Request it here too, same action.
+    let nexusDeletionRequested = false;
+    let nexusDeletionRequestId = null;
+    try {
+      const authoritativeUser = await authoritativeRuntimeUser(user);
+      if (authoritativeUser) {
+        const request = await authoritativeNexusRuntime.requestDeletionRequest({ user: authoritativeUser });
+        nexusDeletionRequested = true;
+        nexusDeletionRequestId = request?.request_id || null;
+      }
+    } catch (error) {
+      console.error("[account-erase] failed to request authoritative nexus deletion:", error.message);
+    }
+    const gaps = knownUnownedProfileGaps(db.profile).filter(gap => !nexusDeletionRequested || !/privacy\/deletions/.test(gap));
     const erasedEmail = user.email;
     anonymizeUserRecord(user);
     if (usingPostgresAuth()) {
@@ -46341,6 +46360,8 @@ async function api(req, res, url) {
       verification: {
         profileRecordsRemoved: removedProfileRecords,
         uploadedFilesRemoved: removedUploadCount,
+        nexusDeletionRequested,
+        nexusDeletionRequestId,
         accountDisabled: true,
         sessionsRevoked: true
       },
