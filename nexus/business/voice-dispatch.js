@@ -325,10 +325,26 @@ function extractGrantStatusArgs(command = "", args = {}) {
   return { status: sanitizeText(args.status || (statusMatch ? statusMatch[1].trim() : ""), 40) };
 }
 
+// Found live (business/CRM audit): the same "first match wins" bug already
+// fixed for resolveListingIndex below -- Array.find picked whichever grant
+// appeared FIRST in the array, not the most specific one actually named. A
+// funder's renewal/follow-on grant sharing a name prefix with an earlier one
+// from the same funder ("Ford Foundation" / "Ford Foundation Youth
+// Innovation Fund" -- an ordinary real-world naming pattern) could silently
+// mark the wrong grant awarded, with no error or confirmation mismatch shown.
+// Now picks the longest matching funder/program name (the most specific
+// one); a genuine tie between two grants is left ambiguous rather than
+// guessed, the same way resolveListingIndex refuses to guess.
 function resolveGrant(grants, command = "") {
   const text = String(command || "").toLowerCase();
-  return grants.find(grant => (grant.funderName && text.includes(String(grant.funderName).toLowerCase()))
-    || (grant.program && text.includes(String(grant.program).toLowerCase())));
+  const matches = grants.map(grant => ({ grant, matchedLength: Math.max(
+    grant.funderName && text.includes(String(grant.funderName).toLowerCase()) ? String(grant.funderName).length : -1,
+    grant.program && text.includes(String(grant.program).toLowerCase()) ? String(grant.program).length : -1
+  ) })).filter(entry => entry.matchedLength >= 0);
+  if (!matches.length) return null;
+  const longest = Math.max(...matches.map(entry => entry.matchedLength));
+  const longestMatches = matches.filter(entry => entry.matchedLength === longest);
+  return longestMatches.length === 1 ? longestMatches[0].grant : null;
 }
 
 function extractTaskArgs(command = "", args = {}) {
@@ -362,9 +378,17 @@ function extractTaskStatusArgs(command = "", args = {}) {
   return { status: sanitizeText(args.status || normalized, 30) };
 }
 
+// Same fix, same reason as resolveGrant above: two tasks whose titles share a
+// prefix ("Follow up with buyer" / "Follow up with buyer about financing")
+// could resolve to the wrong one depending purely on array order. Now picks
+// the longest (most specific) matching title; a genuine tie is ambiguous.
 function resolveTask(tasks, command = "") {
   const text = String(command || "").toLowerCase();
-  return tasks.find(task => task.title && text.includes(String(task.title).toLowerCase()));
+  const matches = tasks.filter(task => task.title && text.includes(String(task.title).toLowerCase()));
+  if (!matches.length) return null;
+  const longest = Math.max(...matches.map(task => String(task.title).length));
+  const longestMatches = matches.filter(task => String(task.title).length === longest);
+  return longestMatches.length === 1 ? longestMatches[0] : null;
 }
 
 function extractAppointmentArgs(command = "", args = {}) {
