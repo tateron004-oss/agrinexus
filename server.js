@@ -51680,9 +51680,23 @@ async function api(req, res, url) {
       metadata: { applicationId: application.id, roleId: role.id }
     });
     db.profile.placements = db.profile.applications.length;
-    db.profile.interviews = Math.max(db.profile.interviews, 1);
-    db.profile.candidateStage = db.profile.placements > 1 ? "Placement Pool" : "Interview";
-    db.profile.earnings = Math.max(db.profile.earnings, 180 + role.rate);
+    // Found live (case-review/workforce audit): applying used to
+    // unconditionally set interviews>=1, candidateStage="Interview", and
+    // fabricate earnings from the mere act of applying -- with no readiness
+    // check at all. /api/workforce/action's own "interview" type correctly
+    // requires readiness>=50 before it will do any of this, and "shift"
+    // requires interviews>=1 before it will schedule a paid shift; applying
+    // for a role only requires readiness>=role.minReadiness (real roles go
+    // as low as 45%), so a candidate well below the interview threshold
+    // could apply, have interviews/stage/earnings fabricated as a side
+    // effect, and then schedule and get paid for a shift immediately --
+    // without ever passing the real interview gate a direct "interview"
+    // action would have refused them. Applying only records the
+    // application now; interviews/candidateStage/earnings only advance
+    // through the real, gated actions. A stage already reached further
+    // along the pipeline (via a genuine interview/shift) is preserved, not
+    // regressed, by a later application to a different role.
+    if (!["Interview", "Placement Pool"].includes(db.profile.candidateStage)) db.profile.candidateStage = "Applied";
     addActivity(db.profile, `Applied to ${role.title}.`);
     addWorkflowNote(db.profile, body.note, "Application note");
     await writeDb(db);
