@@ -33362,8 +33362,16 @@ async function runAgentCommand(db, user, command, options = {}) {
     return trustedOperatingSystemCommandResponse(db, user, text, options);
   }
   if (/\b(approve|confirm|run paused|continue paused)\b/.test(lower) && /\b(cloud agent|cloud-agent|cloud mission|autonomous agent|agent queue)\b/.test(lower)) {
-    const run = (db.profile.cloudAgentRuns || []).find(item => item.status === "needs-approval" || (item.steps || []).some(step => step.approvalStatus === "needed"))
-      || (db.profile.cloudAgentRuns || [])[0];
+    // Found live: this used to fall back to the most recently created run
+    // (regardless of status) whenever none was currently awaiting approval --
+    // so saying "approve the cloud agent mission" after the last mission had
+    // already finished silently re-executed that same completed mission's
+    // steps a second time (double wallet credit, duplicate trade order,
+    // duplicate course-progress advance, duplicate drone mission). A run's
+    // per-step approvalStatus can also stay "needed" forever even after the
+    // step itself has executed, so only the run's own authoritative status is
+    // trusted here, not that stale per-step flag.
+    const run = (db.profile.cloudAgentRuns || []).find(item => item.status === "needs-approval");
     if (!run) {
       return {
         intent: "cloud_agent.no_run",
@@ -53956,6 +53964,17 @@ async function api(req, res, url) {
     if (body.runId) {
       const run = db.profile.cloudAgentRuns.find(item => item.id === body.runId);
       if (!run) return send(res, 404, { error: "Cloud agent run not found" });
+      // Found live: executeCloudAgentRun has no re-entrancy guard of its own --
+      // it always re-runs every step in run.steps from scratch. Without this
+      // check, approving the same runId twice (double-click, client retry, a
+      // replayed request) re-applied every side effect a second time: another
+      // wallet credit, another duplicate trade order, another course-progress
+      // advance, another drone mission, all counted again as if it were a new
+      // approved run. Only a run genuinely still awaiting approval may be
+      // (re-)approved.
+      if (!["awaiting-approval", "queued", "needs-approval"].includes(run.status)) {
+        return send(res, 409, { error: `This cloud agent run is already ${run.status} and cannot be approved again.`, status: run.status });
+      }
       approvalResult = await executeCloudAgentRun(db, user, run, { approved: true });
     }
     if (!approvalResult) return send(res, 400, { error: "Provide runId or templateId to approve." });
