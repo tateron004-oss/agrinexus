@@ -116,7 +116,10 @@ function normalizeEditable(info, input = {}) {
     // (strategy.js) only ever produced a one-shot text template -- nothing
     // persisted an actual funding opportunity, its deadline, or its
     // application status across visits.
-    grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }, 200, new Set(["amount"])),
+    // Found live (business/CRM audit): unlike transactions/invoiceItems/listings, grants had no currency
+    // field at all -- a value could never persist even via the direct API, so every grant was silently
+    // treated as USD regardless of what was actually said or stored.
+    grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, currency: "USD", deadline: "", status: "researching", notes: "" }, 200, new Set(["amount"])),
     // Tool 5 of the small-business/nonprofit suite: appointment scheduling.
     // A real Google Calendar integration already exists (server/providers/
     // calendarProvider.js, createEvent()) but was only reachable through
