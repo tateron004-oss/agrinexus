@@ -39,6 +39,18 @@ function createEmergencyLocation({ circle, pushWithLink, now = () => new Date() 
       if (!recipients.length) return { status: 200, body: { shared: [], updates: alert.updates || 0, done: true, reason: "nobody_chose_to_receive_it" } };
 
       const number_ = (alert.updates || 0) + 1;
+      // Found live: this used to send every real push FIRST, using number_ computed from the stale `alert`
+      // read above, and only write the claim back afterward -- two near-simultaneous share() calls for the
+      // same alert could both compute the same number_ before either had written, sending real pushes with
+      // the identical idempotency key (silently dropping one of two genuinely distinct GPS fixes) and
+      // defeating the 45-second anti-spam throttle both calls independently passed. Claiming this update
+      // slot atomically BEFORE sending anything (mirrors the "claim the transition before notifying anyone"
+      // fix already applied to medication dose alerts) means only one of two racing calls can ever proceed.
+      const claimed = await circle.updateAlert({
+        tenantId, userId, memoryId: alert.memoryId, expectedUpdates: alert.updates || 0,
+        change: content => ({ ...content, updates: number_, lastUpdateAt: at.toISOString() })
+      });
+      if (!claimed) return { status: 200, body: { shared: [], updates: alert.updates || 0, throttled: true, done: false } };
       const code = encodePlusCode(lat, lng);
       // In the language the alert was raised in, and in English: the member's own language is not known here, so nobody is sent words they cannot read.
       const language = languageOf(alert.language); const languages = language === "en" ? ["en"] : [language, "en"];
@@ -60,8 +72,6 @@ function createEmergencyLocation({ circle, pushWithLink, now = () => new Date() 
         try { await pushWithLink({ toUserId: member.otherId, title, body, url: mapLink(lat, lng), key: `emergency-location:${alert.alertId}:${member.otherId}:${number_}` }); shared.push(member.otherName); }
         catch { /* one failed push must not stop the others */ }
       }
-      // What is kept on the alert is a count and a time. Never the position.
-      await circle.updateAlert({ tenantId, userId, memoryId: alert.memoryId, change: content => ({ ...content, updates: number_, lastUpdateAt: at.toISOString() }) });
       return { status: 200, body: { shared, updates: number_, done: number_ >= MAX_UPDATES } };
     }
   });

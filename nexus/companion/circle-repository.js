@@ -56,12 +56,32 @@ class CircleRepository {
 
   // ---- emergency alerts the person triggered (same table and purpose; a different kind, so links never see them) ----
   // The same alert within five minutes is one alert, matching the push de-duplication in safety.js.
+  // Found live: the reuse check reads before it commits, same shape as invite()'s already-fixed duplicate
+  // race above -- two near-simultaneous first-ever alerts for the same person (a genuine panic sending two
+  // messages within milliseconds, or a client double-submit) could both see no recent alert and both insert
+  // distinct alert rows with different alertIds. A phone holding the FIRST alertId (from the first
+  // safetyTurn() response) would then have its location-share calls rejected with 409 no_active_alert once
+  // the second, slightly-later row sorts as "latest" -- silently breaking location sharing for that
+  // emergency even though a circle alert genuinely went out. Re-checking under the same
+  // transaction-scoped advisory lock as the insert, keyed per person, closes the window.
   async recordAlert({ tenantId, userId, alerted, now = new Date(), language = "en" }) {
-    const latest = await this.latestAlert({ tenantId, userId, now });
-    if (latest && !latest.ended && now.getTime() - Date.parse(latest.at) < 5 * 60 * 1000) return { alertId: latest.alertId, reused: true };
-    const alertId = `alt_${crypto.randomUUID()}`;
-    await this.insertRow(this.db, { tenantId, userId, content: { kind: "alert", role: "alert", alertId, at: now.toISOString(), alerted: alerted.map(member => ({ id: member.otherId, name: member.otherName })), language, ended: false, updates: 0, lastUpdateAt: null } });
-    return { alertId, reused: false };
+    const write = async db => {
+      const result = await db.query(`select memory_id,principal_id,content from nexus_memory_items where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='circle'
+        and deleted_at is null and content->>'kind'='alert' order by created_at desc, memory_id desc limit 200`, [tenantId, userId]);
+      const rows = (result.rows || result).filter(row => row.content && now.getTime() - Date.parse(row.content.at) < ALERT_MINUTES * 60 * 1000);
+      rows.sort((a, b) => Date.parse(b.content.at) - Date.parse(a.content.at));
+      const latest = rows[0]?.content || null;
+      if (latest && !latest.ended && now.getTime() - Date.parse(latest.at) < 5 * 60 * 1000) return { alertId: latest.alertId, reused: true };
+      const alertId = `alt_${crypto.randomUUID()}`;
+      await this.insertRow(db, { tenantId, userId, content: { kind: "alert", role: "alert", alertId, at: now.toISOString(), alerted: alerted.map(member => ({ id: member.otherId, name: member.otherName })), language, ended: false, updates: 0, lastUpdateAt: null } });
+      return { alertId, reused: false };
+    };
+    return typeof this.db.transaction === "function"
+      ? this.db.transaction(async trx => {
+          await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`circle-alert:${tenantId}:${userId}`]);
+          return write(trx);
+        })
+      : write(this.db);
   }
   // The person's most recent alert that is still within the hour, or null.
   async latestAlert({ tenantId, userId, now = new Date() }) {
@@ -69,10 +89,24 @@ class CircleRepository {
     rows.sort((a, b) => Date.parse(b.content.at) - Date.parse(a.content.at));
     return rows[0] ? { memoryId: rows[0].memory_id, ...rows[0].content } : null;
   }
-  async updateAlert({ tenantId, userId, memoryId, change }) {
+  // `expectedUpdates`, when given, makes this a real compare-and-swap: the write only takes effect if the
+  // alert's current `updates` count (checked in the SQL WHERE clause itself, not just the earlier read --
+  // Postgres's own row-level locking makes this genuinely atomic under concurrent callers) still matches
+  // what the caller last read. Found live: emergency-location.js's share() read the alert once, computed its
+  // next update number from that snapshot, sent real pushes using it as part of the idempotency key, and
+  // only wrote the update back afterward -- two near-simultaneous share() calls for the same alert could
+  // both compute the same number, sending real pushes with the identical idempotency key (so the
+  // notification layer's dedup silently dropped one of two genuinely distinct GPS fixes) and defeating the
+  // 45-second anti-spam throttle. Callers that omit expectedUpdates (safety.js's own use) are unaffected.
+  async updateAlert({ tenantId, userId, memoryId, change, expectedUpdates }) {
     const row = (await this.rows({ tenantId, userId, kind: "alert" })).find(item => item.memory_id === memoryId); if (!row) return false;
-    await this.db.query(`update nexus_memory_items set content=$3,updated_at=now() where tenant_id=$1 and memory_id=$2 and purpose='circle' and deleted_at is null`, [tenantId, memoryId, change(row.content)]);
-    return true;
+    if (expectedUpdates !== undefined && (row.content.updates || 0) !== expectedUpdates) return false;
+    const params = [tenantId, memoryId, change(row.content)];
+    let sql = `update nexus_memory_items set content=$3,updated_at=now() where tenant_id=$1 and memory_id=$2 and purpose='circle' and deleted_at is null`;
+    if (expectedUpdates !== undefined) { sql += ` and coalesce((content->>'updates')::int,0) = $4`; params.push(expectedUpdates); }
+    sql += ` returning memory_id`;
+    const result = await this.db.query(sql, params);
+    return Boolean((result.rows || result)[0]);
   }
 
   async insertRow(db, { tenantId, userId, content }) {
