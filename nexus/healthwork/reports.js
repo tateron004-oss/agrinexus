@@ -48,13 +48,20 @@ async function monthly(ctx, text) {
   const followups = (await listOf(ctx, "followup")).filter(item => item.data.status === "done" && item.data.doneOn && inRange(item.data.doneOn) && patients.has(item.data.pid));
   const gaveOut = (await listOf(ctx, "dispense")).filter(item => inRange(item.data.day));
   const registered = [...patients.values()].filter(patient => patient.data.registeredOn && inRange(patient.data.registeredOn));
-  if (!visits.length && !doses.length && !births.length && !referrals.length && !registered.length && !gaveOut.length) return null;
+  // Found live (healthwork audit): a pregnancy registered in the period was counted neither here (the
+  // "anything to report" gate only checked new PATIENT registrations, not pregnancy registrations, so a
+  // month with only pregnancy registrations printed "nothing to report") nor correctly below (the stat
+  // filtered by status !== "delivered" at report time, silently dropping any pregnancy that was registered
+  // in the period but has since delivered -- even though the registration itself genuinely happened in the
+  // reported period). Registration count must be independent of the pregnancy's current status.
+  const pregRegistered = preg.filter(item => item.data.since && inRange(item.data.since));
+  if (!visits.length && !doses.length && !births.length && !referrals.length && !registered.length && !gaveOut.length && !pregRegistered.length) return null;
   const given = new Map(); for (const item of gaveOut) { const key = `${item.data.item}|${item.data.unit}`; given.set(key, (given.get(key) || 0) + item.data.qty); }
   const content = `${await header(ctx, "Monthly activity report")}Period: ${period.from} to ${period.to} (${period.label})\n\n` +
     `PATIENTS\n  New patients registered:   ${registered.length}\n  Patients seen:             ${seen.length}\n    female / male:           ${seen.filter(patient => patient.data.sex === "female").length} / ${seen.filter(patient => patient.data.sex === "male").length}\n    children under 5:        ${seen.filter(patient => under5(patient, period.to)).length}\n  Visits recorded:           ${visits.length}\n\n` +
     `CONDITIONS (as stated by the health worker at each visit)\n${rows(tally(visits.map(item => item.data.condition)))}\n\n` +
     `IMMUNISATION DOSES GIVEN (${doses.length})\n${rows(tally(doses.map(item => item.data.vaccine)))}\n\n` +
-    `MATERNAL\n  Births recorded:           ${births.length}\n  Pregnancies registered:    ${preg.filter(item => item.data.since && inRange(item.data.since) && item.data.status !== "delivered").length}\n\n` +
+    `MATERNAL\n  Births recorded:           ${births.length}\n  Pregnancies registered:    ${pregRegistered.length}\n\n` +
     `REFERRALS MADE: ${referrals.length}\n${rows(tally(referrals.map(item => item.data.to)))}\n\n` +
     `FOLLOW-UPS COMPLETED: ${followups.length}\n\n` +
     `MEDICINES AND SUPPLIES GIVEN OUT\n${rows([...given.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([key, value]) => { const [name, unit] = key.split("|"); return [name, unitLabel(Math.round(value * 1000) / 1000, unit)]; }))}${foot}`;
