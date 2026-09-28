@@ -190,10 +190,14 @@ class RecordRepository {
   // "not paid" matches computeBusinessDashboard's own unpaidInvoices
   // definition (status !== 'paid') exactly, so this sweep's idea of an
   // unpaid invoice never drifts from what the dashboard already shows.
+  // Found live: both this and the grant predicate below compared status
+  // case-sensitively against freeform text a person can type in any case
+  // ("Paid", "Awarded") -- lower() matches the case-insensitive fix already
+  // applied to computeBusinessDashboard's own grant/invoice comparisons.
   async listBusinessWorkspacesWithDatedDeadlines({ limit = 50 }) {
     const OVERDUE_TASK = `t->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (t->>'dueDate')::date < current_date and coalesce(t->>'status','') not in ('done','complete')`;
-    const APPROACHING_GRANT = `g->>'deadline' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'deadline')::date between current_date and current_date + 7 and coalesce(g->>'status','') not in ('awarded','declined')`;
-    const OVERDUE_INVOICE = `i->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (i->>'dueDate')::date < current_date and coalesce(i->>'status','') != 'paid'`;
+    const APPROACHING_GRANT = `g->>'deadline' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'deadline')::date between current_date and current_date + 7 and lower(coalesce(g->>'status','')) not in ('awarded','declined')`;
+    const OVERDUE_INVOICE = `i->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (i->>'dueDate')::date < current_date and lower(coalesce(i->>'status','')) != 'paid'`;
     const result = await this.db.query(`select tenant_id, owner_id, record_id,
         data->'info'->>'businessName' as business_name,
         (select jsonb_agg(jsonb_build_object('title', t->>'title', 'dueDate', t->>'dueDate'))
