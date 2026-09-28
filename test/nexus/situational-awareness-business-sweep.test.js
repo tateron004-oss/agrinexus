@@ -27,6 +27,12 @@ test("listStaleBusinessWorkspaces checks record staleness and open tasks/grants,
   assert.doesNotMatch(sql, /dueDate/i);
   assert.doesNotMatch(sql, /deadline/i);
   assert.deepEqual(db.calls[0].params, [staleBefore, 10]);
+  // Found live: task.status/grant.status are freeform text a person can type
+  // in any case ("Done", "Awarded") -- without lower(), a capitalized task or
+  // grant here never matched 'done'/'complete'/'awarded'/'declined' and kept
+  // this workspace showing as having open items forever.
+  assert.match(sql, /lower\(coalesce\(t->>'status',''\)\) not in \('done','complete'\)/);
+  assert.match(sql, /lower\(coalesce\(g->>'status',''\)\) not in \('awarded','declined'\)/);
 });
 
 // Found live: record_id ("rec_<uuid>") is not a real uuid and can never be sent as subjectId (a real Postgres

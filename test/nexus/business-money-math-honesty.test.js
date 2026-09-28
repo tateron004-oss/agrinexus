@@ -121,6 +121,29 @@ test("computeBusinessDashboard's grantsAwarded matches grant status case-insensi
   assert.equal(dashboard.grantsAwarded, 75000, "both differently-cased 'awarded' grants must count");
 });
 
+// Found live: extractLeadArgs only lowercases the regex-fallback branch -- a
+// structured tool-call arg (args.type: "Donor") is stored verbatim, so a
+// naturally-capitalized lead type fell into "others" instead of its real
+// bucket. Same case-sensitivity bug class as grantsAwarded, fixed the same
+// way: compare lowercased.
+test("computeBusinessDashboard's lead-type buckets match case-insensitively, so a naturally-capitalized type still counts in its real bucket", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    leads: [{ type: "Donor" }, { type: "donor" }, { type: "Buyer" }, { type: "Landlord" }]
+  }));
+  assert.equal(dashboard.donors, 2, "both differently-cased 'donor' leads must count");
+  assert.equal(dashboard.buyers, 1);
+  assert.equal(dashboard.landlords, 1);
+  assert.equal(dashboard.others, 0, "none of these must fall into the generic others bucket");
+});
+
+// Found live: same case-sensitivity bug class as unpaidInvoices/grantsAwarded/lead-type above.
+test("computeBusinessDashboard's openTasks matches task status case-insensitively", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    tasks: [{ status: "Done" }, { status: "Complete" }, { status: "todo" }]
+  }));
+  assert.equal(dashboard.openTasks, 1, "both differently-cased 'done'/'complete' tasks must be excluded from the open count");
+});
+
 // Found live: the same case-sensitivity bug as grantsAwarded above, on
 // invoice.status -- a naturally typed "Paid" (capital P) never matched an
 // exact-lowercase "paid" check, so that invoice stayed counted as unpaid
