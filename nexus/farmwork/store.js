@@ -26,25 +26,39 @@ class FarmRecordRepository {
 
   searchable(collection, data) { return this.keepSearchableText ? `${collection}: ${String(data?.name || data?.title || data?.item || "").slice(0, 80)}` : collection; }
 
-  async nextNumber({ tenantId, userId, collection }) {
+  async nextNumber({ tenantId, userId, collection }, db = this.db) {
     const wide = PUBLIC_COLLECTIONS.includes(collection);
     const result = wide
-      ? await this.db.query(`select coalesce(max((content->>'number')::int),0) as n from nexus_memory_items
+      ? await db.query(`select coalesce(max((content->>'number')::int),0) as n from nexus_memory_items
           where tenant_id=$1 and purpose='${this.purpose}' and content->>'collection'=$2`, [tenantId, collection])
-      : await this.db.query(`select coalesce(max((content->>'number')::int),0) as n from nexus_memory_items
+      : await db.query(`select coalesce(max((content->>'number')::int),0) as n from nexus_memory_items
           where tenant_id=$1 and principal_id=$2 and purpose='${this.purpose}' and content->>'collection'=$3`, [tenantId, userId, collection]);
     return Number((result.rows || result)[0]?.n || 0) + 1;
   }
 
+  // Found live (same shape already fixed in community/store.js's addReport): nextNumber() read the current
+  // max with a plain select, then add() inserted separately -- no transaction, no lock, no unique constraint.
+  // Two records added close enough together (either the same person double-tapping, or -- for the wide,
+  // cross-tenant PUBLIC_COLLECTIONS case like the market board listing -- two different people in the same
+  // tenant) could both read the same max and both be assigned the same number, so "close listing 12" or
+  // "deliver order 12" could later land on the wrong record while its identically-numbered sibling is never
+  // touched. A transaction-scoped advisory lock, keyed per tenant+collection (and per-user for the
+  // non-wide case, since numbering is otherwise scoped to one person's own records), serializes concurrent
+  // number allocation without needing a real per-scope counter row.
   async add({ tenantId, userId, collection, data }) {
-    const number = await this.nextNumber({ tenantId, userId, collection });
-    const now = new Date().toISOString();
-    const memoryId = createId("memory");
-    await this.db.query(`insert into nexus_memory_items
-      (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
-      values ($1,$2,$3,'domain','${this.purpose}',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','${this.sensitivity}')`,
-    [memoryId, tenantId, userId, { kind: "record", collection, number, data, createdAt: now, updatedAt: now }, this.searchable(collection, data), PLACEHOLDER_VECTOR, { source: "farm-toolkit", capturedAt: now }]);
-    return { memoryId, userId, number, collection, data, createdAt: now, updatedAt: now };
+    const wide = PUBLIC_COLLECTIONS.includes(collection);
+    const lockKey = `${this.purpose}:${tenantId}:${collection}:${wide ? "*" : userId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const number = await this.nextNumber({ tenantId, userId, collection }, trx);
+      const now = new Date().toISOString();
+      const memoryId = createId("memory");
+      await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','${this.purpose}',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','${this.sensitivity}')`,
+      [memoryId, tenantId, userId, { kind: "record", collection, number, data, createdAt: now, updatedAt: now }, this.searchable(collection, data), PLACEHOLDER_VECTOR, { source: "farm-toolkit", capturedAt: now }]);
+      return { memoryId, userId, number, collection, data, createdAt: now, updatedAt: now };
+    });
   }
 
   // A person's own records of one collection, newest first.
