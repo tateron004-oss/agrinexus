@@ -124,19 +124,25 @@ class RecordRepository {
   // Returns enough of the real content (business name, open task titles,
   // open grant labels) for the caller to write a genuinely specific nudge,
   // not just "you have open items somewhere."
+  // Found live: task.status/grant.status are freeform text a person can type
+  // in any case ("Done", "Awarded") -- without lower(), a capitalized task or
+  // grant here never matched 'done'/'complete'/'awarded'/'declined' and kept
+  // this workspace showing as having open items forever, even after they
+  // were actually finished. Mirrors the same fix already applied to
+  // listBusinessWorkspacesWithDatedDeadlines's own predicates below.
   async listStaleBusinessWorkspaces({ staleBefore, limit = 50 }) {
     const result = await this.db.query(`select tenant_id, owner_id, record_id, updated_at,
         data->'info'->>'businessName' as business_name,
         (select jsonb_agg(t->>'title') from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t
-          where coalesce(t->>'status','') not in ('done','complete')) as open_task_titles,
+          where lower(coalesce(t->>'status','')) not in ('done','complete')) as open_task_titles,
         (select jsonb_agg(coalesce(g->>'funderName', g->>'program')) from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g
-          where coalesce(g->>'status','') not in ('awarded','declined')) as open_grant_labels
+          where lower(coalesce(g->>'status','')) not in ('awarded','declined')) as open_grant_labels
       from nexus_records
       where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
         and updated_at < $1
         and (
-          exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t where coalesce(t->>'status','') not in ('done','complete'))
-          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g where coalesce(g->>'status','') not in ('awarded','declined'))
+          exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t where lower(coalesce(t->>'status','')) not in ('done','complete'))
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g where lower(coalesce(g->>'status','')) not in ('awarded','declined'))
         )
       order by updated_at
       limit $2`, [staleBefore, Math.min(Math.max(limit, 1), 200)]);
@@ -190,10 +196,14 @@ class RecordRepository {
   // "not paid" matches computeBusinessDashboard's own unpaidInvoices
   // definition (status !== 'paid') exactly, so this sweep's idea of an
   // unpaid invoice never drifts from what the dashboard already shows.
+  // Found live: all three predicates below compare status case-sensitively
+  // against freeform text a person can type in any case ("Done", "Awarded",
+  // "Paid") -- lower() matches the case-insensitive fix already applied to
+  // computeBusinessDashboard's own task/grant/invoice comparisons.
   async listBusinessWorkspacesWithDatedDeadlines({ limit = 50 }) {
-    const OVERDUE_TASK = `t->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (t->>'dueDate')::date < current_date and coalesce(t->>'status','') not in ('done','complete')`;
-    const APPROACHING_GRANT = `g->>'deadline' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'deadline')::date between current_date and current_date + 7 and coalesce(g->>'status','') not in ('awarded','declined')`;
-    const OVERDUE_INVOICE = `i->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (i->>'dueDate')::date < current_date and coalesce(i->>'status','') != 'paid'`;
+    const OVERDUE_TASK = `t->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (t->>'dueDate')::date < current_date and lower(coalesce(t->>'status','')) not in ('done','complete')`;
+    const APPROACHING_GRANT = `g->>'deadline' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'deadline')::date between current_date and current_date + 7 and lower(coalesce(g->>'status','')) not in ('awarded','declined')`;
+    const OVERDUE_INVOICE = `i->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (i->>'dueDate')::date < current_date and lower(coalesce(i->>'status','')) != 'paid'`;
     const result = await this.db.query(`select tenant_id, owner_id, record_id,
         data->'info'->>'businessName' as business_name,
         (select jsonb_agg(jsonb_build_object('title', t->>'title', 'dueDate', t->>'dueDate'))

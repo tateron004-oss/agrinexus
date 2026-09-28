@@ -45,6 +45,16 @@ test("dashboard counts customers/donors/sponsors/volunteers separately by real l
   assert.match(html, /2 customers, 1 donors, 1 sponsors, 2 volunteers/);
 });
 
+// Found live: mirrors the already-fixed grant.status case-sensitivity bug --
+// extractLeadArgs only lowercases the regex-fallback branch, so a structured
+// tool-call arg stored a naturally-capitalized type verbatim and it fell into
+// the generic "others" bucket instead of its real one.
+test("dashboard matches lead type case-insensitively, so a naturally-capitalized 'Donor' still counts in its real bucket", () => {
+  const html = loadRenderDashboard(workspace({ leads: [{ type: "Donor" }, { type: "donor" }] }));
+  assert.match(html, /2 donors/);
+  assert.doesNotMatch(html, /1 other/);
+});
+
 test("dashboard sums real invoice line items and counts unpaid invoices", () => {
   const html = loadRenderDashboard(workspace({
     invoices: [{ status: "paid" }, { status: "sent" }, { status: "draft" }],
@@ -67,6 +77,14 @@ test("dashboard counts open tasks against the real total, and active appointment
   }));
   assert.match(html, /2 of 3 not yet done/);
   assert.match(html, /2 active/);
+});
+
+// Found live: mirrors the already-fixed grant/invoice status case-sensitivity
+// bug -- a naturally typed "Done"/"Complete" (capital) never matched this
+// exact-lowercase check, so that task stayed counted as open forever.
+test("dashboard matches task status case-insensitively, so naturally-capitalized 'Done'/'Complete' still count as finished", () => {
+  const html = loadRenderDashboard(workspace({ tasks: [{ status: "Done" }, { status: "Complete" }, { status: "todo" }] }));
+  assert.match(html, /1 of 3 not yet done/);
 });
 
 test("dashboard on a brand-new, empty workspace shows real zeros, not missing/undefined values", () => {

@@ -27,6 +27,12 @@ test("listBusinessWorkspacesWithDatedDeadlines checks a real overdue task dueDat
   assert.match(sql, /!= 'paid'/);
   assert.match(sql, /invoices/);
   assert.deepEqual(db.calls[0].params, [10]);
+  // Found live: task.status is freeform text a person can type in any case
+  // ("Done") -- without lower(), a capitalized task never matched 'done'/
+  // 'complete' and kept showing as overdue forever, even after being marked
+  // done. Mirrors the same case-insensitivity fix already applied to
+  // computeBusinessDashboard's own task/grant/invoice comparisons.
+  assert.match(sql, /lower\(coalesce\(t->>'status',''\)\) not in \('done','complete'\)/);
 });
 
 // Found live: record_id ("rec_<uuid>") is not a real uuid and can never be sent as subjectId (a real Postgres

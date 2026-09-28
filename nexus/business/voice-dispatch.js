@@ -484,23 +484,29 @@ function computeBusinessDashboard(editable) {
   const currency = currencies[0] || "USD";
   const income = byCurrency[currency]?.income || 0;
   const expenses = byCurrency[currency]?.expenses || 0;
-  const customers = editable.leads.filter(row => row.type === "customer").length;
-  const donors = editable.leads.filter(row => row.type === "donor").length;
-  const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
-  const volunteers = editable.leads.filter(row => row.type === "volunteer").length;
+  // Found live: extractLeadArgs only lowercases the regex-fallback branch --
+  // a structured tool-call arg (args.type: "Donor") is stored verbatim, so a
+  // naturally-capitalized lead type fell into "others" below instead of its
+  // real bucket. Same case-sensitivity bug class already fixed for
+  // unpaidInvoices/grantsAwarded, fixed the same way: compare lowercased.
+  const leadType = row => String(row.type || "").toLowerCase();
+  const customers = editable.leads.filter(row => leadType(row) === "customer").length;
+  const donors = editable.leads.filter(row => leadType(row) === "donor").length;
+  const sponsors = editable.leads.filter(row => leadType(row) === "sponsor").length;
+  const volunteers = editable.leads.filter(row => leadType(row) === "volunteer").length;
   // Real estate lead types get their own explicit counts, same as
   // customers/donors/sponsors/volunteers, rather than falling into the
   // generic "others" bucket where a voice summary can't name them clearly.
-  const buyers = editable.leads.filter(row => row.type === "buyer").length;
-  const sellers = editable.leads.filter(row => row.type === "seller").length;
-  const tenants = editable.leads.filter(row => row.type === "tenant").length;
-  const landlords = editable.leads.filter(row => row.type === "landlord").length;
+  const buyers = editable.leads.filter(row => leadType(row) === "buyer").length;
+  const sellers = editable.leads.filter(row => leadType(row) === "seller").length;
+  const tenants = editable.leads.filter(row => leadType(row) === "tenant").length;
+  const landlords = editable.leads.filter(row => leadType(row) === "landlord").length;
   // Any type outside the ones counted above (e.g. "member"/"congregant" for
   // a church, or "client" from a conversational intake) is still real,
   // saved data -- counted here so it never silently disappears from the
   // summary, rather than hardcoding every new church/industry word as its
   // own bucket.
-  const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer", "buyer", "seller", "tenant", "landlord"].includes(row.type)).length;
+  const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer", "buyer", "seller", "tenant", "landlord"].includes(leadType(row))).length;
   // Rounds each line to the cent before summing (matches the invoice PDF
   // export's own fix) so this total can never drift from what a generated
   // invoice actually shows, even by a cent, for a fractional-cent unit price.
@@ -513,7 +519,12 @@ function computeBusinessDashboard(editable) {
   // so a correctly-marked grant's amount silently vanishes from the
   // awarded total with no error or indication.
   const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
-  const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
+  // Found live: same case-sensitivity bug already fixed above for
+  // unpaidInvoices/grantsAwarded -- task.status is also freeform text (see
+  // extractTaskStatusArgs), so a naturally typed "Done"/"Complete" (capital)
+  // never matched this exact-lowercase check and that task stayed counted as
+  // open forever.
+  const openTasks = editable.tasks.filter(task => { const status = String(task.status || "").toLowerCase(); return status !== "done" && status !== "complete"; }).length;
   const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
   const listings = editable.listings || [];
   // Case-insensitive, matching extractListingArgs' own normalization fix --
