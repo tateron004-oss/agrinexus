@@ -90,15 +90,21 @@
     const money = moneyByCurrency(editable.transactions);
     if (!Object.keys(money).length) money.USD = { income: 0, expenses: 0 };
     const currencies = Object.keys(money);
-    const customers = editable.leads.filter(row => row.type === "customer").length;
-    const donors = editable.leads.filter(row => row.type === "donor").length;
-    const sponsors = editable.leads.filter(row => row.type === "sponsor").length;
-    const volunteers = editable.leads.filter(row => row.type === "volunteer").length;
+    // Found live: extractLeadArgs only lowercases the regex-fallback branch --
+    // a structured tool-call arg (args.type: "Donor") is stored verbatim, so
+    // a naturally-capitalized lead type fell into "others" below instead of
+    // its real bucket. Same case-sensitivity bug class as unpaidInvoices/
+    // grantsAwarded/listing status, fixed the same way: compare lowercased.
+    const leadType = row => String(row.type || "").toLowerCase();
+    const customers = editable.leads.filter(row => leadType(row) === "customer").length;
+    const donors = editable.leads.filter(row => leadType(row) === "donor").length;
+    const sponsors = editable.leads.filter(row => leadType(row) === "sponsor").length;
+    const volunteers = editable.leads.filter(row => leadType(row) === "volunteer").length;
     // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard exactly:
     // any lead type outside the original four (e.g. "member"/"congregant" for a
     // church workspace, "client" from a conversational intake) still counts here
     // instead of silently disappearing from the summary.
-    const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer"].includes(row.type)).length;
+    const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer"].includes(leadType(row))).length;
     // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
     // fix exactly: rounds each line to the cent before summing, and matches
     // grant status case-insensitively -- see that file for the found-live
@@ -114,7 +120,9 @@
     const unpaidInvoices = editable.invoices.filter(invoice => String(invoice.status || "").toLowerCase() !== "paid").length;
     const grantsRequested = editable.grants.reduce((sum, grant) => sum + grant.amount, 0);
     const grantsAwarded = editable.grants.filter(grant => String(grant.status || "").toLowerCase() === "awarded").reduce((sum, grant) => sum + grant.amount, 0);
-    const openTasks = editable.tasks.filter(task => task.status !== "done" && task.status !== "complete").length;
+    // Found live: same case-sensitivity bug already fixed above for
+    // unpaidInvoices/grantsAwarded.
+    const openTasks = editable.tasks.filter(task => { const status = String(task.status || "").toLowerCase(); return status !== "done" && status !== "complete"; }).length;
     const upcomingAppointments = editable.appointments.filter(appointment => appointment.status !== "cancelled").length;
     // Mirrors nexus/business/voice-dispatch.js's computeBusinessDashboard's
     // listing metrics exactly -- found live: this real data (real listing

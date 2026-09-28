@@ -20,10 +20,27 @@ const USERS = [
   { id: "u-late", tenant_id: "t1", email: "late@example.com", display_name: "Late Joiner", status: "active" }
 ];
 
-// An in-memory database that understands exactly the statements the circle repository issues.
+// An in-memory database that understands exactly the statements the circle repository issues. The advisory
+// lock genuinely serializes concurrent transactions on the same key (a held lock only releases when its own
+// transaction's work finishes, matching real Postgres blocking behavior) -- see farmwork-toolkit.test.js's
+// lockingFarmDb() for the same technique, used there to prove a real numbering race is closed.
 function circleDb() {
-  const rows = []; const db = {
-    rows, async transaction(fn) { return fn(db); },
+  const rows = []; const locks = new Map();
+  const db = {
+    rows,
+    async transaction(fn) {
+      const trx = Object.create(db);
+      let release = null;
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0]; const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held)); await ahead; release = myRelease; return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
     async query(sql, params) {
       if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
       if (/from users where tenant_id=\$1 and lower\(email\)/.test(sql)) return { rows: USERS.filter(user => user.tenant_id === params[0] && user.email === String(params[1]).toLowerCase()).map(user => ({ id: user.id, display_name: user.display_name })) };
@@ -36,7 +53,13 @@ function circleDb() {
       }
       if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) return { rows: rows.filter(row => row.tenant_id === params[0] && row.purpose === "circle" && !row.deleted && (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
       if (/insert into nexus_memory_items/.test(sql) && /'circle'/.test(sql)) { rows.push({ memory_id: params[0], tenant_id: params[1], principal_id: params[2], purpose: "circle", content: params[3] }); return { rows: [] }; }
-      if (/update nexus_memory_items set content=\$3/.test(sql) && /purpose='circle'/.test(sql)) { const row = rows.find(item => item.tenant_id === params[0] && item.memory_id === params[1]); if (row) row.content = params[2]; return { rows: [] }; }
+      if (/update nexus_memory_items set content=\$3/.test(sql) && /purpose='circle'/.test(sql)) {
+        const row = rows.find(item => item.tenant_id === params[0] && item.memory_id === params[1]);
+        if (!row) return { rows: [] };
+        if (/coalesce\(\(content->>'updates'\)::int,0\) = \$4/.test(sql) && (row.content.updates || 0) !== params[3]) return { rows: [] };
+        row.content = params[2];
+        return { rows: [{ memory_id: row.memory_id }] };
+      }
       throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
     }
   };
@@ -86,6 +109,27 @@ test("nobody in the circle yet means nothing to share, and an invitation not yet
   assert.match(await say("share my location in emergencies"), /Nobody in your circle has said yes/);
   await circle.invite({ tenantId: "t1", person: { id: "u-baba", name: "Baba Kamau" }, member: { id: "u-amina", name: "Amina Wanjiru" } });
   assert.match(await say("share my location in emergencies"), /Nobody in your circle has said yes/); assert.match(await say("share my location in emergencies with Amina"), /hasn't said yes to your invitation yet/);
+});
+
+// Found live: the "same alert within 5 minutes is one alert" reuse check read before it committed, same
+// shape as invite()'s already-fixed duplicate-link race -- two near-simultaneous first-ever alerts for the
+// same person (a genuine panic sending two messages within milliseconds, or a client double-submit) could
+// both see no recent alert and both insert distinct alert rows with different alertIds, silently breaking
+// location sharing for whichever alertId a phone happened to hold once the other sorted as "latest".
+test("two concurrent first-ever alerts for the same person only create one alert row, not two", async () => {
+  const db = circleDb(); const circle = new CircleRepository(db);
+  await circle.invite({ tenantId: "t1", person: { id: "u-baba", name: "Baba Kamau" }, member: { id: "u-amina", name: "Amina Wanjiru" } });
+  await circle.respond({ tenantId: "t1", memberId: "u-amina", linkId: (await circle.listFor({ tenantId: "t1", userId: "u-baba" }))[0].linkId, accept: true });
+  const alerted = [{ otherId: "u-amina", otherName: "Amina Wanjiru" }];
+  const now = new Date("2026-09-20T05:00:00Z");
+  const [first, second] = await Promise.all([
+    circle.recordAlert({ tenantId: "t1", userId: "u-baba", alerted, now }),
+    circle.recordAlert({ tenantId: "t1", userId: "u-baba", alerted, now })
+  ]);
+  assert.equal(first.alertId, second.alertId, "both racing calls must resolve to the SAME alertId, not two independent alerts");
+  assert.equal([first.reused, second.reused].filter(Boolean).length, 1, "exactly one of the two must be told it reused an existing alert");
+  const alertRows = db.rows.filter(row => row.content.kind === "alert");
+  assert.equal(alertRows.length, 1, "only one alert row must actually exist, not two");
 });
 
 // ---------- the alert itself never waits for a location, and says so honestly ----------
@@ -147,6 +191,27 @@ test("a member who leaves, or is not chosen any more, stops receiving it at once
   await w.join("u-late", "friend"); await w.say("share my location in emergencies"); assert.deepEqual((await w.locate(alert.alertId)).body.shared, ["Joseph Otieno"], "choosing everyone again includes Joseph, but not the person who joined after the alert");
 });
 
+// Found live: the alert's update counter/lastUpdateAt was read once, `number_` was computed from that
+// stale snapshot, and real pushes were sent using it as part of the idempotency key -- only AFTER sending
+// was the claim written back. Two near-simultaneous share() calls for the same alert (a client-side retry,
+// or the phone's background location watcher firing twice) could both read the same stale alert, both pass
+// the 45-second throttle using the same stale lastUpdateAt, and both compute the same number_ -- sending
+// real pushes with the identical idempotency key (silently dropping one of two genuinely distinct GPS
+// fixes) and defeating the throttle. Claiming the update slot atomically before sending anything closes it.
+test("two concurrent location shares for the same fresh alert only one claims the update and sends real pushes", async () => {
+  const w = await world({ optIn: ["Amina", "Joseph"] });
+  const { emergency: alert } = await w.handle("I need help now");
+  const [first, second] = await Promise.all([w.locate(alert.alertId), w.locate(alert.alertId)]);
+  const results = [first, second];
+  const succeeded = results.filter(result => !result.body.throttled);
+  const throttled = results.filter(result => result.body.throttled);
+  assert.equal(succeeded.length, 1, "exactly one of two racing location shares must claim the update slot");
+  assert.equal(throttled.length, 1, "the losing racer must be told it was throttled, not silently duplicate the push");
+  assert.deepEqual(throttled[0].body.shared, [], "the losing racer must never send any real pushes");
+  const aminaLocationPushes = w.pushes.filter(push => push.userId === "u-amina" && /location/i.test(push.content.title));
+  assert.equal(aminaLocationPushes.length, 1, "the recipient must receive exactly one real push, not one per racing call");
+});
+
 // Found live: recipients was computed once at the top of share(), then the send loop does N real, sequential
 // awaited pushes -- if the person revoked a member (left the circle, or turned off sharing location with
 // them) while an EARLIER push in that same loop was still in flight, the stale recipients list would still
@@ -162,7 +227,7 @@ test("a member revoked while an earlier recipient's push in the SAME batch is st
   const circle = {
     async latestAlert() { return alert; },
     async activeMembers() { return activeMembers; },
-    async updateAlert({ change }) { Object.assign(alert, change(alert)); }
+    async updateAlert({ change }) { Object.assign(alert, change(alert)); return true; }
   };
   const pushed = [];
   const pushWithLink = async ({ toUserId }) => {
