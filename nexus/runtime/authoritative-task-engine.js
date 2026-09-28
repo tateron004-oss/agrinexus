@@ -103,6 +103,12 @@ class AuthoritativeTaskEngine {
         { stepId, dependencies: [...dependencies], incomplete: incomplete.map(candidate => candidate.step_id) });
     }
     const candidates = [step.tool_id, ...(step.fallback_tool_ids || [])]; let lastError = null;
+    // Tracks whether ANY candidate this call actually reached executions.start() (a real, billable attempt) --
+    // as opposed to every candidate being turned away by a pre-flight guard (unavailable, unconfirmed, or
+    // already retry-exhausted) before ever trying. executeTask() uses this to tell "a real attempt just failed
+    // and a legitimate future retry may still succeed" (leave the task running) apart from "nothing can ever
+    // progress with the current configuration" (see the throw below, and executeTask()'s own comment).
+    let attemptedExecution = false;
     const retryOrdinal = step.state === "failed" ? Number(step.attempt_count || 1) + 1 : 1;
     for (const [attempt, toolId] of candidates.entries()) {
       const tool = await this.tools.get(toolId); const executor = tool && this.executors[tool.tool_id];
@@ -136,6 +142,7 @@ class AuthoritativeTaskEngine {
       const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
         toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
       if (started.duplicate) return verifiedDuplicate(started.execution);
+      attemptedExecution = true;
       const observedAt = Date.now();
       const span = this.observability ? await observeSafely(() => this.observability.startSpan({
         traceId: context.requestId, tenantId: context.tenantId, taskId, operation: "tool.execute",
@@ -201,7 +208,9 @@ class AuthoritativeTaskEngine {
         lastError = cause;
       }
     }
-    throw lastError || new NexusRuntimeError("tool_unavailable", "No governed tool was available; nothing was executed.", 503);
+    const finalError = lastError || new NexusRuntimeError("tool_unavailable", "No governed tool was available; nothing was executed.", 503);
+    finalError.attemptedExecution = attemptedExecution;
+    throw finalError;
   }
 
   async executeTask({ context, taskId }) {
@@ -215,6 +224,20 @@ class AuthoritativeTaskEngine {
     if (task.state === "queued") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
       nextState: "running", reason: "Governed task execution started" });
 
+    // Found live: neither throw below (an unrecoverable step, or execute() exhausting every candidate tool) ever
+    // transitioned the task itself out of "running" -- both propagated straight out of executeTask() uncaught,
+    // leaving the task frozen at "running" forever. Since agent.sweep-advanceable-tasks re-enqueues any autonomous
+    // task still in "running" past its staleness window with a freshly-randomized (never deduped) idempotency
+    // key, this created an unbounded, forever-repeating job storm: every sweep cycle re-tries the exact same
+    // already-exhausted step, hits the exact same failure, and never self-corrects. A live-conversation task hit
+    // the milder half of the same bug -- it just permanently misreports itself as "running" to any later query.
+    // Mirrors blockStalledAutonomousTaskIfApplicable() in nexus/workers/handlers.js, the established convention
+    // for this codebase's other "permanently stuck, stop treating it as in-flight" case (a stalled "verifying"
+    // task) -- blocked() is used there for the same reason: terminal, so nothing ever revives it by accident.
+    const blockOnUnrecoverableFailure = async cause => {
+      await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+        nextState: "blocked", reason: `Task execution permanently stalled: ${cause.code || cause.message || "unknown error"}` }).catch(() => {});
+    };
     const receipts = [];
     while (true) {
       task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
@@ -222,10 +245,25 @@ class AuthoritativeTaskEngine {
       if (!remaining.length) break;
       const completed = new Set((task.steps || []).filter(step => step.state === "completed").map(step => step.step_id));
       const ready = remaining.find(step => (step.depends_on || []).every(id => completed.has(id)));
-      if (!ready) throw new NexusRuntimeError("task_execution_blocked", "No task step can proceed; prerequisites or prior failures require attention.", 409,
-        { remaining: remaining.map(step => ({ stepId: step.step_id, state: step.state, dependsOn: step.depends_on || [] })) });
+      if (!ready) {
+        const blocked = new NexusRuntimeError("task_execution_blocked", "No task step can proceed; prerequisites or prior failures require attention.", 409,
+          { remaining: remaining.map(step => ({ stepId: step.step_id, state: step.state, dependsOn: step.depends_on || [] })) });
+        await blockOnUnrecoverableFailure(blocked);
+        throw blocked;
+      }
       if (ready.confirmation_state === "required") return { task, state: "awaiting_confirmation", pendingStepId: ready.step_id, receipts, completed: false };
-      const result = await this.execute({ context, taskId, stepId: ready.step_id });
+      let result;
+      try {
+        result = await this.execute({ context, taskId, stepId: ready.step_id });
+      } catch (cause) {
+        // A genuine attempt (cause.attemptedExecution) means the step's own attempt_count just advanced and a
+        // legitimate future executeTask() call may still retry it successfully -- leave the task "running" for
+        // that, matching the existing, deliberate retry-then-resume behavior. Only block when NO candidate ever
+        // even reached executions.start() this call (every one was turned away by availability/confirmation/
+        // retry-exhaustion first) -- nothing about that will ever change on its own, so retrying is pointless.
+        if (!cause.attemptedExecution) await blockOnUnrecoverableFailure(cause);
+        throw cause;
+      }
       if (result.receipt) receipts.push(result.receipt);
     }
 
