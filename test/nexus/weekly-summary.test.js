@@ -70,6 +70,24 @@ test("the sweep sends one summary on the chosen weekday once the chosen time has
   assert.equal((await service.sendDue({ at: SUNDAY_EVENING })).sent, 0, "already sent this week");
 });
 
+// Found live (worker-sweep reliability audit): `handled` used to be marked BEFORE the real
+// notifications.enqueue() call, which does a real DB insert that can throw on any transient failure. Since
+// `handled` is keyed per calendar week and only clears past 5000 entries, an uncaught throw there cost that
+// person their entire weekly summary with no retry until the following week's send window, silently.
+test("a transient enqueue failure is retried on the next tick, not silently marked handled for the whole week", async () => {
+  let fail = true;
+  const queued = [];
+  const notifications = { async enqueue(row) { if (fail) throw new Error("connection reset"); queued.push(row); return row; }, async existsByKey() { return false; }, async listReminders() { return []; } };
+  const memory = { async profile() { return [{ content: { kind: "name", value: "Amina" } }]; }, async listFarmEntries() { return [{ content: { kind: "reading", metric: "rain", value: 12, unit: "mm", day: "2026-09-19" } }]; }, async listPersonalItems() { return []; } };
+  const service = createWeeklySummaryService({ notifications, settings: { async listActive() { return [person()]; } }, memory, devices: { async listPushable() { return [{ id: 1 }]; } }, autonomyControl: { async isPaused() { return false; } }, now: () => SUNDAY_EVENING });
+  await assert.rejects(() => service.sendDue({ at: SUNDAY_EVENING }), /connection reset/);
+  assert.equal(queued.length, 0, "nothing was actually queued");
+  fail = false;
+  const retried = await service.sendDue({ at: SUNDAY_EVENING });
+  assert.equal(retried.sent, 1, "the same week must still retry, not skip until next week because `handled` was marked prematurely");
+  assert.equal(queued.length, 1);
+});
+
 test("it waits for the right day and time, and respects pause, devices and an empty week", async () => {
   assert.equal((await harness({ settings: [person({ dayOfWeek: 1 })] }).service.sendDue({ at: SUNDAY_EVENING })).sent, 0, "wrong weekday");
   assert.equal((await harness({ settings: [person({ timeOfDay: "20:00" })] }).service.sendDue({ at: SUNDAY_EVENING })).sent, 0, "time not yet arrived");
