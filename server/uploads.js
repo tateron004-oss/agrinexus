@@ -228,8 +228,14 @@ function parseAndStoreUpload(req, { env = process.env, userId } = {}) {
           if (!magicBytesMatch(head, declaredType)) {
             throw Object.assign(new Error("content_does_not_match_declared_type"), { declaredType });
           }
+          // Found live (uploads/document-handling audit): by this point tmpPath (this very upload's own
+          // file) already exists on disk in `dir` under a name that doesn't end in ".meta.json", so
+          // currentUsageBytes(dir) already includes its bytesWritten -- adding bytesWritten again here
+          // double-counted every upload's own size against the quota, by up to maxUploadBytes per
+          // request, silently halving the effectively usable margin and rejecting genuinely-within-quota
+          // uploads with a false "storage full" error.
           const usage = currentUsageBytes(dir);
-          if (usage + bytesWritten > totalQuotaBytes(env)) {
+          if (usage > totalQuotaBytes(env)) {
             throw Object.assign(new Error("storage_quota_exceeded"), { usage, quota: totalQuotaBytes(env) });
           }
           fs.renameSync(tmpPath, finalPath);
