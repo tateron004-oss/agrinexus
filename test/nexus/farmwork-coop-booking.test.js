@@ -34,6 +34,7 @@ test("booking shared equipment by a one-word name that matches two real items re
 
 test("booking shared equipment by an unambiguous name still works exactly as before", async () => {
   const store = fakeStore();
+  await store.add({ collection: "member", data: { name: "Amina" } });
   await coop.handle(ctxFor(store, "add shared equipment: tractor"));
   const result = await coop.handle(ctxFor(store, "book the tractor for Amina on Friday"));
   assert.match(result, /Booked the tractor for Amina/);
@@ -42,6 +43,7 @@ test("booking shared equipment by an unambiguous name still works exactly as bef
 
 test("booking shared equipment by its exact full name still resolves even when a loose one-word query would be ambiguous", async () => {
   const store = fakeStore();
+  await store.add({ collection: "member", data: { name: "Amina" } });
   await coop.handle(ctxFor(store, "add shared equipment: water pump"));
   await coop.handle(ctxFor(store, "add shared equipment: sprayer pump"));
   const result = await coop.handle(ctxFor(store, "book the water pump for Amina on Friday"));
