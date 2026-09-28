@@ -31,6 +31,30 @@ const crypto = require("node:crypto");
 // tight 4000-char echo-text cap, since real long-form content is exactly
 // what this executor is for.
 const MAX_DOCUMENT_CONTENT_LENGTH = 50000;
+// Found live (production outage, capability-testing the orb): the planning
+// model's tool-call schema has no enum constraint on documents.create's
+// format field -- it's free text, so the model plausibly writes "document",
+// "report", "letter", or similar natural-language words for "make me a
+// document" instead of one of exportProvider.exportDocument()'s tiny literal
+// allowlist (json/txt/md/pdf/docx). Any format outside that exact list made
+// exportDocument() return a "blocked" status instead of "completed", which
+// verifyDocumentsCreateOutcome then reported as a hard, generic
+// "outcome_unverified" 502 with no indication the real cause was just an
+// unrecognized format word -- every single "create a document" request that
+// didn't happen to say pdf/docx/json/md/txt outright failed this way.
+// Normalizing common synonyms (and falling back to the always-valid txt for
+// anything else) makes this robust to what the model actually says, instead
+// of hard-failing the whole capability on a word choice.
+const DOCUMENT_FORMAT_ALIASES = Object.freeze({
+  document: "txt", doc: "txt", text: "txt", plain: "txt", report: "txt", letter: "txt", summary: "txt", note: "txt",
+  markdown: "md", word: "docx"
+});
+const VALID_DOCUMENT_FORMATS = Object.freeze(["json", "txt", "md", "pdf", "docx"]);
+function normalizeDocumentFormat(rawFormat) {
+  const format = String(rawFormat || "txt").toLowerCase().trim();
+  if (VALID_DOCUMENT_FORMATS.includes(format)) return format;
+  return DOCUMENT_FORMAT_ALIASES[format] || "txt";
+}
 function createDocumentsCreateExecutor({ env = process.env, documents = null } = {}) {
   return async function execute({ input = {}, context, taskId }) {
     const rawContent = String(input.content || input.text || input.command || "");
@@ -38,7 +62,7 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
       confirmed: true,
       title: input.title || "Nexus document",
       content: rawContent.length > MAX_DOCUMENT_CONTENT_LENGTH ? rawContent.slice(0, MAX_DOCUMENT_CONTENT_LENGTH) : rawContent,
-      format: String(input.format || "txt").toLowerCase()
+      format: normalizeDocumentFormat(input.format)
     };
     const result = await exportProvider.exportDocument(body, env);
     const data = result.body?.data || {};
@@ -91,4 +115,4 @@ function verifyDocumentsCreateOutcome({ result }) {
   return { verified, method: "real_local_export", reason: verified ? null : "export_not_completed" };
 }
 
-module.exports = Object.freeze({ createDocumentsCreateExecutor, verifyDocumentsCreateOutcome });
+module.exports = Object.freeze({ createDocumentsCreateExecutor, verifyDocumentsCreateOutcome, normalizeDocumentFormat });

@@ -2,7 +2,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const exportProvider = require("../../server/providers/exportProvider.js");
-const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome } = require("../../nexus/documents/executor.js");
+const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome, normalizeDocumentFormat } = require("../../nexus/documents/executor.js");
 
 function withPatched(moduleExports, fnName, replacement, run) {
   const original = moduleExports[fnName];
@@ -58,6 +58,37 @@ test("an unbounded document content string is capped before reaching the real ex
     const execute = createDocumentsCreateExecutor({ env: {} });
     await execute({ input: { title: "x", content: "a normal short document", format: "txt" } });
   });
+});
+
+// Found live (production outage, capability-testing the orb): the planning
+// model's tool-call schema has no enum constraint on format, so it wrote
+// "document" for a plain "create a document" request -- outside
+// exportDocument()'s tiny literal allowlist (json/txt/md/pdf/docx) -- and
+// the whole documents.create capability hard-failed with a generic
+// "outcome_unverified" 502 that never surfaced the real cause.
+test("an unrecognized format word from the planner (e.g. 'document') is normalized to a real, always-valid format instead of hard-failing the whole capability", async () => {
+  await withPatched(exportProvider, "exportDocument", async body => {
+    assert.equal(body.format, "txt", "an unrecognized format word must fall back to the always-valid txt");
+    return { httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-alias", bytes: 20 } } };
+  }, async () => {
+    const execute = createDocumentsCreateExecutor({ env: {} });
+    const result = await execute({ input: { title: "Crop rotation guide", content: "text", format: "document" } });
+    assert.equal(verifyDocumentsCreateOutcome({ result }).verified, true, "the step must now verify instead of failing");
+  });
+});
+
+test("normalizeDocumentFormat maps common synonyms and leaves the real formats untouched", () => {
+  assert.equal(normalizeDocumentFormat("document"), "txt");
+  assert.equal(normalizeDocumentFormat("report"), "txt");
+  assert.equal(normalizeDocumentFormat("letter"), "txt");
+  assert.equal(normalizeDocumentFormat("markdown"), "md");
+  assert.equal(normalizeDocumentFormat("word"), "docx");
+  assert.equal(normalizeDocumentFormat("PDF"), "pdf");
+  assert.equal(normalizeDocumentFormat("docx"), "docx");
+  assert.equal(normalizeDocumentFormat("json"), "json");
+  assert.equal(normalizeDocumentFormat(""), "txt");
+  assert.equal(normalizeDocumentFormat(undefined), "txt");
+  assert.equal(normalizeDocumentFormat("something-totally-unrecognized"), "txt");
 });
 
 test("a failed export does not verify", async () => {
