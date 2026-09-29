@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const dailyProvider = require("./providers/daily");
 const externalUrlProvider = require("./providers/external-url");
 const zoomProvider = require("./providers/zoom");
+const { withActionLifecycle } = require("../action-lifecycle.js");
 
 const CONDITIONS = new Set(["diabetes", "hypertension", "obesity", "general", "other"]);
 
@@ -291,7 +292,25 @@ async function createEncounter(db, body = {}, user = null, env = process.env, op
   // and consentToShare omitted/false, bypassing the same gate its sibling
   // route enforces for the identical action.
   if (intake.createVideo && !emergency && intake.consentToShare) {
-    encounter.video = await createVideoForEncounter(encounter, env, options);
+    // Found live (telehealth audit): this real Daily.co/Zoom room creation had no
+    // idempotency protection at all, reachable through BOTH
+    // POST /api/nexus/telehealth/create-encounter and the NL "start a video
+    // visit" voice/text path -- unlike the dedicated createVideoRoom() above,
+    // fixed earlier for the identical issue on its own route. A retry or
+    // double-submit of either call path generated a fresh, real, billable
+    // video room every time. Fixed at this shared choke-point inside
+    // createEncounter() itself so both call sites are covered, matching the
+    // same withActionLifecycle pattern createVideoRoom() already uses.
+    const wrapped = await withActionLifecycle(db, {
+      provider: "nexus-telehealth", action: "telehealth.video-room.create", body, actorId: user?.id || user?.email || "",
+      execute: async () => {
+        const created = await createVideoForEncounter(encounter, env, options);
+        return { httpStatus: created.ok ? 200 : 400, body: created.ok ? { ...created, status: "created" } : created };
+      },
+      verify: async created => ({ verified: Boolean(created?.body?.roomCreated),
+        note: created?.body?.roomCreated ? "Provider returned a real, live video room." : "No real video room was confirmed." })
+    });
+    encounter.video = wrapped.body;
     db.nexusTelehealthVideoAttempts.unshift({
       id: `video-${encounter.id}`,
       encounterId: encounter.id,
