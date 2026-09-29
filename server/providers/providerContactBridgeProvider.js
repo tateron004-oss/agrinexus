@@ -49,8 +49,18 @@ function normalizeProviderCard(body = {}) {
   };
 }
 
+// Found live (drone/provider sibling sweep, widening to a systemic regex audit): "diagnos"/"prescri"/
+// "pregnan" here were bare word-FRAGMENTS wrapped in \b(...)\b -- but \b requires a boundary
+// immediately after the fragment, and none of "diagnosis"/"diagnosed"/"diagnosing", "prescribe"/
+// "prescribing"/"prescription", or "pregnant"/"pregnancy" have a word boundary right after "diagnos"/
+// "prescri"/"pregnan". The pattern matched NONE of the natural forms of its own three most important
+// trigger words -- only the literal, essentially never-typed fragments "diagnos"/"prescri"/"pregnan"
+// as whole words. \w* lets each fragment match any real-word continuation, the same fix applied to
+// the 6 sibling SENSITIVE_*_PATTERN/BLOCKED_*_TEXT regexes across the codebase with this identical
+// defect (communicationsBridgeProvider.js, learningBridgeProvider.js, mapsFieldVisitBridgeProvider.js,
+// marketplaceBridgeProvider.js, sessionBridgeProvider.js, workflowOrchestratorBridgeProvider.js).
 function containsSensitiveHealthDetails(value = "") {
-  return /\b(diagnos|prescri|symptom|pain|bleeding|pregnan|diabetes|blood pressure|medication|medicine|patient|medical record|ssn|insurance|dob|date of birth)\b/i.test(clean(value));
+  return /\b(diagnos\w*|prescri\w*|symptom|pain|bleeding|pregnan\w*|diabetes|blood pressure|medication|medicine|patient|medical record|ssn|insurance|dob|date of birth)\b/i.test(clean(value));
 }
 
 function saveProvider(body = {}, db, env = process.env) {
@@ -61,6 +71,13 @@ function saveProvider(body = {}, db, env = process.env) {
   if (confirmation) return confirmation;
   const card = normalizeProviderCard(body);
   if (!card.name && !card.organization) return blockedResponse(provider, action, "Provider name or organization is required before saving.");
+  // Found live (drone/provider sibling sweep): this unconditionally asserted noHealthDataStored: true
+  // without ever checking that claim -- name/organization/specialty/address are all free text a raw
+  // POST caller fully controls (this endpoint isn't restricted to actual npiProvider.search() output),
+  // so nothing stopped sensitive health content from being saved while the record claimed otherwise.
+  if ([card.name, card.organization, card.specialty, card.address].some(containsSensitiveHealthDetails)) {
+    return blockedResponse(provider, action, "Saved providers must stay non-sensitive. Do not enter patient, diagnosis, medication, symptom, insurance, or medical-record details.");
+  }
   const savedProvider = {
     id: `saved-provider-${Date.now()}`,
     ...card,
@@ -86,16 +103,25 @@ function saveProviderNote(body = {}, db, env = process.env) {
   if (confirmation) return confirmation;
   const note = clean(body.note).slice(0, 500);
   if (!note) return blockedResponse(provider, action, "A non-sensitive provider note is required.");
-  if (containsSensitiveHealthDetails(note)) {
+  const providerName = clean(body.providerName || body.name).slice(0, 180);
+  const organization = clean(body.organizationName || body.organization).slice(0, 180);
+  const npi = clean(body.npi).slice(0, 40);
+  const source = clean(body.source || "CMS NPPES NPI Registry").slice(0, 120);
+  // Found live (drone/provider sibling sweep): only `note` was scanned here, but providerName/
+  // organization/npi/source are ALL persisted into the same record and are equally free-text,
+  // caller-controlled fields on this raw POST body -- sensitive content placed in any of them sailed
+  // through unfiltered even though the function unconditionally asserted sensitiveHealthDataAllowed:
+  // false and the blocked-response message explicitly promises notes "must stay non-sensitive."
+  if ([note, providerName, organization, npi, source].some(containsSensitiveHealthDetails)) {
     return blockedResponse(provider, action, "Provider notes must stay non-sensitive. Do not enter patient, diagnosis, medication, symptom, insurance, or medical-record details.");
   }
   const savedNote = {
     id: `provider-note-${Date.now()}`,
-    providerName: clean(body.providerName || body.name).slice(0, 180),
-    organization: clean(body.organizationName || body.organization).slice(0, 180),
-    npi: clean(body.npi).slice(0, 40),
+    providerName,
+    organization,
+    npi,
     note,
-    source: clean(body.source || "CMS NPPES NPI Registry").slice(0, 120),
+    source,
     sensitiveHealthDataAllowed: false,
     createdAt: new Date().toISOString()
   };
