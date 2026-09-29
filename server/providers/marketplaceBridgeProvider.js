@@ -392,7 +392,15 @@ function queueOffline(body = {}, db, env = process.env) {
   if (confirmation) return confirmation;
   const listingRecord = normalizeListing(body);
   if (!listingRecord.title || !listingRecord.category) return blockedResponse(provider, action, "Listing title and category are required for offline marketplace queue.");
-  const safetyError = validateSafeMarketplaceRecord({ title: listingRecord.title, category: listingRecord.category, description: listingRecord.description }, "Marketplace offline queue");
+  // Found live (legal/consent/marketplace-safety audit): this only scanned
+  // {title, category, description} against SENSITIVE_MARKETPLACE_PATTERN,
+  // unlike the sibling createListing() above (which scans the whole
+  // normalized record) -- but location and quantity below are ALSO
+  // persisted into the queued content, unscanned. A bank account number or
+  // other sensitive content stuffed into location/quantity would be saved
+  // to the local offline queue untouched, even though the identical content
+  // in title/category/description would have been correctly blocked.
+  const safetyError = validateSafeMarketplaceRecord({ title: listingRecord.title, category: listingRecord.category, description: listingRecord.description, location: listingRecord.location, quantity: listingRecord.quantity }, "Marketplace offline queue");
   if (safetyError) return blockedResponse(provider, action, safetyError);
   const content = JSON.stringify({
     listingId: listingRecord.id,
