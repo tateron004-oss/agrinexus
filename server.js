@@ -32421,7 +32421,19 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (/\b(trusted operating system|trusted os|people can rely on|actually rely on|can we trust|trust review|dependable platform|reliable operating system|production trust|trust score)\b/.test(lower)) {
     return trustedOperatingSystemCommandResponse(db, user, text, options);
   }
-  const phase4RiskyAction = conversational ? phase4RiskyActionForCommand(text) : null;
+  // Found live (legal/consent audit): this gate ONLY ever stages a
+  // confirmation request (it never executes anything itself), so gating it
+  // on `conversational` gained nothing but a real security hole -- a
+  // non-conversational caller (any direct API call, or the OpenAI-native
+  // tool gateway's own fallback, which hardcodes conversational:false) for
+  // "share my personal information"/"call the doctor"/"make payment"/etc
+  // skipped this early staging path entirely and fell through toward
+  // handlers further down that, in several cases, execute the real action
+  // immediately with no confirmation at all (see the conversational-gated
+  // execute branches fixed in the same commit). Always computing it,
+  // regardless of conversational, only ever adds a staged-confirmation
+  // response -- it cannot turn a safe path unsafe.
+  const phase4RiskyAction = phase4RiskyActionForCommand(text);
   if (phase4RiskyAction) return stageAgentAction(db, text, phase4RiskyAction);
   if (conversational && shouldHandleActiveClarificationAnswer(db, text, lower)) {
     const clarified = continueClarification(db, user, text);
@@ -33354,8 +33366,27 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (/\b(trade update|buyer update|route update|logistics update|operations brief|status report|message the buyer|notify the driver|handoff message|prepare.*buyer.*update|buyer.*route.*payment)\b/.test(lower)) {
     return tradeOperationalCommunicationBrief(db, user, text);
   }
+  // Found live (legal/consent audit): every `if (conversational && !options.confirm)`/
+  // `if (conversational && !wantsExecute)` gate in this function (this one and
+  // every other one below through the end of runAgentCommand) skipped
+  // confirmation staging ENTIRELY whenever conversational was falsy, executing
+  // the real action immediately regardless of options.confirm. `conversational`
+  // is fully client-controlled (runCompanionSafeAgentCommand passes
+  // `body.conversational === true` straight from the raw request body reaching
+  // /api/agent/command, and the OpenAI-native tool gateway's own fallback
+  // hardcodes conversational:false), while `options.confirm`/wantsExecute is
+  // the actual "has this specific action been confirmed" signal. The most
+  // severe instances: communications.outbound_call (a real Twilio call),
+  // workforce.apply_role (a real job application submission), and
+  // trade.buyer_contact (a real buyer message) could all be triggered with a
+  // real external/persistent side effect and zero confirmation ever shown to
+  // a user, just by a caller omitting or setting conversational:false. Fixed
+  // by dropping `conversational` from every one of these gates -- the real
+  // confirmation signal (options.confirm, or wantsExecute's equivalent
+  // explicit trigger-word check) is unaffected and still works exactly as
+  // before for every already-correctly-behaving conversational caller.
   if (/\b(check|assess|review|inspect|analyze|analyse)\b.*\b(route|road|corridor|shipment path|delivery path)\b/.test(lower)) {
-    if (conversational && !options.confirm) {
+    if (!options.confirm) {
       return stageAgentAction(db, text, { module: "Maps", tool: "map.route_risk", action: "Assess route", section: "map" });
     }
     const result = await executeAgentStepWithRetry(db, user, {
@@ -33378,7 +33409,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     return liveRouteTrackingResponse(db, user, text);
   }
   if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(buyer|seller|crop|crops|produce|harvest|quality|field|farm)/.test(lower)) {
-    if (conversational && !options.confirm) {
+    if (!options.confirm) {
       return stageAgentAction(db, text, { module: "AgriTrade", tool: "trade.buyer_video", action: "Open buyer crop video", section: "trade" });
     }
     const session = createVideoSessionWorkflow(db, user, { type: "buyer-crop-video", subject: "crop quality video", note: text });
@@ -33390,7 +33421,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(injury|wound|rash|swelling|fall|patient|doctor|provider|telehealth|health)/.test(lower)) {
-    if (conversational && !options.confirm) {
+    if (!options.confirm) {
       return stageAgentAction(db, text, { module: "Healthcare", tool: "health.video_session", action: "Open telehealth video", section: "health" });
     }
     const session = createVideoSessionWorkflow(db, user, { type: "telehealth-video", subject: "telehealth video support", note: text });
@@ -33481,7 +33512,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if ((lower.includes("apply") || lower.includes("application")) && (lower.includes("job") || lower.includes("role") || lower.includes("workforce") || lower.includes("position"))) {
-    if (conversational && !options.confirm) {
+    if (!options.confirm) {
       return stageAgentAction(db, text, { kind: "workforce-application", module: "Workforce", action: "apply for the best matched role", section: "workforce" });
     }
     const result = submitBestWorkforceApplication(db, user, text);
@@ -33606,7 +33637,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   if (lower.includes("autopilot") || lower.includes("auto pilot") || lower.includes("take over") || lower.includes("run the mission")) {
     const goal = text.replace(/^(run|start|create|use|activate)?\s*(agent\s+)?(auto\s*pilot|autopilot)\s*(mode)?\s*(for|to)?/i, "").trim() || text || "Run an AgriNexus autopilot mission.";
-    if (conversational && !options.confirm) {
+    if (!options.confirm) {
       const preview = buildAutopilotPlan(db, goal, user);
       db.profile.agentMemory.lastStatus = "autopilot-awaiting-confirmation";
       db.profile.agentMemory.lastSummary = `Autopilot can run ${preview.steps.length} supervised step(s). Say yes to execute, or no to cancel.`;
@@ -33888,7 +33919,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       : /recruiter|employer|job|workforce/.test(lower) ? "workforce recruiter call"
       : /instructor|teacher|learning|course/.test(lower) ? "learning support call"
       : "AgriNexus support call";
-    if (conversational && !wantsExecute) {
+    if (!wantsExecute) {
       return stageAgentAction(db, text, {
         module: "AI",
         tool: "communications.outbound_call",
@@ -33962,7 +33993,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(injury|wound|rash|swelling|fall|patient|doctor|provider|telehealth|clinic|health)/.test(lower)) {
-    if (conversational && !wantsExecute) {
+    if (!wantsExecute) {
       return stageAgentAction(db, text, { module: "Healthcare", tool: "health.video_session", action: "Open telehealth video", section: "health" });
     }
     const session = createVideoSessionWorkflow(db, user, { type: "health", videoNote: text });
@@ -33975,7 +34006,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(buyer|seller|crop|crops|produce|harvest|quality|field|farm)/.test(lower)) {
-    if (conversational && !wantsExecute) {
+    if (!wantsExecute) {
       return stageAgentAction(db, text, { module: "AgriTrade", tool: "trade.buyer_video", action: "Open buyer crop video", section: "trade" });
     }
     const session = createVideoSessionWorkflow(db, user, { type: "trade", videoNote: text });
@@ -34490,7 +34521,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if ((lower.includes("buyer") || lower.includes("customer")) && (lower.includes("speak") || lower.includes("talk") || lower.includes("call") || lower.includes("message") || lower.includes("contact"))) {
-    if (conversational && !wantsExecute) {
+    if (!wantsExecute) {
       return stageAgentAction(db, text, { kind: "buyer-contact", module: "AgriTrade", action: "prepare buyer contact", section: "trade" });
     }
     const contact = createBuyerContactWorkflow(db, user, text);
@@ -34514,7 +34545,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if ((lower.includes("apply") || lower.includes("application")) && (lower.includes("job") || lower.includes("role") || lower.includes("workforce") || lower.includes("position"))) {
-    if (conversational && !wantsExecute) {
+    if (!wantsExecute) {
       return stageAgentAction(db, text, { kind: "workforce-application", module: "Workforce", action: "apply for the best matched role", section: "workforce" });
     }
     const result = submitBestWorkforceApplication(db, user, text);
@@ -34536,7 +34567,7 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   const deepIntent = deepVoiceIntent(lower);
   if (deepIntent) {
-    if (conversational && !wantsExecute) {
+    if (!wantsExecute) {
       return stageAgentAction(db, text, { module: deepIntent.module, tool: deepIntent.tool, action: deepIntent.action, section: deepIntent.section });
     }
     const step = {
