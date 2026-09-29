@@ -20717,6 +20717,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         contact.to = pending.recipient;
         if (!contact.message || contact.message === command) contact.message = pending.message;
         if (!targetNameArg) targetNameArg = pending.targetName || "";
+        // Found live (connect-and-listen audit): rememberPendingCommunicationsRequest
+        // saves mode specifically so a later bare "I confirm" turn can recover a
+        // "connect me to X and listen" request -- but this recall never restored it.
+        // wantsConnectCall/wantsListenAndRemember below are computed from THIS turn's
+        // own args.mode/command text, which won't match on a bare confirmation, so the
+        // request silently downgraded to a plain one-way announcement call instead of
+        // the two-leg listen-and-record bridge the user actually asked for and already
+        // saw the confirmation prompt for.
+        if (!args.mode && pending.mode) args.mode = pending.mode;
       }
     }
     // "Connect me to X" is a different shape of call than the default: the

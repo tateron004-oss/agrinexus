@@ -62,7 +62,7 @@ test.before(async () => {
   fs.copyFileSync(dbPath, tempDbPath);
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_CALLS_ENABLED: "true" },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_CALLS_ENABLED: "true", PHONE_LISTEN_AND_REMEMBER_ENABLED: "true", TWILIO_AUTHORIZED_CALLERS: "+15105019401" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -109,6 +109,23 @@ test("once a confirmed request is acted on, the pending memory is cleared -- a l
   await callTool(cookie, { command: "I confirm", confirmed: true });
   const staleReuse = await callTool(cookie, { command: "confirm", confirmed: true });
   assert.notEqual(staleReuse.providerData?.to, "555 019 4401", "a resolved request must not be replayed by a later, unrelated confirmation");
+});
+
+// Found live (connect-and-listen audit): rememberPendingCommunicationsRequest saves
+// mode specifically so a later bare "I confirm" turn can recover a "connect me to X
+// and listen" request -- but the recall never restored it, so wantsConnectCall/
+// wantsListenAndRemember (computed from the confirm turn's own empty command text)
+// both went false, silently downgrading a two-leg listen-and-record bridge request
+// into a plain one-way announcement call on confirmation.
+test("a bare 'I confirm' after 'connect me to X and listen' still starts the two-leg listen-and-record bridge, not a plain one-way call", async () => {
+  const cookie = await loginAsAdmin();
+  const first = await callTool(cookie, { command: "connect me to +15559990000 and listen", channel: "call" });
+  assert.equal(first.status, "confirmation_required", "the first, unconfirmed request must still require confirmation, unchanged");
+
+  const second = await callTool(cookie, { command: "I confirm", confirmed: true });
+  assert.equal(second.status, "completed", "a bare confirmation must actually complete the action");
+  assert.equal(second.providerData?.channel, "voice-connect-listen",
+    "the confirmed turn must still start the two-leg listen-and-record bridge the user actually asked for, not silently downgrade to a plain one-way call");
 });
 
 test("the source code correctly gates remembering to only the first, unconfirmed turn -- never records a request that has already been confirmed", () => {
