@@ -20938,6 +20938,33 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const searchResult = await nexusRealProviders.learningBridge.search({ query: learningTopic }, process.env);
       const cards = searchResult?.body?.data?.cards || [];
       const bestMatch = cards[0];
+      // Found live (learning/education audit): bestMatch was always cards[0] --
+      // the first catalog entry that merely contains the stripped keyword(s),
+      // in fixed catalog array order, never necessarily the course the
+      // learner actually meant. A single common keyword like "business"
+      // matches six different catalog resources; "I finished my business
+      // training" always silently recorded progress against whichever entry
+      // is listed first ("Farm business basics"), regardless of which course
+      // was actually completed -- with no error and no correction path
+      // (markProgress treats "completed" as terminal). Marking progress,
+      // saving, or setting a reminder are exactly the kind of
+      // mistaken-identity-prone, hard-to-undo actions this codebase already
+      // refuses to guess on elsewhere (resolveGrant/resolveTask/
+      // resolveListingIndex) -- ask which course rather than silently acting
+      // on the wrong one whenever more than one real candidate matches. A
+      // plain "teach me about X" browse request below is unaffected: showing
+      // one example lesson (with matchedResources listing the rest) isn't a
+      // record-mutating action, so it keeps its existing behavior.
+      if (cards.length > 1 && (wantsProgress || wantsSave || wantsReminder)) {
+        const verb = wantsProgress ? "mark progress for" : wantsSave ? "save" : "set a reminder for";
+        const options = cards.slice(0, 5).map(card => card.title).join('", "');
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "learning-preparation-ready",
+          [`Found ${cards.length} possible matching courses; did not ${verb} any of them without knowing which one was meant.`],
+          ["Nexus did not enroll the learner, issue a certificate, or claim completion of an external course."]);
+        return { ...common, capability: "learning-training", status: "learning-preparation-ready",
+          response: `I found more than one matching course: "${options}". Which one would you like me to ${verb}?`,
+          receipt, evidenceReceipt: receipt, localOnly: true, matchedResources: cards.slice(0, 5) };
+      }
       if (bestMatch && wantsProgress) {
         // Confirmed: learningBridgeProvider's markProgress/saveResource/
         // createLearningReminder all already have a real requireConfirmation()
