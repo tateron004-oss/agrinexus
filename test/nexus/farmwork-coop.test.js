@@ -75,6 +75,25 @@ test("booking shared equipment for someone who isn't a registered co-op member i
   assert.match(anonymous, /Booked the tractor Saturday/);
 });
 
+// Found live (systemic ambiguous-match sweep): booking used a raw first-match
+// .find() over the equipment list -- "Water pump" and "Pump sprayer" both
+// match the shared word "pump", and the OLD code silently booked whichever
+// item happened to be listed first, reserving the wrong equipment/day with
+// no error at all.
+test("booking equipment whose name is a shared-word match across two different items asks which one, instead of silently booking the wrong one", async () => {
+  const who = farmer();
+  await who.say("Add shared equipment: water pump");
+  await who.say("Add shared equipment: pump sprayer");
+
+  const ambiguous = await who.say("Book the pump for Friday");
+  assert.match(ambiguous, /Which one: (water pump or pump sprayer|pump sprayer or water pump)\?/);
+  assert.equal((await who.store.list({ tenantId: "t1", userId: "u1", collection: "coop_booking" })).length, 0, "no booking must be created for an ambiguous equipment name");
+
+  // An exact, unambiguous name still works exactly as before.
+  const exact = await who.say("Book the water pump for Friday");
+  assert.match(exact, /Booked the water pump/);
+});
+
 // Found live (drone/field-visit audit): the clash check and the booking used to be two
 // separate store calls (list() then add()), with a real window between them for two
 // near-simultaneous bookings of the same equipment and day to both read "no clash" and

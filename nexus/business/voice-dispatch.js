@@ -402,10 +402,25 @@ function extractAppointmentArgs(command = "", args = {}) {
   };
 }
 
+// Found live (systemic ambiguous-match sweep): the same "first match wins"
+// bug already fixed for resolveGrant/resolveTask/resolveListingIndex in this
+// file -- findIndex picked whichever appointment happened to be first in the
+// array, not the most specific title actually named. Two appointments "Vet
+// visit" and "Vet visit follow-up": "sync my vet visit follow-up
+// appointment" could resolve to the plain "Vet visit" and push the WRONG
+// appointment to the user's real calendar provider as an external side
+// effect. Now picks the longest (most specific) matching title; a genuine
+// tie is left ambiguous rather than guessed, same as its siblings.
 function resolveAppointmentIndex(appointments, command = "") {
   const text = String(command || "").toLowerCase();
-  const named = appointments.findIndex(appointment => appointment.title && text.includes(String(appointment.title).toLowerCase()));
-  if (named !== -1) return named;
+  const matches = appointments.map((appointment, index) => ({ appointment, index }))
+    .filter(entry => entry.appointment.title && text.includes(String(entry.appointment.title).toLowerCase()));
+  if (matches.length) {
+    matches.sort((a, b) => String(b.appointment.title).length - String(a.appointment.title).length);
+    const longest = String(matches[0].appointment.title).length;
+    const longestMatches = matches.filter(entry => String(entry.appointment.title).length === longest);
+    return longestMatches.length === 1 ? longestMatches[0].index : -1;
+  }
   const unsynced = appointments.map((appointment, index) => ({ appointment, index }))
     .filter(entry => entry.appointment.status !== "synced" && entry.appointment.status !== "synced-simulated");
   return unsynced.length === 1 ? unsynced[0].index : -1;

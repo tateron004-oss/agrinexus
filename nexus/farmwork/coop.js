@@ -156,7 +156,18 @@ async function handle(ctx) {
     return items.length ? `Shared equipment: ${items.slice().reverse().map(item => item.data.name).join(", ")}.` : 'No shared equipment yet. Say "add shared equipment: tractor".';
   }
   if ((m = /^(?:please )?book (?:the )?(.+?)(?: for (.+?))? (?:on|for) (.+)$/i.exec(t))) {
-    const items = await ctx.store.list({ ...scope, collection: "coop_equipment" }); const item = items.find(entry => entry.data.name === clean(m[1]).toLowerCase() || entry.data.name.split(" ").includes(clean(m[1]).toLowerCase()));
+    const items = await ctx.store.list({ ...scope, collection: "coop_equipment" });
+    const wanted = clean(m[1]).toLowerCase();
+    // Found live (systemic ambiguous-match sweep): first-match .find() --
+    // equipment "Water pump" and "Pump sprayer" both match the shared word
+    // "pump", and .find() silently booked whichever was listed first,
+    // reserving the wrong item/day with no confirmation mismatch. Prefer an
+    // exact full-name match; only ask when multiple DIFFERENT items still
+    // match by shared word.
+    const exact = items.filter(entry => entry.data.name === wanted);
+    const candidates = exact.length ? exact : items.filter(entry => entry.data.name.split(" ").includes(wanted));
+    if (candidates.length > 1) return `Which one: ${candidates.map(entry => entry.data.name).join(" or ")}?`;
+    const item = candidates[0];
     const day = anyDay(m[3], ctx.today);
     if (item && day) {
       if (day < ctx.today) return "That day has already passed. Give me a day that is still ahead.";

@@ -274,6 +274,29 @@ test("buyers keep notes, follow-ups and orders, and a delivered order records th
   assert.match(await who.say("What is my profit this year"), /9,000/);
 });
 
+// Found live (systemic ambiguous-match sweep): "done following up with X"
+// bypassed findParty()'s own proper ambiguity handling with a raw first-match
+// .find() -- open follow-ups for "John Otieno" and "John Kamau" both match
+// the shared word "john", and the OLD code silently marked whichever
+// follow-up appeared first in the array as done, with no error at all.
+test("marking a follow-up done by a name shared across two different parties asks which one, instead of silently closing the wrong one", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called John Otieno", "skip", "skip", "skip"]);
+  await run(who, ["Add a buyer called John Kamau", "skip", "skip", "skip"]);
+  await who.say("Follow up with John Otieno on Friday");
+  await who.say("Follow up with John Kamau on Friday");
+
+  const ambiguous = await who.say("Done following up with John");
+  assert.match(ambiguous, /Which one: (John Otieno or John Kamau|John Kamau or John Otieno)\?/);
+  const open = (await who.store.list({ tenantId: "t1", userId: who.userId, collection: "followup" })).filter(item => item.data.status === "open");
+  assert.equal(open.length, 2, "neither follow-up must be closed while the name is ambiguous");
+
+  // An unambiguous single-word match (matching just this codebase's existing
+  // word-based lookup, unchanged by this fix) still works exactly as before.
+  const exact = await who.say("Done following up with Otieno");
+  assert.match(exact, /Done: follow-up with John Otieno/);
+});
+
 // Found live (trade/marketplace audit): FarmRecordRepository.update() was an
 // unconditional overwrite with no compare-and-swap on the record's prior
 // status. Two near-simultaneous "deliver order N" requests for the same

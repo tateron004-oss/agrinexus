@@ -143,7 +143,23 @@ async function handle(ctx) {
   }
   if ((m = /^(?:mark )?follow-?up #?(\d{1,5}) (?:as )?(?:done|finished|complete)$/i.exec(t)) || (m = /^(?:done|finished) (?:following up|follow-?up|checking in) (?:with )?(.+)$/i.exec(t))) {
     const items = (await ctx.store.list({ ...scope, collection: "followup" })).filter(item => item.data.status === "open");
-    const item = /^\d+$/.test(m[1]) ? items.find(entry => entry.number === Number(m[1])) : items.find(entry => entry.data.party.toLowerCase().split(" ").includes(clean(m[1]).toLowerCase()));
+    let item;
+    if (/^\d+$/.test(m[1])) {
+      item = items.find(entry => entry.number === Number(m[1]));
+    } else {
+      // Found live (systemic ambiguous-match sweep): this bypassed findParty()'s
+      // own proper ambiguity handling (used two branches above) with a raw
+      // first-match lookup -- open follow-ups for "John Otieno" and "John
+      // Kamau" both match the word "john", and .find() silently closed
+      // whichever appeared first, with no confirmation mismatch. Only ask
+      // when the matches are genuinely different people; two open follow-ups
+      // for the SAME party aren't a naming ambiguity.
+      const wanted = clean(m[1]).toLowerCase();
+      const matches = items.filter(entry => entry.data.party.toLowerCase().split(" ").includes(wanted));
+      const distinctParties = [...new Set(matches.map(entry => entry.data.party))];
+      if (distinctParties.length > 1) return `Which one: ${distinctParties.join(" or ")}?`;
+      item = matches[0];
+    }
     if (!item) return `I can't find that follow-up.`;
     await ctx.store.update({ ...scope, record: { ...item, data: { ...item.data, status: "done", doneOn: ctx.today } } });
     return `Done: follow-up with ${item.data.party}.`;
