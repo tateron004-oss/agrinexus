@@ -1878,6 +1878,24 @@ function usingPostgresAuth() {
   return String(process.env.AUTH_STORE || "blob").trim().toLowerCase() === "postgres" && Boolean(process.env.DATABASE_URL);
 }
 
+// Found live (session/auth sibling audit, same bug class as PR #409's blob-store admin-takeover fix):
+// the admin sandbox-account routes' blob-only existing-account guard says nothing about Postgres. When
+// AUTH_STORE=postgres, pgUsers.createUser() is an unconditional upsert (`on conflict ... do update set
+// password_hash = excluded.password_hash`) with no ownership check of its own -- so a real Postgres-
+// authoritative account that simply has no blob shadow row yet (a seed account, or any account that
+// predates the AUTH_STORE=postgres cutover and has never logged in since -- login is the only thing
+// that creates a blob shadow, via buildBlobShadowFromPostgresUser) would have its real password
+// silently overwritten the moment anyone with the Admin role called one of these endpoints with that
+// email. Refuses the same way the blob check does, but only when this is the FIRST time one of these
+// endpoints has ever touched that email (no blob shadow row at all) -- a blob row that IS present and
+// flagged isSandboxTestAccount means one of these endpoints created it before, so re-running to reset
+// ITS password is still allowed, matching these routes' own intended repeat-use behavior.
+async function refuseIfRealPostgresAccountExists(email, blobExisting) {
+  if (blobExisting || !usingPostgresAuth()) return false;
+  const pgUser = await pgUsers.findUserByEmail(getPgPool(), email).catch(() => null);
+  return Boolean(pgUser && pgUser.status === "active");
+}
+
 // Additive shadow-write only: the JSON blob (db.profile.healthIntakes) stays
 // the authoritative read path for the app's many existing intake call sites.
 // This proves a real Postgres record can be created alongside it, the same
@@ -50543,6 +50561,7 @@ async function api(req, res, url) {
     // real, pre-existing account (including demoting an existing Admin) just
     // because an admin happened to supply that account's email.
     if (existing && !existing.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
+    if (await refuseIfRealPostgresAccountExists(email, existing)) return send(res, 409, { error: "That email already belongs to an existing account" });
     const account = existing || {
       id: crypto.randomUUID(),
       email,
@@ -50592,6 +50611,7 @@ async function api(req, res, url) {
     // real, pre-existing Admin account (a takeover of someone else's real
     // login) just because the caller supplied that account's email.
     if (account && !account.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
+    if (await refuseIfRealPostgresAccountExists(email, account)) return send(res, 409, { error: "That email already belongs to an existing account" });
     const adminAccount = account || {
       id: crypto.randomUUID(),
       email,
@@ -50641,6 +50661,7 @@ async function api(req, res, url) {
     // account management -- it must never overwrite a real, pre-existing
     // account just because the caller supplied that account's email.
     if (existing && !existing.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
+    if (await refuseIfRealPostgresAccountExists(email, existing)) return send(res, 409, { error: "That email already belongs to an existing account" });
     const account = existing || {
       id: crypto.randomUUID(),
       email,
