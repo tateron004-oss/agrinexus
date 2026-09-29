@@ -2756,6 +2756,22 @@ function knownUnownedProfileGaps(profile) {
   if (hasAny(["marketplaceListings", "offlineQueue", "droneMissionRequests", "nexusSavedProviders", "nexusProviderNotes"])) {
     gaps.push("Locally-saved marketplace listings, offline queue items, drone mission requests, and saved provider contacts/notes have no per-account owner field today and are not included.");
   }
+  // Found live (follow-up provider sweep, same bug shape as the two blocks
+  // above, found in provider files not yet checked against this disclosure
+  // list): droneMissionBridgeProvider.js's requestRecord() writes a DIFFERENT
+  // array (nexusDroneMissionRequests) than djiProvider.js's already-disclosed
+  // droneMissionRequests -- easy to mistake for already covered since the
+  // names differ only by the "nexus" prefix. rpmBridgeProvider.js/
+  // rtmBridgeProvider.js/mobileClinicBridgeProvider.js/chronicDiseaseBridge
+  // Provider.js/telehealthBridgeProvider.js all save an "intake"/"session"
+  // record via the same medicalBridgeUtils saveRecord() convention as the
+  // already-disclosed nexus*Readings/nexus*Intakes siblings, but each
+  // provider's OWN intake/session/plan store was missed when this list was
+  // built. workflowOrchestratorBridgeProvider.js's plan record is a plain
+  // object literal with no owner field at all, same as the arrays above.
+  if (hasAny(["nexusDroneMissionRequests", "nexusRpmIntakes", "nexusRtmIntakes", "nexusFitnessTrainingPlans", "nexusSavedMobileClinics", "nexusWorkflowPlans", "nexusChronicDiseaseIntakes", "nexusTelehealthBridgeIntakes", "nexusTelehealthBridgeSessions"])) {
+    gaps.push("Locally-saved drone-bridge mission requests, RPM/RTM/telehealth-bridge/chronic-disease intake and session preparation records, fitness training plans, saved mobile clinics, and workflow plans have no per-account owner field today and are not included.");
+  }
   gaps.push("If you have used AgriNexus's newer Postgres-backed companion/reminders/health-toolkit features, request their erasure separately via /api/nexus/runtime/privacy/deletions.");
   return gaps;
 }
