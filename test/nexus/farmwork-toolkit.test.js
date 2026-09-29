@@ -376,6 +376,29 @@ test("two concurrent 'sold' requests deducting the same stock item are not silen
   assert.equal(stock[0].data.qty, 12, `expected both concurrent deductions (5kg + 3kg) off the starting 20kg to be reflected, got ${stock[0].data.qty}`);
 });
 
+// Found live (marketplace/stock-race sibling sweep): unlike the deliver-order CLAIM above (a
+// compare-and-swap on the order's own status, closing the same-order race), the stock-quantity write
+// that follows a delivery had no casField guard at all. Two DIFFERENT open orders for the SAME stock
+// item, delivered close together, could each read the same starting qty and each write their own
+// deduction, silently losing one -- a real inventory-count corruption distinct from the already-fixed
+// same-order double-delivery race.
+test("two concurrent 'deliver order' requests for DIFFERENT orders sharing the same stock item are not silently lost to a race", async () => {
+  const who = farmer();
+  await who.say("Add 100 kg of maize to my inventory");
+  await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
+  await who.say("Add an order from Amina Traders for 5 kg maize at 45 per kg");
+  await run(who, ["Add a buyer called Otieno Farm", "skip", "skip", "skip"]);
+  await who.say("Add an order from Otieno Farm for 3 kg maize at 45 per kg");
+
+  const [first, second] = await Promise.all([who.say("Deliver order 1"), who.say("Deliver order 2")]);
+  assert.match(first, /income of 225 recorded/);
+  assert.match(second, /income of 135 recorded/);
+
+  const stock = await who.store.list({ tenantId: "t1", userId: "u1", collection: "stock" });
+  assert.equal(stock.length, 1);
+  assert.equal(stock[0].data.qty, 92, `expected both concurrent deductions (5kg + 3kg) off the starting 100kg to be reflected, got ${stock[0].data.qty}`);
+});
+
 // Found live (same follow-up sweep): cancel order had no compare-and-swap at all, unlike the
 // deliver-order claim above it. A "deliver order N" and "cancel order N" arriving close together could
 // both pass their own status-is-still-"open" checks before either write landed: if deliver's write wins

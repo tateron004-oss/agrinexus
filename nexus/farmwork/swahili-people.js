@@ -218,7 +218,24 @@ async function handle(ctx) {
       } else notes.push(SW.noteNoPrice);
     } catch (error) { if (error !== NOT_FARM) throw error; notes.push(SW.noteNoPrice); }
     const stock = await list("stock");
-    if (d.kind === "sale") { const found = findItems(stock, d.item).filter(entry => entry.data.unit === d.unit); if (found.length === 1) { const left = round(Math.max(0, found[0].data.qty - d.qty), 3); await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } } }); notes.push(SW.noteStockLeft({ left: unitLabelSw(left, d.unit), name: swahiliItem(found[0].data.name) })); } }
+    // Found live (same sweep as the English parties.js fix): this had the same missing-casField gap --
+    // two "agizo N limetolewa" deliveries for the same stock item close together could each read the
+    // same starting qty and each write their own deduction, silently losing one. Retries against the
+    // latest qty, matching addStock and the now-fixed English sibling.
+    if (d.kind === "sale") {
+      const found = findItems(stock, d.item).filter(entry => entry.data.unit === d.unit);
+      if (found.length === 1) {
+        let current = found[0]; let applied = false;
+        for (let attempt = 0; attempt < 5 && !applied; attempt += 1) {
+          const left = round(Math.max(0, current.data.qty - d.qty), 3);
+          applied = await ctx.store.update({ ...scope, record: { ...current, data: { ...current.data, qty: left } }, casField: "qty", casValue: current.data.qty });
+          if (applied) { notes.push(SW.noteStockLeft({ left: unitLabelSw(left, d.unit), name: swahiliItem(current.data.name) })); break; }
+          const refreshed = (await list("stock")).find(item => item.memoryId === current.memoryId);
+          if (!refreshed) break;
+          current = refreshed;
+        }
+      }
+    }
     else { const added = await addStock(ctx, d.item, { value: d.qty, unit: d.unit }); if (added) notes.push(SW.noteStockAdded({ now: unitLabelSw(added.data.qty, added.data.unit), name: swahiliItem(added.data.name) })); }
     return SW.orderDone({ n: record.number, sale: d.kind === "sale", notes: notes.join("; ") });
   }
