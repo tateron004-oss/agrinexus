@@ -31089,6 +31089,15 @@ async function runNexusPersistentOperationsCommand(command = "", options = {}) {
     body: {
       action,
       command,
+      // Found live (admin/investor dashboard audit): when nobody is signed
+      // in, the server has no identity to attribute a Nexus Operations
+      // record to, and used to fall back to one shared demo account for
+      // every anonymous visitor -- colliding unrelated visitors' real
+      // chronic-care/transaction/applicant records together. Sending this
+      // browser's own stable device id (already used for real push-device
+      // registration) lets the server give this specific browser its own
+      // separate, continuous anonymous identity instead.
+      deviceId: nexusLocalDeviceId(),
       ...(options.body || {})
     }
   });
