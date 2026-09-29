@@ -43832,6 +43832,23 @@ function nexusOperationResponse(db, user, action, record, audit, receipt, extra 
   };
 }
 
+// Found live (admin/investor dashboard audit): the pre-auth
+// /api/nexus/operations/action and /command routes need SOME identity to
+// attribute a record to when nobody is signed in, and used to fall back to
+// the same real seeded Standard User account for every anonymous caller --
+// colliding every unrelated, unauthenticated visitor onto one shared owner.
+// deviceId is the same stable, client-persisted id already used for real
+// push-device registration (nexusLocalDeviceId() in public/app.js): keying
+// off it gives one real anonymous visitor's own sequential actions genuine
+// continuity across requests (the legitimate behavior
+// archive/qa-scripts/nexus-persistent-operations-chronic-care-qa.js
+// exercises), while a caller with no deviceId at all (or a different one)
+// gets its own single-use identity instead of colliding with anyone else's.
+function anonymousOperationsIdentity(body = {}) {
+  const deviceId = String(body.deviceId || "").trim().slice(0, 120);
+  return { id: deviceId ? `anon-device-${deviceId}` : `anon-${crypto.randomUUID()}`, role: "Standard User" };
+}
+
 // realUserEmail defaults to user's own email so every internal recursive
 // self-call (this function calls itself for auto-created employer/applicant/
 // shipment/transaction records, all passing the same `user`) keeps working
@@ -45174,8 +45191,26 @@ async function api(req, res, url) {
     // substituted account there previously leaked the Admin account's full
     // admin snapshot (and identity) to a request with no session at all,
     // since db.users[0] is the seeded Platform Admin.
-    const operationsUser = user || db.users.find(account => account.role === "Standard User") || db.users[0];
-    const result = runNexusOperationsAction(db, await readBody(req), operationsUser, user?.email || null);
+    const body = await readBody(req);
+    // Found live (admin/investor dashboard audit): the fallback previously
+    // used here resolved to the SAME real seeded Standard User account for
+    // every anonymous caller -- so nexusOperationsOwnerKey(operationsUser)
+    // (just `user.id`) was identical for every unrelated, unauthenticated
+    // visitor. Visitor A (not signed in) creates a real chronic-care profile
+    // with real patient name/medications/allergies; unrelated Visitor B (not
+    // signed in, different browser) then reads or omits an ID on the same
+    // pre-auth route, and nexusOperationsOwned/latestActiveChronicCareProfile's
+    // "most recent record this owner has" fallback resolves straight to A's
+    // real record. anonymousOperationsIdentity keys off the same stable,
+    // client-persisted deviceId already used for real push-device
+    // registration (nexusLocalDeviceId() in public/app.js) -- one real
+    // anonymous visitor's own sequential actions still find their own prior
+    // record (the legitimate continuity this pre-auth path is designed for,
+    // exercised by archive/qa-scripts/nexus-persistent-operations-chronic-
+    // care-qa.js), while a genuinely different visitor's browser (a
+    // different or absent deviceId) never collides with it.
+    const operationsUser = user || anonymousOperationsIdentity(body);
+    const result = runNexusOperationsAction(db, body, operationsUser, user?.email || null);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     const state = publicState(db, user);
@@ -45185,7 +45220,10 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/operations/command" && req.method === "POST") {
     const body = await readBody(req);
-    const operationsUser = user || db.users.find(account => account.role === "Standard User") || db.users[0];
+    // Found live (admin/investor dashboard audit): same anonymous-visitor
+    // cross-user PHI/financial-record collision as /api/nexus/operations/
+    // action above -- see that comment for the full failure scenario.
+    const operationsUser = user || anonymousOperationsIdentity(body);
     const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser, user?.email || null);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
