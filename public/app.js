@@ -27862,8 +27862,17 @@ function nextNexusInterviewIndex(fields = [], interview = {}) {
   const values = nexusInterviewValues(interview);
   const skipped = new Set(interview.skipped || []);
   const preferred = Math.max(0, Number(interview.currentIndex || 0));
-  const fromPreferred = fields.findIndex((field, index) => index >= preferred && !values[field.name] && !skipped.has(field.name));
-  if (fromPreferred >= 0) return fromPreferred;
+  // Found live: "Back" and "Correct previous" deliberately set currentIndex
+  // to an ALREADY-ANSWERED field's index so the user can review/edit it
+  // (renderNexusGuidedIntakePanel even pre-fills the input with the
+  // existing answer) -- but this used to always search forward from
+  // `preferred` for the next UNanswered field, immediately skipping past
+  // the very field the user asked to revise and landing on a later,
+  // unrelated question instead. currentIndex is authoritative once it
+  // points at a real field; only fall back to searching for the first open
+  // field when it's out of range (e.g. a fresh interview, or one just
+  // completed).
+  if (preferred < fields.length) return preferred;
   const firstOpen = fields.findIndex(field => !values[field.name] && !skipped.has(field.name));
   return firstOpen >= 0 ? firstOpen : Math.max(fields.length - 1, 0);
 }
