@@ -51168,6 +51168,16 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow executive demo runs" });
+    // Found live: same unguarded-replay shape as /api/demo/wow just above --
+    // no idempotency guard at all, so a double-click/retry/repeat press
+    // unconditionally re-added another duplicate demo order, health intake,
+    // and care plan, and re-incremented learningStreak/learningHours/
+    // representativeConnections every single call. Guarded the same way:
+    // the whole handler is one idempotent "set up the executive demo state"
+    // action whose response is always just the current profile state.
+    if (db.profile.executiveDemoCompletedAt) {
+      return send(res, 200, publicState(db, user));
+    }
     const { country, route } = activeContext(db);
     ensureLearningProfile(db.profile);
     ensureWorkforceProfile(db.profile);
@@ -51303,6 +51313,7 @@ async function api(req, res, url) {
     const copilot = await runAi("copilot", country, route, db.profile);
     recordAiRun(db, { type: "copilot", country, route, result: copilot, module: "AI" });
     recalcReadiness(db.profile);
+    db.profile.executiveDemoCompletedAt = new Date().toISOString();
     addActivity(db.profile, "Executive demo run completed across learning, workforce, health, trade, AI, notifications, and integrations.");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
@@ -51417,6 +51428,23 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/demo/wow" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow investor demo runs" });
+    // Found live: this handler had no idempotency guard at all -- unlike its
+    // own certificate/badge/shift blocks just below (each correctly checks
+    // "does this already exist?" before creating one), the order+wallet
+    // credit, health intake/telehealth/safety/care-plan records, and the
+    // learningHours/learningStreak/representativeConnections counters were
+    // all unconditionally re-added/incremented on every single call. A
+    // double-click, network retry, or pressing the "WOW investor demo"
+    // button a second time silently inflated the wallet balance, order
+    // history, and counters shown in the very same admin/investor dashboard
+    // this route exists to showcase. Since the whole handler represents one
+    // idempotent "put the demo into its WOW state" action (its response is
+    // always just the current profile state, never anything computed only
+    // on a fresh run), guard the entire body once here instead of patching
+    // each mutation site individually.
+    if (db.profile.wowDemoCompletedAt) {
+      return send(res, 200, publicState(db, user));
+    }
     const nigeria = db.countries.find(item => item.id === "nigeria") || db.countries[0];
     db.profile.activeCountryId = nigeria.id;
     db.profile.activeRouteId = nigeria.routeId;
@@ -51664,6 +51692,7 @@ async function api(req, res, url) {
       { title: "Investor proof appears", detail: "Provider events, notifications, activity, map context, and profile state update across the whole platform.", evidence: "Audit-ready operating record", status: "done" }
     ];
     db.profile.demoScore = 100;
+    db.profile.wowDemoCompletedAt = new Date().toISOString();
     recalcReadiness(db.profile);
     addActivity(db.profile, "WOW investor demo completed: rural Nigeria accessibility, learning, workforce, telehealth, trade, map, AI, notifications, and provider evidence are all active.");
     await writeDb(db);
