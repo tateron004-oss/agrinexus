@@ -39662,39 +39662,65 @@ async function sendNexusProviderCoordinationPacket(db, lane = "pharmacy", body =
   }
   const mode = status.providerMode;
   let providerResult = null;
+  // Found live (telehealth/pharmacy audit): this real email/SMS/WhatsApp send
+  // (shared by both the pharmacy and mobile-clinic lanes) had no idempotency
+  // protection at all -- unlike the sibling telehealth /notify route, already
+  // fixed for the identical issue. A retry or double-submit of
+  // /api/nexus/pharmacy/send-referral or /api/nexus/mobile-clinic/send-request
+  // sent the same real message twice to the pharmacy's/clinic's configured
+  // destination. Fixed at this one shared function so both routes are covered.
+  const idempotencyBody = { ...body, [idKey]: caseId };
   if (mode === "email") {
     delivery.email.attempted = true;
-    providerResult = await nexusEmailSendPacket(db, {
-      to: env[config.emailEnv],
-      subject: `${config.title}: ${caseId}`,
-      domain: config.lane,
-      packetId: caseId,
-      summary: packet.summary,
-      packetBody: [
-        packet.summary,
-        packet.readingsSummary,
-        ...(packet.medicationList || []).map(item => `Medication: ${item}`),
-        ...(packet.allergies || []).map(item => `Allergy: ${item}`),
-        ...(packet.symptoms || []).map(item => `Symptom: ${item}`),
-        ...(packet.patientQuestions || []).map(item => `Question: ${item}`),
-        ...(packet.disclaimers || []).map(item => `Safety: ${item}`)
-      ].filter(Boolean).join("\n"),
-      confirmed: true,
-      consent: true
-    }, user, env);
+    const wrapped = await withActionLifecycle(db, {
+      provider: "nexus-provider-coordination", action: `${config.lane}.referral.email`, body: idempotencyBody, actorId: user?.id || user?.email || "",
+      execute: async () => {
+        const sent = await nexusEmailSendPacket(db, {
+          to: env[config.emailEnv],
+          subject: `${config.title}: ${caseId}`,
+          domain: config.lane,
+          packetId: caseId,
+          summary: packet.summary,
+          packetBody: [
+            packet.summary,
+            packet.readingsSummary,
+            ...(packet.medicationList || []).map(item => `Medication: ${item}`),
+            ...(packet.allergies || []).map(item => `Allergy: ${item}`),
+            ...(packet.symptoms || []).map(item => `Symptom: ${item}`),
+            ...(packet.patientQuestions || []).map(item => `Question: ${item}`),
+            ...(packet.disclaimers || []).map(item => `Safety: ${item}`)
+          ].filter(Boolean).join("\n"),
+          confirmed: true,
+          consent: true
+        }, user, env);
+        return { httpStatus: sent.executed ? 200 : 400, body: sent.executed ? { ...sent, status: "sent" } : sent };
+      },
+      verify: async sent => ({ verified: Boolean(sent?.body?.messageId),
+        note: sent?.body?.messageId ? "Provider returned a real message id." : "No real send was confirmed." })
+    });
+    providerResult = wrapped.body;
     delivery.email.executed = Boolean(providerResult.executed);
   } else {
     delivery[mode].attempted = true;
-    providerResult = await nexusCommunicationsSendMessage(db, {
-      channel: mode,
-      to: env[mode === "whatsapp" ? config.whatsappEnv : config.smsEnv],
-      domain: config.lane,
-      packetId: caseId,
-      summary: packet.summary,
-      message: config.smsCopy(caseId),
-      confirmed: true,
-      consent: true
-    }, user, env);
+    const wrapped = await withActionLifecycle(db, {
+      provider: "nexus-provider-coordination", action: `${config.lane}.referral.${mode}`, body: idempotencyBody, actorId: user?.id || user?.email || "",
+      execute: async () => {
+        const sent = await nexusCommunicationsSendMessage(db, {
+          channel: mode,
+          to: env[mode === "whatsapp" ? config.whatsappEnv : config.smsEnv],
+          domain: config.lane,
+          packetId: caseId,
+          summary: packet.summary,
+          message: config.smsCopy(caseId),
+          confirmed: true,
+          consent: true
+        }, user, env);
+        return { httpStatus: sent.executed ? 200 : 400, body: sent.executed ? { ...sent, status: "sent" } : sent };
+      },
+      verify: async sent => ({ verified: Boolean(sent?.body?.messageId),
+        note: sent?.body?.messageId ? "Provider returned a real message id." : "No real send was confirmed." })
+    });
+    providerResult = wrapped.body;
     delivery[mode].executed = Boolean(providerResult.executed);
   }
   if (!providerResult?.executed) {
