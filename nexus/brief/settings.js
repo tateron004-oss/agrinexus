@@ -15,13 +15,30 @@ class BriefSettingsRepository {
   // One brief per person: setting a new one cancels the old. Returns { scheduleId, timeOfDay, timeZone, replaced }.
   async set({ tenantId, userId, timeOfDay, timeZone }) {
     if (!tenantId || !userId || !timeOfDay || !timeZone) throw new Error("Tenant, user, time and time zone are required.");
-    const cancelled = await this.db.query(`update nexus_schedules set state='cancelled',updated_at=now()
-      where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active' returning schedule_id`, [tenantId, userId, JOB_TYPE]);
-    const created = await this.db.query(`insert into nexus_schedules
-      (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,'active') returning schedule_id`,
-    [`sch_${crypto.randomUUID()}`, tenantId, userId, JOB_TYPE, { timeOfDay, timeZone }, { kind: "setting" }, timeZone, PARKED]);
-    return { scheduleId: (created.rows || created)[0]?.schedule_id, timeOfDay, timeZone, replaced: (cancelled.rows || cancelled).length > 0 };
+    const write = async db => {
+      const cancelled = await db.query(`update nexus_schedules set state='cancelled',updated_at=now()
+        where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active' returning schedule_id`, [tenantId, userId, JOB_TYPE]);
+      const created = await db.query(`insert into nexus_schedules
+        (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,'active') returning schedule_id`,
+      [`sch_${crypto.randomUUID()}`, tenantId, userId, JOB_TYPE, { timeOfDay, timeZone }, { kind: "setting" }, timeZone, PARKED]);
+      return { scheduleId: (created.rows || created)[0]?.schedule_id, timeOfDay, timeZone, replaced: (cancelled.rows || cancelled).length > 0 };
+    };
+    // Found live (export/compliance & settings audit): cancel-then-insert was two
+    // separate, non-transactional queries -- a double-submit (network retry,
+    // double-tap, two devices) could interleave two set() calls so each
+    // cancelled a different/stale row and both inserts landed active, leaving
+    // two active daily-brief schedules for the same person. listActive() has
+    // no per-user dedup, so the worker's sweep would silently send two morning
+    // briefs every day from then on. Matches the advisory-lock-guarded-
+    // transaction pattern already used for this exact shape elsewhere
+    // (circle-repository.js's invite()).
+    return typeof this.db.transaction === "function"
+      ? this.db.transaction(async trx => {
+          await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`${JOB_TYPE}:${tenantId}:${userId}`]);
+          return write(trx);
+        })
+      : write(this.db);
   }
 
   async stop({ tenantId, userId }) {
