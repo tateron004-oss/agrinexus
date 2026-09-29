@@ -24,7 +24,11 @@ test("reads back one document that belongs to the caller", async () => {
   assert.equal(result.found, true);
   assert.equal(result.document.documentId, "doc_1");
   assert.equal(result.document.title, "Field report");
-  assert.equal(result.document.downloadPath, "/exports/exp-1.pdf");
+  // Found live (export/document audit): this used to point at the legacy
+  // /exports/:filename route, which 403s for everyone -- including this
+  // document's own owner -- since nothing in this governed pipeline ever
+  // records ownership into the legacy db.exportOwners map that route checks.
+  assert.equal(result.document.downloadPath, "/api/nexus/runtime/documents/doc_1");
   assert.equal(verifyDocumentsReadOutcome({ result }).verified, true);
 });
 
