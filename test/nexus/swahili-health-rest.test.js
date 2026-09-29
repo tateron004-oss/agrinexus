@@ -117,6 +117,19 @@ test("referral letters and reports in Swahili carry only what was recorded; the 
   const register = (await p.health("Chapisha orodha ya wagonjwa")).report.content; assert.match(register, /Jumla: 2/);
 });
 
+// Same bug as reports.js's monthly(), same fix, duplicated by hand in the Swahili report generator.
+test("a pregnancy registered this period is never silently dropped from the Swahili monthly report, even after it delivers", async () => {
+  const p = await registered();
+  for (const row of p.store.rows.filter(row => row.collection === "patient")) row.data.registeredOn = "2026-08-01"; // backdated out of this period, isolating pregnancy-only activity
+  assert.match(await p.health("Chapisha ripoti ya kila mwezi"), /hakuna cha kuchapisha/, "no clinic activity yet this period");
+  await p.health("Mary ni mjamzito, atajifungua tarehe 12 Desemba");
+  const first = (await p.health("Chapisha ripoti ya kila mwezi")).report;
+  assert.match(first.content, /Wagonjwa wapya waliosajiliwa: {2}0/); assert.match(first.content, /Mimba zilizosajiliwa: {10}1/);
+  await p.health("Mary amejifungua mtoto wa kike salama tarehe 15 Septemba");
+  const after = (await p.health("Chapisha ripoti ya kila mwezi")).report;
+  assert.match(after.content, /Mimba zilizosajiliwa: {10}1/, "the registration still genuinely happened this period, even though the pregnancy has since delivered");
+});
+
 test("copy and erase in Swahili: a Swahili yes/no works, and erasing everything needs the exact words", async () => {
   const p = await registered();
   await p.health("Ongeza vidonge 100 vya paracetamol kwenye stoo ya kliniki");

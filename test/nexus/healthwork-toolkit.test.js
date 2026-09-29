@@ -248,6 +248,25 @@ test("the monthly report is counts only, with no patient names, and covers a nam
   assert.equal(await who.say("Print my farm summary"), null); assert.equal(await who.say("Print my resume"), null);
 });
 
+// Found live: the monthly report's "anything to report" gate only checked new PATIENT registrations, so a
+// month with only a new PREGNANCY registration (and nothing else clinic-related) printed "nothing to
+// print" -- and even when the report did print, the "Pregnancies registered" stat filtered by
+// status !== "delivered" at report time, silently dropping a pregnancy that was genuinely registered in
+// the period but has since delivered.
+test("a pregnancy registered this period is never silently dropped from the monthly report, even after it delivers", async () => {
+  const who = worker(); await registerMary(who);
+  const patientRow = who.store.rows.find(row => row.collection === "patient");
+  patientRow.data.registeredOn = "2026-08-01"; // backdated out of this period, isolating pregnancy-only activity
+  assert.match(await who.say("Print my monthly report as a PDF"), /nothing to print/, "no clinic activity yet this period");
+  await who.say("Mary is pregnant, due 12 March");
+  const first = await who.say("Print my monthly report as a PDF");
+  assert.doesNotMatch(first.report?.content ?? String(first), /nothing to print/, "a pregnancy registration alone must make the report print, not be silently ignored");
+  assert.match(first.report.content, /New patients registered:\s+0/); assert.match(first.report.content, /Pregnancies registered:\s+1/);
+  await who.say("Mary delivered a baby girl on 15 September");
+  const after = await who.say("Print my monthly report as a PDF");
+  assert.match(after.report.content, /Pregnancies registered:\s+1/, "the registration still genuinely happened this period, even though the pregnancy has since delivered");
+});
+
 // ---------- removing a patient ----------
 test("removing a patient removes everything kept about them, and only after a yes", async () => {
   const who = worker(); await registerMary(who); await who.say("Visit Mary: cough"); await who.say("Follow up Mary in 3 days"); await who.say("Mary received BCG");

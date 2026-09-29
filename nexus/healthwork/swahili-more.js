@@ -163,13 +163,18 @@ async function monthlySw(ctx, text) {
   const followups = (await listOf(ctx, "followup")).filter(item => item.data.status === "done" && item.data.doneOn && inRange(item.data.doneOn) && patients.has(item.data.pid));
   const gaveOut = (await listOf(ctx, "dispense")).filter(item => inRange(item.data.day));
   const registered = [...patients.values()].filter(patient => patient.data.registeredOn && inRange(patient.data.registeredOn));
-  if (!visits.length && !doses.length && !births.length && !referrals.length && !registered.length && !gaveOut.length) return null;
+  // Found live (healthwork audit, same bug as reports.js's monthly()): a pregnancy registered in the period
+  // was counted neither in the "anything to report" gate (only checked new patient registrations) nor
+  // correctly in the stat below (status !== "delivered" silently dropped a pregnancy registered in the
+  // period that has since delivered). Registration count must be independent of current status.
+  const pregRegistered = preg.filter(item => item.data.since && inRange(item.data.since));
+  if (!visits.length && !doses.length && !births.length && !referrals.length && !registered.length && !gaveOut.length && !pregRegistered.length) return null;
   const given = new Map(); for (const item of gaveOut) { const key = `${item.data.item}|${item.data.unit}`; given.set(key, (given.get(key) || 0) + item.data.qty); }
   const content = `${await header(ctx, "Ripoti ya shughuli za mwezi")}Kipindi: ${period.from} hadi ${period.to} (${period.label})\n\n` +
     `WAGONJWA\n  Wagonjwa wapya waliosajiliwa:  ${registered.length}\n  Wagonjwa walioonwa:            ${seen.length}\n    kike / kiume:                ${seen.filter(patient => patient.data.sex === "female").length} / ${seen.filter(patient => patient.data.sex === "male").length}\n    watoto chini ya miaka 5:     ${seen.filter(patient => under5(patient, period.to)).length}\n  Ziara zilizorekodiwa:          ${visits.length}\n\n` +
     `HALI (kama alivyosema mhudumu wa afya kila ziara)\n${rows(tally(visits.map(item => item.data.condition)))}\n\n` +
     `DOZI ZA CHANJO ZILIZOTOLEWA (${doses.length})\n${rows(tally(doses.map(item => item.data.vaccine)))}\n\n` +
-    `UZAZI\n  Kuzaliwa kulikorekodiwa:       ${births.length}\n  Mimba zilizosajiliwa:          ${preg.filter(item => item.data.since && inRange(item.data.since) && item.data.status !== "delivered").length}\n\n` +
+    `UZAZI\n  Kuzaliwa kulikorekodiwa:       ${births.length}\n  Mimba zilizosajiliwa:          ${pregRegistered.length}\n\n` +
     `RUFAA ZILIZOTOLEWA: ${referrals.length}\n${rows(tally(referrals.map(item => item.data.to)))}\n\n` +
     `UFUATILIAJI ULIOKAMILIKA: ${followups.length}\n\n` +
     `DAWA NA VIFAA VILIVYOTOLEWA\n${rows([...given.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([key, value]) => { const [name, unit] = key.split("|"); return [name, qtyShown(Math.round(value * 1000) / 1000, unit)]; }))}${FOOT}`;
