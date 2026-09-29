@@ -24,7 +24,7 @@ function fakeStore({ recipients = ["u1", "u2", "u3"] } = {}) {
     async addReport({ tenantId, userId, content }) { const number = rows.filter(row => row.tenantId === tenantId && row.content.kind === "report").length + 1; rows.unshift({ memoryId: `r${++n}`, tenantId, userId, content: { ...content, number } }); return number; },
     async listReports({ tenantId, userId = null }) { return rows.filter(row => row.tenantId === tenantId && row.content.kind === "report" && (!userId || row.userId === userId)); },
     async getReport({ tenantId, number }) { return rows.find(row => row.tenantId === tenantId && row.content.kind === "report" && row.content.number === number) || null; },
-    async updateReport({ tenantId, memoryId, content }) { rows.find(row => row.tenantId === tenantId && row.memoryId === memoryId).content = content; return true; },
+    async updateReport({ tenantId, memoryId, content, expectedStatus }) { const row = rows.find(item => item.tenantId === tenantId && item.memoryId === memoryId); if (expectedStatus !== undefined && (row.content.status || "") !== expectedStatus) return false; row.content = content; return true; },
     async addAnnouncement({ tenantId, userId, content }) { const id = `a${++n}`; rows.unshift({ memoryId: id, tenantId, userId, content }); return id; },
     async listAnnouncements({ tenantId, limit = 20 }) { return rows.filter(row => row.tenantId === tenantId && row.content.kind === "announcement").slice(0, limit); },
     async setPending({ tenantId, userId, content }) { await store.clearPending({ tenantId, userId }); rows.unshift({ memoryId: `p${++n}`, tenantId, userId, content }); },
@@ -83,6 +83,41 @@ test("a report open for more than 30 days is still visible to its reporter the m
   await d.say("Report: the borehole in ward 3 is broken", { at: openedLongAgo });
   await d.say("Close report 1: pump repaired", { userId: "staff", roles: ["admin"] });
   assert.match(await d.say("What is the status of my reports?"), /#1 closed — the borehole in ward 3 is broken \(pump repaired\)/, "a report closed today must stay visible today, regardless of how long it was open");
+});
+
+// Found live (follow-up sweep of the CAS/lost-update bug class closed elsewhere tonight):
+// updateReport() wrote unconditionally, with no guard that the report was still in the status the
+// caller read. Two staff members updating the same report close together could both read "open" and
+// each write their own status/note -- whichever landed last silently discarded the other's real work,
+// while BOTH still sent a push worded from their own (possibly no-longer-true) status.
+test("two concurrent staff updates to the same report only apply one, and the push always matches what's persisted", async () => {
+  const d = desk();
+  await d.say("Report: the borehole in ward 3 is broken");
+  const staff = { userId: "staff", roles: ["admin"] };
+  const staff2 = { userId: "staff2", roles: ["admin"] };
+
+  // Force the exact race regardless of natural scheduling luck: freeze the report's read (still
+  // "open") for both racing requests' own getReport() calls, so both compute the same expectedStatus,
+  // exactly like two staff reading the report at the same moment before either writes. Any FURTHER
+  // read (the fix's own re-read on a lost race) sees the real, current data.
+  const realGetReport = d.store.getReport.bind(d.store);
+  const openSnapshot = await realGetReport({ tenantId: "t1", number: 1 });
+  let racingReadsLeft = 2;
+  d.store.getReport = async args => { if (racingReadsLeft > 0) { racingReadsLeft -= 1; return { ...openSnapshot }; } return realGetReport(args); };
+
+  const [first, second] = await Promise.all([
+    d.say("Mark report 1 in progress: dispatched a technician", staff),
+    d.say("Close report 1: pump repaired", staff2)
+  ]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Done\. Report #1 is now/.test(text)).length, 1, "exactly one concurrent update must have won the race");
+  assert.equal(outcomes.filter(text => /was just updated.*by someone else/.test(text)).length, 1, "exactly one must have honestly reported the conflict, not silently overwrite the other's real update");
+
+  const persisted = await d.store.getReport({ tenantId: "t1", number: 1 });
+  const winnerPush = d.pushes.find(row => row.content.title === "Your report was updated");
+  assert.ok(winnerPush, "the reporter must have been pushed exactly once, for the update that actually won");
+  assert.match(winnerPush.content.body, new RegExp(`is now ${persisted.content.status === "in_progress" ? "in progress" : "closed"}`),
+    "the push sent must describe the status that is ACTUALLY persisted, not a status a losing, overwritten update claimed");
 });
 
 test("a person cannot flood the desk", async () => {
