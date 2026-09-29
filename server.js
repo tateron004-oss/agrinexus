@@ -19912,6 +19912,7 @@ function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) 
   }
   const reminder = {
     id: crypto.randomUUID(),
+    ownerId: user?.id || null,
     title,
     time: when,
     type: sanitizePilotText(args.type || "nexus_reminder", 80),
@@ -20748,7 +20749,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // replacing the other.
       const listResult = nexusRealProviders.reminders.list(db, process.env);
       const providerCards = listResult?.body?.data?.cards || [];
-      const pilotCards = (db.nexusPilotReminders || []).map(reminder => ({ id: reminder.id, title: reminder.title, dueAt: reminder.time }));
+      // Found live (IDOR follow-up sweep): unfiltered by owner, "what are my
+      // reminders?" read back EVERY signed-in user's nexusPilotReminders,
+      // including ones created by real voice commands like "remind me to
+      // take my medication."
+      const pilotCards = (db.nexusPilotReminders || []).filter(reminder => nexusPilotRecordOwned(reminder, user)).map(reminder => ({ id: reminder.id, title: reminder.title, dueAt: reminder.time }));
       const pushCards = await nexusOpenAiNativeListPushReminders(user, language);
       const cards = [...pushCards, ...pilotCards, ...providerCards];
       return { ...common, capability: "automation-reminder", status: "reminders-listed", response: cards.length ? `You have ${cards.length} reminder(s): ${cards.slice(0, 5).map(r => `${r.title}${r.dueAt ? ` (${r.dueAt})` : ""}`).join("; ")}.` : "You have no reminders saved yet.", localOnly: true, reminders: cards };
@@ -20763,7 +20768,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // pump filter") let a query for one silently cancel the other instead.
       // Mirrors nexus_memory's already-correct matches.length === 1 gate. Real push reminders are matched too.
       const pushCards = await nexusOpenAiNativeListPushReminders(user, language);
-      const { candidates: matches } = nexusReminderCancelCandidates(command, db.nexusPilotReminders || [], pushCards);
+      // Found live (IDOR follow-up sweep): unfiltered by owner, "cancel my
+      // reminder about X" could match and DELETE another user's reminder by
+      // title -- not just a read leak but a genuine cross-user mutation.
+      const ownedPilotReminders = (db.nexusPilotReminders || []).filter(reminder => nexusPilotRecordOwned(reminder, user));
+      const { candidates: matches } = nexusReminderCancelCandidates(command, ownedPilotReminders, pushCards);
       const match = matches.length === 1 ? matches[0] : null;
       if (!(args.confirmed === true || args.confirmation === true)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
@@ -39318,11 +39327,12 @@ async function sendNexusSendGridEmail({ to, subject, text }, env = process.env) 
   };
 }
 
-function queueNexusEmailFallback(db, payload = {}, status = "email-provider-unconfigured", missingEnv = []) {
+function queueNexusEmailFallback(db, payload = {}, status = "email-provider-unconfigured", missingEnv = [], ownerId = null) {
   ensureNexusProductionRailsState(db);
   const now = new Date().toISOString();
   const item = {
     id: crypto.randomUUID(),
+    ownerId,
     type: "email_packet",
     status,
     domain: sanitizePilotText(payload.domain || "admin", 80),
@@ -39364,7 +39374,7 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
   }
   const text = buildNexusEmailPacketBody({ ...body, domain, packetId });
   if (!status.configured) {
-    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-provider-unconfigured", status.missingEnv);
+    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-provider-unconfigured", status.missingEnv, user?.id || null);
     return {
       ok: true,
       provider: status.provider,
@@ -39410,7 +39420,7 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
     return result;
   } catch (error) {
     const safeError = sanitizePilotText(error.message || "Email provider failed safely.", 220);
-    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-blocked", []);
+    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-blocked", [], user?.id || null);
     return {
       ok: true,
       provider: status.provider,
@@ -39441,12 +39451,18 @@ function buildNexusPasswordResetEmailBody({ resetToken, expiresAt }) {
   ].join("\n");
 }
 
-async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt }, env = process.env) {
+async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt, ownerId = null }, env = process.env) {
   const status = nexusEmailProviderStatus(env);
   const subject = "Your Nexus password reset code";
   const text = buildNexusPasswordResetEmailBody({ resetToken, expiresAt });
   if (!status.configured) {
-    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-provider-unconfigured", status.missingEnv);
+    // Found live (IDOR follow-up sweep): ownerId is the TARGET account being
+    // reset, not the (usually anonymous, pre-auth) requester -- so any other
+    // signed-in user could no longer read this real email address back via
+    // GET /api/nexus/offline-queue once the route itself is filtered, but
+    // the target account (if it ever legitimately re-authenticates and has
+    // access to this internal queue) can still see its own queued item.
+    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-provider-unconfigured", status.missingEnv, ownerId);
     return { ok: true, provider: status.provider, configured: false, executed: false, missingEnv: status.missingEnv, localQueueItem: queueItem, noExternalDelivery: true };
   }
   try {
@@ -39462,7 +39478,7 @@ async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt }, en
     return { ok: true, provider: status.provider, configured: true, executed: true, messageId: providerResult.messageId };
   } catch (error) {
     const safeError = sanitizePilotText(error.message || "Email provider failed safely.", 220);
-    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-blocked", []);
+    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-blocked", [], ownerId);
     return { ok: true, provider: status.provider, configured: true, executed: false, error: safeError, localQueueItem: queueItem, noExternalDelivery: true };
   }
 }
@@ -39584,12 +39600,13 @@ function nexusCommunicationsSafeMessage(body = {}, channel = "sms") {
   return `Nexus ${label} notification. Packet ID: ${packetId}. ${summary.slice(0, 240)} Review before taking action.`;
 }
 
-function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provider-unconfigured", missingEnv = []) {
+function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provider-unconfigured", missingEnv = [], ownerId = null) {
   ensureNexusProductionRailsState(db);
   const now = new Date().toISOString();
   const channel = normalizeNexusCommunicationsChannel(payload.channel || "sms");
   const item = {
     id: crypto.randomUUID(),
+    ownerId,
     type: `${channel}_packet_notification`,
     status,
     channel,
@@ -39668,7 +39685,7 @@ async function nexusCommunicationsSendMessage(db, body = {}, user = null, env = 
   const message = nexusCommunicationsSafeMessage({ ...body, domain, packetId }, channel);
   if (!channelStatus.configured) {
     const fallbackStatus = channel === "whatsapp" ? "whatsapp-provider-unconfigured" : "sms-provider-unconfigured";
-    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, channelStatus.missingEnv);
+    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, channelStatus.missingEnv, user?.id || null);
     return { ok: true, provider: status.provider, channel, configured: false, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, error: `${channel.toUpperCase()} provider is not configured.`, status: fallbackStatus, localQueueItem: queueItem, noExternalDelivery: true };
   }
   try {
@@ -39698,7 +39715,7 @@ async function nexusCommunicationsSendMessage(db, body = {}, user = null, env = 
     return result;
   } catch (error) {
     const fallbackStatus = channel === "whatsapp" ? "whatsapp-blocked" : "sms-blocked";
-    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, []);
+    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, [], user?.id || null);
     return { ok: true, provider: status.provider, channel, configured: true, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: [], error: sanitizePilotText(error.message || `${channel.toUpperCase()} provider failed safely.`, 220), status: fallbackStatus, localQueueItem: queueItem, noExternalDelivery: true };
   }
 }
@@ -39818,13 +39835,14 @@ function summarizeNexusProviderReadings(readings = []) {
   return readings.map(item => `${item.type}: ${item.value}${item.observedAt ? ` (${item.observedAt})` : ""}${item.notes ? ` - ${item.notes}` : ""}`).join("; ");
 }
 
-function queueNexusProviderCoordinationFallback(db, lane = "pharmacy", payload = {}, status = "queued-for-review", missingEnv = []) {
+function queueNexusProviderCoordinationFallback(db, lane = "pharmacy", payload = {}, status = "queued-for-review", missingEnv = [], ownerId = null) {
   ensureNexusProductionRailsState(db);
   const config = NEXUS_PROVIDER_COORDINATION_LANES[lane] || NEXUS_PROVIDER_COORDINATION_LANES.pharmacy;
   const now = new Date().toISOString();
   const id = sanitizePilotText(payload.referralId || payload.requestId || payload.caseId || nexusProviderCoordinationCaseId(config.idPrefix), 80);
   const item = {
     id: crypto.randomUUID(),
+    ownerId,
     type: `${config.lane}_provider_packet`,
     status,
     lane: config.lane,
@@ -39945,7 +39963,7 @@ function createNexusProviderCoordinationPacket(db, lane = "pharmacy", body = {},
   if (body.consentToPreparePacket !== true) {
     return { ok: false, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires consent.", noExternalDelivery: true };
   }
-  const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, emergencyGuidance ? "emergency-guidance" : "pending-review", []);
+  const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, emergencyGuidance ? "emergency-guidance" : "pending-review", [], user?.id || null);
   const result = {
     ok: true,
     [idKey]: caseId,
@@ -39986,11 +40004,11 @@ async function sendNexusProviderCoordinationPacket(db, lane = "pharmacy", body =
   if (body.confirmed !== true) return { ok: false, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires explicit confirmation.", noExternalDelivery: true };
   if (body.consentToPreparePacket !== true || body.consentToShare !== true) return { ok: false, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires consent to prepare and consent to share.", noExternalDelivery: true };
   if (emergencyGuidance) {
-    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "emergency-guidance", []);
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "emergency-guidance", [], user?.id || null);
     return { ok: true, [idKey]: caseId, status: "emergency-guidance", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: status.missingEnv, error: null, emergencyGuidance: "Possible urgent red flags were selected. Use local emergency services or urgent care now if symptoms may be serious. Nexus does not dispatch emergency help.", noExternalDelivery: true };
   }
   if (!status.destinationConfigured) {
-    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", status.missingEnv);
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", status.missingEnv, user?.id || null);
     return { ok: true, [idKey]: caseId, status: "provider-unconfigured", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: status.missingEnv, error: "Provider destination is not configured.", noExternalDelivery: true };
   }
   const mode = status.providerMode;
@@ -40057,7 +40075,7 @@ async function sendNexusProviderCoordinationPacket(db, lane = "pharmacy", body =
     delivery[mode].executed = Boolean(providerResult.executed);
   }
   if (!providerResult?.executed) {
-    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", providerResult?.missingEnv || status.missingEnv);
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", providerResult?.missingEnv || status.missingEnv, user?.id || null);
     return { ok: true, [idKey]: caseId, status: "provider-unconfigured", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: providerResult?.missingEnv || status.missingEnv, error: providerResult?.error || "Provider delivery is not configured.", providerResult, noExternalDelivery: true };
   }
   const sentStatus = mode === "email" ? "sent-email" : mode === "whatsapp" ? "sent-whatsapp" : "sent-sms";
@@ -47228,16 +47246,26 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents });
   }
 
-  // Found live (missing-auth sweep): the identical db.nexusPilotReminders
-  // array (linkedRecordId + up to 320 chars of free-text notes) is already
+  // Found live (missing-auth sweep, later found still incomplete by an
+  // IDOR follow-up sweep): the identical db.nexusPilotReminders array
+  // (linkedRecordId + up to 320 chars of free-text notes) is already
   // returned, redacted-by-role, inside GET /api/nexus/cases/:id -- which is
   // gated by canUse(user, "provider-queue") above. This direct route had no
   // gate at all, letting anyone read every reminder's notes, or inject a
-  // fabricated one that later shows up linked into a real case.
+  // fabricated one that later shows up linked into a real case. The
+  // missing-auth fix above added the sign-in check but never added the
+  // per-owner filter every sibling nexusPilot* collection in this same
+  // subsystem already uses (nexusCommunications/nexusNotifications/
+  // nexusOutcomes/nexusKnowledgeQueries/nexusPersistentMemory, all via
+  // nexusPilotRecordOwned) -- so any signed-in account, any role, could
+  // still read every OTHER user's reminder notes verbatim, including
+  // reminders created by nexusOpenAiNativeCreateLocalReminder from real
+  // voice commands like "remind me to take my medication."
   if (url.pathname === "/api/nexus/reminders" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
-    return send(res, 200, { ok: true, reminders: db.nexusPilotReminders });
+    const reminders = canUse(user, "admin") ? db.nexusPilotReminders : db.nexusPilotReminders.filter(item => nexusPilotRecordOwned(item, user));
+    return send(res, 200, { ok: true, reminders });
   }
 
   if (url.pathname === "/api/nexus/reminders" && req.method === "POST") {
@@ -47246,6 +47274,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const reminder = {
       id: crypto.randomUUID(),
+      ownerId: user?.id || null,
       type: sanitizePilotText(body.type || body.sourceMode || "general", 80),
       title: sanitizePilotText(body.title || body.summary || "Nexus reminder", 160),
       time: sanitizePilotText(body.time || body.when || "Not scheduled", 120),
@@ -47267,16 +47296,24 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, reminder, audit });
   }
 
-  // Found live (missing-auth sweep): queueNexusEmailFallback() pushes a real,
-  // unmasked recipient email address into this exact array whenever the
-  // sign-in-required /api/nexus/email/send-packet route falls back because
-  // the email provider isn't configured -- this route had no gate at all,
+  // Found live (missing-auth sweep, later found still incomplete by an IDOR
+  // follow-up sweep): queueNexusEmailFallback() pushes a real, unmasked
+  // recipient email address into this exact array whenever the sign-in-
+  // required /api/nexus/email/send-packet route falls back because the
+  // email provider isn't configured -- this route had no gate at all,
   // letting anyone read every such address, plus every other queued item's
-  // free-text summary.
+  // free-text summary. The missing-auth fix above added the sign-in check
+  // but never added the per-owner filter every sibling nexusPilot*
+  // collection already uses. Critically, queueNexusEmailFallback() is ALSO
+  // called for password-reset emails (auth-password-reset domain) -- so a
+  // stuck password-reset flow queued the TARGET account's real email
+  // address here too, readable by any other signed-in user (account
+  // enumeration + PII disclosure), not just a sender's own outbound packets.
   if (url.pathname === "/api/nexus/offline-queue" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
-    return send(res, 200, { ok: true, offlineQueue: db.nexusPilotOfflineQueue });
+    const offlineQueue = canUse(user, "admin") ? db.nexusPilotOfflineQueue : db.nexusPilotOfflineQueue.filter(item => nexusPilotRecordOwned(item, user));
+    return send(res, 200, { ok: true, offlineQueue });
   }
 
   if (url.pathname === "/api/nexus/offline-queue" && req.method === "POST") {
@@ -47285,6 +47322,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const item = {
       id: crypto.randomUUID(),
+      ownerId: user?.id || null,
       recordId: sanitizePilotText(body.recordId || "", 120),
       type: sanitizePilotText(body.type || body.sourceMode || "offline_queue_item", 100),
       title: sanitizePilotText(body.title || body.summary || "Offline queue item", 180),
@@ -49295,21 +49333,26 @@ async function api(req, res, url) {
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     let accountExists;
+    let targetUserId = null;
     if (usingPostgresAuth()) {
       accountExists = await pgUsers.setPasswordResetToken(getPgPool(), email, { tokenHash, expiresAt }).catch(() => false);
     } else {
-      const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
-      accountExists = Boolean(user);
-      if (user) {
-        user.resetTokenHash = tokenHash;
-        user.resetTokenExpiresAt = expiresAt;
+      const targetUser = db.users.find(item => String(item.email || "").toLowerCase() === email);
+      accountExists = Boolean(targetUser);
+      if (targetUser) {
+        targetUser.resetTokenHash = tokenHash;
+        targetUser.resetTokenExpiresAt = expiresAt;
+        targetUserId = targetUser.id;
       }
     }
     // Only send a real email (with a real, usable token) when the account exists.
     // The response status below is computed from the provider's configured state
     // alone -- never from accountExists or the per-request send outcome -- so it
     // cannot be used to enumerate which emails are registered.
-    if (accountExists) await sendNexusPasswordResetEmail(db, { to: email, resetToken: rawToken, expiresAt });
+    // targetUserId (the account BEING reset, not the anonymous requester) is
+    // threaded through as the local-fallback queue item's owner -- see the
+    // IDOR fix at queueNexusEmailFallback/GET /api/nexus/offline-queue.
+    if (accountExists) await sendNexusPasswordResetEmail(db, { to: email, resetToken: rawToken, expiresAt, ownerId: targetUserId });
     const providerConfigured = nexusEmailProviderStatus().configured;
     addActivity(db.profile, `Password reset requested for ${email}.`);
     await writeDb(db);
