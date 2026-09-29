@@ -58,13 +58,23 @@ function normalizeDocumentFormat(rawFormat) {
 function createDocumentsCreateExecutor({ env = process.env, documents = null } = {}) {
   return async function execute({ input = {}, context, taskId }) {
     const rawContent = String(input.content || input.text || input.command || "");
+    // Found live: this truncated over-length content with no signal anywhere in the result -- for most
+    // callers a bounded echo of a long AI generation, but for a caller like healthwork/privacy.js's
+    // "export all my patient records" (explicitly presented to the user as the backup to take before an
+    // irreversible ERASE ALL), a silently truncated export is a silently INCOMPLETE backup: the tail of
+    // the real patient data never makes it into the file at all, and nothing here or in
+    // verifyDocumentsCreateOutcome ever caught it. Surfacing it honestly here, at the one choke-point
+    // every documents.create caller funnels through, protects all of them at once rather than requiring
+    // each caller to separately guess at the 50000-char ceiling before it even calls this executor.
+    const truncated = rawContent.length > MAX_DOCUMENT_CONTENT_LENGTH;
     const body = {
       confirmed: true,
       title: input.title || "Nexus document",
-      content: rawContent.length > MAX_DOCUMENT_CONTENT_LENGTH ? rawContent.slice(0, MAX_DOCUMENT_CONTENT_LENGTH) : rawContent,
+      content: truncated ? rawContent.slice(0, MAX_DOCUMENT_CONTENT_LENGTH) : rawContent,
       format: normalizeDocumentFormat(input.format)
     };
     const result = await exportProvider.exportDocument(body, env);
+    if (truncated && result.body?.data) result.body = { ...result.body, data: { ...result.body.data, truncated: true, originalLength: rawContent.length, savedLength: body.content.length } };
     const data = result.body?.data || {};
     if (documents && context && data.exportId && data.localPath) {
       try {
@@ -119,8 +129,9 @@ function verifyDocumentsCreateOutcome({ result }) {
   const data = result?.data || {};
   const verified = result?.status === "completed" && result?.ok !== false
     && typeof data.exportId === "string" && data.exportId.length > 0
-    && Number.isFinite(Number(data.bytes)) && Number(data.bytes) > 0;
-  return { verified, method: "real_local_export", reason: verified ? null : "export_not_completed" };
+    && Number.isFinite(Number(data.bytes)) && Number(data.bytes) > 0
+    && !data.truncated;
+  return { verified, method: "real_local_export", reason: verified ? null : data.truncated ? "content_truncated" : "export_not_completed" };
 }
 
 module.exports = Object.freeze({ createDocumentsCreateExecutor, verifyDocumentsCreateOutcome, normalizeDocumentFormat });

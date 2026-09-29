@@ -281,6 +281,10 @@ function extractInvoiceItemArgs(command = "", args = {}) {
   const lineMatch = body.match(/^(\d+(?:\.\d+)?)?\s*(.+?)\s+at\s+\$?\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s*(?:each|per\s+\w+))?/i);
   const rawQuantity = args.quantity !== undefined ? Number(args.quantity) : (lineMatch && lineMatch[1] ? Number(lineMatch[1]) : 1);
   const rawPrice = args.unitPrice !== undefined ? Number(args.unitPrice) : (lineMatch ? Number(lineMatch[3].replace(/,/g, "")) : NaN);
+  // Found live (follow-up sweep): unlike extractTransactionArgs/extractGrantArgs/extractListingArgs,
+  // this never parsed a currency at all -- "5 bags of maize at 500 shillings each" silently dropped
+  // "shillings", so the line item was always treated as USD regardless of what was actually said.
+  const withCurrency = amountWithCurrency(body);
   return {
     invoiceNumber: sanitizeText(args.invoiceNumber || (invoiceMatch ? invoiceMatch[1].toUpperCase() : ""), 40),
     description: sanitizeText(args.description || (lineMatch ? lineMatch[2].trim() : body), 300),
@@ -290,7 +294,8 @@ function extractInvoiceItemArgs(command = "", args = {}) {
     // negative number here) silently reduced an invoice's total by any
     // amount a caller supplied, with only the spoken/typed confirmation
     // text as a safeguard. Rejected the same way a non-finite price already is.
-    unitPrice: Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : null
+    unitPrice: Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : null,
+    currency: String(args.currency || withCurrency?.currency || "").toUpperCase().slice(0, 3)
   };
 }
 
@@ -559,10 +564,22 @@ function computeBusinessDashboard(editable) {
   // summary, rather than hardcoding every new church/industry word as its
   // own bucket.
   const others = editable.leads.filter(row => !["customer", "donor", "sponsor", "volunteer", "buyer", "seller", "tenant", "landlord"].includes(leadType(row))).length;
-  // Rounds each line to the cent before summing (matches the invoice PDF
-  // export's own fix) so this total can never drift from what a generated
-  // invoice actually shows, even by a cent, for a fractional-cent unit price.
-  const invoiceTotal = editable.invoiceItems.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice * 100) / 100, 0);
+  // Found live (follow-up sweep): this summed every line item's total across ALL currencies with no
+  // bucketing, then the caller hard-prefixed the result with a literal "$" -- the same "mixed
+  // magnitudes under one mislabeled total" shape already fixed for grants and listings just below.
+  // Bucket by each item's own currency (defaulting missing/legacy data to USD) and report the
+  // dominant one plus any others, still rounding each line to the cent before summing (matches the
+  // invoice PDF export's own fix) so a bucket's total can never drift from what a generated invoice
+  // actually shows, even by a cent, for a fractional-cent unit price.
+  const invoiceTotals = {};
+  for (const item of editable.invoiceItems) {
+    const itemCurrency = String(item.currency || "USD").toUpperCase();
+    invoiceTotals[itemCurrency] = Math.round(((invoiceTotals[itemCurrency] || 0) + item.quantity * item.unitPrice) * 100) / 100;
+  }
+  const invoiceTotalEntries = Object.entries(invoiceTotals).sort((a, b) => b[1] - a[1]);
+  const invoiceCurrency = invoiceTotalEntries[0]?.[0] || "USD";
+  const invoiceTotal = invoiceTotalEntries[0]?.[1] || 0;
+  const otherInvoiceCurrencies = invoiceTotalEntries.slice(1).map(([entryCurrency]) => entryCurrency);
   // Found live: same case-sensitivity bug already fixed below for
   // grant.status -- invoice.status is also freeform text, so a naturally
   // typed "Paid" (capital P) never matched this exact-lowercase check and
@@ -630,7 +647,7 @@ function computeBusinessDashboard(editable) {
   return {
     netIncome: income - expenses, income, expenses, currency, otherCurrencies: currencies.slice(1),
     customers, donors, sponsors, volunteers, buyers, sellers, tenants, landlords, others,
-    invoiceTotal, unpaidInvoices,
+    invoiceTotal, invoiceCurrency, otherInvoiceCurrencies, unpaidInvoices,
     grantsRequested, grantsRequestedCurrency, otherGrantRequestedCurrencies,
     grantsAwarded, grantsAwardedCurrency, otherGrantAwardedCurrencies,
     openTasks, totalTasks: editable.tasks.length,
@@ -849,7 +866,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
       : "";
-    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} $${dashboard.invoiceTotal.toFixed(2)} invoiced with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; ${formatMoney(dashboard.grantsRequestedCurrency, dashboard.grantsRequested)} in grants tracked${dashboard.otherGrantRequestedCurrencies.length ? `, not counting grants in ${dashboard.otherGrantRequestedCurrencies.join(", ")}` : ""}, ${formatMoney(dashboard.grantsAwardedCurrency, dashboard.grantsAwarded)} awarded${dashboard.otherGrantAwardedCurrencies.length ? `, not counting awarded grants in ${dashboard.otherGrantAwardedCurrencies.join(", ")}` : ""}; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} ${formatMoney(dashboard.invoiceCurrency, dashboard.invoiceTotal)} invoiced${dashboard.otherInvoiceCurrencies.length ? `, not counting invoices in ${dashboard.otherInvoiceCurrencies.join(", ")}` : ""} with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; ${formatMoney(dashboard.grantsRequestedCurrency, dashboard.grantsRequested)} in grants tracked${dashboard.otherGrantRequestedCurrencies.length ? `, not counting grants in ${dashboard.otherGrantRequestedCurrencies.join(", ")}` : ""}, ${formatMoney(dashboard.grantsAwardedCurrency, dashboard.grantsAwarded)} awarded${dashboard.otherGrantAwardedCurrencies.length ? `, not counting awarded grants in ${dashboard.otherGrantAwardedCurrencies.join(", ")}` : ""}; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
     return { status: "completed", localOnly: true, response, businessDashboard: dashboard, summary: response };
   }
 
@@ -936,12 +953,15 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const invoiceNumber = item.invoiceNumber || invoices.at(-1)?.invoiceNumber || "";
     if (!invoiceNumber) return { status: "needs-input", response: `"${workspaceName}" does not have any invoices yet. Create one first, then I can add line items to it.`, missingInformation: ["invoiceNumber"] };
     if (!invoices.some(invoice => invoice.invoiceNumber === invoiceNumber)) return { status: "needs-input", response: `I could not find invoice ${invoiceNumber} in "${workspaceName}".`, missingInformation: ["invoiceNumber"] };
-    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add ${item.quantity} x ${item.description || "line item"} at $${item.unitPrice.toFixed(2)} to invoice ${invoiceNumber} in "${workspaceName}". Should I go ahead?` };
+    // Found live (follow-up sweep): this hardcoded "$" regardless of what currency was actually said,
+    // and never even saved a currency onto the stored line item -- fixed the same way transaction/
+    // grant/listing amounts already are, with formatMoney() and a persisted currency field.
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add ${item.quantity} x ${item.description || "line item"} at ${formatMoney(item.currency, item.unitPrice)} to invoice ${invoiceNumber} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, invoiceItems: [...resolved.client.data.editable.invoiceItems,
-      { invoiceNumber, description: item.description, quantity: item.quantity, unitPrice: item.unitPrice }] };
+      { invoiceNumber, description: item.description, quantity: item.quantity, unitPrice: item.unitPrice, currency: item.currency || "USD" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
-    const response = `Added ${item.quantity} x ${item.description || "line item"} at $${item.unitPrice.toFixed(2)} to invoice ${invoiceNumber} in "${workspaceName}".`;
+    const response = `Added ${item.quantity} x ${item.description || "line item"} at ${formatMoney(item.currency, item.unitPrice)} to invoice ${invoiceNumber} in "${workspaceName}".`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 

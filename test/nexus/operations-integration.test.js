@@ -11,7 +11,11 @@ test('device registration rejects cross-owner conflicts and keeps token material
  await assert.rejects(()=>api.registerDevice({context,body:{deviceId:'phone',platform:'pwa',tenantId:'forged',userId:'forged',capabilities:{gps:true,camera:false}}}),{code:'device_not_found'});
  assert.deepEqual(call.params.slice(0,5),['phone','tenant','owner','web',['gps']]);
  assert.match(call.sql,/where nexus_devices.tenant_id=excluded.tenant_id and nexus_devices.user_id=excluded.user_id/);
- assert.match(call.sql,/nexus_devices.state='active'/);
+ // A revoked device must be able to re-register (see device-reregistration-after-revoke.test.js),
+ // so re-activation now happens unconditionally in the SET clause rather than being gated in the
+ // WHERE predicate -- the WHERE clause's only remaining job is the tenant/user ownership check
+ // asserted just above.
+ assert.match(call.sql,/do update set\s*\n\s*state='active',/);
  assert.doesNotMatch(call.sql.split('returning')[1],/ciphertext|push_endpoint/);
 });
 test('push and lifecycle APIs require permission, ownership and encrypted token storage',async()=>{

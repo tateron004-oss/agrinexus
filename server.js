@@ -2742,8 +2742,61 @@ function knownUnownedProfileGaps(profile) {
   // bridge providers) genuinely carry no owner field of any kind -- the same
   // honest, already-accepted "no owner field exists" gap as
   // HEALTH_PROFILE_ARRAY_KEYS/orders above, just not yet disclosed here.
-  if (hasAny(["nexusPharmacyIntakes", "nexusSavedPharmacies", "nexusMedicalSupportIntakes", "nexusChronicDiseaseReadings", "nexusRpmDeviceReadings", "nexusRtmActivityEntries", "nexusMobileClinicIntakes", "nexusPatientSupportIntakes"])) {
+  if (hasAny(["nexusPharmacyIntakes", "nexusSavedPharmacies", "nexusMedicalSupportIntakes", "nexusChronicDiseaseReadings", "nexusRpmDeviceReadings", "nexusRtmActivityEntries", "nexusMobileClinicIntakes", "nexusPatientSupportIntakes", "nexusSavedPatientSupportResources"])) {
     gaps.push("Locally-saved pharmacy/chronic-disease/remote-monitoring preparation records have no per-account owner field today and are not included.");
+  }
+  // Found live (server-side provider sweep): these five db.profile arrays --
+  // written by marketplaceBridgeProvider.createListing, offlineSyncProvider.
+  // queueItem, djiProvider.missionRequest, and providerContactBridgeProvider's
+  // saveProvider/saveProviderNote -- share the exact same "genuinely no owner
+  // field" shape as the medical-support block just above (confirmed by
+  // reading each object literal), but were never added to this disclosure
+  // list when that one was built, so export/erase silently omitted them with
+  // no caveat at all.
+  if (hasAny(["marketplaceListings", "offlineQueue", "droneMissionRequests", "nexusSavedProviders", "nexusProviderNotes"])) {
+    gaps.push("Locally-saved marketplace listings, offline queue items, drone mission requests, and saved provider contacts/notes have no per-account owner field today and are not included.");
+  }
+  // Found live (follow-up provider sweep, same bug shape as the two blocks
+  // above, found in provider files not yet checked against this disclosure
+  // list): droneMissionBridgeProvider.js's requestRecord() writes a DIFFERENT
+  // array (nexusDroneMissionRequests) than djiProvider.js's already-disclosed
+  // droneMissionRequests -- easy to mistake for already covered since the
+  // names differ only by the "nexus" prefix. rpmBridgeProvider.js/
+  // rtmBridgeProvider.js/mobileClinicBridgeProvider.js/chronicDiseaseBridge
+  // Provider.js/telehealthBridgeProvider.js all save an "intake"/"session"
+  // record via the same medicalBridgeUtils saveRecord() convention as the
+  // already-disclosed nexus*Readings/nexus*Intakes siblings, but each
+  // provider's OWN intake/session/plan store was missed when this list was
+  // built. workflowOrchestratorBridgeProvider.js's plan record is a plain
+  // object literal with no owner field at all, same as the arrays above.
+  if (hasAny(["nexusDroneMissionRequests", "nexusRpmIntakes", "nexusRtmIntakes", "nexusFitnessTrainingPlans", "nexusSavedMobileClinics", "nexusWorkflowPlans", "nexusChronicDiseaseIntakes", "nexusTelehealthBridgeIntakes", "nexusTelehealthBridgeSessions"])) {
+    gaps.push("Locally-saved drone-bridge mission requests, RPM/RTM/telehealth-bridge/chronic-disease intake and session preparation records, fitness training plans, saved mobile clinics, and workflow plans have no per-account owner field today and are not included.");
+  }
+  // Found live (exhaustive follow-up sweep, same bug shape as the three
+  // blocks above): every remaining db.profile array in server.js's own
+  // inline routes (/api/trade/advanced, /api/workforce/advanced,
+  // /api/learning/advanced, /api/map/advanced, /api/intelligence/*,
+  // /api/cloud-agent/*) and a handful more provider files whose OWN
+  // db.profile array (as opposed to an already-disclosed sibling array from
+  // the same file) was missed. Each item's actual object literal was read
+  // directly to confirm no createdBy/requestedBy/userEmail is ever present.
+  if (hasAny(["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
+    gaps.push("Agent/AI orchestration evidence, integration event logs, and cloud-agent run/correction records have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["twilioCallStatusReceipts", "tradeLogisticsRecords", "tradeMessages", "walletTransactions", "platformTransactionFees", "platformRevenueLedger", "paymentCheckoutRecords", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "paymentReleases", "providerOutreach", "droneFindings", "shiftSchedule"])) {
+    gaps.push("Trade/logistics/finance preparation records (quotes, inspections, cold-chain checks, export readiness, contract packets, payment releases, wallet transactions, and related evidence) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations"])) {
+    gaps.push("Advanced map/logistics planning records (field zones, facility routes, disruption and risk layers, evidence packets, farmer locations) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
+    gaps.push("Advanced workforce operations records (onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "certificates", "learningAccommodations"])) {
+    gaps.push("Advanced learning records (assignments, quiz attempts, instructor notes, progress reports, transcripts, cohorts, certificates, accommodations) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"])) {
+    gaps.push("Locally-saved health/workforce governance feedback, offline sync history, legacy voice reminders, field-visit plans, saved learning resources, and marketplace notes have no per-account owner field today and are not included.");
   }
   gaps.push("If you have used AgriNexus's newer Postgres-backed companion/reminders/health-toolkit features, request their erasure separately via /api/nexus/runtime/privacy/deletions.");
   return gaps;
@@ -6505,7 +6558,15 @@ function maximumOperationalEfficiencyModel(db, user, providers = runtimeProvider
   const smart = smartNextActions(db, user, providers).items.slice(0, 6);
   const readiness = Number(db.profile.readiness || 0);
   const evidenceCount = (db.profile.integrationEvents || []).length + (db.profile.workflowIntelligence || []).length + (db.profile.activity || []).length;
-  const tradeScore = (db.profile.tradeEfficiencyReviews || [])[0]?.score || (db.profile.orders || []).length ? 72 : 58;
+  // Found live: `? :` binds looser than `||`, so this used to parse as
+  // `(reviews[0]?.score || orders.length) ? 72 : 58` -- the real stored
+  // review score was NEVER actually used as the output value; tradeScore was
+  // hardcoded to 72 whenever any score or any order existed, else 58. Fixed
+  // to use the real score when one exists (Number.isFinite, not truthy, so a
+  // genuine 0 score isn't discarded either), falling back to the
+  // orders-based placeholder only when there is no real review yet.
+  const realTradeScore = (db.profile.tradeEfficiencyReviews || [])[0]?.score;
+  const tradeScore = Number.isFinite(realTradeScore) ? realTradeScore : ((db.profile.orders || []).length ? 72 : 58);
   const learningScore = Math.min(100, 50 + (db.profile.certificates || []).length * 10 + (db.profile.enrollments || []).length * 5);
   const workforceScore = Math.min(100, 45 + readiness / 2 + (db.profile.applications || []).length * 8 + (db.profile.shiftSchedule || []).length * 4);
   const healthScore = Math.min(100, 55 + (db.profile.healthIntakes || []).length * 6 + (db.profile.telehealthAccessibility || []).length * 4 + (db.profile.videoSessions || []).length * 5);
@@ -11886,7 +11947,11 @@ function cloudAgentPolicy(user = {}) {
     mode: "controlled-cloud-agent",
     cloudRuntime: IS_HOSTED ? "render-cloud" : "local-cloud-sim",
     canRunSafeToolsAutomatically: true,
-    canCreateToolTemplates: user?.role === "admin" || user?.role === "investor",
+    // Found live: real user roles are stored capitalized ("Admin"/"Investor", see DEFAULT_USERS and
+    // every other role check in this file), but this compared against lowercase "admin"/"investor" --
+    // the cloud-agent tool-template feature was unreachable for every real account, including the
+    // platform's own seeded admin.
+    canCreateToolTemplates: user?.role === "Admin" || user?.role === "Investor",
     canExecuteGeneratedCode: false,
     canSelfDeploy: false,
     canRetrainModel: false,
@@ -12001,7 +12066,7 @@ function createCloudAgentToolTemplate(db, user, body = {}) {
       `AgriNexus, help me with ${title.toLowerCase()}`
     ],
     inputSchema: body.inputSchema || { type: "object", properties: { goal: { type: "string" }, notes: { type: "string" } } },
-    status: body.approved === true && user.role === "admin" ? "approved-template" : "draft-needs-approval",
+    status: body.approved === true && user.role === "Admin" ? "approved-template" : "draft-needs-approval",
     safety: "Template only. It cannot execute arbitrary code and must be bound to registered tools or reviewed provider adapters.",
     createdBy: user.email,
     createdAt: new Date().toISOString(),
@@ -12154,6 +12219,23 @@ async function executeCloudAgentRun(db, user, run, options = {}) {
   const executedSteps = [];
   const blockedSteps = [];
   for (const step of run.steps || []) {
+    // Found live: this function has no re-entrancy guard of its own -- every
+    // call re-iterates the FULL run.steps array. A run with any
+    // requiresApproval step lands in "needs-approval" status, which is one of
+    // the two statuses cloudAgentTick()'s queue scan matches, so an ordinary
+    // POST /api/cloud-agent/tick (ai-role gated only, no approval needed to
+    // call it) kept re-picking up and re-running the SAME run on every tick --
+    // re-executing every already-succeeded safe step again each time (another
+    // wallet credit, another duplicate trade order, another drone mission),
+    // unbounded, for as long as the approval-gated step stayed unapproved.
+    // /api/cloud-agent/approve already guards against re-approving a
+    // non-pending run, but that guard doesn't stop a step that already
+    // executed from being redone once execution resumes -- the real fix
+    // belongs here, in the shared executor both callers go through.
+    if (step.status === "executed") {
+      executedSteps.push(step);
+      continue;
+    }
     if (step.requiresApproval && !approved) {
       const blocked = { ...step, status: "blocked-awaiting-approval", approvalStatus: "needed" };
       blockedSteps.push(blocked);
@@ -12484,7 +12566,12 @@ function createVideoSessionWorkflow(db, user, body = {}) {
   // "video + injury/patient/doctor" branches call this function directly
   // with no restriction check at all, letting a guest/restricted account
   // write a real health intake record via natural-language commands.
-  if (isHealth && !intake && !user?.restrictions?.includes("health-record-write")) {
+  // Found live (further follow-up sweep): this fix used the raw
+  // `user?.restrictions?.includes(...)` idiom instead of the centralized
+  // userIsRestrictedFrom() built specifically to close the "a role with no
+  // restrictions array at all sails through an includes() check" gap (e.g.
+  // Investor) -- reopening exactly that gap here.
+  if (isHealth && !intake && !userIsRestrictedFrom(user, "health-record-write")) {
     intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-VIDEO`,
@@ -13251,7 +13338,11 @@ async function createCommunicationThread(db, user, body = {}) {
   // (several dedicated communication routes, or the legacy runAgentCommand
   // dispatcher's own "message/notify/sms/whatsapp" branches, which have no
   // restriction check of their own) could send a real Twilio SMS/WhatsApp.
-  if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !user?.restrictions?.includes("communications-send")) {
+  // Found live (further follow-up sweep): this used the raw `user?.restrictions?.includes(...)`
+  // idiom instead of the centralized userIsRestrictedFrom(), reopening the "a role with no
+  // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
+  // exists to close everywhere.
+  if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")) {
     delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
     outbound.status = delivery.ok ? "sent-live" : "sent-local";
     outbound.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
@@ -17465,7 +17556,11 @@ async function createOutboundCallWorkflow(db, user, body = {}) {
   // runAgentCommand natural-language dispatcher's own "call the doctor/buyer"
   // branches, which have no restriction check of their own) could place a real
   // Twilio call. Fixing it here, once, closes every current and future caller.
-  const delivery = user?.restrictions?.includes("communications-send")
+  // Found live (further follow-up sweep): this used the raw `user?.restrictions?.includes(...)`
+  // idiom instead of the centralized userIsRestrictedFrom(), reopening the "a role with no
+  // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
+  // exists to close everywhere.
+  const delivery = userIsRestrictedFrom(user, "communications-send")
     ? { attempted: false, ok: false, status: "restricted-account-no-real-call" }
     : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
   const record = {
@@ -19817,6 +19912,7 @@ function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) 
   }
   const reminder = {
     id: crypto.randomUUID(),
+    ownerId: user?.id || null,
     title,
     time: when,
     type: sanitizePilotText(args.type || "nexus_reminder", 80),
@@ -20653,7 +20749,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // replacing the other.
       const listResult = nexusRealProviders.reminders.list(db, process.env);
       const providerCards = listResult?.body?.data?.cards || [];
-      const pilotCards = (db.nexusPilotReminders || []).map(reminder => ({ id: reminder.id, title: reminder.title, dueAt: reminder.time }));
+      // Found live (IDOR follow-up sweep): unfiltered by owner, "what are my
+      // reminders?" read back EVERY signed-in user's nexusPilotReminders,
+      // including ones created by real voice commands like "remind me to
+      // take my medication."
+      const pilotCards = (db.nexusPilotReminders || []).filter(reminder => nexusPilotRecordOwned(reminder, user)).map(reminder => ({ id: reminder.id, title: reminder.title, dueAt: reminder.time }));
       const pushCards = await nexusOpenAiNativeListPushReminders(user, language);
       const cards = [...pushCards, ...pilotCards, ...providerCards];
       return { ...common, capability: "automation-reminder", status: "reminders-listed", response: cards.length ? `You have ${cards.length} reminder(s): ${cards.slice(0, 5).map(r => `${r.title}${r.dueAt ? ` (${r.dueAt})` : ""}`).join("; ")}.` : "You have no reminders saved yet.", localOnly: true, reminders: cards };
@@ -20668,7 +20768,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // pump filter") let a query for one silently cancel the other instead.
       // Mirrors nexus_memory's already-correct matches.length === 1 gate. Real push reminders are matched too.
       const pushCards = await nexusOpenAiNativeListPushReminders(user, language);
-      const { candidates: matches } = nexusReminderCancelCandidates(command, db.nexusPilotReminders || [], pushCards);
+      // Found live (IDOR follow-up sweep): unfiltered by owner, "cancel my
+      // reminder about X" could match and DELETE another user's reminder by
+      // title -- not just a read leak but a genuine cross-user mutation.
+      const ownedPilotReminders = (db.nexusPilotReminders || []).filter(reminder => nexusPilotRecordOwned(reminder, user));
+      const { candidates: matches } = nexusReminderCancelCandidates(command, ownedPilotReminders, pushCards);
       const match = matches.length === 1 ? matches[0] : null;
       if (!(args.confirmed === true || args.confirmation === true)) {
         return nexusOpenAiNativeBlockedToolResult(db, common, {
@@ -22639,7 +22743,25 @@ async function executeAgentPlanObject(db, user, plan, note = "Approved from comm
   plan.executedBy = user.email;
   plan.executedAt = new Date().toISOString();
   const executedSteps = [];
+  // Found live: this loop had no re-entrancy guard of its own -- every call
+  // unconditionally re-executed every step in plan.steps, with no check for
+  // a step that already has status "executed" (the exact same shape already
+  // fixed tonight in executeCloudAgentRun). POST /api/agent/execute is gated
+  // only by canUse(user,"ai"), which the default Standard User role has, and
+  // has no re-entrancy guard of its own either -- a double-click, network
+  // retry, or duplicate client request with the same planId re-ran the whole
+  // plan, including tools with real per-call side effects (trade.market_
+  // review pushes a real order with a real dollar total; learning.start_or_
+  // continue/workforce.match_role re-advance real progress/applications).
+  // Fixed at the root, in this shared executor every caller goes through, by
+  // skipping any step whose status is already "executed" -- safe because a
+  // step's initial status at plan-creation time is always "pending-approval"
+  // or "queued", never "executed".
   for (const step of plan.steps) {
+    if (step.status === "executed") {
+      executedSteps.push(step);
+      continue;
+    }
     executedSteps.push(await executeAgentStepWithRetry(db, user, step, 2));
   }
   plan.steps = executedSteps;
@@ -39205,11 +39327,12 @@ async function sendNexusSendGridEmail({ to, subject, text }, env = process.env) 
   };
 }
 
-function queueNexusEmailFallback(db, payload = {}, status = "email-provider-unconfigured", missingEnv = []) {
+function queueNexusEmailFallback(db, payload = {}, status = "email-provider-unconfigured", missingEnv = [], ownerId = null) {
   ensureNexusProductionRailsState(db);
   const now = new Date().toISOString();
   const item = {
     id: crypto.randomUUID(),
+    ownerId,
     type: "email_packet",
     status,
     domain: sanitizePilotText(payload.domain || "admin", 80),
@@ -39251,7 +39374,7 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
   }
   const text = buildNexusEmailPacketBody({ ...body, domain, packetId });
   if (!status.configured) {
-    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-provider-unconfigured", status.missingEnv);
+    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-provider-unconfigured", status.missingEnv, user?.id || null);
     return {
       ok: true,
       provider: status.provider,
@@ -39297,7 +39420,7 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
     return result;
   } catch (error) {
     const safeError = sanitizePilotText(error.message || "Email provider failed safely.", 220);
-    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-blocked", []);
+    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-blocked", [], user?.id || null);
     return {
       ok: true,
       provider: status.provider,
@@ -39328,12 +39451,18 @@ function buildNexusPasswordResetEmailBody({ resetToken, expiresAt }) {
   ].join("\n");
 }
 
-async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt }, env = process.env) {
+async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt, ownerId = null }, env = process.env) {
   const status = nexusEmailProviderStatus(env);
   const subject = "Your Nexus password reset code";
   const text = buildNexusPasswordResetEmailBody({ resetToken, expiresAt });
   if (!status.configured) {
-    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-provider-unconfigured", status.missingEnv);
+    // Found live (IDOR follow-up sweep): ownerId is the TARGET account being
+    // reset, not the (usually anonymous, pre-auth) requester -- so any other
+    // signed-in user could no longer read this real email address back via
+    // GET /api/nexus/offline-queue once the route itself is filtered, but
+    // the target account (if it ever legitimately re-authenticates and has
+    // access to this internal queue) can still see its own queued item.
+    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-provider-unconfigured", status.missingEnv, ownerId);
     return { ok: true, provider: status.provider, configured: false, executed: false, missingEnv: status.missingEnv, localQueueItem: queueItem, noExternalDelivery: true };
   }
   try {
@@ -39349,7 +39478,7 @@ async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt }, en
     return { ok: true, provider: status.provider, configured: true, executed: true, messageId: providerResult.messageId };
   } catch (error) {
     const safeError = sanitizePilotText(error.message || "Email provider failed safely.", 220);
-    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-blocked", []);
+    const queueItem = queueNexusEmailFallback(db, { to, subject, domain: "auth-password-reset", packetId: `password-reset-${Date.now()}` }, "email-blocked", [], ownerId);
     return { ok: true, provider: status.provider, configured: true, executed: false, error: safeError, localQueueItem: queueItem, noExternalDelivery: true };
   }
 }
@@ -39471,12 +39600,13 @@ function nexusCommunicationsSafeMessage(body = {}, channel = "sms") {
   return `Nexus ${label} notification. Packet ID: ${packetId}. ${summary.slice(0, 240)} Review before taking action.`;
 }
 
-function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provider-unconfigured", missingEnv = []) {
+function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provider-unconfigured", missingEnv = [], ownerId = null) {
   ensureNexusProductionRailsState(db);
   const now = new Date().toISOString();
   const channel = normalizeNexusCommunicationsChannel(payload.channel || "sms");
   const item = {
     id: crypto.randomUUID(),
+    ownerId,
     type: `${channel}_packet_notification`,
     status,
     channel,
@@ -39555,7 +39685,7 @@ async function nexusCommunicationsSendMessage(db, body = {}, user = null, env = 
   const message = nexusCommunicationsSafeMessage({ ...body, domain, packetId }, channel);
   if (!channelStatus.configured) {
     const fallbackStatus = channel === "whatsapp" ? "whatsapp-provider-unconfigured" : "sms-provider-unconfigured";
-    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, channelStatus.missingEnv);
+    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, channelStatus.missingEnv, user?.id || null);
     return { ok: true, provider: status.provider, channel, configured: false, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, error: `${channel.toUpperCase()} provider is not configured.`, status: fallbackStatus, localQueueItem: queueItem, noExternalDelivery: true };
   }
   try {
@@ -39585,7 +39715,7 @@ async function nexusCommunicationsSendMessage(db, body = {}, user = null, env = 
     return result;
   } catch (error) {
     const fallbackStatus = channel === "whatsapp" ? "whatsapp-blocked" : "sms-blocked";
-    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, []);
+    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, [], user?.id || null);
     return { ok: true, provider: status.provider, channel, configured: true, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: [], error: sanitizePilotText(error.message || `${channel.toUpperCase()} provider failed safely.`, 220), status: fallbackStatus, localQueueItem: queueItem, noExternalDelivery: true };
   }
 }
@@ -39705,13 +39835,14 @@ function summarizeNexusProviderReadings(readings = []) {
   return readings.map(item => `${item.type}: ${item.value}${item.observedAt ? ` (${item.observedAt})` : ""}${item.notes ? ` - ${item.notes}` : ""}`).join("; ");
 }
 
-function queueNexusProviderCoordinationFallback(db, lane = "pharmacy", payload = {}, status = "queued-for-review", missingEnv = []) {
+function queueNexusProviderCoordinationFallback(db, lane = "pharmacy", payload = {}, status = "queued-for-review", missingEnv = [], ownerId = null) {
   ensureNexusProductionRailsState(db);
   const config = NEXUS_PROVIDER_COORDINATION_LANES[lane] || NEXUS_PROVIDER_COORDINATION_LANES.pharmacy;
   const now = new Date().toISOString();
   const id = sanitizePilotText(payload.referralId || payload.requestId || payload.caseId || nexusProviderCoordinationCaseId(config.idPrefix), 80);
   const item = {
     id: crypto.randomUUID(),
+    ownerId,
     type: `${config.lane}_provider_packet`,
     status,
     lane: config.lane,
@@ -39832,7 +39963,7 @@ function createNexusProviderCoordinationPacket(db, lane = "pharmacy", body = {},
   if (body.consentToPreparePacket !== true) {
     return { ok: false, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires consent.", noExternalDelivery: true };
   }
-  const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, emergencyGuidance ? "emergency-guidance" : "pending-review", []);
+  const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, emergencyGuidance ? "emergency-guidance" : "pending-review", [], user?.id || null);
   const result = {
     ok: true,
     [idKey]: caseId,
@@ -39873,11 +40004,11 @@ async function sendNexusProviderCoordinationPacket(db, lane = "pharmacy", body =
   if (body.confirmed !== true) return { ok: false, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires explicit confirmation.", noExternalDelivery: true };
   if (body.consentToPreparePacket !== true || body.consentToShare !== true) return { ok: false, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires consent to prepare and consent to share.", noExternalDelivery: true };
   if (emergencyGuidance) {
-    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "emergency-guidance", []);
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "emergency-guidance", [], user?.id || null);
     return { ok: true, [idKey]: caseId, status: "emergency-guidance", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: status.missingEnv, error: null, emergencyGuidance: "Possible urgent red flags were selected. Use local emergency services or urgent care now if symptoms may be serious. Nexus does not dispatch emergency help.", noExternalDelivery: true };
   }
   if (!status.destinationConfigured) {
-    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", status.missingEnv);
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", status.missingEnv, user?.id || null);
     return { ok: true, [idKey]: caseId, status: "provider-unconfigured", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: status.missingEnv, error: "Provider destination is not configured.", noExternalDelivery: true };
   }
   const mode = status.providerMode;
@@ -39944,7 +40075,7 @@ async function sendNexusProviderCoordinationPacket(db, lane = "pharmacy", body =
     delivery[mode].executed = Boolean(providerResult.executed);
   }
   if (!providerResult?.executed) {
-    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", providerResult?.missingEnv || status.missingEnv);
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", providerResult?.missingEnv || status.missingEnv, user?.id || null);
     return { ok: true, [idKey]: caseId, status: "provider-unconfigured", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: providerResult?.missingEnv || status.missingEnv, error: providerResult?.error || "Provider delivery is not configured.", providerResult, noExternalDelivery: true };
   }
   const sentStatus = mode === "email" ? "sent-email" : mode === "whatsapp" ? "sent-whatsapp" : "sent-sms";
@@ -46451,9 +46582,15 @@ async function api(req, res, url) {
     return send(res, 200, result);
   }
 
+  // Found live (follow-up rate-limiting sweep): these two real-send routes were missed by the
+  // "rate-limiting audit" that already closed this exact gap for /api/nexus/tools/sms/send,
+  // /whatsapp/send, /call/start and their sibling real-send routes below -- only the generic 180
+  // req/min/IP+path blanket applied, so a single authorized account could script real emails or
+  // SMS/WhatsApp messages to arbitrary caller-supplied third parties up to that blanket ceiling.
   if (url.pathname === "/api/nexus/email/send-packet" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await nexusEmailSendPacket(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -46463,6 +46600,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/communications/send-message" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await nexusCommunicationsSendMessage(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -46477,8 +46615,13 @@ async function api(req, res, url) {
     return send(res, 200, result);
   }
 
+  // Found live (same follow-up sweep): sendNexusProviderCoordinationPacket performs a real
+  // email/SMS/WhatsApp send (to a fixed, server-configured provider contact, not a caller-supplied
+  // one -- a real cost/DoS-against-that-provider vector rather than arbitrary-third-party spam), with
+  // no route-specific rate limit, the same missing-guard shape as the two routes just above.
   if (url.pathname === "/api/nexus/pharmacy/send-referral" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow pharmacy referrals" });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await sendNexusProviderCoordinationPacket(db, "pharmacy", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -46495,6 +46638,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/mobile-clinic/send-request" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic requests" });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await sendNexusProviderCoordinationPacket(db, "mobile-clinic", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -47102,16 +47246,26 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents });
   }
 
-  // Found live (missing-auth sweep): the identical db.nexusPilotReminders
-  // array (linkedRecordId + up to 320 chars of free-text notes) is already
+  // Found live (missing-auth sweep, later found still incomplete by an
+  // IDOR follow-up sweep): the identical db.nexusPilotReminders array
+  // (linkedRecordId + up to 320 chars of free-text notes) is already
   // returned, redacted-by-role, inside GET /api/nexus/cases/:id -- which is
   // gated by canUse(user, "provider-queue") above. This direct route had no
   // gate at all, letting anyone read every reminder's notes, or inject a
-  // fabricated one that later shows up linked into a real case.
+  // fabricated one that later shows up linked into a real case. The
+  // missing-auth fix above added the sign-in check but never added the
+  // per-owner filter every sibling nexusPilot* collection in this same
+  // subsystem already uses (nexusCommunications/nexusNotifications/
+  // nexusOutcomes/nexusKnowledgeQueries/nexusPersistentMemory, all via
+  // nexusPilotRecordOwned) -- so any signed-in account, any role, could
+  // still read every OTHER user's reminder notes verbatim, including
+  // reminders created by nexusOpenAiNativeCreateLocalReminder from real
+  // voice commands like "remind me to take my medication."
   if (url.pathname === "/api/nexus/reminders" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
-    return send(res, 200, { ok: true, reminders: db.nexusPilotReminders });
+    const reminders = canUse(user, "admin") ? db.nexusPilotReminders : db.nexusPilotReminders.filter(item => nexusPilotRecordOwned(item, user));
+    return send(res, 200, { ok: true, reminders });
   }
 
   if (url.pathname === "/api/nexus/reminders" && req.method === "POST") {
@@ -47120,6 +47274,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const reminder = {
       id: crypto.randomUUID(),
+      ownerId: user?.id || null,
       type: sanitizePilotText(body.type || body.sourceMode || "general", 80),
       title: sanitizePilotText(body.title || body.summary || "Nexus reminder", 160),
       time: sanitizePilotText(body.time || body.when || "Not scheduled", 120),
@@ -47141,16 +47296,24 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, reminder, audit });
   }
 
-  // Found live (missing-auth sweep): queueNexusEmailFallback() pushes a real,
-  // unmasked recipient email address into this exact array whenever the
-  // sign-in-required /api/nexus/email/send-packet route falls back because
-  // the email provider isn't configured -- this route had no gate at all,
+  // Found live (missing-auth sweep, later found still incomplete by an IDOR
+  // follow-up sweep): queueNexusEmailFallback() pushes a real, unmasked
+  // recipient email address into this exact array whenever the sign-in-
+  // required /api/nexus/email/send-packet route falls back because the
+  // email provider isn't configured -- this route had no gate at all,
   // letting anyone read every such address, plus every other queued item's
-  // free-text summary.
+  // free-text summary. The missing-auth fix above added the sign-in check
+  // but never added the per-owner filter every sibling nexusPilot*
+  // collection already uses. Critically, queueNexusEmailFallback() is ALSO
+  // called for password-reset emails (auth-password-reset domain) -- so a
+  // stuck password-reset flow queued the TARGET account's real email
+  // address here too, readable by any other signed-in user (account
+  // enumeration + PII disclosure), not just a sender's own outbound packets.
   if (url.pathname === "/api/nexus/offline-queue" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
-    return send(res, 200, { ok: true, offlineQueue: db.nexusPilotOfflineQueue });
+    const offlineQueue = canUse(user, "admin") ? db.nexusPilotOfflineQueue : db.nexusPilotOfflineQueue.filter(item => nexusPilotRecordOwned(item, user));
+    return send(res, 200, { ok: true, offlineQueue });
   }
 
   if (url.pathname === "/api/nexus/offline-queue" && req.method === "POST") {
@@ -47159,6 +47322,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const item = {
       id: crypto.randomUUID(),
+      ownerId: user?.id || null,
       recordId: sanitizePilotText(body.recordId || "", 120),
       type: sanitizePilotText(body.type || body.sourceMode || "offline_queue_item", 100),
       title: sanitizePilotText(body.title || body.summary || "Offline queue item", 180),
@@ -49169,21 +49333,26 @@ async function api(req, res, url) {
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     let accountExists;
+    let targetUserId = null;
     if (usingPostgresAuth()) {
       accountExists = await pgUsers.setPasswordResetToken(getPgPool(), email, { tokenHash, expiresAt }).catch(() => false);
     } else {
-      const user = db.users.find(item => String(item.email || "").toLowerCase() === email);
-      accountExists = Boolean(user);
-      if (user) {
-        user.resetTokenHash = tokenHash;
-        user.resetTokenExpiresAt = expiresAt;
+      const targetUser = db.users.find(item => String(item.email || "").toLowerCase() === email);
+      accountExists = Boolean(targetUser);
+      if (targetUser) {
+        targetUser.resetTokenHash = tokenHash;
+        targetUser.resetTokenExpiresAt = expiresAt;
+        targetUserId = targetUser.id;
       }
     }
     // Only send a real email (with a real, usable token) when the account exists.
     // The response status below is computed from the provider's configured state
     // alone -- never from accountExists or the per-request send outcome -- so it
     // cannot be used to enumerate which emails are registered.
-    if (accountExists) await sendNexusPasswordResetEmail(db, { to: email, resetToken: rawToken, expiresAt });
+    // targetUserId (the account BEING reset, not the anonymous requester) is
+    // threaded through as the local-fallback queue item's owner -- see the
+    // IDOR fix at queueNexusEmailFallback/GET /api/nexus/offline-queue.
+    if (accountExists) await sendNexusPasswordResetEmail(db, { to: email, resetToken: rawToken, expiresAt, ownerId: targetUserId });
     const providerConfigured = nexusEmailProviderStatus().configured;
     addActivity(db.profile, `Password reset requested for ${email}.`);
     await writeDb(db);
@@ -51060,6 +51229,16 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow executive demo runs" });
+    // Found live: same unguarded-replay shape as /api/demo/wow just above --
+    // no idempotency guard at all, so a double-click/retry/repeat press
+    // unconditionally re-added another duplicate demo order, health intake,
+    // and care plan, and re-incremented learningStreak/learningHours/
+    // representativeConnections every single call. Guarded the same way:
+    // the whole handler is one idempotent "set up the executive demo state"
+    // action whose response is always just the current profile state.
+    if (db.profile.executiveDemoCompletedAt) {
+      return send(res, 200, publicState(db, user));
+    }
     const { country, route } = activeContext(db);
     ensureLearningProfile(db.profile);
     ensureWorkforceProfile(db.profile);
@@ -51195,6 +51374,7 @@ async function api(req, res, url) {
     const copilot = await runAi("copilot", country, route, db.profile);
     recordAiRun(db, { type: "copilot", country, route, result: copilot, module: "AI" });
     recalcReadiness(db.profile);
+    db.profile.executiveDemoCompletedAt = new Date().toISOString();
     addActivity(db.profile, "Executive demo run completed across learning, workforce, health, trade, AI, notifications, and integrations.");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
@@ -51309,6 +51489,23 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/demo/wow" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow investor demo runs" });
+    // Found live: this handler had no idempotency guard at all -- unlike its
+    // own certificate/badge/shift blocks just below (each correctly checks
+    // "does this already exist?" before creating one), the order+wallet
+    // credit, health intake/telehealth/safety/care-plan records, and the
+    // learningHours/learningStreak/representativeConnections counters were
+    // all unconditionally re-added/incremented on every single call. A
+    // double-click, network retry, or pressing the "WOW investor demo"
+    // button a second time silently inflated the wallet balance, order
+    // history, and counters shown in the very same admin/investor dashboard
+    // this route exists to showcase. Since the whole handler represents one
+    // idempotent "put the demo into its WOW state" action (its response is
+    // always just the current profile state, never anything computed only
+    // on a fresh run), guard the entire body once here instead of patching
+    // each mutation site individually.
+    if (db.profile.wowDemoCompletedAt) {
+      return send(res, 200, publicState(db, user));
+    }
     const nigeria = db.countries.find(item => item.id === "nigeria") || db.countries[0];
     db.profile.activeCountryId = nigeria.id;
     db.profile.activeRouteId = nigeria.routeId;
@@ -51556,6 +51753,7 @@ async function api(req, res, url) {
       { title: "Investor proof appears", detail: "Provider events, notifications, activity, map context, and profile state update across the whole platform.", evidence: "Audit-ready operating record", status: "done" }
     ];
     db.profile.demoScore = 100;
+    db.profile.wowDemoCompletedAt = new Date().toISOString();
     recalcReadiness(db.profile);
     addActivity(db.profile, "WOW investor demo completed: rural Nigeria accessibility, learning, workforce, telehealth, trade, map, AI, notifications, and provider evidence are all active.");
     await writeDb(db);
@@ -51870,12 +52068,24 @@ async function api(req, res, url) {
         return ["learning-courses", "learning.assignment_created", `${record.assignmentNumber} assignment created for ${course.title}.`, record];
       },
       "quiz-attempt": () => {
+        // Found live (money-logic-shaped audit, same gap as workforce/
+        // advanced's evaluation action): an explicit score:0 (a genuinely
+        // failed quiz) was silently replaced with a fake 72-96 passing score
+        // via the `body.score || fallback` falsy-zero bug, and there was no
+        // Number.isFinite check at all -- a non-finite score (e.g.
+        // "Infinity") survived Number(...) as a truthy Infinity, bypassing
+        // the fallback and permanently poisoning enrollment.score/quizScore
+        // (both gate certificate issuance and workforce readiness) with
+        // Infinity via Math.max.
+        const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
           attemptNumber: `AN-QUIZ-${String(db.profile.quizAttempts.length + 1).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
-          score: Number(body.score || Math.max(72, Math.min(96, (enrollment.score || 60) + 18))),
+          score: body.score !== undefined && Number.isFinite(requestedScore)
+            ? Math.min(100, Math.max(0, requestedScore))
+            : Math.max(72, Math.min(96, (enrollment.score || 60) + 18)),
           status: "submitted",
           feedback: "Review missed concepts, then proceed toward certificate readiness.",
           createdAt: now
@@ -53091,6 +53301,17 @@ async function api(req, res, url) {
   if (url.pathname === "/api/health/mobile-clinic-revenue" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic revenue workflows" });
     const body = await readBody(req);
+    // Found live (further follow-up sweep): unlike every sibling money-write path in this file
+    // (/api/trade/wallet, /api/trade/payment-checkout, /api/trade/advanced, /api/trade/logistics, all
+    // guarded with Number.isFinite), a non-numeric, negative, or infinite body.amount here flowed
+    // straight into a persisted, receipt/payout-visible mobileClinicRevenueRecords entry with no
+    // validation at all.
+    if (body.amount !== undefined) {
+      const requestedAmount = Number(body.amount);
+      if (!Number.isFinite(requestedAmount) || requestedAmount < 0) {
+        return send(res, 400, { error: "Mobile clinic revenue amount must be a finite number, zero or greater." });
+      }
+    }
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
     const type = String(body.type || "clinic-payment-request").trim();
@@ -53120,7 +53341,14 @@ async function api(req, res, url) {
     const patientName = String(body.patientName || intake.patientName || "Community patient").trim();
     const service = String(body.service || "mobile clinic visit, vitals collection, telehealth handoff, and follow-up support").trim();
     const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "DRC" ? "CDF" : "USD")).trim();
-    const amount = Number(body.amount || (type === "clinic-service-menu" ? 0 : 1500));
+    // Found live (falsy-zero sweep): the guard above at line 53266 explicitly
+    // allows and validates an amount of exactly 0 ("must be a finite number,
+    // zero or greater"), but this line's `body.amount || fallback` treated
+    // an explicit 0 as falsy and silently replaced it with the 1500
+    // placeholder for any type other than "clinic-service-menu" -- a
+    // legitimately free/waived/sponsored clinic visit was recorded and
+    // shown on the patient/provider receipt as a $1500 charge instead of $0.
+    const amount = body.amount !== undefined ? Number(body.amount) : (type === "clinic-service-menu" ? 0 : 1500);
     const paymentMethod = String(body.paymentMethod || "mobile money, cash receipt, card, or sponsor voucher").trim();
     const previous = db.profile.mobileClinicRevenueRecords[0] || null;
     const serviceMenu = [
@@ -53847,6 +54075,17 @@ async function api(req, res, url) {
   if (url.pathname === "/api/trade/logistics" && req.method === "POST") {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade logistics workflows" });
     const body = await readBody(req);
+    // Found live (further follow-up sweep): unlike every sibling money-write path in this file
+    // (/api/trade/wallet, /api/trade/payment-checkout, /api/trade/advanced's quote/release actions,
+    // all guarded with Number.isFinite), a non-numeric, negative, or infinite body.amount here flowed
+    // straight into createTradeLogisticsWorkflow's amount (and, for the "settlement" branch, into a
+    // real wallet-crediting fee calculation) with no validation at all.
+    if (body.amount !== undefined) {
+      const requestedAmount = Number(body.amount);
+      if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+        return send(res, 400, { error: "Logistics amount must be a finite number greater than zero." });
+      }
+    }
     let result;
     try {
       result = await createTradeLogisticsWorkflow(db, user, body);
@@ -54477,7 +54716,7 @@ async function api(req, res, url) {
     if (body.templateId) {
       const template = db.profile.cloudAgentToolTemplates.find(item => item.id === body.templateId);
       if (!template) return send(res, 404, { error: "Cloud agent tool template not found" });
-      if (user.role !== "admin") return send(res, 403, { error: "Only admin can approve tool templates" });
+      if (user.role !== "Admin") return send(res, 403, { error: "Only admin can approve tool templates" });
       template.status = "approved-template";
       template.approvedBy = user.email;
       template.approvedAt = new Date().toISOString();

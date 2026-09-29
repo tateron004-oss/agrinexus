@@ -67,6 +67,13 @@ async function searchYouTubeVideos(query, env = process.env) {
   statusUrl.searchParams.set("key", apiKey);
   const statusResponse = await fetchWithTimeout(statusUrl, { headers: { accept: "application/json" } }, 9000);
   const statusPayload = await statusResponse.json().catch(() => ({}));
+  // Found live: unlike the search call just above (which throws on !ok), this never checked
+  // statusResponse.ok -- a quota/outage/malformed-batch failure on just the status call silently
+  // produced an empty payload, zero "eligible" videos, and searchYouTubeVideos returning [] as if the
+  // search had genuinely found nothing embeddable, rather than surfacing the real provider error.
+  // searchVideos() then silently falls through to the weaker Wikimedia Commons fallback with the
+  // actual YouTube error lost.
+  if (!statusResponse.ok) throw new Error(statusPayload.error?.message || `youtube-status-http-${statusResponse.status}`);
   const embeddableIds = new Set(
     (statusPayload.items || [])
       .filter(item => item.status?.embeddable === true && item.status?.privacyStatus === "public")

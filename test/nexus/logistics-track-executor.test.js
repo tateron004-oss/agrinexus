@@ -36,6 +36,22 @@ test("a real computed route returns a real duration-based estimated arrival, hon
   });
 });
 
+// Found live (follow-up sweep): `Number(data.durationSeconds) || null` (and a truthy check on the
+// result) coerced a genuinely-computed 0-second duration to null -- reachable whenever origin and
+// destination geocode to the same or a near-identical point -- silently dropping a valid
+// estimatedArrival even though ok:true and a real (zero) duration were computed.
+test("a genuinely computed 0-second route duration (same-point origin/destination) is not silently dropped", async () => {
+  const now = Date.now();
+  await withPatched(googleMapsProvider, "route", async () => ({ body: { data: { distanceMeters: 0, durationSeconds: 0, routeGeometry: [[-1.28, 36.82]] } } }), async () => {
+    const execute = createLogisticsTrackExecutor({ env: {} });
+    const result = await execute({ input: { origin: "Same Place", destination: "Same Place" } });
+    assert.equal(result.ok, true);
+    assert.equal(result.durationSeconds, 0, "a real, computed 0 must not be coerced to null");
+    assert.notEqual(result.estimatedArrival, null, "a real 0-second duration must still produce a real estimatedArrival, not be dropped");
+    assert.ok(new Date(result.estimatedArrival).getTime() >= now - 1000);
+  });
+});
+
 test("missing origin or destination is refused before calling the route provider", async () => {
   const execute = createLogisticsTrackExecutor({ env: {} });
   const result = await execute({ input: { origin: "Nairobi" } });

@@ -111,7 +111,11 @@ function normalizeEditable(info, input = {}) {
     // real one-to-many relationship has to be modeled as two flat lists
     // rather than one row holding an embedded line-items array.
     invoices,
-    invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }, 200, new Set(["quantity", "unitPrice"])),
+    // Found live (follow-up sweep): unlike transactions/grants/listings, this shape genuinely had no
+    // currency field -- the grants "Found live" comment above claims invoiceItems already had one, but
+    // it never did, so a value could never persist even via the direct API and every line item was
+    // silently treated as USD regardless of what was actually said or stored.
+    invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0, currency: "USD" }, 200, new Set(["quantity", "unitPrice"])),
     // Tool 4: grant and funding tracking. The existing "Grant Writing Agent"
     // (strategy.js) only ever produced a one-shot text template -- nothing
     // persisted an actual funding opportunity, its deadline, or its

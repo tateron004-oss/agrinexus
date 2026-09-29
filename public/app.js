@@ -10001,6 +10001,33 @@ function money(value) {
   return `$${Number(value).toLocaleString()}`;
 }
 
+function moneyInCurrency(currency, value) {
+  const amount = Number(value) || 0;
+  return !currency || currency === "USD" ? `$${amount.toLocaleString()}` : `${currency} ${amount.toLocaleString()}`;
+}
+
+// Found live: "Platform revenue"/"Revenue earned" summed platformTransactionFees' feeAmount across
+// ALL currencies, then money() hardcoded a "$" on the result -- but a fee's currency is chosen per
+// order at settlement time (server.js), not fixed per account, so one profile can genuinely
+// accumulate fees in KES, NGN, USD, CDF, and GHS side by side (the per-row ledger just below already
+// shows each fee's own currency, proving the client already knows this). Bucket by currency instead
+// of mixing magnitudes under one mislabeled total, matching the same fix already applied server-side
+// for grants/listings/invoices.
+function sumFeesByCurrency(fees, key) {
+  const totals = {};
+  for (const fee of fees || []) {
+    const currency = String(fee.currency || "USD").toUpperCase();
+    totals[currency] = (totals[currency] || 0) + (Number(fee[key]) || 0);
+  }
+  const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  return { currency: entries[0]?.[0] || "USD", amount: entries[0]?.[1] || 0, others: entries.slice(1).map(([currency]) => currency) };
+}
+
+function feeTotalDisplay(fees, key) {
+  const bucketed = sumFeesByCurrency(fees, key);
+  return `${moneyInCurrency(bucketed.currency, bucketed.amount)}${bucketed.others.length ? ` (not counting fees in ${bucketed.others.join(", ")})` : ""}`;
+}
+
 function row(label, value) {
   return `<div class="row"><span>${escapeHtml(translateText(label))}</span><strong>${escapeHtml(translateText(value))}</strong></div>`;
 }
@@ -10289,10 +10316,16 @@ function healthSafetyAssistantAnswer() {
   return `Health safety reminder for ${country.name}: ${heatLine} ${intake ? `Latest intake is ${intake.patientRef || "recorded"}.` : "No current intake is open."} For severe symptoms or danger, contact local emergency help immediately.`;
 }
 
+// Found live (same bug shape as browser-action-controller.js's musicRequest() and app.js's
+// isNexusMediaMusicCommand(), both already fixed tonight): "nigerian"/"congolese"/"kenyan"/
+// "motivational"/"calm"/"training" were listed as bare standalone alternatives instead of requiring
+// an adjacent music noun -- "find nigerian visa requirements", "start congolese registration form",
+// "open my training schedule", and "search calm breathing technique" all matched and got silently
+// hijacked into a canned music-provider response before any real handling was attempted.
 function musicAssistantIntent(command = "") {
   const lower = normalizeToolText(command);
   if (!/\b(play|open|find|search|start|put on|listen to)\b/.test(lower)) return null;
-  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm|training)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross)\b/.test(lower)) return null;
   const cleaned = String(command || "")
     .replace(/\bnexus\b/ig, "")
     .replace(/\b(can you|please|could you|would you|open|play|find|search|start|put on|listen to)\b/ig, " ")
@@ -24384,9 +24417,19 @@ function isNexusMediaMusicCommand(command = "") {
   const lower = text.toLowerCase();
   if (/\b(shipment|tracking number|trade route|logistics|delivery|transport)\b/i.test(lower)) return false;
   const knownMusicIntent = NEXUS_MEDIA_MUSIC_INTENTS.some(intent => intent.patterns.some(pattern => pattern.test(text)));
+  // Found live: providerMusicIntent/genericMusicIntent both listed "study"/"relaxing"/"workout"/
+  // "exercise"/"fitness"/"kenya"/"kenyan"/"nigerian"/"african" as bare, standalone alternatives --
+  // but NEXUS_MEDIA_MUSIC_INTENTS above (knownMusicIntent) already correctly requires these as
+  // compound phrases ("kenyan music", "workout music", etc). Re-listing them here as bare words let
+  // ordinary, unrelated commands like "open my Kenya trip itinerary", "open my Nigerian visa
+  // application", "resume my fitness plan", or "open the study group chat" match as a false-positive
+  // music intent -- several call sites treat a match here as "handled, stop processing", silently
+  // hijacking or suppressing whatever the user actually asked for. Dropped these ambiguous qualifier
+  // words; the unambiguous core music nouns/genre names below are unaffected, and the compound
+  // "X music" phrasing they used to loosely stand in for is already covered by knownMusicIntent.
   const providerMusicIntent = /\b(youtube|spotify|apple music)\b/i.test(text)
-    && /\b(play|open|music|song|playlist|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife)\b/i.test(text);
-  const genericMusicIntent = /\b(play|open|pause|stop|resume|download|rip|cache)\b.*\b(music|song|playlist|audio|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife)\b/i.test(text);
+    && /\b(play|open|music|song|playlist|r&b|rnb|rhythm and blues|afrobeats?|amapiano|gospel|jazz|highlife)\b/i.test(text);
+  const genericMusicIntent = /\b(play|open|pause|stop|resume|download|rip|cache)\b.*\b(music|song|playlist|audio|r&b|rnb|rhythm and blues|afrobeats?|amapiano|gospel|jazz|highlife)\b/i.test(text);
   return knownMusicIntent || providerMusicIntent || genericMusicIntent;
 }
 
@@ -26670,6 +26713,27 @@ function nexusFormDataForWorkflow(workflowId = "") {
     const key = field.dataset.nexusModeField || field.name || "field";
     values[key] = String(field.value || "").trim();
   });
+  // Found live: the default (non-guided) "Form mode" intake form
+  // (renderNexusLandingField, shown by default for every Nexus workflow
+  // unless the user explicitly clicks "Guided mode") tags its inputs with
+  // data-nexus-landing-field, not data-nexus-mode-field -- this collector
+  // never read that attribute, so anything typed into the default form was
+  // silently discarded: "Prepare packet"/"Queue if inactive"/"Review
+  // confirmation" all built the packet from an empty {}, with no client-side
+  // validation to catch it.
+  workspace?.querySelectorAll?.("[data-nexus-landing-field]")?.forEach(field => {
+    const key = field.dataset.nexusLandingField || field.name || "field";
+    if (field.tagName === "FIELDSET") {
+      const selected = Array.from(field.querySelectorAll("[data-nexus-landing-checkbox]:checked")).map(box => box.value);
+      if (selected.length) values[key] = selected.join(", ");
+      return;
+    }
+    if (field.type === "checkbox") {
+      values[key] = field.checked ? (field.value || "true") : "";
+      return;
+    }
+    values[key] = String(field.value || "").trim();
+  });
   values.workflowId = workflowId;
   return values;
 }
@@ -27819,8 +27883,17 @@ function nextNexusInterviewIndex(fields = [], interview = {}) {
   const values = nexusInterviewValues(interview);
   const skipped = new Set(interview.skipped || []);
   const preferred = Math.max(0, Number(interview.currentIndex || 0));
-  const fromPreferred = fields.findIndex((field, index) => index >= preferred && !values[field.name] && !skipped.has(field.name));
-  if (fromPreferred >= 0) return fromPreferred;
+  // Found live: "Back" and "Correct previous" deliberately set currentIndex
+  // to an ALREADY-ANSWERED field's index so the user can review/edit it
+  // (renderNexusGuidedIntakePanel even pre-fills the input with the
+  // existing answer) -- but this used to always search forward from
+  // `preferred` for the next UNanswered field, immediately skipping past
+  // the very field the user asked to revise and landing on a later,
+  // unrelated question instead. currentIndex is authoritative once it
+  // points at a real field; only fall back to searching for the first open
+  // field when it's out of range (e.g. a fresh interview, or one just
+  // completed).
+  if (preferred < fields.length) return preferred;
   const firstOpen = fields.findIndex(field => !values[field.name] && !skipped.has(field.name));
   return firstOpen >= 0 ? firstOpen : Math.max(fields.length - 1, 0);
 }
@@ -41681,7 +41754,7 @@ function render() {
     row("Balance", money(data.profile.wallet)),
     row("Transactions", data.profile.walletTransactions.length),
     row("Last transaction", data.profile.walletTransactions[0]?.provider || "None"),
-    row("Platform revenue", money((data.profile.platformTransactionFees || []).reduce((sum, fee) => sum + Number(fee.feeAmount || 0), 0))),
+    row("Platform revenue", feeTotalDisplay(data.profile.platformTransactionFees || [], "feeAmount")),
     row("Fee records", (data.profile.platformTransactionFees || []).length)
   ].join("");
 
@@ -41691,11 +41764,10 @@ function render() {
 
   if ($("#platformFeePanel")) {
     const fees = data.profile.platformTransactionFees || [];
-    const feeTotal = fees.reduce((sum, fee) => sum + Number(fee.feeAmount || 0), 0);
     $("#platformFeePanel").innerHTML = [
       row("Fee model", `${fees[0]?.feePercent || 2.5}% per settled transaction`),
       row("Fees captured", fees.length),
-      row("Revenue earned", money(feeTotal))
+      row("Revenue earned", feeTotalDisplay(fees, "feeAmount"))
     ].join("");
   }
   if ($("#platformFeeLedger")) {
@@ -42700,8 +42772,16 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
         weight: 2
       }).addTo(layer).bindPopup(`<strong>${translateText("Destination")}</strong><br>${translateText(state.destinationLabel || "Delivery point")}`);
     }
-    if (includeCurrentMarker && state.originPoint) {
-      L.marker(state.originPoint, { icon: shipmentMarkerIcon("Live shipment") })
+    // Found live: this always drew the "Live shipment" marker at state.originPoint (the fixed pickup
+    // point), never at state.livePoint (the real current GPS position) -- even though livePoint is
+    // computed right here in shipmentTrackingState() and the sibling no-routeGeometry fallback below
+    // already correctly prefers it. Whenever a real live-tracked route (with actual polyline geometry)
+    // was available -- the BEST-data case -- the marker stayed glued to the start point for the whole
+    // trip while the popup's own ETA/checkpoint text kept updating, visibly contradicting the frozen
+    // marker position.
+    const shipmentMarkerPoint = state.livePoint || state.originPoint;
+    if (includeCurrentMarker && shipmentMarkerPoint) {
+      L.marker(shipmentMarkerPoint, { icon: shipmentMarkerIcon("Live shipment") })
         .addTo(layer)
         .bindPopup(`<strong>${translateText("Shipment tracking")}</strong><br>${translateText(state.nextCheckpoint || state.activeCheckpoint)}<br>${translateText(`ETA: ${state.eta}`)}<br>${translateText(state.source === "live-provider" ? "Live provider GPS" : "Platform tracking")}`);
     }
@@ -55569,10 +55649,22 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
       action: ["action", "transactionAction"],
       intake: ["intake", "intakeType", "careRequest"]
     };
+    // Found live: this list never included data-nexus-landing-field -- the
+    // attribute the currently-active DEFAULT (non-guided) Form-mode intake
+    // window actually renders (renderNexusLandingField, same one implicated
+    // in the earlier nexusFormDataForWorkflow fix). A voice command that
+    // opened a workspace and genuinely populated its default-mode fields
+    // correctly still failed verification here (populatedFields never
+    // reached expected.length), which throws below and is caught by the
+    // generic catch in dispatchRealtimeToolCall/handleRealtimeFinalTranscript
+    // -- so Kyro told the user "I could not reach the Nexus tool layer right
+    // now" / "temporarily unavailable" even though the action had genuinely
+    // already succeeded on screen.
     const selectors = (aliases[key] || [key]).flatMap(name => [
       `[data-nexus-realtime-field="${key}"]`,
       `[data-maps-field-visit-field="${name}"]`,
       `[data-nexus-mode-field="${name}"]`,
+      `[data-nexus-landing-field="${name}"]`,
       `[data-nexus-guided-answer="${name}"]`,
       `[data-marketplace-create-field="${name}"]`
     ]);
@@ -56126,7 +56218,12 @@ function nexusConversationFirstIntent(command = "") {
       tool: "music-control"
     };
   }
-  if (/\b(play|open|find|search|start|put on|listen to)\b.*\b(music|song|songs|playlist|soul|gospel|congolese|kenyan|relaxing|90s)\b/.test(lower)) {
+  // Found live (same bug shape as the other music-intent fixes tonight): "congolese"/"kenyan"/
+  // "relaxing"/"90s" were bare alternatives with only ".*" (any text) between the verb and the
+  // qualifier -- "play kenyan folklore story", "find congolese registration office", "start relaxing
+  // breathing session", and "open my 90s savings goal" all matched and got rerouted to the music tool
+  // in this primary voice-command routing pipeline, ahead of any real handling.
+  if (/\b(play|open|find|search|start|put on|listen to)\b.*\b(music|song|songs|playlist|soul|gospel)\b/.test(lower)) {
     return {
       type: "tool",
       tool: "music",
