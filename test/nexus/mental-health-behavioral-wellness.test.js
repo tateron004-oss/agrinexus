@@ -24,6 +24,21 @@ test("crisisOverride fires for direct crisis and safeguarding language", () => {
   assert.equal(mh.classifyState("someone is hurting me at home").state, "abuse_or_safeguarding_concern");
 });
 
+// Found live (crisis-detection consistency audit): this classifier is the sole crisis
+// gate for typed chat, the classic phone Gather flow, the realtime phone-bridge's
+// independent transcript listener, and the browser WebRTC voice path -- but was
+// English-only, even though this product explicitly serves Swahili-speaking rural
+// users. A Swahili-speaking user saying "Nataka kufa" ("I want to die") matched
+// nothing and fell through to ordinary conversation with no safety response at all.
+test("crisisOverride also fires for the equivalent Swahili crisis phrases, not just English", () => {
+  for (const text of ["Nataka kufa", "Ninataka kujiua", "Nataka kujidhuru", "Sitaki tena kuishi", "Niko hatarini"]) {
+    assert.equal(mh.shouldHandle(text), true, text);
+    const classification = mh.classifyState(text);
+    assert.equal(classification.crisisOverride, true, text);
+    assert.equal(classification.state, "immediate_danger", text);
+  }
+});
+
 // Confirmed live: shouldHandle()'s general MENTAL_HEALTH_PATTERNS list
 // matches plain words ("therapy", "provider", "counseling") that appear
 // constantly in ordinary, unrelated commands (a real fitness log, a
