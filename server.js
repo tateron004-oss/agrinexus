@@ -11886,7 +11886,11 @@ function cloudAgentPolicy(user = {}) {
     mode: "controlled-cloud-agent",
     cloudRuntime: IS_HOSTED ? "render-cloud" : "local-cloud-sim",
     canRunSafeToolsAutomatically: true,
-    canCreateToolTemplates: user?.role === "admin" || user?.role === "investor",
+    // Found live: real user roles are stored capitalized ("Admin"/"Investor", see DEFAULT_USERS and
+    // every other role check in this file), but this compared against lowercase "admin"/"investor" --
+    // the cloud-agent tool-template feature was unreachable for every real account, including the
+    // platform's own seeded admin.
+    canCreateToolTemplates: user?.role === "Admin" || user?.role === "Investor",
     canExecuteGeneratedCode: false,
     canSelfDeploy: false,
     canRetrainModel: false,
@@ -12001,7 +12005,7 @@ function createCloudAgentToolTemplate(db, user, body = {}) {
       `AgriNexus, help me with ${title.toLowerCase()}`
     ],
     inputSchema: body.inputSchema || { type: "object", properties: { goal: { type: "string" }, notes: { type: "string" } } },
-    status: body.approved === true && user.role === "admin" ? "approved-template" : "draft-needs-approval",
+    status: body.approved === true && user.role === "Admin" ? "approved-template" : "draft-needs-approval",
     safety: "Template only. It cannot execute arbitrary code and must be bound to registered tools or reviewed provider adapters.",
     createdBy: user.email,
     createdAt: new Date().toISOString(),
@@ -54477,7 +54481,7 @@ async function api(req, res, url) {
     if (body.templateId) {
       const template = db.profile.cloudAgentToolTemplates.find(item => item.id === body.templateId);
       if (!template) return send(res, 404, { error: "Cloud agent tool template not found" });
-      if (user.role !== "admin") return send(res, 403, { error: "Only admin can approve tool templates" });
+      if (user.role !== "Admin") return send(res, 403, { error: "Only admin can approve tool templates" });
       template.status = "approved-template";
       template.approvedBy = user.email;
       template.approvedAt = new Date().toISOString();
