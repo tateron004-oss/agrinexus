@@ -24384,9 +24384,19 @@ function isNexusMediaMusicCommand(command = "") {
   const lower = text.toLowerCase();
   if (/\b(shipment|tracking number|trade route|logistics|delivery|transport)\b/i.test(lower)) return false;
   const knownMusicIntent = NEXUS_MEDIA_MUSIC_INTENTS.some(intent => intent.patterns.some(pattern => pattern.test(text)));
+  // Found live: providerMusicIntent/genericMusicIntent both listed "study"/"relaxing"/"workout"/
+  // "exercise"/"fitness"/"kenya"/"kenyan"/"nigerian"/"african" as bare, standalone alternatives --
+  // but NEXUS_MEDIA_MUSIC_INTENTS above (knownMusicIntent) already correctly requires these as
+  // compound phrases ("kenyan music", "workout music", etc). Re-listing them here as bare words let
+  // ordinary, unrelated commands like "open my Kenya trip itinerary", "open my Nigerian visa
+  // application", "resume my fitness plan", or "open the study group chat" match as a false-positive
+  // music intent -- several call sites treat a match here as "handled, stop processing", silently
+  // hijacking or suppressing whatever the user actually asked for. Dropped these ambiguous qualifier
+  // words; the unambiguous core music nouns/genre names below are unaffected, and the compound
+  // "X music" phrasing they used to loosely stand in for is already covered by knownMusicIntent.
   const providerMusicIntent = /\b(youtube|spotify|apple music)\b/i.test(text)
-    && /\b(play|open|music|song|playlist|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife)\b/i.test(text);
-  const genericMusicIntent = /\b(play|open|pause|stop|resume|download|rip|cache)\b.*\b(music|song|playlist|audio|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife)\b/i.test(text);
+    && /\b(play|open|music|song|playlist|r&b|rnb|rhythm and blues|afrobeats?|amapiano|gospel|jazz|highlife)\b/i.test(text);
+  const genericMusicIntent = /\b(play|open|pause|stop|resume|download|rip|cache)\b.*\b(music|song|playlist|audio|r&b|rnb|rhythm and blues|afrobeats?|amapiano|gospel|jazz|highlife)\b/i.test(text);
   return knownMusicIntent || providerMusicIntent || genericMusicIntent;
 }
 
