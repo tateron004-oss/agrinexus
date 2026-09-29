@@ -26713,6 +26713,27 @@ function nexusFormDataForWorkflow(workflowId = "") {
     const key = field.dataset.nexusModeField || field.name || "field";
     values[key] = String(field.value || "").trim();
   });
+  // Found live: the default (non-guided) "Form mode" intake form
+  // (renderNexusLandingField, shown by default for every Nexus workflow
+  // unless the user explicitly clicks "Guided mode") tags its inputs with
+  // data-nexus-landing-field, not data-nexus-mode-field -- this collector
+  // never read that attribute, so anything typed into the default form was
+  // silently discarded: "Prepare packet"/"Queue if inactive"/"Review
+  // confirmation" all built the packet from an empty {}, with no client-side
+  // validation to catch it.
+  workspace?.querySelectorAll?.("[data-nexus-landing-field]")?.forEach(field => {
+    const key = field.dataset.nexusLandingField || field.name || "field";
+    if (field.tagName === "FIELDSET") {
+      const selected = Array.from(field.querySelectorAll("[data-nexus-landing-checkbox]:checked")).map(box => box.value);
+      if (selected.length) values[key] = selected.join(", ");
+      return;
+    }
+    if (field.type === "checkbox") {
+      values[key] = field.checked ? (field.value || "true") : "";
+      return;
+    }
+    values[key] = String(field.value || "").trim();
+  });
   values.workflowId = workflowId;
   return values;
 }
