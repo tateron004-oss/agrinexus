@@ -12178,9 +12178,22 @@ async function executeCloudAgentRun(db, user, run, options = {}) {
     }
     executedSteps.push(result);
   }
-  const failed = executedSteps.filter(step => step.status === "failed");
+  // Found live (drone/cloud-agent audit): a "self-corrected" step is a step
+  // whose REAL action failed, where the only thing that actually succeeded
+  // was a generic ai.copilot fallback summary prepared for human review --
+  // never a retry or recovery of the real action itself (a failed
+  // trade.wallet_payment/trade.market_review/health.referral/etc. never
+  // actually happens just because the fallback summary was written). This
+  // used to count "self-corrected" as completed and exclude it from
+  // `failed`, so run.status became "completed" and run.summary claimed
+  // "Cloud agent completed all N controlled workflow step(s)" even when
+  // every real action in the run had actually failed -- a user/operator
+  // reading the run summary would believe a payment, order, or health
+  // referral went through when it did not. A self-corrected step still
+  // needs the same human review as an outright failed one.
+  const failed = executedSteps.filter(step => step.status === "failed" || step.status === "self-corrected");
   const blocked = executedSteps.filter(step => step.status === "blocked-awaiting-approval");
-  const completed = executedSteps.filter(step => ["executed", "self-corrected"].includes(step.status));
+  const completed = executedSteps.filter(step => step.status === "executed");
   run.steps = executedSteps;
   run.status = failed.length ? "needs-human-review" : blocked.length ? "needs-approval" : "completed";
   run.summary = failed.length
