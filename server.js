@@ -13027,6 +13027,14 @@ function ensureVoiceHealthIntake(db, user, { needSummary, force = false } = {}) 
 }
 
 function runHealthActionByAgent(db, user, type) {
+  // Found live (drone/cloud-agent audit): this never destructured `country`
+  // from activeContext(db) (unlike the sibling ensureVoiceHealthIntake just
+  // above it), yet the vitals/safety/careplan branches below all reference
+  // it -- a real, unconditional ReferenceError on every single invocation of
+  // "capture vitals", "run a safety review", or "generate a care plan",
+  // whether reached through a direct voice/text command or as a step in the
+  // default Healthcare autopilot mission.
+  const { country } = activeContext(db);
   const intake = ensureVoiceHealthIntake(db, user);
   const actionMap = {
     representative: ["representative.connected", "Representative connected", "health-notifications"],
