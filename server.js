@@ -6558,7 +6558,15 @@ function maximumOperationalEfficiencyModel(db, user, providers = runtimeProvider
   const smart = smartNextActions(db, user, providers).items.slice(0, 6);
   const readiness = Number(db.profile.readiness || 0);
   const evidenceCount = (db.profile.integrationEvents || []).length + (db.profile.workflowIntelligence || []).length + (db.profile.activity || []).length;
-  const tradeScore = (db.profile.tradeEfficiencyReviews || [])[0]?.score || (db.profile.orders || []).length ? 72 : 58;
+  // Found live: `? :` binds looser than `||`, so this used to parse as
+  // `(reviews[0]?.score || orders.length) ? 72 : 58` -- the real stored
+  // review score was NEVER actually used as the output value; tradeScore was
+  // hardcoded to 72 whenever any score or any order existed, else 58. Fixed
+  // to use the real score when one exists (Number.isFinite, not truthy, so a
+  // genuine 0 score isn't discarded either), falling back to the
+  // orders-based placeholder only when there is no real review yet.
+  const realTradeScore = (db.profile.tradeEfficiencyReviews || [])[0]?.score;
+  const tradeScore = Number.isFinite(realTradeScore) ? realTradeScore : ((db.profile.orders || []).length ? 72 : 58);
   const learningScore = Math.min(100, 50 + (db.profile.certificates || []).length * 10 + (db.profile.enrollments || []).length * 5);
   const workforceScore = Math.min(100, 45 + readiness / 2 + (db.profile.applications || []).length * 8 + (db.profile.shiftSchedule || []).length * 4);
   const healthScore = Math.min(100, 55 + (db.profile.healthIntakes || []).length * 6 + (db.profile.telehealthAccessibility || []).length * 4 + (db.profile.videoSessions || []).length * 5);
@@ -12211,6 +12219,23 @@ async function executeCloudAgentRun(db, user, run, options = {}) {
   const executedSteps = [];
   const blockedSteps = [];
   for (const step of run.steps || []) {
+    // Found live: this function has no re-entrancy guard of its own -- every
+    // call re-iterates the FULL run.steps array. A run with any
+    // requiresApproval step lands in "needs-approval" status, which is one of
+    // the two statuses cloudAgentTick()'s queue scan matches, so an ordinary
+    // POST /api/cloud-agent/tick (ai-role gated only, no approval needed to
+    // call it) kept re-picking up and re-running the SAME run on every tick --
+    // re-executing every already-succeeded safe step again each time (another
+    // wallet credit, another duplicate trade order, another drone mission),
+    // unbounded, for as long as the approval-gated step stayed unapproved.
+    // /api/cloud-agent/approve already guards against re-approving a
+    // non-pending run, but that guard doesn't stop a step that already
+    // executed from being redone once execution resumes -- the real fix
+    // belongs here, in the shared executor both callers go through.
+    if (step.status === "executed") {
+      executedSteps.push(step);
+      continue;
+    }
     if (step.requiresApproval && !approved) {
       const blocked = { ...step, status: "blocked-awaiting-approval", approvalStatus: "needed" };
       blockedSteps.push(blocked);
@@ -51953,12 +51978,24 @@ async function api(req, res, url) {
         return ["learning-courses", "learning.assignment_created", `${record.assignmentNumber} assignment created for ${course.title}.`, record];
       },
       "quiz-attempt": () => {
+        // Found live (money-logic-shaped audit, same gap as workforce/
+        // advanced's evaluation action): an explicit score:0 (a genuinely
+        // failed quiz) was silently replaced with a fake 72-96 passing score
+        // via the `body.score || fallback` falsy-zero bug, and there was no
+        // Number.isFinite check at all -- a non-finite score (e.g.
+        // "Infinity") survived Number(...) as a truthy Infinity, bypassing
+        // the fallback and permanently poisoning enrollment.score/quizScore
+        // (both gate certificate issuance and workforce readiness) with
+        // Infinity via Math.max.
+        const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
           attemptNumber: `AN-QUIZ-${String(db.profile.quizAttempts.length + 1).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
-          score: Number(body.score || Math.max(72, Math.min(96, (enrollment.score || 60) + 18))),
+          score: body.score !== undefined && Number.isFinite(requestedScore)
+            ? Math.min(100, Math.max(0, requestedScore))
+            : Math.max(72, Math.min(96, (enrollment.score || 60) + 18)),
           status: "submitted",
           feedback: "Review missed concepts, then proceed toward certificate readiness.",
           createdAt: now
