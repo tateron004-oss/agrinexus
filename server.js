@@ -16742,7 +16742,19 @@ async function executeAgentTool(db, user, step) {
       timeline: [{ label: "Agent market review", checkpoint: db.profile.activeCheckpoint, createdAt: new Date().toISOString() }],
       createdAt: new Date().toISOString()
     };
-    db.profile.orders.unshift(order);
+    // Found live (cloud-agent audit): every other order-creation path in the
+    // codebase (and every "most recent order" lookup that reads
+    // orders[orders.length-1] -- trade.advance_order/trade.wallet_payment two
+    // tools below, createTradeLogisticsWorkflow, initializeTradePaymentCheckout,
+    // createBuyerSellerMessage, createBuyerContactWorkflow, and others) treats
+    // the LAST array element as "current." unshift() put this agent-created
+    // order at the FRONT instead, so running this default AgriTrade mission
+    // twice in a session made the second run's advance/wallet-payment steps
+    // silently act on the FIRST run's stale order (still last in the array)
+    // instead of the order this run just created -- reporting success against
+    // the wrong order while the real new order was silently left stuck at
+    // "Agent market review" forever.
+    db.profile.orders.push(order);
     addTradeEvent(db.profile, { type: "agent.market_review", label: `${product.name} market review prepared by agent.` });
     logIntegration(db, {
       providerId: "trade-market",
