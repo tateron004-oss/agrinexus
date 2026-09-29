@@ -2951,11 +2951,20 @@ function knownUnownedProfileGaps(profile, db = null) {
   if (hasAny(["fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations"])) {
     gaps.push("Advanced map/logistics planning records (field zones, facility routes, disruption and risk layers, evidence packets, farmer locations) have no per-account owner field today and are not included.");
   }
-  if (hasAny(["workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
-    gaps.push("Advanced workforce operations records (onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) have no per-account owner field today and are not included.");
+  // Found live (export/erasure sibling sweep): db.profile.applications (workforce role applications --
+  // roleTitle/status/rate/source) has no owner field either, same as its siblings in this bucket, but
+  // was missing from the disclosure list.
+  if (hasAny(["applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
+    gaps.push("Advanced workforce operations records (role applications, onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) have no per-account owner field today and are not included.");
   }
-  if (hasAny(["learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "certificates", "learningAccommodations"])) {
-    gaps.push("Advanced learning records (assignments, quiz attempts, instructor notes, progress reports, transcripts, cohorts, certificates, accommodations) have no per-account owner field today and are not included.");
+  // Found live (export/erasure sibling sweep): enrollments/completedCourses/womenChildrenLearningPlans
+  // are built by the exact same ensureLearningProfile() as certificates/learningAssignments/etc. right
+  // below, with the identical no-owner-field shape -- but they were missing from this disclosure list,
+  // so a user was never told their course-enrollment progress or completed-course history survives
+  // erasure/is absent from export, even though the sibling certificates array right next to them is
+  // honestly disclosed.
+  if (hasAny(["enrollments", "completedCourses", "womenChildrenLearningPlans", "learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "certificates", "learningAccommodations"])) {
+    gaps.push("Advanced learning records (course enrollments, completed-course history, women/children learning plans, assignments, quiz attempts, instructor notes, progress reports, transcripts, cohorts, certificates, accommodations) have no per-account owner field today and are not included.");
   }
   if (hasAny(["nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"])) {
     gaps.push("Locally-saved health/workforce governance feedback, offline sync history, legacy voice reminders, field-visit plans, saved learning resources, and marketplace notes have no per-account owner field today and are not included.");
@@ -44732,6 +44741,13 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const packet = {
       resumePacketId: nexusOperationId("NX-RES"),
       applicantId: applicant.applicantId,
+      // Found live (export/erasure sibling sweep): unlike applicantProfiles/employerProfiles/
+      // jobOpportunities (all of which stamp ownerId at creation), this record had no owner field at
+      // all -- collectOwnedOperationsRecords/eraseOwnedOperationsRecords match strictly on
+      // item.ownerId === userId, so an undefined ownerId can never match any real user. A real
+      // resume-packet headline/skills/summary silently survived both account export (never listed)
+      // and erasure (never removed), with no disclosed gap either.
+      ownerId: nexusOperationsOwnerKey(user),
       status: "prepared",
       headline: cleanOpsText(body.headline || "Workforce readiness packet", 160),
       skills: cleanOpsArray(body.skills || applicant.skills || ""),
@@ -44813,6 +44829,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       applicantId: applicant.applicantId,
       employerId: employer.employerId,
       jobOpportunityId: job.jobOpportunityId,
+      // Found live (export/erasure sibling sweep, same gap as resumePackets above): jobApplications/
+      // interviewFollowUps had no owner field, so a real application-status summary or interview
+      // follow-up note silently survived both account export and erasure, with no disclosed gap.
+      ownerId: nexusOperationsOwnerKey(user),
       type: action,
       status: /accepted|hired|placed|offer/i.test(status) ? "manual-status-review" : status,
       summary: cleanOpsText(body.summary || command || "Application support prepared for review.", 400),
@@ -44826,7 +44846,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       store.jobApplications = store.jobApplications.slice(0, 1000);
       shadowWriteJobApplicationToPostgres(job, applicant, realUserEmail, application.status);
     }
-    store.hiringPipelineRecords.unshift({ pipelineId: nexusOperationId("NX-PIPE"), applicantId: applicant.applicantId, employerId: employer.employerId, jobOpportunityId: job.jobOpportunityId, status: application.status, sourceAction: action, createdAt: now });
+    // Found live (export/erasure sibling sweep, same gap as resumePackets/jobApplications above):
+    // hiringPipelineRecords also had no owner field, so a real hiring-pipeline status history silently
+    // survived both account export and erasure.
+    store.hiringPipelineRecords.unshift({ pipelineId: nexusOperationId("NX-PIPE"), ownerId: nexusOperationsOwnerKey(user), applicantId: applicant.applicantId, employerId: employer.employerId, jobOpportunityId: job.jobOpportunityId, status: application.status, sourceAction: action, createdAt: now });
     store.hiringPipelineRecords = store.hiringPipelineRecords.slice(0, 1000);
     applicant.updatedAt = now;
     employer.updatedAt = now;
