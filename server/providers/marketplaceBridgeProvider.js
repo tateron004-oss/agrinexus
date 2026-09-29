@@ -11,7 +11,12 @@ const remindersProvider = require("./reminderProvider");
 const offlineSyncProvider = require("./offlineSyncProvider");
 const stripeProvider = require("./stripeProvider");
 
-const SENSITIVE_MARKETPLACE_PATTERN = /\b(payment|checkout|escrow|card|bank|routing|account number|ssn|patient|diagnos|prescri|medical record|insurance|password|secret|token|private key)\b/i;
+// Found live (systemic sensitive-pattern regex audit): "diagnos"/"prescri" were bare word-fragments
+// wrapped in \b(...)\b -- \b requires a boundary immediately after the fragment, so this matched NONE
+// of "diagnosis"/"diagnosed"/"diagnosing" or "prescribe"/"prescribing"/"prescription", only the
+// literal, essentially never-typed fragments themselves as whole words. \w* lets each fragment match
+// any real-word continuation (same fix applied to 6 sibling patterns with this identical defect).
+const SENSITIVE_MARKETPLACE_PATTERN = /\b(payment|checkout|escrow|card|bank|routing|account number|ssn|patient|diagnos\w*|prescri\w*|medical record|insurance|password|secret|token|private key)\b/i;
 
 const STARTER_LISTINGS = Object.freeze([
   {

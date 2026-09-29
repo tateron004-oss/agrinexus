@@ -19,7 +19,12 @@ const TEMPLATES = {
   "africa-rural-chronic-care": ["community health worker intake", "DM/HTN/obesity screening preparation", "manual RPM/RTM entry", "mobile clinic option", "telehealth provider review", "pharmacy question draft", "offline queue", "reminder"]
 };
 
-const BLOCKED_WORKFLOW_TEXT = /\b(send now|call now|pay now|book now|dispatch|use my location|camera|diagnos|prescri|medical record|secret|token|password)\b/i;
+// Found live (systemic sensitive-pattern regex audit): "diagnos"/"prescri" were bare word-fragments
+// wrapped in \b(...)\b -- \b requires a boundary immediately after the fragment, so this matched NONE
+// of "diagnosis"/"diagnosed"/"diagnosing" or "prescribe"/"prescribing"/"prescription", only the
+// literal, essentially never-typed fragments themselves as whole words. \w* lets each fragment match
+// any real-word continuation (same fix applied to 6 sibling patterns with this identical defect).
+const BLOCKED_WORKFLOW_TEXT = /\b(send now|call now|pay now|book now|dispatch|use my location|camera|diagnos\w*|prescri\w*|medical record|secret|token|password)\b/i;
 
 function status(env = process.env) {
   return { provider: "nexus-workflow-orchestrator-bridge", enabled: envEnabled("NEXUS_WORKFLOW_ORCHESTRATOR_ENABLED", env, true), templates: Object.keys(TEMPLATES), planningOnly: true, noSilentExecution: true };
