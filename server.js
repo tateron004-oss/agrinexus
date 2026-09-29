@@ -6346,8 +6346,14 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
   const predictive = backendPredictiveAdvisorModel(db, user, command || "what needs attention");
   const { country, route } = activeContext(db);
   const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+  // Found live (device/notification ownership audit): db.profile.assistantReminders
+  // is a single array shared by every account, with createdBy: user.email as the
+  // only per-user attribution (same convention as nexusFieldDispatches' requestedBy).
+  // This reader (and the list/cancel/smart-next-actions readers below) never
+  // filtered by it, so every caller's daily briefing/reminder list/cancel action
+  // silently operated on the whole workspace's reminders, not just their own.
   const reminders = (db.profile.assistantReminders || [])
-    .filter(item => item.status !== "canceled")
+    .filter(item => item.status !== "canceled" && item.createdBy === user?.email)
     .sort((a, b) => Date.parse(a.scheduledAt || a.createdAt || 0) - Date.parse(b.scheduledAt || b.createdAt || 0))
     .slice(0, 3);
   const topReminder = reminders[0] ? formatReminderForBriefing(reminders[0]) : "";
@@ -30031,14 +30037,22 @@ function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
     return null;
   }
   if (/\b(list|show|what are|read|tell me)\b/.test(lower) && /\b(reminders|reminder|follow ups|follow-ups)\b/.test(lower)) {
-    const active = (db.profile.assistantReminders || []).filter(item => item.status !== "canceled").slice(0, 5);
+    // Found live (device/notification ownership audit): unfiltered, this read every
+    // signed-in user's reminders -- task text, contact name/phone, scheduled time --
+    // back to whichever caller asked "what are my reminders", not just their own.
+    const active = (db.profile.assistantReminders || []).filter(item => item.status !== "canceled" && item.createdBy === user?.email).slice(0, 5);
     const response = active.length
       ? `You have ${active.length} reminder${active.length === 1 ? "" : "s"}. ${active.map(item => `${item.reminderNumber}: ${item.task}, ${item.whenLabel}`).join(". ")}.`
       : "You do not have active reminders yet. Say, Nexus, remind me to call Ron tomorrow, or remind me to order medical supplies Friday.";
     return { intent: "assistant.reminders_listed", response, status: "completed", metadata: { conversationMode: true, redirectSection: "agent", reminders: active } };
   }
   if (/\b(cancel|clear|delete|remove)\b/.test(lower) && /\b(reminder|reminders|follow up|follow-up)\b/.test(lower)) {
-    const reminder = (db.profile.assistantReminders || []).find(item => item.status !== "canceled");
+    // Found live (device/notification ownership audit): unfiltered, this canceled
+    // the FIRST active reminder in the whole shared workspace array, regardless of
+    // who created it -- any signed-in user saying "cancel my reminder" could
+    // silently cancel a different real account's medication/appointment/shift
+    // reminder.
+    const reminder = (db.profile.assistantReminders || []).find(item => item.status !== "canceled" && item.createdBy === user?.email);
     if (!reminder) return { intent: "assistant.no_reminder_to_cancel", response: "I do not see an active reminder to cancel.", status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent" } };
     reminder.status = "canceled";
     reminder.canceledAt = new Date().toISOString();
@@ -30098,7 +30112,10 @@ function buildAssistantActionMemory(db, user, command = "") {
       command: pending.command || ""
     });
   }
-  for (const reminder of (db.profile.assistantReminders || []).filter(item => item.status !== "canceled").slice(0, 5)) {
+  // Found live (device/notification ownership audit): unfiltered, this surfaced
+  // every signed-in user's reminders in whichever caller's own "what should I do
+  // next" summary.
+  for (const reminder of (db.profile.assistantReminders || []).filter(item => item.status !== "canceled" && item.createdBy === user?.email).slice(0, 5)) {
     add({
       title: `Reminder: ${reminder.task}`,
       detail: `${reminder.whenLabel || "soon"}${reminder.contactName ? `, contact ${reminder.contactName}` : ""}`,
