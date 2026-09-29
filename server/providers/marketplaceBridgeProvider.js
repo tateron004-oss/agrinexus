@@ -256,7 +256,16 @@ function createListing(body = {}, db, env = process.env) {
     source: "AgriTrade local user test listing"
   });
   if (!record.title || !record.category) return blockedResponse(provider, action, "Listing title and category are required.");
-  const safetyError = validateSafeMarketplaceRecord({ ...record, priceText: "" }, "Marketplace listing");
+  // Found live (marketplace/stock-race sibling sweep, follow-up to #748's
+  // queueOffline() id/source fix): this excluded priceText from the scan
+  // below -- but priceText is persisted into the stored listing AND is part
+  // of matchesListing()'s search haystack, so it is shown to and searchable
+  // by other users just like title/description. A bank account number or
+  // similar sensitive content placed in the price field was saved and
+  // displayed untouched, even though identical content in title/description
+  // is correctly blocked. Same field-coverage gap #748 just closed for
+  // queueOffline() -- scan the whole record, no field left out.
+  const safetyError = validateSafeMarketplaceRecord(record, "Marketplace listing");
   if (safetyError) return blockedResponse(provider, action, safetyError);
   const listingRecord = {
     ...record,
@@ -340,12 +349,19 @@ function saveNote(body = {}, db, env = process.env) {
   if (confirmation) return confirmation;
   const noteText = clean(body.note).slice(0, 500);
   if (!noteText) return blockedResponse(provider, action, "A non-sensitive marketplace note is required.");
-  if (SENSITIVE_MARKETPLACE_PATTERN.test(noteText)) return blockedResponse(provider, action, "Marketplace notes must not include payment, private financial, health, credential, or secret content.");
+  const listingId = clean(body.listingId || body.id).slice(0, 120);
+  const title = clean(body.title).slice(0, 180);
+  const category = clean(body.category).slice(0, 80);
+  // Found live (same sweep as createListing() above): only noteText itself was scanned -- listingId,
+  // title, and category are ALSO persisted into the saved note, unscanned, even though noteText's
+  // identical content would have been correctly blocked.
+  const safetyError = validateSafeMarketplaceRecord({ listingId, title, category, note: noteText }, "Marketplace note");
+  if (safetyError) return blockedResponse(provider, action, safetyError);
   const note = {
     id: `marketplace-note-${Date.now()}`,
-    listingId: clean(body.listingId || body.id).slice(0, 120),
-    title: clean(body.title).slice(0, 180),
-    category: clean(body.category).slice(0, 80),
+    listingId,
+    title,
+    category,
     note: noteText,
     localOnly: true,
     createdAt: new Date().toISOString()
@@ -368,10 +384,18 @@ function createReminder(body = {}, db, env = process.env) {
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
   const title = clean(body.title || "AgriTrade listing").slice(0, 180);
+  const dueAt = clean(body.dueAt || "next marketplace review");
+  // Found live (same sweep): unlike every sibling write path in this file (createListing/saveNote/
+  // prepareInquiry/queueOffline), this never scanned its own user-controlled fields at all -- and
+  // reminderProvider.create() (server/providers/reminderProvider.js) only length-caps title/dueAt/note,
+  // it does not filter content either -- so sensitive text placed in the listing title or due-date
+  // phrase reached db.profile.nexusReminders completely unfiltered.
+  const safetyError = validateSafeMarketplaceRecord({ title, dueAt }, "Marketplace reminder");
+  if (safetyError) return blockedResponse(provider, action, safetyError);
   const reminder = remindersProvider.create({
     confirmed: true,
     title: `Follow up on listing: ${title}`,
-    dueAt: clean(body.dueAt || "next marketplace review"),
+    dueAt,
     note: "AgriTrade follow-up reminder. In-app only; no buyer or seller contacted."
   }, db, env);
   if (reminder.body?.status !== "completed") return reminder;
