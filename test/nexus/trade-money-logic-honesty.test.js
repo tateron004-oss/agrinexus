@@ -206,6 +206,27 @@ test("a non-finite quote price is refused, and a non-finite release amount is re
   assert.match(badRelease.body.error, /finite/i);
 });
 
+// Found live (trade sibling sweep): the Infinity guard above correctly accepts an explicit price/
+// amount of 0 (0 is finite), but the value actually STORED still used `body.price || ...`/
+// `body.amount || ...`, silently discarding the caller's real, explicitly-requested 0 and substituting
+// a fallback (the product's real price, or 650) instead.
+test("an explicit quote price of 0 is honored, not silently replaced by the product's fallback price", async () => {
+  const zeroQuote = await post("/api/trade/advanced", { type: "quote", price: 0 });
+  assert.equal(zeroQuote.status, 200, JSON.stringify(zeroQuote.body));
+  assert.equal(zeroQuote.body.tradeAdvancedResult.record.price, 0, "an explicit price of 0 must be stored as 0, not replaced by a fallback");
+});
+
+test("an explicit release amount of 0 is honored, not silently replaced by the quote/product's fallback amount", async () => {
+  await post("/api/trade/advanced", { type: "quote", price: 777 });
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const walletBefore = (await before.json()).profile.wallet;
+
+  const zeroRelease = await post("/api/trade/advanced", { type: "release", amount: 0 });
+  assert.equal(zeroRelease.status, 200, JSON.stringify(zeroRelease.body));
+  assert.equal(zeroRelease.body.tradeAdvancedResult.record.amount, 0, "an explicit release amount of 0 must be stored as 0, not replaced by a fallback");
+  assert.equal(zeroRelease.body.profile.wallet, walletBefore, "a $0 release must not credit the wallet with the quote's real price instead");
+});
+
 // Found live (further follow-up sweep): unlike every sibling money-write path in this file, a
 // non-finite/negative body.amount on /api/trade/logistics had no validation at all -- flowing
 // straight into a persisted logistics record (and, for the "settlement" type, into the same real

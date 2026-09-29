@@ -196,3 +196,32 @@ test("a Provider Reviewer account is also blocked from the buyer-seller-message 
   const intakeAsReviewer = await post("/api/nexus/tools/telehealth/intake", { confirmed: true, sessionType: "provider_review", reason: "should never be written by a reviewer" }, providerReviewerCookie);
   assert.equal(intakeAsReviewer.status, 403, JSON.stringify(intakeAsReviewer.body));
 });
+
+// Found live (trade sibling sweep): unlike /api/trade/payment-checkout (which correctly gates on
+// userIsRestrictedFrom(user, "external-transaction")), /api/trade/wallet and /api/trade/advanced's
+// quote/release actions -- all of which directly credit/debit the real db.profile.wallet balance --
+// were only ever gated by canUse(user, "trade"), which Investor also holds. Same bug shape already
+// fixed for health-record-write: "trade" access was never meant to authorize an actual real-money
+// wallet transaction.
+test("an Investor account cannot credit/debit the real wallet directly, or via a trade quote/release; a Standard User/Admin still can", async () => {
+  const walletAsInvestor = await post("/api/trade/wallet", { amount: 50 }, investorCookie);
+  assert.equal(walletAsInvestor.status, 403, JSON.stringify(walletAsInvestor.body));
+
+  const quoteAsInvestor = await post("/api/trade/advanced", { type: "quote", price: 500 }, investorCookie);
+  assert.equal(quoteAsInvestor.status, 403, JSON.stringify(quoteAsInvestor.body));
+
+  const quoteAsAdmin = await post("/api/trade/advanced", { type: "quote", price: 500 }, adminCookie);
+  assert.equal(quoteAsAdmin.status, 200, JSON.stringify(quoteAsAdmin.body));
+  const releaseAsInvestor = await post("/api/trade/advanced", { type: "release" }, investorCookie);
+  assert.equal(releaseAsInvestor.status, 403, JSON.stringify(releaseAsInvestor.body));
+
+  const walletAsAdmin = await post("/api/trade/wallet", { amount: 25 }, adminCookie);
+  assert.equal(walletAsAdmin.status, 200, JSON.stringify(walletAsAdmin.body));
+});
+
+test("an Investor account can still reach the non-financial trade/advanced actions (quality, cold-chain, export, contract)", async () => {
+  for (const type of ["quality", "cold-chain", "export", "contract"]) {
+    const result = await post("/api/trade/advanced", { type }, investorCookie);
+    assert.equal(result.status, 200, `${type} should remain unaffected for Investor: ${JSON.stringify(result.body)}`);
+  }
+});

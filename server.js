@@ -10997,6 +10997,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     record.sellerNetAmount = fee.sellerNetAmount;
     db.profile.wallet = Number(db.profile.wallet || 0) + fee.sellerNetAmount;
     db.profile.walletTransactions.unshift(tx);
+    db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
     order.settled = true;
   }
   addActivity(db.profile, `${record.logisticsNumber} ${record.status} for ${productName}.`);
@@ -51956,6 +51957,7 @@ async function api(req, res, url) {
         status: "posted",
         createdAt: new Date().toISOString()
       });
+      db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
       db.profile.wallet = Number((Number(db.profile.wallet || 0) + 450).toFixed(2));
     }
 
@@ -54374,6 +54376,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/trade/wallet" && req.method === "POST") {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow wallet workflows" });
+    // Found live (trade sibling sweep): unlike /api/trade/payment-checkout (which correctly gates on
+    // userIsRestrictedFrom(user, "external-transaction")), this route -- a direct real-wallet credit/
+    // debit -- only ever checked canUse(user, "trade"), which Investor also holds. Same bug shape
+    // already found and fixed for health-record-write ("An Investor account could POST a real intake/
+    // reading directly into shared PHI storage"): "trade" access alone was never meant to authorize an
+    // actual real-money wallet transaction.
+    if (userIsRestrictedFrom(user, "external-transaction")) return send(res, 403, { error: "This account type cannot start a real payment transaction." });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
     const requestedAmount = Number(body.amount || 0);
@@ -54404,6 +54413,7 @@ async function api(req, res, url) {
     }
     db.profile.wallet = currentWallet + tx.amount;
     db.profile.walletTransactions.unshift(tx);
+    db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
     addTradeEvent(db.profile, { type: "wallet.transaction", label: `${tx.provider} ${tx.type} posted for $${Math.abs(tx.amount)}` });
     logIntegration(db, {
       providerId: "trade-payments",
@@ -54545,6 +54555,14 @@ async function api(req, res, url) {
     const order = db.profile.orders[db.profile.orders.length - 1] || null;
     const now = new Date().toISOString();
     const type = body.type || "quote";
+    // Found live (trade sibling sweep, same gap as /api/trade/wallet): unlike /api/trade/payment-
+    // checkout, the quote/release actions here (a real wallet-crediting escrow flow) were reachable
+    // by canUse(user, "trade") alone, which Investor also holds -- "trade" access was never meant to
+    // authorize an actual real-money transaction. quality/cold-chain/export/contract are unaffected
+    // (no wallet or payment involvement) and remain gated by "trade" alone.
+    if (["quote", "release"].includes(type) && userIsRestrictedFrom(user, "external-transaction")) {
+      return send(res, 403, { error: "This account type cannot start a real payment transaction." });
+    }
     const actions = {
       quote: () => {
         // Found live (money-logic audit): Number("Infinity") is a truthy,
@@ -54555,6 +54573,11 @@ async function api(req, res, url) {
         if (body.price !== undefined && !Number.isFinite(requestedPrice)) {
           throw Object.assign(new Error("Quote price must be a finite number."), { httpStatus: 400 });
         }
+        // Found live (trade sibling sweep): the Infinity guard above correctly accepts an explicit
+        // price of 0 (0 is finite), but this still built the stored price with `body.price || ...`,
+        // silently discarding a real, explicitly-requested 0 and substituting the product's real price
+        // (or 650) instead -- a caller's explicit input was replaced with a different number they never
+        // asked for.
         const record = {
           id: crypto.randomUUID(),
           quoteNumber: `AN-QTE-${String(db.profile.tradeQuotes.length + 1).padStart(3, "0")}`,
@@ -54562,11 +54585,12 @@ async function api(req, res, url) {
           productName: product?.name || order?.product || "Active crop lot",
           buyerName: "Regional buyer desk",
           quantity: body.quantity || `20 ${product?.unit || "units"}`,
-          price: Number(body.price || product?.price || 650),
+          price: body.price !== undefined ? requestedPrice : Number(product?.price || 650),
           status: "sent",
           createdAt: now
         };
         db.profile.tradeQuotes.unshift(record);
+        db.profile.tradeQuotes = db.profile.tradeQuotes.slice(0, 50);
         return ["trade-market", "quote.sent", `${record.quoteNumber} quote sent for ${record.productName}.`, record];
       },
       quality: () => {
@@ -54580,6 +54604,7 @@ async function api(req, res, url) {
           createdAt: now
         };
         db.profile.qualityInspections.unshift(record);
+        db.profile.qualityInspections = db.profile.qualityInspections.slice(0, 40);
         return ["trade-logistics", "quality.inspected", `${record.inspectionNumber} quality inspection passed at ${record.grade}.`, record];
       },
       "cold-chain": () => {
@@ -54593,6 +54618,7 @@ async function api(req, res, url) {
           createdAt: now
         };
         db.profile.coldChainChecks.unshift(record);
+        db.profile.coldChainChecks = db.profile.coldChainChecks.slice(0, 40);
         return ["trade-logistics", "cold_chain.checked", `${record.checkNumber} cold-chain check marked ${record.status}.`, record];
       },
       export: () => {
@@ -54605,6 +54631,7 @@ async function api(req, res, url) {
           createdAt: now
         };
         db.profile.exportReadiness.unshift(record);
+        db.profile.exportReadiness = db.profile.exportReadiness.slice(0, 40);
         return ["trade-logistics", "export.ready", `${record.exportNumber} export readiness packet prepared.`, record];
       },
       contract: () => {
@@ -54618,6 +54645,7 @@ async function api(req, res, url) {
           createdAt: now
         };
         db.profile.contractPackets.unshift(record);
+        db.profile.contractPackets = db.profile.contractPackets.slice(0, 40);
         return ["trade-market", "contract.packet_ready", `${record.contractNumber} buyer contract packet drafted.`, record];
       },
       release: () => {
@@ -54642,15 +54670,21 @@ async function api(req, res, url) {
         if (body.amount !== undefined && !Number.isFinite(requestedAmount)) {
           throw Object.assign(new Error("Release amount must be a finite number."), { httpStatus: 400 });
         }
+        // Found live (trade sibling sweep, same shape as quote() above): the Infinity guard correctly
+        // accepts an explicit amount of 0, but this still built the stored/credited amount with
+        // `body.amount || ...`, silently discarding a real, explicitly-requested 0 and crediting the
+        // wallet with latestQuote.price (or 650) instead -- a real, unintended wallet credit the caller
+        // never asked for.
         const record = {
           id: crypto.randomUUID(),
           releaseNumber: `AN-REL-${String(db.profile.paymentReleases.length + 1).padStart(3, "0")}`,
           quoteNumber: latestQuote?.quoteNumber || null,
-          amount: Number(body.amount || latestQuote?.price || product?.price || 650),
+          amount: body.amount !== undefined ? requestedAmount : Number(latestQuote?.price || product?.price || 650),
           status: "released",
           createdAt: now
         };
         db.profile.paymentReleases.unshift(record);
+        db.profile.paymentReleases = db.profile.paymentReleases.slice(0, 50);
         if (latestQuote) latestQuote.status = "released";
         db.profile.wallet = Number(db.profile.wallet || 0) + record.amount;
         db.profile.walletTransactions.unshift({
@@ -54661,6 +54695,7 @@ async function api(req, res, url) {
           status: "posted",
           createdAt: now
         });
+        db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
         return ["trade-payments", "payment.released", `${record.releaseNumber} payment released for $${record.amount}.`, record];
       }
     };
