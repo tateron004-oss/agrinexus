@@ -34,6 +34,7 @@ const SW = {
   added: ({ qty, name, now, expiry }) => `Nimeongeza ${name}: ${qty}.${now ? ` Sasa una: ${now}.` : ""}${expiry ? ` Tarehe ya kuisha muda: ${expiry}.` : ""}${now ? "" : ` Sema "niarifu ${name} ikishuka chini ya 50" ili nikuambie inapoisha.`}`,
   notInStock: ({ name, qty, unit }) => `Sina ${name} kwenye stoo yako ya kliniki. Sema "ongeza ${unit} ${qty} za ${name} kwenye stoo ya kliniki" kwanza.`,
   onlyHave: ({ have, name, qty }) => `Umerekodi ${name}: ${have} tu. Ikiwa hesabu si sahihi, sema "weka hesabu ya ${name} kuwa ${qty}".`,
+  stockChanged: ({ name }) => `Hesabu ya ${name} imebadilika. Sema tena ili niangalie kiasi cha sasa kwanza.`,
   gaveOut: ({ qty, name, to, left, note, last, low }) => `Nimerekodi: umetoa ${name}: ${qty}${to ? `, kwa ${to}` : ""}. Baki: ${left}.${last ? " Hiyo ndiyo ya mwisho." : low ? " Iko kwenye kiwango chako cha chini au chini yake." : ""}${note}`,
   notRegistered: ({ who }) => ` (${who} si mmoja wa wagonjwa wako waliosajiliwa, kwa hivyo haijaunganishwa na rekodi.)`,
   countSet: ({ name, qty }) => `Nimeweka ${name} kuwa: ${qty}.`, have: ({ qty, name, expiry }) => `Una ${name}: ${qty}${expiry ? `, tarehe ya karibu ya kuisha muda ${expiry}` : ""}.`,
@@ -279,7 +280,7 @@ async function handle(ctx) {
 
   // =========================== the clinic's medicines and supplies ===========================
   let cache = null; const load = async () => (cache || (cache = await listOf(ctx, "supply")));
-  const update = (item, patch) => ctx.store.update({ ...scope, record: { ...item, data: { ...item.data, ...patch, updatedOn: ctx.today } } });
+  const update = (item, patch, cas) => ctx.store.update({ ...scope, record: { ...item, data: { ...item.data, ...patch, updatedOn: ctx.today } }, ...(cas ? { casField: cas.field, casValue: cas.value } : {}) });
   // stock coming in: "Ongeza vidonge 100 vya paracetamol kwenye stoo ya kliniki, inaisha muda 31 Machi 2027" / "Nimepokea sanduku 2 za glavu kliniki"
   const exp = /[,;]?\s*(?:inaisha muda|itaisha muda|tarehe ya kuisha(?: muda)?(?: ni)?|muda wa kuisha(?: ni)?)\s*(?:tarehe |mnamo )?(.+)$/i.exec(t);
   const stripped = exp ? clean(t.slice(0, exp.index)) : t;
@@ -318,7 +319,9 @@ async function handle(ctx) {
         let attach = null; let note = "";
         if (m[3]) { const found = await resolveSw(ctx, m[3], { quiet: true }); if (found?.reply) return found.reply; if (found?.patient) attach = found.patient; else note = SW.notRegistered({ who: clean(m[3]) }); }
         const left = Math.round((item.data.qty - quantity.value) * 1000) / 1000;
-        await update(item, { qty: left });
+        // Same bug as supplies.js's English dispense handler, same fix, duplicated by hand in Swahili.
+        const applied = await update(item, { qty: left }, { field: "qty", value: item.data.qty });
+        if (!applied) return SW.stockChanged({ name: item.data.name });
         await record(ctx, "dispense", { item: item.data.name, qty: quantity.value, unit: item.data.unit, day: ctx.today, ...(attach ? { pid: attach.memoryId } : {}) });
         const low = item.data.low !== null && item.data.low !== undefined && left <= item.data.low;
         return SW.gaveOut({ qty: qtyShown(quantity.value, item.data.unit), name: item.data.name, to: attach ? tagSw(attach) : "", left: qtyShown(left, item.data.unit), note, last: left === 0, low });

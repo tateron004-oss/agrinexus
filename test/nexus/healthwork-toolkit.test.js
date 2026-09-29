@@ -220,6 +220,38 @@ test("clinic stock goes in and out, warns, expires, and never touches the farm's
   for (const text of ["Add 10 bags of fertilizer to stock", "Use 2 bags of fertilizer", "How much fertilizer do I have", "What is running low", "Show my stock", "Sold 5 bags of maize"]) assert.equal(await who.say(text), null, text);
 });
 
+// Found live: dispensing read the item's qty, checked it wasn't more than on hand, then wrote a new qty
+// with no guard the read was still current -- two "gave out"/"dispensed" messages for the same item close
+// together (a retry, or two people texting from the same clinic account) could each pass the same
+// safety check and each deduct, silently over-dispensing a finite medicine supply undetected.
+test("two concurrent dispense requests for the same medicine only deduct once, not both", async () => {
+  const who = worker();
+  await who.say("Add 40 tablets of amoxicillin to clinic stock");
+  const [first, second] = await Promise.all([who.say("Dispensed 30 tablets of amoxicillin"), who.say("Dispensed 30 tablets of amoxicillin")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Recorded: 30 tablets of amoxicillin given out/.test(text)).length, 1, "exactly one request must have won the race and deducted stock");
+  assert.equal(outcomes.filter(text => /just changed/.test(text)).length, 1, "exactly one request must have lost the race and been told to try again, not silently over-dispense");
+  assert.match(await who.say("How much amoxicillin do I have"), /10 tablets/, "stock must reflect exactly one 30-tablet deduction from 40, never both (which would go negative)");
+});
+
+// Found live: recording an allergy read the allergies array once, appended one item, and wrote the whole
+// record back with no guard the array was still current -- two allergy statements for the same patient
+// arriving close together could each read the same starting array and each append their own item,
+// silently dropping whichever wrote second. A lost allergy is a real patient-safety gap.
+test("two concurrent allergy statements for the same patient both survive, not one silently dropped", async () => {
+  const who = worker(); await registerMary(who);
+  const requests = [["Mary is allergic to penicillin", "penicillin"], ["Mary is allergic to aspirin", "aspirin"]];
+  const [first, second] = await Promise.all(requests.map(([text]) => who.say(text)));
+  const outcomes = [first, second];
+  const loserIndex = outcomes.findIndex(text => /just changed/.test(text));
+  assert.notEqual(loserIndex, -1, "exactly one request must have lost the race and been told to try again, not silently drop an allergy");
+  assert.equal(outcomes.filter(text => /just changed/.test(text)).length, 1);
+  await who.say(requests[loserIndex][0]); // the loser's real request, said again
+  const record = await who.say("Show Mary's record");
+  assert.match(record, /Allergies you told me:/);
+  assert.match(record, /penicillin/); assert.match(record, /aspirin/);
+});
+
 // ---------- referral letters ----------
 test("a referral letter carries only what was recorded, is kept in the record, and needs a place to send to", async () => {
   const who = worker(); await run(who, ["Set up my clinic details", "nurse", "Kibera Clinic", "Kibera"]); await registerMary(who);

@@ -109,9 +109,17 @@ async function handle(ctx) {
     const allergy = clean(m[2]).toLowerCase().slice(0, 60);
     if (!allergy) return null;
     const d = found.patient.data;
-    if ((d.allergies || []).includes(allergy)) return `${d.name} already has ${allergy} noted.`;
-    if ((d.allergies || []).length >= 20) return "That's 20 allergies already noted; remove some by editing the record with your clinic team.";
-    await ctx.store.update({ tenantId: ctx.tenantId, userId: ctx.userId, record: { ...found.patient, data: { ...d, allergies: [...(d.allergies || []), allergy] } } });
+    const existingAllergies = d.allergies || [];
+    if (existingAllergies.includes(allergy)) return `${d.name} already has ${allergy} noted.`;
+    if (existingAllergies.length >= 20) return "That's 20 allergies already noted; remove some by editing the record with your clinic team.";
+    // Found live (healthwork audit): this read the allergies array once, appended one item, and wrote the
+    // whole record back with no guard the array was still current -- two allergy statements for the same
+    // patient arriving close together (a retry, or two people entering notes for the same visit) could
+    // each read the same starting array and each append their own item, silently dropping whichever wrote
+    // second. Allergies are exactly the data a referral letter/record printout relies on for clinical
+    // safety, so a silently lost allergy is a real patient-safety gap, not just a data-quality one.
+    const applied = await ctx.store.update({ tenantId: ctx.tenantId, userId: ctx.userId, record: { ...found.patient, data: { ...d, allergies: [...existingAllergies, allergy] } }, casArrayField: "allergies", casArrayLength: existingAllergies.length });
+    if (!applied) return `${d.name}'s record just changed. Say that again so I can check the current allergies first.`;
     return `Noted for ${d.name} (#${found.patient.number}): allergic to ${allergy}. I only record what you tell me.`;
   }
 

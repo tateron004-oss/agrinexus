@@ -140,14 +140,24 @@ class FarmRecordRepository {
   // requests could each read the same starting qty, each pass the same "not more than we have" check,
   // and each write their own qty-quantity, so one deduction was silently lost instead of the safety
   // check (stock can never go negative) it was supposed to trip.
-  async update({ tenantId, userId, record, expectedStatus, casField, casValue }) {
+  // `casArrayField`/`casArrayLength` is the same compare-and-swap for a field that's an ARRAY being
+  // appended to (e.g. `allergies`), where a numeric-value comparison doesn't apply -- compares the
+  // array's length instead. Found live: patients.js's "X is allergic to Y" read the current allergies
+  // array once, appended one item, and wrote the whole array back with no guard -- two concurrent allergy
+  // statements for the same patient could each read the same starting array, each append their own item
+  // to their own copy, and whichever write landed last silently discarded the other allergy with no error
+  // to either caller. (A same-length swap in the same instant that also changes content is a narrower,
+  // accepted residual gap -- length is the same practical signal expectedStatus/casValue already use.)
+  async update({ tenantId, userId, record, expectedStatus, casField, casValue, casArrayField, casArrayLength }) {
     if (casField !== undefined && !/^[a-z]+$/.test(casField)) throw new Error("Invalid casField.");
+    if (casArrayField !== undefined && !/^[a-z]+$/.test(casArrayField)) throw new Error("Invalid casArrayField.");
     const params = [tenantId, userId, record.memoryId, { kind: "record", collection: record.collection, number: record.number, data: record.data, createdAt: record.createdAt, updatedAt: new Date().toISOString() },
       this.searchable(record.collection, record.data)];
     let sql = `update nexus_memory_items set content=$4,searchable_text=$5,updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='${this.purpose}' and deleted_at is null`;
     if (expectedStatus !== undefined) { sql += ` and coalesce(content->'data'->>'status','') = $${params.length + 1}`; params.push(expectedStatus); }
     if (casField !== undefined) { sql += ` and (content->'data'->>'${casField}')::numeric = $${params.length + 1}`; params.push(casValue); }
+    if (casArrayField !== undefined) { sql += ` and jsonb_array_length(coalesce(content->'data'->'${casArrayField}','[]'::jsonb)) = $${params.length + 1}`; params.push(casArrayLength); }
     sql += ` returning memory_id`;
     const result = await this.db.query(sql, params);
     return Boolean((result.rows || result)[0]);
