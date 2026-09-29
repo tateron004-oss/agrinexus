@@ -22734,7 +22734,25 @@ async function executeAgentPlanObject(db, user, plan, note = "Approved from comm
   plan.executedBy = user.email;
   plan.executedAt = new Date().toISOString();
   const executedSteps = [];
+  // Found live: this loop had no re-entrancy guard of its own -- every call
+  // unconditionally re-executed every step in plan.steps, with no check for
+  // a step that already has status "executed" (the exact same shape already
+  // fixed tonight in executeCloudAgentRun). POST /api/agent/execute is gated
+  // only by canUse(user,"ai"), which the default Standard User role has, and
+  // has no re-entrancy guard of its own either -- a double-click, network
+  // retry, or duplicate client request with the same planId re-ran the whole
+  // plan, including tools with real per-call side effects (trade.market_
+  // review pushes a real order with a real dollar total; learning.start_or_
+  // continue/workforce.match_role re-advance real progress/applications).
+  // Fixed at the root, in this shared executor every caller goes through, by
+  // skipping any step whose status is already "executed" -- safe because a
+  // step's initial status at plan-creation time is always "pending-approval"
+  // or "queued", never "executed".
   for (const step of plan.steps) {
+    if (step.status === "executed") {
+      executedSteps.push(step);
+      continue;
+    }
     executedSteps.push(await executeAgentStepWithRetry(db, user, step, 2));
   }
   plan.steps = executedSteps;
