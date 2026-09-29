@@ -20917,7 +20917,19 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // text itself. Reuses the same real, already-tested natural-language
     // time parser the reminders pipeline already relies on.
     const explicitStart = String(args.start || args.startTime || args.when || "").trim();
-    const derivedStart = !explicitStart && hasReminderTimePhrase(command) ? parseAssistantReminderTime(command).scheduledAt : "";
+    // Found live (ReferenceError/timezone sweep): this called
+    // parseAssistantReminderTime with no options, so it silently resolved
+    // "tomorrow at 3pm" using time-phrase.js's own DEFAULT_TIME_ZONE
+    // (Africa/Nairobi) regardless of the real caller's zone -- while the
+    // calendarBody built below separately sends the caller's REAL timeZone
+    // (context.timeZone) to the provider. That produced an inconsistent
+    // payload: a start instant computed as if the caller were in Nairobi,
+    // paired with a timeZone field stating their actual zone (e.g. America/
+    // Los_Angeles), the exact "server clock instead of caller's real zone"
+    // bug already fixed once for the reminders pipeline in
+    // nexus/reminders/time-phrase.js -- reappearing here only because this
+    // call site never threaded context.timeZone through.
+    const derivedStart = !explicitStart && hasReminderTimePhrase(command) ? parseAssistantReminderTime(command, { timeZone: context.timeZone || args.timeZone }).scheduledAt : "";
     const lowerCalendarCommand = String(command || "").toLowerCase();
     // Found live: nexus_calendar's own tool description promises "search,
     // schedule, change, or cancel calendar events," but the handler only
