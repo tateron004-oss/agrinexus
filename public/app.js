@@ -10001,6 +10001,33 @@ function money(value) {
   return `$${Number(value).toLocaleString()}`;
 }
 
+function moneyInCurrency(currency, value) {
+  const amount = Number(value) || 0;
+  return !currency || currency === "USD" ? `$${amount.toLocaleString()}` : `${currency} ${amount.toLocaleString()}`;
+}
+
+// Found live: "Platform revenue"/"Revenue earned" summed platformTransactionFees' feeAmount across
+// ALL currencies, then money() hardcoded a "$" on the result -- but a fee's currency is chosen per
+// order at settlement time (server.js), not fixed per account, so one profile can genuinely
+// accumulate fees in KES, NGN, USD, CDF, and GHS side by side (the per-row ledger just below already
+// shows each fee's own currency, proving the client already knows this). Bucket by currency instead
+// of mixing magnitudes under one mislabeled total, matching the same fix already applied server-side
+// for grants/listings/invoices.
+function sumFeesByCurrency(fees, key) {
+  const totals = {};
+  for (const fee of fees || []) {
+    const currency = String(fee.currency || "USD").toUpperCase();
+    totals[currency] = (totals[currency] || 0) + (Number(fee[key]) || 0);
+  }
+  const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  return { currency: entries[0]?.[0] || "USD", amount: entries[0]?.[1] || 0, others: entries.slice(1).map(([currency]) => currency) };
+}
+
+function feeTotalDisplay(fees, key) {
+  const bucketed = sumFeesByCurrency(fees, key);
+  return `${moneyInCurrency(bucketed.currency, bucketed.amount)}${bucketed.others.length ? ` (not counting fees in ${bucketed.others.join(", ")})` : ""}`;
+}
+
 function row(label, value) {
   return `<div class="row"><span>${escapeHtml(translateText(label))}</span><strong>${escapeHtml(translateText(value))}</strong></div>`;
 }
@@ -41697,7 +41724,7 @@ function render() {
     row("Balance", money(data.profile.wallet)),
     row("Transactions", data.profile.walletTransactions.length),
     row("Last transaction", data.profile.walletTransactions[0]?.provider || "None"),
-    row("Platform revenue", money((data.profile.platformTransactionFees || []).reduce((sum, fee) => sum + Number(fee.feeAmount || 0), 0))),
+    row("Platform revenue", feeTotalDisplay(data.profile.platformTransactionFees || [], "feeAmount")),
     row("Fee records", (data.profile.platformTransactionFees || []).length)
   ].join("");
 
@@ -41707,11 +41734,10 @@ function render() {
 
   if ($("#platformFeePanel")) {
     const fees = data.profile.platformTransactionFees || [];
-    const feeTotal = fees.reduce((sum, fee) => sum + Number(fee.feeAmount || 0), 0);
     $("#platformFeePanel").innerHTML = [
       row("Fee model", `${fees[0]?.feePercent || 2.5}% per settled transaction`),
       row("Fees captured", fees.length),
-      row("Revenue earned", money(feeTotal))
+      row("Revenue earned", feeTotalDisplay(fees, "feeAmount"))
     ].join("");
   }
   if ($("#platformFeeLedger")) {
