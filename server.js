@@ -46468,9 +46468,15 @@ async function api(req, res, url) {
     return send(res, 200, result);
   }
 
+  // Found live (follow-up rate-limiting sweep): these two real-send routes were missed by the
+  // "rate-limiting audit" that already closed this exact gap for /api/nexus/tools/sms/send,
+  // /whatsapp/send, /call/start and their sibling real-send routes below -- only the generic 180
+  // req/min/IP+path blanket applied, so a single authorized account could script real emails or
+  // SMS/WhatsApp messages to arbitrary caller-supplied third parties up to that blanket ceiling.
   if (url.pathname === "/api/nexus/email/send-packet" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await nexusEmailSendPacket(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -46480,6 +46486,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/communications/send-message" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await nexusCommunicationsSendMessage(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -46494,8 +46501,13 @@ async function api(req, res, url) {
     return send(res, 200, result);
   }
 
+  // Found live (same follow-up sweep): sendNexusProviderCoordinationPacket performs a real
+  // email/SMS/WhatsApp send (to a fixed, server-configured provider contact, not a caller-supplied
+  // one -- a real cost/DoS-against-that-provider vector rather than arbitrary-third-party spam), with
+  // no route-specific rate limit, the same missing-guard shape as the two routes just above.
   if (url.pathname === "/api/nexus/pharmacy/send-referral" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow pharmacy referrals" });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await sendNexusProviderCoordinationPacket(db, "pharmacy", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -46512,6 +46524,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/mobile-clinic/send-request" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic requests" });
+    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await sendNexusProviderCoordinationPacket(db, "mobile-clinic", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
