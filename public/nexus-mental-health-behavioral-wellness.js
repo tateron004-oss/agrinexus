@@ -138,6 +138,37 @@
     /\b(overdose|severe intoxication|withdrawal seizure)\b/i
   ];
 
+  // Swahili equivalents of the immediate-danger/self-harm phrases above.
+  // Found live (crisis-detection consistency audit): this classifier is the
+  // sole crisis gate for every primary dispatch path (typed chat via
+  // server.js's executeNexusOpenAiNativeTool, the classic phone Gather flow,
+  // the realtime phone-bridge's independent transcript listener, and the
+  // browser WebRTC voice path) -- but was English-only, even though this
+  // product explicitly serves Swahili-speaking rural users (i18n/sw.js, the
+  // farm/health Swahili toolkits). A Swahili-speaking user saying "Nataka
+  // kufa" ("I want to die") or "Ninataka kujiua" ("I want to kill myself")
+  // matched nothing here and fell straight through to ordinary conversation,
+  // with no safety response, no crisis resources, no circle-alert offer.
+  // nexus/companion/safety.js already has real, already-reviewed Swahili
+  // crisis wording (IMMEDIATE_SW/SELF_HARM_SW) for its own, separate,
+  // less-used planner dispatch path -- reused verbatim here rather than
+  // inventing new Swahili phrasing, which this codebase's own convention
+  // (see that file's header comment) requires a fluent speaker and clinician
+  // to review before relying on live. Broader Swahili coverage for the
+  // safeguarding/medical-emergency/hopelessness/general-support categories
+  // below remains a follow-up needing the same review.
+  const CRISIS_PATTERNS_SW = [
+    /\b(?:nataka|ninataka|ningependa|nimeamua) kufa\b/,
+    /\b(?:nataka|ninataka|nafikiria|ninafikiria|nimeamua|nimefikiria) kujiua\b/,
+    /\b(?:nataka|ninataka) kujidhuru\b/,
+    /\b(?:sitaki|sitamani) (?:tena )?kuishi\b/,
+    /\bnimechoka kuishi\b/,
+    /\bmaisha yangu hayana maana\b/,
+    /\bniko hatarini\b/,
+    /\bnimejeruhiwa (?:vibaya|sana)\b/,
+    /\bnina (?:shambulio la moyo|kiharusi)\b/
+  ];
+
   const SAFEGUARDING_PATTERNS = [
     /\b(someone is hurting me|being abused|domestic violence|unsafe at home|child abuse|neglect|exploitation)\b/i,
     /\b(my child|my mother|older adult|vulnerable adult).*\b(abused|neglected|unsafe|hurt)\b/i
@@ -196,6 +227,7 @@
     const text = normalizeText(input);
     if (!text) return false;
     return CRISIS_PATTERNS.some(pattern => pattern.test(text))
+      || CRISIS_PATTERNS_SW.some(pattern => pattern.test(text))
       || SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text))
       || MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text))
       || HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text))
@@ -341,7 +373,7 @@
     const action = detectRequestedAction(text);
     const matchedSignals = [];
 
-    if (CRISIS_PATTERNS.some(pattern => pattern.test(text))) {
+    if (CRISIS_PATTERNS.some(pattern => pattern.test(text)) || CRISIS_PATTERNS_SW.some(pattern => pattern.test(text))) {
       matchedSignals.push("direct_crisis_or_immediate_danger_language");
       return {
         capabilityId: CAPABILITY_ID,
