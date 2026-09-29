@@ -391,6 +391,23 @@ class BusinessService {
     const record = await this.owned(context, recordId);
     if (record.version !== body.expectedVersion) fail("business_version_conflict", "Reload before creating checkout.", 409);
     if (record.data.subscription?.state === "active") fail("business_subscription_active", "This workspace already has a verified paid subscription.", 409);
+    // Found live (calendar-sync sibling sweep, same shape as
+    // syncAppointment's already-synced guard above): the version-conflict
+    // check just above only catches a stale-version replay (e.g. a
+    // double-click before the first response lands); it does nothing for a
+    // second, version-current checkout request while an earlier one is still
+    // pending. That created a real SECOND Stripe Checkout Session (a new
+    // idempotency key, since the key is derived from the now-bumped record
+    // version) and overwrote the stored sessionId, orphaning the first
+    // session -- if the customer then completed payment on the orphaned
+    // session, the webhook's sessionId-identity check would reject that
+    // payment's event, so a real charge could land with the workspace never
+    // marked active. refreshSubscription() (which re-checks the real Stripe
+    // session and can flip a genuinely abandoned one to "expired") is the
+    // supported way past this, not silently minting another session.
+    if (["checkout_created", "pending_payment"].includes(record.data.subscription?.state)) {
+      fail("business_checkout_pending", "A checkout for this workspace is already pending. Use the existing checkout link, or refresh the subscription status once it has expired.", 409);
+    }
     if (!this.providers.checkout) fail("business_provider_unavailable", "Business billing is unavailable.", 503);
     const subscription = await this.providers.checkout({ tenantId: context.tenantId, ownerId: context.userId, recordId, version: record.version, plan: body.plan });
     return this.repository.update({ tenantId: context.tenantId, recordId, actorId: context.userId, expectedVersion: record.version,
