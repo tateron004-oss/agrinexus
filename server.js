@@ -2083,17 +2083,28 @@ function shadowWriteJobApplicationToPostgres(job, applicant, userEmail, status) 
       // (tracked on the persistent applicant record, since the blob's own
       // `application` object is a fresh one every call) instead of inserting
       // a new job_applications row each time.
+      // Found live (real-estate/workforce sibling sweep): the tracked id used
+      // to be a single scalar field on the applicant record (pgJobApplicationId),
+      // with nothing per-job about it. upsertJobApplication()'s UPDATE branch
+      // only ever writes `status`, never `workforce_role_id` -- so the SAME
+      // applicant applying to a SECOND, different job reused the first job's
+      // Postgres row: its status silently got overwritten with the new job's
+      // status while workforce_role_id stayed pinned to the first job, and no
+      // separate row was ever created for the second job at all. Keyed by
+      // jobOpportunityId now, so each job an applicant applies to gets and
+      // keeps its own real Postgres row.
+      const existingId = (applicant.pgJobApplicationIds || {})[job.jobOpportunityId] || null;
       const application = await pgWorkforce.upsertJobApplication(getPgPool(), {
-        id: applicant.pgJobApplicationId || null,
+        id: existingId,
         candidateProfileId: candidate.id,
         workforceRoleId,
         status
       });
-      if (application?.id && application.id !== applicant.pgJobApplicationId) {
+      if (application?.id && application.id !== existingId) {
         await patchPersistedRecord(
           "applicantProfiles",
           item => item.applicantId === applicant.applicantId,
-          record => { record.pgJobApplicationId = application.id; }
+          record => { record.pgJobApplicationIds = { ...(record.pgJobApplicationIds || {}), [job.jobOpportunityId]: application.id }; }
         );
       }
     })
@@ -44610,6 +44621,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.applicantProfiles.unshift(applicant);
+    // Found live (real-estate/workforce sibling sweep): unlike this exact store's own sibling
+    // collections (auditLogs/actionReceipts/consentRecords, all capped to 1000 right after unshift),
+    // none of the 7 workforce/job collections were ever capped anywhere -- and this store is GLOBAL
+    // across every user of the app (ownerId is a read-side filter, not storage partitioning), so its
+    // unbounded growth degrades every single write in the whole app over time, not just workforce ones.
+    store.applicantProfiles = store.applicantProfiles.slice(0, 1000);
     addNexusConsentRecord(db, "applicant", applicant.applicantId, "prepareApplication", applicant.consentState.prepareApplication, actor);
     const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, "applicant_profile_created", actor, "Applicant career profile created for local workforce support.", null, applicant);
     const receipt = addNexusOperationsReceipt(db, "applicant", applicant.applicantId, action, ["Created applicant career profile.", "Recorded consent state for application preparation."], ["Nexus did not apply to a job, send a resume, promise employment, or contact an employer."], "active");
@@ -44631,6 +44648,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.resumePackets.unshift(packet);
+    store.resumePackets = store.resumePackets.slice(0, 1000);
     applicant.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, "resume_packet_prepared", actor, "Resume packet prepared without employer submission.", null, packet);
     const receipt = addNexusOperationsReceipt(db, "resume-packet", packet.resumePacketId, action, ["Prepared resume/job readiness packet."], ["Nexus did not submit an application, contact an employer, or claim job placement."], "prepared");
@@ -44651,6 +44669,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.employerProfiles.unshift(employer);
+    store.employerProfiles = store.employerProfiles.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "employer", employer.employerId, "employer_profile_created", actor, "Employer profile added to local hiring support memory.", null, employer);
     const receipt = addNexusOperationsReceipt(db, "employer", employer.employerId, action, ["Added employer/hiring company record."], ["Nexus did not contact the employer, post a job externally, or claim employer acceptance."], "active");
     return nexusOperationResponse(db, user, action, employer, audit, receipt);
@@ -44674,6 +44693,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.jobOpportunities.unshift(job);
+    store.jobOpportunities = store.jobOpportunities.slice(0, 1000);
     employer.updatedAt = now;
     shadowWriteWorkforceRoleToPostgres(job);
     const audit = addNexusOperationsAudit(db, "job", job.jobOpportunityId, "job_opportunity_added", actor, "Job opportunity added as draft only.", null, job);
@@ -44684,7 +44704,15 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (["prepare_application_packet", "track_application_status", "add_interview_follow_up"].includes(action)) {
     const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId && nexusOperationsOwned(item, user) && !/archived|no-contact|deleted/.test(item.status || "")) || latestActiveApplicantProfile(store, user) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
     const employer = store.employerProfiles.find(item => item.employerId === body.employerId && nexusOperationsOwned(item, user) && !/closed|archived/.test(item.status || "")) || latestActiveEmployerProfile(store, user) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
-    const job = store.jobOpportunities.find(item => item.jobOpportunityId === body.jobOpportunityId && nexusOperationsOwned(item, user)) || store.jobOpportunities.find(item => nexusOperationsOwned(item, user)) || runNexusOperationsAction(db, { action: "add_job_opportunity", employerId: employer.employerId }, user).record;
+    // Found live (real-estate/workforce sibling sweep): the second fallback
+    // below used to pick the caller's first owned job opportunity from ANY
+    // employer, completely ignoring the employerId just resolved above -- a
+    // user managing more than one employer profile who didn't supply an
+    // exact jobOpportunityId could get an application recorded against one
+    // employer's job while attributed to a different employer, corrupting
+    // both the hiring-pipeline view and the Postgres shadow-write. Scoped to
+    // the resolved employer, matching the exact-match lookup right before it.
+    const job = store.jobOpportunities.find(item => item.jobOpportunityId === body.jobOpportunityId && nexusOperationsOwned(item, user)) || store.jobOpportunities.find(item => item.employerId === employer.employerId && nexusOperationsOwned(item, user)) || runNexusOperationsAction(db, { action: "add_job_opportunity", employerId: employer.employerId }, user).record;
     const status = action === "track_application_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "add_interview_follow_up" ? "follow-up-prepared" : "prepared";
     const application = {
       applicationId: nexusOperationId(action === "add_interview_follow_up" ? "NX-INTV" : "NX-APPL"),
@@ -44698,12 +44726,14 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now,
       updatedAt: now
     };
-    if (action === "add_interview_follow_up") store.interviewFollowUps.unshift(application);
+    if (action === "add_interview_follow_up") { store.interviewFollowUps.unshift(application); store.interviewFollowUps = store.interviewFollowUps.slice(0, 1000); }
     else {
       store.jobApplications.unshift(application);
+      store.jobApplications = store.jobApplications.slice(0, 1000);
       shadowWriteJobApplicationToPostgres(job, applicant, realUserEmail, application.status);
     }
     store.hiringPipelineRecords.unshift({ pipelineId: nexusOperationId("NX-PIPE"), applicantId: applicant.applicantId, employerId: employer.employerId, jobOpportunityId: job.jobOpportunityId, status: application.status, sourceAction: action, createdAt: now });
+    store.hiringPipelineRecords = store.hiringPipelineRecords.slice(0, 1000);
     applicant.updatedAt = now;
     employer.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "application", application.applicationId, action, actor, `${action} recorded without employer submission.`, null, application);
