@@ -134,6 +134,45 @@ test("buyers, suppliers, follow-ups and orders in Swahili; delivering an order r
   assert.match(await f.say("Show my income this month"), /4,000/, "English reads the money the Swahili delivery recorded");
 });
 
+// Found live (follow-up sweep of the already-fixed English parties.js order-race bug): the Swahili
+// order-delivery branch was actually WORSE than the pre-fix English version -- it recorded real money
+// and moved real stock BEFORE writing status:"done" unconditionally at the end, with no compare-and-swap
+// at all. Two concurrent "Agizo N limetolewa" requests for the same order could both pass the open-status
+// check and each record their own real money/stock movement for one physical delivery. Mirrors the
+// already-passing English "two concurrent 'deliver order'" test.
+test("two concurrent Swahili 'agizo limetolewa' requests for the same order only record the sale once, not twice", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Amina, +254712345678, mahindi, Kisumu");
+  await f.say("Amina ameagiza kilo 100 za mahindi kwa shilingi 40 kwa kilo");
+
+  const [first, second] = await Promise.all([f.say("Agizo 1 limetolewa"), f.say("Agizo 1 limetolewa")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /mapato ya shilingi 4,000 yamerekodiwa/.test(text)).length, 1, "exactly one request must have recorded the sale");
+  assert.equal(outcomes.filter(text => /tayari limekamilika/.test(text)).length, 1, "exactly one request must have lost the race");
+
+  const money = await list(f, "money");
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the income must only be recorded once, not once per racing request");
+});
+
+// Found live (same sweep): the Swahili cancel branch also had no compare-and-swap, so a deliver and a
+// cancel for the same order arriving close together could both pass their own open-status checks, with
+// cancel's unconditional write silently overwriting a real recorded delivery.
+test("cancelling a Swahili order that was just delivered by a concurrent request does not erase the real delivery", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Amina, +254712345678, mahindi, Kisumu");
+  await f.say("Amina ameagiza kilo 100 za mahindi kwa shilingi 40 kwa kilo");
+
+  const [deliverResult, cancelResult] = await Promise.all([f.say("Agizo 1 limetolewa"), f.say("futa agizo 1")]);
+  const outcomes = [deliverResult, cancelResult];
+  assert.equal(outcomes.filter(text => /mapato ya shilingi 4,000 yamerekodiwa/.test(text)).length, 1, "the delivery must have gone through and recorded real income");
+
+  const [order] = await list(f, "order");
+  assert.equal(order.data.status, "done", `a real recorded delivery must never be silently overwritten back to "cancelled": ${JSON.stringify(order.data)}`);
+
+  const money = await list(f, "money");
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the real income record must still exist, matching the order's real done status");
+});
+
 test("the cooperative in Swahili", async () => {
   const f = farmer();
   assert.match(await f.say("Anzisha ushirika wetu Umoja wa Wakulima, ada 500 kila mwezi"), /Nimeanzisha Umoja wa Wakulima, ada 500 kila mwezi/);

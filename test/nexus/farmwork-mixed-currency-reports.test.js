@@ -59,3 +59,23 @@ test("swahili-business.js: the KWA AINA (by-kind) section keeps currencies separ
   assert.match(report.content, /USD 40/);
   assert.doesNotMatch(report.content, /USD 5040|USD 5,040|KES\s*5,040/);
 });
+
+// Found live (follow-up sweep): reports.js's pad() bounded a table cell to its column width with
+// `.slice(0, Math.max(width, value.length))` -- a no-op whenever the value is longer than the column,
+// since Math.max always resolves to the value's own full length in that case. A job title (or any other
+// non-last-column cell) longer than its declared column width was never actually truncated, so it kept
+// pushing every column after it further right than the same column on every other row of the printed
+// txt/pdf/docx report -- a real, reliably-triggered misalignment in a customer-facing document.
+test("reports.js: a job title longer than its column width doesn't push later columns out of alignment with other rows", async () => {
+  const store = fakeFarmStore();
+  const longTitle = "Repair the entire northern boundary fence line properly";
+  assert.ok(longTitle.length > 34, "the fixture title must actually exceed the Job column's declared width of 34");
+  await store.add({ tenantId: "t1", userId: "u1", collection: "task", data: { title: longTitle, assignee: "Amina", due: "2026-09-25", status: "open" } });
+  await store.add({ tenantId: "t1", userId: "u1", collection: "task", data: { title: "Fix pump", assignee: "Otieno", due: "2026-09-26", status: "open" } });
+  const ctx = { store, tenantId: "t1", userId: "u1", today: "2026-09-20" };
+  const report = await reports.build(ctx, "tasks", "task list");
+  const lines = report.content.split("\n").filter(line => /Amina|Otieno/.test(line));
+  assert.equal(lines.length, 2, `expected exactly one row per task: ${JSON.stringify(lines)}`);
+  const whoColumnStart = line => (/Amina/.test(line) ? line.indexOf("Amina") : line.indexOf("Otieno"));
+  assert.equal(whoColumnStart(lines[0]), whoColumnStart(lines[1]), `expected the Who column to start at the same character offset on every row, regardless of how long the job title is: ${JSON.stringify(lines)}`);
+});

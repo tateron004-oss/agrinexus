@@ -86,3 +86,12 @@ test("an ordinary, non-sensitive listing is still queued normally, unaffected by
   const result = await post({ confirmed: true, title: "Maize seeds", category: "Grain", location: "Nairobi", quantity: "20 bags" });
   assert.equal(result.body.status, "completed", JSON.stringify(result.body));
 });
+
+// Found live (follow-up sweep): unlike createListing() (which always overrides source to a fixed
+// string), queueOffline() passes body.source straight through normalizeListing() untouched -- and
+// source is persisted into the queued content. It was the one field on this specific route where a
+// caller could put arbitrary sensitive text straight into the offline queue.
+test("sensitive content in a listing's source field is blocked, not silently queued for offline sync", async () => {
+  const result = await post({ confirmed: true, title: "Maize seeds", category: "Grain", source: "ssn 123-45-6789" });
+  assert.equal(result.body.status, "blocked", JSON.stringify(result.body));
+});

@@ -11,7 +11,13 @@ const { findParty } = require("./parties.js");
 // asked) saved through the same real, owner-only document export the rest of Kyro uses, so they can be downloaded and printed. A report
 // contains only what was recorded; it never adds a figure.
 const line = (width = 60) => "-".repeat(width);
-const pad = (value, width) => String(value).padEnd(width).slice(0, Math.max(width, String(value).length));
+// Found live: Math.max(width, length) makes the .slice() a no-op whenever the value is longer than
+// its column (it always resolves to the value's own full length), so a long cell never actually gets
+// bounded to `width` -- it silently misaligns every column after it, in every printed txt/pdf/docx
+// report and buyer receipt built from this table. padEnd() only ever grows a string up to `width`
+// (never shrinks it), so slicing to exactly `width` bounds both a short, now-padded value and a long,
+// unpadded one to the same column width -- no Math.min/max needed at all.
+const pad = (value, width) => String(value).padEnd(width).slice(0, width);
 function table(rows, widths) { return rows.map(row => row.map((cell, i) => (i === row.length - 1 ? String(cell) : pad(cell, widths[i]))).join("  ")).join("\n"); }
 const formatOf = text => (/\bpdf\b/i.test(text) ? "pdf" : /\b(?:word|docx)\b/i.test(text) ? "docx" : "txt");
 

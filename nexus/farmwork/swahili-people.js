@@ -193,25 +193,36 @@ async function handle(ctx) {
     if (!record) return SW.noOrder({ n: m[1] });
     const d = record.data;
     if (d.status !== "open") return SW.orderClosed({ n: record.number, status: statusOf(d.status) });
+    // Found live (follow-up sweep of the English parties.js order-race fix): this recorded money and
+    // moved stock BEFORE writing status:"done" unconditionally at the end, with no compare-and-swap --
+    // unlike the already-fixed English equivalent. Two concurrent "agizo N limetolewa" requests for the
+    // same order could both pass the status !== "open" check above and each record their own real
+    // money and stock movement for one physical delivery. Claim the order atomically first, matching
+    // parties.js: only the request that wins the swap proceeds with any money/stock side effect.
+    const claimed = await ctx.store.update({ ...scope, record: { ...record, data: { ...d, status: "done", doneOn: ctx.today } }, expectedStatus: "open" });
+    if (!claimed) return SW.orderClosed({ n: record.number, status: statusOf("done") });
     const notes = [];
     try {
       if (d.price) {
         const amount = round(d.price * d.qty);
         const result = await recordMoney(ctx, { type: d.kind === "sale" ? "income" : "expense", category: d.kind === "sale" ? "crops" : "other", amount, currency: d.currency, party: d.party, item: d.item, qty: d.qty, unit: d.unit, note: `order ${record.number}` });
-        if (result.refused) return result.refused;
+        if (result.refused) { await ctx.store.update({ ...scope, record: { ...record, data: d } }); return result.refused; }
         notes.push(d.kind === "sale" ? SW.noteIncome({ amount: moneyShown(amount, result.record.data.currency) }) : SW.noteSpend({ amount: moneyShown(amount, result.record.data.currency) }));
       } else notes.push(SW.noteNoPrice);
     } catch (error) { if (error !== NOT_FARM) throw error; notes.push(SW.noteNoPrice); }
     const stock = await list("stock");
     if (d.kind === "sale") { const found = findItems(stock, d.item).filter(entry => entry.data.unit === d.unit); if (found.length === 1) { const left = round(Math.max(0, found[0].data.qty - d.qty), 3); await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } } }); notes.push(SW.noteStockLeft({ left: unitLabelSw(left, d.unit), name: swahiliItem(found[0].data.name) })); } }
     else { const added = await addStock(ctx, d.item, { value: d.qty, unit: d.unit }); if (added) notes.push(SW.noteStockAdded({ now: unitLabelSw(added.data.qty, added.data.unit), name: swahiliItem(added.data.name) })); }
-    await ctx.store.update({ ...scope, record: { ...record, data: { ...d, status: "done", doneOn: ctx.today } } });
     return SW.orderDone({ n: record.number, sale: d.kind === "sale", notes: notes.join("; ") });
   }
   if ((m = /^(?:tafadhali\s+)?(?:futa|ghairi)\s+agizo (?:namba )?#?(\d{1,5})$/i.exec(t))) {
     const record = (await list("order")).find(item => item.number === Number(m[1]));
     if (!record || record.data.status !== "open") return record ? SW.orderClosed({ n: record.number, status: statusOf(record.data.status) }) : SW.noOrder({ n: m[1] });
-    await ctx.store.update({ ...scope, record: { ...record, data: { ...record.data, status: "cancelled" } } });
+    // Found live (same sweep): cancel had no compare-and-swap either, so a "deliver" and "cancel" for
+    // the same order arriving close together could both pass their own open-status checks, with
+    // cancel's unconditional write then silently overwriting a real recorded delivery.
+    const claimed = await ctx.store.update({ ...scope, record: { ...record, data: { ...record.data, status: "cancelled" } }, expectedStatus: "open" });
+    if (!claimed) return SW.orderClosed({ n: record.number, status: statusOf("done") });
     return SW.orderCancelled({ n: record.number });
   }
   if ((m = /^(?:tafadhali\s+)?(?:ondoa|futa)\s+(?:mnunuzi|mteja|msambazaji|muuzaji)\s+(.+)$/i.exec(t))) {
