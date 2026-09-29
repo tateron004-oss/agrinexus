@@ -68,8 +68,24 @@ function createCheckinService({ settings, state, circle, push, notifications, de
         return `I've told ${members.map(link => link.otherName).join(", ")}. I'm here too.`;
       }
       if (!["pending", "alerted", "missed", "ok", "low"].includes(current.status)) return null;
-      const wasAlerted = current.status === "alerted";
-      await state.update({ tenantId, memoryId: current.memoryId, content: { ...current, status: kind === "ok" ? "ok" : "low", answeredAt: at.toISOString() } });
+      // Found live: this wrote the answer unconditionally, with wasAlerted read from the stale
+      // `current` snapshot taken before the write. sendDue()'s own "pending -> alerted" claim (below)
+      // is CAS-protected, but that only stops it from clobbering an already-recorded answer -- it does
+      // nothing for the reverse timing, where sendDue() wins the race and claims "alerted" (and pushes
+      // a "check-in missed, call them" alert to the circle) in the moment between this function's read
+      // and write. The final status here still ends up correct either way (unconditional write), but
+      // wasAlerted would then be computed as false from the stale pre-race snapshot, silently skipping
+      // BOTH the "I've let your circle know you're fine" clearing push and the same line in the reply --
+      // leaving the caregiver with an unresolved "missed" alert even though the person answered. Fixed
+      // by claiming the transition with the record's own real prior status and re-reading on a lost
+      // race, so wasAlerted reflects what actually happened, not a stale read.
+      let latest = current; let claimed = false;
+      for (let attempt = 0; attempt < 5 && !claimed; attempt += 1) {
+        claimed = await state.update({ tenantId, memoryId: latest.memoryId, content: { ...latest, status: kind === "ok" ? "ok" : "low", answeredAt: at.toISOString() }, expectedStatus: latest.status });
+        if (!claimed) { const fresh = await state.get({ tenantId, userId, day: today }); if (!fresh) return null; latest = fresh; }
+      }
+      if (!claimed) return null;
+      const wasAlerted = latest.status === "alerted";
       if (wasAlerted) {
         for (const link of await sharing({ tenantId, userId })) { try { await push({ tenantId, userId: link.otherId, title: "Checked in", body: `${name} has checked in and is okay.`, key: `checkin-cleared:${userId}:${link.otherId}:${today}` }); } catch { /* best effort */ } }
       }

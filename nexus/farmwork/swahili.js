@@ -27,6 +27,7 @@ const SW = {
   undoNone: "Hakuna cha kufuta.", undone: ({ what, amount, income }) => `Nimeondoa: ${income ? "mapato" : "matumizi"} ya ${amount} (${what}). Mabadiliko ya ghala hayajarudishwa; niambie ukitaka yasahihishwe.`,
   stockUsed: ({ taken, name, left }) => `Nimerekodi: umetumia ${taken} za ${name}; zimebaki ${left}.`,
   stockUsedNone: ({ name }) => `Sioni ${name} kwenye ghala lako. Sema "ongeza ${name} kwenye ghala" kwanza.`,
+  stockChanged: ({ name }) => `Kiasi cha ${name} kimebadilika. Sema tena ili niangalie kiasi cha sasa kwanza.`,
   stockAdded: ({ qty, name, now }) => `Nimeongeza ${qty} za ${name} kwenye ghala lako. Sasa una ${now}.`,
   stockFull: "Ghala lako limejaa (vitu mia nne). Ondoa vingine kwanza.",
   stockHave: ({ name, now }) => `Una ${now} za ${name}.`, stockNone: ({ name }) => `Sioni ${name} kwenye ghala lako.`,
@@ -77,11 +78,15 @@ async function handleSwahili(ctx) {
     if (result.refused) return SW.full;
     let stock = "";
     if (deal.quantity) {
-      const list = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(list, item).filter(entry => entry.data.unit === deal.quantity.unit);
-      if (found.length === 1) {
+      // Same bug as money.js's English "sold" stock deduction, same fix, duplicated by hand in Swahili.
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const list = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(list, item).filter(entry => entry.data.unit === deal.quantity.unit);
+        if (found.length !== 1) break;
         const left = round(Math.max(0, found[0].data.qty - deal.quantity.value), 3);
-        await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } } });
+        const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });
+        if (!applied) continue;
         stock = SW.stockOut({ taken: unitLabelSw(Math.min(deal.quantity.value, found[0].data.qty), deal.quantity.unit), left: unitLabelSw(left, deal.quantity.unit), less: deal.quantity.value > found[0].data.qty });
+        break;
       }
     }
     return SW.sold({ qty: deal.quantity ? unitLabelSw(deal.quantity.value, deal.quantity.unit) : "", item: deal.item, buyer: deal.party, amount: moneyShown(deal.money.amount, result.record.data.currency), stock, income: totalsText(sum(monthOf(ctx, result.all), "income")) });
@@ -169,7 +174,9 @@ async function handleSwahili(ctx) {
     const list = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(list, englishItem(name)).filter(entry => entry.data.unit === quantity.unit);
     if (found.length !== 1) return SW.stockUsedNone({ name });
     const left = round(Math.max(0, found[0].data.qty - quantity.value), 3);
-    await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } } });
+    // Same bug as inventory.js's English "used X of Y" deduction, same fix, duplicated by hand in Swahili.
+    const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });
+    if (!applied) return SW.stockChanged({ name: found[0].data.name });
     return SW.stockUsed({ taken: unitLabelSw(quantity.value, quantity.unit), name, left: unitLabelSw(left, quantity.unit) });
   }
   if ((m = /^(?:nina|tuna)\s+(.+?)\s+kiasi gani(?: (?:ghalani|kwenye ghala|stoo))?$/i.exec(t))) {

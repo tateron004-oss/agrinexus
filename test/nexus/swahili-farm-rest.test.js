@@ -173,6 +173,33 @@ test("cancelling a Swahili order that was just delivered by a concurrent request
   assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the real income record must still exist, matching the order's real done status");
 });
 
+// Found live (further follow-up sweep): swahili.js's "Nimeuza" stock deduction had the same missing
+// CAS guard as its English money.js equivalent, same fix, duplicated by hand in Swahili.
+test("two concurrent Swahili 'Nimeuza' sales deducting the same stock item are not silently lost to a race", async () => {
+  const f = farmer();
+  await f.say("Nimenunua mbolea kilo 20 kwa shilingi 5000");
+  const [first, second] = await Promise.all([f.say("Nimeuza kilo 5 za mbolea kwa shilingi 500"), f.say("Nimeuza kilo 3 za mbolea kwa shilingi 300")]);
+  assert.match(first, /Nimetoa .* kwenye ghala lako/);
+  assert.match(second, /Nimetoa .* kwenye ghala lako/);
+  const stock = await list(f, "stock");
+  assert.equal(stock.length, 1);
+  assert.equal(stock[0].data.qty, 12, `expected both concurrent deductions (5kg + 3kg) off the starting 20kg to be reflected, got ${stock[0].data.qty}`);
+});
+
+// Found live (same sweep): the dedicated Swahili "Nimetumia" stock-usage command (distinct from
+// inventory.js's already-fixed English "used X of Y") had no CAS guard at all.
+test("two concurrent Swahili 'Nimetumia' stock-usage requests for the same item are not silently lost to a race", async () => {
+  const f = farmer();
+  await f.say("Nimenunua mbolea kilo 20 kwa shilingi 5000");
+  const [first, second] = await Promise.all([f.say("Nimetumia kilo 5 za mbolea"), f.say("Nimetumia kilo 3 za mbolea")]);
+  const outcomes = [first, second];
+  // Matching inventory.js's already-fixed English "used X of Y": on a lost race exactly one request
+  // must honestly report the stock changed (ask to retry), not have BOTH silently claim success while
+  // one deduction is actually lost underneath.
+  assert.equal(outcomes.filter(text => /^Nimerekodi: umetumia/.test(text)).length, 1, `exactly one request must succeed: ${JSON.stringify(outcomes)}`);
+  assert.equal(outcomes.filter(text => /kimebadilika/.test(text)).length, 1, `exactly one request must honestly report the stock changed, not silently lose its deduction: ${JSON.stringify(outcomes)}`);
+});
+
 test("the cooperative in Swahili", async () => {
   const f = farmer();
   assert.match(await f.say("Anzisha ushirika wetu Umoja wa Wakulima, ada 500 kila mwezi"), /Nimeanzisha Umoja wa Wakulima, ada 500 kila mwezi/);

@@ -343,6 +343,39 @@ test("two concurrent stock-increasing purchases of the same item are not silentl
   assert.equal(after[0].data.qty, 18, `expected both concurrent additions (5kg + 3kg) on top of the starting 10kg to be reflected, but got ${after[0].data.qty}`);
 });
 
+// Found live (a further follow-up sweep): "sold <animal>" recorded income BEFORE writing the animal's
+// "gone" status, with no compare-and-swap on either. Two concurrent/retried "sold cow 12 for X"
+// messages for the same animal could both match the still-active animal and each call recordMoney(),
+// producing two real income records for one physical sale.
+test("two concurrent 'sold <animal>' requests for the same animal only record income once, not twice", async () => {
+  const who = farmer();
+  await who.store.add({ tenantId: "t1", userId: "u1", collection: "animal", data: { tag: "cow 12", species: "cattle", status: "active" } });
+
+  const [first, second] = await Promise.all([who.say("Sold cow 12 for 40000"), who.say("Sold cow 12 for 40000")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Recorded: sold cow 12 for/.test(text)).length, 1, "exactly one request must have recorded the sale");
+  assert.equal(outcomes.filter(text => /already recorded as sold/.test(text)).length, 1, "exactly one request must have lost the race");
+
+  const money = await who.store.list({ tenantId: "t1", userId: "u1", collection: "money" });
+  assert.equal(money.filter(record => record.data.note === "sold cow 12").length, 1, "the income must only be recorded once, not once per racing request");
+  const animals = await who.store.list({ tenantId: "t1", userId: "u1", collection: "animal" });
+  assert.equal(animals[0].data.status, "gone");
+});
+
+// Found live (same sweep): money.js's "sold" stock deduction had no CAS guard, unlike inventory.js's
+// own "used X of Y" deduction. Two concurrent sales of the same stocked item could each read the same
+// starting qty and each write their own deduction, silently losing one.
+test("two concurrent 'sold' requests deducting the same stock item are not silently lost to a race", async () => {
+  const who = farmer();
+  await who.say("Bought 20 kg of fertilizer for 2000");
+  const [first, second] = await Promise.all([who.say("Sold 5 kg of fertilizer for 500"), who.say("Sold 3 kg of fertilizer for 300")]);
+  assert.match(first, /took .* out of your stock/);
+  assert.match(second, /took .* out of your stock/);
+  const stock = await who.store.list({ tenantId: "t1", userId: "u1", collection: "stock" });
+  assert.equal(stock.length, 1);
+  assert.equal(stock[0].data.qty, 12, `expected both concurrent deductions (5kg + 3kg) off the starting 20kg to be reflected, got ${stock[0].data.qty}`);
+});
+
 // Found live (same follow-up sweep): cancel order had no compare-and-swap at all, unlike the
 // deliver-order claim above it. A "deliver order N" and "cancel order N" arriving close together could
 // both pass their own status-is-still-"open" checks before either write landed: if deliver's write wins
