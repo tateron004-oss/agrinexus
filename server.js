@@ -29286,7 +29286,17 @@ function nexusMissionBrainModel(db, user, goalText = "", options = {}) {
   const memories = retrieveAgentMemories(db.profile, goal, 6);
   const smart = smartNextActions(db, user, providers);
   const autopilot = buildAutopilotPlan(db, goal, user);
-  const latestRoutePacket = (db.profile.locationRoutePackets || [])[0] || null;
+  // Found live (weather/GPS/notifications audit): db.profile.locationRoutePackets
+  // is a single array shared by every account, with createdBy: user.email as
+  // the only per-user attribution -- the same "shared array + ownership
+  // field, never filtered" bug class already fixed for
+  // db.profile.assistantReminders (PR #732). Unfiltered, this exposed the
+  // globally most-recent user's real trade-route packet (seller/buyer
+  // pickup/delivery location text, product name, exact coordinates) inside
+  // EVERY OTHER account's own mission-brain response, both as the
+  // "Real-Time Map Intelligence" evidence string below and as the full raw
+  // packet object returned in metadata.
+  const latestRoutePacket = (db.profile.locationRoutePackets || []).find(item => item.createdBy === user?.email) || null;
   const liveProviders = providers.filter(provider => provider.status === "connected");
   const providerReady = providers.filter(provider => provider.status !== "connected");
   const risky = /\b(health|injury|emergency|doctor|provider|payment|wallet|buyer|seller|route|delivery|shipment|job|apply|message|call|whatsapp|sms)\b/i.test(goal);
@@ -45645,7 +45655,17 @@ async function api(req, res, url) {
     if (!response) return send(res, 404, { ok: false, error: "response_not_found" });
     response.visibleToUser = true;
     response.updatedAt = new Date().toISOString();
-    db.nexusNotifications.unshift(normalizeNotification({ title: "Nexus review response ready", message: "A provider/admin response is ready for review.", recordId: response.recordId }));
+    // Found live (weather/GPS/notifications audit): normalizeNotification's
+    // ownerId falls back to `user?.id`, but `user` here is the PROVIDER/ADMIN
+    // publishing the response, not the real submitter who is waiting on it --
+    // and no user argument was passed at all, so ownerId was always null.
+    // GET /api/nexus/notifications filters a non-admin caller by
+    // nexusPilotRecordOwned(item, user) (record.ownerId === user.id), so a
+    // null ownerId never matches any real account: the submitter who is
+    // actually meant to see "Nexus review response ready" never received it
+    // in their own notification list, only reachable via the admin-all view.
+    const submitterRecord = findNexusPilotRecord(db, response.recordId, null, { requireOwnership: false });
+    db.nexusNotifications.unshift(normalizeNotification({ title: "Nexus review response ready", message: "A provider/admin response is ready for review.", recordId: response.recordId }, {}, submitterRecord ? { id: submitterRecord.ownerId } : null));
     addNexusPilotAuditEvent(db, "provider_response_published", {
       relatedRecordId: response.recordId,
       actor: user?.name || response.reviewerLabel,
