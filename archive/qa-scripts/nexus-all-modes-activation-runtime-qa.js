@@ -210,7 +210,15 @@ function waitForServer(child) {
   try {
     await waitForServer(child);
 
-    const matrix = await request("GET", "/api/nexus/activation-matrix");
+    // Found live (investor/admin dashboard audit): activation-matrix now requires
+    // sign-in, matching its siblings /api/nexus/operation-receipts and
+    // /api/nexus/audit-log below -- login moved ahead of it accordingly.
+    const login = await request("POST", "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
+    assert.strictEqual(login.status, 200, "admin login should succeed");
+    const cookie = (login.headers["set-cookie"] || []).map(item => item.split(";")[0]).join("; ");
+    assert(cookie, "admin login should set a session cookie");
+
+    const matrix = await request("GET", "/api/nexus/activation-matrix", null, cookie);
     assert.strictEqual(matrix.status, 200, "activation matrix should respond");
     assert(matrix.body.ok, "activation matrix should be ok");
     assert(matrix.body.entries.length >= 12, "activation matrix should include all major categories");
@@ -247,11 +255,6 @@ function waitForServer(child) {
     assert.strictEqual(providerTest.status, 200, "provider test should respond");
     assert.strictEqual(providerTest.body.status, "provider_test_failed", "missing LMS credentials should fail safely");
     assert(providerTest.body.missingEnv.includes("MOODLE_TOKEN"), "provider test should show missing env name");
-
-    const login = await request("POST", "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
-    assert.strictEqual(login.status, 200, "admin login should succeed");
-    const cookie = (login.headers["set-cookie"] || []).map(item => item.split(";")[0]).join("; ");
-    assert(cookie, "admin login should set a session cookie");
 
     const lifecycle = await request("POST", "/api/nexus/records/lifecycle", {
       entityType: "patient",

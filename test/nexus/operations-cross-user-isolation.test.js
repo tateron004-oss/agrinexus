@@ -43,11 +43,19 @@ function cookieFrom(res) {
   return raw.map(part => part.split(";")[0]).join("; ");
 }
 
+// Cached per account: this file logs into the same handful of accounts
+// repeatedly across many tests, and each fresh /api/login call counts against
+// the real account login-rate-limit -- reusing one session per account
+// avoids tripping it, with identical behavior for every caller.
+const cookieCache = new Map();
 async function login(email, password) {
+  if (cookieCache.has(email)) return cookieCache.get(email);
   const res = await fetch(`${base}/api/login`, { method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password }) });
   assert.equal(res.status, 200, `login for ${email} should succeed`);
-  return cookieFrom(res);
+  const cookie = cookieFrom(res);
+  cookieCache.set(email, cookie);
+  return cookie;
 }
 
 async function createTestUser(adminCookie, email, password) {
@@ -148,4 +156,63 @@ test("show_action_receipts redacts the real entityId for a non-admin caller but 
   const adminView = await opsAction(adminCookie, { action: "show_action_receipts" });
   assert.equal(adminView.json.ok, true);
   assert.ok(adminView.json.receipts.some(receipt => receipt.entityId), "a real Admin must still see real entityIds");
+});
+
+// Found live (investor/admin dashboard audit): show_action_receipts (above) was already
+// fixed to redact entityId, but nexusOperationsSummary()'s OWN recentReceipts field --
+// which backs publicState()'s persistentOperations field, returned by GET /api/state and
+// 27+ other routes, including show_action_receipts' own response -- was never redacted.
+// A Guest/Investor/Standard User got real entityIds for other users' records on
+// essentially every page load or action response.
+test("GET /api/state's persistentOperations.recentReceipts redacts entityId for a non-admin caller but still shows it to a real Admin", async () => {
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  const nonAdminState = await fetch(`${base}/api/state`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  const nonAdminReceipts = nonAdminState.persistentOperations?.recentReceipts || [];
+  assert.ok(nonAdminReceipts.length > 0, "sanity check: there are real receipts to redact");
+  for (const receipt of nonAdminReceipts) {
+    assert.equal(receipt.entityId, null, "a non-admin must not see other users' real entityIds via persistentOperations");
+  }
+
+  const adminState = await fetch(`${base}/api/state`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminState.persistentOperations?.recentReceipts?.some(receipt => receipt.entityId), "a real Admin must still see real entityIds");
+});
+
+// Found live (investor/admin dashboard audit): unlike its siblings
+// /api/nexus/operation-receipts and /api/nexus/audit-log (both gated with a 401 for an
+// unauthenticated caller), /api/nexus/activation-matrix had no auth check at all and
+// returned raw, unredacted receipts/audit entries to a fully anonymous, pre-login caller.
+test("GET /api/nexus/activation-matrix requires sign-in and redacts entityId for a non-admin caller", async () => {
+  const anonymous = await fetch(`${base}/api/nexus/activation-matrix`);
+  assert.equal(anonymous.status, 401, "an unauthenticated caller must not reach the activation matrix at all");
+
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  const nonAdminView = await fetch(`${base}/api/nexus/activation-matrix`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  assert.ok(nonAdminView.receipts.length > 0, "sanity check: there are real receipts to redact");
+  for (const receipt of nonAdminView.receipts) assert.equal(receipt.entityId, null, "a non-admin must not see other users' real entityIds");
+  for (const entry of nonAdminView.audit) assert.equal(entry.before, null);
+
+  const adminView = await fetch(`${base}/api/nexus/activation-matrix`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminView.receipts.some(receipt => receipt.entityId), "a real Admin must still see real entityIds");
+});
+
+// Found live (investor/admin dashboard audit): this route already had the missing-401
+// fix, but unlike its sibling /api/nexus/audit-log two routes below (redacted via
+// redactSensitiveAuditEntry), it never redacted entityId for a non-admin caller.
+test("GET /api/nexus/operation-receipts redacts entityId for a non-admin caller but still shows it to a real Admin", async () => {
+  const anonymous = await fetch(`${base}/api/nexus/operation-receipts`);
+  assert.equal(anonymous.status, 401);
+
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  const nonAdminView = await fetch(`${base}/api/nexus/operation-receipts`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  assert.ok(nonAdminView.receipts.length > 0, "sanity check: there are real receipts to redact");
+  for (const receipt of nonAdminView.receipts) assert.equal(receipt.entityId, null, "a non-admin must not see other users' real entityIds");
+
+  const adminView = await fetch(`${base}/api/nexus/operation-receipts`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminView.receipts.some(receipt => receipt.entityId), "a real Admin must still see real entityIds");
 });
