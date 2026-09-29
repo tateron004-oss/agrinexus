@@ -16272,6 +16272,26 @@ function selectedTradeProduct(db, productId, country) {
     || (db.products || [])[0];
 }
 
+// Found live (drone/course audit, confirmed twice independently): every
+// drone/field record reference number below was generated from
+// `array.length + 1`, but every one of these arrays is immediately capped
+// with `.unshift(record); array = array.slice(0, 20)` right after
+// insertion -- once an account has created more than 20 records of a given
+// type, `.length` permanently stays at 20, so the ref generator keeps
+// computing the same "021" suffix forever. Every subsequent mission/scan/
+// finding/field-task/field-report/irrigation-plan/pest-alert/spray-plan/
+// yield-forecast/compliance-audit/field-zone of that type gets an identical
+// "unique" reference number, breaking any downstream lookup that identifies
+// a record by its human-readable ref (buyer disputes, compliance audits,
+// field-task assignment). A real, ever-growing per-type sequence (never
+// reset by the array's own 20-item display cap) keeps every ref genuinely
+// unique.
+function nextRecordSequence(db, key) {
+  db.profile.recordSequences = db.profile.recordSequences || {};
+  db.profile.recordSequences[key] = (db.profile.recordSequences[key] || 0) + 1;
+  return db.profile.recordSequences[key];
+}
+
 function createDroneMission(db, { productId, source = "operator", fieldZone, objective } = {}) {
   ensureTradeProfile(db.profile);
   const { country, route } = activeContext(db);
@@ -16279,7 +16299,7 @@ function createDroneMission(db, { productId, source = "operator", fieldZone, obj
   if (!product) throw new Error("No crop lot is available for drone mission planning.");
   const mission = {
     id: crypto.randomUUID(),
-    missionRef: `AN-FLIGHT-${country.id.toUpperCase()}-${String((db.profile.droneMissions || []).length + 1).padStart(3, "0")}`,
+    missionRef: `AN-FLIGHT-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneMissions")).padStart(3, "0")}`,
     productId: product.id,
     productName: product.name,
     countryId: country.id,
@@ -16355,7 +16375,7 @@ function createDroneScan(db, { productId, source = "operator", fieldZone, scanTy
   const cropHealthScore = Math.max(55, Math.min(98, Number(product.buyerInterest || 75) + (country.risk === "Low" ? 8 : -4)));
   const scan = {
     id: crypto.randomUUID(),
-    scanRef: `AN-DRONE-${country.id.toUpperCase()}-${String((db.profile.droneScans || []).length + 1).padStart(3, "0")}`,
+    scanRef: `AN-DRONE-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneScans")).padStart(3, "0")}`,
     productId: product.id,
     productName: product.name,
     countryId: country.id,
@@ -16373,7 +16393,7 @@ function createDroneScan(db, { productId, source = "operator", fieldZone, scanTy
   const plain = plainDroneInterpretation(db, scan, null);
   const finding = {
     id: crypto.randomUUID(),
-    findingRef: `AN-FIND-${country.id.toUpperCase()}-${String((db.profile.droneFindings || []).length + 1).padStart(3, "0")}`,
+    findingRef: `AN-FIND-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneFindings")).padStart(3, "0")}`,
     scanId: scan.id,
     scanRef: scan.scanRef,
     productId: product.id,
@@ -16425,7 +16445,7 @@ function createFieldIntervention(db, { source = "operator", assignedTo = "Field 
   const productName = finding?.productName || scan?.productName || "active crop lot";
   const task = {
     id: crypto.randomUUID(),
-    taskRef: `AN-FIELD-${country.id.toUpperCase()}-${String((db.profile.fieldInterventions || []).length + 1).padStart(3, "0")}`,
+    taskRef: `AN-FIELD-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "fieldInterventions")).padStart(3, "0")}`,
     findingId: finding?.id || null,
     scanId: scan?.id || null,
     productName,
@@ -16482,7 +16502,7 @@ function createAdvancedDroneOperation(db, { type = "field-report", productId, so
   const makers = {
     "field-report": () => ({
       ...base,
-      reportRef: `AN-AGRO-${country.id.toUpperCase()}-${String(db.profile.droneFieldReports.length + 1).padStart(3, "0")}`,
+      reportRef: `AN-AGRO-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneFieldReports")).padStart(3, "0")}`,
       cropHealthScore: health,
       soilMoisture: country.heat >= 38 ? "low" : health >= 80 ? "balanced" : "watch",
       standCount: `${Math.max(68, health - 5)}% productive stand`,
@@ -16491,7 +16511,7 @@ function createAdvancedDroneOperation(db, { type = "field-report", productId, so
     }),
     irrigation: () => ({
       ...base,
-      planRef: `AN-IRR-${country.id.toUpperCase()}-${String(db.profile.droneIrrigationPlans.length + 1).padStart(3, "0")}`,
+      planRef: `AN-IRR-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneIrrigationPlans")).padStart(3, "0")}`,
       priorityZones: country.heat >= 38 ? ["north ridge", "low moisture rows", "edge stress"] : ["watch rows", "drip-line check"],
       waterRecommendation: country.heat >= 38 ? "early morning irrigation within 24 hours" : "standard irrigation cycle with targeted field verification",
       estimatedSavings: `${Math.max(8, Math.round((100 - health) / 2))}% water optimization`,
@@ -16499,7 +16519,7 @@ function createAdvancedDroneOperation(db, { type = "field-report", productId, so
     }),
     pest: () => ({
       ...base,
-      alertRef: `AN-PEST-${country.id.toUpperCase()}-${String(db.profile.dronePestAlerts.length + 1).padStart(3, "0")}`,
+      alertRef: `AN-PEST-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "dronePestAlerts")).padStart(3, "0")}`,
       riskLevel: finding?.severity === "priority" ? "priority" : health < 75 ? "elevated" : "watch",
       suspectedIssues: health < 75 ? ["leaf stress", "pest scouting required", "fungal-risk watch"] : ["edge scouting", "spot-check required"],
       scoutWindow: "same-week field scouting",
@@ -16507,14 +16527,14 @@ function createAdvancedDroneOperation(db, { type = "field-report", productId, so
     }),
     spray: () => ({
       ...base,
-      sprayRef: `AN-SPRAY-${country.id.toUpperCase()}-${String(db.profile.droneSprayPlans.length + 1).padStart(3, "0")}`,
+      sprayRef: `AN-SPRAY-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneSprayPlans")).padStart(3, "0")}`,
       targetZones: ["affected rows", "field edge", "buyer-quality sample area"],
       safetyChecks: ["wind speed check", "community notification", "operator PPE", "chemical record", "buffer-zone review"],
       status: "spray-plan-ready"
     }),
     yield: () => ({
       ...base,
-      forecastRef: `AN-YIELD-${country.id.toUpperCase()}-${String(db.profile.droneYieldForecasts.length + 1).padStart(3, "0")}`,
+      forecastRef: `AN-YIELD-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneYieldForecasts")).padStart(3, "0")}`,
       estimate: scan?.yieldEstimate || `${Math.max(12, Math.round((product.buyerInterest || 70) / 4))} harvest units`,
       buyerReadiness: product.buyerInterest >= 80 && health >= 75 ? "ready for buyer offer" : "needs field improvement before premium offer",
       confidence: Math.max(72, Math.min(96, health + 5)),
@@ -16522,7 +16542,7 @@ function createAdvancedDroneOperation(db, { type = "field-report", productId, so
     }),
     compliance: () => ({
       ...base,
-      auditRef: `AN-DAUD-${country.id.toUpperCase()}-${String(db.profile.droneComplianceAudits.length + 1).padStart(3, "0")}`,
+      auditRef: `AN-DAUD-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "droneComplianceAudits")).padStart(3, "0")}`,
       checks: ["pilot authorization", "community consent", "airspace review", "data privacy", "crop-owner approval", "evidence retention"],
       status: "compliance-audit-ready"
     })
@@ -54256,7 +54276,7 @@ async function api(req, res, url) {
     if (type === "field-zone") {
       record = {
         id: crypto.randomUUID(),
-        zoneNumber: `ZONE-${country.id.toUpperCase()}-${String(db.profile.fieldZones.length + 1).padStart(3, "0")}`,
+        zoneNumber: `ZONE-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "fieldZones")).padStart(3, "0")}`,
         zoneName: body.zoneName || `${country.cropFocus || "Crop"} resilience zone`,
         countryId: country.id,
         routeId: route.id,
