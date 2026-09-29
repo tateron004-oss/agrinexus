@@ -4467,7 +4467,7 @@ async function runCrossPlatformFunction(db, user, body = {}) {
   } else if (selected.id === "telehealth-navigation") {
     const intake = withHealthProvenance({
       id: crypto.randomUUID(),
-      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "healthIntakes")).padStart(3, "0")}`,
       patientName: body.patientName || "Community patient",
       countryId: country.id,
       needSummary: body.needSummary || "Safe telehealth navigation, accessibility support, and provider handoff request",
@@ -4510,7 +4510,7 @@ async function runCrossPlatformFunction(db, user, body = {}) {
   }
   const run = {
     id: crypto.randomUUID(),
-    runNumber: `AN-XFUNC-${String((db.profile.crossPlatformFunctionRuns || []).length + 1).padStart(3, "0")}`,
+    runNumber: `AN-XFUNC-${String(nextRecordSequence(db, "crossPlatformFunctionRuns")).padStart(3, "0")}`,
     functionId: selected.id,
     number: selected.number,
     title: selected.title,
@@ -5525,7 +5525,7 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
     const run = {
       ...model,
       action: options.action || "review",
-      runNumber: `AN-GOV-${String(db.profile.governmentReadinessRuns.length + 1).padStart(3, "0")}`,
+      runNumber: `AN-GOV-${String(nextRecordSequence(db, "governmentReadinessRuns")).padStart(3, "0")}`,
       createdBy: user?.email || "system"
     };
     db.profile.governmentReadinessRuns.unshift(run);
@@ -10661,7 +10661,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
   const deliveryReadyForConfirmation = type !== "delivery-confirm" || Number(order.stageIndex || 0) >= ORDER_STAGES.indexOf("Quality check");
   const record = {
     id: crypto.randomUUID(),
-    logisticsNumber: `AN-SHIP-${String(db.profile.tradeLogisticsRecords.length + 1).padStart(4, "0")}`,
+    logisticsNumber: `AN-SHIP-${String(nextRecordSequence(db, "tradeLogisticsRecords")).padStart(4, "0")}`,
     type,
     orderId: order.id,
     orderNumber: order.orderNumber,
@@ -11034,7 +11034,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
   const selectedPath = paths.find(path => path.id === body.pathId) || paths.find(path => /child|youth/i.test(body.learnerGroup || "") && path.ageGroup === "child-youth") || paths[0];
   const course = (db.courses || []).find(item => item.id === (body.courseId || selectedPath.linkedCourseId)) || (db.courses || [])[0] || {};
   const now = new Date().toISOString();
-  const planNumber = `AN-FLEARN-${String((db.profile.womenChildrenLearningPlans || []).length + 1).padStart(3, "0")}`;
+  const planNumber = `AN-FLEARN-${String(nextRecordSequence(db, "womenChildrenLearningPlans")).padStart(3, "0")}`;
   const learnerGroup = String(body.learnerGroup || selectedPath.audience).trim();
   const language = body.language || user.language || db.profile.accessibilityProfile?.language || "en";
   const supportNeed = String(body.supportNeed || "Voice-first, picture-supported, low-bandwidth learning").trim();
@@ -11087,7 +11087,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
   db.profile.womenChildrenLearningPlans = db.profile.womenChildrenLearningPlans.slice(0, 30);
   db.profile.learningAssignments.unshift({
     id: crypto.randomUUID(),
-    assignmentNumber: `AN-FAM-ASG-${String(db.profile.learningAssignments.length + 1).padStart(3, "0")}`,
+    assignmentNumber: `AN-FAM-ASG-${String(nextRecordSequence(db, "learningAssignments")).padStart(3, "0")}`,
     courseId: course.id || null,
     courseTitle: course.title || selectedPath.title,
     title: `${selectedPath.title} first lesson`,
@@ -11109,7 +11109,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
   });
   db.profile.learningCohorts.unshift({
     id: crypto.randomUUID(),
-    cohortNumber: `AN-FAM-COH-${String(db.profile.learningCohorts.length + 1).padStart(3, "0")}`,
+    cohortNumber: `AN-FAM-COH-${String(nextRecordSequence(db, "learningCohorts")).padStart(3, "0")}`,
     courseId: course.id || null,
     courseTitle: course.title || selectedPath.title,
     cohortName: `${learnerGroup} learning circle`,
@@ -11368,7 +11368,7 @@ function createPlatformTransactionFee(db, details = {}) {
   const sellerNetAmount = Number(Math.max(0, grossAmount - feeAmount).toFixed(2));
   const fee = {
     id: crypto.randomUUID(),
-    feeNumber: `AN-FEE-${String(db.profile.platformTransactionFees.length + 1).padStart(4, "0")}`,
+    feeNumber: `AN-FEE-${String(nextRecordSequence(db, "platformTransactionFees")).padStart(4, "0")}`,
     module: "AgriTrade",
     type: "transaction-fee",
     orderId: details.orderId || null,
@@ -11443,7 +11443,7 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
   const sellerNetAmount = Number(Math.max(0, grossAmount - platformFeeAmount).toFixed(2));
   const checkout = {
     id: crypto.randomUUID(),
-    checkoutNumber: `AN-CHECKOUT-${String(db.profile.paymentCheckoutRecords.length + 1).padStart(4, "0")}`,
+    checkoutNumber: `AN-CHECKOUT-${String(nextRecordSequence(db, "paymentCheckoutRecords")).padStart(4, "0")}`,
     provider,
     status: "local-checkout-ready",
     orderId: order?.id || null,
@@ -11460,7 +11460,7 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
     platformFeeAmount,
     sellerNetAmount,
     routeName: route.name,
-    reference: `ANPAY-${Date.now()}-${String(db.profile.paymentCheckoutRecords.length + 1).padStart(3, "0")}`,
+    reference: `ANPAY-${Date.now()}-${String(nextRecordSequence(db, "paymentCheckoutRecords")).padStart(3, "0")}`,
     checkoutUrl: null,
     providerResponse: null,
     setupRequired: [],
@@ -12524,7 +12524,7 @@ function createVideoSessionWorkflow(db, user, body = {}) {
     : String(body.subject || product?.name || "crop video proof");
   const session = withHealthProvenance({
     id: crypto.randomUUID(),
-    sessionNumber: `AN-VID-${String((db.profile.videoSessions || []).length + 1).padStart(3, "0")}`,
+    sessionNumber: `AN-VID-${String(nextRecordSequence(db, "videoSessions")).padStart(3, "0")}`,
     module: moduleName,
     type: isHealth ? "telehealth-video" : "buyer-crop-video",
     status: "ready",
@@ -15638,7 +15638,7 @@ function runWomenFamilyAgricultureWorkflow(db, user, body = {}) {
   const course = db.courses.find(item => item.id === body.courseId) || db.courses.find(item => /farm|agri|health|business|safety/i.test(item.title || "")) || db.courses[0] || {};
   const role = db.roles.find(item => item.country === country.name) || db.roles[0] || {};
   const now = new Date().toISOString();
-  const runNumber = `AN-WFAM-${String((db.profile.womenFamilyRuns || []).length + 1).padStart(3, "0")}`;
+  const runNumber = `AN-WFAM-${String(nextRecordSequence(db, "womenFamilyRuns")).padStart(3, "0")}`;
   const beneficiaryGroup = String(body.beneficiaryGroup || "Women farmers, caregivers, and youth learners").trim();
   const primaryNeed = String(body.primaryNeed || body.supportNeed || "Farm income, family health access, youth learning, and cooperative selling support").trim();
   const cooperativeName = String(body.cooperativeName || `${country.name} Women Farmer Cooperative`).trim();
@@ -17470,7 +17470,7 @@ async function createOutboundCallWorkflow(db, user, body = {}) {
     : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
   const record = {
     id: crypto.randomUUID(),
-    callNumber: `CALL-${String((db.profile.outboundCalls || []).length + 1).padStart(3, "0")}`,
+    callNumber: `CALL-${String(nextRecordSequence(db, "outboundCalls")).padStart(3, "0")}`,
     purpose,
     to: recipient || "",
     from: process.env.TWILIO_PHONE_NUMBER || "",
@@ -28772,7 +28772,7 @@ async function applyConversationalIntake(db, user, pending) {
     ensureHealthProfile(db.profile);
     const intake = withHealthProvenance({
       id: crypto.randomUUID(),
-      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "healthIntakes")).padStart(3, "0")}`,
       patientName: answers.patientName || "Voice-supported patient",
       countryId: country.id,
       needSummary: answers.needSummary || `${country.name} telehealth intake`,
@@ -29335,7 +29335,7 @@ function tradeLocationRouteResponse(db, user, text, options = {}) {
   const liveRoutingConfigured = Boolean(process.env.ROUTING_WEBHOOK_URL || process.env.MAPBOX_ACCESS_TOKEN || process.env.OPENROUTESERVICE_API_KEY || process.env.GOOGLE_MAPS_API_KEY);
   const packet = {
     id: crypto.randomUUID(),
-    packetNumber: `LOCATION-ROUTE-${String((db.profile.locationRoutePackets || []).length + 1).padStart(3, "0")}`,
+    packetNumber: `LOCATION-ROUTE-${String(nextRecordSequence(db, "locationRoutePackets")).padStart(3, "0")}`,
     productName: order?.productName || order?.product || product?.name || "crop lot",
     buyerLocation: locations.destinationText,
     sellerLocation: locations.originText,
@@ -30134,7 +30134,7 @@ function createAssistantReminder(db, user, text, options = {}) {
   const contact = callName ? findPhoneContact(db, callName) : null;
   const reminder = {
     id: crypto.randomUUID(),
-    reminderNumber: `REM-${String((db.profile.assistantReminders || []).length + 1).padStart(3, "0")}`,
+    reminderNumber: `REM-${String(nextRecordSequence(db, "assistantReminders")).padStart(3, "0")}`,
     task,
     scheduledAt: timing.scheduledAt,
     whenLabel: timing.whenLabel,
@@ -50183,7 +50183,7 @@ async function api(req, res, url) {
     ensureOperationsProfile(db.profile);
     const ticket = {
       id: crypto.randomUUID(),
-      ticketNumber: `AN-SUP-${String(db.profile.supportTickets.length + 1).padStart(4, "0")}`,
+      ticketNumber: `AN-SUP-${String(nextRecordSequence(db, "supportTickets")).padStart(4, "0")}`,
       subject: String(body.subject || "Platform support request").trim(),
       module: String(body.module || "Platform").trim(),
       priority: String(body.priority || "standard").trim(),
@@ -51857,7 +51857,7 @@ async function api(req, res, url) {
       assignment: () => {
         const record = {
           id: crypto.randomUUID(),
-          assignmentNumber: `AN-ASG-${String(db.profile.learningAssignments.length + 1).padStart(3, "0")}`,
+          assignmentNumber: `AN-ASG-${String(nextRecordSequence(db, "learningAssignments")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           title: body.title || `${course.title} field assignment`,
@@ -51935,7 +51935,7 @@ async function api(req, res, url) {
       cohort: () => {
         const record = {
           id: crypto.randomUUID(),
-          cohortNumber: `AN-COH-${String(db.profile.learningCohorts.length + 1).padStart(3, "0")}`,
+          cohortNumber: `AN-COH-${String(nextRecordSequence(db, "learningCohorts")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           cohortName: body.cohortName || `${course.track} rural learner cohort`,
@@ -52272,7 +52272,7 @@ async function api(req, res, url) {
       const patientName = String(body.patientName || "Community patient").trim();
       const intake = withHealthProvenance({
         id: crypto.randomUUID(),
-        patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
+        patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "healthIntakes")).padStart(3, "0")}`,
         patientName,
         countryId: country.id,
         needSummary,
@@ -52790,7 +52790,7 @@ async function api(req, res, url) {
       const supplySource = nearestSupplySources[0];
       record = {
         id: crypto.randomUUID(),
-        requestNumber: `RHS-${String(db.profile.mobileClinicSupplyRequests.length + 1).padStart(3, "0")}`,
+        requestNumber: `RHS-${String(nextRecordSequence(db, "mobileClinicSupplyRequests")).padStart(3, "0")}`,
         patientRef: activeIntake.patientRef,
         mobileClinicName: String(body.mobileClinicName || mobileClinic?.name || "Mobile clinic team").trim(),
         locationText,
@@ -52821,7 +52821,7 @@ async function api(req, res, url) {
       const flags = medicalSupplyFlags(supplyNeeds);
       record = {
         id: crypto.randomUUID(),
-        matchNumber: `RHS-MATCH-${String(db.profile.mobileClinicSupplyMatches.length + 1).padStart(3, "0")}`,
+        matchNumber: `RHS-MATCH-${String(nextRecordSequence(db, "mobileClinicSupplyMatches")).padStart(3, "0")}`,
         requestNumber: request?.requestNumber || null,
         patientRef: activeIntake.patientRef,
         mobileClinicName: String(body.mobileClinicName || request?.mobileClinicName || nearestMobileClinic[0]?.name || "Mobile clinic team").trim(),
@@ -52850,7 +52850,7 @@ async function api(req, res, url) {
       const destination = match?.mobileClinicName || request?.mobileClinicName || nearestMobileClinic[0]?.name || "Mobile clinic team";
       record = {
         id: crypto.randomUUID(),
-        dispatchNumber: `RHS-DISP-${String(db.profile.mobileClinicSupplyDispatches.length + 1).padStart(3, "0")}`,
+        dispatchNumber: `RHS-DISP-${String(nextRecordSequence(db, "mobileClinicSupplyDispatches")).padStart(3, "0")}`,
         requestNumber: request?.requestNumber || null,
         matchNumber: match?.matchNumber || null,
         patientRef: activeIntake.patientRef,
@@ -52874,7 +52874,7 @@ async function api(req, res, url) {
       const dispatch = db.profile.mobileClinicSupplyDispatches[0] || null;
       record = {
         id: crypto.randomUUID(),
-        deliveryNumber: `RHS-DEL-${String(db.profile.mobileClinicSupplyDeliveries.length + 1).padStart(3, "0")}`,
+        deliveryNumber: `RHS-DEL-${String(nextRecordSequence(db, "mobileClinicSupplyDeliveries")).padStart(3, "0")}`,
         dispatchNumber: dispatch?.dispatchNumber || null,
         patientRef: activeIntake.patientRef,
         receivedBy: String(body.receivedBy || "Mobile clinic lead").trim(),
@@ -52894,7 +52894,7 @@ async function api(req, res, url) {
     } else if (type === "nearest-clinic") {
       record = {
         id: crypto.randomUUID(),
-        matchNumber: `RHC-${String(db.profile.ruralClinicMatches.length + 1).padStart(3, "0")}`,
+        matchNumber: `RHC-${String(nextRecordSequence(db, "ruralClinicMatches")).padStart(3, "0")}`,
         patientRef: activeIntake.patientRef,
         patientName,
         patientPoint,
@@ -52913,7 +52913,7 @@ async function api(req, res, url) {
     } else if (type === "mobile-clinic") {
       record = {
         id: crypto.randomUUID(),
-        requestNumber: `RHM-${String(db.profile.mobileClinicRequests.length + 1).padStart(3, "0")}`,
+        requestNumber: `RHM-${String(nextRecordSequence(db, "mobileClinicRequests")).padStart(3, "0")}`,
         patientRef: activeIntake.patientRef,
         patientName,
         patientPoint,
@@ -52932,7 +52932,7 @@ async function api(req, res, url) {
     } else if (type === "pharmacy") {
       record = {
         id: crypto.randomUUID(),
-        requestNumber: `RHP-${String(db.profile.pharmacyRequests.length + 1).padStart(3, "0")}`,
+        requestNumber: `RHP-${String(nextRecordSequence(db, "pharmacyRequests")).padStart(3, "0")}`,
         patientRef: activeIntake.patientRef,
         patientName,
         patientPoint,
@@ -52952,7 +52952,7 @@ async function api(req, res, url) {
     } else if (type === "handoff") {
       record = {
         id: crypto.randomUUID(),
-        packetNumber: `RHH-${String(db.profile.ruralHealthHandoffPackets.length + 1).padStart(3, "0")}`,
+        packetNumber: `RHH-${String(nextRecordSequence(db, "ruralHealthHandoffPackets")).padStart(3, "0")}`,
         patientRef: activeIntake.patientRef,
         patientName,
         preferredLanguage,
@@ -52989,7 +52989,7 @@ async function api(req, res, url) {
     } else {
       record = {
         id: crypto.randomUUID(),
-        guideNumber: `RHG-${String(db.profile.ruralSymptomGuides.length + 1).padStart(3, "0")}`,
+        guideNumber: `RHG-${String(nextRecordSequence(db, "ruralSymptomGuides")).padStart(3, "0")}`,
         patientRef: activeIntake.patientRef,
         patientName,
         preferredLanguage,
@@ -53137,7 +53137,7 @@ async function api(req, res, url) {
     };
     const record = withHealthProvenance({
       id: crypto.randomUUID(),
-      revenueNumber: `MCR-${String(db.profile.mobileClinicRevenueRecords.length + 1).padStart(3, "0")}`,
+      revenueNumber: `MCR-${String(nextRecordSequence(db, "mobileClinicRevenueRecords")).padStart(3, "0")}`,
       type,
       patientRef: intake.patientRef,
       patientName,
@@ -53150,8 +53150,8 @@ async function api(req, res, url) {
       status: statusMap[type] || "payment workflow recorded",
       previousRevenueNumber: previous?.revenueNumber || null,
       serviceMenu,
-      receiptNumber: type === "clinic-receipt" ? `MCR-RCPT-${String(db.profile.mobileClinicRevenueRecords.length + 1).padStart(3, "0")}` : null,
-      payoutNumber: type === "clinic-payout" ? `MCR-PAY-${String(db.profile.mobileClinicRevenueRecords.length + 1).padStart(3, "0")}` : null,
+      receiptNumber: type === "clinic-receipt" ? `MCR-RCPT-${String(nextRecordSequence(db, "mobileClinicRevenueRecords")).padStart(3, "0")}` : null,
+      payoutNumber: type === "clinic-payout" ? `MCR-PAY-${String(nextRecordSequence(db, "mobileClinicRevenueRecords")).padStart(3, "0")}` : null,
       payerInstruction: "Confirm the patient, sponsor, or care partner understands the service, price, receipt, and refund/support path before collecting payment.",
       payoutInstruction: "Provider payout remains pending until payment provider settlement, patient/sponsor confirmation, and compliance review are complete.",
       clinicalBoundary: "AgriNexus records billing, receipt, routing, and evidence only. Clinical judgment stays with licensed providers.",
@@ -53207,7 +53207,7 @@ async function api(req, res, url) {
     const createdAt = new Date().toISOString();
     const intake = withHealthProvenance({
       id: crypto.randomUUID(),
-      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "healthIntakes")).padStart(3, "0")}`,
       patientName,
       countryId: country.id,
       needSummary,
@@ -54293,7 +54293,7 @@ async function api(req, res, url) {
     } else if (type === "facility-route") {
       record = {
         id: crypto.randomUUID(),
-        routeNumber: `ROUTE-${country.id.toUpperCase()}-${String(db.profile.facilityRoutes.length + 1).padStart(3, "0")}`,
+        routeNumber: `ROUTE-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "facilityRoutes")).padStart(3, "0")}`,
         origin: body.origin || checkpoint,
         destination: body.destination || (country.facilities > 1 ? "Nearest rural facility hub" : "Community access point"),
         purpose: body.purpose || "Move people, care packets, crop lots, and workforce teams with audit evidence.",
@@ -54309,7 +54309,7 @@ async function api(req, res, url) {
     } else if (type === "disruption") {
       record = {
         id: crypto.randomUUID(),
-        disruptionNumber: `DISRUPT-${country.id.toUpperCase()}-${String(db.profile.routeDisruptions.length + 1).padStart(3, "0")}`,
+        disruptionNumber: `DISRUPT-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "routeDisruptions")).padStart(3, "0")}`,
         checkpoint,
         issue: body.issue || "Road, weather, fuel, or clinic access delay reported by field team.",
         severity: body.severity || (country.risk === "High" ? "high" : "medium"),
@@ -54327,7 +54327,7 @@ async function api(req, res, url) {
       const score = country.risk === "High" ? 82 : country.risk === "Medium" ? 58 : 34;
       record = {
         id: crypto.randomUUID(),
-        layerNumber: `RISK-${country.id.toUpperCase()}-${String(db.profile.mapRiskLayers.length + 1).padStart(3, "0")}`,
+        layerNumber: `RISK-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "mapRiskLayers")).padStart(3, "0")}`,
         layers: body.layers || ["road access", "clinic reach", "market movement", "weather exposure", "workforce coverage"],
         score,
         countryId: country.id,
@@ -54342,7 +54342,7 @@ async function api(req, res, url) {
     } else if (type === "evidence") {
       record = {
         id: crypto.randomUUID(),
-        packetNumber: `MAP-EVIDENCE-${country.id.toUpperCase()}-${String(db.profile.mapEvidencePackets.length + 1).padStart(3, "0")}`,
+        packetNumber: `MAP-EVIDENCE-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "mapEvidencePackets")).padStart(3, "0")}`,
         countryId: country.id,
         routeId: route.id,
         evidence: [
@@ -54363,7 +54363,7 @@ async function api(req, res, url) {
     } else {
       record = {
         id: crypto.randomUUID(),
-        locationNumber: `FARMER-${country.id.toUpperCase()}-${String(db.profile.farmerLocations.length + 1).padStart(3, "0")}`,
+        locationNumber: `FARMER-${country.id.toUpperCase()}-${String(nextRecordSequence(db, "farmerLocations")).padStart(3, "0")}`,
         farmerName: body.farmerName || "Rural producer group",
         countryId: country.id,
         routeId: route.id,
