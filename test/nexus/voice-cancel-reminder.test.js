@@ -83,7 +83,11 @@ test("cancel failures are reported, not claimed: not found, not cancelled, no ru
 
 test("the tool matches with the shared normalization, includes push reminders, and keeps its gates", () => {
   const branch = server.slice(server.indexOf("const wantsCancelReminder = "), server.indexOf("if (toolName === \"nexus_lists\") {"));
-  assert.match(branch, /const pushCards = await nexusOpenAiNativeListPushReminders\(user, language\);\s*const \{ candidates: matches \} = nexusReminderCancelCandidates\(command, db\.nexusPilotReminders \|\| \[\], pushCards\);/);
+  // Found live (IDOR follow-up sweep): db.nexusPilotReminders is now filtered
+  // to the caller's own reminders (nexusPilotRecordOwned) before being
+  // handed to nexusReminderCancelCandidates, so "cancel my reminder about X"
+  // can no longer match -- and delete -- another user's reminder by title.
+  assert.match(branch, /const pushCards = await nexusOpenAiNativeListPushReminders\(user, language\);\s*(?:\/\/[^\n]*\n\s*)*const ownedPilotReminders = \(db\.nexusPilotReminders \|\| \[\]\)\.filter\(reminder => nexusPilotRecordOwned\(reminder, user\)\);\s*const \{ candidates: matches \} = nexusReminderCancelCandidates\(command, ownedPilotReminders, pushCards\);/);
   assert.match(branch, /status: "confirmation-required"/, "cancelling still needs explicit confirmation");
   assert.match(branch, /status: "reminder-ambiguous"/); assert.match(branch, /status: "reminder-not-found"/);
   assert.match(branch, /if \(match\.kind === "push"\) \{[\s\S]*nexusOpenAiNativeCancelPushReminder\(user, match\.title, language\)/);

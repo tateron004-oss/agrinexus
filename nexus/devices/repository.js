@@ -12,12 +12,13 @@ class DeviceRepository {
     const result = await this.db.query(`insert into nexus_devices
       (device_id,tenant_id,user_id,platform,capabilities,push_endpoint,push_key_ciphertext,app_version,permission_state,lifecycle_state)
       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict (device_id) do update set
+      state='active',
       capabilities=excluded.capabilities,app_version=excluded.app_version,permission_state=excluded.permission_state,
       lifecycle_state=excluded.lifecycle_state,last_seen_at=now(),updated_at=now(),
       push_endpoint=coalesce(excluded.push_endpoint,nexus_devices.push_endpoint),
       push_key_ciphertext=coalesce(excluded.push_key_ciphertext,nexus_devices.push_key_ciphertext)
       where nexus_devices.tenant_id=excluded.tenant_id and nexus_devices.user_id=excluded.user_id
-      and nexus_devices.state='active' returning ${PUBLIC_COLUMNS}`,
+      returning ${PUBLIC_COLUMNS}`,
       [required(item.deviceId,"deviceId"),required(item.tenantId,"tenantId"),required(item.userId,"userId"),platform,capabilities,
         item.pushEndpoint || null,item.pushKeyCiphertext || null,String(item.appVersion || ""),item.permissions || {},
         allowed(item.lifecycleState || "foreground", LIFECYCLE_STATES, "lifecycle state")]);

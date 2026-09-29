@@ -31,12 +31,19 @@
     const value = text(command).toLowerCase();
     return /\b(weather|forecast|temperature|rain|raining|heat|hali ya hewa|clima|meteo|météo)\b/.test(value);
   }
+  // Found live: the second alternative below was a catch-all -- ANY "play"/"put on"/"listen to"/
+  // "start" command followed by 2-80 characters matched regardless of topic, unless it happened to
+  // contain one of a handful of blacklisted words. "play the weather forecast", "put on my calendar
+  // for today", "play my reminders for tomorrow", and "play my job applications" (all real, plausible
+  // rural-user phrasings) all matched -- opening a real, autoplaying, full-viewport YouTube search
+  // modal for a nonsense query on top of (or instead of) whatever the user actually asked for. Removed
+  // the catch-all; a real music request must actually name music (a genre, "song"/"track"/"playlist",
+  // or an artist via "by").
   function musicRequest(command = "") {
     const value = text(command).toLowerCase();
     if (!/\b(play|listen to|put on|start)\b/.test(value)) return false;
     if (/\b(role|part|game|video|movie|podcast|lesson|course|workflow|recording)\b/.test(value)) return false;
-    return /\b(music|song|track|playlist|album|artist|by|r&b|rnb|gospel|afrobeats|jazz|hip hop|reggae|rumba|soul)\b/.test(value)
-      || /\b(play|listen to|put on)\b\s+[^.?!]{2,80}$/i.test(value);
+    return /\b(music|song|track|playlist|album|artist|by|r&b|rnb|gospel|afrobeats|jazz|hip hop|reggae|rumba|soul)\b/.test(value);
   }
   function musicQuery(command = "") {
     return text(command)

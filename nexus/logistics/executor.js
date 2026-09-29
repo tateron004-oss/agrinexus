@@ -29,8 +29,12 @@ function createLogisticsTrackExecutor({ env = process.env } = {}) {
     if (!Number.isFinite(Number(data.durationSeconds)) && !data.routeGeometry) {
       return { ok: false, trackingMethod: null, origin, destination, reason: "route_not_computed" };
     }
-    const durationSeconds = Number(data.durationSeconds) || null;
-    const estimatedArrival = durationSeconds ? new Date(Date.now() + durationSeconds * 1000).toISOString() : null;
+    // Found live: `|| null` (and the truthy check below) coerces a genuinely-computed 0-second
+    // duration -- reachable whenever origin and destination geocode to the same or a near-identical
+    // point -- to null, silently dropping a valid estimatedArrival even though a real route was
+    // computed. `??`/an explicit null check treat 0 as the real value it is.
+    const durationSeconds = Number.isFinite(Number(data.durationSeconds)) ? Number(data.durationSeconds) : null;
+    const estimatedArrival = durationSeconds !== null ? new Date(Date.now() + durationSeconds * 1000).toISOString() : null;
     return {
       ok: true,
       origin, destination,

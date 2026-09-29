@@ -34,7 +34,13 @@ function queueItem(body = {}, db, env = process.env) {
   const content = clean(body.content);
   if (!content) return blockedResponse(provider, action, "Offline queue content is required.");
   if (BLOCKED_TYPES.test(`${type} ${content}`)) return blockedResponse(provider, action, "High-risk or sensitive offline queue item blocked. No provider handoff or execution was queued.");
-  const item = { id: `offline-${Date.now()}`, type, content, status: "queued", createdAt: new Date().toISOString() };
+  // Found live (unbounded-input sweep): unlike its sibling
+  // offlineExpansionBridgeProvider.queue() (caps title/summary at 180/500
+  // before calling this same function), content here had no length cap at
+  // all -- capped after the blocked-content scan so a long malicious string
+  // is still caught, but before it reaches the persisted, size-uncapped
+  // db.profile.offlineQueue array.
+  const item = { id: `offline-${Date.now()}`, type, content: content.slice(0, 500), status: "queued", createdAt: new Date().toISOString() };
   ensureQueue(db).unshift(item);
   db.profile.offlineQueue = db.profile.offlineQueue.slice(0, 50);
   return providerResponse({ provider, action, status: "completed", message: "Safe offline item queued locally.", data: { item } });

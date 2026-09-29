@@ -68,9 +68,15 @@ async function handleMoney(ctx) {
     const money = parseMoney(rest);
     if (animal && money) {
       const buyer = /\bto (?:my |the )?([A-Za-z][A-Za-z' -]{1,30}?)(?:\s+(?:for|at)\b|$)/.exec(rest)?.[1];
+      // Found live (follow-up sweep of the order-delivery race fix): this recorded income BEFORE
+      // writing the animal's "gone" status, with no compare-and-swap on either. Two concurrent/retried
+      // "sold cow 12 for X" messages for the same animal could both match the still-active animal and
+      // each call recordMoney(), producing two real income records for one physical sale. Claim the
+      // animal atomically first, matching the order-delivery pattern.
+      const claimed = await ctx.store.update({ ...scope, record: { ...animal, data: { ...animal.data, status: "gone", goneOn: ctx.today, soldFor: money.amount } }, expectedStatus: animal.data.status });
+      if (!claimed) return `${animal.data.tag} was already recorded as sold or removed, so I didn't record this again.`;
       const result = await recordMoney(ctx, { type: "income", category: "livestock", amount: money.amount, currency: money.currency, party: buyer ? titleCase(buyer) : "", note: `sold ${animal.data.tag}` });
-      if (result.refused) return result.refused;
-      await ctx.store.update({ ...scope, record: { ...animal, data: { ...animal.data, status: "gone", goneOn: ctx.today, soldFor: money.amount } } });
+      if (result.refused) { await ctx.store.update({ ...scope, record: { ...animal, data: animal.data } }); return result.refused; }
       return `Recorded: sold ${animal.data.tag} for ${formatMoney(money.amount, result.record.data.currency)}. I've taken it off your animal list (its history is kept).`;
     }
     const quantity = parseQuantity(rest); const per = parsePricePer(rest);
@@ -105,11 +111,19 @@ async function handleMoney(ctx) {
     if (result.refused) return result.refused;
     let stockNote = "";
     if (quantity) {
-      const stock = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(stock, item).filter(entry => entry.data.unit === quantity.unit);
-      if (found.length === 1) {
+      // Found live (follow-up sweep): this read+wrote qty with no CAS guard, unlike inventory.js's own
+      // "used X of Y" deduction, which is already protected. Two concurrent sales of the same item could
+      // each read the same starting qty and each write their own deduction, silently losing one. This is
+      // a secondary bookkeeping note on an already-recorded sale (not the primary action), so it retries
+      // against the latest qty rather than asking the user to redo the whole sale.
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const stock = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(stock, item).filter(entry => entry.data.unit === quantity.unit);
+        if (found.length !== 1) break;
         const left = round(Math.max(0, found[0].data.qty - quantity.value), 3);
-        await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } } });
+        const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });
+        if (!applied) continue;
         stockNote = ` I took ${unitLabel(Math.min(quantity.value, found[0].data.qty), quantity.unit)} out of your stock${quantity.value > found[0].data.qty ? " (you had less recorded than you sold, so it is now zero)" : `; ${unitLabel(left, quantity.unit)} left`}.`;
+        break;
       }
     }
     const period = extractPeriod("this month", ctx.today);

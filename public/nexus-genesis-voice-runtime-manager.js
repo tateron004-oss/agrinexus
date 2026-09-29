@@ -346,6 +346,19 @@
           if (currentGeneration !== generation) return { ok: false, stale: true };
           if (result === false || result?.ok === false) throw Object.assign(new Error(result?.reason || `${name} failed to start.`), { category: result?.category || "startup-failure" });
         } catch (error) {
+          // Found live: the success path just above already bails out with
+          // {stale:true} when `generation` moved on while this call's
+          // invoke("startSession", ...) was in flight, but this catch had no
+          // such guard -- so if a NEWER overlapping start() call already
+          // succeeded and put the adapter in a real "listening" state before
+          // this OLDER, now-rejecting call's promise settled, tearing down
+          // ownership/state here would silently kill the healthy newer
+          // session (mic/audio-output locks released, state forced to
+          // "failed") because of an unrelated, stale start attempt finishing
+          // late. Reachable whenever a restart is retried while a prior
+          // attempt is still in flight (auto-recovery racing a manual retry,
+          // a flaky network causing a slow reject).
+          if (currentGeneration !== generation) return { ok: false, stale: true };
           await this.releaseOwnership("start-failed");
           setState("failed");
           emit("error", normalizeRuntimeError(error, "startup-failure"));
@@ -645,8 +658,8 @@
           return { ok: true, activeRuntime: activeName, ownership };
         }
         if (activeName !== "legacy" && policy.automaticRollback) return this.rollbackToLegacy(ownershipHealthy ? "watchdog-response-timeout" : "watchdog-ownership-failure", { announce: true });
-        const recovered = await adapters.legacy.recover(ownershipHealthy ? "watchdog-stuck-state" : "watchdog-microphone-ownership");
-        return { ...recovered, watchdogRecovery: true, activeRuntime: "legacy" };
+        const recovered = await adapter.recover(ownershipHealthy ? "watchdog-stuck-state" : "watchdog-microphone-ownership");
+        return { ...recovered, watchdogRecovery: true, activeRuntime: activeName };
       },
       getState() {
         return {

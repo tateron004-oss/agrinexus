@@ -41,11 +41,25 @@ const lowNote = item => (item.data.low !== undefined && item.data.low !== null &
 
 async function addStock(ctx, name, quantity) {
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
-  const items = await ctx.store.list({ ...scope, collection: "stock" });
-  const same = items.find(item => keyOf(item.data.name) === keyOf(name) && item.data.unit === quantity.unit);
-  if (same) { const next = { ...same, data: { ...same.data, qty: Math.round((same.data.qty + quantity.value) * 1000) / 1000 } }; await ctx.store.update({ ...scope, record: next }); return next; }
-  if (items.length >= 400) return null;
-  return ctx.store.add({ ...scope, collection: "stock", data: { name, category: categoryOf(name), qty: quantity.value, unit: quantity.unit } }).then(record => record);
+  // Found live: this read qty, then wrote qty+delta with no guard that it was still current -- two
+  // concurrent stock additions (e.g. "bought X" purchases recorded close together) could each read the
+  // same starting qty and each write their own new total, silently losing one addition instead of both
+  // landing. Unlike the deduction path in handle() below, an addition never needs to ask the user to
+  // retry -- there's no "not more than we have" check that can go stale -- so on a lost race this just
+  // re-reads the latest qty and retries the same addition against it.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const items = await ctx.store.list({ ...scope, collection: "stock" });
+    const same = items.find(item => keyOf(item.data.name) === keyOf(name) && item.data.unit === quantity.unit);
+    if (same) {
+      const next = { ...same, data: { ...same.data, qty: Math.round((same.data.qty + quantity.value) * 1000) / 1000 } };
+      const applied = await ctx.store.update({ ...scope, record: next, casField: "qty", casValue: same.data.qty });
+      if (applied) return next;
+      continue;
+    }
+    if (items.length >= 400) return null;
+    return ctx.store.add({ ...scope, collection: "stock", data: { name, category: categoryOf(name), qty: quantity.value, unit: quantity.unit } }).then(record => record);
+  }
+  return null;
 }
 
 async function handle(ctx) {

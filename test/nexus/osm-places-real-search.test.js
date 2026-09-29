@@ -161,3 +161,25 @@ test("clinic and pharmacy searches use the fallback and report real OpenStreetMa
   assert.equal(p.body.data.cards.length, 2); assert.match(p.body.message, /Found 2 real pharmacy/);
   assert.ok(pharmacy.calls.includes("nominatim-places"));
 });
+
+// Found live (follow-up sweep, same shape as nexus/navigation/service.js's already-fixed clampLat/
+// clampLng): unlike navigation/service.js (which never sets bounded=1, so an out-of-range viewbox
+// there only degrades ranking), this provider sets bounded=1 on its Nominatim fallback, making an
+// unclamped viewbox near a pole or the antimeridian a hard filter that could zero out real nearby
+// pharmacy/clinic results.
+test("the Nominatim fallback's viewbox is clamped to valid lat/lng ranges near the antimeridian and the poles", async () => {
+  let placesUrl = null;
+  const fetchImpl = async url => {
+    const target = String(url);
+    if (target.includes("overpass")) return { ok: false, status: 429, text: async () => "{}" };
+    if (target.includes("viewbox")) { placesUrl = target; return nominatimHit(); }
+    // geocode: near the antimeridian and a pole
+    return { ok: true, text: async () => JSON.stringify([{ lat: "89.5", lon: "179.5", display_name: "Near the pole and the date line" }]) };
+  };
+  await osmPlacesProvider.findNearbyPlaces({ locationText: "Somewhere remote", osmFilters: ['"amenity"="pharmacy"'], fetchImpl, fallbackTerm: "pharmacy" });
+  assert.ok(placesUrl, "expected the Nominatim places fallback to be called");
+  const viewbox = decodeURIComponent(new URL(placesUrl).searchParams.get("viewbox"));
+  const [minLng, maxLat, maxLng, minLat] = viewbox.split(",").map(Number);
+  for (const value of [minLng, maxLng]) assert.ok(value >= -180 && value <= 180, `longitude ${value} out of range`);
+  for (const value of [minLat, maxLat]) assert.ok(value >= -90 && value <= 90, `latitude ${value} out of range`);
+});

@@ -111,7 +111,11 @@ function normalizeEditable(info, input = {}) {
     // real one-to-many relationship has to be modeled as two flat lists
     // rather than one row holding an embedded line-items array.
     invoices,
-    invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0 }, 200, new Set(["quantity", "unitPrice"])),
+    // Found live (follow-up sweep): unlike transactions/grants/listings, this shape genuinely had no
+    // currency field -- the grants "Found live" comment above claims invoiceItems already had one, but
+    // it never did, so a value could never persist even via the direct API and every line item was
+    // silently treated as USD regardless of what was actually said or stored.
+    invoiceItems: rows(input.invoiceItems === undefined ? starter.invoiceItems : input.invoiceItems, { invoiceNumber: "", description: "", quantity: 1, unitPrice: 0, currency: "USD" }, 200, new Set(["quantity", "unitPrice"])),
     // Tool 4: grant and funding tracking. The existing "Grant Writing Agent"
     // (strategy.js) only ever produced a one-shot text template -- nothing
     // persisted an actual funding opportunity, its deadline, or its
@@ -300,6 +304,15 @@ class BusinessService {
     const appointments = record.data.editable.appointments;
     if (!Number.isInteger(index) || !appointments[index]) fail("business_appointment_not_found", "No appointment at that position exists in this workspace.", 404);
     const appointment = appointments[index];
+    // Found live: unlike checkout() just above (refuses a second real
+    // subscription once one is active), this had no equivalent guard --
+    // re-syncing an appointment that was already synced created a SECOND
+    // real duplicate event on the user's actual calendar and silently
+    // overwrote the stored calendarEventId/calendarLink, orphaning the first
+    // event with no way to manage it through the app anymore.
+    if (appointment.status === "synced" || appointment.status === "synced-simulated") {
+      fail("business_appointment_already_synced", "This appointment is already synced to your calendar.", 409);
+    }
     if (!this.providers.calendar) fail("business_provider_unavailable", "Calendar sync is unavailable.", 503);
     const result = await this.providers.calendar({ title: appointment.title, start: appointment.start,
       end: appointment.end, notes: appointment.notes });
