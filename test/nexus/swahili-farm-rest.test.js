@@ -152,6 +152,39 @@ test("the cooperative in Swahili", async () => {
   assert.match(await f.say("Ondoa mwanachama Juma"), /Nimwondoe Juma kwenye ushirika/); assert.match(await f.say("ndiyo"), /Nimeondoa Juma/);
 });
 
+// Same fix, same reason as the English equipment-booking test in
+// farmwork-coop.test.js: "pampu ya maji" and "pampu ya dawa" both match the
+// shared word "pampu", and the OLD code silently booked whichever appeared
+// first with no ambiguity check.
+test("booking cooperative equipment by a shared word across two different items asks which one, in Swahili", async () => {
+  const f = farmer();
+  await f.say("Anzisha ushirika wetu Umoja wa Wakulima, ada 500 kila mwezi");
+  await f.say("Ongeza kifaa cha pamoja: pampu ya maji");
+  await f.say("Ongeza kifaa cha pamoja: pampu ya dawa");
+  await f.say("Ongeza kifaa cha pamoja: trekta");
+  const ambiguous = await f.say("Weka nafasi ya pampu Ijumaa");
+  assert.match(ambiguous, /Yupi: (pampu ya maji au pampu ya dawa|pampu ya dawa au pampu ya maji)\?/);
+  // An unambiguous, single-word equipment name is unaffected by the fix.
+  const exact = await f.say("Weka nafasi ya trekta Ijumaa");
+  assert.match(exact, /Nimeweka nafasi ya trekta/);
+});
+
+// Same fix, same reason as the English follow-up test in
+// farmwork-toolkit.test.js: open follow-ups for two different "John"s both
+// match the shared word "john", and the OLD code silently closed whichever
+// appeared first with no ambiguity check.
+test("marking a follow-up done by a name shared across two different parties asks which one, in Swahili", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi John Otieno");
+  await f.say("Ongeza mnunuzi John Kamau");
+  await f.say("Mfuatilie John Otieno Ijumaa");
+  await f.say("Mfuatilie John Kamau Ijumaa");
+  const ambiguous = await f.say("Nimemaliza kumfuatilia John");
+  assert.match(ambiguous, /Yupi: (John Otieno au John Kamau|John Kamau au John Otieno)\?/);
+  const exact = await f.say("Nimemaliza kumfuatilia Otieno");
+  assert.match(exact, /Imekamilika: ufuatiliaji wa John Otieno/);
+});
+
 test("the community board in Swahili: what a listing shows, who can change it, and the bilingual note to the poster", async () => {
   const store = fakeFarmStore(); const memory = fakeMemory(); const sent = [];
   const seller = farmer({ userId: "u1", store, memory, sent, names: { u1: "Amina Wanjiru", u2: "Juma Otieno" } }); const buyer = farmer({ userId: "u2", store, memory, sent, names: { u1: "Amina Wanjiru", u2: "Juma Otieno" } });

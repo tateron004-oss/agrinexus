@@ -149,7 +149,19 @@ async function handle(ctx) {
   }
   if ((m = /^ufuatiliaji wa (?:biashara|mnunuzi|msambazaji) (?:namba )?#?(\d{1,5}) umekamilika$/i.exec(t)) || (m = /^nimemaliza kumfuatilia\s+(.+)$/i.exec(t))) {
     const items = (await list("followup")).filter(item => item.data.status === "open" && item.data.party);
-    const item = /^\d+$/.test(m[1]) ? items.find(entry => entry.number === Number(m[1])) : items.find(entry => entry.data.party.toLowerCase().split(" ").includes(clean(m[1]).toLowerCase()));
+    let item;
+    if (/^\d+$/.test(m[1])) {
+      item = items.find(entry => entry.number === Number(m[1]));
+    } else {
+      // Same fix as parties.js's English equivalent: only ask when the
+      // matches are genuinely different people, not two open follow-ups for
+      // the same party.
+      const wanted = clean(m[1]).toLowerCase();
+      const matches = items.filter(entry => entry.data.party.toLowerCase().split(" ").includes(wanted));
+      const distinctParties = [...new Set(matches.map(entry => entry.data.party))];
+      if (distinctParties.length > 1) return SW.whichParty({ names: distinctParties.join(" au ") });
+      item = matches[0];
+    }
     if (!item) return /^\d+$/.test(m[1]) ? SW.followMissing : null;
     await ctx.store.update({ ...scope, record: { ...item, data: { ...item.data, status: "done", doneOn: ctx.today } } });
     return SW.followDone({ name: item.data.party });
@@ -284,7 +296,13 @@ async function handle(ctx) {
   }
   if (/^(?:onyesha|orodhesha|nionyeshe)\s+vifaa vya pamoja$/.test(lower)) { const items = await list("coop_equipment"); return items.length ? SW.equipList({ lines: items.slice().reverse().map(item => item.data.name).join(", ") }) : SW.equipNone; }
   if ((m = /^(?:tafadhali\s+)?weka nafasi ya\s+(.+?)(?:\s+kwa\s+(.+?))?\s+(.+)$/i.exec(t))) {
-    const items = await list("coop_equipment"); const wanted = clean(m[1]).toLowerCase(); const item = items.find(entry => entry.data.name === wanted || entry.data.name.split(" ").includes(wanted)); const tail = m[3];
+    const items = await list("coop_equipment"); const wanted = clean(m[1]).toLowerCase();
+    // Same fix as coop.js's English equivalent: prefer an exact full-name
+    // match; only ask when multiple DIFFERENT items still match by shared word.
+    const exact = items.filter(entry => entry.data.name === wanted);
+    const candidates = exact.length ? exact : items.filter(entry => entry.data.name.split(" ").includes(wanted));
+    if (candidates.length > 1) return SW.whichParty({ names: candidates.map(entry => entry.data.name).join(" au ") });
+    const item = candidates[0]; const tail = m[3];
     const day = dayFromSw(tail, ctx.today);
     if (item && day) {
       if (day < ctx.today) return SW.dayPassed;

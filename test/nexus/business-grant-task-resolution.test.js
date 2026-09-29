@@ -58,3 +58,27 @@ test("resolveTask returns null (ambiguous) rather than guessing when nothing or 
   const tied = [{ title: "Call the vet" }, { title: "Call the vet" }];
   assert.equal(voiceDispatch.resolveTask(tied, "mark call the vet as done"), null, "a genuine tie must be left ambiguous, not guessed");
 });
+
+// Found live (systemic ambiguous-match sweep, 2026-09-28): unlike its
+// siblings above (all fixed this session), resolveAppointmentIndex still
+// used plain findIndex -- whichever appointment happens to be first in the
+// array wins. It's used by syncAppointment to decide which appointment gets
+// pushed to the user's real calendar provider, so a wrong pick is a real,
+// unreviewed external side effect on the wrong record.
+test("resolveAppointmentIndex picks the most specific (longest) matching title, not just the first one in array order", () => {
+  const appointments = [
+    { title: "Vet visit", status: "pending" },
+    { title: "Vet visit follow-up", status: "pending" }
+  ];
+  assert.equal(voiceDispatch.resolveAppointmentIndex(appointments, "sync my vet visit follow-up appointment"), 1);
+  assert.equal(voiceDispatch.resolveAppointmentIndex(appointments, "sync my vet visit appointment"), 0);
+  const reversed = [appointments[1], appointments[0]];
+  assert.equal(voiceDispatch.resolveAppointmentIndex(reversed, "sync my vet visit follow-up appointment"), 0);
+});
+
+test("resolveAppointmentIndex still falls back to the one unsynced appointment for a pronoun-style reference, and refuses a genuine tie", () => {
+  const appointments = [{ title: "Vet visit", status: "pending" }, { title: "Vet visit follow-up", status: "synced" }];
+  assert.equal(voiceDispatch.resolveAppointmentIndex(appointments, "sync the appointment"), 0);
+  const tied = [{ title: "Vet visit", status: "pending" }, { title: "Vet visit", status: "pending" }];
+  assert.equal(voiceDispatch.resolveAppointmentIndex(tied, "sync my vet visit appointment"), -1, "a genuine tie must be left ambiguous, not guessed");
+});
