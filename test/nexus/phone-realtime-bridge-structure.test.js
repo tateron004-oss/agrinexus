@@ -28,18 +28,18 @@ function sliceFunction(name) {
   return source.slice(start, end);
 }
 
-test("the /incoming route only takes the real-time branch when phoneRealtimeStreamingEnabled() is true", () => {
+test("the /incoming route only takes the real-time branch when phoneRealtimeStreamingEnabled() is true, and skips it when redirected back with ?fallback=classic", () => {
   const routeStart = source.indexOf('url.pathname === "/api/voice/phone/incoming" && req.method === "POST"');
   assert.notEqual(routeStart, -1);
-  const branchStart = source.indexOf("if (phoneRealtimeStreamingEnabled(process.env)) {", routeStart);
-  assert.notEqual(branchStart, -1, "the opt-in real-time branch must exist inside the /incoming route");
+  const branchStart = source.indexOf('if (phoneRealtimeStreamingEnabled(process.env) && url.searchParams.get("fallback") !== "classic") {', routeStart);
+  assert.notEqual(branchStart, -1, "the opt-in real-time branch must exist inside the /incoming route, and must be skippable via ?fallback=classic");
   const classicFlowIndex = source.indexOf('updatePhoneVoiceSession(db, session, { step: "name"', routeStart);
   assert.notEqual(classicFlowIndex, -1, "the existing turn-based flow must remain in place, unmodified");
   assert.ok(branchStart < classicFlowIndex, "the real-time check must run before falling into the classic Gather flow");
 });
 
 test("the real-time branch re-checks caller authorization independently before minting a stream token", () => {
-  const branchStart = source.indexOf("if (phoneRealtimeStreamingEnabled(process.env)) {");
+  const branchStart = source.indexOf('if (phoneRealtimeStreamingEnabled(process.env) && url.searchParams.get("fallback") !== "classic") {');
   const branchEnd = source.indexOf("const session = getPhoneVoiceSession(db, phoneSessionKey(body,", branchStart);
   const branch = source.slice(branchStart, branchEnd);
   assert.match(branch, /const authorizedCaller = resolveAuthorizedPhoneCaller\(db, body\);/);
@@ -173,7 +173,7 @@ test("every step of the crisis listener (classify, build packet, deliver) is wra
 // reason for a call that had, in fact, connected and started speaking.
 test("a failure while writing the connected-call audit log does not tear down an already-connected call", () => {
   const handlerBody = sliceFunction("handleTwilioPhoneRealtimeStream");
-  const connectIndex = handlerBody.indexOf("await transport.connect(");
+  const connectIndex = handlerBody.indexOf("const connectPromise = transport.connect(");
   const connectFailedCatchIndex = handlerBody.indexOf('await cleanup("connect-failed");');
   const logWriteIndex = handlerBody.indexOf('action: "phone.realtime_connected"');
   assert.ok(connectIndex > 0 && connectFailedCatchIndex > 0 && logWriteIndex > 0, "expected all three markers to be present");
