@@ -124,7 +124,12 @@ assert.strictEqual(blockedDownload.mediaMode.playbackStatus, "download_blocked",
 assert(blockedDownload.message.includes("cannot download, rip, cache, host, or redistribute"), "Download block should explain copyright boundary");
 
 assertIncludes(voiceShell, "isMediaProviderHandoffCommand", "voice media routing");
-assertIncludes(voiceShell, "jazz|youtube|spotify|apple music|study|background|relaxing|workout|exercise|fitness", "voice media expanded genre routing");
+// Found live (music-intent false-positive audit): this literal string previously included
+// "study|relaxing|workout|exercise|fitness" as bare alternatives requiring no adjacent music noun --
+// the exact bug (routing "start my workout" or "open the study group chat" into the music pipeline)
+// this session's fix removed. Updated to check for the fixed, still-broad genre routing instead of
+// pinning this QA to the pre-fix regex text.
+assertIncludes(voiceShell, "music|r\\s*&\\s*b|rnb|afrobeats?|afro beats?|naija|amapiano|highlife|gospel|jazz|youtube|spotify|apple music|background", "voice media expanded genre routing");
 assertIncludes(voiceShell, "MUSIC_NO_ACTIVE_PROVIDER_PLAYBACK", "voice no-active-playback response");
 assertIncludes(voiceShell, "mediaProviderHandoff", "voice provider handoff metadata");
 

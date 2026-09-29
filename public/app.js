@@ -10289,10 +10289,16 @@ function healthSafetyAssistantAnswer() {
   return `Health safety reminder for ${country.name}: ${heatLine} ${intake ? `Latest intake is ${intake.patientRef || "recorded"}.` : "No current intake is open."} For severe symptoms or danger, contact local emergency help immediately.`;
 }
 
+// Found live (same bug shape as browser-action-controller.js's musicRequest() and app.js's
+// isNexusMediaMusicCommand(), both already fixed tonight): "nigerian"/"congolese"/"kenyan"/
+// "motivational"/"calm"/"training" were listed as bare standalone alternatives instead of requiring
+// an adjacent music noun -- "find nigerian visa requirements", "start congolese registration form",
+// "open my training schedule", and "search calm breathing technique" all matched and got silently
+// hijacked into a canned music-provider response before any real handling was attempted.
 function musicAssistantIntent(command = "") {
   const lower = normalizeToolText(command);
   if (!/\b(play|open|find|search|start|put on|listen to)\b/.test(lower)) return null;
-  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm|training)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross)\b/.test(lower)) return null;
   const cleaned = String(command || "")
     .replace(/\bnexus\b/ig, "")
     .replace(/\b(can you|please|could you|would you|open|play|find|search|start|put on|listen to)\b/ig, " ")
@@ -56136,7 +56142,12 @@ function nexusConversationFirstIntent(command = "") {
       tool: "music-control"
     };
   }
-  if (/\b(play|open|find|search|start|put on|listen to)\b.*\b(music|song|songs|playlist|soul|gospel|congolese|kenyan|relaxing|90s)\b/.test(lower)) {
+  // Found live (same bug shape as the other music-intent fixes tonight): "congolese"/"kenyan"/
+  // "relaxing"/"90s" were bare alternatives with only ".*" (any text) between the verb and the
+  // qualifier -- "play kenyan folklore story", "find congolese registration office", "start relaxing
+  // breathing session", and "open my 90s savings goal" all matched and got rerouted to the music tool
+  // in this primary voice-command routing pipeline, ahead of any real handling.
+  if (/\b(play|open|find|search|start|put on|listen to)\b.*\b(music|song|songs|playlist|soul|gospel)\b/.test(lower)) {
     return {
       type: "tool",
       tool: "music",
