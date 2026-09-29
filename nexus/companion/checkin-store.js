@@ -15,13 +15,26 @@ class CheckinSettingsRepository {
   constructor(db) { if (!db?.query) throw new Error("A database runtime is required."); this.db = db; }
   async set({ tenantId, userId, timeOfDay, timeZone, graceHours = 3 }) {
     if (!tenantId || !userId || !timeOfDay || !timeZone) throw new Error("Tenant, user, time and time zone are required.");
-    const cancelled = await this.db.query(`update nexus_schedules set state='cancelled',updated_at=now()
-      where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active' returning schedule_id`, [tenantId, userId, JOB_TYPE]);
-    const created = await this.db.query(`insert into nexus_schedules
-      (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,'active') returning schedule_id`,
-    [`sch_${crypto.randomUUID()}`, tenantId, userId, JOB_TYPE, { timeOfDay, timeZone, graceHours }, { kind: "setting" }, timeZone, PARKED]);
-    return { scheduleId: (created.rows || created)[0]?.schedule_id, timeOfDay, timeZone, graceHours, replaced: (cancelled.rows || cancelled).length > 0 };
+    const write = async db => {
+      const cancelled = await db.query(`update nexus_schedules set state='cancelled',updated_at=now()
+        where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active' returning schedule_id`, [tenantId, userId, JOB_TYPE]);
+      const created = await db.query(`insert into nexus_schedules
+        (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,'active') returning schedule_id`,
+      [`sch_${crypto.randomUUID()}`, tenantId, userId, JOB_TYPE, { timeOfDay, timeZone, graceHours }, { kind: "setting" }, timeZone, PARKED]);
+      return { scheduleId: (created.rows || created)[0]?.schedule_id, timeOfDay, timeZone, graceHours, replaced: (cancelled.rows || cancelled).length > 0 };
+    };
+    // Found live (export/compliance & settings audit): same non-atomic
+    // cancel-then-insert race already fixed for brief/settings.js and
+    // alerts/settings.js -- a double-submit could leave two active daily
+    // check-in schedules for the same person, and the worker's sweep would
+    // silently send two check-in prompts every day from then on.
+    return typeof this.db.transaction === "function"
+      ? this.db.transaction(async trx => {
+          await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`${JOB_TYPE}:${tenantId}:${userId}`]);
+          return write(trx);
+        })
+      : write(this.db);
   }
   async stop({ tenantId, userId }) {
     const result = await this.db.query(`update nexus_schedules set state='cancelled',updated_at=now()

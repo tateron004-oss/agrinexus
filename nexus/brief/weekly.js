@@ -19,13 +19,26 @@ class WeeklySummarySettingsRepository {
   constructor(db) { if (!db?.query) throw new Error("A database runtime is required."); this.db = db; }
   async set({ tenantId, userId, dayOfWeek, timeOfDay, timeZone }) {
     if (!tenantId || !userId || !timeOfDay || !timeZone || !Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) throw new Error("Tenant, user, weekday, time and time zone are required.");
-    const cancelled = await this.db.query(`update nexus_schedules set state='cancelled',updated_at=now()
-      where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active' returning schedule_id`, [tenantId, userId, JOB_TYPE]);
-    const created = await this.db.query(`insert into nexus_schedules
-      (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,'active') returning schedule_id`,
-    [`sch_${crypto.randomUUID()}`, tenantId, userId, JOB_TYPE, { dayOfWeek, timeOfDay, timeZone }, { kind: "setting" }, timeZone, PARKED]);
-    return { scheduleId: (created.rows || created)[0]?.schedule_id, dayOfWeek, timeOfDay, timeZone, replaced: (cancelled.rows || cancelled).length > 0 };
+    const write = async db => {
+      const cancelled = await db.query(`update nexus_schedules set state='cancelled',updated_at=now()
+        where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active' returning schedule_id`, [tenantId, userId, JOB_TYPE]);
+      const created = await db.query(`insert into nexus_schedules
+        (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,'active') returning schedule_id`,
+      [`sch_${crypto.randomUUID()}`, tenantId, userId, JOB_TYPE, { dayOfWeek, timeOfDay, timeZone }, { kind: "setting" }, timeZone, PARKED]);
+      return { scheduleId: (created.rows || created)[0]?.schedule_id, dayOfWeek, timeOfDay, timeZone, replaced: (cancelled.rows || cancelled).length > 0 };
+    };
+    // Found live (export/compliance & settings audit): same non-atomic
+    // cancel-then-insert race already fixed for brief/settings.js and
+    // alerts/settings.js -- a double-submit could leave two active weekly-
+    // summary schedules for the same person, and the worker's sweep would
+    // silently send two summaries every week from then on.
+    return typeof this.db.transaction === "function"
+      ? this.db.transaction(async trx => {
+          await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`${JOB_TYPE}:${tenantId}:${userId}`]);
+          return write(trx);
+        })
+      : write(this.db);
   }
   async stop({ tenantId, userId }) {
     const result = await this.db.query(`update nexus_schedules set state='cancelled',updated_at=now()
