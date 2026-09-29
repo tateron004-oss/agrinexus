@@ -53698,7 +53698,15 @@ async function api(req, res, url) {
     try {
       ({ scan } = createDroneScan(db, {
         productId: body.productId,
-        source: "operator",
+        // Found live (drone/account-erasure audit): this route hardcoded
+        // "operator" instead of the real signed-in user's email, unlike the
+        // equivalent field-intelligence launch-kit path (createDroneScan at
+        // line 4397) which already uses source: user.email. Per this file's
+        // own PROFILE_OWNER_FIELDS convention, droneScans is scanned by
+        // createdBy for account export/erasure -- a record stamped "operator"
+        // matches no real account, so it was permanently unattributable and
+        // silently survived a real user's account-erasure/export request.
+        source: user.email,
         fieldZone: body.fieldZone,
         scanType: body.scanType
       }));
@@ -53718,7 +53726,10 @@ async function api(req, res, url) {
     try {
       mission = createDroneMission(db, {
         productId: body.productId,
-        source: "operator",
+        // Found live (drone/account-erasure audit): same "operator" hardcoding
+        // as the drone-scan route above -- see that comment for the full
+        // account-erasure/export impact.
+        source: user.email,
         fieldZone: body.fieldZone,
         objective: body.objective
       });
@@ -53737,7 +53748,10 @@ async function api(req, res, url) {
     let task;
     try {
       task = createFieldIntervention(db, {
-        source: "operator",
+        // Found live (drone/account-erasure audit): same "operator" hardcoding
+        // as the drone-scan route above -- see that comment for the full
+        // account-erasure/export impact.
+        source: user.email,
         assignedTo: body.assignedTo || "Field agritech team"
       });
     } catch (error) {
@@ -53757,7 +53771,10 @@ async function api(req, res, url) {
       record = createAdvancedDroneOperation(db, {
         type: body.type,
         productId: body.productId,
-        source: "operator"
+        // Found live (drone/account-erasure audit): same "operator" hardcoding
+        // as the drone-scan route above -- see that comment for the full
+        // account-erasure/export impact.
+        source: user.email
       });
     } catch (error) {
       return send(res, 409, { error: error.message });
