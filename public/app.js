@@ -55649,10 +55649,22 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
       action: ["action", "transactionAction"],
       intake: ["intake", "intakeType", "careRequest"]
     };
+    // Found live: this list never included data-nexus-landing-field -- the
+    // attribute the currently-active DEFAULT (non-guided) Form-mode intake
+    // window actually renders (renderNexusLandingField, same one implicated
+    // in the earlier nexusFormDataForWorkflow fix). A voice command that
+    // opened a workspace and genuinely populated its default-mode fields
+    // correctly still failed verification here (populatedFields never
+    // reached expected.length), which throws below and is caught by the
+    // generic catch in dispatchRealtimeToolCall/handleRealtimeFinalTranscript
+    // -- so Kyro told the user "I could not reach the Nexus tool layer right
+    // now" / "temporarily unavailable" even though the action had genuinely
+    // already succeeded on screen.
     const selectors = (aliases[key] || [key]).flatMap(name => [
       `[data-nexus-realtime-field="${key}"]`,
       `[data-maps-field-visit-field="${name}"]`,
       `[data-nexus-mode-field="${name}"]`,
+      `[data-nexus-landing-field="${name}"]`,
       `[data-nexus-guided-answer="${name}"]`,
       `[data-marketplace-create-field="${name}"]`
     ]);
