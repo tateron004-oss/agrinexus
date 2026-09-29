@@ -41,11 +41,18 @@ function create(body = {}, db, env = process.env) {
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
   if (!clean(body.title)) return blockedResponse(provider, action, "Reminder title is required.");
+  // Found live (unbounded-input sweep): unlike its sibling POST
+  // /api/nexus/reminders (server.js, sanitizePilotText caps title/notes/
+  // time at 160/320/120), this function's own create() had no length cap at
+  // all -- the request body's only limit is the global 20MB readBody cap,
+  // and db.profile.nexusReminders is capped by item COUNT (50), not by
+  // size, so a handful of multi-MB reminders meaningfully bloats the single
+  // JSON/jsonb state blob every read/write rewrites wholesale.
   const reminder = {
     id: `reminder-${Date.now()}`,
-    title: clean(body.title),
-    dueAt: clean(body.dueAt || ""),
-    note: clean(body.note || ""),
+    title: clean(body.title).slice(0, 200),
+    dueAt: clean(body.dueAt || "").slice(0, 120),
+    note: clean(body.note || "").slice(0, 500),
     status: "in_app_only",
     osNotificationRequested: false,
     createdAt: new Date().toISOString()
