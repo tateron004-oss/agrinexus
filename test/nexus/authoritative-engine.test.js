@@ -107,6 +107,23 @@ test("executeTask blocks the task itself when no remaining step can ever become 
   assert.equal(store.task.state, "blocked");
 });
 
+// Found live (task state-machine/confirmation-flow audit): executeTask() only
+// special-cased "planned"/"awaiting_confirmation"/"queued" before its step loop,
+// and its terminal-rejection list didn't include "paused" either -- a paused
+// task fell straight into the loop and kept executing real tools while the DB
+// state stayed "paused", and (since the loop's completion check only fires for
+// state === "running") could never reach "verifying"/"completed" even once every
+// step genuinely finished.
+test("executeTask refuses to run a paused task instead of silently executing through the pause", async () => {
+  const { engine, store } = fixture();
+  store.steps = [{ step_id: "stp_1", tool_id: "documents.save", fallback_tool_ids: [], confirmation_state: "approved", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { schema: "nexus.task.v1", tenantId: "tenant", correlationId: "trace", ownerId: "user", state: "paused", version: 1, history: [] };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  await assert.rejects(() => engine.executeTask({ context, taskId: "tsk" }), error => error.code === "task_paused");
+  assert.equal(store.calls, 0, "the real tool must never be invoked while the task is paused");
+  assert.equal(store.task.state, "paused", "a refused execution must not itself change the task's state");
+});
+
 async function expectCode(work, code) {
   await assert.rejects(work, error => error instanceof NexusRuntimeError && error.code === code);
 }

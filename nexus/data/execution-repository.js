@@ -11,14 +11,32 @@ class ExecutionRepository {
       const existing = await trx.query("select * from nexus_tool_executions where tenant_id=$1 and idempotency_key=$2 for update", [tenantId, idempotencyKey]);
       if ((existing.rows || existing)[0]) return { execution: (existing.rows || existing)[0], duplicate: true };
       const executionId = createId("toolCall");
-      const result = await trx.query(`insert into nexus_tool_executions
+      // Found live (task state-machine/confirmation-flow audit): SELECT ... FOR
+      // UPDATE above takes no lock when zero rows match (there is nothing yet to
+      // lock), so two concurrent start() calls for the same idempotency key (a
+      // straggler agent.advance-task job racing agent.sweep-advanceable-tasks'
+      // re-enqueue) could both reach here and both attempt this insert. The real
+      // unique (tenant_id, idempotency_key) constraint then made the LOSING
+      // insert throw a raw Postgres unique-violation error, which propagated
+      // unchanged into executeTask()'s catch and permanently blocked the task --
+      // even though the winning call may have succeeded or still be running
+      // fine. ON CONFLICT DO NOTHING plus a re-select turns the losing call into
+      // the same honest {duplicate:true} outcome the pre-existing-row branch
+      // above already returns, instead of letting it throw.
+      const inserted = await trx.query(`insert into nexus_tool_executions
         (execution_id,tenant_id,task_id,step_id,tool_id,actor_id,idempotency_key,state,request)
-        values ($1,$2,$3,$4,$5,$6,$7,'running',$8) returning *`,
+        values ($1,$2,$3,$4,$5,$6,$7,'running',$8)
+        on conflict (tenant_id, idempotency_key) do nothing returning *`,
       [executionId, tenantId, taskId, stepId, toolId, actorId, idempotencyKey, request]);
+      const insertedRow = (inserted.rows || inserted)[0];
+      if (!insertedRow) {
+        const winner = await trx.query("select * from nexus_tool_executions where tenant_id=$1 and idempotency_key=$2", [tenantId, idempotencyKey]);
+        return { execution: (winner.rows || winner)[0], duplicate: true };
+      }
       await trx.query(`update nexus_task_steps set state='running',attempt_count=attempt_count+1,
         started_at=coalesce(started_at,now()),updated_at=now() where tenant_id=$1 and task_id=$2 and step_id=$3`,
       [tenantId, taskId, stepId]);
-      return { execution: (result.rows || result)[0], duplicate: false };
+      return { execution: insertedRow, duplicate: false };
     });
   }
   async finish({ tenantId, executionId, stepId, successful, response = null, error = null, receipt, verified }) {
