@@ -11,7 +11,12 @@ const moodleProvider = require("./moodleProvider");
 const remindersProvider = require("./reminderProvider");
 const offlineSyncProvider = require("./offlineSyncProvider");
 
-const SENSITIVE_PATTERN = /\b(patient|diagnos|prescri|treat(?:ment)?|symptom|medical record|insurance|ssn|date of birth|dob|payment|card|bank|credential|transcript|grade|student id)\b/i;
+// Found live (systemic sensitive-pattern regex audit): "diagnos"/"prescri" were bare word-fragments
+// wrapped in \b(...)\b -- \b requires a boundary immediately after the fragment, so this matched NONE
+// of "diagnosis"/"diagnosed"/"diagnosing" or "prescribe"/"prescribing"/"prescription", only the
+// literal, essentially never-typed fragments themselves as whole words. \w* lets each fragment match
+// any real-word continuation (same fix applied to 6 sibling patterns with this identical defect).
+const SENSITIVE_PATTERN = /\b(patient|diagnos\w*|prescri\w*|treat(?:ment)?|symptom|medical record|insurance|ssn|date of birth|dob|payment|card|bank|credential|transcript|grade|student id)\b/i;
 
 const LOCAL_CATALOG = Object.freeze([
   {

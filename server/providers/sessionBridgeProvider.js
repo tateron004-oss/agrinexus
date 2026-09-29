@@ -4,7 +4,12 @@ const remindersProvider = require("./reminderProvider");
 const offlineSyncProvider = require("./offlineSyncProvider");
 
 const SESSION_TYPES = new Set(["provider review", "learning/training", "agriculture support", "workforce coaching", "marketplace support", "community service"]);
-const SENSITIVE_SESSION_PATTERN = /\b(diagnos|prescri|medical record|patient|payment|card|bank|secret|token|password|emergency|dispatch|invite all)\b/i;
+// Found live (systemic sensitive-pattern regex audit): "diagnos"/"prescri" were bare word-fragments
+// wrapped in \b(...)\b -- \b requires a boundary immediately after the fragment, so this matched NONE
+// of "diagnosis"/"diagnosed"/"diagnosing" or "prescribe"/"prescribing"/"prescription", only the
+// literal, essentially never-typed fragments themselves as whole words. \w* lets each fragment match
+// any real-word continuation (same fix applied to 6 sibling patterns with this identical defect).
+const SENSITIVE_SESSION_PATTERN = /\b(diagnos\w*|prescri\w*|medical record|patient|payment|card|bank|secret|token|password|emergency|dispatch|invite all)\b/i;
 
 function status(env = process.env) {
   return { provider: "nexus-session-bridge", enabled: envEnabled("NEXUS_SESSION_BRIDGE_ENABLED", env, true), zoom: zoomProvider.status(env), preparationAvailable: true, noHiddenInvites: true, confirmationControlled: true };

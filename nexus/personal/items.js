@@ -180,7 +180,16 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
       }
       default: return null;
     }
-  } catch { return null; }
+  } catch {
+    // Found live (business/personal sibling sweep, "outcome-shape honesty" bug class): request has
+    // already been positively identified as a to-do/note/event action by readRequest() above, OUTSIDE
+    // this try block -- returning null here (this module's own documented sentinel for "not a personal-
+    // item request at all") on a genuine failure inside the switch (e.g. a transient error saving to
+    // memory) silently re-labels a real, already-confirmed save attempt as "wasn't a personal item,"
+    // and the caller (planner.js) falls through to unrelated generic conversation with no indication
+    // the to-do/note/event was never saved.
+    return "Something went wrong saving that. Please try again.";
+  }
 }
 
 // What is on a person's calendar today and how many to-dos are open, for the morning brief.

@@ -33,7 +33,15 @@ function intake(body = {}, db, env = process.env) {
   if (disabled) return disabled;
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
-  const blocked = guardMedicalText(PROVIDER, action, [body.goal, body.notes], false);
+  // Found live (telehealth sibling sweep): this scanned body.goal/body.notes, but the real, shipped
+  // client form for this exact endpoint (public/app.js's RTM module field list) has no "goal" or
+  // "notes" field at all -- its one free-text field is literally named "participationGoal", which is
+  // what actually gets persisted just below. For every real submission through the real UI, body.goal
+  // and body.notes are always undefined, so guardMedicalText scanned an empty string while whatever the
+  // user actually typed (including diagnose/prescribe/dosage or emergency-word content) sailed through
+  // unfiltered. Scans every field this function actually persists, not the field names of a different
+  // sibling provider's form.
+  const blocked = guardMedicalText(PROVIDER, action, [body.participationGoal, body.goal, body.notes, body.learningResourceInterest, body.communityLocation], false);
   if (blocked) return blocked;
   const record = saveRecord(db, INTAKES, localRecord("rtm-intake", body, {
     participationGoal: safeText(body.participationGoal || body.goal || "organize participation for provider review", 240),

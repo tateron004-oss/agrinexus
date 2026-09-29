@@ -11,7 +11,12 @@ const googleMapsProvider = require("./googleMapsProvider");
 const remindersProvider = require("./reminderProvider");
 const offlineSyncProvider = require("./offlineSyncProvider");
 
-const SENSITIVE_FIELD_VISIT_PATTERN = /\b(payment|checkout|escrow|card|bank|routing|account number|ssn|diagnos|prescri|medical record|insurance|password|secret|token|private key|emergency dispatch|911|call now|message now|whatsapp)\b/i;
+// Found live (systemic sensitive-pattern regex audit): "diagnos"/"prescri" were bare word-fragments
+// wrapped in \b(...)\b -- \b requires a boundary immediately after the fragment, so this matched NONE
+// of "diagnosis"/"diagnosed"/"diagnosing" or "prescribe"/"prescribing"/"prescription", only the
+// literal, essentially never-typed fragments themselves as whole words. \w* lets each fragment match
+// any real-word continuation (same fix applied to 6 sibling patterns with this identical defect).
+const SENSITIVE_FIELD_VISIT_PATTERN = /\b(payment|checkout|escrow|card|bank|routing|account number|ssn|diagnos\w*|prescri\w*|medical record|insurance|password|secret|token|private key|emergency dispatch|911|call now|message now|whatsapp)\b/i;
 const DESTINATION_TYPES = new Set(["provider", "marketplace", "learning", "farm", "community", "custom"]);
 
 function status(env = process.env) {

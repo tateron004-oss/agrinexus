@@ -217,7 +217,27 @@ async function handle(ctx) {
       notes.push(`${d.kind === "sale" ? "income" : "spending"} of ${formatMoney(amount, result.record.data.currency)} recorded`);
     } else notes.push("no price was given, so I did not record any money — say \"sold ... for ...\" to add it");
     const stock = await ctx.store.list({ ...scope, collection: "stock" });
-    if (d.kind === "sale") { const found = findItems(stock, d.item).filter(entry => entry.data.unit === d.unit); if (found.length === 1) { const left = round(Math.max(0, found[0].data.qty - d.qty), 3); await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } } }); notes.push(`${unitLabel(left, d.unit)} of ${found[0].data.name} left in stock`); } }
+    // Found live (marketplace/stock-race sibling sweep): unlike addStock's own compare-and-swap retry
+    // loop in inventory.js, this deduction read qty once and wrote it back with no casField guard at
+    // all -- two orders for the SAME stock item delivered close together could each read the same
+    // starting qty and each write their own deduction, silently losing one. By this point the order is
+    // already claimed "done" and its money already recorded, so (like addStock, and unlike the manual
+    // "used X of Y" command) a lost race here retries against the latest qty rather than asking the
+    // user to redo something that can no longer be redone.
+    if (d.kind === "sale") {
+      const found = findItems(stock, d.item).filter(entry => entry.data.unit === d.unit);
+      if (found.length === 1) {
+        let current = found[0]; let applied = false;
+        for (let attempt = 0; attempt < 5 && !applied; attempt += 1) {
+          const left = round(Math.max(0, current.data.qty - d.qty), 3);
+          applied = await ctx.store.update({ ...scope, record: { ...current, data: { ...current.data, qty: left } }, casField: "qty", casValue: current.data.qty });
+          if (applied) { notes.push(`${unitLabel(left, d.unit)} of ${current.data.name} left in stock`); break; }
+          const refreshed = (await ctx.store.list({ ...scope, collection: "stock" })).find(item => item.memoryId === current.memoryId);
+          if (!refreshed) break;
+          current = refreshed;
+        }
+      }
+    }
     else { const added = await addStock(ctx, d.item, { value: d.qty, unit: d.unit }); if (added) notes.push(`added to stock (${unitLabel(added.data.qty, added.data.unit)} of ${added.data.name})`); }
     return `Order ${orderRecord.number} ${d.kind === "sale" ? "delivered" : "received"}: ${notes.join("; ")}.`;
   }
