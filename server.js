@@ -22546,8 +22546,16 @@ async function translateDisplayValue(db, user, value, targetLanguage, context, c
 async function translateAgentDisplayBundle(db, user, result = {}, targetLanguage = "en") {
   if (!targetLanguage || targetLanguage === "en") return null;
   const metadata = result.metadata || {};
+  // Found live (translation/upload audit): this function's only caller
+  // (translateAgentCommandResult, just below) already translates
+  // result.response once, correctly, before calling this -- but feeding it
+  // back in here as `displayBundle.response` made translateDisplayValue
+  // translate it a SECOND time, with sourceLanguage hardcoded to "en" even
+  // though the text was no longer English. Every translated agent turn fired
+  // an extra, unnecessary paid provider call and produced a mistranslated/
+  // mislabeled localized.response. result.response is passed through as-is
+  // instead of being fed into the re-translation pass below.
   const displayBundle = {
-    response: result.response || "",
     suggestedReplies: metadata.suggestedReplies || [],
     turnCoach: metadata.turnCoach || null,
     situationAgent: metadata.situationAgent || null,
@@ -22561,6 +22569,7 @@ async function translateAgentDisplayBundle(db, user, result = {}, targetLanguage
   const budget = { count: 0, max: 90 };
   const localized = await translateDisplayValue(db, user, displayBundle, targetLanguage, `agent-display:${result.intent || "unknown"}`, cache, budget);
   return {
+    response: result.response || "",
     ...localized,
     translationBudgetUsed: budget.count,
     preservedSystemFields: true
@@ -35035,6 +35044,16 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
       nexusPlan: agentAction.nexusPlan || null,
       plannerObservation: agentAction.plannerObservation || null
     };
+    // Found live (translation/upload audit): unlike the runAgentCommand
+    // branch just below (which calls translateAgentCommandResult before
+    // returning), this direct_conversational_response branch returned
+    // conversationalModeOrchestrator.response -- a hardcoded English string
+    // -- completely untranslated, while metadata.language/targetLanguage
+    // were still stamped with the real target language. A Spanish-language
+    // caller saying "hola" or "are you there?" got an English answer (read
+    // aloud with a Spanish Twilio voice on a phone call) with every metadata
+    // field falsely claiming the response was already in Spanish.
+    result = await translateAgentCommandResult(db, user, result, { targetLanguage: commandLanguage });
     commandRecord(db, user, command, result);
     if (outputMode === "voice") {
       voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, {
