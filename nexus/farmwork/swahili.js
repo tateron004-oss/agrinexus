@@ -27,6 +27,7 @@ const SW = {
   undoNone: "Hakuna cha kufuta.", undone: ({ what, amount, income }) => `Nimeondoa: ${income ? "mapato" : "matumizi"} ya ${amount} (${what}). Mabadiliko ya ghala hayajarudishwa; niambie ukitaka yasahihishwe.`,
   stockUsed: ({ taken, name, left }) => `Nimerekodi: umetumia ${taken} za ${name}; zimebaki ${left}.`,
   stockUsedNone: ({ name }) => `Sioni ${name} kwenye ghala lako. Sema "ongeza ${name} kwenye ghala" kwanza.`,
+  stockUsedTooMuch: ({ have, name, diff }) => `Una ${have} tu za ${name}, kwa hivyo sijabadilisha chochote. Kama hesabu si sahihi, niambie "ongeza ${diff} za ${name} kwenye ghala" kwanza.`,
   stockChanged: ({ name }) => `Kiasi cha ${name} kimebadilika. Sema tena ili niangalie kiasi cha sasa kwanza.`,
   stockAdded: ({ qty, name, now }) => `Nimeongeza ${qty} za ${name} kwenye ghala lako. Sasa una ${now}.`,
   stockFull: "Ghala lako limejaa (vitu mia nne). Ondoa vingine kwanza.",
@@ -173,6 +174,13 @@ async function handleSwahili(ctx) {
     if (!name || name.length > 60) return null;
     const list = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(list, englishItem(name)).filter(entry => entry.data.unit === quantity.unit);
     if (found.length !== 1) return SW.stockUsedNone({ name });
+    // Found live (further follow-up sweep): unlike inventory.js's English "used X of Y" deduction
+    // (which refuses when the stated quantity exceeds what's recorded, so a mistaken/implausible
+    // figure never silently corrupts the count), this Swahili command had no such guard at all -- it
+    // just clamped to zero and reported success as if nothing were wrong. A Swahili speaker saying
+    // "used 10 bags" against 2 recorded bags got their real stock silently zeroed with no warning,
+    // strictly worse protection than the identical English action.
+    if (quantity.value > found[0].data.qty) return SW.stockUsedTooMuch({ have: unitLabelSw(found[0].data.qty, found[0].data.unit), name: found[0].data.name, diff: unitLabelSw(round(quantity.value - found[0].data.qty, 3), quantity.unit) });
     const left = round(Math.max(0, found[0].data.qty - quantity.value), 3);
     // Same bug as inventory.js's English "used X of Y" deduction, same fix, duplicated by hand in Swahili.
     const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });

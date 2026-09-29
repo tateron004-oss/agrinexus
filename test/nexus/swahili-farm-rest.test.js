@@ -200,6 +200,19 @@ test("two concurrent Swahili 'Nimetumia' stock-usage requests for the same item 
   assert.equal(outcomes.filter(text => /kimebadilika/.test(text)).length, 1, `exactly one request must honestly report the stock changed, not silently lose its deduction: ${JSON.stringify(outcomes)}`);
 });
 
+// Found live (further follow-up sweep): unlike inventory.js's English "used X of Y" deduction (which
+// refuses outright when the stated quantity exceeds what's recorded), the Swahili "Nimetumia" command
+// had no such guard -- it silently clamped to zero and reported success as if nothing were wrong,
+// strictly worse protection than the identical English action for the same real mistake.
+test("Swahili 'Nimetumia' refuses an implausible over-quantity instead of silently zeroing real stock", async () => {
+  const f = farmer();
+  await f.say("Nimenunua mbolea kilo 2 kwa shilingi 500");
+  const reply = await f.say("Nimetumia kilo 10 za mbolea");
+  assert.match(reply, /^Una kilo 2 tu za fertiliser/, reply);
+  const stock = await list(f, "stock");
+  assert.equal(stock[0].data.qty, 2, "the real recorded quantity must be left untouched, not silently zeroed");
+});
+
 test("the cooperative in Swahili", async () => {
   const f = farmer();
   assert.match(await f.say("Anzisha ushirika wetu Umoja wa Wakulima, ada 500 kila mwezi"), /Nimeanzisha Umoja wa Wakulima, ada 500 kila mwezi/);
