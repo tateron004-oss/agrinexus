@@ -96,7 +96,15 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
         } catch {
           // Leave reopenVerified honestly false; the create/save above already succeeded.
         }
-        return { ...result.body, documentId: document.document_id, savedVersion: version.version, reopenVerified };
+        // Found live (export/document audit): result.body.downloadPath (from
+        // exportProvider.exportDocument) points at the legacy /exports/:filename
+        // route, which 403s for everyone -- including this document's own
+        // owner -- since nothing in this governed pipeline ever records
+        // ownership into the legacy db.exportOwners map that route checks.
+        // Override it with the real, owner-scoped route this document is
+        // actually readable through, matching read-executor.js's formatDocument.
+        return { ...result.body, downloadPath: `/api/nexus/runtime/documents/${document.document_id}`,
+          documentId: document.document_id, savedVersion: version.version, reopenVerified };
       } catch {
         // The real file export already succeeded; a failure to also index it
         // for later listing/reading shouldn't fail the whole create action --

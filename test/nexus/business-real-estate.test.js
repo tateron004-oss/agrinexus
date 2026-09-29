@@ -67,6 +67,20 @@ test("extractListingArgs normalizes args.status to lowercase, not just the text-
   assert.equal(voiceDispatch.extractListingArgs("mark listing status", { address: "500 Elm St", status: "Active" }).status, "active");
 });
 
+// Found live (real-estate/document audit): unlike price (hardened above) and every other
+// numeric field in this file, args.beds/args.baths had no Number.isFinite check -- a
+// non-numeric tool-call arg (e.g. an LLM planning beds: "two") produced NaN, which
+// normalizeEditable then rejects with a thrown error addListing's own handler never
+// catches, surfacing as an unhandled rejection instead of a clean clarification.
+test("extractListingArgs rejects non-numeric args.beds/args.baths instead of producing NaN", () => {
+  const result = voiceDispatch.extractListingArgs("list a property", { address: "500 Elm St", beds: "two", baths: "one and a half" });
+  assert.equal(result.beds, 0);
+  assert.equal(result.baths, 0);
+  const valid = voiceDispatch.extractListingArgs("list a property", { address: "500 Elm St", beds: 3, baths: 2.5 });
+  assert.equal(valid.beds, 3);
+  assert.equal(valid.baths, 2.5);
+});
+
 // Found live: resolveListingIndex used findIndex, which picks whichever
 // matching address comes FIRST in the array, not the most specific one --
 // when one listing's address is a literal prefix of another's (two units

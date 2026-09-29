@@ -27,7 +27,17 @@ function formatDocument(row) {
     title: row.title,
     documentType: row.document_type,
     version: row.version || null,
-    downloadPath: row.object_key?.startsWith("local:") ? `/exports/${row.object_key.slice("local:".length)}` : null,
+    // Found live (export/document audit): this pointed at server.js's legacy
+    // /exports/:filename route, which 403s for everyone -- including this
+    // document's own owner -- because that route only checks db.exportOwners,
+    // which nothing in this (governed, Postgres-backed) documents pipeline
+    // ever populates. The real, already-built, owner-scoped download path is
+    // GET /api/nexus/runtime/documents/:documentId (server-runtime-adapter.js),
+    // which the client's own downloadNexusAuthoritativeDocument() already
+    // calls by documentId for the create/save/reopen lifecycle -- this field
+    // exists for any OTHER caller (documents.read/list, an API integrator)
+    // that would otherwise follow the same dead link.
+    downloadPath: row.object_key?.startsWith("local:") ? `/api/nexus/runtime/documents/${row.document_id}` : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };

@@ -466,8 +466,16 @@ function extractListingArgs(command = "", args = {}) {
     price: args.price !== undefined ? (Number.isFinite(Number(args.price)) && Number(args.price) >= 0 ? Number(args.price) : 0) : (Number.isFinite(price) ? price : 0),
     currency: priceCurrency || "USD",
     propertyType: sanitizeText(args.propertyType || (typeMatch ? typeMatch[1].toLowerCase() : ""), 40),
-    beds: args.beds !== undefined ? Number(args.beds) : (bedsMatch ? Number(bedsMatch[1]) : 0),
-    baths: args.baths !== undefined ? Number(args.baths) : (bathsMatch ? Number(bathsMatch[1]) : 0),
+    // Found live (real-estate/document audit): unlike price just above (and
+    // every other numeric field in this file), these had no Number.isFinite
+    // check -- a tool-call arg like beds: "two" produced beds: NaN, which
+    // normalizeEditable (nexus/business/service.js) then rejects with a
+    // thrown business_workspace_invalid error. addListing's own handler has
+    // no try/catch around that PUT, so this surfaced as an unhandled
+    // rejection instead of a clean clarifying question, breaking the
+    // graceful-degradation pattern the rest of this file follows.
+    beds: args.beds !== undefined ? (Number.isFinite(Number(args.beds)) ? Number(args.beds) : 0) : (bedsMatch ? Number(bedsMatch[1]) : 0),
+    baths: args.baths !== undefined ? (Number.isFinite(Number(args.baths)) ? Number(args.baths) : 0) : (bathsMatch ? Number(bathsMatch[1]) : 0),
     // Found live: only the text-parsed branch normalized to lowercase --
     // args.status (a structured tool-call argument, e.g. "Active") was
     // stored verbatim, and computeBusinessDashboard's exact-case status

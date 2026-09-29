@@ -141,6 +141,36 @@ test("indexes a real export into the document repository when one and a context 
   fs.unlinkSync(tmpFile);
 });
 
+// Found live (export/document audit): the executor's return value used to
+// spread exportProvider's raw response unchanged, whose data.downloadPath
+// points at the legacy /exports/:filename route -- which 403s for everyone,
+// including this document's own owner, since nothing in this governed
+// pipeline ever records ownership into the legacy db.exportOwners map that
+// route checks. The one real, already-built, owner-scoped path a document
+// created this way is actually readable through is
+// GET /api/nexus/runtime/documents/:documentId.
+test("the outcome's downloadPath points at the real, owner-scoped documents route, not the dead legacy export route", async () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const tmpFile = path.join(os.tmpdir(), `nexus-doc-test-${Date.now()}.txt`);
+  fs.writeFileSync(tmpFile, "hello world");
+  const documents = {
+    create: async () => ({ document_id: "doc_download_test" }),
+    addVersion: async () => ({ version_id: "ver_1", version: 1 })
+  };
+  await withPatched(exportProvider, "exportDocument", async () => ({
+    httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-dl", bytes: 11, filename: "exp-dl.txt", localPath: tmpFile, downloadPath: "/exports/exp-dl.txt" } }
+  }), async () => {
+    const execute = createDocumentsCreateExecutor({ env: {}, documents });
+    const result = await execute({ input: { title: "Field report", content: "hello world", format: "txt" },
+      context: { tenantId: "t1", userId: "u1" }, taskId: "tsk_1" });
+    assert.equal(result.downloadPath, "/api/nexus/runtime/documents/doc_download_test");
+    assert.doesNotMatch(result.downloadPath, /^\/exports\//);
+  });
+  fs.unlinkSync(tmpFile);
+});
+
 test("a failure to index the export does not fail the (already-successful) create", async () => {
   const documents = {
     create: async () => { throw new Error("db unavailable"); },
