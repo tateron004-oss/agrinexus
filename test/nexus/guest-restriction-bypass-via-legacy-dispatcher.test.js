@@ -94,14 +94,21 @@ function healthIntakeCount() {
 // createOutboundCallWorkflow/createCommunicationThread/createVideoSessionWorkflow
 // themselves, closing every caller (this dispatcher, /api/agent/command when
 // OpenAI-native is unconfigured, and any future caller) in one place.
+//
+// Updated (legal/consent audit, conversational-bypass fix): this exact
+// fallback path hardcodes conversational:false, which used to ALSO skip
+// confirmation staging entirely (a separate, since-fixed bug -- see
+// confirmation-gate-conversational-bypass.test.js). Now a single-turn "call
+// the doctor"/"show my injury to a doctor" correctly stages for confirmation
+// first, for every caller regardless of restriction -- so these first two
+// tests now verify that staging (not restriction) is what stops the real
+// action on the first turn, and that no real record is written before any
+// confirmation, restricted or not.
 test("a guest session reaching the legacy dispatcher via the default tool name cannot place a real outbound call", async () => {
   const result = await callTool("call the doctor about my rash");
   assert.equal(result.status, 200);
-  const outboundCall = result.body?.result?.metadata?.outboundCall;
-  assert.ok(outboundCall, "expected the legacy dispatcher's call branch to fire");
-  assert.equal(outboundCall.status, "restricted-account-no-real-call");
-  assert.equal(outboundCall.delivery.attempted, false);
-  assert.doesNotMatch(result.body.response, /needs-twilio-call-config/, "must be refused for the restriction, not just missing Twilio config");
+  assert.equal(result.body?.result?.status, "needs-confirmation", "a single-turn command must stage for confirmation, not place a real call immediately");
+  assert.equal(result.body?.result?.metadata?.outboundCall, undefined, "no real outbound call attempt should exist before any confirmation");
 });
 
 // createVideoSessionWorkflow's health-intake write has the identical gap:
@@ -112,16 +119,25 @@ test("a guest session's video-call request does not write a real health intake r
   assert.equal(healthIntakeCount(), 0, "test fixture must start with no intakes");
   const result = await callTool("show my injury to a doctor");
   assert.equal(result.status, 200);
-  assert.equal(result.body.intent, "health.video_session_ready", "expected the video-session branch to fire");
-  assert.equal(healthIntakeCount(), 0, "a restricted account must not get a real health intake written");
+  assert.equal(result.body.intent, "conversation.pending_action", "expected the request to stage for confirmation, not execute the video-session branch immediately");
+  assert.equal(healthIntakeCount(), 0, "no health intake must be written before any confirmation");
 });
 
-test("the same request from a non-restricted account still writes a real health intake, unaffected by the fix", async () => {
+// The confirmation gate applies uniformly regardless of restriction: this
+// specific route (the OpenAI-native tool gateway's fallback) hardcodes
+// conversational:false and never forwards any confirm signal at all, so a
+// single-turn command reaching it can never complete an action in one call,
+// restricted or not -- confirming the fix is not restriction-specific, it
+// closes the gap for every caller of this fallback the same way. Genuine
+// confirmed execution (via options.confirm) is covered separately in
+// confirmation-gate-conversational-bypass.test.js against /api/agent/command,
+// the route that actually forwards a real confirm flag from the request body.
+test("the same request from a non-restricted account also stages for confirmation now, unaffected by restriction", async () => {
   const before = healthIntakeCount();
   const result = await callTool("show my injury to a doctor", adminCookie);
   assert.equal(result.status, 200);
-  assert.equal(result.body.intent, "health.video_session_ready");
-  assert.equal(healthIntakeCount(), before + 1);
+  assert.equal(result.body.intent, "conversation.pending_action", "a non-restricted account's single-turn command must also stage, not execute immediately");
+  assert.equal(healthIntakeCount(), before, "no health intake must be written before any confirmation, restricted or not");
 });
 
 test("the dedicated /api/voice/phone/outbound-call route also refuses a restricted account, with an explicit 403", async () => {
