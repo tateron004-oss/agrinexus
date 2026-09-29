@@ -412,6 +412,45 @@ test("a check-in answered mid-sweep is never falsely reported as missed, and the
   assert.equal(w.checkinRows[0].status, "ok", "the person's real answer must survive, not be clobbered back to 'alerted'");
 });
 
+// Found live (follow-up sweep, the reverse direction of the test above): sendDue()'s alert claim wins
+// FIRST (for real), and the person's own answer arrives after, but reads a snapshot of the check-in
+// from before that claim landed -- exactly what happens when answer()'s state.get() read and sendDue()'s
+// later claim race in the other order. The final status still ends up correct either way (answer()'s
+// write is unconditional and always wins), but the OLD code's "was it alerted" check read that same
+// stale pre-claim snapshot, so the circle's earlier "check-in missed" alert was never cleared with a
+// "checked in and is okay" push -- left unresolved even though the person actually answered.
+test("answering a check-in after its alert claim already won the race still clears the circle's alert", async () => {
+  let clock = new Date("2026-09-20T05:00:00Z");
+  const w = world(); w.now = clock;
+  const companion = createCompanion({ circle: w.circle, checkinSettings: w.settings, checkinState: w.state, notifications: w.notifications, devices: w.devices, now: () => clock });
+  const say = (text, userId = "u-baba") => companion.turn({ command: { text, tenantId: "t1", actorId: userId }, context: { timeZone: "Africa/Nairobi" } });
+  await say("Add amina@example.com to my circle as my daughter"); await say("Accept the invitation from Baba", "u-amina");
+  await say("Share my check-ins with Amina");
+  await say("Check in on me every morning at 8"); w.pushes.length = 0;
+  await companion.sendDue({ at: clock });
+  clock = new Date("2026-09-20T08:10:00Z"); // past the grace period, nothing heard yet
+
+  // Capture the "pending" snapshot BEFORE the claim below actually lands, simulating answer()'s own
+  // initial read racing ahead of sendDue()'s claim.
+  const realGet = w.state.get.bind(w.state);
+  const staleSnapshot = await realGet({ userId: "u-baba", day: "2026-09-20" });
+  assert.equal(staleSnapshot.status, "pending", "sanity check: must capture the real pre-claim state");
+
+  await companion.sendDue({ at: clock }); // claims "alerted" for real and tells the circle
+  w.pushes.length = 0;
+
+  // Hand back that frozen snapshot for exactly ONE call (answer()'s own initial read) -- any further
+  // call (the fix's own CAS-retry fetch, reading the real current data) is unaffected.
+  let usedStale = false;
+  w.state.get = async args => { if (!usedStale) { usedStale = true; return staleSnapshot; } return realGet(args); };
+
+  await say("I'm okay");
+
+  assert.equal(w.checkinRows[0].status, "ok", "the real answer must still be recorded regardless of the stale read");
+  assert.equal(w.pushes.filter(push => push.userId === "u-amina" && push.content.body === "Baba Kamau has checked in and is okay.").length, 1,
+    "the circle must be told the person checked in and is fine, clearing the earlier missed alert -- not left unresolved");
+});
+
 test("saying anything to Kyro counts as being there; with nobody chosen, a miss is recorded quietly", async () => {
   let clock = new Date("2026-09-20T05:00:00Z");
   const w = world();

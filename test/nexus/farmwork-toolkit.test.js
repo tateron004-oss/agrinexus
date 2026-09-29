@@ -321,6 +321,84 @@ test("two concurrent 'deliver order' requests for the same order only record the
   assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the income must only be recorded once, not once per racing request");
 });
 
+// Found live (follow-up audit sweep): inventory.js's addStock() had the SAME shape of race as the
+// deliver-order bug above, but on the stock-quantity write itself -- a plain read-modify-write with no
+// compare-and-swap. Two near-simultaneous stock-increasing purchases of the same item ("bought" records
+// via money.js) could both read the same starting qty and each write their own new total, so one whole
+// addition was silently lost instead of both landing. Fixed by retrying the addition against the latest
+// qty whenever the compare-and-swap loses the race, rather than an unconditional overwrite.
+test("two concurrent stock-increasing purchases of the same item are not silently lost to a race", async () => {
+  const who = farmer();
+  await who.say("Bought 10 kg of fertilizer for 1000");
+  const before = await who.store.list({ tenantId: "t1", userId: "u1", collection: "stock" });
+  assert.equal(before.length, 1, "the first purchase must create exactly one stock item");
+  assert.equal(before[0].data.qty, 10);
+
+  const [first, second] = await Promise.all([who.say("Bought 5 kg of fertilizer for 500"), who.say("Bought 3 kg of fertilizer for 300")]);
+  assert.match(first, /added it to your stock/i);
+  assert.match(second, /added it to your stock/i);
+
+  const after = await who.store.list({ tenantId: "t1", userId: "u1", collection: "stock" });
+  assert.equal(after.length, 1, "both purchases must update the SAME stock item, not create a second one");
+  assert.equal(after[0].data.qty, 18, `expected both concurrent additions (5kg + 3kg) on top of the starting 10kg to be reflected, but got ${after[0].data.qty}`);
+});
+
+// Found live (a further follow-up sweep): "sold <animal>" recorded income BEFORE writing the animal's
+// "gone" status, with no compare-and-swap on either. Two concurrent/retried "sold cow 12 for X"
+// messages for the same animal could both match the still-active animal and each call recordMoney(),
+// producing two real income records for one physical sale.
+test("two concurrent 'sold <animal>' requests for the same animal only record income once, not twice", async () => {
+  const who = farmer();
+  await who.store.add({ tenantId: "t1", userId: "u1", collection: "animal", data: { tag: "cow 12", species: "cattle", status: "active" } });
+
+  const [first, second] = await Promise.all([who.say("Sold cow 12 for 40000"), who.say("Sold cow 12 for 40000")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Recorded: sold cow 12 for/.test(text)).length, 1, "exactly one request must have recorded the sale");
+  assert.equal(outcomes.filter(text => /already recorded as sold/.test(text)).length, 1, "exactly one request must have lost the race");
+
+  const money = await who.store.list({ tenantId: "t1", userId: "u1", collection: "money" });
+  assert.equal(money.filter(record => record.data.note === "sold cow 12").length, 1, "the income must only be recorded once, not once per racing request");
+  const animals = await who.store.list({ tenantId: "t1", userId: "u1", collection: "animal" });
+  assert.equal(animals[0].data.status, "gone");
+});
+
+// Found live (same sweep): money.js's "sold" stock deduction had no CAS guard, unlike inventory.js's
+// own "used X of Y" deduction. Two concurrent sales of the same stocked item could each read the same
+// starting qty and each write their own deduction, silently losing one.
+test("two concurrent 'sold' requests deducting the same stock item are not silently lost to a race", async () => {
+  const who = farmer();
+  await who.say("Bought 20 kg of fertilizer for 2000");
+  const [first, second] = await Promise.all([who.say("Sold 5 kg of fertilizer for 500"), who.say("Sold 3 kg of fertilizer for 300")]);
+  assert.match(first, /took .* out of your stock/);
+  assert.match(second, /took .* out of your stock/);
+  const stock = await who.store.list({ tenantId: "t1", userId: "u1", collection: "stock" });
+  assert.equal(stock.length, 1);
+  assert.equal(stock[0].data.qty, 12, `expected both concurrent deductions (5kg + 3kg) off the starting 20kg to be reflected, got ${stock[0].data.qty}`);
+});
+
+// Found live (same follow-up sweep): cancel order had no compare-and-swap at all, unlike the
+// deliver-order claim above it. A "deliver order N" and "cancel order N" arriving close together could
+// both pass their own status-is-still-"open" checks before either write landed: if deliver's write wins
+// first (recording real income and moving real stock), cancel's later UNCONDITIONAL write -- built from
+// its own stale pre-delivery snapshot -- would silently overwrite the order back to "cancelled" (and
+// drop the doneOn timestamp deliver had just set), leaving a real recorded payment with an order record
+// that claims it never happened.
+test("cancelling an order that was just delivered by a concurrent request does not erase the real delivery", async () => {
+  const who = farmer();
+  await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);
+  await who.say("Add an order from Amina Traders for 200 kg maize at 45 per kg");
+
+  const [deliverResult, cancelResult] = await Promise.all([who.say("Deliver order 1"), who.say("cancel order 1")]);
+  const outcomes = [deliverResult, cancelResult];
+  assert.equal(outcomes.filter(text => /income of 9,000 recorded/.test(text)).length, 1, "the delivery must have gone through and recorded real income");
+
+  const [order] = await who.store.list({ tenantId: "t1", userId: "u1", collection: "order" });
+  assert.equal(order.data.status, "done", `a real recorded delivery must never be silently overwritten back to "cancelled": ${JSON.stringify(order.data)}`);
+
+  const money = await who.store.list({ tenantId: "t1", userId: "u1", collection: "money" });
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the real income record must still exist, matching the order's real done status");
+});
+
 test("a note to a calendar or list is not taken for a buyer note", async () => {
   const who = farmer();
   await run(who, ["Add a buyer called Amina Traders", "skip", "skip", "skip"]);

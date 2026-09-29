@@ -157,9 +157,21 @@ function createMedicationService({ store, circle = null, push, notifications, de
           for (const item of found) {
             const waiting = doses.filter(dose => dose.medId === item.memoryId && ["pending", "alerted", "missed"].includes(dose.status)).sort((a, b) => a.time.localeCompare(b.time));
             if (waiting.length) {
-              const dose = waiting.at(-1);
-              await store.updateDose({ tenantId, memoryId: dose.memoryId, content: { ...dose, status: "taken", takenAt: at.toISOString(), takenLocal: hhmm } });
-              if (dose.status === "alerted") for (const link of await sharing({ tenantId, userId })) { try { await push({ tenantId, userId: link.otherId, title: "Dose taken", body: `${await nameOf({ tenantId, userId })} has taken the dose that was waiting.`, key: `dose-cleared:${dose.medId}:${dose.day}:${dose.time}:${link.otherId}` }); } catch { /* best effort */ } }
+              // Found live: this wrote the confirmation unconditionally, with the "was it alerted"
+              // check reading the STALE `dose` snapshot from before the write. sendDue()'s own
+              // "pending -> alerted" claim (below) is CAS-protected against clobbering an already-taken
+              // dose, but that only covers one direction -- if sendDue() wins the race and claims
+              // "alerted" (pushing "a dose is waiting" to the circle) in the moment between this read
+              // and write, `dose.status === "alerted"` here still evaluates false against the stale
+              // snapshot, silently skipping the "Dose taken" clearing push -- leaving the circle with an
+              // unresolved "check on them" alert even though the dose was confirmed. Fixed by claiming
+              // the transition with the record's own real prior status and re-reading on a lost race.
+              let latest = waiting.at(-1); let claimed = false;
+              for (let attempt = 0; attempt < 5 && !claimed; attempt += 1) {
+                claimed = await store.updateDose({ tenantId, memoryId: latest.memoryId, content: { ...latest, status: "taken", takenAt: at.toISOString(), takenLocal: hhmm }, expectedStatus: latest.status });
+                if (!claimed) { const fresh = await store.getDose({ tenantId, userId, medId: item.memoryId, day: today, time: latest.time }); if (!fresh) break; latest = fresh; }
+              }
+              if (claimed && latest.status === "alerted") for (const link of await sharing({ tenantId, userId })) { try { await push({ tenantId, userId: link.otherId, title: "Dose taken", body: `${await nameOf({ tenantId, userId })} has taken the dose that was waiting.`, key: `dose-cleared:${latest.medId}:${latest.day}:${latest.time}:${link.otherId}` }); } catch { /* best effort */ } }
             } else {
               await store.createDose({ tenantId, userId, content: { medId: item.memoryId, name: item.name, day: today, time: hhmm, status: "taken", takenAt: at.toISOString(), takenLocal: hhmm, extra: true } });
             }

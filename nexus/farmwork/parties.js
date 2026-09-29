@@ -224,7 +224,15 @@ async function handle(ctx) {
   if ((m = /^(?:please )?cancel order #?(\d{1,5})$/i.exec(t))) {
     const orderRecord = (await ctx.store.list({ ...scope, collection: "order" })).find(item => item.number === Number(m[1]));
     if (!orderRecord || orderRecord.data.status !== "open") return orderRecord ? `Order ${orderRecord.number} is already ${orderRecord.data.status}.` : `I can't find order ${m[1]}.`;
-    await ctx.store.update({ ...scope, record: { ...orderRecord, data: { ...orderRecord.data, status: "cancelled" } } });
+    // Found live: this wrote status:"cancelled" unconditionally, with no expectedStatus guard, unlike
+    // the deliver-order claim above it. A "deliver order N" and "cancel order N" arriving close together
+    // could both pass their own status !== "open" checks before either write lands: deliver's CAS write
+    // wins, records real money/stock, and sets status:"done" -- then cancel's unconditional write, built
+    // from its own stale pre-delivery snapshot, overwrites that back to "cancelled" (also silently
+    // dropping the doneOn timestamp), leaving a real recorded payment/stock movement with an order
+    // record that says it never happened.
+    const claimed = await ctx.store.update({ ...scope, record: { ...orderRecord, data: { ...orderRecord.data, status: "cancelled" } }, expectedStatus: "open" });
+    if (!claimed) return `Order ${orderRecord.number} was just delivered, so I didn't cancel it.`;
     return `Cancelled order ${orderRecord.number}.`;
   }
 

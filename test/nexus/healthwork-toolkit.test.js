@@ -234,6 +234,19 @@ test("two concurrent dispense requests for the same medicine only deduct once, n
   assert.match(await who.say("How much amoxicillin do I have"), /10 tablets/, "stock must reflect exactly one 30-tablet deduction from 40, never both (which would go negative)");
 });
 
+// Found live (follow-up sweep): the sibling "stock coming in" branch had the SAME missing guard as the
+// already-fixed "dispensed" branch above -- two concurrent restock deliveries for the same medicine
+// could each read the same starting qty and each write their own new total, silently losing one
+// delivery from the clinic's medicine count instead of both landing.
+test("two concurrent restock deliveries for the same medicine both land, not one silently lost", async () => {
+  const who = worker();
+  await who.say("Add 40 tablets of amoxicillin to clinic stock");
+  const [first, second] = await Promise.all([who.say("Received 30 tablets of amoxicillin at the clinic"), who.say("Received 20 tablets of amoxicillin at the clinic")]);
+  assert.match(first, /You now have/);
+  assert.match(second, /You now have/);
+  assert.match(await who.say("How much amoxicillin do I have"), /90 tablets/, "stock must reflect BOTH deliveries (30 + 20) on top of the starting 40, not have one silently lost");
+});
+
 // Found live: recording an allergy read the allergies array once, appended one item, and wrote the whole
 // record back with no guard the array was still current -- two allergy statements for the same patient
 // arriving close together could each read the same starting array and each append their own item,

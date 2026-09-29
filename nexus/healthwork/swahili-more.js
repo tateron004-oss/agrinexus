@@ -296,8 +296,18 @@ async function handle(ctx) {
         if (exp) { expiry = dayFrom(exp[1], ctx.today); if (!expiry) return SW.askExpiry({ text: clean(exp[1]) }); if (expiry < ctx.today) return SW.expiredAlready; }
         if (known && known.data.unit !== quantity.unit) return SW.wrongUnit({ name: known.data.name, unit: SUP_SHOWN[known.data.unit] || known.data.unit });
         if (known) {
-          const nearest = expiry && (!known.data.expiry || expiry < known.data.expiry) ? expiry : known.data.expiry; const now = Math.round((known.data.qty + quantity.value) * 1000) / 1000;
-          await update(known, { qty: now, ...(nearest ? { expiry: nearest } : {}) });
+          const nearest = expiry && (!known.data.expiry || expiry < known.data.expiry) ? expiry : known.data.expiry;
+          // Same bug as supplies.js's English "stock coming in" branch, same fix, duplicated by hand in Swahili.
+          let current = known; let now = null;
+          for (let attempt = 0; attempt < 5; attempt += 1) {
+            now = Math.round((current.data.qty + quantity.value) * 1000) / 1000;
+            const applied = await update(current, { qty: now, ...(nearest ? { expiry: nearest } : {}) }, { field: "qty", value: current.data.qty });
+            if (applied) break;
+            const fresh = soleSupply(await ctx.store.list({ ...scope, collection: "supply" }), name);
+            if (!fresh) { now = null; break; }
+            current = fresh; now = null;
+          }
+          if (now === null) return SW.stockChanged({ name: known.data.name });
           return SW.added({ qty: qtyShown(quantity.value, quantity.unit), name: known.data.name, now: qtyShown(now, quantity.unit), expiry: expiry ? describeDaySw(nearest, ctx.today) : "" });
         }
         if (items.length >= 1000) return SW.supplyFull;

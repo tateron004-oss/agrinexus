@@ -104,6 +104,19 @@ test("two concurrent Swahili dispense requests for the same medicine only deduct
   assert.match(await p.health("Nina amoxicillin kiasi gani"), /vidonge 10/, "stock must reflect exactly one 30-tablet deduction from 40, never both");
 });
 
+// Found live (follow-up sweep): the sibling "stock coming in" (nimepokea) branch had the SAME missing
+// guard as the already-fixed dispense branch above -- two concurrent restock deliveries for the same
+// medicine could each read the same starting qty and each write their own new total, silently losing
+// one delivery.
+test("two concurrent Swahili restock deliveries for the same medicine both land, not one silently lost", async () => {
+  const p = await registered();
+  await p.health("Ongeza vidonge 40 vya amoxicillin kwenye stoo ya kliniki");
+  const [first, second] = await Promise.all([p.health("Nimepokea vidonge 30 vya amoxicillin"), p.health("Nimepokea vidonge 20 vya amoxicillin")]);
+  assert.match(first, /Sasa una/);
+  assert.match(second, /Sasa una/);
+  assert.match(await p.health("Nina amoxicillin kiasi gani"), /vidonge 90/, "stock must reflect BOTH deliveries (30 + 20) on top of the starting 40, not have one silently lost");
+});
+
 // Same bug as the English allergy handler, same fix, duplicated by hand in Swahili.
 test("two concurrent Swahili allergy statements for the same patient both survive, not one silently dropped", async () => {
   const p = await registered();

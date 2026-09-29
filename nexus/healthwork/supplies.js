@@ -51,8 +51,22 @@ async function handle(ctx) {
       if (known && known.data.unit !== unit) return `You keep ${known.data.name} in ${known.data.unit}s; say the amount in ${known.data.unit}s so the count stays right.`;
       if (known) {
         const nearest = expiry && (!known.data.expiry || expiry < known.data.expiry) ? expiry : known.data.expiry;
-        await update(known, { qty: Math.round((known.data.qty + qty) * 1000) / 1000, ...(nearest ? { expiry: nearest } : {}) });
-        return `Added ${unitLabel(qty, unit)} of ${known.data.name}. You now have ${unitLabel(Math.round((known.data.qty + qty) * 1000) / 1000, unit)}.${expiry ? ` Nearest expiry noted: ${dayWords(nearest, ctx.today)}.` : ""}`;
+        // Found live (follow-up sweep): this read+wrote qty with no CAS guard, unlike the sibling
+        // "dispensed"/going-out branch below, which is already protected. Two concurrent restock
+        // deliveries for the same medicine could each read the same starting qty and each write their
+        // own new total, silently losing one delivery from the clinic's medicine count. Retry against
+        // the latest qty on a lost race, matching inventory.js's addStock() fix for the same shape.
+        let current = known; let nextQty = null;
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          nextQty = Math.round((current.data.qty + qty) * 1000) / 1000;
+          const applied = await update(current, { qty: nextQty, ...(nearest ? { expiry: nearest } : {}) }, { field: "qty", value: current.data.qty });
+          if (applied) break;
+          const fresh = soleSupply(await ctx.store.list({ ...scope, collection: "supply" }), name);
+          if (!fresh) { nextQty = null; break; }
+          current = fresh; nextQty = null;
+        }
+        if (nextQty === null) return `${known.data.name}'s stock just changed. Say that again so I can check the current amount first.`;
+        return `Added ${unitLabel(qty, unit)} of ${known.data.name}. You now have ${unitLabel(nextQty, unit)}.${expiry ? ` Nearest expiry noted: ${dayWords(nearest, ctx.today)}.` : ""}`;
       }
       if (items.length >= 1000) return "That's the most items I can keep (a thousand). Remove some first.";
       await record(ctx, "supply", { name, qty, unit, low: null, expiry: expiry || null, updatedOn: ctx.today });

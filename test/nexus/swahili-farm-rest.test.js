@@ -134,6 +134,100 @@ test("buyers, suppliers, follow-ups and orders in Swahili; delivering an order r
   assert.match(await f.say("Show my income this month"), /4,000/, "English reads the money the Swahili delivery recorded");
 });
 
+// Found live (further follow-up sweep, same shape as parties.js's already-fixed English equivalent):
+// a price stated "per kg" was stored unconditionally even when the order's own quantity was in a
+// different unit (bags) -- delivering the order later blindly multiplied the mismatched units.
+test("a Swahili order priced per a different unit than its quantity honestly records no money on delivery, not a fabricated total", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Amina, +254712345678, mahindi, Kisumu");
+  const created = await f.say("Amina ameagiza magunia 3 za mahindi kwa shilingi 40 kwa kilo kufikia Ijumaa");
+  assert.match(created, /Agizo 1:/);
+  assert.doesNotMatch(created, /kwa jumla/, "no fabricated 'in all' total when the price's unit doesn't match the order's quantity unit");
+  const delivered = await f.say("Agizo 1 limetolewa");
+  assert.match(delivered, /bei haikutajwa, kwa hivyo sikurekodi pesa/, delivered);
+  const money = await list(f, "money");
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 0, "no fabricated income must be recorded from multiplying mismatched units");
+});
+
+// Found live (follow-up sweep of the already-fixed English parties.js order-race bug): the Swahili
+// order-delivery branch was actually WORSE than the pre-fix English version -- it recorded real money
+// and moved real stock BEFORE writing status:"done" unconditionally at the end, with no compare-and-swap
+// at all. Two concurrent "Agizo N limetolewa" requests for the same order could both pass the open-status
+// check and each record their own real money/stock movement for one physical delivery. Mirrors the
+// already-passing English "two concurrent 'deliver order'" test.
+test("two concurrent Swahili 'agizo limetolewa' requests for the same order only record the sale once, not twice", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Amina, +254712345678, mahindi, Kisumu");
+  await f.say("Amina ameagiza kilo 100 za mahindi kwa shilingi 40 kwa kilo");
+
+  const [first, second] = await Promise.all([f.say("Agizo 1 limetolewa"), f.say("Agizo 1 limetolewa")]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /mapato ya shilingi 4,000 yamerekodiwa/.test(text)).length, 1, "exactly one request must have recorded the sale");
+  assert.equal(outcomes.filter(text => /tayari limekamilika/.test(text)).length, 1, "exactly one request must have lost the race");
+
+  const money = await list(f, "money");
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the income must only be recorded once, not once per racing request");
+});
+
+// Found live (same sweep): the Swahili cancel branch also had no compare-and-swap, so a deliver and a
+// cancel for the same order arriving close together could both pass their own open-status checks, with
+// cancel's unconditional write silently overwriting a real recorded delivery.
+test("cancelling a Swahili order that was just delivered by a concurrent request does not erase the real delivery", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Amina, +254712345678, mahindi, Kisumu");
+  await f.say("Amina ameagiza kilo 100 za mahindi kwa shilingi 40 kwa kilo");
+
+  const [deliverResult, cancelResult] = await Promise.all([f.say("Agizo 1 limetolewa"), f.say("futa agizo 1")]);
+  const outcomes = [deliverResult, cancelResult];
+  assert.equal(outcomes.filter(text => /mapato ya shilingi 4,000 yamerekodiwa/.test(text)).length, 1, "the delivery must have gone through and recorded real income");
+
+  const [order] = await list(f, "order");
+  assert.equal(order.data.status, "done", `a real recorded delivery must never be silently overwritten back to "cancelled": ${JSON.stringify(order.data)}`);
+
+  const money = await list(f, "money");
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 1, "the real income record must still exist, matching the order's real done status");
+});
+
+// Found live (further follow-up sweep): swahili.js's "Nimeuza" stock deduction had the same missing
+// CAS guard as its English money.js equivalent, same fix, duplicated by hand in Swahili.
+test("two concurrent Swahili 'Nimeuza' sales deducting the same stock item are not silently lost to a race", async () => {
+  const f = farmer();
+  await f.say("Nimenunua mbolea kilo 20 kwa shilingi 5000");
+  const [first, second] = await Promise.all([f.say("Nimeuza kilo 5 za mbolea kwa shilingi 500"), f.say("Nimeuza kilo 3 za mbolea kwa shilingi 300")]);
+  assert.match(first, /Nimetoa .* kwenye ghala lako/);
+  assert.match(second, /Nimetoa .* kwenye ghala lako/);
+  const stock = await list(f, "stock");
+  assert.equal(stock.length, 1);
+  assert.equal(stock[0].data.qty, 12, `expected both concurrent deductions (5kg + 3kg) off the starting 20kg to be reflected, got ${stock[0].data.qty}`);
+});
+
+// Found live (same sweep): the dedicated Swahili "Nimetumia" stock-usage command (distinct from
+// inventory.js's already-fixed English "used X of Y") had no CAS guard at all.
+test("two concurrent Swahili 'Nimetumia' stock-usage requests for the same item are not silently lost to a race", async () => {
+  const f = farmer();
+  await f.say("Nimenunua mbolea kilo 20 kwa shilingi 5000");
+  const [first, second] = await Promise.all([f.say("Nimetumia kilo 5 za mbolea"), f.say("Nimetumia kilo 3 za mbolea")]);
+  const outcomes = [first, second];
+  // Matching inventory.js's already-fixed English "used X of Y": on a lost race exactly one request
+  // must honestly report the stock changed (ask to retry), not have BOTH silently claim success while
+  // one deduction is actually lost underneath.
+  assert.equal(outcomes.filter(text => /^Nimerekodi: umetumia/.test(text)).length, 1, `exactly one request must succeed: ${JSON.stringify(outcomes)}`);
+  assert.equal(outcomes.filter(text => /kimebadilika/.test(text)).length, 1, `exactly one request must honestly report the stock changed, not silently lose its deduction: ${JSON.stringify(outcomes)}`);
+});
+
+// Found live (further follow-up sweep): unlike inventory.js's English "used X of Y" deduction (which
+// refuses outright when the stated quantity exceeds what's recorded), the Swahili "Nimetumia" command
+// had no such guard -- it silently clamped to zero and reported success as if nothing were wrong,
+// strictly worse protection than the identical English action for the same real mistake.
+test("Swahili 'Nimetumia' refuses an implausible over-quantity instead of silently zeroing real stock", async () => {
+  const f = farmer();
+  await f.say("Nimenunua mbolea kilo 2 kwa shilingi 500");
+  const reply = await f.say("Nimetumia kilo 10 za mbolea");
+  assert.match(reply, /^Una kilo 2 tu za fertiliser/, reply);
+  const stock = await list(f, "stock");
+  assert.equal(stock[0].data.qty, 2, "the real recorded quantity must be left untouched, not silently zeroed");
+});
+
 test("the cooperative in Swahili", async () => {
   const f = farmer();
   assert.match(await f.say("Anzisha ushirika wetu Umoja wa Wakulima, ada 500 kila mwezi"), /Nimeanzisha Umoja wa Wakulima, ada 500 kila mwezi/);
