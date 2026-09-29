@@ -2,7 +2,7 @@
 
 const { clean, titleCase, anyDay, pastDay, plural, num } = require("./parse.js");
 const { startGuided, askConfirm } = require("./guided.js");
-const { describeDay, addDays } = require("../personal/dates.js");
+const { describeDay, addDays, addMonths } = require("../personal/dates.js");
 
 // Livestock records: each animal (or flock), and what happened to it: vaccinations and other treatments, weights, milk, breeding and births.
 // Kyro records what the farmer says and reminds them of the dates THEY gave; it never says what an animal has, what to give it, or when it
@@ -54,7 +54,13 @@ function findAnimal(animals, query) {
   return null;
 }
 
-const addMonths = (day, months) => { const d = new Date(`${day}T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() + months); return d.toISOString().slice(0, 10); };
+// Found live (business/personal sibling sweep): this used to reimplement addMonths locally with a
+// naive Date.setUTCMonth() call, unlike the shared nexus/personal/dates.js version this file already
+// imports describeDay/addDays from -- setUTCMonth rolls an out-of-range day into the NEXT month
+// instead of clamping to the target month's real last day (e.g. Jan 31 + 1 month became Mar 3, not the
+// correct Feb 28). This fed nextDueOf() below, used by real "vaccinated X, next due in N months/years"
+// voice commands -- a health-relevant livestock due-date could silently land on the wrong day whenever
+// the jump crossed into a shorter month. Now uses the already-correct, already-clamped shared version.
 function nextDueOf(text, today) {
   if (!text) return null;
   const m = /\bin (\d{1,2}) (months?|weeks?|days?|years?)\b/i.exec(text);

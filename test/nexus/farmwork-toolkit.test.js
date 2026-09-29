@@ -6,6 +6,7 @@ const { FarmRecordRepository } = require("../../nexus/farmwork/store.js");
 const { farmWorkLine } = require("../../nexus/farmwork/brief.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { fakeFarmStore, fakeMemory } = require("./farmwork-fake.js");
+const { nextDueOf } = require("../../nexus/farmwork/livestock.js");
 
 const NOW = new Date("2026-09-20T05:00:00Z"); // Sunday 20 September 2026 in Nairobi
 
@@ -173,6 +174,18 @@ test("two concurrent 'used X of Y' requests against the same stock only deduct o
 
   const stillHave = await who.say("How much urea do I have");
   assert.match(stillHave, /10 kg/, "stock must reflect exactly one 30 kg deduction from 40 kg, never both (which would go negative) and never neither");
+});
+
+// Found live (business/personal sibling sweep): nextDueOf() used to reimplement addMonths locally with
+// a naive Date.setUTCMonth() call, unlike the shared nexus/personal/dates.js version this file already
+// imports describeDay/addDays from -- setUTCMonth rolls an out-of-range day into the NEXT month instead
+// of clamping to the target month's real last day. A real "vaccinated X, next due in N months/years"
+// voice command could silently land a health-relevant livestock due-date on the wrong day.
+test("nextDueOf clamps 'in N months/years' to the target month's real last day, instead of rolling into the next month", () => {
+  assert.equal(nextDueOf("in 1 month", "2026-01-31"), "2026-02-28", "Jan 31 + 1 month must clamp to Feb 28, not roll to Mar 3");
+  assert.equal(nextDueOf("in 3 months", "2026-11-30"), "2027-02-28", "a year-crossing jump must still clamp correctly");
+  assert.equal(nextDueOf("in 1 year", "2028-02-29"), "2029-02-28", "a leap-day start must clamp into a non-leap target year");
+  assert.equal(nextDueOf("in 2 weeks", "2026-01-31"), "2026-02-14", "week/day offsets are unaffected, unchanged behavior");
 });
 
 // ---------- animals ----------
