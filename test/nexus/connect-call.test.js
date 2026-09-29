@@ -95,7 +95,14 @@ function sliceServerFunction(name) {
   return source.slice(start, end);
 }
 
-test("nexusOwnPhoneForUser matches by email first, then falls back to the bare/default-owner allowlist entry", () => {
+// Found live (phone/realtime bridge audit): the bare-entry fallback used to apply to ANY caller whose
+// email wasn't separately listed, not just the account owner it's meant for -- a real, non-owner "Standard
+// User" teammate asking to "connect me to <number>" got the OWNER's real personal phone silently
+// substituted as "their own phone" (with the response text falsely claiming it was calling "your own
+// phone"), ringing the owner's phone and bridging it live to an arbitrary number the non-owner chose, with
+// no owner consent. Restricted to the actual owner tier (Admin) so a non-owner with no listed number
+// instead gets startConnectCall's own honest "Your own phone number is required" refusal.
+test("nexusOwnPhoneForUser matches by email first, then falls back to the bare/default-owner allowlist entry only for the account owner (Admin)", () => {
   const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
   const extract = name => {
     const start = source.indexOf(`function ${name}(`);
@@ -116,7 +123,12 @@ test("nexusOwnPhoneForUser matches by email first, then falls back to the bare/d
   assert.equal(sandbox.nexusOwnPhoneForUser({ email: "staff@agrinexus.org" }, env2), "+15559876543");
   assert.equal(sandbox.nexusOwnPhoneForUser({ email: "nobody@agrinexus.org" }, env2), "");
   const bareEnv = { TWILIO_AUTHORIZED_CALLERS: "+15551234567" };
-  assert.equal(sandbox.nexusOwnPhoneForUser({ email: "anyone@agrinexus.org" }, bareEnv), "+15551234567");
+  assert.equal(sandbox.nexusOwnPhoneForUser({ email: "anyone@agrinexus.org", role: "Admin" }, bareEnv), "+15551234567",
+    "the real account owner (Admin) with no separately-listed email must still resolve to the bare/default entry");
+  assert.equal(sandbox.nexusOwnPhoneForUser({ email: "anyone@agrinexus.org", role: "Standard User" }, bareEnv), "",
+    "a non-owner Standard User with no email match must never be silently given the owner's phone");
+  assert.equal(sandbox.nexusOwnPhoneForUser({ email: "anyone@agrinexus.org" }, bareEnv), "",
+    "a user with no role at all must never be silently given the owner's phone either");
 });
 
 test("only explicit connect-style phrasing (or an explicit mode) routes a call through the bridging path, not every 'call' request", () => {
