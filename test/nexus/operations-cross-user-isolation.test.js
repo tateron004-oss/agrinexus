@@ -216,3 +216,47 @@ test("GET /api/nexus/operation-receipts redacts entityId for a non-admin caller 
   const adminView = await fetch(`${base}/api/nexus/operation-receipts`, { headers: { cookie: adminCookie } }).then(res => res.json());
   assert.ok(adminView.receipts.some(receipt => receipt.entityId), "a real Admin must still see real entityIds");
 });
+
+// Found live (operations-dashboard/entityId-leak follow-up sweep): the nexus_receipts
+// AI-agent tool -- dispatchable by any signed-in Standard User or Investor, not just an
+// Admin -- returned every entry's real entityId/relatedRecordId unredacted, while
+// falsely claiming noSecretValuesReturned: true.
+test("the nexus_receipts AI tool redacts entityId/relatedRecordId for a non-admin caller but still shows it to a real Admin", async () => {
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  const callTool = async cookie => fetch(`${base}/api/nexus/openai-native/tool`, { method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ name: "nexus_receipts", command: "show my receipts and audit history" }) }).then(res => res.json());
+
+  const nonAdminView = await callTool(victimCookie);
+  assert.ok(nonAdminView.receipts.length > 0, "sanity check: there are real receipts/audit events to redact");
+  for (const entry of nonAdminView.receipts) assert.ok(!entry.entityId && !entry.relatedRecordId, "a non-admin must not see other users' real IDs via nexus_receipts");
+
+  const adminView = await callTool(adminCookie);
+  assert.ok(adminView.receipts.some(entry => entry.entityId || entry.relatedRecordId), "a real Admin must still see real IDs");
+});
+
+// Found live (operations-dashboard/entityId-leak follow-up sweep): unlike its siblings,
+// this route was gated against anonymous access but returned every user's auditEvents
+// unredacted to ANY signed-in caller, each carrying a real cross-user relatedRecordId.
+test("GET /api/nexus/consent-history redacts relatedRecordId for a non-admin caller but still shows it to a real Admin", async () => {
+  const anonymous = await fetch(`${base}/api/nexus/consent-history`);
+  assert.equal(anonymous.status, 401);
+
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  // Create a real db.nexusPilotAuditEvents entry (with a real relatedRecordId) to redact.
+  const referral = await fetch(`${base}/api/nexus/pharmacy/create-referral`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie },
+    body: JSON.stringify({ confirmed: true, consentToPreparePacket: true }) }).then(res => res.json());
+  assert.equal(referral.ok, true, "sanity check: the referral that creates the pilot audit event must itself succeed");
+
+  const nonAdminView = await fetch(`${base}/api/nexus/consent-history`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  assert.ok(nonAdminView.auditEvents.length > 0, "sanity check: there are real audit events to redact");
+  for (const entry of nonAdminView.auditEvents) assert.equal(entry.relatedRecordId, null, "a non-admin must not see other users' real relatedRecordId");
+
+  const adminView = await fetch(`${base}/api/nexus/consent-history`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminView.auditEvents.some(entry => entry.relatedRecordId), "a real Admin must still see real relatedRecordIds");
+});

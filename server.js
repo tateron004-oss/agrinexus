@@ -21862,9 +21862,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_receipts") {
     const store = ensureNexusPersistentOperations(db);
+    // Found live (operations-dashboard/entityId-leak follow-up sweep): unlike
+    // show_action_receipts, nexusOperationsSummary's recentReceipts, and the
+    // /api/nexus/activation-matrix and /api/nexus/operation-receipts routes
+    // (all fixed to redact the real cross-user record ID for a non-admin
+    // caller), this AI-tool-dispatched sibling -- reachable by any signed-in
+    // Standard User or Investor via nexus_receipts, not just an admin --
+    // returned every entry's real entityId/relatedRecordId unredacted, while
+    // falsely claiming noSecretValuesReturned: true.
+    const canViewSensitive = canUse(user, "admin");
     const receipts = [
-      ...(store.actionReceipts || []).slice(0, 8),
-      ...(db.nexusPilotAuditEvents || []).slice(0, 4)
+      ...(store.actionReceipts || []).slice(0, 8).map(entry => canViewSensitive ? entry : { ...entry, entityId: null }),
+      ...(db.nexusPilotAuditEvents || []).slice(0, 4).map(entry => redactPilotAuditEvent(entry, canViewSensitive))
     ];
     return {
       ...common,
@@ -41467,6 +41476,15 @@ function redactSensitiveAuditEntry(entry, canViewSensitive) {
   return { ...entry, before: null, after: null };
 }
 
+// Same redaction shape as show_action_receipts' entityId nulling, applied to
+// db.nexusPilotAuditEvents entries -- these carry the same real cross-user
+// record ID (relatedRecordId, set to chronicCareId/transactionId/... in
+// addNexusPilotAuditEvent) in the exact same shared, unscoped collection.
+function redactPilotAuditEvent(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, relatedRecordId: null };
+}
+
 function nexusOperationsSummary(db, user = null) {
   const store = ensureNexusPersistentOperations(db);
   const canViewSensitiveAudit = canUse(user, "admin");
@@ -46545,7 +46563,14 @@ async function api(req, res, url) {
     // readable by an unauthenticated caller.
     if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents, auditEvents: db.nexusPilotAuditEvents });
+    // Found live (operations-dashboard/entityId-leak follow-up sweep): this
+    // returned every user's auditEvents unredacted to any signed-in caller
+    // (Standard User/Investor included), each carrying a real cross-user
+    // relatedRecordId -- the same IDOR-enabling leak class already fixed for
+    // store.actionReceipts/auditLogs, just on this separate array.
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents,
+      auditEvents: db.nexusPilotAuditEvents.map(entry => redactPilotAuditEvent(entry, canViewSensitive)) });
   }
 
   if (url.pathname === "/api/nexus/account" && req.method === "GET") {
