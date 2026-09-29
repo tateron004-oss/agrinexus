@@ -2665,6 +2665,46 @@ function eraseOwnedProfileRecords(profile, email) {
   return removedCounts;
 }
 
+// Found live (workforce/job-search audit, same bug class as the telehealth
+// export/erasure gap): db.nexusPersistentOperations is another top-level
+// sibling of db.profile -- an entire separate "Nexus Operations" content
+// store (health, marketplace, learning, workforce/job-search, drone, and
+// more; see NEXUS_OPERATION_COLLECTIONS) with a real, uniform per-item
+// ownerId field already used correctly for read-side isolation
+// (nexusOperationsOwned -- the same mechanism
+// operations-cross-user-isolation.test.js already exercises for
+// show_action_receipts/create_chronic_care_profile/etc). But
+// collectOwnedProfileRecords/eraseOwnedProfileRecords above only ever scan
+// db.profile's own arrays, so a real applicant's resume/job-application
+// history, chronic-care profile, marketplace listings, and more all
+// silently survived account erasure and were absent from export, with no
+// disclosed gap either.
+//
+// actionReceipts/consentRecords/auditLogs/archiveRecords/statusChanges are
+// deliberately excluded from both scans, the same judgment already applied
+// to nexusPilotAuditEvents/nexusNotifications in the telehealth fix: they
+// are this store's own audit/compliance trail of actions taken, not primary
+// user content, so they are disclosed as a known gap instead of erased.
+const NEXUS_OPERATIONS_AUDIT_TRAIL_COLLECTIONS = new Set(["actionReceipts", "consentRecords", "auditLogs", "archiveRecords", "statusChanges"]);
+
+function nexusOperationsContentCollectionKeys() {
+  return NEXUS_OPERATION_COLLECTIONS.filter(key => !NEXUS_OPERATIONS_AUDIT_TRAIL_COLLECTIONS.has(key));
+}
+
+function collectOwnedOperationsRecords(db, userId) {
+  const owned = {};
+  const store = db?.nexusPersistentOperations;
+  if (!userId || !store) return owned;
+  for (const key of nexusOperationsContentCollectionKeys()) {
+    // A strict ownerId match only -- nexusOperationsOwned's own admin bypass
+    // must never apply here, or an Admin erasing/exporting their OWN account
+    // would sweep in every other user's records too.
+    const matches = (store[key] || []).filter(item => item?.ownerId === userId);
+    if (matches.length) owned[key] = matches;
+  }
+  return JSON.parse(JSON.stringify(owned));
+}
+
 // Found live (telehealth/account-erasure audit): db.nexusTelehealthEncounters
 // and its child records (nexusTelehealthFollowUps, nexusTelehealthVideoAttempts,
 // nexusPilotReviewQueue entries created for it) live as top-level siblings of
@@ -2702,6 +2742,20 @@ function collectOwnedTelehealthRecords(db, userId) {
   return JSON.parse(JSON.stringify(owned));
 }
 
+function eraseOwnedOperationsRecords(db, userId) {
+  const removedCounts = {};
+  const store = db?.nexusPersistentOperations;
+  if (!userId || !store) return removedCounts;
+  for (const key of nexusOperationsContentCollectionKeys()) {
+    if (!Array.isArray(store[key])) continue;
+    const before = store[key].length;
+    store[key] = store[key].filter(item => item?.ownerId !== userId);
+    const removed = before - store[key].length;
+    if (removed > 0) removedCounts[key] = removed;
+  }
+  return removedCounts;
+}
+
 function eraseOwnedTelehealthRecords(db, userId) {
   const normalizedUserId = String(userId || "");
   const removedCounts = {};
@@ -2726,7 +2780,7 @@ function eraseOwnedTelehealthRecords(db, userId) {
 // The categories collectOwnedProfileRecords/eraseOwnedProfileRecords cannot
 // reach, surfaced explicitly in every export/erase response so neither ever
 // implies a completeness it doesn't have.
-function knownUnownedProfileGaps(profile) {
+function knownUnownedProfileGaps(profile, operationsStore = null) {
   const gaps = [];
   const hasAny = keys => keys.some(key => Array.isArray(profile?.[key]) && profile[key].length > 0);
   if (hasAny([...HEALTH_PROFILE_ARRAY_KEYS])) {
@@ -2734,6 +2788,9 @@ function knownUnownedProfileGaps(profile) {
   }
   if (hasAny(["orders"])) {
     gaps.push("Marketplace trade orders have no per-account owner field today and are not included.");
+  }
+  if (operationsStore && [...NEXUS_OPERATIONS_AUDIT_TRAIL_COLLECTIONS].some(key => (operationsStore[key] || []).length > 0)) {
+    gaps.push("Nexus Operations' own action receipts, consent records, audit log, archive records, and status-change history are retained as an audit/compliance trail and are not included.");
   }
   // Found live (telehealth/account-erasure audit, same sweep as
   // collectOwnedTelehealthRecords above): these locally-saved medical-support
@@ -46859,7 +46916,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
@@ -46867,7 +46924,7 @@ async function api(req, res, url) {
       account: { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language },
       profileRecords: ownedRecords,
       uploadedFiles: ownedUploads,
-      knownGaps: knownUnownedProfileGaps(db.profile)
+      knownGaps: knownUnownedProfileGaps(db.profile, db.nexusPersistentOperations)
     };
     const exportResult = await nexusRealProviders.exports.exportDocument({
       title: `AgriNexus data export for ${user.email}`,
@@ -46905,7 +46962,7 @@ async function api(req, res, url) {
     if (body.confirmed !== true) {
       return send(res, 400, { ok: false, status: "confirmation_required", error: "Pass confirmed: true to permanently erase this account. This cannot be undone." });
     }
-    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id) };
+    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id) };
     const uploadDirPath = nexusUploads.uploadDir(process.env);
     const ownedUploads = nexusUploads.listUploadsForUser(uploadDirPath, user.id);
     let removedUploadCount = 0;
@@ -46931,7 +46988,7 @@ async function api(req, res, url) {
     } catch (error) {
       console.error("[account-erase] failed to request authoritative nexus deletion:", error.message);
     }
-    const gaps = knownUnownedProfileGaps(db.profile).filter(gap => !nexusDeletionRequested || !/privacy\/deletions/.test(gap));
+    const gaps = knownUnownedProfileGaps(db.profile, db.nexusPersistentOperations).filter(gap => !nexusDeletionRequested || !/privacy\/deletions/.test(gap));
     const erasedEmail = user.email;
     anonymizeUserRecord(user);
     if (usingPostgresAuth()) {
