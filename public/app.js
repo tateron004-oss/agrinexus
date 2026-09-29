@@ -42716,8 +42716,16 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
         weight: 2
       }).addTo(layer).bindPopup(`<strong>${translateText("Destination")}</strong><br>${translateText(state.destinationLabel || "Delivery point")}`);
     }
-    if (includeCurrentMarker && state.originPoint) {
-      L.marker(state.originPoint, { icon: shipmentMarkerIcon("Live shipment") })
+    // Found live: this always drew the "Live shipment" marker at state.originPoint (the fixed pickup
+    // point), never at state.livePoint (the real current GPS position) -- even though livePoint is
+    // computed right here in shipmentTrackingState() and the sibling no-routeGeometry fallback below
+    // already correctly prefers it. Whenever a real live-tracked route (with actual polyline geometry)
+    // was available -- the BEST-data case -- the marker stayed glued to the start point for the whole
+    // trip while the popup's own ETA/checkpoint text kept updating, visibly contradicting the frozen
+    // marker position.
+    const shipmentMarkerPoint = state.livePoint || state.originPoint;
+    if (includeCurrentMarker && shipmentMarkerPoint) {
+      L.marker(shipmentMarkerPoint, { icon: shipmentMarkerIcon("Live shipment") })
         .addTo(layer)
         .bindPopup(`<strong>${translateText("Shipment tracking")}</strong><br>${translateText(state.nextCheckpoint || state.activeCheckpoint)}<br>${translateText(`ETA: ${state.eta}`)}<br>${translateText(state.source === "live-provider" ? "Live provider GPS" : "Platform tracking")}`);
     }
