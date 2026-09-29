@@ -206,6 +206,31 @@ test("a non-finite quote price is refused, and a non-finite release amount is re
   assert.match(badRelease.body.error, /finite/i);
 });
 
+// Found live (further follow-up sweep): unlike every sibling money-write path in this file, a
+// non-finite/negative body.amount on /api/trade/logistics had no validation at all -- flowing
+// straight into a persisted logistics record (and, for the "settlement" type, into the same real
+// wallet-crediting path already fixed above).
+test("a non-finite logistics amount is refused, not silently persisted into a corrupted record", async () => {
+  const badLogistics = await post("/api/trade/logistics", { type: "logistics-quote", amount: "Infinity" });
+  assert.equal(badLogistics.status, 400);
+  assert.match(badLogistics.body.error, /finite/i);
+
+  const negative = await post("/api/trade/logistics", { type: "logistics-quote", amount: -50 });
+  assert.equal(negative.status, 400);
+});
+
+// Found live (same sweep): /api/health/mobile-clinic-revenue had the same missing-validation gap --
+// a non-finite body.amount flowed straight into a persisted mobileClinicRevenueRecords entry shown
+// in receipts and payout instructions.
+test("a non-finite mobile-clinic-revenue amount is refused, not silently persisted", async () => {
+  const badRevenue = await post("/api/health/mobile-clinic-revenue", { type: "clinic-payment-request", amount: "Infinity" });
+  assert.equal(badRevenue.status, 400);
+  assert.match(badRevenue.body.error, /finite/i);
+
+  const negative = await post("/api/health/mobile-clinic-revenue", { type: "clinic-payment-request", amount: -100 });
+  assert.equal(negative.status, 400);
+});
+
 // Found live (money-logic audit): settlement reused the same generic
 // "amount" computed for every logistics record type (quote, booking,
 // pickup, delivery...) -- a freight-cost ESTIMATE (12% of the order total),

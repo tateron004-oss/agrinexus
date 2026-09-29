@@ -53121,6 +53121,17 @@ async function api(req, res, url) {
   if (url.pathname === "/api/health/mobile-clinic-revenue" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic revenue workflows" });
     const body = await readBody(req);
+    // Found live (further follow-up sweep): unlike every sibling money-write path in this file
+    // (/api/trade/wallet, /api/trade/payment-checkout, /api/trade/advanced, /api/trade/logistics, all
+    // guarded with Number.isFinite), a non-numeric, negative, or infinite body.amount here flowed
+    // straight into a persisted, receipt/payout-visible mobileClinicRevenueRecords entry with no
+    // validation at all.
+    if (body.amount !== undefined) {
+      const requestedAmount = Number(body.amount);
+      if (!Number.isFinite(requestedAmount) || requestedAmount < 0) {
+        return send(res, 400, { error: "Mobile clinic revenue amount must be a finite number, zero or greater." });
+      }
+    }
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
     const type = String(body.type || "clinic-payment-request").trim();
@@ -53877,6 +53888,17 @@ async function api(req, res, url) {
   if (url.pathname === "/api/trade/logistics" && req.method === "POST") {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade logistics workflows" });
     const body = await readBody(req);
+    // Found live (further follow-up sweep): unlike every sibling money-write path in this file
+    // (/api/trade/wallet, /api/trade/payment-checkout, /api/trade/advanced's quote/release actions,
+    // all guarded with Number.isFinite), a non-numeric, negative, or infinite body.amount here flowed
+    // straight into createTradeLogisticsWorkflow's amount (and, for the "settlement" branch, into a
+    // real wallet-crediting fee calculation) with no validation at all.
+    if (body.amount !== undefined) {
+      const requestedAmount = Number(body.amount);
+      if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+        return send(res, 400, { error: "Logistics amount must be a finite number greater than zero." });
+      }
+    }
     let result;
     try {
       result = await createTradeLogisticsWorkflow(db, user, body);
