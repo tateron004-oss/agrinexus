@@ -2742,8 +2742,19 @@ function knownUnownedProfileGaps(profile) {
   // bridge providers) genuinely carry no owner field of any kind -- the same
   // honest, already-accepted "no owner field exists" gap as
   // HEALTH_PROFILE_ARRAY_KEYS/orders above, just not yet disclosed here.
-  if (hasAny(["nexusPharmacyIntakes", "nexusSavedPharmacies", "nexusMedicalSupportIntakes", "nexusChronicDiseaseReadings", "nexusRpmDeviceReadings", "nexusRtmActivityEntries", "nexusMobileClinicIntakes", "nexusPatientSupportIntakes"])) {
+  if (hasAny(["nexusPharmacyIntakes", "nexusSavedPharmacies", "nexusMedicalSupportIntakes", "nexusChronicDiseaseReadings", "nexusRpmDeviceReadings", "nexusRtmActivityEntries", "nexusMobileClinicIntakes", "nexusPatientSupportIntakes", "nexusSavedPatientSupportResources"])) {
     gaps.push("Locally-saved pharmacy/chronic-disease/remote-monitoring preparation records have no per-account owner field today and are not included.");
+  }
+  // Found live (server-side provider sweep): these five db.profile arrays --
+  // written by marketplaceBridgeProvider.createListing, offlineSyncProvider.
+  // queueItem, djiProvider.missionRequest, and providerContactBridgeProvider's
+  // saveProvider/saveProviderNote -- share the exact same "genuinely no owner
+  // field" shape as the medical-support block just above (confirmed by
+  // reading each object literal), but were never added to this disclosure
+  // list when that one was built, so export/erase silently omitted them with
+  // no caveat at all.
+  if (hasAny(["marketplaceListings", "offlineQueue", "droneMissionRequests", "nexusSavedProviders", "nexusProviderNotes"])) {
+    gaps.push("Locally-saved marketplace listings, offline queue items, drone mission requests, and saved provider contacts/notes have no per-account owner field today and are not included.");
   }
   gaps.push("If you have used AgriNexus's newer Postgres-backed companion/reminders/health-toolkit features, request their erasure separately via /api/nexus/runtime/privacy/deletions.");
   return gaps;
