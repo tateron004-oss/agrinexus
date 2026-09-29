@@ -179,7 +179,14 @@ async function handle(ctx) {
     if (!item || item.length > 50) return null;
     const party = await partyFor(ctx, order.who, order.kind === "sale" ? "buyer" : "supplier");
     if (!party) return SW.whichNamed({ who: order.who });
-    const record = await ctx.store.add({ ...scope, collection: "order", data: { kind: order.kind, party: party.data.name, item: englishItem(item), qty: quantity.value, unit: quantity.unit, price: price?.amount || null, currency: price?.currency || "", status: "open", due: split.due || null, day: ctx.today } });
+    // Found live (further follow-up sweep, same shape as parties.js's already-fixed English
+    // equivalent): a price stated "per kg" was stored unconditionally even when the order's own
+    // quantity was in a different unit (bags, crates) -- delivering the order later blindly
+    // multiplied the mismatched units (e.g. "3 bags at 40 per kg" recorded 120, when a bag is
+    // realistically ~90-100kg). Falling back to no stored price when units mismatch reuses the
+    // existing, already-honest "no price was given" message at delivery time.
+    const matchedUnitPrice = price && price.per === quantity.unit ? price.amount : null;
+    const record = await ctx.store.add({ ...scope, collection: "order", data: { kind: order.kind, party: party.data.name, item: englishItem(item), qty: quantity.value, unit: quantity.unit, price: matchedUnitPrice, currency: price?.currency || "", status: "open", due: split.due || null, day: ctx.today } });
     const priceLine = price ? SW.priceLine({ price: moneyShown(price.amount, price.currency), per: unitLabelSw(1, price.per).split(" ")[0], total: price.per === quantity.unit ? moneyShown(round(price.amount * quantity.value), price.currency) : "" }) : "";
     const args = { n: record.number, qty: unitLabelSw(quantity.value, quantity.unit), item, name: party.data.name, priceLine, when: split.due ? dayShown(split.due, ctx.today) : "" };
     return order.kind === "sale" ? SW.saleOrder(args) : SW.buyOrder(args);

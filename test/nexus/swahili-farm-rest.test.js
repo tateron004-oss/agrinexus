@@ -134,6 +134,21 @@ test("buyers, suppliers, follow-ups and orders in Swahili; delivering an order r
   assert.match(await f.say("Show my income this month"), /4,000/, "English reads the money the Swahili delivery recorded");
 });
 
+// Found live (further follow-up sweep, same shape as parties.js's already-fixed English equivalent):
+// a price stated "per kg" was stored unconditionally even when the order's own quantity was in a
+// different unit (bags) -- delivering the order later blindly multiplied the mismatched units.
+test("a Swahili order priced per a different unit than its quantity honestly records no money on delivery, not a fabricated total", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Amina, +254712345678, mahindi, Kisumu");
+  const created = await f.say("Amina ameagiza magunia 3 za mahindi kwa shilingi 40 kwa kilo kufikia Ijumaa");
+  assert.match(created, /Agizo 1:/);
+  assert.doesNotMatch(created, /kwa jumla/, "no fabricated 'in all' total when the price's unit doesn't match the order's quantity unit");
+  const delivered = await f.say("Agizo 1 limetolewa");
+  assert.match(delivered, /bei haikutajwa, kwa hivyo sikurekodi pesa/, delivered);
+  const money = await list(f, "money");
+  assert.equal(money.filter(record => record.data.note === "order 1").length, 0, "no fabricated income must be recorded from multiplying mismatched units");
+});
+
 // Found live (follow-up sweep of the already-fixed English parties.js order-race bug): the Swahili
 // order-delivery branch was actually WORSE than the pre-fix English version -- it recorded real money
 // and moved real stock BEFORE writing status:"done" unconditionally at the end, with no compare-and-swap
