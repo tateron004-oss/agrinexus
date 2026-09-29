@@ -286,6 +286,30 @@ test("budget refusal precedes execution and telemetry outages never erase verifi
   assert.equal(store.calls,1);
 });
 
+// Found live (notifications/push-delivery audit): unlike the observability calls above (already safely wrapped
+// in observeSafely), the post-completion audit.record() call was NOT guarded -- if it threw (a transient DB
+// blip) after the real tool call and finish(successful:true) had already durably completed, execute() fell into
+// the generic catch, which called finish(successful:false) on the SAME executionId, overwriting the
+// already-completed, already-verified execution back to 'failed'. A retry would then compute a brand-new
+// idempotency key (never matching the original completed one) and re-run the real tool call for real --
+// e.g. a genuinely duplicate reminders.schedule notification.
+test("an audit-log failure after a real completion never overwrites it back to 'failed' or lets a retry re-run the tool", async () => {
+  const { engine, store } = fixture();
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  store.steps = [{ step_id: "s", tool_id: "documents.save", confirmation_state: "approved", idempotency_key: "one", state: "pending", input: {} }];
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  engine.audit.record = async () => { throw new Error("audit log unavailable"); };
+  const result = await engine.execute({ context, taskId: "task", stepId: "s" });
+  assert.equal(result.duplicate, false);
+  assert.equal(result.receipt.verification.verified, true);
+  assert.equal(store.execution.state, "completed", "an audit-log failure must never regress an already-completed execution back to 'failed'");
+  assert.equal(store.calls, 1);
+  // A second call for the same step must see the real completion and refuse to re-run the tool, not treat it as a fresh retry.
+  const again = await engine.execute({ context, taskId: "task", stepId: "s" });
+  assert.equal(again.duplicate, true);
+  assert.equal(store.calls, 1, "the real tool must not be invoked a second time");
+});
+
 // Found live: recordCost() was only ever called on the SUCCESS path -- the real, billable provider call already
 // happens before outcome verification, so a failure AFTER that call (an unverifiable result, a late timeout, an
 // executor throw) meant a real charge could have been incurred but was never written to the cost ledger at all,
