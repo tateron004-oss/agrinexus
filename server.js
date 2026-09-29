@@ -17915,6 +17915,19 @@ function phoneRealtimeStreamUrl(env = process.env) {
   return base.replace(/^http/i, "ws").replace(/\/$/, "") + "/api/voice/phone/stream";
 }
 
+// Where a live call gets redirected (via Twilio's Call-update REST API) when
+// the real-time bridge fails to establish -- see the "connect-failed" catch
+// in handleTwilioPhoneRealtimeStream. The ?fallback=classic marker tells the
+// /api/voice/phone/incoming route to skip the real-time branch even though
+// PHONE_REALTIME_STREAMING_ENABLED is still "true", so the redirected call
+// lands in the turn-based Gather/TTS flow instead of immediately trying (and
+// likely failing again) the same real-time connection that just failed.
+function phoneRealtimeClassicFallbackUrl(env = process.env) {
+  const base = String(env.PUBLIC_BASE_URL || "").trim();
+  if (!base) return "";
+  return `${base.replace(/\/$/, "")}/api/voice/phone/incoming?fallback=classic`;
+}
+
 // Call screening for unrecognized callers: instead of the flat decline
 // resolveAuthorizedPhoneCaller's callers otherwise give an unauthorized
 // number, an unrecognized caller gets a short screening greeting, then --
@@ -49654,7 +49667,7 @@ async function api(req, res, url) {
     // any value other than "true" for PHONE_REALTIME_STREAMING_ENABLED keeps
     // today's hardened, already-tested turn-based flow exactly as it is, and
     // requires no change to the Twilio console webhook URL either way.
-    if (phoneRealtimeStreamingEnabled(process.env)) {
+    if (phoneRealtimeStreamingEnabled(process.env) && url.searchParams.get("fallback") !== "classic") {
       const callSid = String(body.CallSid || body.callSid || "");
       const streamUrl = phoneRealtimeStreamUrl(process.env);
       const authorizedCaller = resolveAuthorizedPhoneCaller(db, body);
@@ -56106,7 +56119,21 @@ function handleTwilioPhoneRealtimeStream(ws) {
         const sessionConfig = phoneRealtimeWebSocketSessionConfig(user, user.language || "en", process.env);
         transport = new OpenAIRealtimeWebSocket({ model: sessionConfig.model, useInsecureApiKey: true });
         wirePhoneRealtimeTransportEvents(transport, ws, () => streamSid, () => callSid, () => user);
-        await transport.connect({ apiKey: process.env.OPENAI_API_KEY, model: sessionConfig.model, initialSessionConfig: sessionConfig });
+        // Found live (phone-bridge audit): transport.connect() has no timeout
+        // of its own -- a stalled handshake (no "open" and no "error" event)
+        // left this await pending forever, so the caller heard nothing and
+        // the call sat connected in silence until PHONE_REALTIME_MAX_CALL_SECONDS
+        // finally spoke a goodbye, up to 30 minutes later. Racing it against a
+        // clamped timeout turns that silent-hang failure mode into the same,
+        // already-handled "connect failed" path below (redirect to the
+        // classic flow), instead of leaving the caller stranded.
+        const connectPromise = transport.connect({ apiKey: process.env.OPENAI_API_KEY, model: sessionConfig.model, initialSessionConfig: sessionConfig });
+        connectPromise.catch(() => {}); // observed here so a later rejection is never unhandled if the timeout below wins the race
+        const connectTimeoutMs = Math.min(Math.max(Number(process.env.PHONE_REALTIME_CONNECT_TIMEOUT_MS) || 12000, 3000), 30000);
+        await Promise.race([
+          connectPromise,
+          new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error("OpenAI Realtime connect timed out"), { code: "phone-realtime-connect-timeout" })), connectTimeoutMs))
+        ]);
         transport.sendMessage("The caller just connected. Greet them warmly in one short sentence and ask how you can help.", {}, { triggerResponse: true });
         capTimer = setTimeout(() => {
           try { transport.sendMessage("The call time limit has been reached. Say a brief goodbye now.", {}, { triggerResponse: true }); } catch {}
@@ -56114,7 +56141,30 @@ function handleTwilioPhoneRealtimeStream(ws) {
         }, PHONE_REALTIME_MAX_CALL_SECONDS * 1000);
       } catch (error) {
         recordServerError({ source: "phone-realtime-connect", message: error.stack || error.message, context: { callSid } });
-        await cleanup("connect-failed");
+        // Found live (phone-bridge audit, matching the reported "greeting
+        // plays, then hangs up before the caller can speak" symptom): until
+        // now, any failure here -- a transient OpenAI auth/network blip, a
+        // readDb() hiccup -- fell straight through to cleanup(), which just
+        // closes this WebSocket. Because the TwiML that started this call was
+        // a bare <Connect><Stream> with nothing after it, closing the stream
+        // IS hanging up on Twilio's side. Redirecting the still-live call to
+        // the classic Gather/TTS flow instead means a transient failure costs
+        // the caller a beat of silence, not the whole call.
+        const fallbackUrl = phoneRealtimeClassicFallbackUrl(process.env);
+        let redirected = false;
+        if (callSid && fallbackUrl && nexusRealProviders.twilio.twilioConfigured(process.env).length === 0) {
+          try {
+            await nexusRealProviders.twilio.redirectCall(callSid, fallbackUrl, process.env);
+            redirected = true;
+          } catch (redirectError) {
+            recordServerError({ source: "phone-realtime-connect-redirect", message: redirectError.stack || redirectError.message, context: { callSid } });
+          }
+        }
+        if (redirected) {
+          await cleanup("connect-failed-redirected-to-classic-flow");
+        } else {
+          await cleanup("connect-failed");
+        }
         return;
       }
       // Found live (not yet confirmed against a real call, but a plausible,

@@ -334,4 +334,17 @@ async function startConnectAndListenCall(body = {}, env = process.env) {
   }
 }
 
-module.exports = { status, sendSms, sendWhatsapp, startCall, startConnectCall, startConnectAndListenCall, twilioFromNumber };
+// Redirects an ALREADY-ANSWERED, in-progress call to a different TwiML URL.
+// Used by server.js's phone-realtime bridge to recover a call when the
+// OpenAI Realtime connection fails to establish: the only other option is to
+// close the WebSocket, which -- because the original TwiML was a bare
+// <Connect><Stream> with nothing after it -- ends the call in silence. That
+// silent hangup is exactly the "greeting plays, then the call ends before
+// the caller can speak" symptom this exists to recover from. No confirmation
+// gate: this never starts a new call or reaches a new person, it only
+// changes what an already-live call the caller already answered does next.
+async function redirectCall(callSid, url, env = process.env) {
+  return twilioPost(`/Calls/${encodeURIComponent(callSid)}.json`, { Url: url, Method: "POST" }, env);
+}
+
+module.exports = { status, sendSms, sendWhatsapp, startCall, startConnectCall, startConnectAndListenCall, redirectCall, twilioConfigured, twilioFromNumber };
