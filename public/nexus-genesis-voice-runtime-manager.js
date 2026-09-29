@@ -645,8 +645,8 @@
           return { ok: true, activeRuntime: activeName, ownership };
         }
         if (activeName !== "legacy" && policy.automaticRollback) return this.rollbackToLegacy(ownershipHealthy ? "watchdog-response-timeout" : "watchdog-ownership-failure", { announce: true });
-        const recovered = await adapters.legacy.recover(ownershipHealthy ? "watchdog-stuck-state" : "watchdog-microphone-ownership");
-        return { ...recovered, watchdogRecovery: true, activeRuntime: "legacy" };
+        const recovered = await adapter.recover(ownershipHealthy ? "watchdog-stuck-state" : "watchdog-microphone-ownership");
+        return { ...recovered, watchdogRecovery: true, activeRuntime: activeName };
       },
       getState() {
         return {
