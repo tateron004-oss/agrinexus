@@ -231,6 +231,19 @@ test("a non-finite mobile-clinic-revenue amount is refused, not silently persist
   assert.equal(negative.status, 400);
 });
 
+// Found live (falsy-zero sweep, same route as above but a different bug): the
+// finite/range guard just above explicitly allows and validates amount:0
+// ("must be a finite number, zero or greater"), but the amount actually
+// persisted a few lines later used `body.amount || fallback`, which treats an
+// explicit 0 as falsy -- a legitimately free/waived/sponsored clinic visit
+// was recorded and shown on the patient/provider receipt as a $1500 charge.
+test("an explicit mobile-clinic-revenue amount of 0 (a waived/sponsored visit) is honored, not replaced with the $1500 default", async () => {
+  const result = await post("/api/health/mobile-clinic-revenue", { type: "clinic-payment-request", amount: 0 });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const record = result.body.mobileClinicRevenueResult.record;
+  assert.equal(record.amount, 0, "an explicit amount of 0 must be honored, not silently replaced with the $1500 default");
+});
+
 // Found live (money-logic audit): settlement reused the same generic
 // "amount" computed for every logistics record type (quote, booking,
 // pickup, delivery...) -- a freight-cost ESTIMATE (12% of the order total),

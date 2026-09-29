@@ -53298,7 +53298,14 @@ async function api(req, res, url) {
     const patientName = String(body.patientName || intake.patientName || "Community patient").trim();
     const service = String(body.service || "mobile clinic visit, vitals collection, telehealth handoff, and follow-up support").trim();
     const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "DRC" ? "CDF" : "USD")).trim();
-    const amount = Number(body.amount || (type === "clinic-service-menu" ? 0 : 1500));
+    // Found live (falsy-zero sweep): the guard above at line 53266 explicitly
+    // allows and validates an amount of exactly 0 ("must be a finite number,
+    // zero or greater"), but this line's `body.amount || fallback` treated
+    // an explicit 0 as falsy and silently replaced it with the 1500
+    // placeholder for any type other than "clinic-service-menu" -- a
+    // legitimately free/waived/sponsored clinic visit was recorded and
+    // shown on the patient/provider receipt as a $1500 charge instead of $0.
+    const amount = body.amount !== undefined ? Number(body.amount) : (type === "clinic-service-menu" ? 0 : 1500);
     const paymentMethod = String(body.paymentMethod || "mobile money, cash receipt, card, or sponsor voucher").trim();
     const previous = db.profile.mobileClinicRevenueRecords[0] || null;
     const serviceMenu = [
