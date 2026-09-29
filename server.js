@@ -2665,6 +2665,64 @@ function eraseOwnedProfileRecords(profile, email) {
   return removedCounts;
 }
 
+// Found live (telehealth/account-erasure audit): db.nexusTelehealthEncounters
+// and its child records (nexusTelehealthFollowUps, nexusTelehealthVideoAttempts,
+// nexusPilotReviewQueue entries created for it) live as top-level siblings of
+// db.profile (server/telehealth/provider.js's ensureState sets them directly
+// on `db`), not nested inside it -- collectOwnedProfileRecords/
+// eraseOwnedProfileRecords above only ever scan db.profile's own arrays via
+// Object.entries(profile), so they never even see these. A real telehealth
+// encounter (patient name, symptoms, medications, allergies, red flags,
+// contact info) silently survived both /api/account/export (never listed)
+// and /api/account/erase (claimed success while leaving it all in place),
+// with no disclosed gap either -- unlike HEALTH_PROFILE_ARRAY_KEYS/orders
+// just below, which are honestly disclosed as unreachable. Unlike those,
+// though, an encounter DOES carry a real per-user owner field: `userId`
+// (not `createdBy`, which server/telehealth/provider.js's own comment
+// explains is only a display-name label, never an authorization boundary --
+// the same `userId` field is already the real ownership check `ownsEncounter`
+// uses to gate reads). Children link back to their encounter via
+// encounterId, so a real per-user scan and cascade is possible here, the
+// same way eraseOwnedProfileRecords already cascades communicationThreads
+// into communicationMessages by threadId.
+const TELEHEALTH_CHILD_ARRAY_KEYS = ["nexusTelehealthFollowUps", "nexusTelehealthVideoAttempts", "nexusPilotReviewQueue"];
+
+function collectOwnedTelehealthRecords(db, userId) {
+  const normalizedUserId = String(userId || "");
+  const owned = {};
+  if (!normalizedUserId || !Array.isArray(db?.nexusTelehealthEncounters)) return owned;
+  const encounters = db.nexusTelehealthEncounters.filter(item => String(item?.userId || "") === normalizedUserId);
+  if (!encounters.length) return owned;
+  owned.nexusTelehealthEncounters = encounters;
+  const encounterIds = new Set(encounters.map(item => item.id));
+  for (const key of TELEHEALTH_CHILD_ARRAY_KEYS) {
+    const matches = (db[key] || []).filter(item => encounterIds.has(item?.encounterId));
+    if (matches.length) owned[key] = matches;
+  }
+  return JSON.parse(JSON.stringify(owned));
+}
+
+function eraseOwnedTelehealthRecords(db, userId) {
+  const normalizedUserId = String(userId || "");
+  const removedCounts = {};
+  if (!normalizedUserId || !db || !Array.isArray(db.nexusTelehealthEncounters)) return removedCounts;
+  const encounterIds = new Set(db.nexusTelehealthEncounters
+    .filter(item => String(item?.userId || "") === normalizedUserId)
+    .map(item => item.id));
+  if (!encounterIds.size) return removedCounts;
+  const beforeEncounters = db.nexusTelehealthEncounters.length;
+  db.nexusTelehealthEncounters = db.nexusTelehealthEncounters.filter(item => !encounterIds.has(item.id));
+  removedCounts.nexusTelehealthEncounters = beforeEncounters - db.nexusTelehealthEncounters.length;
+  for (const key of TELEHEALTH_CHILD_ARRAY_KEYS) {
+    if (!Array.isArray(db[key])) continue;
+    const before = db[key].length;
+    db[key] = db[key].filter(item => !encounterIds.has(item?.encounterId));
+    const removed = before - db[key].length;
+    if (removed > 0) removedCounts[key] = removed;
+  }
+  return removedCounts;
+}
+
 // The categories collectOwnedProfileRecords/eraseOwnedProfileRecords cannot
 // reach, surfaced explicitly in every export/erase response so neither ever
 // implies a completeness it doesn't have.
@@ -2676,6 +2734,16 @@ function knownUnownedProfileGaps(profile) {
   }
   if (hasAny(["orders"])) {
     gaps.push("Marketplace trade orders have no per-account owner field today and are not included.");
+  }
+  // Found live (telehealth/account-erasure audit, same sweep as
+  // collectOwnedTelehealthRecords above): these locally-saved medical-support
+  // preparation records (server/providers/medicalBridgeUtils.js's saveRecord,
+  // used by the pharmacy/chronic-disease/RPM/RTM/mobile-clinic/patient-support
+  // bridge providers) genuinely carry no owner field of any kind -- the same
+  // honest, already-accepted "no owner field exists" gap as
+  // HEALTH_PROFILE_ARRAY_KEYS/orders above, just not yet disclosed here.
+  if (hasAny(["nexusPharmacyIntakes", "nexusSavedPharmacies", "nexusMedicalSupportIntakes", "nexusChronicDiseaseReadings", "nexusRpmDeviceReadings", "nexusRtmActivityEntries", "nexusMobileClinicIntakes", "nexusPatientSupportIntakes"])) {
+    gaps.push("Locally-saved pharmacy/chronic-disease/remote-monitoring preparation records have no per-account owner field today and are not included.");
   }
   gaps.push("If you have used AgriNexus's newer Postgres-backed companion/reminders/health-toolkit features, request their erasure separately via /api/nexus/runtime/privacy/deletions.");
   return gaps;
@@ -46506,7 +46574,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = collectOwnedProfileRecords(db.profile, user.email);
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
@@ -46552,7 +46620,7 @@ async function api(req, res, url) {
     if (body.confirmed !== true) {
       return send(res, 400, { ok: false, status: "confirmation_required", error: "Pass confirmed: true to permanently erase this account. This cannot be undone." });
     }
-    const removedProfileRecords = eraseOwnedProfileRecords(db.profile, user.email);
+    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id) };
     const uploadDirPath = nexusUploads.uploadDir(process.env);
     const ownedUploads = nexusUploads.listUploadsForUser(uploadDirPath, user.id);
     let removedUploadCount = 0;
