@@ -173,3 +173,18 @@ test("the same words said twice are one thing: the newest is taken", async () =>
   await say(memory, "Add buy seed to my to-do list"); await memory.addPersonalItem({ userId: "u1", content: { kind: "todo", list: "todo", text: "buy seed", done: false } });
   assert.match(await say(memory, "Mark buy seed as done"), /^Done\. Ticked off buy seed\./);
 });
+
+// Found live (business/personal sibling sweep, "outcome-shape honesty" bug class): readRequest()
+// already positively identifies a request as a to-do/note/event action BEFORE the try block that
+// wraps the actual save -- so a genuine failure inside the switch (a transient memory-store error) was
+// caught by the blanket catch and turned into `null`, this module's own documented sentinel for "not a
+// personal-item request at all." The caller (planner.js) treats a null exactly that way and falls
+// through to unrelated generic conversation, with zero indication the to-do/note/event was never
+// saved.
+test("a real save failure is reported honestly, not silently relabeled as 'not a personal-item request'", async () => {
+  const memory = fakeMemory();
+  memory.addPersonalItem = async () => { throw new Error("transient store failure"); };
+  const result = await say(memory, "Add buy seed to my to-do list");
+  assert.notEqual(result, null, "a request readRequest() already confirmed was a to-do/note/event action must never silently look like it wasn't one");
+  assert.match(result, /something went wrong/i);
+});

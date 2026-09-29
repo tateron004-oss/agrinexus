@@ -94,6 +94,25 @@ test("revoking business consent withdraws every scope it ever granted, not just 
   assert.equal(f.grants.size, 0, "revoking business consent must withdraw every scope, not leave AI/billing consent active forever");
 });
 
+// Found live (business/personal sibling sweep): unlike plan() (which checks the base DATA_SCOPE
+// consent before AI_SCOPE), assistant() only ever checked/re-granted AI_SCOPE -- so once a user
+// revoked business consent, a later assistant() call with consent:true silently re-granted ONLY
+// AI_SCOPE and shared the entire workspace with the AI provider anyway, even though the user's base
+// "you may use/store my business data" consent was not active.
+test("assistant() refuses to share the workspace with the AI provider after business consent is revoked, matching plan()", async () => {
+  let calls = 0;
+  const f = fixture({ assistant: async () => { calls++; return { reply: "ok" }; } });
+  const row = await f.service.create(f.context, { businessName: "Cooperative", consent: true });
+  await f.service.assistant(f.context, row.record_id, { confirmed: true, consent: true, message: "hi" });
+  assert.equal(calls, 1, "the first, consented call must still reach the AI provider");
+  await f.service.revokeConsent(f.context);
+  await assert.rejects(
+    () => f.service.assistant(f.context, row.record_id, { confirmed: true, consent: true, message: "hi again" }),
+    error => error.code === "business_consent_required"
+  );
+  assert.equal(calls, 1, "the AI provider must never be called again once base business consent is revoked");
+});
+
 test("disabled business providers cannot fetch even when methods are invoked", async () => {
   let calls = 0; const providers = createBusinessProviders({ env: {}, fetchFn: async () => { calls++; throw Error("Network forbidden"); } });
   await assert.rejects(() => providers.assistant({}), error => error.code === "business_provider_unavailable");
@@ -279,6 +298,43 @@ test("appointment scheduler: re-syncing an already-synced appointment is refused
   );
   assert.equal(calendarCalls.length, 1, 'a re-sync of an already-synced appointment must never create a second real calendar event');
   assert.equal(synced.data.editable.appointments[0].calendarEventId, 'evt_1', 'the original real calendar event must not be overwritten by a refused re-sync');
+});
+
+// Found live (calendar-sync sibling sweep): checkout() only refused a second
+// checkout once state === "active" -- a second, version-current request
+// while an earlier checkout was still "checkout_created"/"pending_payment"
+// sailed through, minted a real SECOND Stripe Checkout Session (providers.js
+// derives its idempotency key from the record's version, which changes
+// between calls), and overwrote the stored sessionId, orphaning the first
+// session. If the customer then paid on the orphaned session, the webhook's
+// sessionId-identity check (see the signed-webhook test below) would reject
+// that payment's event -- a real charge with the workspace never marked
+// active.
+test("business billing: a second checkout while one is already pending is refused, not silently duplicated on the real provider", async () => {
+  let checkoutCalls = [];
+  const f = fixture({
+    checkout: async input => { checkoutCalls.push(input); return { state: "checkout_created", provider: "stripe", sessionId: `cs_${checkoutCalls.length}`, checkoutUrl: "https://checkout.stripe.com/test", plan: input.plan, paid: false }; },
+    refresh: async () => ({ state: "expired", paid: false })
+  });
+  const row = await f.service.create(f.context, { businessName: "Cooperative", consent: true });
+  const created = await f.service.checkout(f.context, row.record_id, { confirmed: true, consent: true, expectedVersion: 1, plan: "pro" });
+  assert.equal(checkoutCalls.length, 1, "the first, legitimate checkout must still create one real Stripe session");
+  assert.equal(created.data.subscription.sessionId, "cs_1");
+
+  await assert.rejects(
+    () => f.service.checkout(f.context, row.record_id, { confirmed: true, consent: true, expectedVersion: created.version, plan: "pro" }),
+    error => error.code === "business_checkout_pending"
+  );
+  assert.equal(checkoutCalls.length, 1, "a second checkout while one is already pending must never create a second real Stripe session");
+  assert.equal(created.data.subscription.sessionId, "cs_1", "the original real checkout session must not be orphaned by a refused second checkout");
+
+  // Once refreshSubscription() (a real re-check against the provider, not a
+  // silent local override) reports the pending session as no longer
+  // pending, a fresh checkout must be allowed again.
+  const refreshed = await f.service.refreshSubscription(f.context, row.record_id);
+  assert.equal(refreshed.data.subscription.state, "expired");
+  await f.service.checkout(f.context, row.record_id, { confirmed: true, consent: true, expectedVersion: refreshed.version, plan: "pro" });
+  assert.equal(checkoutCalls.length, 2, "once the prior session is confirmed expired via a real provider check, a fresh checkout must be allowed");
 });
 
 test("business plan builder: a real, editable, versioned plan document persists and exports as a real PDF", async () => {

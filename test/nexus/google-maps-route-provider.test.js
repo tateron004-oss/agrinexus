@@ -44,6 +44,37 @@ test("route() with a real Google Maps API key returns durationSeconds and routeG
   );
 });
 
+// Found live (maps/reports sibling sweep, same falsy-zero bug already fixed once tonight in
+// nexus/logistics/executor.js's own local durationSeconds -- that fix never touched this provider, so
+// the identical defect survived here): a genuinely-computed 0-meter route (origin and destination
+// resolving to the same or a near-identical coordinate) was coerced to null by `|| null`, discarding a
+// real, correctly-computed value.
+test("route() reports a genuine 0-meter distance honestly, instead of coercing it to null", async () => {
+  await withStubbedFetch(
+    async url => {
+      assert.match(String(url), /^https:\/\/routes\.googleapis\.com\//);
+      return {
+        ok: true,
+        text: async () => JSON.stringify({
+          routes: [{ duration: "0s", distanceMeters: 0, description: "you have arrived" }]
+        })
+      };
+    },
+    async () => {
+      const result = await mapsProvider.route(
+        { origin: "Same Address, CA", destination: "Same Address, CA" },
+        {
+          NEXUS_MAPS_ENABLED: "true",
+          GOOGLE_MAPS_API_KEY: "test-key",
+          NEXUS_MAPS_FETCH_IMPL: async () => ({ ok: true, text: async () => JSON.stringify([]) })
+        }
+      );
+      assert.equal(result.body.status, "completed");
+      assert.equal(result.body.data.distanceMeters, 0, "a real, computed 0-meter distance must be reported as 0, not silently discarded as null");
+    }
+  );
+});
+
 test("route() with a real Google Maps API key sends intermediates for waypoints and returns them resolved", async () => {
   await withStubbedFetch(
     async (url, init) => {

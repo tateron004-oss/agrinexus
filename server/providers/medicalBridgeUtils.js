@@ -12,7 +12,14 @@ const {
 const remindersProvider = require("./reminderProvider");
 const offlineSyncProvider = require("./offlineSyncProvider");
 
-const FORBIDDEN_MEDICAL_EXECUTION = /\b(diagnos(?:e|is)|prescrib\w*|dosage|dose|insulin dose|change medication|stop medication|start medication|refill|transfer prescription|dispens\w*|book appointment|schedule appointment|confirmed appointment|insurance claim|eligibility|payment|checkout|medical record|fhir write|ehr write|emergency dispatch|dispatch ambulance|call now|message now|whatsapp now|email now|share location|geolocation|camera|microphone|secret|token|password)\b/i;
+// Found live (systemic sensitive-pattern regex audit): diagnos(?:e|is) and prescrib\w* were narrower
+// than intended -- \b right after the group requires a boundary immediately following "diagnose"/
+// "diagnosis"/whatever prescrib\w* matched, so real forms like "diagnosed"/"diagnosing" (continue past
+// "diagnose") and "prescription"/"prescriptions" (branch off "prescri", not "prescrib") never matched.
+// diagnos\w*/prescri\w* widen both to any real-word continuation of the shared root, matching the fix
+// applied to 6 sibling patterns across the codebase with the same defect in a cruder (bare-fragment)
+// form.
+const FORBIDDEN_MEDICAL_EXECUTION = /\b(diagnos\w*|prescri\w*|dosage|dose|insulin dose|change medication|stop medication|start medication|refill|transfer prescription|dispens\w*|book appointment|schedule appointment|confirmed appointment|insurance claim|eligibility|payment|checkout|medical record|fhir write|ehr write|emergency dispatch|dispatch ambulance|call now|message now|whatsapp now|email now|share location|geolocation|camera|microphone|secret|token|password)\b/i;
 // Found live (telehealth safety audit): this was the ONLY symptom-safety
 // gate on telehealthBridgeProvider.js's real Daily.co room-creation path,
 // but it was narrower than this codebase's own canonical red-flag

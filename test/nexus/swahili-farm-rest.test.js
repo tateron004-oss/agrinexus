@@ -355,6 +355,24 @@ test("a Swahili receipt includes a recorded sale even when it has no parseable q
   assert.match(receipt.content, /9,500/, "the no-quantity sale must be included in the printed total");
 });
 
+// Found live (business/personal sibling sweep, same bug as the English receipt()'s own already-fixed
+// total, and the same bug class as the Swahili party-history fix just below): the receipt's JUMLA
+// (total) summed raw amounts across every currency and mislabeled the result with whichever line
+// happened to be first, instead of keeping each currency's total separate like every other total in
+// this file already does.
+test("a Swahili receipt keeps different currencies separate in its total instead of adding them together under one label", async () => {
+  const f = farmer();
+  await f.say("Ongeza mnunuzi Otieno"); await f.say("skip"); await f.say("skip"); await f.say("skip");
+  await f.say("Nimeuza kilo 10 za mahindi kwa Otieno kwa dola 500");
+  await f.say("Nimeuza kilo 20 za maharage kwa Otieno kwa shilingi 3000");
+  const receipt = (await f.say("Chapisha stakabadhi ya Otieno")).report;
+  const totalLine = receipt.content.split("\n").find(line => line.startsWith("JUMLA:"));
+  assert.ok(totalLine, "expected a JUMLA (total) line in the receipt");
+  assert.match(totalLine, /\$500(?:\.00)?/, "the JUMLA line itself must show the USD total on its own, not folded into another currency");
+  assert.match(totalLine, /3,000/, "the JUMLA line itself must show the shillings total separately, not combined with the USD amount");
+  assert.doesNotMatch(totalLine, /\$?3,?500|503,000|500,003,000/, "the two currencies must never be summed together into one fabricated number");
+});
+
 // Found live (business-ledger audit): a party's "history" earned/spent
 // totals summed raw amounts across every currency, mislabeled with
 // whichever record happened to be first -- the same currency-combining bug

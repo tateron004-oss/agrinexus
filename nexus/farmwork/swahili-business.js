@@ -151,9 +151,14 @@ async function receiptSw(ctx, who) {
   // just being described without a unit label.
   const lines = [...orders.map(order => ({ day: order.data.doneOn || order.data.day, what: `${unitLabelSw(order.data.qty, order.data.unit)} za ${swahiliItem(order.data.item)}`, amount: round((order.data.price || 0) * order.data.qty), currency: order.data.currency })), ...sales.map(record => ({ day: record.data.day, what: record.data.qty ? `${unitLabelSw(record.data.qty, record.data.unit)} za ${swahiliItem(record.data.item)}` : swahiliItem(record.data.item), amount: record.data.amount, currency: record.data.currency }))];
   if (!lines.length) return null;
-  const buyer = orders[0]?.data.party || found?.party?.data.name || who || "Mnunuzi"; const cur = lines[0].currency; const total = round(lines.reduce((s, item) => s + item.amount, 0));
+  const buyer = orders[0]?.data.party || found?.party?.data.name || who || "Mnunuzi"; const cur = lines[0].currency;
+  // Found live (business/personal sibling sweep, same bug as the English receipt()'s own already-fixed
+  // total): order lines and money-sale lines can carry different currencies, but the total used to sum
+  // them flatly and label it with whichever line happened to be first. Bucket by currency, matching
+  // reports.js's receipt() and every other total in this file.
+  const totals = {}; for (const item of lines) { const currency = item.currency || cur || ""; totals[currency] = round((totals[currency] || 0) + item.amount); }
   const farm = (await ctx.store.list({ ...scope, collection: "farm" }))[0]; const owner = (ctx.nameOf ? await ctx.nameOf({ tenantId: ctx.tenantId, userId: ctx.userId }).catch(() => "") : "") || "";
-  return { title: `Stakabadhi - ${buyer}`, content: `STAKABADHI\n${farm?.data.farmName || owner || "Shamba"}\nTarehe: ${ctx.today}\nImepokelewa kutoka kwa: ${buyer}\n${line()}\n${table([["Tarehe", "Kitu", "Kiasi"], ...lines.map(item => [item.day, item.what, moneyShown(item.amount, item.currency || cur)])], [12, 30])}\n${line()}\nJUMLA: ${moneyShown(total, cur)}\n\nAsante.\n\nImetayarishwa na Kyro kutoka kwenye mauzo uliyorekodi.` };
+  return { title: `Stakabadhi - ${buyer}`, content: `STAKABADHI\n${farm?.data.farmName || owner || "Shamba"}\nTarehe: ${ctx.today}\nImepokelewa kutoka kwa: ${buyer}\n${line()}\n${table([["Tarehe", "Kitu", "Kiasi"], ...lines.map(item => [item.day, item.what, moneyShown(item.amount, item.currency || cur)])], [12, 30])}\n${line()}\nJUMLA: ${totalsText(totals)}\n\nAsante.\n\nImetayarishwa na Kyro kutoka kwenye mauzo uliyorekodi.` };
 }
 
 // ---- loans ----

@@ -210,7 +210,13 @@ async function route(body = {}, env = process.env) {
         destinationLat: destinationCoords?.lat ?? null,
         destinationLng: destinationCoords?.lng ?? null,
         destinationResolved: destinationCoords?.label || "",
-        distanceMeters: firstRoute?.distanceMeters || null,
+        // Found live (maps/reports sibling sweep, same falsy-zero bug already fixed once tonight in
+        // nexus/logistics/executor.js's own local durationSeconds -- that fix never touched this
+        // provider, so the identical defect survived here): a genuinely-computed 0-meter route (origin
+        // and destination resolving to the same or a near-identical coordinate) was coerced to null by
+        // ||, same as the sibling free-OSM path (publicOsmRoute() below) already correctly avoids via a
+        // typeof check.
+        distanceMeters: typeof firstRoute?.distanceMeters === "number" ? firstRoute.distanceMeters : null,
         duration: firstRoute?.duration || null,
         durationSeconds,
         routeGeometry: routeGeometry.length > 1 ? routeGeometry : null,

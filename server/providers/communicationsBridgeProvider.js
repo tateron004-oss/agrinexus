@@ -9,7 +9,12 @@ const {
 
 const twilioProvider = require("./twilioProvider");
 
-const SENSITIVE_COMMUNICATION_PATTERN = /\b(patient|diagnos|prescri|medical record|payment|card|bank|password|secret|token|private key|emergency dispatch)\b/i;
+// Found live (systemic sensitive-pattern regex audit): "diagnos"/"prescri" were bare word-fragments
+// wrapped in \b(...)\b -- \b requires a boundary immediately after the fragment, so this matched NONE
+// of "diagnosis"/"diagnosed"/"diagnosing" or "prescribe"/"prescribing"/"prescription", only the
+// literal, essentially never-typed fragments themselves as whole words. \w* lets each fragment match
+// any real-word continuation (same fix applied to 6 sibling patterns with this identical defect).
+const SENSITIVE_COMMUNICATION_PATTERN = /\b(patient|diagnos\w*|prescri\w*|medical record|payment|card|bank|password|secret|token|private key|emergency dispatch)\b/i;
 
 function maskPhone(value = "") {
   const text = clean(value);
