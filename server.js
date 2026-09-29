@@ -53814,6 +53814,20 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade payment checkout workflows" });
     if (userIsRestrictedFrom(user, "external-transaction")) return send(res, 403, { error: "This account type cannot start a real payment transaction." });
     const body = await readBody(req);
+    // Found live (wallet/payment-math audit): unlike every sibling money-write
+    // path in this file (/api/trade/wallet, and the quote/release actions on
+    // /api/trade/advanced, all guarded with Number.isFinite), a non-numeric,
+    // negative, or infinite body.amount here flowed straight into
+    // initializeTradePaymentCheckout's grossAmount with no validation at all --
+    // producing a NaN-poisoned checkout record, or, when a real Paystack/
+    // Flutterwave key is configured, a malformed amount sent to a live
+    // third-party payment-initialization API.
+    if (body.amount !== undefined) {
+      const requestedAmount = Number(body.amount);
+      if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+        return send(res, 400, { error: "Payment amount must be a finite number greater than zero." });
+      }
+    }
     const checkout = await initializeTradePaymentCheckout(db, user, body);
     addWorkflowNote(db.profile, body.note, "Payment checkout note");
     await writeDb(db);
