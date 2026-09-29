@@ -232,6 +232,17 @@ class AuthoritativeTaskEngine {
     if (!task) throw new NexusRuntimeError("task_not_found", "Task not found.", 404);
     if (task.ownerId !== context.userId && !context.hasRole?.("admin")) throw new NexusRuntimeError("task_owner_required", "Only the task owner may execute this task.", 403);
     if (["completed", "cancelled", "blocked", "expired"].includes(task.state)) throw new NexusRuntimeError("task_not_executable", `A ${task.state} task cannot execute.`, 409);
+    // Found live (task state-machine/confirmation-flow audit): "paused" is a legal
+    // transition target (nexus/tasks/state-machine.js) reachable via the generic
+    // transition endpoint, but nothing below specially handles it the way
+    // "planned"/"awaiting_confirmation"/"queued" are -- a paused task fell
+    // straight into the step loop and kept executing real tools while the DB
+    // state stayed "paused". Worse, the loop's own completion check only fires
+    // when task.state === "running", so even a paused task whose steps all
+    // finished could never reach "verifying"/"completed". paused's only legal
+    // forward transition is back to "queued" (an explicit resume action) --
+    // refuse to execute here instead of silently ignoring the pause.
+    if (task.state === "paused") throw new NexusRuntimeError("task_paused", "This task is paused. Resume it before it can execute.", 409);
     if (task.state === "planned") await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
       nextState: "queued", reason: "Governed task execution requested" });
     // Found live: a task returning here to resume after the user answered a
