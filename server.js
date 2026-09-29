@@ -13222,21 +13222,34 @@ function runHealthActionByAgent(db, user, type) {
     language: intake.preferredLanguage || user.language || "en",
     createdAt: new Date().toISOString()
   };
+  // Found live (telehealth sibling sweep, follow-up to the runHealthActionByAgent crash fix just above):
+  // every OTHER write site for these same four telehealthX arrays elsewhere in this file caps them to 20
+  // right after unshift() -- this function, reached by real repeatable voice/text commands ("capture
+  // vitals", "run a safety review", etc.) and by the default Healthcare autopilot mission's steps, never
+  // did. safetyReviews/carePlans are uncapped at EVERY one of their write sites in the whole file (see
+  // the matching fix at their other call sites), so those two are capped here too rather than only
+  // matching a convention this function alone was missing.
   if (["caption", "caregiver", "accessibility"].includes(type)) {
     db.profile.telehealthAccessibility.unshift(record);
     db.profile.telehealthAccessibility = db.profile.telehealthAccessibility.slice(0, 20);
   } else if (type === "consent") {
     db.profile.telehealthConsents.unshift(record);
+    db.profile.telehealthConsents = db.profile.telehealthConsents.slice(0, 20);
   } else if (type === "vitals") {
     db.profile.telehealthVitals.unshift({ ...record, temperatureC: country.heat >= 38 ? 38.1 : 36.8, pulse: country.risk === "High" ? 96 : 82 });
+    db.profile.telehealthVitals = db.profile.telehealthVitals.slice(0, 20);
   } else if (type === "referral") {
     db.profile.telehealthReferrals.unshift(record);
+    db.profile.telehealthReferrals = db.profile.telehealthReferrals.slice(0, 20);
   } else if (type === "followup") {
     db.profile.telehealthFollowUps.unshift(record);
+    db.profile.telehealthFollowUps = db.profile.telehealthFollowUps.slice(0, 20);
   } else if (type === "safety") {
     db.profile.safetyReviews.unshift({ ...record, riskLevel: country.risk, heatIndex: country.heat });
+    db.profile.safetyReviews = db.profile.safetyReviews.slice(0, 20);
   } else if (type === "careplan") {
     db.profile.carePlans.unshift({ ...record, text: `Care plan prepared for ${country.name}: monitor risk, access needs, caregiver support, and route context.` });
+    db.profile.carePlans = db.profile.carePlans.slice(0, 20);
   }
   logIntegration(db, {
     providerId: selected[2],
@@ -51402,6 +51415,7 @@ async function api(req, res, url) {
       provider: careResult.provider,
       createdAt: new Date().toISOString()
     });
+    db.profile.carePlans = db.profile.carePlans.slice(0, 20);
     country.queue = "Care plan generated";
 
     const product = (db.products || [])[0];
@@ -51742,6 +51756,7 @@ async function api(req, res, url) {
       recommendation: "Proceed with human-supported accessible telehealth, caregiver handoff, and low-bandwidth callback.",
       createdAt: new Date().toISOString()
     });
+    db.profile.safetyReviews = db.profile.safetyReviews.slice(0, 20);
     const careResult = await runAi("careplan", country, route, db.profile);
     db.profile.carePlans.unshift({
       id: crypto.randomUUID(),
@@ -51753,6 +51768,7 @@ async function api(req, res, url) {
       provider: careResult.provider,
       createdAt: new Date().toISOString()
     });
+    db.profile.carePlans = db.profile.carePlans.slice(0, 20);
     country.queue = "Accessible telehealth plan ready";
 
     const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
@@ -52640,6 +52656,7 @@ async function api(req, res, url) {
         createdAt: new Date().toISOString()
       };
       db.profile.safetyReviews.unshift(review);
+      db.profile.safetyReviews = db.profile.safetyReviews.slice(0, 20);
       logIntegration(db, {
         providerId: "health-ehr",
         module: "Healthcare",
@@ -52686,6 +52703,7 @@ async function api(req, res, url) {
       });
       carePlan.encounterId = encounter.encounterId;
       db.profile.carePlans.unshift(carePlan);
+      db.profile.carePlans = db.profile.carePlans.slice(0, 20);
       logIntegration(db, {
         providerId: "health-ehr",
         module: "Healthcare",

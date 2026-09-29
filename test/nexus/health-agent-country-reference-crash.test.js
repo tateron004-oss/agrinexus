@@ -46,7 +46,11 @@ test.before(async () => {
   fs.copyFileSync(dbPath, tempDbPath);
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" },
+    // The cap tests below deliberately send more than 60 agent commands (the
+    // default AI-agent rate limit's per-minute window) to prove the array
+    // caps hold under repeated real use -- raised here since this file is
+    // not testing rate-limiting itself.
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "500" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -89,4 +93,32 @@ test("generating a care plan actually works instead of always silently failing",
   assert.equal(httpStatus, 200);
   assert.equal(result.status, "completed", `expected care plan generation to succeed, got: ${JSON.stringify(result)}`);
   assert.match(result.response, /care plan/i);
+});
+
+// Found live (telehealth sibling sweep, follow-up to the crash fix above): unlike every other write
+// site for telehealthConsents/telehealthVitals/telehealthReferrals/telehealthFollowUps elsewhere in
+// server.js (all of which cap to 20 right after unshift), runHealthActionByAgent never capped any of
+// them -- and safetyReviews/carePlans were never capped at ANY of their write sites in the whole file.
+// Since db.profile is a single JSON/jsonb blob rewritten wholesale on every read/write, repeatedly
+// running "capture vitals" (a real, repeatable voice/text command, also a default Healthcare autopilot
+// mission step) grew telehealthVitals without bound.
+test("repeatedly capturing vitals through the voice agent does not grow telehealthVitals without bound", async () => {
+  for (let i = 0; i < 22; i += 1) {
+    const { result } = await cmd({ command: "capture vitals", confirm: true });
+    assert.equal(result.status, "completed");
+  }
+  const db = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  assert.ok(db.profile.telehealthVitals.length <= 20, `expected telehealthVitals to be capped at 20, got ${db.profile.telehealthVitals.length}`);
+});
+
+test("repeatedly running a safety review or generating a care plan does not grow safetyReviews/carePlans without bound", async () => {
+  for (let i = 0; i < 22; i += 1) {
+    const safety = await cmd({ command: "run a safety review", confirm: true });
+    assert.equal(safety.result.status, "completed");
+    const careplan = await cmd({ command: "generate a care plan", confirm: true });
+    assert.equal(careplan.result.status, "completed");
+  }
+  const db = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  assert.ok(db.profile.safetyReviews.length <= 20, `expected safetyReviews to be capped at 20, got ${db.profile.safetyReviews.length}`);
+  assert.ok(db.profile.carePlans.length <= 20, `expected carePlans to be capped at 20, got ${db.profile.carePlans.length}`);
 });
