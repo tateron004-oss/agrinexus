@@ -392,7 +392,15 @@ function queueOffline(body = {}, db, env = process.env) {
   if (confirmation) return confirmation;
   const listingRecord = normalizeListing(body);
   if (!listingRecord.title || !listingRecord.category) return blockedResponse(provider, action, "Listing title and category are required for offline marketplace queue.");
-  const safetyError = validateSafeMarketplaceRecord({ title: listingRecord.title, category: listingRecord.category, description: listingRecord.description }, "Marketplace offline queue");
+  // Found live (legal/consent/marketplace-safety audit, follow-up sweep):
+  // this scanned {title, category, description, location, quantity} against
+  // SENSITIVE_MARKETPLACE_PATTERN, but id/source below are ALSO persisted
+  // into the queued content, unscanned. Unlike createListing() (which always
+  // overrides source to a fixed string), queueOffline passes body.source
+  // straight through normalizeListing() -- so a caller-supplied source
+  // string was the one field on this path that could carry sensitive
+  // content straight into db.profile.offlineQueue untouched.
+  const safetyError = validateSafeMarketplaceRecord({ id: listingRecord.id, title: listingRecord.title, category: listingRecord.category, description: listingRecord.description, location: listingRecord.location, quantity: listingRecord.quantity, source: listingRecord.source }, "Marketplace offline queue");
   if (safetyError) return blockedResponse(provider, action, safetyError);
   const content = JSON.stringify({
     listingId: listingRecord.id,

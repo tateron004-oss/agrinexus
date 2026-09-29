@@ -142,11 +142,21 @@ async function waitForHealth(port, child) {
   throw new Error("server did not become healthy");
 }
 
+// This whole script simulates ONE continuous anonymous (never signed-in)
+// visitor performing a sequence of actions -- a real deviceId (the same
+// stable id public/app.js's nexusLocalDeviceId() sends on every real
+// browser request) is required so all these calls resolve to the same
+// anonymous identity server-side; without one, each call would now get its
+// own single-use identity (the fix for a real cross-visitor PHI/financial-
+// record collision bug) and none of this sequence's later steps would find
+// the earlier steps' own records.
+const QA_ANONYMOUS_DEVICE_ID = "qa-anonymous-session-device";
+
 async function post(port, body) {
   const response = await fetch(`http://127.0.0.1:${port}/api/nexus/operations/command`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify({ deviceId: QA_ANONYMOUS_DEVICE_ID, ...body })
   });
   const json = await response.json();
   assert(response.ok, `operation ${body.action || body.command} should pass: ${JSON.stringify(json)}`);

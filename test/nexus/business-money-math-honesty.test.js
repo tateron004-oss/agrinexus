@@ -105,6 +105,40 @@ test("computeBusinessDashboard's invoiceTotal rounds each line before summing, m
   assert.equal(dashboard.invoiceTotal, 61.49, "10*3.999 rounds to 39.99, 5*4.299 rounds to 21.50 -- these must sum to 61.49 (matching the per-row-rounded PDF), not the raw unrounded 61.485");
 });
 
+// Found live (follow-up sweep): unlike extractTransactionArgs/extractGrantArgs/extractListingArgs, this
+// never parsed a currency at all -- "5 bags of maize at 500 shillings each" silently dropped
+// "shillings", so a line item was always treated as USD regardless of what was actually said, and the
+// stored row's shape had no currency field to begin with.
+test("extractInvoiceItemArgs recognizes a local-currency unit price, not just a literal dollar sign", () => {
+  const result = voiceDispatch.extractInvoiceItemArgs("add a line item to INV-1001: 5 bags of maize at 500 shillings each", {});
+  assert.equal(result.unitPrice, 500);
+  assert.equal(result.currency, "KES");
+});
+
+test("computeBusinessDashboard buckets invoiceTotal by currency instead of mixing it under one label", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    invoiceItems: [
+      { invoiceNumber: "INV-1", quantity: 2, unitPrice: 50, currency: "USD" },
+      { invoiceNumber: "INV-2", quantity: 1, unitPrice: 5000000, currency: "KES" },
+      { invoiceNumber: "INV-3", quantity: 3, unitPrice: 10, currency: "USD" }
+    ]
+  }));
+  // Bucketed by raw numeric total, same convention as otherGrantRequestedCurrencies/otherListingCurrencies
+  // elsewhere in this file (no real currency-value conversion) -- KES's larger raw number sorts first here.
+  assert.equal(dashboard.invoiceCurrency, "KES");
+  assert.equal(dashboard.invoiceTotal, 5000000);
+  assert.deepEqual(dashboard.otherInvoiceCurrencies, ["USD"], "the USD line items (100+30=130) must be tracked separately, not combined with KES's larger raw number");
+});
+
+test("an invoice line item with no currency stated still defaults cleanly to USD, unaffected by the currency fix", () => {
+  const dashboard = voiceDispatch.computeBusinessDashboard(dashboardCatalog({
+    invoiceItems: [{ invoiceNumber: "INV-1", quantity: 2, unitPrice: 50 }]
+  }));
+  assert.equal(dashboard.invoiceCurrency, "USD");
+  assert.equal(dashboard.invoiceTotal, 100);
+  assert.deepEqual(dashboard.otherInvoiceCurrencies, []);
+});
+
 // Found live: grant.status is freeform text with no normalization --
 // "Awarded" (capitalized, exactly how a natural "set the grant status to
 // Awarded" phrase gets stored) never matched an exact-lowercase "awarded"

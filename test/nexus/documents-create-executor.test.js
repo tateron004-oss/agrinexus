@@ -60,6 +60,36 @@ test("an unbounded document content string is capped before reaching the real ex
   });
 });
 
+// Found live (follow-up sweep): truncation above happened with no signal anywhere in the result --
+// for a caller like healthwork/privacy.js's "export all my patient records" (explicitly the backup to
+// take before an irreversible ERASE ALL), a silently truncated export is a silently INCOMPLETE backup.
+// The executor must now surface it, and verifyDocumentsCreateOutcome must refuse to call it verified.
+test("a truncated export is surfaced as data.truncated, not silently reported as a complete success", async () => {
+  await withPatched(exportProvider, "exportDocument", async body => ({
+    httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-truncated", bytes: body.content.length } }
+  }), async () => {
+    const execute = createDocumentsCreateExecutor({ env: {} });
+    const result = await execute({ input: { title: "Full patient export", content: "x".repeat(60000), format: "json" } });
+    assert.equal(result.data.truncated, true);
+    assert.equal(result.data.originalLength, 60000);
+    assert.equal(result.data.savedLength, 50000);
+    const outcome = verifyDocumentsCreateOutcome({ result });
+    assert.equal(outcome.verified, false, "a truncated export must never verify as a complete, trustworthy backup");
+    assert.equal(outcome.reason, "content_truncated");
+  });
+});
+
+test("content at or under the cap is never flagged as truncated, unaffected by the fix", async () => {
+  await withPatched(exportProvider, "exportDocument", async body => ({
+    httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-normal", bytes: body.content.length } }
+  }), async () => {
+    const execute = createDocumentsCreateExecutor({ env: {} });
+    const result = await execute({ input: { title: "Small export", content: "a normal short document", format: "txt" } });
+    assert.equal(result.data.truncated, undefined);
+    assert.equal(verifyDocumentsCreateOutcome({ result }).verified, true);
+  });
+});
+
 // Found live (production outage, capability-testing the orb): the planning
 // model's tool-call schema has no enum constraint on format, so it wrote
 // "document" for a plain "create a document" request -- outside

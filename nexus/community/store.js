@@ -61,9 +61,20 @@ class CommunityRepository {
     const row = (result.rows || result)[0];
     return row ? { memoryId: row.memory_id, userId: row.principal_id, content: row.content } : null;
   }
-  async updateReport({ tenantId, memoryId, content }) {
-    const result = await this.db.query(`update nexus_memory_items set content=$3,updated_at=now()
-      where tenant_id=$1 and memory_id=$2 and purpose='community_reports' and deleted_at is null returning memory_id`, [tenantId, memoryId, content]);
+  // Found live (follow-up sweep of the CAS/lost-update bug class closed elsewhere tonight):
+  // this was a plain unconditional update with no guard that the report was still in the state
+  // the caller read it in, unlike addReport()'s own advisory-lock-guarded numbering right above.
+  // Two staff members updating the same report close together could both read the same starting
+  // content and each write their own update; whichever lands last silently discards the other's
+  // status/note. `expectedStatus` lets the caller require the report's current status to still
+  // match what it read before writing, closing the race the same way the rest of the codebase does.
+  async updateReport({ tenantId, memoryId, content, expectedStatus }) {
+    const params = [tenantId, memoryId, content];
+    let sql = `update nexus_memory_items set content=$3,updated_at=now()
+      where tenant_id=$1 and memory_id=$2 and purpose='community_reports' and deleted_at is null`;
+    if (expectedStatus !== undefined) { sql += ` and coalesce(content->>'status','') = $${params.length + 1}`; params.push(expectedStatus); }
+    sql += ` returning memory_id`;
+    const result = await this.db.query(sql, params);
     return Boolean((result.rows || result)[0]);
   }
 

@@ -100,3 +100,41 @@ test("real Twilio send/call routes are rate-limited beyond the account/role chec
   }
   assert.ok(sawRateLimited, "expected the real-send route to eventually respond 429 under a rapid-fire loop");
 });
+
+// Found live (follow-up rate-limiting sweep): these two routes -- both able to trigger a real,
+// caller-controlled-recipient email or SMS/WhatsApp send once confirmed:true -- were missed by the
+// audit above and had no route-specific rate limit at all, only the generic 180/min/IP+path blanket.
+test("the real email send-packet and communications send-message routes are also rate-limited", async () => {
+  let sawRateLimited = false;
+  for (let i = 0; i < 25; i += 1) {
+    const result = await post("/api/nexus/email/send-packet", { to: "someone@example.com", confirmed: true }, adminCookie);
+    if (result.status === 429) { sawRateLimited = true; break; }
+  }
+  assert.ok(sawRateLimited, "expected /api/nexus/email/send-packet to eventually respond 429 under a rapid-fire loop");
+
+  let sawRateLimitedComms = false;
+  for (let i = 0; i < 25; i += 1) {
+    const result = await post("/api/nexus/communications/send-message", { to: "+15555550100", channel: "sms", confirmed: true }, adminCookie);
+    if (result.status === 429) { sawRateLimitedComms = true; break; }
+  }
+  assert.ok(sawRateLimitedComms, "expected /api/nexus/communications/send-message to eventually respond 429 under a rapid-fire loop");
+});
+
+// Found live (same sweep): sendNexusProviderCoordinationPacket performs a real email/SMS/WhatsApp
+// send to a fixed, server-configured provider contact -- lower severity than a caller-controlled
+// recipient, but the same missing-guard shape, and worth closing alongside the routes above.
+test("the real pharmacy/mobile-clinic send-referral routes are also rate-limited", async () => {
+  let sawRateLimitedPharmacy = false;
+  for (let i = 0; i < 25; i += 1) {
+    const result = await post("/api/nexus/pharmacy/send-referral", { confirmed: true }, adminCookie);
+    if (result.status === 429) { sawRateLimitedPharmacy = true; break; }
+  }
+  assert.ok(sawRateLimitedPharmacy, "expected /api/nexus/pharmacy/send-referral to eventually respond 429 under a rapid-fire loop");
+
+  let sawRateLimitedClinic = false;
+  for (let i = 0; i < 25; i += 1) {
+    const result = await post("/api/nexus/mobile-clinic/send-request", { confirmed: true }, adminCookie);
+    if (result.status === 429) { sawRateLimitedClinic = true; break; }
+  }
+  assert.ok(sawRateLimitedClinic, "expected /api/nexus/mobile-clinic/send-request to eventually respond 429 under a rapid-fire loop");
+});

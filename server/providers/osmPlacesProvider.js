@@ -50,6 +50,14 @@ const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
 // this provider already depends on for geocoding, answered the same bounded
 // query in under a second. Used only when the caller names a fallbackTerm and
 // Overpass failed or found nothing; results are the same real OpenStreetMap data.
+// Found live (follow-up sweep, same shape as nexus/navigation/service.js's already-fixed clampLat/
+// clampLng): unclamped, this could send a latitude past +/-90 near a pole or a longitude past +/-180
+// near the antimeridian -- and unlike navigation/service.js (which never sets bounded=1, so an
+// out-of-range viewbox there only degrades ranking), THIS provider sets bounded=1, making it a hard
+// filter that can zero out real nearby pharmacy/clinic results for a health-related feature.
+const clampLat = value => Math.max(-90, Math.min(90, value));
+const clampLng = value => Math.max(-180, Math.min(180, value));
+
 async function nominatimPlaces({ origin, term, limit, radiusMeters, fetcher }) {
   const latDelta = radiusMeters / 111000;
   const lonDelta = radiusMeters / (111000 * Math.max(Math.cos((origin.lat * Math.PI) / 180), 0.1));
@@ -60,7 +68,7 @@ async function nominatimPlaces({ origin, term, limit, radiusMeters, fetcher }) {
   url.searchParams.set("addressdetails", "1");
   url.searchParams.set("extratags", "1");
   url.searchParams.set("bounded", "1");
-  url.searchParams.set("viewbox", [origin.lon - lonDelta, origin.lat + latDelta, origin.lon + lonDelta, origin.lat - latDelta].join(","));
+  url.searchParams.set("viewbox", [clampLng(origin.lon - lonDelta), clampLat(origin.lat + latDelta), clampLng(origin.lon + lonDelta), clampLat(origin.lat - latDelta)].join(","));
   const response = await fetcher(url, { method: "GET", headers: { accept: "application/json", "user-agent": USER_AGENT }, signal: AbortSignal.timeout(9000) });
   const payload = await safeJson(response);
   if (!response.ok || !Array.isArray(payload)) throw new Error("nominatim-unavailable");

@@ -94,7 +94,17 @@ async function communityTurn({ text, store, notifications, tenantId, userId, nam
         }
         const found = await store.getReport({ tenantId, number: request.number });
         if (!found) return `I can't find report #${request.number}.`;
-        await store.updateReport({ tenantId, memoryId: found.memoryId, content: { ...found.content, status: request.status, note: request.note || found.content.note || "", updatedAt: now.toISOString(), updatedDay: today, updatedBy: clean(userName).slice(0, 60) } });
+        // Found live: this wrote unconditionally, so two staff updating the same report close
+        // together could each overwrite the other's status/note -- and BOTH pushes below still went
+        // out worded from each caller's own request.status/note, so a citizen could be told their
+        // report is "resolved" while what's actually persisted is whatever a second, racing update
+        // landed with. Claim the report atomically (it must still be in the status this caller read)
+        // before pushing anything, so the push and the persisted content always agree.
+        const claimed = await store.updateReport({ tenantId, memoryId: found.memoryId, content: { ...found.content, status: request.status, note: request.note || found.content.note || "", updatedAt: now.toISOString(), updatedDay: today, updatedBy: clean(userName).slice(0, 60) }, expectedStatus: found.content.status });
+        if (!claimed) {
+          const latest = await store.getReport({ tenantId, number: request.number });
+          return `Report #${request.number} was just updated${latest ? ` (it's now ${STATUS_WORDS[latest.content.status] || latest.content.status})` : ""} by someone else. Check it and say the update again if it still needs changing.`;
+        }
         if (found.userId && found.userId !== userId) await push(found.userId, "Your report was updated", `Report #${request.number} is now ${STATUS_WORDS[request.status]}${request.note ? `: ${request.note}` : "."}`, `report:${request.number}:${tenantId}:${request.status}:${now.getTime() - (now.getTime() % 60000)}`);
         return `Done. Report #${request.number} is now ${STATUS_WORDS[request.status]}${found.userId !== userId ? ", and the person who reported it has been told" : ""}.`;
       }

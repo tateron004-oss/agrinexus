@@ -221,10 +221,17 @@
     return /\b(stop|pause|end|resume)\b.*\b(music|rhythm|song|audio|playback)\b/.test(text);
   }
 
+  // Found live (same bug shape as the other music-intent fixes tonight): isKenyaMusicCommand right
+  // above this function is a careful compound-phrase classifier (requires verb + music-noun + kenya/
+  // kenyan together), but this "broader fallback" re-listed "african"/"nigerian"/"study"/"relaxing"/
+  // "workout"/"exercise"/"fitness" as bare alternatives needing only a verb, with no music-noun
+  // requirement at all. "start my workout", "play nigerian jollof rice recipe", "open the study group
+  // chat", and (especially bad for an agriculture app) "play african swine fever alert" all matched
+  // and got swallowed into a canned "I prepared safe music provider options" response.
   function isMediaProviderHandoffCommand(command) {
     const text = normalizeCommand(command).toLowerCase();
     if (isKenyaMusicCommand(text) || isStopMusicCommand(text)) return false;
-    return /\b(play|open|use|start)\b.*\b(music|r\s*&\s*b|rnb|afrobeats?|afro beats?|african|nigerian|naija|amapiano|highlife|gospel|jazz|youtube|spotify|apple music|study|background|relaxing|workout|exercise|fitness)\b/.test(text)
+    return /\b(play|open|use|start)\b.*\b(music|r\s*&\s*b|rnb|afrobeats?|afro beats?|naija|amapiano|highlife|gospel|jazz|youtube|spotify|apple music|background)\b/.test(text)
       || /\b(open this in|use)\b.*\b(youtube|spotify|apple music)\b/.test(text)
       || /\b(music while i study|background music)\b/.test(text);
   }

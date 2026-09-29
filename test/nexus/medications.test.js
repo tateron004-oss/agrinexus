@@ -190,6 +190,43 @@ test("a dose confirmed mid-sweep is never clobbered back to alerted, and no fals
   assert.ok(dose.content.takenAt, "the real confirmation's takenAt must still be present");
 });
 
+// Found live (follow-up sweep of the checkin/dose CAS races): the reverse direction of the race the
+// test above covers. Here sendDue()'s "pending -> alerted" claim wins FIRST (for real), and turn()'s
+// own "taken" confirmation arrives after, but reading a snapshot of the dose from BEFORE that claim
+// landed -- exactly what happens when turn()'s dosesForDay() read and sendDue()'s later claim race in
+// the other order. The real data still ends up "taken" either way (the confirm write always wins), but
+// the OLD code's "was it alerted" check read that same stale pre-claim snapshot, so the circle's earlier
+// "a dose is waiting" alert was never cleared with a "Dose taken" push -- left unresolved even though
+// the person confirmed on time relative to their own answer.
+test("confirming a dose after its alert claim already won the race still clears the circle's alert", async () => {
+  const members = [{ otherId: "u-amina", otherName: "Amina Wanjiru", shares: { medications: true } }];
+  const store = fakeStore(); const pushes = []; let clock = new Date("2026-09-20T05:00:00Z");
+  const circle = { async activeMembers() { return members; } };
+  const service = createMedicationService({ store, circle, notifications: { enqueue: async () => {} }, devices: { listPushable: async () => [{ id: 1 }] }, autonomyControl: { isPaused: async () => false },
+    push: async row => { pushes.push(row); }, memoryUserName: async () => "Baba Kamau", now: () => clock });
+  await service.turn({ tenantId: "t1", userId: "u1", text: "Add medication metformin 500mg at 8am", timeZone: "Africa/Nairobi", at: clock });
+  await service.sendDue({ at: clock }); pushes.length = 0;
+  clock = new Date("2026-09-20T07:10:00Z"); // past the two-hour grace window
+
+  // Freeze dosesForDay() to always hand back a snapshot taken NOW, while the dose is still "pending" --
+  // simulating turn() having read the dose a moment before sendDue's claim lands, even though its
+  // actual write happens after.
+  const realDosesForDay = store.dosesForDay.bind(store);
+  const stale = await realDosesForDay({ tenantId: "t1", userId: "u1", day: "2026-09-20" });
+  assert.equal(stale[0]?.status, "pending", "sanity check: the frozen snapshot must be the real pre-claim state");
+  store.dosesForDay = async () => stale;
+
+  await service.sendDue({ at: clock }); // claims "alerted" for real and tells the circle a dose is waiting
+  pushes.length = 0;
+
+  await service.turn({ tenantId: "t1", userId: "u1", text: "I took my metformin", timeZone: "Africa/Nairobi", at: clock });
+
+  const dose = store.rows.find(row => row.content.kind === "dose");
+  assert.equal(dose.content.status, "taken", "the real confirmation must still be recorded regardless of the stale read");
+  assert.equal(pushes.filter(push => push.userId === "u-amina" && push.title === "Dose taken").length, 1,
+    "the circle must be told the dose was taken, clearing the earlier 'a dose is waiting' alert -- not left unresolved");
+});
+
 test("with nobody chosen, a missed dose is recorded quietly and nobody is told", async () => {
   const s = setup(); await s.say("Add medication metformin at 8am"); await s.service.sendDue({ at: s.clock }); s.pushes.length = 0;
   const late = await s.service.sendDue({ at: new Date("2026-09-20T07:30:00Z") });

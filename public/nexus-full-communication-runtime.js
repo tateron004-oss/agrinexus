@@ -330,7 +330,7 @@
   function detectChannel(text = "") {
     const value = lower(text);
     if (/\b(whatsapp|wa)\b/.test(value)) return "whatsapp";
-    if (/\b(sms|text message|text the)\b/.test(value)) return "sms";
+    if (/\b(sms|text)\b/.test(value)) return "sms";
     if (/\b(email|mail)\b/.test(value)) return "email";
     if (/\b(telegram)\b/.test(value)) return "telegram";
     if (/\b(notification|notify)\b/.test(value)) return "notification";

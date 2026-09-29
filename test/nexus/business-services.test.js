@@ -257,6 +257,30 @@ test("appointment scheduler: syncing writes back a real calendar event and never
   assert.equal(synced2.data.editable.appointments[0].status, 'synced-simulated');
 });
 
+// Found live: unlike checkout() (refuses a second real subscription once one
+// is active), syncAppointment had no equivalent guard -- re-syncing an
+// already-synced appointment created a SECOND real duplicate event on the
+// user's actual calendar and silently overwrote the stored calendarEventId/
+// calendarLink, orphaning the first event with no way to manage it through
+// the app anymore.
+test("appointment scheduler: re-syncing an already-synced appointment is refused, not silently duplicated on the real calendar", async () => {
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  let calendarCalls = [];
+  const f = fixture({ calendar: async input => { calendarCalls.push(input); return { eventId: `evt_${calendarCalls.length}`, htmlLink: 'https://calendar.example/evt', providerVerified: true }; } });
+  const row = await f.service.create(f.context, { businessName: 'Cooperative', consent: true });
+  const editable = { ...row.data.editable, appointments: [{ title: 'Vet visit', start: '2026-04-01T09:00', end: '2026-04-01T10:00', notes: '', status: 'scheduled', calendarEventId: '', calendarLink: '' }] };
+  const updated = await f.service.update(f.context, row.record_id, { expectedVersion: 1, editable });
+  const synced = await f.service.syncAppointment(f.context, row.record_id, { appointmentIndex: 0, expectedVersion: updated.version, confirmed: true });
+  assert.equal(calendarCalls.length, 1, 'the first, legitimate sync must still create one real calendar event');
+
+  await assert.rejects(
+    () => f.service.syncAppointment(f.context, row.record_id, { appointmentIndex: 0, expectedVersion: synced.version, confirmed: true }),
+    error => error.code === 'business_appointment_already_synced'
+  );
+  assert.equal(calendarCalls.length, 1, 'a re-sync of an already-synced appointment must never create a second real calendar event');
+  assert.equal(synced.data.editable.appointments[0].calendarEventId, 'evt_1', 'the original real calendar event must not be overwritten by a refused re-sync');
+});
+
 test("business plan builder: a real, editable, versioned plan document persists and exports as a real PDF", async () => {
   const info = templates.inferBusiness({ businessName: 'Cooperative' });
   assert.deepEqual(templates.defaultClientWorkspace(info).businessPlan, {
