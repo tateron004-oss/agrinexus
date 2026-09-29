@@ -94,6 +94,25 @@ test("revoking business consent withdraws every scope it ever granted, not just 
   assert.equal(f.grants.size, 0, "revoking business consent must withdraw every scope, not leave AI/billing consent active forever");
 });
 
+// Found live (business/personal sibling sweep): unlike plan() (which checks the base DATA_SCOPE
+// consent before AI_SCOPE), assistant() only ever checked/re-granted AI_SCOPE -- so once a user
+// revoked business consent, a later assistant() call with consent:true silently re-granted ONLY
+// AI_SCOPE and shared the entire workspace with the AI provider anyway, even though the user's base
+// "you may use/store my business data" consent was not active.
+test("assistant() refuses to share the workspace with the AI provider after business consent is revoked, matching plan()", async () => {
+  let calls = 0;
+  const f = fixture({ assistant: async () => { calls++; return { reply: "ok" }; } });
+  const row = await f.service.create(f.context, { businessName: "Cooperative", consent: true });
+  await f.service.assistant(f.context, row.record_id, { confirmed: true, consent: true, message: "hi" });
+  assert.equal(calls, 1, "the first, consented call must still reach the AI provider");
+  await f.service.revokeConsent(f.context);
+  await assert.rejects(
+    () => f.service.assistant(f.context, row.record_id, { confirmed: true, consent: true, message: "hi again" }),
+    error => error.code === "business_consent_required"
+  );
+  assert.equal(calls, 1, "the AI provider must never be called again once base business consent is revoked");
+});
+
 test("disabled business providers cannot fetch even when methods are invoked", async () => {
   let calls = 0; const providers = createBusinessProviders({ env: {}, fetchFn: async () => { calls++; throw Error("Network forbidden"); } });
   await assert.rejects(() => providers.assistant({}), error => error.code === "business_provider_unavailable");

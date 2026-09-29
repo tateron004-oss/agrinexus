@@ -368,6 +368,13 @@ class BusinessService {
   async assistant(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm sharing this draft with the AI provider.", 409);
+    // Found live (business/personal sibling sweep): unlike plan() right below, this never checked
+    // DATA_SCOPE (the base "you may use/store my business data" consent) before AI_SCOPE -- so once a
+    // user revoked business consent (revokeConsent() correctly withdraws DATA_SCOPE/AI_SCOPE/
+    // BILLING_SCOPE together), a later assistant() call with consent:true silently re-granted ONLY
+    // AI_SCOPE and shared the entire workspace (all CRM/financial data in record.data.editable) with
+    // the AI provider anyway, even though the user's base data-storage consent was not active.
+    await this.consent(context);
     await this.consent(context, body.consent === true, AI_SCOPE);
     const record = await this.owned(context, recordId);
     if (!this.providers.assistant) fail("business_provider_unavailable", "Business AI is unavailable.", 503);
