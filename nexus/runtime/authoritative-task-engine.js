@@ -182,16 +182,36 @@ class AuthoritativeTaskEngine {
         key, "completed", { ...verification, selectedTool: toolId, fallbackAttempt: attempt });
       const execution = await this.executions.finish({ tenantId: context.tenantId,
         executionId: started.execution.execution_id, stepId, successful: true, response: result, receipt, verified: true });
-      const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
-      await this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
-        correlationId: task.correlationId, taskId, eventType: "tool.completed", outcome: "verified", metadata: receipt });
-      if (this.observability) {
-        await observeSafely(() => this.observability.recordCost({ tenantId: context.tenantId, taskId,
-          toolId: tool.tool_id, provider: providerId, estimatedCostCents: result?.costCents ?? estimatedCostCents,
-          metadata: { executionId: started.execution.execution_id } }));
-        await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
-          providerId, successful: true, latencyMs: Date.now() - observedAt }));
-        if (span) await observeSafely(() => this.observability.finishSpan(span, { attributes: { verified: true } }));
+      // Found live (notifications/push-delivery audit): the real tool call and its
+      // verification (above) already genuinely completed by this point, and finish()
+      // just durably recorded it. The audit-log write and observability calls below
+      // are bookkeeping, not the operation itself -- if either threw (a transient DB
+      // blip), this used to fall straight into the catch below, which calls
+      // finish(successful:false) on the SAME executionId, silently overwriting an
+      // already-completed, already-verified execution back to 'failed'. The next
+      // retry then computes a brand-new idempotency key (`${baseKey}:retry:N`),
+      // which the duplicate check never matches against the original completed key,
+      // so the real tool call runs AGAIN for real -- e.g. a second, genuinely
+      // duplicate reminders.schedule notification. A bookkeeping failure after a
+      // confirmed completion must never re-trigger the tool, so it gets its own
+      // non-requeuing catch, matching the identical pattern already established for
+      // notifications.deliver() in nexus/workers/handlers.js.
+      try {
+        const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: false });
+        await this.audit.record({ tenantId: context.tenantId, actorId: context.userId,
+          correlationId: task.correlationId, taskId, eventType: "tool.completed", outcome: "verified", metadata: receipt });
+        if (this.observability) {
+          await observeSafely(() => this.observability.recordCost({ tenantId: context.tenantId, taskId,
+            toolId: tool.tool_id, provider: providerId, estimatedCostCents: result?.costCents ?? estimatedCostCents,
+            metadata: { executionId: started.execution.execution_id } }));
+          await observeSafely(() => this.observability.recordProviderHealth({ tenantId: context.tenantId,
+            providerId, successful: true, latencyMs: Date.now() - observedAt }));
+          if (span) await observeSafely(() => this.observability.finishSpan(span, { attributes: { verified: true } }));
+        }
+      } catch {
+        // The real execution is already durably completed; a failure recording the
+        // audit trail or observability metrics must not be treated as the tool
+        // itself having failed.
       }
       return { execution, duplicate: false, receipt };
       } catch (cause) {
