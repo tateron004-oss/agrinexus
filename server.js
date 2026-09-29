@@ -41538,7 +41538,16 @@ function nexusOperationsSummary(db, user = null) {
       consentBeforeSharing: true,
       auditTrail: true
     },
-    recentReceipts: store.actionReceipts.slice(0, 8),
+    // Found live (investor/admin dashboard audit): unlike recentAudit just
+    // below (redacted via redactSensitiveAuditEntry) and show_action_receipts'
+    // own entityId redaction, this returned every entry's real entityId
+    // (chronicCareId/transactionId/applicantId/...) to any caller. This
+    // function backs publicState()'s persistentOperations field, returned
+    // directly by GET /api/state and 27+ other routes -- so a Guest,
+    // Investor, or Standard User got real entityIds for OTHER users' records
+    // on essentially every page load or action response, the exact IDOR-
+    // enabling leak show_action_receipts was already fixed to prevent.
+    recentReceipts: store.actionReceipts.slice(0, 8).map(entry => canViewSensitiveAudit ? entry : { ...entry, entityId: null }),
     recentAudit: store.auditLogs.slice(0, 8).map(entry => redactSensitiveAuditEntry(entry, canViewSensitiveAudit))
   };
 }
@@ -45052,12 +45061,20 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/activation-matrix" && req.method === "GET") {
+    // Found live (investor/admin dashboard audit): unlike its siblings
+    // /api/nexus/operation-receipts and /api/nexus/audit-log (both gated with
+    // `if (!user) return 401`), this route had no auth check at all AND
+    // returned raw, unredacted receipts/audit entries -- a fully anonymous,
+    // pre-login caller got real entityIds and unredacted before/after
+    // snapshots for every user's records.
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const store = ensureNexusPersistentOperations(db);
+    const canViewSensitive = canUse(user, "admin");
     addNexusOperationsAudit(db, "activation", "matrix", "activation_matrix_viewed", user?.role || "standard-user", "All-modes activation matrix viewed; no provider execution occurred.");
     const snapshot = nexusActivationRegistrySnapshot(process.env);
     snapshot.internetServices = nexusInternetServicesSnapshot(process.env);
-    snapshot.receipts = store.actionReceipts.slice(0, 12);
-    snapshot.audit = store.auditLogs.slice(0, 12);
+    snapshot.receipts = store.actionReceipts.slice(0, 12).map(entry => canViewSensitive ? entry : { ...entry, entityId: null });
+    snapshot.audit = store.auditLogs.slice(0, 12).map(entry => redactSensitiveAuditEntry(entry, canViewSensitive));
     await writeDb(db);
     return send(res, 200, snapshot);
   }
@@ -45175,7 +45192,14 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/operation-receipts" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     const store = ensureNexusPersistentOperations(db);
-    return send(res, 200, { ok: true, receipts: store.actionReceipts.slice(0, 100), noSecretValues: true });
+    // Found live (investor/admin dashboard audit): unlike its sibling
+    // /api/nexus/audit-log two routes below (redacted via
+    // redactSensitiveAuditEntry) and show_action_receipts' own entityId
+    // redaction, this route returned every signed-in caller (Guest,
+    // Investor, Standard User) the real entityId (chronicCareId/
+    // transactionId/applicantId/...) for every user's action receipts.
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, receipts: store.actionReceipts.slice(0, 100).map(entry => canViewSensitive ? entry : { ...entry, entityId: null }), noSecretValues: true });
   }
 
   if (url.pathname === "/api/nexus/audit-log" && req.method === "GET") {
