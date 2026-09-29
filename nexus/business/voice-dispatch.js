@@ -52,11 +52,31 @@ async function resolveBusinessClient(businessRequest, command = "") {
   const clients = listing?.body?.clients || [];
   if (!clients.length) return { clients, client: null };
   const text = String(command || "").toLowerCase();
-  const named = clients.find(item => {
+  // Found live (systemic ambiguous-match sweep): the same "first match wins"
+  // bug already fixed for resolveGrant/resolveTask/resolveAppointmentIndex/
+  // resolveListingIndex in this file -- Array.find picked whichever workspace
+  // happened to come first in the array, not the most specific name actually
+  // spoken. Two workspaces "Grace" and "Grace's Bakery" (an ordinary
+  // real-world naming collision): "log a $50 expense for Grace's Bakery"
+  // could silently record into the wrong, shorter-named workspace depending
+  // purely on array order, corrupting both workspaces' ledgers with no error.
+  // Now picks the longest (most specific) matching name; unlike its siblings,
+  // a genuine tie falls back to the first tied match (the most recently
+  // updated, since this list is already ordered by updated_at desc) rather
+  // than refusing outright -- every one of resolveBusinessClient's ~20 call
+  // sites treats a null client as "you have no workspace at all" and would
+  // show that misleading message on a tie, unlike the siblings' callers which
+  // are built to ask a clarifying question.
+  const matches = clients.filter(item => {
     const name = item.data?.info?.businessName;
     return name && text.includes(String(name).toLowerCase());
   });
-  return { clients, client: named || clients[0] };
+  if (matches.length) {
+    const longest = Math.max(...matches.map(item => String(item.data.info.businessName).length));
+    const named = matches.find(item => String(item.data.info.businessName).length === longest);
+    return { clients, client: named };
+  }
+  return { clients, client: clients[0] };
 }
 
 function extractLeadArgs(command = "", args = {}) {

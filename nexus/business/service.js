@@ -304,6 +304,15 @@ class BusinessService {
     const appointments = record.data.editable.appointments;
     if (!Number.isInteger(index) || !appointments[index]) fail("business_appointment_not_found", "No appointment at that position exists in this workspace.", 404);
     const appointment = appointments[index];
+    // Found live: unlike checkout() just above (refuses a second real
+    // subscription once one is active), this had no equivalent guard --
+    // re-syncing an appointment that was already synced created a SECOND
+    // real duplicate event on the user's actual calendar and silently
+    // overwrote the stored calendarEventId/calendarLink, orphaning the first
+    // event with no way to manage it through the app anymore.
+    if (appointment.status === "synced" || appointment.status === "synced-simulated") {
+      fail("business_appointment_already_synced", "This appointment is already synced to your calendar.", 409);
+    }
     if (!this.providers.calendar) fail("business_provider_unavailable", "Calendar sync is unavailable.", 503);
     const result = await this.providers.calendar({ title: appointment.title, start: appointment.start,
       end: appointment.end, notes: appointment.notes });

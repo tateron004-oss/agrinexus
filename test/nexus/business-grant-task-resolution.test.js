@@ -82,3 +82,37 @@ test("resolveAppointmentIndex still falls back to the one unsynced appointment f
   const tied = [{ title: "Vet visit", status: "pending" }, { title: "Vet visit", status: "pending" }];
   assert.equal(voiceDispatch.resolveAppointmentIndex(tied, "sync my vet visit appointment"), -1, "a genuine tie must be left ambiguous, not guessed");
 });
+
+// Found live (systemic ambiguous-match sweep, 2026-09-28): the top-level
+// workspace resolver used by every single business operation (leads,
+// transactions, invoices, grants, tasks, listings, appointments) still used
+// plain Array.find -- the exact bug already fixed for its siblings above.
+// Two workspaces "Grace" and "Grace's Bakery" (an ordinary real-world naming
+// collision): "log a $50 expense for Grace's Bakery" could silently record
+// into the wrong, shorter-named workspace depending purely on array order.
+test("resolveBusinessClient picks the most specific (longest) matching workspace name, not just the first one in array order", async () => {
+  const clients = [
+    { record_id: "rec_1", data: { info: { businessName: "Grace" } } },
+    { record_id: "rec_2", data: { info: { businessName: "Grace's Bakery" } } }
+  ];
+  const businessRequest = async () => ({ body: { clients } });
+  const named = await voiceDispatch.resolveBusinessClient(businessRequest, "log a $50 expense for Grace's Bakery");
+  assert.equal(named.client, clients[1]);
+  const plain = await voiceDispatch.resolveBusinessClient(businessRequest, "log a $50 expense for Grace");
+  assert.equal(plain.client, clients[0]);
+  // Unaffected when the array order is reversed.
+  const reversed = [clients[1], clients[0]];
+  const reversedRequest = async () => ({ body: { clients: reversed } });
+  const namedReversed = await voiceDispatch.resolveBusinessClient(reversedRequest, "log a $50 expense for Grace's Bakery");
+  assert.equal(namedReversed.client, clients[1]);
+});
+
+test("resolveBusinessClient falls back to the most recently updated workspace when no name is spoken, unaffected by the longest-match fix", async () => {
+  const clients = [
+    { record_id: "rec_1", data: { info: { businessName: "Riverside Farm" } } },
+    { record_id: "rec_2", data: { info: { businessName: "Downtown Clinic" } } }
+  ];
+  const businessRequest = async () => ({ body: { clients } });
+  const resolved = await voiceDispatch.resolveBusinessClient(businessRequest, "show me the dashboard");
+  assert.equal(resolved.client, clients[0]);
+});
