@@ -28,6 +28,27 @@ test("trainingPlan blocks medically forbidden content the same way other medical
   assert.equal(db.profile.nexusFitnessTrainingPlans?.length || 0, 0);
 });
 
+// Found live (telehealth sibling sweep): intake() scanned body.goal/body.notes against
+// guardMedicalText, but the real, shipped client form for this exact endpoint has no "goal" or
+// "notes" field -- its one free-text field is literally named "participationGoal", which is what
+// actually gets persisted. Every real submission through the real UI had body.goal/body.notes
+// undefined, so the scan was effectively a no-op and whatever the user actually typed into
+// "Participation goal" -- including forbidden-medical-execution or emergency-word content -- was
+// saved verbatim.
+test("intake blocks medically forbidden content in the field the real form actually sends (participationGoal), not just goal/notes", () => {
+  const db = fixtureDb();
+  const blocked = rtmBridge.intake({ participationGoal: "prescribe me a dosage plan", confirmed: true }, db, {});
+  assert.equal(blocked.body.status, "blocked", JSON.stringify(blocked.body));
+  assert.equal(db.profile.nexusRtmIntakes?.length || 0, 0, "no intake must be saved when participationGoal is forbidden content");
+
+  const emergencyBlocked = rtmBridge.intake({ participationGoal: "having chest pain during exercise", confirmed: true }, db, {});
+  assert.equal(emergencyBlocked.body.status, "blocked", JSON.stringify(emergencyBlocked.body));
+
+  const ok = rtmBridge.intake({ participationGoal: "organize weekly rehab activity for review", confirmed: true }, db, {});
+  assert.equal(ok.body.status, "completed", JSON.stringify(ok.body));
+  assert.equal(db.profile.nexusRtmIntakes.length, 1);
+});
+
 test("trainingPlans lists saved plans, most recent first", () => {
   const db = fixtureDb();
   rtmBridge.trainingPlan({ goal: "build strength", confirmed: true }, db, {});
