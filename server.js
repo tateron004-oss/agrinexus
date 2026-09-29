@@ -12488,7 +12488,12 @@ function createVideoSessionWorkflow(db, user, body = {}) {
   // "video + injury/patient/doctor" branches call this function directly
   // with no restriction check at all, letting a guest/restricted account
   // write a real health intake record via natural-language commands.
-  if (isHealth && !intake && !user?.restrictions?.includes("health-record-write")) {
+  // Found live (further follow-up sweep): this fix used the raw
+  // `user?.restrictions?.includes(...)` idiom instead of the centralized
+  // userIsRestrictedFrom() built specifically to close the "a role with no
+  // restrictions array at all sails through an includes() check" gap (e.g.
+  // Investor) -- reopening exactly that gap here.
+  if (isHealth && !intake && !userIsRestrictedFrom(user, "health-record-write")) {
     intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-VIDEO`,
@@ -13255,7 +13260,11 @@ async function createCommunicationThread(db, user, body = {}) {
   // (several dedicated communication routes, or the legacy runAgentCommand
   // dispatcher's own "message/notify/sms/whatsapp" branches, which have no
   // restriction check of their own) could send a real Twilio SMS/WhatsApp.
-  if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !user?.restrictions?.includes("communications-send")) {
+  // Found live (further follow-up sweep): this used the raw `user?.restrictions?.includes(...)`
+  // idiom instead of the centralized userIsRestrictedFrom(), reopening the "a role with no
+  // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
+  // exists to close everywhere.
+  if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")) {
     delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
     outbound.status = delivery.ok ? "sent-live" : "sent-local";
     outbound.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
@@ -17469,7 +17478,11 @@ async function createOutboundCallWorkflow(db, user, body = {}) {
   // runAgentCommand natural-language dispatcher's own "call the doctor/buyer"
   // branches, which have no restriction check of their own) could place a real
   // Twilio call. Fixing it here, once, closes every current and future caller.
-  const delivery = user?.restrictions?.includes("communications-send")
+  // Found live (further follow-up sweep): this used the raw `user?.restrictions?.includes(...)`
+  // idiom instead of the centralized userIsRestrictedFrom(), reopening the "a role with no
+  // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
+  // exists to close everywhere.
+  const delivery = userIsRestrictedFrom(user, "communications-send")
     ? { attempted: false, ok: false, status: "restricted-account-no-real-call" }
     : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
   const record = {
