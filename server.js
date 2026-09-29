@@ -2772,6 +2772,32 @@ function knownUnownedProfileGaps(profile) {
   if (hasAny(["nexusDroneMissionRequests", "nexusRpmIntakes", "nexusRtmIntakes", "nexusFitnessTrainingPlans", "nexusSavedMobileClinics", "nexusWorkflowPlans", "nexusChronicDiseaseIntakes", "nexusTelehealthBridgeIntakes", "nexusTelehealthBridgeSessions"])) {
     gaps.push("Locally-saved drone-bridge mission requests, RPM/RTM/telehealth-bridge/chronic-disease intake and session preparation records, fitness training plans, saved mobile clinics, and workflow plans have no per-account owner field today and are not included.");
   }
+  // Found live (exhaustive follow-up sweep, same bug shape as the three
+  // blocks above): every remaining db.profile array in server.js's own
+  // inline routes (/api/trade/advanced, /api/workforce/advanced,
+  // /api/learning/advanced, /api/map/advanced, /api/intelligence/*,
+  // /api/cloud-agent/*) and a handful more provider files whose OWN
+  // db.profile array (as opposed to an already-disclosed sibling array from
+  // the same file) was missed. Each item's actual object literal was read
+  // directly to confirm no createdBy/requestedBy/userEmail is ever present.
+  if (hasAny(["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
+    gaps.push("Agent/AI orchestration evidence, integration event logs, and cloud-agent run/correction records have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["twilioCallStatusReceipts", "tradeLogisticsRecords", "tradeMessages", "walletTransactions", "platformTransactionFees", "platformRevenueLedger", "paymentCheckoutRecords", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "paymentReleases", "providerOutreach", "droneFindings", "shiftSchedule"])) {
+    gaps.push("Trade/logistics/finance preparation records (quotes, inspections, cold-chain checks, export readiness, contract packets, payment releases, wallet transactions, and related evidence) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations"])) {
+    gaps.push("Advanced map/logistics planning records (field zones, facility routes, disruption and risk layers, evidence packets, farmer locations) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
+    gaps.push("Advanced workforce operations records (onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "certificates", "learningAccommodations"])) {
+    gaps.push("Advanced learning records (assignments, quiz attempts, instructor notes, progress reports, transcripts, cohorts, certificates, accommodations) have no per-account owner field today and are not included.");
+  }
+  if (hasAny(["nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"])) {
+    gaps.push("Locally-saved health/workforce governance feedback, offline sync history, legacy voice reminders, field-visit plans, saved learning resources, and marketplace notes have no per-account owner field today and are not included.");
+  }
   gaps.push("If you have used AgriNexus's newer Postgres-backed companion/reminders/health-toolkit features, request their erasure separately via /api/nexus/runtime/privacy/deletions.");
   return gaps;
 }
