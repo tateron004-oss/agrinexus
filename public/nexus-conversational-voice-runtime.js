@@ -233,14 +233,17 @@
       if (brainRuntime.mount) brainRuntime.mount();
       if (brainRuntime.render) brainRuntime.render(result);
       const summary = result?.conversationalResponse || result?.userVisibleStatus || result?.understoodGoal || "Nexus prepared a unified mission plan.";
-      renderResponse({
-        text: summary,
-        language: currentLanguage(),
-        intent: "unified_brain_mission",
-        safety: {
-          noExecution: true,
-          message: "No external action was authorized by the Unified Brain."
-        }
+      // Found live: this called renderResponse(...), a function that is never defined anywhere in
+      // this file (only renderDialogueResult/renderStatus/renderTranscript exist) -- every command
+      // the Unified Brain Runtime intercepts (a broad, realistic set) hit this ReferenceError.
+      // processTranscript() is always invoked as `void processTranscript(...)`, so the rejection was
+      // silently swallowed: the UI stayed stuck on "Nexus is preparing your plan" forever, nothing was
+      // rendered or spoken, and setState("idle", ...) right below was never reached. Uses the same
+      // renderDialogueResult() the sibling agriculture-runtime branch already calls a few lines down,
+      // with the field names it actually expects (answer, not text).
+      renderDialogueResult({
+        answer: summary,
+        intentType: "unified_brain_mission"
       });
       setState("idle", "Mission plan prepared safely");
       return result;
