@@ -40925,6 +40925,10 @@ function render() {
   applyRoleNavigation();
   applyExperienceMode();
   welcomeSignedInUser();
+  // Lets browser-action-controller.js scope its own localStorage (e.g. saved rural provider/health
+  // communication cards, which can hold real PHI) per account instead of per browser -- otherwise a
+  // shared/community device mixes one person's saved health facts into the next person's session.
+  window.NexusBrowserActionController?.setCurrentAccountKey?.(data.user.email || data.user.id || data.user.name || "");
   void restoreNexusAuthoritativeRuntime();
 
   $("#countrySelect").innerHTML = [
