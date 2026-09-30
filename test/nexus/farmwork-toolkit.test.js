@@ -6,8 +6,10 @@ const { FarmRecordRepository } = require("../../nexus/farmwork/store.js");
 const { farmWorkLine } = require("../../nexus/farmwork/brief.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { fakeFarmStore, fakeMemory } = require("./farmwork-fake.js");
-const { nextDueOf } = require("../../nexus/farmwork/livestock.js");
+const { nextDueOf, confirms: livestockConfirms } = require("../../nexus/farmwork/livestock.js");
 const { addStock } = require("../../nexus/farmwork/inventory.js");
+const journal = require("../../nexus/farmwork/journal.js");
+const swahiliLand = require("../../nexus/farmwork/swahili-land.js");
 
 const NOW = new Date("2026-09-20T05:00:00Z"); // Sunday 20 September 2026 in Nairobi
 
@@ -521,6 +523,92 @@ test("pests are recorded but never diagnosed", async () => {
   const text = await farmer().say("I saw aphids on my tomatoes");
   assert.match(text, /I only keep a record/); assert.match(text, /agro-vet|extension/i);
   assert.equal(await farmer().say("I saw a rat in the kitchen"), null);
+});
+
+// Found live (farmwork audit): journal.js's "update problem N: ..." read the actions array once, appended
+// one note, and wrote the whole array back with no guard it was still current -- exactly the array-append
+// race store.js's own casArrayField exists to close (same shape already fixed for healthwork's allergy list).
+// This simulates a second writer's update landing in the gap between this handler's own read and its write.
+test("updating the same pest-journal entry from two concurrent messages does not silently drop one action note", async () => {
+  const store = fakeFarmStore();
+  const entry = await store.add({ tenantId: "t1", userId: "u1", collection: "pest", data: { kind: "pest", text: "armyworm", field: "", crop: "", day: "2026-09-20", status: "open", actions: [] } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "pest") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...entry, data: { ...entry.data, actions: [{ day: "2026-09-20", text: "concurrent note" }] } }, casArrayField: "actions", casArrayLength: 0 });
+    }
+    return result;
+  };
+  const ctx = { text: "update problem 1: sprayed pesticide", store, tenantId: "t1", userId: "u1", today: "2026-09-20" };
+  assert.match(await journal.handle(ctx), /record just changed/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "pest" }))[0];
+  assert.equal(after.data.actions.length, 1, "the concurrent note must survive, not be silently overwritten");
+  assert.equal(after.data.actions[0].text, "concurrent note");
+});
+
+// Same race, same fix, Swahili sibling handler.
+test("sasisha tatizo (Swahili): a concurrent update does not silently drop one action note either", async () => {
+  const store = fakeFarmStore();
+  const entry = await store.add({ tenantId: "t1", userId: "u1", collection: "pest", data: { kind: "pest", text: "viwavi jeshi", field: "", crop: "", day: "2026-09-20", status: "open", actions: [] } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "pest") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...entry, data: { ...entry.data, actions: [{ day: "2026-09-20", text: "concurrent note" }] } }, casArrayField: "actions", casArrayLength: 0 });
+    }
+    return result;
+  };
+  const ctx = { text: "sasisha tatizo 1: nilinyunyizia dawa", store, tenantId: "t1", userId: "u1", today: "2026-09-20" };
+  assert.match(await swahiliLand.handle(ctx), /imebadilika/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "pest" }))[0];
+  assert.equal(after.data.actions.length, 1, "the concurrent note must survive, not be silently overwritten");
+});
+
+// Found live (farmwork audit, asymmetric with money.js's "sold" path): the "animal-gone" confirm had no
+// expectedStatus guard, unlike the sale confirmation which was already hardened for the same status field
+// on the same record type. This simulates a concurrent "sold X for Y" write landing in the gap between the
+// confirm handler's own read and its write.
+test("confirming an animal is gone after a concurrent sale does not silently overwrite the sale detail", async () => {
+  const store = fakeFarmStore();
+  const animal = await store.add({ tenantId: "t1", userId: "u1", collection: "animal", data: { tag: "bella", species: "cattle", status: "active" } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "animal") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...animal, data: { ...animal.data, status: "gone", goneOn: "2026-09-20", soldFor: 40000 } }, expectedStatus: "active" });
+    }
+    return result;
+  };
+  const ctx = { tenantId: "t1", userId: "u1", today: "2026-09-20", store };
+  const reply = await livestockConfirms["animal-gone"](ctx, { type: "animal-gone", memoryId: animal.memoryId, tag: "bella" });
+  assert.match(reply, /record just changed/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "animal" }))[0];
+  assert.equal(after.data.soldFor, 40000, "the sale detail must survive, not be silently overwritten by the stale 'gone' confirm");
+  assert.equal(after.data.status, "gone");
+});
+
+// Same race, same fix, Swahili sibling confirm.
+test("animal-gone-sw: a concurrent sale is not silently overwritten either", async () => {
+  const store = fakeFarmStore();
+  const animal = await store.add({ tenantId: "t1", userId: "u1", collection: "animal", data: { tag: "bella", species: "cattle", status: "active" } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "animal") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...animal, data: { ...animal.data, status: "gone", goneOn: "2026-09-20", soldFor: 40000 } }, expectedStatus: "active" });
+    }
+    return result;
+  };
+  const ctx = { tenantId: "t1", userId: "u1", today: "2026-09-20", store };
+  const reply = await swahiliLand.confirms["animal-gone-sw"](ctx, { type: "animal-gone-sw", memoryId: animal.memoryId, tag: "bella" });
+  assert.match(reply, /imebadilika/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "animal" }))[0];
+  assert.equal(after.data.soldFor, 40000);
 });
 
 // ---------- printable reports ----------
