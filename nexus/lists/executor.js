@@ -9,6 +9,17 @@
 // workspaceId, no new migration), not a bespoke lists table.
 const WORKSPACE_ID = "lists";
 const RECORD_TYPE = "checklist";
+// Found live (lists-toolkit audit): neither of these was capped. A single list could grow without bound --
+// normalizeItems() only caps ONE call's own addItems payload at 200, never the merged result against the
+// list's existing size, so repeated "add these 200 items" calls grew one list forever. And nothing capped
+// how many lists one account could create at all -- lists.read/lists.update both resolve a list from
+// records.list({..., limit: 200}) (the store's own real query window, newest-updated-first), so once an
+// account passed 200 lists, its least-recently-touched ones silently fell out of that window: lists.update
+// would report list_not_found for a list that genuinely still existed, and it could never be found or
+// listed again either. Capping list creation at exactly the same number the read window already supports
+// means a list can never fall out of it in the first place.
+const MAX_LISTS_PER_ACCOUNT = 200;
+const MAX_ITEMS_PER_LIST = 500;
 
 function normalizeItems(rawItems) {
   return (Array.isArray(rawItems) ? rawItems : [])
@@ -18,8 +29,10 @@ function normalizeItems(rawItems) {
 }
 
 function createListsCreateExecutor({ records }) {
-  if (!records?.create) throw new Error("A record repository is required.");
+  if (!records?.create || !records?.list) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context, taskId }) {
+    const existing = await records.list({ tenantId: context.tenantId, ownerId: context.userId, workspaceId: WORKSPACE_ID, recordType: RECORD_TYPE, limit: MAX_LISTS_PER_ACCOUNT });
+    if (existing.length >= MAX_LISTS_PER_ACCOUNT) return { persisted: false, reason: "list_cap_reached", maxLists: MAX_LISTS_PER_ACCOUNT };
     const title = String(input.title || "Untitled list").trim().slice(0, 160);
     const items = normalizeItems(input.items);
     const inserted = await records.create({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
@@ -67,7 +80,11 @@ function createListsUpdateExecutor({ records }) {
     const existing = rows.find(item => item.record_id === input.listId);
     if (!existing) return { updated: false, listId: input.listId, reason: "list_not_found" };
     let items = (existing.data?.items || []).slice();
-    for (const addition of normalizeItems(input.addItems)) items.push(addition);
+    const additions = normalizeItems(input.addItems);
+    if (additions.length && items.length + additions.length > MAX_ITEMS_PER_LIST) {
+      return { updated: false, listId: input.listId, reason: "list_item_cap_reached", maxItems: MAX_ITEMS_PER_LIST };
+    }
+    for (const addition of additions) items.push(addition);
     if (Array.isArray(input.toggleIndexes)) for (const index of input.toggleIndexes) if (items[index]) items[index] = { ...items[index], done: !items[index].done };
     if (Array.isArray(input.removeIndexes)) {
       const toRemove = new Set(input.removeIndexes);
