@@ -9820,6 +9820,16 @@ function twilioFromForProvider(providerId) {
   return process.env.TWILIO_SMS_FROM || process.env.TWILIO_PHONE_NUMBER || "";
 }
 
+// Found live (communications/notifications audit): unlike server/providers/communicationsBridgeProvider.js's
+// sendSms/sendWhatsapp/startCall (which require confirmed:true via requireConfirmation() and refuse any
+// message matching this same pattern via safeMessage()), the legacy in-file real-send paths that call
+// sendTwilioMessage/startTwilioOutboundCall below (createBuyerSellerMessage, createCommunicationThread,
+// createOutboundCallWorkflow, and /api/notifications/send) had neither a confirmation gate nor a content
+// scan -- any authenticated, non-restricted user could trigger a real Twilio SMS/WhatsApp/call to a
+// client-supplied recipient with a single unconfirmed request, carrying arbitrary free text (including
+// health, payment, or credential content) straight through with no filter at all.
+const SENSITIVE_COMMUNICATION_PATTERN = /\b(patient|diagnos\w*|prescri\w*|medical record|payment|card|bank|password|secret|token|private key|emergency dispatch)\b/i;
+
 async function sendTwilioMessage({ providerId, channel, to, text }) {
   const required = [
     ["TWILIO_ACCOUNT_SID", process.env.TWILIO_ACCOUNT_SID],
@@ -12665,7 +12675,13 @@ async function createBuyerSellerMessage(db, user, body = {}) {
   const recipient = twilioRecipientForProvider(providerId, body);
   let delivery = { attempted: false, ok: true, status: "local-thread-only", channel };
   if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")) {
-    delivery = await sendTwilioMessage({ providerId, channel, to: recipient, text });
+    if (body.confirmed !== true) {
+      delivery = { attempted: false, ok: false, status: "confirmation-required-for-live-send", channel };
+    } else if (SENSITIVE_COMMUNICATION_PATTERN.test(text)) {
+      delivery = { attempted: false, ok: false, status: "blocked-sensitive-content", channel };
+    } else {
+      delivery = await sendTwilioMessage({ providerId, channel, to: recipient, text });
+    }
     sellerMessage.status = delivery.ok ? "sent-live" : "sent-local";
     sellerMessage.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
     thread.status = delivery.ok ? "active-live" : "active";
@@ -13563,7 +13579,13 @@ async function createCommunicationThread(db, user, body = {}) {
   // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
   // exists to close everywhere.
   if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")) {
-    delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
+    if (body.confirmed !== true) {
+      delivery = { attempted: false, ok: false, status: "confirmation-required-for-live-send", channel };
+    } else if (SENSITIVE_COMMUNICATION_PATTERN.test(text)) {
+      delivery = { attempted: false, ok: false, status: "blocked-sensitive-content", channel };
+    } else {
+      delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
+    }
     outbound.status = delivery.ok ? "sent-live" : "sent-local";
     outbound.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
     thread.status = delivery.ok ? "active-live" : "active";
@@ -16012,7 +16034,10 @@ function runWomenFamilyAgricultureWorkflow(db, user, body = {}) {
     providerId: "notifications",
     channel: "in-app",
     message: `${runNumber} opened for ${beneficiaryGroup}.`,
-    createdBy: user.name
+    // Found live (communications/notifications audit): a display name, unlike the correct
+    // user?.email-based convention used elsewhere in this same function family -- PROFILE_OWNER_FIELDS'
+    // export/erasure scan matches by email, so this notification silently survived account erasure.
+    createdBy: user?.email || "Ask Nexus"
   });
   logIntegration(db, {
     providerId: "openai",
@@ -17748,7 +17773,7 @@ async function runLocalPilotStudio(db, user, scenario = "rural-access") {
     providerId: "openai",
     channel: "local-pilot",
     message: `${run.title} evidence report is ready.`,
-    createdBy: user.name
+    createdBy: user?.email || "Ask Nexus"
   });
   logIntegration(db, {
     providerId: "openai",
@@ -17807,9 +17832,17 @@ async function createOutboundCallWorkflow(db, user, body = {}) {
   // idiom instead of the centralized userIsRestrictedFrom(), reopening the "a role with no
   // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
   // exists to close everywhere.
+  // Note: the confirmation gate for this function lives at its one unconfirmed caller
+  // (POST /api/voice/phone/outbound-call), not here -- every OTHER caller (the Cloud Agent's
+  // communications.outbound_call step, and the conversational dispatcher's staged "call X" ->
+  // "yes" flow) already requires its own prior confirmation/approval before ever reaching this
+  // function, and never threads a `confirmed` field through, so gating on body.confirmed here would
+  // have wrongly re-blocked those already-legitimate, already-confirmed callers.
   const delivery = userIsRestrictedFrom(user, "communications-send")
     ? { attempted: false, ok: false, status: "restricted-account-no-real-call" }
-    : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
+    : SENSITIVE_COMMUNICATION_PATTERN.test(message)
+      ? { attempted: false, ok: false, status: "blocked-sensitive-content" }
+      : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
   const record = {
     id: crypto.randomUUID(),
     callNumber: `CALL-${String(nextRecordSequence(db, "outboundCalls")).padStart(3, "0")}`,
@@ -46323,6 +46356,7 @@ async function api(req, res, url) {
     // in their own notification list, only reachable via the admin-all view.
     const submitterRecord = findNexusPilotRecord(db, response.recordId, null, { requireOwnership: false });
     db.nexusNotifications.unshift(normalizeNotification({ title: "Nexus review response ready", message: "A provider/admin response is ready for review.", recordId: response.recordId }, {}, submitterRecord ? { id: submitterRecord.ownerId } : null));
+    db.nexusNotifications.splice(500);
     addNexusPilotAuditEvent(db, "provider_response_published", {
       relatedRecordId: response.recordId,
       actor: user?.name || response.reviewerLabel,
@@ -46458,6 +46492,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const communication = normalizeCommunication(await readBody(req), {}, user);
     db.nexusCommunications.unshift(communication);
+    db.nexusCommunications.splice(500);
     addNexusPilotAuditEvent(db, "communication_prepared", {
       actor: user?.name || "Standard User",
       role: user?.role || "Standard User",
@@ -46503,6 +46538,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const notification = normalizeNotification(await readBody(req), {}, user);
     db.nexusNotifications.unshift(notification);
+    db.nexusNotifications.splice(500);
     await writeDb(db);
     return send(res, 200, { ok: true, notification });
   }
@@ -46528,6 +46564,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const outcome = normalizeOutcome(await readBody(req), {}, user);
     db.nexusOutcomes.unshift(outcome);
+    db.nexusOutcomes.splice(500);
     addNexusPilotAuditEvent(db, "outcome_recorded", {
       actor: user?.name || "Standard User",
       role: user?.role || "Standard User",
@@ -51696,7 +51733,7 @@ async function api(req, res, url) {
         providerId: moduleName === "Healthcare" ? "health-notifications" : moduleName === "Workforce" ? "workforce-notifications" : moduleName === "Learning" ? "learning-certificates" : "trade-logistics",
         channel: "executive-demo",
         message: `${moduleName} executive demo workflow completed.`,
-        createdBy: user.name
+        createdBy: user?.email || "Ask Nexus"
       });
     }
 
@@ -52072,7 +52109,7 @@ async function api(req, res, url) {
         providerId: moduleName === "Healthcare" ? "health-notifications" : moduleName === "Workforce" ? "workforce-notifications" : moduleName === "Learning" ? "learning-certificates" : moduleName === "AgriTrade" ? "trade-logistics" : "openai",
         channel: "wow-demo",
         message: `${moduleName} WOW demo evidence completed for rural Nigeria accessibility scenario.`,
-        createdBy: user.name
+        createdBy: user?.email || "Ask Nexus"
       });
     }
 
@@ -55985,6 +56022,12 @@ async function api(req, res, url) {
     // instead of a confusing "call needs setup" response.
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
     const body = await readBody(req);
+    // Found live (communications/notifications audit): unlike this function's OTHER callers (the Cloud
+    // Agent's approval-gated communications.outbound_call step, and the conversational dispatcher's own
+    // staged "call X" -> "yes" confirmation flow), this direct REST route had no confirmation gate of any
+    // kind -- any authenticated, non-restricted user could place a real, billed Twilio call to a
+    // client-supplied recipient with a single unconfirmed POST.
+    if (body.confirmed !== true) return send(res, 400, { error: "Pass confirmed: true to place a real outbound call.", status: "confirmation_required" });
     const record = await createOutboundCallWorkflow(db, user, body);
     await writeDb(db);
     const state = publicState(db, user);
@@ -56032,17 +56075,26 @@ async function api(req, res, url) {
     // canUse(user,"notifications") (Standard User, Provider Reviewer, Admin)
     // could trigger a real Twilio SMS/WhatsApp send to a client-supplied
     // recipient.
-    const delivery = ["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")
-      ? await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text: message })
-      : { attempted: false, ok: true, status: "local-notification-only" };
-    addNotification(db.profile, { module: moduleName, providerId, channel, message, createdBy: user.name, deliveryStatus: delivery.status });
+    // Found live (communications/notifications audit): unlike server/providers/communicationsBridgeProvider.js's
+    // sendSms/sendWhatsapp (which require confirmed:true and refuse any message matching
+    // SENSITIVE_COMMUNICATION_PATTERN before sending), this route had neither a confirmation gate nor a
+    // content scan -- a single unconfirmed POST with arbitrary free text reached a real Twilio send.
+    const wantsRealSend = ["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send");
+    const delivery = !wantsRealSend
+      ? { attempted: false, ok: true, status: "local-notification-only" }
+      : body.confirmed !== true
+        ? { attempted: false, ok: false, status: "confirmation-required-for-live-send" }
+        : SENSITIVE_COMMUNICATION_PATTERN.test(message)
+          ? { attempted: false, ok: false, status: "blocked-sensitive-content" }
+          : await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text: message });
+    addNotification(db.profile, { module: moduleName, providerId, channel, message, createdBy: user?.email || "Ask Nexus", deliveryStatus: delivery.status });
     logIntegration(db, {
       providerId,
       module: moduleName,
       action: "notification.sent",
       status: delivery.ok || !delivery.attempted ? "success" : "needs-setup",
       detail: delivery.ok ? message : `${message} Delivery status: ${delivery.status}.`,
-      metadata: { channel, createdBy: user.name, delivery }
+      metadata: { channel, createdBy: user?.email || "Ask Nexus", delivery }
     });
     addActivity(db.profile, `${moduleName} notification sent: ${message}`);
     await writeDb(db);
