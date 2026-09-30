@@ -40,16 +40,29 @@ const IMMEDIATE = [
   /\b(?:please )?send (?:an )?(?:emergency )?alert to my (?:trusted )?circle\b/
 ];
 const ASK_FIRST = /^(?:please )?(?:help|help me|i need help|i need some help)$/;
+// Found live (companion audit): plain, first-person, unambiguous crisis statements were missed entirely --
+// treated as ordinary chat with zero acknowledgment -- because the adjacent common wordings for phrasings
+// already covered here were absent: self-cutting ("I've been cutting myself") next to the already-covered
+// kill/hurt/harm; the contraction "isn't worth living" next to the literal substring "not worth living";
+// "no point in living" next to the already-covered "no reason to live/go on"; and "wish I was never born"
+// next to the already-covered "wish I was/were dead". Per this file's own established philosophy (see
+// IMMEDIATE above): a false trigger costs a recoverable "false alarm", a missed real one does not -- so
+// these widen recall the same way, with two narrow exclusions for common idioms that are not self-harm
+// ("die laughing"; "cut myself a slice/break", "cut myself off [from someone]") so the widening doesn't
+// trade a miss for alert-fatigue on everyday speech.
 const SELF_HARM = [
   // First person only: "I want to die" is about the person; "how do I help a friend who is suicidal" is not, and is left to normal handling.
-  /\bi(?:'m| am|'ve| have| just| really| sometimes| often)?\s+(?:\w+\s+){0,3}?(?:want(?:ed)? to (?:die|kill myself|end (?:it|my life))|kill(?:ing)? myself|end(?:ing)? my (?:own )?life|end it all|(?:don'?t|do not) want to (?:live|be alive|be here|go on)|want to disappear)\b/i,
+  /\bi(?:'m| am|'ve| have| just| really| sometimes| often)?\s+(?:\w+\s+){0,3}?(?:want(?:ed)? to (?:die(?!\s+laughing)|kill myself|end (?:it|my life))|kill(?:ing)? myself|end(?:ing)? my (?:own )?life|end it all|(?:don'?t|do not) want to (?:live|be alive|be here|go on)|want to disappear)\b/i,
   /\b(?:i'?m|i am|i keep|i have been|i've been|i sometimes|i often|i just|i can't stop)\s+(?:been )?think(?:ing)? (?:of|about) (?:suicide|dying|ending (?:it|it all|my life)|killing myself)\b/i,
   /\bi(?:'m| am| feel| have been|'ve been| am feeling)\s+(?:really |so |very |actually )?suicidal\b/i,
   /\b(?:kill|hurt|harm) myself\b/i,
+  /\bcut(?:ting)? myself(?!\s+(?:a|some|the|off)\b)\b/i,
   /\bbetter off (?:dead|without me)\b/i,
   /\bno reason to (?:live|go on)\b/i,
+  /\bno point (?:in )?(?:living|going on)\b/i,
+  /\b(?:is|was)?n'?t worth living\b/i,
   /\bnot worth living\b/i,
-  /\bwish i (?:was|were) dead\b/i
+  /\bwish i (?:was|were) (?:dead|never born)\b/i
 ];
 
 // Kiswahili. First person only, like the English ones ("nataka kufa" is about the person; a news story about "kujiua" is not).
