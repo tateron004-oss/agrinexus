@@ -145,6 +145,27 @@ class MemoryRepository {
     return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
   }
 
+  // Found live (same CAS-less-race shape already fixed in nexus/farmwork/store.js's add()): the caller
+  // (personal/items.js) used to read the current item count, check it against the cap, and only then
+  // insert -- as two separate, unguarded calls. Two adds arriving close together when the person is one
+  // item under the cap could both read the same under-cap count and both insert, overshooting the cap
+  // instead of the second one being told "Your lists are full." An advisory lock scoped to this person's
+  // own personal_items serializes concurrent adds the same way farm_records' per-collection lock does.
+  async addPersonalItemUnlessFull({ tenantId, userId, content, maxItems }) {
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`personal_items:${tenantId}:${userId}`]);
+      const countResult = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='personal_items' and deleted_at is null`, [tenantId, userId]);
+      const count = Number((countResult.rows || countResult)[0]?.n || 0);
+      if (count >= maxItems) return { full: true };
+      const saved = await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','personal_items',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','sensitive') returning memory_id`,
+      [createId("memory"), tenantId, userId, content, `${content.kind}: ${String(content.text || "").slice(0, 200)}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { full: false, memoryId: (saved.rows || saved)[0]?.memory_id, content };
+    });
+  }
+
   async listPersonalItems({ tenantId, userId, kind = null, limit = 400 }) {
     const result = await this.db.query(`select memory_id,content from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='personal_items' and deleted_at is null
