@@ -23645,69 +23645,6 @@ function renderNexusCommunicationsProviderStatusCard() {
     </section>
   `;
 }
-
-function renderNexusKnowledgeRailPanel() {
-  const status = nexusKnowledgeStatus || {};
-  const sources = Array.isArray(nexusKnowledgeTrustedSources) ? nexusKnowledgeTrustedSources : [];
-  const enabled = Boolean(status.enabled && status.configured);
-  const providerList = Array.isArray(status.supportedLiveKnowledgeProviders) ? status.supportedLiveKnowledgeProviders : [];
-  const safeDomains = Array.isArray(status.safeDomainsSupported) ? status.safeDomainsSupported : [];
-  const missingEnv = Array.isArray(status.missingEnvVars) ? status.missingEnvVars : Array.isArray(status.missingEnv) ? status.missingEnv : [];
-  const openAiNative = nexusOpenAiNativeStatus || {};
-  const openAiMissing = Array.isArray(openAiNative.missingEnv) ? openAiNative.missingEnv : [];
-  const lastTest = status.lastTestResult || null;
-  return `
-    <section class="nexus-knowledge-rail" data-nexus-knowledge-rail="true" data-testid="nexus-knowledge-rail" aria-label="${escapeHtml(translateText("Nexus live knowledge retrieval"))}">
-      <div class="nexus-knowledge-rail-header">
-        <div>
-          <span class="eyebrow">${escapeHtml(translateText("Live knowledge rail"))}</span>
-          <strong>${escapeHtml(translateText("Ask Nexus for current, source-backed information"))}</strong>
-          <small data-testid="nexus-knowledge-status">${escapeHtml(translateText(enabled ? `Configured: ${status.provider || "provider"}` : status.disabledMessage || "Live internet retrieval is not configured yet. Nexus can still use built-in guidance and prepare a question for review."))}</small>
-          <small data-testid="nexus-live-knowledge-provider-status">${escapeHtml(translateText("Selected provider"))}: ${escapeHtml(status.selectedProvider || "auto")} / ${escapeHtml(status.testabilityStatus || status.testability || "disabled")}</small>
-        </div>
-        <div class="nexus-knowledge-rail-actions">
-          <button type="button" data-nexus-knowledge-action="refresh-status" data-testid="nexus-knowledge-refresh">${escapeHtml(translateText("Refresh"))}</button>
-          <button type="button" data-nexus-knowledge-action="test-provider" data-testid="nexus-live-knowledge-test-provider">${escapeHtml(translateText("Test provider"))}</button>
-        </div>
-      </div>
-      <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-all-modes-status">
-        <span>${escapeHtml(translateText("Providers"))}: ${providerList.map(item => escapeHtml(item.provider)).join(", ") || "tavily, brave, exa, generic"}</span>
-        <span>${escapeHtml(translateText("Citation capable"))}: ${escapeHtml(String(Boolean(status.citationCapability || status.citationCapable)))}</span>
-        <span>${escapeHtml(translateText("Missing"))}: ${missingEnv.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
-      </div>
-      <div class="nexus-knowledge-source-row" data-testid="nexus-openai-native-status" data-no-secret-values="true">
-        <span>${escapeHtml(translateText("OpenAI-native brain"))}: ${escapeHtml(openAiNative.ready ? translateText("configured") : translateText(openAiNative.enabled === false ? "disabled" : "missing configuration"))}</span>
-        <span>${escapeHtml(translateText("Model"))}: ${escapeHtml(openAiNative.model || "gpt-5.4-mini")}</span>
-        <span>${escapeHtml(translateText("Missing"))}: ${openAiMissing.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
-      </div>
-      ${lastTest ? `
-        <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-last-test-result">
-          <span>${escapeHtml(translateText("Last test"))}: ${escapeHtml(lastTest.status || lastTest.testStatus || "checked")}</span>
-          <span>${escapeHtml(translateText("Provider"))}: ${escapeHtml(lastTest.provider || status.provider || "not-configured")}</span>
-          <span>${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(lastTest.citationCount || 0))}</span>
-        </div>
-      ` : ""}
-      <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-safe-domains">
-        ${safeDomains.slice(0, 12).map(domain => `<span>${escapeHtml(domain)}</span>`).join("")}
-      </div>
-      ${renderNexusEmailProviderStatusCard()}
-      ${renderNexusCommunicationsProviderStatusCard()}
-      <div class="nexus-knowledge-query-row">
-        <label>
-          <span>${escapeHtml(translateText("Knowledge question"))}</span>
-          <input id="nexusKnowledgeQuestionInput" data-testid="nexus-knowledge-question-input" type="text" placeholder="${escapeHtml(translateText("Example: What causes yellow leaves on maize?"))}">
-        </label>
-        <button type="button" data-nexus-knowledge-action="ask" data-testid="nexus-knowledge-ask">${escapeHtml(translateText("Ask with sources"))}</button>
-      </div>
-      <div class="nexus-knowledge-source-row" data-testid="nexus-knowledge-trusted-sources">
-        ${sources.slice(0, 6).map(source => `<span>${escapeHtml(translateText(source.label || source.id))}</span>`).join("")}
-      </div>
-      ${renderNexusKnowledgeAnswerCard(nexusKnowledgeLastResult)}
-      <p class="nexus-knowledge-action-status" data-nexus-knowledge-action-status>${escapeHtml(translateText(nexusKnowledgeActionStatus || "No provider handoff, payment, message, call, location sharing, pharmacy action, diagnosis, or emergency action occurs from this rail."))}</p>
-    </section>
-  `;
-}
-
 function renderNexusInternetResourceHistoryPanel() {
   const answer = nexusKnowledgeLastResult || null;
   const requestItem = nexusProviderPathwayLastRequest || null;
@@ -26537,83 +26474,6 @@ function renderNexusDemoSandboxControls(location = "command-landing") {
     </section>
   `;
 }
-
-function renderNexusUserTestingRuntimePanel() {
-  const status = nexusUserTestingRuntimeStatus || {};
-  const counts = status.counts || {};
-  const database = status.database || {};
-  const lanes = status.providers?.lanes || [];
-  const roles = status.roles || [];
-  const result = nexusUserTestingRuntimeLastResult;
-  const localMemoryMessage = database.userMessage || "Local memory active. Production database not connected.";
-  const topLanes = lanes.slice(0, 8);
-  return `
-    <section class="nexus-user-testing-runtime nexus-glass-card" data-nexus-user-testing-runtime="true" data-no-secret-values="true" aria-label="${escapeHtml(translateText("End-to-end user testing runtime"))}">
-      <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${escapeHtml(translateText("Runtime Layer"))}</span>
-        <strong>${escapeHtml(translateText("End-to-end user testing layer"))}</strong>
-        <p>${escapeHtml(translateText("Persistent memory, predictive next steps, provider credential gates, consent, receipts, roles, and verification are active for local-safe testing."))}</p>
-      </div>
-      <div class="nexus-demo-status-strip" data-nexus-user-testing-database-status="true">
-        ${renderNexusStatusBadge(database.configured ? "configured" : "local_only", { label: database.configured ? "Database configured" : "Local memory active" })}
-        ${renderNexusStatusBadge("not_executed", { label: "No silent execution" })}
-        ${renderNexusStatusBadge("confirmation_required", { label: "Consent gates" })}
-        <span>${escapeHtml(translateText(localMemoryMessage))}</span>
-      </div>
-      <div class="nexus-command-status-summary" data-nexus-user-testing-counts="true">
-        <article><strong>${escapeHtml(String(counts.records || 0))}</strong><span>${escapeHtml(translateText("Memory records"))}</span></article>
-        <article><strong>${escapeHtml(String(counts.receipts || 0))}</strong><span>${escapeHtml(translateText("Receipts"))}</span></article>
-        <article><strong>${escapeHtml(String(counts.predictions || 0))}</strong><span>${escapeHtml(translateText("Predictions"))}</span></article>
-        <article><strong>${escapeHtml(String(counts.consentGates || 0))}</strong><span>${escapeHtml(translateText("Consent gates"))}</span></article>
-      </div>
-      <div class="nexus-demo-sandbox-actions" data-nexus-user-testing-actions="true">
-        <button type="button" class="primary" data-nexus-user-testing-action="refresh">${escapeHtml(translateText("Refresh runtime"))}</button>
-        <button type="button" data-nexus-user-testing-action="run-harness">${escapeHtml(translateText("Run E2E harness"))}</button>
-        <button type="button" data-nexus-user-testing-action="save-sample-record">${escapeHtml(translateText("Save sample memory"))}</button>
-        <button type="button" data-nexus-user-testing-action="predict-next-step">${escapeHtml(translateText("Predict next step"))}</button>
-        <button type="button" data-nexus-user-testing-action="prepare-action">${escapeHtml(translateText("Prepare gated action"))}</button>
-        <button type="button" data-nexus-user-testing-action="create-consent">${escapeHtml(translateText("Create consent gate"))}</button>
-        <button type="button" data-nexus-user-testing-action="verify-outcome">${escapeHtml(translateText("Verify outcome"))}</button>
-      </div>
-      ${result ? `
-        <article class="nexus-smart-empty-state" data-nexus-user-testing-last-result="true">
-          <strong>${escapeHtml(translateText(result.title || "Latest runtime result"))}</strong>
-          <span>${escapeHtml(translateText(result.message || result.status || "Runtime action completed locally."))}</span>
-        </article>
-      ` : ""}
-      <div class="nexus-demo-record-grid" data-nexus-user-testing-role-surfaces="true">
-        <article>
-          <div>
-            <strong>${escapeHtml(translateText("Role-based dashboards"))}</strong>
-            <small>${escapeHtml(translateText("Surfaces remain review/preparation focused unless configured and approved."))}</small>
-          </div>
-          ${roles.slice(0, 11).map(role => `
-            <button type="button" class="nexus-demo-mission-button" data-nexus-role-surface="${escapeHtml(role.name || role)}" data-nexus-user-testing-action="refresh">
-              <b>${escapeHtml(translateText(role.name || role))}</b>
-              <span>${escapeHtml(translateText((role.availableActions || ["review memory"]).join(", ")))}</span>
-              <small>${escapeHtml(translateText("No silent provider handoff"))}</small>
-            </button>
-          `).join("")}
-        </article>
-        <article data-nexus-user-testing-provider-lanes="true">
-          <div>
-            <strong>${escapeHtml(translateText("Provider activation gates"))}</strong>
-            <small>${escapeHtml(translateText(`${status.providers?.readyCount || 0} configured, ${status.providers?.blockedCount || 0} credential-gated`))}</small>
-          </div>
-          ${topLanes.map(lane => `
-            <p data-nexus-user-testing-provider-lane="${escapeHtml(lane.id)}">
-              <b>${escapeHtml(translateText(lane.name))}</b><br>
-              <span>${escapeHtml(translateText(lane.testabilityState || "missing_config"))}</span>
-              ${(lane.missingEnvNames || []).length ? `<small>${escapeHtml(translateText("Missing:"))} ${escapeHtml(lane.missingEnvNames.join(", "))}</small>` : `<small>${escapeHtml(translateText("Configured env shape detected"))}</small>`}
-            </p>
-          `).join("")}
-        </article>
-      </div>
-      <small>${escapeHtml(translateText("Safety: Nexus does not diagnose, prescribe, pay, book, dispatch, share location, send messages, contact providers, or execute external actions from this layer without configured credentials, consent, confirmation, audit, and verification."))}</small>
-    </section>
-  `;
-}
-
 async function refreshNexusUserTestingRuntimeStatus(options = {}) {
   if (nexusUserTestingRuntimeLoading) return nexusUserTestingRuntimeStatus;
   nexusUserTestingRuntimeLoading = true;
@@ -33807,49 +33667,6 @@ function nexusActiveSidebarId() {
   if (["resource-assistant", "communications", "email", "sms", "whatsapp", "phone", "telegram", "media", "reminders", "offline"].includes(id)) return "ask";
   return id;
 }
-
-function renderNexusCommandCenterSidebar() {
-  const activeSidebarId = nexusActiveSidebarId();
-  const items = [
-    ["home", "Home", "Home", "nexus"],
-    ["ask", "Ask Nexus", "help me", "spark"],
-    ["agriculture", "Agriculture", "I need agriculture support.", "leaf"],
-    ["chronic-care", "Health", "Nexus, record my blood pressure.", "pulse"],
-    ["agritrade", "Marketplace", "Help me with AgriTrade, but do not take payment.", "market"],
-    ["learning", "Learning", "Help me find agriculture training.", "learn"],
-    ["jobs", "Jobs", "Help me find jobs or training.", "work"],
-    ["maps", "Maps", "Help me plan a field visit route.", "map"],
-    ["settings", "Settings", "Nexus, show language and safety settings.", "gear"]
-  ];
-  return `
-    <aside class="nexus-command-sidebar nexus-sidebar nexus-glass-card" data-nexus-command-sidebar="true" aria-label="${escapeHtml(translateText("Nexus navigation"))}">
-      <div class="nexus-sidebar-brand">
-        <span class="nexus-sidebar-logo" aria-hidden="true">NX</span>
-        <div>
-          <strong>${escapeHtml(translateText("Nexus"))}</strong>
-          <small>${escapeHtml(translateText("AgriNexus AI Platform"))}</small>
-        </div>
-      </div>
-      <nav class="nexus-sidebar-nav" aria-label="${escapeHtml(translateText("Standard User sections"))}">
-        ${items.map((item, index) => {
-          const [id, label, command, icon] = item;
-          return `
-            <button type="button" class="${activeSidebarId === id ? "active" : ""}" data-nexus-mode-shortcut="sidebar-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}" aria-pressed="${activeSidebarId === id}">
-              <span class="nexus-sidebar-icon nexus-sidebar-icon-${escapeHtml(icon)}" aria-hidden="true"></span>
-              <span>${escapeHtml(translateText(label))}</span>
-            </button>
-          `;
-        }).join("")}
-      </nav>
-      <div class="nexus-sidebar-status nexus-status-pill" data-testid="nexus-sidebar-platform-status">
-        <span></span>
-        <strong>${escapeHtml(translateText("Platform Active"))}</strong>
-        <small>${escapeHtml(translateText("All systems operational"))}</small>
-      </div>
-    </aside>
-  `;
-}
-
 function renderNexusTopWelcomeArea() {
   return `
     <header class="nexus-command-topbar" data-nexus-command-topbar="true">
@@ -33871,44 +33688,6 @@ function renderNexusTopWelcomeArea() {
     </header>
   `;
 }
-
-function renderNexusCoreFeatureCards() {
-  const activeSidebarId = nexusActiveSidebarId();
-  const cards = [
-    ["agriculture", "Agriculture Help", "Source-aware crop, soil, pest, field, and advisor preparation.", "I need agriculture support.", "agri"],
-    ["chronic-care", "Chronic Care Support", "Organize readings, questions, RPM/RTM context, and provider-ready summaries.", "Nexus, record my blood pressure.", "health"],
-    ["agritrade", "Marketplace", "Prepare product, buyer, price, logistics, and review notes without transactions.", "Help me with AgriTrade, but do not take payment.", "market"],
-    ["learning", "Learning & Jobs", "Build training, literacy, skills, and workforce next-step plans.", "Help me find agriculture training.", "learn"]
-  ];
-  return `
-    <section class="nexus-core-feature-grid" data-nexus-core-feature-grid="true" aria-label="${escapeHtml(translateText("Core Nexus support areas"))}">
-      ${cards.map(([id, title, description, command, accent]) => `
-        <article class="nexus-core-feature-card nexus-feature-card nexus-glass-card nexus-core-feature-${escapeHtml(accent)} ${activeSidebarId === id ? "selected active" : ""}" data-nexus-core-feature="${escapeHtml(id)}">
-          <span aria-hidden="true"></span>
-          <strong>${escapeHtml(translateText(title))}</strong>
-          <p>${escapeHtml(translateText(description))}</p>
-          <button type="button" data-nexus-mode-shortcut="core-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}">
-            ${escapeHtml(translateText("Open workflow"))}
-          </button>
-        </article>
-      `).join("")}
-    </section>
-  `;
-}
-
-function renderNexusVoiceInteractionBar() {
-  return `
-    <section class="nexus-voice-interaction-bar nexus-voice-bar nexus-glass-card" data-nexus-voice-interaction-bar="true" aria-label="${escapeHtml(translateText("Voice interaction"))}">
-      <button type="button" class="nexus-voice-pulse" data-nexus-command-center-voice data-nexus-os-voice-control="toggle-listening" aria-label="${escapeHtml(translateText("Talk to Nexus"))}"></button>
-      <div>
-        <strong>${escapeHtml(translateText("Tap to speak with Nexus"))}</strong>
-        <small>${escapeHtml(translateText("Voice stays user-initiated. You can also type any request above."))}</small>
-      </div>
-      <div class="nexus-waveform" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-    </section>
-  `;
-}
-
 function renderNexusSavedQuestionsUtilityPanel() {
   const history = nexusKnowledgeHistory || {};
   const queries = Array.isArray(history.queries) ? history.queries : [];
@@ -33997,40 +33776,6 @@ function renderNexusMemoryUtilityPanel() {
     </section>
   `;
 }
-
-function renderNexusRightUtilityColumn() {
-  return `
-    <aside class="nexus-command-right-rail nexus-right-rail" data-nexus-command-right-rail="true" aria-label="${escapeHtml(translateText("Nexus utilities"))}">
-      ${renderNexusProfileUtilityPanel()}
-      ${renderNexusMemoryUtilityPanel()}
-      ${renderNexusSavedQuestionsUtilityPanel()}
-      ${renderNexusProviderSupportUtilityPanel()}
-      ${renderNexusPlatformStatusUtilityPanel()}
-      ${renderNexusInternetResourceHistoryPanel()}
-    </aside>
-  `;
-}
-
-function renderNexusOperationsShelf() {
-  return `
-    <details class="nexus-operations-shelf" data-nexus-operations-shelf="true" open>
-      <summary>${escapeHtml(translateText("Review workspace details"))}</summary>
-      <div class="nexus-operations-shelf-grid">
-        <a href="/business-services.html" target="_blank" rel="noopener noreferrer">${escapeHtml(translateText("Business services"))}</a>
-        ${renderNexusEndgameCommandCenter()}
-        ${renderNexusActivationCenter()}
-        ${renderNexusReviewQueues()}
-        ${renderNexusMissionHistoryPanel()}
-        ${renderNexusActiveWorkSummary()}
-        ${renderNexusPilotPlatformStatusPanel()}
-        ${renderNexusPilotReviewQueuePanel()}
-        ${renderNexusPilotReadinessDashboard()}
-        ${renderNexusProductionPlatformRailsPanel()}
-      </div>
-    </details>
-  `;
-}
-
 function renderNexusModeLauncher() {
   const shortcutsById = new Map((NEXUS_COMMAND_CENTER_SHORTCUTS || [])
     .filter(item => item && item.id)
@@ -34060,116 +33805,6 @@ function renderNexusModeLauncher() {
     </section>
   `;
 }
-
-function renderNexusMajorLaunchButtons() {
-  return `
-    <section class="nexus-major-launches" data-nexus-command-center-launches="true" aria-label="${escapeHtml(translateText("Open major Nexus services"))}">
-      <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${escapeHtml(translateText("Command Center"))}</span>
-        <strong>${escapeHtml(translateText("Open a major service"))}</strong>
-      </div>
-      <div class="nexus-major-launch-grid">
-        ${NEXUS_MAJOR_LAUNCH_BUTTONS.map(item => `
-          <button type="button" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}">
-            <strong>${escapeHtml(translateText(item.label))}</strong>
-            <span>${escapeHtml(translateText("Open guided app window"))}</span>
-          </button>
-        `).join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderNexusPremiumMiniAppLauncher() {
-  return `
-    <section class="nexus-premium-miniapp-launcher" data-nexus-premium-miniapp-launcher="true" aria-label="${escapeHtml(translateText("Nexus mini-app launcher"))}">
-      <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${escapeHtml(translateText("Mini-App Intelligence Launcher"))}</span>
-        <strong>${escapeHtml(translateText("Choose a mission area"))}</strong>
-        <p>${escapeHtml(translateText("Start with a simple card. Nexus opens the right focused workspace and keeps provider actions gated until credentials, consent, confirmation, and audit are ready."))}</p>
-      </div>
-      <div class="nexus-premium-miniapp-grid">
-        ${NEXUS_PREMIUM_MINI_APPS.map(app => `
-          <article class="nexus-premium-miniapp-card nexus-glass-card" data-nexus-mini-app-card="${escapeHtml(app.id)}">
-            <div class="nexus-miniapp-card-head">
-              <span class="nexus-miniapp-icon" aria-hidden="true">${escapeHtml(app.icon)}</span>
-              <div>
-                <strong>${escapeHtml(translateText(app.title))}</strong>
-                ${renderNexusStatusBadge(app.status)}
-                ${nexusDemoDataState?.loaded ? `${renderNexusDemoBadge("Demo")}<span class="nexus-demo-count" data-nexus-demo-count="${escapeHtml(app.id)}">${escapeHtml(String(nexusDemoRecordCountForMiniApp(app.id)))} ${escapeHtml(translateText("demo"))}</span>` : ""}
-              </div>
-            </div>
-            <p>${escapeHtml(translateText(app.purpose))}</p>
-            <small>${escapeHtml(translateText(app.summary))}</small>
-            <div class="nexus-miniapp-actions">
-              <button type="button" class="primary" data-nexus-mode-shortcut="${escapeHtml(app.id)}" data-nexus-command="${escapeHtml(app.command)}">${escapeHtml(translateText(app.primaryLabel))}</button>
-              <button type="button" data-nexus-mode-shortcut="${escapeHtml(app.id)}-status" data-nexus-command="${escapeHtml(app.statusCommand)}">${escapeHtml(translateText(app.secondaryLabel))}</button>
-            </div>
-          </article>
-        `).join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderNexusDemoRecordsPanel() {
-  const summary = getNexusDemoSummary();
-  if (!summary.loaded || !nexusDemoDataVisible) return "";
-  const records = nexusDemoDataState.records || {};
-  const missions = Array.isArray(nexusDemoDataState.missions) ? nexusDemoDataState.missions : [];
-  const sections = [
-    ["health", "Health & Care"],
-    ["agriculture", "Agriculture & Food Security"],
-    ["marketplace", "Trade & Marketplace"],
-    ["logistics", "Logistics & Maps"],
-    ["workforce", "Jobs & Workforce"],
-    ["learning", "Learning & Literacy"],
-    ["drone", "Drone & Field Operations"],
-    ["communications", "Communications & Media"],
-    ["providerActivation", "Provider Activation"]
-  ];
-  return `
-    <section class="nexus-demo-records-panel nexus-glass-card" data-nexus-demo-records-panel="true" aria-label="${escapeHtml(translateText("Demo sandbox records"))}">
-      <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${escapeHtml(translateText("Demo Records"))}</span>
-        <strong>${escapeHtml(translateText("Sandbox records for every Nexus mode"))}</strong>
-        <p>${escapeHtml(translateText("All records below are fictional and marked demo/sandbox. Nothing was sent externally."))}</p>
-      </div>
-      <div class="nexus-demo-record-grid">
-        <article data-nexus-demo-record-section="missions">
-          <div>
-            ${renderNexusDemoBadge("Demo")}
-            <strong>${escapeHtml(translateText("Demo Missions"))}</strong>
-            <small>${escapeHtml(String(missions.length))} ${escapeHtml(translateText("sandbox mission(s)"))}</small>
-          </div>
-          ${missions.map(mission => `
-            <button type="button" class="nexus-demo-mission-button" data-nexus-demo-mission-open="${escapeHtml(mission.id || "")}">
-              <b>${escapeHtml(translateText(mission.title || "Demo mission"))}</b>
-              <span>${escapeHtml(translateText(mission.goal || mission.safetyNote || "Demo mission only."))}</span>
-              <small>${escapeHtml(translateText("Open sandbox mission"))}</small>
-            </button>
-          `).join("")}
-        </article>
-        ${sections.map(([key, label]) => {
-          const items = Array.isArray(records[key]) ? records[key] : [];
-          return `
-            <article data-nexus-demo-record-section="${escapeHtml(key)}">
-              <div>
-                ${renderNexusDemoBadge("Demo")}
-                <strong>${escapeHtml(translateText(label))}</strong>
-                <small>${escapeHtml(String(items.length))} ${escapeHtml(translateText("sandbox record(s)"))}</small>
-              </div>
-              ${items.slice(0, 4).map(item => `
-                <p><b>${escapeHtml(translateText(item.title || item.type || "Demo record"))}</b><br><span>${escapeHtml(translateText(item.summary || item.safetyNote || "Demo record only."))}</span></p>
-              `).join("")}
-            </article>
-          `;
-        }).join("")}
-      </div>
-    </section>
-  `;
-}
-
 function nexusCurrentMissionSnapshot() {
   const state = nexusActiveWorkflowState || {};
   const activeAgenticMission = state?.agenticMission || nexusAgenticCommandMissions[0] || null;
@@ -34390,100 +34025,6 @@ function renderNexusPremiumActivityReceiptsPanel() {
     </section>
   `;
 }
-
-function renderNexusRecentWorkflowsPanel() {
-  const items = nexusRecentWorkflows.slice(0, 5);
-  return `
-    <section class="nexus-recent-workflows" data-nexus-recent-workflows="true" aria-label="${escapeHtml(translateText("Continue where you left off"))}">
-      <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${escapeHtml(translateText("Recent"))}</span>
-        <strong>${escapeHtml(translateText("Continue where you left off"))}</strong>
-      </div>
-      ${items.length ? `
-        <div class="nexus-recent-workflow-grid">
-          ${items.map(item => `
-            <button type="button" data-nexus-recent-workflow="${escapeHtml(item.id)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(`Continue ${item.title}`)}">
-              <span>${escapeHtml(translateText(item.title))}</span>
-              ${renderNexusStatusBadge(item.status)}
-              <small>${escapeHtml(translateText(item.summary))}</small>
-            </button>
-          `).join("")}
-        </div>
-      ` : `<p class="nexus-smart-empty-state" data-nexus-smart-empty-state="recent-workflows">${escapeHtml(translateText("No recent workflow yet. Ask Nexus or choose a service to begin."))}</p>`}
-    </section>
-  `;
-}
-
-function renderNexusRoleAwareControls() {
-  const roleSuggestions = {
-    "Standard User": "Suggested: ask Nexus, choose a support area, prepare packets, and review safe next steps.",
-    Provider: "Suggested: review provider-ready summaries, prepared packets, and confirmation-gated handoffs.",
-    Vendor: "Suggested: review marketplace inquiry prep, logistics requests, and credential-gated actions.",
-    Admin: "Suggested: review queues, credential status, audit posture, and blocked external actions.",
-    Trainer: "Suggested: review learning, literacy, workforce, and enrollment preparation lanes.",
-    "Agriculture Expert": "Suggested: review crop support, field visit planning, AgriTrade, and source-backed guidance.",
-    "Clinic Staff": "Suggested: review telehealth intake, mobile clinic, pharmacy prep, and chronic care summaries."
-  };
-  return `
-    <section class="nexus-role-low-bandwidth-panel" data-nexus-role-aware-view="true" data-nexus-low-bandwidth-control="true">
-      <div>
-        <label>
-          <span>${escapeHtml(translateText("Role view"))}</span>
-          <select data-nexus-role-selector aria-label="${escapeHtml(translateText("Select role view"))}">
-            ${NEXUS_UX_ROLES.map(role => `<option value="${escapeHtml(role)}" ${role === nexusUserExperienceRole ? "selected" : ""}>${escapeHtml(translateText(role))}</option>`).join("")}
-          </select>
-        </label>
-        <small>${escapeHtml(translateText("This filters suggestions only. It is not authentication or authorization."))}</small>
-        <p class="nexus-role-suggestion" data-nexus-role-suggestion>${escapeHtml(translateText(roleSuggestions[nexusUserExperienceRole] || roleSuggestions["Standard User"]))}</p>
-      </div>
-      <div>
-        <label>
-          <span>${escapeHtml(translateText("Language preference"))}</span>
-          <select data-nexus-language-preference aria-label="${escapeHtml(translateText("Language preference"))}">
-            ${["English", "Spanish", "French", "Arabic", "Portuguese", "Swahili"].map(language => `<option value="${escapeHtml(language)}" ${language === (nexusLanguagePreference || "English") ? "selected" : ""}>${escapeHtml(translateText(language))}</option>`).join("")}
-          </select>
-        </label>
-        <small>${escapeHtml(translateText(nexusLanguagePreference ? "Language preference captured for local UI guidance." : "Choose a display preference. Full translation depends on supported app content."))}</small>
-      </div>
-      <button type="button" data-nexus-low-bandwidth-toggle aria-pressed="${nexusLowBandwidthMode ? "true" : "false"}">
-        ${escapeHtml(translateText(nexusLowBandwidthMode ? "Low-bandwidth mode on" : "Use low-bandwidth mode"))}
-      </button>
-    </section>
-  `;
-}
-
-function renderNexusCommandCenterStatusSummary() {
-  const providerMissing = nexusRealProviderTestingStatus?.providers?.filter?.(provider => provider.testabilityState === "missing_config").length || 0;
-  const queued = nexusPreparedPackets.filter(packet => packet.outcomeStatus === "queued" || packet.offlineEligible).length;
-  const liveReady = nexusKnowledgeStatus?.ready || nexusKnowledgeStatus?.configured || false;
-  return `
-    <section class="nexus-command-status-summary" data-nexus-provider-status-summary="true" data-nexus-queue-fallback-summary="true" data-nexus-live-knowledge-status-summary="true" data-nexus-production-safety-status="true">
-      <article>${renderNexusStatusBadge(providerMissing ? "missing_config" : "ready")}<strong>${escapeHtml(translateText("Provider status"))}</strong><span>${escapeHtml(translateText(providerMissing ? `${providerMissing} provider area(s) need credentials.` : "Provider gates are visible and safe."))}</span></article>
-      <article>${renderNexusStatusBadge(queued ? "queued" : "prepared")}<strong>${escapeHtml(translateText("Queue / fallback"))}</strong><span>${escapeHtml(translateText(queued ? `${queued} local item(s) can be reviewed.` : "No queued local item yet."))}</span></article>
-      <article>${renderNexusStatusBadge(liveReady ? "research_complete" : "credential_required")}<strong>${escapeHtml(translateText("Live Knowledge"))}</strong><span>${escapeHtml(translateText(liveReady ? "Configured source retrieval can show citations." : "Missing credentials are shown by env name only."))}</span></article>
-      <article>${renderNexusStatusBadge("not_executed")}<strong>${escapeHtml(translateText("Production safety"))}</strong><span>${escapeHtml(translateText("No hidden execution. Serious actions require consent and confirmation."))}</span></article>
-    </section>
-  `;
-}
-
-function renderNexusSuggestedActions() {
-  return `
-    <section class="nexus-suggested-actions" data-nexus-suggested-actions="true" aria-label="${escapeHtml(translateText("What Nexus can help with today"))}">
-      <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${translateText("Quick start")}</span>
-        <strong>${translateText("What Nexus can help with today")}</strong>
-      </div>
-      <div class="nexus-suggested-action-grid">
-        ${NEXUS_HOME_SUGGESTED_ACTIONS.map((item, index) => `
-          <button type="button" class="nexus-suggested-action nexus-suggested-action-${escapeHtml(item.accent || "green")}" data-nexus-mode-shortcut="suggested-${index}" data-nexus-command="${escapeHtml(item.command)}">
-            ${translateText(item.label)}
-          </button>
-        `).join("")}
-      </div>
-    </section>
-  `;
-}
-
 function isNexusCapabilityOverviewCommand(command = "") {
   return /\b(what can nexus do|what can you do|show me nexus modes|show nexus modes|what can nexus do across all modes|nexus modes)\b/i.test(String(command || ""));
 }
@@ -37999,46 +37540,6 @@ function renderNexusActiveWorkSummary() {
 // Check routes, facilities, regions, and location support.
 // Browse options and prepare inquiry notes without buyer contact, orders, or payment.
 // data-simple-section="${item.section}"
-function renderNexusAgenticBrainPanel() {
-  const status = nexusAgenticBrainStatus || {};
-  const hasResult = Boolean(nexusAgenticBrainLastResult);
-  if (!hasResult) {
-    return `
-      <section class="nexus-agentic-brain-panel nexus-agentic-brain-panel-empty" data-nexus-agentic-brain-panel="true" aria-label="${translateText("Nexus response area")}">
-        <div class="nexus-dashboard-section-head">
-          <span class="eyebrow">${translateText("Ready when you are")}</span>
-          <strong>${translateText("Nexus responses will appear here")}</strong>
-        </div>
-        <p>${translateText("Choose a mode card, tap a quick action, or ask in your own words. Nexus will prepare review-only next steps and keep provider, payment, call, message, location, camera, medical, pharmacy, and emergency actions gated.")}</p>
-      </section>
-    `;
-  }
-  return `
-    <section class="nexus-agentic-brain-panel" data-nexus-agentic-brain-panel="true" aria-label="${translateText("Nexus contextual results")}">
-      <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${translateText("Contextual results")}</span>
-        <strong>${translateText("What Nexus prepared")}</strong>
-      </div>
-      <p>${translateText("After you ask, Nexus shows prepared cards, active work, and review-only next steps here.")}</p>
-      <p>${translateText("Nexus does not diagnose, prescribe, fake provider contact, fake booking, silently send messages, process payments, route emergency services, use camera, use microphone, or share location.")}</p>
-      <div class="nexus-real-provider-status-actions">
-        <button type="button" data-nexus-brain-action="refresh">${translateText("Refresh brain state")}</button>
-        <span>${translateText("Active tasks")}: ${escapeHtml(String(status.activeTaskCount ?? nexusAgenticBrainTasks.length))} / ${translateText("Provider queue")}: ${escapeHtml(String(status.providerQueueCount ?? nexusAgenticBrainProviderQueue.length))}</span>
-      </div>
-      ${renderNexusAgenticBrainResultCards()}
-      <details class="nexus-real-provider-result" data-nexus-agentic-brain-result="true">
-        <summary>${translateText("Details")}</summary>
-        <pre>${escapeHtml(nexusAgenticBrainLastResult ? JSON.stringify(nexusAgenticBrainLastResult, null, 2) : translateText("No Nexus brain result yet."))}</pre>
-      </details>
-      <h4>${translateText("Active tasks")}</h4>
-      ${renderNexusAgenticBrainTasks()}
-      <h4>${translateText("Provider/Admin local queue")}</h4>
-      ${renderNexusAgenticBrainProviderQueue()}
-      ${renderNexusAgenticBrainMatrix()}
-    </section>
-  `;
-}
-
 function nexusAgenticBrainCommandValue() {
   return $("#nexusAgenticBrainCommand")?.value?.trim() || nexusAgenticBrainDefaultCommand();
 }
@@ -39359,35 +38860,6 @@ function renderNexusOsDeploymentProfileSummary() {
     </div>
   `;
 }
-
-function renderNexusOsApplicationShellPanel() {
-  const shellState = nexusOsShellState();
-  const controls = [
-    ["Language", "Nexus, change language."],
-    ["Mission history", "Nexus, show receipts."],
-    ["Privacy", "Nexus, show privacy controls."],
-    ["Accessibility", "Nexus, open accessibility help."],
-    ["Settings", "Nexus, show language and safety settings."],
-    ["Connectivity", "Nexus, show provider readiness."]
-  ];
-  return `
-    <section class="nexus-os-shell-panel" data-nexus-os-application-shell="true" aria-label="${escapeHtml(translateText("Nexus OS shell status"))}">
-      <div class="nexus-os-shell-status" data-nexus-os-shell-states="true">
-        ${Object.values(shellState).map(value => `<span>${escapeHtml(translateText(value))}</span>`).join("")}
-      </div>
-      ${renderNexusOsDeploymentProfileSummary()}
-      <div class="nexus-os-shell-actions" data-nexus-os-shell-actions="true" aria-label="${escapeHtml(translateText("Nexus shell controls"))}">
-        ${controls.map(([label, command]) => `
-          <button type="button" data-simple-command="${escapeHtml(command)}" data-nexus-os-shell-control="${escapeHtml(String(label).toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">
-            ${escapeHtml(translateText(label))}
-          </button>
-        `).join("")}
-      </div>
-      <p class="nexus-os-shell-focus-note">${escapeHtml(translateText("Speak or type naturally. Nexus opens only the workflow needed for your mission."))}</p>
-    </section>
-  `;
-}
-
 function renderNexusOsCalmHelper() {
   const prompts = [
     "Nexus, help me get started.",
@@ -39425,56 +38897,6 @@ function getNexusOsGenesisPlatformAcceptance() {
 if (typeof window !== "undefined") {
   window.getNexusOsGenesisPlatformAcceptance = getNexusOsGenesisPlatformAcceptance;
 }
-
-function renderNexusOsGenesisReleasePanel() {
-  const acceptance = getNexusOsGenesisPlatformAcceptance();
-  const checks = [
-    "Mobile, tablet, and desktop layouts",
-    "Keyboard focus and visible focus rings",
-    "Screen-reader live regions and labels",
-    "Reduced motion and high contrast modes",
-    "Long translation wrapping",
-    "Tenant and domain isolation",
-    "No fake execution claims"
-  ];
-  return `
-    <section class="nexus-os-genesis-release-panel" data-nexus-os-genesis-release="1.0" data-nexus-os-responsive-hardening="mobile-tablet-desktop" data-nexus-os-accessibility-hardening="keyboard screen-reader reduced-motion high-contrast forced-colors long-translation" data-nexus-os-no-fake-execution="true" aria-label="${escapeHtml(translateText("Nexus OS Genesis platform readiness"))}">
-      <strong>${escapeHtml(translateText(acceptance.release))}</strong>
-      <p>${escapeHtml(translateText("The shared Nexus OS shell is hardened for real deployments while keeping regulated actions gated by policy, credentials, consent, confirmation, and receipts."))}</p>
-      <div class="nexus-os-genesis-release-checks" aria-label="${escapeHtml(translateText("Genesis platform checks"))}">
-        ${checks.map(check => `<span>${escapeHtml(translateText(check))}</span>`).join("")}
-      </div>
-    </section>
-  `;
-}
-
-function renderNexusOsDeferredLegacySurfaces() {
-  return `
-    <div class="nexus-os-deferred-legacy-host" data-nexus-os-deferred-legacy-surfaces="true" data-standard-user-startup-visible="false" hidden aria-hidden="true">
-      ${renderNexusOsApplicationShellPanel()}
-      ${renderNexusOsGenesisReleasePanel()}
-      ${renderNexusCommandCenterSidebar()}
-      ${renderNexusDemoSandboxControls("deferred-command-landing")}
-      ${renderNexusUserTestingRuntimePanel()}
-      ${renderNexusPremiumMiniAppLauncher()}
-      ${renderNexusDemoRecordsPanel()}
-      ${renderNexusPremiumActivityReceiptsPanel()}
-      ${renderNexusMajorLaunchButtons()}
-      ${renderNexusRecentWorkflowsPanel()}
-      ${renderNexusRoleAwareControls()}
-      ${renderNexusCommandCenterStatusSummary()}
-      ${renderNexusCoreFeatureCards()}
-      ${renderNexusModeLauncher()}
-      ${renderNexusSuggestedActions()}
-      ${renderNexusVoiceInteractionBar()}
-      ${renderNexusAgenticBrainPanel()}
-      ${renderNexusKnowledgeRailPanel()}
-      ${renderNexusOperationsShelf()}
-      ${renderNexusRightUtilityColumn()}
-    </div>
-  `;
-}
-
 function renderNexusUserWorkspaceSegment(label = "Nexus section", renderer = () => "") {
   try {
     return renderer();
