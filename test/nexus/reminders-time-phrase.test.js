@@ -11,6 +11,27 @@ test("'in N hours/minutes' resolves to a real future timestamp", () => {
   assert.equal(whenLabel, "in 2 hours");
 });
 
+// Found live (date/timezone follow-up audit): "in N days"/"in N weeks" used the same raw millisecond
+// addition as "in N minutes/hours" -- correct for a genuine elapsed-duration phrase, but "in 2 days"
+// means the same wall-clock moment 2 calendar days ahead in the caller's own zone (what "tomorrow"/a
+// weekday name already mean here), not exactly 48 real elapsed hours. Raw addition silently drifts the
+// fired time across a DST transition. 2026-11-02 02:00 is when America/New_York falls back from EDT to
+// EST (clocks repeat 1:00-2:00am), so 9am on 31 Oct 2026 (still EDT) plus "2 days" crosses it.
+test("'in N days' preserves the caller's wall-clock time across a DST transition, like 'tomorrow' does -- not a fixed N*24 real hours later", () => {
+  const now = new Date("2026-10-31T13:00:00Z"); // 09:00 EDT (UTC-4) on 31 Oct 2026
+  const inTwoDays = parseAssistantReminderTime("remind me in 2 days to check the pump", { timeZone: "America/New_York", now });
+  // The same real moment reached by chaining "tomorrow" twice from the same starting instant -- both mean
+  // "9am local, 2 calendar days from now," computed through the same DST-safe zoned-arithmetic path.
+  const tomorrow = parseAssistantReminderTime("remind me tomorrow to check the pump", { timeZone: "America/New_York", now });
+  const dayAfterTomorrow = parseAssistantReminderTime("remind me tomorrow to check the pump", { timeZone: "America/New_York", now: new Date(tomorrow.scheduledAt) });
+  assert.equal(inTwoDays.scheduledAt, dayAfterTomorrow.scheduledAt, "'in 2 days' must mean the same wall-clock moment as chaining 'tomorrow' twice, not a fixed 48 real hours later");
+  // Confirm a real DST transition actually fell within this window, so the test genuinely exercises the
+  // bug rather than passing by coincidence: the fixed, zone-aware result must differ from naive 48-hour
+  // millisecond addition.
+  const rawTwoDaysLater = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
+  assert.notEqual(inTwoDays.scheduledAt, rawTwoDaysLater, "the fixed result must differ from raw 48-hour addition -- proving a real DST transition was actually crossed and matters here");
+});
+
 // Found live (notification-delivery audit): every date below used to be
 // computed in the SERVER's own local clock, not the caller's real time
 // zone -- "remind me at 3pm" from someone in a different zone than the
