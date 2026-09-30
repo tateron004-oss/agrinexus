@@ -58,6 +58,13 @@ function bmi(weightValue, weightUnit, heightValue, heightUnit) {
 function createChronicDiseaseIntakeExecutor({ records }) {
   if (!records?.create) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context, taskId }) {
+    // Found live (restriction-bypass follow-up audit): same gap as health.record's own executor -- every
+    // direct REST/legacy path that writes a real health record is gated on
+    // userIsRestrictedFrom(user, "health-record-write"), but this canonical-tool executor had no check at
+    // all. See nexus/health/executor.js's matching fix for the full scenario.
+    if (context?.isRestrictedFrom?.("health-record-write")) {
+      throw Object.assign(new Error("This account type cannot write real health records."), { code: "health_record_write_restricted", status: 403 });
+    }
     const blocked = guardMedicalText("nexus-chronic-disease", "chronic_disease.intake", [input.questionsForProvider, input.accessBarriers], false);
     // A safety block is a deliberate, correct refusal -- not a tool
     // failure -- so it's returned as a normal (non-throwing) outcome, the
@@ -98,6 +105,11 @@ function verifyChronicDiseaseIntakeOutcome({ result }) {
 function createChronicDiseaseReadingExecutor({ records }) {
   if (!records?.create) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context, taskId }) {
+    // Found live (restriction-bypass follow-up audit): same gap as health.record's own executor -- see
+    // nexus/health/executor.js's matching fix for the full scenario.
+    if (context?.isRestrictedFrom?.("health-record-write")) {
+      throw Object.assign(new Error("This account type cannot write real health records."), { code: "health_record_write_restricted", status: 403 });
+    }
     const blocked = guardMedicalText("nexus-chronic-disease", "chronic_disease.reading", [input.notes, input.symptoms, input.foodActivityNote], false);
     if (blocked) return { persisted: false, blocked: true, reason: blocked.body.message };
     const data = {
