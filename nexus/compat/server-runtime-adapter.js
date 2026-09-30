@@ -22,7 +22,7 @@ function safeDatabaseIdentifier(value) {
 }
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
-  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth } = {}) {
+  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth, isRestrictedFrom = () => false } = {}) {
   let runtimePromise = null;
   // The GPS's place search, reverse lookup and routing (see navigation/service.js). Position is never logged or stored.
   const navigation = createNavigationService({ env });
@@ -532,6 +532,15 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         query: Object.fromEntries(url.searchParams.entries()) };
       let result = null;
       if (url.pathname.startsWith("/api/nexus/runtime/business/")) {
+        // Found live (business/marketplace audit): nexus/business's own authorize() only checks
+        // org-membership permissions, which every non-guest signed-in role holds unconditionally --
+        // there's no way for the business engine itself to distinguish an Investor/Provider Reviewer
+        // account from a real Standard User. Checked here, at the one integration point that still has
+        // the legacy user.role, so a restricted account can't create a real Stripe checkout session the
+        // same way it's already blocked from every other real-money route in server.js.
+        if (req.method === "POST" && /^\/api\/nexus\/runtime\/business\/clients\/[^/]+\/checkout$/.test(url.pathname) && isRestrictedFrom(user, "external-transaction")) {
+          send(res, 403, { error: "This account type cannot start a real payment transaction.", code: "business_checkout_restricted" }); return true;
+        }
         result = await createBusinessApi(active, { env }).handle({ method: req.method, pathname: url.pathname, context, body });
       } else if (url.pathname === "/api/nexus/runtime/behavior/turn" && req.method === "POST") {
         if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
@@ -731,6 +740,13 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       return true;
     }
   async function businessRequest({ method, pathname, body = {}, user }) {
+    // Same restriction check as the main HTTP dispatcher above -- this is a second, separate entry point
+    // into the business engine (used by the voice/conversational dispatcher) that would otherwise bypass
+    // it entirely. No current voice-dispatch action reaches .../checkout, but closing it here too avoids
+    // silently reopening the gap the moment one does.
+    if (method === "POST" && /^\/api\/nexus\/runtime\/business\/clients\/[^/]+\/checkout$/.test(pathname) && isRestrictedFrom(user, "external-transaction")) {
+      throw new NexusRuntimeError("business_checkout_restricted", "This account type cannot start a real payment transaction.", 403);
+    }
     const active = await runtime(); await active.ready;
     const context = requestContext({ headers: {} }, user);
     return createBusinessApi(active, { env }).handle({ method, pathname, context, body });

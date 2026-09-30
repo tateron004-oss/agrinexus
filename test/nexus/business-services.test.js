@@ -113,6 +113,23 @@ test("assistant() refuses to share the workspace with the AI provider after busi
   assert.equal(calls, 1, "the AI provider must never be called again once base business consent is revoked");
 });
 
+// Found live (business/marketplace audit): the identical gap as assistant() above, but on checkout() --
+// it only ever checked/re-granted BILLING_SCOPE, never the base DATA_SCOPE, so a user who revoked
+// business consent could still get a real Stripe checkout session created with consent:true.
+test("checkout() refuses to create a real checkout session after business consent is revoked, matching assistant()/plan()", async () => {
+  let calls = 0;
+  const f = fixture({ checkout: async () => { calls++; return { state: "pending" }; } });
+  const row = await f.service.create(f.context, { businessName: "Cooperative", consent: true });
+  await f.service.checkout(f.context, row.record_id, { confirmed: true, consent: true, expectedVersion: 1, plan: "pro" });
+  assert.equal(calls, 1, "the first, consented call must still reach the billing provider");
+  await f.service.revokeConsent(f.context);
+  await assert.rejects(
+    () => f.service.checkout(f.context, row.record_id, { confirmed: true, consent: true, expectedVersion: 2, plan: "pro" }),
+    error => error.code === "business_consent_required"
+  );
+  assert.equal(calls, 1, "the billing provider must never be called again once base business consent is revoked");
+});
+
 test("disabled business providers cannot fetch even when methods are invoked", async () => {
   let calls = 0; const providers = createBusinessProviders({ env: {}, fetchFn: async () => { calls++; throw Error("Network forbidden"); } });
   await assert.rejects(() => providers.assistant({}), error => error.code === "business_provider_unavailable");

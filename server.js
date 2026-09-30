@@ -139,7 +139,14 @@ const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const authoritativeNexusRuntime = createServerRuntimeAdapter({
   resolveUser: async req => authoritativeRuntimeUser(currentUser(req, await readDb())),
   readJson: readBody,
-  logger: console
+  logger: console,
+  // Found live (business/marketplace audit): the nexus/business engine's own authorize() only checks
+  // org-membership permissions (tasks:execute/tasks:read), which authoritativeRuntimeUser() above grants
+  // unconditionally to every non-guest signed-in role -- there is no concept of userIsRestrictedFrom's
+  // Investor/Provider Reviewer denylist inside nexus/business at all. Passed in here (rather than
+  // duplicated inside nexus/, which has no notion of legacy roles) so the checkout route below can refuse
+  // a real Stripe checkout session the same way every other real-money route in this file already does.
+  isRestrictedFrom: userIsRestrictedFrom
 });
 
 function deterministicAuthoritativeUserId(legacyUserId = "") {
