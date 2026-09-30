@@ -260,3 +260,54 @@ test("GET /api/nexus/consent-history redacts relatedRecordId for a non-admin cal
   const adminView = await fetch(`${base}/api/nexus/consent-history`, { headers: { cookie: adminCookie } }).then(res => res.json());
   assert.ok(adminView.auditEvents.some(entry => entry.relatedRecordId), "a real Admin must still see real relatedRecordIds");
 });
+
+// Found live (consent-history follow-up to the auditEvents redaction above): consentEvents was returned
+// completely raw to any signed-in caller, with no redaction at all -- each entry carries recordId (and,
+// for provider-pathway consents, providerPathwayRequestId) plus profileLabel, the other user's real
+// display name, disclosing who consented to what.
+test("GET /api/nexus/consent-history redacts recordId/profileLabel for a non-admin caller but still shows them to a real Admin", async () => {
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  const created = await fetch(`${base}/api/nexus/records`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie },
+    body: JSON.stringify({ sourceMode: "telehealth_intake", payload: { note: "consent redaction test subject" } }) }).then(res => res.json());
+  const recordId = created.record.id;
+  const consented = await fetch(`${base}/api/nexus/records/${recordId}/consent`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie }, body: JSON.stringify({}) }).then(res => res.json());
+  assert.equal(consented.ok, true, "sanity check: the consent that creates the pilot consent event must itself succeed");
+
+  const nonAdminView = await fetch(`${base}/api/nexus/consent-history`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  assert.ok(nonAdminView.consentEvents.length > 0, "sanity check: there are real consent events to redact");
+  for (const entry of nonAdminView.consentEvents) {
+    assert.equal(entry.recordId, null, "a non-admin must not see other users' real recordId");
+    assert.equal(entry.profileLabel, null, "a non-admin must not see other users' real profileLabel");
+  }
+
+  const adminView = await fetch(`${base}/api/nexus/consent-history`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminView.consentEvents.some(entry => entry.recordId), "a real Admin must still see real recordIds");
+  assert.ok(adminView.consentEvents.some(entry => entry.profileLabel), "a real Admin must still see real profileLabels");
+});
+
+// Found live (same sweep): db.nexusPilotAuditEvents/nexusPilotConsentEvents/nexusIntegrationAttempts/
+// nexusExportDeleteRequests/nexusRoutingLogs were never capped anywhere, unlike every sibling collection
+// already fixed this session (e.g. store.applicantProfiles, and this same store's own
+// auditLogs/actionReceipts/consentRecords, all capped to 1000).
+test("db.nexusPilotAuditEvents and db.nexusPilotConsentEvents stay capped at 1000 across repeated actions", async () => {
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+  const db = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  db.nexusPilotAuditEvents = Array.from({ length: 1000 }, (_, i) => ({ id: `filler-audit-${i}`, eventType: "filler", timestamp: new Date().toISOString() }));
+  db.nexusPilotConsentEvents = Array.from({ length: 1000 }, (_, i) => ({ id: `filler-consent-${i}`, recordId: "filler" }));
+  fs.writeFileSync(tempDbPath, JSON.stringify(db));
+
+  const created = await fetch(`${base}/api/nexus/records`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie },
+    body: JSON.stringify({ sourceMode: "telehealth_intake", payload: { note: "cap test subject" } }) }).then(res => res.json());
+  const recordId = created.record.id;
+  await fetch(`${base}/api/nexus/records/${recordId}/consent`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie }, body: JSON.stringify({}) });
+
+  const after = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  assert.ok(after.nexusPilotAuditEvents.length <= 1000, `expected nexusPilotAuditEvents to be capped at 1000, got ${after.nexusPilotAuditEvents.length}`);
+  assert.ok(after.nexusPilotConsentEvents.length <= 1000, `expected nexusPilotConsentEvents to be capped at 1000, got ${after.nexusPilotConsentEvents.length}`);
+});
