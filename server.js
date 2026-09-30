@@ -2890,20 +2890,37 @@ function eraseOwnedNexusContentRecords(db, userId) {
 // most individual toolkit stores already use for one collection) -- a real, honest completeness gain over
 // today's total absence, though an account with more than 5000 combined rows across every toolkit would
 // still see only its most recent 5000; a full per-purpose paginated export is future work, not this fix.
+//
+// Found live (lists-toolkit follow-up audit, same day): the first version of this fix only queried
+// nexus_memory_items -- but a SECOND, entirely separate Postgres table, nexus_records (RecordRepository),
+// backs its own set of real nexus/* tools (lists.create/update, health.record, telehealth.prepare,
+// drone.plan, business templates, workspace state, autonomy-control state). Account erasure already
+// correctly reaches this table too (data-lifecycle-repository.js's own nexus_records sweep), so the exact
+// same "erasable but never once downloadable" asymmetry this function was written to close for
+// nexus_memory_items was still wide open for nexus_records -- reproduced in a second table the first fix
+// never touched. Scoped identically to how erasure scopes it (subject_id when set, else owner_id), grouped
+// by workspace_id+record_type so each tool's data is clearly labeled the same way purpose already labels
+// the memory-table rows.
 async function collectOwnedNexusMemoryRecords(user) {
   if (!usingPostgresState()) return {};
   try {
     const authoritativeUser = await authoritativeRuntimeUser(user);
     if (!authoritativeUser) return {};
     const pool = getPgPool();
-    const result = await pool.query(`select purpose,content,created_at from nexus_memory_items
+    const owned = {};
+    const memoryResult = await pool.query(`select purpose,content,created_at from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and deleted_at is null order by created_at desc limit 5000`,
       [authoritativeUser.tenantId, authoritativeUser.id]);
-    const rows = result.rows || result;
-    const owned = {};
-    for (const row of rows) {
-      const key = `nexus.${row.purpose}`;
+    for (const row of (memoryResult.rows || memoryResult)) {
+      const key = `nexus.memory.${row.purpose}`;
       (owned[key] || (owned[key] = [])).push({ content: row.content, createdAt: row.created_at });
+    }
+    const recordsResult = await pool.query(`select workspace_id,record_type,data,created_at from nexus_records
+      where tenant_id=$1 and (subject_id=$2 or (subject_id is null and owner_id=$2)) and deleted_at is null
+      order by created_at desc limit 5000`, [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (recordsResult.rows || recordsResult)) {
+      const key = `nexus.records.${row.workspace_id}.${row.record_type}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.data, createdAt: row.created_at });
     }
     return owned;
   } catch (error) {

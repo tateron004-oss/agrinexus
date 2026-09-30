@@ -82,13 +82,41 @@ test("collectOwnedNexusMemoryRecords reads the real user's own nexus_memory_item
         { purpose: "wellness", content: { kind: "entry", metric: "sleep", value: 7 }, created_at: "2026-09-21T00:00:00.000Z" },
         { purpose: "circle", content: { kind: "circle", role: "person", otherName: "Joseph" }, created_at: "2026-09-19T00:00:00.000Z" }
       ] };
+    }],
+    [/^select workspace_id,record_type,data,created_at from nexus_records/, () => ({ rows: [] })]
+  ]);
+  const { collectOwnedNexusMemoryRecords } = loadFns({ statePostgres: true, pool });
+  const owned = await collectOwnedNexusMemoryRecords({ id: "user-1", email: "amina@example.com", role: "Standard User" });
+  assert.equal(owned["nexus.memory.wellness"].length, 2, "every purpose's rows must be grouped together, labeled by the real toolkit column");
+  assert.equal(owned["nexus.memory.circle"].length, 1);
+  assert.deepEqual(owned["nexus.memory.wellness"][0].content, { kind: "goal", metric: "workouts", target: 4 });
+});
+
+// Found live (lists-toolkit follow-up audit): the first version of this fix only queried nexus_memory_items
+// -- a second, entirely separate Postgres table, nexus_records (RecordRepository, backing lists.create/
+// update, health.record, telehealth.prepare, drone.plan, business templates, workspace/autonomy-control
+// state), was still completely absent from export despite erasure already reaching it.
+test("collectOwnedNexusMemoryRecords also reads the real user's own nexus_records rows, grouped by workspace and record type, scoped the same way erasure scopes them", async () => {
+  const pool = stubPool([
+    [/^select id from users where tenant_id=\$1 and lower\(email\)=\$2/, () => ({ rows: [{ id: "pg-user-1" }] })],
+    [/^insert into users/, () => ({ rows: [] })],
+    [/^insert into nexus_organization_memberships/, () => ({ rows: [] })],
+    [/^select purpose,content,created_at from nexus_memory_items/, () => ({ rows: [] })],
+    [/^select workspace_id,record_type,data,created_at from nexus_records/, (params) => {
+      assert.equal(params[0], "00000000-0000-0000-0000-000000000001", "must query the real authoritative tenant id");
+      assert.equal(params[1], "pg-user-1", "must query the caller's own resolved authoritative user id, never a client-suppliable one");
+      return { rows: [
+        { workspace_id: "lists", record_type: "checklist", data: { title: "Groceries", items: [{ text: "milk" }] }, created_at: "2026-09-20T00:00:00.000Z" },
+        { workspace_id: "lists", record_type: "checklist", data: { title: "Farm tasks", items: [] }, created_at: "2026-09-19T00:00:00.000Z" },
+        { workspace_id: "health", record_type: "observation", data: { kind: "vitals" }, created_at: "2026-09-18T00:00:00.000Z" }
+      ] };
     }]
   ]);
   const { collectOwnedNexusMemoryRecords } = loadFns({ statePostgres: true, pool });
   const owned = await collectOwnedNexusMemoryRecords({ id: "user-1", email: "amina@example.com", role: "Standard User" });
-  assert.equal(owned["nexus.wellness"].length, 2, "every purpose's rows must be grouped together, labeled by the real toolkit column");
-  assert.equal(owned["nexus.circle"].length, 1);
-  assert.deepEqual(owned["nexus.wellness"][0].content, { kind: "goal", metric: "workouts", target: 4 });
+  assert.equal(owned["nexus.records.lists.checklist"].length, 2, "every workspace+record type's rows must be grouped together");
+  assert.equal(owned["nexus.records.health.observation"].length, 1);
+  assert.deepEqual(owned["nexus.records.lists.checklist"][0].content, { title: "Groceries", items: [{ text: "milk" }] });
 });
 
 test("collectOwnedNexusMemoryRecords fails closed (returns nothing, never throws) if the authoritative query itself errors", async () => {
