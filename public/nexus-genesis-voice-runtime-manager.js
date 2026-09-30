@@ -294,8 +294,7 @@
     const sessionContext = behavior.sessionContext || createSessionContext();
     const owner = `voice-runtime:${name}`;
     const lock = behavior.lock || createVoiceOwnershipLock();
-    function emit(event, payload = {}, eventGeneration = generation) {
-      if (eventGeneration !== generation) return;
+    function emit(event, payload = {}) {
       (listeners.get(event) || []).forEach(listener => listener({ event, runtime: name, ...payload }));
     }
     function setState(nextState) {
@@ -458,6 +457,7 @@
         return { ok: true, state };
       },
       async callTool(toolName, args = {}) {
+        const currentGeneration = generation;
         setState("processing");
         emit("userSpeechEnd", {});
         let gatewayResult;
@@ -466,6 +466,15 @@
         } catch (error) {
           gatewayResult = { ok: false, response: "I could not complete that request, but I am still listening.", blockedReason: normalizeRuntimeError(error, "tool-failure").category };
         }
+        // Found live: a stop() or start() elsewhere bumps `generation` and tears
+        // down (or replaces) this adapter's session -- without this check, an
+        // in-flight callTool() that started BEFORE that stop/start finishes
+        // AFTER it would unconditionally setState()/emit() its result, silently
+        // resurrecting a session that was supposed to be closed (or overwriting
+        // a newer one already in progress). Reachable whenever a tool call is
+        // still awaiting its provider response when the user stops listening or
+        // a restart happens mid-call.
+        if (currentGeneration !== generation) return { ok: false, toolName, stale: true, state, executionAttempted: false };
         if (behavior.failTool || gatewayResult?.ok === false) {
           emit("error", { category: gatewayResult?.blockedReason || "provider-failure" });
           setState("recovering");
@@ -926,6 +935,7 @@
       async recover(reason = "recover") {
         if (!active || state === "terminated") return { ok: false, state, reason: "inactive" };
         generation += 1;
+        const recoverGeneration = generation;
         pendingListeningRecovery = false;
         const safeReason = String(reason || "recover").slice(0, 120);
         recoveryLog.push({ reason: safeReason, at: new Date().toISOString(), generation });
@@ -933,6 +943,15 @@
         logTransition("recovering", safeReason);
         clearAllWatchdogs();
         const recoveryResult = await runtimeManager.adapter().recover(safeReason);
+        // Found live: unlike processTurn(), this recover() bumped `generation`
+        // before its await but never re-checked it afterward -- so a slower,
+        // earlier recover() call resolving AFTER a newer, overlapping recover()
+        // call had already finished (successfully or not) would still run its
+        // own completion logic below, silently overwriting whatever the newer,
+        // authoritative attempt had already decided (including resurrecting
+        // `state` to "listening" after the newer attempt had explicitly failed
+        // and deactivated the session).
+        if (recoverGeneration !== generation) return { ok: false, state, stale: true, reason: safeReason };
         if (!recoveryResult?.ok) {
           active = false;
           logTransition("recovering", "recovery-failed", {
