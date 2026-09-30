@@ -34,9 +34,15 @@ class RecordRepository {
     });
   }
 
-  async list({ tenantId, subjectId, ownerId, workspaceId, recordType, limit=100 }) {
+  // conditionFocus is deliberately its own named, hardcoded-column-path parameter (data->>'conditionFocus'),
+  // not a generic "filter by any JSONB field" option -- this table's data is a caller-defined freeform blob
+  // with no fixed shape across record types (see listStaleHealthSubjects's own comment above), so a generic
+  // dynamic-field filter would mean interpolating a caller-supplied field name into raw SQL. Add another
+  // named parameter the same way if a different domain concept needs the same treatment.
+  async list({ tenantId, subjectId, ownerId, workspaceId, recordType, conditionFocus, limit=100 }) {
     const values=[tenantId]; let where="tenant_id=$1 and deleted_at is null";
     for(const [column,value] of [["subject_id",subjectId],["owner_id",ownerId],["workspace_id",workspaceId],["record_type",recordType]]) if(value){values.push(value);where+=` and ${column}=$${values.length}`;}
+    if(conditionFocus){values.push(conditionFocus);where+=` and data->>'conditionFocus'=$${values.length}`;}
     values.push(Math.min(Math.max(limit,1),200));
     const result=await this.db.query(`select * from nexus_records where ${where} order by updated_at desc limit $${values.length}`,values);
     return result.rows||result;
