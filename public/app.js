@@ -58249,6 +58249,16 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
 async function submitNexusPendingBehaviorConfirmation(approved, text, options = {}) {
   const pending = nexusPendingBehaviorConfirmation;
   if (!pending) return false;
+  // Found live (fresh-module frontend audit): a double "yes" (duplicate voice-final event, double-tap
+  // Enter, a second click before the first request resolves) fired two concurrent POSTs to
+  // /api/nexus/runtime/behavior/confirm for the same pending step -- unlike the older confirmPendingWorkflow()
+  // path, which already disables its input while a request is in flight. The real execution path is already
+  // atomic server-side (ExecutionRepository.start()'s unique constraint on (tenant_id, idempotency_key)
+  // prevents a double real action either way), but a redundant concurrent request still raced two response
+  // handlers against each other for no reason. Cleared synchronously, before the first await, so any second
+  // call arriving on this tick or a later one sees nexusPendingBehaviorConfirmation already null and returns
+  // false immediately via the guard above.
+  nexusPendingBehaviorConfirmation = null;
   authoritativeGenesisTranscriptRoute = null;
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
