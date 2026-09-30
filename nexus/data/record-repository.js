@@ -23,6 +23,41 @@ class RecordRepository {
     });
   }
 
+  // Found live (fresh-module audit): callers that treat (tenantId, workspaceId, recordType) as identifying
+  // a single settings-style row -- read the current one, update() if found, create() if not (e.g.
+  // AutonomyControlRepository.setPaused()) -- had no lock on the create branch. Two concurrent first-time
+  // calls could both see no existing row and both create one, leaving two rows for the same logical
+  // setting whose "current" read (ordered by updated_at, no tiebreaker) could non-deterministically flip
+  // between them. This locks the whole read-check-write under one advisory lock keyed on the triple, the
+  // same pattern already used for this exact shape elsewhere (e.g. WeatherAlertSettingsRepository.set()).
+  async upsertSingleton({ tenantId, ownerId, subjectId, taskId, workspaceId, recordType, classification, data, provenance = {}, actorId }) {
+    if (!tenantId || !ownerId || !workspaceId || !recordType || !classification) throw new Error("Record tenant, owner, workspace, type, and classification are required.");
+    if (!CLASSIFICATIONS.has(classification)) throw new Error("Unsupported record classification.");
+    if ((classification === "health" || classification === "regulated") && !subjectId) throw new Error("Regulated records require a subject.");
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`record-singleton:${tenantId}:${workspaceId}:${recordType}`]);
+      const existing = await trx.query(`select * from nexus_records where tenant_id=$1 and workspace_id=$2 and record_type=$3 and deleted_at is null order by updated_at desc limit 1`,
+        [tenantId, workspaceId, recordType]);
+      const found = (existing.rows || existing)[0];
+      if (found) {
+        const result = await trx.query(`update nexus_records set data=$3,provenance=$4,version=version+1,updated_at=now()
+          where tenant_id=$1 and record_id=$2 returning *`, [tenantId, found.record_id, data, provenance]);
+        const record = (result.rows || result)[0];
+        await trx.query(`insert into nexus_record_versions(version_id,record_id,version,data,provenance,changed_by)
+          values ($1,$2,$3,$4,$5,$6)`, [createId("recordVersion"), found.record_id, record.version, data, provenance, actorId || ownerId]);
+        return record;
+      }
+      const recordId = createId("record");
+      const inserted = await trx.query(`insert into nexus_records
+        (record_id,tenant_id,subject_id,owner_id,task_id,workspace_id,record_type,classification,state,data,provenance,retention_until)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *`,
+      [recordId, tenantId, subjectId || null, ownerId, taskId || null, workspaceId, recordType, classification, "active", data, provenance, null]);
+      await trx.query(`insert into nexus_record_versions(version_id,record_id,version,data,provenance,changed_by)
+        values ($1,$2,1,$3,$4,$5)`, [createId("recordVersion"), recordId, data, provenance, actorId || ownerId]);
+      return (inserted.rows || inserted)[0];
+    });
+  }
+
   async update({ tenantId, recordId, expectedVersion, actorId, data, provenance = {} }) {
     return this.db.transaction(async trx => {
       const result=await trx.query(`update nexus_records set data=$4,provenance=$5,version=version+1,updated_at=now()

@@ -57,3 +57,26 @@ test("isPaused reflects the most recently stored state", async () => {
   assert.equal(await repo.isPaused({ tenantId: "t1" }), true);
   assert.deepEqual(await repo.status({ tenantId: "t1" }), { paused: true, reason: "manual hold" });
 });
+
+// Found live (fresh-module audit): the old read-then-branch (current() then either update() or create())
+// had no lock on the create path -- two concurrent first-time setPaused() calls for the same tenant could
+// both see no existing row and both create one. When the real repository's upsertSingleton is available,
+// setPaused must use it (a real advisory-lock-guarded read-check-write) instead of the unlocked fallback.
+test("setPaused uses the repository's upsertSingleton (a real locked read-check-write) when available, instead of the unlocked read-then-branch", async () => {
+  const calls = { upsertSingleton: [], create: [], update: [], list: [] };
+  const records = {
+    list: async input => { calls.list.push(input); return []; },
+    create: async input => { calls.create.push(input); return { record_id: "rec_x", data: input.data }; },
+    update: async input => { calls.update.push(input); return { record_id: "rec_x", data: input.data }; },
+    upsertSingleton: async input => { calls.upsertSingleton.push(input); return { record_id: "rec_locked", data: input.data }; }
+  };
+  const repo = new AutonomyControlRepository(records);
+  const result = await repo.setPaused({ tenantId: "t1", actorId: "admin-1", paused: true, reason: "bad trigger" });
+  assert.equal(calls.upsertSingleton.length, 1);
+  assert.equal(calls.create.length, 0, "must not also call the unlocked create() when upsertSingleton is available");
+  assert.equal(calls.update.length, 0);
+  assert.equal(calls.upsertSingleton[0].workspaceId, WORKSPACE_ID);
+  assert.equal(calls.upsertSingleton[0].recordType, RECORD_TYPE);
+  assert.equal(calls.upsertSingleton[0].data.paused, true);
+  assert.equal(result.record_id, "rec_locked");
+});

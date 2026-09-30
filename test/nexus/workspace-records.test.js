@@ -23,6 +23,34 @@ test("claimCooldown reserves the window under an advisory lock when nothing rece
   assert.match(db.calls[3].sql,/insert into nexus_record_versions/);
 });
 
+// Found live (fresh-module audit): callers that treat (tenantId, workspaceId, recordType) as identifying a
+// single settings-style row (e.g. AutonomyControlRepository.setPaused()) used to read-then-branch with no
+// lock on the create path -- two concurrent first-time calls could both see no existing row and both
+// create one. upsertSingleton closes that the same way claimCooldown closes its own race: one advisory
+// lock, one transaction.
+test("upsertSingleton creates a new record under an advisory lock when nothing exists yet",async()=>{
+  const db=fakeDb([{rows:[]},{rows:[]},{rows:[{record_id:"rec_1",tenant_id:"t",workspace_id:"w",record_type:"setting",classification:"standard",data:{paused:true},version:1}]},{rows:[]}]);
+  const repo=new RecordRepository(db);
+  const result=await repo.upsertSingleton({tenantId:"t",ownerId:"u",workspaceId:"w",recordType:"setting",classification:"standard",data:{paused:true},actorId:"u"});
+  assert.equal(result.record_id,"rec_1");
+  assert.match(db.calls[0].sql,/pg_advisory_xact_lock/);
+  assert.deepEqual(db.calls[0].params,["record-singleton:t:w:setting"]);
+  assert.match(db.calls[1].sql,/select \* from nexus_records where tenant_id=\$1 and workspace_id=\$2 and record_type=\$3/);
+  assert.match(db.calls[2].sql,/insert into nexus_records/);
+  assert.match(db.calls[3].sql,/insert into nexus_record_versions/);
+});
+
+test("upsertSingleton updates the existing record (with a version bump), not create a second one, once one exists",async()=>{
+  const db=fakeDb([{rows:[]},{rows:[{record_id:"rec_1",tenant_id:"t",workspace_id:"w",record_type:"setting",version:3,data:{paused:true}}]},{rows:[{record_id:"rec_1",version:4,data:{paused:false}}]},{rows:[]}]);
+  const repo=new RecordRepository(db);
+  const result=await repo.upsertSingleton({tenantId:"t",ownerId:"u",workspaceId:"w",recordType:"setting",classification:"standard",data:{paused:false},actorId:"u"});
+  assert.equal(result.record_id,"rec_1");
+  assert.equal(result.version,4);
+  assert.match(db.calls[2].sql,/update nexus_records set data=\$3,provenance=\$4,version=version\+1/);
+  assert.deepEqual(db.calls[2].params.slice(0,2),["t","rec_1"]);
+  assert.equal(db.calls.filter(call=>/insert into nexus_records/.test(call.sql)).length,0,"must never create a second row once one exists");
+});
+
 test("claimCooldown refuses the window and inserts nothing when a recent marker is still within the cooldown",async()=>{
   const db=fakeDb([{rows:[]},{rows:[{updated_at:new Date().toISOString()}]}]);
   const repo=new RecordRepository(db);
