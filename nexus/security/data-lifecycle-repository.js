@@ -1,8 +1,29 @@
 "use strict";
+const fs = require("node:fs");
+const path = require("node:path");
 const { createId } = require("../contracts/identifiers.js");
 
 class DataLifecycleRepository {
   constructor(db) { if (!db?.query || !db?.transaction) throw new Error("A transactional database runtime is required."); this.db=db; }
+  // Found live (server/providers/ sweep): nexus/documents/executor.js writes real exported files (JSON/
+  // TXT/MD/PDF/DOCX, potentially including "export all my patient records") to local disk via
+  // exportProvider.exportDocument(), and indexes them into nexus_document_versions with
+  // object_key="local:<filename>". executeDeletion() below already wipes that row's content/object_key --
+  // but nulling the pointer never deleted the actual file, the same pointer-nulled/bytes-orphaned gap this
+  // codebase already fixed for S3 artifacts. Best-effort and non-transactional on purpose: a missing file
+  // (already cleaned up, or never written due to an earlier error) must not fail the erasure transaction,
+  // and disk I/O has no place inside a database transaction anyway.
+  async purgeLocalExportFiles(objectKeys = [], env = process.env) {
+    if (!objectKeys.length) return;
+    const root = path.resolve(String(env.NEXUS_EXPORT_DIR || path.join(process.cwd(), "output", "nexus-exports")));
+    for (const key of objectKeys) {
+      const match = /^local:(.+)$/.exec(String(key || ""));
+      if (!match) continue;
+      const filename = match[1];
+      if (!/^[a-zA-Z0-9._-]+$/.test(filename)) continue;
+      try { await fs.promises.unlink(path.join(root, filename)); } catch (error) { if (error?.code !== "ENOENT") { /* best-effort: erasure must not fail on a disk error */ } }
+    }
+  }
   async requestDeletion({tenantId,subjectId,requestedBy}) {
     if(!tenantId||!subjectId||!requestedBy) throw new Error("Deletion tenant, subject, and requester are required.");
     const result=await this.db.query(`insert into nexus_deletion_requests(request_id,tenant_id,subject_id,requested_by)
@@ -10,7 +31,8 @@ class DataLifecycleRepository {
     return (result.rows||result)[0];
   }
   async executeDeletion({tenantId,requestId}) {
-    return this.db.transaction(async trx=>{
+    const purgedLocalFileKeys=[];
+    const outcome=await this.db.transaction(async trx=>{
       const locked=await trx.query(`select * from nexus_deletion_requests where tenant_id=$1 and request_id=$2 for update`,[tenantId,requestId]);
       const request=(locked.rows||locked)[0]; if(!request) throw new Error("Deletion request not found.");
       const holds=await trx.query(`select hold_id from nexus_legal_holds where tenant_id=$1 and state='active' and (subject_id is null or subject_id=$2) limit 1`,[tenantId,request.subject_id]);
@@ -59,8 +81,14 @@ class DataLifecycleRepository {
       // conversation are erased too, without touching that conversation's other participants' messages.
       const messages=await trx.query(`update nexus_messages set content='{}'::jsonb,provenance='{}'::jsonb where tenant_id=$1 and (actor_id=$2 or conversation_id in (select conversation_id from nexus_conversations where tenant_id=$1 and owner_id=$2))`,[tenantId,request.subject_id]);
       const documents=await trx.query(`update nexus_documents set state='deleted',title='',metadata='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null returning document_id`,[tenantId,request.subject_id]);
-      const documentVersions=await trx.query(`update nexus_document_versions v set content='{}'::jsonb,object_key=null
-        from nexus_documents d where v.document_id=d.document_id and d.tenant_id=$1 and d.owner_id=$2`,[tenantId,request.subject_id]);
+      // RETURNING on an UPDATE reflects the row's POST-update state, so object_key would already read back
+      // null here -- the old value is snapshotted via this CTE (evaluated before the update runs) instead.
+      const documentVersions=await trx.query(`with old_versions as (
+          select v.version_id,v.object_key from nexus_document_versions v
+          join nexus_documents d on v.document_id=d.document_id where d.tenant_id=$1 and d.owner_id=$2)
+        update nexus_document_versions v set content='{}'::jsonb,object_key=null
+        from old_versions where v.version_id=old_versions.version_id returning old_versions.object_key as object_key`,[tenantId,request.subject_id]);
+      (documentVersions.rows||documentVersions).forEach(row=>{ if(row?.object_key) purgedLocalFileKeys.push(row.object_key); });
       const notifications=await trx.query(`delete from nexus_notifications where tenant_id=$1 and user_id=$2 returning notification_id`,[tenantId,request.subject_id]);
       // Found live: nexus_devices (a real webpush/FCM/APNs endpoint URL and
       // an encrypted push auth secret, per registered device) and
@@ -84,7 +112,7 @@ class DataLifecycleRepository {
         conversationsErased:true,conversationsCount:(conversations.rows||conversations).length,
         messagesErased:true,
         documentsErased:true,documentsCount:(documents.rows||documents).length,
-        documentVersionsErased:true,
+        documentVersionsErased:true,localExportFileKeysFound:purgedLocalFileKeys.length,
         notificationsErased:true,notificationsCount:(notifications.rows||notifications).length,
         devicesErased:true,devicesCount:(devices.rows||devices).length,
         deviceEventsErased:true,deviceEventsCount:(deviceEvents.rows||deviceEvents).length,
@@ -96,6 +124,8 @@ class DataLifecycleRepository {
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};
     });
+    await this.purgeLocalExportFiles(purgedLocalFileKeys);
+    return outcome;
   }
   // Found live (job-queue/schedule-dispatch follow-up audit): a request
   // whose executeDeletion() deterministically fails (a real, reproducible
