@@ -19806,7 +19806,15 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
     providerAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
     providerSucceeded,
     executionAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
-    executionVerified: typeof body.nexusLifecycleVerified === "boolean" ? body.nexusLifecycleVerified : providerSucceeded,
+    // Found live (fresh-module audit): for any tool call NOT wrapped in withActionLifecycle (so
+    // nexusLifecycleVerified is never set), this fell back to bare providerSucceeded -- which is true for a
+    // labeled-simulated demo-double response (ok:true, status:"completed") exactly as much as for a real
+    // one. A read-only action like calendar.event.search has no withActionLifecycle wrapper at all (it's
+    // not a write, so there's nothing to dedupe), so its simulated "no real calendar configured" response
+    // reported execution.verified: true in the structured envelope -- honest in the spoken/rendered text,
+    // but misleading to any caller or downstream evaluator trusting this structured field as "this really
+    // happened against a real provider."
+    executionVerified: typeof body.nexusLifecycleVerified === "boolean" ? body.nexusLifecycleVerified : (providerSucceeded && body.data?.simulated !== true),
     missingEnvVars: body.missingConfig || [],
     requiresConfirmation: Boolean(body.requiresConfirmation),
     disabled: Boolean(body.disabled),
