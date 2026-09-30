@@ -319,3 +319,65 @@ test("GET /api/nexus/integrations/:type/logs requires sign-in and redacts actor 
   assert.ok(nonAdminView.logs.length > 0, "sanity check: there are real integration attempts to redact");
   for (const entry of nonAdminView.logs) assert.equal(entry.actor, null, "a non-admin must not see other users' real actor display name");
 });
+
+async function providerReviewerCookie() {
+  const email = "zzops-provider-reviewer@example.com";
+  if (cookieCache.has(email)) return login(email, "ReviewerPass2026!");
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  await createTestUser(adminCookie, email, "ReviewerPass2026!");
+  const db = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  const reviewerUser = db.users.find(u => u.email === email);
+  assert.ok(reviewerUser, "expected the freshly created test user to be in the store");
+  reviewerUser.role = "Provider Reviewer";
+  fs.writeFileSync(tempDbPath, JSON.stringify(db));
+  return login(email, "ReviewerPass2026!");
+}
+
+// Found live (redact*/sibling-array IDOR exhaustive follow-up sweep): db.nexusRoutingLogs entries carry
+// the exact same recordId/actor values that get redacted as relatedRecordId/actor everywhere
+// nexusPilotAuditEvents is read, but GET /api/nexus/provider-pathways/logs and GET
+// /api/nexus/routing/logs returned this identical data raw. Both routes are gated on
+// canUse(user, "provider-queue"), which Provider Reviewer holds alongside Admin -- so a Provider
+// Reviewer account could see another organization's real record IDs and requester names.
+test("GET /api/nexus/routing/logs and /api/nexus/provider-pathways/logs redact recordId/actor for a Provider Reviewer but still show them to a real Admin", async () => {
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const reviewerCookie = await providerReviewerCookie();
+
+  const created = await fetch(`${base}/api/nexus/records`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ sourceMode: "telehealth_intake", payload: { note: "routing redaction test subject" } }) }).then(res => res.json());
+  const recordId = created.record.id;
+  const routed = await fetch(`${base}/api/nexus/routing/route-record`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ recordId, safetyOverride: true }) }).then(res => res.json());
+  assert.equal(routed.ok, true, "sanity check: routing evaluation that creates the routing log must itself succeed");
+
+  const pathwayRequest = await fetch(`${base}/api/nexus/provider-pathways/request`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie },
+    body: JSON.stringify({ structuredRecordId: recordId, category: "telehealth" }) }).then(res => res.json());
+  assert.equal(pathwayRequest.ok, true, "sanity check: creating the provider pathway request must itself succeed");
+  const pathwayRequestId = pathwayRequest.providerPathwayRequest.id;
+  await fetch(`${base}/api/nexus/provider-pathways/${pathwayRequestId}/consent`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie }, body: JSON.stringify({}) });
+  const pathwayRouted = await fetch(`${base}/api/nexus/provider-pathways/${pathwayRequestId}/route`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: adminCookie }, body: JSON.stringify({}) }).then(res => res.json());
+  assert.equal(pathwayRouted.ok, true, "sanity check: routing the provider pathway request (creating a providerPathwayRequestId-bearing routing log) must itself succeed");
+
+  const reviewerLogsView = await fetch(`${base}/api/nexus/routing/logs`, { headers: { cookie: reviewerCookie } }).then(res => res.json());
+  assert.ok(reviewerLogsView.logs.length > 0, "sanity check: there are real routing logs to redact");
+  for (const entry of reviewerLogsView.logs) {
+    assert.equal(entry.recordId, null, "a Provider Reviewer must not see another account's real recordId");
+    assert.equal(entry.actor, null, "a Provider Reviewer must not see another account's real actor display name");
+  }
+
+  const adminLogsView = await fetch(`${base}/api/nexus/routing/logs`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminLogsView.logs.some(entry => entry.recordId), "a real Admin must still see real recordIds");
+  assert.ok(adminLogsView.logs.some(entry => entry.actor), "a real Admin must still see real actor display names");
+
+  const reviewerPathwaysView = await fetch(`${base}/api/nexus/provider-pathways/logs`, { headers: { cookie: reviewerCookie } }).then(res => res.json());
+  assert.ok(reviewerPathwaysView.routingLogs.length > 0, "sanity check: there is a real providerPathwayRequestId-bearing routing log to redact");
+  for (const entry of reviewerPathwaysView.routingLogs) {
+    assert.equal(entry.recordId, null, "a Provider Reviewer must not see another account's real recordId via provider-pathways/logs either");
+    assert.equal(entry.actor, null, "a Provider Reviewer must not see another account's real actor via provider-pathways/logs either");
+  }
+});

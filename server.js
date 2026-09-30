@@ -42114,6 +42114,20 @@ function redactIntegrationAttempt(entry, canViewSensitive) {
   return { ...entry, actor: null };
 }
 
+// Found live (redact*/sibling-array IDOR exhaustive follow-up sweep): db.nexusRoutingLogs entries carry
+// the exact same recordId/actor values (see nexusRouteRecord/nexusEvaluateRouting) that get passed as
+// relatedRecordId/actor into the paired addNexusPilotAuditEvent("routing_evaluated", ...) call -- and
+// relatedRecordId IS redacted everywhere nexusPilotAuditEvents is read -- but GET
+// /api/nexus/provider-pathways/logs and GET /api/nexus/routing/logs returned this identical data raw.
+// Both routes are gated on canUse(user, "provider-queue"), which Provider Reviewer holds alongside Admin
+// (not just Admin), so a Provider Reviewer account from one provider organization could see another
+// organization's real record IDs and requester names through this door -- the same shared,
+// unscoped-collection exposure already called out for the sibling audit-trail arrays.
+function redactRoutingLog(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, recordId: null, actor: null };
+}
+
 function nexusOperationsSummary(db, user = null) {
   const store = ensureNexusPersistentOperations(db);
   const canViewSensitiveAudit = canUse(user, "admin");
@@ -46125,10 +46139,11 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/provider-pathways/logs" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
+    const canViewSensitive = canUse(user, "admin");
     return send(res, 200, {
       ok: true,
       providerPathwayRequests: db.nexusProviderPathwayRequests,
-      routingLogs: db.nexusRoutingLogs.filter(item => item.providerPathwayRequestId)
+      routingLogs: db.nexusRoutingLogs.filter(item => item.providerPathwayRequestId).map(entry => redactRoutingLog(entry, canViewSensitive))
     });
   }
 
@@ -46220,7 +46235,8 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/routing/logs" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, logs: db.nexusRoutingLogs });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, logs: db.nexusRoutingLogs.map(entry => redactRoutingLog(entry, canViewSensitive)) });
   }
 
   if (url.pathname === "/api/nexus/cases" && req.method === "GET") {
