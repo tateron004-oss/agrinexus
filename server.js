@@ -44327,6 +44327,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       archiveReason: null
     };
     store.chronicCareProfiles.unshift(profile);
+    store.chronicCareProfiles = store.chronicCareProfiles.slice(0, 1000);
     addNexusConsentRecord(db, "chronic-care", profile.chronicCareId, "preparePacket", profile.consentState.preparePacket, actor);
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "chronic_care_profile_created", actor, `${profile.conditionArea} chronic care profile created for local operations memory.`, null, profile);
     const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, "create_chronic_care_profile", ["Created chronic care profile.", "Recorded consent state and provider review lane."], didNot, "active");
@@ -44337,6 +44338,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
     const reading = {
       readingId: nexusOperationId("NX-RPM"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: cleanOpsText(body.type || (/glucose|sugar/i.test(command) ? "blood_glucose" : /weight/i.test(command) ? "weight" : /pulse/i.test(command) ? "pulse" : /oxygen/i.test(command) ? "oxygen" : /adherence/i.test(command) ? "medication_adherence" : "blood_pressure"), 80),
       value: cleanOpsText(body.value || command || "manual reading recorded", 160),
@@ -44346,6 +44348,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now
     };
     store.rpmReadings.unshift(reading);
+    store.rpmReadings = store.rpmReadings.slice(0, 1000);
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rpm_reading_added", actor, `${reading.type} RPM reading added.`, null, reading);
     const receipt = addNexusOperationsReceipt(db, "rpm-reading", reading.readingId, "add_rpm_reading", ["Added RPM reading to chronic care timeline.", "Kept reading local until consented provider sharing is configured."], didNot, "recorded");
@@ -44356,6 +44359,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
     const activity = {
       activityId: nexusOperationId("NX-RTM"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: cleanOpsText(body.type || (/mobility/i.test(command) ? "mobility" : /pain/i.test(command) ? "pain" : /exercise/i.test(command) ? "exercise" : /nutrition/i.test(command) ? "nutrition" : /adherence/i.test(command) ? "medication_adherence" : /symptom/i.test(command) ? "symptom_check" : "therapy_activity"), 80),
       value: cleanOpsText(body.value || command || "therapy activity recorded", 200),
@@ -44364,6 +44368,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now
     };
     store.rtmActivities.unshift(activity);
+    store.rtmActivities = store.rtmActivities.slice(0, 1000);
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rtm_activity_added", actor, `${activity.type} RTM activity added.`, null, activity);
     const receipt = addNexusOperationsReceipt(db, "rtm-activity", activity.activityId, "add_rtm_activity", ["Added RTM activity to chronic care timeline."], didNot, "recorded");
@@ -44380,6 +44385,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const lane = action === "create_pharmacy_referral" ? "pharmacy" : action === "create_mobile_clinic_follow_up" ? "mobile-clinic" : action === "create_telehealth_encounter" ? "telehealth" : "physician-review";
     const caseItem = {
       caseId: nexusOperationId("NX-CASE"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: lane,
       status: "prepared",
@@ -44389,6 +44395,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.cases.unshift(caseItem);
+    store.cases = store.cases.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "case", caseItem.caseId, action, actor, `${lane} case packet prepared from chronic care profile.`, null, caseItem);
     const receipt = addNexusOperationsReceipt(db, "case", caseItem.caseId, action, [`Prepared ${lane} case packet from chronic care profile.`, "Marked sharing as consent-gated."], didNot, "prepared");
     return nexusOperationResponse(db, user, action, caseItem, audit, receipt);
@@ -44407,6 +44414,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.healthcareIntakes.unshift(intake);
+    store.healthcareIntakes = store.healthcareIntakes.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, "intake_created", actor, "Healthcare intake created and linked to operations memory.", null, intake);
     const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, "create_intake", ["Created healthcare intake record.", "Kept external sharing disabled until consent and provider configuration."], didNot, "active");
     return nexusOperationResponse(db, user, action, intake, audit, receipt);
@@ -44458,6 +44466,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.providers.unshift(provider);
+    store.providers = store.providers.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "provider", provider.providerId, "provider_added", actor, `${type} provider added to directory.`, null, provider);
     const receipt = addNexusOperationsReceipt(db, "provider", provider.providerId, action, [`Added ${type} provider directory record.`], didNot, "active");
     return nexusOperationResponse(db, user, action, provider, audit, receipt);
@@ -44658,6 +44667,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.learningProfiles.unshift(profile);
+    store.learningProfiles = store.learningProfiles.slice(0, 1000);
     addNexusConsentRecord(db, "learning-profile", profile.learningProfileId, "prepareReferral", profile.consentState.prepareReferral, actor);
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, "learning_profile_created", actor, "Learning profile created for local operations memory.", null, profile);
     const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Created learning and development profile.", "Recorded consent state for training referral preparation."], ["Nexus did not enroll the learner, certify completion, submit to an LMS, or contact a training provider."], "active");
@@ -44669,6 +44679,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const status = action === "track_enrollment_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "track_training_interest" ? "interest-recorded" : "prepared";
     const record = {
       trainingRecordId: nexusOperationId("NX-TRN"),
+      ownerId: nexusOperationsOwnerKey(user),
       learningProfileId: profile.learningProfileId,
       type: action,
       status: /confirmed|accepted|completed|certified/i.test(status) ? "manual-status-review" : status,
@@ -44681,11 +44692,11 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now,
       updatedAt: now
     };
-    if (action === "create_learning_plan") store.learningPlans.unshift(record);
-    else if (action === "create_skill_assessment_packet") store.skillAssessments.unshift(record);
-    else if (action === "prepare_lms_handoff") store.lmsHandoffRecords.unshift(record);
-    else if (action === "create_drone_training_referral") store.certificationPathways.unshift(record);
-    else store.trainingRecords.unshift(record);
+    if (action === "create_learning_plan") { store.learningPlans.unshift(record); store.learningPlans = store.learningPlans.slice(0, 1000); }
+    else if (action === "create_skill_assessment_packet") { store.skillAssessments.unshift(record); store.skillAssessments = store.skillAssessments.slice(0, 1000); }
+    else if (action === "prepare_lms_handoff") { store.lmsHandoffRecords.unshift(record); store.lmsHandoffRecords = store.lmsHandoffRecords.slice(0, 1000); }
+    else if (action === "create_drone_training_referral") { store.certificationPathways.unshift(record); store.certificationPathways = store.certificationPathways.slice(0, 1000); }
+    else { store.trainingRecords.unshift(record); store.trainingRecords = store.trainingRecords.slice(0, 1000); }
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, `${action} recorded for learning profile with execution disabled.`, null, record);
     const receipt = addNexusOperationsReceipt(db, "training-record", record.trainingRecordId, action, ["Prepared learning/training support record.", "Kept provider/LMS handoff disabled until credentials, consent, and confirmation exist."], ["Nexus did not enroll the learner, certify training, submit a referral, or claim provider acceptance."], record.status);
