@@ -144,6 +144,13 @@ test("drone/heat-risk operations collections stay capped at 1000 across repeated
     store.droneMissionEvents.push(filler({ droneEventId: `filler-drev-${i}` }));
     store.droneImageryReports.push(filler({ droneImageryReportId: `filler-dimg-${i}` }));
     store.heatRiskReports.push(filler({ heatReportId: `filler-heat-${i}` }));
+    // Found live (Nexus Operations sibling audit): these three (plus trackingEvents, checked
+    // separately below) were left uncapped when every sibling collection in this same store was
+    // capped at 1000 -- a real gap, not by design, since they're writable via the same pre-auth
+    // route as everything else here.
+    store.parties.push(filler({ partyId: `filler-party-${i}`, type: "buyer", status: "active" }));
+    store.shipments.push(filler({ shipmentId: `filler-ship-${i}`, status: "draft" }));
+    store.transactions.push(filler({ transactionId: `filler-txn-${i}`, status: "draft" }));
   }
   fs.writeFileSync(tempDbPath, JSON.stringify(db));
 
@@ -152,6 +159,10 @@ test("drone/heat-risk operations collections stay capped at 1000 across repeated
   const mission = await opsAction({ action: "create_drone_mission_request", missionType: "crop scouting", locationText: "Cap Test Field" });
   await opsAction({ action: "create_agriculture_expert_packet_from_drone", droneMissionId: mission.json.record.droneMissionId });
   await opsAction({ action: "log_heat_risk_report", region: "Cap Test Region" });
+  await opsAction({ action: "add_buyer", businessName: "Cap Test Buyer" });
+  const shipment = await opsAction({ action: "create_shipment", origin: "Cap Test Farm", destination: "Cap Test Market" });
+  await opsAction({ action: "add_tracking_event", shipmentId: shipment.json.record.shipmentId, status: "picked-up" });
+  await opsAction({ action: "create_transaction", amount: "100" });
 
   const after = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
   const afterStore = after.nexusPersistentOperations;
@@ -161,6 +172,28 @@ test("drone/heat-risk operations collections stay capped at 1000 across repeated
   assert.ok(afterStore.droneMissionEvents.length <= 1000, `droneMissionEvents got ${afterStore.droneMissionEvents.length}`);
   assert.ok(afterStore.droneImageryReports.length <= 1000, `droneImageryReports got ${afterStore.droneImageryReports.length}`);
   assert.ok(afterStore.heatRiskReports.length <= 1000, `heatRiskReports got ${afterStore.heatRiskReports.length}`);
+  assert.ok(afterStore.parties.length <= 1000, `parties got ${afterStore.parties.length}`);
+  assert.ok(afterStore.shipments.length <= 1000, `shipments got ${afterStore.shipments.length}`);
+  assert.ok(afterStore.transactions.length <= 1000, `transactions got ${afterStore.transactions.length}`);
+});
+
+// Found live (Nexus Operations sibling audit, same shape as droneMissionEvents above): trackingEvents was
+// never capped either -- unlike the denormalized per-shipment copy (shipment.trackingEvents, capped at 50),
+// the top-level global array used by export/erasure/show_shipment_timeline's cross-shipment query had no
+// bound at all.
+test("trackingEvents stays capped at 1000 across repeated writes", async () => {
+  const db = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  const store = db.nexusPersistentOperations;
+  for (let i = 0; i < 1000; i += 1) {
+    store.trackingEvents.push({ eventId: `filler-trk-${i}`, ownerId: "filler-owner", shipmentId: "filler-ship", status: "in-transit", occurredAt: new Date().toISOString() });
+  }
+  fs.writeFileSync(tempDbPath, JSON.stringify(db));
+
+  const shipment = await opsAction({ action: "create_shipment", origin: "Cap Test Farm 2", destination: "Cap Test Market 2" });
+  await opsAction({ action: "add_tracking_event", shipmentId: shipment.json.record.shipmentId, status: "picked-up" });
+
+  const after = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
+  assert.ok(after.nexusPersistentOperations.trackingEvents.length <= 1000, `trackingEvents got ${after.nexusPersistentOperations.trackingEvents.length}`);
 });
 
 // Found live (nexus-operations sweep): droneMissionEvents/droneImageryReports/heatRiskReports never set
