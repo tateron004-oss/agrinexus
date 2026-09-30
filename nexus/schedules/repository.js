@@ -36,31 +36,30 @@ class ScheduleRepository {
       const dispatched = [];
       for (const schedule of due.rows || due) {
         const occurrence = new Date(schedule.next_run_at).toISOString();
-        const job = await jobs.enqueue({ tenantId: schedule.tenant_id, taskId: schedule.task_id,
-          jobType: schedule.job_type, queue: "default", payload: { ...schedule.payload, scheduleId: schedule.schedule_id,
-            ownerId: schedule.owner_id, occurrence }, idempotencyKey: `schedule:${schedule.schedule_id}:${occurrence}` });
-        // Found live (job-queue/schedule-dispatch follow-up audit): this
-        // whole loop ran inside ONE transaction, so a throw from
-        // nextOccurrence for any single schedule (e.g. a malformed cadence
-        // that create() previously never validated) rolled back every
-        // OTHER schedule's advancement in the same batch too, and left the
-        // poison-pill schedule's own next_run_at unchanged -- so it sorted
-        // first again on every subsequent pass and threw every time,
-        // forever, blocking the dispatcher for every tenant. A schedule
-        // whose cadence can't be computed is paused (not left "active" to
-        // be retried unboundedly) instead of aborting the whole batch.
-        let next;
+        // Found live (job-queue/schedule-dispatch follow-up audit): this whole loop runs inside ONE
+        // transaction, so an uncaught throw from any single schedule rolls back every OTHER schedule's
+        // advancement in the same batch too, and leaves the poison-pill schedule's own next_run_at
+        // unchanged -- so it sorts first again on every subsequent pass and throws every time, forever,
+        // blocking the dispatcher for every tenant. This was originally guarded only around
+        // nextOccurrence() (a malformed cadence), but jobs.enqueue() (a FK/check-constraint violation on
+        // task_id/job_type, or a malformed payload) and the success-path state-transition update below it
+        // could throw exactly the same way and were left unguarded -- reopening the identical wedge
+        // through a different call. Every real step for one schedule now shares one try/catch: a schedule
+        // that can't be dispatched at all is paused (not left "active" to be retried unboundedly) instead
+        // of aborting the whole batch.
         try {
-          next = nextOccurrence(schedule.cadence, schedule.next_run_at);
+          const job = await jobs.enqueue({ tenantId: schedule.tenant_id, taskId: schedule.task_id,
+            jobType: schedule.job_type, queue: "default", payload: { ...schedule.payload, scheduleId: schedule.schedule_id,
+              ownerId: schedule.owner_id, occurrence }, idempotencyKey: `schedule:${schedule.schedule_id}:${occurrence}` });
+          const next = nextOccurrence(schedule.cadence, schedule.next_run_at);
+          await trx.query(`update nexus_schedules set state=$2,last_run_at=next_run_at,next_run_at=coalesce($3,next_run_at),
+            updated_at=now() where schedule_id=$1`, [schedule.schedule_id, next ? "active" : "completed", next]);
+          dispatched.push({ scheduleId: schedule.schedule_id, jobId: job.job_id || job.jobId, occurrence });
         } catch (error) {
           await trx.query(`update nexus_schedules set state='paused',last_run_at=next_run_at,updated_at=now()
             where schedule_id=$1`, [schedule.schedule_id]);
-          dispatched.push({ scheduleId: schedule.schedule_id, jobId: job.job_id || job.jobId, occurrence, paused: true, error: error.message });
-          continue;
+          dispatched.push({ scheduleId: schedule.schedule_id, occurrence, paused: true, error: error.message });
         }
-        await trx.query(`update nexus_schedules set state=$2,last_run_at=next_run_at,next_run_at=coalesce($3,next_run_at),
-          updated_at=now() where schedule_id=$1`, [schedule.schedule_id, next ? "active" : "completed", next]);
-        dispatched.push({ scheduleId: schedule.schedule_id, jobId: job.job_id || job.jobId, occurrence });
       }
       return dispatched;
     });

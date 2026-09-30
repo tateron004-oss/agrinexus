@@ -133,7 +133,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
     // retry budget, so a single transient failure still retries normally
     // first; the job itself still fails/dead-letters through the normal
     // path below regardless (this never swallows the error).
-    "deletion.execute": async ({ job }) => {
+    "deletion.execute": async ({ job, heartbeat }) => withHeartbeat(heartbeat, async () => {
       const requestId = required(job.payload?.requestId, "Deletion request ID");
       try {
         return await runtime.dataLifecycle.executeDeletion({ tenantId: job.tenant_id, requestId });
@@ -143,7 +143,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
         }
         throw error;
       }
-    },
+    }),
     // Self-healing sweep for erasure requests, the same shape as agent.sweep-advanceable-tasks: requestDeletion() enqueues
     // "deletion.execute" immediately, so this only ever finds one that was lost (a crash between the insert and the enqueue, a dropped job) --
     // a request must never be able to sit at 'queued' forever. executeDeletion is idempotent (its updates and the memory-items delete are all
@@ -164,7 +164,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
     // needed to be a live HTTP request. Triggered immediately when an
     // autonomous task is created (AuthoritativeTaskEngine.create()) and again
     // by agent.sweep-advanceable-tasks whenever one stalls.
-    "agent.advance-task": async ({ job }) => {
+    "agent.advance-task": async ({ job, heartbeat }) => withHeartbeat(heartbeat, async () => {
       const taskId = required(job.payload?.taskId, "Task ID for agent.advance-task");
       const task = await runtime.tasks.get({ tenantId: job.tenant_id, taskId, includeSteps: false });
       if (!task) throw Object.assign(new Error("Task not found for agent.advance-task."), { code: "task_not_found" });
@@ -209,7 +209,7 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
         return { taskId, state: "awaiting_render", outcomeNotificationQueued: true };
       }
       return { taskId, state: result.state };
-    },
+    }),
     // Self-healing: re-drives any autonomous task that has sat in queued,
     // running, or verifying without progress past the staleness window --
     // a crashed worker, a missed job, or (for verifying) a step-approval
@@ -782,6 +782,22 @@ async function blockStalledAutonomousTaskIfApplicable({ runtime, notification, e
 }
 
 function required(value, label) { if (!value) throw new Error(`${label} is required.`); return value; }
+
+// Found live (job-queue/schedule-dispatch follow-up audit): claim()'s lease defaults to 60 seconds, and
+// only notifications.deliver ever called the heartbeat it's handed -- deletion.execute (a multi-table
+// transactional erasure across a whole tenant) and agent.advance-task (which can call an LLM-backed tool
+// executor over the network) each do ONE potentially-slow call with nothing extending their own lease. If
+// that call legitimately runs past 60 seconds and more than one worker instance is running, a second
+// instance's claim() sees the lease as "expired" and re-runs the SAME job while the first is still
+// genuinely working -- and the first instance's own eventual finish() then silently no-ops (its
+// `leased_by=$2` no longer matches), dropping its real completion/failure outcome with no error anywhere.
+// A periodic heartbeat while the one slow call is in flight keeps the lease alive for as long as the work
+// actually takes, the same protection notifications.deliver already has between its own claimed items.
+function withHeartbeat(heartbeat, work) {
+  if (typeof heartbeat !== "function") return work();
+  const keepAlive = setInterval(() => { heartbeat().catch(() => {}); }, 20000);
+  return work().finally(() => clearInterval(keepAlive));
+}
 
 module.exports = Object.freeze({ createHandlers, AUTONOMOUS_OUTCOME_NOTIFICATION_KIND, AUTONOMOUS_CONFIRMATION_NOTIFICATION_KIND,
   SITUATIONAL_AWARENESS_WORKSPACE_ID, HEALTH_CHECKIN_NUDGE_RECORD_TYPE, FARM_LOG_NUDGE_RECORD_TYPE,
