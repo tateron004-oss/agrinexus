@@ -24,6 +24,10 @@ function fakeDb() {
         const [tenantId, ownerId] = params;
         return { rows: rows.filter(row => row.tenant_id === tenantId && row.owner_id === ownerId && !row.deleted_at) };
       }
+      if (/^select \* from nexus_records where tenant_id=\$1\s+and owner_id=\$2 and record_id=\$3/i.test(sql)) {
+        const [tenantId, ownerId, recordId, recordType] = params;
+        return { rows: rows.filter(row => row.tenant_id === tenantId && row.owner_id === ownerId && row.record_id === recordId && row.record_type === recordType && !row.deleted_at) };
+      }
       return { rows: [] };
     }
   };
@@ -96,4 +100,44 @@ test("businessRequest keeps two different authoritative users from seeing each o
   });
   const otherListing = await adapter.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients", user: otherUser });
   assert.deepEqual(otherListing.body.clients, []);
+});
+
+// Found live (business/marketplace audit): nexus/business's own authorize() only checks org-membership
+// permissions, which every non-guest signed-in role holds unconditionally (see authoritativeRuntimeUser
+// in server.js) -- there is no way for the business engine itself to distinguish an Investor/Provider
+// Reviewer account from a real Standard User. isRestrictedFrom is the one hook server.js wires in (with
+// the real userIsRestrictedFrom) so a restricted account can't reach a real Stripe checkout session
+// through either entry point: the main HTTP dispatcher, or this businessRequest helper used by voice.
+test("businessRequest refuses a checkout request when the caller is restricted from external transactions, but allows other business actions through", async () => {
+  const db = fakeDb();
+  const active = {
+    ready: Promise.resolve(), db,
+    access: { async authorize() {} },
+    consents: { async active() { return undefined; }, async grant(item) { return { ...item, consent_id: "consent-1" }; } }
+  };
+  const isRestrictedFrom = (user, restriction) => restriction === "external-transaction" && user?.role === "Investor";
+  const adapter = createServerRuntimeAdapter({ env: {}, resolveUser: async () => null, readJson: async () => ({}), createRuntimeFn: () => active, isRestrictedFrom });
+  const investor = { id: "investor-1", tenantId: "tenant-authoritative-1", role: "Investor", permissions: ["tasks:execute"] };
+
+  const created = await adapter.businessRequest({ method: "POST", pathname: "/api/nexus/runtime/business/clients",
+    body: { businessName: "Investor's Business", consent: true }, user: investor });
+  assert.equal(created.status, 201, "a restricted account must still be able to do ordinary, non-financial business actions");
+
+  await assert.rejects(
+    () => adapter.businessRequest({ method: "POST", pathname: `/api/nexus/runtime/business/clients/${created.body.record_id}/checkout`,
+      body: { confirmed: true, consent: true, expectedVersion: 1, plan: "pro" }, user: investor }),
+    error => error.code === "business_checkout_restricted" && error.status === 403
+  );
+
+  const standardUser = { id: "standard-1", tenantId: "tenant-authoritative-1", role: "Standard User", permissions: ["tasks:execute"] };
+  const createdForStandard = await adapter.businessRequest({ method: "POST", pathname: "/api/nexus/runtime/business/clients",
+    body: { businessName: "Standard User's Business", consent: true }, user: standardUser });
+  // A non-restricted caller must still reach the real service layer (which then fails for an unrelated,
+  // expected reason here -- no checkout provider is configured in this fixture -- proving the gate above
+  // is not what stopped it).
+  await assert.rejects(
+    () => adapter.businessRequest({ method: "POST", pathname: `/api/nexus/runtime/business/clients/${createdForStandard.body.record_id}/checkout`,
+      body: { confirmed: true, consent: true, expectedVersion: 1, plan: "pro" }, user: standardUser }),
+    error => error.code !== "business_checkout_restricted"
+  );
 });

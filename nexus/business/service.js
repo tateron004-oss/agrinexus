@@ -394,6 +394,13 @@ class BusinessService {
   async checkout(context, recordId, body) {
     await this.authorize(context, true);
     if (body.confirmed !== true) fail("business_confirmation_required", "Confirm creating a provider checkout.", 409);
+    // Found live (business/marketplace audit): unlike assistant()/plan() above (both fixed to check base
+    // DATA_SCOPE before their own AI_SCOPE), this only ever checked BILLING_SCOPE -- so a user who
+    // revoked all business consent (revokeConsent() withdraws DATA_SCOPE/AI_SCOPE/BILLING_SCOPE together)
+    // could still re-grant just BILLING_SCOPE with a later checkout({consent:true}) call and get a real
+    // Stripe checkout session created, even though their base "you may use/store my business data"
+    // consent was never re-confirmed.
+    await this.consent(context);
     await this.consent(context, body.consent === true, BILLING_SCOPE);
     const record = await this.owned(context, recordId);
     if (record.version !== body.expectedVersion) fail("business_version_conflict", "Reload before creating checkout.", 409);

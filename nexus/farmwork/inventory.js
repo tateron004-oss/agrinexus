@@ -59,7 +59,12 @@ async function addStock(ctx, name, quantity) {
     if (items.length >= 400) return null;
     return ctx.store.add({ ...scope, collection: "stock", data: { name, category: categoryOf(name), qty: quantity.value, unit: quantity.unit } }).then(record => record);
   }
-  return null;
+  // Found live: exhausting all 5 CAS retries (genuine concurrent-write contention on the same stock item)
+  // returned the same null as the real 400-item cap just above, so the caller always blamed "400 kinds of
+  // stock" even on a near-empty inventory. false is a distinct falsy sentinel every other caller of
+  // addStock already treats the same as null (a plain truthy check), so this only changes what the one
+  // caller that inspects the reason (handle() below) reports.
+  return false;
 }
 
 async function handle(ctx) {
@@ -71,6 +76,7 @@ async function handle(ctx) {
     const quantity = parseQuantity(m[1]); const name = tidyName(m[2]);
     if (!quantity || !name || name.length > 60) return null;
     const record = await addStock(ctx, name, quantity);
+    if (record === false) return "That didn't quite go through -- please try that again.";
     if (!record) return "That's the most kinds of stock I can keep (four hundred). Remove some first.";
     return `Added ${unitLabel(quantity.value, quantity.unit)} of ${name}. You now have ${unitLabel(record.data.qty, record.data.unit)}.`;
   }
