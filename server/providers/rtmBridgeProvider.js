@@ -20,6 +20,15 @@ const ENTRIES = "nexusRtmActivityEntries";
 const PLANS = "nexusFitnessTrainingPlans";
 const ACTIVITY_TYPES = new Set(["therapy_activity", "exercise_rehab", "nutrition_behavior", "medication_adherence_discussion", "education_module", "symptom_function_note", "device_app_usage", "fitness_training"]);
 
+// Found live (falsy-zero sibling sweep): the naive `Number(x) || null` idiom trainingPlan() used for
+// weeklySessionTarget/durationWeeks silently discarded an explicit 0 (e.g. a deliberate rest week
+// programmed into a plan) and replaced it with null, unlike this same file's own participationMinutes
+// field a few lines above, which already correctly preserves 0.
+function numberOrNull(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function status(env = process.env) {
   return defaultStatus(PROVIDER, FLAG, env, {
     rtmScope: ["therapy/activity completion", "exercise/rehab activity", "diet/nutrition behavior", "medication adherence discussion prompts", "education module completion", "symptom/function notes", "device/app usage notes"],
@@ -121,8 +130,8 @@ function trainingPlan(body = {}, db, env = process.env) {
   const record = saveRecord(db, PLANS, localRecord("fitness-plan", body, {
     goal: safeText(body.goal || "general fitness", 200),
     activityFocus: safeList(body.activityFocus || body.focus || "general activity"),
-    weeklySessionTarget: Number(body.weeklySessionTarget) || null,
-    durationWeeks: Number(body.durationWeeks) || null,
+    weeklySessionTarget: numberOrNull(body.weeklySessionTarget),
+    durationWeeks: numberOrNull(body.durationWeeks),
     notes: safeText(body.notes, 240)
   }), 20);
   return response(PROVIDER, action, "completed", "Training plan saved locally. This is general activity guidance, not a training program from a coach, trainer, or clinician.", { plan: record });

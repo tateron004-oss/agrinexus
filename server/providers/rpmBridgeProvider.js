@@ -19,6 +19,15 @@ const INTAKES = "nexusRpmIntakes";
 const READINGS = "nexusRpmDeviceReadings";
 const METRICS = new Set(["blood_pressure", "blood_glucose", "pulse", "weight", "oxygen_saturation", "temperature"]);
 
+// Found live (falsy-zero sibling sweep): the naive `Number(x) || null` idiom this file used for
+// systolic/diastolic/pulse is the exact bug class chronicDiseaseBridgeProvider.js (same module family,
+// same medicalBridgeUtils helpers) already fixed for its own numeric vitals via this same helper -- an
+// explicit 0 is silently discarded and replaced with null instead of being recorded honestly.
+function numberOrNull(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function status(env = process.env) {
   return defaultStatus(PROVIDER, FLAG, env, {
     rpmScope: ["blood pressure", "blood glucose", "pulse", "weight", "oxygen saturation optional", "temperature optional"],
@@ -66,9 +75,9 @@ function deviceReading(body = {}, db, env = process.env) {
     metric: METRICS.has(normalizedMetric) ? normalizedMetric : "blood_pressure",
     value: safeText(body.value || body.reading || "", 80),
     unit: safeText(body.unit || "", 40),
-    systolic: Number(body.systolic) || null,
-    diastolic: Number(body.diastolic) || null,
-    pulse: Number(body.pulse) || null,
+    systolic: numberOrNull(body.systolic),
+    diastolic: numberOrNull(body.diastolic),
+    pulse: numberOrNull(body.pulse),
     dateTimeText: safeText(body.dateTimeText || body.dueAt || "not provided", 120),
     dataSource: safeText(body.dataSource || body.source || "manual", 120),
     notes: safeText(body.notes, 240),
