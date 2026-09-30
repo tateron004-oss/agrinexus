@@ -2876,6 +2876,42 @@ function eraseOwnedNexusContentRecords(db, userId) {
   return removedCounts;
 }
 
+// Found live (wellness-toolkit follow-up audit): /api/account/export only ever read the legacy db.profile
+// blob (via the collectOwned*Records functions above/below) -- it never reached a signed-in user's real,
+// Postgres-backed nexus/ data: companion trusted-circle/emergency history, the wellness log and goals,
+// farm/health toolkit records, community reports/announcements, personal items, saved contacts, and
+// anything else any nexus/* toolkit writes to the shared nexus_memory_items table. Account ERASURE already
+// correctly reaches this data (authoritativeNexusRuntime.requestDeletionRequest, see /api/account/erase
+// below), so a person's real tracked data could be permanently deleted on request while never once being
+// downloadable first -- the same export/erasure asymmetry this codebase has repeatedly had to close for
+// individual collections (see the workforce/learning export gap, PR #752), here at the scale of an entire
+// storage layer. Grouped by purpose (the real column every nexus/* toolkit's own store already scopes by),
+// so each toolkit's data is clearly labeled in the download. Capped at 5000 rows total (the same ceiling
+// most individual toolkit stores already use for one collection) -- a real, honest completeness gain over
+// today's total absence, though an account with more than 5000 combined rows across every toolkit would
+// still see only its most recent 5000; a full per-purpose paginated export is future work, not this fix.
+async function collectOwnedNexusMemoryRecords(user) {
+  if (!usingPostgresState()) return {};
+  try {
+    const authoritativeUser = await authoritativeRuntimeUser(user);
+    if (!authoritativeUser) return {};
+    const pool = getPgPool();
+    const result = await pool.query(`select purpose,content,created_at from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and deleted_at is null order by created_at desc limit 5000`,
+      [authoritativeUser.tenantId, authoritativeUser.id]);
+    const rows = result.rows || result;
+    const owned = {};
+    for (const row of rows) {
+      const key = `nexus.${row.purpose}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.content, createdAt: row.created_at });
+    }
+    return owned;
+  } catch (error) {
+    console.error("[account-export] failed to read authoritative nexus memory records:", error.message);
+    return {};
+  }
+}
+
 // The categories collectOwnedProfileRecords/eraseOwnedProfileRecords cannot
 // reach, surfaced explicitly in every export/erase response so neither ever
 // implies a completeness it doesn't have.
@@ -47246,7 +47282,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...(await collectOwnedNexusMemoryRecords(user)) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
