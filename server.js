@@ -17217,17 +17217,22 @@ async function executeAgentTool(db, user, step) {
   }
 
   if (step.tool === "drone.field_scan") {
-    const { scan } = createDroneScan(db, { source: "agent" });
+    // Found live (drone/cloud-agent audit): unlike the already-fixed /api/trade/drone-scan and
+    // /api/trade/drone-mission REST routes (source: user.email), this and the two sibling branches
+    // below hardcoded the literal string "agent" into createdBy -- which matches no real account, so the
+    // resulting droneScans/droneMissions/fieldInterventions record was silently excluded from that
+    // user's /api/account/export and survived /api/account/erase untouched, forever.
+    const { scan } = createDroneScan(db, { source: user.email });
     return `Completed ${scan.scanRef} for ${scan.productName} with ${scan.cropHealthScore}% crop health.`;
   }
 
   if (step.tool === "drone.flight_plan") {
-    const mission = createDroneMission(db, { source: "agent" });
+    const mission = createDroneMission(db, { source: user.email });
     return `Planned ${mission.missionRef} for ${mission.productName} with compliance checks ready.`;
   }
 
   if (step.tool === "drone.intervention_task") {
-    const task = createFieldIntervention(db, { source: "agent" });
+    const task = createFieldIntervention(db, { source: user.email });
     return `Assigned ${task.taskRef} for ${task.productName}.`;
   }
 
@@ -44106,6 +44111,18 @@ function latestParty(store, type = "", user) {
   return mine.find(item => !type || item.type === type || item.type === "both") || mine[0] || null;
 }
 
+// Same terminal-state-reopen shape as latestActiveShipment/latestActiveEmployerProfile/etc. above:
+// mark_party_closed explicitly sets status "closed" and its own receipt promises outreach has stopped,
+// but create_shipment/create_transaction's buyerPartyId/sellerPartyId fallback (when the caller doesn't
+// name a party) used latestParty()'s own mine[0] fallback, which has no status exclusion and could
+// silently reattach a new shipment/transaction to that same closed party. latestParty() itself is left
+// unchanged for mark_party_closed's own lookup, which must find the party regardless of status to close
+// it in the first place.
+function latestActiveParty(store, type = "", user) {
+  const mine = store.parties.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => (!type || item.type === type || item.type === "both") && !/closed/.test(item.status || "")) || null;
+}
+
 function latestLearningProfile(store, user) {
   const mine = store.learningProfiles.filter(item => nexusOperationsOwned(item, user));
   return mine.find(item => !/archived|deleted/.test(item.status || "")) || mine[0] || null;
@@ -44505,8 +44522,8 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const shipment = {
       shipmentId: nexusOperationId("NX-SHIP"),
       ownerId: nexusOperationsOwnerKey(user),
-      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer", user)?.partyId || "", 120),
-      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller", user)?.partyId || "", 120),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestActiveParty(store, "buyer", user)?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestActiveParty(store, "seller", user)?.partyId || "", 120),
       origin: cleanOpsText(body.origin || "farm", 160),
       destination: cleanOpsText(body.destination || "market", 160),
       productType: cleanOpsText(body.productType || "produce", 120),
@@ -44558,8 +44575,8 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const transaction = {
       transactionId: nexusOperationId("NX-TXN"),
       ownerId: nexusOperationsOwnerKey(user),
-      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer", user)?.partyId || "", 120),
-      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller", user)?.partyId || "", 120),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestActiveParty(store, "buyer", user)?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestActiveParty(store, "seller", user)?.partyId || "", 120),
       shipmentId: cleanOpsText(body.shipmentId || latestActiveShipment(store, user)?.shipmentId || "", 120),
       amount: cleanOpsText(body.amount || "0", 80),
       currency: cleanOpsText(body.currency || "USD", 12),
@@ -44909,6 +44926,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.droneProviders.unshift(provider);
+    store.droneProviders = store.droneProviders.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "drone-provider", provider.droneProviderId, "drone_provider_added", actor, "Drone provider candidate added with dispatch disabled.", null, provider);
     const receipt = addNexusOperationsReceipt(db, "drone-provider", provider.droneProviderId, action, ["Added drone provider candidate record."], ["Nexus did not dispatch drones, schedule flights, capture imagery, or claim provider acceptance."], provider.status);
     return nexusOperationResponse(db, user, action, provider, audit, receipt);
@@ -44927,6 +44945,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.droneEquipment.unshift(equipment);
+    store.droneEquipment = store.droneEquipment.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "drone-equipment", equipment.droneEquipmentId, "drone_equipment_added", actor, "Drone equipment candidate added for readiness review.", null, equipment);
     const receipt = addNexusOperationsReceipt(db, "drone-equipment", equipment.droneEquipmentId, action, ["Added drone equipment record."], ["Nexus did not activate flight hardware, capture images, or launch a mission."], "inventory-review");
     return nexusOperationResponse(db, user, action, equipment, audit, receipt);
@@ -44963,7 +44982,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       // instead, exactly like an unrecognized/stale ID already would. Kept
       // the ownership check too, so this stays closed to cross-user IDOR.
       : (store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId && nexusOperationsOwned(item, user) && !/cancelled|archived|completed/.test(item.status || "")) || latestActiveDroneMission(store, user) || runNexusOperationsAction(db, { action: "create_drone_mission_request" }, user).record);
-    if (action === "create_drone_mission_request") store.droneMissionRequests.unshift(mission);
+    if (action === "create_drone_mission_request") {
+      store.droneMissionRequests.unshift(mission);
+      store.droneMissionRequests = store.droneMissionRequests.slice(0, 1000);
+    }
     const before = action === "create_drone_mission_request" ? null : { ...mission };
     if (action === "prepare_drone_mission_packet") mission.status = "packet-prepared";
     if (action === "match_drone_mission_provider") mission.status = "provider-match-review";
@@ -44971,8 +44993,16 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     if (action === "track_drone_mission_status") mission.status = /flown|dispatched|completed|captured/i.test(body.status || "") ? "manual-status-review" : cleanOpsText(body.status || "manual-status-review", 80);
     if (action === "create_agriculture_expert_packet_from_drone") mission.status = "agriculture-expert-packet-prepared";
     mission.updatedAt = now;
+    // Found live (drone/cloud-agent audit): unlike every sibling record type created in this same
+    // function (drone missions, providers, equipment, parties, shipments, etc.), these two never set
+    // ownerId -- both are in NEXUS_OPERATION_COLLECTIONS, not NEXUS_OPERATIONS_AUDIT_TRAIL_COLLECTIONS, so
+    // collectOwnedOperationsRecords/eraseOwnedOperationsRecords scan them expecting a real ownerId that
+    // never existed, silently excluding a user's own drone-mission events and imagery reports from both
+    // export and erasure with no disclosed gap. Neither array was capped either, unlike this store's other
+    // collections.
     const event = {
       droneEventId: nexusOperationId("NX-DREV"),
+      ownerId: nexusOperationsOwnerKey(user),
       droneMissionId: mission.droneMissionId,
       action,
       status: mission.status,
@@ -44982,15 +45012,18 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       noImageryCaptured: true
     };
     store.droneMissionEvents.unshift(event);
+    store.droneMissionEvents = store.droneMissionEvents.slice(0, 1000);
     if (action === "create_agriculture_expert_packet_from_drone") {
       store.droneImageryReports.unshift({
         droneImageryReportId: nexusOperationId("NX-DIMG"),
+        ownerId: nexusOperationsOwnerKey(user),
         droneMissionId: mission.droneMissionId,
         status: "report-template-prepared",
         summary: "Agriculture expert review packet prepared without claiming imagery capture.",
         noImageryCaptured: true,
         createdAt: now
       });
+      store.droneImageryReports = store.droneImageryReports.slice(0, 1000);
     }
     const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, `${action} recorded with drone dispatch disabled.`, before, mission);
     const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission support record.", "Preserved provider, consent, compliance, and manual review gates."], ["Nexus did not dispatch a drone, schedule a flight, request flight authorization, capture imagery, diagnose crops, or contact a provider."], mission.status);
@@ -45015,8 +45048,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "log_heat_risk_report") {
-    const report = { heatReportId: nexusOperationId("NX-HEAT"), region: cleanOpsText(body.region || body.location || "local area", 160), riskNotes: cleanOpsText(body.riskNotes || command || "Heat illness/risk report logged.", 400), chronicConditionConsideration: cleanOpsText(body.chronicConditionConsideration || "Chronic conditions may increase risk; seek clinical guidance for medical concerns.", 300), liveDatasetConfigured: Boolean(process.env.NEXUS_HEAT_RISK_DATASET_URL), datasetNotice: process.env.NEXUS_HEAT_RISK_DATASET_URL ? "Configured heat-risk source can be reviewed for source-backed heat context." : "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets.", createdAt: now };
+    // Found live (drone/cloud-agent audit): same missing-ownerId shape as droneMissionEvents/
+    // droneImageryReports above -- heatRiskReports is in NEXUS_OPERATION_COLLECTIONS (not the audit-trail
+    // exclusion set), so it's expected to carry a real ownerId, but never did; also never capped.
+    const report = { heatReportId: nexusOperationId("NX-HEAT"), ownerId: nexusOperationsOwnerKey(user), region: cleanOpsText(body.region || body.location || "local area", 160), riskNotes: cleanOpsText(body.riskNotes || command || "Heat illness/risk report logged.", 400), chronicConditionConsideration: cleanOpsText(body.chronicConditionConsideration || "Chronic conditions may increase risk; seek clinical guidance for medical concerns.", 300), liveDatasetConfigured: Boolean(process.env.NEXUS_HEAT_RISK_DATASET_URL), datasetNotice: process.env.NEXUS_HEAT_RISK_DATASET_URL ? "Configured heat-risk source can be reviewed for source-backed heat context." : "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets.", createdAt: now };
     store.heatRiskReports.unshift(report);
+    store.heatRiskReports = store.heatRiskReports.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "case", report.heatReportId, "heat_risk_report_logged", actor, "Heat risk report logged without fake prevalence map.", null, report);
     const receipt = addNexusOperationsReceipt(db, "case", report.heatReportId, action, ["Logged local heat illness/risk report.", "Displayed no-live-dataset notice when configured data is absent."], ["Nexus did not fake illness prevalence, diagnosis, dispatch, weather source, or map overlay."], "recorded");
     return nexusOperationResponse(db, user, action, report, audit, receipt);
