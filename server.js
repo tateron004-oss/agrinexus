@@ -35859,6 +35859,7 @@ function addNexusPilotAuditEvent(db, eventType, options = {}) {
     noEmergencyDispatch: true
   };
   db.nexusPilotAuditEvents.unshift(event);
+  db.nexusPilotAuditEvents = db.nexusPilotAuditEvents.slice(0, 1000);
   shadowWriteAuditEventToPostgres({
     action: event.eventType,
     entityType: event.mode || "pilot",
@@ -40913,6 +40914,7 @@ function nexusCreateExportDeleteRequest(db, body = {}, user = null, requestType 
     noSilentDeletion: requestType === "delete"
   };
   db.nexusExportDeleteRequests.unshift(requestItem);
+  db.nexusExportDeleteRequests = db.nexusExportDeleteRequests.slice(0, 1000);
   addNexusPilotAuditEvent(db, `privacy_${requestType}_request_created`, {
     actor: requestItem.actor,
     role: "Standard User",
@@ -40946,6 +40948,7 @@ function nexusPrepareIntegrationAttempt(db, type = "", body = {}, user = null) {
     missingEnv: status?.missingEnv || []
   };
   db.nexusIntegrationAttempts.unshift(attempt);
+  db.nexusIntegrationAttempts = db.nexusIntegrationAttempts.slice(0, 1000);
   addNexusPilotAuditEvent(db, "integration_attempt_prepared", {
     actor: attempt.actor,
     role: user?.role || "Standard User",
@@ -41459,6 +41462,7 @@ function nexusRouteRecord(db, body = {}, user = null) {
     updatedAt: now
   };
   db.nexusRoutingLogs.unshift(log);
+  db.nexusRoutingLogs = db.nexusRoutingLogs.slice(0, 1000);
   const record = evaluation.recordId ? getRecordById(db, evaluation.recordId) : null;
   if (record) {
     record.routingStatus = evaluation.outcome;
@@ -41687,6 +41691,7 @@ function nexusProviderPathwayConsent(db, requestId, body = {}, user = null) {
     localDemoLimitation: !requestItem.providerConfigured
   };
   db.nexusPilotConsentEvents.unshift(consent);
+  db.nexusPilotConsentEvents = db.nexusPilotConsentEvents.slice(0, 1000);
   addNexusPilotAuditEvent(db, "provider_pathway_consent_confirmed", {
     relatedRecordId: requestItem.structuredRecordId,
     actor: consent.profileLabel,
@@ -41727,6 +41732,7 @@ function nexusProviderPathwayRoute(db, requestId, body = {}, user = null) {
     noSentClaim: requestItem.status !== "routed_to_configured_provider" ? true : false
   };
   db.nexusRoutingLogs.unshift(routing);
+  db.nexusRoutingLogs = db.nexusRoutingLogs.slice(0, 1000);
   addNexusPilotAuditEvent(db, "provider_pathway_route_attempted", {
     relatedRecordId: requestItem.structuredRecordId,
     actor: user?.name || "Standard User",
@@ -42101,6 +42107,16 @@ function redactSensitiveAuditEntry(entry, canViewSensitive) {
 function redactPilotAuditEvent(entry, canViewSensitive) {
   if (canViewSensitive) return entry;
   return { ...entry, relatedRecordId: null };
+}
+
+// Found live (consent-history follow-up to the audit-events IDOR fix above): GET
+// /api/nexus/consent-history redacted auditEvents via redactPilotAuditEvent but returned
+// db.nexusPilotConsentEvents completely raw to any signed-in caller -- the identical leak shape, on a
+// sibling array. Each consent event carries recordId/providerPathwayRequestId (real cross-user record
+// IDs) and profileLabel (the other user's real display name), disclosing who consented to what.
+function redactPilotConsentEvent(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, recordId: null, providerPathwayRequestId: null, profileLabel: null };
 }
 
 function nexusOperationsSummary(db, user = null) {
@@ -47313,7 +47329,7 @@ async function api(req, res, url) {
     // relatedRecordId -- the same IDOR-enabling leak class already fixed for
     // store.actionReceipts/auditLogs, just on this separate array.
     const canViewSensitive = canUse(user, "admin");
-    return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents,
+    return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents.map(entry => redactPilotConsentEvent(entry, canViewSensitive)),
       auditEvents: db.nexusPilotAuditEvents.map(entry => redactPilotAuditEvent(entry, canViewSensitive)) });
   }
 
@@ -47434,6 +47450,7 @@ async function api(req, res, url) {
     record.consentStatus = "confirmed";
     record.updatedAt = now;
     db.nexusPilotConsentEvents.unshift(consent);
+    db.nexusPilotConsentEvents = db.nexusPilotConsentEvents.slice(0, 1000);
     const audit = addNexusPilotAuditEvent(db, "consent_confirmed", {
       relatedRecordId: record.id,
       mode: record.sourceMode,
