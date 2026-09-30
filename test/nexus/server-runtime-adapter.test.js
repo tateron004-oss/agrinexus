@@ -19,6 +19,15 @@ test("request context preserves tenant, identity, role, and permission boundarie
   assert.equal(context.can("task.execute"), true); assert.equal(context.can("admin"), false);
 });
 
+// Found live: acceptanceContext() (used for the token-gated production-acceptance CI probes) honors a "*"
+// wildcard permission, matching AccessControl.authorize()'s own handling -- but this context, built for
+// every real live user request, did not. Harmless today since no real user is ever granted "*", but kept
+// consistent so a future admin/superuser permission model doesn't silently fail under this context.
+test("request context honors a wildcard permission the same way acceptanceContext already does", () => {
+  const context = requestContext({ headers: {} }, { id: "user-1", tenantId: "tenant-1", role: "Admin", permissions: ["*"] });
+  assert.equal(context.can("anything"), true); assert.equal(context.can("communications-send"), true);
+});
+
 test("behavior turns preserve one correlation identifier through governed execution", async () => {
   let observedContext;
   const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {
