@@ -2840,7 +2840,7 @@ function eraseOwnedTelehealthRecords(db, userId) {
 // recordId, the same way communicationThreads cascades into
 // communicationMessages) rather than the uniform ownerId scan used here.
 // Flagged, not silently dropped, but out of scope for this pass.
-const NEXUS_PILOT_CONTENT_ARRAY_KEYS = ["nexusPilotRecords", "nexusKnowledgeQueries", "nexusKnowledgeSavedResults", "nexusKnowledgeReviewSummaries", "nexusInstitutionalEvidenceReceipts", "nexusProviderPathwayRequests", "nexusCommunications", "nexusNotifications", "nexusOutcomes"];
+const NEXUS_PILOT_CONTENT_ARRAY_KEYS = ["nexusPilotRecords", "nexusKnowledgeQueries", "nexusKnowledgeSavedResults", "nexusKnowledgeReviewSummaries", "nexusInstitutionalEvidenceReceipts", "nexusProviderPathwayRequests", "nexusCommunications", "nexusNotifications", "nexusOutcomes", "nexusFieldDispatches"];
 const NEXUS_PILOT_AUDIT_TRAIL_ARRAY_KEYS = ["nexusPilotAuditEvents", "nexusPilotConsentEvents", "nexusIntegrationAttempts", "nexusProductionReadinessEvents", "nexusRoutingLogs", "nexusAttachmentReadinessEvents", "nexusMarketplaceExecutionAttempts", "nexusHighRiskBlockedAttempts", "nexusAiAnswerReports"];
 
 function collectOwnedNexusContentRecords(db, userId) {
@@ -21607,7 +21607,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       ensureNexusProductionRailsState(db);
       const dispatches = canUse(user, "provider-queue")
         ? db.nexusFieldDispatches
-        : db.nexusFieldDispatches.filter(item => item.requestedBy === (user?.name || "Standard User"));
+        : db.nexusFieldDispatches.filter(item => nexusFieldDispatchOwned(item, user));
       return { ...common, capability: "nexus_agriculture", status: "field-agent-dispatches-listed", response: dispatches.length ? `You have ${dispatches.length} field agent dispatch record(s): ${dispatches.slice(0, 5).map(d => `${d.taskType.replace(/-/g, " ")} at ${d.location || "an unspecified location"} (${d.status})`).join("; ")}.` : "You have no field agent dispatch records yet.", localOnly: true, fieldAgentDispatches: dispatches };
     }
     const wantsFieldAgent = !wantsShowFieldAgent && /\bfield\s*agent\b/i.test(command) && /\b(send|dispatch|request|need|schedule)\b/i.test(command);
@@ -41214,9 +41214,24 @@ function normalizeFieldDispatch(db, body = {}, existing = null, user = null) {
     location: sanitizePilotText(body.location || existing?.location || "", 160),
     status,
     requestedBy: sanitizePilotText(user?.name || existing?.requestedBy || "Standard User", 120),
+    // Found live (cloud-agent-adjacent sweep): the only isolation on
+    // db.nexusFieldDispatches was string equality on this display-name field,
+    // not a stable id -- two distinct accounts that share a name (every
+    // account created via /api/admin/test-user with no explicit name
+    // defaults to the literal "Test User"; the seeded demo account is
+    // literally named "Standard User", also the fallback used here when
+    // user?.name is falsy) could read and, for the PATCH status route, write
+    // each other's dispatch records, including free-text taskDescription/
+    // location. ownerId is the real, stable identity; requestedBy stays as
+    // the display label.
+    ownerId: user?.id || existing?.ownerId || null,
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
+}
+
+function nexusFieldDispatchOwned(dispatch, user) {
+  return Boolean(dispatch) && (dispatch.ownerId === user?.id || canUse(user, "provider-queue"));
 }
 
 function assignFieldAgentDispatch(db, body = {}, user = null) {
@@ -41248,6 +41263,7 @@ function assignFieldAgentDispatch(db, body = {}, user = null) {
   }
   const dispatch = normalizeFieldDispatch(db, { ...body, agentId: candidate.id, status: "assigned" }, null, user);
   db.nexusFieldDispatches.unshift(dispatch);
+  db.nexusFieldDispatches = db.nexusFieldDispatches.slice(0, 200);
   candidate.status = "assigned";
   candidate.activeDispatchId = dispatch.id;
   candidate.updatedAt = dispatch.updatedAt;
@@ -46366,7 +46382,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const dispatches = canUse(user, "provider-queue")
       ? db.nexusFieldDispatches
-      : db.nexusFieldDispatches.filter(item => item.requestedBy === (user?.name || "Standard User"));
+      : db.nexusFieldDispatches.filter(item => nexusFieldDispatchOwned(item, user));
     return send(res, 200, { ok: true, dispatches, statuses: NEXUS_FIELD_DISPATCH_STATUSES });
   }
 
@@ -46392,7 +46408,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const dispatch = db.nexusFieldDispatches.find(item => item.id === fieldDispatchStatusMatch[1]);
     if (!dispatch) return send(res, 404, { ok: false, error: "dispatch_not_found" });
-    const isOwner = dispatch.requestedBy === (user?.name || "Standard User");
+    const isOwner = nexusFieldDispatchOwned(dispatch, user);
     const isAgentSideStatus = ["en_route", "completed"].includes(body.status);
     if (isAgentSideStatus && !canUse(user, "provider-queue")) {
       return send(res, 403, { ok: false, error: "Only a provider/admin can mark a dispatch en route or completed." });
