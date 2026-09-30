@@ -151,6 +151,16 @@ function createMedicationService({ store, circle = null, push, notifications, de
               return waiting ? `Not yet — the ${formatTimeOfDay(waiting.time)} dose of ${item.name} is waiting.` : `I haven't asked about ${item.name} yet today, and you haven't logged it.`;
             }).join(" ");
           }
+          // Found live (companion follow-up audit): unlike "remove" just above (which asks "Which one?"
+          // once more than one medicine matches), "taken" applied to every ambiguous partial-name match
+          // with no disambiguation at all -- a single-word query like "insulin" is a genuine subset of
+          // both "insulin glargine" and "insulin aspart" (a realistic basal+bolus case), so "I took my
+          // insulin" (meaning only one of them) would also mark the OTHER, still genuinely pending dose
+          // "taken" -- silently suppressing the real missed-dose alert that should reach the person's
+          // trusted circle. Bulk "I took my pills"-style generic-word matches are deliberately excluded
+          // from this check (GENERIC.test) since matching every active medicine there is the intended,
+          // already-tested behavior -- this only disambiguates a genuinely ambiguous NAMED match.
+          if (!GENERIC.test(request.query) && found.length > 1) return `Which one: ${found.map(item => item.name).join(" or ")}?`;
           const local = localClock(at, zone);
           const hhmm = `${String(Math.floor(local.minutes / 60)).padStart(2, "0")}:${String(local.minutes % 60).padStart(2, "0")}`;
           const notes = [];

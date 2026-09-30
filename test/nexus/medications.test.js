@@ -88,6 +88,25 @@ test("a spoken medicine name never silently matches a different, distinct medici
   assert.match(await s.say("What medications do I take?"), /vitamin d3/, "the real medicine must be untouched");
 });
 
+// Found live: unlike "remove" (which asks "Which one?" once more than one medicine matches a partial name),
+// "taken" applied to every ambiguous match with no disambiguation at all. "insulin" is a genuine word-subset
+// of both "insulin glargine" and "insulin aspart" (a realistic basal+bolus case) -- saying "I took my
+// insulin" (meaning only one of them) silently marked the OTHER, still genuinely pending dose "taken" too,
+// suppressing the real missed-dose alert that should reach the person's trusted circle.
+test("an ambiguous partial medicine name asks which one for 'taken', instead of silently marking every match as taken", async () => {
+  const s = setup();
+  await s.say("Add medication insulin glargine at 8am");
+  await s.say("Add medication insulin aspart at 8am");
+  await s.service.sendDue({ at: s.clock });
+  assert.match(await s.say("I took my insulin"), /^Which one: insulin (?:glargine or insulin aspart|aspart or insulin glargine)\?$/);
+  const taken = s.store.rows.filter(row => row.content.kind === "dose" && row.content.status === "taken");
+  assert.equal(taken.length, 0, "neither dose may be marked taken until the person says which one");
+  assert.equal(await s.say("I took my insulin glargine"), "Thank you. I've logged insulin glargine as taken.", "a genuinely unambiguous name still works");
+  assert.equal(s.store.rows.filter(row => row.content.kind === "dose" && row.content.status === "taken").length, 1);
+  // The deliberately-supported bulk generic-word flow (e.g. "I took my pills") is unaffected by this fix.
+  assert.equal(await s.say("I took my pills"), "Thank you. I've logged insulin glargine and insulin aspart as taken.", "a generic word still means every medicine");
+});
+
 test("Kyro reminds at each dose time once, and never for a phone that cannot be reached", async () => {
   const s = setup();
   await s.say("Add medication metformin 500mg at 8am and 8pm");
