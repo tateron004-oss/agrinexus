@@ -42119,6 +42119,31 @@ function redactPilotConsentEvent(entry, canViewSensitive) {
   return { ...entry, recordId: null, providerPathwayRequestId: null, profileLabel: null };
 }
 
+// Found live (redact*/sibling-array IDOR follow-up sweep): db.nexusIntegrationAttempts is explicitly
+// classified as part of the same audit/compliance trail family as nexusPilotAuditEvents/
+// nexusPilotConsentEvents (see the array-grouping comment above NEXUS_PILOT_AUDIT_TRAIL_ARRAY_KEYS), and
+// carries the identical "real display name" sensitivity class those two already redact -- but GET
+// /api/nexus/integrations/logs and the per-integration /logs variant had NO auth check at all (not even
+// sign-in) and returned every entry's real actor unredacted.
+function redactIntegrationAttempt(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, actor: null };
+}
+
+// Found live (redact*/sibling-array IDOR exhaustive follow-up sweep): db.nexusRoutingLogs entries carry
+// the exact same recordId/actor values (see nexusRouteRecord/nexusEvaluateRouting) that get passed as
+// relatedRecordId/actor into the paired addNexusPilotAuditEvent("routing_evaluated", ...) call -- and
+// relatedRecordId IS redacted everywhere nexusPilotAuditEvents is read -- but GET
+// /api/nexus/provider-pathways/logs and GET /api/nexus/routing/logs returned this identical data raw.
+// Both routes are gated on canUse(user, "provider-queue"), which Provider Reviewer holds alongside Admin
+// (not just Admin), so a Provider Reviewer account from one provider organization could see another
+// organization's real record IDs and requester names through this door -- the same shared,
+// unscoped-collection exposure already called out for the sibling audit-trail arrays.
+function redactRoutingLog(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, recordId: null, actor: null };
+}
+
 function nexusOperationsSummary(db, user = null) {
   const store = ensureNexusPersistentOperations(db);
   const canViewSensitiveAudit = canUse(user, "admin");
@@ -46130,10 +46155,11 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/provider-pathways/logs" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
+    const canViewSensitive = canUse(user, "admin");
     return send(res, 200, {
       ok: true,
       providerPathwayRequests: db.nexusProviderPathwayRequests,
-      routingLogs: db.nexusRoutingLogs.filter(item => item.providerPathwayRequestId)
+      routingLogs: db.nexusRoutingLogs.filter(item => item.providerPathwayRequestId).map(entry => redactRoutingLog(entry, canViewSensitive))
     });
   }
 
@@ -46225,7 +46251,8 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/routing/logs" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, logs: db.nexusRoutingLogs });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, logs: db.nexusRoutingLogs.map(entry => redactRoutingLog(entry, canViewSensitive)) });
   }
 
   if (url.pathname === "/api/nexus/cases" && req.method === "GET") {
@@ -46450,8 +46477,10 @@ async function api(req, res, url) {
 
   const nexusIntegrationLogsMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/logs$/);
   if (nexusIntegrationLogsMatch && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, logs: db.nexusIntegrationAttempts.filter(item => item.integrationId === nexusIntegrationLogsMatch[1] || item.type === nexusIntegrationLogsMatch[1]) });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, logs: db.nexusIntegrationAttempts.filter(item => item.integrationId === nexusIntegrationLogsMatch[1] || item.type === nexusIntegrationLogsMatch[1]).map(entry => redactIntegrationAttempt(entry, canViewSensitive)) });
   }
 
   // db.nexusCommunications/nexusNotifications/nexusOutcomes are shared,
@@ -47159,8 +47188,10 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/integrations/logs" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, attempts: db.nexusIntegrationAttempts });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, attempts: db.nexusIntegrationAttempts.map(entry => redactIntegrationAttempt(entry, canViewSensitive)) });
   }
 
   const nexusIntegrationPrepareMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/prepare$/);
@@ -47601,7 +47632,13 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/audit" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
-    return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents });
+    // Found live (redact*/sibling-array IDOR follow-up sweep): the auth-check fix above closed the
+    // unauthenticated-access gap, but never added the redactPilotAuditEvent() call its sibling
+    // /api/nexus/consent-history already applies to this exact same array -- a real cross-user
+    // relatedRecordId (chronicCareId/transactionId/providerPathwayRequestId/...) and actor (a real
+    // display name) still leaked to any signed-in non-admin caller through this second door.
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents.map(entry => redactPilotAuditEvent(entry, canViewSensitive)) });
   }
 
   // Found live (missing-auth sweep, later found still incomplete by an
