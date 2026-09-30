@@ -25,8 +25,9 @@ const { DeviceRepository } = require("../../nexus/devices/repository.js");
 // answer regardless of what the real query text says.
 function fakeDevicesTable() {
   const rows = new Map();
-  return {
+  const table = {
     rows,
+    async transaction(work) { return work(table); },
     async query(sql, params) {
       if (/^insert into nexus_devices/.test(sql)) {
         const [deviceId, tenantId, userId, platform, capabilities, pushEndpoint, pushKeyCiphertext] = params;
@@ -59,6 +60,7 @@ function fakeDevicesTable() {
       return { rows: [] };
     }
   };
+  return table;
 }
 
 test("a device that was auto-revoked (dead push subscription) can re-register instead of being permanently 404", async () => {

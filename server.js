@@ -2876,6 +2876,34 @@ function eraseOwnedNexusContentRecords(db, userId) {
   return removedCounts;
 }
 
+// Found live (devices audit): nexus_devices/nexus_device_events (a person's real registered push
+// devices -- platform, capabilities, app version, push provider -- and their app-lifecycle event
+// history) are already correctly erased by nexus/security/data-lifecycle-repository.js's
+// executeDeletion, but were never read anywhere for /api/account/export -- a user could "download my
+// data" and never see their own registered devices, the same erasable-but-never-downloadable asymmetry
+// this codebase has repeatedly had to close elsewhere. Deliberately reads the same PUBLIC_COLUMNS shape
+// nexus/devices/repository.js's own list() already uses (never the raw push endpoint/ciphertext
+// secrets), so this export can never leak more than the device owner could already see via their own
+// device list.
+async function collectOwnedDeviceRecords(user) {
+  if (!usingPostgresState()) return {};
+  const authoritativeUser = await authoritativeRuntimeUser(user).catch(() => null);
+  if (!authoritativeUser) return {};
+  const pool = getPgPool();
+  const owned = {};
+  const devices = await pool.query(
+    `select device_id,platform,app_version,permission_state,capabilities,lifecycle_state,push_provider,push_state,state,last_seen_at
+     from nexus_devices where tenant_id=$1 and user_id=$2 order by last_seen_at desc`,
+    [authoritativeUser.tenantId, authoritativeUser.id]).catch(() => ({ rows: [] }));
+  if (devices.rows.length) owned.nexusDevices = devices.rows;
+  const events = await pool.query(
+    `select event_id,device_id,event_type,payload,occurred_at from nexus_device_events
+     where tenant_id=$1 and user_id=$2 order by occurred_at desc limit 1000`,
+    [authoritativeUser.tenantId, authoritativeUser.id]).catch(() => ({ rows: [] }));
+  if (events.rows.length) owned.nexusDeviceEvents = events.rows;
+  return owned;
+}
+
 // The categories collectOwnedProfileRecords/eraseOwnedProfileRecords cannot
 // reach, surfaced explicitly in every export/erase response so neither ever
 // implies a completeness it doesn't have.
@@ -47246,7 +47274,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...(await collectOwnedDeviceRecords(user)) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
