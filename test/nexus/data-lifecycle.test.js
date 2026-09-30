@@ -173,6 +173,31 @@ test("a legal hold blocks consent erasure too, not just the older tables", async
   assert.equal(held.calls.some(call=>/update nexus_consents/.test(call.sql)),false);
 });
 
+// Found live (fresh-module audit): nexus_sync_operations (a real per-device offline-sync history -- whatever
+// entity a person's device queued while offline, e.g. a health reading or business record) was entirely
+// absent from account erasure, the same asymmetry already closed for every other table in this file.
+test("account deletion also erases this subject's sync-operation history", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},
+    {rows:[]},
+    {rows:[{sync_id:'sync1'},{sync_id:'sync2'}]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+  const syncOps = x.calls.find(call => /delete from nexus_sync_operations/.test(call.sql));
+  assert.ok(syncOps); assert.deepEqual(syncOps.params,['tenant-a','owner-a']);
+  assert.equal(result.verification.syncOperationsErased,true);
+  assert.equal(result.verification.syncOperationsCount,2);
+});
+
+test("a legal hold blocks sync-operation erasure too, not just the older tables", async () => {
+  const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+  assert.equal(held.calls.some(call=>/delete from nexus_sync_operations/.test(call.sql)),false);
+});
+
 // Found live: nexus_tasks/nexus_task_steps/nexus_tool_executions were entirely absent from account erasure --
 // every task_document (a person's own goal text and outcome), step input/output, and raw tool-execution
 // request/response (the real PII passed to and from every executor) survived a "verified" erasure in full.
