@@ -7,7 +7,7 @@ test("legal hold blocks erasure before any protected data is changed",async()=>{
 test("verified deletion erases record content and object pointers transactionally",async()=>{const x=db([{rows:[{subject_id:"user"}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);const result=await new DataLifecycleRepository(x).executeDeletion({tenantId:"tenant",requestId:"request"});assert.equal(result.state,"verified");assert.match(x.calls[2].sql,/data='\{\}'::jsonb/);assert.match(x.calls[3].sql,/object_key=null/);});
 
 test("verified deletion erases this subject's memory items too (farm, health, companion, navigation, reminders data all live there)",async()=>{
-  const x=db([{rows:[{subject_id:"owner-a"}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[{memory_id:"m1"},{memory_id:"m2"}]}]);
+  const x=db([{rows:[{subject_id:"owner-a"}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[{memory_id:"m1"},{memory_id:"m2"}]}]);
   const result=await new DataLifecycleRepository(x).executeDeletion({tenantId:"tenant-a",requestId:"request-a"});
   const erase=x.calls.find(call=>/delete from nexus_memory_items/.test(call.sql));
   assert.ok(erase); assert.deepEqual(erase.params,["tenant-a","owner-a"]);
@@ -53,7 +53,7 @@ test("account deletion clears version history within the same tenant and subject
 // documents and notifications were shipped: account deletion erased companion/farm/health/navigation data
 // (nexus_memory_items) and the older nexus_records world, but not what the general agent writes on its own.
 test("account deletion also erases conversations, messages, documents, document versions, and notifications", async () => {
-  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
     {rows:[{conversation_id:'c1'}]},{rows:[]},{rows:[{document_id:'d1'},{document_id:'d2'}]},{rows:[]},{rows:[{notification_id:'n1'}]}]);
   const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
   assert.equal(result.state,'verified');
@@ -116,7 +116,7 @@ test("record and record-version erasure also catches rows with a NULL subject_id
 // fully wired to receive push forever.
 test("account deletion also revokes every device and erases device events", async () => {
   const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
-    {rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
     {rows:[]},
     {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
     {rows:[{device_id:'dev1'},{device_id:'dev2'}]},{rows:[{event_id:'evt1'}]}]);
@@ -150,7 +150,7 @@ test("a legal hold blocks device erasure too, not just the older tables", async 
 // erasure left every consent record's PII-bearing columns live indefinitely under a nominally "erased" subject.
 test("account deletion also revokes consents and wipes the recipient address and confirmation text", async () => {
   const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
-    {rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
     {rows:[]},
     {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
     {rows:[]},{rows:[]},
@@ -198,8 +198,50 @@ test("account deletion also erases task content, step content, and tool-executio
   const executions = x.calls.find(call => /update nexus_tool_executions/.test(call.sql));
   assert.ok(executions); assert.deepEqual(executions.params,['tenant-a','owner-a']);
   assert.match(executions.sql,/request='\{\}'::jsonb/); assert.match(executions.sql,/response=null/); assert.match(executions.sql,/error=null/); assert.match(executions.sql,/receipt=null/); assert.match(executions.sql,/provider_request_id=null/);
-  assert.match(executions.sql,/e\.task_id=t\.task_id and t\.tenant_id=\$1 and t\.owner_id=\$2/);
+  assert.match(executions.sql,/e\.task_id=t\.task_id and e\.tenant_id=\$1/);
+  // Scoped by the task's owner OR the row's own actor_id, so a delegate's own submitted request/response
+  // content on someone else's task is erased too, the same way nexus_messages already handles actor_id vs
+  // conversation ownership above.
+  assert.match(executions.sql,/t\.owner_id=\$2 or e\.actor_id=\$2/);
   assert.equal(result.verification.toolExecutionsErased,true);
+
+  const evidence = x.calls.find(call => /update nexus_outcome_evidence/.test(call.sql));
+  assert.ok(evidence); assert.deepEqual(evidence.params,['tenant-a','owner-a']);
+  assert.match(evidence.sql,/observed='\{\}'::jsonb/); assert.match(evidence.sql,/locator=null/); assert.match(evidence.sql,/checksum=null/);
+  assert.match(evidence.sql,/x\.task_id=t\.task_id and t\.tenant_id=\$1 and t\.owner_id=\$2/);
+  assert.equal(result.verification.outcomeEvidenceErased,true);
+
+  const verifications = x.calls.find(call => /update nexus_outcome_verifications/.test(call.sql));
+  assert.ok(verifications); assert.deepEqual(verifications.params,['tenant-a','owner-a']);
+  assert.match(verifications.sql,/details='\{\}'::jsonb/);
+  assert.match(verifications.sql,/x\.task_id=t\.task_id and t\.tenant_id=\$1 and t\.owner_id=\$2/);
+  assert.equal(result.verification.outcomeVerificationsErased,true);
+});
+
+// Found live (data-lifecycle full-file audit): nexus_predictions (real per-person ML prediction data,
+// including the explicit "health"/"clinical" domain path) was never referenced anywhere in this file, and
+// carries a direct subject_id column so no join is needed.
+test("account deletion also erases model prediction content, scoped directly by subject_id", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[{prediction_id:'pred1'}]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+  const predictions = x.calls.find(call => /update nexus_predictions/.test(call.sql));
+  assert.ok(predictions); assert.deepEqual(predictions.params,['tenant-a','owner-a']);
+  assert.match(predictions.sql,/input_provenance='\{\}'::jsonb/); assert.match(predictions.sql,/output='\{\}'::jsonb/);
+  assert.match(predictions.sql,/where tenant_id=\$1 and subject_id=\$2/);
+  assert.equal(result.verification.predictionsErased,true);
+  assert.equal(result.verification.predictionsCount,1);
+});
+
+test("a legal hold blocks outcome-evidence, outcome-verification, and prediction erasure too", async () => {
+  const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+  for (const pattern of [/update nexus_outcome_evidence/,/update nexus_outcome_verifications/,/update nexus_predictions/]) {
+    assert.equal(held.calls.some(call=>pattern.test(call.sql)),false);
+  }
 });
 
 test("a legal hold blocks task, step, and tool-execution erasure too, not just the older tables", async () => {
@@ -214,7 +256,7 @@ test("a legal hold blocks task, step, and tool-execution erasure too, not just t
 // ever touched nexus_schedules -- a recurring alert/brief/reminder kept dispatching forever after "erasure."
 test("account deletion also cancels this subject's recurring schedules and wipes their payload", async () => {
   const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
-    {rows:[]},{rows:[]},{rows:[]},{rows:[{schedule_id:'sch1'}]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[{schedule_id:'sch1'}]},
     {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);
   const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
   assert.equal(result.state,'verified');
