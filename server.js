@@ -2942,7 +2942,11 @@ function knownUnownedProfileGaps(profile, db = null) {
   // db.profile array (as opposed to an already-disclosed sibling array from
   // the same file) was missed. Each item's actual object literal was read
   // directly to confirm no createdBy/requestedBy/userEmail is ever present.
-  if (hasAny(["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
+  // Found live (cloud-agent audit): cloudAgentAudit records use `actor: user.email`, not
+  // createdBy/requestedBy/userEmail (PROFILE_OWNER_FIELDS), so -- same as its cloudAgentQueue/
+  // cloudAgentCorrections siblings already in this bucket -- it was never picked up by
+  // collectOwnedProfileRecords/eraseOwnedProfileRecords, but was missing from this disclosure list.
+  if (hasAny(["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "cloudAgentAudit", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
     gaps.push("Agent/AI orchestration evidence, integration event logs, and cloud-agent run/correction records have no per-account owner field today and are not included.");
   }
   if (hasAny(["twilioCallStatusReceipts", "tradeLogisticsRecords", "tradeMessages", "walletTransactions", "platformTransactionFees", "platformRevenueLedger", "paymentCheckoutRecords", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "paymentReleases", "providerOutreach", "droneFindings", "shiftSchedule"])) {
@@ -6012,7 +6016,20 @@ function canWriteHealth(user) {
 function userIsRestrictedFrom(user, restriction) {
   if (user?.restrictions?.includes(restriction)) return true;
   if (["communications-send", "external-transaction", "health-record-write"].includes(restriction)) {
-    return !(user?.role === "Admin" || user?.role === "Standard User");
+    // Found live (cloud-agent audit, health-agent-country-reference-crash.test.js regression): this used
+    // to be `!(user?.role === "Admin" || user?.role === "Standard User")` -- a strict allowlist that
+    // silently conflicted with permissionsForRole()'s own, already-tested fallback (provider-permission-
+    // matrix.test.js asserts permissionsForRole("Coordinator") === permissionsForRole("Standard User")):
+    // any role not in that matrix (Coordinator, Field Operations Agent, and any future role) is meant to
+    // carry full Standard User capability, but this allowlist denied them anyway. That was harmless while
+    // this function only gated NEW, narrowly-tested REST routes, but wiring it into the cloud agent's
+    // shared executeAgentTool/createTradeLogisticsWorkflow -- also reachable from ordinary /api/agent/
+    // command voice commands used by real Coordinator/Field-Operations-Agent accounts -- turned the
+    // conflict into a real regression (a live health worker's "generate a care plan"/"capture vitals"
+    // command started failing). Denylisting the two actually-demo/limited roles instead keeps Investor
+    // and Provider Reviewer restricted (unchanged) while matching permissionsForRole's own fallback for
+    // every other role.
+    return user?.role === "Investor" || user?.role === "Provider Reviewer";
   }
   if (restriction === "account-provider-link" && user?.role === "Investor") return true;
   return false;
@@ -10828,6 +10845,16 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
   ensureTradeProfile(db.profile);
   const { country, route } = activeContext(db);
   const type = String(body.type || "shipping-booking").trim();
+  // Found live (cloud-agent audit): unlike /api/trade/wallet and /api/trade/advanced's quote/release
+  // actions (both gated on userIsRestrictedFrom(user, "external-transaction")), this function's own
+  // "settlement" branch -- a real wallet credit further down -- had no restriction check at all,
+  // reachable both via POST /api/trade/logistics directly and via the cloud agent's trade.wallet_payment
+  // tool. Checked here, once, so both callers are covered.
+  if (type === "settlement" && userIsRestrictedFrom(user, "external-transaction")) {
+    const error = new Error("This account type cannot post a real payment transaction.");
+    error.httpStatus = 403;
+    throw error;
+  }
   let order = body.orderId
     ? db.profile.orders.find(item => item.id === body.orderId)
     : db.profile.orders[db.profile.orders.length - 1];
@@ -16917,7 +16944,28 @@ function recordAiRun(db, { type, country, route, result, module = "AI" }) {
   return run;
 }
 
+const CLOUD_AGENT_HEALTH_WRITE_TOOLS = new Set([
+  "health.intake", "health.representative", "health.caption", "health.caregiver",
+  "health.consent", "health.vitals", "health.referral", "health.followup",
+  "health.safety", "health.careplan", "health.accessibility_review"
+]);
+
 async function executeAgentTool(db, user, step) {
+  // Found live (cloud-agent audit): unlike every direct REST health-write route (all gated on
+  // canWriteHealth(user)/userIsRestrictedFrom(user, "health-record-write")), the cloud agent's own
+  // health.* tool dispatch had no restriction check at all -- an Investor account (which holds
+  // canUse(user, "ai") but is restricted from health-record-write everywhere else) could reach a real
+  // health-record write by calling POST /api/cloud-agent/run with a health-flavored goal and
+  // {execute:true, approved:true} (health.* steps are only "approval-required" in the generic
+  // high-impact sense -- any caller can self-approve their own run). Same for trade.wallet_payment,
+  // which is a real wallet credit gated everywhere else on userIsRestrictedFrom(user,
+  // "external-transaction").
+  if (CLOUD_AGENT_HEALTH_WRITE_TOOLS.has(step.tool) && userIsRestrictedFrom(user, "health-record-write")) {
+    throw new Error("This account type cannot write real health records.");
+  }
+  if (step.tool === "trade.wallet_payment" && userIsRestrictedFrom(user, "external-transaction")) {
+    throw new Error("This account type cannot post a real payment transaction.");
+  }
   const { country, route } = activeContext(db);
   if (step.tool === "learning.start_or_continue") {
     ensureLearningProfile(db.profile);
@@ -17063,6 +17111,7 @@ async function executeAgentTool(db, user, step) {
       createdAt: new Date().toISOString()
     };
     db.profile.telehealthAccessibility.unshift(record);
+    db.profile.telehealthAccessibility = db.profile.telehealthAccessibility.slice(0, 20);
     intake.queueStatus = "Agent access plan ready";
     logIntegration(db, {
       providerId: "health-telehealth",
