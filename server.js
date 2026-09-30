@@ -52426,9 +52426,13 @@ async function api(req, res, url) {
         // (both gate certificate issuance and workforce readiness) with
         // Infinity via Math.max.
         const requestedScore = Number(body.score);
+        // Found live (advanced-route numbering audit): array.length is pinned at 20 forever by the
+        // .slice(0,20) cap applied to every array in this handler right after each insert, unlike this
+        // maker's siblings assignment/cohort (already fixed to use nextRecordSequence) -- once 20 quiz
+        // attempts exist, every later one gets the SAME "AN-QUIZ-021" number.
         const record = {
           id: crypto.randomUUID(),
-          attemptNumber: `AN-QUIZ-${String(db.profile.quizAttempts.length + 1).padStart(3, "0")}`,
+          attemptNumber: `AN-QUIZ-${String(nextRecordSequence(db, "quizAttempts")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           score: body.score !== undefined && Number.isFinite(requestedScore)
@@ -52447,7 +52451,7 @@ async function api(req, res, url) {
       note: () => {
         const record = {
           id: crypto.randomUUID(),
-          noteNumber: `AN-INST-${String(db.profile.instructorNotes.length + 1).padStart(3, "0")}`,
+          noteNumber: `AN-INST-${String(nextRecordSequence(db, "instructorNotes")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           author: user.name,
@@ -52461,7 +52465,7 @@ async function api(req, res, url) {
       report: () => {
         const record = {
           id: crypto.randomUUID(),
-          reportNumber: `AN-LRPT-${String(db.profile.learningProgressReports.length + 1).padStart(3, "0")}`,
+          reportNumber: `AN-LRPT-${String(nextRecordSequence(db, "learningProgressReports")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           progress: enrollment.progress || 0,
@@ -52478,7 +52482,7 @@ async function api(req, res, url) {
       transcript: () => {
         const record = {
           id: crypto.randomUUID(),
-          transcriptNumber: `AN-TRN-${String(db.profile.learningTranscripts.length + 1).padStart(3, "0")}`,
+          transcriptNumber: `AN-TRN-${String(nextRecordSequence(db, "learningTranscripts")).padStart(3, "0")}`,
           learnerName: user.name,
           activeCourse: course.title,
           completedCourses: (db.profile.completedCourses || []).map(courseId => db.courses.find(item => item.id === courseId)?.title || courseId),
@@ -52701,7 +52705,7 @@ async function api(req, res, url) {
       onboarding: () => {
         const record = {
           id: crypto.randomUUID(),
-          packetNumber: `AN-ONB-${String(db.profile.workforceOnboarding.length + 1).padStart(3, "0")}`,
+          packetNumber: `AN-ONB-${String(nextRecordSequence(db, "workforceOnboarding")).padStart(3, "0")}`,
           role,
           checklist: ["identity review", "course certificates", "role expectations", "safety briefing", "payment setup"],
           status: "packet-ready",
@@ -52714,7 +52718,7 @@ async function api(req, res, url) {
       document: () => {
         const record = {
           id: crypto.randomUUID(),
-          documentNumber: `AN-DOC-${String(db.profile.workforceDocuments.length + 1).padStart(3, "0")}`,
+          documentNumber: `AN-DOC-${String(nextRecordSequence(db, "workforceDocuments")).padStart(3, "0")}`,
           role,
           checks: ["identity", "certificate proof", "work authorization", "emergency contact"],
           status: "verified",
@@ -52734,7 +52738,7 @@ async function api(req, res, url) {
         const requestedHours = Number(body.hours);
         const record = {
           id: crypto.randomUUID(),
-          timesheetNumber: `AN-TIME-${String(db.profile.timesheets.length + 1).padStart(3, "0")}`,
+          timesheetNumber: `AN-TIME-${String(nextRecordSequence(db, "timesheets")).padStart(3, "0")}`,
           role,
           hours: body.hours !== undefined && Number.isFinite(requestedHours) && requestedHours >= 0 ? requestedHours : 6,
           status: "submitted",
@@ -52755,7 +52759,7 @@ async function api(req, res, url) {
         const requestedAmount = Number(body.amount);
         const record = {
           id: crypto.randomUUID(),
-          payrollNumber: `AN-PAY-${String(db.profile.payrollApprovals.length + 1).padStart(3, "0")}`,
+          payrollNumber: `AN-PAY-${String(nextRecordSequence(db, "payrollApprovals")).padStart(3, "0")}`,
           timesheetNumber: latestTimesheet.timesheetNumber,
           amount: body.amount !== undefined && Number.isFinite(requestedAmount) && requestedAmount >= 0 ? requestedAmount : latestTimesheet.hours * 12,
           status: "approved",
@@ -52774,7 +52778,7 @@ async function api(req, res, url) {
         const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
-          reviewNumber: `AN-REV-${String(db.profile.performanceReviews.length + 1).padStart(3, "0")}`,
+          reviewNumber: `AN-REV-${String(nextRecordSequence(db, "performanceReviews")).padStart(3, "0")}`,
           role,
           score: body.score !== undefined && Number.isFinite(requestedScore) ? Math.min(100, Math.max(0, requestedScore)) : 92,
           strengths: ["attendance", "mobile workflow", "community handoff"],
@@ -52789,7 +52793,7 @@ async function api(req, res, url) {
       "shift-request": () => {
         const record = {
           id: crypto.randomUUID(),
-          requestNumber: `AN-SWAP-${String(db.profile.shiftRequests.length + 1).padStart(3, "0")}`,
+          requestNumber: `AN-SWAP-${String(nextRecordSequence(db, "shiftRequests")).padStart(3, "0")}`,
           role,
           request: body.request || "worker requested shift swap / schedule adjustment",
           status: "manager-review",
@@ -52802,6 +52806,13 @@ async function api(req, res, url) {
     const handler = actions[type];
     if (!handler) return send(res, 400, { error: "Unsupported advanced workforce action" });
     const [providerId, action, detail, record] = handler();
+    // Found live (advanced-route numbering/cap audit): unlike every comparable "advanced" handler in
+    // this file (learning/advanced, map/advanced, trade/advanced all cap their per-type arrays right
+    // after the maker runs), none of these six were ever capped -- unbounded growth in db.profile on
+    // every real workforce action.
+    ["workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"].forEach(key => {
+      db.profile[key] = db.profile[key].slice(0, 20);
+    });
     db.profile.candidateStage = type === "payroll" ? "Paid Placement" : type === "evaluation" ? "Performance Review" : db.profile.candidateStage;
     recalcReadiness(db.profile);
     logIntegration(db, { providerId, module: "Workforce", action, detail, metadata: { recordId: record.id, type } });
