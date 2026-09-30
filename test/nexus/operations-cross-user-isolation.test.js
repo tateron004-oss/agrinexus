@@ -260,3 +260,62 @@ test("GET /api/nexus/consent-history redacts relatedRecordId for a non-admin cal
   const adminView = await fetch(`${base}/api/nexus/consent-history`, { headers: { cookie: adminCookie } }).then(res => res.json());
   assert.ok(adminView.auditEvents.some(entry => entry.relatedRecordId), "a real Admin must still see real relatedRecordIds");
 });
+
+// Found live (redact*/sibling-array IDOR follow-up sweep): the auth-check fix on this route (see the
+// comment right above it in server.js) only added `if (!user) return 401` -- it never added the
+// redactPilotAuditEvent() call its sibling /api/nexus/consent-history already applies to this exact same
+// db.nexusPilotAuditEvents array, so the real cross-user relatedRecordId leak was still live through this
+// second door.
+test("GET /api/nexus/audit redacts relatedRecordId for a non-admin caller but still shows it to a real Admin", async () => {
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  const referral = await fetch(`${base}/api/nexus/pharmacy/create-referral`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie },
+    body: JSON.stringify({ confirmed: true, consentToPreparePacket: true }) }).then(res => res.json());
+  assert.equal(referral.ok, true, "sanity check: the referral that creates the pilot audit event must itself succeed");
+
+  const nonAdminView = await fetch(`${base}/api/nexus/audit`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  assert.ok(nonAdminView.audit.length > 0, "sanity check: there are real audit events to redact");
+  for (const entry of nonAdminView.audit) assert.equal(entry.relatedRecordId, null, "a non-admin must not see other users' real relatedRecordId");
+
+  const adminView = await fetch(`${base}/api/nexus/audit`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminView.audit.some(entry => entry.relatedRecordId), "a real Admin must still see real relatedRecordIds");
+});
+
+// Found live (redact*/sibling-array IDOR follow-up sweep): db.nexusIntegrationAttempts is part of the
+// same audit-trail family as nexusPilotAuditEvents/nexusPilotConsentEvents (both already redact their
+// equivalent real-display-name field for non-admins), but GET /api/nexus/integrations/logs and the
+// per-integration /logs variant had NO auth check at all -- not even sign-in -- and returned every
+// entry's real actor (a real user's display name) unredacted to anyone, including an anonymous caller.
+test("GET /api/nexus/integrations/logs requires sign-in and redacts actor for a non-admin caller, but still shows it to a real Admin", async () => {
+  const anonymous = await fetch(`${base}/api/nexus/integrations/logs`);
+  assert.equal(anonymous.status, 401);
+
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+
+  const prepared = await fetch(`${base}/api/nexus/integrations/internet-retrieval/prepare`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie }, body: JSON.stringify({}) }).then(res => res.json());
+  assert.equal(prepared.ok, true, "sanity check: preparing a real integration attempt must itself succeed");
+
+  const nonAdminView = await fetch(`${base}/api/nexus/integrations/logs`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  assert.ok(nonAdminView.attempts.length > 0, "sanity check: there are real integration attempts to redact");
+  for (const entry of nonAdminView.attempts) assert.equal(entry.actor, null, "a non-admin must not see other users' real actor display name");
+
+  const adminView = await fetch(`${base}/api/nexus/integrations/logs`, { headers: { cookie: adminCookie } }).then(res => res.json());
+  assert.ok(adminView.attempts.some(entry => entry.actor), "a real Admin must still see real actor display names");
+});
+
+test("GET /api/nexus/integrations/:type/logs requires sign-in and redacts actor for a non-admin caller", async () => {
+  const anonymous = await fetch(`${base}/api/nexus/integrations/internet-retrieval/logs`);
+  assert.equal(anonymous.status, 401);
+
+  const victimCookie = await login("zzops-victim@example.com", "VictimPass2026!");
+  await fetch(`${base}/api/nexus/integrations/internet-retrieval/prepare`, { method: "POST",
+    headers: { "content-type": "application/json", cookie: victimCookie }, body: JSON.stringify({}) });
+
+  const nonAdminView = await fetch(`${base}/api/nexus/integrations/internet-retrieval/logs`, { headers: { cookie: victimCookie } }).then(res => res.json());
+  assert.ok(nonAdminView.logs.length > 0, "sanity check: there are real integration attempts to redact");
+  for (const entry of nonAdminView.logs) assert.equal(entry.actor, null, "a non-admin must not see other users' real actor display name");
+});
