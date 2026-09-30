@@ -48,7 +48,12 @@ function fakeStore() {
   return { rows,
     async addEntry({ userId, content }) { rows.unshift({ memoryId: `w${++n}`, userId, content, deleted: false }); return { memoryId: `w${n}` }; },
     async listEntries({ userId }) { return rows.filter(row => row.userId === userId && !row.deleted).map(row => ({ memoryId: row.memoryId, content: row.content })); },
-    async removeEntry({ userId, memoryId }) { const row = rows.find(item => item.memoryId === memoryId && item.userId === userId); if (row) row.deleted = true; return Boolean(row); } };
+    async removeEntry({ userId, memoryId }) { const row = rows.find(item => item.memoryId === memoryId && item.userId === userId); if (row) row.deleted = true; return Boolean(row); },
+    async setGoal({ userId, metric, target }) {
+      for (const row of rows) if (row.userId === userId && !row.deleted && row.content.kind === "goal" && row.content.metric === metric) row.deleted = true;
+      const content = { kind: "goal", metric, target }; rows.unshift({ memoryId: `w${++n}`, userId, content, deleted: false });
+      return { memoryId: `w${n}`, content };
+    } };
 }
 const say = (store, text, userId = "u1", now = NOW) => wellnessTurn({ text, store, tenantId: "t1", userId, now, timeZone: "Africa/Nairobi" });
 
@@ -106,6 +111,65 @@ test("the repository stores wellness entries as private health information and o
   assert.equal((await repo.listEntries({ tenantId: "t1", userId: "u1" }))[0].memoryId, "m1");
   await repo.removeEntry({ tenantId: "t1", userId: "u1", memoryId: "m1" });
   assert.match(calls.at(-1).sql, /set deleted_at=now\(\)/); assert.ok(calls.every(call => !/delete from/i.test(call.sql)));
+});
+
+// Found live: setGoal's read-delete-insert sequence used to be spread across the CALLER's own separate
+// store calls (a plain read snapshot taken once at the top of the whole turn, then removeEntry, then
+// addEntry), not atomic. Two concurrent "my goal is N workouts a week" requests (a retried voice/phone
+// turn) could both see the same existing goal and both insert a new one, leaving two live goal rows for
+// the same metric -- the older one permanently orphaned, since a plain "find the existing goal" read
+// always finds the newest first. Mirrors this session's established promise-queue lock simulation: a held
+// pg_advisory_xact_lock only releases when its own transaction's work finishes, so two concurrent callers
+// racing for the same key are genuinely serialized.
+function lockedWellnessDb() {
+  const rows = []; const locks = new Map(); let n = 0;
+  const db = {
+    rows,
+    async transaction(fn) {
+      let release = null;
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          release = myRelease;
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
+    async query(sql, params) {
+      if (/select memory_id from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId, metric] = params;
+        return { rows: rows.filter(row => row.tenant_id === tenantId && row.principal_id === userId && !row.deleted && row.content.kind === "goal" && row.content.metric === metric) };
+      }
+      if (/update nexus_memory_items set deleted_at=now\(\)/.test(sql)) {
+        const row = rows.find(item => item.memory_id === params[0]); if (row) row.deleted = true;
+        return { rows: [] };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) {
+        const row = { memory_id: `m${++n}`, tenant_id: params[1], principal_id: params[2], content: params[3], deleted: false };
+        rows.push(row);
+        return { rows: [row] };
+      }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  return db;
+}
+test("two concurrent goal-set requests for the same metric never leave two live goal rows", async () => {
+  const db = lockedWellnessDb();
+  const repo = new WellnessRepository(db);
+  await Promise.all([
+    repo.setGoal({ tenantId: "t1", userId: "u1", metric: "workouts", target: 3 }),
+    repo.setGoal({ tenantId: "t1", userId: "u1", metric: "workouts", target: 5 })
+  ]);
+  const live = db.rows.filter(row => !row.deleted && row.content.kind === "goal" && row.content.metric === "workouts");
+  assert.equal(live.length, 1, "only one live goal row must remain for this metric, whichever request won");
 });
 
 test("through the planner a wellness report is a conversational answer with no tool and the model is never asked", async () => {

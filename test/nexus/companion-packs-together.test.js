@@ -20,7 +20,8 @@ function plannerWithEverything() {
   };
   const companion = createCompanion({ circle, checkinSettings: { get: async () => null, listActive: async () => [], set: async args => ({ ...args, graceHours: 3, replaced: false }), stop: async () => 0 }, checkinState: { get: async () => null, listPending: async () => [] }, medicationStore, notifications, now: () => new Date("2026-09-20T05:00:00Z") });
   const wellRows = []; let w = 0;
-  const wellnessStore = { async addEntry({ content }) { wellRows.unshift({ memoryId: `w${++w}`, content }); return {}; }, async listEntries() { return wellRows.map(row => ({ memoryId: row.memoryId, content: row.content })); }, async removeEntry() { return true; } };
+  const wellnessStore = { async addEntry({ content }) { wellRows.unshift({ memoryId: `w${++w}`, content }); return {}; }, async listEntries() { return wellRows.map(row => ({ memoryId: row.memoryId, content: row.content })); }, async removeEntry() { return true; },
+    async setGoal({ metric, target }) { const content = { kind: "goal", metric, target }; wellRows.unshift({ memoryId: `w${++w}`, content }); return { memoryId: `w${w}`, content }; } };
   const reports = []; let r = 0;
   const store = { async addReport({ content }) { reports.push({ memoryId: `r${++r}`, userId: "u1", content: { ...content, number: r } }); return r; }, async listReports() { return reports; }, async getReport() { return null; }, async updateReport() { return true; },
     async addAnnouncement() { return "a1"; }, async listAnnouncements() { return []; }, async setPending() {}, async getPending() { return null; }, async clearPending() { return false; }, async pushRecipients() { return []; }, async optOuts() { return []; }, async setOptOut() {} };
