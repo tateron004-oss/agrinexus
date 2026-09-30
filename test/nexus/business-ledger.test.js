@@ -144,3 +144,21 @@ test("a business read with nothing to read yet is an answer, not a 422 error", a
   assert.equal(result.verified, true); assert.match(result.response, /You do not have a business or nonprofit workspace yet/);
   await assert.rejects(() => execute({ input: { command: "Log a $50 expense for supplies" }, context }), error => error.code === "business_action_incomplete", "a write with no workspace still fails honestly");
 });
+
+// Found live (money-arithmetic audit): invoiceItems rows each carry their own currency, but nothing
+// stopped a later item from using a DIFFERENT currency than items already on the same invoice -- the
+// invoice header itself has no currency field at all. exportInvoice's PDF total then summed raw
+// quantity*unitPrice across every item regardless of currency, blending e.g. $100 USD and KES 3,000 into
+// one meaningless number with no currency label. An invoice is inherently one bill in one currency, so
+// addInvoiceItem now refuses a mismatched item outright rather than letting the PDF try to reconcile it.
+test("adding an invoice line item in a different currency than the invoice's existing items is refused", async () => {
+  const client = { record_id: "rec_1", version: 1, data: { info: { businessName: "Amina Farm" },
+    editable: { invoices: [{ invoiceNumber: "INV-1042", clientName: "Green Valley Co-op" }], invoiceItems: [{ invoiceNumber: "INV-1042", description: "Consulting", quantity: 1, unitPrice: 50, currency: "USD" }] } } };
+  const businessRequest = async ({ method }) => (method === "GET" ? { body: { clients: [client] } } : { body: client });
+  const mismatched = await run({ command: "add a line item to invoice INV-1042: labour at 3000 shillings each", confirmed: true, businessRequest });
+  assert.equal(mismatched.status, "needs-input", JSON.stringify(mismatched));
+  assert.match(mismatched.response, /already has line items in USD.*can't mix/i);
+
+  const matching = await run({ command: "add a line item to invoice INV-1042: supplies at $20 each", confirmed: false, businessRequest });
+  assert.equal(matching.status, "needs-confirmation", "a genuinely matching currency must still be allowed through to confirmation");
+});

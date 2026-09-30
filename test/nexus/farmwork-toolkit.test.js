@@ -234,6 +234,21 @@ test("break-even and budget planning refuse to invent a revenue figure from a mi
   assert.doesNotMatch(budgetResult, /profit|loss/i, "the revenue/profit line must be omitted, not fabricated, when the price's unit doesn't match the expected yield's unit");
 });
 
+// Found live (money-arithmetic audit): unlike the sibling loan-affordability check 20 lines above it in
+// budget.js (which correctly refuses to compare when currencies.size > 1), the break-even cost lookup
+// summed a field's expense records across every currency regardless of match -- a farmer who recorded
+// spending on the same field in more than one currency got a break-even cost off by roughly the exchange
+// rate, not just a rounding error.
+test("break-even refuses to add up a field's spending when it was recorded in more than one currency", async () => {
+  const who = farmer();
+  await run(who, ["Add a field called North Plot, 2 acres", "skip", "skip", "skip", "skip"]);
+  await who.say("Spent 5000 shillings on seed for North Plot");
+  await who.say("Spent 200 dollars on fertilizer for North Plot");
+  const result = await who.say("break even for North Plot: expected 800 kg");
+  assert.match(result, /more than one currency/i);
+  assert.doesNotMatch(result, /to cover|you need to sell/i, "must not fabricate a break-even price from a currency-mixed total");
+});
+
 test("delivering an order with a mismatched-unit price honestly reports no money was recorded, instead of a fabricated total", async () => {
   const who = farmer();
   assert.match(await who.say("order from John: 3 bags of maize at 40 per kg"), /Order 1: 3 bags of maize for John at 40 per kg/);
