@@ -2901,6 +2901,9 @@ function eraseOwnedNexusContentRecords(db, userId) {
 // never touched. Scoped identically to how erasure scopes it (subject_id when set, else owner_id), grouped
 // by workspace_id+record_type so each tool's data is clearly labeled the same way purpose already labels
 // the memory-table rows.
+//
+// Found live (fresh-module audit, same day): a THIRD table, nexus_sync_operations, had the identical gap --
+// see the comment right above its query below for the detail.
 async function collectOwnedNexusMemoryRecords(user) {
   if (!usingPostgresState()) return {};
   try {
@@ -2921,6 +2924,19 @@ async function collectOwnedNexusMemoryRecords(user) {
     for (const row of (recordsResult.rows || recordsResult)) {
       const key = `nexus.records.${row.workspace_id}.${row.record_type}`;
       (owned[key] || (owned[key] = [])).push({ content: row.data, createdAt: row.created_at });
+    }
+    // Found live (fresh-module audit, same day): a THIRD Postgres table, nexus_sync_operations
+    // (nexus/sync/repository.js), was also entirely absent -- it stores a real per-device offline-sync
+    // history (whatever entity a person's device queued while offline: a health reading, a business
+    // record, a farm log entry) keyed directly by user_id, not scoped through either of the two tables
+    // above. Same asymmetry as nexus_memory_items/nexus_records: nothing in this account's export could
+    // ever surface it. Grouped by entity_type, the same real column this table's own summary()/changes()
+    // methods already key their own views by.
+    const syncResult = await pool.query(`select entity_type,entity_id,payload,state,device_id,created_at from nexus_sync_operations
+      where tenant_id=$1 and user_id=$2 order by created_at desc limit 5000`, [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (syncResult.rows || syncResult)) {
+      const key = `nexus.sync.${row.entity_type}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.payload, state: row.state, deviceId: row.device_id, entityId: row.entity_id, createdAt: row.created_at });
     }
     return owned;
   } catch (error) {

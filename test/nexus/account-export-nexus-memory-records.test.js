@@ -83,7 +83,8 @@ test("collectOwnedNexusMemoryRecords reads the real user's own nexus_memory_item
         { purpose: "circle", content: { kind: "circle", role: "person", otherName: "Joseph" }, created_at: "2026-09-19T00:00:00.000Z" }
       ] };
     }],
-    [/^select workspace_id,record_type,data,created_at from nexus_records/, () => ({ rows: [] })]
+    [/^select workspace_id,record_type,data,created_at from nexus_records/, () => ({ rows: [] })],
+    [/^select entity_type,entity_id,payload,state,device_id,created_at from nexus_sync_operations/, () => ({ rows: [] })]
   ]);
   const { collectOwnedNexusMemoryRecords } = loadFns({ statePostgres: true, pool });
   const owned = await collectOwnedNexusMemoryRecords({ id: "user-1", email: "amina@example.com", role: "Standard User" });
@@ -110,13 +111,43 @@ test("collectOwnedNexusMemoryRecords also reads the real user's own nexus_record
         { workspace_id: "lists", record_type: "checklist", data: { title: "Farm tasks", items: [] }, created_at: "2026-09-19T00:00:00.000Z" },
         { workspace_id: "health", record_type: "observation", data: { kind: "vitals" }, created_at: "2026-09-18T00:00:00.000Z" }
       ] };
-    }]
+    }],
+    [/^select entity_type,entity_id,payload,state,device_id,created_at from nexus_sync_operations/, () => ({ rows: [] })]
   ]);
   const { collectOwnedNexusMemoryRecords } = loadFns({ statePostgres: true, pool });
   const owned = await collectOwnedNexusMemoryRecords({ id: "user-1", email: "amina@example.com", role: "Standard User" });
   assert.equal(owned["nexus.records.lists.checklist"].length, 2, "every workspace+record type's rows must be grouped together");
   assert.equal(owned["nexus.records.health.observation"].length, 1);
   assert.deepEqual(owned["nexus.records.lists.checklist"][0].content, { title: "Groceries", items: [{ text: "milk" }] });
+});
+
+// Found live (fresh-module audit, same day): a THIRD, entirely separate Postgres table,
+// nexus_sync_operations (nexus/sync/repository.js), stores a real per-device offline-sync history --
+// whatever entity a person's device queued while offline -- keyed directly by user_id, and was also
+// completely absent from export despite being real, retained data about the account.
+test("collectOwnedNexusMemoryRecords also reads the real user's own nexus_sync_operations rows, grouped by entity type", async () => {
+  const pool = stubPool([
+    [/^select id from users where tenant_id=\$1 and lower\(email\)=\$2/, () => ({ rows: [{ id: "pg-user-1" }] })],
+    [/^insert into users/, () => ({ rows: [] })],
+    [/^insert into nexus_organization_memberships/, () => ({ rows: [] })],
+    [/^select purpose,content,created_at from nexus_memory_items/, () => ({ rows: [] })],
+    [/^select workspace_id,record_type,data,created_at from nexus_records/, () => ({ rows: [] })],
+    [/^select entity_type,entity_id,payload,state,device_id,created_at from nexus_sync_operations/, (params) => {
+      assert.equal(params[0], "00000000-0000-0000-0000-000000000001", "must query the real authoritative tenant id");
+      assert.equal(params[1], "pg-user-1", "must query the caller's own resolved authoritative user id, never a client-suppliable one");
+      return { rows: [
+        { entity_type: "health_observation", entity_id: "obs-1", payload: { systolic: 120 }, state: "applied", device_id: "phone-1", created_at: "2026-09-20T00:00:00.000Z" },
+        { entity_type: "health_observation", entity_id: "obs-2", payload: { systolic: 130 }, state: "conflict", device_id: "phone-1", created_at: "2026-09-19T00:00:00.000Z" },
+        { entity_type: "business_record", entity_id: "inv-1", payload: { total: 500 }, state: "applied", device_id: "tablet-1", created_at: "2026-09-18T00:00:00.000Z" }
+      ] };
+    }]
+  ]);
+  const { collectOwnedNexusMemoryRecords } = loadFns({ statePostgres: true, pool });
+  const owned = await collectOwnedNexusMemoryRecords({ id: "user-1", email: "amina@example.com", role: "Standard User" });
+  assert.equal(owned["nexus.sync.health_observation"].length, 2, "every entity type's rows must be grouped together");
+  assert.equal(owned["nexus.sync.business_record"].length, 1);
+  assert.deepEqual(owned["nexus.sync.health_observation"][0].content, { systolic: 120 });
+  assert.equal(owned["nexus.sync.health_observation"][1].state, "conflict", "a conflicted operation is still real, retained data and must be included");
 });
 
 test("collectOwnedNexusMemoryRecords fails closed (returns nothing, never throws) if the authoritative query itself errors", async () => {
