@@ -2357,6 +2357,29 @@ async function verifyNexusHealthSourceLive(sourceIdOrUrl = "") {
 // grows past a threshold so this can't grow unbounded.
 const RATE_BUCKET_SWEEP_THRESHOLD = 5000;
 
+// Found live (CSRF/session/rate-limit audit): rateLimit()/authRateLimit() below keyed every bucket on
+// req.socket.remoteAddress -- the raw TCP peer of whatever connection this process itself accepted. The
+// real production service (nexus-genesis-certified in render.yaml) is a Render web service, which sits
+// behind Render's own edge proxy; the app never sees a client's real socket, only a connection from
+// Render's internal proxy (this is exactly why secureCookieAttribute() above already reads
+// x-forwarded-proto instead of trusting req.socket.encrypted). With remoteAddress effectively constant
+// for every inbound request, every per-caller rate budget collapsed into one shared, globally-exhaustible
+// bucket -- most seriously on login/password-reset (10 attempts/5min, authRateLimit below): a single
+// unauthenticated attacker could lock every real user out of logging in, repeatably, for 5-minute windows,
+// with negligible effort. AGRINEXUS_TRUST_PROXY (set true in render.yaml for the real deployment) opts
+// into trusting the LAST hop of X-Forwarded-For -- the one this app's own single trusted proxy appended,
+// never something an attacker could have supplied themselves by forging an earlier hop in that header --
+// falling back to remoteAddress when the app isn't known to be behind that trusted proxy (local dev, this
+// test suite, or any future direct-exposure deployment), so an untrusted header is never trusted by
+// default.
+function rateLimitClientKey(req) {
+  if (String(process.env.AGRINEXUS_TRUST_PROXY || "").toLowerCase() === "true") {
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",").map(part => part.trim()).filter(Boolean);
+    if (forwarded.length) return forwarded[forwarded.length - 1];
+  }
+  return req.socket.remoteAddress || "local";
+}
+
 function rateBucketCheck(key, limit, windowMs) {
   const now = Date.now();
   if (rateBuckets.size > RATE_BUCKET_SWEEP_THRESHOLD) {
@@ -2377,7 +2400,7 @@ function rateBucketCheck(key, limit, windowMs) {
 function rateLimit(req, limit = 180, windowMs = 60_000) {
   const configuredLimit = Number(process.env.AGRINEXUS_RATE_LIMIT_PER_WINDOW || limit);
   const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : limit;
-  const key = `${req.socket.remoteAddress || "local"}:${req.url.split("?")[0]}`;
+  const key = `${rateLimitClientKey(req)}:${req.url.split("?")[0]}`;
   return rateBucketCheck(key, effectiveLimit, windowMs);
 }
 
@@ -2388,7 +2411,7 @@ function rateLimit(req, limit = 180, windowMs = 60_000) {
 // under "auth:" so it never shares a bucket (and therefore never
 // double-counts) with the blanket per-path check.
 function authRateLimit(req, bucketName, limit = 10, windowMs = 300_000) {
-  const key = `auth:${bucketName}:${req.socket.remoteAddress || "local"}`;
+  const key = `auth:${bucketName}:${rateLimitClientKey(req)}`;
   return rateBucketCheck(key, limit, windowMs);
 }
 
@@ -56551,6 +56574,16 @@ server.on("error", error => {
 server.on("upgrade", (req, socket, head) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (url.pathname !== "/api/voice/phone/stream" || !phoneRealtimeStreamingEnabled(process.env)) {
+    socket.destroy();
+    return;
+  }
+  // Found live (CSRF/session/rate-limit audit): this listener is entirely separate from the
+  // http.createServer request listener that calls rateLimit() on every ordinary request -- upgrade
+  // requests never passed through the blanket limiter at all. Opening a socket here is cheap (the
+  // expensive part, a real OpenAI Realtime connection, only happens after a validly-signed token arrives
+  // in the stream's own "start" frame), but nothing capped how many upgrade attempts an unauthenticated
+  // caller could make. Reuses the same (now proxy-aware) rateLimit() budget as everything else.
+  if (!rateLimit(req, 60, 60_000)) {
     socket.destroy();
     return;
   }
