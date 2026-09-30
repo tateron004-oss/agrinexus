@@ -52809,14 +52809,17 @@ async function api(req, res, url) {
         return ["workforce-shifts", "timesheet.submitted", `${record.timesheetNumber} timesheet submitted for ${record.hours} hours.`, record];
       },
       payroll: () => {
-        const latestTimesheet = db.profile.timesheets[0] || { hours: 6, timesheetNumber: "AN-TIME-AUTO" };
-        // Found live (money-logic audit): the same falsy-zero-override gap
-        // as timesheet.hours above, but on a real, persisted money ledger --
-        // an explicit amount:0 (a payroll correction) was silently replaced
-        // with a fabricated positive amount, and a negative or non-finite
-        // amount was accepted outright with no check, corrupting
-        // db.profile.earnings below (including permanently NaN-poisoning it
-        // for a non-numeric amount).
+        // Found live (workforce/advanced sibling audit): unlike /api/workforce/action's "shift" (which
+        // refuses to schedule a second shift while one is already scheduled, closing an unbounded-replay
+        // path) and "interview" (readiness>=50 gate), this action had no gate at all -- it could be the
+        // very first workforce action a brand-new user ever took, and it fell back to a fully synthetic
+        // timesheet ({hours:6, timesheetNumber:"AN-TIME-AUTO"}) when none existed, so it was also fully
+        // unconditionally repeatable: every call credited db.profile.earnings again with no dedup tied to
+        // a specific timesheet, the same unbounded-replay shape the "shift" fix explicitly closed one
+        // function above but was never mirrored here. Now requires a real, still-unpaid submitted
+        // timesheet, and marks it paid on approval so the same timesheet can never be paid twice.
+        const latestTimesheet = (db.profile.timesheets || []).find(item => item.status === "submitted");
+        if (!latestTimesheet) return { refused: "Submit a timesheet before payroll can be approved." };
         const requestedAmount = Number(body.amount);
         const record = {
           id: crypto.randomUUID(),
@@ -52826,16 +52829,20 @@ async function api(req, res, url) {
           status: "approved",
           approvedAt: now
         };
+        latestTimesheet.status = "paid";
         db.profile.payrollApprovals.unshift(record);
         db.profile.earnings = Number(db.profile.earnings || 0) + record.amount;
         return ["workforce-hris", "payroll.approved", `${record.payrollNumber} payroll approved for $${record.amount}.`, record];
       },
       evaluation: () => {
-        // Found live (money-logic audit): same falsy-zero-override gap --
-        // an explicit score:0 (recording a genuinely failing review) was
-        // silently replaced with a strong passing 92, while readiness was
-        // still bumped upward below as if a good review had occurred. Also
-        // had no upper bound, unlike readiness/quizScore's own 100 caps.
+        // Found live (workforce/advanced sibling audit): unlike /api/workforce/action's "interview"
+        // (readiness>=50 gate) and "shift" (interviews>=1 gate), this action had no prerequisite at all --
+        // repeated calls with no real interview, mentor assignment, or quiz ever completed could reach
+        // 100% readiness, the exact field roleReadiness() uses to gate real role applications (including
+        // high-minReadiness roles) via /api/workforce/apply. A performance review presupposes the person
+        // has actually been engaged, so this now requires the same interviews>=1 gate "shift" already
+        // uses.
+        if ((db.profile.interviews || 0) < 1) return { refused: "Schedule an interview before a performance review." };
         const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
@@ -52866,7 +52873,9 @@ async function api(req, res, url) {
     };
     const handler = actions[type];
     if (!handler) return send(res, 400, { error: "Unsupported advanced workforce action" });
-    const [providerId, action, detail, record] = handler();
+    const result = handler();
+    if (result?.refused) return send(res, 409, { error: result.refused });
+    const [providerId, action, detail, record] = result;
     // Found live (advanced-route numbering/cap audit): unlike every comparable "advanced" handler in
     // this file (learning/advanced, map/advanced, trade/advanced all cap their per-type arrays right
     // after the maker runs), none of these six were ever capped -- unbounded growth in db.profile on
