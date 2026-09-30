@@ -102,10 +102,15 @@ function addActivity(profile, event) {
   profile.nexusAgenticBrainActivity = profile.nexusAgenticBrainActivity.slice(0, 100);
 }
 
-function activeTask(profile, taskId = "") {
-  if (taskId) return profile.nexusAgenticTasks.find(task => task.taskId === taskId);
-  return profile.nexusAgenticTasks.find(task => task.status === "active" || task.status === "waiting_for_confirmation")
-    || profile.nexusAgenticTasks[0];
+// Found live (legacy server.js route sweep): this whole module persists real chronic-care/RPM task
+// content (userGoal, chronicIntake.userConcern, readings, providerReport) into a single shared,
+// non-per-user db.profile array, with no ownerId captured anywhere -- listTasks()/updateTask()/
+// providerRespond()/verifyTask() all operated across EVERY user's tasks, letting any signed-in user
+// read and mutate every other user's emergency-flagged healthcare tasks. Scoped by ownerId end to end.
+function activeTask(profile, taskId = "", ownerId = "") {
+  if (taskId) return profile.nexusAgenticTasks.find(task => task.taskId === taskId && task.ownerId === ownerId);
+  const owned = profile.nexusAgenticTasks.filter(task => task.ownerId === ownerId);
+  return owned.find(task => task.status === "active" || task.status === "waiting_for_confirmation") || owned[0];
 }
 
 function extractReading(goal = "") {
@@ -559,6 +564,7 @@ function createTask(profile, goal, plan, options = {}) {
   const taskType = options.taskType || taskTypeFor(parts);
   const task = {
     taskId: id("nexus-task"),
+    ownerId: options.ownerId || "",
     caseId: taskType === "medical_follow_up" ? id("nexus-case") : "",
     type: taskType,
     title: safeText(goal || plan.userGoal || taskType, 140),
@@ -619,7 +625,7 @@ function createTask(profile, goal, plan, options = {}) {
   task.providerOnboardingReadiness = providerOnboardingReadinessFor(task);
   profile.nexusAgenticTasks.unshift(task);
   profile.nexusAgenticTasks = profile.nexusAgenticTasks.slice(0, 75);
-  addActivity(profile, { eventType: "task_created", taskId: task.taskId, status: task.status, summary: task.title });
+  addActivity(profile, { eventType: "task_created", ownerId: task.ownerId, taskId: task.taskId, status: task.status, summary: task.title });
   return task;
 }
 
@@ -633,6 +639,7 @@ function createProviderQueueItem(profile, task, plan, env = process.env) {
   const configured = plan.connectorReadiness && Object.values(plan.connectorReadiness).some(item => item.executionEnabled === true);
   const item = {
     queueId: id("nexus-provider-queue"),
+    ownerId: task.ownerId || "",
     taskId: task.taskId,
     caseId: task.caseId || "",
     providerCategory: providerCategoryFor(task.type),
@@ -655,7 +662,7 @@ function createProviderQueueItem(profile, task, plan, env = process.env) {
   profile.nexusProviderQueue = profile.nexusProviderQueue.slice(0, 75);
   task.providerQueueId = item.queueId;
   addTaskHistory(task, "provider_queue_prepared", configured ? "Provider connector is configured; final confirmation is still required." : "Provider request queued locally because live connector is missing or disabled.");
-  addActivity(profile, { eventType: "provider_queue_prepared", taskId: task.taskId, providerQueueId: item.queueId, status: item.status });
+  addActivity(profile, { eventType: "provider_queue_prepared", ownerId: task.ownerId, taskId: task.taskId, providerQueueId: item.queueId, status: item.status });
   return item;
 }
 
@@ -663,12 +670,12 @@ function createFollowUp(profile, task) {
   const followUpId = id("nexus-follow-up");
   task.followUpId = followUpId;
   addTaskHistory(task, "follow_up_created", "Follow-up check created locally. No provider response was invented.");
-  addActivity(profile, { eventType: "follow_up_created", taskId: task.taskId, followUpId, status: "local_only" });
+  addActivity(profile, { eventType: "follow_up_created", ownerId: task.ownerId, taskId: task.taskId, followUpId, status: "local_only" });
   return { followUpId, status: "local_only", message: "Follow-up created locally for later status verification." };
 }
 
-function buildCapabilityResponse(profile) {
-  const openTasks = profile.nexusAgenticTasks.filter(task => !["completed", "cancelled"].includes(task.status));
+function buildCapabilityResponse(profile, ownerId = "") {
+  const openTasks = profile.nexusAgenticTasks.filter(task => task.ownerId === ownerId && !["completed", "cancelled"].includes(task.status));
   return {
     ok: true,
     status: "capability_summary",
@@ -705,7 +712,7 @@ function buildCapabilityResponse(profile) {
   };
 }
 
-async function handleCommand(body = {}, db = {}, env = process.env) {
+async function handleCommand(body = {}, db = {}, env = process.env, ownerId = "") {
   const profile = ensureBrain(db);
   const goal = cleanGoal(body.command || body.userGoal || body.goal || "");
   const taskId = body.taskId || "";
@@ -715,19 +722,19 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
 
   if (parts.includes("media")) {
     const result = mediaMode.buildMediaResponse(goal);
-    addActivity(profile, { eventType: result.auditEvent.eventType, status: result.status, summary: goal });
+    addActivity(profile, { eventType: result.auditEvent.eventType, ownerId, status: result.status, summary: goal });
     return result;
   }
 
   if (parts.includes("general_assistant") && /what can nexus do|what nexus can help|what can nexus do across all modes|show me nexus modes|show nexus modes|nexus modes|what still needs a real provider|show my active cases|active cases|current tasks|what is open|show what nexus can help/i.test(goal)) {
-    const summary = buildCapabilityResponse(profile);
-    addActivity(profile, { eventType: "capability_summary", status: "local_only", summary: goal });
+    const summary = buildCapabilityResponse(profile, ownerId);
+    addActivity(profile, { eventType: "capability_summary", ownerId, status: "local_only", summary: goal });
     return summary;
   }
 
   if (emergencyDetected(goal)) {
     const plan = productionRuntime.plan({ userGoal: goal }, db, env);
-    addActivity(profile, { eventType: "emergency_blocked", status: "blocked_emergency", summary: goal });
+    addActivity(profile, { eventType: "emergency_blocked", ownerId, status: "blocked_emergency", summary: goal });
     return {
       ok: false,
       status: "blocked_emergency",
@@ -737,18 +744,18 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
     };
   }
 
-  let task = activeTask(profile, taskId);
+  let task = activeTask(profile, taskId, ownerId);
   if (suppliedMeasurement && (!task || task.type !== "medical_follow_up")) {
-    task = profile.nexusAgenticTasks.find(item => item.type === "medical_follow_up" && !["completed", "cancelled"].includes(item.status)) || task;
+    task = profile.nexusAgenticTasks.find(item => item.type === "medical_follow_up" && item.ownerId === ownerId && !["completed", "cancelled"].includes(item.status)) || task;
   }
   if (parts.includes("cancel") && task) {
     task.status = "cancelled";
     addTaskHistory(task, "task_cancelled", "User cancelled the task. No external action was executed.");
-    addActivity(profile, { eventType: "task_cancelled", taskId: task.taskId, status: task.status });
+    addActivity(profile, { eventType: "task_cancelled", ownerId: task.ownerId, taskId: task.taskId, status: task.status });
     return { ok: true, status: "cancelled", task, message: "Task cancelled locally. No provider action was executed." };
   }
   if ((parts.includes("continue") || parts.includes("verify")) && task) {
-    if (parts.includes("verify")) return verifyTask({ taskId: task.taskId }, db, env);
+    if (parts.includes("verify")) return verifyTask({ taskId: task.taskId }, db, env, ownerId);
     addTaskHistory(task, "task_resumed", "User resumed the task.");
     return { ok: true, status: "resumed", task, message: `Resuming ${task.title}. Current status: ${task.status}.` };
   }
@@ -756,9 +763,9 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   const plan = productionRuntime.plan({ userGoal: goal, confirmed: body.confirmed === true }, db, env);
   const shouldCreateNew = !suppliedMeasurement && (!task || !parts.includes("confirm") || parts.some(part => ["medical", "agriculture", "marketplace", "workforce", "drone", "maps", "learning", "communications", "offline", "reminder"].includes(part)));
   if (shouldCreateNew && !parts.includes("confirm")) {
-    task = createTask(profile, goal, plan);
+    task = createTask(profile, goal, plan, { ownerId });
   }
-  if (!task) task = createTask(profile, goal, plan);
+  if (!task) task = createTask(profile, goal, plan, { ownerId });
   task.readings = Array.isArray(task.readings) ? task.readings : [];
   task.rtmNotes = Array.isArray(task.rtmNotes) ? task.rtmNotes : [];
   task.chronicPrograms = task.chronicPrograms || chronicProgramSummary([]);
@@ -873,33 +880,33 @@ function buildBrainMessage(task, plan, execution, providerQueue) {
   return `Task is active: ${task.title}. Nexus can continue, verify, complete, or cancel it.`;
 }
 
-function listTasks(db = {}) {
+function listTasks(db = {}, ownerId = "") {
   const profile = ensureBrain(db);
   return {
     ok: true,
-    tasks: profile.nexusAgenticTasks,
-    providerQueue: profile.nexusProviderQueue,
-    activity: profile.nexusAgenticBrainActivity,
+    tasks: profile.nexusAgenticTasks.filter(task => task.ownerId === ownerId),
+    providerQueue: profile.nexusProviderQueue.filter(item => item.ownerId === ownerId),
+    activity: profile.nexusAgenticBrainActivity.filter(event => event.ownerId === ownerId),
     matrix: MATRIX
   };
 }
 
-function updateTask(body = {}, db = {}) {
+function updateTask(body = {}, db = {}, ownerId = "") {
   const profile = ensureBrain(db);
-  const task = activeTask(profile, body.taskId || "");
+  const task = activeTask(profile, body.taskId || "", ownerId);
   if (!task) return { ok: false, status: "not_found", message: "No Nexus task found." };
   const status = body.status === "completed" ? "completed" : body.status === "cancelled" ? "cancelled" : "active";
   task.status = status;
   addTaskHistory(task, status === "completed" ? "task_completed" : status === "cancelled" ? "task_cancelled" : "task_updated", `Task marked ${status}.`);
-  addActivity(profile, { eventType: "task_updated", taskId: task.taskId, status });
+  addActivity(profile, { eventType: "task_updated", ownerId: task.ownerId, taskId: task.taskId, status });
   return { ok: true, status, task };
 }
 
-function providerRespond(body = {}, db = {}) {
+function providerRespond(body = {}, db = {}, ownerId = "") {
   const profile = ensureBrain(db);
-  const item = profile.nexusProviderQueue.find(entry => entry.queueId === body.queueId || entry.taskId === body.taskId);
+  const item = profile.nexusProviderQueue.find(entry => (entry.queueId === body.queueId || entry.taskId === body.taskId) && entry.ownerId === ownerId);
   if (!item) return { ok: false, status: "not_found", message: "No provider/admin queue item found." };
-  const task = profile.nexusAgenticTasks.find(entry => entry.taskId === item.taskId);
+  const task = profile.nexusAgenticTasks.find(entry => entry.taskId === item.taskId && entry.ownerId === ownerId);
   item.status = body.status === "reviewed" ? "reviewed" : "local_response_recorded";
   item.response = safeText(body.response || "Provider/admin reviewed locally. No diagnosis, prescription, booking, or external contact was generated by Nexus.", 500);
   item.reviewedBy = safeText(body.reviewedBy || "local provider/admin reviewer", 120);
@@ -908,15 +915,15 @@ function providerRespond(body = {}, db = {}) {
     task.status = "provider_response_available";
     addTaskHistory(task, "provider_response_recorded", "Provider/admin response recorded locally for user verification.");
   }
-  addActivity(profile, { eventType: "provider_response_recorded", taskId: item.taskId, providerQueueId: item.queueId, status: item.status });
+  addActivity(profile, { eventType: "provider_response_recorded", ownerId: item.ownerId, taskId: item.taskId, providerQueueId: item.queueId, status: item.status });
   return { ok: true, status: item.status, providerQueueItem: item, task };
 }
 
-function verifyTask(body = {}, db = {}, env = process.env) {
+function verifyTask(body = {}, db = {}, env = process.env, ownerId = "") {
   const profile = ensureBrain(db);
-  const task = activeTask(profile, body.taskId || "");
+  const task = activeTask(profile, body.taskId || "", ownerId);
   if (!task) return { ok: false, status: "not_found", message: "No Nexus task found to verify." };
-  const providerItem = profile.nexusProviderQueue.find(item => item.taskId === task.taskId);
+  const providerItem = profile.nexusProviderQueue.find(item => item.taskId === task.taskId && item.ownerId === ownerId);
   const verification = {
     status: providerItem?.status === "local_response_recorded" || providerItem?.status === "reviewed" ? "provider_response_available" : task.reminderId || task.followUpId || task.providerQueueId ? "verified_local_record" : "verification_pending",
     taskId: task.taskId,
@@ -928,7 +935,7 @@ function verifyTask(body = {}, db = {}, env = process.env) {
   };
   task.verification = verification;
   addTaskHistory(task, "task_verified", `Verification status: ${verification.status}.`);
-  addActivity(profile, { eventType: "task_verified", taskId: task.taskId, status: verification.status });
+  addActivity(profile, { eventType: "task_verified", ownerId: task.ownerId, taskId: task.taskId, status: verification.status });
   return { ok: true, status: verification.status, task, verification, providerQueueItem: providerItem || null };
 }
 
