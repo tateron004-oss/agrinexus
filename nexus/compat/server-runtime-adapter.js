@@ -526,7 +526,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const user = await resolveUser(req);
     if (!user) { send(res, 401, { error: "Authentication is required for authoritative Nexus tasks." }); return true; }
     try {
-      const active = await runtime(); await active.ready; const api = createTaskApi(active.engine); const controls = createControlApi(active); const syncApi=createSyncApi(active); const context = requestContext(req, user);
+      const active = await runtime(); await active.ready; const api = createTaskApi(active.engine); const controls = createControlApi(active); const syncApi=createSyncApi(active); const context = requestContext(req, user, isRestrictedFrom);
       const body = ["POST", "PUT", "PATCH"].includes(req.method) ? await readJson(req) : {};
       const request = { context, body, channel: body.channel || "api", locale: body.locale || user.language || "en", params: {},
         query: Object.fromEntries(url.searchParams.entries()) };
@@ -748,7 +748,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       throw new NexusRuntimeError("business_checkout_restricted", "This account type cannot start a real payment transaction.", 403);
     }
     const active = await runtime(); await active.ready;
-    const context = requestContext({ headers: {} }, user);
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
     return createBusinessApi(active, { env }).handle({ method, pathname, context, body });
   }
   // Mirrors the /api/nexus/runtime/behavior/turn and .../acknowledgements
@@ -761,13 +761,13 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   async function behaviorTurnRequest({ text, channel = "api", locale = "en", user, conversationId, taskId }) {
     const active = await runtime(); await active.ready;
     if (!active.behavior) throw Object.assign(new Error("The authoritative behavior spine is unavailable; no legacy write fallback was used."), { code: "behavior_spine_unavailable", status: 503 });
-    const context = requestContext({ headers: {} }, user);
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
     return active.behavior.turn({ input: { correlationId: context.requestId, conversationId, taskId, channel, locale, text }, context });
   }
   async function behaviorAcknowledgeRequest({ taskId, commandId, correlationId, workspace, rendered, visible, audible, evidence = {}, user }) {
     const active = await runtime(); await active.ready;
     if (!active.behavior?.acknowledge) throw Object.assign(new Error("The authoritative renderer acknowledgement path is unavailable."), { code: "behavior_acknowledgement_unavailable", status: 503 });
-    const context = requestContext({ headers: {} }, user);
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
     return active.behavior.acknowledge({ input: { taskId, commandId, correlationId, workspace, rendered, visible, audible, evidence }, context });
   }
   // Mirrors POST /api/nexus/runtime/behavior/confirm in-process: resumes a task a behavior turn left in
@@ -775,7 +775,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   async function behaviorConfirmRequest({ taskId, stepId, approved = true, text, channel = "api", user }) {
     const active = await runtime(); await active.ready;
     if (!active.behavior?.confirm) throw Object.assign(new Error("The authoritative behavior spine is unavailable; no legacy write fallback was used."), { code: "behavior_spine_unavailable", status: 503 });
-    const context = requestContext({ headers: {} }, user);
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
     return active.behavior.confirm({ input: { correlationId: context.requestId, taskId, stepId, approved: approved === true, channel, text }, context });
   }
   // Mirrors POST /api/nexus/runtime/privacy/deletions in-process: lets the
@@ -788,7 +788,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   // and deletion.execute job enqueue stay identical to the HTTP path.
   async function requestDeletionRequest({ user }) {
     const active = await runtime(); await active.ready;
-    const context = requestContext({ headers: {} }, user);
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
     const result = await createControlApi(active).requestDeletion({ context, body: {} });
     return result.body;
   }
@@ -1017,10 +1017,14 @@ function validIanaZone(value) {
   try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; }
 }
 
-function requestContext(req, user) {
+function requestContext(req, user, isRestrictedFrom = () => false) {
   const roles = new Set([user.role, ...(user.roles || [])].filter(Boolean)); const permissions = new Set([...(user.permissions || [])].filter(Boolean));
   const requestId = String(req.headers["x-request-id"] || crypto.randomUUID());
-  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission) });
+  // Bound to the real legacy user object (not just its derived roles/permissions) so a planner-layer
+  // consumer -- e.g. the health-worker toolkit, which has no native concept of userIsRestrictedFrom's
+  // Investor/Provider Reviewer denylist -- can ask the same question every other real-effect route
+  // in server.js already asks, without needing the raw user object threaded through separately.
+  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
 }
 
 function acceptanceContext(principal, values = {}) {
