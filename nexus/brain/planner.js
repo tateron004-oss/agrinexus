@@ -209,8 +209,18 @@ class OpenEndedPlanner {
     }
     // The health worker's record-keeping (patients, visits, immunisations, pregnancies, follow-ups, clinic stock, referral letters, monthly reports:
     // see healthwork/) comes before the farm toolkit; each answers only words plainly for it, and an open guided question is answered first.
-    for (const [toolkit, turn, stepId] of [[this.healthWork, healthWorkTurn, "health-report"], [this.farmWork, farmWorkTurn, "farm-report"]]) {
+    for (const [toolkit, turn, stepId, restriction] of [[this.healthWork, healthWorkTurn, "health-report", "health-record-write"], [this.farmWork, farmWorkTurn, "farm-report", null]]) {
       if (!toolkit?.store) continue;
+      // Found live (healthwork audit): every other real PHI-write surface (the legacy video/injury
+      // dispatcher, the cloud-agent tool executor, the direct REST health routes) is gated on
+      // userIsRestrictedFrom(user, "health-record-write") -- but plain conversation, the most natural
+      // path a person takes, went straight into healthWorkTurn with no restriction check at all, so an
+      // Investor/Provider Reviewer account (or a guest) could register, amend, or permanently erase real
+      // patient records just by talking to Kyro. Skipping the toolkit entirely (not just its write
+      // actions) matches the existing precedent that a restricted account "cannot write or review health
+      // records" -- and skipping only this one toolkit, rather than refusing the whole turn, still lets a
+      // restricted caller use the farm toolkit or ordinary conversation normally.
+      if (restriction && context?.isRestrictedFrom?.(restriction)) continue;
       const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf });
       const goal = String(command.text || "").trim();
       const catalog = work?.report ? await this.catalog() : null;

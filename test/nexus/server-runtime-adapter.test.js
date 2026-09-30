@@ -41,6 +41,41 @@ test("behavior turns preserve one correlation identifier through governed execut
   assert.equal(observedContext.correlationId, "correlation-request-1");
 });
 
+test("request context's isRestrictedFrom asks the real caller-supplied check with the actual user object, not just its derived roles", () => {
+  const calls = [];
+  const user = { id: "user-1", tenantId: "tenant-1", role: "Investor", restrictions: ["account-provider-link"] };
+  const context = requestContext({ headers: {} }, user, (askedUser, restriction) => { calls.push([askedUser, restriction]); return restriction === "health-record-write" && askedUser.role === "Investor"; });
+  assert.equal(context.isRestrictedFrom("health-record-write"), true);
+  assert.equal(context.isRestrictedFrom("communications-send"), false);
+  assert.deepEqual(calls, [[user, "health-record-write"], [user, "communications-send"]]);
+});
+
+test("request context defaults isRestrictedFrom to false when the adapter is not given one", () => {
+  const context = requestContext({ headers: {} }, { id: "user-1", tenantId: "tenant-1", role: "Admin" });
+  assert.equal(context.isRestrictedFrom("health-record-write"), false);
+});
+
+// Found live (healthwork audit): the conversational planner path (behavior/turn, and the in-process
+// businessRequest-style callers used by the legacy voice/native dispatcher) had no way to ask
+// userIsRestrictedFrom at all -- context.isRestrictedFrom closes that gap for every one of them at
+// the single point they all build their context from.
+test("behavior/turn threads the adapter's isRestrictedFrom into the context the planner actually receives", async () => {
+  let observedContext;
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {
+    turn: async ({ context }) => { observedContext = context; return { schema: "nexus.behavior-turn.v1", authoritative: true, legacyFallbackUsed: false, completed: true }; }
+  } };
+  const isRestrictedFrom = (user, restriction) => restriction === "health-record-write" && user.role === "Investor";
+  const adapter = createServerRuntimeAdapter({
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", role: "Investor", permissions: ["tasks:execute"] }),
+    readJson: async () => ({ text: "Register a patient called Mary Akinyi", channel: "typed" }),
+    createRuntimeFn: () => runtime, isRestrictedFrom
+  });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/behavior/turn"), response.send);
+  assert.equal(observedContext.isRestrictedFrom("health-record-write"), true);
+  assert.equal(observedContext.isRestrictedFrom("external-transaction"), false);
+});
+
 test("status truthfully refuses a missing authoritative runtime without legacy fallback", async () => {
   const adapter = createServerRuntimeAdapter({ resolveUser: async () => null, readJson: async () => ({}),
     createRuntimeFn: () => { const error = new Error("DATABASE_URL missing"); error.code = "UNSAFE_PRODUCTION_CONFIG"; throw error; } });
