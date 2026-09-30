@@ -51789,38 +51789,54 @@ async function api(req, res, url) {
   if (url.pathname === "/api/demo/investor-live" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow investor demo mode" });
     const body = await readBody(req);
-    const pilotRun = await runLocalPilotStudio(db, user, body.scenario || "farmer-market");
-    const orchestration = await aiOrchestrationReview(db, user, { type: "copilot", note: "Live investor demo mode" });
-    const packet = evidenceExportPacket(db, user, "investor");
-    db.profile.liveInvestorDemos = db.profile.liveInvestorDemos || [];
-    const demo = {
-      id: crypto.randomUUID(),
-      title: "Live investor guided demo",
-      status: "complete",
-      narratorScript: [
-        "AgriNexus starts with a real user need.",
-        "Nexus reads learning, workforce, telehealth, trade, maps, communications, and provider evidence.",
-        "The platform recommends the highest-value next move.",
-        "Every action creates auditable evidence for partners and funders."
-      ],
-      pilotRunId: pilotRun.id,
-      orchestrationId: orchestration.orchestration.id,
-      evidenceExportId: packet.id,
-      createdBy: user.email,
-      createdAt: new Date().toISOString()
-    };
-    db.profile.liveInvestorDemos.unshift(demo);
-    db.profile.liveInvestorDemos = db.profile.liveInvestorDemos.slice(0, 10);
-    logIntegration(db, {
-      providerId: "openai",
-      module: "AI",
-      action: "demo.investor_live_completed",
-      detail: "Live investor guided demo completed with pilot evidence, AI orchestration, and export packet.",
-      metadata: { demoId: demo.id, pilotRunId: pilotRun.id, orchestrationId: orchestration.orchestration.id, evidenceExportId: packet.id }
+    // Found live: unlike its siblings /api/demo/run and /api/demo/wow (guarded with a permanent
+    // xCompletedAt flag, since those are one-time setup actions), this route is legitimately meant to be
+    // re-run across multiple real investor meetings -- liveInvestorDemos keeps up to 10 distinct runs, so
+    // a permanent "only once ever" guard would be the wrong fix here. The real bug is that a double-click
+    // or retry of the SAME click had no protection at all: every POST unconditionally re-ran
+    // runLocalPilotStudio()/aiOrchestrationReview() -- real OpenAI calls -- and re-logged a duplicate
+    // integration record. withActionLifecycle is the idempotency-key-scoped guard already used elsewhere
+    // in this file for exactly this shape: it suppresses a genuine retry of the identical request within
+    // a short window while still letting a deliberately new demo run (a different scenario, or after the
+    // window) execute for real.
+    const lifecycleResult = await withActionLifecycle(db, {
+      provider: "nexus-investor-demo", action: "demo.investor_live", body, actorId: user?.id || user?.email || "",
+      execute: async () => {
+        const pilotRun = await runLocalPilotStudio(db, user, body.scenario || "farmer-market");
+        const orchestration = await aiOrchestrationReview(db, user, { type: "copilot", note: "Live investor demo mode" });
+        const packet = evidenceExportPacket(db, user, "investor");
+        db.profile.liveInvestorDemos = db.profile.liveInvestorDemos || [];
+        const demo = {
+          id: crypto.randomUUID(),
+          title: "Live investor guided demo",
+          status: "complete",
+          narratorScript: [
+            "AgriNexus starts with a real user need.",
+            "Nexus reads learning, workforce, telehealth, trade, maps, communications, and provider evidence.",
+            "The platform recommends the highest-value next move.",
+            "Every action creates auditable evidence for partners and funders."
+          ],
+          pilotRunId: pilotRun.id,
+          orchestrationId: orchestration.orchestration.id,
+          evidenceExportId: packet.id,
+          createdBy: user.email,
+          createdAt: new Date().toISOString()
+        };
+        db.profile.liveInvestorDemos.unshift(demo);
+        db.profile.liveInvestorDemos = db.profile.liveInvestorDemos.slice(0, 10);
+        logIntegration(db, {
+          providerId: "openai",
+          module: "AI",
+          action: "demo.investor_live_completed",
+          detail: "Live investor guided demo completed with pilot evidence, AI orchestration, and export packet.",
+          metadata: { demoId: demo.id, pilotRunId: pilotRun.id, orchestrationId: orchestration.orchestration.id, evidenceExportId: packet.id }
+        });
+        return { httpStatus: 200, body: { ok: true, status: "completed", data: { demo, pilotRun, orchestration, packet } } };
+      }
     });
     await writeDb(db);
     const state = publicState(db, user);
-    state.liveInvestorDemoResult = { demo, pilotRun, orchestration, packet };
+    state.liveInvestorDemoResult = lifecycleResult.body.data;
     return send(res, 200, state);
   }
 
