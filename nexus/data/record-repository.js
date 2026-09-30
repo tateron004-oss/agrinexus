@@ -34,9 +34,17 @@ class RecordRepository {
     });
   }
 
-  async list({ tenantId, subjectId, ownerId, workspaceId, recordType, limit=100 }) {
+  // Found live (RecordRepository audit): task_id is a real structural column (create()/attachTask()/the
+  // nudge joins above all use it) but list() had no way to filter by it -- WorkspaceStateRepository.current()
+  // had to overfetch the 200 most-recently-updated rows of a record type TENANT-WIDE (not scoped to one
+  // owner) and find its task client-side. A workspace-state row is written for EVERY task that reaches
+  // render_required, across every application, so once more than 200 OTHER tasks in the same tenant had a
+  // more recently updated row, a genuinely existing row fell out of the window: stage() then wrongly created
+  // a duplicate row for the same task (breaking the "one row per task" invariant every caller relies on),
+  // and acknowledge() wrongly refused a real mid-flight task with workspace_state_missing.
+  async list({ tenantId, subjectId, ownerId, workspaceId, recordType, taskId, limit=100 }) {
     const values=[tenantId]; let where="tenant_id=$1 and deleted_at is null";
-    for(const [column,value] of [["subject_id",subjectId],["owner_id",ownerId],["workspace_id",workspaceId],["record_type",recordType]]) if(value){values.push(value);where+=` and ${column}=$${values.length}`;}
+    for(const [column,value] of [["subject_id",subjectId],["owner_id",ownerId],["workspace_id",workspaceId],["record_type",recordType],["task_id",taskId]]) if(value){values.push(value);where+=` and ${column}=$${values.length}`;}
     values.push(Math.min(Math.max(limit,1),200));
     const result=await this.db.query(`select * from nexus_records where ${where} order by updated_at desc limit $${values.length}`,values);
     return result.rows||result;
