@@ -48581,22 +48581,56 @@ async function api(req, res, url) {
     return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
   }
 
+  // Found live (fresh-module audit): unlike every other real-external-side-effect action in this file
+  // (the AI-tool-call nexus_communications path for these exact same Twilio functions, calendar, email,
+  // Zoom -- see /api/nexus/tools/zoom/meeting's own "Found live" comment below for the identical bug
+  // shape), these three raw HTTP routes had no idempotency protection at all. The Provider Contact Bridge
+  // UI (public/app.js's runNexusProviderContactBridgeAction) has no disable-on-click guard, so a genuine
+  // double-click or slow-response retry sent two real SMS messages / placed two real calls to a real
+  // third party's phone number.
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.twilio.sendSms(await readBody(req)));
+    const smsBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "twilio", action: "sms.send", body: smsBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.twilio.sendSms(smsBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real SMS provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/whatsapp/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.twilio.sendWhatsapp(await readBody(req)));
+    const whatsappBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "twilio", action: "whatsapp.send", body: whatsappBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.twilio.sendWhatsapp(whatsappBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real WhatsApp provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/call/start" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
-    return sendProviderResult(res, await nexusRealProviders.twilio.startCall(await readBody(req)));
+    const callBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "twilio", action: "call.start", body: callBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.twilio.startCall(callBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real call provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/maps/status" && req.method === "GET") {
@@ -48645,16 +48679,37 @@ async function api(req, res, url) {
     return sendProviderResult(res, nexusRealProviders.communicationsBridge.draft(await readBody(req)));
   }
 
+  // Found live (fresh-module audit): same idempotency gap as /api/nexus/tools/sms|whatsapp|call/* above --
+  // these communicationsBridge equivalents call the same underlying twilioProvider functions and were
+  // equally reachable from the Provider Contact Bridge UI with no idempotency protection.
   if (url.pathname === "/api/nexus/tools/communications/sms/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendSms(await readBody(req)));
+    const bridgeSmsBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "communicationsBridge", action: "sms.send", body: bridgeSmsBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.communicationsBridge.sendSms(bridgeSmsBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real SMS provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/whatsapp/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendWhatsapp(await readBody(req)));
+    const bridgeWhatsappBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "communicationsBridge", action: "whatsapp.send", body: bridgeWhatsappBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.communicationsBridge.sendWhatsapp(bridgeWhatsappBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real WhatsApp provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/call/prepare" && req.method === "POST") {
@@ -48665,7 +48720,16 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/tools/communications/call/start" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
-    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.startCall(await readBody(req)));
+    const bridgeCallBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "communicationsBridge", action: "call.start", body: bridgeCallBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.communicationsBridge.startCall(bridgeCallBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real call provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/providers/status" && req.method === "GET") {
