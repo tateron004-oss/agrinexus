@@ -54,12 +54,20 @@ class BriefSettingsRepository {
     return row ? { scheduleId: row.schedule_id, timeOfDay: row.payload?.timeOfDay, timeZone: row.payload?.timeZone || row.timezone } : null;
   }
 
-  // Every active brief setting, across tenants, for the worker's sweep.
-  async listActive({ limit = 500 } = {}) {
-    const result = await this.db.query(`select schedule_id,tenant_id,owner_id,payload,timezone from nexus_schedules
-      where job_type=$1 and state='active' order by created_at limit $2`, [JOB_TYPE, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
+  // Every active brief setting, across tenants, for the worker's sweep. Found live (fresh-module audit,
+  // same shape as nexus/alerts/settings.js's listActive): a fixed limit with no further paging meant a
+  // single sweep always saw the exact same oldest rows -- anyone past the limit was permanently excluded
+  // from every future sweep, not just skipped once. A keyset cursor on (created_at, schedule_id) lets the
+  // caller page through every active row in one sweep.
+  async listActive({ limit = 500, afterCreatedAt = null, afterScheduleId = null } = {}) {
+    const values = [JOB_TYPE];
+    let where = "job_type=$1 and state='active'";
+    if (afterCreatedAt && afterScheduleId) { values.push(afterCreatedAt, afterScheduleId); where += ` and (created_at, schedule_id) > ($${values.length - 1}, $${values.length})`; }
+    values.push(Math.min(Math.max(Number(limit) || 500, 1), 2000));
+    const result = await this.db.query(`select schedule_id,tenant_id,owner_id,payload,timezone,created_at from nexus_schedules
+      where ${where} order by created_at, schedule_id limit $${values.length}`, values);
     return (result.rows || result).map(row => ({ scheduleId: row.schedule_id, tenantId: row.tenant_id, userId: row.owner_id,
-      timeOfDay: row.payload?.timeOfDay, timeZone: row.payload?.timeZone || row.timezone }));
+      timeOfDay: row.payload?.timeOfDay, timeZone: row.payload?.timeZone || row.timezone, createdAt: row.created_at }));
   }
 }
 

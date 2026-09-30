@@ -538,7 +538,7 @@ test("the check-in stores write only under their own job type and purpose, and n
   await settings.set({ tenantId: "t1", userId: "u1", timeOfDay: "08:00", timeZone: "Africa/Nairobi" });
   const insert = calls.find(call => /insert into nexus_schedules/.test(call.sql));
   assert.equal(insert.params[3], "checkin.daily"); assert.equal(insert.params[7], "2100-01-01T00:00:00.000Z");
-  assert.deepEqual((await settings.listActive())[0], { scheduleId: "sch_1", tenantId: "t1", userId: "u1", timeOfDay: "08:00", timeZone: "Africa/Nairobi", graceHours: 3 });
+  assert.deepEqual((await settings.listActive())[0], { scheduleId: "sch_1", tenantId: "t1", userId: "u1", timeOfDay: "08:00", timeZone: "Africa/Nairobi", graceHours: 3, createdAt: undefined });
   await state.create({ tenantId: "t1", userId: "u1", content: { day: "2026-09-20", status: "pending", promptedAt: "x" } });
   assert.match(calls.at(-1).sql, /'domain','checkin'/); assert.match(calls.at(-1).sql, /'sensitive'/);
   assert.equal((await state.listPending())[0].userId, "u1");
