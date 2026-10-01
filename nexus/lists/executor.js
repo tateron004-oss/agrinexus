@@ -9,6 +9,17 @@
 // workspaceId, no new migration), not a bespoke lists table.
 const WORKSPACE_ID = "lists";
 const RECORD_TYPE = "checklist";
+// Found live (lists-toolkit audit): neither of these was capped. A single list could grow without bound --
+// normalizeItems() only caps ONE call's own addItems payload at 200, never the merged result against the
+// list's existing size, so repeated "add these 200 items" calls grew one list forever. And nothing capped
+// how many lists one account could create at all -- lists.read/lists.update both resolve a list from
+// records.list({..., limit: 200}) (the store's own real query window, newest-updated-first), so once an
+// account passed 200 lists, its least-recently-touched ones silently fell out of that window: lists.update
+// would report list_not_found for a list that genuinely still existed, and it could never be found or
+// listed again either. Capping list creation at exactly the same number the read window already supports
+// means a list can never fall out of it in the first place.
+const MAX_LISTS_PER_ACCOUNT = 200;
+const MAX_ITEMS_PER_LIST = 500;
 
 function normalizeItems(rawItems) {
   return (Array.isArray(rawItems) ? rawItems : [])
@@ -18,13 +29,19 @@ function normalizeItems(rawItems) {
 }
 
 function createListsCreateExecutor({ records }) {
-  if (!records?.create) throw new Error("A record repository is required.");
+  if (!records?.create || !records?.list || !records?.createUnlessCapped) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context, taskId }) {
     const title = String(input.title || "Untitled list").trim().slice(0, 160);
     const items = normalizeItems(input.items);
-    const inserted = await records.create({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
+    // Found live: the cap was enforced by a plain check-then-act (records.list() to count, then
+    // create() if under the cap) with no lock between them -- two concurrent create calls one-under
+    // the cap could both pass the check and both insert. createUnlessCapped() re-checks and inserts
+    // under one transaction-scoped advisory lock, the same pattern already proven elsewhere in this
+    // codebase (RecordRepository's own claimCooldown()).
+    const inserted = await records.createUnlessCapped({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       taskId, workspaceId: WORKSPACE_ID, recordType: RECORD_TYPE, classification: "standard",
-      data: { title, items }, provenance: { source: "nexus-agent", command: input.command || "" } });
+      data: { title, items }, provenance: { source: "nexus-agent", command: input.command || "" } }, { maxCount: MAX_LISTS_PER_ACCOUNT });
+    if (inserted.capped) return { persisted: false, reason: "list_cap_reached", maxLists: MAX_LISTS_PER_ACCOUNT };
     return { listId: inserted.record_id, title, items, itemCount: items.length, persisted: true };
   };
 }
@@ -67,7 +84,11 @@ function createListsUpdateExecutor({ records }) {
     const existing = rows.find(item => item.record_id === input.listId);
     if (!existing) return { updated: false, listId: input.listId, reason: "list_not_found" };
     let items = (existing.data?.items || []).slice();
-    for (const addition of normalizeItems(input.addItems)) items.push(addition);
+    const additions = normalizeItems(input.addItems);
+    if (additions.length && items.length + additions.length > MAX_ITEMS_PER_LIST) {
+      return { updated: false, listId: input.listId, reason: "list_item_cap_reached", maxItems: MAX_ITEMS_PER_LIST };
+    }
+    for (const addition of additions) items.push(addition);
     if (Array.isArray(input.toggleIndexes)) for (const index of input.toggleIndexes) if (items[index]) items[index] = { ...items[index], done: !items[index].done };
     if (Array.isArray(input.removeIndexes)) {
       const toRemove = new Set(input.removeIndexes);

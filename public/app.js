@@ -12936,9 +12936,14 @@ function renderAiEvidence(selector, moduleName, emptyText) {
   const target = $(selector);
   if (!target) return;
   const runs = aiRunsForModule(moduleName);
+  // Found live (fresh-module audit): translateText() does not escape HTML -- for the default "en" locale
+  // it returns the value completely unmodified. run.text/type/provider ultimately trace back to
+  // db.profile.aiRuns, a single shared blob every account's AI interactions feed into with no
+  // sanitization, so this needed escapeHtml() the same way taskItem()/renderNexusOsConversationTurns()
+  // already correctly wrap translateText() elsewhere in this file.
   target.innerHTML = runs.length
-    ? runs.slice(0, 5).map(run => `<div><strong>${translateText(run.type)} - ${translateText(run.provider)}</strong><span>${translateText(run.text)}</span></div>`).join("")
-    : `<div>${translateText(emptyText)}</div>`;
+    ? runs.slice(0, 5).map(run => `<div><strong>${escapeHtml(translateText(run.type))} - ${escapeHtml(translateText(run.provider))}</strong><span>${escapeHtml(translateText(run.text))}</span></div>`).join("")
+    : `<div>${escapeHtml(translateText(emptyText))}</div>`;
 }
 
 function integrationActionComplete(action) {
@@ -12958,8 +12963,8 @@ function renderProviderEvidence(selector, moduleName, emptyText) {
   const target = $(selector);
   if (!target) return;
   target.innerHTML = events.length
-    ? events.slice(0, 8).map(event => `<div><strong>${translateText(event.providerName)}</strong><span>${translateText(event.action)} - ${translateText(event.status)} - ${translateText(event.detail)}</span></div>`).join("")
-    : `<div>${translateText(emptyText)}</div>`;
+    ? events.slice(0, 8).map(event => `<div><strong>${escapeHtml(translateText(event.providerName))}</strong><span>${escapeHtml(translateText(event.action))} - ${escapeHtml(translateText(event.status))} - ${escapeHtml(translateText(event.detail))}</span></div>`).join("")
+    : `<div>${escapeHtml(translateText(emptyText))}</div>`;
 }
 
 function renderEnginePanel(selector, moduleName) {
@@ -13090,9 +13095,9 @@ function renderGovernancePanel() {
         : "Awaiting human approval";
       const reviewer = run.reviewedBy ? `Reviewed by ${run.reviewedBy}` : "No provider error detected";
       const detail = run.error ? `${run.provider} error: ${run.error}` : `${run.provider} - ${reviewer}`;
-      return `<div><strong>${translateText(run.type)} - ${translateText(status)}</strong><span>${translateText(detail)} - ${translateText(run.text)}</span></div>`;
+      return `<div><strong>${escapeHtml(translateText(run.type))} - ${escapeHtml(translateText(status))}</strong><span>${escapeHtml(translateText(detail))} - ${escapeHtml(translateText(run.text))}</span></div>`;
     }).join("")
-    : `<div>${translateText("No AI runs yet. Run an AI workflow to create review evidence.")}</div>`;
+    : `<div>${escapeHtml(translateText("No AI runs yet. Run an AI workflow to create review evidence."))}</div>`;
 }
 
 function renderNotificationPanel() {
@@ -13187,9 +13192,9 @@ function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecuti
   $("#agentReasoningEvidence").textContent = translateText(evidence);
   stepsTarget.innerHTML = steps.map(step => `
     <div class="reasoning-step">
-      <small>${translateText(step.label)}</small>
-      <strong>${translateText(step.title)}</strong>
-      <span>${translateText(step.detail)}</span>
+      <small>${escapeHtml(translateText(step.label))}</small>
+      <strong>${escapeHtml(translateText(step.title))}</strong>
+      <span>${escapeHtml(translateText(step.detail))}</span>
     </div>
   `).join("");
 }
@@ -13199,10 +13204,10 @@ function missionStepHtml(step) {
   return `
     <div class="mission-step ${status}">
       <div>
-        <strong>${translateText(`${step.module}: ${step.action}`)}</strong>
-        <span>${translateText(step.result || step.detail || step.error || step.tool || "Workflow step")}</span>
+        <strong>${escapeHtml(translateText(`${step.module}: ${step.action}`))}</strong>
+        <span>${escapeHtml(translateText(step.result || step.detail || step.error || step.tool || "Workflow step"))}</span>
       </div>
-      <small>${translateText(step.status || "pending")}</small>
+      <small>${escapeHtml(translateText(step.status || "pending"))}</small>
     </div>
   `;
 }
@@ -13218,10 +13223,10 @@ function renderMissionDashboard() {
   if (pending.length) {
     cards.push(...pending.map(plan => `
       <article class="mission-card">
-        <div class="tag-row"><span>${translateText(plan.mode === "autopilot" ? "Autopilot mission" : "Mission plan")}</span><span>${translateText(plan.status)}</span></div>
+        <div class="tag-row"><span>${escapeHtml(translateText(plan.mode === "autopilot" ? "Autopilot mission" : "Mission plan"))}</span><span>${escapeHtml(translateText(plan.status))}</span></div>
         <div>
-          <strong>${translateText(plan.goal || "Untitled mission")}</strong>
-          <span>${translateText(`${plan.steps?.length || 0} step(s) awaiting approval. Created by ${plan.createdBy || "operator"}.`)}</span>
+          <strong>${escapeHtml(translateText(plan.goal || "Untitled mission"))}</strong>
+          <span>${escapeHtml(translateText(`${plan.steps?.length || 0} step(s) awaiting approval. Created by ${plan.createdBy || "operator"}.`))}</span>
         </div>
         <div class="mission-step-list">${(plan.steps || []).slice(0, 5).map(missionStepHtml).join("")}</div>
       </article>
@@ -13230,10 +13235,10 @@ function renderMissionDashboard() {
   if (completed.length) {
     cards.push(...completed.map(execution => `
       <article class="mission-card">
-        <div class="tag-row"><span>${translateText("Completed mission")}</span><span>${translateText(execution.status)}</span></div>
+        <div class="tag-row"><span>${escapeHtml(translateText("Completed mission"))}</span><span>${escapeHtml(translateText(execution.status))}</span></div>
         <div>
-          <strong>${translateText(execution.goal || "Mission execution")}</strong>
-          <span>${translateText(execution.summary || "Mission completed.")}</span>
+          <strong>${escapeHtml(translateText(execution.goal || "Mission execution"))}</strong>
+          <span>${escapeHtml(translateText(execution.summary || "Mission completed."))}</span>
         </div>
         <div class="mission-step-list">${(execution.steps || []).slice(0, 5).map(missionStepHtml).join("")}</div>
       </article>
@@ -13290,11 +13295,11 @@ function renderCloudAgentPanel() {
   const auditTarget = $("#cloudAgentAuditPanel");
   if (auditTarget) {
     const correctionHtml = corrections.length
-      ? corrections.slice(0, 3).map(item => `<div><strong>${translateText("Self-correction")} - ${translateText(item.status)}</strong><span>${translateText(item.strategy || item.error || "Correction created")}</span></div>`).join("")
+      ? corrections.slice(0, 3).map(item => `<div><strong>${escapeHtml(translateText("Self-correction"))} - ${escapeHtml(translateText(item.status))}</strong><span>${escapeHtml(translateText(item.strategy || item.error || "Correction created"))}</span></div>`).join("")
       : "";
     const auditHtml = audit.length
-      ? audit.slice(0, 6).map(item => `<div><strong>${translateText(item.type)} - ${translateText(item.status)}</strong><span>${translateText(item.summary || "Cloud agent audit event")}</span><small>${translateText(item.actor || "Nexus")} - ${translateText(item.createdAt || "")}</small></div>`).join("")
-      : `<div><strong>${translateText("No audit events yet")}</strong><span>${translateText("Cloud missions will record every plan, action, pause, correction, and approval.")}</span></div>`;
+      ? audit.slice(0, 6).map(item => `<div><strong>${escapeHtml(translateText(item.type))} - ${escapeHtml(translateText(item.status))}</strong><span>${escapeHtml(translateText(item.summary || "Cloud agent audit event"))}</span><small>${escapeHtml(translateText(item.actor || "Nexus"))} - ${escapeHtml(translateText(item.createdAt || ""))}</small></div>`).join("")
+      : `<div><strong>${escapeHtml(translateText("No audit events yet"))}</strong><span>${escapeHtml(translateText("Cloud missions will record every plan, action, pause, correction, and approval."))}</span></div>`;
     auditTarget.innerHTML = `${correctionHtml}${auditHtml}`;
   }
 }
@@ -13374,8 +13379,8 @@ function renderAgentCenter() {
   if ($("#collectiveEvolutionPanel")) {
     const proposals = data.profile.collectiveEvolutionProposals || collective.proposals || [];
     $("#collectiveEvolutionPanel").innerHTML = proposals.length
-      ? proposals.slice(0, 6).map(item => `<div><strong>${translateText(item.title || "Evolution proposal")}</strong><span>${translateText(item.recommendedChange || item.why || "Governed platform improvement")}</span><small>${translateText(`${item.module || "Platform"} - ${item.status || "proposed"} - Admin approval required`)}</small></div>`).join("")
-      : `<div><strong>${translateText("No proposals yet")}</strong><span>${translateText("Run collective brain to generate governed self-evolution recommendations from real usage evidence.")}</span></div>`;
+      ? proposals.slice(0, 6).map(item => `<div><strong>${escapeHtml(translateText(item.title || "Evolution proposal"))}</strong><span>${escapeHtml(translateText(item.recommendedChange || item.why || "Governed platform improvement"))}</span><small>${escapeHtml(translateText(`${item.module || "Platform"} - ${item.status || "proposed"} - Admin approval required`))}</small></div>`).join("")
+      : `<div><strong>${escapeHtml(translateText("No proposals yet"))}</strong><span>${escapeHtml(translateText("Run collective brain to generate governed self-evolution recommendations from real usage evidence."))}</span></div>`;
   }
   if ($("#frontierBrainScore")) $("#frontierBrainScore").textContent = `${Number(frontier.score || 0)}%`;
   if ($("#frontierBrainStatus")) $("#frontierBrainStatus").textContent = translateText(frontier.status || "ready");
@@ -13388,7 +13393,7 @@ function renderAgentCenter() {
     // orchestration) -- this used to be appended as plain text onto the summary paragraph, which made this
     // one dashboard's "not real execution" disclosure far less visible than the others'.
     $("#frontierBrainDisclosure").innerHTML = frontier.disclosureNotice
-      ? `<div class="legacy-intelligence-notice"><small>${translateText(frontier.disclosureNotice)}</small></div>`
+      ? `<div class="legacy-intelligence-notice"><small>${escapeHtml(translateText(frontier.disclosureNotice))}</small></div>`
       : "";
   }
   if ($("#frontierBrainLayerPanel")) {
@@ -13404,8 +13409,8 @@ function renderAgentCenter() {
   }
   if ($("#frontierBrainMissionPanel")) {
     $("#frontierBrainMissionPanel").innerHTML = (frontier.missions || []).length
-      ? (frontier.missions || []).map(item => `<div><strong>${translateText(item.persona || "User")}</strong><span>${translateText(item.goal || "Nexus guided mission")}</span><small>${translateText(item.command || "Nexus, help me")}</small></div>`).join("")
-      : `<div><strong>${translateText("Mission control ready")}</strong><span>${translateText("Nexus will show farmer, patient, learner, worker, admin, and investor missions after activation.")}</span></div>`;
+      ? (frontier.missions || []).map(item => `<div><strong>${escapeHtml(translateText(item.persona || "User"))}</strong><span>${escapeHtml(translateText(item.goal || "Nexus guided mission"))}</span><small>${escapeHtml(translateText(item.command || "Nexus, help me"))}</small></div>`).join("")
+      : `<div><strong>${escapeHtml(translateText("Mission control ready"))}</strong><span>${escapeHtml(translateText("Nexus will show farmer, patient, learner, worker, admin, and investor missions after activation."))}</span></div>`;
   }
   if ($("#nexusIntelligenceScore")) $("#nexusIntelligenceScore").textContent = `${intelligence.score}%`;
   if ($("#nexusIntelligenceMode")) $("#nexusIntelligenceMode").textContent = translateText(intelligence.mode);
@@ -13430,8 +13435,8 @@ function renderAgentCenter() {
   renderModeIntelligence("investor", "investor");
   if ($("#aiOrchestrationPanel")) {
     $("#aiOrchestrationPanel").innerHTML = latestOrchestration
-      ? (data.profile.aiOrchestrations || []).slice(0, 5).map(item => `<div><strong>${translateText(item.topAction?.module || "AI")} - ${translateText(item.topAction?.title || item.title)}</strong><span>${translateText(item.recommendation || "AI orchestration complete")}</span><small>${translateText(item.status)} - ${translateText(item.routeName || "")}</small></div>`).join("")
-      : `<div>${translateText("No AI orchestration review yet. Run Orchestrate next move to have Nexus read the whole platform and recommend the highest-value next action.")}</div>`;
+      ? (data.profile.aiOrchestrations || []).slice(0, 5).map(item => `<div><strong>${escapeHtml(translateText(item.topAction?.module || "AI"))} - ${escapeHtml(translateText(item.topAction?.title || item.title))}</strong><span>${escapeHtml(translateText(item.recommendation || "AI orchestration complete"))}</span><small>${escapeHtml(translateText(item.status))} - ${escapeHtml(translateText(item.routeName || ""))}</small></div>`).join("")
+      : `<div>${escapeHtml(translateText("No AI orchestration review yet. Run Orchestrate next move to have Nexus read the whole platform and recommend the highest-value next action."))}</div>`;
   }
   if ($("#aiOrchestrationEvidence")) {
     $("#aiOrchestrationEvidence").innerHTML = latestOrchestration
@@ -13458,50 +13463,55 @@ function renderAgentCenter() {
     ))
   ].join("");
   $("#agentMemoryPanel").innerHTML = [
-    `<div><strong>Audience</strong><span>${translateText(memory.activeAudience || "government")}</span></div>`,
-    `<div><strong>Mission</strong><span>${translateText(memory.activeMission || "rural transformation")}</span></div>`,
-    `<div><strong>Active voice mission</strong><span>${translateText(memory.activeVoiceMission?.goal || "No active voice mission")} ${memory.activeVoiceMission ? `- ${Number(memory.activeVoiceMission.progress || 0)}%` : ""}</span></div>`,
-    `<div><strong>AgriNexus session</strong><span>${translateText(memory.activeJarvisSession?.goal || "No AgriNexus session active")} ${memory.activeJarvisSession ? `- ${translateText(memory.activeJarvisSession.status || "active")}` : ""}</span></div>`,
-    `<div><strong>Guided checklist</strong><span>${translateText(memory.activeGuidedMission?.currentStep?.title || memory.activeGuidedMission?.status || "No guided checklist active")} ${memory.activeGuidedMission ? `- ${Number(memory.activeGuidedMission.progress || 0)}%` : ""}</span></div>`,
-    `<div><strong>Outcome loop</strong><span>${translateText(memory.activeOutcomeLoop?.nextVisibleAction || "No guided outcome loop active")}</span></div>`,
-    `<div><strong>Outcome question</strong><span>${translateText(memory.activeOutcomeLoop?.oneQuestion || "No outcome question active")}</span></div>`,
-    `<div><strong>Supervisor score</strong><span>${Number(memory.conversationSupervisor?.lastScore || 0)}/100 - ${translateText(memory.conversationSupervisor?.status || "ready")}</span></div>`,
-    `<div><strong>Governance score</strong><span>${Number(memory.reasoningGovernance?.lastScore || 0)}/100 - ${translateText(memory.reasoningGovernance?.status || "ready")}</span></div>`,
-    `<div><strong>Current question</strong><span>${translateText(memory.activeClarification?.question || "No clarification needed")}</span></div>`,
-    `<div><strong>Recovery prompt</strong><span>${translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active")}</span></div>`,
-    `<div><strong>Conversation mode</strong><span>${translateText(memory.userModel?.preferredInteraction || "voice-first guidance")} - ${translateText(memory.userModel?.communicationStyle || "plain-language support")}</span></div>`,
-    `<div><strong>Adaptive style</strong><span>${translateText(memory.userModel?.lastAdaptiveSignals?.persona || "general-operator")} - ${translateText(memory.userModel?.lastAdaptiveSignals?.accessibility || "standard")}</span></div>`,
-    `<div><strong>Long-term memory</strong><span>${translateText(deepMemory.summary)}</span></div>`,
-    `<div><strong>Memory modules</strong><span>${translateText(deepMemory.modules.slice(0, 4).map(item => `${item.name} (${item.count})`).join(", ") || "No module memory yet")}</span></div>`,
-    `<div><strong>User needs</strong><span>${translateText(deepMemory.needs.slice(0, 5).map(item => item.name.replace(/-/g, " ")).join(", ") || "No user need signals yet")}</span></div>`,
-    `<div><strong>Advisor history</strong><span>${Number(deepMemory.advisorEvents || 0)} ${translateText("remembered advisor event(s)")}</span></div>`,
-    `<div><strong>Next prompt</strong><span>${translateText(memory.turnCoach?.nextQuestion || "Ask AgriNexus what you want to do next")}</span></div>`,
-    `<div><strong>Conversation learning</strong><span>${Number(memory.conversationQuality?.turns || 0)} ${translateText("turn(s)")} - ${Number(memory.conversationQuality?.openEndedAnswers || 0)} ${translateText("reasoned answer(s)")}</span></div>`,
-    `<div><strong>Last goal</strong><span>${translateText(memory.lastGoal || "No goal remembered yet")}</span></div>`,
-    `<div><strong>Last summary</strong><span>${translateText(memory.lastSummary || "No summary yet")}</span></div>`
+    `<div><strong>Audience</strong><span>${escapeHtml(translateText(memory.activeAudience || "government"))}</span></div>`,
+    `<div><strong>Mission</strong><span>${escapeHtml(translateText(memory.activeMission || "rural transformation"))}</span></div>`,
+    `<div><strong>Active voice mission</strong><span>${escapeHtml(translateText(memory.activeVoiceMission?.goal || "No active voice mission"))} ${memory.activeVoiceMission ? `- ${Number(memory.activeVoiceMission.progress || 0)}%` : ""}</span></div>`,
+    `<div><strong>AgriNexus session</strong><span>${escapeHtml(translateText(memory.activeJarvisSession?.goal || "No AgriNexus session active"))} ${memory.activeJarvisSession ? `- ${escapeHtml(translateText(memory.activeJarvisSession.status || "active"))}` : ""}</span></div>`,
+    `<div><strong>Guided checklist</strong><span>${escapeHtml(translateText(memory.activeGuidedMission?.currentStep?.title || memory.activeGuidedMission?.status || "No guided checklist active"))} ${memory.activeGuidedMission ? `- ${Number(memory.activeGuidedMission.progress || 0)}%` : ""}</span></div>`,
+    `<div><strong>Outcome loop</strong><span>${escapeHtml(translateText(memory.activeOutcomeLoop?.nextVisibleAction || "No guided outcome loop active"))}</span></div>`,
+    `<div><strong>Outcome question</strong><span>${escapeHtml(translateText(memory.activeOutcomeLoop?.oneQuestion || "No outcome question active"))}</span></div>`,
+    `<div><strong>Supervisor score</strong><span>${Number(memory.conversationSupervisor?.lastScore || 0)}/100 - ${escapeHtml(translateText(memory.conversationSupervisor?.status || "ready"))}</span></div>`,
+    `<div><strong>Governance score</strong><span>${Number(memory.reasoningGovernance?.lastScore || 0)}/100 - ${escapeHtml(translateText(memory.reasoningGovernance?.status || "ready"))}</span></div>`,
+    `<div><strong>Current question</strong><span>${escapeHtml(translateText(memory.activeClarification?.question || "No clarification needed"))}</span></div>`,
+    `<div><strong>Recovery prompt</strong><span>${escapeHtml(translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active"))}</span></div>`,
+    `<div><strong>Conversation mode</strong><span>${escapeHtml(translateText(memory.userModel?.preferredInteraction || "voice-first guidance"))} - ${escapeHtml(translateText(memory.userModel?.communicationStyle || "plain-language support"))}</span></div>`,
+    `<div><strong>Adaptive style</strong><span>${escapeHtml(translateText(memory.userModel?.lastAdaptiveSignals?.persona || "general-operator"))} - ${escapeHtml(translateText(memory.userModel?.lastAdaptiveSignals?.accessibility || "standard"))}</span></div>`,
+    `<div><strong>Long-term memory</strong><span>${escapeHtml(translateText(deepMemory.summary))}</span></div>`,
+    `<div><strong>Memory modules</strong><span>${escapeHtml(translateText(deepMemory.modules.slice(0, 4).map(item => `${item.name} (${item.count})`).join(", ") || "No module memory yet"))}</span></div>`,
+    `<div><strong>User needs</strong><span>${escapeHtml(translateText(deepMemory.needs.slice(0, 5).map(item => item.name.replace(/-/g, " ")).join(", ") || "No user need signals yet"))}</span></div>`,
+    `<div><strong>Advisor history</strong><span>${Number(deepMemory.advisorEvents || 0)} ${escapeHtml(translateText("remembered advisor event(s)"))}</span></div>`,
+    `<div><strong>Next prompt</strong><span>${escapeHtml(translateText(memory.turnCoach?.nextQuestion || "Ask AgriNexus what you want to do next"))}</span></div>`,
+    `<div><strong>Conversation learning</strong><span>${Number(memory.conversationQuality?.turns || 0)} ${escapeHtml(translateText("turn(s)"))} - ${Number(memory.conversationQuality?.openEndedAnswers || 0)} ${escapeHtml(translateText("reasoned answer(s)"))}</span></div>`,
+    `<div><strong>Last goal</strong><span>${escapeHtml(translateText(memory.lastGoal || "No goal remembered yet"))}</span></div>`,
+    `<div><strong>Last summary</strong><span>${escapeHtml(translateText(memory.lastSummary || "No summary yet"))}</span></div>`
   ].join("");
   const latestCommand = commands[0];
   renderAgentReasoningPanel({ latestCommand, pendingAction: data.profile.agentPendingAction, latestExecution: executions[0] });
+  // Found live (fresh-module audit): "What I heard" renders latestCommand.command verbatim -- the user's
+  // own literal typed/spoken text, stored server-side with no sanitization in a single shared
+  // db.profile.agentCommands blob every account (including guests) feeds into and every viewer (including
+  // Admin) sees. Any authenticated user (guest role included, per permissionsForRole's "ai" grant) could
+  // plant a script payload as a command and have it execute in the next viewer's session.
   $("#agentUnderstandingPanel").innerHTML = [
-    `<div><strong>Nexus Brain</strong><span>${translateText(`${brain.goals} - ${brain.mode}`)}</span></div>`,
-    `<div><strong>Brain awareness</strong><span>${translateText(`${brain.awareness}; waiting on ${brain.waitingOn}`)}</span></div>`,
-    `<div><strong>Brain initiative</strong><span>${translateText(brain.initiative)}</span></div>`,
-    `<div><strong>What I heard</strong><span>${translateText(latestCommand?.command || "No command yet")}</span></div>`,
-    `<div><strong>What I understood</strong><span>${translateText(latestCommand?.intent || "Standing by")}</span></div>`,
-    `<div><strong>What needs approval</strong><span>${translateText(plan?.status === "awaiting-approval" ? `${plan.steps.length} planned step(s)` : "No approval pending")}</span></div>`,
-    `<div><strong>What I completed</strong><span>${translateText(executions[0]?.summary || "No execution yet")}</span></div>`,
-    `<div><strong>Evidence status</strong><span>${translateText(evidencePack.status || "ready")} - ${Number(evidencePack.counts?.commands || 0)} ${translateText("command(s)")}</span></div>`,
-    `<div><strong>Outcome loop</strong><span>${translateText(evidencePack.outcomeLoop?.phrase || "No guided outcome loop active")}</span></div>`,
-    `<div><strong>Supervisor</strong><span>${Number(evidencePack.conversationSupervisor?.lastScore || 0)}/100 - ${translateText(evidencePack.conversationSupervisor?.lastSummary || "Conversation Supervisor ready")}</span></div>`,
-    `<div><strong>Reasoning proof</strong><span>${Number(evidencePack.reasoningGovernance?.lastScore || 0)}/100 - ${translateText(evidencePack.reasoningGovernance?.lastSummary || "Reasoning Governance ready")}</span></div>`,
-    `<div><strong>Evidence pack</strong><span>${translateText((evidencePack.evidence || []).slice(0, 3).join(" | ") || "No conversation evidence yet")}</span></div>`,
-    `<div><strong>Tool registry</strong><span>${Number(agentCapabilities.totalTools || 0)} ${translateText("supervised tool(s)")} - ${Number(agentCapabilities.confirmationTools || 0)} ${translateText("need confirmation")}</span></div>`
+    `<div><strong>Nexus Brain</strong><span>${escapeHtml(translateText(`${brain.goals} - ${brain.mode}`))}</span></div>`,
+    `<div><strong>Brain awareness</strong><span>${escapeHtml(translateText(`${brain.awareness}; waiting on ${brain.waitingOn}`))}</span></div>`,
+    `<div><strong>Brain initiative</strong><span>${escapeHtml(translateText(brain.initiative))}</span></div>`,
+    `<div><strong>What I heard</strong><span>${escapeHtml(translateText(latestCommand?.command || "No command yet"))}</span></div>`,
+    `<div><strong>What I understood</strong><span>${escapeHtml(translateText(latestCommand?.intent || "Standing by"))}</span></div>`,
+    `<div><strong>What needs approval</strong><span>${escapeHtml(translateText(plan?.status === "awaiting-approval" ? `${plan.steps.length} planned step(s)` : "No approval pending"))}</span></div>`,
+    `<div><strong>What I completed</strong><span>${escapeHtml(translateText(executions[0]?.summary || "No execution yet"))}</span></div>`,
+    `<div><strong>Evidence status</strong><span>${escapeHtml(translateText(evidencePack.status || "ready"))} - ${Number(evidencePack.counts?.commands || 0)} ${escapeHtml(translateText("command(s)"))}</span></div>`,
+    `<div><strong>Outcome loop</strong><span>${escapeHtml(translateText(evidencePack.outcomeLoop?.phrase || "No guided outcome loop active"))}</span></div>`,
+    `<div><strong>Supervisor</strong><span>${Number(evidencePack.conversationSupervisor?.lastScore || 0)}/100 - ${escapeHtml(translateText(evidencePack.conversationSupervisor?.lastSummary || "Conversation Supervisor ready"))}</span></div>`,
+    `<div><strong>Reasoning proof</strong><span>${Number(evidencePack.reasoningGovernance?.lastScore || 0)}/100 - ${escapeHtml(translateText(evidencePack.reasoningGovernance?.lastSummary || "Reasoning Governance ready"))}</span></div>`,
+    `<div><strong>Evidence pack</strong><span>${escapeHtml(translateText((evidencePack.evidence || []).slice(0, 3).join(" | ") || "No conversation evidence yet"))}</span></div>`,
+    `<div><strong>Tool registry</strong><span>${Number(agentCapabilities.totalTools || 0)} ${escapeHtml(translateText("supervised tool(s)"))} - ${Number(agentCapabilities.confirmationTools || 0)} ${escapeHtml(translateText("need confirmation"))}</span></div>`
   ].join("");
   if ($("#agentBriefingPanel")) {
-    const jarvisItems = (jarvisReadiness.items || []).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.level)} - ${translateText(item.evidence)}</span></div>`).join("");
+    const jarvisItems = (jarvisReadiness.items || []).map(item => `<div><strong>${escapeHtml(translateText(item.title))}</strong><span>${escapeHtml(translateText(item.level))} - ${escapeHtml(translateText(item.evidence))}</span></div>`).join("");
     $("#agentBriefingPanel").innerHTML = jarvisItems || (briefings.length
-      ? briefings.slice(0, 4).map(briefing => `<div><strong>${translateText(briefing.title)}</strong><span>${translateText(briefing.purpose)} - ${translateText(briefing.plainLanguageSummary)}</span></div>`).join("")
-      : `<div>${translateText("No government briefing yet. Create one before the presentation.")}</div>`);
+      ? briefings.slice(0, 4).map(briefing => `<div><strong>${escapeHtml(translateText(briefing.title))}</strong><span>${escapeHtml(translateText(briefing.purpose))} - ${escapeHtml(translateText(briefing.plainLanguageSummary))}</span></div>`).join("")
+      : `<div>${escapeHtml(translateText("No government briefing yet. Create one before the presentation."))}</div>`);
   }
   $("#intelligentAssistantScore").textContent = `${intelligentAssistant.readyCount || 0}/${intelligentAssistant.total || 10}`;
   $("#intelligentAssistantPanel").innerHTML = (intelligentAssistant.items || []).map(item => taskItem(
@@ -13520,8 +13530,8 @@ function renderAgentCenter() {
     ...executions.slice(0, 6).map(item => ({ title: `${item.status} - ${item.goal}`, detail: item.summary }))
   ];
   $("#agentLogPanel").innerHTML = agentLog.length
-    ? agentLog.slice(0, 8).map(item => `<div><strong>${translateText(item.title)}</strong><span>${escapeHtml(translateText(item.detail))}</span></div>`).join("")
-    : `<div>${translateText("No agent execution yet. Create a plan, review it, then execute.")}</div>`;
+    ? agentLog.slice(0, 8).map(item => `<div><strong>${escapeHtml(translateText(item.title))}</strong><span>${escapeHtml(translateText(item.detail))}</span></div>`).join("")
+    : `<div>${escapeHtml(translateText("No agent execution yet. Create a plan, review it, then execute."))}</div>`;
   $("#capabilityScore").textContent = `${capabilities.operational || 0}/${capabilities.total || 0}`;
   $("#capabilityMatrixPanel").innerHTML = (capabilities.items || []).map(item => taskItem(
     item.title,
@@ -18276,11 +18286,15 @@ function taskItem(title, detail, status = "ready", label = "Ready", action = nul
 function renderWorkspace(selector, panels) {
   const target = $(selector);
   if (!target) return;
+  // Found live (fresh-module audit): unescaped, unlike row()/taskItem() elsewhere in this file which
+  // already correctly wrap translateText() in escapeHtml(). This is the shared renderer for every major
+  // workspace panel (dashboard, learning, workforce, health, trade, map, integration, admin) -- escaping
+  // unconditionally here matches this file's own established defensive convention.
   target.innerHTML = panels.map(panel => `
     <article class="workspace-panel">
-      <div class="tag-row"><span>${translateText(panel.eyebrow)}</span><span>${translateText(panel.metric)}</span></div>
-      <h3>${translateText(panel.title)}</h3>
-      <p>${translateText(panel.summary)}</p>
+      <div class="tag-row"><span>${escapeHtml(translateText(panel.eyebrow))}</span><span>${escapeHtml(translateText(panel.metric))}</span></div>
+      <h3>${escapeHtml(translateText(panel.title))}</h3>
+      <p>${escapeHtml(translateText(panel.summary))}</p>
       <div class="task-list">${panel.items.join("")}</div>
     </article>
   `).join("");
@@ -40925,6 +40939,10 @@ function render() {
   applyRoleNavigation();
   applyExperienceMode();
   welcomeSignedInUser();
+  // Lets browser-action-controller.js scope its own localStorage (e.g. saved rural provider/health
+  // communication cards, which can hold real PHI) per account instead of per browser -- otherwise a
+  // shared/community device mixes one person's saved health facts into the next person's session.
+  window.NexusBrowserActionController?.setCurrentAccountKey?.(data.user.email || data.user.id || data.user.name || "");
   void restoreNexusAuthoritativeRuntime();
 
   $("#countrySelect").innerHTML = [
@@ -42437,11 +42455,19 @@ function render() {
     }
   ]);
 
-  $("#adminUsers").innerHTML = (data.admin?.users || []).map(user => `<div><strong>${user.name}</strong><span>${user.role} - ${user.email}</span></div>`).join("");
+  // Found live (fresh-module audit): user.name/subscriber.name/etc. were interpolated into innerHTML with
+  // no escapeHtml(), unlike the #adminAudit block right below which correctly escapes -- an inconsistent
+  // miss, not a design choice. user.name in particular is set from POST /api/auth/guest-session's
+  // unauthenticated body.name (only whitespace-collapsed and length-capped, never HTML-escaped at write
+  // time, matching this codebase's own "escape at render" convention elsewhere) and pushed straight into
+  // db.users, which adminSnapshot() exposes here -- so any anonymous visitor could plant a script payload
+  // as their guest display name and have it execute in an admin's authenticated session the next time they
+  // opened this panel.
+  $("#adminUsers").innerHTML = (data.admin?.users || []).map(user => `<div><strong>${escapeHtml(user.name)}</strong><span>${escapeHtml(user.role)} - ${escapeHtml(user.email)}</span></div>`).join("");
   $("#adminSubscribers").innerHTML = (data.admin?.subscribers || []).length
-    ? data.admin.subscribers.map(subscriber => `<div><strong>${subscriber.name}</strong><span>${subscriber.status} - ${subscriber.email} - ${subscriber.plan} - ${subscriber.seats} seat(s)</span></div>`).join("")
+    ? data.admin.subscribers.map(subscriber => `<div><strong>${escapeHtml(subscriber.name)}</strong><span>${escapeHtml(subscriber.status)} - ${escapeHtml(subscriber.email)} - ${escapeHtml(subscriber.plan)} - ${escapeHtml(subscriber.seats)} seat(s)</span></div>`).join("")
     : "<div>No pilot subscribers invited yet.</div>";
-  $("#adminModules").innerHTML = (data.admin?.modules || []).map(module => `<div><strong>${module.name}</strong><span>${module.status} - ${module.records} record(s)</span></div>`).join("");
+  $("#adminModules").innerHTML = (data.admin?.modules || []).map(module => `<div><strong>${escapeHtml(module.name)}</strong><span>${escapeHtml(module.status)} - ${escapeHtml(module.records)} record(s)</span></div>`).join("");
   $("#adminAudit").innerHTML = (data.admin?.audit || []).length
     ? data.admin.audit.map(event => `<div><strong>${escapeHtml(event.type)}</strong><span>${escapeHtml(event.detail)}</span></div>`).join("")
     : "<div>No audit events yet.</div>";
@@ -42457,11 +42483,14 @@ function render() {
     row("Last response ID", data.profile.aiResponseId || adminLatestAiRun?.responseId || "None"),
     row("Last error", data.profile.aiError || adminLatestAiRun?.error || "None")
   ].join("");
+  // Found live (fresh-module audit): unescaped, unlike row() right above (which already correctly wraps
+  // every value in escapeHtml(translateText(...))). adminLatestAiRun.text is real AI-generated output --
+  // a successful prompt-injection against the AI provider could emit markup here.
   $("#aiConsoleResult").innerHTML = adminLatestAiRun
     ? [
-      `<div><strong>${adminLatestAiRun.type} - ${adminLatestAiRun.countryName}</strong><span>${adminLatestAiRun.text}</span></div>`,
-      `<div><strong>Provider</strong><span>${adminLatestAiRun.provider}${adminLatestAiRun.model ? ` - ${adminLatestAiRun.model}` : ""}</span></div>`,
-      `<div><strong>Checkpoint</strong><span>${adminLatestAiRun.routeName} - ${adminLatestAiRun.checkpoint}</span></div>`
+      `<div><strong>${escapeHtml(adminLatestAiRun.type)} - ${escapeHtml(adminLatestAiRun.countryName)}</strong><span>${escapeHtml(adminLatestAiRun.text)}</span></div>`,
+      `<div><strong>Provider</strong><span>${escapeHtml(adminLatestAiRun.provider)}${adminLatestAiRun.model ? ` - ${escapeHtml(adminLatestAiRun.model)}` : ""}</span></div>`,
+      `<div><strong>Checkpoint</strong><span>${escapeHtml(adminLatestAiRun.routeName)} - ${escapeHtml(adminLatestAiRun.checkpoint)}</span></div>`
     ].join("")
     : "<div>No AI run yet. Run a test to create AI evidence.</div>";
   renderGovernancePanel();

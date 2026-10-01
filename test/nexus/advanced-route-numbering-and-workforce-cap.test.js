@@ -90,7 +90,8 @@ test("quiz-attempt numbers stay unique past the 20-item cap, instead of collidin
   }
   assert.equal(numbers.size, 25, `expected 25 unique quiz-attempt numbers, got ${numbers.size} (a collision means numbering is still pinned by array.length)`);
   const db = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
-  assert.equal(db.profile.quizAttempts.length, 20, "the array itself must still stay capped at 20");
+  const demoUser = db.users.find(item => item.email === "demo@agrinexus.org");
+  assert.equal(demoUser.quizAttempts.length, 20, "the array itself must still stay capped at 20");
 });
 
 test("note/report/transcript numbers also stay unique past the 20-item cap", async () => {

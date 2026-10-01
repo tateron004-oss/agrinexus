@@ -70,6 +70,21 @@ test("daily timeframe with no extreme values reports no notable conditions", asy
   assert.deepEqual(result.notableConditions, []);
 });
 
+test("tomorrow timeframe reports tomorrow's forecast, not today's current conditions", async () => {
+  // The live-source-orchestrator (server/nexus-live-source-orchestrator.js)
+  // sends timeframe: "tomorrow" verbatim whenever a prompt matches /tomorrow/i.
+  // Confirmed live: that string was never recognized here, so it fell through
+  // to the "current" branch and silently answered a "will it rain tomorrow"
+  // question with TODAY's conditions.
+  const env = { ...baseEnv, NEXUS_WEATHER_FETCH_IMPL: fakeFetchFor() };
+  const result = await weatherProvider.getWeatherSourceResultAsync({ locationText: "Austin Texas", timeframe: "tomorrow" }, env);
+  assert.equal(result.sourceStatus, "source-result-available");
+  assert.doesNotMatch(result.resultSummary, /^Current weather/, "must not silently answer with today's current conditions");
+  assert.match(result.resultSummary, /Tomorrow/);
+  assert.equal(result.tomorrow.date, "2026-01-02", "must read the second daily entry (tomorrow), not the first (today)");
+  assert.equal(result.tomorrow.maxTemperatureC, 30);
+});
+
 test("current timeframe behavior is unchanged by the hourly/daily addition", async () => {
   const env = { ...baseEnv, NEXUS_WEATHER_FETCH_IMPL: fakeFetchFor() };
   const result = await weatherProvider.getWeatherSourceResultAsync({ locationText: "Austin Texas" }, env);

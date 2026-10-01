@@ -12,6 +12,15 @@ function fakeFarmStore() {
   return {
     rows, sessions,
     async add({ tenantId, userId, collection, data }) { const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; rows.unshift(row); return shape(row); },
+    // No `await` between the count check and the insert, so -- like the real store's advisory-lock-guarded
+    // transaction -- this is atomic from the caller's point of view.
+    async addUnlessPersonCapped({ tenantId, userId, collection, data, maxPerPerson }) {
+      const count = live().filter(row => row.tenantId === tenantId && row.userId === userId && row.collection === collection && row.data.status === "active").length;
+      if (count >= maxPerPerson) return { capped: true, count };
+      const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      rows.unshift(row);
+      return { record: shape(row) };
+    },
     // No `await` between the clash check and the insert, so -- like the real store's advisory-lock-guarded
     // transaction -- this is atomic from the caller's point of view: two concurrent calls can never both
     // read "no clash" before either has written, closing the same race the real repository closes.

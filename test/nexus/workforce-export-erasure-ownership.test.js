@@ -114,15 +114,17 @@ test("resume packets, job applications, interview follow-ups, and hiring-pipelin
   assert.ok(eraseBody.verification.profileRecordsRemoved.hiringPipelineRecords >= 1, "hiringPipelineRecords must actually be removed by erasure");
 });
 
-// Found live (same sweep): db.profile.enrollments/completedCourses/womenChildrenLearningPlans have the
-// exact same no-owner-field shape as their already-disclosed sibling certificates, but were missing
-// from knownUnownedProfileGaps() -- a user was never told their course-enrollment progress and
-// completed-course history survive erasure/are absent from export. Separately, db.profile.applications
-// (workforce role applications) had the same gap in the existing workforce disclosure bucket.
-test("account export discloses the enrollments/completedCourses/learning-plans and workforce-applications gaps, not just their already-disclosed siblings", async () => {
+// Found live (same sweep, at the time db.profile.applications had the same gap in the existing
+// workforce disclosure bucket). Separately, the course-enrollment cross-user collision fix later moved
+// enrollments/completedCourses/womenChildrenLearningPlans off this same shared db.profile blob onto the
+// user record itself, which has a real owner -- so they now belong in the real export/erasure path
+// instead of the gap list (see collectUserLearningRecords/eraseUserLearningRecords).
+test("account export discloses the workforce-applications gap and includes the enrollments/completedCourses/learning-plans records directly, not as a gap", async () => {
   const seeded = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
-  seeded.profile.enrollments = [{ id: "enrollment-seed-1", courseId: "course-1", status: "in_progress" }];
   seeded.profile.applications = [{ id: "application-seed-1", roleId: "role-1", roleTitle: "Field Lead", status: "submitted" }];
+  const adminUser = seeded.users.find(item => item.email === "admin@agrinexus.org");
+  adminUser.enrollments = [{ id: "enrollment-seed-1", courseId: "course-1", status: "in_progress" }];
+  adminUser.completedCourses = ["course-1"];
   fs.writeFileSync(tempDbPath, JSON.stringify(seeded));
 
   const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
@@ -130,7 +132,8 @@ test("account export discloses the enrollments/completedCourses/learning-plans a
   const exportBody = await exportRes.json();
   assert.equal(exportRes.status, 200, JSON.stringify(exportBody));
   const gaps = exportBody.knownGaps.join(" | ");
-  assert.match(gaps, /course enrollment/i, "the enrollments gap must be disclosed");
-  assert.match(gaps, /completed-course/i, "the completedCourses gap must be disclosed");
+  assert.doesNotMatch(gaps, /course enrollment/i, "the enrollments now have a real owner and must not be disclosed as a gap");
   assert.match(gaps, /role application/i, "the workforce applications gap must be disclosed");
+  assert.equal(exportBody.recordCounts.enrollments, 1, "the admin's own enrollment must appear in the real export");
+  assert.equal(exportBody.recordCounts.completedCourses, 1, "the admin's own completed-course history must appear in the real export");
 });
