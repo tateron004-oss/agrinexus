@@ -597,11 +597,14 @@ function createTask(profile, goal, plan, options = {}) {
   if (measurement?.rpm) {
     task.readings.push(measurement);
     task.missingInformation = task.missingInformation.filter(item => !/reading/i.test(item));
-    task.status = task.requiresConfirmation ? "waiting_for_confirmation" : "active";
+    // `requiresConfirmation` lives on `plan`, not on the task record being built here;
+    // reading it off `task` was always undefined, so logging an RPM reading silently
+    // downgraded a confirmation-required task straight to "active".
+    task.status = plan.requiresConfirmation ? "waiting_for_confirmation" : "active";
   }
   if (measurement?.rtm) {
     task.rtmNotes.push(measurement);
-    task.status = task.requiresConfirmation ? "waiting_for_confirmation" : "active";
+    task.status = plan.requiresConfirmation ? "waiting_for_confirmation" : "active";
   }
   if (taskType === "medical_follow_up") {
     task.chronicIntake = buildChronicIntake(goal);
@@ -741,6 +744,11 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   if (suppliedMeasurement && (!task || task.type !== "medical_follow_up")) {
     task = profile.nexusAgenticTasks.find(item => item.type === "medical_follow_up" && !["completed", "cancelled"].includes(item.status)) || task;
   }
+  // Captured before any create/mutate below so the "confirm" keyword can only ever
+  // confirm a task that was already pending from a PRIOR turn -- never a task this
+  // same message is in the process of creating (see confirmingPendingTask below).
+  const taskBeforeThisTurn = task;
+  const wasAwaitingConfirmation = Boolean(task && task.status === "waiting_for_confirmation");
   if (parts.includes("cancel") && task) {
     task.status = "cancelled";
     addTaskHistory(task, "task_cancelled", "User cancelled the task. No external action was executed.");
@@ -828,7 +836,16 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
     execution = await productionRuntime.execute({ userGoal: "Queue this offline.", confirmed: true }, db, env);
     addTaskHistory(task, "offline_queue_created", "Local offline queue record created.");
   }
-  if (body.confirmed === true || parts.includes("confirm")) {
+  // `parts.includes("confirm")` only means the free text contains the substring
+  // "confirm" -- true of plenty of ordinary goals ("...please confirm this for my
+  // provider"). Treating that alone as consent let a brand-new, never-presented
+  // task be created AND force-executed (confirmed:true) in the very same turn.
+  // Real confirmation requires either the client's explicit confirmed flag, or
+  // confirming a task that was already waiting_for_confirmation BEFORE this turn
+  // (i.e. its plan was actually shown to the user in a prior response) and is
+  // still the same task (no new task was created alongside the word "confirm").
+  const confirmingPendingTask = parts.includes("confirm") && wasAwaitingConfirmation && task === taskBeforeThisTurn;
+  if (body.confirmed === true || confirmingPendingTask) {
     execution = await productionRuntime.execute({ plan, userGoal: goal, confirmed: true }, db, env);
     addTaskHistory(task, "execution_attempted", execution.executionResult?.message || "Confirmed execution attempted through gated runtime.");
   }
