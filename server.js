@@ -2701,6 +2701,41 @@ function eraseOwnedProfileRecords(profile, email) {
   return removedCounts;
 }
 
+// Course-enrollment cross-user collision fix: enrollments/certificates/
+// learningAssignments/etc. moved off the shared db.profile blob onto the
+// user record itself (db.users[]), which already has real per-account
+// ownership. Unlike their old db.profile home -- disclosed in
+// knownUnownedProfileGaps as having no owner at all -- they now have one, so
+// they belong in the normal export/erasure path instead of that gap list.
+const USER_LEARNING_RECORD_ARRAY_KEYS = ["enrollments", "completedCourses", "certificates", "womenChildrenLearningPlans", "learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "learningAccommodations"];
+
+function collectUserLearningRecords(user) {
+  const owned = {};
+  if (!user) return owned;
+  for (const key of USER_LEARNING_RECORD_ARRAY_KEYS) {
+    const value = user[key];
+    if (Array.isArray(value) && value.length) owned[key] = JSON.parse(JSON.stringify(value));
+  }
+  if (user.learningAccessibilityProfile) owned.learningAccessibilityProfile = JSON.parse(JSON.stringify(user.learningAccessibilityProfile));
+  return owned;
+}
+
+function eraseUserLearningRecords(user) {
+  const removedCounts = {};
+  if (!user) return removedCounts;
+  for (const key of USER_LEARNING_RECORD_ARRAY_KEYS) {
+    const before = Array.isArray(user[key]) ? user[key].length : 0;
+    if (before > 0) removedCounts[key] = before;
+    user[key] = [];
+  }
+  user.activeCourseId = null;
+  user.quizScore = 0;
+  user.learningStreak = 0;
+  user.learningHours = 0;
+  delete user.learningAccessibilityProfile;
+  return removedCounts;
+}
+
 // Found live (workforce/job-search audit, same bug class as the telehealth
 // export/erasure gap): db.nexusPersistentOperations is another top-level
 // sibling of db.profile -- an entire separate "Nexus Operations" content
@@ -2968,15 +3003,15 @@ function knownUnownedProfileGaps(profile, db = null) {
   if (hasAny(["applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
     gaps.push("Advanced workforce operations records (role applications, onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) have no per-account owner field today and are not included.");
   }
-  // Found live (export/erasure sibling sweep): enrollments/completedCourses/womenChildrenLearningPlans
-  // are built by the exact same ensureLearningProfile() as certificates/learningAssignments/etc. right
-  // below, with the identical no-owner-field shape -- but they were missing from this disclosure list,
-  // so a user was never told their course-enrollment progress or completed-course history survives
-  // erasure/is absent from export, even though the sibling certificates array right next to them is
-  // honestly disclosed.
-  if (hasAny(["enrollments", "completedCourses", "womenChildrenLearningPlans", "learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "certificates", "learningAccommodations"])) {
-    gaps.push("Advanced learning records (course enrollments, completed-course history, women/children learning plans, assignments, quiz attempts, instructor notes, progress reports, transcripts, cohorts, certificates, accommodations) have no per-account owner field today and are not included.");
-  }
+  // Course-enrollment cross-user collision fix: these fields used to live
+  // on this same shared db.profile blob (hence the gap this block used to
+  // disclose) but have moved onto the user record itself, which has a real
+  // per-account owner -- see collectUserLearningRecords/
+  // eraseUserLearningRecords, folded into export/erase directly instead of
+  // this gap list. Any lingering db.profile data under these same key names
+  // predates that migration, is never read by current code, and is left in
+  // place untouched per this project's archive-don't-delete convention, so
+  // it is intentionally not re-disclosed here either.
   if (hasAny(["nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"])) {
     gaps.push("Locally-saved health/workforce governance feedback, offline sync history, legacy voice reminders, field-visit plans, saved learning resources, and marketplace notes have no per-account owner field today and are not included.");
   }
@@ -3851,7 +3886,7 @@ function jarvisProductionTenModel(db, providers = runtimeProviders(db)) {
 }
 
 function deepOperatingIntelligence(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -3877,7 +3912,7 @@ function deepOperatingIntelligence(db, user, providers = runtimeProviders(db), o
     {
       id: "learning",
       title: "Learning",
-      state: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`,
+      state: `${(user?.enrollments || []).length} enrollment(s), ${(user?.certificates || []).length} certificate(s)`,
       intelligence: "Nexus can choose a course, explain it simply, add captions/audio/offline support, track progress, and connect training to jobs.",
       liveProvider: connected("learning-courses") && connected("learning-certificates"),
       nextCommand: "Nexus, help me start the right course"
@@ -3981,7 +4016,7 @@ function deepOperatingIntelligence(db, user, providers = runtimeProviders(db), o
 }
 
 function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -4049,8 +4084,8 @@ function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), opti
     guidedQuestions,
     missionBlueprints,
     localRecords: {
-      enrollments: (db.profile.enrollments || []).length,
-      certificates: (db.profile.certificates || []).length,
+      enrollments: (user?.enrollments || []).length,
+      certificates: (user?.certificates || []).length,
       applications: (db.profile.applications || []).length,
       healthIntakes: (db.profile.healthIntakes || []).length,
       orders: (db.profile.orders || []).length,
@@ -4100,8 +4135,8 @@ function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), opti
 
 function offlineReasoningKnowledgeBase(db, user) {
   const { country, route } = activeContext(db);
-  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0] || {};
-  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0] || {};
+  const course = (db.courses || []).find(item => item.id === user?.activeCourseId) || (db.courses || [])[0] || {};
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, user, item).eligible) || (db.roles || [])[0] || {};
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0] || {};
   return {
     health: {
@@ -4332,7 +4367,7 @@ function reasonedActionBridgePlan(db, user, command = "", reasoning = {}) {
 
 function offlineReasoningBrainModel(db, user, command = "", options = {}) {
   ensureAiProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -4432,7 +4467,7 @@ function offlineReasoningCommandResponse(db, user, text = "", options = {}) {
 
 function remoteRuralFarmerLaunchKit(db, user, providers = runtimeProviders(db), options = {}) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -4670,7 +4705,7 @@ function crossPlatformFunctionPack(db, user, providers = runtimeProviders(db)) {
 
 async function runCrossPlatformFunction(db, user, body = {}) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -5340,6 +5375,20 @@ function projectCommunicationMessageForUser(message, user, threadsById) {
   };
 }
 
+// Course-enrollment cross-user collision fix: enrollments/certificates/etc.
+// moved off the shared db.profile blob onto the user record itself, but
+// public/app.js still reads them from the client response's data.profile.*
+// (unaware that the server-side storage moved) -- so publicState() merges
+// the signed-in user's own learning fields back onto the client-visible
+// profile object here, under the exact same key names, keeping the whole
+// existing frontend contract working while the real storage stays per-user.
+function learningProfileForClient(user) {
+  if (!user) return {};
+  ensureLearningProfile(user);
+  const { enrollments, completedCourses, certificates, womenChildrenLearningPlans, learningStreak, learningHours, learningAssignments, quizAttempts, instructorNotes, learningProgressReports, learningTranscripts, learningCohorts, learningAccommodations, activeCourseId, quizScore } = user;
+  return { enrollments, completedCourses, certificates, womenChildrenLearningPlans, learningStreak, learningHours, learningAssignments, quizAttempts, instructorNotes, learningProgressReports, learningTranscripts, learningCohorts, learningAccommodations, activeCourseId, quizScore: quizScore || 0 };
+}
+
 function profileForUser(profile, user) {
   // The existing health-record projection below was written for the
   // Investor role, but db.profile is one shared, non-per-user blob -- a
@@ -5441,7 +5490,7 @@ function publicState(db, user) {
     countries: db.countries,
     routes: db.routes,
     courses: db.courses,
-    learningCatalog: learningCatalog(db),
+    learningCatalog: learningCatalog(db, user),
     roles: db.roles,
     products: db.products || [],
     providers,
@@ -5450,7 +5499,7 @@ function publicState(db, user) {
     productionProviderReadiness,
     healthPrivacyComplianceGuardrails,
     capabilities: capabilityMatrix(db, providers),
-    womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers),
+    womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers, user),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
     conversationEvidence: conversationEvidencePack(db),
@@ -5494,12 +5543,11 @@ function publicState(db, user) {
     // field defensively (data.admin?.users || []), so omitting it here for
     // non-admins is a safe, additive-only change.
     admin: canUse(user, "admin") ? adminSnapshot(db, providers) : null,
-    profile: profileForUser(db.profile, user)
+    profile: { ...profileForUser(db.profile, user), ...learningProfileForClient(user) }
   };
 }
 
 function governmentReadinessModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -5515,7 +5563,7 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
     + (db.profile.healthIntakes || []).length
     + (db.profile.orders || []).length
     + (db.profile.applications || []).length
-    + (db.profile.enrollments || []).length;
+    + (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length, 0);
   const heatmap = countries.map(country => {
     const riskText = `${country.risk || ""} ${country.queue || ""}`.toLowerCase();
     const healthScore = riskText.includes("high") || riskText.includes("critical") ? 92 : riskText.includes("moderate") ? 68 : 44;
@@ -5781,7 +5829,6 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
 }
 
 function impactDashboardModel(db, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -5790,9 +5837,15 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   const orders = db.profile.orders || [];
   const womenFamilyRuns = db.profile.womenFamilyRuns || [];
-  const womenChildrenPlans = db.profile.womenChildrenLearningPlans || [];
+  const womenChildrenPlans = (db.users || []).reduce((list, item) => list.concat(item.womenChildrenLearningPlans || []), []);
   const tradeValue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-  const trained = new Set([...(db.profile.completedCourses || []), ...(db.profile.certificates || []).map(item => item.courseId)]).size;
+  // enrollments/certificates/completedCourses are per-user now -- "Learners
+  // trained" sums across every real account instead of one shared blob,
+  // which is a truer platform-wide metric than the old single-blob count
+  // ever was (that count had no user dimension at all).
+  const trained = (db.users || []).filter(item => (item.completedCourses || []).length > 0 || (item.certificates || []).length > 0).length;
+  const totalEnrollments = (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length, 0);
+  const totalCertificates = (db.users || []).reduce((sum, item) => sum + (item.certificates || []).length, 0);
   const providerEvents = (db.profile.integrationEvents || []).length;
   const connectedProviders = providers.filter(provider => provider.status === "connected").length;
   const communications = (db.profile.communicationThreads || []).length + (db.profile.tradeMessageThreads || []).length;
@@ -5807,7 +5860,7 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
     + Math.min(10, womenChildrenPlans.length * 5)
   ));
   const metrics = [
-    { label: "Learners trained", value: trained, detail: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)` },
+    { label: "Learners trained", value: trained, detail: `${totalEnrollments} enrollment(s), ${totalCertificates} certificate(s)` },
     { label: "Jobs supported", value: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length, detail: `${(db.profile.applications || []).length} application(s), ${(db.profile.shiftSchedule || []).length} shift(s)` },
     { label: "Telehealth cases", value: (db.profile.healthIntakes || []).length, detail: `${(db.profile.carePlans || []).length} care plan(s), ${(db.profile.telehealthFollowUps || []).length} follow-up(s)` },
     { label: "Trade value", value: tradeValue, detail: `${orders.length} order(s), ${(db.profile.walletTransactions || []).length} wallet transaction(s)`, format: "money" },
@@ -5842,9 +5895,9 @@ function missionTimelineModel(db, user = null) {
     evidence: redact && module === "Healthcare" ? "" : evidence,
     createdAt: createdAt || new Date().toISOString()
   });
-  (db.profile.enrollments || []).slice(0, 3).forEach(item => add("Learning", "Course pathway started", `${item.progress || 0}% progress`, item.status || "active", item.startedAt, item.courseId));
-  (db.profile.certificates || []).slice(0, 3).forEach(item => add("Learning", "Certificate issued", item.title || item.courseId, "complete", item.issuedAt, item.certificateNumber));
-  (db.profile.womenChildrenLearningPlans || []).slice(0, 3).forEach(item => add("Learning", "Women and children learning plan opened", `${item.learnerGroup}: ${item.pathTitle}`, item.status || "active", item.createdAt, item.planNumber));
+  (user?.enrollments || []).slice(0, 3).forEach(item => add("Learning", "Course pathway started", `${item.progress || 0}% progress`, item.status || "active", item.startedAt, item.courseId));
+  (user?.certificates || []).slice(0, 3).forEach(item => add("Learning", "Certificate issued", item.title || item.courseId, "complete", item.issuedAt, item.certificateNumber));
+  (user?.womenChildrenLearningPlans || []).slice(0, 3).forEach(item => add("Learning", "Women and children learning plan opened", `${item.learnerGroup}: ${item.pathTitle}`, item.status || "active", item.createdAt, item.planNumber));
   (db.profile.applications || []).slice(0, 3).forEach(item => add("Workforce", "Role application submitted", item.roleTitle, item.status || "submitted", item.submittedAt, item.id));
   (db.profile.healthIntakes || []).slice(0, 3).forEach(item => add("Healthcare", "Telehealth intake opened", item.patientRef || item.needSummary, item.queueStatus || "active", item.createdAt, item.riskLevel));
   (db.profile.orders || []).slice(-3).forEach(item => add("AgriTrade", "Trade order created", `${item.orderNumber || item.id}: ${item.product}`, item.stage || "active", item.createdAt, item.checkpoint));
@@ -6423,7 +6476,7 @@ function humanizeAgentResult(db, user, result = {}, command = "") {
 }
 
 function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6524,7 +6577,7 @@ function voiceLanguageLabel(language) {
 }
 
 function platformProgressSummary(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6533,7 +6586,7 @@ function platformProgressSummary(db, user, providers = runtimeProviders(db)) {
   const connected = providers.filter(provider => provider.status === "connected").length;
   return [
     `${db.profile.readiness || 0}% workforce readiness`,
-    `${(db.profile.enrollments || []).length} course enrollment(s) and ${(db.profile.certificates || []).length} certificate(s)`,
+    `${(user?.enrollments || []).length} course enrollment(s) and ${(user?.certificates || []).length} certificate(s)`,
     `${(db.profile.applications || []).length} workforce application(s) and ${(db.profile.shiftSchedule || []).length} shift(s)`,
     `${(db.profile.healthIntakes || []).length} telehealth intake(s) and ${(db.profile.carePlans || []).length} care plan(s)`,
     `${(db.profile.orders || []).length} trade order(s), ${(db.profile.droneScans || []).length} drone scan(s), and ${(db.profile.mapEvidencePackets || []).length} map packet(s)`,
@@ -6604,7 +6657,7 @@ function workflowOutcomeSummary(db) {
 }
 
 function dailyOperatorBriefing(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6615,7 +6668,7 @@ function dailyOperatorBriefing(db, user, providers = runtimeProviders(db)) {
   const latestTrade = (db.profile.tradeEfficiencyReviews || [])[0];
   const priorities = [
     `${(db.profile.healthIntakes || []).length} telehealth intake(s), ${(db.profile.telehealthReferrals || []).length} referral(s), and ${(db.profile.telehealthFollowUps || []).length} follow-up(s)`,
-    `${(db.profile.enrollments || []).length} learner enrollment(s), ${(db.profile.certificates || []).length} certificate(s), and ${db.profile.readiness || 0}% workforce readiness`,
+    `${(user?.enrollments || []).length} learner enrollment(s), ${(user?.certificates || []).length} certificate(s), and ${db.profile.readiness || 0}% workforce readiness`,
     `${(db.profile.applications || []).length} job application(s), ${(db.profile.shiftSchedule || []).length} shift(s), and ${(db.profile.interviews || 0)} interview(s)`,
     `${(db.profile.orders || []).length} trade order(s), ${(db.profile.buyerContacts || []).length} buyer contact(s), and ${(db.profile.droneScans || []).length} drone scan(s)`,
     `${connected}/${providers.length} provider engine(s) connected`
@@ -6650,7 +6703,7 @@ function formatReminderForBriefing(reminder = {}) {
 }
 
 function nexusPersonalAssistantBriefing(db, user, command = "", providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6678,7 +6731,7 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
   const trade = (db.profile.orders || [])[0]
     ? `Trade: ${(db.profile.orders || [])[0].orderNumber || "the active order"} is at ${db.profile.activeCheckpoint || "the current checkpoint"} on ${route.name}.`
     : `Farm and trade: no active order yet. I can help check the crop, contact a buyer, or plan a route.`;
-  const learningWork = `${(db.profile.enrollments || []).length} learning enrollment(s), ${(db.profile.applications || []).length} job application(s), and ${(db.profile.shiftSchedule || []).length} shift(s) are saved.`;
+  const learningWork = `${(user?.enrollments || []).length} learning enrollment(s), ${(db.profile.applications || []).length} job application(s), and ${(db.profile.shiftSchedule || []).length} shift(s) are saved.`;
   const providerLine = `${providers.filter(provider => provider.status === "connected").length}/${providers.length} provider engine(s) connected.`;
   const top = smart[0] || predictive?.predictions?.[0] || null;
   const nextLine = top?.title
@@ -6740,7 +6793,7 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
 }
 
 function maximumOperationalEfficiencyModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6761,7 +6814,7 @@ function maximumOperationalEfficiencyModel(db, user, providers = runtimeProvider
   // orders-based placeholder only when there is no real review yet.
   const realTradeScore = (db.profile.tradeEfficiencyReviews || [])[0]?.score;
   const tradeScore = Number.isFinite(realTradeScore) ? realTradeScore : ((db.profile.orders || []).length ? 72 : 58);
-  const learningScore = Math.min(100, 50 + (db.profile.certificates || []).length * 10 + (db.profile.enrollments || []).length * 5);
+  const learningScore = Math.min(100, 50 + (user?.certificates || []).length * 10 + (user?.enrollments || []).length * 5);
   const workforceScore = Math.min(100, 45 + readiness / 2 + (db.profile.applications || []).length * 8 + (db.profile.shiftSchedule || []).length * 4);
   const healthScore = Math.min(100, 55 + (db.profile.healthIntakes || []).length * 6 + (db.profile.telehealthAccessibility || []).length * 4 + (db.profile.videoSessions || []).length * 5);
   const agentScore = Math.min(100, 60 + (db.profile.agentCommands || []).length * 2 + (db.profile.agentMemory.reasoningHistory || []).length * 2);
@@ -6829,7 +6882,7 @@ function maximumOperationalEfficiencyModel(db, user, providers = runtimeProvider
 }
 
 function autonomousOperatingLoopModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6941,7 +6994,7 @@ function autonomousOperatingLoopModel(db, user, providers = runtimeProviders(db)
 }
 
 function collectiveIntelligenceEngine(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6962,7 +7015,7 @@ function collectiveIntelligenceEngine(db, user, providers = runtimeProviders(db)
   const commandText = commands.slice(0, 80).map(item => `${item.command || ""} ${item.intent || ""}`).join(" ").toLowerCase();
   const conversationText = conversations.slice(0, 80).map(item => `${item.user || item.command || ""} ${item.assistant || item.response || ""}`).join(" ").toLowerCase();
   const moduleSignals = [
-    { module: "Learning", count: (db.profile.enrollments || []).length + (db.profile.completedCourses || []).length + (db.profile.certificates || []).length, terms: ["course", "learn", "lesson", "training", "certificate"] },
+    { module: "Learning", count: (user?.enrollments || []).length + (user?.completedCourses || []).length + (user?.certificates || []).length, terms: ["course", "learn", "lesson", "training", "certificate"] },
     { module: "Workforce", count: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length + Number(db.profile.interviews || 0), terms: ["job", "work", "role", "apply", "interview"] },
     { module: "Telehealth", count: (db.profile.healthIntakes || []).length + (db.profile.mobileClinicRequests || []).length + (db.profile.pharmacyRequests || []).length + (db.profile.supplyRequests || []).length, terms: ["health", "clinic", "doctor", "pharmacy", "medicine", "symptom"] },
     { module: "AgriTrade", count: (db.profile.orders || []).length + (db.profile.buyerContacts || []).length + (db.profile.tradeMessageThreads || []).length + (db.profile.walletTransactions || []).length, terms: ["sell", "buy", "buyer", "seller", "crop", "payment", "shipment"] },
@@ -7140,7 +7193,7 @@ function legacyIntelligenceDisclosure() {
 }
 
 function frontierNexusBrainModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -7161,7 +7214,7 @@ function frontierNexusBrainModel(db, user, providers = runtimeProviders(db), opt
     + (db.profile.agentCommands || []).length
     + (db.profile.workflowIntelligence || []).length;
   const activeRecords = {
-    learning: (db.profile.enrollments || []).length + (db.profile.certificates || []).length,
+    learning: (user?.enrollments || []).length + (user?.certificates || []).length,
     workforce: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length,
     health: (db.profile.healthIntakes || []).length + (db.profile.mobileClinicRequests || []).length + (db.profile.pharmacyRequests || []).length,
     trade: (db.profile.orders || []).length + (db.profile.buyerContacts || []).length + (db.profile.paymentCheckoutRecords || []).length,
@@ -8845,7 +8898,7 @@ function capabilityMatrix(db, providers = runtimeProviders(db)) {
 }
 
 function smartNextActions(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -8853,8 +8906,8 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   const providerOk = id => ["connected", "ready"].includes(providers.find(item => item.id === id)?.status);
   const { country, route } = activeContext(db);
-  const activeCourse = (db.courses || []).find(course => course.id === db.profile.activeCourseId) || (db.courses || [])[0];
-  const eligibleRole = (db.roles || []).find(role => roleReadiness(db.profile, role).eligible) || (db.roles || [])[0];
+  const activeCourse = (db.courses || []).find(course => course.id === user?.activeCourseId) || (db.courses || [])[0];
+  const eligibleRole = (db.roles || []).find(role => roleReadiness(db.profile, user, role).eligible) || (db.roles || [])[0];
   const activeProduct = (db.products || []).find(product => product.countryId === country.id) || (db.products || [])[0];
   const actions = [];
   const push = action => actions.push({
@@ -8874,7 +8927,7 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
     productId: action.productId || null
   });
 
-  if (!db.profile.enrollments?.length) {
+  if (!user?.enrollments?.length) {
     push({
       id: "start-learning",
       module: "Learning",
@@ -8886,7 +8939,7 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
       section: "learning",
       priority: "high"
     });
-  } else if (!db.profile.certificates?.length) {
+  } else if (!user?.certificates?.length) {
     push({
       id: "complete-lesson",
       module: "Learning",
@@ -10602,7 +10655,7 @@ function adminSnapshot(db, providers = runtimeProviders(db)) {
   const profile = db.profile || {};
   ensureOperationsProfile(profile);
   const modules = [
-    { name: "Learning", status: "connected", records: (profile.enrollments || []).length + (profile.certificates || []).length },
+    { name: "Learning", status: "connected", records: (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length + (item.certificates || []).length, 0) },
     { name: "Workforce", status: "connected", records: (profile.applications || []).length + (profile.shiftSchedule || []).length },
     { name: "Healthcare", status: "connected", records: (profile.healthIntakes || []).length + (profile.carePlans || []).length + (profile.safetyReviews || []).length },
     { name: "Women & Family", status: "connected", records: (profile.womenFamilyRuns || []).length },
@@ -11125,40 +11178,50 @@ function recalcReadiness(profile) {
   if (profile.readiness >= 90) profile.learningPath = "Leadership Pathway";
 }
 
-function ensureLearningProfile(profile) {
-  profile.enrollments = profile.enrollments || [];
-  profile.completedCourses = profile.completedCourses || [];
-  profile.certificates = profile.certificates || [];
-  profile.womenChildrenLearningPlans = profile.womenChildrenLearningPlans || [];
-  profile.learningPath = profile.learningPath || "Foundation Pathway";
-  profile.learningStreak = profile.learningStreak || 0;
-  profile.learningHours = profile.learningHours || 0;
-  profile.learningAssignments = profile.learningAssignments || [];
-  profile.quizAttempts = profile.quizAttempts || [];
-  profile.instructorNotes = profile.instructorNotes || [];
-  profile.learningProgressReports = profile.learningProgressReports || [];
-  profile.learningTranscripts = profile.learningTranscripts || [];
-  profile.learningCohorts = profile.learningCohorts || [];
-  profile.accessibilityProfile = profile.accessibilityProfile || {
+// Found live (course-enrollment cross-user collision fix): these fields used
+// to live on db.profile -- a single blob shared by every account, with no
+// owner field at all -- so two different real accounts starting the same
+// course really did share and overwrite one enrollment/certificate/progress
+// record. Moved onto the user entry itself (db.users[] already has genuinely
+// unique entries per account, the same way login already works), matching
+// this codebase's existing convention of flat per-user fields rather than a
+// new nested sub-object. Pre-existing db.profile.* learning data is left in
+// place, untouched and unread going forward, rather than deleted or migrated
+// -- it can't be honestly attributed to one specific account.
+function ensureLearningProfile(user) {
+  user.enrollments = user.enrollments || [];
+  user.completedCourses = user.completedCourses || [];
+  user.certificates = user.certificates || [];
+  user.womenChildrenLearningPlans = user.womenChildrenLearningPlans || [];
+  user.learningPath = user.learningPath || "Foundation Pathway";
+  user.learningStreak = user.learningStreak || 0;
+  user.learningHours = user.learningHours || 0;
+  user.learningAssignments = user.learningAssignments || [];
+  user.quizAttempts = user.quizAttempts || [];
+  user.instructorNotes = user.instructorNotes || [];
+  user.learningProgressReports = user.learningProgressReports || [];
+  user.learningTranscripts = user.learningTranscripts || [];
+  user.learningCohorts = user.learningCohorts || [];
+  user.learningAccessibilityProfile = user.learningAccessibilityProfile || {
     hearingSupport: true,
     visualSupport: true,
     preferredFormats: ["captions", "screen-reader", "large-print", "audio-guide", "offline-packet"],
-    language: profile.language || "sw",
+    language: user.language || "sw",
     bandwidth: "low",
     representative: "Community accessibility aide"
   };
-  profile.learningAccommodations = profile.learningAccommodations || [];
+  user.learningAccommodations = user.learningAccommodations || [];
 }
 
-function getEnrollment(profile, courseId) {
-  ensureLearningProfile(profile);
-  return profile.enrollments.find(item => item.courseId === courseId) || null;
+function getEnrollment(user, courseId) {
+  ensureLearningProfile(user);
+  return user.enrollments.find(item => item.courseId === courseId) || null;
 }
 
-function learningCatalog(db) {
-  ensureLearningProfile(db.profile);
-  const completed = new Set(db.profile.completedCourses || []);
-  const activeCourseId = db.profile.activeCourseId;
+function learningCatalog(db, user = null) {
+  if (user) ensureLearningProfile(user);
+  const completed = new Set(user?.completedCourses || []);
+  const activeCourseId = user?.activeCourseId || null;
   const tracks = Array.from(new Set((db.courses || []).map(course => course.track))).map(track => {
     const courses = db.courses.filter(course => course.track === track);
     return {
@@ -11168,7 +11231,7 @@ function learningCatalog(db) {
     };
   });
   const courses = (db.courses || []).map((course, index) => {
-    const enrollment = getEnrollment(db.profile, course.id);
+    const enrollment = user ? getEnrollment(user, course.id) : null;
     const linkedRoles = (db.roles || []).filter(role => (role.requiredCertificates || []).includes(course.id));
     const nextModuleIndex = enrollment?.activeModuleIndex || 0;
     return {
@@ -11258,9 +11321,9 @@ function womenChildrenLearningPaths(db) {
   ];
 }
 
-function womenChildrenLearningHubModel(db, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
-  const plans = db.profile.womenChildrenLearningPlans || [];
+function womenChildrenLearningHubModel(db, providers = runtimeProviders(db), user = null) {
+  if (user) ensureLearningProfile(user);
+  const plans = (user ? user.womenChildrenLearningPlans : null) || [];
   const paths = womenChildrenLearningPaths(db);
   const latest = plans[0] || null;
   const provider = providers.find(item => item.id === "learning-courses") || {};
@@ -11293,7 +11356,7 @@ function womenChildrenLearningHubModel(db, providers = runtimeProviders(db)) {
 }
 
 function runWomenChildrenLearningWorkflow(db, user, body = {}) {
-  ensureLearningProfile(db.profile);
+  ensureLearningProfile(user);
   ensureOperationsProfile(db.profile);
   ensureAiProfile(db.profile);
   const paths = womenChildrenLearningPaths(db);
@@ -11304,7 +11367,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
   const learnerGroup = String(body.learnerGroup || selectedPath.audience).trim();
   const language = body.language || user.language || db.profile.accessibilityProfile?.language || "en";
   const supportNeed = String(body.supportNeed || "Voice-first, picture-supported, low-bandwidth learning").trim();
-  let enrollment = course.id ? getEnrollment(db.profile, course.id) : null;
+  let enrollment = course.id ? getEnrollment(user, course.id) : null;
   if (course.id && !enrollment) {
     enrollment = {
       id: crypto.randomUUID(),
@@ -11317,12 +11380,12 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
       startedAt: now,
       completedAt: null
     };
-    db.profile.enrollments.unshift(enrollment);
+    user.enrollments.unshift(enrollment);
   } else if (enrollment) {
     enrollment.status = enrollment.status === "completed" ? "completed" : "in_progress";
     enrollment.progress = Math.max(Number(enrollment.progress || 0), 35);
   }
-  if (course.id) db.profile.activeCourseId = course.id;
+  if (course.id) user.activeCourseId = course.id;
   const plan = {
     id: crypto.randomUUID(),
     planNumber,
@@ -11349,9 +11412,9 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     createdAt: now,
     status: "active"
   };
-  db.profile.womenChildrenLearningPlans.unshift(plan);
-  db.profile.womenChildrenLearningPlans = db.profile.womenChildrenLearningPlans.slice(0, 30);
-  db.profile.learningAssignments.unshift({
+  user.womenChildrenLearningPlans.unshift(plan);
+  user.womenChildrenLearningPlans = user.womenChildrenLearningPlans.slice(0, 30);
+  user.learningAssignments.unshift({
     id: crypto.randomUUID(),
     assignmentNumber: `AN-FAM-ASG-${String(nextRecordSequence(db, "learningAssignments")).padStart(3, "0")}`,
     courseId: course.id || null,
@@ -11362,7 +11425,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     status: "assigned",
     createdAt: now
   });
-  db.profile.learningAccommodations.unshift({
+  user.learningAccommodations.unshift({
     id: crypto.randomUUID(),
     courseId: course.id || null,
     courseTitle: course.title || selectedPath.title,
@@ -11373,7 +11436,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     status: "ready",
     createdAt: now
   });
-  db.profile.learningCohorts.unshift({
+  user.learningCohorts.unshift({
     id: crypto.randomUUID(),
     cohortNumber: `AN-FAM-COH-${String(nextRecordSequence(db, "learningCohorts")).padStart(3, "0")}`,
     courseId: course.id || null,
@@ -11384,11 +11447,11 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     status: "active",
     createdAt: now
   });
-  db.profile.learningAssignments = db.profile.learningAssignments.slice(0, 20);
-  db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
-  db.profile.learningCohorts = db.profile.learningCohorts.slice(0, 20);
-  db.profile.learningStreak = Number(db.profile.learningStreak || 0) + 1;
-  db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.5).toFixed(2));
+  user.learningAssignments = user.learningAssignments.slice(0, 20);
+  user.learningAccommodations = user.learningAccommodations.slice(0, 20);
+  user.learningCohorts = user.learningCohorts.slice(0, 20);
+  user.learningStreak = Number(user.learningStreak || 0) + 1;
+  user.learningHours = Number((Number(user.learningHours || 0) + 0.5).toFixed(2));
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 5);
   recalcReadiness(db.profile);
   logIntegration(db, {
@@ -11421,9 +11484,8 @@ function ensureWorkforceProfile(profile) {
   profile.nextShift = profile.nextShift || "Awaiting scheduling";
 }
 
-function roleReadiness(profile, role) {
-  ensureLearningProfile(profile);
-  const missingCertificates = (role.requiredCertificates || []).filter(courseId => !profile.completedCourses.includes(courseId));
+function roleReadiness(profile, user, role) {
+  const missingCertificates = (role.requiredCertificates || []).filter(courseId => !(user?.completedCourses || []).includes(courseId));
   return {
     eligible: profile.readiness >= role.minReadiness && missingCertificates.length === 0,
     missingReadiness: Math.max(0, role.minReadiness - profile.readiness),
@@ -11965,8 +12027,8 @@ function ensureAiProfile(profile) {
 
 function buildAgentPlan(db, goal, user) {
   const { country, route } = activeContext(db);
-  const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-  const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+  const course = db.courses.find(item => item.id === user?.activeCourseId) || db.courses[0];
+  const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   const steps = [
     { id: crypto.randomUUID(), module: "Learning", tool: "learning.start_or_continue", action: "Prepare course path", detail: `Use ${course?.title || "active course"} as the training path and create learning evidence.`, status: "pending-approval" },
@@ -11994,8 +12056,8 @@ function buildAgentPlan(db, goal, user) {
 function buildAutopilotPlan(db, goal, user) {
   const { country, route } = activeContext(db);
   const lower = String(goal || "").toLowerCase();
-  const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-  const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+  const course = db.courses.find(item => item.id === user?.activeCourseId) || db.courses[0];
+  const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   const memory = retrieveAgentMemories(db.profile, goal, 5);
   const makeStep = (module, tool, action, detail) => ({
@@ -13053,10 +13115,10 @@ function submitBestWorkforceApplication(db, user, command = "") {
   ensureWorkforceProfile(db.profile);
   const requested = String(command || "").toLowerCase();
   const role = db.roles.find(item => requested.includes(item.title.toLowerCase()))
-    || db.roles.find(item => roleReadiness(db.profile, item).eligible)
+    || db.roles.find(item => roleReadiness(db.profile, user, item).eligible)
     || db.roles[0];
   if (!role) return { status: "needs-role", response: "No workforce roles are available yet." };
-  const readiness = roleReadiness(db.profile, role);
+  const readiness = roleReadiness(db.profile, user, role);
   if (!readiness.eligible) {
     db.profile.candidateStage = "Readiness Gap Review";
     logIntegration(db, {
@@ -13114,15 +13176,15 @@ function submitBestWorkforceApplication(db, user, command = "") {
   };
 }
 
-function activeLearningCourse(db) {
-  return db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
+function activeLearningCourse(db, user) {
+  return db.courses.find(item => item.id === user?.activeCourseId) || db.courses[0];
 }
 
 function completeAgentLesson(db, user) {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(db.profile, course.id);
+  let enrollment = getEnrollment(user, course.id);
   if (!enrollment) {
     enrollment = {
       id: crypto.randomUUID(),
@@ -13135,13 +13197,13 @@ function completeAgentLesson(db, user) {
       startedAt: new Date().toISOString(),
       completedAt: null
     };
-    db.profile.enrollments.unshift(enrollment);
+    user.enrollments.unshift(enrollment);
   }
   const moduleIndex = Number(enrollment.activeModuleIndex || 0);
   if (!enrollment.completedModules.includes(moduleIndex)) enrollment.completedModules.push(moduleIndex);
   enrollment.activeModuleIndex = Math.min((course.modules || []).length - 1, moduleIndex + 1);
   enrollment.progress = Math.min(100, Math.max(enrollment.progress || 0, 45) + 20);
-  db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.5).toFixed(2));
+  user.learningHours = Number((Number(user.learningHours || 0) + 0.5).toFixed(2));
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 4);
   recalcReadiness(db.profile);
   logIntegration(db, {
@@ -13156,18 +13218,18 @@ function completeAgentLesson(db, user) {
 }
 
 function completeAgentQuiz(db, user) {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(db.profile, course.id);
+  let enrollment = getEnrollment(user, course.id);
   if (!enrollment) {
     executeAgentTool(db, user, { tool: "learning.start_or_continue" });
-    enrollment = getEnrollment(db.profile, course.id);
+    enrollment = getEnrollment(user, course.id);
   }
   enrollment.progress = Math.min(100, Number(enrollment.progress || 0) + 35);
   enrollment.score = Math.min(100, Math.max(Number(enrollment.score || 0), 72));
-  db.profile.quizScore = Math.max(Number(db.profile.quizScore || 0), enrollment.score);
-  db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.75).toFixed(2));
+  user.quizScore = Math.max(Number(user.quizScore || 0), enrollment.score);
+  user.learningHours = Number((Number(user.learningHours || 0) + 0.75).toFixed(2));
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 6);
   recalcReadiness(db.profile);
   logIntegration(db, {
@@ -13182,31 +13244,31 @@ function completeAgentQuiz(db, user) {
 }
 
 function issueAgentCertificate(db, user) {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(db.profile, course.id);
+  let enrollment = getEnrollment(user, course.id);
   if (!enrollment || Number(enrollment.score || 0) < 25) {
     completeAgentQuiz(db, user);
-    enrollment = getEnrollment(db.profile, course.id);
+    enrollment = getEnrollment(user, course.id);
   }
   enrollment.status = "completed";
   enrollment.progress = 100;
   enrollment.completedAt = enrollment.completedAt || new Date().toISOString();
-  if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
-  let certificate = db.profile.certificates.find(item => item.courseId === course.id);
+  if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
+  let certificate = user.certificates.find(item => item.courseId === course.id);
   if (!certificate) {
     certificate = {
       id: crypto.randomUUID(),
-      certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+      certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
       courseId: course.id,
       title: course.title,
       issuedAt: new Date().toISOString()
     };
-    db.profile.certificates.push(certificate);
+    user.certificates.push(certificate);
   }
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 10);
-  db.profile.learningStreak = Number(db.profile.learningStreak || 0) + 1;
+  user.learningStreak = Number(user.learningStreak || 0) + 1;
   recalcReadiness(db.profile);
   logIntegration(db, {
     providerId: "learning-certificates",
@@ -13220,8 +13282,8 @@ function issueAgentCertificate(db, user) {
 }
 
 function prepareLearningAccess(db, user, mode = "caption") {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   const titles = {
     caption: "Captioned lesson packet",
     visual: "Audio guide and screen-reader outline",
@@ -13238,8 +13300,8 @@ function prepareLearningAccess(db, user, mode = "caption") {
     status: "ready",
     createdAt: new Date().toISOString()
   };
-  db.profile.learningAccommodations.unshift(accommodation);
-  db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
+  user.learningAccommodations.unshift(accommodation);
+  user.learningAccommodations = user.learningAccommodations.slice(0, 20);
   logIntegration(db, {
     providerId: "learning-certificates",
     module: "Learning",
@@ -13447,7 +13509,7 @@ function runPlatformActionByAgent(db, user, type) {
   if (type === "profile.summary") {
     logIntegration(db, { providerId: "database", module: "Profile", action: "agent.profile_summary", detail: "Unified profile summary opened by voice agent.", dispatch: false });
     addActivity(db.profile, "Voice agent opened unified profile summary.");
-    return `Unified profile ready: ${db.profile.readiness}% readiness, ${(db.profile.certificates || []).length} certificates, ${(db.profile.applications || []).length} applications, ${(db.profile.orders || []).length} orders.`;
+    return `Unified profile ready: ${db.profile.readiness}% readiness, ${(user?.certificates || []).length} certificates, ${(db.profile.applications || []).length} applications, ${(db.profile.orders || []).length} orders.`;
   }
   return "Platform action recorded.";
 }
@@ -13475,11 +13537,11 @@ function ensureCommunicationProfile(profile) {
   profile.communicationMessages = profile.communicationMessages || [];
 }
 
-function communicationContext(db, moduleName, body = {}) {
+function communicationContext(db, moduleName, body = {}, user = null) {
   const { country, route } = activeContext(db);
   const moduleKey = String(moduleName || "Platform").toLowerCase();
   if (moduleKey.includes("learning")) {
-    const course = (db.courses || []).find(item => item.id === (body.courseId || db.profile.activeCourseId)) || (db.courses || [])[0];
+    const course = (db.courses || []).find(item => item.id === (body.courseId || user?.activeCourseId)) || (db.courses || [])[0];
     return {
       subject: course?.title || "active learning path",
       participantName: body.recipientName || "Learning coach",
@@ -13539,8 +13601,8 @@ async function createCommunicationThread(db, user, body = {}) {
     ? "sms-delivery"
     : /email/i.test(channel)
     ? "email-delivery"
-    : communicationContext(db, moduleName, body).providerId;
-  const context = communicationContext(db, moduleName, body);
+    : communicationContext(db, moduleName, body, user).providerId;
+  const context = communicationContext(db, moduleName, body, user);
   const text = String(body.message || context.defaultMessage).trim();
   const replyText = String(body.reply || context.defaultReply).trim();
   const thread = {
@@ -13943,7 +14005,6 @@ function operationalModuleFromText(text = "") {
 }
 
 function operationalWorkflowScores(db) {
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -13953,11 +14014,18 @@ function operationalWorkflowScores(db) {
     const ready = parts.filter(Boolean).length;
     return Math.round((ready / Math.max(1, parts.length)) * 100);
   };
+  // Learning fields are per-user now -- summed across every real account
+  // instead of one shared blob, same platform-wide framing as the other
+  // module scores here.
+  const totalEnrollments = (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length, 0);
+  const totalCompletedCourses = (db.users || []).reduce((sum, item) => sum + (item.completedCourses || []).length, 0);
+  const totalCertificates = (db.users || []).reduce((sum, item) => sum + (item.certificates || []).length, 0);
+  const totalLearningAccommodations = (db.users || []).reduce((sum, item) => sum + (item.learningAccommodations || []).length, 0);
   const scores = [
     {
       module: "Learning",
-      percent: score([(db.profile.enrollments || []).length, (db.profile.completedCourses || []).length, (db.profile.certificates || []).length, (db.profile.learningAccommodations || []).length]),
-      evidence: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`
+      percent: score([totalEnrollments, totalCompletedCourses, totalCertificates, totalLearningAccommodations]),
+      evidence: `${totalEnrollments} enrollment(s), ${totalCertificates} certificate(s)`
     },
     {
       module: "Workforce",
@@ -14392,7 +14460,7 @@ function buildAdaptiveSignals(db, user, providers = runtimeProviders(db)) {
   if (!(db.profile.orders || []).length) {
     addSignal("missing-trade-order", "AgriTrade", "No crop order yet", "Crop sale demos become stronger when an order, route, receipt, and buyer message exist.", "medium", "Create crop order");
   }
-  if (!(db.profile.enrollments || []).length) {
+  if (!(user?.enrollments || []).length) {
     addSignal("missing-learning-path", "Learning", "No active learner path yet", "Learning feels stronger when a learner is enrolled and a next lesson is visible.", "medium", "Start course");
   }
   if (!(db.profile.applications || []).length) {
@@ -15912,7 +15980,6 @@ function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
 
 function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -15956,7 +16023,6 @@ function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
 
 function runWomenFamilyAgricultureWorkflow(db, user, body = {}) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -16986,10 +17052,10 @@ async function executeAgentTool(db, user, step) {
   }
   const { country, route } = activeContext(db);
   if (step.tool === "learning.start_or_continue") {
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
     if (!course) throw new Error("No course catalog is available.");
-    let enrollment = getEnrollment(db.profile, course.id);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -17002,16 +17068,16 @@ async function executeAgentTool(db, user, step) {
         activeModuleIndex: 0,
         completedModules: []
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
     } else {
       enrollment.progress = Math.min(100, Number(enrollment.progress || 0) + 25);
       enrollment.status = enrollment.progress >= 100 ? "completed" : "in_progress";
       if (enrollment.progress >= 100 && !enrollment.completedAt) enrollment.completedAt = new Date().toISOString();
     }
-    db.profile.activeCourseId = course.id;
+    user.activeCourseId = course.id;
     db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + Math.max(2, Math.round((course.readiness || 8) / 2)));
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.5).toFixed(2));
-    db.profile.learningStreak = Number(db.profile.learningStreak || 0) + 1;
+    user.learningHours = Number((Number(user.learningHours || 0) + 0.5).toFixed(2));
+    user.learningStreak = Number(user.learningStreak || 0) + 1;
     recalcReadiness(db.profile);
     logIntegration(db, {
       providerId: "learning-courses",
@@ -17050,9 +17116,9 @@ async function executeAgentTool(db, user, step) {
 
   if (step.tool === "workforce.match_role") {
     ensureWorkforceProfile(db.profile);
-    const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+    const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
     if (!role) throw new Error("No workforce role catalog is available.");
-    const readiness = roleReadiness(db.profile, role);
+    const readiness = roleReadiness(db.profile, user, role);
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
     let application = db.profile.applications.find(item => item.roleId === role.id);
     if (readiness.eligible && !application) {
@@ -17745,7 +17811,7 @@ async function runLocalPilotStudio(db, user, scenario = "rural-access") {
     status: execution.status === "completed" ? "pilot-ready" : "needs-review",
     summary: `${scenarioConfig.title} completed locally with ${execution.steps.filter(step => step.status === "executed").length}/${execution.steps.length} workflow steps executed.`,
     outcomes: [
-      `${(db.profile.enrollments || []).length} learning enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`,
+      `${(user?.enrollments || []).length} learning enrollment(s), ${(user?.certificates || []).length} certificate(s)`,
       `${(db.profile.applications || []).length} workforce application(s), ${(db.profile.shiftSchedule || []).length} shift(s)`,
       `${(db.profile.healthIntakes || []).length} telehealth intake(s), ${(db.profile.carePlans || []).length} care plan(s)`,
       `${(db.profile.orders || []).length} trade order(s), ${(db.profile.buyerContacts || []).length} buyer contact(s)`,
@@ -23422,19 +23488,19 @@ function roleSpecificReasoningProfile(moduleName = "Agent AI", userModel = {}) {
   };
 }
 
-function evidenceForReasoning(db, moduleName = "Agent AI") {
+function evidenceForReasoning(db, moduleName = "Agent AI", user = null) {
   const { country, route } = activeContext(db);
   const evidence = [
     `${country.name} active country, ${route.name} active route, checkpoint ${db.profile.activeCheckpoint}`,
     `${db.profile.readiness || 0}% workforce readiness`,
-    `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`,
+    `${(user?.enrollments || []).length} enrollment(s), ${(user?.certificates || []).length} certificate(s)`,
     `${(db.profile.healthIntakes || []).length} health intake(s), ${(db.profile.videoSessions || []).length} video session(s)`,
     `${(db.profile.orders || []).length} trade order(s), ${(db.profile.droneScans || []).length} drone scan(s)`,
     `${(db.profile.integrationEvents || []).length} provider/audit event(s)`
   ];
   if (moduleName === "Healthcare") evidence.push(`${country.risk} regional health risk; ${country.queue} queue context`);
   if (moduleName === "AgriTrade") evidence.push(`${db.profile.wallet || 0} wallet balance; route stage ${db.profile.routeStage}`);
-  if (moduleName === "Learning") evidence.push(`Active course ${db.profile.activeCourseId || "none"}`);
+  if (moduleName === "Learning") evidence.push(`Active course ${user?.activeCourseId || "none"}`);
   if (moduleName === "Workforce") evidence.push(`Candidate stage ${db.profile.candidateStage || "not started"}`);
   return evidence;
 }
@@ -23460,7 +23526,7 @@ function reasoningLanguageProductionEngine(db, user, command = "", options = {})
     { id: "multilingual-voice-brain", title: "Multilingual Voice Brain", ready: Boolean(providerOk("voice-stt") || providerOk("voice-tts") || process.env.OPENAI_API_KEY), evidence: `Target language ${targetLanguage}; STT/TTS providers tracked with browser and OpenAI fallbacks.` },
     { id: "role-specific-intelligence", title: "Role-Specific Intelligence", ready: true, evidence: `${roleProfile.audience}: ${roleProfile.priorities.slice(0, 3).join(", ")}.` },
     { id: "human-like-recovery", title: "Human-Like Recovery", ready: true, evidence: "Clarification, voice recovery, imperfect-language routing, and one-question follow-up are active." },
-    { id: "evidence-based-reasoning", title: "Evidence-Based Reasoning", ready: true, evidence: evidenceForReasoning(db, moduleSignal.module).slice(0, 4).join(" | ") }
+    { id: "evidence-based-reasoning", title: "Evidence-Based Reasoning", ready: true, evidence: evidenceForReasoning(db, moduleSignal.module, user).slice(0, 4).join(" | ") }
   ];
   const readyCount = layers.filter(item => item.ready).length;
   const engine = {
@@ -24478,7 +24544,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   };
   const profileSummary = {
     readiness: db.profile.readiness,
-    activeCourseId: db.profile.activeCourseId,
+    activeCourseId: user?.activeCourseId,
     applications: (db.profile.applications || []).length,
     healthIntakes: (db.profile.healthIntakes || []).length,
     orders: (db.profile.orders || []).length,
@@ -28765,7 +28831,7 @@ async function planAgentToolWithOpenAi(db, user, command) {
     profile: {
       readiness: db.profile.readiness,
       learningPath: db.profile.learningPath || db.profile.careerTrack,
-      certificates: (db.profile.certificates || []).length,
+      certificates: (user?.certificates || []).length,
       applications: (db.profile.applications || []).length,
       healthIntakes: (db.profile.healthIntakes || []).length,
       orders: (db.profile.orders || []).length,
@@ -29339,8 +29405,8 @@ function roleGuidanceTarget(text = "") {
 
 function roleGuidancePlan(db, user, target = "farmer") {
   const { country, route } = activeContext(db);
-  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0];
-  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0];
+  const course = (db.courses || []).find(item => item.id === user?.activeCourseId) || (db.courses || [])[0];
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, user, item).eligible) || (db.roles || [])[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   const plans = {
     farmer: {
@@ -29810,7 +29876,7 @@ function tradeLocationRouteResponse(db, user, text, options = {}) {
 
 function nexusMissionBrainModel(db, user, goalText = "", options = {}) {
   ensureAiProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -29989,7 +30055,7 @@ function missionBrainCommandResponse(db, user, text, options = {}) {
 
 function nexusTrustedOperatingSystemModel(db, user, goalText = "", options = {}) {
   ensureAiProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -30005,7 +30071,7 @@ function nexusTrustedOperatingSystemModel(db, user, goalText = "", options = {})
   const auditEvents = db.profile.integrationEvents || [];
   const agentCommands = db.profile.agentCommands || [];
   const workflowEvidence = [
-    (db.profile.enrollments || []).length,
+    (user?.enrollments || []).length,
     (db.profile.applications || []).length,
     (db.profile.healthIntakes || []).length,
     (db.profile.orders || []).length,
@@ -30725,7 +30791,7 @@ function buildAssistantActionMemory(db, user, command = "") {
       source: "workforce-continuity"
     });
   }
-  if ((db.profile.enrollments || []).length && !(db.profile.certificates || []).length) {
+  if ((user?.enrollments || []).length && !(user?.certificates || []).length) {
     add({
       title: "Continue learning path",
       detail: "Learning is started, but no certificate is issued yet.",
@@ -32320,13 +32386,13 @@ async function dailyLifeAdvisorResponse(db, user, text, lower, options = {}) {
   };
 }
 
-function simplePlatformDataBrief(db, text = "") {
+function simplePlatformDataBrief(db, text = "", user = null) {
   const lower = String(text || "").toLowerCase();
   const { country, route } = activeContext(db);
   const scan = (db.profile.droneScans || [])[0];
   const finding = (db.profile.droneFindings || [])[0];
-  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0];
-  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0];
+  const course = (db.courses || []).find(item => item.id === user?.activeCourseId) || (db.courses || [])[0];
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, user, item).eligible) || (db.roles || [])[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   if (/\b(drone|field scan|scan data|crop data|aerial|farm data)\b/.test(lower)) {
     const plain = scan ? plainDroneInterpretation(db, scan, finding) : null;
@@ -32483,7 +32549,7 @@ function isSimpleDataExplanation(lower) {
 }
 
 function simpleDataExplanationResponse(db, user, text, lower) {
-  const brief = simplePlatformDataBrief(db, text);
+  const brief = simplePlatformDataBrief(db, text, user);
   const coach = simpleCoachCardForBrief(brief);
   rememberAgentMemory(db.profile, `${coach.title}: ${coach.response}`, { source: "simple-coach-interpreter", category: "pattern", module: coach.module, confidence: 0.9 });
   db.profile.agentMemory.activeModule = brief.module;
@@ -47317,7 +47383,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
@@ -47363,7 +47429,7 @@ async function api(req, res, url) {
     if (body.confirmed !== true) {
       return send(res, 400, { ok: false, status: "confirmation_required", error: "Pass confirmed: true to permanently erase this account. This cannot be undone." });
     }
-    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id) };
+    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id), ...eraseUserLearningRecords(user) };
     const uploadDirPath = nexusUploads.uploadDir(process.env);
     const ownedUploads = nexusUploads.listUploadsForUser(uploadDirPath, user.id);
     let removedUploadCount = 0;
@@ -51716,14 +51782,14 @@ async function api(req, res, url) {
       return send(res, 200, publicState(db, user));
     }
     const { country, route } = activeContext(db);
-    ensureLearningProfile(db.profile);
+    ensureLearningProfile(user);
     ensureWorkforceProfile(db.profile);
     ensureHealthProfile(db.profile);
     ensureTradeProfile(db.profile);
     ensureAiProfile(db.profile);
 
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-    let enrollment = getEnrollment(db.profile, course.id);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -51736,34 +51802,34 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
     } else {
       enrollment.status = enrollment.status === "completed" ? "completed" : "ready_for_quiz";
       enrollment.progress = Math.max(enrollment.progress || 0, 90);
       enrollment.score = Math.max(enrollment.score || 0, 25);
       enrollment.completedModules = enrollment.completedModules?.length ? enrollment.completedModules : [0];
     }
-    db.profile.activeCourseId = course.id;
-    db.profile.quizScore = Math.max(db.profile.quizScore || 0, enrollment.score);
-    if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
-    if (!db.profile.certificates.some(item => item.courseId === course.id)) {
-      db.profile.certificates.push({
+    user.activeCourseId = course.id;
+    user.quizScore = Math.max(user.quizScore || 0, enrollment.score);
+    if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
+    if (!user.certificates.some(item => item.courseId === course.id)) {
+      user.certificates.push({
         id: crypto.randomUUID(),
-        certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+        certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
         courseId: course.id,
         title: course.title,
         issuedAt: new Date().toISOString()
       });
     }
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((db.profile.learningHours + 1.5).toFixed(1));
+    user.learningStreak += 1;
+    user.learningHours = Number((user.learningHours + 1.5).toFixed(1));
 
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
     if (!db.profile.workforceBadges.includes("Mentor Matched")) db.profile.workforceBadges.push("Mentor Matched");
     db.profile.mentor = "Assigned";
     db.profile.candidateStage = "Interview";
     db.profile.interviews = Math.max(db.profile.interviews || 0, 1);
-    const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+    const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
     if (role && !db.profile.applications.some(item => item.roleId === role.id)) {
       db.profile.applications.unshift({
         id: crypto.randomUUID(),
@@ -51989,14 +52055,14 @@ async function api(req, res, url) {
     const { country, route } = activeContext(db);
     db.profile.activeCheckpoint = route.checkpoints[0];
     db.profile.routeStage = "Investor demo live";
-    ensureLearningProfile(db.profile);
+    ensureLearningProfile(user);
     ensureWorkforceProfile(db.profile);
     ensureHealthProfile(db.profile);
     ensureTradeProfile(db.profile);
     ensureAiProfile(db.profile);
 
     const course = db.courses.find(item => item.id === "telehealth-support") || db.courses[0];
-    let enrollment = getEnrollment(db.profile, course.id);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52009,7 +52075,7 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: new Date().toISOString()
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
     } else {
       enrollment.status = "completed";
       enrollment.progress = 100;
@@ -52017,20 +52083,20 @@ async function api(req, res, url) {
       enrollment.completedModules = (course.modules || []).map((_, index) => index);
       enrollment.completedAt = new Date().toISOString();
     }
-    db.profile.activeCourseId = course.id;
-    db.profile.quizScore = Math.max(db.profile.quizScore || 0, 92);
-    if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
-    if (!db.profile.certificates.some(item => item.courseId === course.id)) {
-      db.profile.certificates.push({
+    user.activeCourseId = course.id;
+    user.quizScore = Math.max(user.quizScore || 0, 92);
+    if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
+    if (!user.certificates.some(item => item.courseId === course.id)) {
+      user.certificates.push({
         id: crypto.randomUUID(),
-        certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+        certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
         courseId: course.id,
         title: course.title,
         issuedAt: new Date().toISOString()
       });
     }
     for (const mode of ["caption", "visual", "low-bandwidth"]) {
-      db.profile.learningAccommodations.unshift({
+      user.learningAccommodations.unshift({
         id: crypto.randomUUID(),
         courseId: course.id,
         courseTitle: course.title,
@@ -52043,9 +52109,9 @@ async function api(req, res, url) {
         createdAt: new Date().toISOString()
       });
     }
-    db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 2).toFixed(1));
-    db.profile.learningStreak += 3;
+    user.learningAccommodations = user.learningAccommodations.slice(0, 20);
+    user.learningHours = Number((Number(user.learningHours || 0) + 2).toFixed(1));
+    user.learningStreak += 3;
     db.profile.readiness = Math.max(db.profile.readiness || 0, 96);
 
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
@@ -52279,7 +52345,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/learning/catalog" && req.method === "GET") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning catalog access" });
-    return send(res, 200, { catalog: learningCatalog(db), user: { language: user.language } });
+    return send(res, 200, { catalog: learningCatalog(db, user), user: { language: user.language } });
   }
 
   if (url.pathname === "/api/learning/start" && req.method === "POST") {
@@ -52287,8 +52353,8 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const course = db.courses.find(item => item.id === body.courseId);
     if (!course) return send(res, 404, { error: "Course not found" });
-    ensureLearningProfile(db.profile);
-    let enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52301,16 +52367,16 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
     } else {
       enrollment.status = enrollment.status === "completed" ? "completed" : "in_progress";
       enrollment.progress = Math.max(enrollment.progress, 25);
       enrollment.activeModuleIndex = enrollment.activeModuleIndex || 0;
       enrollment.completedModules = enrollment.completedModules || [];
     }
-    db.profile.activeCourseId = course.id;
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((db.profile.learningHours + 0.5).toFixed(1));
+    user.activeCourseId = course.id;
+    user.learningStreak += 1;
+    user.learningHours = Number((user.learningHours + 0.5).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + Math.ceil(course.readiness / 2));
     recalcReadiness(db.profile);
     logIntegration(db, {
@@ -52329,10 +52395,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/lesson" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning workflows" });
     const body = await readBody(req);
-    const course = db.courses.find(item => item.id === (body.courseId || db.profile.activeCourseId));
+    const course = db.courses.find(item => item.id === (body.courseId || user.activeCourseId));
     if (!course) return send(res, 404, { error: "Course not found" });
-    ensureLearningProfile(db.profile);
-    let enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52345,7 +52411,7 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
     }
     const modules = course.modules || [];
     const selectedIndex = Number.isInteger(body.moduleIndex) ? body.moduleIndex : enrollment.activeModuleIndex || 0;
@@ -52357,9 +52423,9 @@ async function api(req, res, url) {
     const moduleProgress = modules.length ? Math.round((completedCount / modules.length) * 65) : 35;
     enrollment.progress = Math.max(enrollment.progress || 25, Math.min(90, 25 + moduleProgress));
     if (completedCount >= modules.length && modules.length) enrollment.status = "ready_for_quiz";
-    db.profile.activeCourseId = course.id;
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((db.profile.learningHours + 0.35).toFixed(1));
+    user.activeCourseId = course.id;
+    user.learningStreak += 1;
+    user.learningHours = Number((user.learningHours + 0.35).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + 2);
     recalcReadiness(db.profile);
     logIntegration(db, {
@@ -52378,9 +52444,9 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/quiz" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-    let enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52393,12 +52459,12 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
     }
     enrollment.progress = Math.min(100, enrollment.progress + 35);
     enrollment.score = Math.min(100, enrollment.score + 25);
-    db.profile.quizScore = Math.max(db.profile.quizScore, enrollment.score);
-    db.profile.learningHours = Number((db.profile.learningHours + 0.75).toFixed(1));
+    user.quizScore = Math.max(user.quizScore || 0, enrollment.score);
+    user.learningHours = Number((user.learningHours + 0.75).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + 6);
     recalcReadiness(db.profile);
     logIntegration(db, {
@@ -52417,24 +52483,24 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/certificate" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow credential workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-    const enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
+    const enrollment = getEnrollment(user, course.id);
     if (!enrollment || enrollment.score < 25) return send(res, 409, { error: "Complete a quiz first" });
-    if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
+    if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
     enrollment.status = "completed";
     enrollment.progress = 100;
     enrollment.completedAt = new Date().toISOString();
-    let certificate = db.profile.certificates.find(item => item.courseId === course.id);
+    let certificate = user.certificates.find(item => item.courseId === course.id);
     if (!certificate) {
       certificate = {
         id: crypto.randomUUID(),
-        certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+        certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
         courseId: course.id,
         title: course.title,
         issuedAt: new Date().toISOString()
       };
-      db.profile.certificates.push(certificate);
+      user.certificates.push(certificate);
     }
     logIntegration(db, {
       providerId: "learning-certificates",
@@ -52444,7 +52510,7 @@ async function api(req, res, url) {
       metadata: { courseId: course.id, certificateNumber: certificate.certificateNumber }
     });
     db.profile.readiness = Math.min(100, db.profile.readiness + 10);
-    db.profile.learningStreak += 1;
+    user.learningStreak += 1;
     recalcReadiness(db.profile);
     addActivity(db.profile, `Certificate issued for ${course.title}.`);
     addWorkflowNote(db.profile, body.note, "Certificate note");
@@ -52455,9 +52521,9 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/accessibility" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === (body.courseId || db.profile.activeCourseId)) || db.courses[0];
-    const enrollment = course ? getEnrollment(db.profile, course.id) : null;
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === (body.courseId || user.activeCourseId)) || db.courses[0];
+    const enrollment = course ? getEnrollment(user, course.id) : null;
     const modeNames = {
       caption: "Captioned lesson packet",
       visual: "Audio guide and screen-reader outline",
@@ -52480,10 +52546,10 @@ async function api(req, res, url) {
       progressAtRequest: enrollment?.progress || 0,
       createdAt: new Date().toISOString()
     };
-    db.profile.learningAccommodations.unshift(accommodation);
-    db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.25).toFixed(2));
-    db.profile.learningStreak += 1;
+    user.learningAccommodations.unshift(accommodation);
+    user.learningAccommodations = user.learningAccommodations.slice(0, 20);
+    user.learningHours = Number((Number(user.learningHours || 0) + 0.25).toFixed(2));
+    user.learningStreak += 1;
     logIntegration(db, {
       providerId: "learning-certificates",
       module: "Learning",
@@ -52511,10 +52577,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/advanced" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow advanced learning workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === (body.courseId || db.profile.activeCourseId)) || db.courses[0];
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === (body.courseId || user.activeCourseId)) || db.courses[0];
     if (!course) return send(res, 404, { error: "Course not found" });
-    let enrollment = getEnrollment(db.profile, course.id);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52527,7 +52593,7 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
     }
     const type = body.type || "assignment";
     const now = new Date().toISOString();
@@ -52544,7 +52610,7 @@ async function api(req, res, url) {
           status: "assigned",
           createdAt: now
         };
-        db.profile.learningAssignments.unshift(record);
+        user.learningAssignments.unshift(record);
         return ["learning-courses", "learning.assignment_created", `${record.assignmentNumber} assignment created for ${course.title}.`, record];
       },
       "quiz-attempt": () => {
@@ -52574,10 +52640,10 @@ async function api(req, res, url) {
           feedback: "Review missed concepts, then proceed toward certificate readiness.",
           createdAt: now
         };
-        db.profile.quizAttempts.unshift(record);
+        user.quizAttempts.unshift(record);
         enrollment.score = Math.max(enrollment.score || 0, record.score);
         enrollment.progress = Math.max(enrollment.progress || 25, 85);
-        db.profile.quizScore = Math.max(db.profile.quizScore || 0, record.score);
+        user.quizScore = Math.max(user.quizScore || 0, record.score);
         return ["learning-certificates", "learning.quiz_attempt_recorded", `${record.attemptNumber} quiz attempt recorded at ${record.score}%.`, record];
       },
       note: () => {
@@ -52591,7 +52657,7 @@ async function api(req, res, url) {
           status: "recorded",
           createdAt: now
         };
-        db.profile.instructorNotes.unshift(record);
+        user.instructorNotes.unshift(record);
         return ["learning-courses", "learning.instructor_note_recorded", `${record.noteNumber} instructor note recorded for ${course.title}.`, record];
       },
       report: () => {
@@ -52602,13 +52668,13 @@ async function api(req, res, url) {
           courseTitle: course.title,
           progress: enrollment.progress || 0,
           readiness: db.profile.readiness,
-          learningHours: db.profile.learningHours || 0,
+          learningHours: user.learningHours || 0,
           completedModules: (enrollment.completedModules || []).length,
           recommendation: "Continue active course, complete assessment, and connect certificate to workforce role gate.",
           status: "generated",
           createdAt: now
         };
-        db.profile.learningProgressReports.unshift(record);
+        user.learningProgressReports.unshift(record);
         return ["learning-courses", "learning.progress_report_generated", `${record.reportNumber} progress report generated for ${course.title}.`, record];
       },
       transcript: () => {
@@ -52617,13 +52683,13 @@ async function api(req, res, url) {
           transcriptNumber: `AN-TRN-${String(nextRecordSequence(db, "learningTranscripts")).padStart(3, "0")}`,
           learnerName: user.name,
           activeCourse: course.title,
-          completedCourses: (db.profile.completedCourses || []).map(courseId => db.courses.find(item => item.id === courseId)?.title || courseId),
-          certificates: (db.profile.certificates || []).map(cert => cert.certificateNumber || cert.id),
+          completedCourses: (user.completedCourses || []).map(courseId => db.courses.find(item => item.id === courseId)?.title || courseId),
+          certificates: (user.certificates || []).map(cert => cert.certificateNumber || cert.id),
           readiness: db.profile.readiness,
           status: "issued",
           createdAt: now
         };
-        db.profile.learningTranscripts.unshift(record);
+        user.learningTranscripts.unshift(record);
         return ["learning-certificates", "learning.transcript_issued", `${record.transcriptNumber} transcript issued for ${user.name}.`, record];
       },
       cohort: () => {
@@ -52638,7 +52704,7 @@ async function api(req, res, url) {
           status: "active",
           createdAt: now
         };
-        db.profile.learningCohorts.unshift(record);
+        user.learningCohorts.unshift(record);
         return ["learning-courses", "learning.cohort_created", `${record.cohortNumber} cohort created for ${course.title}.`, record];
       }
     };
@@ -52646,11 +52712,11 @@ async function api(req, res, url) {
     if (!maker) return send(res, 400, { error: "Unsupported advanced learning action" });
     const [providerId, action, detail, record] = maker();
     ["learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts"].forEach(key => {
-      db.profile[key] = db.profile[key].slice(0, 20);
+      user[key] = user[key].slice(0, 20);
     });
-    db.profile.activeCourseId = course.id;
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.25).toFixed(2));
+    user.activeCourseId = course.id;
+    user.learningStreak += 1;
+    user.learningHours = Number((Number(user.learningHours || 0) + 0.25).toFixed(2));
     recalcReadiness(db.profile);
     logIntegration(db, { providerId, module: "Learning", action, detail, metadata: { recordId: record.id, courseId: course.id, type } });
     addActivity(db.profile, detail);
@@ -52775,7 +52841,7 @@ async function api(req, res, url) {
     const role = db.roles.find(item => item.id === body.roleId);
     if (!role) return send(res, 404, { error: "Role not found" });
     ensureWorkforceProfile(db.profile);
-    const readiness = roleReadiness(db.profile, role);
+    const readiness = roleReadiness(db.profile, user, role);
     if (!readiness.eligible) {
       const certificateText = readiness.missingCertificates.length ? ` and certificate(s): ${readiness.missingCertificates.join(", ")}` : "";
       return send(res, 409, { error: `${role.title} needs ${readiness.missingReadiness}% more readiness${certificateText}` });
