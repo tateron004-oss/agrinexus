@@ -48623,11 +48623,11 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/tasks" && req.method === "GET") {
-    return send(res, 200, projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user));
+    return send(res, 200, projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user));
   }
 
   if (url.pathname === "/api/nexus/brain/missions" && req.method === "GET") {
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     return send(res, 200, {
       ok: true,
       missions: state.tasks || [],
@@ -48638,7 +48638,7 @@ async function api(req, res, url) {
 
   if (url.pathname.startsWith("/api/nexus/brain/missions/") && req.method === "GET") {
     const missionId = decodeURIComponent(url.pathname.replace("/api/nexus/brain/missions/", ""));
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     const mission = (state.tasks || []).find(task => task.taskId === missionId || task.caseId === missionId);
     return send(res, mission ? 200 : 404, {
       ok: Boolean(mission),
@@ -48652,13 +48652,13 @@ async function api(req, res, url) {
   if (url.pathname.startsWith("/api/nexus/brain/missions/") && (req.method === "PATCH" || req.method === "POST")) {
     const missionId = decodeURIComponent(url.pathname.replace("/api/nexus/brain/missions/", ""));
     const body = await readBody(req);
-    const result = nexusAgenticBrainRuntime.updateTask({ ...body, taskId: missionId }, db);
+    const result = nexusAgenticBrainRuntime.updateTask({ ...body, taskId: missionId }, db, user.id);
     await writeDb(db);
     return send(res, 200, { ...result, localOnly: true, noExternalExecutionAuthorized: true });
   }
 
   if (url.pathname === "/api/nexus/brain/receipts" && req.method === "GET") {
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     const receipts = (state.activity || []).map(event => ({
       receiptId: event.activityId,
       createdAt: event.createdAt,
@@ -48673,7 +48673,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/memory" && req.method === "GET") {
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     return send(res, 200, {
       ok: true,
       memory: {
@@ -48689,25 +48689,25 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/command" && req.method === "POST") {
-    const result = await nexusAgenticBrainRuntime.handleCommand(await readBody(req), db, process.env);
+    const result = await nexusAgenticBrainRuntime.handleCommand(await readBody(req), db, process.env, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/brain/task" && req.method === "POST") {
-    const result = nexusAgenticBrainRuntime.updateTask(await readBody(req), db);
+    const result = nexusAgenticBrainRuntime.updateTask(await readBody(req), db, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/brain/provider/respond" && req.method === "POST") {
-    const result = nexusAgenticBrainRuntime.providerRespond(await readBody(req), db);
+    const result = nexusAgenticBrainRuntime.providerRespond(await readBody(req), db, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/brain/verify" && req.method === "POST") {
-    const result = nexusAgenticBrainRuntime.verifyTask(await readBody(req), db, process.env);
+    const result = nexusAgenticBrainRuntime.verifyTask(await readBody(req), db, process.env, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
