@@ -42094,6 +42094,19 @@ function addNexusConsentRecord(db, entityType, entityId, consentType, granted = 
   return consent;
 }
 
+// Found live (legacy server.js helper-function sweep): every one of this function's 7 call sites built
+// its own archiveRecords entry inline and unshifted it directly, with no cap anywhere in the file --
+// unlike the sibling addNexusOperationsAudit/addNexusOperationsReceipt/addNexusConsentRecord helpers
+// right above, which all cap their own array at 1000 immediately after unshift. Centralizing the write
+// here closes the gap for all 7 sites at once.
+function addNexusOperationsArchive(db, entityType, entityId, action, reason) {
+  const store = ensureNexusPersistentOperations(db);
+  const record = { archiveId: nexusOperationId("NX-ARCH"), entityType, entityId, action, reason, createdAt: nexusNow() };
+  store.archiveRecords.unshift(record);
+  store.archiveRecords = store.archiveRecords.slice(0, 1000);
+  return record;
+}
+
 // Redacts the full before/after record snapshot from an audit entry unless
 // the caller is privileged. auditLogs' before/after fields (via
 // addNexusOperationsAudit -> safeOpsSnapshot) capture the REAL constructed
@@ -44420,7 +44433,25 @@ function anonymousOperationsIdentity(body = {}) {
 // the ORIGINAL, possibly-null, pre-fallback user's email instead -- so a real
 // Postgres shadow-write is never attributed to a real account nobody
 // actually authenticated as.
-function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = user?.email) {
+// Found live (legacy server.js helper-function sweep): none of this function's health-write actions
+// (create_chronic_care_profile, add_rpm_reading, add_rtm_activity, create_intake,
+// create_provider_review_packet, create_pharmacy_referral, create_mobile_clinic_follow_up,
+// create_telehealth_encounter) ever called canWriteHealth(), unlike the dedicated REST routes for these
+// exact same actions (/api/nexus/pharmacy/create-referral, /api/nexus/mobile-clinic/create-request,
+// /api/nexus/telehealth/create-encounter, etc.), which all correctly gate on it. Both HTTP routes that
+// reach this function (/api/nexus/operations/action, /api/nexus/operations/command) are explicitly
+// pre-auth -- so a fully anonymous caller with no session at all (not just a restricted Guest or
+// Investor) could write real PHI-shaped records (patient id, conditions, medications, allergies, risk
+// flags). Gated against `realUser` (the TRUE, pre-fallback caller -- null for a genuinely anonymous
+// request) rather than `user` (which may be `anonymousOperationsIdentity()`'s synthesized
+// Standard-User-role, no-restrictions fallback, deliberately permissive for the non-health actions this
+// pre-auth path also serves) so this can't be satisfied by the same fallback identity it's meant to stop.
+const NEXUS_OPERATIONS_HEALTH_WRITE_ACTIONS = new Set([
+  "create_chronic_care_profile", "add_rpm_reading", "add_rtm_activity", "create_intake",
+  "create_provider_review_packet", "create_pharmacy_referral", "create_mobile_clinic_follow_up",
+  "create_telehealth_encounter"
+]);
+function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = user?.email, realUser = user) {
   const store = ensureNexusPersistentOperations(db);
   const actor = user?.role || body.actor || "standard-user";
   const command = body.command || "";
@@ -44430,6 +44461,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     "Nexus did not diagnose, prescribe, recommend medication changes, contact providers, send messages, dispatch services, process payments, fake GPS tracking, or claim live acceptance.",
     "Nexus kept the record in persistent operations memory with audit and review controls."
   ];
+
+  if (NEXUS_OPERATIONS_HEALTH_WRITE_ACTIONS.has(action) && !canWriteHealth(realUser)) {
+    return { ok: false, error: "health_write_not_allowed", operations: nexusOperationsSummary(db, user) };
+  }
 
   if (action === "status") {
     return { ok: true, action, operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
@@ -44457,6 +44492,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       archiveReason: null
     };
     store.chronicCareProfiles.unshift(profile);
+    store.chronicCareProfiles = store.chronicCareProfiles.slice(0, 1000);
     addNexusConsentRecord(db, "chronic-care", profile.chronicCareId, "preparePacket", profile.consentState.preparePacket, actor);
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "chronic_care_profile_created", actor, `${profile.conditionArea} chronic care profile created for local operations memory.`, null, profile);
     const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, "create_chronic_care_profile", ["Created chronic care profile.", "Recorded consent state and provider review lane."], didNot, "active");
@@ -44476,6 +44512,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now
     };
     store.rpmReadings.unshift(reading);
+    store.rpmReadings = store.rpmReadings.slice(0, 1000);
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rpm_reading_added", actor, `${reading.type} RPM reading added.`, null, reading);
     const receipt = addNexusOperationsReceipt(db, "rpm-reading", reading.readingId, "add_rpm_reading", ["Added RPM reading to chronic care timeline.", "Kept reading local until consented provider sharing is configured."], didNot, "recorded");
@@ -44494,6 +44531,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now
     };
     store.rtmActivities.unshift(activity);
+    store.rtmActivities = store.rtmActivities.slice(0, 1000);
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rtm_activity_added", actor, `${activity.type} RTM activity added.`, null, activity);
     const receipt = addNexusOperationsReceipt(db, "rtm-activity", activity.activityId, "add_rtm_activity", ["Added RTM activity to chronic care timeline."], didNot, "recorded");
@@ -44519,6 +44557,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.cases.unshift(caseItem);
+    store.cases = store.cases.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "case", caseItem.caseId, action, actor, `${lane} case packet prepared from chronic care profile.`, null, caseItem);
     const receipt = addNexusOperationsReceipt(db, "case", caseItem.caseId, action, [`Prepared ${lane} case packet from chronic care profile.`, "Marked sharing as consent-gated."], didNot, "prepared");
     return nexusOperationResponse(db, user, action, caseItem, audit, receipt);
@@ -44537,6 +44576,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.healthcareIntakes.unshift(intake);
+    store.healthcareIntakes = store.healthcareIntakes.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, "intake_created", actor, "Healthcare intake created and linked to operations memory.", null, intake);
     const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, "create_intake", ["Created healthcare intake record.", "Kept external sharing disabled until consent and provider configuration."], didNot, "active");
     return nexusOperationResponse(db, user, action, intake, audit, receipt);
@@ -44548,7 +44588,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const before = { ...intake };
     intake.status = action === "archive_intake" ? "archived" : "deactivated-delete-review";
     intake.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "intake", entityId: intake.intakeId, action, reason: cleanOpsText(body.reason || "User requested archive/deactivate review.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "intake", intake.intakeId, action, cleanOpsText(body.reason || "User requested archive/deactivate review.", 240));
     const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, action, actor, `Intake ${intake.status}; audit trail preserved.`, before, intake);
     const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, action, ["Updated intake status and preserved audit trail."], ["Nexus did not hard-delete required audit records or continue outreach."], intake.status);
     return nexusOperationResponse(db, user, action, intake, audit, receipt);
@@ -44564,7 +44604,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     profile.updatedAt = now;
     store.healthcareIntakes.filter(item => item.chronicCareId === profile.chronicCareId).forEach(item => { item.status = "archived"; item.noContact = true; item.updatedAt = now; });
     store.careTasks.filter(item => item.chronicCareId === profile.chronicCareId).forEach(item => { item.status = "archived-no-contact"; item.updatedAt = now; });
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "chronic-care", entityId: profile.chronicCareId, action, reason: profile.archiveReason, createdAt: now });
+    addNexusOperationsArchive(db, "chronic-care", profile.chronicCareId, action, profile.archiveReason);
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "patient_deceased_stop_outreach", actor, "Profile marked deceased/no-contact; reminders and active intakes archived; audit preserved.", before, profile);
     const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, action, ["Marked profile deceased/no-contact.", "Archived linked active intakes and care tasks.", "Preserved audit trail."], ["Nexus did not send reminders, messages, provider notices, or hard-delete protected records."], "deceased-stop-outreach");
     return nexusOperationResponse(db, user, action, profile, audit, receipt);
@@ -44588,6 +44628,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.providers.unshift(provider);
+    store.providers = store.providers.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "provider", provider.providerId, "provider_added", actor, `${type} provider added to directory.`, null, provider);
     const receipt = addNexusOperationsReceipt(db, "provider", provider.providerId, action, [`Added ${type} provider directory record.`], didNot, "active");
     return nexusOperationResponse(db, user, action, provider, audit, receipt);
@@ -44613,6 +44654,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.parties.unshift(party);
+    store.parties = store.parties.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "party", party.partyId, "buyer_seller_added", actor, `${party.type} party added to directory.`, null, party);
     const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, [`Added ${party.type} directory record.`], didNot, "active");
     return nexusOperationResponse(db, user, action, party, audit, receipt);
@@ -44625,7 +44667,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     party.status = "closed";
     party.noContact = true;
     party.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "party", entityId: party.partyId, action: "marked_closed", reason: "Business closed/out of business; stop outreach.", createdAt: now });
+    addNexusOperationsArchive(db, "party", party.partyId, "marked_closed", "Business closed/out of business; stop outreach.");
     const audit = addNexusOperationsAudit(db, "party", party.partyId, "business_closed_stop_outreach", actor, "Buyer/seller marked closed; transaction and shipment history preserved.", before, party);
     const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, ["Marked business closed and stopped outreach.", "Preserved transaction/shipment history."], ["Nexus did not contact the party or delete historical records."], "closed");
     return nexusOperationResponse(db, user, action, party, audit, receipt);
@@ -44649,6 +44691,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.shipments.unshift(shipment);
+    store.shipments = store.shipments.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "shipment_created", actor, "Shipment draft created without GPS or carrier confirmation.", null, shipment);
     const receipt = addNexusOperationsReceipt(db, "shipment", shipment.shipmentId, action, ["Created shipment draft.", "Attached buyer/seller references where available."], ["Nexus did not fake GPS tracking, carrier pickup, delivery, route calculation, or dispatch."], "draft");
     return nexusOperationResponse(db, user, action, shipment, audit, receipt);
@@ -44659,6 +44702,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const eventStatus = cleanOpsText(body.status || (/delivered/i.test(command) ? "delivered" : /delayed/i.test(command) ? "delayed" : /temperature/i.test(command) ? "temperature-issue" : /in[- ]?transit/i.test(command) ? "in-transit" : "picked-up"), 80);
     const event = { eventId: nexusOperationId("NX-TRK"), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
     store.trackingEvents.unshift(event);
+    store.trackingEvents = store.trackingEvents.slice(0, 1000);
     shipment.status = eventStatus;
     shipment.updatedAt = now;
     shipment.trackingEvents = [event, ...(shipment.trackingEvents || [])].slice(0, 50);
@@ -44702,6 +44746,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.transactions.unshift(transaction);
+    store.transactions = store.transactions.slice(0, 1000);
     shadowWriteTradeOrderToPostgres(transaction);
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_created", actor, "Transaction draft created with payment execution disabled.", null, transaction);
     const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Created transaction draft and payment gate."], ["Nexus did not charge, pay, refund, escrow, checkout, or create a provider transaction ID."], "draft");
@@ -44726,7 +44771,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const rawAmount = Number(body.amount);
     const amountText = Number.isFinite(rawAmount) && rawAmount < 0 ? "0" : (body.amount || "0");
     const item = { itemId: nexusOperationId("NX-ITEM"), name: cleanOpsText(body.name || body.item || "Transaction item", 120), quantity: cleanOpsText(body.quantity || "1", 80), amount: cleanOpsText(amountText, 80), createdAt: now };
-    transaction.items = [item, ...(transaction.items || [])];
+    transaction.items = [item, ...(transaction.items || [])].slice(0, 50);
     transaction.status = "prepared";
     transaction.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_item_added", actor, "Item added to transaction draft before payment execution.", before, transaction);
@@ -44788,6 +44833,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.learningProfiles.unshift(profile);
+    store.learningProfiles = store.learningProfiles.slice(0, 1000);
     addNexusConsentRecord(db, "learning-profile", profile.learningProfileId, "prepareReferral", profile.consentState.prepareReferral, actor);
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, "learning_profile_created", actor, "Learning profile created for local operations memory.", null, profile);
     const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Created learning and development profile.", "Recorded consent state for training referral preparation."], ["Nexus did not enroll the learner, certify completion, submit to an LMS, or contact a training provider."], "active");
@@ -44811,11 +44857,11 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now,
       updatedAt: now
     };
-    if (action === "create_learning_plan") store.learningPlans.unshift(record);
-    else if (action === "create_skill_assessment_packet") store.skillAssessments.unshift(record);
-    else if (action === "prepare_lms_handoff") store.lmsHandoffRecords.unshift(record);
-    else if (action === "create_drone_training_referral") store.certificationPathways.unshift(record);
-    else store.trainingRecords.unshift(record);
+    if (action === "create_learning_plan") { store.learningPlans.unshift(record); store.learningPlans = store.learningPlans.slice(0, 1000); }
+    else if (action === "create_skill_assessment_packet") { store.skillAssessments.unshift(record); store.skillAssessments = store.skillAssessments.slice(0, 1000); }
+    else if (action === "prepare_lms_handoff") { store.lmsHandoffRecords.unshift(record); store.lmsHandoffRecords = store.lmsHandoffRecords.slice(0, 1000); }
+    else if (action === "create_drone_training_referral") { store.certificationPathways.unshift(record); store.certificationPathways = store.certificationPathways.slice(0, 1000); }
+    else { store.trainingRecords.unshift(record); store.trainingRecords = store.trainingRecords.slice(0, 1000); }
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, `${action} recorded for learning profile with execution disabled.`, null, record);
     const receipt = addNexusOperationsReceipt(db, "training-record", record.trainingRecordId, action, ["Prepared learning/training support record.", "Kept provider/LMS handoff disabled until credentials, consent, and confirmation exist."], ["Nexus did not enroll the learner, certify training, submit a referral, or claim provider acceptance."], record.status);
@@ -44828,7 +44874,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const before = { ...profile };
     profile.status = action === "archive_learning_profile" ? "archived" : "deactivated-delete-review";
     profile.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "learning-profile", entityId: profile.learningProfileId, action, reason: cleanOpsText(body.reason || "User requested learning profile archive/deactivation review.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "learning-profile", profile.learningProfileId, action, cleanOpsText(body.reason || "User requested learning profile archive/deactivation review.", 240));
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, "Learning profile archived/deactivated with audit retained.", before, profile);
     const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Updated learning profile status and preserved audit trail."], ["Nexus did not hard-delete audit records, contact providers, or continue training outreach."], profile.status);
     return nexusOperationResponse(db, user, action, profile, audit, receipt);
@@ -44996,7 +45042,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     employer.status = "closed";
     employer.noContact = true;
     employer.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "employer", entityId: employer.employerId, action, reason: "Employer marked closed/no-contact.", createdAt: now });
+    addNexusOperationsArchive(db, "employer", employer.employerId, action, "Employer marked closed/no-contact.");
     const audit = addNexusOperationsAudit(db, "employer", employer.employerId, "employer_closed", actor, "Employer marked closed; hiring history preserved.", before, employer);
     const receipt = addNexusOperationsReceipt(db, "employer", employer.employerId, action, ["Marked employer closed and stopped outreach."], ["Nexus did not contact employer or delete historical hiring records."], "closed");
     return nexusOperationResponse(db, user, action, employer, audit, receipt);
@@ -45009,7 +45055,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     applicant.status = action === "no_contact_applicant" ? "no-contact" : action === "archive_applicant" ? "archived" : "deactivated-delete-review";
     applicant.noContact = action === "no_contact_applicant";
     applicant.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "applicant", entityId: applicant.applicantId, action, reason: cleanOpsText(body.reason || "Applicant archive/no-contact/deactivation review.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "applicant", applicant.applicantId, action, cleanOpsText(body.reason || "Applicant archive/no-contact/deactivation review.", 240));
     const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, action, actor, "Applicant record status updated with audit retained.", before, applicant);
     const receipt = addNexusOperationsReceipt(db, "applicant", applicant.applicantId, action, ["Updated applicant status and preserved audit trail."], ["Nexus did not hard-delete protected records, contact employers, or continue outreach."], applicant.status);
     return nexusOperationResponse(db, user, action, applicant, audit, receipt);
@@ -45149,7 +45195,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const before = { ...mission };
     mission.status = action === "cancel_drone_mission" ? "cancelled" : "archived";
     mission.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "drone-mission", entityId: mission.droneMissionId, action, reason: cleanOpsText(body.reason || "Drone mission cancelled/archived before execution.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "drone-mission", mission.droneMissionId, action, cleanOpsText(body.reason || "Drone mission cancelled/archived before execution.", 240));
     const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, "Drone mission cancelled/archived before any live flight action.", before, mission);
     const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission status and preserved audit trail."], ["Nexus did not cancel a real flight, contact a provider, or delete compliance history."], mission.status);
     return nexusOperationResponse(db, user, action, mission, audit, receipt);
@@ -45825,7 +45871,7 @@ async function api(req, res, url) {
     // care-qa.js), while a genuinely different visitor's browser (a
     // different or absent deviceId) never collides with it.
     const operationsUser = user || anonymousOperationsIdentity(body);
-    const result = runNexusOperationsAction(db, body, operationsUser, user?.email || null);
+    const result = runNexusOperationsAction(db, body, operationsUser, user?.email || null, user);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     const state = publicState(db, user);
@@ -45839,7 +45885,7 @@ async function api(req, res, url) {
     // cross-user PHI/financial-record collision as /api/nexus/operations/
     // action above -- see that comment for the full failure scenario.
     const operationsUser = user || anonymousOperationsIdentity(body);
-    const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser, user?.email || null);
+    const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser, user?.email || null, user);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     const state = publicState(db, user);
@@ -45969,6 +46015,7 @@ async function api(req, res, url) {
       createdAt: nexusNow()
     };
     store.archiveRecords.unshift(record);
+    store.archiveRecords = store.archiveRecords.slice(0, 1000);
     const auditType = lifecycleStatus === "deceased" ? "patient_marked_deceased" : lifecycleStatus === "closed" ? "business_marked_closed" : lifecycleStatus === "deleted" ? "record_deleted" : "record_deactivated";
     const audit = addNexusOperationsAudit(db, entityType, entityId, auditType, user?.role || "standard-user", `${entityType} marked ${lifecycleStatus} locally; external sync not claimed.`, null, record);
     const receipt = addNexusOperationsReceipt(db, entityType, entityId, auditType, [`Marked ${entityType} as ${lifecycleStatus} in local operations memory.`, "Created lifecycle audit evidence."], ["Nexus did not hard-delete protected audit evidence or claim live provider sync."], lifecycleStatus);
