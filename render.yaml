@@ -423,6 +423,8 @@ services:
         sync: false
       - key: FLUTTERWAVE_SUBACCOUNT_ID
         sync: false
+      - key: FLUTTERWAVE_WEBHOOK_SECRET_HASH
+        sync: false
       - key: TRADE_PAYMENT_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/trade/payments
       - key: TRADE_LOGISTICS_WEBHOOK_URL
