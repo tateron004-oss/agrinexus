@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const voiceDispatch = require("../../nexus/business/voice-dispatch.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 
-const { classify, precheck, run, computeBusinessDashboard } = voiceDispatch;
+const { classify, precheck, run, computeBusinessDashboard, periodIn } = voiceDispatch;
 
 test("first-person and question phrasing reach the income and expense log", () => {
   for (const text of ["I sold 5 bags of maize for 6000 shillings", "We spent KES 2,000 on seed", "I paid 1500 naira for fuel", "Log a $75 expense for supplies", "Record an income of 500 shillings"])
@@ -81,9 +81,17 @@ const tx = (date, type, amount, currency, category = "", description = "") => ({
 const ask = (command, transactions) => run({ command, businessRequest: async () => ({ body: { clients: transactions ? [ledgerClient(transactions)] : [] } }) });
 
 test("a summary question is answered from what was really logged, per currency and period", async () => {
-  const now = new Date().toISOString().slice(0, 10), month = now.slice(0, 7);
-  const rows = [tx(`${month}-01`, "income", 6000, "KES", "maize"), tx(`${month}-02`, "income", 4000, "KES", "beans"), tx(`${month}-03`, "expense", 1500, "KES", "seed"),
-    tx(`${month}-03`, "expense", 20, "USD", "app"), tx("2020-01-05", "expense", 999, "KES", "seed")];
+  // Found live: this used to hardcode day-of-month 01/02/03 for its "this
+  // month" fixtures, assuming "today" always falls on or after the 3rd --
+  // false on the 1st or 2nd of any month, when periodIn's own "this month"
+  // upper bound (today) excludes the fixture's later, still-future dates.
+  // today/month are derived from periodIn itself (the function under test),
+  // not recomputed independently, so this can't drift from its definition of
+  // "today" the way a second, hand-rolled date calculation could.
+  const today = periodIn("today", new Date()).from, month = today.slice(0, 7);
+  const day = n => { const d = `${month}-${String(n).padStart(2, "0")}`; return d <= today ? d : today; };
+  const rows = [tx(day(1), "income", 6000, "KES", "maize"), tx(day(2), "income", 4000, "KES", "beans"), tx(day(3), "expense", 1500, "KES", "seed"),
+    tx(day(3), "expense", 20, "USD", "app"), tx("2020-01-05", "expense", 999, "KES", "seed")];
   const both = await ask("How much did I make this month?", rows);
   assert.equal(both.status, "completed");
   assert.match(both.response, /^This month, in "Amina Farm": KES 10,000 income \(2 entries\)/);
@@ -96,6 +104,38 @@ test("a summary question is answered from what was really logged, per currency a
   assert.match(profit.response, /KES 10,000 income \(2 entries\) and KES 1,500 expenses \(1 entry\), net KES 8,500; \$0\.00 income \(0 entries\) and \$20\.00 expenses \(1 entry\), net \$-20\.00/);
   const none = await ask("How much income did I make last month?", rows);
   assert.match(none.response, /^You have no income recorded last month\. To start, say for example "I sold 5 bags of maize for 6000 shillings"/);
+});
+
+// Found live (date/timezone audit): periodIn used to compute "today"/"this week"/"this month"/"this year"
+// from the SERVER's raw UTC clock (now.getUTCFullYear/getUTCDate/getUTCDay, toISOString().slice(0,10)),
+// unlike every other module in this app, which all use the shared localDay(now, timeZone) utility. In
+// this app's own default zone, Africa/Nairobi (UTC+3), local midnight falls 3 hours BEFORE UTC midnight:
+// a sale logged just after local midnight (still the PREVIOUS day by the server's UTC clock) silently
+// vanished from "today's" total once the server's UTC clock caught up to the new day a few hours later --
+// both the write (transaction/invoice date stamps) and the read (periodIn) used the same wrong clock, so
+// this stayed invisible except in exactly that ~3-hour window every real day.
+test("periodIn computes 'today'/'this week'/'this month'/'last month' in the person's own local day, not the server's UTC day", () => {
+  // 22:00 UTC on 29 Sept 2026 is already 01:00 on 30 Sept 2026 in Africa/Nairobi (UTC+3) -- the exact
+  // "already tomorrow locally, still today by UTC" window the bug lived in.
+  const now = new Date("2026-09-29T22:00:00.000Z");
+  const nairobiToday = periodIn("today", now, "Africa/Nairobi");
+  assert.equal(nairobiToday.from, "2026-09-30", "a Nairobi user's 'today' must be their own local day, not the server's UTC day");
+  assert.equal(nairobiToday.to, "2026-09-30");
+
+  const utcToday = periodIn("today", now, "UTC");
+  assert.equal(utcToday.from, "2026-09-29", "a different, explicitly UTC caller must still see the UTC day -- proving the zone is genuinely honored, not hardcoded");
+
+  const defaultZone = periodIn("today", now);
+  assert.equal(defaultZone.from, "2026-09-30", "with no timeZone passed at all, the app's own real default (Africa/Nairobi) must be used, never the server's raw UTC clock -- this is the exact call shape financeSummary used before the fix");
+
+  // "this week"/"this month"/"last month" must all be derived from that same corrected local day.
+  const nairobiWeek = periodIn("this week", now, "Africa/Nairobi");
+  assert.equal(nairobiWeek.to, "2026-09-30");
+  const monthBoundary = new Date("2026-08-31T22:00:00.000Z"); // 01:00 on 1 Sept in Nairobi -- crosses a month AND a UTC-day boundary at once
+  const nairobiMonth = periodIn("this month", monthBoundary, "Africa/Nairobi");
+  assert.equal(nairobiMonth.from, "2026-09-01", "the new month must already be reflected in Nairobi even though it's still 31 August by UTC");
+  const nairobiLastMonth = periodIn("last month", monthBoundary, "Africa/Nairobi");
+  assert.deepEqual(nairobiLastMonth, { label: "last month", from: "2026-08-01", to: "2026-08-31" });
 });
 
 test("with no workspace the answer says nothing is recorded instead of failing or guessing", async () => {

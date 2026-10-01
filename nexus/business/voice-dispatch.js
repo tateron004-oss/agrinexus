@@ -1,5 +1,8 @@
 "use strict";
 
+const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
+const { addDays, weekdayOf } = require("../personal/dates.js");
+
 // Shared classify+extract+execute logic for business/nonprofit voice and
 // typed commands (add a customer/donor, log an expense, create an invoice,
 // track a grant, manage tasks/appointments, generate documents/plan/
@@ -216,16 +219,26 @@ function extractTransactionArgs(command = "", args = {}) {
   };
 }
 
-const startOfIsoDay = date => date.toISOString().slice(0, 10);
+// Found live (date/timezone audit): this used to compute "today"/"this week"/"this month"/"this year"
+// (and, below, every transaction/invoice date stamp) from the SERVER's UTC clock
+// (now.getUTCFullYear/getUTCDate/getUTCDay, toISOString().slice(0,10)) instead of the person's own local
+// day -- unlike every other module in this app (personal/items.js, farmwork/index.js, healthwork/index.js,
+// companion/*, wellness/log.js, community/desk.js, brief/*), which all use the shared localDay(now,
+// timeZone) utility. In this app's own default zone, Africa/Nairobi (UTC+3), local midnight falls 3 hours
+// BEFORE UTC midnight: a sale logged at 00:15 Nairobi time (21:15 UTC the day before) got stamped with
+// YESTERDAY's UTC date, then silently vanished from "today's" total when the same person asked a few
+// hours later (now fully into UTC's next day too) -- both the write and the read used the same wrong
+// clock, so this stayed invisible except in exactly this ~3-hour window every day. Uses the same
+// DST-immune, date-only-string arithmetic (localDay + addDays) every other module already relies on.
+function todayIn(now, timeZone) { return localDay(now, validTimeZone(timeZone || DEFAULT_TIME_ZONE)); }
 // "this month", "last month", "today", "this week", "this year"; anything else means everything recorded.
-function periodIn(text, now = new Date()) {
-  const day = startOfIsoDay(now);
-  const year = now.getUTCFullYear(), month = now.getUTCMonth();
-  const monthStart = new Date(Date.UTC(year, month, 1));
+function periodIn(text, now = new Date(), timeZone) {
+  const day = todayIn(now, timeZone);
+  const [year, month] = day.split("-");
   if (/\btoday\b/i.test(text)) return { label: "today", from: day, to: day };
-  if (/\bthis week\b/i.test(text)) { const monday = new Date(now); monday.setUTCDate(now.getUTCDate() - ((now.getUTCDay() + 6) % 7)); return { label: "this week", from: startOfIsoDay(monday), to: day }; }
-  if (/\blast month\b/i.test(text)) return { label: "last month", from: startOfIsoDay(new Date(Date.UTC(year, month - 1, 1))), to: startOfIsoDay(new Date(Date.UTC(year, month, 0))) };
-  if (/\bthis month\b/i.test(text)) return { label: "this month", from: startOfIsoDay(monthStart), to: day };
+  if (/\bthis week\b/i.test(text)) { const monday = addDays(day, -((weekdayOf(day) + 6) % 7)); return { label: "this week", from: monday, to: day }; }
+  if (/\blast month\b/i.test(text)) { const firstOfThisMonth = `${year}-${month}-01`; const lastDayOfLastMonth = addDays(firstOfThisMonth, -1); return { label: "last month", from: `${lastDayOfLastMonth.slice(0, 7)}-01`, to: lastDayOfLastMonth }; }
+  if (/\bthis month\b/i.test(text)) return { label: "this month", from: `${year}-${month}-01`, to: day };
   if (/\bthis year\b/i.test(text)) return { label: "this year", from: `${year}-01-01`, to: day };
   return { label: "so far", from: "", to: "" };
 }
@@ -861,7 +874,7 @@ function precheck(command = "", args = {}) {
 // gates confirmation before this ever runs (the authoritative runtime's
 // business.manage tool, confirmationRequired: true) should simply always
 // pass `confirmed: true`.
-async function run({ command = "", args = {}, confirmed, businessRequest }) {
+async function run({ command = "", args = {}, confirmed, businessRequest, timeZone }) {
   if (typeof businessRequest !== "function") throw new Error("A businessRequest bridge function is required.");
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
@@ -892,7 +905,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
 
   if (intent === "financeSummary") {
     const resolved = await resolveBusinessClient(businessRequest, command);
-    const period = periodIn(command);
+    const period = periodIn(command, new Date(), timeZone);
     const focus = /\b(?:spen[dt]|expenses?)\b/i.test(command) && !/\b(?:income|earn|sales|revenue|sell|sold|make|made|profit)\b/i.test(command) ? "expenses"
       : /\b(?:income|earn(?:ed|ings)?|sales|revenue|sell|sold|make|made)\b/i.test(command) && !/\b(?:spen[dt]|expenses?|profit)\b/i.test(command) ? "income" : "both";
     if (!resolved.client) {
@@ -956,7 +969,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const categoryPhrase = transaction.category ? ` for ${transaction.category}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can log a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, transactions: [...resolved.client.data.editable.transactions,
-      { date: new Date().toISOString().slice(0, 10), type: transaction.type, category: transaction.category, amount: transaction.amount, currency: transaction.currency, description: transaction.description }] };
+      { date: todayIn(new Date(), timeZone), type: transaction.type, category: transaction.category, amount: transaction.amount, currency: transaction.currency, description: transaction.description }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Logged a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}".`;
@@ -1024,7 +1037,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest }) {
     const clientPhrase = invoiceArgs.clientName ? ` for ${invoiceArgs.clientName}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can create invoice ${invoiceNumber}${clientPhrase} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, invoices: [...resolved.client.data.editable.invoices,
-      { invoiceNumber, clientName: invoiceArgs.clientName, date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }] };
+      { invoiceNumber, clientName: invoiceArgs.clientName, date: todayIn(new Date(), timeZone), dueDate: "", notes: "", status: "draft" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Created invoice ${invoiceNumber}${clientPhrase} in "${workspaceName}".`;
@@ -1284,5 +1297,5 @@ module.exports = Object.freeze({
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
   extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard,
-  extractListingArgs, resolveListingIndex, nextInvoiceNumber, formatMoney
+  extractListingArgs, resolveListingIndex, nextInvoiceNumber, formatMoney, periodIn
 });
