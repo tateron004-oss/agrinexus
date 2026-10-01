@@ -13289,6 +13289,9 @@ function runWorkforceActionByAgent(db, user, type) {
       estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
     };
     db.profile.shiftSchedule.unshift(shift);
+    // Found live (legacy server.js helper-function sweep): shiftSchedule grows unboundedly -- never
+    // capped at any of its write sites, unlike virtually every other profile array in this file.
+    db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
     db.profile.nextShift = `${shift.role} shift scheduled`;
     db.profile.earnings = Number(db.profile.earnings || 0) + shift.estimatedEarnings;
     if (!db.profile.workforceBadges.includes("Shift Scheduled")) db.profile.workforceBadges.push("Shift Scheduled");
@@ -13744,13 +13747,21 @@ function platformIntelligenceDailyPlan(db, user, goal = "") {
   return plan;
 }
 
+// Found live (legacy server.js helper-function sweep): this function, and the 15 other
+// Operational/Adaptive/Network/Ecosystem/Executive/Autonomous-Orchestration "Intelligence" functions
+// below it in the file, all numbered their records via `(array || []).length + 1` computed BEFORE the
+// array gets `.slice(0, N)`-capped right after -- once an array reaches its cap, `.length` pins at the
+// cap forever, so every subsequent record of that type gets an identical "unique" reference. Same bug
+// class already fixed elsewhere via nextRecordSequence(db, key) (see that function's own comment for
+// the full explanation); none of this module family had ever been converted. Display-only IDs, no
+// money/PHI impact, but genuinely broken uniqueness once any account is active enough to fill a cap.
 function platformIntelligenceDraft(db, user, body = {}) {
   const intelligence = ensurePlatformIntelligenceProfile(db.profile);
   const audience = String(body.audience || "partner").trim();
   const topic = String(body.topic || body.query || "AgriNexus platform follow-up").trim();
   const record = {
     id: crypto.randomUUID(),
-    draftNumber: `NEX-DRAFT-${String((intelligence.messageDrafts || []).length + 1).padStart(3, "0")}`,
+    draftNumber: `NEX-DRAFT-${String(nextRecordSequence(db, "platformIntelligenceMessageDrafts")).padStart(3, "0")}`,
     audience,
     topic,
     channel: String(body.channel || "WhatsApp/SMS/email draft").trim(),
@@ -14038,7 +14049,7 @@ function createOperationalGoal(db, user, body = {}) {
   const moduleScore = scores.find(item => item.module === module)?.percent || scores.find(item => module.includes(item.module))?.percent || 0;
   const goal = {
     id: crypto.randomUUID(),
-    goalNumber: `NEX-GOAL-${String((intelligence.goals || []).length + 1).padStart(3, "0")}`,
+    goalNumber: `NEX-GOAL-${String(nextRecordSequence(db, "operationalGoals")).padStart(3, "0")}`,
     title: goalText,
     module,
     status: "active",
@@ -14091,7 +14102,7 @@ function runOperationalPlaybook(db, user, type = "", body = {}) {
   const goal = createOperationalGoal(db, user, { goal: request, module: playbook?.module || operationalModuleFromText(request) });
   const run = {
     id: crypto.randomUUID(),
-    runNumber: `NEX-PLAY-${String((intelligence.playbookRuns || []).length + 1).padStart(3, "0")}`,
+    runNumber: `NEX-PLAY-${String(nextRecordSequence(db, "operationalPlaybookRuns")).padStart(3, "0")}`,
     playbookId: playbook?.id || "general",
     title: playbook?.title || "General operational playbook",
     module: playbook?.module || goal.module,
@@ -14128,7 +14139,7 @@ function recordOperationalIssue(db, user, body = {}) {
   const module = body.module || operationalModuleFromText(detail);
   const issue = {
     id: crypto.randomUUID(),
-    issueNumber: `NEX-FIX-${String((intelligence.issueReports || []).length + 1).padStart(3, "0")}`,
+    issueNumber: `NEX-FIX-${String(nextRecordSequence(db, "operationalIssueReports")).padStart(3, "0")}`,
     module,
     detail,
     status: "guided-recovery",
@@ -14190,7 +14201,7 @@ function operationalDecisionReview(db, user, query = "") {
   ].slice(0, 5);
   const review = {
     id: crypto.randomUUID(),
-    reviewNumber: `NEX-DEC-${String((intelligence.decisionReviews || []).length + 1).padStart(3, "0")}`,
+    reviewNumber: `NEX-DEC-${String(nextRecordSequence(db, "operationalDecisionReviews")).padStart(3, "0")}`,
     query,
     module,
     workflowScore,
@@ -14406,7 +14417,7 @@ function createAdaptiveNudge(db, user, signalOrBody = {}) {
   const module = signal.module || signalOrBody.module || "Platform";
   const nudge = {
     id: crypto.randomUUID(),
-    nudgeNumber: `NEX-AUTO-${String((autonomy.proactiveNudges || []).length + 1).padStart(3, "0")}`,
+    nudgeNumber: `NEX-AUTO-${String(nextRecordSequence(db, "adaptiveProactiveNudges")).padStart(3, "0")}`,
     module,
     section: adaptiveModuleSection(module),
     title: signal.title || signalOrBody.title || "Nexus proactive next step",
@@ -14447,7 +14458,7 @@ function runAdaptiveAutonomyCycle(db, user, body = {}) {
   const nudges = signals.slice(0, Number(body.limit || 5)).map(signal => createAdaptiveNudge(db, user, signal));
   const run = {
     id: crypto.randomUUID(),
-    runNumber: `NEX-LOOP-${String((autonomy.monitoringRuns || []).length + 1).padStart(3, "0")}`,
+    runNumber: `NEX-LOOP-${String(nextRecordSequence(db, "adaptiveMonitoringRuns")).padStart(3, "0")}`,
     mode: "controlled-adaptive-autonomy",
     status: "completed-local",
     summary: `${signals.length} signal(s) inspected and ${nudges.length} proactive nudge(s) prepared.`,
@@ -14461,7 +14472,7 @@ function runAdaptiveAutonomyCycle(db, user, body = {}) {
   autonomy.monitoringRuns = autonomy.monitoringRuns.slice(0, 50);
   autonomy.autonomousActions.unshift({
     id: crypto.randomUUID(),
-    actionNumber: `NEX-ACT-${String((autonomy.autonomousActions || []).length + 1).padStart(3, "0")}`,
+    actionNumber: `NEX-ACT-${String(nextRecordSequence(db, "adaptiveAutonomousActions")).padStart(3, "0")}`,
     type: "monitor-and-nudge",
     status: "completed-local",
     detail: run.summary,
@@ -14489,7 +14500,7 @@ function recordAdaptiveLearning(db, user, body = {}) {
   const module = body.module || operationalModuleFromText(lesson);
   const update = {
     id: crypto.randomUUID(),
-    updateNumber: `NEX-LEARN-${String((autonomy.learningUpdates || []).length + 1).padStart(3, "0")}`,
+    updateNumber: `NEX-LEARN-${String(nextRecordSequence(db, "adaptiveLearningUpdates")).padStart(3, "0")}`,
     module,
     lesson,
     behaviorChange: String(body.behaviorChange || "Use shorter responses, ask one question, and open the most relevant workflow first.").trim(),
@@ -14754,7 +14765,7 @@ function runNetworkIntelligenceQuery(db, user, body = {}) {
   const match = networkProviderMatch(db, user, query, body);
   const record = {
     id: crypto.randomUUID(),
-    queryNumber: `NEX-NET-${String((network.queries || []).length + 1).padStart(3, "0")}`,
+    queryNumber: `NEX-NET-${String(nextRecordSequence(db, "networkIntelligenceQueries")).padStart(3, "0")}`,
     query,
     serviceId: match.serviceId,
     serviceTitle: match.serviceTitle,
@@ -15100,7 +15111,7 @@ function runEcosystemMission(db, user, body = {}) {
   const liveRoutes = routes.filter(route => route.status === "live-capable").length;
   const record = {
     id: crypto.randomUUID(),
-    missionNumber: `NEX-ECO-${String((ecosystem.missions || []).length + 1).padStart(3, "0")}`,
+    missionNumber: `NEX-ECO-${String(nextRecordSequence(db, "ecosystemMissions")).padStart(3, "0")}`,
     missionId: template.id,
     title: template.title,
     query,
@@ -15430,7 +15441,7 @@ function runExecutiveIntelligenceAnalysis(db, user, body = {}) {
   const topCountry = suite.launchPriorities[0] || {};
   const record = {
     id: crypto.randomUUID(),
-    analysisNumber: `NEX-EXEC-${String((executive.analyses || []).length + 1).padStart(3, "0")}`,
+    analysisNumber: `NEX-EXEC-${String(nextRecordSequence(db, "executiveIntelligenceAnalyses")).padStart(3, "0")}`,
     focus: pillar.id,
     title: pillar.title,
     query,
@@ -15451,7 +15462,7 @@ function runExecutiveIntelligenceAnalysis(db, user, body = {}) {
   executive.decisions.unshift({
     id: crypto.randomUUID(),
     analysisId: record.id,
-    decisionNumber: `NEX-DECIDE-${String((executive.decisions || []).length + 1).padStart(3, "0")}`,
+    decisionNumber: `NEX-DECIDE-${String(nextRecordSequence(db, "executiveIntelligenceDecisions")).padStart(3, "0")}`,
     focus: record.focus,
     recommendation: record.recommendation,
     nextAction: record.nextActions[0],
@@ -15633,7 +15644,7 @@ function runAutonomousOrchestrationMission(db, user, body = {}) {
   const country = body.country || networkCountryFromText(query, db) || template.defaultCountry;
   const mission = {
     id: crypto.randomUUID(),
-    missionNumber: `NEX-ORCH-${String((orchestration.missions || []).length + 1).padStart(3, "0")}`,
+    missionNumber: `NEX-ORCH-${String(nextRecordSequence(db, "autonomousOrchestrationMissions")).padStart(3, "0")}`,
     templateId: template.id,
     title: template.title,
     goal: query || template.goal,
@@ -15703,7 +15714,7 @@ function runAutonomousOrchestrationCycle(db, user, body = {}) {
   mission.updatedAt = new Date().toISOString();
   const cycle = {
     id: crypto.randomUUID(),
-    cycleNumber: `NEX-CYCLE-${String((orchestration.cycles || []).length + 1).padStart(3, "0")}`,
+    cycleNumber: `NEX-CYCLE-${String(nextRecordSequence(db, "autonomousOrchestrationCycles")).padStart(3, "0")}`,
     missionId: mission.id,
     missionNumber: mission.missionNumber,
     completedSteps: completed,
@@ -15786,7 +15797,7 @@ function buildAutonomousOrchestrationReport(db, user, body = {}) {
   const waiting = mission.steps.filter(step => step.status !== "done");
   const report = {
     id: crypto.randomUUID(),
-    reportNumber: `NEX-REPORT-${String((orchestration.reports || []).length + 1).padStart(3, "0")}`,
+    reportNumber: `NEX-REPORT-${String(nextRecordSequence(db, "autonomousOrchestrationReports")).padStart(3, "0")}`,
     missionId: mission.id,
     missionNumber: mission.missionNumber,
     title: `${mission.title} outcome report`,
@@ -52007,6 +52018,7 @@ async function api(req, res, url) {
         demoShift: true
       };
       db.profile.shiftSchedule.unshift(shift);
+      db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
       db.profile.nextShift = new Date(shift.startsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
       db.profile.earnings = Math.max(db.profile.earnings || 0, shift.estimatedEarnings);
     }
@@ -52659,6 +52671,7 @@ async function api(req, res, url) {
         estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
       };
       db.profile.shiftSchedule.unshift(shift);
+      db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
       db.profile.nextShift = `${shift.role} - ${new Date(shift.startsAt).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
       db.profile.readiness = Math.min(100, db.profile.readiness + 6);
       db.profile.earnings += shift.estimatedEarnings;
