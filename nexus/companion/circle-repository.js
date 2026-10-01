@@ -36,11 +36,21 @@ class CircleRepository {
     } catch { return ""; }
   }
 
+  // Found live (companion audit): `kind` ("circle" vs "alert") was applied as a JS .filter() AFTER the SQL
+  // LIMIT 200 already truncated the result set -- both kinds share this one table/purpose and one
+  // principal_id (the person's own userId). Circle-link rows are created once at invite time and only ever
+  // updated in place, so their created_at never advances; alert rows are a brand-new row every time the
+  // person's own emergency trigger fires and are never deleted. A person who has triggered enough alerts
+  // over time (spread more than 5 minutes apart) could have their alert rows alone fill the 200-row window,
+  // silently pushing their real circle-link rows out of it -- with activeMembers() (who to actually notify
+  // in a real emergency) built directly on this function. Filtering by kind in the SQL itself, before the
+  // LIMIT, means the two kinds can never compete for the same window.
   async rows({ tenantId, userId, linkId = null, kind = "circle" }) {
     const result = await this.db.query(`select memory_id,principal_id,content from nexus_memory_items
       where tenant_id=$1 and memory_class='domain' and purpose='circle' and deleted_at is null
       and ($2::text is null or principal_id::text=$2::text) and ($3::text is null or content->>'linkId'=$3)
-      order by created_at desc, memory_id desc limit 200`, [tenantId, userId, linkId]);
+      and content->>'kind'=$4
+      order by created_at desc, memory_id desc limit 200`, [tenantId, userId, linkId, kind]);
     return (result.rows || result).filter(row => row.content && row.content.kind === kind);
   }
 

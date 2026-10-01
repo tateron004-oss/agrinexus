@@ -100,7 +100,18 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
   if (!request) return null;
   const scope = { tenantId, userId };
   const list = kind => memory.listPersonalItems({ ...scope, kind });
+  // Found live (CAS-less-race audit): the real MemoryRepository does this check-then-insert as two
+  // separate, unguarded calls -- two adds arriving close together when the person is one item under the
+  // cap could both read the same under-cap count and both insert. addPersonalItemUnlessFull (when the
+  // memory implementation provides it, e.g. the real Postgres-backed one) runs the count check and the
+  // insert inside one advisory-lock-guarded transaction instead. Fall back to the old two-call form for
+  // any memory implementation that doesn't provide it (e.g. test doubles), where there is no real
+  // concurrent-request race to guard against in the first place.
   const add = async content => {
+    if (memory.addPersonalItemUnlessFull) {
+      const result = await memory.addPersonalItemUnlessFull({ ...scope, content, maxItems: MAX_ITEMS });
+      return !result.full;
+    }
     if ((await memory.listPersonalItems({ ...scope })).length >= MAX_ITEMS) return false;
     await memory.addPersonalItem({ ...scope, content });
     return true;

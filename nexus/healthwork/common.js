@@ -72,7 +72,11 @@ const which = found => `Which one: ${found.ambiguous.slice(0, 6).map(patient => 
 // Loads the person's patients and resolves a name. `{ patient }` when found, `{ reply }` when Kyro should say something, or null when there are no
 // patients at all (so ordinary talk is never taken by this toolkit).
 async function resolvePatient(ctx, query, { quiet = false } = {}) {
-  const patients = await ctx.store.list({ tenantId: ctx.tenantId, userId: ctx.userId, collection: "patient" });
+  // Found live (healthwork audit): the store's own list() defaults to its newest 1000 rows when no
+  // limit is given, but MAX_PATIENTS below explicitly allows up to 5000 -- a health worker with more
+  // than 1000 patients would have this silently fail to find any patient older than that window
+  // ("I don't have a patient called X" for someone who plainly is one), not just at export/erasure time.
+  const patients = await ctx.store.list({ tenantId: ctx.tenantId, userId: ctx.userId, collection: "patient", limit: MAX_PATIENTS });
   if (!patients.length) return null;
   const found = findPatient(patients, query);
   if (found?.patient) return { patient: found.patient, patients };
@@ -84,7 +88,15 @@ async function resolvePatient(ctx, query, { quiet = false } = {}) {
 const dayWords = (day, today) => `${describeDay(day, today)}${String(day).slice(0, 4) !== String(today).slice(0, 4) ? ` ${String(day).slice(0, 4)}` : ""}`;
 
 const record = (ctx, collection, data) => ctx.store.add({ tenantId: ctx.tenantId, userId: ctx.userId, collection, data });
-const listOf = (ctx, collection) => ctx.store.list({ tenantId: ctx.tenantId, userId: ctx.userId, collection });
+// Found live (healthwork audit): every read in this module -- patient removal, monthly reports, a
+// patient's printed record, and "export everything this health worker recorded" -- goes through this
+// one helper, which left the store's own list() at its default 1000-row window instead of the store's
+// real 5000-row ceiling (the same number MAX_PATIENTS already treats as this module's real cap). A
+// worker whose combined visit/dose/pregnancy/referral/dispense history for one collection passed 1000
+// had older rows silently vanish from all four of those, including the export explicitly labelled
+// "exactly as recorded," and a deleted patient's older records could survive "remove this patient...
+// this cannot be undone" untouched.
+const listOf = (ctx, collection) => ctx.store.list({ tenantId: ctx.tenantId, userId: ctx.userId, collection, limit: MAX_PATIENTS });
 const nameMap = patients => new Map(patients.map(patient => [patient.memoryId, patient]));
 const tag = patient => `${patient.data.name} (#${patient.number})`;
 

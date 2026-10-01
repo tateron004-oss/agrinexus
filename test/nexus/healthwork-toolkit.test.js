@@ -8,7 +8,7 @@ const { HealthRecordRepository } = require("../../nexus/healthwork/store.js");
 const { FarmRecordRepository } = require("../../nexus/farmwork/store.js");
 const { healthWorkLine } = require("../../nexus/healthwork/brief.js");
 const { readVitals, conditionOf } = require("../../nexus/healthwork/visits.js");
-const { parseAge, ageWords } = require("../../nexus/healthwork/common.js");
+const { parseAge, ageWords, listOf, resolvePatient, MAX_PATIENTS } = require("../../nexus/healthwork/common.js");
 const { family, outstanding } = require("../../nexus/healthwork/immunisation.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { farmWorkTurn } = require("../../nexus/farmwork/index.js");
@@ -56,6 +56,23 @@ test("ages are worked out by the calendar and shown plainly", () => {
   for (const [text, words] of [["34", "about 34 years"], ["6 months", "about 6 months"], ["3 weeks", "about 3 weeks"], ["2 days", "about 2 days"], ["18 months", "about 18 months"], ["10 weeks", "about 10 weeks"]]) { const age = parseAge(text, today); assert.equal(ageWords(age.born, age.approx, today), words, text); }
   assert.equal(ageWords(parseAge("12 March 2024", today).born, false, today), "2 years");
   for (const bad of ["200", "abc", "", "-3", "tomorrow"]) assert.equal(parseAge(bad, today), null, bad);
+});
+
+// Found live (healthwork audit): every read in this module funnels through listOf()/resolvePatient(),
+// which called the store's list() with no limit at all -- silently taking its default 1000-row window
+// instead of the module's own documented 5000-patient ceiling (MAX_PATIENTS). A health worker with more
+// than 1000 records in one collection would have older patients become unfindable, and older visits,
+// doses, pregnancies, referrals, and dispenses silently vanish from monthly reports, a patient's printed
+// record, "remove this patient and everything about them" (data the module's own store.js says "must be
+// erasable for good"), and the export explicitly labelled "exactly as recorded."
+test("listOf and resolvePatient ask the store for up to this module's real record ceiling, not the store's smaller default window", async () => {
+  const seen = [];
+  const spyStore = { list: async args => { seen.push(args); return []; } };
+  const ctx = { store: spyStore, tenantId: "t1", userId: "u1" };
+  await listOf(ctx, "visit");
+  await resolvePatient(ctx, "Mary");
+  assert.equal(seen[0].limit, MAX_PATIENTS, "listOf must ask for up to the module's real ceiling");
+  assert.equal(seen[1].limit, MAX_PATIENTS, "resolvePatient must ask for up to the module's real ceiling");
 });
 
 // ---------- registering ----------
@@ -400,6 +417,26 @@ test("the planner answers health words itself, turns a letter into a real docume
   let consulted = false; const spy = new Proxy(fakeFarmStore(), { get(target, prop) { if (prop === "getSession") consulted = true; return target[prop]; } });
   const emergency = await planner({ healthWork: { store: spy }, companion: { turn: async ({ command: given }) => (/help now/i.test(given.text) ? "EMERGENCY FIRST" : null) } }).plan({ command: command("I need help now"), context: {} });
   assert.equal(emergency.response, "EMERGENCY FIRST"); assert.equal(consulted, false);
+});
+
+test("a restricted account (health-record-write) cannot reach the health toolkit through plain conversation -- found live: every other real PHI-write surface checks userIsRestrictedFrom, but the planner's health branch never did, so an Investor/Provider Reviewer/guest account could register, amend, or erase real patient records just by talking to Kyro", async () => {
+  let consulted = false;
+  const spy = new Proxy(fakeFarmStore(), { get(target, prop) { if (prop === "getSession") consulted = true; return target[prop]; } });
+  const healthWork = { store: spy, notifications: null, nameOf: async () => "Amina" };
+  const restrictedContext = { timeZone: "Africa/Nairobi", isRestrictedFrom: restriction => restriction === "health-record-write" };
+  // Nothing else in this fixture handles patient-registration text, so once the health toolkit is
+  // correctly skipped the request falls all the way through to the AI model -- which this fixture's
+  // model.plan() deliberately throws on, proving the toolkit's store was never consulted rather than
+  // asserting anything about that particular error message.
+  await assert.rejects(planner({ healthWork }).plan({ command: command("Register a patient called Mary Akinyi, 34, female, Kibera"), context: restrictedContext }));
+  assert.equal(consulted, false, "a restricted account's message must never reach the health toolkit's store at all");
+
+  // A context restricted from something else entirely (or not restricted at all) is unaffected.
+  const store = fakeFarmStore();
+  const normalWho = worker({ store }); await registerMary(normalWho);
+  const answer = await planner({ healthWork: { store, notifications: null, nameOf: async () => "Amina" } })
+    .plan({ command: command("Show Mary's record"), context: { timeZone: "Africa/Nairobi", isRestrictedFrom: restriction => restriction === "external-transaction" } });
+  assert.equal(answer.application, "conversation"); assert.match(answer.response, /Mary Akinyi/);
 });
 
 test("the runtime builds the health repository, gives it to the planner and the brief", () => {

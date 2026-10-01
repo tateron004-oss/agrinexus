@@ -126,14 +126,19 @@ async function communityTurn({ text, store, notifications, tenantId, userId, nam
         if (!staff) return null;
         const pending = await store.getPending({ tenantId, userId });
         if (!pending || new Date(pending.content.expiresAt).getTime() < now.getTime()) { if (pending) await store.clearPending({ tenantId, userId }); return "There is no announcement waiting (they expire after ten minutes). Say \"announce: …\" to prepare one."; }
-        const sentToday = (await store.listAnnouncements({ tenantId, limit: 20 })).filter(row => row.content.day === today).length;
-        if (sentToday >= MAX_ANNOUNCEMENTS_PER_DAY) { await store.clearPending({ tenantId, userId }); return "Three announcements have already gone out today, which is the limit. Please try again tomorrow."; }
         const optedOut = new Set(await store.optOuts({ tenantId }));
         const recipients = (await store.pushRecipients({ tenantId, limit: 5000 })).filter(id => !optedOut.has(id));
-        const announcementId = await store.addAnnouncement({ tenantId, userId, content: { kind: "announcement", text: pending.content.text, day: today, by: clean(userName).slice(0, 60), recipients: recipients.length, sentAt: now.toISOString() } });
+        // Found live: the daily cap was re-checked here with a plain read, no lock -- two different staff
+        // members, each having independently prepared their own pending announcement, could both pass this
+        // check and both insert, pushing the tenant past its daily limit. addAnnouncementUnlessCapped()
+        // re-checks and inserts under one transaction-scoped advisory lock, the same way addReport()'s own
+        // numbering is already serialized.
+        const result = await store.addAnnouncementUnlessCapped({ tenantId, userId, today, maxPerDay: MAX_ANNOUNCEMENTS_PER_DAY,
+          content: { kind: "announcement", text: pending.content.text, day: today, by: clean(userName).slice(0, 60), recipients: recipients.length, sentAt: now.toISOString() } });
+        if (result.capped) { await store.clearPending({ tenantId, userId }); return "Three announcements have already gone out today, which is the limit. Please try again tomorrow."; }
         await store.clearPending({ tenantId, userId });
         let sent = 0;
-        for (const id of recipients) { try { await push(id, "Community announcement", pending.content.text, `announce:${announcementId}:${id}`); sent += 1; } catch { /* one failure must not stop the rest */ } }
+        for (const id of recipients) { try { await push(id, "Community announcement", pending.content.text, `announce:${result.announcementId}:${id}`); sent += 1; } catch { /* one failure must not stop the rest */ } }
         return `Sent to ${sent} ${sent === 1 ? "person" : "people"}. It's recorded, and anyone can read it later by asking "what's new from the community?".`;
       }
       case "opt-out": { await store.setOptOut({ tenantId, userId, value: true }); return 'Done. You won\'t get community announcements. Say "start community announcements" to get them again. Emergency alerts from your own circle are separate and unaffected.'; }

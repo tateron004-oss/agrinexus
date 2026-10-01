@@ -96,6 +96,25 @@ class AuthoritativeTaskEngine {
     }
     if (["cancelled", "skipped"].includes(step.state)) throw new NexusRuntimeError("step_not_executable", `A ${step.state} step cannot execute.`, 409);
     const taskWithSteps = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
+    // Found live (authoritative-engine audit): confirmation used to be checked ONLY per-candidate, using
+    // each candidate tool's OWN confirmation_required flag (below) -- never the step's own
+    // confirmation_state, which is set once at creation from the PRIMARY tool and updated only by
+    // approve()/reject(). A step whose primary tool required confirmation and was explicitly REJECTED
+    // still fell through to a fallback tool that doesn't independently require confirmation, which the
+    // per-candidate check never denied -- executing the exact real action the person said no to. This is
+    // the engine's own guarantee, not something every caller can be trusted to replicate: executeTask()
+    // handles "required" and "rejected" proactively before ever calling execute() (see its own comments),
+    // but execute() is also a separately routed, directly callable endpoint (POST .../execute), so it must
+    // hold this invariant itself regardless of caller. Once the step's own state is anything but
+    // "not_required" or "approved", NO candidate -- primary or fallback -- may run.
+    if (step.confirmation_state && !["not_required", "approved"].includes(step.confirmation_state)) {
+      const denied = new NexusRuntimeError("confirmation_required", step.confirmation_state === "rejected"
+        ? "This step was declined and cannot execute." : "This step requires confirmation that was never given.", 409);
+      denied.confirmationState = step.confirmation_state;
+      await this.audit.record({ tenantId: context.tenantId, actorId: context.userId, correlationId: taskWithSteps?.correlationId,
+        taskId, eventType: "tool.denied", outcome: "denied", metadata: { stepId, code: denied.code, message: denied.message } });
+      throw denied;
+    }
     const dependencies = new Set(step.depends_on || []);
     const incomplete = (taskWithSteps?.steps || []).filter(candidate => dependencies.has(candidate.step_id) && candidate.state !== "completed");
     if (incomplete.length || dependencies.size > (taskWithSteps?.steps || []).filter(candidate => dependencies.has(candidate.step_id)).length) {
@@ -321,6 +340,19 @@ class AuthoritativeTaskEngine {
         const persisted = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
           nextState: "awaiting_confirmation", reason: "Step requires user confirmation before proceeding" });
         return { task: persisted, state: "awaiting_confirmation", pendingStepId: ready.step_id, receipts, completed: false };
+      }
+      // Found live: a rejected step fell straight through to execute() below (now denied by its own
+      // step-level confirmation gate -- see execute()'s comment), which threw with attemptedExecution:false
+      // and landed the whole task in "blocked" via blockOnUnrecoverableFailure -- the same terminal state
+      // this file uses for a genuine operational fault, permanently misclassifying a person's ordinary "no"
+      // as something needing operator attention. Cancelling here instead -- the same outcome
+      // BehaviorSpine.confirm() already reaches one layer up for the live-conversation path -- makes that
+      // correct outcome hold at the engine itself for every caller, not just the one that happens to
+      // replicate it.
+      if (ready.confirmation_state === "rejected") {
+        const persisted = await this.transition({ tenantId: context.tenantId, taskId, actorId: context.userId,
+          nextState: "cancelled", reason: "Step was declined; task cancelled" });
+        return { task: persisted, state: "cancelled", pendingStepId: ready.step_id, receipts, completed: false };
       }
       let result;
       try {
