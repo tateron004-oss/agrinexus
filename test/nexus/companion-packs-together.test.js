@@ -14,6 +14,11 @@ function plannerWithEverything() {
   const medicationStore = {
     async listMedications() { return medRows.filter(row => row.content.kind === "medication").map(row => ({ memoryId: row.memoryId, content: row.content })); },
     async addMedication({ content }) { medRows.push({ memoryId: `m${++n}`, content }); },
+    async addMedicationUnlessCapped({ content, maxMedications }) {
+      const count = medRows.filter(row => row.content.kind === "medication" && row.content.active !== false).length;
+      if (count >= maxMedications) return { capped: true, count };
+      const memoryId = `m${++n}`; medRows.push({ memoryId, content }); return { memoryId, content };
+    },
     async updateMedication() { return true; }, async removeMedication() { return true; },
     async dosesForDay() { return []; }, async createDose() {}, async updateDose() {}, async getDose() { return null; },
     async listAllActiveMedications() { return []; }, async listPendingDoses() { return []; }
