@@ -30,7 +30,7 @@ function createBusinessExecutor({ repository, access, consents, env }) {
       throw error;
     }
     const result = await voiceDispatch.run({
-      command: String(input?.command || ""), args: input?.args || {}, confirmed: true, businessRequest
+      command: String(input?.command || ""), args: input?.args || {}, confirmed: true, businessRequest, timeZone: context?.timeZone
     });
     // A read with nothing to read yet ("show my business dashboard" before any workspace exists) is a true answer, not a
     // failure: it said so, and how to start, instead of surfacing as a 422 error.
