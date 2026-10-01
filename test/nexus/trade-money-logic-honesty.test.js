@@ -59,18 +59,41 @@ async function post(pathname, body = {}) {
 
 // Found live (money-logic audit): nothing marked a trade quote as "already
 // released" -- the same quote could be released an unlimited number of
-// times (a double-click, a client retry, a replayed request), crediting the
-// wallet again in full every time.
-test("releasing the same escrow quote twice does not double-credit the wallet", async () => {
+// times (a double-click, a client retry, a replayed request). Still guarded
+// as a record-integrity rule even though release no longer credits real
+// funds at all (see the real-fund-minting test below).
+test("releasing the same escrow quote twice is refused as a duplicate, with no real payment provider involved", async () => {
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const walletBefore = (await before.json()).profile.wallet;
+
   await post("/api/trade/advanced", { type: "quote", price: 650 });
   const first = await post("/api/trade/advanced", { type: "release" });
   assert.equal(first.status, 200);
-  const walletAfterFirst = first.body.profile.wallet;
-  assert.ok(walletAfterFirst >= 650, "the first release must credit the wallet");
+  assert.equal(first.body.tradeAdvancedResult.record.realFundsCredited, false, "release must disclose that no real funds were credited");
+  assert.equal(first.body.profile.wallet, walletBefore, "release must never touch the real spendable wallet");
 
   const second = await post("/api/trade/advanced", { type: "release" });
   assert.equal(second.status, 409, "a repeat release of the same quote must be refused");
   assert.match(second.body.error, /already been released/i);
+});
+
+// Found live (money-logic audit, real-fund-minting finding): /api/trade/
+// advanced's "release" credited the real spendable wallet based solely on a
+// quote the SAME caller had just created themselves, with no real payment
+// provider ever verifying anything. Confirmed live: looping quote(price)
+// then release 3 times with price 999999 minted $2,999,997 of real,
+// spendable wallet balance out of nothing. Fixed by no longer crediting the
+// wallet from this flow at all, since no real provider is wired into it.
+test("looping quote-then-release does not mint unlimited real wallet funds", async () => {
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const walletBefore = (await before.json()).profile.wallet;
+
+  for (let i = 0; i < 3; i += 1) {
+    await post("/api/trade/advanced", { type: "quote", price: 999999 });
+    const released = await post("/api/trade/advanced", { type: "release" });
+    assert.equal(released.status, 200);
+    assert.equal(released.body.profile.wallet, walletBefore, "each release in the loop must leave the real wallet untouched");
+  }
 });
 
 // Found live: order.total always assumed exactly 20 units regardless of
@@ -193,6 +216,28 @@ test("a non-finite wallet amount is refused, not silently credited", async () =>
   assert.ok(after.body.profile.wallet < balanceBefore + 1000, "the infinite request must not have been credited");
 });
 
+// Found live (money-logic audit, real-fund-minting finding): a credit had no
+// ceiling at all -- the real UI only ever sends a fixed $120 "M-Pesa
+// payment," but a direct caller could credit any amount, repeatedly, with no
+// real payment provider ever verifying it. Confirmed live: a single request
+// for $999,999 was accepted outright before this fix.
+test("a wallet credit is capped, since no real payment provider is connected", async () => {
+  const before = await post("/api/trade/wallet", { amount: 1 });
+  const balanceBefore = before.body.profile.wallet;
+
+  const huge = await post("/api/trade/wallet", { amount: 999999 });
+  assert.equal(huge.status, 400);
+  assert.match(huge.body.error, /cannot exceed/i);
+
+  const after = await post("/api/trade/wallet", { amount: 120 });
+  assert.equal(after.status, 200, JSON.stringify(after.body));
+  assert.equal(after.body.profile.wallet, balanceBefore + 120, "a credit within the cap must still work exactly as before");
+
+  const debit = await post("/api/trade/wallet", { amount: -50 });
+  assert.equal(debit.status, 200, "debits must be unaffected by the credit cap");
+  assert.equal(debit.body.profile.wallet, balanceBefore + 120 - 50);
+});
+
 // Same Infinity-bypass shape in /api/trade/advanced's quote and release
 // actions, which also feed straight into the wallet balance on release.
 test("a non-finite quote price is refused, and a non-finite release amount is refused", async () => {
@@ -295,9 +340,42 @@ test("settling an order pays the seller from the real order total, not a freight
   assert.ok(record.sellerNetAmount > order.total * 0.9, `expected the seller to receive close to the real order total minus the platform fee, got ${record.sellerNetAmount} for an order total of ${order.total}`);
 });
 
+// Found live (real-money audit, confirmed with a live spawned server): settlement credited the real
+// spendable wallet for the full order.total based solely on self-service stage advancement -- no
+// buyer, no real payment provider, ever involved. One account created a $999,999 order, advanced it
+// through every stage alone, and settled it: the wallet went from 5,990 to 980,989.02. Same shape and
+// same fix as the already-closed /api/trade/advanced "release" exploit: /api/trade/payment-checkout
+// genuinely calls the real Paystack/Flutterwave APIs, but nothing yet verifies their result (no
+// webhook receiver exists for either provider), so there is still no real signal anywhere that an
+// order was actually paid for. Settlement can no longer credit real funds until that verification
+// exists -- confirmed here the same way the release fix is confirmed just above.
+test("settling a self-created, self-advanced order no longer credits the real wallet, since no real payment provider ever verified it was paid", async () => {
+  const productsRes = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const product = (await productsRes.json()).products?.[0];
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const walletBefore = (await before.json()).profile.wallet;
+
+  const orderResult = await post("/api/trade/order", { productId: product.id, quantity: 500 });
+  const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
+  assert.ok(order.total > 10000, `expected a large self-chosen order total, got ${order.total}`);
+
+  await post("/api/trade/advance", { orderId: order.id }); // Packed -> In transit
+  await post("/api/trade/advance", { orderId: order.id }); // In transit -> Quality check
+  await post("/api/trade/logistics", { type: "delivery-confirm", orderId: order.id });
+
+  const settleResult = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
+  assert.equal(settleResult.status, 200, JSON.stringify(settleResult.body));
+  const { record } = settleResult.body.tradeLogisticsResult;
+  assert.equal(record.realFundsCredited, false, "the settlement record must honestly disclose that no real funds were credited");
+  assert.match(record.status, /no real payment provider has verified/i);
+  assert.equal(settleResult.body.profile.wallet, walletBefore, "a self-service settlement of a self-created order must never move the real wallet");
+});
+
 test("settling the same order twice does not double-credit the wallet", async () => {
   const productsRes = await fetch(`${base}/api/state`, { headers: { cookie } });
   const product = (await productsRes.json()).products?.[0];
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const walletBefore = (await before.json()).profile.wallet;
   const orderResult = await post("/api/trade/order", { productId: product.id, quantity: 3 });
   const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
   await post("/api/trade/advance", { orderId: order.id }); // Packed -> In transit
@@ -306,7 +384,7 @@ test("settling the same order twice does not double-credit the wallet", async ()
 
   const first = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
   assert.equal(first.status, 200);
-  const walletAfterFirst = first.body.profile.wallet;
+  assert.equal(first.body.profile.wallet, walletBefore, "a settlement must never credit the real wallet at all now");
 
   const second = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
   assert.equal(second.status, 409, "a repeat settlement of the same order must be refused");

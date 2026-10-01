@@ -112,10 +112,12 @@ function createMedicationService({ store, circle = null, push, notifications, de
           if (request.invalid === "name") return 'Tell me the medicine like this: "add medication metformin 500mg at 8am and 8pm".';
           if (request.invalid === "times") return `I couldn't read the times for ${request.name}. Try "at 8am and 8pm" or "in the morning and evening".`;
           const existing = meds.find(item => item.content.name === request.name);
-          if (!existing && meds.length >= MAX_MEDICATIONS) return "That's the most medicines I can keep reminders for (twelve). Remove one first.";
           const content = { kind: "medication", name: request.name, dose: request.dose, times: request.times, timeZone: zone, active: true, createdAt: at.toISOString() };
           if (existing) await store.updateMedication({ tenantId, userId, memoryId: existing.memoryId, content: { ...existing.content, ...content, createdAt: existing.content.createdAt } });
-          else await store.addMedication({ tenantId, userId, content });
+          else {
+            const added = await store.addMedicationUnlessCapped({ tenantId, userId, content, maxMedications: MAX_MEDICATIONS });
+            if (added.capped) return "That's the most medicines I can keep reminders for (twelve). Remove one first.";
+          }
           let pushable = true;
           try { pushable = devices?.listPushable ? (await devices.listPushable({ tenantId, userId })).length > 0 : true; } catch { pushable = true; }
           const members = await sharing({ tenantId, userId }).catch(() => []);

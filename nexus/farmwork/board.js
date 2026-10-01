@@ -26,12 +26,13 @@ async function handle(ctx) {
     if (!quantity && !/\b(?:for sale|wanted|selling|buying|listing|advert|board|to sell)\b/i.test(t)) return null; // "post office hours" is not this
     if (!quantity || !item || item.length > 50) return "To post, give me the amount, what it is, and the price, like \"post for sale: 500 kg maize at 40 per kg\".";
     if (!per && !parseMoney(body)) return "What price do you want? Say it like \"at 40 per kg\" (or \"price 20000 for the lot\").";
-    const mine = (await ctx.store.listPublic({ tenantId: ctx.tenantId, collection: "listing" })).filter(record => record.userId === ctx.userId && record.data.status === "active");
-    if (mine.length >= MAX_ACTIVE_PER_PERSON) return "You have thirty listings up already. Remove or mark some sold first.";
     const name = (ctx.nameOf ? await ctx.nameOf({ tenantId: ctx.tenantId, userId: ctx.userId }).catch(() => "") : "") || "A farmer";
     const farm = (await ctx.store.list({ ...scope, collection: "farm" }))[0];
     const lot = !per ? parseMoney(body) : null;
-    const record = await ctx.store.add({ tenantId: ctx.tenantId, userId: ctx.userId, collection: "listing", data: { type: wantWord || /\b(?:wanted|buying|looking for|want to buy)\b/i.test(t) ? "buy" : "sell", item, qty: quantity.value, unit: quantity.unit, price: per ? per.amount : lot ? round(lot.amount / quantity.value, 2) : null, per: per?.per || quantity.unit, currency: per?.currency || lot?.currency || "", seller: name, area: farm?.data.location || "", day: ctx.today, status: "active" } });
+    const added = await ctx.store.addUnlessPersonCapped({ tenantId: ctx.tenantId, userId: ctx.userId, collection: "listing", maxPerPerson: MAX_ACTIVE_PER_PERSON,
+      data: { type: wantWord || /\b(?:wanted|buying|looking for|want to buy)\b/i.test(t) ? "buy" : "sell", item, qty: quantity.value, unit: quantity.unit, price: per ? per.amount : lot ? round(lot.amount / quantity.value, 2) : null, per: per?.per || quantity.unit, currency: per?.currency || lot?.currency || "", seller: name, area: farm?.data.location || "", day: ctx.today, status: "active" } });
+    if (added.capped) return "You have thirty listings up already. Remove or mark some sold first.";
+    const record = added.record;
     return `Posted. ${describeListing(record)}. Everyone in your community can see it (never your phone number). Say "remove listing ${record.number}" or "mark listing ${record.number} sold" when it's done.`;
   }
 

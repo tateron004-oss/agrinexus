@@ -196,6 +196,29 @@ class MemoryRepository {
     return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
   }
 
+  // Found live (brief/memory follow-up audit, same shape as WellnessRepository.addEntryUnlessCapped()):
+  // the MAX_ENTRIES cap was enforced by the caller (farm/log.js) with a plain check-then-act read
+  // (listFarmEntries, then addFarmEntry if under the cap), with no lock -- concurrent "log" requests
+  // from the same person (two devices, a retried voice/phone turn) that are all in flight before any
+  // write lands all observe the same stale count and all pass, letting a burst of concurrent writes
+  // push past the 5000-entry cap by as many as raced together. Serializes the count-check and the
+  // insert under one transaction-scoped advisory lock keyed per person.
+  async addFarmEntryUnlessCapped({ tenantId, userId, content, maxEntries }) {
+    const lockKey = `farm-entries:${tenantId}:${userId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const result = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='farm_log' and deleted_at is null`, [tenantId, userId]);
+      const count = Number((result.rows || result)[0]?.n || 0);
+      if (count >= maxEntries) return { capped: true, count };
+      const saved = await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','farm_log',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','internal') returning memory_id`,
+      [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.metric} ${content.value ?? content.below ?? ""}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+    });
+  }
+
   async listFarmEntries({ tenantId, userId, limit = 5000 }) {
     const result = await this.db.query(`select memory_id,content from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='farm_log' and deleted_at is null
