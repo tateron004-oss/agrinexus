@@ -45104,7 +45104,13 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (action === "add_tracking_event") {
     const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId && nexusOperationsOwned(item, user) && !/cancelled|delivered/.test(item.status || "")) || latestActiveShipment(store, user) || runNexusOperationsAction(db, { action: "create_shipment" }, user).record;
     const eventStatus = cleanOpsText(body.status || (/delivered/i.test(command) ? "delivered" : /delayed/i.test(command) ? "delayed" : /temperature/i.test(command) ? "temperature-issue" : /in[- ]?transit/i.test(command) ? "in-transit" : "picked-up"), 80);
-    const event = { eventId: nexusOperationId("NX-TRK"), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
+    // Found live (Nexus Operations sibling audit, same shape as droneMissionEvents/heatRiskReports above):
+    // trackingEvents is in NEXUS_OPERATION_COLLECTIONS (not the audit-trail exclusion set), so
+    // collectOwnedOperationsRecords/eraseOwnedOperationsRecords scan it expecting a real ownerId that never
+    // existed here -- a user's own shipment tracking notes (pickup location, "temperature issue" notes, etc.)
+    // silently survived erasure forever and were absent from export. The top-level array was also never
+    // capped (only the denormalized per-shipment copy below is).
+    const event = { eventId: nexusOperationId("NX-TRK"), ownerId: nexusOperationsOwnerKey(user), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
     store.trackingEvents.unshift(event);
     store.trackingEvents = store.trackingEvents.slice(0, 1000);
     shipment.status = eventStatus;
