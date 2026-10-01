@@ -190,9 +190,24 @@ class MemoryRepository {
   // item under the cap could both read the same under-cap count and both insert, overshooting the cap
   // instead of the second one being told "Your lists are full." An advisory lock scoped to this person's
   // own personal_items serializes concurrent adds the same way farm_records' per-collection lock does.
-  async addPersonalItemUnlessFull({ tenantId, userId, content, maxItems }) {
+  //
+  // Found live (personal-items follow-up audit): items.js's own duplicate check (todo-add/event-add: "is
+  // this already on the list/calendar?") had the identical unguarded check-then-act shape, just for
+  // duplicate content instead of the cap -- read existing items, decide, then call add() separately. Two
+  // near-simultaneous identical requests (a client retry, or the same recognized utterance twice) could
+  // both see "no duplicate yet" and both insert, instead of the second one being told it's already there.
+  // `isDuplicate`, when passed, is checked against this content's own kind's existing rows inside the same
+  // locked transaction, before the cap check -- generalizing the guard instead of adding a second one.
+  async addPersonalItemUnlessFull({ tenantId, userId, content, maxItems, isDuplicate = null }) {
     return this.db.transaction(async trx => {
       await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`personal_items:${tenantId}:${userId}`]);
+      if (isDuplicate) {
+        const existingResult = await trx.query(`select content from nexus_memory_items
+          where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='personal_items' and deleted_at is null and content->>'kind'=$3`,
+        [tenantId, userId, content.kind]);
+        const duplicate = (existingResult.rows || existingResult).map(row => row.content).find(isDuplicate);
+        if (duplicate) return { full: false, duplicate };
+      }
       const countResult = await trx.query(`select count(*)::int as n from nexus_memory_items
         where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='personal_items' and deleted_at is null`, [tenantId, userId]);
       const count = Number((countResult.rows || countResult)[0]?.n || 0);
