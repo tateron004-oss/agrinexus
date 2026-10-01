@@ -340,9 +340,42 @@ test("settling an order pays the seller from the real order total, not a freight
   assert.ok(record.sellerNetAmount > order.total * 0.9, `expected the seller to receive close to the real order total minus the platform fee, got ${record.sellerNetAmount} for an order total of ${order.total}`);
 });
 
+// Found live (real-money audit, confirmed with a live spawned server): settlement credited the real
+// spendable wallet for the full order.total based solely on self-service stage advancement -- no
+// buyer, no real payment provider, ever involved. One account created a $999,999 order, advanced it
+// through every stage alone, and settled it: the wallet went from 5,990 to 980,989.02. Same shape and
+// same fix as the already-closed /api/trade/advanced "release" exploit: /api/trade/payment-checkout
+// genuinely calls the real Paystack/Flutterwave APIs, but nothing yet verifies their result (no
+// webhook receiver exists for either provider), so there is still no real signal anywhere that an
+// order was actually paid for. Settlement can no longer credit real funds until that verification
+// exists -- confirmed here the same way the release fix is confirmed just above.
+test("settling a self-created, self-advanced order no longer credits the real wallet, since no real payment provider ever verified it was paid", async () => {
+  const productsRes = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const product = (await productsRes.json()).products?.[0];
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const walletBefore = (await before.json()).profile.wallet;
+
+  const orderResult = await post("/api/trade/order", { productId: product.id, quantity: 500 });
+  const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
+  assert.ok(order.total > 10000, `expected a large self-chosen order total, got ${order.total}`);
+
+  await post("/api/trade/advance", { orderId: order.id }); // Packed -> In transit
+  await post("/api/trade/advance", { orderId: order.id }); // In transit -> Quality check
+  await post("/api/trade/logistics", { type: "delivery-confirm", orderId: order.id });
+
+  const settleResult = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
+  assert.equal(settleResult.status, 200, JSON.stringify(settleResult.body));
+  const { record } = settleResult.body.tradeLogisticsResult;
+  assert.equal(record.realFundsCredited, false, "the settlement record must honestly disclose that no real funds were credited");
+  assert.match(record.status, /no real payment provider has verified/i);
+  assert.equal(settleResult.body.profile.wallet, walletBefore, "a self-service settlement of a self-created order must never move the real wallet");
+});
+
 test("settling the same order twice does not double-credit the wallet", async () => {
   const productsRes = await fetch(`${base}/api/state`, { headers: { cookie } });
   const product = (await productsRes.json()).products?.[0];
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } });
+  const walletBefore = (await before.json()).profile.wallet;
   const orderResult = await post("/api/trade/order", { productId: product.id, quantity: 3 });
   const order = orderResult.body.profile.orders[orderResult.body.profile.orders.length - 1];
   await post("/api/trade/advance", { orderId: order.id }); // Packed -> In transit
@@ -351,7 +384,7 @@ test("settling the same order twice does not double-credit the wallet", async ()
 
   const first = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
   assert.equal(first.status, 200);
-  const walletAfterFirst = first.body.profile.wallet;
+  assert.equal(first.body.profile.wallet, walletBefore, "a settlement must never credit the real wallet at all now");
 
   const second = await post("/api/trade/logistics", { type: "settlement", orderId: order.id });
   assert.equal(second.status, 409, "a repeat settlement of the same order must be refused");

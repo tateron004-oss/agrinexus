@@ -11078,6 +11078,18 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       grossAmount: Number(order.total) || amount,
       currency
     });
+    // Found live (real-money audit, confirmed with a live spawned server): settlement credited the
+    // real spendable wallet for the full order.total based solely on this caller's own stage
+    // advancement (order.stage === "Delivered") -- itself entirely self-service, with no buyer and no
+    // real payment provider ever involved. A single account could create an order with an arbitrary
+    // total, advance it through every stage alone, and settle it: confirmed live, the wallet went from
+    // 5,990 to 980,989.02 off one $999,999 self-created order. Same shape and same fix as the already-
+    // closed /api/trade/advanced "release" exploit: /api/trade/payment-checkout genuinely calls the
+    // real Paystack/Flutterwave APIs, but nothing in this codebase yet verifies their result (no webhook
+    // receiver exists for either provider), so there is still no real signal anywhere that an order was
+    // actually paid for. Settlement can no longer credit real funds until that verification exists --
+    // it still records what would have been released, for the same record-keeping/UI purposes as
+    // before, just without the wallet mutation, matching the release fix's realFundsCredited: false.
     const tx = {
       id: crypto.randomUUID(),
       provider: "AgriNexus settlement",
@@ -11088,13 +11100,15 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       currency,
       type: "credit",
       status: "settlement-prepared",
+      realFundsCredited: false,
       orderId: order.id,
       logisticsId: record.id,
       createdAt: record.createdAt
     };
     record.platformFee = fee;
     record.sellerNetAmount = fee.sellerNetAmount;
-    db.profile.wallet = Number(db.profile.wallet || 0) + fee.sellerNetAmount;
+    record.realFundsCredited = false;
+    record.status = `${record.status} -- no real payment provider has verified this order was paid, so this did not credit your spendable wallet`;
     db.profile.walletTransactions.unshift(tx);
     db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
     order.settled = true;
