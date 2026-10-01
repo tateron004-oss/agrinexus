@@ -81,9 +81,17 @@ const tx = (date, type, amount, currency, category = "", description = "") => ({
 const ask = (command, transactions) => run({ command, businessRequest: async () => ({ body: { clients: transactions ? [ledgerClient(transactions)] : [] } }) });
 
 test("a summary question is answered from what was really logged, per currency and period", async () => {
-  const now = new Date().toISOString().slice(0, 10), month = now.slice(0, 7);
-  const rows = [tx(`${month}-01`, "income", 6000, "KES", "maize"), tx(`${month}-02`, "income", 4000, "KES", "beans"), tx(`${month}-03`, "expense", 1500, "KES", "seed"),
-    tx(`${month}-03`, "expense", 20, "USD", "app"), tx("2020-01-05", "expense", 999, "KES", "seed")];
+  // Found live: this used to hardcode day-of-month 01/02/03 for its "this
+  // month" fixtures, assuming "today" always falls on or after the 3rd --
+  // false on the 1st or 2nd of any month, when periodIn's own "this month"
+  // upper bound (today) excludes the fixture's later, still-future dates.
+  // today/month are derived from periodIn itself (the function under test),
+  // not recomputed independently, so this can't drift from its definition of
+  // "today" the way a second, hand-rolled date calculation could.
+  const today = periodIn("today", new Date()).from, month = today.slice(0, 7);
+  const day = n => { const d = `${month}-${String(n).padStart(2, "0")}`; return d <= today ? d : today; };
+  const rows = [tx(day(1), "income", 6000, "KES", "maize"), tx(day(2), "income", 4000, "KES", "beans"), tx(day(3), "expense", 1500, "KES", "seed"),
+    tx(day(3), "expense", 20, "USD", "app"), tx("2020-01-05", "expense", 999, "KES", "seed")];
   const both = await ask("How much did I make this month?", rows);
   assert.equal(both.status, "completed");
   assert.match(both.response, /^This month, in "Amina Farm": KES 10,000 income \(2 entries\)/);
