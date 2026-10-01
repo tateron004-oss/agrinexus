@@ -56,11 +56,12 @@ function readTempDb() {
   return JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
 }
 
-// A $1000 order at the default 2.5% platform fee settles for a $975 seller net payout -- the real,
-// order-tied amount trade.wallet_payment now posts (see server.js's fix), replacing the old fixed,
-// fabricated $120 credit this test file used to rely on.
+// A $1000 order at the default 2.5% platform fee would settle for a $975 seller net payout, but
+// settlement (see server.js's fix for the self-service wallet-crediting exploit) no longer credits the
+// real wallet for any order -- no real payment provider has ever verified one was actually paid for.
+// trade.wallet_payment still records the settlement attempt (walletTransactions), just honestly, with
+// realFundsCredited: false, replacing the old fixed, fabricated $120 credit this test file used to rely on.
 const TEST_ORDER_TOTAL = 1000;
-const EXPECTED_SETTLEMENT_NET = 975;
 
 function injectRun(status) {
   const db = readTempDb();
@@ -143,15 +144,16 @@ test("a run genuinely awaiting approval can still be approved and executes exact
   assert.equal(result.status, 200, JSON.stringify(result.body));
 
   const db = readTempDb();
-  assert.equal(db.profile.wallet, EXPECTED_SETTLEMENT_NET, "the one legitimate approval must still execute the step");
-  assert.equal((db.profile.walletTransactions || []).length, 1);
+  assert.equal(db.profile.wallet, 0, "settlement must never credit the real wallet, since no real payment provider verified this order was paid");
+  assert.equal((db.profile.walletTransactions || []).length, 1, "the one legitimate approval must still execute the step and record the attempt");
+  assert.equal(db.profile.walletTransactions[0].realFundsCredited, false);
 
   // Approving the very same run again, now that it is completed, must be refused.
   const secondAttempt = await approve(runId);
   assert.equal(secondAttempt.status, 409, JSON.stringify(secondAttempt.body));
   const afterSecondAttempt = readTempDb();
-  assert.equal(afterSecondAttempt.profile.wallet, EXPECTED_SETTLEMENT_NET, "a second approval of the same run must not credit the wallet again");
-  assert.equal((afterSecondAttempt.profile.walletTransactions || []).length, 1);
+  assert.equal(afterSecondAttempt.profile.wallet, 0);
+  assert.equal((afterSecondAttempt.profile.walletTransactions || []).length, 1, "a second approval of the same run must not execute the step again");
 });
 
 // Found live (GPS/cloud-agent audit): trade.wallet_payment used to unconditionally credit a fixed,

@@ -15,6 +15,29 @@ class WellnessRepository {
     [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.metric}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
     return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
   }
+  // Found live (nexus/ infrastructure sweep, same bug shape as setGoal's own read-delete-insert race
+  // above): the MAX_ENTRIES cap was enforced by the caller with a plain check-then-act read
+  // (listEntries, then addEntry if under the cap), with no lock -- concurrent "log" requests from the
+  // same person (two devices, a retried voice/phone turn) that are all in flight before any write
+  // lands all observe the same stale count and all pass, letting a burst of concurrent writes push
+  // past the 5000-entry cap by as many as raced together. Serializes the count-check and the insert
+  // under one transaction-scoped advisory lock keyed per person, the same pattern already proven for
+  // setGoal and this codebase's other per-person caps.
+  async addEntryUnlessCapped({ tenantId, userId, content, maxEntries }) {
+    const lockKey = `wellness-entries:${tenantId}:${userId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const result = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='wellness' and deleted_at is null`, [tenantId, userId]);
+      const count = Number((result.rows || result)[0]?.n || 0);
+      if (count >= maxEntries) return { capped: true, count };
+      const saved = await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','wellness',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','health') returning memory_id`,
+      [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.metric}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+    });
+  }
   async listEntries({ tenantId, userId, limit = 5000 }) {
     const result = await this.db.query(`select memory_id,content from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='wellness' and deleted_at is null

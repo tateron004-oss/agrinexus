@@ -71,6 +71,22 @@ test("a caller-supplied subjectId is ignored -- the subject is always the caller
   assert.equal(created[0].subjectId, "u3", "the forged subjectId must never be used");
 });
 
+// Found live (restriction-bypass follow-up audit): every direct REST health-write route, the legacy cloud
+// agent, and the plain-conversation healthWork toolkit are all gated on
+// userIsRestrictedFrom(user, "health-record-write") -- this canonical-tool executor was not, letting a
+// restricted account (Investor/Provider Reviewer) write a real PHI record once they approved the
+// confirmation prompt.
+test("a restricted account cannot write a real health record through this executor", async () => {
+  const { records, created } = fixture();
+  const execute = createHealthRecordExecutor({ records });
+  const restrictedContext = { tenantId: "t1", userId: "u1", isRestrictedFrom: restriction => restriction === "health-record-write" };
+  await assert.rejects(
+    () => execute({ input: { systolic: 140, diastolic: 90 }, context: restrictedContext, taskId: "task-1" }),
+    error => /This account type cannot write real health records\./.test(error.message) && error.code === "health_record_write_restricted" && error.status === 403
+  );
+  assert.equal(created.length, 0, "nothing must be persisted when the account is restricted");
+});
+
 test("a missing recordId or non-positive version does not verify", () => {
   assert.equal(verifyHealthRecordOutcome({ result: { persisted: true, recordId: "", version: 1 } }).verified, false);
   assert.equal(verifyHealthRecordOutcome({ result: { persisted: true, recordId: "rec-1", version: 0 } }).verified, false);

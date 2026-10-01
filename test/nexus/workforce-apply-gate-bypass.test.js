@@ -42,8 +42,10 @@ test.before(async () => {
   seedDb.profile.earnings = 0;
   seedDb.profile.applications = [];
   seedDb.profile.shiftSchedule = [];
-  if (!seedDb.profile.completedCourses.includes("digital-foundations")) {
-    seedDb.profile.completedCourses.push("digital-foundations");
+  const seedUser = seedDb.users.find(item => item.email === "user@agrinexus.org");
+  seedUser.completedCourses = seedUser.completedCourses || [];
+  if (!seedUser.completedCourses.includes("digital-foundations")) {
+    seedUser.completedCourses.push("digital-foundations");
   }
   fs.writeFileSync(tempDbPath, JSON.stringify(seedDb));
   server = spawn(process.execPath, ["server.js"], {

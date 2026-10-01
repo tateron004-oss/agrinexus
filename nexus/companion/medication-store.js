@@ -19,6 +19,29 @@ class MedicationRepository {
     [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.name}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
   }
   addMedication(args) { return this.insert(args); }
+  // Found live (companion follow-up audit, same shape as claimDoseSlot() above): the per-person
+  // MAX_MEDICATIONS cap was enforced by the caller (medications.js) with a plain check-then-act read
+  // (listMedications, then addMedication if under the cap), with no lock at all -- unlike this same
+  // file's own claimDoseSlot(), which already uses a transaction-scoped advisory lock for a different
+  // caller. Two concurrent "add medication" requests at 11/12 meds could both pass the stale check and
+  // both insert, exceeding the cap.
+  async addMedicationUnlessCapped({ tenantId, userId, content, maxMedications }) {
+    const lockKey = `medication-cap:${tenantId}:${userId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const result = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='medications' and deleted_at is null
+        and content->>'kind'='medication' and coalesce(content->>'active','true')<>'false'`, [tenantId, userId]);
+      const count = Number((result.rows || result)[0]?.n || 0);
+      if (count >= maxMedications) return { capped: true, count };
+      const memoryId = createId("memory");
+      await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','medications',$4,$5,$6::vector,'none',$7,0.8,0.9,'user_confirmed','health')`,
+      [memoryId, tenantId, userId, content, `${content.kind}: ${content.name}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { memoryId, content };
+    });
+  }
   createDose(args) { return this.insert({ ...args, content: { kind: "dose", ...args.content } }); }
 
   async listMedications({ tenantId, userId }) {

@@ -53,6 +53,30 @@ class CommunityRepository {
       return number;
     });
   }
+  // Found live (nexus/ infrastructure sweep, same bug shape as addAnnouncementUnlessCapped above):
+  // desk.js's MAX_OPEN_PER_PERSON cap was enforced by a plain check-then-act read (listReports, then
+  // addReport if under the cap), with no lock -- a burst of concurrent "report: ..." requests from one
+  // person (double-tap, retried voice/phone turn, multiple devices) could all read the same
+  // under-the-cap open count and all insert, pushing that person's open-report count past the limit
+  // with no bound on how far past. Serializes the cap check and the insert under one transaction-scoped
+  // advisory lock keyed per person, then reuses addReport()'s own tenant-scoped numbering lock inside
+  // the same transaction so numbering stays correctly serialized too.
+  async addReportUnlessCapped({ tenantId, userId, content, maxOpenPerPerson }) {
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`community_reports_cap:${tenantId}:${userId}`]);
+      const openResult = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='community_reports' and deleted_at is null
+        and content->>'kind'='report' and content->>'status' in ('open','in_progress')`, [tenantId, userId]);
+      const openCount = Number((openResult.rows || openResult)[0]?.n || 0);
+      if (openCount >= maxOpenPerPerson) return { capped: true, openCount };
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`community_reports:${tenantId}`]);
+      const numberResult = await trx.query(`select coalesce(max((content->>'number')::int),0) as n from nexus_memory_items
+        where tenant_id=$1 and purpose='community_reports' and content->>'kind'='report'`, [tenantId]);
+      const number = Number((numberResult.rows || numberResult)[0]?.n || 0) + 1;
+      await this.insert({ tenantId, userId, purpose: "community_reports", content: { ...content, number }, sensitivity: "sensitive" }, trx);
+      return { number };
+    });
+  }
   // A person's own reports, or (no userId) every report in the community, newest first.
   listReports({ tenantId, userId = null, limit = 500 }) { return this.select({ tenantId, userId, purpose: "community_reports", kind: "report", limit }); }
   async getReport({ tenantId, number }) {
