@@ -29,15 +29,19 @@ function normalizeItems(rawItems) {
 }
 
 function createListsCreateExecutor({ records }) {
-  if (!records?.create || !records?.list) throw new Error("A record repository is required.");
+  if (!records?.create || !records?.list || !records?.createUnlessCapped) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context, taskId }) {
-    const existing = await records.list({ tenantId: context.tenantId, ownerId: context.userId, workspaceId: WORKSPACE_ID, recordType: RECORD_TYPE, limit: MAX_LISTS_PER_ACCOUNT });
-    if (existing.length >= MAX_LISTS_PER_ACCOUNT) return { persisted: false, reason: "list_cap_reached", maxLists: MAX_LISTS_PER_ACCOUNT };
     const title = String(input.title || "Untitled list").trim().slice(0, 160);
     const items = normalizeItems(input.items);
-    const inserted = await records.create({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
+    // Found live: the cap was enforced by a plain check-then-act (records.list() to count, then
+    // create() if under the cap) with no lock between them -- two concurrent create calls one-under
+    // the cap could both pass the check and both insert. createUnlessCapped() re-checks and inserts
+    // under one transaction-scoped advisory lock, the same pattern already proven elsewhere in this
+    // codebase (RecordRepository's own claimCooldown()).
+    const inserted = await records.createUnlessCapped({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
       taskId, workspaceId: WORKSPACE_ID, recordType: RECORD_TYPE, classification: "standard",
-      data: { title, items }, provenance: { source: "nexus-agent", command: input.command || "" } });
+      data: { title, items }, provenance: { source: "nexus-agent", command: input.command || "" } }, { maxCount: MAX_LISTS_PER_ACCOUNT });
+    if (inserted.capped) return { persisted: false, reason: "list_cap_reached", maxLists: MAX_LISTS_PER_ACCOUNT };
     return { listId: inserted.record_id, title, items, itemCount: items.length, persisted: true };
   };
 }

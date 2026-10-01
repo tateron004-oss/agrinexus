@@ -23,6 +23,40 @@ class RecordRepository {
     });
   }
 
+  // Found live (lists-toolkit follow-up audit): createListsCreateExecutor() enforced the
+  // per-account MAX_LISTS_PER_ACCOUNT cap with a plain check-then-act (records.list() to count, then
+  // create() if under the cap), with no lock between them -- unlike this same class's own
+  // claimCooldown(), built specifically to close this exact gap for a different caller. Two concurrent
+  // create calls for the same account both one-under the cap could both read the same count and both
+  // insert, pushing the account over the cap it exists to enforce (and, for lists specifically, past
+  // the exact row count the read-side query window supports -- see executor.js's own comment on why
+  // that isn't just a soft overage). Generic across callers the same way create()/list() already are,
+  // rather than one-off per feature.
+  async createUnlessCapped(item, { maxCount, countFilter = {} } = {}) {
+    if (!item.tenantId || !item.ownerId || !item.workspaceId || !item.recordType || !item.classification) throw new Error("Record tenant, owner, workspace, type, and classification are required.");
+    if (!CLASSIFICATIONS.has(item.classification)) throw new Error("Unsupported record classification.");
+    if ((item.classification === "health" || item.classification === "regulated") && !item.subjectId) throw new Error("Regulated records require a subject.");
+    const recordId = item.recordId || createId("record");
+    const lockKey = `record-cap:${item.tenantId}:${item.workspaceId}:${item.recordType}:${countFilter.ownerId || item.ownerId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const values = [item.tenantId]; let where = "tenant_id=$1 and deleted_at is null";
+      for (const [column, value] of [["subject_id", countFilter.subjectId], ["owner_id", countFilter.ownerId ?? item.ownerId], ["workspace_id", item.workspaceId], ["record_type", item.recordType]])
+        if (value) { values.push(value); where += ` and ${column}=$${values.length}`; }
+      const counted = await trx.query(`select count(*)::int as n from nexus_records where ${where}`, values);
+      const count = Number((counted.rows || counted)[0]?.n || 0);
+      if (count >= maxCount) return { capped: true, count };
+      const inserted = await trx.query(`insert into nexus_records
+        (record_id,tenant_id,subject_id,owner_id,task_id,workspace_id,record_type,classification,state,data,provenance,retention_until)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *`,
+      [recordId,item.tenantId,item.subjectId||null,item.ownerId,item.taskId||null,item.workspaceId,item.recordType,item.classification,
+        item.state||"active",item.data||{},item.provenance||{},item.retentionUntil||null]);
+      await trx.query(`insert into nexus_record_versions(version_id,record_id,version,data,provenance,changed_by)
+        values ($1,$2,1,$3,$4,$5)`,[createId("recordVersion"),recordId,item.data||{},item.provenance||{},item.ownerId]);
+      return (inserted.rows||inserted)[0];
+    });
+  }
+
   async update({ tenantId, recordId, expectedVersion, actorId, data, provenance = {} }) {
     return this.db.transaction(async trx => {
       const result=await trx.query(`update nexus_records set data=$4,provenance=$5,version=version+1,updated_at=now()

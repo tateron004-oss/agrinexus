@@ -16,6 +16,14 @@ function fixture(existingRows = []) {
       return row;
     },
     list: async ({ workspaceId, recordType }) => [...rows.values()].filter(row => (!workspaceId || row.workspaceId === workspaceId || true) && true),
+    createUnlessCapped: async (input, { maxCount } = {}) => {
+      if (rows.size >= maxCount) return { capped: true, count: rows.size };
+      counter += 1;
+      const row = { record_id: `rec_${counter}`, version: 1, data: input.data, provenance: input.provenance,
+        tenantId: input.tenantId, ownerId: input.ownerId, updated_at: "2026-09-16T00:00:00.000Z" };
+      rows.set(row.record_id, row);
+      return row;
+    },
     update: async ({ recordId, expectedVersion, data, provenance }) => {
       const existing = rows.get(recordId);
       if (!existing || existing.version !== expectedVersion) throw new Error("Record version conflict or record unavailable.");
@@ -29,6 +37,7 @@ function fixture(existingRows = []) {
 
 test("throws without a record repository", () => {
   assert.throws(() => createListsCreateExecutor({}), /record repository is required/);
+  assert.throws(() => createListsCreateExecutor({ records: { create: async () => {}, list: async () => [] } }), /record repository is required/, "createUnlessCapped is required too, not just create/list");
   assert.throws(() => createListsReadExecutor({}), /record repository is required/);
   assert.throws(() => createListsUpdateExecutor({}), /record repository is required/);
 });
