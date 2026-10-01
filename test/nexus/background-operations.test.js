@@ -105,12 +105,13 @@ test("notification delivery never reports success without a verified provider re
 // attempts<5 -- so the very next poll would claim and re-send the SAME
 // message a second time, even though it was already genuinely delivered.
 test("a bookkeeping failure after a confirmed real send never requeues the notification for a duplicate resend", async () => {
-  const failed = []; let sendCount = 0;
+  const failed = []; const extended = []; let sendCount = 0; let deliveredCalls = 0;
   const runtime = {
     notifications: {
       claim: async () => [{ notification_id: "n1", channel: "push" }],
       failed: async (...args) => { failed.push(args); return { state: "queued" }; },
-      delivered: async () => { throw new Error("connection reset"); }
+      delivered: async () => { deliveredCalls += 1; throw new Error("connection reset"); },
+      extendLease: async (...args) => { extended.push(args); return { state: "delivering" }; }
     },
     schedules: {}, jobs: {}, dataLifecycle: {}
   };
@@ -118,8 +119,34 @@ test("a bookkeeping failure after a confirmed real send never requeues the notif
   const result = await handlers["notifications.deliver"]({ job: { payload: {} }, heartbeat: async () => {} });
   assert.equal(sendCount, 1, "the provider must only be called once");
   assert.equal(failed.length, 0, "failed() -- which can requeue for a resend -- must never be called after a confirmed send");
+  assert.equal(deliveredCalls, 3, "a persistent bookkeeping failure is retried a few times before giving up");
+  assert.equal(extended.length, 1, "the lease must be pushed out so claim()'s stale-lease reclaim cannot resend this notification");
   assert.equal(result.outcomes[0].delivered, true);
   assert.equal(result.outcomes[0].bookkeepingError, true);
+});
+
+// Found live (notifications-pipeline follow-up audit): the fix above stops the IMMEDIATE resend, but
+// without extending the lease, the row sits at state='delivering' with its original short lease still
+// ticking -- claim()'s own stale-lease reclaim (built to recover a CRASHED worker's in-flight send)
+// cannot tell that apart from "the send genuinely succeeded, only delivered() failed," so once the
+// lease naturally expired the SAME notification was reclaimed and genuinely resent a second time.
+test("a transient bookkeeping failure that clears on retry never extends the lease or reports bookkeepingError", async () => {
+  const extended = []; let deliveredCalls = 0;
+  const runtime = {
+    notifications: {
+      claim: async () => [{ notification_id: "n1", channel: "push" }],
+      failed: async () => ({ state: "queued" }),
+      delivered: async () => { deliveredCalls += 1; if (deliveredCalls < 2) throw new Error("connection reset"); },
+      extendLease: async (...args) => { extended.push(args); return { state: "delivering" }; }
+    },
+    schedules: {}, jobs: {}, dataLifecycle: {}
+  };
+  const handlers = createHandlers({ runtime, deliveryProviders: { push: async () => ({ verified: true, providerReceiptId: "p1" }) } });
+  const result = await handlers["notifications.deliver"]({ job: { payload: {} }, heartbeat: async () => {} });
+  assert.equal(deliveredCalls, 2, "the second retry succeeds, so no further attempts are made");
+  assert.equal(extended.length, 0, "a bookkeeping failure that clears on retry must never extend the lease");
+  assert.equal(result.outcomes[0].delivered, true);
+  assert.equal(result.outcomes[0].bookkeepingError, undefined);
 });
 
 test("retention and deletion jobs use the authoritative lifecycle repository", async () => {
