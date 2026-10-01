@@ -120,3 +120,31 @@ test("update can rename the list", async () => {
   const result = await execute({ input: { listId: "rec_1", title: "New title" }, context: { tenantId: "t1", userId: "u1" } });
   assert.equal(result.list.title, "New title");
 });
+
+// Found live: neither the number of lists one account could create, nor the number of items on one list,
+// was ever capped. lists.read/lists.update both resolve a list from a real records.list() query window of
+// 200 (the store's own newest-updated-first limit), so once an account passed 200 lists, its least-
+// recently-touched ones silently fell out of that window -- lists.update would report list_not_found for a
+// list that genuinely still existed, and it could never be found or listed again either.
+test("create refuses once the account already has the maximum number of lists, instead of creating one that could fall out of the read window", async () => {
+  const many = Array.from({ length: 200 }, (_, i) => ({ record_id: `rec_${i}`, version: 1, data: { title: `List ${i}`, items: [] } }));
+  const { records } = fixture(many);
+  const execute = createListsCreateExecutor({ records });
+  const result = await execute({ input: { title: "One too many" }, context: { tenantId: "t1", userId: "u1" } });
+  assert.equal(result.persisted, false);
+  assert.equal(result.reason, "list_cap_reached");
+  assert.equal(verifyListsCreateOutcome({ result }).verified, false, "an outright refusal is not itself a verified real write");
+});
+
+// Found live: normalizeItems() only capped ONE call's own addItems payload at 200 -- nothing capped the
+// MERGED result against the list's existing size, so repeated "add these 200 items" calls could grow a
+// single list without bound.
+test("update refuses to add items once the list would exceed its item cap, instead of growing it without bound", async () => {
+  const nearFull = Array.from({ length: 495 }, (_, i) => ({ text: `item ${i}`, done: false }));
+  const { records } = fixture([{ record_id: "rec_1", version: 1, data: { title: "Big list", items: nearFull } }]);
+  const execute = createListsUpdateExecutor({ records });
+  const result = await execute({ input: { listId: "rec_1", addItems: Array.from({ length: 10 }, (_, i) => `new ${i}`) }, context: { tenantId: "t1", userId: "u1" } });
+  assert.equal(result.updated, false);
+  assert.equal(result.reason, "list_item_cap_reached");
+  assert.equal(verifyListsUpdateOutcome({ result }).verified, true, "an honest refusal is still a verified outcome, the same as list_not_found");
+});
