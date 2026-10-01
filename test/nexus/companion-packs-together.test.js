@@ -20,9 +20,13 @@ function plannerWithEverything() {
   };
   const companion = createCompanion({ circle, checkinSettings: { get: async () => null, listActive: async () => [], set: async args => ({ ...args, graceHours: 3, replaced: false }), stop: async () => 0 }, checkinState: { get: async () => null, listPending: async () => [] }, medicationStore, notifications, now: () => new Date("2026-09-20T05:00:00Z") });
   const wellRows = []; let w = 0;
-  const wellnessStore = { async addEntry({ content }) { wellRows.unshift({ memoryId: `w${++w}`, content }); return {}; }, async listEntries() { return wellRows.map(row => ({ memoryId: row.memoryId, content: row.content })); }, async removeEntry() { return true; } };
+  const wellnessStore = { async addEntry({ content }) { wellRows.unshift({ memoryId: `w${++w}`, content }); return {}; },
+    async addEntryUnlessCapped({ content }) { wellRows.unshift({ memoryId: `w${++w}`, content }); return { memoryId: `w${w}`, content }; },
+    async listEntries() { return wellRows.map(row => ({ memoryId: row.memoryId, content: row.content })); }, async removeEntry() { return true; } };
   const reports = []; let r = 0;
-  const store = { async addReport({ content }) { reports.push({ memoryId: `r${++r}`, userId: "u1", content: { ...content, number: r } }); return r; }, async listReports() { return reports; }, async getReport() { return null; }, async updateReport() { return true; },
+  const store = { async addReport({ content }) { reports.push({ memoryId: `r${++r}`, userId: "u1", content: { ...content, number: r } }); return r; },
+    async addReportUnlessCapped({ content }) { r += 1; reports.push({ memoryId: `r${r}`, userId: "u1", content: { ...content, number: r } }); return { number: r }; },
+    async listReports() { return reports; }, async getReport() { return null; }, async updateReport() { return true; },
     async addAnnouncement() { return "a1"; }, async listAnnouncements() { return []; }, async setPending() {}, async getPending() { return null; }, async clearPending() { return false; }, async pushRecipients() { return []; }, async optOuts() { return []; }, async setOptOut() {} };
   const planner = new OpenEndedPlanner({ companion, wellnessStore, community: { store, notifications, nameOf: async () => "Baba" }, memory: null, tools: { list: async () => [] }, applications: { list: () => [] },
     model: { plan: async request => { modelCalls.push(request.command?.text || request.text); throw new Error("the model was asked"); }, respond: async () => null } });
