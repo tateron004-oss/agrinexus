@@ -44904,6 +44904,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
     const reading = {
       readingId: nexusOperationId("NX-RPM"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: cleanOpsText(body.type || (/glucose|sugar/i.test(command) ? "blood_glucose" : /weight/i.test(command) ? "weight" : /pulse/i.test(command) ? "pulse" : /oxygen/i.test(command) ? "oxygen" : /adherence/i.test(command) ? "medication_adherence" : "blood_pressure"), 80),
       value: cleanOpsText(body.value || command || "manual reading recorded", 160),
@@ -44924,6 +44925,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
     const activity = {
       activityId: nexusOperationId("NX-RTM"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: cleanOpsText(body.type || (/mobility/i.test(command) ? "mobility" : /pain/i.test(command) ? "pain" : /exercise/i.test(command) ? "exercise" : /nutrition/i.test(command) ? "nutrition" : /adherence/i.test(command) ? "medication_adherence" : /symptom/i.test(command) ? "symptom_check" : "therapy_activity"), 80),
       value: cleanOpsText(body.value || command || "therapy activity recorded", 200),
@@ -44949,6 +44951,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const lane = action === "create_pharmacy_referral" ? "pharmacy" : action === "create_mobile_clinic_follow_up" ? "mobile-clinic" : action === "create_telehealth_encounter" ? "telehealth" : "physician-review";
     const caseItem = {
       caseId: nexusOperationId("NX-CASE"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: lane,
       status: "prepared",
@@ -45246,6 +45249,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const status = action === "track_enrollment_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "track_training_interest" ? "interest-recorded" : "prepared";
     const record = {
       trainingRecordId: nexusOperationId("NX-TRN"),
+      ownerId: nexusOperationsOwnerKey(user),
       learningProfileId: profile.learningProfileId,
       type: action,
       status: /confirmed|accepted|completed|certified/i.test(status) ? "manual-status-review" : status,
