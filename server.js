@@ -49279,7 +49279,14 @@ async function api(req, res, url) {
     return sendProviderResult(res, result);
   }
 
+  // Found live (admin/webhook sweep): unlike every other real-money/real-send route in this file
+  // (/api/trade/advanced's quote/release, /api/trade/wallet, trade.wallet_payment), this route never
+  // checked userIsRestrictedFrom(user, "external-transaction") -- a Guest or Investor account (both
+  // restricted from external transactions elsewhere) could reach it. Currently inert only because the
+  // Stripe provider itself hardcodes a "blocked" status regardless of caller; adding the same check here
+  // closes the gap at the route layer too, so it stays closed if that hardcoded block is ever lifted.
   if (url.pathname === "/api/nexus/tools/marketplace/payment-intent" && req.method === "POST") {
+    if (userIsRestrictedFrom(user, "external-transaction")) return send(res, 403, { error: "This account type cannot start a real payment transaction." });
     return sendProviderResult(res, nexusRealProviders.stripe.paymentIntent(await readBody(req)));
   }
 
@@ -49292,6 +49299,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/payments/stripe/payment-intent" && req.method === "POST") {
+    if (userIsRestrictedFrom(user, "external-transaction")) return send(res, 403, { error: "This account type cannot start a real payment transaction." });
     return sendProviderResult(res, nexusRealProviders.paymentReadinessBridge.paymentIntent(await readBody(req)));
   }
 

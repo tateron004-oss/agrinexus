@@ -225,3 +225,22 @@ test("an Investor account can still reach the non-financial trade/advanced actio
     assert.equal(result.status, 200, `${type} should remain unaffected for Investor: ${JSON.stringify(result.body)}`);
   }
 });
+
+// Found live (admin/webhook sweep): unlike every other real-money/real-send route in this file
+// (/api/trade/advanced's quote/release, /api/trade/wallet), these two payment-intent routes never
+// checked userIsRestrictedFrom(user, "external-transaction") -- an Investor account could reach them.
+// Currently inert only because the Stripe provider itself hardcodes a "blocked" status regardless of
+// caller, but the route-level check should hold on its own, not rely on that provider-layer detail.
+test("an Investor account cannot start a real payment intent through either Stripe payment-intent route; a Standard User/Admin still can", async () => {
+  const marketplaceAsInvestor = await post("/api/nexus/tools/marketplace/payment-intent", {}, investorCookie);
+  assert.equal(marketplaceAsInvestor.status, 403, JSON.stringify(marketplaceAsInvestor.body));
+
+  const stripeAsInvestor = await post("/api/nexus/tools/payments/stripe/payment-intent", {}, investorCookie);
+  assert.equal(stripeAsInvestor.status, 403, JSON.stringify(stripeAsInvestor.body));
+
+  const marketplaceAsAdmin = await post("/api/nexus/tools/marketplace/payment-intent", {}, adminCookie);
+  assert.notEqual(marketplaceAsAdmin.status, 403, JSON.stringify(marketplaceAsAdmin.body));
+
+  const stripeAsAdmin = await post("/api/nexus/tools/payments/stripe/payment-intent", {}, adminCookie);
+  assert.notEqual(stripeAsAdmin.status, 403, JSON.stringify(stripeAsAdmin.body));
+});
