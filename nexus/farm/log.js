@@ -178,7 +178,7 @@ const REFUSALS = {
 
 // Returns the words to answer with, or null when this is not about the farm log. `memory` needs addFarmEntry / listFarmEntries / removeFarmEntry.
 async function farmLogTurn({ text, memory, tenantId, userId, now = new Date(), timeZone }) {
-  if (!memory?.addFarmEntry || !memory?.listFarmEntries || !memory?.removeFarmEntry) return null;
+  if (!memory?.addFarmEntry || !memory?.listFarmEntries || !memory?.removeFarmEntry || !memory?.addFarmEntryUnlessCapped) return null;
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   const today = localDay(now, zone);
   const request = readRequest(text, today);
@@ -191,9 +191,9 @@ async function farmLogTurn({ text, memory, tenantId, userId, now = new Date(), t
     const alerts = rows.filter(row => row.content.kind === "alert").map(row => row.content);
     switch (request.action) {
       case "log": {
-        if (rows.length >= MAX_ENTRIES) return "Your farm log is full. Tell me to undo the last entry, or ask me for a summary first.";
         const entry = { kind: "reading", metric: request.metric, value: request.value, unit: request.unit, place: request.place, crop: request.crop, day: request.day };
-        await memory.addFarmEntry({ ...scope, content: entry });
+        const added = await memory.addFarmEntryUnlessCapped({ ...scope, content: entry, maxEntries: MAX_ENTRIES });
+        if (added.capped) return "Your farm log is full. Tell me to undo the last entry, or ask me for a summary first.";
         const when = whenWords(entry.day, today);
         let line = `Logged ${describeReading(entry)} for ${when}.`;
         if (entry.metric === "rain") {
