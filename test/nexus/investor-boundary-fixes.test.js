@@ -160,7 +160,12 @@ test("an Investor account cannot trigger a real Twilio send via buyer-seller mes
   assert.equal(investorThread.liveRecipientConfigured, undefined, "the real-send branch must never be entered for an Investor");
   assert.equal(investorThread.status, "active", "must stay in the local-only state, never active-live");
 
-  const asAdmin = await post("/api/trade/message", { channel: "SMS", message: "please call about the order" }, adminCookie);
+  // Found live (communications/notifications audit, later same session): this path had NO confirmation
+  // gate at all before that later fix -- confirmed:true is now required to reach the real Twilio branch.
+  // Passed here so this test keeps proving what it always proved (a non-restricted account reaches the
+  // real branch); the no-confirmation case is covered separately in
+  // legacy-twilio-confirmation-and-content-filter.test.js.
+  const asAdmin = await post("/api/trade/message", { channel: "SMS", message: "please call about the order", confirmed: true }, adminCookie);
   assert.equal(asAdmin.status, 200, JSON.stringify(asAdmin.body));
   const adminThread = asAdmin.body.tradeMessageResult.thread;
   assert.notEqual(adminThread.liveRecipientConfigured, undefined, "a real account must still reach the real-send branch (Twilio itself may be unconfigured in this test env, but the gate must not be the reason)");
@@ -180,7 +185,12 @@ test("/api/notifications/send never reaches the real Twilio branch for a Provide
   assert.equal(asReviewer.status, 200, JSON.stringify(asReviewer.body));
   assert.equal(asReviewer.body.profile.notifications[0].deliveryStatus, "local-notification-only", "a Provider Reviewer must never reach the real Twilio send branch");
 
-  const asAdmin = await post("/api/notifications/send", { module: "AgriTrade", channel: "sms", message: "admin notice" }, adminCookie);
+  // Found live (communications/notifications audit, later same session): this route had NO
+  // confirmation gate at all before that later fix -- confirmed:true is now required to reach the real
+  // Twilio branch, same as every other real-send path. Passed here so this test keeps proving what it
+  // always proved (a non-restricted account reaches the real branch); the no-confirmation case is
+  // covered separately in legacy-twilio-confirmation-and-content-filter.test.js.
+  const asAdmin = await post("/api/notifications/send", { module: "AgriTrade", channel: "sms", message: "admin notice", confirmed: true }, adminCookie);
   assert.equal(asAdmin.status, 200, JSON.stringify(asAdmin.body));
   assert.equal(asAdmin.body.profile.notifications[0].deliveryStatus, "needs-twilio-config", "a real account must still reach the real Twilio branch (unconfigured in this test env, but the gate must not be the reason it stopped)");
 });
