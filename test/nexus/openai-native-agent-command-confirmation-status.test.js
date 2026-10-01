@@ -73,7 +73,13 @@ test.before(async () => {
       ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath,
       NEXUS_DISABLE_LOCAL_ENV_FILES: "true",
       OPENAI_API_KEY: "test-only-openai-native-key",
-      OPENAI_RESPONSES_URL: `http://127.0.0.1:${mockPort}/responses`
+      OPENAI_RESPONSES_URL: `http://127.0.0.1:${mockPort}/responses`,
+      // CI's own isolated test run (`.github/workflows`) deliberately sets this
+      // to "false" to block real provider calls -- without forcing it back on
+      // here, this test's whole premise (reaching runNexusOpenAiNativeAgentCommand)
+      // silently never executes and the request falls through to the legacy
+      // companion-safe dispatcher instead, failing for an unrelated reason.
+      NEXUS_OPENAI_NATIVE_ENABLED: "true"
     },
     stdio: "ignore",
     windowsHide: true
