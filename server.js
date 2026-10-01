@@ -22313,7 +22313,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // reach the exact same tested behavior instead of the authoritative
       // planner's free AI guess among an unrelated tool catalog.
       const result = await nexusBusinessVoiceDispatch.run({
-        command, args,
+        command, args, timeZone: context.timeZone || args.timeZone,
         businessRequest: opts => authoritativeNexusRuntime.businessRequest({ ...opts, user: authoritativeUser })
       });
       return { ...common, capability: "business-assistant", ...result };
