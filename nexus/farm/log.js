@@ -201,9 +201,18 @@ async function farmLogTurn({ text, memory, tenantId, userId, now = new Date(), t
           const same = [...readings.map(row => row.content), entry].filter(item => item.metric === "rain" && inPeriod(item, month));
           line += ` Rain this month: ${fmt(same.reduce((sum, item) => sum + item.value, 0))} mm over ${new Set(same.map(item => item.day)).size} ${new Set(same.map(item => item.day)).size === 1 ? "day" : "days"}.`;
         } else if (entry.metric === "harvest") {
+          // Found live: this used to total only entries whose unit matched the
+          // one just logged, silently dropping the same crop's entries logged
+          // in a different unit (e.g. "5 bags" earlier, "200 kg" now) from a
+          // line that claims to be the "Total ... this year" -- matches
+          // totalWords()'s already-correct per-unit grouping, same as the
+          // explicit "how much have I harvested" query below.
           const year = extractPeriod("this year", today);
-          const total = [...readings.map(row => row.content), entry].filter(item => item.metric === "harvest" && item.crop === entry.crop && item.unit === entry.unit && inPeriod(item, year)).reduce((sum, item) => sum + item.value, 0);
-          line += ` Total ${entry.crop} this year: ${totalWords({ [entry.unit]: total })}.`;
+          const sums = {};
+          for (const item of [...readings.map(row => row.content), entry]) {
+            if (item.metric === "harvest" && item.crop === entry.crop && inPeriod(item, year)) sums[item.unit] = (sums[item.unit] || 0) + item.value;
+          }
+          line += ` Total ${entry.crop} this year: ${totalWords(sums)}.`;
         }
         const hit = belowAlert(entry, alerts);
         if (hit) line += ` Heads up: that is below your ${fmt(hit.below)}${hit.unit === "%" ? "%" : " litres"} alert${hit.place ? ` for the ${hit.place}` : ""}.`;
@@ -235,9 +244,18 @@ async function farmLogTurn({ text, memory, tenantId, userId, now = new Date(), t
         return `Your latest entries: ${recent.join("; ")}.`;
       }
       case "undo": {
-        const last = readings[0];
+        // Found live: this only ever looked at readings, so if the person's
+        // most recent action was setting an alert, "undo my last entry"
+        // silently deleted an older real reading instead and left the alert
+        // in place -- rows (unlike readings) already carries everything
+        // newest-first, so rows[0] is the one actually most recently added.
+        const last = rows[0];
         if (!last) return "There is nothing in your farm log to undo.";
         await memory.removeFarmEntry({ ...scope, memoryId: last.memory_id });
+        if (last.content.kind === "alert") {
+          const what = last.content.metric === "soil" ? `soil moisture${last.content.place ? ` in the ${last.content.place}` : ""}` : `${last.content.place ? `the ${last.content.place} tank` : "the tank"}`;
+          return `Removed your last entry: the alert for ${what} below ${fmt(last.content.below)}${last.content.unit === "%" ? "%" : " litres"}.`;
+        }
         return `Removed your last entry: ${describeReading(last.content)} for ${whenWords(last.content.day, today)}.`;
       }
       case "alert-set": {
