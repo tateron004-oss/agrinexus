@@ -106,6 +106,19 @@ test("emergencies and self-harm are recognised in the person's own words, and no
   for (const text of ["how do I help a friend who is suicidal", "my brother said he wants to die", "What is suicide prevention?", "I could kill that deadline", "help with my maize", "emergency contact list", "I need help with my maize", "What should I do in an emergency?", "Good morning"]) assert.equal(readSafety(text), null, text);
 });
 
+// Found live (companion audit): plain, first-person, unambiguous self-harm statements were missed
+// entirely (fell through to ordinary chat with zero acknowledgment) because the adjacent common wordings
+// for phrasings already covered here were absent -- self-cutting, the contraction "isn't worth living",
+// "no point in living", and "wish I was never born". Widened alongside two narrow exclusions for common
+// idioms that are not self-harm, so the widening doesn't trade a miss for alert-fatigue on everyday speech.
+test("self-harm detection also catches self-cutting, contracted and alternate common phrasings, without over-triggering on everyday idioms that share the same words", () => {
+  for (const text of ["I want to cut myself", "I've been cutting myself", "I cut myself last night",
+    "my life isn't worth living", "life isn't worth living anymore", "there's no point in living anymore",
+    "there is no point living", "I wish I was never born"]) assert.equal(readSafety(text), "self_harm", text);
+  for (const text of ["I want to die laughing, that joke was great", "I need help cutting myself a slice of cake",
+    "I keep cutting myself off from everyone lately"]) assert.equal(readSafety(text), null, text);
+});
+
 // Found live (safety-critical): every IMMEDIATE pattern used to require the
 // ENTIRE message to match exactly (`^...$`) and was gated behind a 70-char
 // cap, so any real elaboration at all -- describing where they fell, what
@@ -232,6 +245,38 @@ test("you cannot invite yourself or the same person twice, and the circle has a 
   const person = { id: "u-baba", name: "Baba Kamau" };
   for (let i = 0; i < 8; i += 1) assert.ok((await circle.invite({ tenantId: "t1", person, member: { id: `x${i}`, name: `Person ${i}` } })).link);
   assert.deepEqual(await circle.invite({ tenantId: "t1", person, member: { id: "x8", name: "Person 8" } }), { refused: "full" });
+});
+
+// Found live (companion audit): CircleRepository.rows() filtered `kind` ("circle" vs "alert") in a JS
+// .filter() AFTER the SQL's own `limit 200` already truncated the result set. Circle-link rows are created
+// once and only ever updated in place (created_at never advances); alert rows are a brand-new row every
+// time the person's own emergency trigger fires, and are never deleted. This file's shared circleDb()
+// fixture never simulates the LIMIT at all, so it cannot reproduce this bug -- this test uses its own
+// minimal fake that mirrors Postgres's real execution order (WHERE, including kind, applied BEFORE ORDER
+// BY/LIMIT) to prove a real circle member survives being buried under 200 newer alert rows.
+function limitedCircleDb() {
+  const rows = [];
+  return { rows, async query(sql, params) {
+    if (/insert into nexus_memory_items/.test(sql)) { rows.push({ tenant_id: params[1], principal_id: params[2], content: params[3], createdAt: rows.length }); return { rows: [] }; }
+    if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) {
+      const [tenantId, userId, linkId, kind] = params;
+      let matches = rows.filter(row => row.tenant_id === tenantId && (userId === null || row.principal_id === userId) && (linkId === null || row.content.linkId === linkId));
+      if (/content->>'kind'=\$4/.test(sql)) matches = matches.filter(row => row.content.kind === kind);
+      matches = matches.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
+      return { rows: matches.map(row => ({ memory_id: `m${row.createdAt}`, principal_id: row.principal_id, content: row.content })) };
+    }
+    throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+  } };
+}
+test("activeMembers finds a real, already-accepted circle member even after the person has accumulated 200 newer alert-kind rows", async () => {
+  const db = limitedCircleDb(); const circle = new CircleRepository(db);
+  await circle.insertRow(db, { tenantId: "t1", userId: "u-amina", content: { kind: "circle", role: "person", linkId: "lnk1", otherId: "u-joseph", otherName: "Joseph Otieno", status: "active", shares: {} } });
+  for (let i = 0; i < 200; i += 1) {
+    await circle.insertRow(db, { tenantId: "t1", userId: "u-amina", content: { kind: "alert", role: "alert", alertId: `alt_${i}`, at: new Date(2026, 0, 1, 0, i).toISOString(), alerted: [], ended: false, updates: 0 } });
+  }
+  const members = await circle.activeMembers({ tenantId: "t1", personId: "u-amina" });
+  assert.equal(members.length, 1, "a real, already-accepted circle member must still be found even after 200 unrelated alert rows");
+  assert.equal(members[0].otherId, "u-joseph");
 });
 
 // Found live: every check in invite() (the duplicate check included) reads

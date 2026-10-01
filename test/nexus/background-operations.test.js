@@ -59,6 +59,34 @@ test("a schedule with a poison-pill cadence is paused without blocking any other
   assert.equal(x.calls[2].params[1], "active");
 });
 
+// Found live (job-queue/schedule-dispatch follow-up audit): the poison-pill guard above was applied only
+// around nextOccurrence()'s throw -- jobs.enqueue() (which can throw on a bad job_type/task_id/payload)
+// and the success-path state-transition update sat OUTSIDE any try/catch, so either one throwing reopens
+// the exact same "sorts first forever, wedges the whole batch for every tenant" bug through a different
+// call, instead of pausing just the one schedule that can't be dispatched.
+test("an enqueue failure for one schedule pauses only that schedule and does not wedge the rest of the due batch", async () => {
+  const x = db([
+    { rows: [
+      { schedule_id: "bad", tenant_id: "t1", owner_id: "u1", task_id: null, job_type: "bogus.type", payload: {}, cadence: { once: true }, next_run_at: "2026-01-01T00:00:00Z" },
+      { schedule_id: "good", tenant_id: "t2", owner_id: "u2", task_id: null, job_type: "notifications.deliver", payload: {}, cadence: { everySeconds: 3600 }, next_run_at: "2026-01-01T00:00:00Z" }
+    ] },
+    { rows: [] }, // the "bad" schedule's pause update
+    { rows: [] }  // the "good" schedule's normal advance update
+  ]);
+  const enqueued = [];
+  const rows = await new ScheduleRepository(x).dispatchDue({
+    jobs: { enqueue: async job => { if (job.jobType === "bogus.type") throw new Error("invalid jobType: violates check constraint"); enqueued.push(job); return { job_id: `j-${job.tenantId}` }; } },
+    now: new Date("2026-01-02T00:00:00Z")
+  });
+  assert.equal(enqueued.length, 1, "the good schedule's enqueue must still happen even though an earlier schedule's enqueue failed");
+  assert.equal(rows[0].paused, true);
+  assert.match(rows[0].error, /invalid jobType/);
+  assert.match(x.calls[1].sql, /state='paused'/, "the bad schedule stops being selected again instead of retrying forever");
+  assert.equal(rows[1].paused, undefined, "the good schedule in the same batch must advance normally, unaffected");
+  assert.match(x.calls[2].sql, /state=\$2/);
+  assert.equal(x.calls[2].params[1], "active");
+});
+
 test("notification delivery never reports success without a verified provider receipt", async () => {
   const failed = []; const delivered = [];
   const runtime = { notifications: { claim: async () => [{ notification_id: "n1", channel: "push" }], failed: async (...args) => failed.push(args), delivered: async id => delivered.push(id) },
@@ -121,6 +149,27 @@ test("deletion.execute marks the request permanently failed only once the job's 
   await assert.rejects(handlers["deletion.execute"]({ job: { tenant_id: "t", attempts: 5, max_attempts: 5, payload: { requestId: "r" } } }));
   assert.equal(marked.length, 1, "the final attempt must mark the request permanently failed");
   assert.deepEqual(marked[0], { tenantId: "t", requestId: "r", error: "constraint violation" });
+});
+
+// Found live (job-queue/schedule-dispatch follow-up audit): claim()'s lease defaults to 60 seconds, but
+// only notifications.deliver ever called the heartbeat handed to every handler -- deletion.execute (a
+// single, potentially slow, multi-table transactional erasure) had nothing extending its own lease. A
+// deletion that genuinely runs past 60 seconds, with more than one worker instance live, would have a
+// second instance's claim() treat the lease as expired and re-run the SAME job while the first is still
+// working -- and the first instance's own eventual finish() would then silently no-op.
+test("deletion.execute keeps its own job lease alive with periodic heartbeats while a single slow deletion is in flight", async t => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  let resolveWork;
+  const workPromise = new Promise(resolve => { resolveWork = resolve; });
+  const heartbeats = [];
+  const runtime = { notifications: {}, schedules: {}, jobs: {}, dataLifecycle: { executeDeletion: async () => workPromise } };
+  const handlers = createHandlers({ runtime });
+  const job = { tenant_id: "t1", attempts: 1, max_attempts: 5, payload: { requestId: "req-1" } };
+  const resultPromise = handlers["deletion.execute"]({ job, heartbeat: async () => { heartbeats.push(true); } });
+  t.mock.timers.tick(20000); t.mock.timers.tick(20000);
+  assert.ok(heartbeats.length >= 2, "heartbeat must fire periodically while the deletion is still in flight");
+  resolveWork({ state: "verified" });
+  assert.deepEqual(await resultPromise, { state: "verified" });
 });
 
 test("deletion.sweep re-enqueues stale queued erasure requests, not the ones already picked up", async () => {

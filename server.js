@@ -139,7 +139,14 @@ const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const authoritativeNexusRuntime = createServerRuntimeAdapter({
   resolveUser: async req => authoritativeRuntimeUser(currentUser(req, await readDb())),
   readJson: readBody,
-  logger: console
+  logger: console,
+  // Found live (business/marketplace audit): the nexus/business engine's own authorize() only checks
+  // org-membership permissions (tasks:execute/tasks:read), which authoritativeRuntimeUser() above grants
+  // unconditionally to every non-guest signed-in role -- there is no concept of userIsRestrictedFrom's
+  // Investor/Provider Reviewer denylist inside nexus/business at all. Passed in here (rather than
+  // duplicated inside nexus/, which has no notion of legacy roles) so the checkout route below can refuse
+  // a real Stripe checkout session the same way every other real-money route in this file already does.
+  isRestrictedFrom: userIsRestrictedFrom
 });
 
 function deterministicAuthoritativeUserId(legacyUserId = "") {
@@ -2840,7 +2847,7 @@ function eraseOwnedTelehealthRecords(db, userId) {
 // recordId, the same way communicationThreads cascades into
 // communicationMessages) rather than the uniform ownerId scan used here.
 // Flagged, not silently dropped, but out of scope for this pass.
-const NEXUS_PILOT_CONTENT_ARRAY_KEYS = ["nexusPilotRecords", "nexusKnowledgeQueries", "nexusKnowledgeSavedResults", "nexusKnowledgeReviewSummaries", "nexusInstitutionalEvidenceReceipts", "nexusProviderPathwayRequests", "nexusCommunications", "nexusNotifications", "nexusOutcomes"];
+const NEXUS_PILOT_CONTENT_ARRAY_KEYS = ["nexusPilotRecords", "nexusKnowledgeQueries", "nexusKnowledgeSavedResults", "nexusKnowledgeReviewSummaries", "nexusInstitutionalEvidenceReceipts", "nexusProviderPathwayRequests", "nexusCommunications", "nexusNotifications", "nexusOutcomes", "nexusFieldDispatches"];
 const NEXUS_PILOT_AUDIT_TRAIL_ARRAY_KEYS = ["nexusPilotAuditEvents", "nexusPilotConsentEvents", "nexusIntegrationAttempts", "nexusProductionReadinessEvents", "nexusRoutingLogs", "nexusAttachmentReadinessEvents", "nexusMarketplaceExecutionAttempts", "nexusHighRiskBlockedAttempts", "nexusAiAnswerReports"];
 
 function collectOwnedNexusContentRecords(db, userId) {
@@ -2942,7 +2949,11 @@ function knownUnownedProfileGaps(profile, db = null) {
   // db.profile array (as opposed to an already-disclosed sibling array from
   // the same file) was missed. Each item's actual object literal was read
   // directly to confirm no createdBy/requestedBy/userEmail is ever present.
-  if (hasAny(["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
+  // Found live (cloud-agent audit): cloudAgentAudit records use `actor: user.email`, not
+  // createdBy/requestedBy/userEmail (PROFILE_OWNER_FIELDS), so -- same as its cloudAgentQueue/
+  // cloudAgentCorrections siblings already in this bucket -- it was never picked up by
+  // collectOwnedProfileRecords/eraseOwnedProfileRecords, but was missing from this disclosure list.
+  if (hasAny(["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "cloudAgentAudit", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
     gaps.push("Agent/AI orchestration evidence, integration event logs, and cloud-agent run/correction records have no per-account owner field today and are not included.");
   }
   if (hasAny(["twilioCallStatusReceipts", "tradeLogisticsRecords", "tradeMessages", "walletTransactions", "platformTransactionFees", "platformRevenueLedger", "paymentCheckoutRecords", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "paymentReleases", "providerOutreach", "droneFindings", "shiftSchedule"])) {
@@ -6012,7 +6023,20 @@ function canWriteHealth(user) {
 function userIsRestrictedFrom(user, restriction) {
   if (user?.restrictions?.includes(restriction)) return true;
   if (["communications-send", "external-transaction", "health-record-write"].includes(restriction)) {
-    return !(user?.role === "Admin" || user?.role === "Standard User");
+    // Found live (cloud-agent audit, health-agent-country-reference-crash.test.js regression): this used
+    // to be `!(user?.role === "Admin" || user?.role === "Standard User")` -- a strict allowlist that
+    // silently conflicted with permissionsForRole()'s own, already-tested fallback (provider-permission-
+    // matrix.test.js asserts permissionsForRole("Coordinator") === permissionsForRole("Standard User")):
+    // any role not in that matrix (Coordinator, Field Operations Agent, and any future role) is meant to
+    // carry full Standard User capability, but this allowlist denied them anyway. That was harmless while
+    // this function only gated NEW, narrowly-tested REST routes, but wiring it into the cloud agent's
+    // shared executeAgentTool/createTradeLogisticsWorkflow -- also reachable from ordinary /api/agent/
+    // command voice commands used by real Coordinator/Field-Operations-Agent accounts -- turned the
+    // conflict into a real regression (a live health worker's "generate a care plan"/"capture vitals"
+    // command started failing). Denylisting the two actually-demo/limited roles instead keeps Investor
+    // and Provider Reviewer restricted (unchanged) while matching permissionsForRole's own fallback for
+    // every other role.
+    return user?.role === "Investor" || user?.role === "Provider Reviewer";
   }
   if (restriction === "account-provider-link" && user?.role === "Investor") return true;
   return false;
@@ -10828,6 +10852,16 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
   ensureTradeProfile(db.profile);
   const { country, route } = activeContext(db);
   const type = String(body.type || "shipping-booking").trim();
+  // Found live (cloud-agent audit): unlike /api/trade/wallet and /api/trade/advanced's quote/release
+  // actions (both gated on userIsRestrictedFrom(user, "external-transaction")), this function's own
+  // "settlement" branch -- a real wallet credit further down -- had no restriction check at all,
+  // reachable both via POST /api/trade/logistics directly and via the cloud agent's trade.wallet_payment
+  // tool. Checked here, once, so both callers are covered.
+  if (type === "settlement" && userIsRestrictedFrom(user, "external-transaction")) {
+    const error = new Error("This account type cannot post a real payment transaction.");
+    error.httpStatus = 403;
+    throw error;
+  }
   let order = body.orderId
     ? db.profile.orders.find(item => item.id === body.orderId)
     : db.profile.orders[db.profile.orders.length - 1];
@@ -16917,7 +16951,28 @@ function recordAiRun(db, { type, country, route, result, module = "AI" }) {
   return run;
 }
 
+const CLOUD_AGENT_HEALTH_WRITE_TOOLS = new Set([
+  "health.intake", "health.representative", "health.caption", "health.caregiver",
+  "health.consent", "health.vitals", "health.referral", "health.followup",
+  "health.safety", "health.careplan", "health.accessibility_review"
+]);
+
 async function executeAgentTool(db, user, step) {
+  // Found live (cloud-agent audit): unlike every direct REST health-write route (all gated on
+  // canWriteHealth(user)/userIsRestrictedFrom(user, "health-record-write")), the cloud agent's own
+  // health.* tool dispatch had no restriction check at all -- an Investor account (which holds
+  // canUse(user, "ai") but is restricted from health-record-write everywhere else) could reach a real
+  // health-record write by calling POST /api/cloud-agent/run with a health-flavored goal and
+  // {execute:true, approved:true} (health.* steps are only "approval-required" in the generic
+  // high-impact sense -- any caller can self-approve their own run). Same for trade.wallet_payment,
+  // which is a real wallet credit gated everywhere else on userIsRestrictedFrom(user,
+  // "external-transaction").
+  if (CLOUD_AGENT_HEALTH_WRITE_TOOLS.has(step.tool) && userIsRestrictedFrom(user, "health-record-write")) {
+    throw new Error("This account type cannot write real health records.");
+  }
+  if (step.tool === "trade.wallet_payment" && userIsRestrictedFrom(user, "external-transaction")) {
+    throw new Error("This account type cannot post a real payment transaction.");
+  }
   const { country, route } = activeContext(db);
   if (step.tool === "learning.start_or_continue") {
     ensureLearningProfile(db.profile);
@@ -17063,6 +17118,7 @@ async function executeAgentTool(db, user, step) {
       createdAt: new Date().toISOString()
     };
     db.profile.telehealthAccessibility.unshift(record);
+    db.profile.telehealthAccessibility = db.profile.telehealthAccessibility.slice(0, 20);
     intake.queueStatus = "Agent access plan ready";
     logIntegration(db, {
       providerId: "health-telehealth",
@@ -17217,17 +17273,22 @@ async function executeAgentTool(db, user, step) {
   }
 
   if (step.tool === "drone.field_scan") {
-    const { scan } = createDroneScan(db, { source: "agent" });
+    // Found live (drone/cloud-agent audit): unlike the already-fixed /api/trade/drone-scan and
+    // /api/trade/drone-mission REST routes (source: user.email), this and the two sibling branches
+    // below hardcoded the literal string "agent" into createdBy -- which matches no real account, so the
+    // resulting droneScans/droneMissions/fieldInterventions record was silently excluded from that
+    // user's /api/account/export and survived /api/account/erase untouched, forever.
+    const { scan } = createDroneScan(db, { source: user.email });
     return `Completed ${scan.scanRef} for ${scan.productName} with ${scan.cropHealthScore}% crop health.`;
   }
 
   if (step.tool === "drone.flight_plan") {
-    const mission = createDroneMission(db, { source: "agent" });
+    const mission = createDroneMission(db, { source: user.email });
     return `Planned ${mission.missionRef} for ${mission.productName} with compliance checks ready.`;
   }
 
   if (step.tool === "drone.intervention_task") {
-    const task = createFieldIntervention(db, { source: "agent" });
+    const task = createFieldIntervention(db, { source: user.email });
     return `Assigned ${task.taskRef} for ${task.productName}.`;
   }
 
@@ -21553,7 +21614,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       ensureNexusProductionRailsState(db);
       const dispatches = canUse(user, "provider-queue")
         ? db.nexusFieldDispatches
-        : db.nexusFieldDispatches.filter(item => item.requestedBy === (user?.name || "Standard User"));
+        : db.nexusFieldDispatches.filter(item => nexusFieldDispatchOwned(item, user));
       return { ...common, capability: "nexus_agriculture", status: "field-agent-dispatches-listed", response: dispatches.length ? `You have ${dispatches.length} field agent dispatch record(s): ${dispatches.slice(0, 5).map(d => `${d.taskType.replace(/-/g, " ")} at ${d.location || "an unspecified location"} (${d.status})`).join("; ")}.` : "You have no field agent dispatch records yet.", localOnly: true, fieldAgentDispatches: dispatches };
     }
     const wantsFieldAgent = !wantsShowFieldAgent && /\bfield\s*agent\b/i.test(command) && /\b(send|dispatch|request|need|schedule)\b/i.test(command);
@@ -22244,7 +22305,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // reach the exact same tested behavior instead of the authoritative
       // planner's free AI guess among an unrelated tool catalog.
       const result = await nexusBusinessVoiceDispatch.run({
-        command, args,
+        command, args, timeZone: context.timeZone || args.timeZone,
         businessRequest: opts => authoritativeNexusRuntime.businessRequest({ ...opts, user: authoritativeUser })
       });
       return { ...common, capability: "business-assistant", ...result };
@@ -35805,6 +35866,7 @@ function addNexusPilotAuditEvent(db, eventType, options = {}) {
     noEmergencyDispatch: true
   };
   db.nexusPilotAuditEvents.unshift(event);
+  db.nexusPilotAuditEvents = db.nexusPilotAuditEvents.slice(0, 1000);
   shadowWriteAuditEventToPostgres({
     action: event.eventType,
     entityType: event.mode || "pilot",
@@ -40859,6 +40921,7 @@ function nexusCreateExportDeleteRequest(db, body = {}, user = null, requestType 
     noSilentDeletion: requestType === "delete"
   };
   db.nexusExportDeleteRequests.unshift(requestItem);
+  db.nexusExportDeleteRequests = db.nexusExportDeleteRequests.slice(0, 1000);
   addNexusPilotAuditEvent(db, `privacy_${requestType}_request_created`, {
     actor: requestItem.actor,
     role: "Standard User",
@@ -40892,6 +40955,7 @@ function nexusPrepareIntegrationAttempt(db, type = "", body = {}, user = null) {
     missingEnv: status?.missingEnv || []
   };
   db.nexusIntegrationAttempts.unshift(attempt);
+  db.nexusIntegrationAttempts = db.nexusIntegrationAttempts.slice(0, 1000);
   addNexusPilotAuditEvent(db, "integration_attempt_prepared", {
     actor: attempt.actor,
     role: user?.role || "Standard User",
@@ -41160,9 +41224,24 @@ function normalizeFieldDispatch(db, body = {}, existing = null, user = null) {
     location: sanitizePilotText(body.location || existing?.location || "", 160),
     status,
     requestedBy: sanitizePilotText(user?.name || existing?.requestedBy || "Standard User", 120),
+    // Found live (cloud-agent-adjacent sweep): the only isolation on
+    // db.nexusFieldDispatches was string equality on this display-name field,
+    // not a stable id -- two distinct accounts that share a name (every
+    // account created via /api/admin/test-user with no explicit name
+    // defaults to the literal "Test User"; the seeded demo account is
+    // literally named "Standard User", also the fallback used here when
+    // user?.name is falsy) could read and, for the PATCH status route, write
+    // each other's dispatch records, including free-text taskDescription/
+    // location. ownerId is the real, stable identity; requestedBy stays as
+    // the display label.
+    ownerId: user?.id || existing?.ownerId || null,
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
+}
+
+function nexusFieldDispatchOwned(dispatch, user) {
+  return Boolean(dispatch) && (dispatch.ownerId === user?.id || canUse(user, "provider-queue"));
 }
 
 function assignFieldAgentDispatch(db, body = {}, user = null) {
@@ -41194,6 +41273,7 @@ function assignFieldAgentDispatch(db, body = {}, user = null) {
   }
   const dispatch = normalizeFieldDispatch(db, { ...body, agentId: candidate.id, status: "assigned" }, null, user);
   db.nexusFieldDispatches.unshift(dispatch);
+  db.nexusFieldDispatches = db.nexusFieldDispatches.slice(0, 200);
   candidate.status = "assigned";
   candidate.activeDispatchId = dispatch.id;
   candidate.updatedAt = dispatch.updatedAt;
@@ -41389,6 +41469,7 @@ function nexusRouteRecord(db, body = {}, user = null) {
     updatedAt: now
   };
   db.nexusRoutingLogs.unshift(log);
+  db.nexusRoutingLogs = db.nexusRoutingLogs.slice(0, 1000);
   const record = evaluation.recordId ? getRecordById(db, evaluation.recordId) : null;
   if (record) {
     record.routingStatus = evaluation.outcome;
@@ -41617,6 +41698,7 @@ function nexusProviderPathwayConsent(db, requestId, body = {}, user = null) {
     localDemoLimitation: !requestItem.providerConfigured
   };
   db.nexusPilotConsentEvents.unshift(consent);
+  db.nexusPilotConsentEvents = db.nexusPilotConsentEvents.slice(0, 1000);
   addNexusPilotAuditEvent(db, "provider_pathway_consent_confirmed", {
     relatedRecordId: requestItem.structuredRecordId,
     actor: consent.profileLabel,
@@ -41657,6 +41739,7 @@ function nexusProviderPathwayRoute(db, requestId, body = {}, user = null) {
     noSentClaim: requestItem.status !== "routed_to_configured_provider" ? true : false
   };
   db.nexusRoutingLogs.unshift(routing);
+  db.nexusRoutingLogs = db.nexusRoutingLogs.slice(0, 1000);
   addNexusPilotAuditEvent(db, "provider_pathway_route_attempted", {
     relatedRecordId: requestItem.structuredRecordId,
     actor: user?.name || "Standard User",
@@ -42031,6 +42114,41 @@ function redactSensitiveAuditEntry(entry, canViewSensitive) {
 function redactPilotAuditEvent(entry, canViewSensitive) {
   if (canViewSensitive) return entry;
   return { ...entry, relatedRecordId: null };
+}
+
+// Found live (consent-history follow-up to the audit-events IDOR fix above): GET
+// /api/nexus/consent-history redacted auditEvents via redactPilotAuditEvent but returned
+// db.nexusPilotConsentEvents completely raw to any signed-in caller -- the identical leak shape, on a
+// sibling array. Each consent event carries recordId/providerPathwayRequestId (real cross-user record
+// IDs) and profileLabel (the other user's real display name), disclosing who consented to what.
+function redactPilotConsentEvent(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, recordId: null, providerPathwayRequestId: null, profileLabel: null };
+}
+
+// Found live (redact*/sibling-array IDOR follow-up sweep): db.nexusIntegrationAttempts is explicitly
+// classified as part of the same audit/compliance trail family as nexusPilotAuditEvents/
+// nexusPilotConsentEvents (see the array-grouping comment above NEXUS_PILOT_AUDIT_TRAIL_ARRAY_KEYS), and
+// carries the identical "real display name" sensitivity class those two already redact -- but GET
+// /api/nexus/integrations/logs and the per-integration /logs variant had NO auth check at all (not even
+// sign-in) and returned every entry's real actor unredacted.
+function redactIntegrationAttempt(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, actor: null };
+}
+
+// Found live (redact*/sibling-array IDOR exhaustive follow-up sweep): db.nexusRoutingLogs entries carry
+// the exact same recordId/actor values (see nexusRouteRecord/nexusEvaluateRouting) that get passed as
+// relatedRecordId/actor into the paired addNexusPilotAuditEvent("routing_evaluated", ...) call -- and
+// relatedRecordId IS redacted everywhere nexusPilotAuditEvents is read -- but GET
+// /api/nexus/provider-pathways/logs and GET /api/nexus/routing/logs returned this identical data raw.
+// Both routes are gated on canUse(user, "provider-queue"), which Provider Reviewer holds alongside Admin
+// (not just Admin), so a Provider Reviewer account from one provider organization could see another
+// organization's real record IDs and requester names through this door -- the same shared,
+// unscoped-collection exposure already called out for the sibling audit-trail arrays.
+function redactRoutingLog(entry, canViewSensitive) {
+  if (canViewSensitive) return entry;
+  return { ...entry, recordId: null, actor: null };
 }
 
 function nexusOperationsSummary(db, user = null) {
@@ -44106,6 +44224,18 @@ function latestParty(store, type = "", user) {
   return mine.find(item => !type || item.type === type || item.type === "both") || mine[0] || null;
 }
 
+// Same terminal-state-reopen shape as latestActiveShipment/latestActiveEmployerProfile/etc. above:
+// mark_party_closed explicitly sets status "closed" and its own receipt promises outreach has stopped,
+// but create_shipment/create_transaction's buyerPartyId/sellerPartyId fallback (when the caller doesn't
+// name a party) used latestParty()'s own mine[0] fallback, which has no status exclusion and could
+// silently reattach a new shipment/transaction to that same closed party. latestParty() itself is left
+// unchanged for mark_party_closed's own lookup, which must find the party regardless of status to close
+// it in the first place.
+function latestActiveParty(store, type = "", user) {
+  const mine = store.parties.filter(item => nexusOperationsOwned(item, user));
+  return mine.find(item => (!type || item.type === type || item.type === "both") && !/closed/.test(item.status || "")) || null;
+}
+
 function latestLearningProfile(store, user) {
   const mine = store.learningProfiles.filter(item => nexusOperationsOwned(item, user));
   return mine.find(item => !/archived|deleted/.test(item.status || "")) || mine[0] || null;
@@ -44514,8 +44644,8 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const shipment = {
       shipmentId: nexusOperationId("NX-SHIP"),
       ownerId: nexusOperationsOwnerKey(user),
-      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer", user)?.partyId || "", 120),
-      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller", user)?.partyId || "", 120),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestActiveParty(store, "buyer", user)?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestActiveParty(store, "seller", user)?.partyId || "", 120),
       origin: cleanOpsText(body.origin || "farm", 160),
       destination: cleanOpsText(body.destination || "market", 160),
       productType: cleanOpsText(body.productType || "produce", 120),
@@ -44567,8 +44697,8 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const transaction = {
       transactionId: nexusOperationId("NX-TXN"),
       ownerId: nexusOperationsOwnerKey(user),
-      buyerPartyId: cleanOpsText(body.buyerPartyId || latestParty(store, "buyer", user)?.partyId || "", 120),
-      sellerPartyId: cleanOpsText(body.sellerPartyId || latestParty(store, "seller", user)?.partyId || "", 120),
+      buyerPartyId: cleanOpsText(body.buyerPartyId || latestActiveParty(store, "buyer", user)?.partyId || "", 120),
+      sellerPartyId: cleanOpsText(body.sellerPartyId || latestActiveParty(store, "seller", user)?.partyId || "", 120),
       shipmentId: cleanOpsText(body.shipmentId || latestActiveShipment(store, user)?.shipmentId || "", 120),
       amount: cleanOpsText(body.amount || "0", 80),
       currency: cleanOpsText(body.currency || "USD", 12),
@@ -44920,6 +45050,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.droneProviders.unshift(provider);
+    store.droneProviders = store.droneProviders.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "drone-provider", provider.droneProviderId, "drone_provider_added", actor, "Drone provider candidate added with dispatch disabled.", null, provider);
     const receipt = addNexusOperationsReceipt(db, "drone-provider", provider.droneProviderId, action, ["Added drone provider candidate record."], ["Nexus did not dispatch drones, schedule flights, capture imagery, or claim provider acceptance."], provider.status);
     return nexusOperationResponse(db, user, action, provider, audit, receipt);
@@ -44938,6 +45069,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.droneEquipment.unshift(equipment);
+    store.droneEquipment = store.droneEquipment.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "drone-equipment", equipment.droneEquipmentId, "drone_equipment_added", actor, "Drone equipment candidate added for readiness review.", null, equipment);
     const receipt = addNexusOperationsReceipt(db, "drone-equipment", equipment.droneEquipmentId, action, ["Added drone equipment record."], ["Nexus did not activate flight hardware, capture images, or launch a mission."], "inventory-review");
     return nexusOperationResponse(db, user, action, equipment, audit, receipt);
@@ -44974,7 +45106,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       // instead, exactly like an unrecognized/stale ID already would. Kept
       // the ownership check too, so this stays closed to cross-user IDOR.
       : (store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId && nexusOperationsOwned(item, user) && !/cancelled|archived|completed/.test(item.status || "")) || latestActiveDroneMission(store, user) || runNexusOperationsAction(db, { action: "create_drone_mission_request" }, user).record);
-    if (action === "create_drone_mission_request") store.droneMissionRequests.unshift(mission);
+    if (action === "create_drone_mission_request") {
+      store.droneMissionRequests.unshift(mission);
+      store.droneMissionRequests = store.droneMissionRequests.slice(0, 1000);
+    }
     const before = action === "create_drone_mission_request" ? null : { ...mission };
     if (action === "prepare_drone_mission_packet") mission.status = "packet-prepared";
     if (action === "match_drone_mission_provider") mission.status = "provider-match-review";
@@ -44982,8 +45117,16 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     if (action === "track_drone_mission_status") mission.status = /flown|dispatched|completed|captured/i.test(body.status || "") ? "manual-status-review" : cleanOpsText(body.status || "manual-status-review", 80);
     if (action === "create_agriculture_expert_packet_from_drone") mission.status = "agriculture-expert-packet-prepared";
     mission.updatedAt = now;
+    // Found live (drone/cloud-agent audit): unlike every sibling record type created in this same
+    // function (drone missions, providers, equipment, parties, shipments, etc.), these two never set
+    // ownerId -- both are in NEXUS_OPERATION_COLLECTIONS, not NEXUS_OPERATIONS_AUDIT_TRAIL_COLLECTIONS, so
+    // collectOwnedOperationsRecords/eraseOwnedOperationsRecords scan them expecting a real ownerId that
+    // never existed, silently excluding a user's own drone-mission events and imagery reports from both
+    // export and erasure with no disclosed gap. Neither array was capped either, unlike this store's other
+    // collections.
     const event = {
       droneEventId: nexusOperationId("NX-DREV"),
+      ownerId: nexusOperationsOwnerKey(user),
       droneMissionId: mission.droneMissionId,
       action,
       status: mission.status,
@@ -44993,15 +45136,18 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       noImageryCaptured: true
     };
     store.droneMissionEvents.unshift(event);
+    store.droneMissionEvents = store.droneMissionEvents.slice(0, 1000);
     if (action === "create_agriculture_expert_packet_from_drone") {
       store.droneImageryReports.unshift({
         droneImageryReportId: nexusOperationId("NX-DIMG"),
+        ownerId: nexusOperationsOwnerKey(user),
         droneMissionId: mission.droneMissionId,
         status: "report-template-prepared",
         summary: "Agriculture expert review packet prepared without claiming imagery capture.",
         noImageryCaptured: true,
         createdAt: now
       });
+      store.droneImageryReports = store.droneImageryReports.slice(0, 1000);
     }
     const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, `${action} recorded with drone dispatch disabled.`, before, mission);
     const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission support record.", "Preserved provider, consent, compliance, and manual review gates."], ["Nexus did not dispatch a drone, schedule a flight, request flight authorization, capture imagery, diagnose crops, or contact a provider."], mission.status);
@@ -45026,8 +45172,12 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   }
 
   if (action === "log_heat_risk_report") {
-    const report = { heatReportId: nexusOperationId("NX-HEAT"), region: cleanOpsText(body.region || body.location || "local area", 160), riskNotes: cleanOpsText(body.riskNotes || command || "Heat illness/risk report logged.", 400), chronicConditionConsideration: cleanOpsText(body.chronicConditionConsideration || "Chronic conditions may increase risk; seek clinical guidance for medical concerns.", 300), liveDatasetConfigured: Boolean(process.env.NEXUS_HEAT_RISK_DATASET_URL), datasetNotice: process.env.NEXUS_HEAT_RISK_DATASET_URL ? "Configured heat-risk source can be reviewed for source-backed heat context." : "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets.", createdAt: now };
+    // Found live (drone/cloud-agent audit): same missing-ownerId shape as droneMissionEvents/
+    // droneImageryReports above -- heatRiskReports is in NEXUS_OPERATION_COLLECTIONS (not the audit-trail
+    // exclusion set), so it's expected to carry a real ownerId, but never did; also never capped.
+    const report = { heatReportId: nexusOperationId("NX-HEAT"), ownerId: nexusOperationsOwnerKey(user), region: cleanOpsText(body.region || body.location || "local area", 160), riskNotes: cleanOpsText(body.riskNotes || command || "Heat illness/risk report logged.", 400), chronicConditionConsideration: cleanOpsText(body.chronicConditionConsideration || "Chronic conditions may increase risk; seek clinical guidance for medical concerns.", 300), liveDatasetConfigured: Boolean(process.env.NEXUS_HEAT_RISK_DATASET_URL), datasetNotice: process.env.NEXUS_HEAT_RISK_DATASET_URL ? "Configured heat-risk source can be reviewed for source-backed heat context." : "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets.", createdAt: now };
     store.heatRiskReports.unshift(report);
+    store.heatRiskReports = store.heatRiskReports.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "case", report.heatReportId, "heat_risk_report_logged", actor, "Heat risk report logged without fake prevalence map.", null, report);
     const receipt = addNexusOperationsReceipt(db, "case", report.heatReportId, action, ["Logged local heat illness/risk report.", "Displayed no-live-dataset notice when configured data is absent."], ["Nexus did not fake illness prevalence, diagnosis, dispatch, weather source, or map overlay."], "recorded");
     return nexusOperationResponse(db, user, action, report, audit, receipt);
@@ -46023,10 +46173,11 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/provider-pathways/logs" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
+    const canViewSensitive = canUse(user, "admin");
     return send(res, 200, {
       ok: true,
       providerPathwayRequests: db.nexusProviderPathwayRequests,
-      routingLogs: db.nexusRoutingLogs.filter(item => item.providerPathwayRequestId)
+      routingLogs: db.nexusRoutingLogs.filter(item => item.providerPathwayRequestId).map(entry => redactRoutingLog(entry, canViewSensitive))
     });
   }
 
@@ -46118,7 +46269,8 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/routing/logs" && req.method === "GET") {
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, logs: db.nexusRoutingLogs });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, logs: db.nexusRoutingLogs.map(entry => redactRoutingLog(entry, canViewSensitive)) });
   }
 
   if (url.pathname === "/api/nexus/cases" && req.method === "GET") {
@@ -46291,7 +46443,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const dispatches = canUse(user, "provider-queue")
       ? db.nexusFieldDispatches
-      : db.nexusFieldDispatches.filter(item => item.requestedBy === (user?.name || "Standard User"));
+      : db.nexusFieldDispatches.filter(item => nexusFieldDispatchOwned(item, user));
     return send(res, 200, { ok: true, dispatches, statuses: NEXUS_FIELD_DISPATCH_STATUSES });
   }
 
@@ -46317,7 +46469,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const dispatch = db.nexusFieldDispatches.find(item => item.id === fieldDispatchStatusMatch[1]);
     if (!dispatch) return send(res, 404, { ok: false, error: "dispatch_not_found" });
-    const isOwner = dispatch.requestedBy === (user?.name || "Standard User");
+    const isOwner = nexusFieldDispatchOwned(dispatch, user);
     const isAgentSideStatus = ["en_route", "completed"].includes(body.status);
     if (isAgentSideStatus && !canUse(user, "provider-queue")) {
       return send(res, 403, { ok: false, error: "Only a provider/admin can mark a dispatch en route or completed." });
@@ -46343,8 +46495,10 @@ async function api(req, res, url) {
 
   const nexusIntegrationLogsMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/logs$/);
   if (nexusIntegrationLogsMatch && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, logs: db.nexusIntegrationAttempts.filter(item => item.integrationId === nexusIntegrationLogsMatch[1] || item.type === nexusIntegrationLogsMatch[1]) });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, logs: db.nexusIntegrationAttempts.filter(item => item.integrationId === nexusIntegrationLogsMatch[1] || item.type === nexusIntegrationLogsMatch[1]).map(entry => redactIntegrationAttempt(entry, canViewSensitive)) });
   }
 
   // db.nexusCommunications/nexusNotifications/nexusOutcomes are shared,
@@ -47052,8 +47206,10 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/integrations/logs" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusProductionRailsState(db);
-    return send(res, 200, { ok: true, attempts: db.nexusIntegrationAttempts });
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, attempts: db.nexusIntegrationAttempts.map(entry => redactIntegrationAttempt(entry, canViewSensitive)) });
   }
 
   const nexusIntegrationPrepareMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/prepare$/);
@@ -47222,7 +47378,7 @@ async function api(req, res, url) {
     // relatedRecordId -- the same IDOR-enabling leak class already fixed for
     // store.actionReceipts/auditLogs, just on this separate array.
     const canViewSensitive = canUse(user, "admin");
-    return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents,
+    return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents.map(entry => redactPilotConsentEvent(entry, canViewSensitive)),
       auditEvents: db.nexusPilotAuditEvents.map(entry => redactPilotAuditEvent(entry, canViewSensitive)) });
   }
 
@@ -47343,6 +47499,7 @@ async function api(req, res, url) {
     record.consentStatus = "confirmed";
     record.updatedAt = now;
     db.nexusPilotConsentEvents.unshift(consent);
+    db.nexusPilotConsentEvents = db.nexusPilotConsentEvents.slice(0, 1000);
     const audit = addNexusPilotAuditEvent(db, "consent_confirmed", {
       relatedRecordId: record.id,
       mode: record.sourceMode,
@@ -47493,7 +47650,13 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/audit" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     ensureNexusPilotState(db);
-    return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents });
+    // Found live (redact*/sibling-array IDOR follow-up sweep): the auth-check fix above closed the
+    // unauthenticated-access gap, but never added the redactPilotAuditEvent() call its sibling
+    // /api/nexus/consent-history already applies to this exact same array -- a real cross-user
+    // relatedRecordId (chronicCareId/transactionId/providerPathwayRequestId/...) and actor (a real
+    // display name) still leaked to any signed-in non-admin caller through this second door.
+    const canViewSensitive = canUse(user, "admin");
+    return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents.map(entry => redactPilotAuditEvent(entry, canViewSensitive)) });
   }
 
   // Found live (missing-auth sweep, later found still incomplete by an
@@ -52335,9 +52498,13 @@ async function api(req, res, url) {
         // (both gate certificate issuance and workforce readiness) with
         // Infinity via Math.max.
         const requestedScore = Number(body.score);
+        // Found live (advanced-route numbering audit): array.length is pinned at 20 forever by the
+        // .slice(0,20) cap applied to every array in this handler right after each insert, unlike this
+        // maker's siblings assignment/cohort (already fixed to use nextRecordSequence) -- once 20 quiz
+        // attempts exist, every later one gets the SAME "AN-QUIZ-021" number.
         const record = {
           id: crypto.randomUUID(),
-          attemptNumber: `AN-QUIZ-${String(db.profile.quizAttempts.length + 1).padStart(3, "0")}`,
+          attemptNumber: `AN-QUIZ-${String(nextRecordSequence(db, "quizAttempts")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           score: body.score !== undefined && Number.isFinite(requestedScore)
@@ -52356,7 +52523,7 @@ async function api(req, res, url) {
       note: () => {
         const record = {
           id: crypto.randomUUID(),
-          noteNumber: `AN-INST-${String(db.profile.instructorNotes.length + 1).padStart(3, "0")}`,
+          noteNumber: `AN-INST-${String(nextRecordSequence(db, "instructorNotes")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           author: user.name,
@@ -52370,7 +52537,7 @@ async function api(req, res, url) {
       report: () => {
         const record = {
           id: crypto.randomUUID(),
-          reportNumber: `AN-LRPT-${String(db.profile.learningProgressReports.length + 1).padStart(3, "0")}`,
+          reportNumber: `AN-LRPT-${String(nextRecordSequence(db, "learningProgressReports")).padStart(3, "0")}`,
           courseId: course.id,
           courseTitle: course.title,
           progress: enrollment.progress || 0,
@@ -52387,7 +52554,7 @@ async function api(req, res, url) {
       transcript: () => {
         const record = {
           id: crypto.randomUUID(),
-          transcriptNumber: `AN-TRN-${String(db.profile.learningTranscripts.length + 1).padStart(3, "0")}`,
+          transcriptNumber: `AN-TRN-${String(nextRecordSequence(db, "learningTranscripts")).padStart(3, "0")}`,
           learnerName: user.name,
           activeCourse: course.title,
           completedCourses: (db.profile.completedCourses || []).map(courseId => db.courses.find(item => item.id === courseId)?.title || courseId),
@@ -52610,7 +52777,7 @@ async function api(req, res, url) {
       onboarding: () => {
         const record = {
           id: crypto.randomUUID(),
-          packetNumber: `AN-ONB-${String(db.profile.workforceOnboarding.length + 1).padStart(3, "0")}`,
+          packetNumber: `AN-ONB-${String(nextRecordSequence(db, "workforceOnboarding")).padStart(3, "0")}`,
           role,
           checklist: ["identity review", "course certificates", "role expectations", "safety briefing", "payment setup"],
           status: "packet-ready",
@@ -52623,7 +52790,7 @@ async function api(req, res, url) {
       document: () => {
         const record = {
           id: crypto.randomUUID(),
-          documentNumber: `AN-DOC-${String(db.profile.workforceDocuments.length + 1).padStart(3, "0")}`,
+          documentNumber: `AN-DOC-${String(nextRecordSequence(db, "workforceDocuments")).padStart(3, "0")}`,
           role,
           checks: ["identity", "certificate proof", "work authorization", "emergency contact"],
           status: "verified",
@@ -52643,7 +52810,7 @@ async function api(req, res, url) {
         const requestedHours = Number(body.hours);
         const record = {
           id: crypto.randomUUID(),
-          timesheetNumber: `AN-TIME-${String(db.profile.timesheets.length + 1).padStart(3, "0")}`,
+          timesheetNumber: `AN-TIME-${String(nextRecordSequence(db, "timesheets")).padStart(3, "0")}`,
           role,
           hours: body.hours !== undefined && Number.isFinite(requestedHours) && requestedHours >= 0 ? requestedHours : 6,
           status: "submitted",
@@ -52664,7 +52831,7 @@ async function api(req, res, url) {
         const requestedAmount = Number(body.amount);
         const record = {
           id: crypto.randomUUID(),
-          payrollNumber: `AN-PAY-${String(db.profile.payrollApprovals.length + 1).padStart(3, "0")}`,
+          payrollNumber: `AN-PAY-${String(nextRecordSequence(db, "payrollApprovals")).padStart(3, "0")}`,
           timesheetNumber: latestTimesheet.timesheetNumber,
           amount: body.amount !== undefined && Number.isFinite(requestedAmount) && requestedAmount >= 0 ? requestedAmount : latestTimesheet.hours * 12,
           status: "approved",
@@ -52683,7 +52850,7 @@ async function api(req, res, url) {
         const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
-          reviewNumber: `AN-REV-${String(db.profile.performanceReviews.length + 1).padStart(3, "0")}`,
+          reviewNumber: `AN-REV-${String(nextRecordSequence(db, "performanceReviews")).padStart(3, "0")}`,
           role,
           score: body.score !== undefined && Number.isFinite(requestedScore) ? Math.min(100, Math.max(0, requestedScore)) : 92,
           strengths: ["attendance", "mobile workflow", "community handoff"],
@@ -52698,7 +52865,7 @@ async function api(req, res, url) {
       "shift-request": () => {
         const record = {
           id: crypto.randomUUID(),
-          requestNumber: `AN-SWAP-${String(db.profile.shiftRequests.length + 1).padStart(3, "0")}`,
+          requestNumber: `AN-SWAP-${String(nextRecordSequence(db, "shiftRequests")).padStart(3, "0")}`,
           role,
           request: body.request || "worker requested shift swap / schedule adjustment",
           status: "manager-review",
@@ -52711,6 +52878,13 @@ async function api(req, res, url) {
     const handler = actions[type];
     if (!handler) return send(res, 400, { error: "Unsupported advanced workforce action" });
     const [providerId, action, detail, record] = handler();
+    // Found live (advanced-route numbering/cap audit): unlike every comparable "advanced" handler in
+    // this file (learning/advanced, map/advanced, trade/advanced all cap their per-type arrays right
+    // after the maker runs), none of these six were ever capped -- unbounded growth in db.profile on
+    // every real workforce action.
+    ["workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"].forEach(key => {
+      db.profile[key] = db.profile[key].slice(0, 20);
+    });
     db.profile.candidateStage = type === "payroll" ? "Paid Placement" : type === "evaluation" ? "Performance Review" : db.profile.candidateStage;
     recalcReadiness(db.profile);
     logIntegration(db, { providerId, module: "Workforce", action, detail, metadata: { recordId: record.id, type } });

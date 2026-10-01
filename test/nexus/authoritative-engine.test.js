@@ -74,6 +74,47 @@ test("a fallback tool that itself requires confirmation is skipped, not left to 
   assert.equal(backupCalls, 1);
 });
 
+// Found live (authoritative-engine audit): confirmation was checked per-candidate using each candidate
+// tool's OWN confirmation_required flag, never the step's own confirmation_state (set once at creation from
+// the PRIMARY tool, updated only by approve()/reject()). A step whose primary tool required confirmation
+// and was explicitly REJECTED still fell through to a fallback tool that doesn't independently require
+// confirmation -- the per-candidate check never denied it -- executing the exact real action the person
+// said no to. execute() is a separately routed, directly callable endpoint, so it must hold this invariant
+// itself regardless of caller.
+test("a step whose primary tool required confirmation and was rejected cannot execute via a fallback tool that doesn't independently require confirmation", async () => {
+  const { engine, store } = fixture();
+  let fallbackCalls = 0;
+  engine.tools.get = async id => ({ tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: id === "provider.primary", consent_scope: null, timeout_ms: 1000 });
+  engine.executors["provider.primary"] = async () => ({ persisted: true });
+  engine.executors["provider.backup"] = async () => { fallbackCalls += 1; return { persisted: true }; };
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.primary", fallback_tool_ids: ["provider.backup"],
+    confirmation_state: "rejected", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { tenantId: "tenant", correlationId: "trace" };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  await assert.rejects(() => engine.execute({ context, taskId: "tsk", stepId: "stp_1" }), error => error.code === "confirmation_required");
+  assert.equal(fallbackCalls, 0, "a fallback tool must never run for a step whose confirmation was explicitly rejected");
+  assert.ok(store.audits.find(event => event.eventType === "tool.denied"), "the denial must be audited");
+});
+
+// Same root cause, the executeTask() side: a rejected step used to fall straight through to execute()
+// (now denied above), landing the whole task in "blocked" via blockOnUnrecoverableFailure -- the same
+// terminal state this file uses for a genuine operational fault, misclassifying an ordinary user "no" as
+// something needing operator attention.
+test("executeTask() cancels the task (not blocks it) when the ready step's confirmation was rejected, and never reaches a fallback tool", async () => {
+  const { engine, store } = fixture();
+  let fallbackCalls = 0;
+  engine.tools.get = async id => ({ tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: id === "provider.primary", consent_scope: null, timeout_ms: 1000 });
+  engine.executors["provider.backup"] = async () => { fallbackCalls += 1; return { persisted: true }; };
+  store.steps = [{ step_id: "stp_1", tool_id: "provider.primary", fallback_tool_ids: ["provider.backup"],
+    confirmation_state: "rejected", idempotency_key: "key", state: "pending", input: {} }];
+  store.task = { schema: "nexus.task.v1", tenantId: "tenant", correlationId: "trace", ownerId: "user", state: "running", version: 1, history: [] };
+  const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+  const result = await engine.executeTask({ context, taskId: "tsk" });
+  assert.equal(result.state, "cancelled");
+  assert.equal(store.task.state, "cancelled", "a declined step must cancel the task, not leave it blocked");
+  assert.equal(fallbackCalls, 0, "a fallback tool must never run for a rejected step");
+});
+
 // Found live: when execute() exhausts every candidate tool (or no remaining step's dependencies can ever be
 // satisfied), executeTask() let that throw propagate straight out with no transition of the task itself out of
 // "running" -- the task was left permanently frozen at "running" forever. Since agent.sweep-advanceable-tasks

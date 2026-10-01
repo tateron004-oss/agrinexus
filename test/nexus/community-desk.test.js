@@ -26,6 +26,12 @@ function fakeStore({ recipients = ["u1", "u2", "u3"] } = {}) {
     async getReport({ tenantId, number }) { return rows.find(row => row.tenantId === tenantId && row.content.kind === "report" && row.content.number === number) || null; },
     async updateReport({ tenantId, memoryId, content, expectedStatus }) { const row = rows.find(item => item.tenantId === tenantId && item.memoryId === memoryId); if (expectedStatus !== undefined && (row.content.status || "") !== expectedStatus) return false; row.content = content; return true; },
     async addAnnouncement({ tenantId, userId, content }) { const id = `a${++n}`; rows.unshift({ memoryId: id, tenantId, userId, content }); return id; },
+    async addAnnouncementUnlessCapped({ tenantId, userId, content, today, maxPerDay }) {
+      const sentToday = rows.filter(row => row.tenantId === tenantId && row.content.kind === "announcement" && row.content.day === today).length;
+      if (sentToday >= maxPerDay) return { capped: true };
+      const id = `a${++n}`; rows.unshift({ memoryId: id, tenantId, userId, content });
+      return { announcementId: id };
+    },
     async listAnnouncements({ tenantId, limit = 20 }) { return rows.filter(row => row.tenantId === tenantId && row.content.kind === "announcement").slice(0, limit); },
     async setPending({ tenantId, userId, content }) { await store.clearPending({ tenantId, userId }); rows.unshift({ memoryId: `p${++n}`, tenantId, userId, content }); },
     async getPending({ tenantId, userId }) { return rows.find(row => row.tenantId === tenantId && row.userId === userId && row.content.kind === "pending") || null; },
@@ -174,6 +180,84 @@ test("the repository keeps reports and notices inside one tenant, numbers report
   await repo.listReports({ tenantId: "t1", userId: "u1" }); assert.equal(calls.at(-1).params[0], "t1"); assert.equal(calls.at(-1).params[1], "u1");
   await repo.setOptOut({ tenantId: "t1", userId: "u9", value: false }); assert.match(calls.at(-1).sql, /set deleted_at=now\(\)/);
   assert.ok(calls.every(call => !/delete from/i.test(call.sql)));
+});
+
+// Found live: the daily announcement cap was re-checked with a plain read, no lock -- two different staff
+// members, each having independently prepared their own pending announcement (a realistic scenario, since
+// setPending/getPending are keyed per staff userId, not shared), could both pass the "under the cap" check
+// and both insert. This mirrors the exact promise-queue lock simulation this session already uses for
+// other pg_advisory_xact_lock-guarded races: a held lock only releases when its own transaction's work
+// finishes, so two concurrent callers racing for the same key are genuinely serialized.
+function cappedAnnouncementDb() {
+  const rows = []; const locks = new Map();
+  const db = {
+    rows,
+    async transaction(fn) {
+      let release = null;
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          release = myRelease;
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
+    async query(sql, params) {
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, day] = params;
+        return { rows: [{ n: rows.filter(row => row.tenantId === tenantId && row.content.kind === "announcement" && row.content.day === day).length }] };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) { rows.push({ tenantId: params[1], userId: params[2], content: params[4] }); return { rows: [] }; }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  return db;
+}
+test("two staff members confirming their own independently prepared announcement at the same moment cannot together exceed the daily cap", async () => {
+  const db = cappedAnnouncementDb();
+  const repo = new CommunityRepository(db);
+  for (let i = 0; i < MAX_ANNOUNCEMENTS_PER_DAY - 1; i += 1) {
+    await repo.addAnnouncementUnlessCapped({ tenantId: "t1", userId: "staff", today: "2026-09-20", maxPerDay: MAX_ANNOUNCEMENTS_PER_DAY, content: { kind: "announcement", day: "2026-09-20", text: `n${i}` } });
+  }
+  const [a, b] = await Promise.all([
+    repo.addAnnouncementUnlessCapped({ tenantId: "t1", userId: "staff1", today: "2026-09-20", maxPerDay: MAX_ANNOUNCEMENTS_PER_DAY, content: { kind: "announcement", day: "2026-09-20", text: "race-a" } }),
+    repo.addAnnouncementUnlessCapped({ tenantId: "t1", userId: "staff2", today: "2026-09-20", maxPerDay: MAX_ANNOUNCEMENTS_PER_DAY, content: { kind: "announcement", day: "2026-09-20", text: "race-b" } })
+  ]);
+  const succeeded = [a, b].filter(r => !r.capped).length;
+  assert.equal(succeeded, 1, "only one of the two concurrent confirmations may land once the cap is one announcement away");
+});
+
+// Found live: optOuts() used to be a single select() capped at 2000 rows (select()'s own hard ceiling) --
+// a tenant with more than 2000 active opt-outs would have its EARLIEST opt-outs (the people who most
+// plainly asked, first, to stop hearing from the community desk) silently fall off every read, and
+// announce/confirm-announcement both push to every recipient not in this list. A fixed cap can never be
+// the right fix for a consent list, so this now pages through in batches of 2000 via keyset pagination.
+test("optOuts() pages through more than one batch instead of silently dropping the earliest opt-outs once a tenant passes the batch size", async () => {
+  const rows = [];
+  for (let i = 0; i < 2005; i += 1) rows.push({ memory_id: `m${i}`, principal_id: `u${i}`, created_at: new Date(2026, 0, 1, 0, 0, i).toISOString() });
+  const db = {
+    async query(sql, params) {
+      if (/select memory_id,principal_id,created_at from nexus_memory_items/.test(sql)) {
+        const [, cursorAt, cursorId] = params;
+        let matches = cursorAt === null ? rows : rows.filter(row => row.created_at < cursorAt || (row.created_at === cursorAt && row.memory_id < cursorId));
+        matches = matches.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : (a.memory_id < b.memory_id ? 1 : -1)));
+        return { rows: matches.slice(0, 2000) };
+      }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  const repo = new CommunityRepository(db);
+  const ids = await repo.optOuts({ tenantId: "t1" });
+  assert.equal(ids.length, 2005, "every opt-out must be returned, not just the newest 2000");
+  assert.ok(ids.includes("u0"), "the very first person to ever opt out must still be included");
+  assert.ok(ids.includes("u2004"), "the most recent opt-out must also still be included");
 });
 
 test("through the planner these are conversational answers with no tool, and staff rights come from the admin role only", async () => {

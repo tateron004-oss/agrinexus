@@ -80,6 +80,24 @@ class CommunityRepository {
 
   // ---- announcements ----
   addAnnouncement({ tenantId, userId, content }) { return this.insert({ tenantId, userId, purpose: "community_notices", content }); }
+  // Found live: the daily announcement cap was enforced by desk.js with a plain check-then-act read
+  // (count today's announcements, then insert), with no lock -- unlike addReport()'s own advisory-lock-
+  // guarded numbering above. Two different staff members, each having independently prepared their own
+  // pending announcement (setPending/getPending are keyed per staff userId, so this is a realistic
+  // scenario, not the same principal racing itself), could both read "under the cap" and both insert,
+  // pushing the tenant past its daily limit. Serializes the count-check and the insert under the same kind
+  // of transaction-scoped advisory lock, keyed per tenant.
+  async addAnnouncementUnlessCapped({ tenantId, userId, content, today, maxPerDay }) {
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`community_announcements:${tenantId}`]);
+      const result = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and memory_class='domain' and purpose='community_notices' and deleted_at is null and content->>'kind'='announcement' and content->>'day'=$2`, [tenantId, today]);
+      const sentToday = Number((result.rows || result)[0]?.n || 0);
+      if (sentToday >= maxPerDay) return { capped: true, sentToday };
+      const announcementId = await this.insert({ tenantId, userId, purpose: "community_notices", content }, trx);
+      return { announcementId };
+    });
+  }
   listAnnouncements({ tenantId, limit = 20 }) { return this.select({ tenantId, purpose: "community_notices", kind: "announcement", limit }); }
   async setPending({ tenantId, userId, content }) { await this.clearPending({ tenantId, userId }); await this.insert({ tenantId, userId, purpose: "community_notices", content }); }
   async getPending({ tenantId, userId }) { return (await this.select({ tenantId, userId, purpose: "community_notices", kind: "pending", limit: 1 }))[0] || null; }
@@ -96,7 +114,30 @@ class CommunityRepository {
   }
 
   // ---- opting out of announcements ----
-  async optOuts({ tenantId }) { return (await this.select({ tenantId, purpose: "community_optout", kind: "optout", limit: 2000 })).map(row => String(row.userId)); }
+  // Found live: this used to be a single select() capped at 2000 (select()'s own hard ceiling), so a
+  // tenant with more than 2000 active opt-outs would silently lose its EARLIEST opt-outs from every read
+  // -- the people who most plainly asked, first, to stop hearing from the community desk. Both callers
+  // (announce/confirm-announcement) push to every recipient not in this list, so losing someone from it
+  // means an announcement is sent to a person who explicitly opted out, contradicting this module's own
+  // "who have not opted out" contract. A fixed cap can never be the right fix for a consent list -- it has
+  // to return everyone, however many there are, so this pages through in batches via keyset pagination
+  // instead of relying on select()'s single-page limit.
+  async optOuts({ tenantId }) {
+    const ids = new Set();
+    let cursor = null;
+    for (;;) {
+      const result = await this.db.query(`select memory_id,principal_id,created_at from nexus_memory_items
+        where tenant_id=$1 and memory_class='domain' and purpose='community_optout' and deleted_at is null and content->>'kind'='optout'
+        and ($2::timestamptz is null or (created_at,memory_id) < ($2::timestamptz,$3::text))
+        order by created_at desc, memory_id desc limit 2000`, [tenantId, cursor?.createdAt || null, cursor?.memoryId || null]);
+      const rows = result.rows || result;
+      for (const row of rows) ids.add(String(row.principal_id));
+      if (rows.length < 2000) break;
+      const last = rows[rows.length - 1];
+      cursor = { createdAt: last.created_at, memoryId: last.memory_id };
+    }
+    return [...ids];
+  }
   async setOptOut({ tenantId, userId, value }) {
     const existing = await this.select({ tenantId, userId, purpose: "community_optout", kind: "optout", limit: 5 });
     if (value && !existing.length) await this.insert({ tenantId, userId, purpose: "community_optout", content: { kind: "optout", text: "opted out" } });

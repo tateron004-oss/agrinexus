@@ -7,6 +7,7 @@ const { farmWorkLine } = require("../../nexus/farmwork/brief.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { fakeFarmStore, fakeMemory } = require("./farmwork-fake.js");
 const { nextDueOf } = require("../../nexus/farmwork/livestock.js");
+const { addStock } = require("../../nexus/farmwork/inventory.js");
 
 const NOW = new Date("2026-09-20T05:00:00Z"); // Sunday 20 September 2026 in Nairobi
 
@@ -354,6 +355,26 @@ test("two concurrent stock-increasing purchases of the same item are not silentl
   const after = await who.store.list({ tenantId: "t1", userId: "u1", collection: "stock" });
   assert.equal(after.length, 1, "both purchases must update the SAME stock item, not create a second one");
   assert.equal(after[0].data.qty, 18, `expected both concurrent additions (5kg + 3kg) on top of the starting 10kg to be reflected, but got ${after[0].data.qty}`);
+});
+
+// Found live (business/marketplace audit): addStock() returned the same null for two different cases --
+// a genuine 400-item cap, or all 5 CAS retries failing under real concurrent write contention on the same
+// item -- so a caller always got told they had 400 kinds of stock, even on a near-empty inventory, when
+// the real reason was a transient write conflict worth just retrying.
+test("addStock reports a real CAS-retry exhaustion distinctly from the 400-item cap, so the caller isn't wrongly told their inventory is full", async () => {
+  const store = fakeFarmStore();
+  await store.add({ tenantId: "t1", userId: "u1", collection: "stock", data: { name: "fertilizer", category: "input", qty: 10, unit: "kg" } });
+  const realUpdate = store.update.bind(store);
+  let updateCalls = 0;
+  store.update = async (...args) => { updateCalls += 1; return false; };
+  const result = await addStock({ tenantId: "t1", userId: "u1", store }, "fertilizer", { value: 5, unit: "kg" });
+  assert.equal(result, false, "exhausting every CAS retry must report false, distinct from null (the real 400-item cap)");
+  assert.equal(updateCalls, 5, "must actually retry all 5 attempts before giving up");
+  store.update = realUpdate;
+
+  const who = farmer({ store: fakeFarmStore() });
+  for (let i = 0; i < 400; i += 1) await who.store.add({ tenantId: "t1", userId: "u1", collection: "stock", data: { name: `item ${i}`, category: "input", qty: 1, unit: "kg" } });
+  assert.match(await who.say("Add 1 kg of one more thing to my inventory"), /four hundred/i, "the real 400-item cap must still produce its own distinct message, unaffected by the fix");
 });
 
 // Found live (a further follow-up sweep): "sold <animal>" recorded income BEFORE writing the animal's

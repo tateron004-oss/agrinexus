@@ -84,7 +84,11 @@ function intake(body = {}, db, env = process.env) {
   if (disabled) return disabled;
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
-  const blocked = guardMedicalText(PROVIDER, action, [body.reason, body.concern, body.questions], false);
+  // Found live (content-safety sibling sweep): unlike medicalSupportBridgeProvider.js, which scans the
+  // same body.selectedProviderReference field it stores, this guard call omitted it entirely -- as well as
+  // accessibilityNeeds, another free-text field this record persists. Neither identical field name nor
+  // purpose differs between the two files; only the scan coverage did.
+  const blocked = guardMedicalText(PROVIDER, action, [body.reason, body.concern, body.questions, body.selectedProviderReference, body.accessibilityNeeds], false);
   if (blocked) return blocked;
   const record = saveRecord(db, INTAKES, normalizeIntake(body));
   return response(PROVIDER, action, "completed", "Telehealth intake saved locally for preparation only.", { intake: record });
@@ -106,7 +110,7 @@ function prepare(body = {}, db, env = process.env) {
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
   const record = normalizeIntake(body);
-  const blocked = guardMedicalText(PROVIDER, action, [record.reason, record.questions.join(" ")], false);
+  const blocked = guardMedicalText(PROVIDER, action, [record.reason, record.questions.join(" "), record.selectedProviderReference, record.accessibilityNeeds], false);
   if (blocked) return blocked;
   return response(PROVIDER, action, "prepared", "Telehealth session preparation created locally. No live provider was connected.", {
     sessionPlan: {
@@ -125,7 +129,7 @@ async function createSession(body = {}, db, env = process.env) {
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
   const record = normalizeIntake(body);
-  const blocked = guardMedicalText(PROVIDER, action, [record.reason, record.questions.join(" ")], false);
+  const blocked = guardMedicalText(PROVIDER, action, [record.reason, record.questions.join(" "), record.selectedProviderReference, record.accessibilityNeeds], false);
   if (blocked) return blocked;
   const provider = safeText(body.videoProvider || "local", 40).toLowerCase();
   if (provider === "local") {
