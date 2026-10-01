@@ -54704,6 +54704,16 @@ async function api(req, res, url) {
     // balance to Infinity (and it self-perpetuates, since Number(Infinity||0)
     // stays Infinity on every later read, unlike NaN which resets to 0).
     if (!Number.isFinite(requestedAmount)) return send(res, 400, { error: "Wallet amount must be a finite number." });
+    // Found live (money-logic audit, real-fund-minting finding): a credit had no
+    // ceiling at all -- the real UI only ever sends a fixed $120 "M-Pesa payment,"
+    // but nothing stopped a direct caller from crediting any amount, repeatedly,
+    // with no real payment provider ever verifying it. Debits are unaffected
+    // (already bounded by the balance-floor check below); only unverified credits
+    // are capped, well above the UI's own $120 so legitimate use is untouched.
+    const WALLET_CREDIT_CAP = 1000;
+    if (requestedAmount > WALLET_CREDIT_CAP) {
+      return send(res, 400, { error: `A wallet credit cannot exceed $${WALLET_CREDIT_CAP} per request without a real, verified payment provider.` });
+    }
     const tx = {
       id: crypto.randomUUID(),
       provider: body.provider || "Wallet",
@@ -54964,50 +54974,46 @@ async function api(req, res, url) {
         // Found live (money-logic audit): nothing marked a quote as
         // "already released" -- the same quote could be released an
         // unlimited number of times (a double-click, a client retry, or a
-        // replayed request), crediting the wallet again in full every time.
-        // Executed proof: three identical release calls against the same
-        // quote credited $650 three times (wallet: 650 -> 1300 -> 1950)
-        // with the quote's own status field never even read. Guards the
-        // same way nexus/farmwork/parties.js's delivery/payment recording
-        // already does elsewhere in this codebase (refuse a second
-        // transition once a record leaves its initial state).
+        // replayed request). Still guarded even though release no longer
+        // credits real funds (below) -- a record shouldn't claim the same
+        // escrow quote was released twice. Guards the same way
+        // nexus/farmwork/parties.js's delivery/payment recording already
+        // does elsewhere in this codebase (refuse a second transition once
+        // a record leaves its initial state).
         if (latestQuote && latestQuote.status === "released") {
           throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
         }
         // Found live (money-logic audit): same Infinity-bypass shape as
-        // quote() above -- an explicit non-finite amount would be credited
-        // to the wallet as-is, permanently corrupting the stored balance.
+        // quote() above -- an explicit non-finite amount would have been
+        // credited to the wallet as-is, permanently corrupting the stored
+        // balance.
         const requestedAmount = Number(body.amount);
         if (body.amount !== undefined && !Number.isFinite(requestedAmount)) {
           throw Object.assign(new Error("Release amount must be a finite number."), { httpStatus: 400 });
         }
-        // Found live (trade sibling sweep, same shape as quote() above): the Infinity guard correctly
-        // accepts an explicit amount of 0, but this still built the stored/credited amount with
-        // `body.amount || ...`, silently discarding a real, explicitly-requested 0 and crediting the
-        // wallet with latestQuote.price (or 650) instead -- a real, unintended wallet credit the caller
-        // never asked for.
+        // Found live (money-logic audit, real-fund-minting finding): this
+        // credited the real spendable wallet based solely on a quote the
+        // SAME caller had just created, with no real payment provider ever
+        // verifying anything -- confirmed live that looping quote(price)
+        // then release an unlimited number of times minted an unlimited,
+        // caller-chosen amount into a real balance spendable elsewhere in
+        // the app. No real payment provider is wired into this escrow flow
+        // at all, so it can no longer credit real funds -- it still records
+        // what WOULD have been released, for the same record-keeping/UI
+        // purposes as before, just without the wallet mutation.
         const record = {
           id: crypto.randomUUID(),
           releaseNumber: `AN-REL-${String(db.profile.paymentReleases.length + 1).padStart(3, "0")}`,
           quoteNumber: latestQuote?.quoteNumber || null,
           amount: body.amount !== undefined ? requestedAmount : Number(latestQuote?.price || product?.price || 650),
           status: "released",
+          realFundsCredited: false,
           createdAt: now
         };
         db.profile.paymentReleases.unshift(record);
         db.profile.paymentReleases = db.profile.paymentReleases.slice(0, 50);
         if (latestQuote) latestQuote.status = "released";
-        db.profile.wallet = Number(db.profile.wallet || 0) + record.amount;
-        db.profile.walletTransactions.unshift({
-          id: crypto.randomUUID(),
-          provider: "Escrow release",
-          amount: record.amount,
-          type: "credit",
-          status: "posted",
-          createdAt: now
-        });
-        db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
-        return ["trade-payments", "payment.released", `${record.releaseNumber} payment released for $${record.amount}.`, record];
+        return ["trade-payments", "payment.released", `${record.releaseNumber} escrow release recorded for $${record.amount} -- no real payment provider is connected, so this did not credit your spendable wallet.`, record];
       }
     };
     const handler = actions[type];

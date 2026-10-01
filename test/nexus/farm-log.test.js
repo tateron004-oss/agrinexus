@@ -73,6 +73,20 @@ test("tank and soil readings are read back with their day, and a warning fires w
   assert.match(await say(memory, "What is my soil moisture in the west field"), /no soil moisture logged for the west field/);
 });
 
+// Found live: "undo my last entry" used to only ever consider readings, so
+// if the person's most recent action was setting an alert, it silently
+// deleted an older real reading instead and left the just-set alert in
+// place -- the exact opposite of what "undo my last entry" means right
+// after setting an alert.
+test("undoing the last entry removes whichever was actually added most recently, including an alert", async () => {
+  const memory = fakeMemory();
+  await say(memory, "Log 12 mm of rain");
+  assert.match(await say(memory, "Warn me if the tank drops below 20 percent"), /^I'll warn you when you log the tank below 20%/);
+  assert.equal(await say(memory, "Undo my last entry"), "Removed your last entry: the alert for the tank below 20%.");
+  assert.equal(await say(memory, "What alerts do I have?"), 'You have no farm alerts. Say "warn me if the tank drops below 20 percent".');
+  assert.equal(await say(memory, "How much rain have we had?"), "Rain this month: 12 mm over 1 day.", "the earlier rain reading must survive, untouched");
+});
+
 test("harvests are totalled per crop and unit, with tonnes converted to kilograms", async () => {
   const memory = fakeMemory();
   assert.equal(await say(memory, "I harvested 200 kg of maize"), "Logged 200 kg of maize for today. Total maize this year: 200 kg.");
@@ -82,6 +96,18 @@ test("harvests are totalled per crop and unit, with tonnes converted to kilogram
   assert.equal(await say(memory, "What is my total harvest?"), "Harvest this year: 30 eggs; beans 5 bags; maize 1200 kg.", "newest crop first");
   assert.match(await say(memory, "How much cassava have I harvested this year?"), /no cassava harvest logged/);
   assert.match(await say(memory, "Show my farm log"), /^Your latest entries: today: .*eggs/);
+});
+
+// Found live: the inline "Total ... this year" line shown right after
+// logging a harvest used to total only entries matching the unit just
+// logged, silently dropping the same crop's entries logged in a different
+// unit from a line that claims to be the complete total -- unlike the
+// explicit "how much have I harvested" query, which already groups by
+// every unit present.
+test("the inline total after logging a harvest includes every unit logged for that crop this year, not just the one just logged", async () => {
+  const memory = fakeMemory();
+  assert.equal(await say(memory, "Log a harvest of 5 bags of maize"), "Logged 5 bags of maize for today. Total maize this year: 5 bags.");
+  assert.equal(await say(memory, "I harvested 200 kg of maize"), "Logged 200 kg of maize for today. Total maize this year: 5 bags and 200 kg.");
 });
 
 test("the log belongs to one person and is capped", async () => {
