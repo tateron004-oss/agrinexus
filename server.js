@@ -135,6 +135,19 @@ const phoneAudioCache = new Map();
 // OpenAI call plus TTS on every single turn.
 const PHONE_CALL_MAX_TURNS = Number(process.env.PHONE_CALL_MAX_TURNS || 40);
 const spotifyOAuthStates = new Map();
+const SPOTIFY_OAUTH_STATE_TTL_MS = Number(process.env.SPOTIFY_OAUTH_STATE_TTL_MS || 10 * 60 * 1000);
+// Found live (server/ dir module sweep follow-up): the callback route only
+// ever deletes a state entry on a completed round trip (success or Spotify-
+// reported error) -- a user who starts the login flow and then abandons it
+// (closes the tab, denies consent without Spotify redirecting back at all)
+// leaves its entry in this in-memory Map forever, for the life of the
+// server process. OAuth states are only ever useful for a few minutes, so
+// sweep expired ones whenever a new flow starts.
+function cleanupSpotifyOAuthStates(now = Date.now()) {
+  for (const [state, entry] of spotifyOAuthStates.entries()) {
+    if (now - Number(entry?.createdAt || 0) > SPOTIFY_OAUTH_STATE_TTL_MS) spotifyOAuthStates.delete(state);
+  }
+}
 const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const authoritativeNexusRuntime = createServerRuntimeAdapter({
   resolveUser: async req => authoritativeRuntimeUser(currentUser(req, await readDb())),
@@ -20268,6 +20281,7 @@ function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) 
     externalNotificationSent: false
   };
   db.nexusPilotReminders.unshift(reminder);
+  db.nexusPilotReminders = db.nexusPilotReminders.slice(0, 200);
   const audit = addNexusPilotAuditEvent(db, "openai_native_local_reminder_created", {
     actor: user?.name || user?.email || "Standard User",
     role: user?.role || "Standard User",
@@ -36018,6 +36032,7 @@ function buildNexusPilotRecord(db, body = {}, user = null) {
   });
   record.auditRefs = [audit.id];
   db.nexusPilotRecords.unshift(record);
+  db.nexusPilotRecords = db.nexusPilotRecords.slice(0, 200);
   return record;
 }
 
@@ -36064,6 +36079,7 @@ function nexusPilotQueueRecordForReview(db, record, user = null) {
   record.reviewStatus = "ready_for_review";
   record.updatedAt = now;
   db.nexusPilotReviewQueue.unshift(queueItem);
+  db.nexusPilotReviewQueue = db.nexusPilotReviewQueue.slice(0, 200);
   const audit = addNexusPilotAuditEvent(db, "item_queued_for_review", {
     relatedRecordId: record.id,
     mode: record.sourceMode,
@@ -39705,6 +39721,7 @@ function queueNexusEmailFallback(db, payload = {}, status = "email-provider-unco
     updatedAt: now
   };
   db.nexusPilotOfflineQueue.unshift(item);
+  db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
   addNexusPilotAuditEvent(db, "email_packet_queued_locally", {
     relatedRecordId: item.id,
     mode: item.domain,
@@ -39979,6 +39996,7 @@ function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provid
     updatedAt: now
   };
   db.nexusPilotOfflineQueue.unshift(item);
+  db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
   addNexusPilotAuditEvent(db, "communications_packet_queued_locally", {
     relatedRecordId: item.id,
     mode: item.domain,
@@ -40213,6 +40231,7 @@ function queueNexusProviderCoordinationFallback(db, lane = "pharmacy", payload =
     updatedAt: now
   };
   db.nexusPilotOfflineQueue.unshift(item);
+  db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
   addNexusPilotAuditEvent(db, `${config.lane}_packet_queued_locally`, {
     relatedRecordId: item.id,
     mode: config.lane,
@@ -40707,6 +40726,7 @@ function nexusKnowledgeSaveResult(db, body = {}, user = null) {
     noExternalAction: true
   };
   db.nexusKnowledgeSavedResults.unshift(saved);
+  db.nexusKnowledgeSavedResults = db.nexusKnowledgeSavedResults.slice(0, 200);
   addNexusPilotAuditEvent(db, "knowledge_result_saved", {
     relatedRecordId: record.id,
     actor: user?.name || record.profileLabel,
@@ -40799,6 +40819,7 @@ function nexusKnowledgePrepareReviewSummary(db, body = {}, user = null) {
   };
   if (!Array.isArray(db.nexusKnowledgeReviewSummaries)) db.nexusKnowledgeReviewSummaries = [];
   db.nexusKnowledgeReviewSummaries.unshift(summary);
+  db.nexusKnowledgeReviewSummaries = db.nexusKnowledgeReviewSummaries.slice(0, 200);
   const audit = addNexusPilotAuditEvent(db, "knowledge_review_summary_prepared", {
     relatedRecordId: summary.linkedRecordId,
     actor: user?.name || "Standard User",
@@ -41629,6 +41650,7 @@ function caseTimelineEvent(db, caseId, eventType, description, refs = {}) {
     createdAt: new Date().toISOString()
   };
   db.nexusCaseTimeline.unshift(event);
+  db.nexusCaseTimeline = db.nexusCaseTimeline.slice(0, 1000);
   return event;
 }
 
@@ -41750,6 +41772,7 @@ function nexusProviderPathwayStatus(db) {
 function nexusProviderPathwayRequest(db, body = {}, user = null) {
   const requestItem = normalizeProviderPathwayRequest(db, body, user);
   db.nexusProviderPathwayRequests.unshift(requestItem);
+  db.nexusProviderPathwayRequests = db.nexusProviderPathwayRequests.slice(0, 200);
   addNexusPilotAuditEvent(db, "provider_pathway_request_prepared", {
     relatedRecordId: requestItem.structuredRecordId,
     actor: requestItem.createdBy,
@@ -46243,6 +46266,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const provider = normalizeProviderOrganization(await readBody(req));
     db.nexusProviderOrganizations.unshift(provider);
+    db.nexusProviderOrganizations = db.nexusProviderOrganizations.slice(0, 500);
     addNexusPilotAuditEvent(db, "provider_organization_created", {
       actor: user?.name || "Provider/Admin",
       role: user?.role || "Admin",
@@ -46341,6 +46365,7 @@ async function api(req, res, url) {
     if (!provider) return send(res, 404, { ok: false, error: "provider_not_found" });
     const reviewer = normalizeProviderReviewer(provider.id, await readBody(req));
     db.nexusProviderReviewers.unshift(reviewer);
+    db.nexusProviderReviewers = db.nexusProviderReviewers.slice(0, 500);
     addNexusPilotAuditEvent(db, "provider_reviewer_created", {
       actor: user?.name || "Provider/Admin",
       role: user?.role || "Admin",
@@ -46379,6 +46404,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const rule = normalizeRoutingRule(await readBody(req));
     db.nexusRoutingRules.unshift(rule);
+    db.nexusRoutingRules = db.nexusRoutingRules.slice(0, 500);
     await writeDb(db);
     return send(res, 200, { ok: true, rule });
   }
@@ -46408,6 +46434,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const caseItem = normalizeCase(db, await readBody(req), {}, user);
     db.nexusCases.unshift(caseItem);
+    db.nexusCases = db.nexusCases.slice(0, 500);
     caseTimelineEvent(db, caseItem.id, "case_created", "Case created locally with no external provider action.", { actor: user?.name || "Standard User" });
     await writeDb(db);
     return send(res, 200, { ok: true, case: caseItem, timeline: db.nexusCaseTimeline.filter(item => item.caseId === caseItem.id) });
@@ -46486,6 +46513,7 @@ async function api(req, res, url) {
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     const response = normalizeProviderResponse(db, record.id, await readBody(req), {}, user);
     db.nexusProviderResponses.unshift(response);
+    db.nexusProviderResponses = db.nexusProviderResponses.slice(0, 500);
     record.providerResponseIds = [response.id, ...(record.providerResponseIds || [])];
     record.updatedAt = response.updatedAt;
     addNexusPilotAuditEvent(db, "provider_response_created", {
@@ -46526,6 +46554,7 @@ async function api(req, res, url) {
     // in their own notification list, only reachable via the admin-all view.
     const submitterRecord = findNexusPilotRecord(db, response.recordId, null, { requireOwnership: false });
     db.nexusNotifications.unshift(normalizeNotification({ title: "Nexus review response ready", message: "A provider/admin response is ready for review.", recordId: response.recordId }, {}, submitterRecord ? { id: submitterRecord.ownerId } : null));
+    db.nexusNotifications = db.nexusNotifications.slice(0, 200);
     addNexusPilotAuditEvent(db, "provider_response_published", {
       relatedRecordId: response.recordId,
       actor: user?.name || response.reviewerLabel,
@@ -46663,6 +46692,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const communication = normalizeCommunication(await readBody(req), {}, user);
     db.nexusCommunications.unshift(communication);
+    db.nexusCommunications = db.nexusCommunications.slice(0, 200);
     addNexusPilotAuditEvent(db, "communication_prepared", {
       actor: user?.name || "Standard User",
       role: user?.role || "Standard User",
@@ -46708,6 +46738,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const notification = normalizeNotification(await readBody(req), {}, user);
     db.nexusNotifications.unshift(notification);
+    db.nexusNotifications = db.nexusNotifications.slice(0, 200);
     await writeDb(db);
     return send(res, 200, { ok: true, notification });
   }
@@ -46733,6 +46764,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const outcome = normalizeOutcome(await readBody(req), {}, user);
     db.nexusOutcomes.unshift(outcome);
+    db.nexusOutcomes = db.nexusOutcomes.slice(0, 200);
     addNexusPilotAuditEvent(db, "outcome_recorded", {
       actor: user?.name || "Standard User",
       role: user?.role || "Standard User",
@@ -46779,6 +46811,7 @@ async function api(req, res, url) {
       updatedAt: now
     };
     db.nexusLaunchBlockers.unshift(blocker);
+    db.nexusLaunchBlockers = db.nexusLaunchBlockers.slice(0, 200);
     await writeDb(db);
     return send(res, 200, { ok: true, blocker });
   }
@@ -47726,6 +47759,7 @@ async function api(req, res, url) {
     item.providerAdminNotes = [note, ...(item.providerAdminNotes || [])];
     item.updatedAt = note.createdAt;
     db.nexusPilotAdminNotes.unshift({ ...note, queueItemId: item.id, recordId: item.recordId });
+    db.nexusPilotAdminNotes = db.nexusPilotAdminNotes.slice(0, 200);
     const audit = addNexusPilotAuditEvent(db, "provider_admin_note_added", {
       relatedRecordId: item.recordId,
       mode: item.sourceMode,
@@ -47825,6 +47859,7 @@ async function api(req, res, url) {
       localReminderOnly: true
     };
     db.nexusPilotReminders.unshift(reminder);
+    db.nexusPilotReminders = db.nexusPilotReminders.slice(0, 200);
     const audit = addNexusPilotAuditEvent(db, "reminder_created", {
       relatedRecordId: reminder.linkedRecordId,
       mode: reminder.type,
@@ -47872,6 +47907,7 @@ async function api(req, res, url) {
       noLiveSyncClaim: true
     };
     db.nexusPilotOfflineQueue.unshift(item);
+    db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
     const audit = addNexusPilotAuditEvent(db, "offline_item_queued", {
       relatedRecordId: item.recordId,
       mode: item.type,
@@ -48600,6 +48636,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/health-evidence/feedback" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
     db.profile = db.profile || {};
     db.profile.nexusHealthEvidenceGovernanceQueue = db.profile.nexusHealthEvidenceGovernanceQueue || [];
@@ -48640,6 +48677,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/workforce-genesis/feedback" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
     db.profile = db.profile || {};
     db.profile.nexusWorkforceGovernanceQueue = db.profile.nexusWorkforceGovernanceQueue || [];
@@ -49328,6 +49366,7 @@ async function api(req, res, url) {
     if (!user) return send(res, 401, { error: "Sign in required before connecting Spotify" });
     if (userIsRestrictedFrom(user, "account-provider-link")) return send(res, 403, { error: "This account type cannot link an external provider account." });
     if (!process.env.SPOTIFY_CLIENT_ID) return send(res, 400, { error: "SPOTIFY_CLIENT_ID is required" });
+    cleanupSpotifyOAuthStates();
     const state = crypto.randomBytes(18).toString("hex");
     const sid = parseCookies(req).agrinexus_sid || "";
     spotifyOAuthStates.set(state, { userId: user.id, sid, createdAt: Date.now() });
@@ -49349,7 +49388,7 @@ async function api(req, res, url) {
     const stored = spotifyOAuthStates.get(state);
     if (state) spotifyOAuthStates.delete(state);
     if (error) return send(res, 400, { error: `Spotify authorization failed: ${error}` });
-    if (!stored || !code) return send(res, 400, { error: "Spotify authorization state was not recognized" });
+    if (!stored || !code || Date.now() - Number(stored.createdAt || 0) > SPOTIFY_OAUTH_STATE_TTL_MS) return send(res, 400, { error: "Spotify authorization state was not recognized" });
     const authUser = db.users.find(item => item.id === stored.userId);
     if (!authUser) return send(res, 404, { error: "Spotify connection user not found" });
     try {
