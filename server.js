@@ -2924,6 +2924,37 @@ function eraseOwnedNexusContentRecords(db, userId) {
   return removedCounts;
 }
 
+// Found live (storage-infrastructure audit): /api/account/export never read nexus_artifacts, the real
+// Postgres-backed table a signed-in user's own uploads land in via POST /api/nexus/runtime/artifacts
+// (nexus/storage/artifact-repository.js) -- a genuine checksum, title, content type, and size for whatever
+// file the caller saved. Account erasure already reaches this table (data-lifecycle-repository.js wipes
+// title/metadata/object_key on every row scoped to this subject), so the same "erasable but never once
+// downloadable" asymmetry already fixed for nexus_memory_items/nexus_records/nexus_sync_operations was open
+// here too, in a table of its own this codebase's other export sweeps never looked at. The file's own bytes
+// are not embedded here (they can be multi-megabyte binary content already served by the per-artifact GET
+// route, tenant/owner scoped the same way); a download path pointing at that real route is given instead.
+async function collectOwnedNexusArtifactRecords(user) {
+  if (!usingPostgresState()) return {};
+  try {
+    const authoritativeUser = await authoritativeRuntimeUser(user);
+    if (!authoritativeUser) return {};
+    const pool = getPgPool();
+    const result = await pool.query(`select artifact_id,kind,title,content_type,checksum,size_bytes,created_at
+      from nexus_artifacts where tenant_id=$1 and owner_id=$2 and deleted_at is null order by created_at desc limit 5000`,
+      [authoritativeUser.tenantId, authoritativeUser.id]);
+    const rows = result.rows || result;
+    if (!rows.length) return {};
+    return { "nexus.artifacts": rows.map(row => ({
+      artifactId: row.artifact_id, kind: row.kind, title: row.title, contentType: row.content_type,
+      checksum: row.checksum, sizeBytes: row.size_bytes, createdAt: row.created_at,
+      downloadPath: `/api/nexus/runtime/artifacts/${encodeURIComponent(row.artifact_id)}`
+    })) };
+  } catch (error) {
+    console.error("[account-export] failed to read nexus artifact records:", error.message);
+    return {};
+  }
+}
+
 // The categories collectOwnedProfileRecords/eraseOwnedProfileRecords cannot
 // reach, surfaced explicitly in every export/erase response so neither ever
 // implies a completeness it doesn't have.
@@ -47584,7 +47615,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedNexusArtifactRecords(user)) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
