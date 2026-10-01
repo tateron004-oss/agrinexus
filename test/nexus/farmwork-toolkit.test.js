@@ -71,6 +71,11 @@ function lockingFarmDb() {
         const n = Math.max(0, ...rows.filter(row => row.tenant_id === tenantId && row.principal_id === userId && row.content.collection === collection).map(row => row.content.number));
         return { rows: [{ n }] };
       }
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId, collection] = params;
+        const n = rows.filter(row => row.tenant_id === tenantId && row.principal_id === userId && row.content.collection === collection && row.content.data?.status === "active").length;
+        return { rows: [{ n }] };
+      }
       if (/insert into nexus_memory_items/.test(sql)) { rows.push({ tenant_id: params[1], principal_id: params[2], content: params[3] }); return { rows: [] }; }
       throw new Error("unexpected SQL: " + sql.slice(0, 80));
     } };
@@ -83,6 +88,22 @@ test("two concurrent add() calls for the same person's same collection are numbe
   const [first, second] = await Promise.all([add(), add()]);
   assert.deepEqual([first.number, second.number].sort(), [1, 2], "each concurrent add must get its own number, not a duplicate");
   assert.equal(db.rows.length, 2, "both records must actually exist");
+});
+
+// Found live (farmwork follow-up audit): the board's MAX_ACTIVE_PER_PERSON cap was enforced by a plain
+// check-then-act read (listPublic, then add() if under the cap), with no lock -- two concurrent "post
+// listing" requests from the same person at the cap boundary could both pass the stale check and both
+// insert. addUnlessPersonCapped() re-checks and inserts under the same advisory lock add() already uses
+// for numbering.
+test("two concurrent listing posts from the same person at the cap boundary cannot together exceed the per-person limit", async () => {
+  const db = lockingFarmDb(); const store = new FarmRecordRepository(db);
+  for (let i = 0; i < 2; i += 1) {
+    await store.addUnlessPersonCapped({ tenantId: "t1", userId: "u1", collection: "listing", maxPerPerson: 3, data: { item: `item${i}`, status: "active" } });
+  }
+  const post = () => store.addUnlessPersonCapped({ tenantId: "t1", userId: "u1", collection: "listing", maxPerPerson: 3, data: { item: "race", status: "active" } });
+  const [first, second] = await Promise.all([post(), post()]);
+  const succeeded = [first, second].filter(result => !result.capped).length;
+  assert.equal(succeeded, 1, "only one of the two concurrent posts may land once the cap is one listing away");
 });
 
 // ---------- guided conversations ----------
