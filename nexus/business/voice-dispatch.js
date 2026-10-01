@@ -836,7 +836,13 @@ function precheck(command = "", args = {}) {
     else if (!transaction.currency) clarification = `Which currency is ${transaction.amount} in, for example shillings or dollars?`;
   } else if (intent === "addInvoiceItem") {
     const item = extractInvoiceItemArgs(command, args);
-    if (!item.unitPrice) clarification = "What is the unit price for this line item?";
+    // Found live (business-module follow-up audit): extractInvoiceItemArgs already correctly parses and
+    // preserves a real 0 (Number.isFinite(rawPrice) && rawPrice>=0 ? rawPrice : null), but this falsy check
+    // treated a legitimate $0 line item (a waived fee, a free add-on shown for transparency -- an ordinary
+    // real invoice line, unlike a $0 transaction) the same as "no price given," re-asking forever since
+    // every retry re-parses "$0" into unitPrice:0 and hits the same falsy check again -- a genuine dead end
+    // with no way to complete the action through voice/chat at all.
+    if (item.unitPrice === null) clarification = "What is the unit price for this line item?";
   } else if (intent === "addGrant") {
     const grant = extractGrantArgs(command, args);
     if (!grant.funderName && !grant.program) clarification = "What is the name of the funder or the grant/funding program?";
@@ -978,7 +984,10 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
 
   if (intent === "addInvoiceItem") {
     const item = extractInvoiceItemArgs(command, args);
-    if (!item.unitPrice) return { status: "needs-input", response: "What is the unit price for this line item?", missingInformation: ["unitPrice"] };
+    // Found live (business-module follow-up audit): same falsy-zero gap as precheck()'s mirror of this
+    // check above -- a legitimate $0 line item (a waived fee, a free add-on) was rejected and re-prompted
+    // forever, since every retry re-parses "$0" into unitPrice:0 and hits the same falsy check again.
+    if (item.unitPrice === null) return { status: "needs-input", response: "What is the unit price for this line item?", missingInformation: ["unitPrice"] };
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding invoice line items.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";

@@ -310,7 +310,20 @@ class BusinessService {
     // real duplicate event on the user's actual calendar and silently
     // overwrote the stored calendarEventId/calendarLink, orphaning the first
     // event with no way to manage it through the app anymore.
-    if (appointment.status === "synced" || appointment.status === "synced-simulated") {
+    // Found live (business-module follow-up audit): the guard compared
+    // appointment.status with an exact-string match, but normalizeEditable()
+    // never validates/normalizes this field's case at all (it's a freeform
+    // string up to 8000 chars, writable directly via the generic PUT the
+    // dashboard's own save endpoint uses for every other field) -- the same
+    // case-sensitivity bug class already fixed repeatedly elsewhere in this
+    // file's sweep predicates, just never applied to the one write-time guard
+    // whose entire purpose is preventing a real duplicate external side
+    // effect. "Synced"/"SYNCED" (written via the raw API, not reachable from
+    // today's voice/chat surface, but reachable from the same REST endpoint
+    // any other client -- mobile, an integration, a future UI -- would use)
+    // silently bypassed the guard and let a second real calendar event through.
+    const normalizedStatus = String(appointment.status || "").toLowerCase();
+    if (normalizedStatus === "synced" || normalizedStatus === "synced-simulated") {
       fail("business_appointment_already_synced", "This appointment is already synced to your calendar.", 409);
     }
     if (!this.providers.calendar) fail("business_provider_unavailable", "Calendar sync is unavailable.", 503);
