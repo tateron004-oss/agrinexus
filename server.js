@@ -10890,6 +10890,10 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       createdAt: new Date().toISOString()
     };
     db.profile.orders.push(order);
+    // Found live (legacy server.js helper-function sweep): orders grows unboundedly -- never capped
+    // anywhere in the file, unlike sibling arrays created in this same function (tradeLogisticsRecords,
+    // walletTransactions). Trims the OLDEST orders (array front) since push() always appends at the end.
+    if (db.profile.orders.length > 1000) db.profile.orders = db.profile.orders.slice(-1000);
   }
   const buyerName = String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} verified buyer desk`).trim();
   const sellerName = String(body.sellerName || user.name || "Farmer seller").trim();
@@ -10900,7 +10904,12 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
   const direction = String(body.direction || (type === "buyer-pickup" ? "buyer-to-seller pickup" : "seller-to-buyer delivery")).trim();
   const carrier = String(body.carrier || "AgriNexus logistics partner").trim();
   const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "DRC" ? "CDF" : "USD")).trim();
-  const amount = Number(body.amount || Math.max(25, Math.round(Number(order.total || 1200) * 0.12)));
+  // Found live (legacy server.js helper-function sweep, low severity -- this feeds only non-settlement
+  // logistics-record display/logging, never a real credited amount; the real-money settlement path below
+  // already resolves its own grossAmount from order.total directly): an explicit amount:0 was treated as
+  // missing and silently overridden by the computed freight estimate.
+  const requestedAmount = Number(body.amount);
+  const amount = body.amount !== undefined && Number.isFinite(requestedAmount) && requestedAmount >= 0 ? requestedAmount : Math.max(25, Math.round(Number(order.total || 1200) * 0.12));
   const statusMap = {
     "logistics-quote": "quote prepared",
     "shipping-booking": "shipment booked",
@@ -11002,6 +11011,11 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     if (order.stage !== "Delivered") {
       throw Object.assign(new Error(`This order has not been marked Delivered yet (currently "${order.stage}") -- confirm delivery before settling payment.`), { httpStatus: 409 });
     }
+    // Found live (legacy server.js helper-function sweep): a legitimate order.total of exactly 0 (a
+    // free-sample/zero-price product) was treated as missing and silently replaced with `amount` -- the
+    // unrelated 12%-of-total freight-cost ESTIMATE computed above, not the real sale proceeds -- then
+    // credited to the seller's real wallet for an order that should settle for nothing.
+    const resolvedOrderTotal = Number(order.total);
     const fee = createPlatformTransactionFee(db, {
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -11010,7 +11024,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       buyerName,
       sellerName,
       productName,
-      grossAmount: Number(order.total) || amount,
+      grossAmount: Number.isFinite(resolvedOrderTotal) ? resolvedOrderTotal : amount,
       currency
     });
     const tx = {
@@ -11318,7 +11332,10 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
       startedAt: now,
       completedAt: null
     };
+    // Found live (legacy server.js helper-function sweep): enrollments grows unboundedly across all 9
+    // of its write sites in this file -- never capped anywhere, unlike sibling arrays elsewhere.
     db.profile.enrollments.unshift(enrollment);
+    db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
   } else if (enrollment) {
     enrollment.status = enrollment.status === "completed" ? "completed" : "in_progress";
     enrollment.progress = Math.max(Number(enrollment.progress || 0), 35);
@@ -13125,6 +13142,7 @@ function completeAgentLesson(db, user) {
       completedAt: null
     };
     db.profile.enrollments.unshift(enrollment);
+    db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
   }
   const moduleIndex = Number(enrollment.activeModuleIndex || 0);
   if (!enrollment.completedModules.includes(moduleIndex)) enrollment.completedModules.push(moduleIndex);
@@ -16992,6 +17010,7 @@ async function executeAgentTool(db, user, step) {
         completedModules: []
       };
       db.profile.enrollments.unshift(enrollment);
+      db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
     } else {
       enrollment.progress = Math.min(100, Number(enrollment.progress || 0) + 25);
       enrollment.status = enrollment.progress >= 100 ? "completed" : "in_progress";
@@ -51666,6 +51685,7 @@ async function api(req, res, url) {
         completedAt: null
       };
       db.profile.enrollments.unshift(enrollment);
+      db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
     } else {
       enrollment.status = enrollment.status === "completed" ? "completed" : "ready_for_quiz";
       enrollment.progress = Math.max(enrollment.progress || 0, 90);
@@ -51939,6 +51959,7 @@ async function api(req, res, url) {
         completedAt: new Date().toISOString()
       };
       db.profile.enrollments.unshift(enrollment);
+      db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
     } else {
       enrollment.status = "completed";
       enrollment.progress = 100;
@@ -52231,6 +52252,7 @@ async function api(req, res, url) {
         completedAt: null
       };
       db.profile.enrollments.unshift(enrollment);
+      db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
     } else {
       enrollment.status = enrollment.status === "completed" ? "completed" : "in_progress";
       enrollment.progress = Math.max(enrollment.progress, 25);
@@ -52275,6 +52297,7 @@ async function api(req, res, url) {
         completedAt: null
       };
       db.profile.enrollments.unshift(enrollment);
+      db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
     }
     const modules = course.modules || [];
     const selectedIndex = Number.isInteger(body.moduleIndex) ? body.moduleIndex : enrollment.activeModuleIndex || 0;
@@ -52323,6 +52346,7 @@ async function api(req, res, url) {
         completedAt: null
       };
       db.profile.enrollments.unshift(enrollment);
+      db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
     }
     enrollment.progress = Math.min(100, enrollment.progress + 35);
     enrollment.score = Math.min(100, enrollment.score + 25);
@@ -52457,6 +52481,7 @@ async function api(req, res, url) {
         completedAt: null
       };
       db.profile.enrollments.unshift(enrollment);
+      db.profile.enrollments = db.profile.enrollments.slice(0, 1000);
     }
     const type = body.type || "assignment";
     const now = new Date().toISOString();
