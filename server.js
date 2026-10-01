@@ -4723,9 +4723,8 @@ async function runCrossPlatformFunction(db, user, body = {}) {
       contactMethod: "Voice callback plus SMS/WhatsApp summary",
       caregiverName: "Community health aide"
     });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
-    db.profile.healthIntakes = db.profile.healthIntakes.slice(0, 30);
     created.push(`${intake.patientRef} telehealth navigation intake`);
   } else if (selected.id === "learning-workforce") {
     const plan = runWomenChildrenLearningWorkflow(db, user, {
@@ -11472,6 +11471,18 @@ function ensureHealthProfile(profile) {
   profile.mobileClinicRevenueRecords = profile.mobileClinicRevenueRecords || [];
 }
 
+// Found live: of the ~17 call sites across this file that add to
+// db.profile.healthIntakes (PHI-bearing), only one capped it afterward --
+// every other creator let it grow without bound. Centralizing the add+cap
+// here, rather than copy-pasting a cap line after each unshift, avoids the
+// indentation-substring-collision mistake that happened earlier this same
+// sweep when a cap line was pasted after every site individually.
+function addHealthIntake(db, intake) {
+  db.profile.healthIntakes.unshift(intake);
+  db.profile.healthIntakes = db.profile.healthIntakes.slice(0, 30);
+  return intake;
+}
+
 function ruralHealthNetworkCatalog(db) {
   const countries = db.countries || [];
   const byName = name => countries.find(item => String(item.name || "").toLowerCase().includes(name.toLowerCase()));
@@ -12797,7 +12808,7 @@ function createVideoSessionWorkflow(db, user, body = {}) {
       accessibilityNeeds: "Captions, audio narration, caregiver handoff, low-bandwidth fallback",
       contactMethod: "Video plus fallback callback"
     }, { defaultFields: ["fallbackIntake"] });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
   }
   const encounter = isHealth && intake
@@ -13326,7 +13337,7 @@ function ensureVoiceHealthIntake(db, user, { needSummary, force = false } = {}) 
       routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
       createdAt: new Date().toISOString()
     };
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
   }
   return intake;
@@ -17103,7 +17114,7 @@ async function executeAgentTool(db, user, step) {
         contactMethod: "Low-bandwidth callback",
         caregiverName: "Community accessibility aide"
       });
-      db.profile.healthIntakes.unshift(intake);
+      addHealthIntake(db, intake);
       shadowWriteHealthIntakeToPostgres(intake);
     }
     const record = {
@@ -29181,7 +29192,7 @@ async function applyConversationalIntake(db, user, pending) {
       accessibilityNeeds: "Voice-first support",
       contactMethod: "Voice callback"
     });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
     logIntegration(db, { providerId: "health-telehealth", module: "Healthcare", action: "agent.conversational_intake_created", detail: `${intake.patientRef} created from conversational intake.`, metadata: { intakeId: intake.id, answers } });
     addActivity(db.profile, `${intake.patientRef} created from conversational intake.`);
@@ -51716,7 +51727,7 @@ async function api(req, res, url) {
     }, {}, {
       needSummary: `${country.name} executive demo intake for queue, heat, and representative workflow`
     }, { simulation: true, defaultFields: ["executiveDemo"] });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     db.profile.representativeConnections += 1;
     const careResult = await runAi("careplan", country, route, db.profile);
     db.profile.carePlans.unshift({
@@ -52023,7 +52034,7 @@ async function api(req, res, url) {
     }, {}, {
       needSummary: "Rural Nigeria accessible telehealth intake for hearing and visual impairment support"
     }, { simulation: true, defaultFields: ["wowDemo"] });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     db.profile.representativeConnections += 1;
     db.profile.telehealthAccessibility.unshift(
       {
@@ -52928,7 +52939,7 @@ async function api(req, res, url) {
         contactMethod: "Low-bandwidth callback",
         caregiverName: "Community accessibility aide"
       });
-      db.profile.healthIntakes.unshift(intake);
+      addHealthIntake(db, intake);
       shadowWriteHealthIntakeToPostgres(intake);
       ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
@@ -53007,7 +53018,7 @@ async function api(req, res, url) {
         createdAt: new Date().toISOString()
       }, body, { needSummary: `${country.name} care plan review` }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const carePlan = withHealthProvenance({
@@ -53055,7 +53066,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} consent and privacy review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53114,7 +53125,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} vitals and triage review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53176,7 +53187,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} referral review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53236,7 +53247,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} follow-up review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53292,7 +53303,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} accessible telehealth review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53398,7 +53409,7 @@ async function api(req, res, url) {
       caregiverName: "Community health aide"
     }, { defaultFields: ["fallbackIntake"] });
     if (!db.profile.healthIntakes.find(item => item.id === activeIntake.id)) {
-      db.profile.healthIntakes.unshift(activeIntake);
+      addHealthIntake(db, activeIntake);
       shadowWriteHealthIntakeToPostgres(activeIntake);
     }
     activeIntake.patientName = patientName || activeIntake.patientName;
@@ -53756,7 +53767,7 @@ async function api(req, res, url) {
       needSummary: "Mobile clinic revenue workflow",
       contactMethod: "voice callback, SMS, or WhatsApp"
     }, { defaultFields: ["fallbackIntake"] });
-    if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+    if (!db.profile.healthIntakes.find(item => item.id === intake.id)) addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
     const mobileClinic = (db.profile.mobileClinicRequests || [])[0]?.mobileClinic || nearestRuralHealthSites(db, { label: country.name, lat: country.lat, lng: country.lng, country: country.name }, "mobile-clinic", 1)[0];
     const providerName = String(body.providerName || mobileClinic?.name || `${country.name} Mobile Clinic Team`).trim();
@@ -53883,7 +53894,7 @@ async function api(req, res, url) {
       contactMethod: "Voice callback plus SMS summary",
       caregiverName: "Community accessibility aide"
     }, { simulation: true });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
       lifecycleState: "intake-started",
       demoRecord: true,
@@ -54042,7 +54053,7 @@ async function api(req, res, url) {
         accessibilityNeeds: "Captions, audio narration, caregiver handoff",
         contactMethod: "Low-bandwidth callback"
       }, { defaultFields: ["fallbackIntake"] });
-      db.profile.healthIntakes.unshift(intake);
+      addHealthIntake(db, intake);
       shadowWriteHealthIntakeToPostgres(intake);
     }
     const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
