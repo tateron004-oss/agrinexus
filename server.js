@@ -55323,6 +55323,18 @@ async function api(req, res, url) {
       },
       release: () => {
         const latestQuote = db.profile.tradeQuotes[0];
+        // Found live (trade/advanced sibling audit, same shape just fixed in /api/workforce/advanced's
+        // payroll action): the dedup guard below only ever fires when a quote exists ("latestQuote &&
+        // ..."), so when no quote has ever been sent (tradeQuotes is empty, its real starting state --
+        // confirmed absent from the base db.json fixture), the guard is silently false-y and release
+        // falls straight through -- not just once, but on every subsequent call, since there's still no
+        // quote to ever mark "released". The credited amount then falls back to a fully fabricated
+        // product price (or 650), crediting real, spendable db.profile.wallet funds an unbounded number
+        // of times for a transaction that never had a real quote, buyer, or escrow behind it. Requiring a
+        // real quote to exist closes this the same way payroll now requires a real timesheet.
+        if (!latestQuote) {
+          throw Object.assign(new Error("Send a quote before releasing payment."), { httpStatus: 409 });
+        }
         // Found live (money-logic audit): nothing marked a quote as
         // "already released" -- the same quote could be released an
         // unlimited number of times (a double-click, a client retry, or a
@@ -55331,8 +55343,10 @@ async function api(req, res, url) {
         // escrow quote was released twice. Guards the same way
         // nexus/farmwork/parties.js's delivery/payment recording already
         // does elsewhere in this codebase (refuse a second transition once
-        // a record leaves its initial state).
-        if (latestQuote && latestQuote.status === "released") {
+        // a record leaves its initial state). latestQuote is guaranteed
+        // truthy here -- the !latestQuote guard just above already throws
+        // otherwise -- so no further null-check is needed.
+        if (latestQuote.status === "released") {
           throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
         }
         // Found live (money-logic audit): same Infinity-bypass shape as

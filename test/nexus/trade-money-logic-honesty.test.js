@@ -57,6 +57,23 @@ async function post(pathname, body = {}) {
   return { status: res.status, body: await res.json() };
 }
 
+// Found live (trade/advanced sibling audit, same shape as /api/workforce/advanced's payroll fix): the
+// dedup guard below only ever fired when a quote existed ("latestQuote && ..."), so when no quote had
+// ever been sent (tradeQuotes' real starting state -- confirmed absent from the base db.json fixture),
+// the guard stayed silently false and release fell straight through, unboundedly repeatably, crediting
+// real spendable wallet funds with a fully fabricated amount for a transaction that never had a real
+// quote, buyer, or escrow behind it. This must run first, before any other test in this file creates a
+// quote (db.profile is a single shared blob across every account in this legacy system).
+test("release refuses when no quote has ever been sent, instead of fabricating one and crediting the wallet", async () => {
+  const before = await fetch(`${base}/api/state`, { headers: { cookie } }).then(res => res.json());
+  const walletBefore = before.profile.wallet;
+  const result = await post("/api/trade/advanced", { type: "release" });
+  assert.equal(result.status, 409, JSON.stringify(result.body));
+  assert.match(result.body.error, /quote/i);
+  const after = await fetch(`${base}/api/state`, { headers: { cookie } }).then(res => res.json());
+  assert.equal(after.profile.wallet, walletBefore, "the wallet must not be credited when no quote ever existed");
+});
+
 // Found live (money-logic audit): nothing marked a trade quote as "already
 // released" -- the same quote could be released an unlimited number of
 // times (a double-click, a client retry, a replayed request). Still guarded
