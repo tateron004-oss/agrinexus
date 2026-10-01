@@ -37,8 +37,31 @@ class DataLifecycleRepository {
       const tasks=await trx.query(`update nexus_tasks set goal='[erased]',task_document='{}'::jsonb,outcome=null,updated_at=now() where tenant_id=$1 and owner_id=$2 returning task_id`,[tenantId,request.subject_id]);
       await trx.query(`update nexus_task_steps s set title='[erased]',input='{}'::jsonb,output=null,error=null
         from nexus_tasks t where s.task_id=t.task_id and t.tenant_id=$1 and t.owner_id=$2`,[tenantId,request.subject_id]);
+      // Found live (data-lifecycle full-file audit): this only ever matched the task's OWNER, not the row's own
+      // actor_id -- unlike nexus_messages just below, which already handles exactly this scenario ("a person's
+      // own words in someone else's shared conversation are erased too"). A delegate (nexus_delegations) acting
+      // on another person's task leaves their own submitted request/response content -- message text, phone
+      // numbers dialed, addresses, health data, per this function's own comment above -- on that OTHER person's
+      // task, surviving the delegate's own account erasure. e.tenant_id is this table's own real column (not
+      // just via the join), used as the tenant guard so the actor_id branch can never reach across tenants.
       await trx.query(`update nexus_tool_executions e set request='{}'::jsonb,response=null,error=null,receipt=null,provider_request_id=null
-        from nexus_tasks t where e.task_id=t.task_id and t.tenant_id=$1 and t.owner_id=$2`,[tenantId,request.subject_id]);
+        from nexus_tasks t where e.task_id=t.task_id and e.tenant_id=$1 and (t.owner_id=$2 or e.actor_id=$2)`,[tenantId,request.subject_id]);
+      // Found live (data-lifecycle full-file audit): nexus_outcome_evidence/nexus_outcome_verifications
+      // (verification/outcome-repository.js's verify()) were entirely absent from this sweep -- the same class
+      // of per-task evidence nexus_task_steps/nexus_tool_executions just above already get wiped for, joined
+      // the identical way, just never added when those two were. observed/details jsonb carry the real evidence
+      // a tool's outcome was actually verified against (e.g. what was actually confirmed/sent); locator/checksum
+      // can reference a real asset. Neither table has its own subject/owner column, so both are reached the same
+      // way task_steps/tool_executions are: joined to the owning task.
+      await trx.query(`update nexus_outcome_evidence x set observed='{}'::jsonb,locator=null,checksum=null
+        from nexus_tasks t where x.task_id=t.task_id and t.tenant_id=$1 and t.owner_id=$2`,[tenantId,request.subject_id]);
+      await trx.query(`update nexus_outcome_verifications x set details='{}'::jsonb
+        from nexus_tasks t where x.task_id=t.task_id and t.tenant_id=$1 and t.owner_id=$2`,[tenantId,request.subject_id]);
+      // Found live (data-lifecycle full-file audit): nexus_predictions (real per-person ML prediction data,
+      // including the explicit "health"/"clinical" domain path -- models/repository.js's own highRisk check)
+      // was never referenced anywhere in this file. It carries a direct subject_id column, so no join is needed.
+      const predictions=await trx.query(`update nexus_predictions set input_provenance='{}'::jsonb,output='{}'::jsonb
+        where tenant_id=$1 and subject_id=$2 returning prediction_id`,[tenantId,request.subject_id]);
       // Found live: a recurring schedule (weather/daily-brief/weekly-brief/check-in, or a person's own reminder)
       // kept dispatching -- ScheduleRepository.dispatchDue only ever looks at state='active' -- regardless of an
       // erasure, since nothing here ever touched nexus_schedules. Cancelling stops all future dispatch and wipes
@@ -90,6 +113,8 @@ class DataLifecycleRepository {
         deviceEventsErased:true,deviceEventsCount:(deviceEvents.rows||deviceEvents).length,
         tasksErased:true,tasksCount:(tasks.rows||tasks).length,
         taskStepsErased:true,toolExecutionsErased:true,
+        outcomeEvidenceErased:true,outcomeVerificationsErased:true,
+        predictionsErased:true,predictionsCount:(predictions.rows||predictions).length,
         schedulesCancelled:true,schedulesCount:(schedules.rows||schedules).length,
         consentsErased:true,consentsCount:(consents.rows||consents).length,
         verifiedAt:new Date().toISOString()};
