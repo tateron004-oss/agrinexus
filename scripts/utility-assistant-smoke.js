@@ -52,7 +52,14 @@ async function call(route, body) {
       TWILIO_AUTH_TOKEN: "",
       TWILIO_PHONE_NUMBER: "",
       PUBLIC_BASE_URL: "",
-      DEMO_CALL_TO: ""
+      DEMO_CALL_TO: "",
+      // Found live: this script makes ~59 /api/agent/command calls (several
+      // inside loops), right against aiAgentRateLimit's real 60-per-60s
+      // budget -- a coin-flip depending on exact round-trip timing, not
+      // anything this script is meant to be testing. Raised here, for this
+      // script's own server only, so a functional smoke test isn't coupled
+      // to a security rate-limiter's exact numeric threshold.
+      AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "1000"
     },
     stdio: "ignore",
     windowsHide: true
