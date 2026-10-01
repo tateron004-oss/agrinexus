@@ -22564,7 +22564,20 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     // and any caller branching on status (the confirmation-required checks
     // used throughout this file, e.g. around line 16094 and 30285) would
     // never see that this turn is actually still pending.
-    const requiresConfirmation = toolResults.some(item => item.result?.status === "confirmation_required");
+    // Found live: only the underscore spelling was checked here, which only
+    // the provider-layer helpers (email.send, Twilio sendSms/sendWhatsapp,
+    // via providerUtils.js's confirmationRequiredResponse) actually use.
+    // Every in-function branch that pauses for confirmation directly
+    // (reminder cancellation, field-visit-plan cancellation, nexus_lists,
+    // nexus_health_preparation's telehealth-video path) uses the hyphenated
+    // "confirmation-required" instead, and two of those (reminder/field-visit
+    // cancellation) never set requiresConfirmation on their own result
+    // either -- so this check silently missed all of them and reported
+    // "completed" for a turn that was actually still waiting on the user.
+    const requiresConfirmation = toolResults.some(item =>
+      item.result?.requiresConfirmation === true
+      || item.result?.status === "confirmation_required"
+      || item.result?.status === "confirmation-required");
     return ensureSpeakableAgentResult({
       intent: runType,
       response: finalText,
