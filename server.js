@@ -11912,6 +11912,174 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
   return checkout;
 }
 
+// Found live (payment-callback gap, flagged 2026-09-28, confirmed and scoped with the user 2026-10-01):
+// initializeTradePaymentCheckout above genuinely calls the real Paystack/Flutterwave checkout-initiation
+// APIs and points their callback_url/redirect_url at these paths, but no route handler existed for either
+// -- a real buyer completing a real payment had no way to ever have that reflected here. Per the user's
+// explicit scoping choice, this ONLY marks the matching checkout/order as paid; it never credits the
+// wallet or moves money itself (settlement, separately, stays disabled -- see its own "Found live"
+// comment above -- until a later, separately-confirmed decision re-enables it on top of this).
+function paystackApiBase() {
+  return String(process.env.PAYSTACK_API_BASE_URL || "https://api.paystack.co").replace(/\/$/, "");
+}
+
+function flutterwaveApiBase() {
+  return String(process.env.FLUTTERWAVE_API_BASE_URL || "https://api.flutterwave.com").replace(/\/$/, "");
+}
+
+// Paystack signs the exact raw request body with HMAC-SHA512 using the account's own secret key --
+// cryptographically tied to the payload, so a webhook POST that passes this check can be trusted
+// directly with no extra network round trip (unlike Flutterwave's verif-hash below).
+function validPaystackWebhookSignature(req, rawBody) {
+  const secret = String(process.env.PAYSTACK_SECRET_KEY || "");
+  const supplied = String(req.headers["x-paystack-signature"] || "");
+  if (!secret || !supplied) return false;
+  const expected = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
+
+// Flutterwave's verif-hash is a constant shared secret compared as-is (not an HMAC over the body), per
+// Flutterwave's own docs -- weaker than Paystack's scheme, so a webhook POST that passes this check still
+// gets re-confirmed against Flutterwave's own verify-transaction API below before anything is marked paid.
+function validFlutterwaveWebhookSignature(req) {
+  const secret = String(process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH || "");
+  const supplied = String(req.headers["verif-hash"] || "");
+  if (!secret || !supplied) return false;
+  const secretBuffer = Buffer.from(secret);
+  const suppliedBuffer = Buffer.from(supplied);
+  return secretBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(secretBuffer, suppliedBuffer);
+}
+
+async function verifyPaystackTransaction(reference) {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  if (!secretKey || !reference) return { ok: false };
+  try {
+    const response = await fetchWithTimeout(`${paystackApiBase()}/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { authorization: `Bearer ${secretKey}` }
+    }, 10000);
+    const json = await response.json().catch(() => ({}));
+    return { ok: Boolean(response.ok && json.status && json.data), data: json.data || null };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+async function verifyFlutterwaveTransaction(transactionId) {
+  const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
+  if (!secretKey || !transactionId) return { ok: false };
+  try {
+    const response = await fetchWithTimeout(`${flutterwaveApiBase()}/v3/transactions/${encodeURIComponent(transactionId)}/verify`, {
+      headers: { authorization: `Bearer ${secretKey}` }
+    }, 10000);
+    const json = await response.json().catch(() => ({}));
+    return { ok: Boolean(response.ok && json.status === "success" && json.data), data: json.data || null };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+// Idempotent against provider webhook retries and a buyer's browser re-hitting the redirect URL: a
+// checkout that is already "paid" is a no-op, so this never double-processes the same payment.
+function markTradePaymentVerified(db, { provider, reference, providerEventId, verifiedAmountOk }) {
+  ensureTradeProfile(db.profile);
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  if (!checkout) return { ok: false, reason: "checkout-not-found" };
+  if (checkout.status === "paid") return { ok: true, alreadyProcessed: true, checkout };
+  if (verifiedAmountOk === false) {
+    logIntegration(db, {
+      providerId: "trade-payments", module: "AgriTrade", action: "payment.amount_mismatch", status: "failed",
+      detail: `${checkout.checkoutNumber}: ${provider} confirmed a payment, but the verified amount did not match this checkout -- not marked paid.`,
+      metadata: { checkoutId: checkout.id, provider, reference }, dispatch: false
+    });
+    return { ok: false, reason: "amount-mismatch", checkout };
+  }
+  const order = checkout.orderId ? (db.profile.orders || []).find(item => item.id === checkout.orderId) : null;
+  checkout.status = "paid";
+  checkout.paidAt = new Date().toISOString();
+  checkout.providerEventId = providerEventId || null;
+  if (order) {
+    order.paid = true;
+    order.paidAt = checkout.paidAt;
+    order.paymentReference = reference;
+    order.paymentProvider = provider;
+  }
+  addTradeEvent(db.profile, { type: "payment.verified", label: `${checkout.checkoutNumber} confirmed paid by ${provider} (${reference}).` });
+  logIntegration(db, {
+    providerId: "trade-payments", module: "AgriTrade", action: "payment.verified", status: "success",
+    detail: `${checkout.checkoutNumber} confirmed paid by ${provider}${order ? `; ${order.orderNumber} marked paid` : ""}. This only marks the order as paid -- it never credits the wallet.`,
+    metadata: { checkoutId: checkout.id, orderId: checkout.orderId, provider, reference },
+    dispatch: false
+  });
+  addActivity(db.profile, `${checkout.checkoutNumber} confirmed paid by ${provider}.`);
+  return { ok: true, checkout, order };
+}
+
+function markTradePaymentFailed(db, { provider, reference }) {
+  ensureTradeProfile(db.profile);
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  if (!checkout || checkout.status === "paid") return { ok: Boolean(checkout) };
+  checkout.status = `${provider}-payment-not-completed`;
+  logIntegration(db, {
+    providerId: "trade-payments", module: "AgriTrade", action: "payment.failed", status: "failed",
+    detail: `${checkout.checkoutNumber}: ${provider} reported this payment as not completed.`,
+    metadata: { checkoutId: checkout.id, provider, reference }, dispatch: false
+  });
+  return { ok: true, checkout };
+}
+
+async function processPaystackReference(db, reference) {
+  if (!reference) return { ok: false, reason: "missing-reference" };
+  const verification = await verifyPaystackTransaction(reference);
+  if (!verification.ok || !verification.data) return { ok: false, reason: "verify-failed" };
+  if (String(verification.data.status || "") !== "success") {
+    markTradePaymentFailed(db, { provider: "paystack", reference });
+    return { ok: false, reason: "not-successful" };
+  }
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  const expectedSubunit = checkout ? paymentSubunitAmount(checkout.grossAmount, checkout.currency) : null;
+  const amountOk = expectedSubunit === null || Math.abs(expectedSubunit - Number(verification.data.amount || 0)) <= 1;
+  return markTradePaymentVerified(db, {
+    provider: "paystack", reference,
+    providerEventId: verification.data.id ? String(verification.data.id) : null,
+    verifiedAmountOk: amountOk
+  });
+}
+
+async function processFlutterwaveTransactionId(db, transactionId, fallbackReference) {
+  if (!transactionId) return { ok: false, reason: "missing-transaction-id" };
+  const verification = await verifyFlutterwaveTransaction(transactionId);
+  if (!verification.ok || !verification.data) return { ok: false, reason: "verify-failed" };
+  const reference = String(verification.data.tx_ref || fallbackReference || "").trim();
+  if (!reference) return { ok: false, reason: "missing-reference" };
+  if (String(verification.data.status || "").toLowerCase() !== "successful") {
+    markTradePaymentFailed(db, { provider: "flutterwave", reference });
+    return { ok: false, reason: "not-successful" };
+  }
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  const amountOk = !checkout || (
+    Math.abs(Number(checkout.grossAmount) - Number(verification.data.amount || 0)) < 0.5
+    && String(verification.data.currency || checkout.currency).toUpperCase() === String(checkout.currency).toUpperCase()
+  );
+  return markTradePaymentVerified(db, {
+    provider: "flutterwave", reference,
+    providerEventId: verification.data.id ? String(verification.data.id) : null,
+    verifiedAmountOk: amountOk
+  });
+}
+
+function tradePaymentCallbackPage(outcome) {
+  const paid = outcome === "paid";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${paid ? "Payment received" : "Payment not confirmed"}</title></head>
+<body style="font-family: sans-serif; max-width: 480px; margin: 48px auto; text-align: center;">
+<h1>${paid ? "Payment received" : "Payment not confirmed"}</h1>
+<p>${paid
+    ? "Thank you -- your payment has been confirmed and your order has been marked as paid."
+    : "We could not confirm this payment yet. If you already paid, please contact support with your reference."}</p>
+</body></html>`;
+}
+
 function ensureAiProfile(profile) {
   // Per-account display names captured from spoken/typed greetings ("this is Ron",
   // "my name is X"). Unlike the rest of agentMemory (genuinely shared across the
@@ -50833,6 +51001,75 @@ async function api(req, res, url) {
       matchedOutboundCall: Boolean(result.call),
       noSecretValues: true
     });
+  }
+
+  // The real webhook/callback receivers closing the Paystack/Flutterwave gap (see
+  // initializeTradePaymentCheckout's "Found live" comment): its callback_url/redirect_url point here,
+  // and (if the user also configures a server-to-server webhook URL in their Paystack/Flutterwave
+  // dashboard) a provider's own webhook POST lands here too. Neither requires a signed-in session --
+  // these calls come from the buyer's browser (GET, after checkout) or directly from the payment
+  // provider's servers (POST), never from this app's own authenticated users -- so, like the Twilio
+  // webhook routes above, these must be placed before the blanket "sign in required" gate just below.
+  if (url.pathname === "/api/trade/payment-callback/paystack" && req.method === "GET") {
+    const reference = String(url.searchParams.get("reference") || url.searchParams.get("trxref") || "").trim();
+    const result = await processPaystackReference(db, reference);
+    await writeDb(db);
+    return send(res, 200, tradePaymentCallbackPage(result.ok ? "paid" : "failed"), { "content-type": "text/html; charset=utf-8" });
+  }
+
+  if (url.pathname === "/api/trade/payment-callback/paystack" && req.method === "POST") {
+    let rawBody = "";
+    try {
+      rawBody = await readRawBody(req, 2_000_000);
+    } catch (error) {
+      return send(res, 413, { ok: false, error: error.message || "Payload too large" });
+    }
+    if (!validPaystackWebhookSignature(req, rawBody)) {
+      return send(res, 403, { ok: false, error: "Invalid Paystack webhook signature", noSecretValues: true });
+    }
+    let payload = {};
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+      return send(res, 400, { ok: false, error: "Invalid JSON payload" });
+    }
+    const reference = String(payload.data?.reference || "").trim();
+    if (reference) {
+      if (String(payload.event || "") === "charge.success" && payload.data?.status === "success") {
+        const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+        const expectedSubunit = checkout ? paymentSubunitAmount(checkout.grossAmount, checkout.currency) : null;
+        const amountOk = expectedSubunit === null || Math.abs(expectedSubunit - Number(payload.data.amount || 0)) <= 1;
+        markTradePaymentVerified(db, {
+          provider: "paystack", reference,
+          providerEventId: payload.data.id ? String(payload.data.id) : null,
+          verifiedAmountOk: amountOk
+        });
+      } else {
+        markTradePaymentFailed(db, { provider: "paystack", reference });
+      }
+      await writeDb(db);
+    }
+    return send(res, 200, { ok: true });
+  }
+
+  if (url.pathname === "/api/trade/payment-callback/flutterwave" && req.method === "GET") {
+    const transactionId = String(url.searchParams.get("transaction_id") || "").trim();
+    const txRef = String(url.searchParams.get("tx_ref") || "").trim();
+    const result = await processFlutterwaveTransactionId(db, transactionId, txRef);
+    await writeDb(db);
+    return send(res, 200, tradePaymentCallbackPage(result.ok ? "paid" : "failed"), { "content-type": "text/html; charset=utf-8" });
+  }
+
+  if (url.pathname === "/api/trade/payment-callback/flutterwave" && req.method === "POST") {
+    if (!validFlutterwaveWebhookSignature(req)) {
+      return send(res, 403, { ok: false, error: "Invalid Flutterwave webhook signature", noSecretValues: true });
+    }
+    const body = await readBody(req);
+    const transactionId = String(body.data?.id || "").trim();
+    const txRef = String(body.data?.tx_ref || body.data?.txRef || "").trim();
+    await processFlutterwaveTransactionId(db, transactionId, txRef);
+    await writeDb(db);
+    return send(res, 200, { ok: true });
   }
 
   const boundedGenesisVoiceGuestRoutes = new Set([
