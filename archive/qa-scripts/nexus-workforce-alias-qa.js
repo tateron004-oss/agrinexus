@@ -46,7 +46,7 @@ async function call(route, body) {
 }
 
 const commandChecks = [
-  { command: "What is Nexus Genesis | AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "Nexus is the assistant inside Nexus Genesis | AgriNexus" },
+  { command: "What is Kyro Genesis | AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "Kyro is the assistant inside Kyro Genesis AgriNexus" },
   { command: "Are you AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "legacy/internal compatibility identity" },
   { command: "What can you do?", intent: "conversation.capability_summary", section: "dashboard", includes: "agriculture" },
   { command: "help me with training", intent: "conversation.learning_start", section: "learning", includes: "skill" },
@@ -67,7 +67,7 @@ const commandChecks = [
 (async () => {
   includesAll(app, [
     "function nexusPlatformExplainAnswer",
-    "Nexus is the assistant inside Nexus Genesis | AgriNexus",
+    "Kyro is the assistant inside Kyro Genesis | AgriNexus",
     "function nexusWorkforceCapabilityAnswer",
     "help me with training",
     "show job pathways",
@@ -79,7 +79,7 @@ const commandChecks = [
     'const assistantFullName = "AgriNexus";',
     'localStorage.getItem("agrinexusPersona")'
   ], "Frontend assistant copy, aliases, and protected identifiers");
-  assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
+  assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-__NEXUS_RELEASE_SHA__"/, "Protected AgriNexus PWA cache marker constant should remain");
 
   includesAll(serverSource, [
     "function nexusWorkforcePlatformExplanation",

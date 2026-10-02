@@ -13,23 +13,23 @@ function includesAll(haystack, values, label) {
 }
 
 includesAll(html, [
-  "<title>Nexus Genesis | AgriNexus</title>",
-  '<meta name="application-name" content="Nexus Genesis | AgriNexus">',
-  '<meta name="apple-mobile-web-app-title" content="Nexus Genesis | AgriNexus">',
-  '<h1 id="loginTitle">Nexus Genesis | AgriNexus</h1>',
-  "<strong>Nexus Genesis | AgriNexus</strong>",
+  "<title>Kyro Genesis | AgriNexus</title>",
+  '<meta name="application-name" content="Kyro Genesis | AgriNexus">',
+  '<meta name="apple-mobile-web-app-title" content="Kyro Genesis | AgriNexus">',
+  '<h1 id="loginTitle">Kyro Genesis | AgriNexus</h1>',
+  "<strong>Kyro Genesis | AgriNexus</strong>",
   'id="workspaceAskBtn" class="primary" type="button">Ask Nexus</button>',
   '<h2 id="globalAssistantTitle">Ask Nexus</h2>',
   'id="jarvisToggle" class="jarvis-toggle primary" type="button" aria-expanded="false" aria-controls="jarvisPanel">Ask Nexus</button>',
-  "Nexus Genesis access platform for agriculture, health, learning, workforce, marketplace, maps, provider readiness, and guided Nexus assistance.",
+  "Kyro Genesis access platform for agriculture, health, learning, workforce, marketplace, maps, provider readiness, and guided Kyro assistance.",
   "marketplace trade",
   "AgriTrade"
 ], "Visible Nexus Genesis shell");
 
 includesAll(app, [
   "const nexusProductIdentity = Object.freeze({",
-  'productName: "Nexus Genesis | AgriNexus"',
-  'assistantName: "Nexus"',
+  'productName: "Kyro Genesis | AgriNexus"',
+  'assistantName: "Kyro"',
   'edition: "genesis"',
   'legacyProductName: "AgriNexus"',
   '{ label: "Ask Nexus", detail: "Tell the assistant what you need in plain language.", command: "help me", primary: true }',
@@ -53,7 +53,7 @@ includesAll(app, [
   "window.AgriNexusNativeBridge"
 ], "Protected AgriNexus runtime compatibility identifiers");
 assert.match(app, /const AGRINEXUS_BUILD_VERSION = "__NEXUS_RELEASE_SHA__"/, "Protected AgriNexus immutable build marker should remain");
-assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
+assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-__NEXUS_RELEASE_SHA__"/, "Protected AgriNexus PWA cache marker constant should remain");
 
 includesAll(server, [
   'AGRINEXUS_PWA_CACHE_VERSION',

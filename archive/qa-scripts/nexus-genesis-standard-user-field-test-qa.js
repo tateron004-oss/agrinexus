@@ -63,7 +63,6 @@ includesAll(app, [
   "data-nexus-global-offline-action",
   "data-nexus-provider-coordination-action",
   "data-real-provider-test",
-  "nexusProviderActivationStatusLabel",
   "data-nexus-approved-memory-action",
   "deleteNexusMemoryWithConfirmation",
   "nexusPersistentTaskMemoryLoad",

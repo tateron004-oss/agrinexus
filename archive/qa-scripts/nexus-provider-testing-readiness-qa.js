@@ -35,6 +35,30 @@ function assertAbsent(source, patterns, label) {
   }
 }
 
+// app.js is one long flat script with hundreds of unrelated top-level
+// functions interleaved between named dashboard helpers (they are not
+// defined contiguously), so a plain `indexOf(startMarker)`..`indexOf(endMarker)`
+// slice sweeps in unrelated code and produces false positives (e.g. an
+// unrelated file-upload fetch() call landing between two distant markers).
+// Extract each named top-level function's own body instead, bounded by the
+// next top-level declaration, and only check those.
+function extractTopLevelBlock(source, marker) {
+  const start = source.indexOf(marker);
+  assert(start >= 0, `expected top-level block starting "${marker}" to exist`);
+  const nextDeclRe = /\n(?:async )?function |\nconst |\nclass /g;
+  nextDeclRe.lastIndex = start + 1;
+  const match = nextDeclRe.exec(source);
+  const end = match ? match.index : source.length;
+  return source.slice(start, end);
+}
+
+const DASHBOARD_FUNCTION_NAMES = [
+  "nexusPlatformDashboardModeById",
+  "renderNexusDashboardPromptChips",
+  "renderNexusPlatformDashboard",
+  "handleNexusPlatformDashboardClick"
+];
+
 includesAll(plan, [
   "# Nexus Provider Testing Readiness Plan",
   "## Purpose",
@@ -219,11 +243,10 @@ includesAll(app, [
   "Citations inform review; they do not authorize execution."
 ], "Provider testing safety copy");
 
-const dashboardBlockStart = app.indexOf("const NEXUS_PLATFORM_DASHBOARD_MODES");
-const dashboardBlockEnd = app.indexOf("function renderUserWorkspace");
-assert(dashboardBlockStart >= 0, "Dashboard modes block must exist.");
-assert(dashboardBlockEnd > dashboardBlockStart, "Dashboard renderer block must be bounded before renderUserWorkspace.");
-const dashboardBlock = app.slice(dashboardBlockStart, dashboardBlockEnd);
+const dashboardBlock = [
+  extractTopLevelBlock(app, "const NEXUS_PLATFORM_DASHBOARD_MODES"),
+  ...DASHBOARD_FUNCTION_NAMES.map(name => extractTopLevelBlock(app, `function ${name}(`))
+].join("\n");
 
 assertAbsent(dashboardBlock, [
   /window\.open/,

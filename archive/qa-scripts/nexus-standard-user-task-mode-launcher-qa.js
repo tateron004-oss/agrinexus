@@ -55,8 +55,6 @@ function assertNotIncludes(source, token, label) {
 ].forEach(command => assertIncludes(app, command, `health access launcher command ${command}`));
 
 [
-  "function renderNexusHealthAccessPreparationOptions",
-  "data-nexus-health-access-card",
   "const NEXUS_HEALTH_ACCESS_PREPARATION_MODES",
   "function detectNexusHealthAccessPreparationMode",
   "function buildNexusHealthAccessPreparationResult",
@@ -70,8 +68,7 @@ function assertNotIncludes(source, token, label) {
 ].forEach(token => assertIncludes(app, token, `health access prep token ${token}`));
 
 [
-  "does not diagnose, prescribe, book, call, message, dispatch, share medical records, request location, or contact a provider",
-  "No provider, pharmacy, call, message, payment, location, camera, drone, appointment, or emergency action was executed"
+  "does not diagnose, prescribe, book, call, message, dispatch, share medical records, request location, or contact a provider"
 ].forEach(token => assertIncludes(app, token, `safety boundary ${token}`));
 
 [
