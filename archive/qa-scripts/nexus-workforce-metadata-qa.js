@@ -47,8 +47,8 @@ async function call(route, body) {
 
 function assertIdentity(identity, label) {
   assert.deepStrictEqual(identity, {
-    productName: "Nexus Genesis | AgriNexus",
-    assistantName: "Nexus",
+    productName: "Kyro Genesis | AgriNexus",
+    assistantName: "Kyro",
     edition: "genesis",
     legacyProductName: "AgriNexus"
   }, `${label}: product identity mismatch`);
@@ -57,8 +57,8 @@ function assertIdentity(identity, label) {
 (async () => {
   includesAll(serverSource, [
     "const PRODUCT_IDENTITY = Object.freeze({",
-    'productName: "Nexus Genesis | AgriNexus"',
-    'assistantName: "Nexus"',
+    'productName: "Kyro Genesis | AgriNexus"',
+    'assistantName: "Kyro"',
     'edition: "genesis"',
     'legacyProductName: "AgriNexus"',
     "function productIdentityMetadata()",
@@ -85,8 +85,8 @@ function assertIdentity(identity, label) {
 
   includesAll(appSource, [
     "const nexusProductIdentity = Object.freeze({",
-    'productName: "Nexus Genesis | AgriNexus"',
-    'assistantName: "Nexus"',
+    'productName: "Kyro Genesis | AgriNexus"',
+    'assistantName: "Kyro"',
     'edition: "genesis"',
     'legacyProductName: "AgriNexus"',
     'const assistantFullName = "AgriNexus";',
@@ -95,7 +95,7 @@ function assertIdentity(identity, label) {
     "Sell my crop",
     "Scan my field"
   ], "Frontend fallback identity and protected compatibility");
-  assert.match(appSource, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
+  assert.match(appSource, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-__NEXUS_RELEASE_SHA__"/, "Protected AgriNexus PWA cache marker constant should remain");
 
   includesAll(nativeBridge, [
     '"name": "AgriNexus Native Voice Bridge"',
@@ -130,7 +130,7 @@ function assertIdentity(identity, label) {
     assert(state.profile && JSON.stringify(state).includes("AgriTrade"), "/api/state should retain AgriTrade compatibility data");
 
     const platform = await call("/api/agent/command", {
-      command: "What is Nexus Genesis | AgriNexus?",
+      command: "What is Kyro Genesis | AgriNexus?",
       inputMode: "voice",
       outputMode: "voice",
       conversational: true,
@@ -138,7 +138,7 @@ function assertIdentity(identity, label) {
       targetLanguage: "en"
     });
     assert.strictEqual(platform.commandResult?.intent, "conversation.platform_explained", "Nexus Genesis identity prompt should route to platform explanation");
-    assert(String(platform.commandResult?.response || "").includes("Nexus is the assistant inside Nexus Genesis | AgriNexus"), "Platform explanation should use canonical product identity wording");
+    assert(String(platform.commandResult?.response || "").includes("Kyro is the assistant inside Kyro Genesis AgriNexus"), "Platform explanation should use canonical product identity wording");
 
     console.log("Nexus Genesis metadata QA passed");
     console.log("- backend PRODUCT_IDENTITY is canonical");

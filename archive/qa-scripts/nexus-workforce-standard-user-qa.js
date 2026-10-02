@@ -88,7 +88,7 @@ mustInclude(app, [
   'simpleUserSections'
 ], "Protected frontend identifiers and workflow wiring");
 assert.match(app, /const AGRINEXUS_BUILD_VERSION = "__NEXUS_RELEASE_SHA__"/, "Protected AgriNexus immutable build marker should remain");
-assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
+assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-__NEXUS_RELEASE_SHA__"/, "Protected AgriNexus PWA cache marker constant should remain");
 
 mustInclude(server, [
   'AGRINEXUS_PWA_CACHE_VERSION',

@@ -33918,7 +33918,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     const next = smartNextActions(db, user, runtimeProviders(db)).items[0];
     return {
       intent: "conversation.guided_menu",
-      response: `Nexus is the assistant inside Nexus Genesis | AgriNexus. I can help with training, job readiness, field support, health access, maps, marketplace or AgriTrade, and messages. Best next step: ${next?.title || "tell me the area you need"}. Say training, job pathways, health access, maps, marketplace, or AI help.`,
+      response: `Kyro is the assistant inside Kyro Genesis | AgriNexus. I can help with training, job readiness, field support, health access, maps, marketplace or AgriTrade, and messages. Best next step: ${next?.title || "tell me the area you need"}. Say training, job pathways, health access, maps, marketplace, or AI help.`,
       status: "guiding",
       metadata: { conversationMode: true, redirectSection: next?.section || "dashboard", recommendedAction: next || null }
     };

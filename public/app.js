@@ -54427,7 +54427,7 @@ function nexusConversationFirstResponse(response, suggestions = [], status = "an
 }
 
 function nexusPlatformExplainAnswer() {
-  return "Nexus is the assistant inside Nexus Genesis | AgriNexus, a full multilingual access platform and voice-operated assistant foundation for farmers, workers, patients, providers, and underserved communities. I can help with agriculture, workforce training, health access, pharmacy support, mobile clinics, transportation-to-care, maps, community services, and marketplace support. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. Live regulated actions require verified connectors, consent, user approval, provider confirmation where needed, and audit logging before they can be enabled.";
+  return "Kyro is the assistant inside Kyro Genesis | AgriNexus, a full multilingual access platform and voice-operated assistant foundation for farmers, workers, patients, providers, and underserved communities. I can help with agriculture, workforce training, health access, pharmacy support, mobile clinics, transportation-to-care, maps, community services, and marketplace support. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. Live regulated actions require verified connectors, consent, user approval, provider confirmation where needed, and audit logging before they can be enabled.";
 }
 
 function nexusPlatformDifferentiatorAnswer() {
