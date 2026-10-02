@@ -2947,6 +2947,75 @@ function eraseOwnedNexusContentRecords(db, userId) {
   return removedCounts;
 }
 
+// Found live (wellness-toolkit follow-up audit): /api/account/export only ever read the legacy db.profile
+// blob (via the collectOwned*Records functions above/below) -- it never reached a signed-in user's real,
+// Postgres-backed nexus/ data: companion trusted-circle/emergency history, the wellness log and goals,
+// farm/health toolkit records, community reports/announcements, personal items, saved contacts, and
+// anything else any nexus/* toolkit writes to the shared nexus_memory_items table. Account ERASURE already
+// correctly reaches this data (authoritativeNexusRuntime.requestDeletionRequest, see /api/account/erase
+// below), so a person's real tracked data could be permanently deleted on request while never once being
+// downloadable first -- the same export/erasure asymmetry this codebase has repeatedly had to close for
+// individual collections (see the workforce/learning export gap, PR #752), here at the scale of an entire
+// storage layer. Grouped by purpose (the real column every nexus/* toolkit's own store already scopes by),
+// so each toolkit's data is clearly labeled in the download. Capped at 5000 rows total (the same ceiling
+// most individual toolkit stores already use for one collection) -- a real, honest completeness gain over
+// today's total absence, though an account with more than 5000 combined rows across every toolkit would
+// still see only its most recent 5000; a full per-purpose paginated export is future work, not this fix.
+//
+// Found live (lists-toolkit follow-up audit, same day): the first version of this fix only queried
+// nexus_memory_items -- but a SECOND, entirely separate Postgres table, nexus_records (RecordRepository),
+// backs its own set of real nexus/* tools (lists.create/update, health.record, telehealth.prepare,
+// drone.plan, business templates, workspace state, autonomy-control state). Account erasure already
+// correctly reaches this table too (data-lifecycle-repository.js's own nexus_records sweep), so the exact
+// same "erasable but never once downloadable" asymmetry this function was written to close for
+// nexus_memory_items was still wide open for nexus_records -- reproduced in a second table the first fix
+// never touched. Scoped identically to how erasure scopes it (subject_id when set, else owner_id), grouped
+// by workspace_id+record_type so each tool's data is clearly labeled the same way purpose already labels
+// the memory-table rows.
+//
+// Found live (fresh-module audit, same day): a THIRD table, nexus_sync_operations, had the identical gap --
+// see the comment right above its query below for the detail.
+async function collectOwnedNexusMemoryRecords(user) {
+  if (!usingPostgresState()) return {};
+  try {
+    const authoritativeUser = await authoritativeRuntimeUser(user);
+    if (!authoritativeUser) return {};
+    const pool = getPgPool();
+    const owned = {};
+    const memoryResult = await pool.query(`select purpose,content,created_at from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and deleted_at is null order by created_at desc limit 5000`,
+      [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (memoryResult.rows || memoryResult)) {
+      const key = `nexus.memory.${row.purpose}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.content, createdAt: row.created_at });
+    }
+    const recordsResult = await pool.query(`select workspace_id,record_type,data,created_at from nexus_records
+      where tenant_id=$1 and (subject_id=$2 or (subject_id is null and owner_id=$2)) and deleted_at is null
+      order by created_at desc limit 5000`, [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (recordsResult.rows || recordsResult)) {
+      const key = `nexus.records.${row.workspace_id}.${row.record_type}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.data, createdAt: row.created_at });
+    }
+    // Found live (fresh-module audit, same day): a THIRD Postgres table, nexus_sync_operations
+    // (nexus/sync/repository.js), was also entirely absent -- it stores a real per-device offline-sync
+    // history (whatever entity a person's device queued while offline: a health reading, a business
+    // record, a farm log entry) keyed directly by user_id, not scoped through either of the two tables
+    // above. Same asymmetry as nexus_memory_items/nexus_records: nothing in this account's export could
+    // ever surface it. Grouped by entity_type, the same real column this table's own summary()/changes()
+    // methods already key their own views by.
+    const syncResult = await pool.query(`select entity_type,entity_id,payload,state,device_id,created_at from nexus_sync_operations
+      where tenant_id=$1 and user_id=$2 order by created_at desc limit 5000`, [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (syncResult.rows || syncResult)) {
+      const key = `nexus.sync.${row.entity_type}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.payload, state: row.state, deviceId: row.device_id, entityId: row.entity_id, createdAt: row.created_at });
+    }
+    return owned;
+  } catch (error) {
+    console.error("[account-export] failed to read authoritative nexus memory records:", error.message);
+    return {};
+  }
+}
+
 // Found live (storage-infrastructure audit): /api/account/export never read nexus_artifacts, the real
 // Postgres-backed table a signed-in user's own uploads land in via POST /api/nexus/runtime/artifacts
 // (nexus/storage/artifact-repository.js) -- a genuine checksum, title, content type, and size for whatever
@@ -47746,7 +47815,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedNexusArtifactRecords(user)) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedNexusMemoryRecords(user)), ...(await collectOwnedNexusArtifactRecords(user)) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
