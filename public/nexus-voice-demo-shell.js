@@ -108,6 +108,7 @@
 
   let activeRecognition = null;
   let isSpeaking = false;
+  let transcriptGeneration = 0;
   let selectedLanguage = DEFAULT_LANGUAGE;
   let isDemoMusicPlaying = false;
   let demoMusicContext = null;
@@ -477,6 +478,8 @@
       setStatus(STATUS_READY);
       return;
     }
+    transcriptGeneration += 1;
+    const currentGeneration = transcriptGeneration;
     setStatus(STATUS_PROCESSING);
     setTranscript(`Heard: ${transcript}`);
     const bridge = window.NexusVoiceDemoShellBridge;
@@ -522,11 +525,19 @@
     if (isMediaProviderHandoffCommand(transcript)) {
       try {
         const result = await bridge?.submitSafeTranscript?.(transcript, { source: COMMAND_SOURCE, mediaProviderHandoff: true });
+        // Found live (same bug shape as the conversational-voice-runtime races): routeTranscript() is
+        // called fire-and-forget from recognition.onresult with no in-flight guard, and this branch's
+        // bridge call can take arbitrarily long. If a second push-to-talk turn starts and resolves
+        // before this older, slower call's await settles, its stale response would land (and its
+        // speak() would CANCEL the newer turn's already-playing speech) after the newer turn -- in a
+        // health-access demo, that can replace a fresh safety response with a stale unrelated one.
+        if (currentGeneration !== transcriptGeneration) return;
         const response = normalizeCommand(result?.response) || "I prepared safe music provider options. Nexus is not hosting, downloading, or playing copyrighted music directly.";
         bridge?.showResponse?.(response, { source: COMMAND_SOURCE, mediaProviderHandoff: true, blocked: false });
         setTranscript(`Heard: ${transcript}`);
         speak(response);
       } catch (error) {
+        if (currentGeneration !== transcriptGeneration) return;
         const response = "I can prepare safe music provider options, but I cannot host, download, or play copyrighted music directly.";
         bridge?.showResponse?.(response, { source: COMMAND_SOURCE, mediaProviderHandoff: true, blocked: false });
         setTranscript(`Heard: ${transcript}`);
@@ -536,10 +547,12 @@
     }
     try {
       const result = await bridge?.submitSafeTranscript?.(transcript, { source: COMMAND_SOURCE });
+      if (currentGeneration !== transcriptGeneration) return;
       const response = normalizeCommand(result?.response) || safeFallbackResponse(transcript);
       setTranscript(`Heard: ${transcript}`);
       speak(response);
     } catch (error) {
+      if (currentGeneration !== transcriptGeneration) return;
       const response = safeFallbackResponse(transcript);
       setTranscript(`Heard: ${transcript}`);
       speak(response);
