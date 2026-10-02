@@ -116,7 +116,16 @@ class DataLifecycleRepository {
       // message content itself) in `recipient`/`receipt`. Revoked the same way nexus_devices is above, and the
       // PII-bearing columns are nulled either way so the row's own audit history stays consistent.
       const consents=await trx.query(`update nexus_consents set state='revoked',revoked_at=now(),recipient=null,receipt='{}'::jsonb where tenant_id=$1 and subject_id=$2 and state<>'revoked' returning consent_id`,[tenantId,request.subject_id]);
+      // Found live (fresh-module audit): nexus_sync_operations (nexus/sync/repository.js) was entirely
+      // absent from this sweep -- it stores a real per-device offline-sync history (whatever entity a
+      // person's device queued while offline: a health reading, a business record, a farm log entry) keyed
+      // directly by tenant_id/user_id. It carries no versioning/audit requirement of its own (it's
+      // delivery-attempt/conflict history, not a record of truth -- the same character as notifications and
+      // device events above), so it's hard-deleted the same way those are, rather than soft-deleted like
+      // nexus_records/nexus_artifacts.
+      const syncOperations=await trx.query(`delete from nexus_sync_operations where tenant_id=$1 and user_id=$2 returning sync_id`,[tenantId,request.subject_id]);
       const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,memoryItemsErased:true,memoryItemsCount:(memoryItems.rows||memoryItems).length,
+        syncOperationsErased:true,syncOperationsCount:(syncOperations.rows||syncOperations).length,
         conversationsErased:true,conversationsCount:(conversations.rows||conversations).length,
         messagesErased:true,
         documentsErased:true,documentsCount:(documents.rows||documents).length,
