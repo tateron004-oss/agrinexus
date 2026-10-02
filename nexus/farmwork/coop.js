@@ -244,4 +244,4 @@ async function handle(ctx) {
   return null;
 }
 
-module.exports = Object.freeze({ handle, templates, findMember });
+module.exports = Object.freeze({ handle, templates, findMember, paidTowardDues });

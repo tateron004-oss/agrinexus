@@ -138,13 +138,32 @@ async function searchCommonsVideos(query) {
 }
 
 // Tries YouTube first (richer results, needs a key), falls back to the always-available Commons search.
-// Never throws for "no key"/"no results" -- only for a genuine provider-call failure, which the caller
+// Never throws for "no key"/"no results" -- only when BOTH providers genuinely fail, which the caller
 // (the nexus executor) turns into an honest, non-fabricated refusal rather than a crash.
 async function searchVideos(query, env = process.env) {
-  const youtube = await searchYouTubeVideos(query, env).catch(error => { throw Object.assign(error, { provider: "youtube" }); });
+  let youtube = null;
+  let youtubeError = null;
+  try {
+    youtube = await searchYouTubeVideos(query, env);
+  } catch (error) {
+    // Found live: a genuine YouTube provider failure (quota exceeded, outage, a bad/revoked key) used to
+    // rethrow immediately here, so Commons was never tried -- contradicting this file's own header
+    // comment that the Commons fallback is why "view videos" should never be fully unreachable. That
+    // comment was only actually true for the "no API key configured" case (a null return, handled
+    // below), not the more realistic production failure mode of YouTube being configured but failing
+    // (its search quota is small -- 100 units per call against a 10,000/day budget, so routine traffic
+    // can exhaust it well within a day). Falling through to Commons instead of rethrowing here.
+    youtubeError = Object.assign(error, { provider: "youtube" });
+  }
   if (youtube && youtube.length) return { provider: "youtube", results: youtube };
-  const commons = await searchCommonsVideos(query).catch(error => { throw Object.assign(error, { provider: "wikimedia-commons" }); });
-  return { provider: "wikimedia-commons", results: commons };
+  try {
+    const commons = await searchCommonsVideos(query);
+    return { provider: "wikimedia-commons", results: commons };
+  } catch (commonsError) {
+    // Both providers failed for a real reason -- surface the YouTube failure when there was one (usually
+    // the more actionable signal, e.g. a quota/key problem), otherwise the Commons failure.
+    throw youtubeError || Object.assign(commonsError, { provider: "wikimedia-commons" });
+  }
 }
 
 module.exports = Object.freeze({ searchYouTubeVideos, searchCommonsVideos, searchVideos });

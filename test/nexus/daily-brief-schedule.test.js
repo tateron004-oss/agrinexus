@@ -44,7 +44,7 @@ test("a person's setting is one active row that can never look due to the dispat
   assert.match(calls[0].sql, /where tenant_id=\$1 and owner_id=\$2 and job_type=\$3 and state='active'/, "only this person's brief is cancelled");
   assert.equal(await repo.stop({ tenantId: "t1", userId: "u1" }), 0);
   assert.deepEqual(await repo.get({ tenantId: "t1", userId: "u1" }), { scheduleId: "sch_new", timeOfDay: "07:00", timeZone: "Africa/Nairobi" });
-  assert.deepEqual(await repo.listActive({ limit: 10 }), [{ scheduleId: "sch_new", tenantId: "t1", userId: "u1", timeOfDay: "07:00", timeZone: "Africa/Nairobi" }]);
+  assert.deepEqual(await repo.listActive({ limit: 10 }), [{ scheduleId: "sch_new", tenantId: "t1", userId: "u1", timeOfDay: "07:00", timeZone: "Africa/Nairobi", createdAt: undefined }]);
   await assert.rejects(() => repo.set({ tenantId: "t1", userId: "u1", timeOfDay: "", timeZone: "UTC" }), /required/);
 });
 

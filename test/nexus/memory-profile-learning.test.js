@@ -84,11 +84,14 @@ test("'what do you know about me' reads facts back as sentences", () => {
 
 test("the repository saves one current fact per kind, privately, and forgets softly", async () => {
   const calls = [];
-  const db = { async query(sql, params) { calls.push({ sql, params });
-    if (/^\s*update nexus_memory_items set deleted_at=now\(\),updated_at=now\(\)\s+where tenant_id=\$1 and principal_id=\$2 and memory_class='profile' and purpose='task_planning' and content->>'kind'/.test(sql)) return { rows: [{ content: { kind: "location", value: "Kisumu" } }] };
-    if (/insert into nexus_memory_items/.test(sql)) return { rows: [{ memory_id: "memory_1", content: { kind: "location", value: "Nakuru" } }] };
-    if (/select memory_id,content,created_at/.test(sql)) return { rows: [{ memory_id: "m2", content: { kind: "name", value: "Amina" } }, { memory_id: "m1", content: { kind: "location", value: "Nakuru" } }, { memory_id: "mx", content: { marker: "acceptance" } }] };
-    return { rows: [{ content: { kind: "location", value: "Nakuru" } }] }; } };
+  const db = {
+    async query(sql, params) { calls.push({ sql, params });
+      if (/^\s*update nexus_memory_items set deleted_at=now\(\),updated_at=now\(\)\s+where tenant_id=\$1 and principal_id=\$2 and memory_class='profile' and purpose='task_planning' and content->>'kind'/.test(sql)) return { rows: [{ content: { kind: "location", value: "Kisumu" } }] };
+      if (/insert into nexus_memory_items/.test(sql)) return { rows: [{ memory_id: "memory_1", content: { kind: "location", value: "Nakuru" } }] };
+      if (/select memory_id,content,created_at/.test(sql)) return { rows: [{ memory_id: "m2", content: { kind: "name", value: "Amina" } }, { memory_id: "m1", content: { kind: "location", value: "Nakuru" } }, { memory_id: "mx", content: { marker: "acceptance" } }] };
+      return { rows: [{ content: { kind: "location", value: "Nakuru" } }] }; },
+    async transaction(work) { return work(db); }
+  };
   const repo = new MemoryRepository(db);
   const result = await repo.saveProfileFact({ tenantId: "t1", userId: "u1", kind: "location", value: "Nakuru", sourceText: "I live in Nakuru", conversationId: "cnv_1" });
   assert.deepEqual(result.replaced, [{ kind: "location", value: "Kisumu" }]); assert.deepEqual(result.fact, { kind: "location", value: "Nakuru" });
@@ -97,7 +100,7 @@ test("the repository saves one current fact per kind, privately, and forgets sof
   assert.deepEqual([insert.params[1], insert.params[2], insert.params[4]], ["t1", "u1", { kind: "location", value: "Nakuru" }]);
   assert.equal(insert.params[6].length, 1 + 1535 * 2 + 2, "a fixed unit-vector placeholder for the required embedding column"); assert.equal(insert.params[6][0], "[");
   assert.equal(insert.params[7].source, "user-statement"); assert.equal(insert.params[7].text, "I live in Nakuru");
-  assert.match(calls[0].sql, /where tenant_id=\$1 and principal_id=\$2/, "the previous fact is looked up for this person only");
+  assert.match(calls[1].sql, /where tenant_id=\$1 and principal_id=\$2/, "the previous fact is looked up for this person only (calls[0] is the new per-person advisory lock)");
 
   assert.deepEqual((await repo.profile({ tenantId: "t1", userId: "u1" })).map(row => row.memory_id), ["m2", "m1"], "only real facts, not other memory items");
   calls.length = 0;
@@ -105,4 +108,58 @@ test("the repository saves one current fact per kind, privately, and forgets sof
   assert.deepEqual(forgotten, [{ kind: "location", value: "Nakuru" }]);
   const update = calls.find(call => /^\s*update/.test(call.sql));
   assert.match(update.sql, /set deleted_at=now\(\)/); assert.doesNotMatch(update.sql, /delete from/i); assert.deepEqual(update.params, ["t1", "u1", ["m2"]]);
+});
+
+// Found live: saveProfileFact()'s soft-delete-then-insert used to be two separate, unguarded statements --
+// no transaction, no lock. Two concurrent statements about the same fact (the same correction sent twice
+// quickly) could both read/soft-delete the same existing row and both insert, leaving two simultaneously-
+// active rows for the same kind, violating "one current fact per kind." Mirrors this session's established
+// promise-queue lock simulation.
+function lockedProfileFactsDb() {
+  const rows = []; const locks = new Map(); let n = 0;
+  const db = {
+    rows,
+    async transaction(fn) {
+      let release = null;
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          release = myRelease;
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
+    async query(sql, params) {
+      if (/^\s*update nexus_memory_items set deleted_at=now\(\)/.test(sql)) {
+        const [tenantId, userId, kind] = params;
+        const matches = rows.filter(row => row.tenantId === tenantId && row.userId === userId && row.content.kind === kind && !row.deleted);
+        for (const row of matches) row.deleted = true;
+        return { rows: matches.map(row => ({ content: row.content })) };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) {
+        const row = { memory_id: `m${++n}`, tenantId: params[1], userId: params[2], content: params[4], deleted: false };
+        rows.push(row);
+        return { rows: [{ memory_id: row.memory_id, content: row.content }] };
+      }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  return db;
+}
+test("two concurrent saves of the same profile-fact kind never leave two live facts for that kind", async () => {
+  const db = lockedProfileFactsDb();
+  const repo = new MemoryRepository(db);
+  await Promise.all([
+    repo.saveProfileFact({ tenantId: "t1", userId: "u1", kind: "location", value: "Nakuru", sourceText: "I live in Nakuru" }),
+    repo.saveProfileFact({ tenantId: "t1", userId: "u1", kind: "location", value: "Kisumu", sourceText: "I live in Kisumu" })
+  ]);
+  const live = db.rows.filter(row => !row.deleted && row.content.kind === "location");
+  assert.equal(live.length, 1, "only one live fact must remain for this kind, whichever request won");
 });

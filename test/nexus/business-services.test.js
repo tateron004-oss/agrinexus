@@ -317,6 +317,28 @@ test("appointment scheduler: re-syncing an already-synced appointment is refused
   assert.equal(synced.data.editable.appointments[0].calendarEventId, 'evt_1', 'the original real calendar event must not be overwritten by a refused re-sync');
 });
 
+// Found live (business-module follow-up audit): the already-synced guard above compared appointment.status
+// with an exact-string match ("synced"/"synced-simulated"), but normalizeEditable() never validates or
+// normalizes this field's case -- it's a freeform string writable directly via the generic PUT the
+// dashboard's own save endpoint uses for every other field. A differently-cased status ("Synced"/"SYNCED",
+// reachable via the raw REST API even though today's dashboard UI renders this field read-only) silently
+// bypassed the guard and let a second real duplicate calendar event through.
+test("appointment scheduler: a differently-cased already-synced status still refuses a re-sync, not just the exact lowercase string", async () => {
+  const info = templates.inferBusiness({ businessName: 'Cooperative' });
+  let calendarCalls = [];
+  const f = fixture({ calendar: async input => { calendarCalls.push(input); return { eventId: `evt_${calendarCalls.length}`, htmlLink: 'https://calendar.example/evt', providerVerified: true }; } });
+  const row = await f.service.create(f.context, { businessName: 'Cooperative', consent: true });
+  // Written directly, bypassing syncAppointment() itself -- simulating a raw PUT (or any future write path)
+  // that sets an already-synced status in a different case than the sync executor itself always writes.
+  const editable = { ...row.data.editable, appointments: [{ title: 'Vet visit', start: '2026-04-01T09:00', end: '2026-04-01T10:00', notes: '', status: 'SYNCED', calendarEventId: 'evt_existing', calendarLink: 'https://calendar.example/existing' }] };
+  const updated = await f.service.update(f.context, row.record_id, { expectedVersion: 1, editable });
+  await assert.rejects(
+    () => f.service.syncAppointment(f.context, row.record_id, { appointmentIndex: 0, expectedVersion: updated.version, confirmed: true }),
+    error => error.code === 'business_appointment_already_synced'
+  );
+  assert.equal(calendarCalls.length, 0, 'a differently-cased already-synced status must never let a second real calendar event through');
+});
+
 // Found live (calendar-sync sibling sweep): checkout() only refused a second
 // checkout once state === "active" -- a second, version-current request
 // while an earlier checkout was still "checkout_created"/"pending_payment"

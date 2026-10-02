@@ -6,7 +6,7 @@ const { normalizeRecipient } = require("../communications/send-request.js");
 const { recordMoney, NOT_FARM, sum } = require("./money.js");
 const { addStock, findItems } = require("./inventory.js");
 const { findParty } = require("./parties.js");
-const { findMember } = require("./coop.js");
+const { findMember, paidTowardDues } = require("./coop.js");
 const { askConfirmSw } = require("./swahili-land.js");
 const { parseQuantitySw, unitLabelSw, parseMoneySw, moneyShown, englishItem, swahiliItem, describeDaySw, dayInEnglish, isDayWord, dayFromSw, splitDueSw, periodSw, placeName, CURRENCY_WORDS, UNIT_WORD, NUMBER } = require("../i18n/swahili-words.js");
 
@@ -296,7 +296,12 @@ async function handle(ctx) {
       const dues = /(?:\bada\b|mchango wa kawaida|kila mwezi|kila wiki|kila mwaka)/i.test(`${m[2]} ${purpose}`) || /amelipa/i.test(t) && !purpose; const currency = money.currency || c?.data.currency || "";
       await ctx.store.add({ ...scope, collection: "coop_payment", data: { member: found.member.data.name, kind: dues ? "dues" : "contribution", amount: money.amount, currency, purpose: purpose.slice(0, 80), day: ctx.today } });
       const period = periodOfCoop(c);
-      const paid = (await list("coop_payment")).filter(pay => pay.data.member === found.member.data.name && pay.data.kind === "dues" && pay.data.day >= period.from && pay.data.day <= period.to).reduce((sum, pay) => sum + pay.data.amount, 0);
+      // Found live (money-arithmetic audit): unlike coop.js's own English handler, this summed dues
+      // payments across every currency with no match check -- paidTowardDues (shared with coop.js, the
+      // same reference fix already used there) only counts payments actually made in the coop's own
+      // currency, so a payment in a different currency can never silently satisfy (or clear) a dues
+      // target denominated in another one.
+      const paid = paidTowardDues((await list("coop_payment")).filter(pay => pay.data.member === found.member.data.name && pay.data.kind === "dues" && pay.data.day >= period.from && pay.data.day <= period.to), c);
       const owed = dues && c?.data.dues ? round(c.data.dues - paid) : 0;
       return SW.paid({ name: found.member.data.name, dues, amount: moneyShown(money.amount, currency), purpose, owed: owed > 0 ? moneyShown(owed, currency) : "", period: period.label, upToDate: dues && c?.data.dues && owed <= 0 });
     }
@@ -312,15 +317,23 @@ async function handle(ctx) {
     if (!c?.data.dues) return SW.setDuesFirst; if (!rows.length) return SW.noMembers;
     const period = periodSw(lower, ctx.today, c.data.period === "weekly" ? "this week" : c.data.period === "yearly" ? "this year" : "this month");
     const pays = (await list("coop_payment")).filter(pay => pay.data.kind === "dues" && pay.data.day >= period.from && pay.data.day <= period.to);
-    const owing = rows.map(member => ({ member, owed: round(c.data.dues - pays.filter(pay => pay.data.member === member.data.name).reduce((sum, pay) => sum + pay.data.amount, 0)) })).filter(item => item.owed > 0);
+    // Same missing currency-match guard as the "amelipa" handler above -- paidTowardDues only counts a
+    // payment toward dues when it's in the coop's own currency.
+    const owing = rows.map(member => ({ member, owed: round(c.data.dues - paidTowardDues(pays.filter(pay => pay.data.member === member.data.name), c)) })).filter(item => item.owed > 0);
     return owing.length ? SW.owing({ n: owing.length, period: period.label, lines: owing.slice(0, 15).map(item => `${item.member.data.name} ${moneyShown(item.owed, c.data.currency)}`).join("; ") }) : SW.allPaid({ period: period.label });
   }
   if ((m = /^(?:onyesha|nionyeshe)\s+(?:michango|malipo) ya ushirika(?: (wiki hii|mwezi huu|mwaka huu|mwezi uliopita))?$/i.exec(t))) {
     const period = periodSw(m[1] || "mwaka huu", ctx.today, "this year"); const rows = (await list("coop_payment")).filter(pay => pay.data.day >= period.from && pay.data.day <= period.to);
     if (!rows.length) return SW.noCoopPays({ period: period.label });
-    const cur = rows[0].data.currency; const sumKind = kind => round(rows.filter(pay => pay.data.kind === kind).reduce((total, pay) => total + pay.data.amount, 0));
-    const top = Object.entries(rows.filter(pay => pay.data.kind !== "payout").reduce((acc, pay) => { acc[pay.data.member] = round((acc[pay.data.member] || 0) + pay.data.amount); return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    return SW.coopSums({ period: period.label, dues: moneyShown(sumKind("dues"), cur), contributions: moneyShown(sumKind("contribution"), cur), paidOut: moneyShown(sumKind("payout"), cur), top: top.map(([name, amount]) => `${name} ${moneyShown(amount, cur)}`).join(", ") });
+    // Found live (money-arithmetic audit): unlike coop.js's own English report (which buckets by
+    // currency, matching sum()/showTotals() everywhere else in the farm toolkit), this labeled the whole
+    // total with whichever payment happened to be first ("rows[0].data.currency") and summed every
+    // currency together into it, and ranked "top contributor" by name alone (mixing separate currencies'
+    // contributions under one member into a single meaningless figure too).
+    const sumKindBucketed = kind => { const totals = {}; for (const pay of rows) { if (pay.data.kind !== kind) continue; const currency = pay.data.currency || ""; totals[currency] = round((totals[currency] || 0) + pay.data.amount); } return totals; };
+    const showTotalsSw = totals => Object.entries(totals).map(([currency, amount]) => moneyShown(amount, currency)).join(" na ");
+    const top = Object.entries(rows.filter(pay => pay.data.kind !== "payout").reduce((acc, pay) => { const key = `${pay.data.member}|${pay.data.currency || ""}`; acc[key] = round((acc[key] || 0) + pay.data.amount); return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    return SW.coopSums({ period: period.label, dues: showTotalsSw(sumKindBucketed("dues")), contributions: showTotalsSw(sumKindBucketed("contribution")), paidOut: showTotalsSw(sumKindBucketed("payout")), top: top.map(([key, amount]) => { const [name, currency] = key.split("|"); return `${name} ${moneyShown(amount, currency)}`; }).join(", ") });
   }
   // shared equipment
   if ((m = /^(?:tafadhali\s+)?(?:ongeza|sajili)\s+kifaa cha pamoja\s*[:,-]?\s*(.+)$/i.exec(t))) {

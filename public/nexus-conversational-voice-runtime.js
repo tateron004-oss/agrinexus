@@ -52,6 +52,17 @@
   let lastResult = null;
   let muted = false;
   let mounted = false;
+  // Found live (fresh-module frontend audit): processTranscript() is called from three independent entry
+  // points (a voice result, typed "send", a follow-up prompt click) with no in-flight guard. If a slower
+  // call (e.g. the live-knowledge/dialogue path) is still awaiting its result when a newer, faster call
+  // starts and finishes first, the SLOWER call's eventual result still overwrites lastResponse/lastResult
+  // and speaks/renders -- so the UI can end up showing and speaking the answer to a stale, already-abandoned
+  // question after the person has already moved on. transcriptGeneration is bumped at the start of every
+  // processTranscript() call; each of its three branches checks, right after its own await, whether it's
+  // still the latest call before rendering/speaking -- the same generation-check pattern already used
+  // correctly elsewhere in this codebase (kyro-navigation.js's sessionGeneration, nexus-genesis-voice-
+  // runtime-manager.js's processTurn).
+  let transcriptGeneration = 0;
 
   function canonicalLanguage(language) {
     const raw = String(language || "en").toLowerCase();
@@ -221,6 +232,8 @@
       setState("idle", "No transcript captured.");
       return null;
     }
+    transcriptGeneration += 1;
+    const generation = transcriptGeneration;
     renderTranscript(text, meta.confidence);
     setState("reasoning", "Nexus is preparing your plan");
     const brainRuntime = root?.NexusUnifiedBrainRuntime;
@@ -230,6 +243,7 @@
         inputType: meta.source || "voice",
         sourceMode: "conversation_shell"
       });
+      if (generation !== transcriptGeneration) return result; // a newer processTranscript() call has since started; let it own the UI/speech
       if (brainRuntime.mount) brainRuntime.mount();
       if (brainRuntime.render) brainRuntime.render(result);
       const summary = result?.conversationalResponse || result?.userVisibleStatus || result?.understoodGoal || "Nexus prepared a unified mission plan.";
@@ -255,6 +269,7 @@
         inputType: meta.source || "voice",
         sourceMode: "conversation_shell"
       });
+      if (generation !== transcriptGeneration) return result;
       agricultureRuntime.mount?.();
       agricultureRuntime.render?.(result);
       const answer = result.userVisibleStatus || result.answer || result.message || "Nexus prepared an agriculture packet locally. No external agriculture action was executed.";
@@ -290,6 +305,7 @@
         sources: []
       };
     }
+    if (generation !== transcriptGeneration) return result;
     renderDialogueResult(result);
     if (!muted && meta.source !== "typed") {
       speak(result.spokenSummary || result.answer || "", { language: currentLanguage() });
@@ -306,17 +322,29 @@
       return { started: false, reason: "unsupported", fallback: FALLBACKS.voiceInputUnavailable };
     }
     stop();
-    recognition = new Constructor();
+    // Found live (fresh-module frontend audit): onend/onerror checked the shared module-level `state` and
+    // unconditionally nulled the shared `recognition` variable, with nothing tying either check to THIS
+    // specific recognition instance. If recognition.stop() doesn't synchronously cancel the browser's
+    // already-queued "end" event (it generally doesn't), and a fresh startListening() call replaces
+    // `recognition` with a new instance before the old one's onend fires, the stale onend still saw
+    // state === "listening" (now true for the NEW session) and flipped it back to idle -- and nulled
+    // `recognition`, discarding the new, still-active instance. Capturing the instance in this closure and
+    // checking recognition === instance before acting makes a stale event from an already-replaced
+    // instance a no-op instead.
+    const instance = new Constructor();
+    recognition = instance;
     recognition.lang = localeForLanguage(currentLanguage());
     recognition.interimResults = false;
     recognition.continuous = false;
     recognition.maxAlternatives = 1;
-    recognition.onstart = () => setState("listening", "Listening for one Nexus command");
+    recognition.onstart = () => { if (recognition === instance) setState("listening", "Listening for one Nexus command"); };
     recognition.onerror = event => {
+      if (recognition !== instance) return;
       recognition = null;
       setState("error", event?.error === "language-not-supported" ? FALLBACKS.selectedLanguageInputUnsupported : "Voice input stopped safely.");
     };
     recognition.onend = () => {
+      if (recognition !== instance) return;
       if (state === "listening") setState("idle", "Voice input ended");
       recognition = null;
     };

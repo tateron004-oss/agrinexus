@@ -142,7 +142,7 @@ const distanceName = distance => (distance === 21.1 ? "half marathon" : distance
 
 // Returns the words to answer with, or null when this is not about the wellness log. `store` needs add/list/remove.
 async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), timeZone }) {
-  if (!store?.addEntry || !store?.listEntries || !store?.removeEntry) return null;
+  if (!store?.addEntry || !store?.listEntries || !store?.removeEntry || !store?.setGoal || !store?.addEntryUnlessCapped) return null;
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   const today = localDay(now, zone);
   const request = readRequest(text, today);
@@ -155,10 +155,10 @@ async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), t
     const goals = rows.filter(row => row.content.kind === "goal").map(row => row.content);
     switch (request.action) {
       case "log": {
-        if (rows.length >= MAX_ENTRIES) return "Your log is full. Tell me to undo the last entry, or ask me for a summary first.";
         const entry = { kind: "entry", ...Object.fromEntries(Object.entries(request).filter(([key]) => key !== "action")) };
         const before = personalBests(entries);
-        await store.addEntry({ ...scope, content: entry });
+        const added = await store.addEntryUnlessCapped({ ...scope, content: entry, maxEntries: MAX_ENTRIES });
+        if (added.capped) return "Your log is full. Tell me to undo the last entry, or ask me for a summary first.";
         let line = `Logged ${describeEntry(entry)} for ${when(entry.day, today)}.`;
         if (entry.metric === "workout") {
           const week = extractPeriod("this week", today);
@@ -203,9 +203,7 @@ async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), t
         return keys.length ? `Your personal bests: ${keys.map(distance => `${distanceName(distance)} ${clock(best[distance].minutes)} (${when(best[distance].day, today)})`).join("; ")}.` : 'No personal bests yet. Log a run with a distance and time, like "I ran 5 km in 28 minutes".';
       }
       case "goal": {
-        const existing = rows.find(row => row.content.kind === "goal" && row.content.metric === request.metric);
-        if (existing) await store.removeEntry({ ...scope, memoryId: existing.memoryId });
-        await store.addEntry({ ...scope, content: { kind: "goal", metric: request.metric, target: request.target } });
+        await store.setGoal({ ...scope, metric: request.metric, target: request.target });
         return request.metric === "workouts" ? `Goal set: ${request.target} workouts a week. I'll tell you how you're doing whenever you log one, or ask "how am I doing on my goals?".` : `Goal set: ${request.target} hours of sleep a night. I'll mention it when a night falls short.`;
       }
       case "goals": {
