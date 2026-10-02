@@ -998,17 +998,27 @@ function sendMessagePlan(text, catalog) {
 // computer voice will say and must say yes before the call is placed (see consent/user-confirmable-consents.js).
 const CALL_OPENER = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:call|phone|ring|dial)\b/i;
 const CALL_MESSAGE_CLAUSE = /(?:\b(?:and|then)?\s*(?:say|saying|says|tell (?:them|him|her)|tell (?:them|him|her) that|with the message|to say)\b[:,]?|:)\s*["“']?(.+?)["”']?\s*$/is;
+// A number-shaped run of digits with no leading "+" (e.g. a local "0712345678", never typed with a
+// country code by someone used to dialing it at home) -- distinct from no digits at all ("call me a
+// taxi", "call it a day"), which must stay untouched below.
+const PHONE_LIKE = /\b\d[\d\s().-]{6,18}\d\b/;
 
 function callPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!CALL_OPENER.test(goal)) return null;
-  const phone = SEND_PHONE.exec(goal)?.[0];
-  if (!phone) return null;
   if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
       !catalog.applications.some(app => app.applicationId === "communications")) return null;
+  const phone = SEND_PHONE.exec(goal)?.[0];
+  const base = { goal, application: "communications", riskTier: "regulated" };
+  // Found live: a number was required to start with "+" to be recognized at all here -- a local-format
+  // number with no country code (overwhelmingly the natural way someone dials their own country's numbers)
+  // fell all the way through to the free-form AI planner with no guidance, even though sendMessagePlan
+  // already asks for the country code in this exact situation for a text/WhatsApp/email send.
+  if (!phone) return PHONE_LIKE.test(goal)
+    ? { ...base, clarification: "I need the full phone number with the country code to place a call, like +254712345678.", steps: [] }
+    : null;
   const clause = CALL_MESSAGE_CLAUSE.exec(goal.slice(goal.indexOf(phone) + phone.length));
   const words = clause?.[1]?.replace(/\s+/g, " ").replace(/^that\s+/i, "").trim();
-  const base = { goal, application: "communications", riskTier: "regulated" };
   // A number that can never be called (premium-rate or special range, or not a full international number) is refused here, before
   // anyone is asked to confirm something that would be refused afterwards.
   if (!normalizeRecipient("call", phone)) return { ...base, clarification: "I cannot place a call to that number. Give me a regular phone number with the country code, like +15105019401.", steps: [] };
