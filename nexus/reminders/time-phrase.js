@@ -95,10 +95,19 @@ function parseAssistantReminderTime(text = "", options = {}) {
   if (relative) {
     const amount = Number(relative[1]);
     const unit = relative[2];
-    const multiplier = /minute|min/.test(unit) ? 60 * 1000
-      : /hour|hr/.test(unit) ? 60 * 60 * 1000
-        : /week/.test(unit) ? 7 * 24 * 60 * 60 * 1000
-          : 24 * 60 * 60 * 1000;
+    // Found live (date/timezone follow-up audit): "in N days"/"in N weeks" used the same raw
+    // addMs() as "in N minutes/hours" -- correct for a genuine elapsed-duration phrase, but "in 2
+    // days" means the same wall-clock moment 2 calendar days ahead in the caller's own zone (the
+    // same thing "tomorrow"/a weekday name mean, via atLocalDay below), not exactly 48 real elapsed
+    // hours. Raw millisecond addition silently drifts the fired time by up to an hour across a DST
+    // transition -- e.g. "in 2 days" said the morning before a fall-back would fire an hour earlier
+    // than the same request phrased as "day after tomorrow" or an explicit weekday would.
+    if (/day|week/.test(unit)) {
+      const days = /week/.test(unit) ? amount * 7 : amount;
+      const scheduled = atLocalDay(days, false);
+      return { scheduledAt: scheduled.toISOString(), whenLabel: `in ${amount} ${unit}` };
+    }
+    const multiplier = /minute|min/.test(unit) ? 60 * 1000 : 60 * 60 * 1000;
     const date = addMs(amount * multiplier);
     return { scheduledAt: date.toISOString(), whenLabel: `in ${amount} ${unit}` };
   }
