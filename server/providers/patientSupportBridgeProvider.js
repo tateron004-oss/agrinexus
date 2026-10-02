@@ -73,11 +73,18 @@ function save(body = {}, db, env = process.env) {
   if (disabled) return disabled;
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
+  const title = safeText(body.title || "Patient support resource", 160);
+  const category = safeText(body.category || "patient navigation", 120);
+  const summary = safeText(body.summary || "", 240);
+  // Found live (fresh-module audit): this save path never scanned its own user-controlled fields before
+  // persisting them, unlike sibling write paths elsewhere in this provider family.
+  const blocked = guardMedicalText(PROVIDER, action, [title, category, summary], false);
+  if (blocked) return blocked;
   const record = saveRecord(db, SAVED, localRecord("patient-support-save", body, {
     resourceId: safeText(body.resourceId || body.id, 120),
-    title: safeText(body.title || "Patient support resource", 160),
-    category: safeText(body.category || "patient navigation", 120),
-    summary: safeText(body.summary || "", 240)
+    title,
+    category,
+    summary
   }));
   return response(PROVIDER, action, "completed", "Patient support resource saved locally. No referral or benefit action was submitted.", { resource: record });
 }

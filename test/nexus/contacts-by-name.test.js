@@ -39,11 +39,14 @@ test("a name resolves to one contact, or says it is ambiguous, or nothing", () =
 // The repository against a scripted database: what SQL it writes and how it merges.
 test("saving a contact keeps it private under its own purpose, merges by name, and forgetting is a soft delete", async () => {
   const calls = []; let stored = [];
-  const db = { async query(sql, params) {
-    calls.push({ sql, params });
-    if (/select memory_id,content/.test(sql)) return { rows: stored };
-    return { rows: [] };
-  } };
+  const db = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (/select memory_id,content/.test(sql)) return { rows: stored };
+      return { rows: [] };
+    },
+    async transaction(work) { return work(db); }
+  };
   const repo = new MemoryRepository(db);
   const first = await repo.saveContact({ tenantId: "t1", userId: "u1", name: "Otieno", phone: "+254733000333" });
   assert.equal(first.updated, false);
@@ -63,6 +66,75 @@ test("saving a contact keeps it private under its own purpose, merges by name, a
   assert.ok(calls.some(call => /set deleted_at=now\(\)/.test(call.sql)));
   assert.equal(await repo.forgetContact({ tenantId: "t1", userId: "u1", name: "Nobody" }), null);
   assert.ok(calls.every(call => !/delete from/i.test(call.sql)), "nothing is hard deleted");
+});
+
+// Found live: saveContact()'s read-check-delete-insert used to be three separate, unguarded statements --
+// no transaction, no lock. Two near-simultaneous "save contact" calls for the same name could both see "no
+// existing contact" and both insert, producing two active rows with the identical name and breaking the
+// "one contact per name" guarantee. Mirrors this session's established promise-queue lock simulation: a
+// held pg_advisory_xact_lock only releases when its own transaction's work finishes, so two concurrent
+// callers racing for the same key are genuinely serialized.
+function lockedContactsDb() {
+  const rows = []; const locks = new Map(); let n = 0;
+  const db = {
+    rows,
+    async transaction(fn) {
+      let release = null;
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          release = myRelease;
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
+    async query(sql, params) {
+      if (/select memory_id,content from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId] = params;
+        return { rows: rows.filter(row => row.tenantId === tenantId && row.userId === userId && !row.deleted) };
+      }
+      if (/update nexus_memory_items set deleted_at=now\(\)/.test(sql)) {
+        const row = rows.find(item => item.memory_id === params[2]); if (row) row.deleted = true;
+        return { rows: [] };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) {
+        const row = { memory_id: `m${++n}`, tenantId: params[1], userId: params[2], content: params[3], deleted: false };
+        rows.push(row);
+        return { rows: [row] };
+      }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  return db;
+}
+test("two concurrent saves of the same contact name never leave two live rows for that name", async () => {
+  const db = lockedContactsDb();
+  const repo = new MemoryRepository(db);
+  await Promise.all([
+    repo.saveContact({ tenantId: "t1", userId: "u1", name: "Otieno", phone: "+254733000111" }),
+    repo.saveContact({ tenantId: "t1", userId: "u1", name: "otieno", phone: "+254733000222" })
+  ]);
+  const live = db.rows.filter(row => !row.deleted && row.content.name.toLowerCase() === "otieno");
+  assert.equal(live.length, 1, "only one live row must remain for this name, whichever request won");
+});
+
+// Found live: nothing capped how many contacts one account could save. listContacts()'s own 200-row read
+// window meant a contact saved past that count could never be found or forgotten by name again anyway --
+// capping creation at exactly that number closes the root cause.
+test("saving a new contact once the account already has the maximum refuses instead of creating one that could fall out of the read window", async () => {
+  const db = lockedContactsDb();
+  for (let i = 0; i < 200; i += 1) db.rows.push({ memory_id: `seed${i}`, tenantId: "t1", userId: "u1", content: { kind: "contact", name: `Person ${i}`, phone: "", email: "" }, deleted: false });
+  const repo = new MemoryRepository(db);
+  const result = await repo.saveContact({ tenantId: "t1", userId: "u1", name: "One Too Many", phone: "+254700000000" });
+  assert.equal(result.full, true);
+  assert.equal(db.rows.filter(row => !row.deleted).length, 200, "no new row must be created once the cap is already reached");
 });
 
 function fakeMemory() {

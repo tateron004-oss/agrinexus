@@ -53,10 +53,19 @@ class WeatherAlertSettingsRepository {
     return row ? { scheduleId: row.schedule_id, timeZone: row.payload?.timeZone || row.timezone } : null;
   }
 
-  async listActive({ limit = 500 } = {}) {
-    const result = await this.db.query(`select schedule_id,tenant_id,owner_id,payload,timezone from nexus_schedules
-      where job_type=$1 and state='active' order by created_at limit $2`, [JOB_TYPE, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
-    return (result.rows || result).map(row => ({ scheduleId: row.schedule_id, tenantId: row.tenant_id, userId: row.owner_id, timeZone: row.payload?.timeZone || row.timezone }));
+  // Found live (fresh-module audit): the sweep (nexus/alerts/service.js's sendDue) called this with a fixed
+  // limit:500 and never paged further -- since this ordered by created_at with no cursor, every sweep
+  // returned the exact same oldest 500 rows forever, permanently excluding the 501st-and-later person who
+  // ever turned weather alerts on. A keyset cursor on (created_at, schedule_id) (a real tiebreaker, unlike
+  // created_at alone which can collide) lets the caller page through every active row across a single sweep.
+  async listActive({ limit = 500, afterCreatedAt = null, afterScheduleId = null } = {}) {
+    const values = [JOB_TYPE];
+    let where = "job_type=$1 and state='active'";
+    if (afterCreatedAt && afterScheduleId) { values.push(afterCreatedAt, afterScheduleId); where += ` and (created_at, schedule_id) > ($${values.length - 1}, $${values.length})`; }
+    values.push(Math.min(Math.max(Number(limit) || 500, 1), 2000));
+    const result = await this.db.query(`select schedule_id,tenant_id,owner_id,payload,timezone,created_at from nexus_schedules
+      where ${where} order by created_at, schedule_id limit $${values.length}`, values);
+    return (result.rows || result).map(row => ({ scheduleId: row.schedule_id, tenantId: row.tenant_id, userId: row.owner_id, timeZone: row.payload?.timeZone || row.timezone, createdAt: row.created_at }));
   }
 }
 

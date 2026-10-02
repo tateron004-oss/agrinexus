@@ -106,4 +106,51 @@ test("two concurrent claimCooldown calls for the same subject only reserve the w
   assert.equal(outcomes.filter(result=>result===null).length,1,"the loser must see the window as already taken, not also reserve it");
   assert.equal(db.rows.length,1,"only one marker record may exist, not two");
 });
+// Found live (lists-toolkit follow-up audit): createListsCreateExecutor() enforced its per-account
+// list cap with a plain check-then-act (records.list() to count, then create() if under the cap), no
+// lock between them -- the exact gap claimCooldown() above already closes for a different caller.
+// createUnlessCapped() generalizes that same fix: one transaction, one advisory lock, re-counting
+// right before the insert.
+function lockingRecordsDbForCap(){
+  const rows=[]; const locks=new Map();
+  const db={rows,
+    async transaction(fn){
+      let release=null;
+      const trx=Object.create(db);
+      trx.query=async(sql,params)=>{
+        if(/pg_advisory_xact_lock/.test(sql)){
+          const key=params[0]; const ahead=locks.get(key)||Promise.resolve();
+          let myRelease; const held=new Promise(resolve=>{myRelease=resolve;});
+          locks.set(key,ahead.then(()=>held)); await ahead; release=myRelease; return {rows:[]};
+        }
+        return db.query(sql,params);
+      };
+      try{ return await fn(trx); } finally{ if(release) release(); }
+    },
+    async query(sql,params){
+      if(/select count\(\*\)::int as n from nexus_records/.test(sql)){
+        const columns=["subject_id","owner_id","workspace_id","record_type"].filter(col=>new RegExp(`${col}=\\$`).test(sql));
+        const [tenantId,...rest]=params;
+        const matched=rows.filter(row=>row.tenant_id===tenantId&&columns.every((col,i)=>row[col]===rest[i]));
+        return {rows:[{n:matched.length}]};
+      }
+      if(/insert into nexus_records/.test(sql)){
+        const row={record_id:params[0],tenant_id:params[1],subject_id:params[2],owner_id:params[3],task_id:params[4],workspace_id:params[5],record_type:params[6],classification:params[7],state:params[8],data:params[9],provenance:params[10]};
+        rows.push(row); return {rows:[row]};
+      }
+      if(/insert into nexus_record_versions/.test(sql)) return {rows:[]};
+      throw new Error("unexpected SQL: "+sql.slice(0,80));
+    }};
+  return db;
+}
+test("two concurrent createUnlessCapped calls at the cap boundary cannot together exceed the cap",async()=>{
+  const db=lockingRecordsDbForCap();
+  const repo=new RecordRepository(db);
+  for(let i=0;i<2;i+=1) await repo.createUnlessCapped({tenantId:"t",ownerId:"u",workspaceId:"lists",recordType:"checklist",classification:"standard",data:{title:`list ${i}`}},{maxCount:3});
+  const create=()=>repo.createUnlessCapped({tenantId:"t",ownerId:"u",workspaceId:"lists",recordType:"checklist",classification:"standard",data:{title:"race"}},{maxCount:3});
+  const [first,second]=await Promise.all([create(),create()]);
+  const succeeded=[first,second].filter(result=>!result.capped).length;
+  assert.equal(succeeded,1,"only one of the two concurrent creates may land once the cap is one away");
+  assert.equal(db.rows.length,3,"the stored record count must never exceed the cap");
+});
 test("workspace cannot cut over without exact-release proofs and rollback",async()=>{const db=fakeDb([{rows:[{workspace_id:"health",state:"authoritative"}]}]);const repo=new WorkspaceMigrationRepository(db);const releaseSha="a".repeat(40);await assert.rejects(repo.activate({workspaceId:"health",proofs:{contract:true},releaseSha}),/rollback|proof/i);const proofs=Object.fromEntries(REQUIRED_PROOFS.map(k=>[k,{state:"verified",evidenceId:k,releaseSha}]));const result=await repo.activate({workspaceId:"health",proofs,releaseSha,rollbackRef:"refs/tags/nexus-before-health"});assert.equal(result.state,"authoritative");assert.match(db.calls[0].sql,/state='authoritative'/);assert.equal(db.calls[0].params[1].rollback.ref,"refs/tags/nexus-before-health");});

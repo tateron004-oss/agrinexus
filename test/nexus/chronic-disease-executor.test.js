@@ -63,6 +63,27 @@ test("a caller-supplied subjectId is ignored -- the subject is always the caller
   assert.equal(readingCreated[0].subjectId, "attacker-user-id");
 });
 
+// Found live (restriction-bypass follow-up audit): same gap as health.record's own executor -- neither the
+// intake nor the reading executor checked userIsRestrictedFrom("health-record-write") at all, letting a
+// restricted account (Investor/Provider Reviewer) write a real PHI record once they approved the
+// confirmation prompt.
+test("a restricted account cannot write a real intake or reading through these executors", async () => {
+  const { records: intakeRecords, created: intakeCreated } = fixture();
+  const restrictedContext = { tenantId: "t1", userId: "u1", isRestrictedFrom: restriction => restriction === "health-record-write" };
+  await assert.rejects(
+    () => createChronicDiseaseIntakeExecutor({ records: intakeRecords })({ input: { conditionFocus: "diabetes" }, context: restrictedContext }),
+    error => /This account type cannot write real health records\./.test(error.message) && error.code === "health_record_write_restricted" && error.status === 403
+  );
+  assert.equal(intakeCreated.length, 0);
+
+  const { records: readingRecords, created: readingCreated } = fixture();
+  await assert.rejects(
+    () => createChronicDiseaseReadingExecutor({ records: readingRecords })({ input: { systolic: 140, diastolic: 90 }, context: restrictedContext }),
+    error => /This account type cannot write real health records\./.test(error.message) && error.code === "health_record_write_restricted" && error.status === 403
+  );
+  assert.equal(readingCreated.length, 0);
+});
+
 test("intake defaults an invalid conditionFocus to unknown_provider_review_needed", async () => {
   const { records, created } = fixture();
   const execute = createChronicDiseaseIntakeExecutor({ records });

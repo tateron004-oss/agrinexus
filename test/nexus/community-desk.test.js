@@ -22,6 +22,13 @@ function fakeStore({ recipients = ["u1", "u2", "u3"] } = {}) {
   const store = {
     rows, optouts,
     async addReport({ tenantId, userId, content }) { const number = rows.filter(row => row.tenantId === tenantId && row.content.kind === "report").length + 1; rows.unshift({ memoryId: `r${++n}`, tenantId, userId, content: { ...content, number } }); return number; },
+    async addReportUnlessCapped({ tenantId, userId, content, maxOpenPerPerson }) {
+      const openCount = rows.filter(row => row.tenantId === tenantId && row.userId === userId && row.content.kind === "report" && ["open", "in_progress"].includes(row.content.status)).length;
+      if (openCount >= maxOpenPerPerson) return { capped: true, openCount };
+      const number = rows.filter(row => row.tenantId === tenantId && row.content.kind === "report").length + 1;
+      rows.unshift({ memoryId: `r${++n}`, tenantId, userId, content: { ...content, number } });
+      return { number };
+    },
     async listReports({ tenantId, userId = null }) { return rows.filter(row => row.tenantId === tenantId && row.content.kind === "report" && (!userId || row.userId === userId)); },
     async getReport({ tenantId, number }) { return rows.find(row => row.tenantId === tenantId && row.content.kind === "report" && row.content.number === number) || null; },
     async updateReport({ tenantId, memoryId, content, expectedStatus }) { const row = rows.find(item => item.tenantId === tenantId && item.memoryId === memoryId); if (expectedStatus !== undefined && (row.content.status || "") !== expectedStatus) return false; row.content = content; return true; },
@@ -130,6 +137,64 @@ test("a person cannot flood the desk", async () => {
   const d = desk();
   for (let i = 0; i < 10; i += 1) assert.match(await d.say(`Report: broken pipe number ${i} on the street`), /logged report/);
   assert.match(await d.say("Report: another broken pipe on the street"), /already have ten open reports/);
+});
+
+function cappedReportDb() {
+  const rows = []; const locks = new Map(); let n = 0;
+  const db = {
+    rows,
+    async transaction(fn) {
+      // A real pg_advisory_xact_lock is transaction-scoped and releases automatically when the
+      // transaction ends, however many distinct keys were locked -- this harness must release every
+      // lock this transaction acquired, not just the last one, since addReportUnlessCapped acquires two.
+      const releases = [];
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          releases.push(myRelease);
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { for (const release of releases) release(); }
+    },
+    async query(sql, params) {
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId] = params;
+        return { rows: [{ n: rows.filter(row => row.tenantId === tenantId && row.userId === userId && ["open", "in_progress"].includes(row.content.status)).length }] };
+      }
+      if (/select coalesce\(max/.test(sql)) {
+        const [tenantId] = params;
+        return { rows: [{ n: rows.filter(row => row.tenantId === tenantId).reduce((max, row) => Math.max(max, row.content.number || 0), 0) }] };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) { rows.push({ memoryId: `r${++n}`, tenantId: params[1], userId: params[2], content: params[4] }); return { rows: [] }; }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  return db;
+}
+// Found live: the MAX_OPEN_PER_PERSON cap was enforced by desk.js with a plain check-then-act read
+// (listReports, then addReport if under the cap), with no lock -- a burst of concurrent report
+// requests from the same person could all pass the check. addReportUnlessCapped() re-checks and
+// inserts under one transaction-scoped advisory lock, the same pattern already proven above for the
+// announcement cap.
+test("two concurrent reports from the same person at the cap boundary cannot together exceed the open-report limit", async () => {
+  const db = cappedReportDb();
+  const repo = new CommunityRepository(db);
+  for (let i = 0; i < 9; i += 1) {
+    await repo.addReportUnlessCapped({ tenantId: "t1", userId: "u1", maxOpenPerPerson: 10, content: { kind: "report", status: "open", text: `n${i}` } });
+  }
+  const [a, b] = await Promise.all([
+    repo.addReportUnlessCapped({ tenantId: "t1", userId: "u1", maxOpenPerPerson: 10, content: { kind: "report", status: "open", text: "race-a" } }),
+    repo.addReportUnlessCapped({ tenantId: "t1", userId: "u1", maxOpenPerPerson: 10, content: { kind: "report", status: "open", text: "race-b" } })
+  ]);
+  const succeeded = [a, b].filter(r => !r.capped).length;
+  assert.equal(succeeded, 1, "only one of the two concurrent reports may land once the cap is one report away");
 });
 
 test("an announcement is prepared first, sent only when confirmed, only to those with alerts on who have not opted out, and recorded", async () => {

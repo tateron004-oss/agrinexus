@@ -51,11 +51,18 @@ class WeeklySummarySettingsRepository {
     const row = (result.rows || result)[0];
     return row ? { scheduleId: row.schedule_id, dayOfWeek: row.payload?.dayOfWeek, timeOfDay: row.payload?.timeOfDay, timeZone: row.payload?.timeZone || row.timezone } : null;
   }
-  async listActive({ limit = 500 } = {}) {
-    const result = await this.db.query(`select schedule_id,tenant_id,owner_id,payload,timezone from nexus_schedules
-      where job_type=$1 and state='active' order by created_at limit $2`, [JOB_TYPE, Math.min(Math.max(Number(limit) || 500, 1), 2000)]);
+  // Found live (fresh-module audit, same shape as nexus/alerts/settings.js's listActive): a fixed limit
+  // with no further paging meant a single sweep always saw the exact same oldest rows -- anyone past the
+  // limit was permanently excluded from every future sweep, not just skipped once.
+  async listActive({ limit = 500, afterCreatedAt = null, afterScheduleId = null } = {}) {
+    const values = [JOB_TYPE];
+    let where = "job_type=$1 and state='active'";
+    if (afterCreatedAt && afterScheduleId) { values.push(afterCreatedAt, afterScheduleId); where += ` and (created_at, schedule_id) > ($${values.length - 1}, $${values.length})`; }
+    values.push(Math.min(Math.max(Number(limit) || 500, 1), 2000));
+    const result = await this.db.query(`select schedule_id,tenant_id,owner_id,payload,timezone,created_at from nexus_schedules
+      where ${where} order by created_at, schedule_id limit $${values.length}`, values);
     return (result.rows || result).map(row => ({ scheduleId: row.schedule_id, tenantId: row.tenant_id, userId: row.owner_id,
-      dayOfWeek: row.payload?.dayOfWeek, timeOfDay: row.payload?.timeOfDay, timeZone: row.payload?.timeZone || row.timezone }));
+      dayOfWeek: row.payload?.dayOfWeek, timeOfDay: row.payload?.timeOfDay, timeZone: row.payload?.timeZone || row.timezone, createdAt: row.created_at }));
   }
 }
 
@@ -113,33 +120,44 @@ function createWeeklySummaryService({ notifications, settings = null, memory = n
       const result = { checked: 0, sent: 0, skippedPaused: 0, skippedNoDevice: 0, skippedNothingToSay: 0 };
       if (!settings?.listActive || !notifications?.enqueue) return result;
       const paused = new Map();
-      for (const setting of await settings.listActive({ limit: 500 })) {
-        result.checked += 1;
-        const zone = validTimeZone(setting.timeZone || DEFAULT_TIME_ZONE);
-        const today = localDay(at, zone);
-        if (weekdayOf(today) !== setting.dayOfWeek || !isDueNow({ timeOfDay: setting.timeOfDay, timeZone: zone, now: at })) continue;
-        const key = `weekly:${setting.userId}:${today}`;
-        if (handled.has(key)) continue;
-        if (!paused.has(setting.tenantId)) paused.set(setting.tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId: setting.tenantId }).catch(() => false) : false);
-        if (paused.get(setting.tenantId)) { result.skippedPaused += 1; continue; }
-        if (notifications.existsByKey && await notifications.existsByKey({ tenantId: setting.tenantId, idempotencyKey: key })) { handled.add(key); continue; }
-        let found = [];
-        try { found = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { found = []; }
-        if (!found.length) { result.skippedNoDevice += 1; continue; }
-        const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
-        const text = await composeFor({ tenantId: setting.tenantId, userId: setting.userId, known, timeZone: zone });
-        // Found live (worker-sweep reliability audit): same shape as brief/service.js's daily sweep --
-        // `handled` used to be marked BEFORE the real notifications.enqueue() call below, which does a real
-        // DB insert that can throw on any transient failure. An uncaught throw there left the key
-        // permanently marked handled with nothing ever actually queued -- since `handled` is keyed per
-        // calendar week and only clears past 5000 entries, a single transient blip cost that person their
-        // entire weekly summary with no retry until the following week's send window, silently.
-        if (!text) { handled.add(key); result.skippedNothingToSay += 1; continue; }
-        await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
-          content: { title: "Your weekly summary", body: text, kind: "weekly_summary" } });
-        handled.add(key);
-        logger?.info?.("weekly_summary.queued", { userId: setting.userId, day: today });
-        result.sent += 1;
+      // Found live (fresh-module audit, same shape as nexus/alerts/service.js's sendDue): a single
+      // listActive({limit:500}) call with no further paging meant a sweep always saw the exact same oldest
+      // rows -- anyone past the limit was permanently excluded from every future sweep. Paged via a keyset
+      // cursor so a single sweep covers every active row, however many there are.
+      let cursor = null;
+      for (;;) {
+        const page = await settings.listActive({ limit: 500, ...(cursor ? { afterCreatedAt: cursor.createdAt, afterScheduleId: cursor.scheduleId } : {}) });
+        if (!page.length) break;
+        for (const setting of page) {
+          result.checked += 1;
+          const zone = validTimeZone(setting.timeZone || DEFAULT_TIME_ZONE);
+          const today = localDay(at, zone);
+          if (weekdayOf(today) !== setting.dayOfWeek || !isDueNow({ timeOfDay: setting.timeOfDay, timeZone: zone, now: at })) continue;
+          const key = `weekly:${setting.userId}:${today}`;
+          if (handled.has(key)) continue;
+          if (!paused.has(setting.tenantId)) paused.set(setting.tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId: setting.tenantId }).catch(() => false) : false);
+          if (paused.get(setting.tenantId)) { result.skippedPaused += 1; continue; }
+          if (notifications.existsByKey && await notifications.existsByKey({ tenantId: setting.tenantId, idempotencyKey: key })) { handled.add(key); continue; }
+          let found = [];
+          try { found = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { found = []; }
+          if (!found.length) { result.skippedNoDevice += 1; continue; }
+          const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
+          const text = await composeFor({ tenantId: setting.tenantId, userId: setting.userId, known, timeZone: zone });
+          // Found live (worker-sweep reliability audit): same shape as brief/service.js's daily sweep --
+          // `handled` used to be marked BEFORE the real notifications.enqueue() call below, which does a real
+          // DB insert that can throw on any transient failure. An uncaught throw there left the key
+          // permanently marked handled with nothing ever actually queued -- since `handled` is keyed per
+          // calendar week and only clears past 5000 entries, a single transient blip cost that person their
+          // entire weekly summary with no retry until the following week's send window, silently.
+          if (!text) { handled.add(key); result.skippedNothingToSay += 1; continue; }
+          await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
+            content: { title: "Your weekly summary", body: text, kind: "weekly_summary" } });
+          handled.add(key);
+          logger?.info?.("weekly_summary.queued", { userId: setting.userId, day: today });
+          result.sent += 1;
+        }
+        cursor = { createdAt: page[page.length - 1].createdAt, scheduleId: page[page.length - 1].scheduleId };
+        if (page.length < 500) break;
       }
       if (handled.size > 5000) handled.clear();
       return result;
