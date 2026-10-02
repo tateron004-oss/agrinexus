@@ -296,12 +296,54 @@ class MemoryRepository {
     return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
   }
 
+  // Found live (quality/feedback follow-up audit): unlike addPersonalItemUnlessFull's cap, addFeedback had
+  // no ceiling at all -- every "that was wrong"/"that helped" turn is reachable with no confirmation gate
+  // or throttle anywhere in the call chain (feedbackTurn answers on a single regex match), so a buggy
+  // client retry loop or a misfiring voice intent has an open path to unbounded row growth for one
+  // account. Same advisory-lock-guarded count-then-insert pattern as addPersonalItemUnlessFull. Feedback
+  // is written far more than it's read back by its own owner, so past the cap this simply stops recording
+  // silently (the person's "thank you" reply is unaffected) rather than surfacing a "your feedback is
+  // full" message nobody would find useful.
+  async addFeedbackUnlessFull({ tenantId, userId, content, maxItems }) {
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`feedback:${tenantId}:${userId}`]);
+      const countResult = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='feedback' and deleted_at is null`, [tenantId, userId]);
+      const count = Number((countResult.rows || countResult)[0]?.n || 0);
+      if (count >= maxItems) return { full: true };
+      const saved = await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','feedback',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','internal') returning memory_id`,
+      [createId("memory"), tenantId, userId, content, `feedback: ${content.rating}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { full: false, memoryId: (saved.rows || saved)[0]?.memory_id, content };
+    });
+  }
+
   async listFeedback({ tenantId, userId = null, sinceDays = 30, limit = 200 }) {
     const result = await this.db.query(`select memory_id,content,created_at from nexus_memory_items
       where tenant_id=$1 and ($2::text is null or principal_id::text=$2::text) and memory_class='domain' and purpose='feedback' and deleted_at is null
       and created_at > now() - ($3::int * interval '1 day') order by created_at desc, memory_id desc limit $4`,
     [tenantId, userId, Math.min(Math.max(Number(sinceDays) || 30, 1), 365), Math.min(Math.max(Number(limit) || 200, 1), 1000)]);
     return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.rating);
+  }
+
+  // Found live (quality/feedback follow-up audit): the admin report read this tenant's feedback through
+  // listFeedback's own row cap (max 1000, the report itself asks for 500) and derived its "N helpful, M
+  // flagged wrong" counts from however many rows came back -- so a tenant with more than 500 feedback
+  // items in the last 30 days (plausible for an active multi-user account) got silently wrong counts once
+  // truncated, the exact "capped lookup over an uncapped store" shape already fixed elsewhere this
+  // session. A real aggregate count is exact regardless of volume; listFeedback stays as the excerpt
+  // source for the report's "Latest flagged" sample, which only ever needs a handful of rows.
+  async countFeedback({ tenantId, sinceDays = 30 }) {
+    const result = await this.db.query(`select
+        count(*) filter (where content->>'rating'='down')::int as down,
+        count(*) filter (where content->>'rating'='up')::int as up
+      from nexus_memory_items
+      where tenant_id=$1 and memory_class='domain' and purpose='feedback' and deleted_at is null
+      and created_at > now() - ($2::int * interval '1 day')`,
+    [tenantId, Math.min(Math.max(Number(sinceDays) || 30, 1), 365)]);
+    const row = (result.rows || result)[0] || {};
+    return { down: Number(row.down || 0), up: Number(row.up || 0) };
   }
 
   async updateFeedback({ tenantId, userId, memoryId, content }) {
