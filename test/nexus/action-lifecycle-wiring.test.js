@@ -207,6 +207,19 @@ test("nexusOpenAiNativeProviderToolResult falls back to the old ok+status heuris
   assert.equal(output.executionVerified, true, "call sites not wrapped by withActionLifecycle must keep their prior behavior unchanged");
 });
 
+// Found live (fresh-module audit): a read-only action (e.g. calendar.event.search) is never wrapped in
+// withActionLifecycle (nothing to dedupe on a read), so nexusLifecycleVerified is never set and this fell
+// back to bare providerSucceeded -- true for a labeled-simulated demo-double response (ok:true,
+// status:"completed") exactly as much as for a real one, so execution.verified: true was reported for a
+// search that never actually reached a real calendar provider.
+test("nexusOpenAiNativeProviderToolResult does not report executionVerified:true for a simulated response with no lifecycle wrapper", () => {
+  const run = loadProviderToolResult();
+  const simulatedSearchResult = { httpStatus: 200, body: { ok: true, status: "completed", message: "Simulated calendar search run by the local demo double.", data: { eventId: "SIMULATED-EVT-ABC", simulated: true, events: [] } } };
+  const output = run({}, { toolName: "nexus_calendar", command: "search my calendar" }, simulatedSearchResult);
+  assert.equal(output.providerSucceeded, true, "providerSucceeded is a separate, unchanged signal");
+  assert.equal(output.executionVerified, false, "a simulated result must never report as verified, even with no lifecycle wrapper");
+});
+
 // Confirmed by the production capability audit: OpenAI Realtime voice and
 // the Windows desktop wake listener both reach real tool execution through
 // this exact function (executeNexusOpenAiNativeTool) without ever passing

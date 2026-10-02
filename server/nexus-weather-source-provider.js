@@ -314,6 +314,53 @@ function cacheWeather(request, result) {
   return result;
 }
 
+function normalizeOpenMeteoTomorrowPayload({ locationText, geocodingPayload, forecastPayload }) {
+  const location = Array.isArray(geocodingPayload.results) && geocodingPayload.results[0] ? geocodingPayload.results[0] : {};
+  const daily = forecastPayload && forecastPayload.daily ? forecastPayload.daily : {};
+  const dates = Array.isArray(daily.time) ? daily.time : [];
+  const maxTemps = Array.isArray(daily.temperature_2m_max) ? daily.temperature_2m_max : [];
+  const minTemps = Array.isArray(daily.temperature_2m_min) ? daily.temperature_2m_min : [];
+  const precipitation = Array.isArray(daily.precipitation_sum) ? daily.precipitation_sum : [];
+  const codes = Array.isArray(daily.weather_code) ? daily.weather_code : [];
+  const city = hasText(location.name) ? location.name : normalizeLocationText(locationText);
+  const admin = hasText(location.admin1) ? `, ${location.admin1}` : "";
+  const country = hasText(location.country_code) ? `, ${location.country_code}` : "";
+  // Open-Meteo's daily array is ordered starting from TODAY (index 0), so a
+  // "tomorrow" request must read index 1, not index 0 -- otherwise this
+  // silently reports today's values while claiming to answer about tomorrow.
+  const hasTomorrowEntry = dates.length > 1;
+  const index = hasTomorrowEntry ? 1 : 0;
+  const date = dates[index];
+  const hasDay = hasText(date);
+  const maxTemperatureC = typeof maxTemps[index] === "number" ? Math.round(maxTemps[index]) : null;
+  const minTemperatureC = typeof minTemps[index] === "number" ? Math.round(minTemps[index]) : null;
+  const precipitationMm = typeof precipitation[index] === "number" ? Math.round(precipitation[index] * 10) / 10 : null;
+  const conditions = weatherCodeSummary(codes[index]);
+  const retrievedAt = new Date().toISOString();
+  const normalized = normalizeSourceResult({
+    sourceResultId: `weather-open-meteo-tomorrow-${city.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "location"}`,
+    requestType: "weather",
+    providerName: WEATHER_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "Open-Meteo",
+    sourceCategory: "weather",
+    sourceUrl: "https://open-meteo.com/",
+    query: `tomorrow's weather for ${normalizeLocationText(locationText)}`,
+    resultSummary: hasDay
+      ? `Tomorrow's forecast for ${city}${admin}${country} (${date}): ${conditions}, ${minTemperatureC ?? "?"}-${maxTemperatureC ?? "?"} C${typeof precipitationMm === "number" ? `, ${precipitationMm} mm precipitation` : ""}.${hasTomorrowEntry ? "" : " The provider did not return a separate day for tomorrow; this is today's forecast."}`
+      : `No forecast data was returned for ${city}${admin}${country}.`,
+    rawResultAvailable: true,
+    retrievedAt,
+    lastUpdated: retrievedAt,
+    freshnessStatus: "fresh",
+    confidenceLevel: "medium",
+    limitationNotes: "Read-only public Open-Meteo forecast for tomorrow specifically, not today's current conditions. Verify directly with a national weather service before operational use.",
+    evidenceStatus: "source-backed",
+    sourceStatus: hasDay ? "source-result-available" : "source-error"
+  });
+  return { ...normalized, tomorrow: hasDay ? { date, maxTemperatureC, minTemperatureC, precipitationMm, conditions } : null };
+}
+
 function normalizeMetNorwayWeatherPayload({ locationText, geocodingPayload, forecastPayload }) {
   const location = Array.isArray(geocodingPayload) && geocodingPayload[0] ? geocodingPayload[0] : {};
   const instant = forecastPayload?.properties?.timeseries?.[0];
@@ -408,7 +455,14 @@ async function runOpenMeteoReadOnlyLookup(request = {}, env = process.env) {
     }
     const { location, geocodingPayload } = geocoded;
 
-    const timeframe = ["hourly", "daily"].includes(query.timeframe) ? query.timeframe : "current";
+    // "tomorrow" is a distinct, recognized value here -- not just an alias
+    // for "daily" -- because the live-source-orchestrator
+    // (server/nexus-live-source-orchestrator.js) sends timeframe: "tomorrow"
+    // verbatim for any prompt matching /tomorrow/i. Confirmed live: that
+    // string previously fell through the hourly/daily check below and
+    // silently used the "current" branch, so "will it rain tomorrow?"
+    // answered with TODAY's conditions with no indication of the mismatch.
+    const timeframe = ["hourly", "daily", "tomorrow"].includes(query.timeframe) ? query.timeframe : "current";
     const forecastUrl = new URL(OPEN_METEO_FORECAST_URL);
     forecastUrl.searchParams.set("latitude", String(location.latitude));
     forecastUrl.searchParams.set("longitude", String(location.longitude));
@@ -419,16 +473,20 @@ async function runOpenMeteoReadOnlyLookup(request = {}, env = process.env) {
     } else if (timeframe === "daily") {
       forecastUrl.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code");
       forecastUrl.searchParams.set("forecast_days", "7");
+    } else if (timeframe === "tomorrow") {
+      forecastUrl.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code");
+      forecastUrl.searchParams.set("forecast_days", "2");
     } else {
       forecastUrl.searchParams.set("current", "temperature_2m,weather_code,wind_speed_10m");
     }
     const forecastPayload = await fetchJsonWithRetry(fetchImpl, forecastUrl, env);
     const normalize = timeframe === "hourly" ? normalizeOpenMeteoHourlyPayload
       : timeframe === "daily" ? normalizeOpenMeteoDailyPayload
+      : timeframe === "tomorrow" ? normalizeOpenMeteoTomorrowPayload
       : normalizeOpenMeteoWeatherPayload;
     return cacheWeather(request, normalize({ locationText: query.locationText, geocodingPayload, forecastPayload }));
   } catch (error) {
-    if (query.timeframe === "hourly" || query.timeframe === "daily") {
+    if (query.timeframe === "hourly" || query.timeframe === "daily" || query.timeframe === "tomorrow") {
       const cached = readCachedWeather(request, env);
       if (cached) return cached;
       return buildOpenMeteoProviderErrorResult(query.locationText, `source-error: ${error?.message || "unknown"}`);
@@ -548,6 +606,7 @@ module.exports = Object.freeze({
   normalizeOpenMeteoWeatherPayload,
   normalizeOpenMeteoHourlyPayload,
   normalizeOpenMeteoDailyPayload,
+  normalizeOpenMeteoTomorrowPayload,
   normalizeMetNorwayWeatherPayload,
   runMetNorwayFallbackLookup,
   runOpenMeteoReadOnlyLookup,

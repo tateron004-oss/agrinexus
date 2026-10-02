@@ -103,3 +103,79 @@ test("MemoryRepository.addPersonalItemUnlessFull inserts when genuinely under th
   assert.equal(result.full, false);
   assert.equal(result.memoryId, "m-new");
 });
+
+// Found live (personal-items follow-up audit): items.js's own todo-add/event-add duplicate check had the
+// identical unguarded check-then-act shape as the cap race just above, just for duplicate content instead
+// of the cap -- read existing items, decide, then call add() separately, with no lock spanning both. This
+// generalizes addPersonalItemUnlessFull with an optional isDuplicate predicate, checked inside the same
+// locked transaction, before the cap check.
+test("MemoryRepository.addPersonalItemUnlessFull finds a duplicate inside the transaction and never reaches the cap check or the insert", async () => {
+  const queries = [];
+  const trx = { query: async (sql, params) => {
+    queries.push(sql.trim().split("\n")[0]);
+    if (/pg_advisory_xact_lock/i.test(sql)) return { rows: [] };
+    if (/^select content/i.test(sql)) { assert.equal(params[2], "todo"); return { rows: [{ content: { kind: "todo", list: "todo", text: "buy seed", done: false } }] }; }
+    if (/select count/i.test(sql)) assert.fail("must never reach the cap check once a duplicate is found");
+    assert.fail("must never reach the insert once a duplicate is found");
+  } };
+  const db = { query: async () => { throw new Error("must run inside a transaction"); }, transaction: async fn => fn(trx) };
+  const repo = new MemoryRepository(db);
+  const isDuplicate = existing => existing.list === "todo" && !existing.done && existing.text === "buy seed";
+  const result = await repo.addPersonalItemUnlessFull({ tenantId: "t1", userId: "u1", content: { kind: "todo", list: "todo", text: "buy seed", done: false }, maxItems: 300, isDuplicate });
+  assert.deepEqual(result, { full: false, duplicate: { kind: "todo", list: "todo", text: "buy seed", done: false } });
+  assert.ok(queries.some(q => /pg_advisory_xact_lock/i.test(q)), "must take an advisory lock before checking for a duplicate");
+});
+
+test("MemoryRepository.addPersonalItemUnlessFull inserts when isDuplicate finds no match", async () => {
+  const trx = { query: async sql => { if (/^select content/i.test(sql)) return { rows: [] }; if (/select count/i.test(sql)) return { rows: [{ n: 5 }] }; return { rows: [{ memory_id: "m-new" }] }; } };
+  const db = { query: async () => { throw new Error("must run inside a transaction"); }, transaction: async fn => fn(trx) };
+  const repo = new MemoryRepository(db);
+  const result = await repo.addPersonalItemUnlessFull({ tenantId: "t1", userId: "u1", content: { kind: "todo", list: "todo", text: "fix the gate", done: false }, maxItems: 300, isDuplicate: () => false });
+  assert.equal(result.full, false);
+  assert.equal(result.memoryId, "m-new");
+});
+
+// A fake db whose advisory lock genuinely serializes concurrent transactions (matching real Postgres
+// blocking behavior), proving the real check-then-act race for duplicates is actually closed.
+function lockingPersonalItemsDb() {
+  const rows = []; const locks = new Map();
+  const db = { rows,
+    async transaction(fn) {
+      let release = null; const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0]; const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held)); await ahead; release = myRelease; return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
+    async query(sql, params) {
+      if (/^select content from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId, kind] = params;
+        return { rows: rows.filter(row => row.tenant_id === tenantId && row.principal_id === userId && row.content.kind === kind).map(row => ({ content: row.content })) };
+      }
+      if (/select count/i.test(sql)) return { rows: [{ n: rows.length }] };
+      if (/^insert into nexus_memory_items/.test(sql)) {
+        const [, tenantId, userId, content] = params;
+        rows.push({ tenant_id: tenantId, principal_id: userId, content });
+        return { rows: [{ memory_id: `m${rows.length}` }] };
+      }
+      return { rows: [] };
+    } };
+  return db;
+}
+
+test("two concurrent identical todo-adds racing the duplicate check only insert one item", async () => {
+  const repo = new MemoryRepository(lockingPersonalItemsDb());
+  const content = { kind: "todo", list: "todo", text: "buy seed", done: false };
+  const isDuplicate = existing => existing.list === "todo" && !existing.done && existing.text === "buy seed";
+  const results = await Promise.allSettled([
+    repo.addPersonalItemUnlessFull({ tenantId: "t1", userId: "u1", content, maxItems: 300, isDuplicate }),
+    repo.addPersonalItemUnlessFull({ tenantId: "t1", userId: "u1", content, maxItems: 300, isDuplicate })
+  ]);
+  const inserted = results.filter(result => result.status === "fulfilled" && result.value?.memoryId).length;
+  assert.equal(inserted, 1, "only one of the two racing identical adds may actually insert");
+});

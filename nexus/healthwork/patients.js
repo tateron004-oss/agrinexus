@@ -147,8 +147,16 @@ const confirms = {
   "remove-patient": async (ctx, action) => {
     const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
     let removed = 0;
+    // Found live (healthwork audit): this called ctx.store.list() directly, bypassing listOf()'s
+    // MAX_PATIENTS (5000) limit that every other read site in this module already uses specifically
+    // because FarmRecordRepository.list() defaults to a 1000-row window (see common.js's own comment on
+    // listOf/listAllPatients). A health worker whose combined visit/dose/pregnancy/followup/referral/
+    // dispense history across all patients exceeds 1000 rows in any one collection would have that
+    // collection's oldest rows silently excluded here -- so "remove patient... this cannot be undone"
+    // would leave some of that patient's real records never found, never erased, and (since the patient
+    // itself is gone) never discoverable or purgeable again. A real, permanent PII-retention gap.
     for (const collection of ["visit", "dose", "pregnancy", "followup", "referral", "dispense"]) {
-      for (const item of await ctx.store.list({ ...scope, collection })) if (item.data.pid === action.memoryId && await ctx.store.remove({ ...scope, memoryId: item.memoryId })) removed += 1;
+      for (const item of await listOf(ctx, collection)) if (item.data.pid === action.memoryId && await ctx.store.remove({ ...scope, memoryId: item.memoryId })) removed += 1;
     }
     const gone = await ctx.store.remove({ ...scope, memoryId: action.memoryId });
     if (gone) await record(ctx, "audit", { event: "patient-removed", day: ctx.today, patient: action.number, records: removed }); // a number and a count, never a name

@@ -142,7 +142,7 @@ const distanceName = distance => (distance === 21.1 ? "half marathon" : distance
 
 // Returns the words to answer with, or null when this is not about the wellness log. `store` needs add/list/remove.
 async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), timeZone }) {
-  if (!store?.addEntry || !store?.listEntries || !store?.removeEntry) return null;
+  if (!store?.addEntry || !store?.listEntries || !store?.removeEntry || !store?.addEntryUnlessCapped) return null;
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   const today = localDay(now, zone);
   const request = readRequest(text, today);
@@ -155,10 +155,10 @@ async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), t
     const goals = rows.filter(row => row.content.kind === "goal").map(row => row.content);
     switch (request.action) {
       case "log": {
-        if (rows.length >= MAX_ENTRIES) return "Your log is full. Tell me to undo the last entry, or ask me for a summary first.";
         const entry = { kind: "entry", ...Object.fromEntries(Object.entries(request).filter(([key]) => key !== "action")) };
         const before = personalBests(entries);
-        await store.addEntry({ ...scope, content: entry });
+        const added = await store.addEntryUnlessCapped({ ...scope, content: entry, maxEntries: MAX_ENTRIES });
+        if (added.capped) return "Your log is full. Tell me to undo the last entry, or ask me for a summary first.";
         let line = `Logged ${describeEntry(entry)} for ${when(entry.day, today)}.`;
         if (entry.metric === "workout") {
           const week = extractPeriod("this week", today);
