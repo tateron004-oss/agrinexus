@@ -11550,7 +11550,9 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     courseId: course.id || null,
     courseTitle: course.title || selectedPath.title,
     cohortName: `${learnerGroup} learning circle`,
-    learnerCount: Number(body.learnerCount || (selectedPath.ageGroup === "child-youth" ? 12 : 24)),
+    // Found live (legacy server.js route sweep, low severity -- display-only, no money/security
+    // impact): same falsy-zero gap as the sibling /api/learning/advanced cohort maker.
+    learnerCount: body.learnerCount !== undefined && Number.isFinite(Number(body.learnerCount)) && Number(body.learnerCount) >= 0 ? Number(body.learnerCount) : (selectedPath.ageGroup === "child-youth" ? 12 : 24),
     facilitator: body.facilitator || "Family learning facilitator",
     status: "active",
     createdAt: now
@@ -13640,6 +13642,10 @@ function runWorkforceActionByAgent(db, user, type) {
       return "A shift is already scheduled. Wait until it starts before scheduling another.";
     }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
+    // Found live (legacy server.js route sweep): same falsy-zero-override gap as the REST
+    // /api/workforce/action "shift" handler this mirrors -- an explicit rate:0 (an unpaid/volunteer
+    // placement) was treated as missing and silently replaced with a fabricated $64.
+    const requestedRate = Number(db.profile.applications[0]?.rate);
     const shift = {
       id: crypto.randomUUID(),
       role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
@@ -13649,7 +13655,7 @@ function runWorkforceActionByAgent(db, user, type) {
       // literal regardless of which role the shift's own `role` field names --
       // a user placed into a higher-rate role saw the same estimate as one on
       // the cheapest role. Use the actually-applied role's real rate.
-      estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
+      estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
     };
     db.profile.shiftSchedule.unshift(shift);
     db.profile.nextShift = `${shift.role} shift scheduled`;
@@ -53214,7 +53220,9 @@ async function api(req, res, url) {
           courseId: course.id,
           courseTitle: course.title,
           cohortName: body.cohortName || `${course.track} rural learner cohort`,
-          learnerCount: Number(body.learnerCount || 24),
+          // Found live (legacy server.js route sweep, low severity -- display-only, no money/security
+          // impact): an explicit learnerCount:0 was treated as missing and silently replaced with 24.
+          learnerCount: body.learnerCount !== undefined && Number.isFinite(Number(body.learnerCount)) && Number(body.learnerCount) >= 0 ? Number(body.learnerCount) : 24,
           facilitator: body.facilitator || "Community learning facilitator",
           status: "active",
           createdAt: now
@@ -53303,12 +53311,17 @@ async function api(req, res, url) {
       if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
         return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
       }
+      // Found live (legacy server.js route sweep): same falsy-zero-override gap as the money-logic
+      // audit already fixed on timesheet/payroll/evaluation just below -- an explicit rate:0 (an
+      // unpaid/volunteer placement) was treated as missing and silently replaced with a fabricated $64,
+      // then added unconditionally to the real db.profile.earnings ledger.
+      const requestedRate = Number(db.profile.applications[0]?.rate);
       const shift = {
         id: crypto.randomUUID(),
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
         startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
         status: "scheduled",
-        estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
+        estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
       };
       db.profile.shiftSchedule.unshift(shift);
       db.profile.nextShift = `${shift.role} - ${new Date(shift.startsAt).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
@@ -54434,11 +54447,16 @@ async function api(req, res, url) {
     const amount = body.amount !== undefined ? Number(body.amount) : (type === "clinic-service-menu" ? 0 : 1500);
     const paymentMethod = String(body.paymentMethod || "mobile money, cash receipt, card, or sponsor voucher").trim();
     const previous = db.profile.mobileClinicRevenueRecords[0] || null;
+    // Found live (legacy server.js route sweep): amount itself was already fixed just above to honor
+    // an explicit 0 (a legitimately free/waived/sponsored visit) -- but this serviceMenu, built from
+    // that same amount, still re-applied `amount || 1500` to every displayed price, so a genuinely free
+    // visit still showed "Mobile clinic visit: 1500" on the patient/provider-facing receipt. amount is
+    // already a fully resolved finite number at this point; no further fallback is needed or correct.
     const serviceMenu = [
-      { name: "Mobile clinic visit", price: amount || 1500, currency, note: "Provider confirms clinical service before payment is requested." },
-      { name: "Vitals and intake support", price: Math.max(300, Math.round((amount || 1500) * 0.35)), currency, note: "Non-diagnostic collection and handoff support." },
-      { name: "Telehealth referral handoff", price: Math.max(500, Math.round((amount || 1500) * 0.45)), currency, note: "Referral packet and communication workflow." },
-      { name: "Pharmacy/supply coordination", price: Math.max(400, Math.round((amount || 1500) * 0.4)), currency, note: "Availability, route, and compliance evidence." }
+      { name: "Mobile clinic visit", price: amount, currency, note: "Provider confirms clinical service before payment is requested." },
+      { name: "Vitals and intake support", price: Math.max(300, Math.round(amount * 0.35)), currency, note: "Non-diagnostic collection and handoff support." },
+      { name: "Telehealth referral handoff", price: Math.max(500, Math.round(amount * 0.45)), currency, note: "Referral packet and communication workflow." },
+      { name: "Pharmacy/supply coordination", price: Math.max(400, Math.round(amount * 0.4)), currency, note: "Availability, route, and compliance evidence." }
     ];
     const statusMap = {
       "clinic-service-menu": "service menu published",
@@ -54715,11 +54733,18 @@ async function api(req, res, url) {
     });
     const type = body.type || "appointment";
     const now = new Date().toISOString();
+    // Found live (legacy server.js route sweep): every maker below numbered records via
+    // `<array>.length + 1`, but storeLimit caps every one of these same arrays to 20 right after each
+    // insert -- once an array reaches 20 entries, .length is pinned at 20 forever, so every record of
+    // that type past the 20th gets an identical "unique" number (e.g. every appointment past the 20th is
+    // "AN-APT-021"). Same bug class already fixed elsewhere in this file (learning/advanced's quiz
+    // maker, PR #758's learning/workforce numbering fix) via nextRecordSequence -- this route was never
+    // converted. Switched every maker here to the same real, ever-growing per-type sequence.
     const makers = {
       appointment: () => {
         const record = {
           id: crypto.randomUUID(),
-          appointmentNumber: `AN-APT-${String(db.profile.telehealthAppointments.length + 1).padStart(3, "0")}`,
+          appointmentNumber: `AN-APT-${String(nextRecordSequence(db, "telehealthAppointments")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54737,7 +54762,7 @@ async function api(req, res, url) {
       provider: () => {
         const record = {
           id: crypto.randomUUID(),
-          assignmentNumber: `AN-PROV-${String(db.profile.telehealthProviderAssignments.length + 1).padStart(3, "0")}`,
+          assignmentNumber: `AN-PROV-${String(nextRecordSequence(db, "telehealthProviderAssignments")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54754,7 +54779,7 @@ async function api(req, res, url) {
       history: () => {
         const record = {
           id: crypto.randomUUID(),
-          historyNumber: `AN-HIST-${String(db.profile.patientHistoryRecords.length + 1).padStart(3, "0")}`,
+          historyNumber: `AN-HIST-${String(nextRecordSequence(db, "patientHistoryRecords")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54771,7 +54796,7 @@ async function api(req, res, url) {
       prescription: () => {
         const record = {
           id: crypto.randomUUID(),
-          packetNumber: `AN-RX-${String(db.profile.telehealthPrescriptionPackets.length + 1).padStart(3, "0")}`,
+          packetNumber: `AN-RX-${String(nextRecordSequence(db, "telehealthPrescriptionPackets")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54786,7 +54811,7 @@ async function api(req, res, url) {
       emergency: () => {
         const record = {
           id: crypto.randomUUID(),
-          escalationNumber: `AN-ESC-${String(db.profile.telehealthEmergencyEscalations.length + 1).padStart(3, "0")}`,
+          escalationNumber: `AN-ESC-${String(nextRecordSequence(db, "telehealthEmergencyEscalations")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54802,7 +54827,7 @@ async function api(req, res, url) {
       note: () => {
         const record = {
           id: crypto.randomUUID(),
-          noteNumber: `AN-NOTE-${String(db.profile.careTeamNotes.length + 1).padStart(3, "0")}`,
+          noteNumber: `AN-NOTE-${String(nextRecordSequence(db, "careTeamNotes")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54817,7 +54842,7 @@ async function api(req, res, url) {
       outcome: () => {
         const record = {
           id: crypto.randomUUID(),
-          outcomeNumber: `AN-OUT-${String(db.profile.telehealthOutcomeReviews.length + 1).padStart(3, "0")}`,
+          outcomeNumber: `AN-OUT-${String(nextRecordSequence(db, "telehealthOutcomeReviews")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
