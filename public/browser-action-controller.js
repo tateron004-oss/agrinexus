@@ -5,6 +5,21 @@
   const providerCardReplayWindowMs = 2500;
   const pilotEvidenceStorageKey = "nexus.pilot-evidence.v1";
   const pilotConsentStorageKey = "nexus.pilot-evidence-consent.v1";
+  const providerCardStoragePrefix = "nexus.rural-provider-cards.v1";
+  const providerCardTtlMs = 30 * 24 * 60 * 60 * 1000;
+  // Found live (design-decision resolved): saveProviderCardOffline() persists real PHI (symptoms,
+  // medications, allergies, readings the person just typed or said) to localStorage with no expiry and
+  // no notion of which account is using the browser -- so a shared/community device mixed one person's
+  // health facts into the next person's saved cards, and nothing ever expired. This module has no
+  // access to "who is logged in" on its own; app.js calls setCurrentAccountKey() (see render()) whenever
+  // the current user is known, so storage can be scoped per account instead of per browser.
+  let currentAccountKey = "";
+  function setCurrentAccountKey(accountKey) {
+    currentAccountKey = text(accountKey).toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 120);
+  }
+  function providerCardStorageKey() {
+    return currentAccountKey ? `${providerCardStoragePrefix}:${currentAccountKey}` : providerCardStoragePrefix;
+  }
   function text(value) { return String(value ?? "").trim(); }
   function html(value) {
     return text(value).replace(/[&<>"']/g, character => ({
@@ -652,11 +667,30 @@
     ];
     return lines.join("\n");
   }
+  function readSavedProviderCards() {
+    try {
+      const value = JSON.parse(global.localStorage?.getItem(providerCardStorageKey()) || "[]");
+      const list = Array.isArray(value) ? value : [];
+      const now = Date.now();
+      // Expired entries are dropped here (not just skipped) so retention is actually bounded, not just
+      // hidden -- the very next save rewrites the key without them.
+      return list.filter(entry => now - new Date(entry?.createdAt || 0).getTime() < providerCardTtlMs);
+    } catch {
+      return [];
+    }
+  }
   function saveProviderCardOffline(card = {}) {
     try {
-      const current = JSON.parse(global.localStorage?.getItem("nexus.rural-provider-cards.v1") || "[]");
-      const cards = [card, ...(Array.isArray(current) ? current : [])].slice(0, 20);
-      global.localStorage?.setItem("nexus.rural-provider-cards.v1", JSON.stringify(cards));
+      const cards = [card, ...readSavedProviderCards()].slice(0, 20);
+      global.localStorage?.setItem(providerCardStorageKey(), JSON.stringify(cards));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function clearSavedProviderCards() {
+    try {
+      global.localStorage?.removeItem(providerCardStorageKey());
       return true;
     } catch {
       return false;
@@ -753,6 +787,7 @@
             ${questions.map((item, index) => `<li><span class="nexus-rural-provider-card-number">${html(item[0])}<small>${index + 1}</small></span><span>${html(item[1])}</span></li>`).join("")}
           </ol>
           <div class="nexus-rural-provider-card-boundary">Nexus prepared this communication aid from the current request. A qualified clinician or pharmacist must make medical and medication decisions.</div>
+          <div class="nexus-rural-provider-card-boundary">This card is saved only on this device, for up to 30 days, so you can reopen it before a visit. If this is a shared or public device, use "Clear saved cards" below when you are done, or share/download/print it for yourself instead of leaving it saved here.</div>
         </div>
         <footer class="nexus-rural-provider-card-actions" aria-label="Provider card actions">
           <button data-card-action="read">🔊 Read aloud</button>
@@ -761,6 +796,7 @@
           <button data-card-action="print">🖨 Print / Save PDF</button>
           <button data-card-action="download">⬇ Download</button>
           <button data-card-action="share">↗ Share with consent</button>
+          <button data-card-action="clear-saved">🗑 Clear saved cards from this device</button>
           <button data-card-action="close">Close</button>
         </footer>
       </article>
@@ -775,6 +811,11 @@
       if (action === "print") global.print?.();
       if (action === "download") downloadProviderCard(card);
       if (action === "share") void shareProviderCard(card);
+      if (action === "clear-saved") {
+        clearSavedProviderCards();
+        const button = event.target?.closest?.("[data-card-action=\"clear-saved\"]");
+        if (button) { button.textContent = "✅ Saved cards cleared from this device"; button.disabled = true; }
+      }
     });
     document.body.appendChild(shell);
     shell.querySelector(".nexus-rural-provider-card-close")?.focus?.();
@@ -869,6 +910,8 @@
     setPilotEvidenceConsent,
     recordPilotEvidence,
     getPilotEvidenceSummary: pilotEvidenceSummary,
-    getPilotReportText: pilotReportText
+    getPilotReportText: pilotReportText,
+    setCurrentAccountKey,
+    clearSavedProviderCards
   });
 })(window);

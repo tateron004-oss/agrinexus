@@ -65,6 +65,28 @@ class FarmRecordRepository {
     });
   }
 
+  // Found live (farmwork follow-up audit): board.js's MAX_ACTIVE_PER_PERSON cap was enforced by a plain
+  // check-then-act read (listPublic, filtered to the caller's own active records, then add() if under
+  // the cap), with no lock at all -- add()'s own lock only serializes number allocation, not this cap.
+  // Two concurrent "post listing" requests from the same person at 29/30 active listings could both pass
+  // the stale check and both insert, exceeding the per-person cap. Reuses add()'s own lock key (already
+  // tenant+collection-scoped, and for a "wide" collection like listings, shared across every poster in
+  // the tenant -- so this fully serializes the per-person recount too) and re-checks immediately before
+  // the insert, the same pattern now used throughout this codebase for per-person caps.
+  async addUnlessPersonCapped({ tenantId, userId, collection, data, maxPerPerson }) {
+    const wide = PUBLIC_COLLECTIONS.includes(collection);
+    const lockKey = `${this.purpose}:${tenantId}:${collection}:${wide ? "*" : userId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const counted = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='${this.purpose}' and deleted_at is null
+        and content->>'collection'=$3 and content->'data'->>'status'='active'`, [tenantId, userId, collection]);
+      const count = Number((counted.rows || counted)[0]?.n || 0);
+      if (count >= maxPerPerson) return { capped: true, count };
+      return { record: await this.insertRecord(trx, { tenantId, userId, collection, data }) };
+    });
+  }
+
   // Found live (drone/field-visit audit): coop.js's shared-equipment booking read existing
   // bookings for a clash, then -- as a SEPARATE later call -- added the new booking, with no
   // lock or transaction spanning both. Two near-simultaneous bookings for the same equipment

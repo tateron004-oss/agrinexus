@@ -99,11 +99,18 @@ function save(body = {}, db, env = process.env) {
   if (disabled) return disabled;
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
+  const name = safeText(body.name || body.title || "Mobile clinic option", 160);
+  const category = safeText(body.category || body.serviceType, 120);
+  const typedLocation = safeText(body.typedLocation || body.location || body.city, 160);
+  // Found live (fresh-module audit): unlike visitPlan() below, this save path never scanned its own
+  // user-controlled fields before persisting them.
+  const blocked = guardMedicalText(PROVIDER, action, [name, category, typedLocation], false);
+  if (blocked) return blocked;
   const record = saveRecord(db, SAVED, localRecord("mobile-clinic-save", body, {
     clinicId: safeText(body.clinicId || body.id, 120),
-    name: safeText(body.name || body.title || "Mobile clinic option", 160),
-    category: safeText(body.category || body.serviceType, 120),
-    typedLocation: safeText(body.typedLocation || body.location || body.city, 160)
+    name,
+    category,
+    typedLocation
   }));
   return response(PROVIDER, action, "completed", "Mobile clinic option saved locally after confirmation. No clinic was contacted.", { clinic: record });
 }

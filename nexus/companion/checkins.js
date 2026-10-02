@@ -100,22 +100,34 @@ function createCheckinService({ settings, state, circle, push, notifications, de
       if (!settings?.listActive || !notifications?.enqueue) return result;
       const paused = new Map(); const active = new Map();
       const isPaused = async tenantId => { if (!paused.has(tenantId)) paused.set(tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId }).catch(() => false) : false); return paused.get(tenantId); };
-      for (const setting of await settings.listActive({ limit: 500 })) {
-        active.set(`${setting.tenantId}:${setting.userId}`, setting);
-        result.checked += 1;
-        const zone = validTimeZone(setting.timeZone);
-        if (!isDueNow({ timeOfDay: setting.timeOfDay, timeZone: zone, now: at, windowMinutes: 180 })) continue;
-        const today = localDay(at, zone);
-        if (await isPaused(setting.tenantId)) { result.skippedPaused += 1; continue; }
-        if (await state.get({ tenantId: setting.tenantId, userId: setting.userId, day: today })) continue;
-        let found = [];
-        try { found = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { found = []; }
-        if (!found.length) { result.skippedNoDevice += 1; continue; } // no way to ask, so no check-in that could be "missed"
-        const name = first(await nameOf({ tenantId: setting.tenantId, userId: setting.userId }));
-        await state.create({ tenantId: setting.tenantId, userId: setting.userId, content: { day: today, status: "pending", promptedAt: at.toISOString() } });
-        await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: `checkin:${setting.userId}:${today}`,
-          content: { title: "Kyro check-in", body: `Good day${name && name !== "Someone" ? `, ${name}` : ""}. How are you today? Say "I'm okay", or tell me if it's a hard one.`, kind: "checkin" } });
-        result.prompted += 1;
+      // Found live (fresh-module audit, same shape as nexus/alerts/service.js's sendDue): a single
+      // listActive({limit:500}) call with no further paging meant a sweep always saw the exact same oldest
+      // rows -- anyone past the limit was permanently excluded from every future sweep. Paged via a keyset
+      // cursor so a single sweep covers every active row (and `active`, used by the follow-up loop below,
+      // is fully populated across every page before that loop runs).
+      let cursor = null;
+      for (;;) {
+        const page = await settings.listActive({ limit: 500, ...(cursor ? { afterCreatedAt: cursor.createdAt, afterScheduleId: cursor.scheduleId } : {}) });
+        if (!page.length) break;
+        for (const setting of page) {
+          active.set(`${setting.tenantId}:${setting.userId}`, setting);
+          result.checked += 1;
+          const zone = validTimeZone(setting.timeZone);
+          if (!isDueNow({ timeOfDay: setting.timeOfDay, timeZone: zone, now: at, windowMinutes: 180 })) continue;
+          const today = localDay(at, zone);
+          if (await isPaused(setting.tenantId)) { result.skippedPaused += 1; continue; }
+          if (await state.get({ tenantId: setting.tenantId, userId: setting.userId, day: today })) continue;
+          let found = [];
+          try { found = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { found = []; }
+          if (!found.length) { result.skippedNoDevice += 1; continue; } // no way to ask, so no check-in that could be "missed"
+          const name = first(await nameOf({ tenantId: setting.tenantId, userId: setting.userId }));
+          await state.create({ tenantId: setting.tenantId, userId: setting.userId, content: { day: today, status: "pending", promptedAt: at.toISOString() } });
+          await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: `checkin:${setting.userId}:${today}`,
+            content: { title: "Kyro check-in", body: `Good day${name && name !== "Someone" ? `, ${name}` : ""}. How are you today? Say "I'm okay", or tell me if it's a hard one.`, kind: "checkin" } });
+          result.prompted += 1;
+        }
+        cursor = { createdAt: page[page.length - 1].createdAt, scheduleId: page[page.length - 1].scheduleId };
+        if (page.length < 500) break;
       }
       for (const pending of await state.listPending({ limit: 1000 })) {
         const setting = active.get(`${pending.tenantId}:${pending.userId}`);

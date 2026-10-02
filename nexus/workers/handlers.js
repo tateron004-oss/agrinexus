@@ -98,7 +98,16 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
         // poll would then claim and re-deliver it, sending the SAME push/SMS/email a second time. A bookkeeping
         // failure after a confirmed send must never trigger a resend, so it gets its own non-requeuing catch.
         try {
-          await runtime.notifications.delivered(notification.notification_id, workerId);
+          // A transient DB error here (dropped connection, deadlock, timeout) is usually gone within a
+          // few hundred milliseconds -- a short in-process retry clears the common case without ever
+          // reaching the lease-extension fallback below, which deliberately gives up resending rather
+          // than risk a real duplicate send.
+          let lastError = null;
+          for (let attempt = 1; attempt <= 3; attempt += 1) {
+            try { lastError = null; await runtime.notifications.delivered(notification.notification_id, workerId); break; }
+            catch (error) { lastError = error; if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 200 * attempt)); }
+          }
+          if (lastError) throw lastError;
           await acknowledgeAutonomousOutcomeIfApplicable({ runtime, notification, receipt });
           // Found live: a multi-device fan-out (webpush-provider.js) can
           // reach some of a user's devices and not others while still
@@ -114,6 +123,12 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
           logger?.info?.("notifications.delivered", { notificationId: notification.notification_id, channel: notification.channel, method: receipt.method });
           outcomes.push({ notificationId: notification.notification_id, delivered: true, receipt });
         } catch (error) {
+          // The send already genuinely happened and 3 retries of the bookkeeping write still failed --
+          // push the lease far out so claim()'s stale-lease reclaim cannot pick this row back up and
+          // resend it. Left stuck at state='delivering' on purpose: this log line is the signal an
+          // operator (or a future manual delivered() retry, still fenced by the same workerId) needs
+          // to resolve it, not a silent requeue.
+          await runtime.notifications.extendLease(notification.notification_id, workerId).catch(() => {});
           logger?.error?.("notifications.post_delivery_bookkeeping_failed", { notificationId: notification.notification_id, channel: notification.channel,
             detail: String(error.message || "").slice(0, 300) });
           outcomes.push({ notificationId: notification.notification_id, delivered: true, bookkeepingError: true });

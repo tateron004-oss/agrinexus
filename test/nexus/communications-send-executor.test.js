@@ -111,6 +111,34 @@ test("real send fields are flattened to the top level, not just nested under .da
   });
 });
 
+// Found live (restriction-bypass follow-up audit): every direct REST send/call route in server.js is gated
+// on userIsRestrictedFrom(user, "communications-send") -- this authoritative-task-engine executor, reachable
+// from an ordinary typed command, was not, letting a restricted account (Investor/Provider Reviewer) have a
+// real message/call sent on their behalf once they approved the confirmation prompt.
+test("a restricted account cannot send a real message or place a real call through this executor", async () => {
+  const execute = createCommunicationsSendExecutor({ env: {} });
+  const restrictedContext = { isRestrictedFrom: restriction => restriction === "communications-send" };
+  await assert.rejects(
+    () => execute({ input: { channel: "sms", to: "+15551234567", message: "hello" }, context: restrictedContext }),
+    error => /This account type cannot send real messages\./.test(error.message) && error.code === "communications_send_restricted" && error.status === 403
+  );
+  await assert.rejects(
+    () => execute({ input: { channel: "call", to: "+15551234567" }, context: restrictedContext }),
+    error => /This account type cannot start a real call\./.test(error.message) && error.code === "communications_send_restricted" && error.status === 403
+  );
+});
+
+test("an unrestricted account (or no context at all) is unaffected by the restriction check", async () => {
+  await withPatched(twilioProvider, "sendSms", async () => ({ httpStatus: 200, body: { ok: true, status: "completed", data: { sid: "SM-UNRESTRICTED" } } }), async () => {
+    const execute = createCommunicationsSendExecutor({ env: {} });
+    const unrestrictedContext = { isRestrictedFrom: () => false };
+    const result = await execute({ input: { channel: "sms", to: "+15551234567", message: "hello" }, context: unrestrictedContext });
+    assert.equal(result.sid, "SM-UNRESTRICTED");
+    const noContextResult = await execute({ input: { channel: "sms", to: "+15551234567", message: "hello" } });
+    assert.equal(noContextResult.sid, "SM-UNRESTRICTED");
+  });
+});
+
 test("an unrecognized channel falls back to sms", async () => {
   await withPatched(twilioProvider, "sendSms", async () => ({ httpStatus: 200, body: { ok: true, status: "completed", data: { sid: "SM9" } } }), async () => {
     const execute = createCommunicationsSendExecutor({ env: {} });

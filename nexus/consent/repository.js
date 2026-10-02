@@ -35,6 +35,36 @@ class ConsentRepository {
     return Number((result.rows || result)[0]?.count || 0);
   }
 
+  // Found live (consent/tasks sweep): behavior-spine.js's recordConfirmedConsent() used to call
+  // countGrantedSince() (per cap) and then grant() as two separate, unguarded steps -- no transaction, no
+  // lock, and nexus_consents has no DB constraint tying rows to a per-day count. Two confirm() calls for
+  // two different pending steps sharing one consent scope (a client double-submit, or two devices signed
+  // into the same account), arriving close together while already one under a daily send/call cap, could
+  // both read the same "still under the cap" count and both grant -- silently landing the account one over
+  // its own anti-abuse cap on real, irreversible sends/calls. Wraps the whole check-then-grant sequence in
+  // one transaction under a per-subject-scope advisory lock, the same pattern used throughout this
+  // codebase (e.g. nexus/sync/repository.js's own FOR UPDATE idempotency guard) to close exactly this
+  // shape of check-then-act race.
+  async grantIfUnderCap({ tenantId, subjectId, taskId = null, scope, purpose, recipient = null, policyVersion, receipt, caps = [] }) {
+    const consentId = createId("consent");
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`consent-cap:${tenantId}:${subjectId}:${scope}`]);
+      for (const cap of caps) {
+        const result = await trx.query(`select count(*)::int as count from nexus_consents where tenant_id=$1 and subject_id=$2
+          and scope=$3 and granted_at > now() - (24 * interval '1 hour') and ($4::text is null or receipt->>'sendChannel' = $4::text)
+          and coalesce(receipt->>'released','') = ''`,
+        [tenantId, subjectId, scope, cap.channel]);
+        const used = Number((result.rows || result)[0]?.count || 0);
+        if (used >= cap.limit) return { limitReached: true, limit: cap.limit, noun: cap.noun };
+      }
+      const result = await trx.query(`insert into nexus_consents
+        (consent_id,tenant_id,subject_id,task_id,scope,purpose,recipient,state,policy_version,granted_at,receipt)
+        values ($1,$2,$3,$4,$5,$6,$7,'granted',$8,now(),$9) returning *`,
+      [consentId, tenantId, subjectId, taskId, scope, purpose, recipient, policyVersion, receipt || {}]);
+      return (result.rows || result)[0];
+    });
+  }
+
   // Give back a consent whose action verifiably never happened (a send the provider refused before sending). It is revoked, so it
   // can never authorize anything, and marked released so it no longer counts toward the daily cap.
   async release({ tenantId, subjectId, consentId, reason }) {

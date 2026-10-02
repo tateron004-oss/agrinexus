@@ -37,6 +37,18 @@ class NotificationRepository{
   // isn't -- either way, a DIFFERENT worker's lease can never be closed out
   // from under it.
   async delivered(notificationId,workerId=null){const r=await this.db.query("update nexus_notifications set state='delivered',delivered_at=now(),last_error=null,lease_expires_at=null,leased_by=null where notification_id=$1 and state='delivering' and leased_by is not distinct from $2 returning *",[notificationId,workerId]);return (r.rows||r)[0]||null;}
+  // Found live (notifications-pipeline follow-up audit): the existing fix for a delivered() bookkeeping
+  // failure stops the IMMEDIATE resend (see delivered()'s own comment above and handlers.js's
+  // non-requeuing catch), but leaves the row at state='delivering' with its original short lease
+  // (120s default) still ticking -- claim()'s stale-lease reclaim exists specifically to recover a
+  // CRASHED worker's in-flight send, and cannot tell that apart from "the send genuinely succeeded,
+  // only the bookkeeping write failed." Once that lease naturally expires, the same notification gets
+  // reclaimed and genuinely resent -- a real push/SMS/email a second time, for a transient DB error
+  // that has nothing to do with the send itself. Pushes the lease far out instead, so a confirmed-sent
+  // notification is never silently reclaimed; it stays loudly stuck (observable via the
+  // post_delivery_bookkeeping_failed log) for an operator or a later retry to resolve, rather than
+  // ever auto-resending.
+  async extendLease(notificationId,workerId=null,leaseSeconds=86400){const r=await this.db.query("update nexus_notifications set lease_expires_at=now()+make_interval(secs=>$3) where notification_id=$1 and state='delivering' and leased_by is not distinct from $2 returning *",[notificationId,workerId,Math.max(leaseSeconds,1)]);return (r.rows||r)[0]||null;}
   // Found live (delivery-reliability follow-up audit): a retried
   // notification was requeued with scheduled_at left untouched, so it was
   // only ever paced by the worker's fixed poll interval (default 30s), not

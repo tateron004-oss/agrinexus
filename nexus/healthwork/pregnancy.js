@@ -19,7 +19,18 @@ async function handle(ctx) {
     const first = found.patient.data.name.split(" ")[0];
     if (!due || due < ctx.today || due > addDays(ctx.today, 320)) return `What is ${first}'s expected delivery date? Say "${first} is pregnant, due 12 March".`;
     const existing = (await listOf(ctx, "pregnancy")).find(item => item.data.pid === found.patient.memoryId && item.data.status === "open");
-    if (existing) { await ctx.store.update({ ...scope, record: { ...existing, data: { ...existing.data, due } } }); return `Updated ${tag(found.patient)}: expected delivery ${dayWords(due, ctx.today)}.`; }
+    // Found live (healthwork audit): neither this due-date update nor the "delivered" write below guarded
+    // with expectedStatus, unlike other status-carrying transitions in this codebase -- both read the same
+    // open pregnancy record and write back a spread of it. A due-date correction and a delivery event for
+    // the same pregnancy racing close together (message retry/duplicate delivery, already a real trigger
+    // elsewhere in this module) could let the due-date update commit second using its stale pre-delivery
+    // snapshot, silently reverting status back to "open" and discarding deliveredOn/outcome the delivery
+    // write had just recorded -- a real birth silently un-recorded, with no error to either caller.
+    if (existing) {
+      const applied = await ctx.store.update({ ...scope, record: { ...existing, data: { ...existing.data, due } }, expectedStatus: existing.data.status });
+      if (!applied) return `${tag(found.patient)}'s pregnancy record just changed. Say that again so I can check the current record first.`;
+      return `Updated ${tag(found.patient)}: expected delivery ${dayWords(due, ctx.today)}.`;
+    }
     await record(ctx, "pregnancy", { pid: found.patient.memoryId, due, status: "open", since: ctx.today });
     if (ctx.personal?.add) await ctx.personal.add({ kind: "event", text: `Expected delivery patient ${found.patient.number}`, day: due, time: "" });
     return `Recorded: ${tag(found.patient)} is pregnant, expected ${dayWords(due, ctx.today)}. Say "antenatal visit ${first}: …" or "follow up ${first} in 4 weeks" to keep her visits.`;
@@ -34,8 +45,10 @@ async function handle(ctx) {
     if (!day || day > ctx.today) return "I need the day she delivered, like \"on 3 March\", and it can't be in the future.";
     const outcome = clean(on ? (m[2] || "").slice(0, on.index) : (m[2] || "")).slice(0, 80);
     const open = (await listOf(ctx, "pregnancy")).find(item => item.data.pid === found.patient.memoryId && item.data.status === "open");
-    if (open) await ctx.store.update({ ...scope, record: { ...open, data: { ...open.data, status: "delivered", deliveredOn: day, outcome } } });
-    else await record(ctx, "pregnancy", { pid: found.patient.memoryId, due: null, status: "delivered", deliveredOn: day, outcome, since: day });
+    if (open) {
+      const applied = await ctx.store.update({ ...scope, record: { ...open, data: { ...open.data, status: "delivered", deliveredOn: day, outcome } }, expectedStatus: open.data.status });
+      if (!applied) return `${tag(found.patient)}'s pregnancy record just changed. Say that again so I can check the current record first.`;
+    } else await record(ctx, "pregnancy", { pid: found.patient.memoryId, due: null, status: "delivered", deliveredOn: day, outcome, since: day });
     return `Recorded: ${tag(found.patient)} delivered ${day === ctx.today ? "today" : `on ${dayWords(day, ctx.today)}`}${outcome ? ` (${outcome})` : ""}. To keep the baby's records, say "register patient Baby of ${found.patient.data.name.split(" ")[0]}".`;
   }
 
