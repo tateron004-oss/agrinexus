@@ -15,6 +15,29 @@ class WellnessRepository {
     [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.metric}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
     return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
   }
+  // Found live (nexus/ infrastructure sweep, same bug shape as setGoal's own read-delete-insert race
+  // above): the MAX_ENTRIES cap was enforced by the caller with a plain check-then-act read
+  // (listEntries, then addEntry if under the cap), with no lock -- concurrent "log" requests from the
+  // same person (two devices, a retried voice/phone turn) that are all in flight before any write
+  // lands all observe the same stale count and all pass, letting a burst of concurrent writes push
+  // past the 5000-entry cap by as many as raced together. Serializes the count-check and the insert
+  // under one transaction-scoped advisory lock keyed per person, the same pattern already proven for
+  // setGoal and this codebase's other per-person caps.
+  async addEntryUnlessCapped({ tenantId, userId, content, maxEntries }) {
+    const lockKey = `wellness-entries:${tenantId}:${userId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const result = await trx.query(`select count(*)::int as n from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='wellness' and deleted_at is null`, [tenantId, userId]);
+      const count = Number((result.rows || result)[0]?.n || 0);
+      if (count >= maxEntries) return { capped: true, count };
+      const saved = await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','wellness',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','health') returning memory_id`,
+      [createId("memory"), tenantId, userId, content, `${content.kind}: ${content.metric}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+    });
+  }
   async listEntries({ tenantId, userId, limit = 5000 }) {
     const result = await this.db.query(`select memory_id,content from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='wellness' and deleted_at is null
@@ -25,6 +48,35 @@ class WellnessRepository {
     const result = await this.db.query(`update nexus_memory_items set deleted_at=now(),updated_at=now()
       where tenant_id=$1 and principal_id=$2 and memory_id=$3 and purpose='wellness' and deleted_at is null returning memory_id`, [tenantId, userId, memoryId]);
     return Boolean((result.rows || result)[0]);
+  }
+
+  // Found live: the caller used to read the entries snapshot once at the top of the whole turn, find any
+  // existing goal for this metric there, delete it, then insert the new one -- not atomic. Two concurrent
+  // "my goal is N workouts a week" requests (a retried voice/phone turn) could both see the same existing
+  // goal, both delete it (idempotent, so that alone looked safe), and both insert a new one, leaving two
+  // live goal rows for the same metric. Reading the goal back always finds the newest first, so the app
+  // keeps behaving correctly going forward -- but the older duplicate can then never again be matched by
+  // that same "find the existing goal" read, and survives forever as an orphaned row against the 5000-entry
+  // cap. Serializes the whole read-delete-insert sequence under one transaction-scoped advisory lock, keyed
+  // per person+metric -- and clears out any already-existing duplicates for this metric while at it, so a
+  // person who hit the race before this fix self-heals the next time they set this same goal again.
+  async setGoal({ tenantId, userId, metric, target }) {
+    const lockKey = `wellness-goal:${tenantId}:${userId}:${metric}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const existing = await trx.query(`select memory_id from nexus_memory_items
+        where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='wellness' and deleted_at is null
+        and content->>'kind'='goal' and content->>'metric'=$3`, [tenantId, userId, metric]);
+      for (const row of (existing.rows || existing)) {
+        await trx.query(`update nexus_memory_items set deleted_at=now(),updated_at=now() where memory_id=$1`, [row.memory_id]);
+      }
+      const content = { kind: "goal", metric, target };
+      const saved = await trx.query(`insert into nexus_memory_items
+        (memory_id,tenant_id,principal_id,memory_class,purpose,content,searchable_text,embedding,embedding_model,provenance,importance,confidence,verification_state,sensitivity)
+        values ($1,$2,$3,'domain','wellness',$4,$5,$6::vector,'none',$7,0.5,0.9,'user_confirmed','health') returning memory_id`,
+      [createId("memory"), tenantId, userId, content, `goal: ${metric}`, PLACEHOLDER_VECTOR, { source: "user-statement", capturedAt: new Date().toISOString() }]);
+      return { memoryId: (saved.rows || saved)[0]?.memory_id, content };
+    });
   }
 
   // The wellness-domain counterpart to RecordRepository.listStaleHealthSubjects():

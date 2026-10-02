@@ -6,8 +6,10 @@ const { FarmRecordRepository } = require("../../nexus/farmwork/store.js");
 const { farmWorkLine } = require("../../nexus/farmwork/brief.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { fakeFarmStore, fakeMemory } = require("./farmwork-fake.js");
-const { nextDueOf } = require("../../nexus/farmwork/livestock.js");
+const { nextDueOf, confirms: livestockConfirms } = require("../../nexus/farmwork/livestock.js");
 const { addStock } = require("../../nexus/farmwork/inventory.js");
+const journal = require("../../nexus/farmwork/journal.js");
+const swahiliLand = require("../../nexus/farmwork/swahili-land.js");
 
 const NOW = new Date("2026-09-20T05:00:00Z"); // Sunday 20 September 2026 in Nairobi
 
@@ -71,6 +73,11 @@ function lockingFarmDb() {
         const n = Math.max(0, ...rows.filter(row => row.tenant_id === tenantId && row.principal_id === userId && row.content.collection === collection).map(row => row.content.number));
         return { rows: [{ n }] };
       }
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId, collection] = params;
+        const n = rows.filter(row => row.tenant_id === tenantId && row.principal_id === userId && row.content.collection === collection && row.content.data?.status === "active").length;
+        return { rows: [{ n }] };
+      }
       if (/insert into nexus_memory_items/.test(sql)) { rows.push({ tenant_id: params[1], principal_id: params[2], content: params[3] }); return { rows: [] }; }
       throw new Error("unexpected SQL: " + sql.slice(0, 80));
     } };
@@ -83,6 +90,22 @@ test("two concurrent add() calls for the same person's same collection are numbe
   const [first, second] = await Promise.all([add(), add()]);
   assert.deepEqual([first.number, second.number].sort(), [1, 2], "each concurrent add must get its own number, not a duplicate");
   assert.equal(db.rows.length, 2, "both records must actually exist");
+});
+
+// Found live (farmwork follow-up audit): the board's MAX_ACTIVE_PER_PERSON cap was enforced by a plain
+// check-then-act read (listPublic, then add() if under the cap), with no lock -- two concurrent "post
+// listing" requests from the same person at the cap boundary could both pass the stale check and both
+// insert. addUnlessPersonCapped() re-checks and inserts under the same advisory lock add() already uses
+// for numbering.
+test("two concurrent listing posts from the same person at the cap boundary cannot together exceed the per-person limit", async () => {
+  const db = lockingFarmDb(); const store = new FarmRecordRepository(db);
+  for (let i = 0; i < 2; i += 1) {
+    await store.addUnlessPersonCapped({ tenantId: "t1", userId: "u1", collection: "listing", maxPerPerson: 3, data: { item: `item${i}`, status: "active" } });
+  }
+  const post = () => store.addUnlessPersonCapped({ tenantId: "t1", userId: "u1", collection: "listing", maxPerPerson: 3, data: { item: "race", status: "active" } });
+  const [first, second] = await Promise.all([post(), post()]);
+  const succeeded = [first, second].filter(result => !result.capped).length;
+  assert.equal(succeeded, 1, "only one of the two concurrent posts may land once the cap is one listing away");
 });
 
 // ---------- guided conversations ----------
@@ -232,6 +255,21 @@ test("break-even and budget planning refuse to invent a revenue figure from a mi
 
   const budgetResult = await who.say("plan a budget: seed 5000, fertilizer 8000, labour 12000, expect 800 kg at 5000 per bag");
   assert.doesNotMatch(budgetResult, /profit|loss/i, "the revenue/profit line must be omitted, not fabricated, when the price's unit doesn't match the expected yield's unit");
+});
+
+// Found live (money-arithmetic audit): unlike the sibling loan-affordability check 20 lines above it in
+// budget.js (which correctly refuses to compare when currencies.size > 1), the break-even cost lookup
+// summed a field's expense records across every currency regardless of match -- a farmer who recorded
+// spending on the same field in more than one currency got a break-even cost off by roughly the exchange
+// rate, not just a rounding error.
+test("break-even refuses to add up a field's spending when it was recorded in more than one currency", async () => {
+  const who = farmer();
+  await run(who, ["Add a field called North Plot, 2 acres", "skip", "skip", "skip", "skip"]);
+  await who.say("Spent 5000 shillings on seed for North Plot");
+  await who.say("Spent 200 dollars on fertilizer for North Plot");
+  const result = await who.say("break even for North Plot: expected 800 kg");
+  assert.match(result, /more than one currency/i);
+  assert.doesNotMatch(result, /to cover|you need to sell/i, "must not fabricate a break-even price from a currency-mixed total");
 });
 
 test("delivering an order with a mismatched-unit price honestly reports no money was recorded, instead of a fabricated total", async () => {
@@ -521,6 +559,92 @@ test("pests are recorded but never diagnosed", async () => {
   const text = await farmer().say("I saw aphids on my tomatoes");
   assert.match(text, /I only keep a record/); assert.match(text, /agro-vet|extension/i);
   assert.equal(await farmer().say("I saw a rat in the kitchen"), null);
+});
+
+// Found live (farmwork audit): journal.js's "update problem N: ..." read the actions array once, appended
+// one note, and wrote the whole array back with no guard it was still current -- exactly the array-append
+// race store.js's own casArrayField exists to close (same shape already fixed for healthwork's allergy list).
+// This simulates a second writer's update landing in the gap between this handler's own read and its write.
+test("updating the same pest-journal entry from two concurrent messages does not silently drop one action note", async () => {
+  const store = fakeFarmStore();
+  const entry = await store.add({ tenantId: "t1", userId: "u1", collection: "pest", data: { kind: "pest", text: "armyworm", field: "", crop: "", day: "2026-09-20", status: "open", actions: [] } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "pest") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...entry, data: { ...entry.data, actions: [{ day: "2026-09-20", text: "concurrent note" }] } }, casArrayField: "actions", casArrayLength: 0 });
+    }
+    return result;
+  };
+  const ctx = { text: "update problem 1: sprayed pesticide", store, tenantId: "t1", userId: "u1", today: "2026-09-20" };
+  assert.match(await journal.handle(ctx), /record just changed/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "pest" }))[0];
+  assert.equal(after.data.actions.length, 1, "the concurrent note must survive, not be silently overwritten");
+  assert.equal(after.data.actions[0].text, "concurrent note");
+});
+
+// Same race, same fix, Swahili sibling handler.
+test("sasisha tatizo (Swahili): a concurrent update does not silently drop one action note either", async () => {
+  const store = fakeFarmStore();
+  const entry = await store.add({ tenantId: "t1", userId: "u1", collection: "pest", data: { kind: "pest", text: "viwavi jeshi", field: "", crop: "", day: "2026-09-20", status: "open", actions: [] } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "pest") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...entry, data: { ...entry.data, actions: [{ day: "2026-09-20", text: "concurrent note" }] } }, casArrayField: "actions", casArrayLength: 0 });
+    }
+    return result;
+  };
+  const ctx = { text: "sasisha tatizo 1: nilinyunyizia dawa", store, tenantId: "t1", userId: "u1", today: "2026-09-20" };
+  assert.match(await swahiliLand.handle(ctx), /imebadilika/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "pest" }))[0];
+  assert.equal(after.data.actions.length, 1, "the concurrent note must survive, not be silently overwritten");
+});
+
+// Found live (farmwork audit, asymmetric with money.js's "sold" path): the "animal-gone" confirm had no
+// expectedStatus guard, unlike the sale confirmation which was already hardened for the same status field
+// on the same record type. This simulates a concurrent "sold X for Y" write landing in the gap between the
+// confirm handler's own read and its write.
+test("confirming an animal is gone after a concurrent sale does not silently overwrite the sale detail", async () => {
+  const store = fakeFarmStore();
+  const animal = await store.add({ tenantId: "t1", userId: "u1", collection: "animal", data: { tag: "bella", species: "cattle", status: "active" } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "animal") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...animal, data: { ...animal.data, status: "gone", goneOn: "2026-09-20", soldFor: 40000 } }, expectedStatus: "active" });
+    }
+    return result;
+  };
+  const ctx = { tenantId: "t1", userId: "u1", today: "2026-09-20", store };
+  const reply = await livestockConfirms["animal-gone"](ctx, { type: "animal-gone", memoryId: animal.memoryId, tag: "bella" });
+  assert.match(reply, /record just changed/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "animal" }))[0];
+  assert.equal(after.data.soldFor, 40000, "the sale detail must survive, not be silently overwritten by the stale 'gone' confirm");
+  assert.equal(after.data.status, "gone");
+});
+
+// Same race, same fix, Swahili sibling confirm.
+test("animal-gone-sw: a concurrent sale is not silently overwritten either", async () => {
+  const store = fakeFarmStore();
+  const animal = await store.add({ tenantId: "t1", userId: "u1", collection: "animal", data: { tag: "bella", species: "cattle", status: "active" } });
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "animal") {
+      store.list = originalList;
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...animal, data: { ...animal.data, status: "gone", goneOn: "2026-09-20", soldFor: 40000 } }, expectedStatus: "active" });
+    }
+    return result;
+  };
+  const ctx = { tenantId: "t1", userId: "u1", today: "2026-09-20", store };
+  const reply = await swahiliLand.confirms["animal-gone-sw"](ctx, { type: "animal-gone-sw", memoryId: animal.memoryId, tag: "bella" });
+  assert.match(reply, /imebadilika/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "animal" }))[0];
+  assert.equal(after.data.soldFor, 40000);
 });
 
 // ---------- printable reports ----------

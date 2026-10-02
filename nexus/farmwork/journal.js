@@ -33,7 +33,14 @@ async function handle(ctx) {
   if ((m = /^(?:update|add to|note on) (?:pest|disease|problem|entry) #?(\d{1,5})\s*[:,-]\s*(.+)$/i.exec(t))) {
     const entry = (await ctx.store.list({ ...scope, collection: "pest" })).find(item => item.number === Number(m[1]));
     if (!entry) return `I can't find problem ${m[1]} in your journal.`;
-    await ctx.store.update({ ...scope, record: { ...entry, data: { ...entry.data, actions: [...(entry.data.actions || []), { day: ctx.today, text: clean(m[2]).slice(0, 200) }].slice(-20) } } });
+    // Found live (farmwork audit): this read the actions array once, appended one note, and wrote the whole
+    // array back with no guard it was still current -- two "update problem N: ..." messages for the same
+    // entry arriving close together could each read the same starting array and each append their own note,
+    // silently dropping whichever wrote second, exactly the array-append race store.js's own casArrayField
+    // was built to close (same shape already fixed in healthwork/patients.js's allergy list).
+    const existingActions = entry.data.actions || [];
+    const applied = await ctx.store.update({ ...scope, record: { ...entry, data: { ...entry.data, actions: [...existingActions, { day: ctx.today, text: clean(m[2]).slice(0, 200) }].slice(-20) } }, casArrayField: "actions", casArrayLength: existingActions.length });
+    if (!applied) return `Problem ${entry.number}'s record just changed. Say that again so I can check the current notes first.`;
     return `Added to problem ${entry.number}: ${clean(m[2]).slice(0, 120)}. ${DISCLAIMER}`;
   }
   if ((m = /^(?:pest|disease|problem|entry) #?(\d{1,5}) (?:is |has )?(resolved|gone|fixed|solved|under control|worse|spreading|better|improving)(?:\s*[:,-]\s*(.*))?$/i.exec(t))) {

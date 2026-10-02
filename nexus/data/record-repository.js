@@ -23,6 +23,75 @@ class RecordRepository {
     });
   }
 
+  // Found live (fresh-module audit): callers that treat (tenantId, workspaceId, recordType) as identifying
+  // a single settings-style row -- read the current one, update() if found, create() if not (e.g.
+  // AutonomyControlRepository.setPaused()) -- had no lock on the create branch. Two concurrent first-time
+  // calls could both see no existing row and both create one, leaving two rows for the same logical
+  // setting whose "current" read (ordered by updated_at, no tiebreaker) could non-deterministically flip
+  // between them. This locks the whole read-check-write under one advisory lock keyed on the triple, the
+  // same pattern already used for this exact shape elsewhere (e.g. WeatherAlertSettingsRepository.set()).
+  async upsertSingleton({ tenantId, ownerId, subjectId, taskId, workspaceId, recordType, classification, data, provenance = {}, actorId }) {
+    if (!tenantId || !ownerId || !workspaceId || !recordType || !classification) throw new Error("Record tenant, owner, workspace, type, and classification are required.");
+    if (!CLASSIFICATIONS.has(classification)) throw new Error("Unsupported record classification.");
+    if ((classification === "health" || classification === "regulated") && !subjectId) throw new Error("Regulated records require a subject.");
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`record-singleton:${tenantId}:${workspaceId}:${recordType}`]);
+      const existing = await trx.query(`select * from nexus_records where tenant_id=$1 and workspace_id=$2 and record_type=$3 and deleted_at is null order by updated_at desc limit 1`,
+        [tenantId, workspaceId, recordType]);
+      const found = (existing.rows || existing)[0];
+      if (found) {
+        const result = await trx.query(`update nexus_records set data=$3,provenance=$4,version=version+1,updated_at=now()
+          where tenant_id=$1 and record_id=$2 returning *`, [tenantId, found.record_id, data, provenance]);
+        const record = (result.rows || result)[0];
+        await trx.query(`insert into nexus_record_versions(version_id,record_id,version,data,provenance,changed_by)
+          values ($1,$2,$3,$4,$5,$6)`, [createId("recordVersion"), found.record_id, record.version, data, provenance, actorId || ownerId]);
+        return record;
+      }
+      const recordId = createId("record");
+      const inserted = await trx.query(`insert into nexus_records
+        (record_id,tenant_id,subject_id,owner_id,task_id,workspace_id,record_type,classification,state,data,provenance,retention_until)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *`,
+      [recordId, tenantId, subjectId || null, ownerId, taskId || null, workspaceId, recordType, classification, "active", data, provenance, null]);
+      await trx.query(`insert into nexus_record_versions(version_id,record_id,version,data,provenance,changed_by)
+        values ($1,$2,1,$3,$4,$5)`, [createId("recordVersion"), recordId, data, provenance, actorId || ownerId]);
+      return (inserted.rows || inserted)[0];
+    });
+  }
+
+  // Found live (lists-toolkit follow-up audit): createListsCreateExecutor() enforced the
+  // per-account MAX_LISTS_PER_ACCOUNT cap with a plain check-then-act (records.list() to count, then
+  // create() if under the cap), with no lock between them -- unlike this same class's own
+  // claimCooldown(), built specifically to close this exact gap for a different caller. Two concurrent
+  // create calls for the same account both one-under the cap could both read the same count and both
+  // insert, pushing the account over the cap it exists to enforce (and, for lists specifically, past
+  // the exact row count the read-side query window supports -- see executor.js's own comment on why
+  // that isn't just a soft overage). Generic across callers the same way create()/list() already are,
+  // rather than one-off per feature.
+  async createUnlessCapped(item, { maxCount, countFilter = {} } = {}) {
+    if (!item.tenantId || !item.ownerId || !item.workspaceId || !item.recordType || !item.classification) throw new Error("Record tenant, owner, workspace, type, and classification are required.");
+    if (!CLASSIFICATIONS.has(item.classification)) throw new Error("Unsupported record classification.");
+    if ((item.classification === "health" || item.classification === "regulated") && !item.subjectId) throw new Error("Regulated records require a subject.");
+    const recordId = item.recordId || createId("record");
+    const lockKey = `record-cap:${item.tenantId}:${item.workspaceId}:${item.recordType}:${countFilter.ownerId || item.ownerId}`;
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      const values = [item.tenantId]; let where = "tenant_id=$1 and deleted_at is null";
+      for (const [column, value] of [["subject_id", countFilter.subjectId], ["owner_id", countFilter.ownerId ?? item.ownerId], ["workspace_id", item.workspaceId], ["record_type", item.recordType]])
+        if (value) { values.push(value); where += ` and ${column}=$${values.length}`; }
+      const counted = await trx.query(`select count(*)::int as n from nexus_records where ${where}`, values);
+      const count = Number((counted.rows || counted)[0]?.n || 0);
+      if (count >= maxCount) return { capped: true, count };
+      const inserted = await trx.query(`insert into nexus_records
+        (record_id,tenant_id,subject_id,owner_id,task_id,workspace_id,record_type,classification,state,data,provenance,retention_until)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *`,
+      [recordId,item.tenantId,item.subjectId||null,item.ownerId,item.taskId||null,item.workspaceId,item.recordType,item.classification,
+        item.state||"active",item.data||{},item.provenance||{},item.retentionUntil||null]);
+      await trx.query(`insert into nexus_record_versions(version_id,record_id,version,data,provenance,changed_by)
+        values ($1,$2,1,$3,$4,$5)`,[createId("recordVersion"),recordId,item.data||{},item.provenance||{},item.ownerId]);
+      return (inserted.rows||inserted)[0];
+    });
+  }
+
   async update({ tenantId, recordId, expectedVersion, actorId, data, provenance = {} }) {
     return this.db.transaction(async trx => {
       const result=await trx.query(`update nexus_records set data=$4,provenance=$5,version=version+1,updated_at=now()
@@ -34,9 +103,23 @@ class RecordRepository {
     });
   }
 
-  async list({ tenantId, subjectId, ownerId, workspaceId, recordType, limit=100 }) {
+  // conditionFocus is deliberately its own named, hardcoded-column-path parameter (data->>'conditionFocus'),
+  // not a generic "filter by any JSONB field" option -- this table's data is a caller-defined freeform blob
+  // with no fixed shape across record types (see listStaleHealthSubjects's own comment above), so a generic
+  // dynamic-field filter would mean interpolating a caller-supplied field name into raw SQL. Add another
+  // named parameter the same way if a different domain concept needs the same treatment.
+  // Found live (RecordRepository audit): task_id is a real structural column (create()/attachTask()/the
+  // nudge joins above all use it) but list() had no way to filter by it -- WorkspaceStateRepository.current()
+  // had to overfetch the 200 most-recently-updated rows of a record type TENANT-WIDE (not scoped to one
+  // owner) and find its task client-side. A workspace-state row is written for EVERY task that reaches
+  // render_required, across every application, so once more than 200 OTHER tasks in the same tenant had a
+  // more recently updated row, a genuinely existing row fell out of the window: stage() then wrongly created
+  // a duplicate row for the same task (breaking the "one row per task" invariant every caller relies on),
+  // and acknowledge() wrongly refused a real mid-flight task with workspace_state_missing.
+  async list({ tenantId, subjectId, ownerId, workspaceId, recordType, taskId, conditionFocus, limit=100 }) {
     const values=[tenantId]; let where="tenant_id=$1 and deleted_at is null";
-    for(const [column,value] of [["subject_id",subjectId],["owner_id",ownerId],["workspace_id",workspaceId],["record_type",recordType]]) if(value){values.push(value);where+=` and ${column}=$${values.length}`;}
+    for(const [column,value] of [["subject_id",subjectId],["owner_id",ownerId],["workspace_id",workspaceId],["record_type",recordType],["task_id",taskId]]) if(value){values.push(value);where+=` and ${column}=$${values.length}`;}
+    if(conditionFocus){values.push(conditionFocus);where+=` and data->>'conditionFocus'=$${values.length}`;}
     values.push(Math.min(Math.max(limit,1),200));
     const result=await this.db.query(`select * from nexus_records where ${where} order by updated_at desc limit $${values.length}`,values);
     return result.rows||result;

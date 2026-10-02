@@ -12,6 +12,13 @@ const text = (value, limit) => String(value ?? "").replace(/\s+/g, " ").trim().s
 function createTelehealthPrepareExecutor({ records }) {
   if (!records?.create) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context, taskId }) {
+    // Found live (restriction-bypass follow-up audit): same gap as health.record's own executor -- this
+    // writes a real classification:"health" record with no userIsRestrictedFrom("health-record-write")
+    // check at all, unlike every direct REST/legacy path that writes real PHI. See
+    // nexus/health/executor.js's matching fix for the full scenario.
+    if (context?.isRestrictedFrom?.("health-record-write")) {
+      throw coded("health_record_write_restricted", "This account type cannot write real health records.");
+    }
     const concern = text(input.concern || input.reason || input.goal, 2000);
     if (!concern) throw coded("telehealth_concern_required", "A telehealth intake needs a concern to save.");
     // telehealth.prepare is confirmationRequired with consent scope health:telehealth-intake:write; the engine only

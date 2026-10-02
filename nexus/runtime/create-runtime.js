@@ -103,13 +103,18 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const devices = new DeviceRepository(db);
   const deviceTokens = env.NEXUS_DEVICE_TOKEN_KEY ? new DeviceTokenVault(env.NEXUS_DEVICE_TOKEN_KEY) : null;
   const notifications = new NotificationRepository(db);
-  const dataLifecycle = new DataLifecycleRepository(db);
+  const objectStorage = createObjectStore(env);
+  // Found live (restriction-bypass follow-up audit): executeDeletion/purgeExpired only ever nulled an
+  // artifact's object_key column -- nothing told the real S3 object to delete itself, so "erased" bytes
+  // stayed live in the bucket forever. objectStorage is created above (moved up from further down this
+  // function) specifically so it can be handed to DataLifecycleRepository here; it's null when S3 isn't
+  // configured (createObjectStore's own contract), and both methods already handle that gracefully.
+  const dataLifecycle = new DataLifecycleRepository(db, { objectStorage });
   const schedules = new ScheduleRepository(db);
   const applications = new ApplicationRegistry(defaultApplicationManifests());
   const providers = createProviderCatalog({ env, fetchFn });
   const acceptance = new ProductionAcceptanceRepository(db);
   const path2Evidence = new Path2EvidenceRepository(db);
-  const objectStorage = createObjectStore(env);
   // A growing set of canonical tools gets a REAL local/direct executor
   // instead of the scripts/provider-engines.js mock every other tool here
   // still uses -- none of these can produce that mock's signed HMAC

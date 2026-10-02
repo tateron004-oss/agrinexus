@@ -64,13 +64,21 @@ async function post(route, body, cookie) {
     // collection) and no auth on the read paths. Verify PHI created here is
     // not visible to an unauthenticated caller via any of the three read
     // paths, but still visible to a real Admin.
+    //
+    // create_chronic_care_profile is now correctly health-write-gated (a
+    // separate, since-fixed bug: fully anonymous callers could write real
+    // PHI-shaped records), so the record is created here as a real signed-in
+    // caller -- an anonymous attempt would now be refused outright, leaving
+    // nothing for this test's leak-prevention checks below to exercise.
+    const login = await fetch(`${base}/api/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "admin@agrinexus.org", password: "Admin2026!" }) });
+    const cookie = login.headers.get("set-cookie").split(";")[0];
     await post("/api/nexus/operations/action", {
       action: "create_chronic_care_profile",
       conditionArea: "diabetes",
       patientName: "Jane REALPATIENT Doe",
       medications: "insulin, metformin",
       allergies: "penicillin"
-    }, null);
+    }, cookie);
 
     const statusRes = await fetch(`${base}/api/nexus/operations/status`).then(r => r.json());
     assert.equal(JSON.stringify(statusRes).includes("REALPATIENT"), false, "GET /api/nexus/operations/status must not leak PHI to an unauthenticated caller");
@@ -81,8 +89,6 @@ async function post(route, body, cookie) {
     const stateRes = await post("/api/nexus/operations/action", { action: "status" }, null);
     assert.equal(JSON.stringify(stateRes.json).includes("REALPATIENT"), false, "the embedded persistentOperations summary must not leak PHI to an unauthenticated caller");
 
-    const login = await fetch(`${base}/api/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "admin@agrinexus.org", password: "Admin2026!" }) });
-    const cookie = login.headers.get("set-cookie").split(";")[0];
     const adminAudit = await post("/api/nexus/operations/action", { action: "show_audit_log" }, cookie);
     assert.equal(JSON.stringify(adminAudit.json).includes("REALPATIENT"), true, "a real Admin must still see full audit detail");
 

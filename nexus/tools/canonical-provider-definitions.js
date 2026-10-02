@@ -94,6 +94,13 @@ function canonicalProviderTools({ receiptSecret, providerBaseUrl }) {
 // keep passing, silently leaving that tool running with no consent check / no confirmation gate / the wrong risk
 // tier -- with no error, no test failure, no CI signal. Now also fails closed on a governance-field mismatch, not
 // just a missing or extra tool.
+// Found live (identity/access-control follow-up audit): requiredPermission -- the exact field the engine's own
+// authorize() enforces on every tool call -- was missing from this comparison entirely, even though this check
+// exists specifically to catch silent governance drift for every OTHER field. A deployed provider config could
+// weaken a real-effect tool's requiredPermission (parseDefinitions/toolRecord in provider-catalog.js both allow
+// an arbitrary per-tool value) and this would still pass. canonicalProviderTools() always normalizes every
+// canonical tool to "tasks:execute" (there is no per-tool variation in the canonical source), so that is the one
+// value a configured tool's own requiredPermission (or its own "tasks:execute" default) must match.
 function assertCanonicalProviderBindings(definitions) {
   const configuredById = new Map((definitions || []).map(item => [item.toolId, item]));
   const expected = new Set(CANONICAL_PROVIDER_TOOLS.map(item => item.toolId));
@@ -105,7 +112,8 @@ function assertCanonicalProviderBindings(definitions) {
     const actual = configuredById.get(canonical.toolId);
     return (actual.consentScope || null) !== (canonical.consentScope || null)
       || Boolean(actual.confirmationRequired) !== Boolean(canonical.confirmationRequired)
-      || (actual.riskTier || "low") !== (canonical.riskTier || "low");
+      || (actual.riskTier || "low") !== (canonical.riskTier || "low")
+      || (actual.requiredPermission || "tasks:execute") !== "tasks:execute";
   }).map(canonical => canonical.toolId);
   if (mismatched.length) throw coded("provider_catalog_drift",
     `Provider catalog governance drift detected (consentScope/confirmationRequired/riskTier mismatch: ${mismatched.join(",")}).`);

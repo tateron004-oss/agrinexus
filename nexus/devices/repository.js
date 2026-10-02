@@ -3,29 +3,47 @@ const { createId } = require("../contracts/identifiers.js");
 const PLATFORMS = Object.freeze(["web", "android", "ios", "windows", "macos", "linux"]);
 const LIFECYCLE_STATES = Object.freeze(["foreground", "background", "suspended", "terminated"]);
 const PUBLIC_COLUMNS = "device_id,platform,app_version,permission_state,capabilities,lifecycle_state,push_provider,push_state,state,last_seen_at";
+// A person's own physical devices, not an open-ended list like contacts or saved items -- bounded
+// generously (phones, tablets, browsers, a work computer) but not unbounded. Found live (devices
+// audit): register()'s upsert had no per-account cap at all, and list()/listPushable() ran unbounded
+// queries -- a buggy client minting a fresh device_id every call (instead of persisting the one it was
+// given) could grow nexus_devices for one account without limit, and every real push notification then
+// fanned out to the full unbounded set via listPushable(). Capped creation at exactly this number,
+// closed with the same pg_advisory_xact_lock pattern used throughout this codebase so two concurrent
+// first-time registrations can't both slip past the count check.
+const MAX_DEVICES = 50;
 class DeviceRepository {
   constructor(db) { if (!db?.query) throw new Error("A database runtime is required."); this.db = db; }
   async register(item) {
     const platform = allowed(item.platform === "pwa" ? "web" : item.platform, PLATFORMS, "platform");
     const capabilities = Array.isArray(item.capabilities) ? item.capabilities : Object.keys(item.capabilities || {}).filter(key => item.capabilities[key] === true);
     if (capabilities.some(value => typeof value !== "string")) throw invalid("Capabilities must be strings.");
-    const result = await this.db.query(`insert into nexus_devices
-      (device_id,tenant_id,user_id,platform,capabilities,push_endpoint,push_key_ciphertext,app_version,permission_state,lifecycle_state)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict (device_id) do update set
-      state='active',
-      capabilities=excluded.capabilities,app_version=excluded.app_version,permission_state=excluded.permission_state,
-      lifecycle_state=excluded.lifecycle_state,last_seen_at=now(),updated_at=now(),
-      push_endpoint=coalesce(excluded.push_endpoint,nexus_devices.push_endpoint),
-      push_key_ciphertext=coalesce(excluded.push_key_ciphertext,nexus_devices.push_key_ciphertext)
-      where nexus_devices.tenant_id=excluded.tenant_id and nexus_devices.user_id=excluded.user_id
-      returning ${PUBLIC_COLUMNS}`,
-      [required(item.deviceId,"deviceId"),required(item.tenantId,"tenantId"),required(item.userId,"userId"),platform,capabilities,
-        item.pushEndpoint || null,item.pushKeyCiphertext || null,String(item.appVersion || ""),item.permissions || {},
-        allowed(item.lifecycleState || "foreground", LIFECYCLE_STATES, "lifecycle state")]);
-    return (result.rows || result)[0] || null;
+    const deviceId = required(item.deviceId, "deviceId"), tenantId = required(item.tenantId, "tenantId"), userId = required(item.userId, "userId");
+    return this.db.transaction(async trx => {
+      await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`devices:${tenantId}:${userId}`]);
+      const existing = await trx.query(`select 1 from nexus_devices where tenant_id=$1 and user_id=$2 and device_id=$3`, [tenantId, userId, deviceId]);
+      if (!(existing.rows || existing).length) {
+        const count = await trx.query(`select count(*)::int as n from nexus_devices where tenant_id=$1 and user_id=$2`, [tenantId, userId]);
+        if (Number((count.rows || count)[0]?.n || 0) >= MAX_DEVICES) throw invalid(`You already have ${MAX_DEVICES} devices registered. Remove one before adding another.`);
+      }
+      const result = await trx.query(`insert into nexus_devices
+        (device_id,tenant_id,user_id,platform,capabilities,push_endpoint,push_key_ciphertext,app_version,permission_state,lifecycle_state)
+        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict (device_id) do update set
+        state='active',
+        capabilities=excluded.capabilities,app_version=excluded.app_version,permission_state=excluded.permission_state,
+        lifecycle_state=excluded.lifecycle_state,last_seen_at=now(),updated_at=now(),
+        push_endpoint=coalesce(excluded.push_endpoint,nexus_devices.push_endpoint),
+        push_key_ciphertext=coalesce(excluded.push_key_ciphertext,nexus_devices.push_key_ciphertext)
+        where nexus_devices.tenant_id=excluded.tenant_id and nexus_devices.user_id=excluded.user_id
+        returning ${PUBLIC_COLUMNS}`,
+        [deviceId, tenantId, userId, platform, capabilities,
+          item.pushEndpoint || null, item.pushKeyCiphertext || null, String(item.appVersion || ""), item.permissions || {},
+          allowed(item.lifecycleState || "foreground", LIFECYCLE_STATES, "lifecycle state")]);
+      return (result.rows || result)[0] || null;
+    });
   }
   async list({ tenantId,userId }) {
-    const result = await this.db.query(`select ${PUBLIC_COLUMNS} from nexus_devices where tenant_id=$1 and user_id=$2 order by last_seen_at desc`,[tenantId,userId]);
+    const result = await this.db.query(`select ${PUBLIC_COLUMNS} from nexus_devices where tenant_id=$1 and user_id=$2 order by last_seen_at desc limit $3`,[tenantId,userId,MAX_DEVICES]);
     return result.rows || result;
   }
   // PUBLIC_COLUMNS deliberately excludes the push endpoint/ciphertext (client-
@@ -35,8 +53,9 @@ class DeviceRepository {
     const result = await this.db.query(
       `select device_id,push_provider,push_endpoint,push_key_ciphertext from nexus_devices
        where tenant_id=$1 and user_id=$2 and state='active' and push_state='registered'
-       and push_endpoint is not null and push_key_ciphertext is not null`,
-      [tenantId,userId]);
+       and push_endpoint is not null and push_key_ciphertext is not null
+       limit $3`,
+      [tenantId,userId,MAX_DEVICES]);
     return result.rows || result;
   }
   async registerPush({ tenantId,userId,deviceId,provider,pushKeyCiphertext }) {
@@ -67,4 +86,4 @@ class DeviceRepository {
 function invalid(message) { return Object.assign(new Error(message), { code:"invalid_input",status:400 }); }
 function required(value,name) { const text=String(value || "").trim(); if (!text) throw invalid(`${name} is required.`); return text; }
 function allowed(value,values,name) { const text=required(value,name); if (!values.includes(text)) throw invalid(`Invalid ${name}.`); return text; }
-module.exports=Object.freeze({ DeviceRepository,PLATFORMS,LIFECYCLE_STATES });
+module.exports=Object.freeze({ DeviceRepository,PLATFORMS,LIFECYCLE_STATES,MAX_DEVICES });
