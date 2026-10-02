@@ -152,6 +152,17 @@ class DataLifecycleRepository {
       // device events above), so it's hard-deleted the same way those are, rather than soft-deleted like
       // nexus_records/nexus_artifacts.
       const syncOperations=await trx.query(`delete from nexus_sync_operations where tenant_id=$1 and user_id=$2 returning sync_id`,[tenantId,request.subject_id]);
+      // Found live (fresh-module audit): nexus_audit_events (AuditRepository.record(), written on every
+      // engine.execute()/transition()/create() call) was entirely absent from this sweep -- actor_id is a
+      // direct identifier of the erasing person, and the event stream itself (what tools they invoked, when,
+      // and the outcome) is their own activity history. After a "verified" erasure, any tenant member with
+      // observability:read/admin could still query the audit-review surface for that now-supposedly-erased
+      // actor_id and see their full trail. Unlike notifications/device-events (pure delivery-attempt history,
+      // hard-deleted), the audit trail's own structural shape (event_type/outcome/timing/task linkage) is a
+      // genuine compliance record this codebase deliberately keeps elsewhere (see knownUnownedProfileGaps'
+      // own note on audit logs being "retained as an audit/compliance trail") -- so only the direct identifier
+      // is nulled here, the same treatment nexus_consents gets just above, not a hard delete.
+      const auditEvents=await trx.query(`update nexus_audit_events set actor_id=null where tenant_id=$1 and actor_id=$2 returning event_id`,[tenantId,request.subject_id]);
       const verification={recordVersionsErased:true,recordsErased:true,artifactPointersErased:true,memoryItemsErased:true,memoryItemsCount:(memoryItems.rows||memoryItems).length,
         syncOperationsErased:true,syncOperationsCount:(syncOperations.rows||syncOperations).length,
         conversationsErased:true,conversationsCount:(conversations.rows||conversations).length,
@@ -167,6 +178,7 @@ class DataLifecycleRepository {
         predictionsErased:true,predictionsCount:(predictions.rows||predictions).length,
         schedulesCancelled:true,schedulesCount:(schedules.rows||schedules).length,
         consentsErased:true,consentsCount:(consents.rows||consents).length,
+        auditActorIdentifiersErased:true,auditEventsCount:(auditEvents.rows||auditEvents).length,
         verifiedAt:new Date().toISOString()};
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};

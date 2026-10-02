@@ -199,6 +199,40 @@ test("a legal hold blocks sync-operation erasure too, not just the older tables"
   assert.equal(held.calls.some(call=>/delete from nexus_sync_operations/.test(call.sql)),false);
 });
 
+// Found live (fresh-module audit): nexus_audit_events (written on every engine.execute()/transition()/
+// create() call, carrying a real actor_id) was entirely absent from account erasure -- the tenant-wide
+// audit-review surface still showed the erased person's full activity trail by actor_id indefinitely.
+// Unlike notifications/device-events (hard-deleted, pure delivery history), the row itself is kept -- this
+// codebase deliberately treats an audit/compliance trail as retained elsewhere (see the legacy export's own
+// "retained as an audit/compliance trail" disclosure) -- only the direct identifier is nulled, the same
+// treatment nexus_consents gets just above.
+test("account deletion also nulls the actor identifier on this subject's audit-event history, without deleting the events themselves", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},{rows:[]},
+    {rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},
+    {rows:[]},
+    {rows:[{event_id:'evt1'},{event_id:'evt2'},{event_id:'evt3'}]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+
+  const auditEvents = x.calls.find(call => /update nexus_audit_events/.test(call.sql));
+  assert.ok(auditEvents); assert.deepEqual(auditEvents.params,['tenant-a','owner-a']);
+  assert.match(auditEvents.sql,/actor_id=null/);
+  assert.doesNotMatch(auditEvents.sql,/delete from/i, "the audit trail's own rows must survive, only the identifier is cleared");
+  assert.equal(result.verification.auditActorIdentifiersErased,true);
+  assert.equal(result.verification.auditEventsCount,3);
+});
+
+test("a legal hold blocks audit-event actor nulling too, not just the older tables", async () => {
+  const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+  await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+  assert.equal(held.calls.some(call=>/update nexus_audit_events/.test(call.sql)),false);
+});
+
 // Found live: nexus_tasks/nexus_task_steps/nexus_tool_executions were entirely absent from account erasure --
 // every task_document (a person's own goal text and outcome), step input/output, and raw tool-execution
 // request/response (the real PII passed to and from every executor) survived a "verified" erasure in full.
