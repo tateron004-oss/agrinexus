@@ -157,6 +157,29 @@ test("jobs get people and days, appear in the list, and finish", async () => {
   assert.match(await who.say("Show my tasks"), /no open jobs/i);
 });
 
+// Found live (farmwork follow-up audit, same shape as coop.js's equipment-booking clash and
+// board.js's listing cap): the 300-open-job cap was a plain check-then-act -- list(), filter,
+// then a SEPARATE add() -- with no lock spanning both. Two near-simultaneous "assign ... to ..."
+// requests from the same person, both already at the cap, could each read the same under-cap
+// count before either had written, and both insert, silently exceeding the 300-open-job limit.
+test("two concurrent job assignments at the open-job cap only let one through, not both", async () => {
+  const who = farmer();
+  for (let i = 0; i < 299; i += 1) {
+    await who.store.add({ tenantId: "t1", userId: "u1", collection: "task", data: { title: `Job ${i}`, assignee: "", status: "open", due: null, createdOn: "2026-09-20" } });
+  }
+
+  const [first, second] = await Promise.all([
+    who.say("Assign Juma to weed the north plot"),
+    who.say("Assign Juma to spray the maize")
+  ]);
+  const outcomes = [first, second];
+  assert.equal(outcomes.filter(text => /^Task \d+: /.test(text)).length, 1, "exactly one request must have won the race and been recorded as a job");
+  assert.equal(outcomes.filter(text => /lot of open jobs/.test(text)).length, 1, "exactly one request must have lost the race and been refused by the cap");
+
+  const tasks = await who.store.list({ tenantId: "t1", userId: "u1", collection: "task" });
+  assert.equal(tasks.filter(task => task.data.status !== "done").length, 300, "the open-job cap of 300 must never be exceeded, even under a race");
+});
+
 // ---------- stock ----------
 test("stock goes in and out in ordinary words and warns when it runs low", async () => {
   const who = farmer();
