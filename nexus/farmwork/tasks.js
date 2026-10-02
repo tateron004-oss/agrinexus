@@ -74,14 +74,25 @@ async function handle(ctx) {
   }
 
   // ---- giving jobs ----
+  // Found live (farmwork follow-up audit, same shape as coop.js's equipment-booking clash and
+  // board.js's listing cap): the 300-open-job cap used to be a plain check-then-act -- list(),
+  // filter, then a SEPARATE add() -- with no lock spanning both. Two near-simultaneous "assign
+  // ... to ..." requests from the same person, both already at the cap, could each read the
+  // same under-cap count before either had written, and both insert, silently exceeding the
+  // 300-open-job limit. Reuses addUnlessClash()'s advisory-lock-guarded transaction (already
+  // used for coop.js's equipment clash) so the recount happens under the same lock as the insert.
   const create = async (title, assignee, due) => {
     const workers = await ctx.store.list({ ...scope, collection: "worker" });
     const worker = assignee ? findWorker(workers, assignee) : null;
-    const tasks = await ctx.store.list({ ...scope, collection: "task" });
-    if (tasks.filter(task => task.data.status !== "done").length >= 300) return { refused: "That's a lot of open jobs (three hundred). Mark some as done first." };
     const name = worker ? worker.data.name : assignee ? titleCase(assignee) : "";
-    const record = await ctx.store.add({ ...scope, collection: "task", data: { title, assignee: name, status: "open", due: due || null, createdOn: ctx.today } });
-    return { record, known: Boolean(worker), name };
+    const result = await ctx.store.addUnlessClash({
+      ...scope, collection: "task",
+      lockKey: `farm_records:${scope.tenantId}:task:${scope.userId}`,
+      findClash: rows => rows.filter(task => task.data.status !== "done").length >= 300,
+      data: { title, assignee: name, status: "open", due: due || null, createdOn: ctx.today }
+    });
+    if (result.clash) return { refused: "That's a lot of open jobs (three hundred). Mark some as done first." };
+    return { record: result.record, known: Boolean(worker), name };
   };
   if ((m = /^(?:please )?give (.+?) (?:this|the|a) (?:checklist|list of jobs|job list)\s*[:,-]\s*(.+)$/i.exec(t))) {
     const jobs = m[2].split(/\s*[;\n]\s*|\s*,\s*(?=[a-z])/i).map(item => clean(item).replace(/^(?:and|then)\s+/i, "")).filter(Boolean).slice(0, 15);
