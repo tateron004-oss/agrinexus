@@ -275,6 +275,52 @@ test("artifact deletion wipes title and metadata, not just the object pointer", 
   assert.match(artifacts.sql,/title=''/); assert.match(artifacts.sql,/metadata='\{\}'::jsonb/); assert.match(artifacts.sql,/object_key=null/);
 });
 
+// Found live (restriction-bypass follow-up audit): nulling object_key was the only thing that ever happened
+// to a real artifact's bytes -- nothing ever told the actual S3 object to delete itself, so "erased" files
+// stayed live in the bucket forever, orphaned but fully intact.
+test("executeDeletion purges each artifact's real object bytes from object storage, not just the DB pointer", async () => {
+  const removed = [];
+  const objectStorage = { remove: async key => { removed.push(key); return true; } };
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[{object_key:'nexus/t/owner-a/art1/f'},{object_key:'nexus/t/owner-a/art2/f'}]}]);
+  const result = await new DataLifecycleRepository(x, { objectStorage }).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+  assert.deepEqual(removed.sort(), ['nexus/t/owner-a/art1/f','nexus/t/owner-a/art2/f']);
+  assert.equal(result.verification.artifactObjectsPurged, 2);
+  assert.equal(result.verification.artifactObjectPurgeFailures, undefined);
+  // Purged after the transaction commits, so it's a separate patch call to the already-verified request row --
+  // not the in-transaction "state='verified'" write, which happens before the purge can even run.
+  const patch = x.calls.find(call => /update nexus_deletion_requests set verification=\$3/.test(call.sql) && !/state='verified'/.test(call.sql));
+  assert.ok(patch, "the purge outcome must be recorded on the request, not silently dropped");
+  assert.equal(patch.params[2].artifactObjectsPurged, 2);
+});
+
+test("a purge failure for one artifact's object bytes is recorded, not silently swallowed, and does not undo the DB erasure", async () => {
+  const objectStorage = { remove: async key => { if (key.includes('art2')) throw new Error('S3 unavailable'); return true; } };
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[{object_key:'nexus/t/owner-a/art1/f'},{object_key:'nexus/t/owner-a/art2/f'}]}]);
+  const result = await new DataLifecycleRepository(x, { objectStorage }).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified', "the DB erasure must still succeed even when the S3 cleanup partially fails");
+  assert.equal(result.verification.artifactObjectsPurged, 1);
+  assert.equal(result.verification.artifactObjectPurgeFailures, 1);
+});
+
+test("without object storage configured, no purge is attempted and nothing throws", async () => {
+  const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[{object_key:'nexus/t/owner-a/art1/f'}]}]);
+  const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+  assert.equal(result.state,'verified');
+  assert.equal(result.verification.artifactObjectsPurged, undefined);
+  const extraPatch = x.calls.filter(call => /update nexus_deletion_requests set verification=\$3/.test(call.sql) && !/state='verified'/.test(call.sql));
+  assert.equal(extraPatch.length, 0);
+});
+
+test("purgeExpired also purges the real object bytes of every artifact it marks deleted", async () => {
+  const removed = [];
+  const objectStorage = { remove: async key => { removed.push(key); return true; } };
+  const x = db([{rows:[{artifact_id:'art1',object_key:'nexus/t/u/art1/f'},{artifact_id:'art2',object_key:'nexus/t/u/art2/f'}]}]);
+  const rows = await new DataLifecycleRepository(x, { objectStorage }).purgeExpired({ limit: 10 });
+  assert.equal(rows.length, 2);
+  assert.deepEqual(removed.sort(), ['nexus/t/u/art1/f','nexus/t/u/art2/f']);
+});
+
 // Found live (job-queue/schedule-dispatch follow-up audit): a deletion
 // request whose executeDeletion() deterministically fails never left
 // state='queued', and deletion.sweep's own listStaleQueued has no way to

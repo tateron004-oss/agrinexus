@@ -2,7 +2,11 @@
 const { createId } = require("../contracts/identifiers.js");
 
 class DataLifecycleRepository {
-  constructor(db) { if (!db?.query || !db?.transaction) throw new Error("A transactional database runtime is required."); this.db=db; }
+  // objectStorage is optional (undefined in any environment without real S3 configured, matching
+  // createObjectStore()'s own null-when-unconfigured contract) -- when present, it lets executeDeletion/
+  // purgeExpired actually delete the real object bytes an artifact's object_key points to, not just null
+  // the DB pointer. See the "Found live" comment on the artifacts erasure below for why that mattered.
+  constructor(db, { objectStorage } = {}) { if (!db?.query || !db?.transaction) throw new Error("A transactional database runtime is required."); this.db=db; this.objectStorage=objectStorage||null; }
   async requestDeletion({tenantId,subjectId,requestedBy}) {
     if(!tenantId||!subjectId||!requestedBy) throw new Error("Deletion tenant, subject, and requester are required.");
     const result=await this.db.query(`insert into nexus_deletion_requests(request_id,tenant_id,subject_id,requested_by)
@@ -10,7 +14,8 @@ class DataLifecycleRepository {
     return (result.rows||result)[0];
   }
   async executeDeletion({tenantId,requestId}) {
-    return this.db.transaction(async trx=>{
+    let artifactObjectKeys=[];
+    const outcome = await this.db.transaction(async trx=>{
       const locked=await trx.query(`select * from nexus_deletion_requests where tenant_id=$1 and request_id=$2 for update`,[tenantId,requestId]);
       const request=(locked.rows||locked)[0]; if(!request) throw new Error("Deletion request not found.");
       const holds=await trx.query(`select hold_id from nexus_legal_holds where tenant_id=$1 and state='active' and (subject_id is null or subject_id=$2) limit 1`,[tenantId,request.subject_id]);
@@ -25,7 +30,15 @@ class DataLifecycleRepository {
       await trx.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance='{}'::jsonb,deleted_at=now(),updated_at=now() where tenant_id=$1 and (subject_id=$2 or (subject_id is null and owner_id=$2)) and deleted_at is null`,[tenantId,request.subject_id]);
       // title/metadata wiped too, not just the object pointer -- a title like "Mum's biopsy results.pdf" is
       // itself personal data, and leaving it behind after "deletion" while only nulling object_key was a gap.
-      await trx.query(`update nexus_artifacts set state='deleted',title='',metadata='{}'::jsonb,object_key=null,deleted_at=now(),updated_at=now() where tenant_id=$1 and owner_id=$2 and deleted_at is null`,[tenantId,request.subject_id]);
+      // Found live (restriction-bypass follow-up audit): nulling object_key here (and in purgeExpired below)
+      // was the ONLY thing that ever happened to a real artifact's bytes -- nothing ever told the actual S3
+      // object to delete itself, so an uploaded document/photo survived "erasure" forever in the bucket,
+      // orphaned but fully intact. Captured via a CTE (one query, not an extra positional call) so the real
+      // key can be purged from object storage after this transaction commits -- see below.
+      const artifactRows=await trx.query(`with target as (select artifact_id,object_key from nexus_artifacts where tenant_id=$1 and owner_id=$2 and deleted_at is null)
+        update nexus_artifacts a set state='deleted',title='',metadata='{}'::jsonb,object_key=null,deleted_at=now(),updated_at=now()
+        from target where a.artifact_id=target.artifact_id returning target.object_key`,[tenantId,request.subject_id]);
+      artifactObjectKeys=(artifactRows.rows||artifactRows).map(row=>row.object_key).filter(Boolean);
       await trx.query(`update nexus_record_versions v set data='{}'::jsonb,provenance='{}'::jsonb
         from nexus_records r where v.record_id=r.record_id and r.tenant_id=$1 and (r.subject_id=$2 or (r.subject_id is null and r.owner_id=$2))`,[tenantId,request.subject_id]);
       // Found live: nexus_tasks/nexus_task_steps/nexus_tool_executions were entirely absent from this sweep --
@@ -121,6 +134,21 @@ class DataLifecycleRepository {
       await trx.query(`update nexus_deletion_requests set state='verified',verification=$3,completed_at=now() where tenant_id=$1 and request_id=$2`,[tenantId,requestId,verification]);
       return {state:"verified",verification};
     });
+    // Real object bytes are purged after the transaction commits, never inside it -- a slow or failing S3
+    // call must never hold the erasure transaction's locks open. A purge failure does not undo the
+    // already-committed DB erasure (the pointer is gone either way, so there's nothing left for a retry of
+    // executeDeletion itself to find); it's recorded on the request's own verification record instead of
+    // being silently swallowed, matching this codebase's standing rule that a verification claim must be
+    // honest about what actually happened.
+    if (this.objectStorage && artifactObjectKeys.length) {
+      const settled = await Promise.allSettled(artifactObjectKeys.map(key => this.objectStorage.remove(key)));
+      const purged = settled.filter(item => item.status === "fulfilled").length;
+      const failed = settled.length - purged;
+      outcome.verification.artifactObjectsPurged = purged;
+      if (failed) outcome.verification.artifactObjectPurgeFailures = failed;
+      await this.db.query(`update nexus_deletion_requests set verification=$3 where tenant_id=$1 and request_id=$2`,[tenantId,requestId,outcome.verification]);
+    }
+    return outcome;
   }
   // Found live (job-queue/schedule-dispatch follow-up audit): a request
   // whose executeDeletion() deterministically fails (a real, reproducible
@@ -161,11 +189,20 @@ class DataLifecycleRepository {
   // own ownership column) against the hold's subject_id, the same
   // null-means-tenant-wide semantics executeDeletion() already uses.
   async purgeExpired({limit=100}) {
-    const result=await this.db.query(`with expired as (select artifact_id from nexus_artifacts where retention_until<now() and deleted_at is null
+    const result=await this.db.query(`with expired as (select artifact_id,object_key from nexus_artifacts where retention_until<now() and deleted_at is null
       and not exists (select 1 from nexus_legal_holds h where h.tenant_id=nexus_artifacts.tenant_id and h.state='active' and (h.subject_id is null or h.subject_id=nexus_artifacts.owner_id))
       order by retention_until for update skip locked limit $1) update nexus_artifacts a set state='deleted',object_key=null,deleted_at=now(),updated_at=now()
-      from expired where a.artifact_id=expired.artifact_id returning a.artifact_id`,[Math.min(Math.max(limit,1),500)]);
-    return result.rows||result;
+      from expired where a.artifact_id=expired.artifact_id returning a.artifact_id,expired.object_key`,[Math.min(Math.max(limit,1),500)]);
+    const rows=result.rows||result;
+    // Same real-object-deletion gap as executeDeletion above, for the separate retention-expiry sweep path --
+    // best-effort here (no per-row verification record to patch on failure; the next sweep simply won't see
+    // these rows again since they're already marked deleted, same as any other best-effort background job in
+    // this codebase).
+    if (this.objectStorage) {
+      const keys=rows.map(row=>row.object_key).filter(Boolean);
+      if (keys.length) await Promise.allSettled(keys.map(key=>this.objectStorage.remove(key)));
+    }
+    return rows;
   }
   async recordBackupEvidence({releaseSha,backupId,state,checksum,metadata={}}) {
     if(!releaseSha||!backupId||!checksum||!["created","restore_verified","failed"].includes(state)) throw new Error("Valid backup evidence is required.");
