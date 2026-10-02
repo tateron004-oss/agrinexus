@@ -140,6 +140,21 @@ test("a send or call step with no usable recipient and words is rejected so the 
   assert.equal(validatePlan(sendStep({ draft: "Draft a follow-up message", consentRequired: true, returnDeliveryReceipt: true }), validationCatalog, { can: () => true }).valid, true, "the deploy's draft-only shape is exempt");
 });
 
+// Found live: a local-format number with no country code (e.g. "0712345678", the way most people actually
+// dial their own country's numbers) fell all the way through callPlan's own phone check to the free-form AI
+// planner with no guidance at all, even though sendMessagePlan already asks for the country code in this
+// exact situation for a text/WhatsApp/email send. "no digits at all" ("call me a taxi") must stay untouched.
+test("a call to a local-format number with no country code asks for one instead of silently falling through", () => {
+  assert.equal(callPlan("Call 0712345678 and say I am on my way", catalog).clarification,
+    "I need the full phone number with the country code to place a call, like +254712345678.");
+  assert.deepEqual(callPlan("Call 0712345678 and say I am on my way", catalog).steps, []);
+  assert.equal(callPlan("Phone 0712 345 678 and say hi", catalog).clarification,
+    "I need the full phone number with the country code to place a call, like +254712345678.");
+  for (const other of ["Call me a taxi", "Call it a day", "Call my brother and say hi"])
+    assert.equal(callPlan(other, catalog), null, other);
+  assert.equal(callPlan("Call 0712345678 and say hi", { tools: [], applications: [] }), null);
+});
+
 test("when the model picks a send with no number, it is told why and asks the person instead", async () => {
   const seenFeedback = [];
   const model = { plan: async request => { seenFeedback.push(request.feedback.length);
