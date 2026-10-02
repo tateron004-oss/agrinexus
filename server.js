@@ -22344,6 +22344,22 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     let response;
     let intakeRecord = null;
     let readingSaved = false;
+    // Found live (voice-dispatch AI-quality audit): every real-record write
+    // branch below (vitals, training plan, workout log, RTM activity/
+    // adherence note) builds its own spoken response from readingSaved --
+    // which genuinely reflects whether the bridge call persisted a real
+    // record -- but the shared return at the bottom of this branch never
+    // forwarded that into executionAttempted/executionVerified, so it fell
+    // back to common's defaults (false, false) even when the save actually
+    // succeeded. A real "My blood pressure is 150 over 95" (confirmed live
+    // against the actual chronic-care store) is saved and spoken back as
+    // saved, while the structured tool-result envelope the Realtime model
+    // and any other caller actually reads claims no execution was attempted
+    // or verified at all -- the exact "backend ran, envelope says nothing
+    // happened" shape already fixed for nexus_lists/push reminders elsewhere
+    // in this dispatcher. writeAttempted tracks that a real write-capable
+    // bridge call was made (whether or not it ended up persisting).
+    let writeAttempted = false;
     let readingKind = "";
     let extraData = {};
     if (bp || glucose) {
@@ -22356,6 +22372,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(readingResult?.body?.ok && readingResult.body.status === "completed");
+      writeAttempted = true;
       readingKind = bp ? "blood-pressure" : "blood-glucose";
       if (bp) {
         response = readingSaved
@@ -22375,6 +22392,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(rpmResult?.body?.ok && rpmResult.body.status === "completed");
+      writeAttempted = true;
       readingKind = rpmVital.label;
       response = readingSaved
         ? `I saved the ${rpmVital.label} reading ${rpmVital.display} to your remote monitoring record for provider review. This is not a diagnosis, alert, or device connection. Seek urgent medical help now for severe symptoms.`
@@ -22388,6 +22406,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(planResult?.body?.ok && planResult.body.status === "completed");
+      writeAttempted = true;
       readingKind = "training plan";
       response = readingSaved
         ? `I saved a training plan${planResult.body.data.plan.goal ? ` for ${planResult.body.data.plan.goal}` : ""} to your fitness record. This is general activity guidance, not a training program from a coach or clinician.`
@@ -22403,6 +22422,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(workoutResult?.body?.ok && workoutResult.body.status === "completed");
+      writeAttempted = true;
       readingKind = "workout";
       response = readingSaved
         ? `I logged your ${workoutMinutes}-minute ${workoutKind} to your fitness record.`
@@ -22422,6 +22442,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         confirmed: wantsHealthActionConfirmed
       }, db, process.env);
       readingSaved = Boolean(rtmResult?.body?.ok && rtmResult.body.status === "completed");
+      writeAttempted = true;
       readingKind = rtmExercise ? "activity participation" : "medication adherence note";
       response = readingSaved
         ? `I logged that ${rtmExercise ? "activity in your therapy/exercise participation record" : "medication adherence note in your participation record"} for provider review. This is not a treatment plan or medication change. Discuss any medication concerns with your care team.`
@@ -22596,7 +22617,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         : readingSaved ? [`Saved the ${readingKind} reading/entry to the patient's record.`]
         : ["Prepared relevant health information under non-diagnostic safety rules."],
       ["Nexus did not diagnose, prescribe, send health information, contact a provider, or replace clinical judgment."]);
-    return { ...common, capability: "nexus_health_preparation", status, response, receipt, evidenceReceipt: receipt, localOnly: true, ...extraData, ...(intakeRecord ? { intakeId: intakeRecord.id, patientRef: intakeRecord.patientRef } : {}) };
+    return { ...common, capability: "nexus_health_preparation", status, response, receipt, evidenceReceipt: receipt, localOnly: true,
+      // writeAttempted/readingSaved cover the vitals/training-plan/workout/RTM
+      // branches above; intakeRecord's creation (ensureVoiceHealthIntake) is a
+      // real, unconditional local write that always persists when reached, so
+      // it counts as both attempted and verified too.
+      executionAttempted: writeAttempted || Boolean(intakeRecord),
+      executionVerified: readingSaved || Boolean(intakeRecord),
+      ...extraData, ...(intakeRecord ? { intakeId: intakeRecord.id, patientRef: intakeRecord.patientRef } : {}) };
   }
   if (toolName === "nexus_marketplace_logistics") {
     if (/\b(track|tracking|where is my|shipment|route status|delivery status|eta|route delay|route delays|delayed|traffic)\b/i.test(command)) {
