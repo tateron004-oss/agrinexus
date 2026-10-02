@@ -19,18 +19,22 @@ async function knownAbout(memory, context) {
   } catch { return {}; }
 }
 const list = value => String(value || "").split(/\s*,\s*|\s+and\s+/).map(item => item.trim()).filter(Boolean);
-const given = value => (Array.isArray(value) ? value : typeof value === "string" ? value.split(/\s*[;\n]\s*/) : []).filter(item => String(item || "").trim());
+// Whether the person (or the AI planner) actually gave anything for a field -- just a presence check, never a
+// parse. The real splitting happens exactly once, consistently, in build.js's items() (which already handles
+// both arrays and comma/"and"/semicolon-joined strings) -- this used to re-split skills/languages here first with
+// a narrower, semicolon-only regex and hand build.js the already-mangled result, collapsing a plain comma-joined
+// string into one run-on item before build.js ever got a chance to split it correctly.
+const hasContent = value => Array.isArray(value) ? value.some(item => String(item || "").trim()) : typeof value === "string" ? value.trim().length > 0 : false;
 
 function createResumeCreateExecutor({ env = process.env, documents = null, memory = null } = {}) {
   const saveDocument = createDocumentsCreateExecutor({ env, documents });
   return async function execute({ input = {}, context, taskId, stepId, idempotencyKey }) {
     const known = await knownAbout(memory, context);
-    const skills = given(input.skills);
-    const experience = given(input.experience);
     // A person who grows or keeps something has a real, if small, set of skills; add them only when they gave no skills of their own.
     const grown = [...list(known.crops).map(crop => `Growing ${crop}`), ...list(known.livestock).map(animal => `Keeping ${animal}`)];
     const resume = buildResume({ name: input.name || known.name, phone: input.phone, email: input.email, location: input.location || known.location,
-      skills: skills.length ? skills : grown, experience, education: input.education, languages: given(input.languages).length ? input.languages : list(known.language) });
+      skills: hasContent(input.skills) ? input.skills : grown, experience: input.experience, education: input.education,
+      languages: hasContent(input.languages) ? input.languages : list(known.language) });
     const saved = await saveDocument({ input: { title: `Resume - ${resume.name}`, content: resume.text, format: "txt" }, context, taskId, stepId, idempotencyKey });
     return { ...saved, resume: true, resumeName: resume.name, resumeText: resume.text, sections: Object.fromEntries(Object.entries(resume.sections).map(([key, items]) => [key, items.length])) };
   };
