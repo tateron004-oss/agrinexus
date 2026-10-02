@@ -101,3 +101,24 @@ test("omitting the amount still works, falling back to the order/product default
   assert.equal(result.status, 200, JSON.stringify(result.body));
   assert.ok(Number.isFinite(result.body.tradePaymentCheckoutResult.grossAmount));
 });
+
+// Found live (money-arithmetic follow-up audit): grossAmount was stored and used in the
+// fee-split with no rounding to the currency's real precision, unlike the platformFeeAmount/
+// sellerNetAmount fields computed right next to it (both already .toFixed(2)'d). A sub-cent
+// amount like 99.999 flowed straight through to the persisted checkout record and to
+// paymentSubunitAmount's live Paystack subunit conversion, producing a gross that didn't match
+// what the buyer was actually charged after subunit rounding.
+test("a payment amount with more precision than the currency supports is rounded before it enters the fee split", async () => {
+  const result = await post({ amount: 99.999, currency: "USD" });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  const checkout = result.body.tradePaymentCheckoutResult;
+  assert.equal(checkout.grossAmount, 100);
+  assert.equal(checkout.platformFeeAmount, Number((100 * checkout.feeRate).toFixed(2)));
+  assert.equal(checkout.sellerNetAmount, Number((100 - checkout.platformFeeAmount).toFixed(2)));
+});
+
+test("a payment amount in a zero-decimal currency is rounded to a whole unit, not a fractional one", async () => {
+  const result = await post({ amount: 1500.5, currency: "JPY" });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(result.body.tradePaymentCheckoutResult.grossAmount, 1501);
+});

@@ -11807,11 +11807,19 @@ function platformTransactionFeeRate() {
   return Math.min(configured, 0.25);
 }
 
+const ZERO_DECIMAL_CURRENCIES = new Set(["XAF", "XOF", "BIF", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XPF"]);
+
+function roundToCurrencyPrecision(amount, currency = "USD") {
+  const decimals = ZERO_DECIMAL_CURRENCIES.has(String(currency || "").toUpperCase()) ? 0 : 2;
+  const factor = 10 ** decimals;
+  return Math.round(Number(amount || 0) * factor) / factor;
+}
+
 function createPlatformTransactionFee(db, details = {}) {
   ensureTradeProfile(db.profile);
   const currency = details.currency || "USD";
   const rate = platformTransactionFeeRate();
-  const grossAmount = Number(details.grossAmount || details.amount || 0);
+  const grossAmount = roundToCurrencyPrecision(details.grossAmount || details.amount || 0, currency);
   const feeAmount = Number((grossAmount * rate).toFixed(2));
   const sellerNetAmount = Number(Math.max(0, grossAmount - feeAmount).toFixed(2));
   const fee = {
@@ -11869,8 +11877,7 @@ function paymentProviderMode(body = {}) {
 }
 
 function paymentSubunitAmount(amount, currency = "USD") {
-  const noMinorUnit = new Set(["XAF", "XOF", "BIF", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XPF"]);
-  const multiplier = noMinorUnit.has(String(currency || "").toUpperCase()) ? 1 : 100;
+  const multiplier = ZERO_DECIMAL_CURRENCIES.has(String(currency || "").toUpperCase()) ? 1 : 100;
   return Math.max(1, Math.round(Number(amount || 0) * multiplier));
 }
 
@@ -11884,8 +11891,8 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
   const product = order
     ? (db.products || []).find(item => item.id === order.productId)
     : selectedTradeProduct(db, body.productId, country);
-  const grossAmount = Number(body.amount || order?.total || product?.price || 120);
   const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "Ghana" ? "GHS" : "USD")).toUpperCase();
+  const grossAmount = roundToCurrencyPrecision(body.amount || order?.total || product?.price || 120, currency);
   const feeRate = platformTransactionFeeRate();
   const platformFeeAmount = Number((grossAmount * feeRate).toFixed(2));
   const sellerNetAmount = Number(Math.max(0, grossAmount - platformFeeAmount).toFixed(2));
