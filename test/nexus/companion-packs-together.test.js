@@ -27,7 +27,8 @@ function plannerWithEverything() {
   const wellRows = []; let w = 0;
   const wellnessStore = { async addEntry({ content }) { wellRows.unshift({ memoryId: `w${++w}`, content }); return {}; },
     async addEntryUnlessCapped({ content }) { wellRows.unshift({ memoryId: `w${++w}`, content }); return { memoryId: `w${w}`, content }; },
-    async listEntries() { return wellRows.map(row => ({ memoryId: row.memoryId, content: row.content })); }, async removeEntry() { return true; } };
+    async listEntries() { return wellRows.map(row => ({ memoryId: row.memoryId, content: row.content })); }, async removeEntry() { return true; },
+    async setGoal({ metric, target }) { const content = { kind: "goal", metric, target }; wellRows.unshift({ memoryId: `w${++w}`, content }); return { memoryId: `w${w}`, content }; } };
   const reports = []; let r = 0;
   const store = { async addReport({ content }) { reports.push({ memoryId: `r${++r}`, userId: "u1", content: { ...content, number: r } }); return r; },
     async addReportUnlessCapped({ content }) { r += 1; reports.push({ memoryId: `r${r}`, userId: "u1", content: { ...content, number: r } }); return { number: r }; },
