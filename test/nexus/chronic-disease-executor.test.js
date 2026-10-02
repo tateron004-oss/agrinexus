@@ -10,7 +10,12 @@ function fixture(existingRows = []) {
   const created = [];
   const records = {
     create: async row => { created.push(row); return { record_id: `rec_${created.length}`, version: 1 }; },
-    list: async ({ workspaceId, recordType }) => existingRows.filter(row => row.workspaceId === workspaceId && row.recordType === recordType)
+    // Mirrors the real RecordRepository.list(): filters (including conditionFocus, when passed) BEFORE
+    // applying limit -- so a fixture-based test can actually catch a regression to the old "fetch a capped
+    // window of everything, filter afterward" behavior.
+    list: async ({ workspaceId, recordType, conditionFocus, limit }) => existingRows
+      .filter(row => row.workspaceId === workspaceId && row.recordType === recordType && (!conditionFocus || row.data?.conditionFocus === conditionFocus))
+      .slice(0, limit || existingRows.length)
   };
   return { records, created };
 }
@@ -168,6 +173,26 @@ test("summary aggregates real readings filtered by condition focus, and pulls qu
   const allConditions = await execute({ input: {}, context: { tenantId: "t1", userId: "u1" } });
   assert.equal(allConditions.conditionFocus, "cardiometabolic");
   assert.equal(allConditions.readingCount, 2);
+});
+
+// Found live (fresh-module audit): the summary used to fetch a capped window (100 readings) of EVERY
+// condition combined, then filter by conditionFocus in JS afterward -- someone who logs many readings for
+// one condition (e.g. daily glucose checks) could push a different condition's real, recent readings
+// entirely outside that fetched window, so the summary would wrongly claim "no readings saved yet" for a
+// condition that has genuine history. Filtering server-side (via RecordRepository.list's new
+// conditionFocus parameter) means the volume of an unrelated condition can never crowd this one out.
+test("summary correctly finds a different condition's real reading even when another condition has far more volume than the old fetch cap", async () => {
+  const manyDiabetesReadings = Array.from({ length: 105 }, (_, i) => ({
+    workspaceId: WORKSPACE_ID, recordType: READING_RECORD_TYPE, data: { conditionFocus: "diabetes", glucose: 100 + i }
+  }));
+  const rows = [...manyDiabetesReadings,
+    { workspaceId: WORKSPACE_ID, recordType: READING_RECORD_TYPE, data: { conditionFocus: "hypertension", systolic: 150, diastolic: 95 } }];
+  const { records } = fixture(rows);
+  const execute = createChronicDiseaseSummaryExecutor({ records });
+  const hypertensionSummary = await execute({ input: { conditionFocus: "hypertension" }, context: { tenantId: "t1", userId: "u1" } });
+  assert.equal(hypertensionSummary.readingCount, 1, "the real hypertension reading must be found even though diabetes has far more volume");
+  assert.equal(hypertensionSummary.readingTableSummary[0].bloodPressure, "150/95");
+  assert.deepEqual(hypertensionSummary.missingData, []);
 });
 
 test("verify functions reject a malformed result", () => {

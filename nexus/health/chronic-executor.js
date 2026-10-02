@@ -150,12 +150,19 @@ function createChronicDiseaseSummaryExecutor({ records }) {
   if (!records?.list) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context }) {
     const focus = input.conditionFocus && CONDITIONS.has(input.conditionFocus) ? input.conditionFocus : "cardiometabolic";
-    const allReadings = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
-      workspaceId: WORKSPACE_ID, recordType: READING_RECORD_TYPE, limit: 100 });
-    const readingsList = allReadings.filter(row => focus === "cardiometabolic" || row.data?.conditionFocus === focus).slice(0, 30);
-    const allIntakes = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
-      workspaceId: WORKSPACE_ID, recordType: INTAKE_RECORD_TYPE, limit: 10 });
-    const latestIntake = allIntakes.find(row => focus === "cardiometabolic" || row.data?.conditionFocus === focus) || null;
+    // Found live (fresh-module audit): this used to fetch a capped window (100 readings / 10 intakes) of
+    // EVERY condition combined, then filter by conditionFocus in JS afterward. Someone who logs frequent
+    // readings for one condition (e.g. daily glucose checks) could push a different condition's real,
+    // recent readings entirely outside that fetched window -- the summary would then claim "no readings
+    // saved yet" for a condition that genuinely has history further back. "cardiometabolic" is this
+    // executor's own wildcard focus (matches every condition, same as the old JS filter's `focus ===
+    // "cardiometabolic" ||` branch), so it's the one case that still fetches unfiltered.
+    const conditionFilter = focus === "cardiometabolic" ? undefined : focus;
+    const readingsList = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
+      workspaceId: WORKSPACE_ID, recordType: READING_RECORD_TYPE, conditionFocus: conditionFilter, limit: 30 });
+    // Only the single most recent matching intake is ever used below, so there's no need to over-fetch.
+    const [latestIntake = null] = await records.list({ tenantId: context.tenantId, ownerId: context.userId, subjectId: context.userId,
+      workspaceId: WORKSPACE_ID, recordType: INTAKE_RECORD_TYPE, conditionFocus: conditionFilter, limit: 1 });
     return {
       persisted: true,
       conditionFocus: focus,
