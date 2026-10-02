@@ -49,6 +49,29 @@ test("the executor fills gaps only from what the person told Kyro, writes a real
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+// Found live: the AI planner's tool-input schema (nexus/brain/openai-planning-model.js's PLAN_SCHEMA) hands every
+// tool's "input" over as an untyped JSON string, with nothing telling the model that skills/languages want arrays
+// -- so a plain "Crop planning, irrigation and livestock management" is exactly as likely as a real array. Before
+// the fix, build.js's items() only split on semicolons/newlines, so a comma/"and"-joined string landed as ONE
+// run-on bullet instead of separate items (unlike the deterministic resumePlan fast path, which always pre-splits
+// these two fields on comma/"and" itself before calling resume.create). Experience/education keep splitting only
+// on semicolons/newlines, since those are full sentences that often carry their own internal commas.
+test("skills and languages given as a plain comma/'and'-joined string -- not just a pre-split array -- are split into separate items, not collapsed into one run-on line", () => {
+  const resume = buildResume({ name: "Amina", skills: "Crop planning, irrigation and livestock management", languages: "Swahili, English and French" });
+  assert.deepEqual(resume.sections.skills, ["Crop planning", "irrigation", "livestock management"]);
+  assert.deepEqual(resume.sections.languages, ["Swahili", "English", "French"]);
+  const withCommasInside = buildResume({ name: "Amina", experience: "5 years managing a maize farm, overseeing 3 workers; 2 years at a dairy" });
+  assert.deepEqual(withCommasInside.sections.experience, ["5 years managing a maize farm, overseeing 3 workers", "2 years at a dairy"],
+    "experience sentences keep their own internal commas intact -- only ;/newline splits those");
+});
+
+test("the executor splits a plain comma-joined skills/languages string the same way the deterministic planner's own pre-split array would", async () => {
+  const execute = createResumeCreateExecutor({ env: {}, documents: null, memory: { async profile() { return []; } } });
+  const result = await execute({ input: { name: "Amina", skills: "Crop planning, irrigation", languages: "Swahili and English" }, context });
+  assert.match(result.resumeText, /SKILLS\n- Crop planning\n- irrigation\n/);
+  assert.match(result.resumeText, /LANGUAGES\n- Swahili\n- English\n/);
+});
+
 test("without a name anywhere, or without anything to say, the executor refuses instead of inventing a resume", async () => {
   const execute = createResumeCreateExecutor({ env: {}, documents: null, memory: { async profile() { return []; } } });
   await assert.rejects(execute({ input: { skills: ["x"] }, context }), { code: "resume_name_required" });
