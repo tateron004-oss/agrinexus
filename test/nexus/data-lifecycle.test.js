@@ -400,3 +400,51 @@ test("markFailed transitions a still-queued request to the schema's reserved fai
 test("markFailed requires a tenant and request id", async () => {
   await assert.rejects(new DataLifecycleRepository(db()).markFailed({ requestId: "req_1" }), /tenant and request/);
 });
+
+// Found live (server/providers/ sweep): nexus/documents/executor.js writes real exported files to local
+// disk (potentially "export all my patient records") and indexes them as nexus_document_versions rows
+// with object_key="local:<filename>". The erasure query above already nulls that column, but nulling the
+// pointer never deleted the actual file on disk -- the same pointer-nulled/bytes-orphaned gap this
+// codebase already fixed for S3 artifacts, just for local filesystem storage.
+test("account deletion also deletes the real local export file a document version's object_key points to, not just the DB pointer", async () => {
+  const os = require("node:os");
+  const exportDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-export-test-"));
+  const filename = "abc123.txt";
+  const filePath = path.join(exportDir, filename);
+  fs.writeFileSync(filePath, "real exported content");
+  const originalExportDir = process.env.NEXUS_EXPORT_DIR;
+  process.env.NEXUS_EXPORT_DIR = exportDir;
+  try {
+    const x = db([{rows:[{subject_id:'owner-a'}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+      {rows:[]},{rows:[]},{rows:[]},{rows:[]},
+      {rows:[]},
+      {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
+      {rows:[{object_key:`local:${filename}`}]},{rows:[]},{rows:[]},{rows:[]},{rows:[]}]);
+    const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
+    assert.equal(result.state,'verified');
+    assert.equal(result.verification.localExportFileKeysFound,1);
+    assert.equal(fs.existsSync(filePath), false, "the real exported file on disk must be deleted, not just the DB object_key pointer nulled");
+  } finally {
+    if (originalExportDir === undefined) delete process.env.NEXUS_EXPORT_DIR; else process.env.NEXUS_EXPORT_DIR = originalExportDir;
+    fs.rmSync(exportDir, { recursive: true, force: true });
+  }
+});
+
+test("a legal hold blocks the local export file deletion too -- nothing is purged from disk", async () => {
+  const os = require("node:os");
+  const exportDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-export-test-"));
+  const filename = "abc123.txt";
+  const filePath = path.join(exportDir, filename);
+  fs.writeFileSync(filePath, "real exported content");
+  const originalExportDir = process.env.NEXUS_EXPORT_DIR;
+  process.env.NEXUS_EXPORT_DIR = exportDir;
+  try {
+    const held = db([{rows:[{subject_id:'owner-a'}]},{rows:[{hold_id:'hold'}]}]);
+    const result = await new DataLifecycleRepository(held).executeDeletion({tenantId:'tenant-a',requestId:'request-a'});
+    assert.equal(result.state,'blocked');
+    assert.equal(fs.existsSync(filePath), true, "a blocked erasure must not touch any file on disk");
+  } finally {
+    if (originalExportDir === undefined) delete process.env.NEXUS_EXPORT_DIR; else process.env.NEXUS_EXPORT_DIR = originalExportDir;
+    fs.rmSync(exportDir, { recursive: true, force: true });
+  }
+});
