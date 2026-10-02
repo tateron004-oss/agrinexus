@@ -834,7 +834,14 @@ function completeMediaPlaybackPlan(text, catalog) {
 // list, so a real, working request fell through to the free-form AI
 // planner instead of this deterministic fast path.
 const RESUME_REQUEST = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:make|create|build|write|prepare|draft|generate|give me|i need|need)\b[^.?!]{0,40}\b(?:resume|résumé|cv|curriculum vitae)\b/i;
-const RESUME_QUESTION = /^\s*(?:how|what|why|when|where|should|can you explain|tips|is it|do i)\b|\?\s*$/i;
+// Found live: this used to also treat ANY sentence ending in "?" as a question, to catch phrasings beyond
+// its own explicit how/what/.../do-i openers -- but RESUME_REQUEST already requires one of its own leading
+// action verbs (make/create/build/write/...), which a genuine question about resumes never starts with, so
+// that catch-all was never actually needed to exclude a real question. It instead caught the ordinary polite
+// phrasing of a REAL request -- including the exact "can you"/"could you"/"would you" openers RESUME_REQUEST
+// itself explicitly allows -- so "Can you make a resume for me?" silently fell through to the free-form AI
+// planner instead of this deterministic, well-tested fast path.
+const RESUME_QUESTION = /^\s*(?:how|what|why|when|where|should|can you explain|tips|is it|do i)\b/i;
 function resumeField(text, label) {
   const match = new RegExp(`\\b${label}\\s*(?:are|is|include|includes)?\\s*[:\\-]\\s*(.+?)(?=(?:\\.|;|,)?\\s+(?:skills?|experience|education|languages?|phone|email)\\s*[:\\-]|\\.\\s|$)`, "i").exec(text);
   return match ? match[1].trim().replace(/[.]+$/, "") : "";

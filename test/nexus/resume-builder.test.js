@@ -80,3 +80,18 @@ test("'give me'/'i need' phrasing is recognized, not just make/create/build/writ
   assert.match(resumePlan("Give me a resume for a warehouse job", catalog, { name: "Amina" }).clarification, /What should it say/);
   assert.match(resumePlan("I need a resume for a construction job", catalog, { name: "Amina" }).clarification, /What should it say/);
 });
+
+// Found live: RESUME_QUESTION's bare "ends with a question mark" clause was meant to exclude a genuine
+// question about resumes ("How do I write a resume?"), but that case is already excluded by RESUME_REQUEST's
+// own required leading action verb -- a real question never starts with "make/create/build/write/...". The
+// trailing "?" clause instead caught the ordinary polite phrasing of a REAL request, including the exact
+// "can you"/"could you"/"would you" openers RESUME_REQUEST itself explicitly allows, silently downgrading a
+// request like "Can you make a resume for me?" to the free-form AI planner instead of this deterministic,
+// well-tested fast path.
+test("a polite resume request phrased as a question still reaches the deterministic fast path", () => {
+  assert.equal(resumePlan("Can you make a resume for me?", catalog, { name: "Amina", crops: "maize" }).steps[0].toolId, "resume.create");
+  assert.match(resumePlan("Could you create a resume for Juma Otieno?", catalog, {}).clarification, /What should it say/);
+  assert.match(resumePlan("Would you build a resume for me?", catalog, { name: "Amina" }).clarification, /What should it say/);
+  // A genuine question about resumes in general (no action verb at all) must still be left alone.
+  assert.equal(resumePlan("How do I write a resume?", catalog, { name: "Amina" }), null);
+});
