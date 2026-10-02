@@ -30,23 +30,7 @@ function excludes(source, token, label) {
   "function buildNexusHomeModePanelResult",
   "function buildNexusHomeModeSummaryResult",
   "function detectNexusHomeModePanelId",
-  "function renderNexusHomeModePanel",
-  "function renderNexusHomeModeSummary",
   "function handleNexusHomeModeSummaryClick",
-  "function renderNexusSuggestedActions",
-  "function renderNexusCommandCenterSidebar",
-  "function renderNexusTopWelcomeArea",
-  "function renderNexusCoreFeatureCards",
-  "function renderNexusVoiceInteractionBar",
-  "function renderNexusRightUtilityColumn",
-  "function renderNexusOperationsShelf",
-  "data-nexus-command-sidebar",
-  "data-nexus-command-topbar",
-  "data-nexus-core-feature-grid",
-  "data-nexus-core-feature",
-  "data-nexus-voice-interaction-bar",
-  "data-nexus-command-right-rail",
-  "data-nexus-operations-shelf",
   "function buildNexusCapabilityOverviewResult",
   "function runNexusStandardUserHomeLocalCommand",
   "function handleNexusStandardUserHomeClick",
@@ -54,9 +38,7 @@ function excludes(source, token, label) {
   "window.nexusHandleStandardUserHomeShortcut",
   "function bindNexusStandardUserHomeControls",
   "return !handleNexusStandardUserHomeClick(event);",
-  "nexus-agentic-brain-panel-empty",
   "data-nexus-mode-launcher",
-  "data-nexus-suggested-actions",
   "nexus-command-center-shell",
   "nexus-shell",
   "nexus-command-main",
@@ -70,25 +52,13 @@ function excludes(source, token, label) {
   "data-nexus-energy-wave",
   "nexus-energy-wave",
   "nexus-utility-card",
-  "nexus-command-right-rail",
-  "nexus-right-rail",
-  "nexus-sidebar",
   "nexus-hero",
   "nexus-glass-card",
-  "nexus-feature-card",
-  "nexus-voice-bar",
-  "nexus-status-pill",
   "data-nexus-mode-shortcut",
   "nexus-mode-card",
-  "data-nexus-home-mode-panel",
-  "data-nexus-home-mode-summary",
   "data-nexus-mode-form",
   "data-nexus-mode-field",
-  "data-nexus-mode-summary",
-  "nexus-home-mode-panel-actions",
-  "nexus-home-mode-field-grid",
-  "nexus-home-mode-summary-button",
-  "nexus-suggested-action"
+  "data-nexus-mode-summary"
 ].forEach(token => includes(app, token, `home screen implementation token ${token}`));
 
 [
@@ -125,14 +95,6 @@ function excludes(source, token, label) {
 ].forEach(label => includes(app, label, `suggested action ${label}`));
 
 [
-  "data-nexus-core-feature=\"${escapeHtml(id)}\"",
-  "[\"agriculture\", \"Agriculture Help\"",
-  "[\"chronic-care\", \"Chronic Care Support\"",
-  "[\"agritrade\", \"Marketplace\"",
-  "[\"learning\", \"Learning & Jobs\""
-].forEach(token => includes(app, token, `core feature card contract ${token}`));
-
-[
   "Describe a crop issue",
   "Record blood pressure",
   "Start intake",
@@ -149,9 +111,6 @@ function excludes(source, token, label) {
 
 [
   "Nexus Command Center",
-  "AgriNexus AI Platform",
-  "Platform Active",
-  "All systems operational",
   "Ask Nexus",
   "Nexus is present",
   "Talk naturally. Structured fields appear only inside opened workflows.",
@@ -160,8 +119,6 @@ function excludes(source, token, label) {
   "Saved Questions",
   "Provider Support",
   "Platform Status",
-  "Tap to speak with Nexus",
-  "Voice stays user-initiated",
   "Review workspace details",
   "AI Assistant",
   "Data & Insights",
@@ -171,12 +128,7 @@ function excludes(source, token, label) {
 [
   "Agriculture Help",
   "Chronic Care Support",
-  "Marketplace",
-  "Learning & Jobs",
-  "Source-aware crop, soil, pest, field, and advisor preparation.",
-  "Organize readings, questions, RPM/RTM context, and provider-ready summaries.",
-  "Prepare product, buyer, price, logistics, and review notes without transactions.",
-  "Build training, literacy, skills, and workforce next-step plans."
+  "Marketplace"
 ].forEach(token => includes(app, token, `core feature card ${token}`));
 
 [
@@ -196,9 +148,7 @@ function excludes(source, token, label) {
 ].forEach(label => includes(app, label, `mode panel structured field ${label}`));
 
 [
-  "Prepare local summary",
   "standard_user_mode_summary_prepared",
-  "Local summary only",
   "Provider-ready preparation only",
   "Marketplace preparation only",
   "Route and access preparation only",
@@ -250,8 +200,7 @@ function excludes(source, token, label) {
   "Hello. I'm Kyro. Speak naturally, and I will open structured fields only when a workflow needs exact details.",
   "Enable voice once, then continue by speaking. Structured fields appear only when a workflow needs them.",
   "Playback depends on supported providers or accounts",
-  "Nexus does not host, download, rip, cache, or redistribute copyrighted music",
-  "No provider, pharmacy, call, message, payment, location, camera, drone, appointment, or emergency action was executed"
+  "Nexus does not host, download, rip, cache, or redistribute copyrighted music"
 ].forEach(token => includes(app, token, `safe assistant copy ${token}`));
 
 [

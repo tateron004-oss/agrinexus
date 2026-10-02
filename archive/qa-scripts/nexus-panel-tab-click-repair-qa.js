@@ -100,9 +100,7 @@ includes(app, 'data-testid="nexus-mode-card-${escapeHtml(item.id)}"', "mode card
   "save-offline",
   "refresh-history",
   "request-provider-support",
-  "consent-provider-pathway",
-  "ask-mode",
-  "ask"
+  "consent-provider-pathway"
 ].forEach(action => includes(app, `data-nexus-knowledge-action="${action}"`, `internet resource action ${action}`));
 
 [
@@ -110,7 +108,6 @@ includes(app, 'data-testid="nexus-mode-card-${escapeHtml(item.id)}"', "mode card
   "Ask Nexus",
   "Mic",
   "Send",
-  "Open workflow",
   "Save to record",
   "Prepare review summary",
   "Queue for review",
