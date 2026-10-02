@@ -995,6 +995,19 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const invoiceNumber = item.invoiceNumber || invoices.at(-1)?.invoiceNumber || "";
     if (!invoiceNumber) return { status: "needs-input", response: `"${workspaceName}" does not have any invoices yet. Create one first, then I can add line items to it.`, missingInformation: ["invoiceNumber"] };
     if (!invoices.some(invoice => invoice.invoiceNumber === invoiceNumber)) return { status: "needs-input", response: `I could not find invoice ${invoiceNumber} in "${workspaceName}".`, missingInformation: ["invoiceNumber"] };
+    // Found live (money-arithmetic audit): each invoiceItems row carries its own currency (fixed below,
+    // same commit as the currency-persistence fix), but nothing stopped a later item from using a
+    // DIFFERENT currency than items already on the same invoice -- the invoice header itself has no
+    // currency field at all. exportInvoice's PDF total then summed raw quantity*unitPrice across every
+    // item regardless of currency, blending e.g. $100 USD and KES 3,000 into one meaningless "3100.00"
+    // with no currency label. The same "sum across currency with no match check" bug already
+    // found-and-fixed in this module's own sibling paths (grants, transactions, the dashboard's
+    // invoiceTotals bucketing) -- refusing a mismatched item here is simpler and more correct for an
+    // invoice (inherently one bill, one currency) than trying to print a multi-currency total.
+    const itemCurrency = (item.currency || "USD").toUpperCase();
+    const existingItems = resolved.client.data.editable.invoiceItems.filter(row => row.invoiceNumber === invoiceNumber);
+    const mismatched = existingItems.find(row => (row.currency || "USD").toUpperCase() !== itemCurrency);
+    if (mismatched) return { status: "needs-input", response: `Invoice ${invoiceNumber} already has line items in ${mismatched.currency || "USD"}; I can't mix that with ${itemCurrency} on the same invoice.`, missingInformation: ["currency"] };
     // Found live (follow-up sweep): this hardcoded "$" regardless of what currency was actually said,
     // and never even saved a currency onto the stored line item -- fixed the same way transaction/
     // grant/listing amounts already are, with formatMoney() and a persisted currency field.
@@ -1293,5 +1306,5 @@ module.exports = Object.freeze({
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
   extractIntakeArgs, inferStrategyProfile, computeBusinessDashboard,
-  extractListingArgs, resolveListingIndex, nextInvoiceNumber, periodIn
+  extractListingArgs, resolveListingIndex, nextInvoiceNumber, formatMoney, periodIn
 });

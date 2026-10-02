@@ -238,7 +238,11 @@ test("the cooperative in Swahili", async () => {
   assert.match(await f.say("Juma amechangia shilingi 1000 kwa ajili ya mbolea"), /Juma amechangia shilingi 1,000 \(mbolea\)/);
   assert.match(await f.say("Nani hajalipa ada"), /Wanachama 1 wanadaiwa ada mwezi huu: Juma 500/);
   assert.match(await f.say("Malipo ya ushirika kwa Amina: 5000 kwa mauzo"), /ushirika umemlipa Amina 5,000 kwa mauzo/);
-  assert.match(await f.say("Onyesha michango ya ushirika"), /ada 500, michango 1,000, zilizolipwa 5,000/); assert.match(await f.say("Who hasn't paid dues"), /Juma/);
+  // Found live (money-arithmetic audit): this used to label the whole report with whichever payment
+  // happened to be most recent (the payout, recorded with no currency word), silently hiding the fact
+  // that the contribution was actually recorded in shillingi -- now genuinely bucketed by currency, so
+  // the contribution total correctly carries its own real currency.
+  assert.match(await f.say("Onyesha michango ya ushirika"), /ada 500, michango shilingi 1,000, zilizolipwa 5,000/); assert.match(await f.say("Who hasn't paid dues"), /Juma/);
   await f.say("Ongeza kifaa cha pamoja: trekta"); assert.match(await f.say("Weka nafasi ya trekta kwa Amina Ijumaa"), /Nimeweka nafasi ya trekta kwa Amina Ijumaa 25 Septemba/);
   assert.match(await f.say("Weka nafasi ya trekta kwa Juma Ijumaa"), /tayari ina nafasi Ijumaa 25 Septemba kwa Amina/); assert.match(await f.say("Nani ana trekta wiki hii"), /Ijumaa 25 Septemba — Amina/);
   assert.match(await f.say("Amina amewasilisha kilo 200 za mahindi kwenye ushirika"), /Ushirika una kilo 200 za mahindi mwaka huu/);
@@ -326,6 +330,18 @@ test("break-even and budget planning in Swahili also refuse to invent a revenue 
 
   const budget = await f.say("Panga bajeti: mbegu 5000, mbolea 8000, vibarua 12000, natarajia kilo 800 kwa shilingi 5000 kwa gunia");
   assert.doesNotMatch(budget, /faida ya|hasara ya/, "the revenue/profit line must be omitted, not fabricated, when the price's unit doesn't match the expected yield's unit");
+});
+
+// Found live (money-arithmetic audit): the same missing currency-match guard as the English break-even
+// path (budget.js) -- summed a field's expense records across every currency with no check.
+test("break-even in Swahili also refuses to add up a field's spending when it was recorded in more than one currency", async () => {
+  const f = farmer();
+  await f.say("Ongeza shamba linaloitwa Kaskazini, ekari 2");
+  await f.store.add({ tenantId: "t1", userId: "u1", collection: "money", data: { type: "expense", field: "Kaskazini", amount: 5000, currency: "shilingi", day: "2026-01-05" } });
+  await f.store.add({ tenantId: "t1", userId: "u1", collection: "money", data: { type: "expense", field: "Kaskazini", amount: 200, currency: "$", day: "2026-01-06" } });
+  const result = await f.say("Bei ya kuvunja hasara kwa shamba Kaskazini: natarajia kilo 800");
+  assert.match(result, /zaidi ya sarafu moja/i);
+  assert.doesNotMatch(result, /unahitaji kuuza/i, "must not fabricate a break-even price from a currency-mixed total");
 });
 
 test("printable reports in Swahili carry only what was recorded", async () => {
