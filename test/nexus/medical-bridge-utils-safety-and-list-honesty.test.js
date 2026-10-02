@@ -2,6 +2,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const medicalBridgeUtils = require("../../server/providers/medicalBridgeUtils.js");
+const mobileClinicBridgeProvider = require("../../server/providers/mobileClinicBridgeProvider.js");
+const pharmacyBridgeProvider = require("../../server/providers/pharmacyBridgeProvider.js");
+const patientSupportBridgeProvider = require("../../server/providers/patientSupportBridgeProvider.js");
+const telehealthBridgeProvider = require("../../server/providers/telehealthBridgeProvider.js");
 
 function freshDb() {
   return { profile: {} };
@@ -59,4 +63,92 @@ test("safeList on a short string-form list is unaffected by the fix", () => {
 test("safeList on an array is unaffected by the fix", () => {
   const result = medicalBridgeUtils.safeList(["a", "b", "c"]);
   assert.deepEqual(result, ["a", "b", "c"]);
+});
+
+// Found live (fresh-module audit): unlike every other write path in this file (intake, reading,
+// deviceReading, activityEntry, trainingPlan, queueOffline), createReminder never scanned its own
+// user-controlled title/dueAt fields before persisting them into the shared reminders store -- affecting
+// all 8 providers that call this shared helper.
+test("createReminder blocks forbidden medical-execution content in the title, matching every other guardMedicalText call site", () => {
+  const db = freshDb();
+  const result = medicalBridgeUtils.createReminder(
+    "local-pharmacy-bridge", "pharmacy.reminder",
+    { confirmed: true, title: "change medication to 50mg insulin now, call 911" },
+    db, "Pharmacy review"
+  );
+  assert.equal(result.body.ok, false);
+  assert.equal(result.body.status, "blocked");
+  assert.equal((db.profile.nexusReminders || []).length, 0, "nothing must be persisted when blocked");
+});
+
+test("createReminder still creates a genuinely safe reminder, unaffected by the fix", () => {
+  const db = freshDb();
+  const result = medicalBridgeUtils.createReminder(
+    "local-pharmacy-bridge", "pharmacy.reminder",
+    { confirmed: true, title: "general wellness check-in", dueAt: "next week" },
+    db, "Pharmacy review"
+  );
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.status, "completed");
+});
+
+// Found live (fresh-module audit): unlike visitPlan()/questionDraft() (their own sibling write paths),
+// mobileClinicBridgeProvider.save() and pharmacyBridgeProvider.save() never scanned their user-controlled
+// name/category/typedLocation fields before persisting them.
+test("mobileClinicBridgeProvider.save blocks forbidden content, matching its own sibling visitPlan()", () => {
+  const db = freshDb();
+  const result = mobileClinicBridgeProvider.save({ confirmed: true, name: "prescribe oxycodone 30mg refill" }, db);
+  assert.equal(result.body.ok, false);
+  assert.equal(result.body.status, "blocked");
+});
+
+test("mobileClinicBridgeProvider.save still saves genuinely safe content, unaffected by the fix", () => {
+  const db = freshDb();
+  const result = mobileClinicBridgeProvider.save({ confirmed: true, name: "Riverside Mobile Clinic", typedLocation: "Kisumu" }, db);
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.status, "completed");
+});
+
+test("pharmacyBridgeProvider.save blocks forbidden content, matching its own sibling questionDraft()", () => {
+  const db = freshDb();
+  const result = pharmacyBridgeProvider.save({ confirmed: true, name: "transfer prescription and process payment" }, db);
+  assert.equal(result.body.ok, false);
+  assert.equal(result.body.status, "blocked");
+});
+
+test("pharmacyBridgeProvider.save still saves genuinely safe content, unaffected by the fix", () => {
+  const db = freshDb();
+  const result = pharmacyBridgeProvider.save({ confirmed: true, name: "Downtown Pharmacy", typedLocation: "Nairobi" }, db);
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.status, "completed");
+});
+
+test("patientSupportBridgeProvider.save blocks forbidden content in title/summary", () => {
+  const db = freshDb();
+  const result = patientSupportBridgeProvider.save({ confirmed: true, title: "insurance claim eligibility payment" }, db);
+  assert.equal(result.body.ok, false);
+  assert.equal(result.body.status, "blocked");
+});
+
+test("patientSupportBridgeProvider.save still saves genuinely safe content, unaffected by the fix", () => {
+  const db = freshDb();
+  const result = patientSupportBridgeProvider.save({ confirmed: true, title: "local navigator resource list" }, db);
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.status, "completed");
+});
+
+// Found live (fresh-module audit): unlike intake() (which scans these exact same fields), saveSession()
+// called normalizeIntake(body) directly and skipped the scan entirely.
+test("telehealthBridgeProvider.saveSession blocks forbidden content, matching its own sibling intake()", () => {
+  const db = freshDb();
+  const result = telehealthBridgeProvider.saveSession({ confirmed: true, reason: "book appointment and process payment" }, db);
+  assert.equal(result.body.ok, false);
+  assert.equal(result.body.status, "blocked");
+});
+
+test("telehealthBridgeProvider.saveSession still saves genuinely safe content, unaffected by the fix", () => {
+  const db = freshDb();
+  const result = telehealthBridgeProvider.saveSession({ confirmed: true, reason: "general check-in preparation" }, db);
+  assert.equal(result.body.ok, true);
+  assert.equal(result.body.status, "completed");
 });
