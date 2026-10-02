@@ -276,6 +276,19 @@
   function createNavigator({ geolocation, api, speak = () => {}, storage = null, ui = null, wakeLock = null, now = () => Date.now(), wait = (fn, ms) => setTimeout(fn, ms), language: appLanguage = "en" } = {}) {
     let active = null; // { route, follower, destination, mode, language, watchId, lastReroute, lastOffRouteNotice, lastFix, release }
     const appLang = languageOf(appLanguage);
+    // Found live (fresh-module frontend audit): reroute() and go() each capture state, await a real routing
+    // API call, then write their result straight onto `active` with no check that `active` still refers to
+    // the SAME session. Two real races followed from that: (1) a person goes off-route, reroute() starts a
+    // real network call, then before it resolves the person says "actually take me to X instead" -- the
+    // stale reroute response for the OLD destination lands after the NEW go() already replaced `active`,
+    // silently overwriting the new session's route/follower with data for the destination the person just
+    // abandoned; (2) two go() calls overlap (a correction, a double-tap) and whichever route request
+    // resolves last wins, regardless of which was actually issued last. sessionGeneration is bumped every
+    // time a new session is claimed (go()) or ended (stopGuidance()); reroute()/go() capture it before their
+    // own await and discard their result if it no longer matches afterward -- the same generation-check
+    // pattern already used correctly elsewhere in this codebase (nexus-genesis-voice-runtime-manager.js's
+    // processTurn).
+    let sessionGeneration = 0;
 
     const locate = () => new Promise((resolve, reject) => {
       if (!geolocation?.getCurrentPosition) return reject(Object.assign(new Error("no location"), { code: 2 }));
@@ -303,6 +316,7 @@
 
     function stopGuidance(silent = false) {
       if (!active) return false;
+      sessionGeneration += 1; // invalidate any in-flight reroute()/go() that started under the session being ended
       const language = active.language;
       try { geolocation?.clearWatch?.(active.watchId); } catch { /* already gone */ }
       try { active.release?.(); } catch { /* nothing held */ }
@@ -312,15 +326,16 @@
 
     async function reroute(fix) {
       if (!active || now() - active.lastReroute < 20000) return;
+      const generation = sessionGeneration;
       active.lastReroute = now(); const language = active.language;
       speak(tx(language, "off"), { interrupt: true });
       try {
         const { route } = await api({ action: "route", from: { lat: fix.lat, lng: fix.lng }, to: active.destination, mode: active.mode, language });
-        if (!active) return;
+        if (!active || generation !== sessionGeneration) return; // a newer go()/stop() replaced this session while the reroute was in flight
         active.route = route; active.follower = createRouteFollower(route, { mode: active.mode, language }); active.follower.resetOffRoute();
         speak(tx(language, "newRoute", { about: about(route.distanceMeters, route.durationSeconds, language) }));
       } catch {
-        if (active && now() - active.lastOffRouteNotice > 60000) {
+        if (active && generation === sessionGeneration && now() - active.lastOffRouteNotice > 60000) {
           active.lastOffRouteNotice = now();
           speak(tx(language, "noConnection"), { interrupt: false });
           // Found live: connectivity loss during active guidance was spoken
@@ -355,9 +370,14 @@
       else if (!text) return tx(language, "askWhere");
       else if (named === "home") return tx(language, "noHome");
       else destination = { query: text };
+      // Claimed before the route request, not after: a second go() (a correction, a double-tap) issued
+      // while this one's request is still in flight bumps this same counter again, so whichever go() call
+      // resolves first still sees a generation mismatch afterward and defers to whichever is actually last.
+      sessionGeneration += 1; const generation = sessionGeneration;
       let route;
       try { route = (await api({ action: "route", from: { lat: fix.lat, lng: fix.lng }, to: destination, mode, language })).route; }
       catch (error) { return error?.message && !/failed|network/i.test(error.message) ? error.message : tx(language, "routeFailed"); }
+      if (generation !== sessionGeneration) return ""; // superseded by a newer go()/stop() while this route request was in flight; the newer call speaks for itself
       if (active) stopGuidance(true);
       const target = { lat: route.destination.lat, lng: route.destination.lng, label: destination.label || route.destination.label };
       active = { route, follower: createRouteFollower(route, { mode, language }), destination: target, mode, language, watchId: null, lastReroute: 0, lastOffRouteNotice: 0, lastFix: fix, release: null };

@@ -112,10 +112,12 @@ function createMedicationService({ store, circle = null, push, notifications, de
           if (request.invalid === "name") return 'Tell me the medicine like this: "add medication metformin 500mg at 8am and 8pm".';
           if (request.invalid === "times") return `I couldn't read the times for ${request.name}. Try "at 8am and 8pm" or "in the morning and evening".`;
           const existing = meds.find(item => item.content.name === request.name);
-          if (!existing && meds.length >= MAX_MEDICATIONS) return "That's the most medicines I can keep reminders for (twelve). Remove one first.";
           const content = { kind: "medication", name: request.name, dose: request.dose, times: request.times, timeZone: zone, active: true, createdAt: at.toISOString() };
           if (existing) await store.updateMedication({ tenantId, userId, memoryId: existing.memoryId, content: { ...existing.content, ...content, createdAt: existing.content.createdAt } });
-          else await store.addMedication({ tenantId, userId, content });
+          else {
+            const added = await store.addMedicationUnlessCapped({ tenantId, userId, content, maxMedications: MAX_MEDICATIONS });
+            if (added.capped) return "That's the most medicines I can keep reminders for (twelve). Remove one first.";
+          }
           let pushable = true;
           try { pushable = devices?.listPushable ? (await devices.listPushable({ tenantId, userId })).length > 0 : true; } catch { pushable = true; }
           const members = await sharing({ tenantId, userId }).catch(() => []);
@@ -151,6 +153,16 @@ function createMedicationService({ store, circle = null, push, notifications, de
               return waiting ? `Not yet — the ${formatTimeOfDay(waiting.time)} dose of ${item.name} is waiting.` : `I haven't asked about ${item.name} yet today, and you haven't logged it.`;
             }).join(" ");
           }
+          // Found live (companion follow-up audit): unlike "remove" just above (which asks "Which one?"
+          // once more than one medicine matches), "taken" applied to every ambiguous partial-name match
+          // with no disambiguation at all -- a single-word query like "insulin" is a genuine subset of
+          // both "insulin glargine" and "insulin aspart" (a realistic basal+bolus case), so "I took my
+          // insulin" (meaning only one of them) would also mark the OTHER, still genuinely pending dose
+          // "taken" -- silently suppressing the real missed-dose alert that should reach the person's
+          // trusted circle. Bulk "I took my pills"-style generic-word matches are deliberately excluded
+          // from this check (GENERIC.test) since matching every active medicine there is the intended,
+          // already-tested behavior -- this only disambiguates a genuinely ambiguous NAMED match.
+          if (!GENERIC.test(request.query) && found.length > 1) return `Which one: ${found.map(item => item.name).join(" or ")}?`;
           const local = localClock(at, zone);
           const hhmm = `${String(Math.floor(local.minutes / 60)).padStart(2, "0")}:${String(local.minutes % 60).padStart(2, "0")}`;
           const notes = [];

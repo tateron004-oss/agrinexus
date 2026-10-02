@@ -45,8 +45,14 @@ test.before(async () => {
   seeded.profile.walletTransactions = [{ id: "wallet-txn-seed-1", amount: 10, createdAt: new Date().toISOString() }];
   seeded.profile.fieldZones = [{ id: "field-zone-seed-1", status: "field-zone-ready", createdAt: new Date().toISOString() }];
   seeded.profile.timesheets = [{ id: "timesheet-seed-1", createdAt: new Date().toISOString() }];
-  seeded.profile.certificates = [{ id: "certificate-seed-1", courseId: "course-1", createdAt: new Date().toISOString() }];
   seeded.profile.nexusReminders = [{ id: "nexus-reminder-seed-1", createdAt: new Date().toISOString() }];
+  // Course-enrollment cross-user collision fix: certificates (and its
+  // learning siblings) moved off this shared db.profile blob onto the user
+  // record itself, which has a real owner -- so, unlike the five true gaps
+  // above, it is seeded on the admin user directly and is expected to show
+  // up in the real export payload below, not in the gap disclosure list.
+  const adminUser = seeded.users.find(item => item.email === "admin@agrinexus.org");
+  adminUser.certificates = [{ id: "certificate-seed-1", courseId: "course-1", createdAt: new Date().toISOString() }];
   fs.writeFileSync(tempDbPath, JSON.stringify(seeded));
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
@@ -76,6 +82,7 @@ test("account export honestly discloses all six new unowned-collection gaps, ins
   assert.match(gaps, /wallet transaction/i, "trade/logistics/finance gap must be disclosed");
   assert.match(gaps, /field zone/i, "map/logistics gap must be disclosed");
   assert.match(gaps, /timesheet/i, "workforce operations gap must be disclosed");
-  assert.match(gaps, /certificate/i, "learning records gap must be disclosed");
+  assert.doesNotMatch(gaps, /certificate/i, "learning records now have a real owner and must not be disclosed as an unowned gap");
+  assert.equal(exportBody.recordCounts.certificates, 1, "the admin's own certificate must appear in the real export instead of being disclosed as a gap");
   assert.match(gaps, /legacy voice reminder/i, "provider-bridge records gap must be disclosed");
 });

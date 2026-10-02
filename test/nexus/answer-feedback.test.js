@@ -95,6 +95,84 @@ test("the repository stores feedback under its own purpose, lists by person or t
   assert.ok(calls.every(call => !/delete from/i.test(call.sql)));
 });
 
+// Found live (quality/feedback follow-up audit): unlike personal-items' addPersonalItemUnlessFull,
+// addFeedback had no cap at all -- every "that was wrong"/"that helped" turn is reachable with no
+// confirmation gate or throttle anywhere in the call chain, so a buggy client retry loop or a misfiring
+// voice intent had an open path to unbounded row growth. Same advisory-lock-guarded count-then-insert
+// pattern as the personal-items cap.
+test("MemoryRepository.addFeedbackUnlessFull refuses to insert once the cap is reached, inside one transaction", async () => {
+  const queries = [];
+  const trx = { query: async (sql, params) => { queries.push(sql.trim().split("\n")[0]); if (/select count/i.test(sql)) return { rows: [{ n: 2000 }] }; return { rows: [{ memory_id: "should-not-be-reached" }] }; } };
+  const db = { query: async () => { throw new Error("must run inside a transaction"); }, transaction: async fn => fn(trx) };
+  const repo = new MemoryRepository(db);
+  const result = await repo.addFeedbackUnlessFull({ tenantId: "t1", userId: "u1", content: { kind: "feedback", rating: "down" }, maxItems: 2000 });
+  assert.equal(result.full, true, "must refuse the insert once the count is already at the cap");
+  assert.ok(queries.some(q => /pg_advisory_xact_lock/i.test(q)), "must take an advisory lock before checking the count");
+  assert.ok(!queries.some(q => /^insert/i.test(q)), "must never reach the insert once the cap check fails");
+});
+
+test("MemoryRepository.addFeedbackUnlessFull inserts when genuinely under the cap", async () => {
+  const trx = { query: async sql => { if (/select count/i.test(sql)) return { rows: [{ n: 1999 }] }; return { rows: [{ memory_id: "f-new" }] }; } };
+  const db = { query: async () => { throw new Error("must run inside a transaction"); }, transaction: async fn => fn(trx) };
+  const repo = new MemoryRepository(db);
+  const result = await repo.addFeedbackUnlessFull({ tenantId: "t1", userId: "u1", content: { kind: "feedback", rating: "up" }, maxItems: 2000 });
+  assert.equal(result.full, false);
+  assert.equal(result.memoryId, "f-new");
+});
+
+// A fake db whose advisory lock genuinely serializes concurrent transactions (matching real Postgres
+// blocking behavior), proving the check-then-act race for the feedback cap is actually closed.
+function lockingFeedbackDb() {
+  const rows = []; const locks = new Map();
+  const db = { rows,
+    async transaction(fn) {
+      let release = null; const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0]; const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held)); await ahead; release = myRelease; return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { if (release) release(); }
+    },
+    async query(sql) {
+      if (/select count/i.test(sql)) return { rows: [{ n: rows.length }] };
+      if (/^insert into nexus_memory_items/.test(sql)) { rows.push({}); return { rows: [{ memory_id: `f${rows.length}` }] }; }
+      return { rows: [] };
+    } };
+  return db;
+}
+
+test("two concurrent feedback submissions racing the last slot under the cap don't both insert", async () => {
+  const repo = new MemoryRepository(lockingFeedbackDb());
+  const args = { tenantId: "t1", userId: "u1", content: { kind: "feedback", rating: "down" }, maxItems: 1 };
+  const results = await Promise.allSettled([repo.addFeedbackUnlessFull(args), repo.addFeedbackUnlessFull(args)]);
+  const inserted = results.filter(result => result.status === "fulfilled" && result.value?.memoryId).length;
+  assert.equal(inserted, 1, "only one of the two racing submissions may claim the last cap slot");
+});
+
+// Found live: the admin report derived "N helpful, M flagged wrong" from however many rows listFeedback's
+// own cap (500) happened to return -- silently wrong counts once a tenant's 30-day feedback volume passed
+// that cap. countFeedback() is a real aggregate, exact regardless of volume.
+test("MemoryRepository.countFeedback returns exact up/down counts via a real aggregate, not a capped list length", async () => {
+  const calls = [];
+  const db = { async query(sql, params) { calls.push({ sql, params }); return { rows: [{ down: 640, up: 210 }] }; } };
+  const repo = new MemoryRepository(db);
+  const counts = await repo.countFeedback({ tenantId: "t1", sinceDays: 30 });
+  assert.deepEqual(counts, { down: 640, up: 210 });
+  assert.match(calls[0].sql, /count\(\*\) filter \(where content->>'rating'='down'\)/);
+  assert.equal(calls[0].params[1], 30);
+});
+
+test("the admin report's counts stay accurate past listFeedback's own row cap, when the memory implementation provides countFeedback", async () => {
+  const memory = fakeMemory();
+  memory.countFeedback = async () => ({ down: 640, up: 210 });
+  const report = await feedbackTurn({ text: "Show me the feedback report", memory, tenantId: "t1", userId: "a", history: [], roles: ["admin"] });
+  assert.match(report, /^Last 30 days: 210 helpful, 640 flagged wrong\./, "the report must use the real aggregate count, not rows.length from a capped list");
+});
+
 test("through the planner the last answer in the conversation is the one flagged, and no model is asked", async () => {
   const memory = Object.assign(fakeMemory(), { async saveProfileFact() { return { fact: {}, replaced: [] }; }, async profile() { return []; }, async forgetProfile() { return []; }, async search() { return []; }, async recent() { return []; } });
   const p = new OpenEndedPlanner({ memory, tools: { list: async () => [] }, applications: { list: () => [] }, model: { plan: async () => { throw new Error("no model"); }, respond: async () => null } });

@@ -36,6 +36,12 @@ function fakeMemory() {
   const live = userId => rows.filter(row => row.userId === userId && !row.deleted);
   return { rows,
     async addFarmEntry({ userId, content }) { rows.unshift({ memory_id: `f${++n}`, userId, content, deleted: false }); return { memoryId: `f${n}` }; },
+    async addFarmEntryUnlessCapped({ userId, content, maxEntries }) {
+      const count = live(userId).length;
+      if (count >= maxEntries) return { capped: true, count };
+      rows.unshift({ memory_id: `f${++n}`, userId, content, deleted: false });
+      return { memoryId: `f${n}`, content };
+    },
     async listFarmEntries({ userId }) { return live(userId).map(row => ({ memory_id: row.memory_id, content: row.content })); },
     async removeFarmEntry({ userId, memoryId }) { const row = live(userId).find(item => item.memory_id === memoryId); if (row) row.deleted = true; return Boolean(row); }
   };
@@ -73,6 +79,20 @@ test("tank and soil readings are read back with their day, and a warning fires w
   assert.match(await say(memory, "What is my soil moisture in the west field"), /no soil moisture logged for the west field/);
 });
 
+// Found live: "undo my last entry" used to only ever consider readings, so
+// if the person's most recent action was setting an alert, it silently
+// deleted an older real reading instead and left the just-set alert in
+// place -- the exact opposite of what "undo my last entry" means right
+// after setting an alert.
+test("undoing the last entry removes whichever was actually added most recently, including an alert", async () => {
+  const memory = fakeMemory();
+  await say(memory, "Log 12 mm of rain");
+  assert.match(await say(memory, "Warn me if the tank drops below 20 percent"), /^I'll warn you when you log the tank below 20%/);
+  assert.equal(await say(memory, "Undo my last entry"), "Removed your last entry: the alert for the tank below 20%.");
+  assert.equal(await say(memory, "What alerts do I have?"), 'You have no farm alerts. Say "warn me if the tank drops below 20 percent".');
+  assert.equal(await say(memory, "How much rain have we had?"), "Rain this month: 12 mm over 1 day.", "the earlier rain reading must survive, untouched");
+});
+
 test("harvests are totalled per crop and unit, with tonnes converted to kilograms", async () => {
   const memory = fakeMemory();
   assert.equal(await say(memory, "I harvested 200 kg of maize"), "Logged 200 kg of maize for today. Total maize this year: 200 kg.");
@@ -84,12 +104,75 @@ test("harvests are totalled per crop and unit, with tonnes converted to kilogram
   assert.match(await say(memory, "Show my farm log"), /^Your latest entries: today: .*eggs/);
 });
 
+// Found live: the inline "Total ... this year" line shown right after
+// logging a harvest used to total only entries matching the unit just
+// logged, silently dropping the same crop's entries logged in a different
+// unit from a line that claims to be the complete total -- unlike the
+// explicit "how much have I harvested" query, which already groups by
+// every unit present.
+test("the inline total after logging a harvest includes every unit logged for that crop this year, not just the one just logged", async () => {
+  const memory = fakeMemory();
+  assert.equal(await say(memory, "Log a harvest of 5 bags of maize"), "Logged 5 bags of maize for today. Total maize this year: 5 bags.");
+  assert.equal(await say(memory, "I harvested 200 kg of maize"), "Logged 200 kg of maize for today. Total maize this year: 5 bags and 200 kg.");
+});
+
 test("the log belongs to one person and is capped", async () => {
   const memory = fakeMemory();
   await say(memory, "Log 12 mm of rain", "u1");
   assert.match(await say(memory, "How much rain have we had?", "u2"), /^I have no rain logged/);
   for (let i = 0; i < MAX_ENTRIES; i += 1) await memory.addFarmEntry({ userId: "u3", content: { kind: "reading", metric: "rain", value: 1, unit: "mm", day: TODAY } });
   assert.match(await say(memory, "Log 12 mm of rain", "u3"), /farm log is full/);
+});
+
+function cappedFarmDb() {
+  const rows = []; const locks = new Map(); let n = 0;
+  const db = {
+    rows,
+    async transaction(fn) {
+      const releases = [];
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          releases.push(myRelease);
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { for (const release of releases) release(); }
+    },
+    async query(sql, params) {
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId] = params;
+        return { rows: [{ n: rows.filter(row => row.tenantId === tenantId && row.userId === userId).length }] };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) { rows.push({ memoryId: `f${++n}`, tenantId: params[1], userId: params[2], content: params[3] }); return { rows: [{ memory_id: `f${n}` }] }; }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  return db;
+}
+// Found live: the MAX_ENTRIES cap was enforced by the caller with a plain check-then-act read
+// (listFarmEntries, then addFarmEntry if under the cap), with no lock -- concurrent "log" requests
+// from the same person could all pass the check. addFarmEntryUnlessCapped() re-checks and inserts
+// under one transaction-scoped advisory lock, the same pattern already proven for the wellness log's
+// own entry cap.
+test("two concurrent log entries from the same person at the cap boundary cannot together exceed the entry limit", async () => {
+  const db = cappedFarmDb();
+  const repo = new MemoryRepository(db);
+  for (let i = 0; i < 4; i += 1) {
+    await repo.addFarmEntryUnlessCapped({ tenantId: "t1", userId: "u1", maxEntries: 5, content: { kind: "reading", metric: "rain", value: 1, unit: "mm", day: TODAY } });
+  }
+  const [a, b] = await Promise.all([
+    repo.addFarmEntryUnlessCapped({ tenantId: "t1", userId: "u1", maxEntries: 5, content: { kind: "reading", metric: "rain", value: 1, unit: "mm", day: TODAY } }),
+    repo.addFarmEntryUnlessCapped({ tenantId: "t1", userId: "u1", maxEntries: 5, content: { kind: "reading", metric: "rain", value: 1, unit: "mm", day: TODAY } })
+  ]);
+  const succeeded = [a, b].filter(r => !r.capped).length;
+  assert.equal(succeeded, 1, "only one of the two concurrent entries may land once the cap is one entry away");
 });
 
 test("the repository stores farm entries privately under their own purpose and only soft-deletes", async () => {

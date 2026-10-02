@@ -62,6 +62,21 @@ test("a genuine positive unit price still works exactly as before", () => {
   assert.equal(result.unitPrice, 50);
 });
 
+// Found live (business-module follow-up audit): precheck()'s addInvoiceItem clarification check used
+// `!item.unitPrice`, treating a legitimate $0 line item (a waived fee, a free add-on shown for
+// transparency -- an ordinary real invoice line) the same as "no price given" -- rejected and re-prompted
+// forever, since every retry re-parses "$0" into unitPrice:0 and hits the same falsy check again. The same
+// bug was duplicated in run()'s own mirror of this check.
+test("a genuine $0 unit price is accepted, not endlessly re-prompted as missing", () => {
+  const withZero = voiceDispatch.precheck("Add a line item to invoice INV-1001", { unitPrice: 0, quantity: 1, description: "complimentary consultation" });
+  assert.equal(withZero.clarification, null, "a real $0 price must be accepted, not treated as missing");
+});
+
+test("a genuinely missing unit price is still asked for, unaffected by the $0 fix", () => {
+  const missing = voiceDispatch.precheck("Add a line item to invoice INV-1001", { quantity: 1, description: "consulting" });
+  assert.match(missing.clarification, /unit price/i);
+});
+
 // Found live: extractTransactionArgs' amount had no sign check at all -- a
 // negative amount (reachable via direct tool-call arguments) would silently
 // flip the meaning of "type", since the dashboard summary always adds

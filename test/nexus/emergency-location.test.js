@@ -30,16 +30,18 @@ function circleDb() {
     rows,
     async transaction(fn) {
       const trx = Object.create(db);
-      let release = null;
+      // A real pg_advisory_xact_lock is transaction-scoped and releases automatically when the
+      // transaction ends, however many distinct keys were locked -- invite() now acquires up to 3.
+      const releases = [];
       trx.query = async (sql, params) => {
         if (/pg_advisory_xact_lock/.test(sql)) {
           const key = params[0]; const ahead = locks.get(key) || Promise.resolve();
           let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
-          locks.set(key, ahead.then(() => held)); await ahead; release = myRelease; return { rows: [] };
+          locks.set(key, ahead.then(() => held)); await ahead; releases.push(myRelease); return { rows: [] };
         }
         return db.query(sql, params);
       };
-      try { return await fn(trx); } finally { if (release) release(); }
+      try { return await fn(trx); } finally { for (const release of releases) release(); }
     },
     async query(sql, params) {
       if (/pg_advisory_xact_lock/.test(sql)) return { rows: [] };
@@ -50,6 +52,13 @@ function circleDb() {
         const match = rows.some(row => row.tenant_id === tenantId && row.purpose === "circle" && !row.deleted && row.principal_id === personId
           && row.content.kind === "circle" && row.content.role === "person" && row.content.otherId === memberId && row.content.status !== "ended");
         return { rows: match ? [{ "?column?": 1 }] : [] };
+      }
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, principalId] = params;
+        const role = /'role'='person'/.test(sql) ? "person" : "member";
+        const n = rows.filter(row => row.tenant_id === tenantId && row.purpose === "circle" && !row.deleted && row.principal_id === principalId
+          && row.content.kind === "circle" && row.content.role === role && row.content.status !== "ended").length;
+        return { rows: [{ n }] };
       }
       if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) return { rows: rows.filter(row => row.tenant_id === params[0] && row.purpose === "circle" && !row.deleted && (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
       if (/insert into nexus_memory_items/.test(sql) && /'circle'/.test(sql)) { rows.push({ memory_id: params[0], tenant_id: params[1], principal_id: params[2], purpose: "circle", content: params[3] }); return { rows: [] }; }

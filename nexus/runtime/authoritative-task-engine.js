@@ -170,8 +170,16 @@ class AuthoritativeTaskEngine {
       if (previous?.state === "completed") return verifiedDuplicate(previous);
       const estimatedCostCents = Number(tool.metadata?.estimatedCostCents || 0);
       // Budget refusal occurs before claiming an execution or contacting its provider.
-      if (this.observability) await this.observability.assertCostAllowed({ tenantId: context.tenantId,
-        estimatedCostCents, operationLimitCents: tool.cost_limit_cents });
+      // Found live (observability audit): a thrown CostLimitError here was not caught anywhere in
+      // execute() and propagated straight out uncaught -- unlike every OTHER pre-execution denial in this
+      // same loop (permission, confirmation, consent), which all go through auditDenial() first. A
+      // cost-limit refusal was completely invisible on the audit review surface explicitly documented as
+      // "everything Kyro did, for a human to actually look at."
+      if (this.observability) {
+        try {
+          await this.observability.assertCostAllowed({ tenantId: context.tenantId, estimatedCostCents, operationLimitCents: tool.cost_limit_cents });
+        } catch (denied) { await auditDenial(denied); throw denied; }
+      }
       const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
         toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
       if (started.duplicate) return verifiedDuplicate(started.execution);

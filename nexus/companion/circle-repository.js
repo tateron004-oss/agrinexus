@@ -135,6 +135,9 @@ class CircleRepository {
     const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
     if ((await this.rows({ tenantId, userId: person.id })).some(row => row.content.role === "person" && row.content.otherId === member.id && row.content.status === "ended"
       && row.content.endedBy === member.id && !row.content.acceptedAt && new Date(row.content.endedAt).getTime() > cutoff)) return { refused: "declined_recently" };
+    // Fast pre-checks for the common case (a quick "you're full" reply with no transaction needed);
+    // the authoritative checks happen inside the lock below, since these reads can go stale by the
+    // time the insert actually runs.
     if (mine.filter(link => link.role === "person").length >= MAX_MEMBERS) return { refused: "full" };
     if ((await this.listFor({ tenantId, userId: member.id })).filter(link => link.role === "member").length >= MAX_LINKS_AS_MEMBER) return { refused: "member_full" };
     const linkId = `lnk_${crypto.randomUUID()}`; const invitedAt = new Date().toISOString(); const rel = clean(relationship).slice(0, 40);
@@ -147,23 +150,38 @@ class CircleRepository {
     // double-counting against both sides' MAX_MEMBERS/MAX_LINKS_AS_MEMBER
     // caps). Re-checking for a duplicate under the same transaction-scoped
     // advisory lock as the insert -- keyed symmetrically so it doesn't
-    // matter which side initiates -- closes the window entirely.
+    // matter which side initiates -- closes the duplicate-link window, but
+    // that lock alone doesn't close the CAP race: it's keyed to one
+    // specific (person, member) pair, so two concurrent invite() calls from
+    // the same person to two DIFFERENT members use two different lock keys
+    // and never serialize against each other at all, letting both pass the
+    // stale MAX_MEMBERS/MAX_LINKS_AS_MEMBER pre-checks above. Also locking
+    // (and re-checking) on person.id and member.id individually -- all lock
+    // keys acquired in one sorted order so two overlapping invite() calls
+    // can never deadlock waiting on each other's keys in reverse order --
+    // closes that the same way.
     const write = async db => {
       const existing = await db.query(`select 1 from nexus_memory_items where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='circle'
         and deleted_at is null and content->>'kind'='circle' and content->>'role'='person' and content->>'otherId'=$3 and content->>'status'<>'ended' limit 1`,
       [tenantId, person.id, member.id]);
-      if ((existing.rows || existing)[0]) return null;
+      if ((existing.rows || existing)[0]) return { refused: "duplicate" };
+      const personCount = await db.query(`select count(*)::int as n from nexus_memory_items where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='circle'
+        and deleted_at is null and content->>'kind'='circle' and content->>'role'='person' and content->>'status'<>'ended'`, [tenantId, person.id]);
+      if (Number((personCount.rows || personCount)[0]?.n || 0) >= MAX_MEMBERS) return { refused: "full" };
+      const memberCount = await db.query(`select count(*)::int as n from nexus_memory_items where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='circle'
+        and deleted_at is null and content->>'kind'='circle' and content->>'role'='member' and content->>'status'<>'ended'`, [tenantId, member.id]);
+      if (Number((memberCount.rows || memberCount)[0]?.n || 0) >= MAX_LINKS_AS_MEMBER) return { refused: "member_full" };
       await this.insertRow(db, { tenantId, userId: person.id, content: { ...base, role: "person", otherId: member.id, otherName: member.name } });
       await this.insertRow(db, { tenantId, userId: member.id, content: { ...base, role: "member", otherId: person.id, otherName: person.name } });
-      return { linkId, status: "invited", relationship: rel };
+      return { link: { linkId, status: "invited", relationship: rel } };
     };
-    const link = typeof this.db.transaction === "function"
+    const lockKeys = [`circle-invite:${tenantId}:${[person.id, member.id].sort().join(":")}`, `circle-cap:${tenantId}:${person.id}`, `circle-cap:${tenantId}:${member.id}`].sort();
+    return typeof this.db.transaction === "function"
       ? await this.db.transaction(async trx => {
-          await trx.query("select pg_advisory_xact_lock(hashtext($1))", [`circle-invite:${tenantId}:${[person.id, member.id].sort().join(":")}`]);
+          for (const key of lockKeys) await trx.query("select pg_advisory_xact_lock(hashtext($1))", [key]);
           return write(trx);
         })
       : await write(this.db);
-    return link ? { link } : { refused: "duplicate" };
   }
 
   async updateBoth({ tenantId, linkId, change }) {

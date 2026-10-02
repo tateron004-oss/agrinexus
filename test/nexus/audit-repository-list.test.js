@@ -9,6 +9,22 @@ function fakeDb(results = []) {
   return db;
 }
 
+// Found live: record() had no redact() call, unlike its sibling ObservabilityRepository, which redacts
+// metadata at the same trust boundary before every insert. Every current caller's metadata happens to be
+// clean today, but the guarantee lived only in call-site discipline, not the repository itself.
+test("record redacts sensitive metadata keys before inserting, the same way ObservabilityRepository already does", async () => {
+  const db = fakeDb([{ rows: [{ event_id: "evt_1" }] }]);
+  const repo = new AuditRepository(db);
+  await repo.record({ tenantId: "t1", actorId: "u1", correlationId: "c1", eventType: "tool.completed", outcome: "verified",
+    metadata: { toolId: "communications.send", authorization: "Bearer secret", apiKey: "sk_live_123", nested: { password: "hunter2", ok: true } } });
+  const inserted = db.calls[0].params[8];
+  assert.equal(inserted.authorization, "[REDACTED]");
+  assert.equal(inserted.apiKey, "[REDACTED]");
+  assert.equal(inserted.nested.password, "[REDACTED]");
+  assert.equal(inserted.toolId, "communications.send", "non-sensitive fields must pass through unchanged");
+  assert.equal(inserted.nested.ok, true);
+});
+
 test("list scopes to tenant and orders by occurred_at desc with no optional filters", async () => {
   const db = fakeDb([{ rows: [{ event_id: "evt_1" }] }]);
   const repo = new AuditRepository(db);

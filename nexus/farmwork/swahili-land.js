@@ -47,6 +47,7 @@ const SW = {
   bredFuture: "Siku hiyo bado iko mbele; ninarekodi yaliyotokea tu.", bred: ({ tag, when, sire, species, expected }) => `Nimerekodi: ${tag} amepandishwa ${when}${sire ? ` (${sire})` : ""}.${expected ? ` Kwa kawaida ${species} huzaa karibu ${expected}; hicho ni kipindi cha kawaida, si ahadi.` : ""}`,
   born: ({ tag, when }) => `Nimerekodi: ${tag} amezaa ${when}. Sema "ongeza ndama" (au mtoto wa mbuzi, kondoo…) kuweka rekodi ya mdogo.`, fed: ({ tag, qty, what }) => `Nimerekodi: umemlisha ${tag} ${qty} za ${what}.`,
   goneAsk: ({ tag }) => `Nimweke ${tag} kuwa ameondoka kwenye kundi lako? Historia yake itabaki kwenye rekodi zako.`, goneDone: ({ tag }) => `Sawa. ${tag} amewekwa kuwa ameondoka, na historia yake imehifadhiwa.`, goneMissing: ({ tag }) => `Simwoni ${tag} tena.`,
+  goneChanged: ({ tag }) => `Rekodi ya ${tag} imebadilika (labda ameuzwa au tayari amewekwa kuwa ameondoka). Sijabadilisha kitu kingine.`,
   removeAnimalAsk: ({ tag }) => `Nimwondoe ${tag} na kuacha kutunza rekodi zake?`,
   // workers and jobs
   askWorker: "Mfanyakazi anaitwa nani? Sema \"ongeza mfanyakazi Juma, +254712345678, kupalilia\".", workerExists: ({ name }) => `Tayari una mfanyakazi anayeitwa ${name}.`, workersFull: "Hiyo ndiyo idadi kubwa ya wafanyakazi ninayoweza kuhifadhi (mia moja). Ondoa mmoja kwanza.",
@@ -61,6 +62,7 @@ const SW = {
   // pest and disease journal
   journalFull: "Kumbukumbu zako zimejaa (maingizo elfu mbili). Ondoa baadhi kwanza.", logged: ({ n, text, where }) => `Nimeandika #${n}: "${text}"${where}. ${DISCLAIMER} Sema "sasisha tatizo ${n}: nilinyunyizia …" kuandika ulichofanya, au "tatizo ${n} limeisha".`,
   noProblem: ({ n }) => `Siwezi kupata tatizo ${n} kwenye kumbukumbu zako.`, problemAdded: ({ n, text }) => `Nimeongeza kwenye tatizo ${n}: ${text}. ${DISCLAIMER}`,
+  problemChanged: ({ n }) => `Rekodi ya tatizo ${n} imebadilika. Sema tena ili niangalie maelezo ya sasa kwanza.`,
   problemNoted: ({ n, word, resolved }) => `Nimeandika: tatizo ${n} ${word}.${resolved ? " Nimeliweka kuwa limetatuliwa." : " Nimeliacha wazi."}`,
   journalEmpty: "Kumbukumbu zako za wadudu na magonjwa ni tupu. Sema \"andika tatizo: viwavi jeshi kwenye mahindi\" ukiona.", journalSummary: ({ open, closed, lines }) => `Matatizo ${open} wazi, ${closed} yaliyotatuliwa. Ya hivi karibuni: ${lines}.`,
   fieldProblems: ({ name, lines }) => `Kwenye ${name}: ${lines}.`, fieldNoProblems: ({ name }) => `Hakuna kitu kwenye kumbukumbu zako kuhusu ${name}.`,
@@ -417,7 +419,10 @@ async function handle(ctx) {
   if ((m = /^(?:sasisha|ongeza kwenye|andika kwenye)\s+tatizo\s+(?:namba\s+)?#?(\d{1,5})\s*[:,-]\s*(.+)$/i.exec(t))) {
     const entry = (await list("pest")).find(item => item.number === Number(m[1]));
     if (!entry) return SW.noProblem({ n: m[1] });
-    await ctx.store.update({ ...scope, record: { ...entry, data: { ...entry.data, actions: [...(entry.data.actions || []), { day: ctx.today, text: clean(m[2]).slice(0, 200) }].slice(-20) } } });
+    // Same array-append race as journal.js's English handler, same fix, duplicated by hand in Swahili.
+    const existingActions = entry.data.actions || [];
+    const applied = await ctx.store.update({ ...scope, record: { ...entry, data: { ...entry.data, actions: [...existingActions, { day: ctx.today, text: clean(m[2]).slice(0, 200) }].slice(-20) } }, casArrayField: "actions", casArrayLength: existingActions.length });
+    if (!applied) return SW.problemChanged({ n: entry.number });
     return SW.problemAdded({ n: entry.number, text: clean(m[2]).slice(0, 120) });
   }
   if ((m = /^tatizo (?:namba )?#?(\d{1,5}) (?:limeisha|limetatuliwa|limekwisha|limepungua|limezidi|linaenea|limekuwa bora)(?:\s*[:,-]\s*(.*))?$/i.exec(t))) {
@@ -464,7 +469,9 @@ const confirms = {
   "animal-gone-sw": async (ctx, action) => {
     const animal = (await ctx.store.list({ tenantId: ctx.tenantId, userId: ctx.userId, collection: "animal" })).find(item => item.memoryId === action.memoryId);
     if (!animal) return SW.goneMissing({ tag: tagShown(action.tag) });
-    await ctx.store.update({ tenantId: ctx.tenantId, userId: ctx.userId, record: { ...animal, data: { ...animal.data, status: "gone", goneOn: ctx.today } } });
+    // Same asymmetric-with-money.js's-"sold"-path gap as livestock.js's English handler, same fix.
+    const applied = await ctx.store.update({ tenantId: ctx.tenantId, userId: ctx.userId, record: { ...animal, data: { ...animal.data, status: "gone", goneOn: ctx.today } }, expectedStatus: animal.data.status });
+    if (!applied) return SW.goneChanged({ tag: tagShown(action.tag) });
     return SW.goneDone({ tag: tagShown(action.tag) });
   }
 };

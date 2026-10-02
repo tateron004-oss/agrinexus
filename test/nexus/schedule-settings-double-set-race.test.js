@@ -59,7 +59,7 @@ function lockingSchedulesDb() {
         rows.push({ schedule_id: scheduleId, tenant_id: tenantId, owner_id: ownerId, job_type: jobType, payload, cadence, timezone, next_run_at: nextRunAt, state: "active" });
         return { rows: [{ schedule_id: scheduleId }] };
       }
-      if (/select schedule_id,tenant_id,owner_id,payload,timezone from nexus_schedules/.test(sql)) {
+      if (/select schedule_id,tenant_id,owner_id,payload,timezone,created_at from nexus_schedules/.test(sql)) {
         const [jobType] = params;
         return { rows: rows.filter(row => row.job_type === jobType && row.state === "active") };
       }

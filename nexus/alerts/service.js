@@ -31,35 +31,48 @@ function createWeatherAlertService({ notifications, settings = null, memory = nu
       const result = { checked: 0, sent: 0, skippedPaused: 0, skippedNoDevice: 0, skippedNoTown: 0, skippedQuiet: 0, skippedNoForecast: 0 };
       if (!settings?.listActive || !notifications?.enqueue) return result;
       const paused = new Map(); const forecasts = new Map();
-      for (const setting of await settings.listActive({ limit: 500 })) {
-        result.checked += 1;
-        const zone = validTimeZone(setting.timeZone || DEFAULT_TIME_ZONE);
-        const clock = localClock(at, zone);
-        if (clock.minutes >= QUIET_FROM_MINUTES || clock.minutes < QUIET_UNTIL_MINUTES) { result.skippedQuiet += 1; continue; }
-        if (!paused.has(setting.tenantId)) paused.set(setting.tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId: setting.tenantId }).catch(() => false) : false);
-        if (paused.get(setting.tenantId)) { result.skippedPaused += 1; continue; }
-        const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
-        if (!known.location) { result.skippedNoTown += 1; continue; }
-        const townKey = known.location.trim().toLowerCase();
-        if (!forecasts.has(townKey)) forecasts.set(townKey, fetchAlertForecast({ place: known.location, fetchImpl }));
-        const forecast = await forecasts.get(townKey);
-        if (!forecast) { result.skippedNoForecast += 1; continue; }
-        // The forecast's own dates are the place's local days; the first is "today" there.
-        const alerts = evaluateForecast(forecast, forecast.days[0]?.date);
-        if (!alerts.length) continue;
-        let devicesFound = [];
-        try { devicesFound = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { devicesFound = []; }
-        if (!devicesFound.length) { result.skippedNoDevice += 1; continue; }
-        let sentNow = 0;
-        for (const alert of alerts) {
-          if (sentNow >= MAX_PUSHES_PER_PERSON_PER_SWEEP) break;
-          const key = `alert:${setting.userId}:${alert.kind}:${alert.date}`;
-          if (notifications.existsByKey && await notifications.existsByKey({ tenantId: setting.tenantId, idempotencyKey: key })) continue;
-          await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
-            content: { title: "Weather alert", body: alert.text, kind: "weather_alert" } });
-          logger?.info?.("weather_alert.queued", { userId: setting.userId, kind: alert.kind, day: alert.date });
-          sentNow += 1; result.sent += 1;
+      const PAGE_SIZE = 500;
+      // Found live (fresh-module audit): a single listActive({limit:500}) call with no further paging meant
+      // every sweep saw the exact same oldest 500 rows forever (listActive orders by created_at) -- anyone
+      // who turned weather alerts on after the 500th person was PERMANENTLY excluded from every future
+      // sweep, not just skipped once. Paged via a keyset cursor so a single sweep covers every active row,
+      // however many there are.
+      let cursor = null;
+      for (;;) {
+        const page = await settings.listActive({ limit: PAGE_SIZE, ...(cursor ? { afterCreatedAt: cursor.createdAt, afterScheduleId: cursor.scheduleId } : {}) });
+        if (!page.length) break;
+        for (const setting of page) {
+          result.checked += 1;
+          const zone = validTimeZone(setting.timeZone || DEFAULT_TIME_ZONE);
+          const clock = localClock(at, zone);
+          if (clock.minutes >= QUIET_FROM_MINUTES || clock.minutes < QUIET_UNTIL_MINUTES) { result.skippedQuiet += 1; continue; }
+          if (!paused.has(setting.tenantId)) paused.set(setting.tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId: setting.tenantId }).catch(() => false) : false);
+          if (paused.get(setting.tenantId)) { result.skippedPaused += 1; continue; }
+          const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
+          if (!known.location) { result.skippedNoTown += 1; continue; }
+          const townKey = known.location.trim().toLowerCase();
+          if (!forecasts.has(townKey)) forecasts.set(townKey, fetchAlertForecast({ place: known.location, fetchImpl }));
+          const forecast = await forecasts.get(townKey);
+          if (!forecast) { result.skippedNoForecast += 1; continue; }
+          // The forecast's own dates are the place's local days; the first is "today" there.
+          const alerts = evaluateForecast(forecast, forecast.days[0]?.date);
+          if (!alerts.length) continue;
+          let devicesFound = [];
+          try { devicesFound = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { devicesFound = []; }
+          if (!devicesFound.length) { result.skippedNoDevice += 1; continue; }
+          let sentNow = 0;
+          for (const alert of alerts) {
+            if (sentNow >= MAX_PUSHES_PER_PERSON_PER_SWEEP) break;
+            const key = `alert:${setting.userId}:${alert.kind}:${alert.date}`;
+            if (notifications.existsByKey && await notifications.existsByKey({ tenantId: setting.tenantId, idempotencyKey: key })) continue;
+            await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
+              content: { title: "Weather alert", body: alert.text, kind: "weather_alert" } });
+            logger?.info?.("weather_alert.queued", { userId: setting.userId, kind: alert.kind, day: alert.date });
+            sentNow += 1; result.sent += 1;
+          }
         }
+        cursor = { createdAt: page[page.length - 1].createdAt, scheduleId: page[page.length - 1].scheduleId };
+        if (page.length < PAGE_SIZE) break;
       }
       return result;
     }

@@ -23,6 +23,7 @@ const SW = {
   // pregnancy
   askDue: ({ first }) => `Tarehe ya kujifungua ya ${first} ni lini? Sema "${first} ni mjamzito, atajifungua tarehe 12 Machi".`,
   dueUpdated: ({ who, when }) => `Nimesasisha ${who}: kujifungua kunatarajiwa ${when}.`,
+  pregnancyChanged: ({ who }) => `Rekodi ya mimba ya ${who} imebadilika. Sema tena ili niangalie rekodi ya sasa kwanza.`,
   pregnant: ({ who, when, first }) => `Nimerekodi: ${who} ni mjamzito, anatarajiwa ${when}. Sema "ziara ya ${first}: …" au "mwone ${first} tena baada ya wiki 4" kufuatilia ziara zake.`,
   askDelivered: "Nahitaji siku aliyojifungua, kama \"tarehe 3 Machi\", na haiwezi kuwa ya baadaye.",
   delivered: ({ who, when, outcome, first }) => `Nimerekodi: ${who} amejifungua ${when}${outcome ? ` (${outcome})` : ""}. Kuhifadhi rekodi za mtoto, sema "sajili mgonjwa Mtoto wa ${first}".`,
@@ -247,7 +248,12 @@ async function handle(ctx) {
     const due = m[2] ? dayFrom(m[2], ctx.today) : null; const first = firstName(found.patient);
     if (!due || due < ctx.today || due > addDays(ctx.today, 320)) return SW.askDue({ first });
     const existing = (await listOf(ctx, "pregnancy")).find(item => item.data.pid === found.patient.memoryId && item.data.status === "open");
-    if (existing) { await ctx.store.update({ ...scope, record: { ...existing, data: { ...existing.data, due } } }); return SW.dueUpdated({ who: tagSw(found.patient), when: describeDaySw(due, ctx.today) }); }
+    // Same missing-expectedStatus gap as pregnancy.js's English handler, same fix.
+    if (existing) {
+      const applied = await ctx.store.update({ ...scope, record: { ...existing, data: { ...existing.data, due } }, expectedStatus: existing.data.status });
+      if (!applied) return SW.pregnancyChanged({ who: tagSw(found.patient) });
+      return SW.dueUpdated({ who: tagSw(found.patient), when: describeDaySw(due, ctx.today) });
+    }
     await record(ctx, "pregnancy", { pid: found.patient.memoryId, due, status: "open", since: ctx.today });
     if (ctx.personal?.add) await ctx.personal.add({ kind: "event", text: `Kujifungua kunatarajiwa mgonjwa ${found.patient.number}`, day: due, time: "" });
     return SW.pregnant({ who: tagSw(found.patient), when: describeDaySw(due, ctx.today), first });
@@ -262,8 +268,10 @@ async function handle(ctx) {
     if (!day || day > ctx.today) return SW.askDelivered;
     const outcome = clean(on ? rest.slice(0, on.index) : rest).slice(0, 80);
     const open = (await listOf(ctx, "pregnancy")).find(item => item.data.pid === found.patient.memoryId && item.data.status === "open");
-    if (open) await ctx.store.update({ ...scope, record: { ...open, data: { ...open.data, status: "delivered", deliveredOn: day, outcome } } });
-    else await record(ctx, "pregnancy", { pid: found.patient.memoryId, due: null, status: "delivered", deliveredOn: day, outcome, since: day });
+    if (open) {
+      const applied = await ctx.store.update({ ...scope, record: { ...open, data: { ...open.data, status: "delivered", deliveredOn: day, outcome } }, expectedStatus: open.data.status });
+      if (!applied) return SW.pregnancyChanged({ who: tagSw(found.patient) });
+    } else await record(ctx, "pregnancy", { pid: found.patient.memoryId, due: null, status: "delivered", deliveredOn: day, outcome, since: day });
     return SW.delivered({ who: tagSw(found.patient), when: day === ctx.today ? "leo" : describeDaySw(day, ctx.today), outcome, first: firstName(found.patient) });
   }
   if ((m = /^(?:nani|akina mama gani|wagonjwa gani) (?:ni mjamzito|ni wajawazito|wanatarajiwa kujifungua|anatarajiwa kujifungua)(?: (mwezi huu|mwezi ujao|hivi karibuni|wiki hii))?$/i.exec(t)) || (m = /^(?:onyesha|orodhesha) (?:wajawazito wangu|wajawazito|orodha ya wajawazito|mimba zangu)(?: (mwezi huu|mwezi ujao|hivi karibuni|wiki hii))?$/i.exec(t)) || (m = /^wajawazito (?:wangu|wanaotarajiwa kujifungua)(?: (mwezi huu|mwezi ujao|hivi karibuni|wiki hii))?$/i.exec(t))) {
@@ -473,8 +481,9 @@ const confirms = {
   "remove-record-sw": async (ctx, action) => (await ctx.store.remove({ tenantId: ctx.tenantId, userId: ctx.userId, memoryId: action.memoryId }) ? SW.removedItem({ name: action.label }) : SW.goneItem({ name: action.label })),
   "remove-patient-sw": async (ctx, action) => {
     const scope = { tenantId: ctx.tenantId, userId: ctx.userId }; let removed = 0;
+    // Same MAX_PATIENTS-bypass gap as patients.js's English handler, same fix.
     for (const collection of ["visit", "dose", "pregnancy", "followup", "referral", "dispense"]) {
-      for (const item of await ctx.store.list({ ...scope, collection })) if (item.data.pid === action.memoryId && await ctx.store.remove({ ...scope, memoryId: item.memoryId })) removed += 1;
+      for (const item of await listOf(ctx, collection)) if (item.data.pid === action.memoryId && await ctx.store.remove({ ...scope, memoryId: item.memoryId })) removed += 1;
     }
     const gone = await ctx.store.remove({ ...scope, memoryId: action.memoryId });
     if (gone) await record(ctx, "audit", { event: "patient-removed", day: ctx.today, patient: action.number, records: removed }); // a number and a count, never a name

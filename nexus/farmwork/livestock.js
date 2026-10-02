@@ -190,7 +190,13 @@ const confirms = {
   "animal-gone": async (ctx, action) => {
     const animal = (await ctx.store.list({ tenantId: ctx.tenantId, userId: ctx.userId, collection: "animal" })).find(item => item.memoryId === action.memoryId);
     if (!animal) return `I couldn't find ${action.tag} any more.`;
-    await ctx.store.update({ tenantId: ctx.tenantId, userId: ctx.userId, record: { ...animal, data: { ...animal.data, status: "gone", goneOn: ctx.today } } });
+    // Found live (farmwork audit, asymmetric with money.js's "sold" path): this had no expectedStatus guard,
+    // unlike the sale confirmation which was already hardened for the same status field on the same record
+    // type. A pending "X died" confirmation racing a "sold X for Y" message for the same animal could re-fetch
+    // the animal right before writing and still unconditionally overwrite it, silently erasing soldFor (and
+    // any other fields the sale had just set) with a stale copy, while telling the user only "marked as gone".
+    const applied = await ctx.store.update({ tenantId: ctx.tenantId, userId: ctx.userId, record: { ...animal, data: { ...animal.data, status: "gone", goneOn: ctx.today } }, expectedStatus: animal.data.status });
+    if (!applied) return `${action.tag}'s record just changed (maybe it was just sold or already marked gone). I haven't changed anything more.`;
     return `Okay. ${action.tag} is marked as gone, and its history is kept.`;
   }
 };

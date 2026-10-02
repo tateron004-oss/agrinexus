@@ -46,6 +46,17 @@ function lastExchange(history) {
   return null;
 }
 
+const MAX_FEEDBACK_ITEMS = 2000;
+
+// `addFeedback` past this person's own cap (see addFeedbackUnlessFull's own comment): stops recording
+// silently rather than surfacing a "your feedback is full" message nobody would find useful. Falls back
+// to the plain, uncapped addFeedback for any memory implementation that doesn't provide the capped form
+// (e.g. test doubles), where there is no real unbounded-growth risk to guard against in the first place.
+async function addFeedback(memory, { tenantId, userId, content }) {
+  if (memory.addFeedbackUnlessFull) { await memory.addFeedbackUnlessFull({ tenantId, userId, content, maxItems: MAX_FEEDBACK_ITEMS }); return; }
+  await memory.addFeedback({ tenantId, userId, content });
+}
+
 // Returns the words to answer with, or null when this is not feedback. `memory` needs addFeedback / listFeedback / updateFeedback.
 async function feedbackTurn({ text, memory, tenantId, userId, history = [], roles = [], now = new Date() }) {
   if (!memory?.addFeedback || !memory?.listFeedback) return null;
@@ -55,26 +66,34 @@ async function feedbackTurn({ text, memory, tenantId, userId, history = [], role
   try {
     if (request.action === "report") {
       if (!roles.includes("admin")) return null;
+      // Found live: this used to derive "N helpful, M flagged wrong" from however many rows
+      // listFeedback's own cap (500) happened to return -- silently wrong counts once a tenant's 30-day
+      // feedback volume passed that cap. countFeedback(), when the memory implementation provides it, is
+      // a real aggregate that's exact regardless of volume; listFeedback stays only for the "Latest
+      // flagged" excerpt, which never needs more than a handful of rows.
+      const counts = memory.countFeedback ? await memory.countFeedback({ tenantId, sinceDays: 30 }) : null;
       const rows = await memory.listFeedback({ tenantId, sinceDays: 30, limit: 500 });
-      const down = rows.filter(row => row.content.rating === "down"); const up = rows.length - down.length;
-      if (!rows.length) return "No feedback in the last 30 days.";
+      const down = rows.filter(row => row.content.rating === "down");
+      const up = counts ? counts.up : rows.length - down.length;
+      const downCount = counts ? counts.down : down.length;
+      if (!(up || downCount)) return "No feedback in the last 30 days.";
       const recent = down.slice(0, 5).map(row => `"${clip(row.content.question, 90) || "(no question)"}" answered "${clip(row.content.answer, 90)}"${row.content.note ? ` — they said: ${clip(row.content.note, 90)}` : ""}`);
-      return `Last 30 days: ${up} helpful, ${down.length} flagged wrong.${recent.length ? ` Latest flagged: ${recent.join("; ")}.` : ""}`;
+      return `Last 30 days: ${up} helpful, ${downCount} flagged wrong.${recent.length ? ` Latest flagged: ${recent.join("; ")}.` : ""}`;
     }
     const exchange = lastExchange(history);
     if (request.action === "correct") {
       const mine = (await memory.listFeedback({ tenantId, userId, sinceDays: 1, limit: 5 })).find(row => row.content.rating === "down" && !row.content.note);
       if (mine && memory.updateFeedback) { await memory.updateFeedback({ tenantId, userId, memoryId: mine.memory_id, content: { ...mine.content, note: clip(redact(request.note), 300) } }); return "Thank you. I've added the correct answer for the team."; }
       if (!exchange) return "Thank you. Tell me which answer that was about, or ask again and say \"that was wrong\" if I get it wrong.";
-      await memory.addFeedback({ tenantId, userId, content: { kind: "feedback", rating: "down", question: clip(redact(exchange.question), 300), answer: clip(redact(exchange.answer), 300), note: clip(redact(request.note), 300), day } });
+      await addFeedback(memory, { tenantId, userId, content: { kind: "feedback", rating: "down", question: clip(redact(exchange.question), 300), answer: clip(redact(exchange.answer), 300), note: clip(redact(request.note), 300), day } });
       return "Thank you. I've sent that answer and the correct one to the team so it can be fixed.";
     }
     if (request.rating === "up") {
-      await memory.addFeedback({ tenantId, userId, content: { kind: "feedback", rating: "up", day } });
+      await addFeedback(memory, { tenantId, userId, content: { kind: "feedback", rating: "up", day } });
       return "Glad that helped. I've noted it.";
     }
     if (!exchange) return "I haven't answered anything yet that I could mark as wrong.";
-    await memory.addFeedback({ tenantId, userId, content: { kind: "feedback", rating: "down", question: clip(redact(exchange.question), 300), answer: clip(redact(exchange.answer), 300), note: clip(redact(request.note), 300), day } });
+    await addFeedback(memory, { tenantId, userId, content: { kind: "feedback", rating: "down", question: clip(redact(exchange.question), 300), answer: clip(redact(exchange.answer), 300), note: clip(redact(request.note), 300), day } });
     return `Thank you for telling me. I've sent that answer to the team so it can be fixed (phone numbers and emails removed). ${request.note ? "I included what you said." : 'If you tell me what was wrong, say "the correct answer is …" and I will add it.'}`;
   } catch { return null; }
 }

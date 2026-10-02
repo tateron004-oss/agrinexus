@@ -6,7 +6,7 @@ const {createServerRuntimeAdapter}=require('../../nexus/compat/server-runtime-ad
 const {ObservabilityRepository}=require('../../nexus/observability/operations-repository.js');
 const context={tenantId:'tenant',userId:'owner',can:()=>true,hasRole:()=>false};
 test('device registration rejects cross-owner conflicts and keeps token material out of responses',async()=>{
- let call; const repo=new DeviceRepository({query:async(sql,params)=>{call={sql,params};return{rows:[]};}});
+ let call; const fake={query:async(sql,params)=>{call={sql,params};return{rows:[]};},async transaction(work){return work(fake);}}; const repo=new DeviceRepository(fake);
  const api=createControlApi({devices:repo});
  await assert.rejects(()=>api.registerDevice({context,body:{deviceId:'phone',platform:'pwa',tenantId:'forged',userId:'forged',capabilities:{gps:true,camera:false}}}),{code:'device_not_found'});
  assert.deepEqual(call.params.slice(0,5),['phone','tenant','owner','web',['gps']]);

@@ -111,6 +111,8 @@ services:
         value: postgres
       - key: AGRINEXUS_REQUIRE_LIVE_SERVICES
         value: true
+      - key: AGRINEXUS_TRUST_PROXY
+        value: true
       - key: AGRINEXUS_AUTOMATION_SCHEDULES
         value: disabled
       - key: AGRINEXUS_EVENT_TRIGGERS
@@ -422,6 +424,8 @@ services:
       - key: FLUTTERWAVE_SECRET_KEY
         sync: false
       - key: FLUTTERWAVE_SUBACCOUNT_ID
+        sync: false
+      - key: FLUTTERWAVE_WEBHOOK_SECRET_HASH
         sync: false
       - key: TRADE_PAYMENT_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/trade/payments
