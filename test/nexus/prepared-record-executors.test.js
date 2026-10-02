@@ -50,6 +50,18 @@ test("a telehealth intake with no concern is refused, not saved empty", async ()
     assert.equal(verifyTelehealthPrepareOutcome({ result: bad }).verified, false, JSON.stringify(bad));
 });
 
+// Found live (restriction-bypass follow-up audit): telehealth.prepare writes a real classification:"health"
+// record, same as health.record, but had no userIsRestrictedFrom("health-record-write") check at all.
+test("a restricted account cannot save a real telehealth intake through this executor", async () => {
+  const { records, created } = fixture();
+  const restrictedContext = { tenantId: "t1", userId: "u1", isRestrictedFrom: restriction => restriction === "health-record-write" };
+  await assert.rejects(
+    () => createTelehealthPrepareExecutor({ records })({ input: { concern: "blood pressure concern" }, context: restrictedContext, taskId: "t" }),
+    error => /This account type cannot write real health records\./.test(error.message) && error.code === "health_record_write_restricted"
+  );
+  assert.equal(created.length, 0);
+});
+
 test("a field operation plan is really saved awaiting approval, and nothing is dispatched", async () => {
   const { records, created } = fixture();
   const result = await createOperationPlanExecutor({ records })({ input: { operation: "Prepare a field operation, record approval state, and return its receipt.", recordApproval: true }, context, taskId: "tsk_2" });

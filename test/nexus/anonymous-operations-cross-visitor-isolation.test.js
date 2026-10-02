@@ -66,42 +66,48 @@ test.after(() => {
   fs.rmSync(tempDbPath, { force: true });
 });
 
-test("two unrelated anonymous (never signed in) visitors never collide on the same pre-auth chronic-care record", async () => {
+// create_chronic_care_profile/show_chronic_care_timeline (the actions this test originally used) are
+// now correctly refused for an anonymous caller entirely -- see
+// nexus-operations-health-write-restriction-and-caps.test.js, a separate, later fix for a real
+// unauthenticated-PHI-write bug. That fix is orthogonal to the cross-visitor isolation this test is
+// actually about (the deviceId-based anonymousOperationsIdentity mechanism applies to every pre-auth
+// action, not just health ones), so this test now exercises the same isolation logic against
+// create_shipment/show_shipment_timeline instead, which are not health-write-gated.
+test("two unrelated anonymous (never signed in) visitors never collide on the same pre-auth record", async () => {
   const created = await postAnonymous("/api/nexus/operations/action", {
-    action: "create_chronic_care_profile",
-    conditionArea: "diabetes",
-    patientId: "Anonymous Visitor A Real Patient",
-    medications: "insulin",
-    allergies: "penicillin"
+    action: "create_shipment",
+    origin: "Anonymous Visitor A Farm",
+    destination: "Anonymous Visitor A Market",
+    productType: "maize"
   });
   assert.equal(created.json.ok, true, JSON.stringify(created.json));
-  const visitorAChronicCareId = created.json.record.chronicCareId;
+  const visitorAShipmentId = created.json.record.shipmentId;
 
   // A completely separate anonymous request -- no cookie, no ID supplied --
   // relying on the omitted-ID "most recent record" fallback.
-  const readByAnotherVisitor = await postAnonymous("/api/nexus/operations/action", { action: "show_chronic_care_timeline" });
+  const readByAnotherVisitor = await postAnonymous("/api/nexus/operations/action", { action: "show_shipment_timeline" });
   assert.equal(readByAnotherVisitor.json.ok, true, JSON.stringify(readByAnotherVisitor.json));
-  assert.notEqual(readByAnotherVisitor.json.record?.chronicCareId, visitorAChronicCareId,
-    "an unrelated anonymous visitor must never be handed a different anonymous visitor's real chronic-care record via the omitted-ID fallback");
+  assert.notEqual(readByAnotherVisitor.json.record?.shipmentId, visitorAShipmentId,
+    "an unrelated anonymous visitor must never be handed a different anonymous visitor's real record via the omitted-ID fallback");
 
   // A different anonymous visitor supplying the real ID directly must also
   // be refused (the ownership check itself, not just the fallback).
-  const readByIdByAnotherVisitor = await postAnonymous("/api/nexus/operations/action", { action: "show_chronic_care_timeline", chronicCareId: visitorAChronicCareId });
-  assert.notEqual(readByIdByAnotherVisitor.json.record?.chronicCareId, visitorAChronicCareId,
-    "an unrelated anonymous visitor must never be able to view another anonymous visitor's real chronic-care record by its real ID either");
+  const readByIdByAnotherVisitor = await postAnonymous("/api/nexus/operations/action", { action: "show_shipment_timeline", shipmentId: visitorAShipmentId });
+  assert.notEqual(readByIdByAnotherVisitor.json.record?.shipmentId, visitorAShipmentId,
+    "an unrelated anonymous visitor must never be able to view another anonymous visitor's real record by its real ID either");
 });
 
 test("the SAME anonymous visitor (same deviceId) keeps real continuity across separate requests, unaffected by the cross-visitor fix", async () => {
   const deviceId = "same-anonymous-browser-device";
   const created = await postAnonymous("/api/nexus/operations/action", {
-    action: "create_chronic_care_profile", conditionArea: "diabetes", patientId: "Same Device Patient", deviceId
+    action: "create_shipment", origin: "Same Device Farm", destination: "Same Device Market", productType: "maize", deviceId
   });
   assert.equal(created.json.ok, true, JSON.stringify(created.json));
 
   // A later, separate request from the SAME device (the real, intended
   // behavior for one anonymous visitor's own multi-step session) must still
   // find their own record via the omitted-ID fallback.
-  const readBySameDevice = await postAnonymous("/api/nexus/operations/action", { action: "show_chronic_care_timeline", deviceId });
-  assert.equal(readBySameDevice.json.record?.chronicCareId, created.json.record.chronicCareId,
+  const readBySameDevice = await postAnonymous("/api/nexus/operations/action", { action: "show_shipment_timeline", deviceId });
+  assert.equal(readBySameDevice.json.record?.shipmentId, created.json.record.shipmentId,
     "the same anonymous browser (same deviceId) must still find its own prior record across separate requests");
 });

@@ -20,7 +20,10 @@ function circleDb(users) {
     // query returns -- so two concurrent transactions racing for the same key are genuinely serialized, the
     // way pg_advisory_xact_lock actually blocks a second session until the first commits or rolls back.
     async transaction(fn) {
-      let release = null;
+      // A real pg_advisory_xact_lock is transaction-scoped and releases automatically when the
+      // transaction ends, however many distinct keys were locked -- this harness must release every
+      // lock this transaction acquired, not just the last one (invite() now acquires up to 3).
+      const releases = [];
       const trx = Object.create(db);
       trx.query = async (sql, params) => {
         if (/pg_advisory_xact_lock/.test(sql)) {
@@ -30,12 +33,12 @@ function circleDb(users) {
           let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
           locks.set(key, ahead.then(() => held));
           await ahead;
-          release = myRelease;
+          releases.push(myRelease);
           return { rows: [] };
         }
         return db.query(sql, params);
       };
-      try { return await fn(trx); } finally { if (release) release(); }
+      try { return await fn(trx); } finally { for (const release of releases) release(); }
     },
     async query(sql, params) {
       calls.push({ sql, params });
@@ -50,6 +53,13 @@ function circleDb(users) {
       }
       if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) {
         return { rows: rows.filter(row => row.tenant_id === params[0] && row.purpose === "circle" && !row.deleted && (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
+      }
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, principalId] = params;
+        const role = /'role'='person'/.test(sql) ? "person" : "member";
+        const n = rows.filter(row => row.tenant_id === tenantId && row.purpose === "circle" && !row.deleted && row.principal_id === principalId
+          && row.content.kind === "circle" && row.content.role === role && row.content.status !== "ended").length;
+        return { rows: [{ n }] };
       }
       if (/insert into nexus_memory_items/.test(sql) && /'circle'/.test(sql)) { rows.push({ memory_id: params[0], tenant_id: params[1], principal_id: params[2], purpose: "circle", content: params[3] }); return { rows: [] }; }
       if (/update nexus_memory_items set content=\$3/.test(sql) && /purpose='circle'/.test(sql)) {
@@ -298,6 +308,26 @@ test("two concurrent invitations to the same person only create one link, not tw
   assert.equal(links.length, 1, "only one link to Amina must exist, not two");
 });
 
+// Found live: the duplicate-link lock above is keyed to one specific (person, member) pair, so two
+// concurrent invite() calls from the same person to two DIFFERENT members use two different lock keys
+// and never serialize against each other -- both could pass the stale MAX_MEMBERS pre-check and both
+// insert, exceeding the circle size limit. invite() now also locks (and re-checks) on person.id and
+// member.id individually, closing this the same way.
+test("two concurrent invitations to two different members at the circle's size limit cannot together exceed it", async () => {
+  const many = Array.from({ length: 9 }, (_, i) => ({ id: `x${i}`, tenant_id: "t1", email: `x${i}@example.com`, display_name: `Person ${i}`, status: "active" }));
+  const db = circleDb([...USERS, ...many]); const circle = new CircleRepository(db);
+  const person = { id: "u-baba", name: "Baba Kamau" };
+  for (let i = 0; i < 7; i += 1) assert.ok((await circle.invite({ tenantId: "t1", person, member: { id: `x${i}`, name: `Person ${i}` } })).link);
+  const [a, b] = await Promise.all([
+    circle.invite({ tenantId: "t1", person, member: { id: "x7", name: "Person 7" } }),
+    circle.invite({ tenantId: "t1", person, member: { id: "x8", name: "Person 8" } })
+  ]);
+  const succeeded = [a, b].filter(result => result.link).length;
+  assert.equal(succeeded, 1, "only one of the two concurrent invitations to different members may land once the cap is one away");
+  const links = (await circle.listFor({ tenantId: "t1", userId: "u-baba" })).filter(link => link.role === "person");
+  assert.equal(links.length, 8, "the circle's own size limit must never be exceeded, even by concurrent invites to different people");
+});
+
 test("a member can decline, and either side can leave or remove at any time, and it takes effect for both", async () => {
   const w = world();
   await ask(w, "Add amina@example.com to my circle");
@@ -538,7 +568,7 @@ test("the check-in stores write only under their own job type and purpose, and n
   await settings.set({ tenantId: "t1", userId: "u1", timeOfDay: "08:00", timeZone: "Africa/Nairobi" });
   const insert = calls.find(call => /insert into nexus_schedules/.test(call.sql));
   assert.equal(insert.params[3], "checkin.daily"); assert.equal(insert.params[7], "2100-01-01T00:00:00.000Z");
-  assert.deepEqual((await settings.listActive())[0], { scheduleId: "sch_1", tenantId: "t1", userId: "u1", timeOfDay: "08:00", timeZone: "Africa/Nairobi", graceHours: 3 });
+  assert.deepEqual((await settings.listActive())[0], { scheduleId: "sch_1", tenantId: "t1", userId: "u1", timeOfDay: "08:00", timeZone: "Africa/Nairobi", graceHours: 3, createdAt: undefined });
   await state.create({ tenantId: "t1", userId: "u1", content: { day: "2026-09-20", status: "pending", promptedAt: "x" } });
   assert.match(calls.at(-1).sql, /'domain','checkin'/); assert.match(calls.at(-1).sql, /'sensitive'/);
   assert.equal((await state.listPending())[0].userId, "u1");

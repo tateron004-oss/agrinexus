@@ -335,6 +335,11 @@ test("budget refusal precedes execution and telemetry outages never erase verifi
   engine.observability={assertCostAllowed:async()=>{throw Object.assign(new Error("Budget exceeded"),{code:"cost_limit_exceeded"});}};
   await assert.rejects(()=>engine.execute({context,taskId:"task",stepId:"s"}),{code:"cost_limit_exceeded"});
   assert.equal(store.execution,null); assert.equal(store.calls,0);
+  // Found live (observability audit): unlike every other pre-execution denial (permission/confirmation/consent),
+  // a thrown CostLimitError was never caught in execute() and so never reached audit.record() -- completely
+  // invisible on the audit review surface. A cost-limit refusal must be recorded the same way.
+  assert.ok(store.audits.find(event => event.eventType === "tool.denied" && event.metadata.code === "cost_limit_exceeded"),
+    "a cost-limit denial must be recorded on the audit trail, the same way every other denial already is");
   const fail=async()=>{throw Error("Telemetry unavailable");};
   engine.observability={assertCostAllowed:async()=>{},startSpan:fail,recordCost:fail,recordProviderHealth:fail,finishSpan:fail};
   const result=await engine.execute({context,taskId:"task",stepId:"s"});

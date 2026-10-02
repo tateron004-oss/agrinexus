@@ -10,6 +10,7 @@ const { healthWorkLine } = require("../../nexus/healthwork/brief.js");
 const { readVitals, conditionOf } = require("../../nexus/healthwork/visits.js");
 const { parseAge, ageWords, listOf, resolvePatient, MAX_PATIENTS } = require("../../nexus/healthwork/common.js");
 const { family, outstanding } = require("../../nexus/healthwork/immunisation.js");
+const { confirms: patientConfirms } = require("../../nexus/healthwork/patients.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 const { farmWorkTurn } = require("../../nexus/farmwork/index.js");
 const notes = require("../../public/kyro-offline-notes.js");
@@ -219,6 +220,34 @@ test("a pregnancy needs the worker's expected date, is listed, and is closed by 
   assert.match(await who.say("Mary delivered on 3 May 2030"), /can't be in the future/);
 });
 
+// Found live (healthwork audit): neither the due-date update nor the "delivered" write guarded with
+// expectedStatus -- both read the same open pregnancy record and write back a spread of it. A due-date
+// correction racing a concurrent delivery for the same pregnancy could let the due-date update commit
+// second using its stale pre-delivery snapshot, silently reverting status back to "open" and discarding
+// deliveredOn/outcome the delivery write had just recorded: a real birth silently un-recorded. This
+// simulates the concurrent delivery landing in the gap between the due-date handler's own read and write.
+test("updating a pregnancy's due date after a concurrent delivery does not silently revert the recorded birth", async () => {
+  const store = fakeFarmStore();
+  const who = worker({ store });
+  await registerMary(who);
+  await who.say("Mary is pregnant, due 12 March");
+  const originalList = store.list.bind(store);
+  store.list = async (...args) => {
+    const result = await originalList(...args);
+    if (args[0].collection === "pregnancy") {
+      store.list = originalList;
+      const pregnancyRow = result[0];
+      await store.update({ tenantId: "t1", userId: "u1", record: { ...pregnancyRow, data: { ...pregnancyRow.data, status: "delivered", deliveredOn: "2026-09-20", outcome: "baby girl" } }, expectedStatus: "open" });
+    }
+    return result;
+  };
+  const reply = await who.say("Mary is pregnant, due 20 March");
+  assert.match(reply, /record just changed/i);
+  const after = (await store.list({ tenantId: "t1", userId: "u1", collection: "pregnancy" }))[0];
+  assert.equal(after.data.status, "delivered", "the concurrent delivery must survive, not be silently reverted");
+  assert.equal(after.data.deliveredOn, "2026-09-20");
+});
+
 // ---------- clinic stock ----------
 test("clinic stock goes in and out, warns, expires, and never touches the farm's stock words", async () => {
   const who = worker(); await registerMary(who);
@@ -336,6 +365,21 @@ test("removing a patient removes everything kept about them, and only after a ye
   assert.match(await who.say("Show my patients"), /Mary Akinyi/);
   await who.say("Remove patient Mary"); assert.match(await who.say("yes"), /removed Mary Akinyi and 3 records/);
   assert.match(await who.say("Show my patients"), /no patients registered/); assert.equal(who.store.rows.filter(row => !row.deleted && row.collection !== "audit").length, 0, "only the log entry (a number and a count) is left");
+});
+
+// Found live (healthwork audit): unlike every other read site in this module, "remove patient" called
+// ctx.store.list() directly instead of going through listOf()/MAX_PATIENTS -- silently taking the store's
+// smaller default 1000-row window. A health worker whose combined visit/dose/pregnancy/followup/referral/
+// dispense history exceeds that window in any one collection would have some of a removed patient's real
+// records survive "this cannot be undone" untouched, permanently orphaned and unpurgeable since the patient
+// they belonged to is already gone.
+test("removing a patient scans each collection with this module's real record ceiling, not the store's smaller default window", async () => {
+  const seen = [];
+  const spyStore = { list: async args => { seen.push(args); return []; }, remove: async () => true, add: async () => ({}) };
+  const ctx = { store: spyStore, tenantId: "t1", userId: "u1" };
+  await patientConfirms["remove-patient"](ctx, { memoryId: "m1", label: "Mary Akinyi", number: 1 });
+  assert.equal(seen.length, 6, "one list() call per collection scanned");
+  for (const call of seen) assert.equal(call.limit, MAX_PATIENTS, `${call.collection} must be scanned with the module's real ceiling`);
 });
 
 // ---------- privacy between people, and no hijacking ----------

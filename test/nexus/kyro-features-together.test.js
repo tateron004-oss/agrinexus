@@ -23,6 +23,7 @@ function fullMemory() {
     async addPersonalItem({ userId, content }) { return add("personal", userId, content); }, async listPersonalItems({ userId, kind = null }) { return list(userId, "personal").filter(row => !kind || row.content.kind === kind); },
     async updatePersonalItem({ userId, memoryId, content }) { const row = rows.find(item => item.memory_id === memoryId && item.userId === userId); if (row) row.content = content; return Boolean(row); }, async removePersonalItem({ userId, memoryId }) { return remove(userId, memoryId); },
     async addFarmEntry({ userId, content }) { return add("farm", userId, content); }, async listFarmEntries({ userId }) { return list(userId, "farm"); }, async removeFarmEntry({ userId, memoryId }) { return remove(userId, memoryId); },
+    async addFarmEntryUnlessCapped({ userId, content, maxEntries }) { const count = live(userId, "farm").length; if (count >= maxEntries) return { capped: true, count }; return add("farm", userId, content); },
     async addFeedback({ userId, content }) { return add("feedback", userId, content); }, async listFeedback({ userId }) { return list(userId, "feedback"); }, async updateFeedback() { return true; }
   };
 }

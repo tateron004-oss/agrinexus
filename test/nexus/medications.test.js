@@ -31,6 +31,13 @@ function fakeStore() {
   const rows = []; let n = 0;
   return { rows,
     async addMedication({ tenantId, userId, content }) { rows.push({ memoryId: `m${++n}`, tenantId, userId, content }); },
+    async addMedicationUnlessCapped({ tenantId, userId, content, maxMedications }) {
+      const count = rows.filter(row => row.tenantId === tenantId && row.userId === userId && row.content.kind === "medication" && row.content.active !== false && !row.removed).length;
+      if (count >= maxMedications) return { capped: true, count };
+      const memoryId = `m${++n}`;
+      rows.push({ memoryId, tenantId, userId, content });
+      return { memoryId, content };
+    },
     async createDose({ tenantId, userId, content }) { rows.push({ memoryId: `d${++n}`, tenantId, userId, content: { kind: "dose", ...content } }); },
     async claimDoseSlot({ tenantId, userId, medId, day, time, content }) {
       if (rows.find(item => item.userId === userId && item.content.kind === "dose" && item.content.medId === medId && item.content.day === day && item.content.time === time)) return null;
@@ -86,6 +93,25 @@ test("a spoken medicine name never silently matches a different, distinct medici
   assert.equal(await s.say("I took my vitamin d"), null, "'vitamin d' must not silently resolve to the different, real 'vitamin d3'");
   assert.equal(await s.say("Stop reminding me about vitamin d"), null, "same for removal");
   assert.match(await s.say("What medications do I take?"), /vitamin d3/, "the real medicine must be untouched");
+});
+
+// Found live: unlike "remove" (which asks "Which one?" once more than one medicine matches a partial name),
+// "taken" applied to every ambiguous match with no disambiguation at all. "insulin" is a genuine word-subset
+// of both "insulin glargine" and "insulin aspart" (a realistic basal+bolus case) -- saying "I took my
+// insulin" (meaning only one of them) silently marked the OTHER, still genuinely pending dose "taken" too,
+// suppressing the real missed-dose alert that should reach the person's trusted circle.
+test("an ambiguous partial medicine name asks which one for 'taken', instead of silently marking every match as taken", async () => {
+  const s = setup();
+  await s.say("Add medication insulin glargine at 8am");
+  await s.say("Add medication insulin aspart at 8am");
+  await s.service.sendDue({ at: s.clock });
+  assert.match(await s.say("I took my insulin"), /^Which one: insulin (?:glargine or insulin aspart|aspart or insulin glargine)\?$/);
+  const taken = s.store.rows.filter(row => row.content.kind === "dose" && row.content.status === "taken");
+  assert.equal(taken.length, 0, "neither dose may be marked taken until the person says which one");
+  assert.equal(await s.say("I took my insulin glargine"), "Thank you. I've logged insulin glargine as taken.", "a genuinely unambiguous name still works");
+  assert.equal(s.store.rows.filter(row => row.content.kind === "dose" && row.content.status === "taken").length, 1);
+  // The deliberately-supported bulk generic-word flow (e.g. "I took my pills") is unaffected by this fix.
+  assert.equal(await s.say("I took my pills"), "Thank you. I've logged insulin glargine and insulin aspart as taken.", "a generic word still means every medicine");
 });
 
 test("Kyro reminds at each dose time once, and never for a phone that cannot be reached", async () => {
@@ -251,6 +277,57 @@ test("the repository keeps medicines as private health information under their o
   assert.equal(calls.filter(call => /delete from/i.test(call.sql)).length, 0);
 });
 
+function cappedMedicationDb() {
+  const rows = []; const locks = new Map(); let n = 0;
+  const db = {
+    rows,
+    async transaction(fn) {
+      const releases = [];
+      const trx = Object.create(db);
+      trx.query = async (sql, params) => {
+        if (/pg_advisory_xact_lock/.test(sql)) {
+          const key = params[0];
+          const ahead = locks.get(key) || Promise.resolve();
+          let myRelease; const held = new Promise(resolve => { myRelease = resolve; });
+          locks.set(key, ahead.then(() => held));
+          await ahead;
+          releases.push(myRelease);
+          return { rows: [] };
+        }
+        return db.query(sql, params);
+      };
+      try { return await fn(trx); } finally { for (const release of releases) release(); }
+    },
+    async query(sql, params) {
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [tenantId, userId] = params;
+        return { rows: [{ n: rows.filter(row => row.tenantId === tenantId && row.userId === userId).length }] };
+      }
+      if (/insert into nexus_memory_items/.test(sql)) { rows.push({ memoryId: `m${++n}`, tenantId: params[1], userId: params[2], content: params[3] }); return { rows: [] }; }
+      throw new Error(`unexpected SQL: ${sql.slice(0, 80)}`);
+    }
+  };
+  return db;
+}
+// Found live: the per-person MAX_MEDICATIONS cap was enforced by the caller with a plain check-then-act
+// read (listMedications, then addMedication if under the cap), with no lock -- two concurrent "add
+// medication" requests at 11/12 could both pass the check and both insert. addMedicationUnlessCapped()
+// re-checks and inserts under one transaction-scoped advisory lock, the same pattern already proven for
+// this file's own claimDoseSlot().
+test("two concurrent add-medication requests at the cap boundary cannot together exceed the medication limit", async () => {
+  const db = cappedMedicationDb();
+  const repo = new MedicationRepository(db);
+  for (let i = 0; i < 11; i += 1) {
+    await repo.addMedicationUnlessCapped({ tenantId: "t1", userId: "u1", maxMedications: 12, content: { kind: "medication", name: `drug${i}`, times: ["08:00"] } });
+  }
+  const [a, b] = await Promise.all([
+    repo.addMedicationUnlessCapped({ tenantId: "t1", userId: "u1", maxMedications: 12, content: { kind: "medication", name: "race-a", times: ["08:00"] } }),
+    repo.addMedicationUnlessCapped({ tenantId: "t1", userId: "u1", maxMedications: 12, content: { kind: "medication", name: "race-b", times: ["08:00"] } })
+  ]);
+  const succeeded = [a, b].filter(result => !result.capped).length;
+  assert.equal(succeeded, 1, "only one of the two concurrent add-medication requests may land once the cap is one away");
+});
+
 test("through the companion, sharing medication reminders is a choice the person makes, and the sweep covers medicines too", async () => {
   const users = [{ id: "u-baba", name: "Baba Kamau" }, { id: "u-amina", name: "Amina Wanjiru" }];
   const rows = []; let seq = 0;
@@ -263,6 +340,12 @@ test("through the companion, sharing medication reminders is a choice the person
         const [, personId, memberId] = params;
         const match = rows.some(row => row.principal_id === personId && row.content.kind === "circle" && row.content.role === "person" && row.content.otherId === memberId && row.content.status !== "ended");
         return { rows: match ? [{ "?column?": 1 }] : [] };
+      }
+      if (/select count\(\*\)::int as n from nexus_memory_items/.test(sql)) {
+        const [, principalId] = params;
+        const role = /'role'='person'/.test(sql) ? "person" : "member";
+        const n = rows.filter(row => row.principal_id === principalId && row.content.kind === "circle" && row.content.role === role && row.content.status !== "ended").length;
+        return { rows: [{ n }] };
       }
       if (/select memory_id,principal_id,content from nexus_memory_items/.test(sql)) return { rows: rows.filter(row => (params[1] === null || row.principal_id === params[1]) && (params[2] === null || row.content.linkId === params[2])).map(row => ({ memory_id: row.memory_id, principal_id: row.principal_id, content: row.content })) };
       if (/insert into nexus_memory_items/.test(sql)) { rows.push({ memory_id: `r${++seq}`, principal_id: params[2], content: params[3] }); return { rows: [] }; }

@@ -53,8 +53,14 @@ class WorkspaceStateRepository {
         commandId: existing.data.commandId, correlationId: existing.data.correlationId } });
   }
 
+  // Found live: this used to fetch the 200 most-recently-updated workspace-state rows TENANT-WIDE (list()
+  // had no way to filter by task_id) and find the match client-side. A row of this type is written for
+  // EVERY task that reaches render_required, across every application -- once more than 200 other tasks in
+  // the tenant had a more recently updated row, a genuinely existing row for THIS task fell out of the
+  // window and current() wrongly reported it missing. Filtering by task_id in the query itself means the
+  // result is exact regardless of how many other tasks in the tenant are active.
   async current({ tenantId, taskId }) {
-    const records = await this.records.list({ tenantId, recordType: "authoritative-workspace-state", limit: 200 });
+    const records = await this.records.list({ tenantId, recordType: "authoritative-workspace-state", taskId, limit: 5 });
     return records.find(record => record.task_id === taskId) || null;
   }
 }

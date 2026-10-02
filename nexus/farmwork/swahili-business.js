@@ -21,6 +21,7 @@ const SW = {
   loanBad: "Namba hizo hazionekani sawa (kiasi, riba chini ya 200%, na muda wa mwezi 1 hadi 360), kwa hivyo sijahesabu chochote.",
   loanLine: ({ amount, rate, months, flat, monthly, total, interest }) => `Mkopo wa ${amount}, riba ${rate}, muda wa miezi ${months}${flat ? " (riba tambarare)" : ""}: takriban ${monthly} kwa mwezi, ${total} zitalipwa kwa jumla, ambapo ${interest} ni riba.`,
   loanNeedRecords: "Ili kukuambia kama unaweza kumudu, nahitaji rekodi zako za mapato na matumizi; sema \"nimetumia 5000 kwa mbegu\" na \"nimeuza kilo 200 za mahindi kwa 9000\" yanapotokea.", loanMixed: "Rekodi zako zina zaidi ya sarafu moja, kwa hivyo siwezi kulinganisha.",
+  beMixedCurrency: ({ field }) => `Matumizi yako kwenye ${field} yana zaidi ya sarafu moja, kwa hivyo siwezi kuyajumlisha. Niambie gharama jumla moja kwa moja, kama "kuvunja hasara: gharama ni 60000, natarajia kilo 800".`,
   loanNoProfit: ({ months, profit }) => `Faida uliyorekodi katika miezi ${months} iliyopita ilikuwa ${profit}, kwa hivyo hakuna kinachobaki kwa malipo sasa hivi. Hii inalinganisha tu ulichorekodi; si ushauri wa kifedha.`,
   loanShare: ({ perMonth, months, share, high }) => `Faida uliyorekodi ilikuwa wastani wa ${perMonth} kwa mwezi katika miezi ${months}, kwa hivyo malipo yangechukua takriban asilimia ${share} yake${high ? " — hiyo ni kubwa, na mapato ya shamba yanaweza kubadilika sana kulingana na misimu" : ""}. Hii inalinganisha tu ulichorekodi; si ushauri wa kifedha.`,
   beNeed: ({ field, cost }) => `Ili kukokotoa bei ya kuvunja hasara nahitaji gharama na unachotarajia kuvuna, kama "bei ya kuvunja hasara: gharama 60000, natarajia kilo 800"${field ? `. Kwa ${field} ${cost}.` : "."}`, beNoSpend: "sina matumizi yaliyorekodiwa bado", beNoYield: ({ field }) => `nahitaji mavuno unayotarajia — sema "natarajia kilo 800 kutoka shamba ${field}"`,
@@ -208,7 +209,14 @@ async function handle(ctx) {
     let cost = null; let currency = ""; let expected = null;
     const costMatch = new RegExp(`gharama(?:\\s+(?:ni|za|ya))?\\s*(?:ni\\s*)?((?:(?:shilingi|sh|ksh|tsh|ush)\\s*)?${NUMBER}(?:\\s*shilingi)?)`, "i").exec(rest); if (costMatch) { const c = parseMoneySw(costMatch[1]); if (c) { cost = c.amount; currency = c.currency; } }
     const expMatch = /(?:natarajia|ninatarajia|mavuno yanayotarajiwa)\s+(.+?)(?:\s+kwa\s+(?:shilingi|bei)|$)/i.exec(rest); if (expMatch) { const q = parseQuantitySw(expMatch[1]); if (q) expected = { value: q.value, unit: q.unit }; }
-    if (field && cost === null) { const rows = (await list("money")).filter(record => record.data.type === "expense" && record.data.field === field.data.name && record.data.day >= `${ctx.today.slice(0, 4)}-01-01`); if (rows.length) { cost = round(rows.reduce((total, record) => total + record.data.amount, 0)); currency = rows[0].data.currency; } }
+    // Found live (money-arithmetic audit): same missing currency-mismatch guard as the English break-even
+    // path (budget.js) -- summed expense amounts across every matching record regardless of currency.
+    if (field && cost === null) {
+      const rows = (await list("money")).filter(record => record.data.type === "expense" && record.data.field === field.data.name && record.data.day >= `${ctx.today.slice(0, 4)}-01-01`);
+      const currencies = new Set(rows.map(record => record.data.currency || ""));
+      if (rows.length && currencies.size > 1) return SW.beMixedCurrency({ field: field.data.name });
+      if (rows.length) { cost = round(rows.reduce((total, record) => total + record.data.amount, 0)); currency = rows[0].data.currency; }
+    }
     if (field && !expected && field.data.expectedYield) expected = { value: field.data.expectedYield.value, unit: field.data.expectedYield.unit };
     if (!(cost > 0) || !expected) return SW.beNeed({ field: field?.data.name, cost: field ? (cost === null ? SW.beNoSpend : SW.beNoYield({ field: field.data.name })) : "" });
     const priceMatch = new RegExp(`kwa\\s+((?:shilingi|sh|ksh|tsh|ush)\\s*)?(${NUMBER})\\s*(shilingi|sh|ksh|tsh|ush)?\\s*(?:kwa|kila|/)\\s*(${UNIT_WORD})\\b`, "i").exec(rest); const price = priceMatch ? { amount: Number(priceMatch[2].replace(/,/g, "")), currency: /shilingi/i.test(`${priceMatch[1] || ""}${priceMatch[3] || ""}`) ? "shillings" : "", per: parseQuantitySw(`1 ${priceMatch[4]}`)?.unit } : null;

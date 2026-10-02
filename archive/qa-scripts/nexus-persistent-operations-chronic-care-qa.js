@@ -148,6 +148,23 @@ async function post(port, body) {
   return json.nexusOperationsResult;
 }
 
+// Found live: create_chronic_care_profile/add_rpm_reading/add_rtm_activity/
+// create_provider_review_packet are real PHI-shaped health-write actions --
+// a fully anonymous caller (exactly this script's own premise) must now be
+// refused, not succeed. Uses its own fetch (not post()'s blanket
+// response.ok assertion) specifically to assert that refusal.
+async function postExpectingHealthWriteRefusal(port, body) {
+  const response = await fetch(`http://127.0.0.1:${port}/api/nexus/operations/command`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ deviceId: QA_ANONYMOUS_DEVICE_ID, ...body })
+  });
+  const json = await response.json();
+  assert.equal(response.ok, false, `anonymous ${body.action} must be refused, not ${JSON.stringify(json)}`);
+  assert.equal(json.error, "health_write_not_allowed", `anonymous ${body.action} must be refused specifically as a health-write, got ${JSON.stringify(json)}`);
+  return json;
+}
+
 async function runApiQa() {
   const port = 4297 + Math.floor(Math.random() * 100);
   const tmpDb = path.join(root, `tmp-persistent-operations-${Date.now()}.json`);
@@ -167,23 +184,23 @@ async function runApiQa() {
     assert.equal(status.safety.noFakePayments, true, "safety must forbid fake payments");
     assert.equal(status.safety.noFakeIllnessPrevalenceMap, true, "safety must forbid fake prevalence maps");
 
-    const chronic = await post(port, { action: "create_chronic_care_profile", conditionArea: "hypertension", patientId: "qa-patient" });
-    assert(chronic.record.chronicCareId.startsWith("NX-CC-"), "chronic profile should get NX-CC id");
-    assert.equal(chronic.receipt.noExecutionAuthorized, true, "chronic receipt must not authorize execution");
+    await postExpectingHealthWriteRefusal(port, { action: "create_chronic_care_profile", conditionArea: "hypertension", patientId: "qa-patient" });
+    await postExpectingHealthWriteRefusal(port, { action: "add_rpm_reading", type: "blood_pressure", value: "148/92" });
+    await postExpectingHealthWriteRefusal(port, { action: "add_rtm_activity", type: "therapy_activity", value: "walked 15 minutes" });
+    await postExpectingHealthWriteRefusal(port, { action: "create_provider_review_packet" });
 
-    const rpm = await post(port, { action: "add_rpm_reading", type: "blood_pressure", value: "148/92" });
-    assert(rpm.record.readingId.startsWith("NX-RPM-"), "RPM reading should persist");
-    assert(rpm.timeline.some(item => item.type === "rpm"), "timeline should include RPM");
-
-    const rtm = await post(port, { action: "add_rtm_activity", type: "therapy_activity", value: "walked 15 minutes" });
-    assert(rtm.record.activityId.startsWith("NX-RTM-"), "RTM activity should persist");
-
-    const providerPacket = await post(port, { action: "create_provider_review_packet" });
-    assert.equal(providerPacket.record.status, "prepared", "provider review packet should be prepared only");
-
-    const deceased = await post(port, { action: "mark_deceased_stop_outreach" });
-    assert.equal(deceased.record.noContact, true, "deceased workflow should set no-contact");
-    assert.equal(deceased.record.status, "deceased-stop-outreach", "deceased workflow should stop outreach");
+    // mark_deceased_stop_outreach is not itself health-write-gated, but it
+    // operates on an existing chronic-care profile -- which this anonymous
+    // visitor can no longer create (see above), so it correctly reports no
+    // profile to act on rather than succeeding against nothing.
+    const deceasedResponse = await fetch(`http://127.0.0.1:${port}/api/nexus/operations/command`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deviceId: QA_ANONYMOUS_DEVICE_ID, action: "mark_deceased_stop_outreach" })
+    });
+    const deceasedJson = await deceasedResponse.json();
+    assert.equal(deceasedResponse.ok, false, `anonymous mark_deceased_stop_outreach must be refused for lacking a profile, not ${JSON.stringify(deceasedJson)}`);
+    assert.equal(deceasedJson.error, "chronic_care_profile_not_found", `expected a missing-profile refusal, got ${JSON.stringify(deceasedJson)}`);
 
     const pharmacy = await post(port, { action: "add_pharmacy_provider", name: "QA Pharmacy", serviceRegion: "QA Region" });
     assert.equal(pharmacy.record.type, "pharmacy", "pharmacy provider should persist");

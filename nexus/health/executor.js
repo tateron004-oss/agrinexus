@@ -45,6 +45,17 @@ function healthSafetyResponse(reading = {}) {
 function createHealthRecordExecutor({ records }) {
   if (!records?.create) throw new Error("A record repository is required.");
   return async function execute({ input = {}, context, taskId }) {
+    // Found live (restriction-bypass follow-up audit): every direct REST health-write route in server.js
+    // is gated on userIsRestrictedFrom(user, "health-record-write"), and so is the legacy cloud agent's
+    // health.* tool dispatch and the plain-conversation healthWork toolkit (nexus/brain/planner.js:223) --
+    // but this newer authoritative-task-engine executor for the "health.record" canonical tool, reachable
+    // from an ordinary typed command like "record my blood pressure as 140 over 90", had no restriction
+    // check at all. An Investor/Provider Reviewer account could approve the confirmation prompt and have a
+    // real PHI record written on their behalf. context.isRestrictedFrom is already wired onto every request
+    // context (nexus/compat/server-runtime-adapter.js's requestContext) -- it was just never called here.
+    if (context?.isRestrictedFrom?.("health-record-write")) {
+      throw Object.assign(new Error("This account type cannot write real health records."), { code: "health_record_write_restricted", status: 403 });
+    }
     const observation = observationFrom(input);
     const inserted = await records.create({
       tenantId: context.tenantId,

@@ -49,7 +49,7 @@ const dateWords = iso => String(iso || "").slice(0, 10);
 
 // Returns the words to answer with, or null when the text is not for the desk.
 async function communityTurn({ text, store, notifications, tenantId, userId, nameOf = null, roles = [], timeZone, now = new Date() }) {
-  if (!store?.addReport) return null;
+  if (!store?.addReport || !store?.addReportUnlessCapped) return null;
   const request = readDeskRequest(text);
   if (!request) return null;
   const userName = nameOf ? await nameOf({ tenantId, userId }).catch(() => "") : ""; // only looked up when the words were for the desk
@@ -59,10 +59,14 @@ async function communityTurn({ text, store, notifications, tenantId, userId, nam
   try {
     switch (request.action) {
       case "report": {
-        const mine = await store.listReports({ tenantId, userId });
-        if (mine.filter(row => ["open", "in_progress"].includes(row.content.status)).length >= MAX_OPEN_PER_PERSON) return "You already have ten open reports. Please wait for some to be resolved before adding more.";
-        const number = await store.addReport({ tenantId, userId, content: { kind: "report", text: request.text.slice(0, 300), category: category(request.text), status: "open", reporter: clean(userName).slice(0, 60), day: today, createdAt: now.toISOString() } });
-        return `Thank you. I've logged report #${number}: "${request.text.slice(0, 120)}". The community team can see it, along with your name. I'll tell you when it's updated, or ask "what is the status of my reports?".`;
+        // Found live: the MAX_OPEN_PER_PERSON cap used to be a plain check-then-act read (listReports,
+        // then addReport if under the cap), with no lock -- a burst of concurrent report requests from
+        // the same person could all pass the check. addReportUnlessCapped() re-checks and inserts under
+        // one transaction-scoped advisory lock, the same pattern already used for the announcement cap.
+        const result = await store.addReportUnlessCapped({ tenantId, userId, maxOpenPerPerson: MAX_OPEN_PER_PERSON,
+          content: { kind: "report", text: request.text.slice(0, 300), category: category(request.text), status: "open", reporter: clean(userName).slice(0, 60), day: today, createdAt: now.toISOString() } });
+        if (result.capped) return "You already have ten open reports. Please wait for some to be resolved before adding more.";
+        return `Thank you. I've logged report #${result.number}: "${request.text.slice(0, 120)}". The community team can see it, along with your name. I'll tell you when it's updated, or ask "what is the status of my reports?".`;
       }
       case "my-reports": {
         // Found live: this compared against content.day, the report's

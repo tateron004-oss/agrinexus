@@ -156,6 +156,7 @@ class OpenEndedPlanner {
       if (statement?.invalid) return answer(`I need ${statement.name}'s number with the country code, like +254712345678, so I can dial or text it.`);
       if (statement) {
         const saved = await memory.saveContact({ ...scope, ...statement });
+        if (saved.full) return answer(`You have too many saved contacts to add another. Say "forget" one first, or ask "who are my contacts?"`);
         return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}. Say "forget ${statement.name}" any time, or "who are my contacts?"`);
       }
       const request = extractContactRequest(command.text);

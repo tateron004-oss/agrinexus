@@ -103,6 +103,34 @@ test("nothing is sent overnight, while paused, without a town, or without a devi
   assert.equal((await failing.service.sendDue({ at: MORNING })).skippedNoForecast, 1);
 });
 
+// Found live (fresh-module audit): sendDue used to call listActive({limit:500}) exactly once with no
+// further paging. Since listActive orders by created_at with no cursor, every sweep saw the exact same
+// oldest 500 rows forever -- the 501st person to ever turn weather alerts on (and everyone after them)
+// was PERMANENTLY excluded from every future sweep, not just skipped once. A real, stateful, cursor-aware
+// fake here (unlike the other tests' harness(), which ignores listActive's arguments entirely) proves the
+// sweep now pages through every active row.
+test("the sweep pages through every active setting, not just the first 500 (regression: permanent starvation past the old fixed limit)", async () => {
+  const all = Array.from({ length: 650 }, (_, i) => ({
+    scheduleId: `sch_${String(i).padStart(4, "0")}`, tenantId: "t1", userId: `u${i}`, timeZone: "Africa/Nairobi",
+    createdAt: new Date(2026, 0, 1, 0, 0, i).toISOString()
+  }));
+  const paginatedSettings = {
+    async listActive({ limit, afterCreatedAt, afterScheduleId } = {}) {
+      let rows = all;
+      if (afterCreatedAt && afterScheduleId) rows = all.filter(row => row.createdAt > afterCreatedAt || (row.createdAt === afterCreatedAt && row.scheduleId > afterScheduleId));
+      return rows.slice(0, limit);
+    }
+  };
+  const queued = [];
+  const notifications = { async enqueue(row) { queued.push(row); }, async existsByKey() { return false; } };
+  const memory = { async profile() { return [{ content: { kind: "location", value: "Kisumu" } }]; } };
+  const service = createWeatherAlertService({ notifications, settings: paginatedSettings, memory,
+    devices: { async listPushable() { return [{ id: 1 }]; } }, autonomyControl: { async isPaused() { return false; } }, fetchImpl: fakeFetch() });
+  const result = await service.sendDue({ at: MORNING });
+  assert.equal(result.checked, 650, "every active setting must be checked, not just the first 500 (old fixed-limit bug)");
+  assert.equal(new Set(queued.map(row => row.userId)).size, 650, "everyone, not just the first 500 people, must receive their alert");
+});
+
 test("people in the same town share one forecast lookup, and quiet hours follow each person's own time zone", async () => {
   const shared = harness({ settings: [person("u1"), person("u2"), person("u3", "Pacific/Auckland")] });
   const result = await shared.service.sendDue({ at: MORNING }); // 17:00 in Auckland: not quiet
