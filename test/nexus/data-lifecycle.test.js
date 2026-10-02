@@ -183,6 +183,7 @@ test("account deletion also erases this subject's sync-operation history", async
     {rows:[]},{rows:[]},{rows:[]},{rows:[]},{rows:[]},
     {rows:[]},{rows:[]},
     {rows:[]},
+    {rows:[]},{rows:[]},{rows:[]},
     {rows:[{sync_id:'sync1'},{sync_id:'sync2'}]}]);
   const result = await new DataLifecycleRepository(x).executeDeletion({ tenantId:'tenant-a', requestId:'request-a' });
   assert.equal(result.state,'verified');
