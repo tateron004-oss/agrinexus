@@ -79,6 +79,14 @@ async function workforceAdvanced(type, extra = {}) {
   return { status: res.status, body: await res.json() };
 }
 
+async function workforceAction(type) {
+  const res = await fetch(`${base}/api/workforce/action`, {
+    method: "POST", headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ type })
+  });
+  return { status: res.status, body: await res.json() };
+}
+
 test("quiz-attempt numbers stay unique past the 20-item cap, instead of colliding on the same number forever", async () => {
   const numbers = new Set();
   for (let i = 0; i < 25; i += 1) {
@@ -90,7 +98,8 @@ test("quiz-attempt numbers stay unique past the 20-item cap, instead of collidin
   }
   assert.equal(numbers.size, 25, `expected 25 unique quiz-attempt numbers, got ${numbers.size} (a collision means numbering is still pinned by array.length)`);
   const db = JSON.parse(fs.readFileSync(tempDbPath, "utf8"));
-  assert.equal(db.profile.quizAttempts.length, 20, "the array itself must still stay capped at 20");
+  const demoUser = db.users.find(item => item.email === "demo@agrinexus.org");
+  assert.equal(demoUser.quizAttempts.length, 20, "the array itself must still stay capped at 20");
 });
 
 test("note/report/transcript numbers also stay unique past the 20-item cap", async () => {
@@ -115,9 +124,16 @@ test("workforce/advanced arrays stay capped at 20, and their record numbers stay
     onboarding: "packetNumber", document: "documentNumber", timesheet: "timesheetNumber",
     payroll: "payrollNumber", evaluation: "reviewNumber", "shift-request": "requestNumber"
   };
+  // payroll and evaluation now each require a real prerequisite (found live, same audit as the numbering/
+  // cap bug this test already covers): payroll needs a fresh, still-unpaid timesheet, and evaluation
+  // needs a real interview to have happened. Meeting both before their own loops keeps this test's own
+  // job (numbering/cap, not the new gates) unaffected by the fix.
+  for (let readiness = 0; readiness < 50; readiness += 10) await workforceAction("build-profile");
+  await workforceAction("interview");
   for (const type of ["onboarding", "document", "timesheet", "payroll", "evaluation", "shift-request"]) {
     const numbers = new Set();
     for (let i = 0; i < 25; i += 1) {
+      if (type === "payroll") { const submitted = await workforceAdvanced("timesheet"); assert.equal(submitted.status, 200, JSON.stringify(submitted.body)); }
       const result = await workforceAdvanced(type);
       assert.equal(result.status, 200, JSON.stringify(result.body));
       const record = result.body.workforceAdvancedResult?.record;

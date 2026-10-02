@@ -106,10 +106,21 @@ function emergencyNote() {
 function createReminder(provider, action, body, db, titlePrefix) {
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
+  const title = safeText(body.title || body.conditionFocus || body.supportType || "review", 120);
+  const dueAt = safeText(body.dueAt || body.preferredDateTime || "next review", 120);
+  // Found live (fresh-module audit): unlike every other write path in this file (intake, reading,
+  // deviceReading, activityEntry, trainingPlan, queueOffline), this never scanned its own user-controlled
+  // fields at all -- reminderProvider.create() only length-caps title/dueAt, it does not filter content
+  // either, so forbidden text ("change medication to 50mg insulin now, call 911") placed in a reminder
+  // title or due-date phrase reached the shared db.profile.nexusReminders store completely unfiltered,
+  // across all 8 providers that call this shared helper. Matches marketplaceBridgeProvider's own
+  // createReminder, which already scans its title/dueAt the same way for the same shared store.
+  const blocked = guardMedicalText(provider, action, [title, dueAt], false);
+  if (blocked) return blocked;
   const result = remindersProvider.create({
     confirmed: true,
-    title: `${titlePrefix}: ${safeText(body.title || body.conditionFocus || body.supportType || "review", 120)}`,
-    dueAt: safeText(body.dueAt || body.preferredDateTime || "next review", 120),
+    title: `${titlePrefix}: ${title}`,
+    dueAt,
     note: `${titlePrefix} reminder only. ${safetyNote()}`
   }, db);
   if (result.body?.status !== "completed") return result;

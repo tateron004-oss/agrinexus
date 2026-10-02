@@ -177,6 +177,12 @@ function saveSession(body = {}, db, env = process.env) {
   if (disabled) return disabled;
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
+  // Found live (fresh-module audit): unlike intake() above, which scans these exact same fields before
+  // persisting them, saveSession() called normalizeIntake(body) directly and skipped the scan entirely --
+  // forbidden content in reason/concern/questions/selectedProviderReference/accessibilityNeeds that
+  // intake() would reject could still reach the sessions store through this route.
+  const blocked = guardMedicalText(PROVIDER, action, [body.reason, body.concern, body.questions, body.selectedProviderReference, body.accessibilityNeeds], false);
+  if (blocked) return blocked;
   const record = saveRecord(db, SESSIONS, { ...normalizeIntake(body), status: "saved_local_preparation" });
   return response(PROVIDER, action, "completed", "Telehealth session preparation saved locally after confirmation. No live session was created.", { session: record });
 }

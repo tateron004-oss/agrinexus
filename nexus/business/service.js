@@ -3,6 +3,7 @@
 const templates = require("./templates");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine");
 const { renderPdfBuffer } = require("../../server/providers/exportProvider");
+const { formatMoney } = require("./voice-dispatch.js");
 const DATA_SCOPE = "business:client-data";
 const AI_SCOPE = "business:ai";
 const BILLING_SCOPE = "business:billing";
@@ -276,16 +277,23 @@ class BusinessService {
     // accounting practice: round each line to the cent first, then sum the
     // already-rounded cent values for the total.
     const rowTotals = items.map(item => Math.round(item.quantity * item.unitPrice * 100) / 100);
-    const total = rowTotals.reduce((sum, rowTotal) => sum + rowTotal, 0);
+    // Found live (money-arithmetic audit): the total summed rowTotals with no currency label or check
+    // at all -- addInvoiceItem now refuses to let a new item's currency mismatch what's already on this
+    // invoice (nexus/business/voice-dispatch.js), but this still buckets by currency as defense-in-depth
+    // for any invoice item written before that fix, or through another path, rather than silently
+    // blending currencies into one meaningless number the way a plain sum would.
+    const currencyTotals = {};
+    items.forEach((item, index) => { const currency = (item.currency || "USD").toUpperCase(); currencyTotals[currency] = Math.round(((currencyTotals[currency] || 0) + rowTotals[index]) * 100) / 100; });
+    const totalLine = Object.entries(currencyTotals).map(([currency, amount]) => formatMoney(currency, amount)).join(" + ");
     const content = [
       `Bill to: ${cell(invoice.clientName || "Client")}`,
       `Date: ${cell(invoice.date)}    Due: ${cell(invoice.dueDate)}`,
       "",
       "| Description | Qty | Unit Price | Total |",
       "|---|---|---|---|",
-      ...items.map((item, index) => `| ${cell(item.description)} | ${item.quantity} | ${item.unitPrice.toFixed(2)} | ${rowTotals[index].toFixed(2)} |`),
+      ...items.map((item, index) => `| ${cell(item.description)} | ${item.quantity} | ${formatMoney(item.currency, item.unitPrice)} | ${formatMoney(item.currency, rowTotals[index])} |`),
       "",
-      `Total due: ${total.toFixed(2)}`,
+      `Total due: ${totalLine}`,
       invoice.notes ? invoice.notes : ""
     ].join("\n");
     const pdf = await renderPdfBuffer(`Invoice ${invoiceNumber}`, content);
@@ -310,7 +318,20 @@ class BusinessService {
     // real duplicate event on the user's actual calendar and silently
     // overwrote the stored calendarEventId/calendarLink, orphaning the first
     // event with no way to manage it through the app anymore.
-    if (appointment.status === "synced" || appointment.status === "synced-simulated") {
+    // Found live (business-module follow-up audit): the guard compared
+    // appointment.status with an exact-string match, but normalizeEditable()
+    // never validates/normalizes this field's case at all (it's a freeform
+    // string up to 8000 chars, writable directly via the generic PUT the
+    // dashboard's own save endpoint uses for every other field) -- the same
+    // case-sensitivity bug class already fixed repeatedly elsewhere in this
+    // file's sweep predicates, just never applied to the one write-time guard
+    // whose entire purpose is preventing a real duplicate external side
+    // effect. "Synced"/"SYNCED" (written via the raw API, not reachable from
+    // today's voice/chat surface, but reachable from the same REST endpoint
+    // any other client -- mobile, an integration, a future UI -- would use)
+    // silently bypassed the guard and let a second real calendar event through.
+    const normalizedStatus = String(appointment.status || "").toLowerCase();
+    if (normalizedStatus === "synced" || normalizedStatus === "synced-simulated") {
       fail("business_appointment_already_synced", "This appointment is already synced to your calendar.", 409);
     }
     if (!this.providers.calendar) fail("business_provider_unavailable", "Calendar sync is unavailable.", 503);

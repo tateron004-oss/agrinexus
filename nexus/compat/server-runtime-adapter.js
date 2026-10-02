@@ -1024,7 +1024,12 @@ function requestContext(req, user, isRestrictedFrom = () => false) {
   // consumer -- e.g. the health-worker toolkit, which has no native concept of userIsRestrictedFrom's
   // Investor/Provider Reviewer denylist -- can ask the same question every other real-effect route
   // in server.js already asks, without needing the raw user object threaded through separately.
-  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
+  // Found live (identity/access-control follow-up audit): acceptanceContext() below honors a "*" wildcard
+  // permission (matching AccessControl.authorize()'s own nexus_organization_memberships.permissions
+  // handling), but this context -- the one built for every real live user request -- did not. Harmless
+  // today (authoritativeRuntimeUser() only ever grants an explicit permission list, never "*"), but kept
+  // consistent so a future admin/superuser permission model doesn't silently fail under this context.
+  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has("*") || permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
 }
 
 function acceptanceContext(principal, values = {}) {

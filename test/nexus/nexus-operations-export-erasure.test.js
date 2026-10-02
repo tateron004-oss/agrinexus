@@ -128,6 +128,41 @@ test("account erasure actually removes a user's real applicant profile from Nexu
     "a different real account's own applicant profile must survive another account's erasure untouched");
 });
 
+// Found live (Nexus Operations sibling audit, same shape already fixed for droneMissionEvents/
+// droneImageryReports/heatRiskReports): add_tracking_event never set ownerId on the event it wrote, so
+// this content silently survived erasure forever and was absent from export, with no disclosed gap.
+test("a real shipment tracking-event note is included in the owning account's own export and removed on erasure", async () => {
+  const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
+  await createTestUser(adminCookie, "zzops-export-victim4@example.com", "VictimPass2026!");
+  await createTestUser(adminCookie, "zzops-export-other4@example.com", "OtherPass2026!");
+  const victimCookie = await login("zzops-export-victim4@example.com", "VictimPass2026!");
+  const otherCookie = await login("zzops-export-other4@example.com", "OtherPass2026!");
+
+  const shipment = await opsAction(victimCookie, { action: "create_shipment", origin: "Farm A", destination: "Market B" });
+  assert.equal(shipment.json.ok, true, JSON.stringify(shipment.json));
+  const tracking = await opsAction(victimCookie, { action: "add_tracking_event", shipmentId: shipment.json.record.shipmentId, status: "picked-up", notes: "Left the farm at dawn" });
+  assert.equal(tracking.json.ok, true, JSON.stringify(tracking.json));
+
+  const victimExport = await post(victimCookie, "/api/account/export");
+  assert.equal(victimExport.status, 200, JSON.stringify(victimExport.body));
+  assert.equal(victimExport.body.recordCounts.trackingEvents, 1,
+    "the victim's own real tracking-event note must be included in their own export, not silently omitted");
+
+  await opsAction(otherCookie, { action: "create_shipment" });
+  const otherTracking = await opsAction(otherCookie, { action: "add_tracking_event", notes: "Someone else's note" });
+  assert.equal(otherTracking.json.ok, true, JSON.stringify(otherTracking.json));
+
+  const erase = await post(victimCookie, "/api/account/erase", { confirmed: true });
+  assert.equal(erase.status, 200, JSON.stringify(erase.body));
+  assert.equal(erase.body.verification.profileRecordsRemoved.trackingEvents, 1,
+    "erasing the account must actually remove the real tracking-event note, not just claim success while leaving it in place");
+
+  const otherExportAfter = await post(otherCookie, "/api/account/export");
+  assert.equal(otherExportAfter.status, 200, JSON.stringify(otherExportAfter.body));
+  assert.equal(otherExportAfter.body.recordCounts.trackingEvents, 1,
+    "a different real account's own tracking-event note must survive another account's erasure untouched");
+});
+
 test("account export honestly discloses that Nexus Operations' own audit trail (receipts/consent/audit log) is retained, not included", async () => {
   const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
   await createTestUser(adminCookie, "zzops-export-victim3@example.com", "VictimPass2026!");

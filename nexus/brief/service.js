@@ -63,33 +63,44 @@ function createBriefService({ notifications, settings = null, memory = null, far
       const result = { checked: 0, sent: 0, skippedPaused: 0, skippedNoDevice: 0, skippedNothingToSay: 0 };
       if (!settings?.listActive || !notifications?.enqueue) return result;
       const paused = new Map();
-      for (const setting of await settings.listActive({ limit: 500 })) {
-        result.checked += 1;
-        if (!isDueNow({ timeOfDay: setting.timeOfDay, timeZone: setting.timeZone, now: at })) continue;
-        const clock = localClock(at, setting.timeZone);
-        const key = `brief:${setting.userId}:${clock.day}`;
-        if (handledToday.has(key)) continue;
-        if (!paused.has(setting.tenantId)) paused.set(setting.tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId: setting.tenantId }).catch(() => false) : false);
-        if (paused.get(setting.tenantId)) { result.skippedPaused += 1; continue; }
-        if (notifications.existsByKey && await notifications.existsByKey({ tenantId: setting.tenantId, idempotencyKey: key })) { handledToday.add(key); continue; }
-        let devicesFound = [];
-        try { devicesFound = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { devicesFound = []; }
-        if (!devicesFound.length) { result.skippedNoDevice += 1; continue; }
-        const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
-        const text = await composeFor({ tenantId: setting.tenantId, userId: setting.userId, known, timeZone: setting.timeZone });
-        // Found live (worker-sweep reliability audit): handledToday used to be marked BEFORE the real
-        // notifications.enqueue() call below, which does a real DB insert that can throw on any transient
-        // failure (connection blip, timeout, pool exhaustion). An uncaught throw there left the key
-        // permanently marked handled with nothing ever actually queued -- the person's brief was silently
-        // skipped for the rest of the local day, with no retry and no per-user signal, only a generic
-        // "brief_sweep_failed" log line. Only mark handled once the real work is actually done (or once
-        // there is genuinely nothing to say, a stable outcome that's safe to mark immediately).
-        if (!text) { handledToday.add(key); result.skippedNothingToSay += 1; continue; }
-        await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
-          content: { title: "Your morning brief", body: text, kind: "daily_brief" } });
-        handledToday.add(key);
-        logger?.info?.("brief.queued", { userId: setting.userId, day: clock.day });
-        result.sent += 1;
+      // Found live (fresh-module audit, same shape as nexus/alerts/service.js's sendDue): a single
+      // listActive({limit:500}) call with no further paging meant a sweep always saw the exact same oldest
+      // rows -- anyone past the limit was permanently excluded from every future sweep. Paged via a keyset
+      // cursor so a single sweep covers every active row, however many there are.
+      let cursor = null;
+      for (;;) {
+        const page = await settings.listActive({ limit: 500, ...(cursor ? { afterCreatedAt: cursor.createdAt, afterScheduleId: cursor.scheduleId } : {}) });
+        if (!page.length) break;
+        for (const setting of page) {
+          result.checked += 1;
+          if (!isDueNow({ timeOfDay: setting.timeOfDay, timeZone: setting.timeZone, now: at })) continue;
+          const clock = localClock(at, setting.timeZone);
+          const key = `brief:${setting.userId}:${clock.day}`;
+          if (handledToday.has(key)) continue;
+          if (!paused.has(setting.tenantId)) paused.set(setting.tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId: setting.tenantId }).catch(() => false) : false);
+          if (paused.get(setting.tenantId)) { result.skippedPaused += 1; continue; }
+          if (notifications.existsByKey && await notifications.existsByKey({ tenantId: setting.tenantId, idempotencyKey: key })) { handledToday.add(key); continue; }
+          let devicesFound = [];
+          try { devicesFound = devices?.listPushable ? await devices.listPushable({ tenantId: setting.tenantId, userId: setting.userId }) : [{}]; } catch { devicesFound = []; }
+          if (!devicesFound.length) { result.skippedNoDevice += 1; continue; }
+          const known = await factsByKind(memory, { tenantId: setting.tenantId, userId: setting.userId });
+          const text = await composeFor({ tenantId: setting.tenantId, userId: setting.userId, known, timeZone: setting.timeZone });
+          // Found live (worker-sweep reliability audit): handledToday used to be marked BEFORE the real
+          // notifications.enqueue() call below, which does a real DB insert that can throw on any transient
+          // failure (connection blip, timeout, pool exhaustion). An uncaught throw there left the key
+          // permanently marked handled with nothing ever actually queued -- the person's brief was silently
+          // skipped for the rest of the local day, with no retry and no per-user signal, only a generic
+          // "brief_sweep_failed" log line. Only mark handled once the real work is actually done (or once
+          // there is genuinely nothing to say, a stable outcome that's safe to mark immediately).
+          if (!text) { handledToday.add(key); result.skippedNothingToSay += 1; continue; }
+          await notifications.enqueue({ tenantId: setting.tenantId, userId: setting.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
+            content: { title: "Your morning brief", body: text, kind: "daily_brief" } });
+          handledToday.add(key);
+          logger?.info?.("brief.queued", { userId: setting.userId, day: clock.day });
+          result.sent += 1;
+        }
+        cursor = { createdAt: page[page.length - 1].createdAt, scheduleId: page[page.length - 1].scheduleId };
+        if (page.length < 500) break;
       }
       if (handledToday.size > 5000) handledToday.clear();
       return result;

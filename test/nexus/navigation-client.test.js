@@ -222,6 +222,85 @@ test("leaving the route finds a new one, but not more than once every twenty sec
   assert.equal(t.calls.length, 1); assert.ok(t.spoken.some(item => /can't plan a new route without a connection/.test(item.text)), t.spoken.map(item => item.text).join(" | ")); assert.equal(t.navigator.active, true, "still guiding");
 });
 
+// Found live (fresh-module frontend audit): reroute() and go() each captured state, awaited a real routing
+// API call, then wrote their result straight onto the active session with no check that it was still the
+// SAME session by the time the call resolved. A stale reroute response for an abandoned destination, or the
+// loser of two overlapping go() calls, could silently win and overwrite a newer, still-active session's
+// route.
+function deferredApi() {
+  const pending = [];
+  const api = async body => new Promise((resolve, reject) => { pending.push({ body, resolve, reject }); });
+  return { api, pending };
+}
+
+test("a stale reroute response cannot overwrite a newer navigation session started while it was in flight", async () => {
+  const d = deferredApi();
+  const spoken = []; const watchers = []; const shows = [];
+  const geolocation = {
+    getCurrentPosition(ok) { ok({ coords: { latitude: -1.3, longitude: 36.8, accuracy: 10 } }); },
+    watchPosition(ok, err) { watchers.push({ ok, err }); return watchers.length; }, clearWatch() {}
+  };
+  const navigator = nav.createNavigator({ geolocation, api: d.api, speak: (text, opts) => spoken.push({ text, ...opts }), storage: memoryStorage(), ui: { show: value => shows.push(value), error() {}, hide() {} }, wakeLock: async () => null, now: () => Date.now(), wait: fn => fn() });
+
+  // Start guiding to destination A.
+  const goA = navigator.handle("take me to Destination A");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(d.pending.length, 1, "go() must have issued its own route request by now");
+  d.pending[0].resolve({ route: { ...straightRoute(), destination: { label: "Destination A", lat: -1.28, lng: 36.8 } } });
+  await goA;
+
+  // Trigger a reroute (off-route) for the A session -- its request goes out but does not resolve yet.
+  for (let i = 0; i < 3; i += 1) navigator._onFix({ coords: { latitude: -1.2, longitude: 36.9, accuracy: 10 } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(d.pending.length, 2, "the reroute's own route request must be in flight");
+  const staleReroute = d.pending[1];
+
+  // Before the stale reroute resolves, the person corrects themselves to a brand-new destination B.
+  const goB = navigator.handle("take me to Destination B");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(d.pending.length, 3, "go() for destination B must have issued its own route request");
+  d.pending[2].resolve({ route: { ...straightRoute(), destination: { label: "Destination B", lat: -1.5, lng: 37.0 } } });
+  await goB;
+  shows.length = 0;
+
+  // The stale reroute for A now resolves, long after B took over.
+  staleReroute.resolve({ route: { ...straightRoute(), destination: { label: "Destination A", lat: -1.28, lng: 36.8 } } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(!spoken.some(item => /New route/.test(item.text)), "the stale reroute must not announce a new route for the abandoned destination");
+
+  // Following the still-active session must keep reporting Destination B, not have silently reverted to A.
+  navigator._onFix({ coords: { latitude: -1.5, longitude: 37.0, accuracy: 10 } });
+  assert.ok(shows.some(value => value.destination === "Destination B"), "the active session's own destination must still be B");
+  assert.ok(!shows.some(value => value.destination === "Destination A"), "the stale reroute must never have made the panel show the abandoned destination A again");
+  navigator.stop(true);
+});
+
+test("two overlapping go() calls: only the last one issued wins, whichever route request resolves first", async () => {
+  const d = deferredApi();
+  const watchers = [];
+  const geolocation = {
+    getCurrentPosition(ok) { ok({ coords: { latitude: -1.3, longitude: 36.8, accuracy: 10 } }); },
+    watchPosition(ok, err) { watchers.push({ ok, err }); return watchers.length; }, clearWatch() {}
+  };
+  const navigator = nav.createNavigator({ geolocation, api: d.api, speak: () => {}, storage: memoryStorage(), ui: { show() {}, error() {}, hide() {} }, wakeLock: async () => null, now: () => Date.now(), wait: fn => fn() });
+
+  const firstGo = navigator.handle("take me to Old Destination");
+  await new Promise(resolve => setImmediate(resolve));
+  const secondGo = navigator.handle("take me to New Destination"); // issued while the first is still awaiting its route
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(d.pending.length, 2);
+
+  // The FIRST call's route request resolves LAST (network timing is not guaranteed to match call order).
+  d.pending[1].resolve({ route: { ...straightRoute(), destination: { label: "New Destination", lat: -1.5, lng: 37.0 } } });
+  const secondResult = await secondGo;
+  d.pending[0].resolve({ route: { ...straightRoute(), destination: { label: "Old Destination", lat: -1.28, lng: 36.8 } } });
+  const firstResult = await firstGo;
+
+  assert.match(secondResult, /New Destination/, "the call that was actually issued last must win");
+  assert.equal(firstResult, "", "the superseded call must resolve quietly, not overwrite the session or speak a stale destination");
+  navigator.stop(true);
+});
+
 test("repeat, how far, stop and losing permission while guiding", async () => {
   const t = setup(); await t.navigator.handle("take me to Kibera Health Centre"); t.p.emit(-1.3 + 60 * 0.0001, 36.8);
   assert.match(await t.navigator.handle("repeat that"), /^In (?:450|500) meters, turn left onto Second Road\.$/); assert.match(await t.navigator.handle("how far is it"), /kilometers? to go, about \d+ minutes\.$/);

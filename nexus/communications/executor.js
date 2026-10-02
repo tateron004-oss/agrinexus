@@ -24,9 +24,21 @@ function normalizeChannel(value) {
 }
 
 function createCommunicationsSendExecutor({ env = process.env } = {}) {
-  return async function execute({ input = {} }) {
+  return async function execute({ input = {}, context }) {
     const channel = normalizeChannel(input.channel);
     const handler = CHANNEL_HANDLERS[channel];
+    // Found live (restriction-bypass follow-up audit): every direct REST send/call route in server.js
+    // (SMS/WhatsApp/email/call) is gated on userIsRestrictedFrom(user, "communications-send"), and the
+    // legacy cloud agent and provider dispatch paths were fixed the same way -- but this newer
+    // authoritative-task-engine executor, reachable from an ordinary typed command like "text +254... saying
+    // hello" via nexus/brain/planner.js's sendMessagePlan/callPlan, had no restriction check at all. An
+    // Investor/Provider Reviewer account could approve the confirmation prompt and have a real SMS/WhatsApp/
+    // call/email sent on their behalf. context.isRestrictedFrom is already wired onto every request context
+    // (nexus/compat/server-runtime-adapter.js's requestContext) -- it was just never called here.
+    if (context?.isRestrictedFrom?.("communications-send")) {
+      throw Object.assign(new Error(channel === "call" ? "This account type cannot start a real call." : "This account type cannot send real messages."),
+        { code: "communications_send_restricted", status: 403 });
+    }
     // The engine's own confirmationRequired/consentScope gate on
     // "communications.send" (canonical-provider-definitions.js) has already
     // been satisfied by the time execute() reaches this executor -- pass

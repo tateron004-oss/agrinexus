@@ -70,6 +70,13 @@ async function handle(ctx) {
     if (costMatch) { const c = parseMoney(`for ${costMatch[1]}`) || { amount: num(costMatch[1].replace(/[^\d.]/g, "")), currency: "" }; cost = c.amount; currency = c.currency; }
     if (field && cost === null) {
       const rows = (await ctx.store.list({ ...scope, collection: "money" })).filter(record => record.data.type === "expense" && record.data.field === field.data.name && record.data.day >= `${ctx.today.slice(0, 4)}-01-01`);
+      // Found live (money-arithmetic audit): unlike the sibling loan-affordability check 20 lines above
+      // (which correctly refuses to compare when currencies.size > 1), this summed expense amounts across
+      // every matching record regardless of currency -- a farmer who recorded spending in more than one
+      // currency for the same field got a break-even cost that was off by roughly the exchange rate, not
+      // just a rounding error.
+      const currencies = new Set(rows.map(record => record.data.currency || ""));
+      if (rows.length && currencies.size > 1) return `Your spending on ${field.data.name} uses more than one currency, so I can't add it up. Tell me the total cost directly, like "break even: costs 60000, expected 800 kg".`;
       if (rows.length) { cost = round(rows.reduce((sum, record) => sum + record.data.amount, 0)); currency = rows[0].data.currency; }
     }
     if (field && !expected && field.data.expectedYield) expected = { value: field.data.expectedYield.value, unit: field.data.expectedYield.unit };

@@ -42,7 +42,7 @@ test("the setting is a parked row under its own job type, and refuses an invalid
   await repo.set({ tenantId: "t1", userId: "u1", dayOfWeek: 0, timeOfDay: "18:00", timeZone: "Africa/Nairobi" });
   const insert = calls.find(call => /insert into nexus_schedules/.test(call.sql));
   assert.equal(insert.params[3], JOB_TYPE); assert.equal(JOB_TYPE, "summary.weekly"); assert.equal(insert.params[7], PARKED);
-  assert.deepEqual((await repo.listActive())[0], { scheduleId: "sch_1", tenantId: "t1", userId: "u1", dayOfWeek: 0, timeOfDay: "18:00", timeZone: "Africa/Nairobi" });
+  assert.deepEqual((await repo.listActive())[0], { scheduleId: "sch_1", tenantId: "t1", userId: "u1", dayOfWeek: 0, timeOfDay: "18:00", timeZone: "Africa/Nairobi", createdAt: undefined });
   assert.equal((await repo.get({ tenantId: "t1", userId: "u1" })).dayOfWeek, 0);
   assert.equal(await repo.stop({ tenantId: "t1", userId: "u1" }), 1);
   await assert.rejects(repo.set({ tenantId: "t1", userId: "u1", dayOfWeek: 9, timeOfDay: "18:00", timeZone: "x" }));

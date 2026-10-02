@@ -135,6 +135,19 @@ const phoneAudioCache = new Map();
 // OpenAI call plus TTS on every single turn.
 const PHONE_CALL_MAX_TURNS = Number(process.env.PHONE_CALL_MAX_TURNS || 40);
 const spotifyOAuthStates = new Map();
+const SPOTIFY_OAUTH_STATE_TTL_MS = Number(process.env.SPOTIFY_OAUTH_STATE_TTL_MS || 10 * 60 * 1000);
+// Found live (server/ dir module sweep follow-up): the callback route only
+// ever deletes a state entry on a completed round trip (success or Spotify-
+// reported error) -- a user who starts the login flow and then abandons it
+// (closes the tab, denies consent without Spotify redirecting back at all)
+// leaves its entry in this in-memory Map forever, for the life of the
+// server process. OAuth states are only ever useful for a few minutes, so
+// sweep expired ones whenever a new flow starts.
+function cleanupSpotifyOAuthStates(now = Date.now()) {
+  for (const [state, entry] of spotifyOAuthStates.entries()) {
+    if (now - Number(entry?.createdAt || 0) > SPOTIFY_OAUTH_STATE_TTL_MS) spotifyOAuthStates.delete(state);
+  }
+}
 const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 const authoritativeNexusRuntime = createServerRuntimeAdapter({
   resolveUser: async req => authoritativeRuntimeUser(currentUser(req, await readDb())),
@@ -2357,6 +2370,29 @@ async function verifyNexusHealthSourceLive(sourceIdOrUrl = "") {
 // grows past a threshold so this can't grow unbounded.
 const RATE_BUCKET_SWEEP_THRESHOLD = 5000;
 
+// Found live (CSRF/session/rate-limit audit): rateLimit()/authRateLimit() below keyed every bucket on
+// req.socket.remoteAddress -- the raw TCP peer of whatever connection this process itself accepted. The
+// real production service (nexus-genesis-certified in render.yaml) is a Render web service, which sits
+// behind Render's own edge proxy; the app never sees a client's real socket, only a connection from
+// Render's internal proxy (this is exactly why secureCookieAttribute() above already reads
+// x-forwarded-proto instead of trusting req.socket.encrypted). With remoteAddress effectively constant
+// for every inbound request, every per-caller rate budget collapsed into one shared, globally-exhaustible
+// bucket -- most seriously on login/password-reset (10 attempts/5min, authRateLimit below): a single
+// unauthenticated attacker could lock every real user out of logging in, repeatably, for 5-minute windows,
+// with negligible effort. AGRINEXUS_TRUST_PROXY (set true in render.yaml for the real deployment) opts
+// into trusting the LAST hop of X-Forwarded-For -- the one this app's own single trusted proxy appended,
+// never something an attacker could have supplied themselves by forging an earlier hop in that header --
+// falling back to remoteAddress when the app isn't known to be behind that trusted proxy (local dev, this
+// test suite, or any future direct-exposure deployment), so an untrusted header is never trusted by
+// default.
+function rateLimitClientKey(req) {
+  if (String(process.env.AGRINEXUS_TRUST_PROXY || "").toLowerCase() === "true") {
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",").map(part => part.trim()).filter(Boolean);
+    if (forwarded.length) return forwarded[forwarded.length - 1];
+  }
+  return req.socket.remoteAddress || "local";
+}
+
 function rateBucketCheck(key, limit, windowMs) {
   const now = Date.now();
   if (rateBuckets.size > RATE_BUCKET_SWEEP_THRESHOLD) {
@@ -2377,7 +2413,7 @@ function rateBucketCheck(key, limit, windowMs) {
 function rateLimit(req, limit = 180, windowMs = 60_000) {
   const configuredLimit = Number(process.env.AGRINEXUS_RATE_LIMIT_PER_WINDOW || limit);
   const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : limit;
-  const key = `${req.socket.remoteAddress || "local"}:${req.url.split("?")[0]}`;
+  const key = `${rateLimitClientKey(req)}:${req.url.split("?")[0]}`;
   return rateBucketCheck(key, effectiveLimit, windowMs);
 }
 
@@ -2388,7 +2424,7 @@ function rateLimit(req, limit = 180, windowMs = 60_000) {
 // under "auth:" so it never shares a bucket (and therefore never
 // double-counts) with the blanket per-path check.
 function authRateLimit(req, bucketName, limit = 10, windowMs = 300_000) {
-  const key = `auth:${bucketName}:${req.socket.remoteAddress || "local"}`;
+  const key = `auth:${bucketName}:${rateLimitClientKey(req)}`;
   return rateBucketCheck(key, limit, windowMs);
 }
 
@@ -2701,6 +2737,41 @@ function eraseOwnedProfileRecords(profile, email) {
   return removedCounts;
 }
 
+// Course-enrollment cross-user collision fix: enrollments/certificates/
+// learningAssignments/etc. moved off the shared db.profile blob onto the
+// user record itself (db.users[]), which already has real per-account
+// ownership. Unlike their old db.profile home -- disclosed in
+// knownUnownedProfileGaps as having no owner at all -- they now have one, so
+// they belong in the normal export/erasure path instead of that gap list.
+const USER_LEARNING_RECORD_ARRAY_KEYS = ["enrollments", "completedCourses", "certificates", "womenChildrenLearningPlans", "learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "learningAccommodations"];
+
+function collectUserLearningRecords(user) {
+  const owned = {};
+  if (!user) return owned;
+  for (const key of USER_LEARNING_RECORD_ARRAY_KEYS) {
+    const value = user[key];
+    if (Array.isArray(value) && value.length) owned[key] = JSON.parse(JSON.stringify(value));
+  }
+  if (user.learningAccessibilityProfile) owned.learningAccessibilityProfile = JSON.parse(JSON.stringify(user.learningAccessibilityProfile));
+  return owned;
+}
+
+function eraseUserLearningRecords(user) {
+  const removedCounts = {};
+  if (!user) return removedCounts;
+  for (const key of USER_LEARNING_RECORD_ARRAY_KEYS) {
+    const before = Array.isArray(user[key]) ? user[key].length : 0;
+    if (before > 0) removedCounts[key] = before;
+    user[key] = [];
+  }
+  user.activeCourseId = null;
+  user.quizScore = 0;
+  user.learningStreak = 0;
+  user.learningHours = 0;
+  delete user.learningAccessibilityProfile;
+  return removedCounts;
+}
+
 // Found live (workforce/job-search audit, same bug class as the telehealth
 // export/erasure gap): db.nexusPersistentOperations is another top-level
 // sibling of db.profile -- an entire separate "Nexus Operations" content
@@ -2876,6 +2947,106 @@ function eraseOwnedNexusContentRecords(db, userId) {
   return removedCounts;
 }
 
+// Found live (wellness-toolkit follow-up audit): /api/account/export only ever read the legacy db.profile
+// blob (via the collectOwned*Records functions above/below) -- it never reached a signed-in user's real,
+// Postgres-backed nexus/ data: companion trusted-circle/emergency history, the wellness log and goals,
+// farm/health toolkit records, community reports/announcements, personal items, saved contacts, and
+// anything else any nexus/* toolkit writes to the shared nexus_memory_items table. Account ERASURE already
+// correctly reaches this data (authoritativeNexusRuntime.requestDeletionRequest, see /api/account/erase
+// below), so a person's real tracked data could be permanently deleted on request while never once being
+// downloadable first -- the same export/erasure asymmetry this codebase has repeatedly had to close for
+// individual collections (see the workforce/learning export gap, PR #752), here at the scale of an entire
+// storage layer. Grouped by purpose (the real column every nexus/* toolkit's own store already scopes by),
+// so each toolkit's data is clearly labeled in the download. Capped at 5000 rows total (the same ceiling
+// most individual toolkit stores already use for one collection) -- a real, honest completeness gain over
+// today's total absence, though an account with more than 5000 combined rows across every toolkit would
+// still see only its most recent 5000; a full per-purpose paginated export is future work, not this fix.
+//
+// Found live (lists-toolkit follow-up audit, same day): the first version of this fix only queried
+// nexus_memory_items -- but a SECOND, entirely separate Postgres table, nexus_records (RecordRepository),
+// backs its own set of real nexus/* tools (lists.create/update, health.record, telehealth.prepare,
+// drone.plan, business templates, workspace state, autonomy-control state). Account erasure already
+// correctly reaches this table too (data-lifecycle-repository.js's own nexus_records sweep), so the exact
+// same "erasable but never once downloadable" asymmetry this function was written to close for
+// nexus_memory_items was still wide open for nexus_records -- reproduced in a second table the first fix
+// never touched. Scoped identically to how erasure scopes it (subject_id when set, else owner_id), grouped
+// by workspace_id+record_type so each tool's data is clearly labeled the same way purpose already labels
+// the memory-table rows.
+//
+// Found live (fresh-module audit, same day): a THIRD table, nexus_sync_operations, had the identical gap --
+// see the comment right above its query below for the detail.
+async function collectOwnedNexusMemoryRecords(user) {
+  if (!usingPostgresState()) return {};
+  try {
+    const authoritativeUser = await authoritativeRuntimeUser(user);
+    if (!authoritativeUser) return {};
+    const pool = getPgPool();
+    const owned = {};
+    const memoryResult = await pool.query(`select purpose,content,created_at from nexus_memory_items
+      where tenant_id=$1 and principal_id=$2 and deleted_at is null order by created_at desc limit 5000`,
+      [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (memoryResult.rows || memoryResult)) {
+      const key = `nexus.memory.${row.purpose}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.content, createdAt: row.created_at });
+    }
+    const recordsResult = await pool.query(`select workspace_id,record_type,data,created_at from nexus_records
+      where tenant_id=$1 and (subject_id=$2 or (subject_id is null and owner_id=$2)) and deleted_at is null
+      order by created_at desc limit 5000`, [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (recordsResult.rows || recordsResult)) {
+      const key = `nexus.records.${row.workspace_id}.${row.record_type}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.data, createdAt: row.created_at });
+    }
+    // Found live (fresh-module audit, same day): a THIRD Postgres table, nexus_sync_operations
+    // (nexus/sync/repository.js), was also entirely absent -- it stores a real per-device offline-sync
+    // history (whatever entity a person's device queued while offline: a health reading, a business
+    // record, a farm log entry) keyed directly by user_id, not scoped through either of the two tables
+    // above. Same asymmetry as nexus_memory_items/nexus_records: nothing in this account's export could
+    // ever surface it. Grouped by entity_type, the same real column this table's own summary()/changes()
+    // methods already key their own views by.
+    const syncResult = await pool.query(`select entity_type,entity_id,payload,state,device_id,created_at from nexus_sync_operations
+      where tenant_id=$1 and user_id=$2 order by created_at desc limit 5000`, [authoritativeUser.tenantId, authoritativeUser.id]);
+    for (const row of (syncResult.rows || syncResult)) {
+      const key = `nexus.sync.${row.entity_type}`;
+      (owned[key] || (owned[key] = [])).push({ content: row.payload, state: row.state, deviceId: row.device_id, entityId: row.entity_id, createdAt: row.created_at });
+    }
+    return owned;
+  } catch (error) {
+    console.error("[account-export] failed to read authoritative nexus memory records:", error.message);
+    return {};
+  }
+}
+
+// Found live (storage-infrastructure audit): /api/account/export never read nexus_artifacts, the real
+// Postgres-backed table a signed-in user's own uploads land in via POST /api/nexus/runtime/artifacts
+// (nexus/storage/artifact-repository.js) -- a genuine checksum, title, content type, and size for whatever
+// file the caller saved. Account erasure already reaches this table (data-lifecycle-repository.js wipes
+// title/metadata/object_key on every row scoped to this subject), so the same "erasable but never once
+// downloadable" asymmetry already fixed for nexus_memory_items/nexus_records/nexus_sync_operations was open
+// here too, in a table of its own this codebase's other export sweeps never looked at. The file's own bytes
+// are not embedded here (they can be multi-megabyte binary content already served by the per-artifact GET
+// route, tenant/owner scoped the same way); a download path pointing at that real route is given instead.
+async function collectOwnedNexusArtifactRecords(user) {
+  if (!usingPostgresState()) return {};
+  try {
+    const authoritativeUser = await authoritativeRuntimeUser(user);
+    if (!authoritativeUser) return {};
+    const pool = getPgPool();
+    const result = await pool.query(`select artifact_id,kind,title,content_type,checksum,size_bytes,created_at
+      from nexus_artifacts where tenant_id=$1 and owner_id=$2 and deleted_at is null order by created_at desc limit 5000`,
+      [authoritativeUser.tenantId, authoritativeUser.id]);
+    const rows = result.rows || result;
+    if (!rows.length) return {};
+    return { "nexus.artifacts": rows.map(row => ({
+      artifactId: row.artifact_id, kind: row.kind, title: row.title, contentType: row.content_type,
+      checksum: row.checksum, sizeBytes: row.size_bytes, createdAt: row.created_at,
+      downloadPath: `/api/nexus/runtime/artifacts/${encodeURIComponent(row.artifact_id)}`
+    })) };
+  } catch (error) {
+    console.error("[account-export] failed to read nexus artifact records:", error.message);
+    return {};
+  }
+}
+
 // The categories collectOwnedProfileRecords/eraseOwnedProfileRecords cannot
 // reach, surfaced explicitly in every export/erase response so neither ever
 // implies a completeness it doesn't have.
@@ -2968,15 +3139,15 @@ function knownUnownedProfileGaps(profile, db = null) {
   if (hasAny(["applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
     gaps.push("Advanced workforce operations records (role applications, onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) have no per-account owner field today and are not included.");
   }
-  // Found live (export/erasure sibling sweep): enrollments/completedCourses/womenChildrenLearningPlans
-  // are built by the exact same ensureLearningProfile() as certificates/learningAssignments/etc. right
-  // below, with the identical no-owner-field shape -- but they were missing from this disclosure list,
-  // so a user was never told their course-enrollment progress or completed-course history survives
-  // erasure/is absent from export, even though the sibling certificates array right next to them is
-  // honestly disclosed.
-  if (hasAny(["enrollments", "completedCourses", "womenChildrenLearningPlans", "learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts", "certificates", "learningAccommodations"])) {
-    gaps.push("Advanced learning records (course enrollments, completed-course history, women/children learning plans, assignments, quiz attempts, instructor notes, progress reports, transcripts, cohorts, certificates, accommodations) have no per-account owner field today and are not included.");
-  }
+  // Course-enrollment cross-user collision fix: these fields used to live
+  // on this same shared db.profile blob (hence the gap this block used to
+  // disclose) but have moved onto the user record itself, which has a real
+  // per-account owner -- see collectUserLearningRecords/
+  // eraseUserLearningRecords, folded into export/erase directly instead of
+  // this gap list. Any lingering db.profile data under these same key names
+  // predates that migration, is never read by current code, and is left in
+  // place untouched per this project's archive-don't-delete convention, so
+  // it is intentionally not re-disclosed here either.
   if (hasAny(["nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"])) {
     gaps.push("Locally-saved health/workforce governance feedback, offline sync history, legacy voice reminders, field-visit plans, saved learning resources, and marketplace notes have no per-account owner field today and are not included.");
   }
@@ -3851,7 +4022,7 @@ function jarvisProductionTenModel(db, providers = runtimeProviders(db)) {
 }
 
 function deepOperatingIntelligence(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -3877,7 +4048,7 @@ function deepOperatingIntelligence(db, user, providers = runtimeProviders(db), o
     {
       id: "learning",
       title: "Learning",
-      state: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`,
+      state: `${(user?.enrollments || []).length} enrollment(s), ${(user?.certificates || []).length} certificate(s)`,
       intelligence: "Nexus can choose a course, explain it simply, add captions/audio/offline support, track progress, and connect training to jobs.",
       liveProvider: connected("learning-courses") && connected("learning-certificates"),
       nextCommand: "Nexus, help me start the right course"
@@ -3981,7 +4152,7 @@ function deepOperatingIntelligence(db, user, providers = runtimeProviders(db), o
 }
 
 function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -4049,8 +4220,8 @@ function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), opti
     guidedQuestions,
     missionBlueprints,
     localRecords: {
-      enrollments: (db.profile.enrollments || []).length,
-      certificates: (db.profile.certificates || []).length,
+      enrollments: (user?.enrollments || []).length,
+      certificates: (user?.certificates || []).length,
       applications: (db.profile.applications || []).length,
       healthIntakes: (db.profile.healthIntakes || []).length,
       orders: (db.profile.orders || []).length,
@@ -4100,8 +4271,8 @@ function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), opti
 
 function offlineReasoningKnowledgeBase(db, user) {
   const { country, route } = activeContext(db);
-  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0] || {};
-  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0] || {};
+  const course = (db.courses || []).find(item => item.id === user?.activeCourseId) || (db.courses || [])[0] || {};
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, user, item).eligible) || (db.roles || [])[0] || {};
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0] || {};
   return {
     health: {
@@ -4332,7 +4503,7 @@ function reasonedActionBridgePlan(db, user, command = "", reasoning = {}) {
 
 function offlineReasoningBrainModel(db, user, command = "", options = {}) {
   ensureAiProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -4432,7 +4603,7 @@ function offlineReasoningCommandResponse(db, user, text = "", options = {}) {
 
 function remoteRuralFarmerLaunchKit(db, user, providers = runtimeProviders(db), options = {}) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -4670,7 +4841,7 @@ function crossPlatformFunctionPack(db, user, providers = runtimeProviders(db)) {
 
 async function runCrossPlatformFunction(db, user, body = {}) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -4723,9 +4894,8 @@ async function runCrossPlatformFunction(db, user, body = {}) {
       contactMethod: "Voice callback plus SMS/WhatsApp summary",
       caregiverName: "Community health aide"
     });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
-    db.profile.healthIntakes = db.profile.healthIntakes.slice(0, 30);
     created.push(`${intake.patientRef} telehealth navigation intake`);
   } else if (selected.id === "learning-workforce") {
     const plan = runWomenChildrenLearningWorkflow(db, user, {
@@ -5341,6 +5511,20 @@ function projectCommunicationMessageForUser(message, user, threadsById) {
   };
 }
 
+// Course-enrollment cross-user collision fix: enrollments/certificates/etc.
+// moved off the shared db.profile blob onto the user record itself, but
+// public/app.js still reads them from the client response's data.profile.*
+// (unaware that the server-side storage moved) -- so publicState() merges
+// the signed-in user's own learning fields back onto the client-visible
+// profile object here, under the exact same key names, keeping the whole
+// existing frontend contract working while the real storage stays per-user.
+function learningProfileForClient(user) {
+  if (!user) return {};
+  ensureLearningProfile(user);
+  const { enrollments, completedCourses, certificates, womenChildrenLearningPlans, learningStreak, learningHours, learningAssignments, quizAttempts, instructorNotes, learningProgressReports, learningTranscripts, learningCohorts, learningAccommodations, activeCourseId, quizScore } = user;
+  return { enrollments, completedCourses, certificates, womenChildrenLearningPlans, learningStreak, learningHours, learningAssignments, quizAttempts, instructorNotes, learningProgressReports, learningTranscripts, learningCohorts, learningAccommodations, activeCourseId, quizScore: quizScore || 0 };
+}
+
 function profileForUser(profile, user) {
   // The existing health-record projection below was written for the
   // Investor role, but db.profile is one shared, non-per-user blob -- a
@@ -5442,7 +5626,7 @@ function publicState(db, user) {
     countries: db.countries,
     routes: db.routes,
     courses: db.courses,
-    learningCatalog: learningCatalog(db),
+    learningCatalog: learningCatalog(db, user),
     roles: db.roles,
     products: db.products || [],
     providers,
@@ -5451,7 +5635,7 @@ function publicState(db, user) {
     productionProviderReadiness,
     healthPrivacyComplianceGuardrails,
     capabilities: capabilityMatrix(db, providers),
-    womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers),
+    womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers, user),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
     conversationEvidence: conversationEvidencePack(db),
@@ -5495,12 +5679,11 @@ function publicState(db, user) {
     // field defensively (data.admin?.users || []), so omitting it here for
     // non-admins is a safe, additive-only change.
     admin: canUse(user, "admin") ? adminSnapshot(db, providers) : null,
-    profile: profileForUser(db.profile, user)
+    profile: { ...profileForUser(db.profile, user), ...learningProfileForClient(user) }
   };
 }
 
 function governmentReadinessModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -5516,7 +5699,7 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
     + (db.profile.healthIntakes || []).length
     + (db.profile.orders || []).length
     + (db.profile.applications || []).length
-    + (db.profile.enrollments || []).length;
+    + (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length, 0);
   const heatmap = countries.map(country => {
     const riskText = `${country.risk || ""} ${country.queue || ""}`.toLowerCase();
     const healthScore = riskText.includes("high") || riskText.includes("critical") ? 92 : riskText.includes("moderate") ? 68 : 44;
@@ -5782,7 +5965,6 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
 }
 
 function impactDashboardModel(db, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -5791,9 +5973,15 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   const orders = db.profile.orders || [];
   const womenFamilyRuns = db.profile.womenFamilyRuns || [];
-  const womenChildrenPlans = db.profile.womenChildrenLearningPlans || [];
+  const womenChildrenPlans = (db.users || []).reduce((list, item) => list.concat(item.womenChildrenLearningPlans || []), []);
   const tradeValue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-  const trained = new Set([...(db.profile.completedCourses || []), ...(db.profile.certificates || []).map(item => item.courseId)]).size;
+  // enrollments/certificates/completedCourses are per-user now -- "Learners
+  // trained" sums across every real account instead of one shared blob,
+  // which is a truer platform-wide metric than the old single-blob count
+  // ever was (that count had no user dimension at all).
+  const trained = (db.users || []).filter(item => (item.completedCourses || []).length > 0 || (item.certificates || []).length > 0).length;
+  const totalEnrollments = (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length, 0);
+  const totalCertificates = (db.users || []).reduce((sum, item) => sum + (item.certificates || []).length, 0);
   const providerEvents = (db.profile.integrationEvents || []).length;
   const connectedProviders = providers.filter(provider => provider.status === "connected").length;
   const communications = (db.profile.communicationThreads || []).length + (db.profile.tradeMessageThreads || []).length;
@@ -5808,7 +5996,7 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
     + Math.min(10, womenChildrenPlans.length * 5)
   ));
   const metrics = [
-    { label: "Learners trained", value: trained, detail: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)` },
+    { label: "Learners trained", value: trained, detail: `${totalEnrollments} enrollment(s), ${totalCertificates} certificate(s)` },
     { label: "Jobs supported", value: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length, detail: `${(db.profile.applications || []).length} application(s), ${(db.profile.shiftSchedule || []).length} shift(s)` },
     { label: "Telehealth cases", value: (db.profile.healthIntakes || []).length, detail: `${(db.profile.carePlans || []).length} care plan(s), ${(db.profile.telehealthFollowUps || []).length} follow-up(s)` },
     { label: "Trade value", value: tradeValue, detail: `${orders.length} order(s), ${(db.profile.walletTransactions || []).length} wallet transaction(s)`, format: "money" },
@@ -5843,9 +6031,9 @@ function missionTimelineModel(db, user = null) {
     evidence: redact && module === "Healthcare" ? "" : evidence,
     createdAt: createdAt || new Date().toISOString()
   });
-  (db.profile.enrollments || []).slice(0, 3).forEach(item => add("Learning", "Course pathway started", `${item.progress || 0}% progress`, item.status || "active", item.startedAt, item.courseId));
-  (db.profile.certificates || []).slice(0, 3).forEach(item => add("Learning", "Certificate issued", item.title || item.courseId, "complete", item.issuedAt, item.certificateNumber));
-  (db.profile.womenChildrenLearningPlans || []).slice(0, 3).forEach(item => add("Learning", "Women and children learning plan opened", `${item.learnerGroup}: ${item.pathTitle}`, item.status || "active", item.createdAt, item.planNumber));
+  (user?.enrollments || []).slice(0, 3).forEach(item => add("Learning", "Course pathway started", `${item.progress || 0}% progress`, item.status || "active", item.startedAt, item.courseId));
+  (user?.certificates || []).slice(0, 3).forEach(item => add("Learning", "Certificate issued", item.title || item.courseId, "complete", item.issuedAt, item.certificateNumber));
+  (user?.womenChildrenLearningPlans || []).slice(0, 3).forEach(item => add("Learning", "Women and children learning plan opened", `${item.learnerGroup}: ${item.pathTitle}`, item.status || "active", item.createdAt, item.planNumber));
   (db.profile.applications || []).slice(0, 3).forEach(item => add("Workforce", "Role application submitted", item.roleTitle, item.status || "submitted", item.submittedAt, item.id));
   (db.profile.healthIntakes || []).slice(0, 3).forEach(item => add("Healthcare", "Telehealth intake opened", item.patientRef || item.needSummary, item.queueStatus || "active", item.createdAt, item.riskLevel));
   (db.profile.orders || []).slice(-3).forEach(item => add("AgriTrade", "Trade order created", `${item.orderNumber || item.id}: ${item.product}`, item.stage || "active", item.createdAt, item.checkpoint));
@@ -6424,7 +6612,7 @@ function humanizeAgentResult(db, user, result = {}, command = "") {
 }
 
 function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6525,7 +6713,7 @@ function voiceLanguageLabel(language) {
 }
 
 function platformProgressSummary(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6534,7 +6722,7 @@ function platformProgressSummary(db, user, providers = runtimeProviders(db)) {
   const connected = providers.filter(provider => provider.status === "connected").length;
   return [
     `${db.profile.readiness || 0}% workforce readiness`,
-    `${(db.profile.enrollments || []).length} course enrollment(s) and ${(db.profile.certificates || []).length} certificate(s)`,
+    `${(user?.enrollments || []).length} course enrollment(s) and ${(user?.certificates || []).length} certificate(s)`,
     `${(db.profile.applications || []).length} workforce application(s) and ${(db.profile.shiftSchedule || []).length} shift(s)`,
     `${(db.profile.healthIntakes || []).length} telehealth intake(s) and ${(db.profile.carePlans || []).length} care plan(s)`,
     `${(db.profile.orders || []).length} trade order(s), ${(db.profile.droneScans || []).length} drone scan(s), and ${(db.profile.mapEvidencePackets || []).length} map packet(s)`,
@@ -6605,7 +6793,7 @@ function workflowOutcomeSummary(db) {
 }
 
 function dailyOperatorBriefing(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6616,7 +6804,7 @@ function dailyOperatorBriefing(db, user, providers = runtimeProviders(db)) {
   const latestTrade = (db.profile.tradeEfficiencyReviews || [])[0];
   const priorities = [
     `${(db.profile.healthIntakes || []).length} telehealth intake(s), ${(db.profile.telehealthReferrals || []).length} referral(s), and ${(db.profile.telehealthFollowUps || []).length} follow-up(s)`,
-    `${(db.profile.enrollments || []).length} learner enrollment(s), ${(db.profile.certificates || []).length} certificate(s), and ${db.profile.readiness || 0}% workforce readiness`,
+    `${(user?.enrollments || []).length} learner enrollment(s), ${(user?.certificates || []).length} certificate(s), and ${db.profile.readiness || 0}% workforce readiness`,
     `${(db.profile.applications || []).length} job application(s), ${(db.profile.shiftSchedule || []).length} shift(s), and ${(db.profile.interviews || 0)} interview(s)`,
     `${(db.profile.orders || []).length} trade order(s), ${(db.profile.buyerContacts || []).length} buyer contact(s), and ${(db.profile.droneScans || []).length} drone scan(s)`,
     `${connected}/${providers.length} provider engine(s) connected`
@@ -6651,7 +6839,7 @@ function formatReminderForBriefing(reminder = {}) {
 }
 
 function nexusPersonalAssistantBriefing(db, user, command = "", providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6679,7 +6867,7 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
   const trade = (db.profile.orders || [])[0]
     ? `Trade: ${(db.profile.orders || [])[0].orderNumber || "the active order"} is at ${db.profile.activeCheckpoint || "the current checkpoint"} on ${route.name}.`
     : `Farm and trade: no active order yet. I can help check the crop, contact a buyer, or plan a route.`;
-  const learningWork = `${(db.profile.enrollments || []).length} learning enrollment(s), ${(db.profile.applications || []).length} job application(s), and ${(db.profile.shiftSchedule || []).length} shift(s) are saved.`;
+  const learningWork = `${(user?.enrollments || []).length} learning enrollment(s), ${(db.profile.applications || []).length} job application(s), and ${(db.profile.shiftSchedule || []).length} shift(s) are saved.`;
   const providerLine = `${providers.filter(provider => provider.status === "connected").length}/${providers.length} provider engine(s) connected.`;
   const top = smart[0] || predictive?.predictions?.[0] || null;
   const nextLine = top?.title
@@ -6741,7 +6929,7 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
 }
 
 function maximumOperationalEfficiencyModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6762,7 +6950,7 @@ function maximumOperationalEfficiencyModel(db, user, providers = runtimeProvider
   // orders-based placeholder only when there is no real review yet.
   const realTradeScore = (db.profile.tradeEfficiencyReviews || [])[0]?.score;
   const tradeScore = Number.isFinite(realTradeScore) ? realTradeScore : ((db.profile.orders || []).length ? 72 : 58);
-  const learningScore = Math.min(100, 50 + (db.profile.certificates || []).length * 10 + (db.profile.enrollments || []).length * 5);
+  const learningScore = Math.min(100, 50 + (user?.certificates || []).length * 10 + (user?.enrollments || []).length * 5);
   const workforceScore = Math.min(100, 45 + readiness / 2 + (db.profile.applications || []).length * 8 + (db.profile.shiftSchedule || []).length * 4);
   const healthScore = Math.min(100, 55 + (db.profile.healthIntakes || []).length * 6 + (db.profile.telehealthAccessibility || []).length * 4 + (db.profile.videoSessions || []).length * 5);
   const agentScore = Math.min(100, 60 + (db.profile.agentCommands || []).length * 2 + (db.profile.agentMemory.reasoningHistory || []).length * 2);
@@ -6830,7 +7018,7 @@ function maximumOperationalEfficiencyModel(db, user, providers = runtimeProvider
 }
 
 function autonomousOperatingLoopModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6942,7 +7130,7 @@ function autonomousOperatingLoopModel(db, user, providers = runtimeProviders(db)
 }
 
 function collectiveIntelligenceEngine(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -6963,7 +7151,7 @@ function collectiveIntelligenceEngine(db, user, providers = runtimeProviders(db)
   const commandText = commands.slice(0, 80).map(item => `${item.command || ""} ${item.intent || ""}`).join(" ").toLowerCase();
   const conversationText = conversations.slice(0, 80).map(item => `${item.user || item.command || ""} ${item.assistant || item.response || ""}`).join(" ").toLowerCase();
   const moduleSignals = [
-    { module: "Learning", count: (db.profile.enrollments || []).length + (db.profile.completedCourses || []).length + (db.profile.certificates || []).length, terms: ["course", "learn", "lesson", "training", "certificate"] },
+    { module: "Learning", count: (user?.enrollments || []).length + (user?.completedCourses || []).length + (user?.certificates || []).length, terms: ["course", "learn", "lesson", "training", "certificate"] },
     { module: "Workforce", count: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length + Number(db.profile.interviews || 0), terms: ["job", "work", "role", "apply", "interview"] },
     { module: "Telehealth", count: (db.profile.healthIntakes || []).length + (db.profile.mobileClinicRequests || []).length + (db.profile.pharmacyRequests || []).length + (db.profile.supplyRequests || []).length, terms: ["health", "clinic", "doctor", "pharmacy", "medicine", "symptom"] },
     { module: "AgriTrade", count: (db.profile.orders || []).length + (db.profile.buyerContacts || []).length + (db.profile.tradeMessageThreads || []).length + (db.profile.walletTransactions || []).length, terms: ["sell", "buy", "buyer", "seller", "crop", "payment", "shipment"] },
@@ -7141,7 +7329,7 @@ function legacyIntelligenceDisclosure() {
 }
 
 function frontierNexusBrainModel(db, user, providers = runtimeProviders(db), options = {}) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -7162,7 +7350,7 @@ function frontierNexusBrainModel(db, user, providers = runtimeProviders(db), opt
     + (db.profile.agentCommands || []).length
     + (db.profile.workflowIntelligence || []).length;
   const activeRecords = {
-    learning: (db.profile.enrollments || []).length + (db.profile.certificates || []).length,
+    learning: (user?.enrollments || []).length + (user?.certificates || []).length,
     workforce: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length,
     health: (db.profile.healthIntakes || []).length + (db.profile.mobileClinicRequests || []).length + (db.profile.pharmacyRequests || []).length,
     trade: (db.profile.orders || []).length + (db.profile.buyerContacts || []).length + (db.profile.paymentCheckoutRecords || []).length,
@@ -8846,7 +9034,7 @@ function capabilityMatrix(db, providers = runtimeProviders(db)) {
 }
 
 function smartNextActions(db, user, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -8854,8 +9042,8 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   const providerOk = id => ["connected", "ready"].includes(providers.find(item => item.id === id)?.status);
   const { country, route } = activeContext(db);
-  const activeCourse = (db.courses || []).find(course => course.id === db.profile.activeCourseId) || (db.courses || [])[0];
-  const eligibleRole = (db.roles || []).find(role => roleReadiness(db.profile, role).eligible) || (db.roles || [])[0];
+  const activeCourse = (db.courses || []).find(course => course.id === user?.activeCourseId) || (db.courses || [])[0];
+  const eligibleRole = (db.roles || []).find(role => roleReadiness(db.profile, user, role).eligible) || (db.roles || [])[0];
   const activeProduct = (db.products || []).find(product => product.countryId === country.id) || (db.products || [])[0];
   const actions = [];
   const push = action => actions.push({
@@ -8875,7 +9063,7 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
     productId: action.productId || null
   });
 
-  if (!db.profile.enrollments?.length) {
+  if (!user?.enrollments?.length) {
     push({
       id: "start-learning",
       module: "Learning",
@@ -8887,7 +9075,7 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
       section: "learning",
       priority: "high"
     });
-  } else if (!db.profile.certificates?.length) {
+  } else if (!user?.certificates?.length) {
     push({
       id: "complete-lesson",
       module: "Learning",
@@ -9827,6 +10015,16 @@ function twilioFromForProvider(providerId) {
   return process.env.TWILIO_SMS_FROM || process.env.TWILIO_PHONE_NUMBER || "";
 }
 
+// Found live (communications/notifications audit): unlike server/providers/communicationsBridgeProvider.js's
+// sendSms/sendWhatsapp/startCall (which require confirmed:true via requireConfirmation() and refuse any
+// message matching this same pattern via safeMessage()), the legacy in-file real-send paths that call
+// sendTwilioMessage/startTwilioOutboundCall below (createBuyerSellerMessage, createCommunicationThread,
+// createOutboundCallWorkflow, and /api/notifications/send) had neither a confirmation gate nor a content
+// scan -- any authenticated, non-restricted user could trigger a real Twilio SMS/WhatsApp/call to a
+// client-supplied recipient with a single unconfirmed request, carrying arbitrary free text (including
+// health, payment, or credential content) straight through with no filter at all.
+const SENSITIVE_COMMUNICATION_PATTERN = /\b(patient|diagnos\w*|prescri\w*|medical record|payment|card|bank|password|secret|token|private key|emergency dispatch)\b/i;
+
 async function sendTwilioMessage({ providerId, channel, to, text }) {
   const required = [
     ["TWILIO_ACCOUNT_SID", process.env.TWILIO_ACCOUNT_SID],
@@ -10603,7 +10801,7 @@ function adminSnapshot(db, providers = runtimeProviders(db)) {
   const profile = db.profile || {};
   ensureOperationsProfile(profile);
   const modules = [
-    { name: "Learning", status: "connected", records: (profile.enrollments || []).length + (profile.certificates || []).length },
+    { name: "Learning", status: "connected", records: (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length + (item.certificates || []).length, 0) },
     { name: "Workforce", status: "connected", records: (profile.applications || []).length + (profile.shiftSchedule || []).length },
     { name: "Healthcare", status: "connected", records: (profile.healthIntakes || []).length + (profile.carePlans || []).length + (profile.safetyReviews || []).length },
     { name: "Women & Family", status: "connected", records: (profile.womenFamilyRuns || []).length },
@@ -10890,6 +11088,10 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       createdAt: new Date().toISOString()
     };
     db.profile.orders.push(order);
+    // Found live (legacy server.js helper-function sweep): orders grows unboundedly -- never capped
+    // anywhere in the file, unlike sibling arrays created in this same function (tradeLogisticsRecords,
+    // walletTransactions). Trims the OLDEST orders (array front) since push() always appends at the end.
+    if (db.profile.orders.length > 1000) db.profile.orders = db.profile.orders.slice(-1000);
   }
   const buyerName = String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} verified buyer desk`).trim();
   const sellerName = String(body.sellerName || user.name || "Farmer seller").trim();
@@ -10900,7 +11102,12 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
   const direction = String(body.direction || (type === "buyer-pickup" ? "buyer-to-seller pickup" : "seller-to-buyer delivery")).trim();
   const carrier = String(body.carrier || "AgriNexus logistics partner").trim();
   const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "DRC" ? "CDF" : "USD")).trim();
-  const amount = Number(body.amount || Math.max(25, Math.round(Number(order.total || 1200) * 0.12)));
+  // Found live (legacy server.js helper-function sweep, low severity -- this feeds only non-settlement
+  // logistics-record display/logging, never a real credited amount; the real-money settlement path below
+  // already resolves its own grossAmount from order.total directly): an explicit amount:0 was treated as
+  // missing and silently overridden by the computed freight estimate.
+  const requestedAmount = Number(body.amount);
+  const amount = body.amount !== undefined && Number.isFinite(requestedAmount) && requestedAmount >= 0 ? requestedAmount : Math.max(25, Math.round(Number(order.total || 1200) * 0.12));
   const statusMap = {
     "logistics-quote": "quote prepared",
     "shipping-booking": "shipment booked",
@@ -11002,6 +11209,11 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     if (order.stage !== "Delivered") {
       throw Object.assign(new Error(`This order has not been marked Delivered yet (currently "${order.stage}") -- confirm delivery before settling payment.`), { httpStatus: 409 });
     }
+    // Found live (legacy server.js helper-function sweep): a legitimate order.total of exactly 0 (a
+    // free-sample/zero-price product) was treated as missing and silently replaced with `amount` -- the
+    // unrelated 12%-of-total freight-cost ESTIMATE computed above, not the real sale proceeds -- then
+    // credited to the seller's real wallet for an order that should settle for nothing.
+    const resolvedOrderTotal = Number(order.total);
     const fee = createPlatformTransactionFee(db, {
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -11010,9 +11222,21 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       buyerName,
       sellerName,
       productName,
-      grossAmount: Number(order.total) || amount,
+      grossAmount: Number.isFinite(resolvedOrderTotal) ? resolvedOrderTotal : amount,
       currency
     });
+    // Found live (real-money audit, confirmed with a live spawned server): settlement credited the
+    // real spendable wallet for the full order.total based solely on this caller's own stage
+    // advancement (order.stage === "Delivered") -- itself entirely self-service, with no buyer and no
+    // real payment provider ever involved. A single account could create an order with an arbitrary
+    // total, advance it through every stage alone, and settle it: confirmed live, the wallet went from
+    // 5,990 to 980,989.02 off one $999,999 self-created order. Same shape and same fix as the already-
+    // closed /api/trade/advanced "release" exploit: /api/trade/payment-checkout genuinely calls the
+    // real Paystack/Flutterwave APIs, but nothing in this codebase yet verifies their result (no webhook
+    // receiver exists for either provider), so there is still no real signal anywhere that an order was
+    // actually paid for. Settlement can no longer credit real funds until that verification exists --
+    // it still records what would have been released, for the same record-keeping/UI purposes as
+    // before, just without the wallet mutation, matching the release fix's realFundsCredited: false.
     const tx = {
       id: crypto.randomUUID(),
       provider: "AgriNexus settlement",
@@ -11023,13 +11247,15 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       currency,
       type: "credit",
       status: "settlement-prepared",
+      realFundsCredited: false,
       orderId: order.id,
       logisticsId: record.id,
       createdAt: record.createdAt
     };
     record.platformFee = fee;
     record.sellerNetAmount = fee.sellerNetAmount;
-    db.profile.wallet = Number(db.profile.wallet || 0) + fee.sellerNetAmount;
+    record.realFundsCredited = false;
+    record.status = `${record.status} -- no real payment provider has verified this order was paid, so this did not credit your spendable wallet`;
     db.profile.walletTransactions.unshift(tx);
     db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
     order.settled = true;
@@ -11126,40 +11352,50 @@ function recalcReadiness(profile) {
   if (profile.readiness >= 90) profile.learningPath = "Leadership Pathway";
 }
 
-function ensureLearningProfile(profile) {
-  profile.enrollments = profile.enrollments || [];
-  profile.completedCourses = profile.completedCourses || [];
-  profile.certificates = profile.certificates || [];
-  profile.womenChildrenLearningPlans = profile.womenChildrenLearningPlans || [];
-  profile.learningPath = profile.learningPath || "Foundation Pathway";
-  profile.learningStreak = profile.learningStreak || 0;
-  profile.learningHours = profile.learningHours || 0;
-  profile.learningAssignments = profile.learningAssignments || [];
-  profile.quizAttempts = profile.quizAttempts || [];
-  profile.instructorNotes = profile.instructorNotes || [];
-  profile.learningProgressReports = profile.learningProgressReports || [];
-  profile.learningTranscripts = profile.learningTranscripts || [];
-  profile.learningCohorts = profile.learningCohorts || [];
-  profile.accessibilityProfile = profile.accessibilityProfile || {
+// Found live (course-enrollment cross-user collision fix): these fields used
+// to live on db.profile -- a single blob shared by every account, with no
+// owner field at all -- so two different real accounts starting the same
+// course really did share and overwrite one enrollment/certificate/progress
+// record. Moved onto the user entry itself (db.users[] already has genuinely
+// unique entries per account, the same way login already works), matching
+// this codebase's existing convention of flat per-user fields rather than a
+// new nested sub-object. Pre-existing db.profile.* learning data is left in
+// place, untouched and unread going forward, rather than deleted or migrated
+// -- it can't be honestly attributed to one specific account.
+function ensureLearningProfile(user) {
+  user.enrollments = user.enrollments || [];
+  user.completedCourses = user.completedCourses || [];
+  user.certificates = user.certificates || [];
+  user.womenChildrenLearningPlans = user.womenChildrenLearningPlans || [];
+  user.learningPath = user.learningPath || "Foundation Pathway";
+  user.learningStreak = user.learningStreak || 0;
+  user.learningHours = user.learningHours || 0;
+  user.learningAssignments = user.learningAssignments || [];
+  user.quizAttempts = user.quizAttempts || [];
+  user.instructorNotes = user.instructorNotes || [];
+  user.learningProgressReports = user.learningProgressReports || [];
+  user.learningTranscripts = user.learningTranscripts || [];
+  user.learningCohorts = user.learningCohorts || [];
+  user.learningAccessibilityProfile = user.learningAccessibilityProfile || {
     hearingSupport: true,
     visualSupport: true,
     preferredFormats: ["captions", "screen-reader", "large-print", "audio-guide", "offline-packet"],
-    language: profile.language || "sw",
+    language: user.language || "sw",
     bandwidth: "low",
     representative: "Community accessibility aide"
   };
-  profile.learningAccommodations = profile.learningAccommodations || [];
+  user.learningAccommodations = user.learningAccommodations || [];
 }
 
-function getEnrollment(profile, courseId) {
-  ensureLearningProfile(profile);
-  return profile.enrollments.find(item => item.courseId === courseId) || null;
+function getEnrollment(user, courseId) {
+  ensureLearningProfile(user);
+  return user.enrollments.find(item => item.courseId === courseId) || null;
 }
 
-function learningCatalog(db) {
-  ensureLearningProfile(db.profile);
-  const completed = new Set(db.profile.completedCourses || []);
-  const activeCourseId = db.profile.activeCourseId;
+function learningCatalog(db, user = null) {
+  if (user) ensureLearningProfile(user);
+  const completed = new Set(user?.completedCourses || []);
+  const activeCourseId = user?.activeCourseId || null;
   const tracks = Array.from(new Set((db.courses || []).map(course => course.track))).map(track => {
     const courses = db.courses.filter(course => course.track === track);
     return {
@@ -11169,7 +11405,7 @@ function learningCatalog(db) {
     };
   });
   const courses = (db.courses || []).map((course, index) => {
-    const enrollment = getEnrollment(db.profile, course.id);
+    const enrollment = user ? getEnrollment(user, course.id) : null;
     const linkedRoles = (db.roles || []).filter(role => (role.requiredCertificates || []).includes(course.id));
     const nextModuleIndex = enrollment?.activeModuleIndex || 0;
     return {
@@ -11259,9 +11495,9 @@ function womenChildrenLearningPaths(db) {
   ];
 }
 
-function womenChildrenLearningHubModel(db, providers = runtimeProviders(db)) {
-  ensureLearningProfile(db.profile);
-  const plans = db.profile.womenChildrenLearningPlans || [];
+function womenChildrenLearningHubModel(db, providers = runtimeProviders(db), user = null) {
+  if (user) ensureLearningProfile(user);
+  const plans = (user ? user.womenChildrenLearningPlans : null) || [];
   const paths = womenChildrenLearningPaths(db);
   const latest = plans[0] || null;
   const provider = providers.find(item => item.id === "learning-courses") || {};
@@ -11294,7 +11530,7 @@ function womenChildrenLearningHubModel(db, providers = runtimeProviders(db)) {
 }
 
 function runWomenChildrenLearningWorkflow(db, user, body = {}) {
-  ensureLearningProfile(db.profile);
+  ensureLearningProfile(user);
   ensureOperationsProfile(db.profile);
   ensureAiProfile(db.profile);
   const paths = womenChildrenLearningPaths(db);
@@ -11305,7 +11541,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
   const learnerGroup = String(body.learnerGroup || selectedPath.audience).trim();
   const language = body.language || user.language || db.profile.accessibilityProfile?.language || "en";
   const supportNeed = String(body.supportNeed || "Voice-first, picture-supported, low-bandwidth learning").trim();
-  let enrollment = course.id ? getEnrollment(db.profile, course.id) : null;
+  let enrollment = course.id ? getEnrollment(user, course.id) : null;
   if (course.id && !enrollment) {
     enrollment = {
       id: crypto.randomUUID(),
@@ -11318,12 +11554,15 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
       startedAt: now,
       completedAt: null
     };
-    db.profile.enrollments.unshift(enrollment);
+    // Found live (legacy server.js helper-function sweep): enrollments grows unboundedly across all 9
+    // of its write sites in this file -- never capped anywhere, unlike sibling arrays elsewhere.
+    user.enrollments.unshift(enrollment);
+    user.enrollments = user.enrollments.slice(0, 1000);
   } else if (enrollment) {
     enrollment.status = enrollment.status === "completed" ? "completed" : "in_progress";
     enrollment.progress = Math.max(Number(enrollment.progress || 0), 35);
   }
-  if (course.id) db.profile.activeCourseId = course.id;
+  if (course.id) user.activeCourseId = course.id;
   const plan = {
     id: crypto.randomUUID(),
     planNumber,
@@ -11350,9 +11589,9 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     createdAt: now,
     status: "active"
   };
-  db.profile.womenChildrenLearningPlans.unshift(plan);
-  db.profile.womenChildrenLearningPlans = db.profile.womenChildrenLearningPlans.slice(0, 30);
-  db.profile.learningAssignments.unshift({
+  user.womenChildrenLearningPlans.unshift(plan);
+  user.womenChildrenLearningPlans = user.womenChildrenLearningPlans.slice(0, 30);
+  user.learningAssignments.unshift({
     id: crypto.randomUUID(),
     assignmentNumber: `AN-FAM-ASG-${String(nextRecordSequence(db, "learningAssignments")).padStart(3, "0")}`,
     courseId: course.id || null,
@@ -11363,7 +11602,7 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     status: "assigned",
     createdAt: now
   });
-  db.profile.learningAccommodations.unshift({
+  user.learningAccommodations.unshift({
     id: crypto.randomUUID(),
     courseId: course.id || null,
     courseTitle: course.title || selectedPath.title,
@@ -11374,22 +11613,24 @@ function runWomenChildrenLearningWorkflow(db, user, body = {}) {
     status: "ready",
     createdAt: now
   });
-  db.profile.learningCohorts.unshift({
+  user.learningCohorts.unshift({
     id: crypto.randomUUID(),
     cohortNumber: `AN-FAM-COH-${String(nextRecordSequence(db, "learningCohorts")).padStart(3, "0")}`,
     courseId: course.id || null,
     courseTitle: course.title || selectedPath.title,
     cohortName: `${learnerGroup} learning circle`,
-    learnerCount: Number(body.learnerCount || (selectedPath.ageGroup === "child-youth" ? 12 : 24)),
+    // Found live (legacy server.js route sweep, low severity -- display-only, no money/security
+    // impact): same falsy-zero gap as the sibling /api/learning/advanced cohort maker.
+    learnerCount: body.learnerCount !== undefined && Number.isFinite(Number(body.learnerCount)) && Number(body.learnerCount) >= 0 ? Number(body.learnerCount) : (selectedPath.ageGroup === "child-youth" ? 12 : 24),
     facilitator: body.facilitator || "Family learning facilitator",
     status: "active",
     createdAt: now
   });
-  db.profile.learningAssignments = db.profile.learningAssignments.slice(0, 20);
-  db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
-  db.profile.learningCohorts = db.profile.learningCohorts.slice(0, 20);
-  db.profile.learningStreak = Number(db.profile.learningStreak || 0) + 1;
-  db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.5).toFixed(2));
+  user.learningAssignments = user.learningAssignments.slice(0, 20);
+  user.learningAccommodations = user.learningAccommodations.slice(0, 20);
+  user.learningCohorts = user.learningCohorts.slice(0, 20);
+  user.learningStreak = Number(user.learningStreak || 0) + 1;
+  user.learningHours = Number((Number(user.learningHours || 0) + 0.5).toFixed(2));
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 5);
   recalcReadiness(db.profile);
   logIntegration(db, {
@@ -11422,9 +11663,8 @@ function ensureWorkforceProfile(profile) {
   profile.nextShift = profile.nextShift || "Awaiting scheduling";
 }
 
-function roleReadiness(profile, role) {
-  ensureLearningProfile(profile);
-  const missingCertificates = (role.requiredCertificates || []).filter(courseId => !profile.completedCourses.includes(courseId));
+function roleReadiness(profile, user, role) {
+  const missingCertificates = (role.requiredCertificates || []).filter(courseId => !(user?.completedCourses || []).includes(courseId));
   return {
     eligible: profile.readiness >= role.minReadiness && missingCertificates.length === 0,
     missingReadiness: Math.max(0, role.minReadiness - profile.readiness),
@@ -11470,6 +11710,18 @@ function ensureHealthProfile(profile) {
   profile.mobileClinicSupplyDispatches = profile.mobileClinicSupplyDispatches || [];
   profile.mobileClinicSupplyDeliveries = profile.mobileClinicSupplyDeliveries || [];
   profile.mobileClinicRevenueRecords = profile.mobileClinicRevenueRecords || [];
+}
+
+// Found live: of the ~17 call sites across this file that add to
+// db.profile.healthIntakes (PHI-bearing), only one capped it afterward --
+// every other creator let it grow without bound. Centralizing the add+cap
+// here, rather than copy-pasting a cap line after each unshift, avoids the
+// indentation-substring-collision mistake that happened earlier this same
+// sweep when a cap line was pasted after every site individually.
+function addHealthIntake(db, intake) {
+  db.profile.healthIntakes.unshift(intake);
+  db.profile.healthIntakes = db.profile.healthIntakes.slice(0, 30);
+  return intake;
 }
 
 function ruralHealthNetworkCatalog(db) {
@@ -11626,11 +11878,19 @@ function platformTransactionFeeRate() {
   return Math.min(configured, 0.25);
 }
 
+const ZERO_DECIMAL_CURRENCIES = new Set(["XAF", "XOF", "BIF", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XPF"]);
+
+function roundToCurrencyPrecision(amount, currency = "USD") {
+  const decimals = ZERO_DECIMAL_CURRENCIES.has(String(currency || "").toUpperCase()) ? 0 : 2;
+  const factor = 10 ** decimals;
+  return Math.round(Number(amount || 0) * factor) / factor;
+}
+
 function createPlatformTransactionFee(db, details = {}) {
   ensureTradeProfile(db.profile);
   const currency = details.currency || "USD";
   const rate = platformTransactionFeeRate();
-  const grossAmount = Number(details.grossAmount || details.amount || 0);
+  const grossAmount = roundToCurrencyPrecision(details.grossAmount || details.amount || 0, currency);
   const feeAmount = Number((grossAmount * rate).toFixed(2));
   const sellerNetAmount = Number(Math.max(0, grossAmount - feeAmount).toFixed(2));
   const fee = {
@@ -11688,8 +11948,7 @@ function paymentProviderMode(body = {}) {
 }
 
 function paymentSubunitAmount(amount, currency = "USD") {
-  const noMinorUnit = new Set(["XAF", "XOF", "BIF", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XPF"]);
-  const multiplier = noMinorUnit.has(String(currency || "").toUpperCase()) ? 1 : 100;
+  const multiplier = ZERO_DECIMAL_CURRENCIES.has(String(currency || "").toUpperCase()) ? 1 : 100;
   return Math.max(1, Math.round(Number(amount || 0) * multiplier));
 }
 
@@ -11703,8 +11962,8 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
   const product = order
     ? (db.products || []).find(item => item.id === order.productId)
     : selectedTradeProduct(db, body.productId, country);
-  const grossAmount = Number(body.amount || order?.total || product?.price || 120);
   const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "Ghana" ? "GHS" : "USD")).toUpperCase();
+  const grossAmount = roundToCurrencyPrecision(body.amount || order?.total || product?.price || 120, currency);
   const feeRate = platformTransactionFeeRate();
   const platformFeeAmount = Number((grossAmount * feeRate).toFixed(2));
   const sellerNetAmount = Number(Math.max(0, grossAmount - platformFeeAmount).toFixed(2));
@@ -11824,6 +12083,174 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
   });
   addActivity(db.profile, `${checkout.provider} checkout prepared: ${checkout.checkoutNumber}.`);
   return checkout;
+}
+
+// Found live (payment-callback gap, flagged 2026-09-28, confirmed and scoped with the user 2026-10-01):
+// initializeTradePaymentCheckout above genuinely calls the real Paystack/Flutterwave checkout-initiation
+// APIs and points their callback_url/redirect_url at these paths, but no route handler existed for either
+// -- a real buyer completing a real payment had no way to ever have that reflected here. Per the user's
+// explicit scoping choice, this ONLY marks the matching checkout/order as paid; it never credits the
+// wallet or moves money itself (settlement, separately, stays disabled -- see its own "Found live"
+// comment above -- until a later, separately-confirmed decision re-enables it on top of this).
+function paystackApiBase() {
+  return String(process.env.PAYSTACK_API_BASE_URL || "https://api.paystack.co").replace(/\/$/, "");
+}
+
+function flutterwaveApiBase() {
+  return String(process.env.FLUTTERWAVE_API_BASE_URL || "https://api.flutterwave.com").replace(/\/$/, "");
+}
+
+// Paystack signs the exact raw request body with HMAC-SHA512 using the account's own secret key --
+// cryptographically tied to the payload, so a webhook POST that passes this check can be trusted
+// directly with no extra network round trip (unlike Flutterwave's verif-hash below).
+function validPaystackWebhookSignature(req, rawBody) {
+  const secret = String(process.env.PAYSTACK_SECRET_KEY || "");
+  const supplied = String(req.headers["x-paystack-signature"] || "");
+  if (!secret || !supplied) return false;
+  const expected = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
+
+// Flutterwave's verif-hash is a constant shared secret compared as-is (not an HMAC over the body), per
+// Flutterwave's own docs -- weaker than Paystack's scheme, so a webhook POST that passes this check still
+// gets re-confirmed against Flutterwave's own verify-transaction API below before anything is marked paid.
+function validFlutterwaveWebhookSignature(req) {
+  const secret = String(process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH || "");
+  const supplied = String(req.headers["verif-hash"] || "");
+  if (!secret || !supplied) return false;
+  const secretBuffer = Buffer.from(secret);
+  const suppliedBuffer = Buffer.from(supplied);
+  return secretBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(secretBuffer, suppliedBuffer);
+}
+
+async function verifyPaystackTransaction(reference) {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  if (!secretKey || !reference) return { ok: false };
+  try {
+    const response = await fetchWithTimeout(`${paystackApiBase()}/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { authorization: `Bearer ${secretKey}` }
+    }, 10000);
+    const json = await response.json().catch(() => ({}));
+    return { ok: Boolean(response.ok && json.status && json.data), data: json.data || null };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+async function verifyFlutterwaveTransaction(transactionId) {
+  const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
+  if (!secretKey || !transactionId) return { ok: false };
+  try {
+    const response = await fetchWithTimeout(`${flutterwaveApiBase()}/v3/transactions/${encodeURIComponent(transactionId)}/verify`, {
+      headers: { authorization: `Bearer ${secretKey}` }
+    }, 10000);
+    const json = await response.json().catch(() => ({}));
+    return { ok: Boolean(response.ok && json.status === "success" && json.data), data: json.data || null };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+// Idempotent against provider webhook retries and a buyer's browser re-hitting the redirect URL: a
+// checkout that is already "paid" is a no-op, so this never double-processes the same payment.
+function markTradePaymentVerified(db, { provider, reference, providerEventId, verifiedAmountOk }) {
+  ensureTradeProfile(db.profile);
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  if (!checkout) return { ok: false, reason: "checkout-not-found" };
+  if (checkout.status === "paid") return { ok: true, alreadyProcessed: true, checkout };
+  if (verifiedAmountOk === false) {
+    logIntegration(db, {
+      providerId: "trade-payments", module: "AgriTrade", action: "payment.amount_mismatch", status: "failed",
+      detail: `${checkout.checkoutNumber}: ${provider} confirmed a payment, but the verified amount did not match this checkout -- not marked paid.`,
+      metadata: { checkoutId: checkout.id, provider, reference }, dispatch: false
+    });
+    return { ok: false, reason: "amount-mismatch", checkout };
+  }
+  const order = checkout.orderId ? (db.profile.orders || []).find(item => item.id === checkout.orderId) : null;
+  checkout.status = "paid";
+  checkout.paidAt = new Date().toISOString();
+  checkout.providerEventId = providerEventId || null;
+  if (order) {
+    order.paid = true;
+    order.paidAt = checkout.paidAt;
+    order.paymentReference = reference;
+    order.paymentProvider = provider;
+  }
+  addTradeEvent(db.profile, { type: "payment.verified", label: `${checkout.checkoutNumber} confirmed paid by ${provider} (${reference}).` });
+  logIntegration(db, {
+    providerId: "trade-payments", module: "AgriTrade", action: "payment.verified", status: "success",
+    detail: `${checkout.checkoutNumber} confirmed paid by ${provider}${order ? `; ${order.orderNumber} marked paid` : ""}. This only marks the order as paid -- it never credits the wallet.`,
+    metadata: { checkoutId: checkout.id, orderId: checkout.orderId, provider, reference },
+    dispatch: false
+  });
+  addActivity(db.profile, `${checkout.checkoutNumber} confirmed paid by ${provider}.`);
+  return { ok: true, checkout, order };
+}
+
+function markTradePaymentFailed(db, { provider, reference }) {
+  ensureTradeProfile(db.profile);
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  if (!checkout || checkout.status === "paid") return { ok: Boolean(checkout) };
+  checkout.status = `${provider}-payment-not-completed`;
+  logIntegration(db, {
+    providerId: "trade-payments", module: "AgriTrade", action: "payment.failed", status: "failed",
+    detail: `${checkout.checkoutNumber}: ${provider} reported this payment as not completed.`,
+    metadata: { checkoutId: checkout.id, provider, reference }, dispatch: false
+  });
+  return { ok: true, checkout };
+}
+
+async function processPaystackReference(db, reference) {
+  if (!reference) return { ok: false, reason: "missing-reference" };
+  const verification = await verifyPaystackTransaction(reference);
+  if (!verification.ok || !verification.data) return { ok: false, reason: "verify-failed" };
+  if (String(verification.data.status || "") !== "success") {
+    markTradePaymentFailed(db, { provider: "paystack", reference });
+    return { ok: false, reason: "not-successful" };
+  }
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  const expectedSubunit = checkout ? paymentSubunitAmount(checkout.grossAmount, checkout.currency) : null;
+  const amountOk = expectedSubunit === null || Math.abs(expectedSubunit - Number(verification.data.amount || 0)) <= 1;
+  return markTradePaymentVerified(db, {
+    provider: "paystack", reference,
+    providerEventId: verification.data.id ? String(verification.data.id) : null,
+    verifiedAmountOk: amountOk
+  });
+}
+
+async function processFlutterwaveTransactionId(db, transactionId, fallbackReference) {
+  if (!transactionId) return { ok: false, reason: "missing-transaction-id" };
+  const verification = await verifyFlutterwaveTransaction(transactionId);
+  if (!verification.ok || !verification.data) return { ok: false, reason: "verify-failed" };
+  const reference = String(verification.data.tx_ref || fallbackReference || "").trim();
+  if (!reference) return { ok: false, reason: "missing-reference" };
+  if (String(verification.data.status || "").toLowerCase() !== "successful") {
+    markTradePaymentFailed(db, { provider: "flutterwave", reference });
+    return { ok: false, reason: "not-successful" };
+  }
+  const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+  const amountOk = !checkout || (
+    Math.abs(Number(checkout.grossAmount) - Number(verification.data.amount || 0)) < 0.5
+    && String(verification.data.currency || checkout.currency).toUpperCase() === String(checkout.currency).toUpperCase()
+  );
+  return markTradePaymentVerified(db, {
+    provider: "flutterwave", reference,
+    providerEventId: verification.data.id ? String(verification.data.id) : null,
+    verifiedAmountOk: amountOk
+  });
+}
+
+function tradePaymentCallbackPage(outcome) {
+  const paid = outcome === "paid";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${paid ? "Payment received" : "Payment not confirmed"}</title></head>
+<body style="font-family: sans-serif; max-width: 480px; margin: 48px auto; text-align: center;">
+<h1>${paid ? "Payment received" : "Payment not confirmed"}</h1>
+<p>${paid
+    ? "Thank you -- your payment has been confirmed and your order has been marked as paid."
+    : "We could not confirm this payment yet. If you already paid, please contact support with your reference."}</p>
+</body></html>`;
 }
 
 function ensureAiProfile(profile) {
@@ -11954,8 +12381,8 @@ function ensureAiProfile(profile) {
 
 function buildAgentPlan(db, goal, user) {
   const { country, route } = activeContext(db);
-  const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-  const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+  const course = db.courses.find(item => item.id === user?.activeCourseId) || db.courses[0];
+  const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   const steps = [
     { id: crypto.randomUUID(), module: "Learning", tool: "learning.start_or_continue", action: "Prepare course path", detail: `Use ${course?.title || "active course"} as the training path and create learning evidence.`, status: "pending-approval" },
@@ -11983,8 +12410,8 @@ function buildAgentPlan(db, goal, user) {
 function buildAutopilotPlan(db, goal, user) {
   const { country, route } = activeContext(db);
   const lower = String(goal || "").toLowerCase();
-  const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-  const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+  const course = db.courses.find(item => item.id === user?.activeCourseId) || db.courses[0];
+  const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   const memory = retrieveAgentMemories(db.profile, goal, 5);
   const makeStep = (module, tool, action, detail) => ({
@@ -12672,7 +13099,13 @@ async function createBuyerSellerMessage(db, user, body = {}) {
   const recipient = twilioRecipientForProvider(providerId, body);
   let delivery = { attempted: false, ok: true, status: "local-thread-only", channel };
   if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")) {
-    delivery = await sendTwilioMessage({ providerId, channel, to: recipient, text });
+    if (body.confirmed !== true) {
+      delivery = { attempted: false, ok: false, status: "confirmation-required-for-live-send", channel };
+    } else if (SENSITIVE_COMMUNICATION_PATTERN.test(text)) {
+      delivery = { attempted: false, ok: false, status: "blocked-sensitive-content", channel };
+    } else {
+      delivery = await sendTwilioMessage({ providerId, channel, to: recipient, text });
+    }
     sellerMessage.status = delivery.ok ? "sent-live" : "sent-local";
     sellerMessage.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
     thread.status = delivery.ok ? "active-live" : "active";
@@ -12797,7 +13230,7 @@ function createVideoSessionWorkflow(db, user, body = {}) {
       accessibilityNeeds: "Captions, audio narration, caregiver handoff, low-bandwidth fallback",
       contactMethod: "Video plus fallback callback"
     }, { defaultFields: ["fallbackIntake"] });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
   }
   const encounter = isHealth && intake
@@ -13042,10 +13475,10 @@ function submitBestWorkforceApplication(db, user, command = "") {
   ensureWorkforceProfile(db.profile);
   const requested = String(command || "").toLowerCase();
   const role = db.roles.find(item => requested.includes(item.title.toLowerCase()))
-    || db.roles.find(item => roleReadiness(db.profile, item).eligible)
+    || db.roles.find(item => roleReadiness(db.profile, user, item).eligible)
     || db.roles[0];
   if (!role) return { status: "needs-role", response: "No workforce roles are available yet." };
-  const readiness = roleReadiness(db.profile, role);
+  const readiness = roleReadiness(db.profile, user, role);
   if (!readiness.eligible) {
     db.profile.candidateStage = "Readiness Gap Review";
     logIntegration(db, {
@@ -13103,15 +13536,15 @@ function submitBestWorkforceApplication(db, user, command = "") {
   };
 }
 
-function activeLearningCourse(db) {
-  return db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
+function activeLearningCourse(db, user) {
+  return db.courses.find(item => item.id === user?.activeCourseId) || db.courses[0];
 }
 
 function completeAgentLesson(db, user) {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(db.profile, course.id);
+  let enrollment = getEnrollment(user, course.id);
   if (!enrollment) {
     enrollment = {
       id: crypto.randomUUID(),
@@ -13124,13 +13557,14 @@ function completeAgentLesson(db, user) {
       startedAt: new Date().toISOString(),
       completedAt: null
     };
-    db.profile.enrollments.unshift(enrollment);
+    user.enrollments.unshift(enrollment);
+    user.enrollments = user.enrollments.slice(0, 1000);
   }
   const moduleIndex = Number(enrollment.activeModuleIndex || 0);
   if (!enrollment.completedModules.includes(moduleIndex)) enrollment.completedModules.push(moduleIndex);
   enrollment.activeModuleIndex = Math.min((course.modules || []).length - 1, moduleIndex + 1);
   enrollment.progress = Math.min(100, Math.max(enrollment.progress || 0, 45) + 20);
-  db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.5).toFixed(2));
+  user.learningHours = Number((Number(user.learningHours || 0) + 0.5).toFixed(2));
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 4);
   recalcReadiness(db.profile);
   logIntegration(db, {
@@ -13145,18 +13579,18 @@ function completeAgentLesson(db, user) {
 }
 
 function completeAgentQuiz(db, user) {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(db.profile, course.id);
+  let enrollment = getEnrollment(user, course.id);
   if (!enrollment) {
     executeAgentTool(db, user, { tool: "learning.start_or_continue" });
-    enrollment = getEnrollment(db.profile, course.id);
+    enrollment = getEnrollment(user, course.id);
   }
   enrollment.progress = Math.min(100, Number(enrollment.progress || 0) + 35);
   enrollment.score = Math.min(100, Math.max(Number(enrollment.score || 0), 72));
-  db.profile.quizScore = Math.max(Number(db.profile.quizScore || 0), enrollment.score);
-  db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.75).toFixed(2));
+  user.quizScore = Math.max(Number(user.quizScore || 0), enrollment.score);
+  user.learningHours = Number((Number(user.learningHours || 0) + 0.75).toFixed(2));
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 6);
   recalcReadiness(db.profile);
   logIntegration(db, {
@@ -13171,31 +13605,31 @@ function completeAgentQuiz(db, user) {
 }
 
 function issueAgentCertificate(db, user) {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(db.profile, course.id);
+  let enrollment = getEnrollment(user, course.id);
   if (!enrollment || Number(enrollment.score || 0) < 25) {
     completeAgentQuiz(db, user);
-    enrollment = getEnrollment(db.profile, course.id);
+    enrollment = getEnrollment(user, course.id);
   }
   enrollment.status = "completed";
   enrollment.progress = 100;
   enrollment.completedAt = enrollment.completedAt || new Date().toISOString();
-  if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
-  let certificate = db.profile.certificates.find(item => item.courseId === course.id);
+  if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
+  let certificate = user.certificates.find(item => item.courseId === course.id);
   if (!certificate) {
     certificate = {
       id: crypto.randomUUID(),
-      certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+      certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
       courseId: course.id,
       title: course.title,
       issuedAt: new Date().toISOString()
     };
-    db.profile.certificates.push(certificate);
+    user.certificates.push(certificate);
   }
   db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 10);
-  db.profile.learningStreak = Number(db.profile.learningStreak || 0) + 1;
+  user.learningStreak = Number(user.learningStreak || 0) + 1;
   recalcReadiness(db.profile);
   logIntegration(db, {
     providerId: "learning-certificates",
@@ -13209,8 +13643,8 @@ function issueAgentCertificate(db, user) {
 }
 
 function prepareLearningAccess(db, user, mode = "caption") {
-  ensureLearningProfile(db.profile);
-  const course = activeLearningCourse(db);
+  ensureLearningProfile(user);
+  const course = activeLearningCourse(db, user);
   const titles = {
     caption: "Captioned lesson packet",
     visual: "Audio guide and screen-reader outline",
@@ -13227,8 +13661,8 @@ function prepareLearningAccess(db, user, mode = "caption") {
     status: "ready",
     createdAt: new Date().toISOString()
   };
-  db.profile.learningAccommodations.unshift(accommodation);
-  db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
+  user.learningAccommodations.unshift(accommodation);
+  user.learningAccommodations = user.learningAccommodations.slice(0, 20);
   logIntegration(db, {
     providerId: "learning-certificates",
     module: "Learning",
@@ -13277,6 +13711,10 @@ function runWorkforceActionByAgent(db, user, type) {
       return "A shift is already scheduled. Wait until it starts before scheduling another.";
     }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
+    // Found live (legacy server.js route sweep): same falsy-zero-override gap as the REST
+    // /api/workforce/action "shift" handler this mirrors -- an explicit rate:0 (an unpaid/volunteer
+    // placement) was treated as missing and silently replaced with a fabricated $64.
+    const requestedRate = Number(db.profile.applications[0]?.rate);
     const shift = {
       id: crypto.randomUUID(),
       role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
@@ -13286,9 +13724,12 @@ function runWorkforceActionByAgent(db, user, type) {
       // literal regardless of which role the shift's own `role` field names --
       // a user placed into a higher-rate role saw the same estimate as one on
       // the cheapest role. Use the actually-applied role's real rate.
-      estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
+      estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
     };
     db.profile.shiftSchedule.unshift(shift);
+    // Found live (legacy server.js helper-function sweep): shiftSchedule grows unboundedly -- never
+    // capped at any of its write sites, unlike virtually every other profile array in this file.
+    db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
     db.profile.nextShift = `${shift.role} shift scheduled`;
     db.profile.earnings = Number(db.profile.earnings || 0) + shift.estimatedEarnings;
     if (!db.profile.workforceBadges.includes("Shift Scheduled")) db.profile.workforceBadges.push("Shift Scheduled");
@@ -13326,7 +13767,7 @@ function ensureVoiceHealthIntake(db, user, { needSummary, force = false } = {}) 
       routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
       createdAt: new Date().toISOString()
     };
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
   }
   return intake;
@@ -13436,7 +13877,7 @@ function runPlatformActionByAgent(db, user, type) {
   if (type === "profile.summary") {
     logIntegration(db, { providerId: "database", module: "Profile", action: "agent.profile_summary", detail: "Unified profile summary opened by voice agent.", dispatch: false });
     addActivity(db.profile, "Voice agent opened unified profile summary.");
-    return `Unified profile ready: ${db.profile.readiness}% readiness, ${(db.profile.certificates || []).length} certificates, ${(db.profile.applications || []).length} applications, ${(db.profile.orders || []).length} orders.`;
+    return `Unified profile ready: ${db.profile.readiness}% readiness, ${(user?.certificates || []).length} certificates, ${(db.profile.applications || []).length} applications, ${(db.profile.orders || []).length} orders.`;
   }
   return "Platform action recorded.";
 }
@@ -13464,11 +13905,11 @@ function ensureCommunicationProfile(profile) {
   profile.communicationMessages = profile.communicationMessages || [];
 }
 
-function communicationContext(db, moduleName, body = {}) {
+function communicationContext(db, moduleName, body = {}, user = null) {
   const { country, route } = activeContext(db);
   const moduleKey = String(moduleName || "Platform").toLowerCase();
   if (moduleKey.includes("learning")) {
-    const course = (db.courses || []).find(item => item.id === (body.courseId || db.profile.activeCourseId)) || (db.courses || [])[0];
+    const course = (db.courses || []).find(item => item.id === (body.courseId || user?.activeCourseId)) || (db.courses || [])[0];
     return {
       subject: course?.title || "active learning path",
       participantName: body.recipientName || "Learning coach",
@@ -13528,8 +13969,8 @@ async function createCommunicationThread(db, user, body = {}) {
     ? "sms-delivery"
     : /email/i.test(channel)
     ? "email-delivery"
-    : communicationContext(db, moduleName, body).providerId;
-  const context = communicationContext(db, moduleName, body);
+    : communicationContext(db, moduleName, body, user).providerId;
+  const context = communicationContext(db, moduleName, body, user);
   const text = String(body.message || context.defaultMessage).trim();
   const replyText = String(body.reply || context.defaultReply).trim();
   const thread = {
@@ -13570,7 +14011,13 @@ async function createCommunicationThread(db, user, body = {}) {
   // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
   // exists to close everywhere.
   if (["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")) {
-    delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
+    if (body.confirmed !== true) {
+      delivery = { attempted: false, ok: false, status: "confirmation-required-for-live-send", channel };
+    } else if (SENSITIVE_COMMUNICATION_PATTERN.test(text)) {
+      delivery = { attempted: false, ok: false, status: "blocked-sensitive-content", channel };
+    } else {
+      delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
+    }
     outbound.status = delivery.ok ? "sent-live" : "sent-local";
     outbound.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
     thread.status = delivery.ok ? "active-live" : "active";
@@ -13744,13 +14191,21 @@ function platformIntelligenceDailyPlan(db, user, goal = "") {
   return plan;
 }
 
+// Found live (legacy server.js helper-function sweep): this function, and the 15 other
+// Operational/Adaptive/Network/Ecosystem/Executive/Autonomous-Orchestration "Intelligence" functions
+// below it in the file, all numbered their records via `(array || []).length + 1` computed BEFORE the
+// array gets `.slice(0, N)`-capped right after -- once an array reaches its cap, `.length` pins at the
+// cap forever, so every subsequent record of that type gets an identical "unique" reference. Same bug
+// class already fixed elsewhere via nextRecordSequence(db, key) (see that function's own comment for
+// the full explanation); none of this module family had ever been converted. Display-only IDs, no
+// money/PHI impact, but genuinely broken uniqueness once any account is active enough to fill a cap.
 function platformIntelligenceDraft(db, user, body = {}) {
   const intelligence = ensurePlatformIntelligenceProfile(db.profile);
   const audience = String(body.audience || "partner").trim();
   const topic = String(body.topic || body.query || "AgriNexus platform follow-up").trim();
   const record = {
     id: crypto.randomUUID(),
-    draftNumber: `NEX-DRAFT-${String((intelligence.messageDrafts || []).length + 1).padStart(3, "0")}`,
+    draftNumber: `NEX-DRAFT-${String(nextRecordSequence(db, "platformIntelligenceMessageDrafts")).padStart(3, "0")}`,
     audience,
     topic,
     channel: String(body.channel || "WhatsApp/SMS/email draft").trim(),
@@ -13932,7 +14387,6 @@ function operationalModuleFromText(text = "") {
 }
 
 function operationalWorkflowScores(db) {
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -13942,11 +14396,18 @@ function operationalWorkflowScores(db) {
     const ready = parts.filter(Boolean).length;
     return Math.round((ready / Math.max(1, parts.length)) * 100);
   };
+  // Learning fields are per-user now -- summed across every real account
+  // instead of one shared blob, same platform-wide framing as the other
+  // module scores here.
+  const totalEnrollments = (db.users || []).reduce((sum, item) => sum + (item.enrollments || []).length, 0);
+  const totalCompletedCourses = (db.users || []).reduce((sum, item) => sum + (item.completedCourses || []).length, 0);
+  const totalCertificates = (db.users || []).reduce((sum, item) => sum + (item.certificates || []).length, 0);
+  const totalLearningAccommodations = (db.users || []).reduce((sum, item) => sum + (item.learningAccommodations || []).length, 0);
   const scores = [
     {
       module: "Learning",
-      percent: score([(db.profile.enrollments || []).length, (db.profile.completedCourses || []).length, (db.profile.certificates || []).length, (db.profile.learningAccommodations || []).length]),
-      evidence: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`
+      percent: score([totalEnrollments, totalCompletedCourses, totalCertificates, totalLearningAccommodations]),
+      evidence: `${totalEnrollments} enrollment(s), ${totalCertificates} certificate(s)`
     },
     {
       module: "Workforce",
@@ -14038,7 +14499,7 @@ function createOperationalGoal(db, user, body = {}) {
   const moduleScore = scores.find(item => item.module === module)?.percent || scores.find(item => module.includes(item.module))?.percent || 0;
   const goal = {
     id: crypto.randomUUID(),
-    goalNumber: `NEX-GOAL-${String((intelligence.goals || []).length + 1).padStart(3, "0")}`,
+    goalNumber: `NEX-GOAL-${String(nextRecordSequence(db, "operationalGoals")).padStart(3, "0")}`,
     title: goalText,
     module,
     status: "active",
@@ -14091,7 +14552,7 @@ function runOperationalPlaybook(db, user, type = "", body = {}) {
   const goal = createOperationalGoal(db, user, { goal: request, module: playbook?.module || operationalModuleFromText(request) });
   const run = {
     id: crypto.randomUUID(),
-    runNumber: `NEX-PLAY-${String((intelligence.playbookRuns || []).length + 1).padStart(3, "0")}`,
+    runNumber: `NEX-PLAY-${String(nextRecordSequence(db, "operationalPlaybookRuns")).padStart(3, "0")}`,
     playbookId: playbook?.id || "general",
     title: playbook?.title || "General operational playbook",
     module: playbook?.module || goal.module,
@@ -14128,7 +14589,7 @@ function recordOperationalIssue(db, user, body = {}) {
   const module = body.module || operationalModuleFromText(detail);
   const issue = {
     id: crypto.randomUUID(),
-    issueNumber: `NEX-FIX-${String((intelligence.issueReports || []).length + 1).padStart(3, "0")}`,
+    issueNumber: `NEX-FIX-${String(nextRecordSequence(db, "operationalIssueReports")).padStart(3, "0")}`,
     module,
     detail,
     status: "guided-recovery",
@@ -14190,7 +14651,7 @@ function operationalDecisionReview(db, user, query = "") {
   ].slice(0, 5);
   const review = {
     id: crypto.randomUUID(),
-    reviewNumber: `NEX-DEC-${String((intelligence.decisionReviews || []).length + 1).padStart(3, "0")}`,
+    reviewNumber: `NEX-DEC-${String(nextRecordSequence(db, "operationalDecisionReviews")).padStart(3, "0")}`,
     query,
     module,
     workflowScore,
@@ -14381,7 +14842,7 @@ function buildAdaptiveSignals(db, user, providers = runtimeProviders(db)) {
   if (!(db.profile.orders || []).length) {
     addSignal("missing-trade-order", "AgriTrade", "No crop order yet", "Crop sale demos become stronger when an order, route, receipt, and buyer message exist.", "medium", "Create crop order");
   }
-  if (!(db.profile.enrollments || []).length) {
+  if (!(user?.enrollments || []).length) {
     addSignal("missing-learning-path", "Learning", "No active learner path yet", "Learning feels stronger when a learner is enrolled and a next lesson is visible.", "medium", "Start course");
   }
   if (!(db.profile.applications || []).length) {
@@ -14406,7 +14867,7 @@ function createAdaptiveNudge(db, user, signalOrBody = {}) {
   const module = signal.module || signalOrBody.module || "Platform";
   const nudge = {
     id: crypto.randomUUID(),
-    nudgeNumber: `NEX-AUTO-${String((autonomy.proactiveNudges || []).length + 1).padStart(3, "0")}`,
+    nudgeNumber: `NEX-AUTO-${String(nextRecordSequence(db, "adaptiveProactiveNudges")).padStart(3, "0")}`,
     module,
     section: adaptiveModuleSection(module),
     title: signal.title || signalOrBody.title || "Nexus proactive next step",
@@ -14447,7 +14908,7 @@ function runAdaptiveAutonomyCycle(db, user, body = {}) {
   const nudges = signals.slice(0, Number(body.limit || 5)).map(signal => createAdaptiveNudge(db, user, signal));
   const run = {
     id: crypto.randomUUID(),
-    runNumber: `NEX-LOOP-${String((autonomy.monitoringRuns || []).length + 1).padStart(3, "0")}`,
+    runNumber: `NEX-LOOP-${String(nextRecordSequence(db, "adaptiveMonitoringRuns")).padStart(3, "0")}`,
     mode: "controlled-adaptive-autonomy",
     status: "completed-local",
     summary: `${signals.length} signal(s) inspected and ${nudges.length} proactive nudge(s) prepared.`,
@@ -14461,7 +14922,7 @@ function runAdaptiveAutonomyCycle(db, user, body = {}) {
   autonomy.monitoringRuns = autonomy.monitoringRuns.slice(0, 50);
   autonomy.autonomousActions.unshift({
     id: crypto.randomUUID(),
-    actionNumber: `NEX-ACT-${String((autonomy.autonomousActions || []).length + 1).padStart(3, "0")}`,
+    actionNumber: `NEX-ACT-${String(nextRecordSequence(db, "adaptiveAutonomousActions")).padStart(3, "0")}`,
     type: "monitor-and-nudge",
     status: "completed-local",
     detail: run.summary,
@@ -14489,7 +14950,7 @@ function recordAdaptiveLearning(db, user, body = {}) {
   const module = body.module || operationalModuleFromText(lesson);
   const update = {
     id: crypto.randomUUID(),
-    updateNumber: `NEX-LEARN-${String((autonomy.learningUpdates || []).length + 1).padStart(3, "0")}`,
+    updateNumber: `NEX-LEARN-${String(nextRecordSequence(db, "adaptiveLearningUpdates")).padStart(3, "0")}`,
     module,
     lesson,
     behaviorChange: String(body.behaviorChange || "Use shorter responses, ask one question, and open the most relevant workflow first.").trim(),
@@ -14754,7 +15215,7 @@ function runNetworkIntelligenceQuery(db, user, body = {}) {
   const match = networkProviderMatch(db, user, query, body);
   const record = {
     id: crypto.randomUUID(),
-    queryNumber: `NEX-NET-${String((network.queries || []).length + 1).padStart(3, "0")}`,
+    queryNumber: `NEX-NET-${String(nextRecordSequence(db, "networkIntelligenceQueries")).padStart(3, "0")}`,
     query,
     serviceId: match.serviceId,
     serviceTitle: match.serviceTitle,
@@ -15100,7 +15561,7 @@ function runEcosystemMission(db, user, body = {}) {
   const liveRoutes = routes.filter(route => route.status === "live-capable").length;
   const record = {
     id: crypto.randomUUID(),
-    missionNumber: `NEX-ECO-${String((ecosystem.missions || []).length + 1).padStart(3, "0")}`,
+    missionNumber: `NEX-ECO-${String(nextRecordSequence(db, "ecosystemMissions")).padStart(3, "0")}`,
     missionId: template.id,
     title: template.title,
     query,
@@ -15430,7 +15891,7 @@ function runExecutiveIntelligenceAnalysis(db, user, body = {}) {
   const topCountry = suite.launchPriorities[0] || {};
   const record = {
     id: crypto.randomUUID(),
-    analysisNumber: `NEX-EXEC-${String((executive.analyses || []).length + 1).padStart(3, "0")}`,
+    analysisNumber: `NEX-EXEC-${String(nextRecordSequence(db, "executiveIntelligenceAnalyses")).padStart(3, "0")}`,
     focus: pillar.id,
     title: pillar.title,
     query,
@@ -15451,7 +15912,7 @@ function runExecutiveIntelligenceAnalysis(db, user, body = {}) {
   executive.decisions.unshift({
     id: crypto.randomUUID(),
     analysisId: record.id,
-    decisionNumber: `NEX-DECIDE-${String((executive.decisions || []).length + 1).padStart(3, "0")}`,
+    decisionNumber: `NEX-DECIDE-${String(nextRecordSequence(db, "executiveIntelligenceDecisions")).padStart(3, "0")}`,
     focus: record.focus,
     recommendation: record.recommendation,
     nextAction: record.nextActions[0],
@@ -15633,7 +16094,7 @@ function runAutonomousOrchestrationMission(db, user, body = {}) {
   const country = body.country || networkCountryFromText(query, db) || template.defaultCountry;
   const mission = {
     id: crypto.randomUUID(),
-    missionNumber: `NEX-ORCH-${String((orchestration.missions || []).length + 1).padStart(3, "0")}`,
+    missionNumber: `NEX-ORCH-${String(nextRecordSequence(db, "autonomousOrchestrationMissions")).padStart(3, "0")}`,
     templateId: template.id,
     title: template.title,
     goal: query || template.goal,
@@ -15703,7 +16164,7 @@ function runAutonomousOrchestrationCycle(db, user, body = {}) {
   mission.updatedAt = new Date().toISOString();
   const cycle = {
     id: crypto.randomUUID(),
-    cycleNumber: `NEX-CYCLE-${String((orchestration.cycles || []).length + 1).padStart(3, "0")}`,
+    cycleNumber: `NEX-CYCLE-${String(nextRecordSequence(db, "autonomousOrchestrationCycles")).padStart(3, "0")}`,
     missionId: mission.id,
     missionNumber: mission.missionNumber,
     completedSteps: completed,
@@ -15786,7 +16247,7 @@ function buildAutonomousOrchestrationReport(db, user, body = {}) {
   const waiting = mission.steps.filter(step => step.status !== "done");
   const report = {
     id: crypto.randomUUID(),
-    reportNumber: `NEX-REPORT-${String((orchestration.reports || []).length + 1).padStart(3, "0")}`,
+    reportNumber: `NEX-REPORT-${String(nextRecordSequence(db, "autonomousOrchestrationReports")).padStart(3, "0")}`,
     missionId: mission.id,
     missionNumber: mission.missionNumber,
     title: `${mission.title} outcome report`,
@@ -15901,7 +16362,6 @@ function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
 
 function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -15945,7 +16405,6 @@ function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
 
 function runWomenFamilyAgricultureWorkflow(db, user, body = {}) {
   ensureOperationsProfile(db.profile);
-  ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -16019,7 +16478,10 @@ function runWomenFamilyAgricultureWorkflow(db, user, body = {}) {
     providerId: "notifications",
     channel: "in-app",
     message: `${runNumber} opened for ${beneficiaryGroup}.`,
-    createdBy: user.name
+    // Found live (communications/notifications audit): a display name, unlike the correct
+    // user?.email-based convention used elsewhere in this same function family -- PROFILE_OWNER_FIELDS'
+    // export/erasure scan matches by email, so this notification silently survived account erasure.
+    createdBy: user?.email || "Ask Nexus"
   });
   logIntegration(db, {
     providerId: "openai",
@@ -16975,10 +17437,10 @@ async function executeAgentTool(db, user, step) {
   }
   const { country, route } = activeContext(db);
   if (step.tool === "learning.start_or_continue") {
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
     if (!course) throw new Error("No course catalog is available.");
-    let enrollment = getEnrollment(db.profile, course.id);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -16991,16 +17453,17 @@ async function executeAgentTool(db, user, step) {
         activeModuleIndex: 0,
         completedModules: []
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
+      user.enrollments = user.enrollments.slice(0, 1000);
     } else {
       enrollment.progress = Math.min(100, Number(enrollment.progress || 0) + 25);
       enrollment.status = enrollment.progress >= 100 ? "completed" : "in_progress";
       if (enrollment.progress >= 100 && !enrollment.completedAt) enrollment.completedAt = new Date().toISOString();
     }
-    db.profile.activeCourseId = course.id;
+    user.activeCourseId = course.id;
     db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + Math.max(2, Math.round((course.readiness || 8) / 2)));
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.5).toFixed(2));
-    db.profile.learningStreak = Number(db.profile.learningStreak || 0) + 1;
+    user.learningHours = Number((Number(user.learningHours || 0) + 0.5).toFixed(2));
+    user.learningStreak = Number(user.learningStreak || 0) + 1;
     recalcReadiness(db.profile);
     logIntegration(db, {
       providerId: "learning-courses",
@@ -17039,9 +17502,9 @@ async function executeAgentTool(db, user, step) {
 
   if (step.tool === "workforce.match_role") {
     ensureWorkforceProfile(db.profile);
-    const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+    const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
     if (!role) throw new Error("No workforce role catalog is available.");
-    const readiness = roleReadiness(db.profile, role);
+    const readiness = roleReadiness(db.profile, user, role);
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
     let application = db.profile.applications.find(item => item.roleId === role.id);
     if (readiness.eligible && !application) {
@@ -17103,7 +17566,7 @@ async function executeAgentTool(db, user, step) {
         contactMethod: "Low-bandwidth callback",
         caregiverName: "Community accessibility aide"
       });
-      db.profile.healthIntakes.unshift(intake);
+      addHealthIntake(db, intake);
       shadowWriteHealthIntakeToPostgres(intake);
     }
     const record = {
@@ -17734,7 +18197,7 @@ async function runLocalPilotStudio(db, user, scenario = "rural-access") {
     status: execution.status === "completed" ? "pilot-ready" : "needs-review",
     summary: `${scenarioConfig.title} completed locally with ${execution.steps.filter(step => step.status === "executed").length}/${execution.steps.length} workflow steps executed.`,
     outcomes: [
-      `${(db.profile.enrollments || []).length} learning enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`,
+      `${(user?.enrollments || []).length} learning enrollment(s), ${(user?.certificates || []).length} certificate(s)`,
       `${(db.profile.applications || []).length} workforce application(s), ${(db.profile.shiftSchedule || []).length} shift(s)`,
       `${(db.profile.healthIntakes || []).length} telehealth intake(s), ${(db.profile.carePlans || []).length} care plan(s)`,
       `${(db.profile.orders || []).length} trade order(s), ${(db.profile.buyerContacts || []).length} buyer contact(s)`,
@@ -17755,7 +18218,7 @@ async function runLocalPilotStudio(db, user, scenario = "rural-access") {
     providerId: "openai",
     channel: "local-pilot",
     message: `${run.title} evidence report is ready.`,
-    createdBy: user.name
+    createdBy: user?.email || "Ask Nexus"
   });
   logIntegration(db, {
     providerId: "openai",
@@ -17814,9 +18277,17 @@ async function createOutboundCallWorkflow(db, user, body = {}) {
   // idiom instead of the centralized userIsRestrictedFrom(), reopening the "a role with no
   // restrictions array at all, e.g. Investor, sails through an includes() check" gap that function
   // exists to close everywhere.
+  // Note: the confirmation gate for this function lives at its one unconfirmed caller
+  // (POST /api/voice/phone/outbound-call), not here -- every OTHER caller (the Cloud Agent's
+  // communications.outbound_call step, and the conversational dispatcher's staged "call X" ->
+  // "yes" flow) already requires its own prior confirmation/approval before ever reaching this
+  // function, and never threads a `confirmed` field through, so gating on body.confirmed here would
+  // have wrongly re-blocked those already-legitimate, already-confirmed callers.
   const delivery = userIsRestrictedFrom(user, "communications-send")
     ? { attempted: false, ok: false, status: "restricted-account-no-real-call" }
-    : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
+    : SENSITIVE_COMMUNICATION_PATTERN.test(message)
+      ? { attempted: false, ok: false, status: "blocked-sensitive-content" }
+      : await startTwilioOutboundCall({ to: recipient, message, context: purpose });
   const record = {
     id: crypto.randomUUID(),
     callNumber: `CALL-${String(nextRecordSequence(db, "outboundCalls")).padStart(3, "0")}`,
@@ -19806,7 +20277,15 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
     providerAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
     providerSucceeded,
     executionAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
-    executionVerified: typeof body.nexusLifecycleVerified === "boolean" ? body.nexusLifecycleVerified : providerSucceeded,
+    // Found live (fresh-module audit): for any tool call NOT wrapped in withActionLifecycle (so
+    // nexusLifecycleVerified is never set), this fell back to bare providerSucceeded -- which is true for a
+    // labeled-simulated demo-double response (ok:true, status:"completed") exactly as much as for a real
+    // one. A read-only action like calendar.event.search has no withActionLifecycle wrapper at all (it's
+    // not a write, so there's nothing to dedupe), so its simulated "no real calendar configured" response
+    // reported execution.verified: true in the structured envelope -- honest in the spoken/rendered text,
+    // but misleading to any caller or downstream evaluator trusting this structured field as "this really
+    // happened against a real provider."
+    executionVerified: typeof body.nexusLifecycleVerified === "boolean" ? body.nexusLifecycleVerified : (providerSucceeded && body.data?.simulated !== true),
     missingEnvVars: body.missingConfig || [],
     requiresConfirmation: Boolean(body.requiresConfirmation),
     disabled: Boolean(body.disabled),
@@ -20191,6 +20670,7 @@ function nexusOpenAiNativeCreateLocalReminder(db, user, common = {}, args = {}) 
     externalNotificationSent: false
   };
   db.nexusPilotReminders.unshift(reminder);
+  db.nexusPilotReminders = db.nexusPilotReminders.slice(0, 200);
   const audit = addNexusPilotAuditEvent(db, "openai_native_local_reminder_created", {
     actor: user?.name || user?.email || "Standard User",
     role: user?.role || "Standard User",
@@ -22564,7 +23044,20 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     // and any caller branching on status (the confirmation-required checks
     // used throughout this file, e.g. around line 16094 and 30285) would
     // never see that this turn is actually still pending.
-    const requiresConfirmation = toolResults.some(item => item.result?.status === "confirmation_required");
+    // Found live: only the underscore spelling was checked here, which only
+    // the provider-layer helpers (email.send, Twilio sendSms/sendWhatsapp,
+    // via providerUtils.js's confirmationRequiredResponse) actually use.
+    // Every in-function branch that pauses for confirmation directly
+    // (reminder cancellation, field-visit-plan cancellation, nexus_lists,
+    // nexus_health_preparation's telehealth-video path) uses the hyphenated
+    // "confirmation-required" instead, and two of those (reminder/field-visit
+    // cancellation) never set requiresConfirmation on their own result
+    // either -- so this check silently missed all of them and reported
+    // "completed" for a turn that was actually still waiting on the user.
+    const requiresConfirmation = toolResults.some(item =>
+      item.result?.requiresConfirmation === true
+      || item.result?.status === "confirmation_required"
+      || item.result?.status === "confirmation-required");
     return ensureSpeakableAgentResult({
       intent: runType,
       response: finalText,
@@ -23398,19 +23891,19 @@ function roleSpecificReasoningProfile(moduleName = "Agent AI", userModel = {}) {
   };
 }
 
-function evidenceForReasoning(db, moduleName = "Agent AI") {
+function evidenceForReasoning(db, moduleName = "Agent AI", user = null) {
   const { country, route } = activeContext(db);
   const evidence = [
     `${country.name} active country, ${route.name} active route, checkpoint ${db.profile.activeCheckpoint}`,
     `${db.profile.readiness || 0}% workforce readiness`,
-    `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`,
+    `${(user?.enrollments || []).length} enrollment(s), ${(user?.certificates || []).length} certificate(s)`,
     `${(db.profile.healthIntakes || []).length} health intake(s), ${(db.profile.videoSessions || []).length} video session(s)`,
     `${(db.profile.orders || []).length} trade order(s), ${(db.profile.droneScans || []).length} drone scan(s)`,
     `${(db.profile.integrationEvents || []).length} provider/audit event(s)`
   ];
   if (moduleName === "Healthcare") evidence.push(`${country.risk} regional health risk; ${country.queue} queue context`);
   if (moduleName === "AgriTrade") evidence.push(`${db.profile.wallet || 0} wallet balance; route stage ${db.profile.routeStage}`);
-  if (moduleName === "Learning") evidence.push(`Active course ${db.profile.activeCourseId || "none"}`);
+  if (moduleName === "Learning") evidence.push(`Active course ${user?.activeCourseId || "none"}`);
   if (moduleName === "Workforce") evidence.push(`Candidate stage ${db.profile.candidateStage || "not started"}`);
   return evidence;
 }
@@ -23436,7 +23929,7 @@ function reasoningLanguageProductionEngine(db, user, command = "", options = {})
     { id: "multilingual-voice-brain", title: "Multilingual Voice Brain", ready: Boolean(providerOk("voice-stt") || providerOk("voice-tts") || process.env.OPENAI_API_KEY), evidence: `Target language ${targetLanguage}; STT/TTS providers tracked with browser and OpenAI fallbacks.` },
     { id: "role-specific-intelligence", title: "Role-Specific Intelligence", ready: true, evidence: `${roleProfile.audience}: ${roleProfile.priorities.slice(0, 3).join(", ")}.` },
     { id: "human-like-recovery", title: "Human-Like Recovery", ready: true, evidence: "Clarification, voice recovery, imperfect-language routing, and one-question follow-up are active." },
-    { id: "evidence-based-reasoning", title: "Evidence-Based Reasoning", ready: true, evidence: evidenceForReasoning(db, moduleSignal.module).slice(0, 4).join(" | ") }
+    { id: "evidence-based-reasoning", title: "Evidence-Based Reasoning", ready: true, evidence: evidenceForReasoning(db, moduleSignal.module, user).slice(0, 4).join(" | ") }
   ];
   const readyCount = layers.filter(item => item.ready).length;
   const engine = {
@@ -24454,7 +24947,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   };
   const profileSummary = {
     readiness: db.profile.readiness,
-    activeCourseId: db.profile.activeCourseId,
+    activeCourseId: user?.activeCourseId,
     applications: (db.profile.applications || []).length,
     healthIntakes: (db.profile.healthIntakes || []).length,
     orders: (db.profile.orders || []).length,
@@ -28741,7 +29234,7 @@ async function planAgentToolWithOpenAi(db, user, command) {
     profile: {
       readiness: db.profile.readiness,
       learningPath: db.profile.learningPath || db.profile.careerTrack,
-      certificates: (db.profile.certificates || []).length,
+      certificates: (user?.certificates || []).length,
       applications: (db.profile.applications || []).length,
       healthIntakes: (db.profile.healthIntakes || []).length,
       orders: (db.profile.orders || []).length,
@@ -29181,7 +29674,7 @@ async function applyConversationalIntake(db, user, pending) {
       accessibilityNeeds: "Voice-first support",
       contactMethod: "Voice callback"
     });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
     logIntegration(db, { providerId: "health-telehealth", module: "Healthcare", action: "agent.conversational_intake_created", detail: `${intake.patientRef} created from conversational intake.`, metadata: { intakeId: intake.id, answers } });
     addActivity(db.profile, `${intake.patientRef} created from conversational intake.`);
@@ -29315,8 +29808,8 @@ function roleGuidanceTarget(text = "") {
 
 function roleGuidancePlan(db, user, target = "farmer") {
   const { country, route } = activeContext(db);
-  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0];
-  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0];
+  const course = (db.courses || []).find(item => item.id === user?.activeCourseId) || (db.courses || [])[0];
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, user, item).eligible) || (db.roles || [])[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   const plans = {
     farmer: {
@@ -29786,7 +30279,7 @@ function tradeLocationRouteResponse(db, user, text, options = {}) {
 
 function nexusMissionBrainModel(db, user, goalText = "", options = {}) {
   ensureAiProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -29965,7 +30458,7 @@ function missionBrainCommandResponse(db, user, text, options = {}) {
 
 function nexusTrustedOperatingSystemModel(db, user, goalText = "", options = {}) {
   ensureAiProfile(db.profile);
-  ensureLearningProfile(db.profile);
+  if (user) ensureLearningProfile(user);
   ensureWorkforceProfile(db.profile);
   ensureHealthProfile(db.profile);
   ensureTradeProfile(db.profile);
@@ -29981,7 +30474,7 @@ function nexusTrustedOperatingSystemModel(db, user, goalText = "", options = {})
   const auditEvents = db.profile.integrationEvents || [];
   const agentCommands = db.profile.agentCommands || [];
   const workflowEvidence = [
-    (db.profile.enrollments || []).length,
+    (user?.enrollments || []).length,
     (db.profile.applications || []).length,
     (db.profile.healthIntakes || []).length,
     (db.profile.orders || []).length,
@@ -30701,7 +31194,7 @@ function buildAssistantActionMemory(db, user, command = "") {
       source: "workforce-continuity"
     });
   }
-  if ((db.profile.enrollments || []).length && !(db.profile.certificates || []).length) {
+  if ((user?.enrollments || []).length && !(user?.certificates || []).length) {
     add({
       title: "Continue learning path",
       detail: "Learning is started, but no certificate is issued yet.",
@@ -32296,13 +32789,13 @@ async function dailyLifeAdvisorResponse(db, user, text, lower, options = {}) {
   };
 }
 
-function simplePlatformDataBrief(db, text = "") {
+function simplePlatformDataBrief(db, text = "", user = null) {
   const lower = String(text || "").toLowerCase();
   const { country, route } = activeContext(db);
   const scan = (db.profile.droneScans || [])[0];
   const finding = (db.profile.droneFindings || [])[0];
-  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0];
-  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0];
+  const course = (db.courses || []).find(item => item.id === user?.activeCourseId) || (db.courses || [])[0];
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, user, item).eligible) || (db.roles || [])[0];
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   if (/\b(drone|field scan|scan data|crop data|aerial|farm data)\b/.test(lower)) {
     const plain = scan ? plainDroneInterpretation(db, scan, finding) : null;
@@ -32459,7 +32952,7 @@ function isSimpleDataExplanation(lower) {
 }
 
 function simpleDataExplanationResponse(db, user, text, lower) {
-  const brief = simplePlatformDataBrief(db, text);
+  const brief = simplePlatformDataBrief(db, text, user);
   const coach = simpleCoachCardForBrief(brief);
   rememberAgentMemory(db.profile, `${coach.title}: ${coach.response}`, { source: "simple-coach-interpreter", category: "pattern", module: coach.module, confidence: 0.9 });
   db.profile.agentMemory.activeModule = brief.module;
@@ -35928,6 +36421,7 @@ function buildNexusPilotRecord(db, body = {}, user = null) {
   });
   record.auditRefs = [audit.id];
   db.nexusPilotRecords.unshift(record);
+  db.nexusPilotRecords = db.nexusPilotRecords.slice(0, 200);
   return record;
 }
 
@@ -35974,6 +36468,7 @@ function nexusPilotQueueRecordForReview(db, record, user = null) {
   record.reviewStatus = "ready_for_review";
   record.updatedAt = now;
   db.nexusPilotReviewQueue.unshift(queueItem);
+  db.nexusPilotReviewQueue = db.nexusPilotReviewQueue.slice(0, 200);
   const audit = addNexusPilotAuditEvent(db, "item_queued_for_review", {
     relatedRecordId: record.id,
     mode: record.sourceMode,
@@ -39615,6 +40110,7 @@ function queueNexusEmailFallback(db, payload = {}, status = "email-provider-unco
     updatedAt: now
   };
   db.nexusPilotOfflineQueue.unshift(item);
+  db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
   addNexusPilotAuditEvent(db, "email_packet_queued_locally", {
     relatedRecordId: item.id,
     mode: item.domain,
@@ -39889,6 +40385,7 @@ function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provid
     updatedAt: now
   };
   db.nexusPilotOfflineQueue.unshift(item);
+  db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
   addNexusPilotAuditEvent(db, "communications_packet_queued_locally", {
     relatedRecordId: item.id,
     mode: item.domain,
@@ -40123,6 +40620,7 @@ function queueNexusProviderCoordinationFallback(db, lane = "pharmacy", payload =
     updatedAt: now
   };
   db.nexusPilotOfflineQueue.unshift(item);
+  db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
   addNexusPilotAuditEvent(db, `${config.lane}_packet_queued_locally`, {
     relatedRecordId: item.id,
     mode: config.lane,
@@ -40617,6 +41115,7 @@ function nexusKnowledgeSaveResult(db, body = {}, user = null) {
     noExternalAction: true
   };
   db.nexusKnowledgeSavedResults.unshift(saved);
+  db.nexusKnowledgeSavedResults = db.nexusKnowledgeSavedResults.slice(0, 200);
   addNexusPilotAuditEvent(db, "knowledge_result_saved", {
     relatedRecordId: record.id,
     actor: user?.name || record.profileLabel,
@@ -40709,6 +41208,7 @@ function nexusKnowledgePrepareReviewSummary(db, body = {}, user = null) {
   };
   if (!Array.isArray(db.nexusKnowledgeReviewSummaries)) db.nexusKnowledgeReviewSummaries = [];
   db.nexusKnowledgeReviewSummaries.unshift(summary);
+  db.nexusKnowledgeReviewSummaries = db.nexusKnowledgeReviewSummaries.slice(0, 200);
   const audit = addNexusPilotAuditEvent(db, "knowledge_review_summary_prepared", {
     relatedRecordId: summary.linkedRecordId,
     actor: user?.name || "Standard User",
@@ -41539,6 +42039,7 @@ function caseTimelineEvent(db, caseId, eventType, description, refs = {}) {
     createdAt: new Date().toISOString()
   };
   db.nexusCaseTimeline.unshift(event);
+  db.nexusCaseTimeline = db.nexusCaseTimeline.slice(0, 1000);
   return event;
 }
 
@@ -41660,6 +42161,7 @@ function nexusProviderPathwayStatus(db) {
 function nexusProviderPathwayRequest(db, body = {}, user = null) {
   const requestItem = normalizeProviderPathwayRequest(db, body, user);
   db.nexusProviderPathwayRequests.unshift(requestItem);
+  db.nexusProviderPathwayRequests = db.nexusProviderPathwayRequests.slice(0, 200);
   addNexusPilotAuditEvent(db, "provider_pathway_request_prepared", {
     relatedRecordId: requestItem.structuredRecordId,
     actor: requestItem.createdBy,
@@ -42092,6 +42594,19 @@ function addNexusConsentRecord(db, entityType, entityId, consentType, granted = 
   store.consentRecords.unshift(consent);
   store.consentRecords = store.consentRecords.slice(0, 1000);
   return consent;
+}
+
+// Found live (legacy server.js helper-function sweep): every one of this function's 7 call sites built
+// its own archiveRecords entry inline and unshifted it directly, with no cap anywhere in the file --
+// unlike the sibling addNexusOperationsAudit/addNexusOperationsReceipt/addNexusConsentRecord helpers
+// right above, which all cap their own array at 1000 immediately after unshift. Centralizing the write
+// here closes the gap for all 7 sites at once.
+function addNexusOperationsArchive(db, entityType, entityId, action, reason) {
+  const store = ensureNexusPersistentOperations(db);
+  const record = { archiveId: nexusOperationId("NX-ARCH"), entityType, entityId, action, reason, createdAt: nexusNow() };
+  store.archiveRecords.unshift(record);
+  store.archiveRecords = store.archiveRecords.slice(0, 1000);
+  return record;
 }
 
 // Redacts the full before/after record snapshot from an audit entry unless
@@ -44420,7 +44935,25 @@ function anonymousOperationsIdentity(body = {}) {
 // the ORIGINAL, possibly-null, pre-fallback user's email instead -- so a real
 // Postgres shadow-write is never attributed to a real account nobody
 // actually authenticated as.
-function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = user?.email) {
+// Found live (legacy server.js helper-function sweep): none of this function's health-write actions
+// (create_chronic_care_profile, add_rpm_reading, add_rtm_activity, create_intake,
+// create_provider_review_packet, create_pharmacy_referral, create_mobile_clinic_follow_up,
+// create_telehealth_encounter) ever called canWriteHealth(), unlike the dedicated REST routes for these
+// exact same actions (/api/nexus/pharmacy/create-referral, /api/nexus/mobile-clinic/create-request,
+// /api/nexus/telehealth/create-encounter, etc.), which all correctly gate on it. Both HTTP routes that
+// reach this function (/api/nexus/operations/action, /api/nexus/operations/command) are explicitly
+// pre-auth -- so a fully anonymous caller with no session at all (not just a restricted Guest or
+// Investor) could write real PHI-shaped records (patient id, conditions, medications, allergies, risk
+// flags). Gated against `realUser` (the TRUE, pre-fallback caller -- null for a genuinely anonymous
+// request) rather than `user` (which may be `anonymousOperationsIdentity()`'s synthesized
+// Standard-User-role, no-restrictions fallback, deliberately permissive for the non-health actions this
+// pre-auth path also serves) so this can't be satisfied by the same fallback identity it's meant to stop.
+const NEXUS_OPERATIONS_HEALTH_WRITE_ACTIONS = new Set([
+  "create_chronic_care_profile", "add_rpm_reading", "add_rtm_activity", "create_intake",
+  "create_provider_review_packet", "create_pharmacy_referral", "create_mobile_clinic_follow_up",
+  "create_telehealth_encounter"
+]);
+function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = user?.email, realUser = user) {
   const store = ensureNexusPersistentOperations(db);
   const actor = user?.role || body.actor || "standard-user";
   const command = body.command || "";
@@ -44430,6 +44963,10 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     "Nexus did not diagnose, prescribe, recommend medication changes, contact providers, send messages, dispatch services, process payments, fake GPS tracking, or claim live acceptance.",
     "Nexus kept the record in persistent operations memory with audit and review controls."
   ];
+
+  if (NEXUS_OPERATIONS_HEALTH_WRITE_ACTIONS.has(action) && !canWriteHealth(realUser)) {
+    return { ok: false, error: "health_write_not_allowed", operations: nexusOperationsSummary(db, user) };
+  }
 
   if (action === "status") {
     return { ok: true, action, operations: nexusOperationsSummary(db, user), noExecutionAuthorized: true };
@@ -44457,6 +44994,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       archiveReason: null
     };
     store.chronicCareProfiles.unshift(profile);
+    store.chronicCareProfiles = store.chronicCareProfiles.slice(0, 1000);
     addNexusConsentRecord(db, "chronic-care", profile.chronicCareId, "preparePacket", profile.consentState.preparePacket, actor);
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "chronic_care_profile_created", actor, `${profile.conditionArea} chronic care profile created for local operations memory.`, null, profile);
     const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, "create_chronic_care_profile", ["Created chronic care profile.", "Recorded consent state and provider review lane."], didNot, "active");
@@ -44467,6 +45005,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "hypertension" }, user).record;
     const reading = {
       readingId: nexusOperationId("NX-RPM"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: cleanOpsText(body.type || (/glucose|sugar/i.test(command) ? "blood_glucose" : /weight/i.test(command) ? "weight" : /pulse/i.test(command) ? "pulse" : /oxygen/i.test(command) ? "oxygen" : /adherence/i.test(command) ? "medication_adherence" : "blood_pressure"), 80),
       value: cleanOpsText(body.value || command || "manual reading recorded", 160),
@@ -44476,6 +45015,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now
     };
     store.rpmReadings.unshift(reading);
+    store.rpmReadings = store.rpmReadings.slice(0, 1000);
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rpm_reading_added", actor, `${reading.type} RPM reading added.`, null, reading);
     const receipt = addNexusOperationsReceipt(db, "rpm-reading", reading.readingId, "add_rpm_reading", ["Added RPM reading to chronic care timeline.", "Kept reading local until consented provider sharing is configured."], didNot, "recorded");
@@ -44486,6 +45026,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const profile = store.chronicCareProfiles.find(item => item.chronicCareId === body.chronicCareId && nexusOperationsOwned(item, user) && !/archived|deceased/.test(item.status || "")) || latestActiveChronicCareProfile(store, user) || runNexusOperationsAction(db, { action: "create_chronic_care_profile", conditionArea: "other" }, user).record;
     const activity = {
       activityId: nexusOperationId("NX-RTM"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: cleanOpsText(body.type || (/mobility/i.test(command) ? "mobility" : /pain/i.test(command) ? "pain" : /exercise/i.test(command) ? "exercise" : /nutrition/i.test(command) ? "nutrition" : /adherence/i.test(command) ? "medication_adherence" : /symptom/i.test(command) ? "symptom_check" : "therapy_activity"), 80),
       value: cleanOpsText(body.value || command || "therapy activity recorded", 200),
@@ -44494,6 +45035,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now
     };
     store.rtmActivities.unshift(activity);
+    store.rtmActivities = store.rtmActivities.slice(0, 1000);
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "rtm_activity_added", actor, `${activity.type} RTM activity added.`, null, activity);
     const receipt = addNexusOperationsReceipt(db, "rtm-activity", activity.activityId, "add_rtm_activity", ["Added RTM activity to chronic care timeline."], didNot, "recorded");
@@ -44510,6 +45052,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const lane = action === "create_pharmacy_referral" ? "pharmacy" : action === "create_mobile_clinic_follow_up" ? "mobile-clinic" : action === "create_telehealth_encounter" ? "telehealth" : "physician-review";
     const caseItem = {
       caseId: nexusOperationId("NX-CASE"),
+      ownerId: nexusOperationsOwnerKey(user),
       chronicCareId: profile.chronicCareId,
       type: lane,
       status: "prepared",
@@ -44519,6 +45062,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.cases.unshift(caseItem);
+    store.cases = store.cases.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "case", caseItem.caseId, action, actor, `${lane} case packet prepared from chronic care profile.`, null, caseItem);
     const receipt = addNexusOperationsReceipt(db, "case", caseItem.caseId, action, [`Prepared ${lane} case packet from chronic care profile.`, "Marked sharing as consent-gated."], didNot, "prepared");
     return nexusOperationResponse(db, user, action, caseItem, audit, receipt);
@@ -44537,6 +45081,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.healthcareIntakes.unshift(intake);
+    store.healthcareIntakes = store.healthcareIntakes.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, "intake_created", actor, "Healthcare intake created and linked to operations memory.", null, intake);
     const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, "create_intake", ["Created healthcare intake record.", "Kept external sharing disabled until consent and provider configuration."], didNot, "active");
     return nexusOperationResponse(db, user, action, intake, audit, receipt);
@@ -44548,7 +45093,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const before = { ...intake };
     intake.status = action === "archive_intake" ? "archived" : "deactivated-delete-review";
     intake.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "intake", entityId: intake.intakeId, action, reason: cleanOpsText(body.reason || "User requested archive/deactivate review.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "intake", intake.intakeId, action, cleanOpsText(body.reason || "User requested archive/deactivate review.", 240));
     const audit = addNexusOperationsAudit(db, "intake", intake.intakeId, action, actor, `Intake ${intake.status}; audit trail preserved.`, before, intake);
     const receipt = addNexusOperationsReceipt(db, "intake", intake.intakeId, action, ["Updated intake status and preserved audit trail."], ["Nexus did not hard-delete required audit records or continue outreach."], intake.status);
     return nexusOperationResponse(db, user, action, intake, audit, receipt);
@@ -44564,7 +45109,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     profile.updatedAt = now;
     store.healthcareIntakes.filter(item => item.chronicCareId === profile.chronicCareId).forEach(item => { item.status = "archived"; item.noContact = true; item.updatedAt = now; });
     store.careTasks.filter(item => item.chronicCareId === profile.chronicCareId).forEach(item => { item.status = "archived-no-contact"; item.updatedAt = now; });
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "chronic-care", entityId: profile.chronicCareId, action, reason: profile.archiveReason, createdAt: now });
+    addNexusOperationsArchive(db, "chronic-care", profile.chronicCareId, action, profile.archiveReason);
     const audit = addNexusOperationsAudit(db, "chronic-care", profile.chronicCareId, "patient_deceased_stop_outreach", actor, "Profile marked deceased/no-contact; reminders and active intakes archived; audit preserved.", before, profile);
     const receipt = addNexusOperationsReceipt(db, "chronic-care", profile.chronicCareId, action, ["Marked profile deceased/no-contact.", "Archived linked active intakes and care tasks.", "Preserved audit trail."], ["Nexus did not send reminders, messages, provider notices, or hard-delete protected records."], "deceased-stop-outreach");
     return nexusOperationResponse(db, user, action, profile, audit, receipt);
@@ -44588,6 +45133,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.providers.unshift(provider);
+    store.providers = store.providers.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "provider", provider.providerId, "provider_added", actor, `${type} provider added to directory.`, null, provider);
     const receipt = addNexusOperationsReceipt(db, "provider", provider.providerId, action, [`Added ${type} provider directory record.`], didNot, "active");
     return nexusOperationResponse(db, user, action, provider, audit, receipt);
@@ -44613,6 +45159,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.parties.unshift(party);
+    store.parties = store.parties.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "party", party.partyId, "buyer_seller_added", actor, `${party.type} party added to directory.`, null, party);
     const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, [`Added ${party.type} directory record.`], didNot, "active");
     return nexusOperationResponse(db, user, action, party, audit, receipt);
@@ -44625,7 +45172,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     party.status = "closed";
     party.noContact = true;
     party.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "party", entityId: party.partyId, action: "marked_closed", reason: "Business closed/out of business; stop outreach.", createdAt: now });
+    addNexusOperationsArchive(db, "party", party.partyId, "marked_closed", "Business closed/out of business; stop outreach.");
     const audit = addNexusOperationsAudit(db, "party", party.partyId, "business_closed_stop_outreach", actor, "Buyer/seller marked closed; transaction and shipment history preserved.", before, party);
     const receipt = addNexusOperationsReceipt(db, "party", party.partyId, action, ["Marked business closed and stopped outreach.", "Preserved transaction/shipment history."], ["Nexus did not contact the party or delete historical records."], "closed");
     return nexusOperationResponse(db, user, action, party, audit, receipt);
@@ -44649,6 +45196,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.shipments.unshift(shipment);
+    store.shipments = store.shipments.slice(0, 1000);
     const audit = addNexusOperationsAudit(db, "shipment", shipment.shipmentId, "shipment_created", actor, "Shipment draft created without GPS or carrier confirmation.", null, shipment);
     const receipt = addNexusOperationsReceipt(db, "shipment", shipment.shipmentId, action, ["Created shipment draft.", "Attached buyer/seller references where available."], ["Nexus did not fake GPS tracking, carrier pickup, delivery, route calculation, or dispatch."], "draft");
     return nexusOperationResponse(db, user, action, shipment, audit, receipt);
@@ -44657,8 +45205,15 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
   if (action === "add_tracking_event") {
     const shipment = store.shipments.find(item => item.shipmentId === body.shipmentId && nexusOperationsOwned(item, user) && !/cancelled|delivered/.test(item.status || "")) || latestActiveShipment(store, user) || runNexusOperationsAction(db, { action: "create_shipment" }, user).record;
     const eventStatus = cleanOpsText(body.status || (/delivered/i.test(command) ? "delivered" : /delayed/i.test(command) ? "delayed" : /temperature/i.test(command) ? "temperature-issue" : /in[- ]?transit/i.test(command) ? "in-transit" : "picked-up"), 80);
-    const event = { eventId: nexusOperationId("NX-TRK"), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
+    // Found live (Nexus Operations sibling audit, same shape as droneMissionEvents/heatRiskReports above):
+    // trackingEvents is in NEXUS_OPERATION_COLLECTIONS (not the audit-trail exclusion set), so
+    // collectOwnedOperationsRecords/eraseOwnedOperationsRecords scan it expecting a real ownerId that never
+    // existed here -- a user's own shipment tracking notes (pickup location, "temperature issue" notes, etc.)
+    // silently survived erasure forever and were absent from export. The top-level array was also never
+    // capped (only the denormalized per-shipment copy below is).
+    const event = { eventId: nexusOperationId("NX-TRK"), ownerId: nexusOperationsOwnerKey(user), shipmentId: shipment.shipmentId, status: eventStatus, location: cleanOpsText(body.location || "", 160), notes: cleanOpsText(body.notes || command || "", 300), occurredAt: body.occurredAt || now };
     store.trackingEvents.unshift(event);
+    store.trackingEvents = store.trackingEvents.slice(0, 1000);
     shipment.status = eventStatus;
     shipment.updatedAt = now;
     shipment.trackingEvents = [event, ...(shipment.trackingEvents || [])].slice(0, 50);
@@ -44702,6 +45257,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.transactions.unshift(transaction);
+    store.transactions = store.transactions.slice(0, 1000);
     shadowWriteTradeOrderToPostgres(transaction);
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_created", actor, "Transaction draft created with payment execution disabled.", null, transaction);
     const receipt = addNexusOperationsReceipt(db, "transaction", transaction.transactionId, action, ["Created transaction draft and payment gate."], ["Nexus did not charge, pay, refund, escrow, checkout, or create a provider transaction ID."], "draft");
@@ -44726,7 +45282,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const rawAmount = Number(body.amount);
     const amountText = Number.isFinite(rawAmount) && rawAmount < 0 ? "0" : (body.amount || "0");
     const item = { itemId: nexusOperationId("NX-ITEM"), name: cleanOpsText(body.name || body.item || "Transaction item", 120), quantity: cleanOpsText(body.quantity || "1", 80), amount: cleanOpsText(amountText, 80), createdAt: now };
-    transaction.items = [item, ...(transaction.items || [])];
+    transaction.items = [item, ...(transaction.items || [])].slice(0, 50);
     transaction.status = "prepared";
     transaction.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "transaction", transaction.transactionId, "transaction_item_added", actor, "Item added to transaction draft before payment execution.", before, transaction);
@@ -44788,6 +45344,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       updatedAt: now
     };
     store.learningProfiles.unshift(profile);
+    store.learningProfiles = store.learningProfiles.slice(0, 1000);
     addNexusConsentRecord(db, "learning-profile", profile.learningProfileId, "prepareReferral", profile.consentState.prepareReferral, actor);
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, "learning_profile_created", actor, "Learning profile created for local operations memory.", null, profile);
     const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Created learning and development profile.", "Recorded consent state for training referral preparation."], ["Nexus did not enroll the learner, certify completion, submit to an LMS, or contact a training provider."], "active");
@@ -44799,6 +45356,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const status = action === "track_enrollment_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "track_training_interest" ? "interest-recorded" : "prepared";
     const record = {
       trainingRecordId: nexusOperationId("NX-TRN"),
+      ownerId: nexusOperationsOwnerKey(user),
       learningProfileId: profile.learningProfileId,
       type: action,
       status: /confirmed|accepted|completed|certified/i.test(status) ? "manual-status-review" : status,
@@ -44811,11 +45369,11 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
       createdAt: now,
       updatedAt: now
     };
-    if (action === "create_learning_plan") store.learningPlans.unshift(record);
-    else if (action === "create_skill_assessment_packet") store.skillAssessments.unshift(record);
-    else if (action === "prepare_lms_handoff") store.lmsHandoffRecords.unshift(record);
-    else if (action === "create_drone_training_referral") store.certificationPathways.unshift(record);
-    else store.trainingRecords.unshift(record);
+    if (action === "create_learning_plan") { store.learningPlans.unshift(record); store.learningPlans = store.learningPlans.slice(0, 1000); }
+    else if (action === "create_skill_assessment_packet") { store.skillAssessments.unshift(record); store.skillAssessments = store.skillAssessments.slice(0, 1000); }
+    else if (action === "prepare_lms_handoff") { store.lmsHandoffRecords.unshift(record); store.lmsHandoffRecords = store.lmsHandoffRecords.slice(0, 1000); }
+    else if (action === "create_drone_training_referral") { store.certificationPathways.unshift(record); store.certificationPathways = store.certificationPathways.slice(0, 1000); }
+    else { store.trainingRecords.unshift(record); store.trainingRecords = store.trainingRecords.slice(0, 1000); }
     profile.updatedAt = now;
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, `${action} recorded for learning profile with execution disabled.`, null, record);
     const receipt = addNexusOperationsReceipt(db, "training-record", record.trainingRecordId, action, ["Prepared learning/training support record.", "Kept provider/LMS handoff disabled until credentials, consent, and confirmation exist."], ["Nexus did not enroll the learner, certify training, submit a referral, or claim provider acceptance."], record.status);
@@ -44828,7 +45386,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const before = { ...profile };
     profile.status = action === "archive_learning_profile" ? "archived" : "deactivated-delete-review";
     profile.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "learning-profile", entityId: profile.learningProfileId, action, reason: cleanOpsText(body.reason || "User requested learning profile archive/deactivation review.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "learning-profile", profile.learningProfileId, action, cleanOpsText(body.reason || "User requested learning profile archive/deactivation review.", 240));
     const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, "Learning profile archived/deactivated with audit retained.", before, profile);
     const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Updated learning profile status and preserved audit trail."], ["Nexus did not hard-delete audit records, contact providers, or continue training outreach."], profile.status);
     return nexusOperationResponse(db, user, action, profile, audit, receipt);
@@ -44996,7 +45554,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     employer.status = "closed";
     employer.noContact = true;
     employer.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "employer", entityId: employer.employerId, action, reason: "Employer marked closed/no-contact.", createdAt: now });
+    addNexusOperationsArchive(db, "employer", employer.employerId, action, "Employer marked closed/no-contact.");
     const audit = addNexusOperationsAudit(db, "employer", employer.employerId, "employer_closed", actor, "Employer marked closed; hiring history preserved.", before, employer);
     const receipt = addNexusOperationsReceipt(db, "employer", employer.employerId, action, ["Marked employer closed and stopped outreach."], ["Nexus did not contact employer or delete historical hiring records."], "closed");
     return nexusOperationResponse(db, user, action, employer, audit, receipt);
@@ -45009,7 +45567,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     applicant.status = action === "no_contact_applicant" ? "no-contact" : action === "archive_applicant" ? "archived" : "deactivated-delete-review";
     applicant.noContact = action === "no_contact_applicant";
     applicant.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "applicant", entityId: applicant.applicantId, action, reason: cleanOpsText(body.reason || "Applicant archive/no-contact/deactivation review.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "applicant", applicant.applicantId, action, cleanOpsText(body.reason || "Applicant archive/no-contact/deactivation review.", 240));
     const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, action, actor, "Applicant record status updated with audit retained.", before, applicant);
     const receipt = addNexusOperationsReceipt(db, "applicant", applicant.applicantId, action, ["Updated applicant status and preserved audit trail."], ["Nexus did not hard-delete protected records, contact employers, or continue outreach."], applicant.status);
     return nexusOperationResponse(db, user, action, applicant, audit, receipt);
@@ -45149,7 +45707,7 @@ function runNexusOperationsAction(db, body = {}, user = null, realUserEmail = us
     const before = { ...mission };
     mission.status = action === "cancel_drone_mission" ? "cancelled" : "archived";
     mission.updatedAt = now;
-    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "drone-mission", entityId: mission.droneMissionId, action, reason: cleanOpsText(body.reason || "Drone mission cancelled/archived before execution.", 240), createdAt: now });
+    addNexusOperationsArchive(db, "drone-mission", mission.droneMissionId, action, cleanOpsText(body.reason || "Drone mission cancelled/archived before execution.", 240));
     const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, "Drone mission cancelled/archived before any live flight action.", before, mission);
     const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission status and preserved audit trail."], ["Nexus did not cancel a real flight, contact a provider, or delete compliance history."], mission.status);
     return nexusOperationResponse(db, user, action, mission, audit, receipt);
@@ -45825,7 +46383,7 @@ async function api(req, res, url) {
     // care-qa.js), while a genuinely different visitor's browser (a
     // different or absent deviceId) never collides with it.
     const operationsUser = user || anonymousOperationsIdentity(body);
-    const result = runNexusOperationsAction(db, body, operationsUser, user?.email || null);
+    const result = runNexusOperationsAction(db, body, operationsUser, user?.email || null, user);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     const state = publicState(db, user);
@@ -45839,7 +46397,7 @@ async function api(req, res, url) {
     // cross-user PHI/financial-record collision as /api/nexus/operations/
     // action above -- see that comment for the full failure scenario.
     const operationsUser = user || anonymousOperationsIdentity(body);
-    const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser, user?.email || null);
+    const result = runNexusOperationsAction(db, { ...body, action: body.action || parseNexusOperationsCommand(body.command || body.prompt || "") }, operationsUser, user?.email || null, user);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     const state = publicState(db, user);
@@ -45969,6 +46527,7 @@ async function api(req, res, url) {
       createdAt: nexusNow()
     };
     store.archiveRecords.unshift(record);
+    store.archiveRecords = store.archiveRecords.slice(0, 1000);
     const auditType = lifecycleStatus === "deceased" ? "patient_marked_deceased" : lifecycleStatus === "closed" ? "business_marked_closed" : lifecycleStatus === "deleted" ? "record_deleted" : "record_deactivated";
     const audit = addNexusOperationsAudit(db, entityType, entityId, auditType, user?.role || "standard-user", `${entityType} marked ${lifecycleStatus} locally; external sync not claimed.`, null, record);
     const receipt = addNexusOperationsReceipt(db, entityType, entityId, auditType, [`Marked ${entityType} as ${lifecycleStatus} in local operations memory.`, "Created lifecycle audit evidence."], ["Nexus did not hard-delete protected audit evidence or claim live provider sync."], lifecycleStatus);
@@ -46106,6 +46665,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const provider = normalizeProviderOrganization(await readBody(req));
     db.nexusProviderOrganizations.unshift(provider);
+    db.nexusProviderOrganizations = db.nexusProviderOrganizations.slice(0, 500);
     addNexusPilotAuditEvent(db, "provider_organization_created", {
       actor: user?.name || "Provider/Admin",
       role: user?.role || "Admin",
@@ -46204,6 +46764,7 @@ async function api(req, res, url) {
     if (!provider) return send(res, 404, { ok: false, error: "provider_not_found" });
     const reviewer = normalizeProviderReviewer(provider.id, await readBody(req));
     db.nexusProviderReviewers.unshift(reviewer);
+    db.nexusProviderReviewers = db.nexusProviderReviewers.slice(0, 500);
     addNexusPilotAuditEvent(db, "provider_reviewer_created", {
       actor: user?.name || "Provider/Admin",
       role: user?.role || "Admin",
@@ -46242,6 +46803,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const rule = normalizeRoutingRule(await readBody(req));
     db.nexusRoutingRules.unshift(rule);
+    db.nexusRoutingRules = db.nexusRoutingRules.slice(0, 500);
     await writeDb(db);
     return send(res, 200, { ok: true, rule });
   }
@@ -46271,6 +46833,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const caseItem = normalizeCase(db, await readBody(req), {}, user);
     db.nexusCases.unshift(caseItem);
+    db.nexusCases = db.nexusCases.slice(0, 500);
     caseTimelineEvent(db, caseItem.id, "case_created", "Case created locally with no external provider action.", { actor: user?.name || "Standard User" });
     await writeDb(db);
     return send(res, 200, { ok: true, case: caseItem, timeline: db.nexusCaseTimeline.filter(item => item.caseId === caseItem.id) });
@@ -46349,6 +46912,7 @@ async function api(req, res, url) {
     if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
     const response = normalizeProviderResponse(db, record.id, await readBody(req), {}, user);
     db.nexusProviderResponses.unshift(response);
+    db.nexusProviderResponses = db.nexusProviderResponses.slice(0, 500);
     record.providerResponseIds = [response.id, ...(record.providerResponseIds || [])];
     record.updatedAt = response.updatedAt;
     addNexusPilotAuditEvent(db, "provider_response_created", {
@@ -46389,6 +46953,7 @@ async function api(req, res, url) {
     // in their own notification list, only reachable via the admin-all view.
     const submitterRecord = findNexusPilotRecord(db, response.recordId, null, { requireOwnership: false });
     db.nexusNotifications.unshift(normalizeNotification({ title: "Nexus review response ready", message: "A provider/admin response is ready for review.", recordId: response.recordId }, {}, submitterRecord ? { id: submitterRecord.ownerId } : null));
+    db.nexusNotifications = db.nexusNotifications.slice(0, 200);
     addNexusPilotAuditEvent(db, "provider_response_published", {
       relatedRecordId: response.recordId,
       actor: user?.name || response.reviewerLabel,
@@ -46526,6 +47091,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const communication = normalizeCommunication(await readBody(req), {}, user);
     db.nexusCommunications.unshift(communication);
+    db.nexusCommunications = db.nexusCommunications.slice(0, 200);
     addNexusPilotAuditEvent(db, "communication_prepared", {
       actor: user?.name || "Standard User",
       role: user?.role || "Standard User",
@@ -46571,6 +47137,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const notification = normalizeNotification(await readBody(req), {}, user);
     db.nexusNotifications.unshift(notification);
+    db.nexusNotifications = db.nexusNotifications.slice(0, 200);
     await writeDb(db);
     return send(res, 200, { ok: true, notification });
   }
@@ -46596,6 +47163,7 @@ async function api(req, res, url) {
     ensureNexusProductionRailsState(db);
     const outcome = normalizeOutcome(await readBody(req), {}, user);
     db.nexusOutcomes.unshift(outcome);
+    db.nexusOutcomes = db.nexusOutcomes.slice(0, 200);
     addNexusPilotAuditEvent(db, "outcome_recorded", {
       actor: user?.name || "Standard User",
       role: user?.role || "Standard User",
@@ -46642,6 +47210,7 @@ async function api(req, res, url) {
       updatedAt: now
     };
     db.nexusLaunchBlockers.unshift(blocker);
+    db.nexusLaunchBlockers = db.nexusLaunchBlockers.slice(0, 200);
     await writeDb(db);
     return send(res, 200, { ok: true, blocker });
   }
@@ -47246,7 +47815,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedNexusMemoryRecords(user)), ...(await collectOwnedNexusArtifactRecords(user)) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
@@ -47292,7 +47861,7 @@ async function api(req, res, url) {
     if (body.confirmed !== true) {
       return send(res, 400, { ok: false, status: "confirmation_required", error: "Pass confirmed: true to permanently erase this account. This cannot be undone." });
     }
-    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id) };
+    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id), ...eraseUserLearningRecords(user) };
     const uploadDirPath = nexusUploads.uploadDir(process.env);
     const ownedUploads = nexusUploads.listUploadsForUser(uploadDirPath, user.id);
     let removedUploadCount = 0;
@@ -47589,6 +48158,7 @@ async function api(req, res, url) {
     item.providerAdminNotes = [note, ...(item.providerAdminNotes || [])];
     item.updatedAt = note.createdAt;
     db.nexusPilotAdminNotes.unshift({ ...note, queueItemId: item.id, recordId: item.recordId });
+    db.nexusPilotAdminNotes = db.nexusPilotAdminNotes.slice(0, 200);
     const audit = addNexusPilotAuditEvent(db, "provider_admin_note_added", {
       relatedRecordId: item.recordId,
       mode: item.sourceMode,
@@ -47688,6 +48258,7 @@ async function api(req, res, url) {
       localReminderOnly: true
     };
     db.nexusPilotReminders.unshift(reminder);
+    db.nexusPilotReminders = db.nexusPilotReminders.slice(0, 200);
     const audit = addNexusPilotAuditEvent(db, "reminder_created", {
       relatedRecordId: reminder.linkedRecordId,
       mode: reminder.type,
@@ -47735,6 +48306,7 @@ async function api(req, res, url) {
       noLiveSyncClaim: true
     };
     db.nexusPilotOfflineQueue.unshift(item);
+    db.nexusPilotOfflineQueue = db.nexusPilotOfflineQueue.slice(0, 200);
     const audit = addNexusPilotAuditEvent(db, "offline_item_queued", {
       relatedRecordId: item.recordId,
       mode: item.type,
@@ -48228,11 +48800,11 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/tasks" && req.method === "GET") {
-    return send(res, 200, projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user));
+    return send(res, 200, projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user));
   }
 
   if (url.pathname === "/api/nexus/brain/missions" && req.method === "GET") {
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     return send(res, 200, {
       ok: true,
       missions: state.tasks || [],
@@ -48243,7 +48815,7 @@ async function api(req, res, url) {
 
   if (url.pathname.startsWith("/api/nexus/brain/missions/") && req.method === "GET") {
     const missionId = decodeURIComponent(url.pathname.replace("/api/nexus/brain/missions/", ""));
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     const mission = (state.tasks || []).find(task => task.taskId === missionId || task.caseId === missionId);
     return send(res, mission ? 200 : 404, {
       ok: Boolean(mission),
@@ -48257,13 +48829,13 @@ async function api(req, res, url) {
   if (url.pathname.startsWith("/api/nexus/brain/missions/") && (req.method === "PATCH" || req.method === "POST")) {
     const missionId = decodeURIComponent(url.pathname.replace("/api/nexus/brain/missions/", ""));
     const body = await readBody(req);
-    const result = nexusAgenticBrainRuntime.updateTask({ ...body, taskId: missionId }, db);
+    const result = nexusAgenticBrainRuntime.updateTask({ ...body, taskId: missionId }, db, user.id);
     await writeDb(db);
     return send(res, 200, { ...result, localOnly: true, noExternalExecutionAuthorized: true });
   }
 
   if (url.pathname === "/api/nexus/brain/receipts" && req.method === "GET") {
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     const receipts = (state.activity || []).map(event => ({
       receiptId: event.activityId,
       createdAt: event.createdAt,
@@ -48278,7 +48850,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/memory" && req.method === "GET") {
-    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db), user);
+    const state = projectAgenticTasksStateForUser(nexusAgenticBrainRuntime.listTasks(db, user.id), user);
     return send(res, 200, {
       ok: true,
       memory: {
@@ -48294,25 +48866,25 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/brain/command" && req.method === "POST") {
-    const result = await nexusAgenticBrainRuntime.handleCommand(await readBody(req), db, process.env);
+    const result = await nexusAgenticBrainRuntime.handleCommand(await readBody(req), db, process.env, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/brain/task" && req.method === "POST") {
-    const result = nexusAgenticBrainRuntime.updateTask(await readBody(req), db);
+    const result = nexusAgenticBrainRuntime.updateTask(await readBody(req), db, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/brain/provider/respond" && req.method === "POST") {
-    const result = nexusAgenticBrainRuntime.providerRespond(await readBody(req), db);
+    const result = nexusAgenticBrainRuntime.providerRespond(await readBody(req), db, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/brain/verify" && req.method === "POST") {
-    const result = nexusAgenticBrainRuntime.verifyTask(await readBody(req), db, process.env);
+    const result = nexusAgenticBrainRuntime.verifyTask(await readBody(req), db, process.env, user.id);
     await writeDb(db);
     return send(res, 200, result);
   }
@@ -48463,6 +49035,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/health-evidence/feedback" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
     db.profile = db.profile || {};
     db.profile.nexusHealthEvidenceGovernanceQueue = db.profile.nexusHealthEvidenceGovernanceQueue || [];
@@ -48503,6 +49076,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/workforce-genesis/feedback" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
     db.profile = db.profile || {};
     db.profile.nexusWorkforceGovernanceQueue = db.profile.nexusWorkforceGovernanceQueue || [];
@@ -48581,22 +49155,56 @@ async function api(req, res, url) {
     return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
   }
 
+  // Found live (fresh-module audit): unlike every other real-external-side-effect action in this file
+  // (the AI-tool-call nexus_communications path for these exact same Twilio functions, calendar, email,
+  // Zoom -- see /api/nexus/tools/zoom/meeting's own "Found live" comment below for the identical bug
+  // shape), these three raw HTTP routes had no idempotency protection at all. The Provider Contact Bridge
+  // UI (public/app.js's runNexusProviderContactBridgeAction) has no disable-on-click guard, so a genuine
+  // double-click or slow-response retry sent two real SMS messages / placed two real calls to a real
+  // third party's phone number.
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.twilio.sendSms(await readBody(req)));
+    const smsBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "twilio", action: "sms.send", body: smsBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.twilio.sendSms(smsBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real SMS provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/whatsapp/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.twilio.sendWhatsapp(await readBody(req)));
+    const whatsappBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "twilio", action: "whatsapp.send", body: whatsappBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.twilio.sendWhatsapp(whatsappBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real WhatsApp provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/call/start" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
-    return sendProviderResult(res, await nexusRealProviders.twilio.startCall(await readBody(req)));
+    const callBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "twilio", action: "call.start", body: callBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.twilio.startCall(callBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real call provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/maps/status" && req.method === "GET") {
@@ -48645,16 +49253,37 @@ async function api(req, res, url) {
     return sendProviderResult(res, nexusRealProviders.communicationsBridge.draft(await readBody(req)));
   }
 
+  // Found live (fresh-module audit): same idempotency gap as /api/nexus/tools/sms|whatsapp|call/* above --
+  // these communicationsBridge equivalents call the same underlying twilioProvider functions and were
+  // equally reachable from the Provider Contact Bridge UI with no idempotency protection.
   if (url.pathname === "/api/nexus/tools/communications/sms/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real SMS." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendSms(await readBody(req)));
+    const bridgeSmsBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "communicationsBridge", action: "sms.send", body: bridgeSmsBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.communicationsBridge.sendSms(bridgeSmsBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real SMS provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/whatsapp/send" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to send a real WhatsApp message." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendWhatsapp(await readBody(req)));
+    const bridgeWhatsappBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "communicationsBridge", action: "whatsapp.send", body: bridgeWhatsappBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.communicationsBridge.sendWhatsapp(bridgeWhatsappBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real WhatsApp provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/communications/call/prepare" && req.method === "POST") {
@@ -48665,7 +49294,16 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/tools/communications/call/start" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Authentication is required to start a real call." });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
-    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.startCall(await readBody(req)));
+    const bridgeCallBody = await readBody(req);
+    return sendProviderResult(res, await withActionLifecycle(db, {
+      provider: "communicationsBridge", action: "call.start", body: bridgeCallBody, actorId: user?.id || user?.email || "",
+      execute: () => nexusRealProviders.communicationsBridge.startCall(bridgeCallBody),
+      verify: async result => {
+        const data = result?.body?.data || {};
+        const realId = data.sid || data.providerMessageId;
+        return { verified: Boolean(realId) && !data.simulated, note: data.simulated ? "Simulated response -- no real call provider was contacted." : realId ? "Provider response contained a real id." : "Provider response had no id to verify against." };
+      }
+    }));
   }
 
   if (url.pathname === "/api/nexus/tools/providers/status" && req.method === "GET") {
@@ -48905,7 +49543,14 @@ async function api(req, res, url) {
     return sendProviderResult(res, result);
   }
 
+  // Found live (admin/webhook sweep): unlike every other real-money/real-send route in this file
+  // (/api/trade/advanced's quote/release, /api/trade/wallet, trade.wallet_payment), this route never
+  // checked userIsRestrictedFrom(user, "external-transaction") -- a Guest or Investor account (both
+  // restricted from external transactions elsewhere) could reach it. Currently inert only because the
+  // Stripe provider itself hardcodes a "blocked" status regardless of caller; adding the same check here
+  // closes the gap at the route layer too, so it stays closed if that hardcoded block is ever lifted.
   if (url.pathname === "/api/nexus/tools/marketplace/payment-intent" && req.method === "POST") {
+    if (userIsRestrictedFrom(user, "external-transaction")) return send(res, 403, { error: "This account type cannot start a real payment transaction." });
     return sendProviderResult(res, nexusRealProviders.stripe.paymentIntent(await readBody(req)));
   }
 
@@ -48918,6 +49563,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/payments/stripe/payment-intent" && req.method === "POST") {
+    if (userIsRestrictedFrom(user, "external-transaction")) return send(res, 403, { error: "This account type cannot start a real payment transaction." });
     return sendProviderResult(res, nexusRealProviders.paymentReadinessBridge.paymentIntent(await readBody(req)));
   }
 
@@ -49191,6 +49837,7 @@ async function api(req, res, url) {
     if (!user) return send(res, 401, { error: "Sign in required before connecting Spotify" });
     if (userIsRestrictedFrom(user, "account-provider-link")) return send(res, 403, { error: "This account type cannot link an external provider account." });
     if (!process.env.SPOTIFY_CLIENT_ID) return send(res, 400, { error: "SPOTIFY_CLIENT_ID is required" });
+    cleanupSpotifyOAuthStates();
     const state = crypto.randomBytes(18).toString("hex");
     const sid = parseCookies(req).agrinexus_sid || "";
     spotifyOAuthStates.set(state, { userId: user.id, sid, createdAt: Date.now() });
@@ -49212,7 +49859,7 @@ async function api(req, res, url) {
     const stored = spotifyOAuthStates.get(state);
     if (state) spotifyOAuthStates.delete(state);
     if (error) return send(res, 400, { error: `Spotify authorization failed: ${error}` });
-    if (!stored || !code) return send(res, 400, { error: "Spotify authorization state was not recognized" });
+    if (!stored || !code || Date.now() - Number(stored.createdAt || 0) > SPOTIFY_OAUTH_STATE_TTL_MS) return send(res, 400, { error: "Spotify authorization state was not recognized" });
     const authUser = db.users.find(item => item.id === stored.userId);
     if (!authUser) return send(res, 404, { error: "Spotify connection user not found" });
     try {
@@ -50659,6 +51306,75 @@ async function api(req, res, url) {
     });
   }
 
+  // The real webhook/callback receivers closing the Paystack/Flutterwave gap (see
+  // initializeTradePaymentCheckout's "Found live" comment): its callback_url/redirect_url point here,
+  // and (if the user also configures a server-to-server webhook URL in their Paystack/Flutterwave
+  // dashboard) a provider's own webhook POST lands here too. Neither requires a signed-in session --
+  // these calls come from the buyer's browser (GET, after checkout) or directly from the payment
+  // provider's servers (POST), never from this app's own authenticated users -- so, like the Twilio
+  // webhook routes above, these must be placed before the blanket "sign in required" gate just below.
+  if (url.pathname === "/api/trade/payment-callback/paystack" && req.method === "GET") {
+    const reference = String(url.searchParams.get("reference") || url.searchParams.get("trxref") || "").trim();
+    const result = await processPaystackReference(db, reference);
+    await writeDb(db);
+    return send(res, 200, tradePaymentCallbackPage(result.ok ? "paid" : "failed"), { "content-type": "text/html; charset=utf-8" });
+  }
+
+  if (url.pathname === "/api/trade/payment-callback/paystack" && req.method === "POST") {
+    let rawBody = "";
+    try {
+      rawBody = await readRawBody(req, 2_000_000);
+    } catch (error) {
+      return send(res, 413, { ok: false, error: error.message || "Payload too large" });
+    }
+    if (!validPaystackWebhookSignature(req, rawBody)) {
+      return send(res, 403, { ok: false, error: "Invalid Paystack webhook signature", noSecretValues: true });
+    }
+    let payload = {};
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+      return send(res, 400, { ok: false, error: "Invalid JSON payload" });
+    }
+    const reference = String(payload.data?.reference || "").trim();
+    if (reference) {
+      if (String(payload.event || "") === "charge.success" && payload.data?.status === "success") {
+        const checkout = (db.profile.paymentCheckoutRecords || []).find(item => item.reference === reference);
+        const expectedSubunit = checkout ? paymentSubunitAmount(checkout.grossAmount, checkout.currency) : null;
+        const amountOk = expectedSubunit === null || Math.abs(expectedSubunit - Number(payload.data.amount || 0)) <= 1;
+        markTradePaymentVerified(db, {
+          provider: "paystack", reference,
+          providerEventId: payload.data.id ? String(payload.data.id) : null,
+          verifiedAmountOk: amountOk
+        });
+      } else {
+        markTradePaymentFailed(db, { provider: "paystack", reference });
+      }
+      await writeDb(db);
+    }
+    return send(res, 200, { ok: true });
+  }
+
+  if (url.pathname === "/api/trade/payment-callback/flutterwave" && req.method === "GET") {
+    const transactionId = String(url.searchParams.get("transaction_id") || "").trim();
+    const txRef = String(url.searchParams.get("tx_ref") || "").trim();
+    const result = await processFlutterwaveTransactionId(db, transactionId, txRef);
+    await writeDb(db);
+    return send(res, 200, tradePaymentCallbackPage(result.ok ? "paid" : "failed"), { "content-type": "text/html; charset=utf-8" });
+  }
+
+  if (url.pathname === "/api/trade/payment-callback/flutterwave" && req.method === "POST") {
+    if (!validFlutterwaveWebhookSignature(req)) {
+      return send(res, 403, { ok: false, error: "Invalid Flutterwave webhook signature", noSecretValues: true });
+    }
+    const body = await readBody(req);
+    const transactionId = String(body.data?.id || "").trim();
+    const txRef = String(body.data?.tx_ref || body.data?.txRef || "").trim();
+    await processFlutterwaveTransactionId(db, transactionId, txRef);
+    await writeDb(db);
+    return send(res, 200, { ok: true });
+  }
+
   const boundedGenesisVoiceGuestRoutes = new Set([
     "/api/voice/realtime/status",
     "/api/voice/realtime/session",
@@ -51645,14 +52361,14 @@ async function api(req, res, url) {
       return send(res, 200, publicState(db, user));
     }
     const { country, route } = activeContext(db);
-    ensureLearningProfile(db.profile);
+    ensureLearningProfile(user);
     ensureWorkforceProfile(db.profile);
     ensureHealthProfile(db.profile);
     ensureTradeProfile(db.profile);
     ensureAiProfile(db.profile);
 
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-    let enrollment = getEnrollment(db.profile, course.id);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -51665,34 +52381,35 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
+      user.enrollments = user.enrollments.slice(0, 1000);
     } else {
       enrollment.status = enrollment.status === "completed" ? "completed" : "ready_for_quiz";
       enrollment.progress = Math.max(enrollment.progress || 0, 90);
       enrollment.score = Math.max(enrollment.score || 0, 25);
       enrollment.completedModules = enrollment.completedModules?.length ? enrollment.completedModules : [0];
     }
-    db.profile.activeCourseId = course.id;
-    db.profile.quizScore = Math.max(db.profile.quizScore || 0, enrollment.score);
-    if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
-    if (!db.profile.certificates.some(item => item.courseId === course.id)) {
-      db.profile.certificates.push({
+    user.activeCourseId = course.id;
+    user.quizScore = Math.max(user.quizScore || 0, enrollment.score);
+    if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
+    if (!user.certificates.some(item => item.courseId === course.id)) {
+      user.certificates.push({
         id: crypto.randomUUID(),
-        certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+        certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
         courseId: course.id,
         title: course.title,
         issuedAt: new Date().toISOString()
       });
     }
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((db.profile.learningHours + 1.5).toFixed(1));
+    user.learningStreak += 1;
+    user.learningHours = Number((user.learningHours + 1.5).toFixed(1));
 
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
     if (!db.profile.workforceBadges.includes("Mentor Matched")) db.profile.workforceBadges.push("Mentor Matched");
     db.profile.mentor = "Assigned";
     db.profile.candidateStage = "Interview";
     db.profile.interviews = Math.max(db.profile.interviews || 0, 1);
-    const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+    const role = db.roles.find(item => roleReadiness(db.profile, user, item).eligible) || db.roles[0];
     if (role && !db.profile.applications.some(item => item.roleId === role.id)) {
       db.profile.applications.unshift({
         id: crypto.randomUUID(),
@@ -51716,7 +52433,7 @@ async function api(req, res, url) {
     }, {}, {
       needSummary: `${country.name} executive demo intake for queue, heat, and representative workflow`
     }, { simulation: true, defaultFields: ["executiveDemo"] });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     db.profile.representativeConnections += 1;
     const careResult = await runAi("careplan", country, route, db.profile);
     db.profile.carePlans.unshift({
@@ -51773,7 +52490,7 @@ async function api(req, res, url) {
         providerId: moduleName === "Healthcare" ? "health-notifications" : moduleName === "Workforce" ? "workforce-notifications" : moduleName === "Learning" ? "learning-certificates" : "trade-logistics",
         channel: "executive-demo",
         message: `${moduleName} executive demo workflow completed.`,
-        createdBy: user.name
+        createdBy: user?.email || "Ask Nexus"
       });
     }
 
@@ -51789,38 +52506,54 @@ async function api(req, res, url) {
   if (url.pathname === "/api/demo/investor-live" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow investor demo mode" });
     const body = await readBody(req);
-    const pilotRun = await runLocalPilotStudio(db, user, body.scenario || "farmer-market");
-    const orchestration = await aiOrchestrationReview(db, user, { type: "copilot", note: "Live investor demo mode" });
-    const packet = evidenceExportPacket(db, user, "investor");
-    db.profile.liveInvestorDemos = db.profile.liveInvestorDemos || [];
-    const demo = {
-      id: crypto.randomUUID(),
-      title: "Live investor guided demo",
-      status: "complete",
-      narratorScript: [
-        "AgriNexus starts with a real user need.",
-        "Nexus reads learning, workforce, telehealth, trade, maps, communications, and provider evidence.",
-        "The platform recommends the highest-value next move.",
-        "Every action creates auditable evidence for partners and funders."
-      ],
-      pilotRunId: pilotRun.id,
-      orchestrationId: orchestration.orchestration.id,
-      evidenceExportId: packet.id,
-      createdBy: user.email,
-      createdAt: new Date().toISOString()
-    };
-    db.profile.liveInvestorDemos.unshift(demo);
-    db.profile.liveInvestorDemos = db.profile.liveInvestorDemos.slice(0, 10);
-    logIntegration(db, {
-      providerId: "openai",
-      module: "AI",
-      action: "demo.investor_live_completed",
-      detail: "Live investor guided demo completed with pilot evidence, AI orchestration, and export packet.",
-      metadata: { demoId: demo.id, pilotRunId: pilotRun.id, orchestrationId: orchestration.orchestration.id, evidenceExportId: packet.id }
+    // Found live: unlike its siblings /api/demo/run and /api/demo/wow (guarded with a permanent
+    // xCompletedAt flag, since those are one-time setup actions), this route is legitimately meant to be
+    // re-run across multiple real investor meetings -- liveInvestorDemos keeps up to 10 distinct runs, so
+    // a permanent "only once ever" guard would be the wrong fix here. The real bug is that a double-click
+    // or retry of the SAME click had no protection at all: every POST unconditionally re-ran
+    // runLocalPilotStudio()/aiOrchestrationReview() -- real OpenAI calls -- and re-logged a duplicate
+    // integration record. withActionLifecycle is the idempotency-key-scoped guard already used elsewhere
+    // in this file for exactly this shape: it suppresses a genuine retry of the identical request within
+    // a short window while still letting a deliberately new demo run (a different scenario, or after the
+    // window) execute for real.
+    const lifecycleResult = await withActionLifecycle(db, {
+      provider: "nexus-investor-demo", action: "demo.investor_live", body, actorId: user?.id || user?.email || "",
+      execute: async () => {
+        const pilotRun = await runLocalPilotStudio(db, user, body.scenario || "farmer-market");
+        const orchestration = await aiOrchestrationReview(db, user, { type: "copilot", note: "Live investor demo mode" });
+        const packet = evidenceExportPacket(db, user, "investor");
+        db.profile.liveInvestorDemos = db.profile.liveInvestorDemos || [];
+        const demo = {
+          id: crypto.randomUUID(),
+          title: "Live investor guided demo",
+          status: "complete",
+          narratorScript: [
+            "AgriNexus starts with a real user need.",
+            "Nexus reads learning, workforce, telehealth, trade, maps, communications, and provider evidence.",
+            "The platform recommends the highest-value next move.",
+            "Every action creates auditable evidence for partners and funders."
+          ],
+          pilotRunId: pilotRun.id,
+          orchestrationId: orchestration.orchestration.id,
+          evidenceExportId: packet.id,
+          createdBy: user.email,
+          createdAt: new Date().toISOString()
+        };
+        db.profile.liveInvestorDemos.unshift(demo);
+        db.profile.liveInvestorDemos = db.profile.liveInvestorDemos.slice(0, 10);
+        logIntegration(db, {
+          providerId: "openai",
+          module: "AI",
+          action: "demo.investor_live_completed",
+          detail: "Live investor guided demo completed with pilot evidence, AI orchestration, and export packet.",
+          metadata: { demoId: demo.id, pilotRunId: pilotRun.id, orchestrationId: orchestration.orchestration.id, evidenceExportId: packet.id }
+        });
+        return { httpStatus: 200, body: { ok: true, status: "completed", data: { demo, pilotRun, orchestration, packet } } };
+      }
     });
     await writeDb(db);
     const state = publicState(db, user);
-    state.liveInvestorDemoResult = { demo, pilotRun, orchestration, packet };
+    state.liveInvestorDemoResult = lifecycleResult.body.data;
     return send(res, 200, state);
   }
 
@@ -51918,14 +52651,14 @@ async function api(req, res, url) {
     const { country, route } = activeContext(db);
     db.profile.activeCheckpoint = route.checkpoints[0];
     db.profile.routeStage = "Investor demo live";
-    ensureLearningProfile(db.profile);
+    ensureLearningProfile(user);
     ensureWorkforceProfile(db.profile);
     ensureHealthProfile(db.profile);
     ensureTradeProfile(db.profile);
     ensureAiProfile(db.profile);
 
     const course = db.courses.find(item => item.id === "telehealth-support") || db.courses[0];
-    let enrollment = getEnrollment(db.profile, course.id);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -51938,7 +52671,8 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: new Date().toISOString()
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
+      user.enrollments = user.enrollments.slice(0, 1000);
     } else {
       enrollment.status = "completed";
       enrollment.progress = 100;
@@ -51946,20 +52680,20 @@ async function api(req, res, url) {
       enrollment.completedModules = (course.modules || []).map((_, index) => index);
       enrollment.completedAt = new Date().toISOString();
     }
-    db.profile.activeCourseId = course.id;
-    db.profile.quizScore = Math.max(db.profile.quizScore || 0, 92);
-    if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
-    if (!db.profile.certificates.some(item => item.courseId === course.id)) {
-      db.profile.certificates.push({
+    user.activeCourseId = course.id;
+    user.quizScore = Math.max(user.quizScore || 0, 92);
+    if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
+    if (!user.certificates.some(item => item.courseId === course.id)) {
+      user.certificates.push({
         id: crypto.randomUUID(),
-        certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+        certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
         courseId: course.id,
         title: course.title,
         issuedAt: new Date().toISOString()
       });
     }
     for (const mode of ["caption", "visual", "low-bandwidth"]) {
-      db.profile.learningAccommodations.unshift({
+      user.learningAccommodations.unshift({
         id: crypto.randomUUID(),
         courseId: course.id,
         courseTitle: course.title,
@@ -51972,9 +52706,9 @@ async function api(req, res, url) {
         createdAt: new Date().toISOString()
       });
     }
-    db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 2).toFixed(1));
-    db.profile.learningStreak += 3;
+    user.learningAccommodations = user.learningAccommodations.slice(0, 20);
+    user.learningHours = Number((Number(user.learningHours || 0) + 2).toFixed(1));
+    user.learningStreak += 3;
     db.profile.readiness = Math.max(db.profile.readiness || 0, 96);
 
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
@@ -52007,6 +52741,7 @@ async function api(req, res, url) {
         demoShift: true
       };
       db.profile.shiftSchedule.unshift(shift);
+      db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
       db.profile.nextShift = new Date(shift.startsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
       db.profile.earnings = Math.max(db.profile.earnings || 0, shift.estimatedEarnings);
     }
@@ -52023,7 +52758,7 @@ async function api(req, res, url) {
     }, {}, {
       needSummary: "Rural Nigeria accessible telehealth intake for hearing and visual impairment support"
     }, { simulation: true, defaultFields: ["wowDemo"] });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     db.profile.representativeConnections += 1;
     db.profile.telehealthAccessibility.unshift(
       {
@@ -52149,7 +52884,7 @@ async function api(req, res, url) {
         providerId: moduleName === "Healthcare" ? "health-notifications" : moduleName === "Workforce" ? "workforce-notifications" : moduleName === "Learning" ? "learning-certificates" : moduleName === "AgriTrade" ? "trade-logistics" : "openai",
         channel: "wow-demo",
         message: `${moduleName} WOW demo evidence completed for rural Nigeria accessibility scenario.`,
-        createdBy: user.name
+        createdBy: user?.email || "Ask Nexus"
       });
     }
 
@@ -52208,7 +52943,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/learning/catalog" && req.method === "GET") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning catalog access" });
-    return send(res, 200, { catalog: learningCatalog(db), user: { language: user.language } });
+    return send(res, 200, { catalog: learningCatalog(db, user), user: { language: user.language } });
   }
 
   if (url.pathname === "/api/learning/start" && req.method === "POST") {
@@ -52216,8 +52951,8 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const course = db.courses.find(item => item.id === body.courseId);
     if (!course) return send(res, 404, { error: "Course not found" });
-    ensureLearningProfile(db.profile);
-    let enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52230,16 +52965,17 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
+      user.enrollments = user.enrollments.slice(0, 1000);
     } else {
       enrollment.status = enrollment.status === "completed" ? "completed" : "in_progress";
       enrollment.progress = Math.max(enrollment.progress, 25);
       enrollment.activeModuleIndex = enrollment.activeModuleIndex || 0;
       enrollment.completedModules = enrollment.completedModules || [];
     }
-    db.profile.activeCourseId = course.id;
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((db.profile.learningHours + 0.5).toFixed(1));
+    user.activeCourseId = course.id;
+    user.learningStreak += 1;
+    user.learningHours = Number((user.learningHours + 0.5).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + Math.ceil(course.readiness / 2));
     recalcReadiness(db.profile);
     logIntegration(db, {
@@ -52258,10 +52994,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/lesson" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning workflows" });
     const body = await readBody(req);
-    const course = db.courses.find(item => item.id === (body.courseId || db.profile.activeCourseId));
+    const course = db.courses.find(item => item.id === (body.courseId || user.activeCourseId));
     if (!course) return send(res, 404, { error: "Course not found" });
-    ensureLearningProfile(db.profile);
-    let enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52274,7 +53010,8 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
+      user.enrollments = user.enrollments.slice(0, 1000);
     }
     const modules = course.modules || [];
     const selectedIndex = Number.isInteger(body.moduleIndex) ? body.moduleIndex : enrollment.activeModuleIndex || 0;
@@ -52286,9 +53023,9 @@ async function api(req, res, url) {
     const moduleProgress = modules.length ? Math.round((completedCount / modules.length) * 65) : 35;
     enrollment.progress = Math.max(enrollment.progress || 25, Math.min(90, 25 + moduleProgress));
     if (completedCount >= modules.length && modules.length) enrollment.status = "ready_for_quiz";
-    db.profile.activeCourseId = course.id;
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((db.profile.learningHours + 0.35).toFixed(1));
+    user.activeCourseId = course.id;
+    user.learningStreak += 1;
+    user.learningHours = Number((user.learningHours + 0.35).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + 2);
     recalcReadiness(db.profile);
     logIntegration(db, {
@@ -52307,9 +53044,9 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/quiz" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-    let enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52322,12 +53059,13 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
+      user.enrollments = user.enrollments.slice(0, 1000);
     }
     enrollment.progress = Math.min(100, enrollment.progress + 35);
     enrollment.score = Math.min(100, enrollment.score + 25);
-    db.profile.quizScore = Math.max(db.profile.quizScore, enrollment.score);
-    db.profile.learningHours = Number((db.profile.learningHours + 0.75).toFixed(1));
+    user.quizScore = Math.max(user.quizScore || 0, enrollment.score);
+    user.learningHours = Number((user.learningHours + 0.75).toFixed(1));
     db.profile.readiness = Math.min(100, db.profile.readiness + 6);
     recalcReadiness(db.profile);
     logIntegration(db, {
@@ -52346,24 +53084,24 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/certificate" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow credential workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
-    const enrollment = getEnrollment(db.profile, course.id);
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === user.activeCourseId) || db.courses[0];
+    const enrollment = getEnrollment(user, course.id);
     if (!enrollment || enrollment.score < 25) return send(res, 409, { error: "Complete a quiz first" });
-    if (!db.profile.completedCourses.includes(course.id)) db.profile.completedCourses.push(course.id);
+    if (!user.completedCourses.includes(course.id)) user.completedCourses.push(course.id);
     enrollment.status = "completed";
     enrollment.progress = 100;
     enrollment.completedAt = new Date().toISOString();
-    let certificate = db.profile.certificates.find(item => item.courseId === course.id);
+    let certificate = user.certificates.find(item => item.courseId === course.id);
     if (!certificate) {
       certificate = {
         id: crypto.randomUUID(),
-        certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
+        certificateNumber: `AN-CERT-${String(user.certificates.length + 1).padStart(4, "0")}`,
         courseId: course.id,
         title: course.title,
         issuedAt: new Date().toISOString()
       };
-      db.profile.certificates.push(certificate);
+      user.certificates.push(certificate);
     }
     logIntegration(db, {
       providerId: "learning-certificates",
@@ -52373,7 +53111,7 @@ async function api(req, res, url) {
       metadata: { courseId: course.id, certificateNumber: certificate.certificateNumber }
     });
     db.profile.readiness = Math.min(100, db.profile.readiness + 10);
-    db.profile.learningStreak += 1;
+    user.learningStreak += 1;
     recalcReadiness(db.profile);
     addActivity(db.profile, `Certificate issued for ${course.title}.`);
     addWorkflowNote(db.profile, body.note, "Certificate note");
@@ -52384,9 +53122,9 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/accessibility" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === (body.courseId || db.profile.activeCourseId)) || db.courses[0];
-    const enrollment = course ? getEnrollment(db.profile, course.id) : null;
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === (body.courseId || user.activeCourseId)) || db.courses[0];
+    const enrollment = course ? getEnrollment(user, course.id) : null;
     const modeNames = {
       caption: "Captioned lesson packet",
       visual: "Audio guide and screen-reader outline",
@@ -52409,10 +53147,10 @@ async function api(req, res, url) {
       progressAtRequest: enrollment?.progress || 0,
       createdAt: new Date().toISOString()
     };
-    db.profile.learningAccommodations.unshift(accommodation);
-    db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.25).toFixed(2));
-    db.profile.learningStreak += 1;
+    user.learningAccommodations.unshift(accommodation);
+    user.learningAccommodations = user.learningAccommodations.slice(0, 20);
+    user.learningHours = Number((Number(user.learningHours || 0) + 0.25).toFixed(2));
+    user.learningStreak += 1;
     logIntegration(db, {
       providerId: "learning-certificates",
       module: "Learning",
@@ -52440,10 +53178,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/learning/advanced" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow advanced learning workflows" });
     const body = await readBody(req);
-    ensureLearningProfile(db.profile);
-    const course = db.courses.find(item => item.id === (body.courseId || db.profile.activeCourseId)) || db.courses[0];
+    ensureLearningProfile(user);
+    const course = db.courses.find(item => item.id === (body.courseId || user.activeCourseId)) || db.courses[0];
     if (!course) return send(res, 404, { error: "Course not found" });
-    let enrollment = getEnrollment(db.profile, course.id);
+    let enrollment = getEnrollment(user, course.id);
     if (!enrollment) {
       enrollment = {
         id: crypto.randomUUID(),
@@ -52456,7 +53194,8 @@ async function api(req, res, url) {
         startedAt: new Date().toISOString(),
         completedAt: null
       };
-      db.profile.enrollments.unshift(enrollment);
+      user.enrollments.unshift(enrollment);
+      user.enrollments = user.enrollments.slice(0, 1000);
     }
     const type = body.type || "assignment";
     const now = new Date().toISOString();
@@ -52473,7 +53212,7 @@ async function api(req, res, url) {
           status: "assigned",
           createdAt: now
         };
-        db.profile.learningAssignments.unshift(record);
+        user.learningAssignments.unshift(record);
         return ["learning-courses", "learning.assignment_created", `${record.assignmentNumber} assignment created for ${course.title}.`, record];
       },
       "quiz-attempt": () => {
@@ -52503,10 +53242,10 @@ async function api(req, res, url) {
           feedback: "Review missed concepts, then proceed toward certificate readiness.",
           createdAt: now
         };
-        db.profile.quizAttempts.unshift(record);
+        user.quizAttempts.unshift(record);
         enrollment.score = Math.max(enrollment.score || 0, record.score);
         enrollment.progress = Math.max(enrollment.progress || 25, 85);
-        db.profile.quizScore = Math.max(db.profile.quizScore || 0, record.score);
+        user.quizScore = Math.max(user.quizScore || 0, record.score);
         return ["learning-certificates", "learning.quiz_attempt_recorded", `${record.attemptNumber} quiz attempt recorded at ${record.score}%.`, record];
       },
       note: () => {
@@ -52520,7 +53259,7 @@ async function api(req, res, url) {
           status: "recorded",
           createdAt: now
         };
-        db.profile.instructorNotes.unshift(record);
+        user.instructorNotes.unshift(record);
         return ["learning-courses", "learning.instructor_note_recorded", `${record.noteNumber} instructor note recorded for ${course.title}.`, record];
       },
       report: () => {
@@ -52531,13 +53270,13 @@ async function api(req, res, url) {
           courseTitle: course.title,
           progress: enrollment.progress || 0,
           readiness: db.profile.readiness,
-          learningHours: db.profile.learningHours || 0,
+          learningHours: user.learningHours || 0,
           completedModules: (enrollment.completedModules || []).length,
           recommendation: "Continue active course, complete assessment, and connect certificate to workforce role gate.",
           status: "generated",
           createdAt: now
         };
-        db.profile.learningProgressReports.unshift(record);
+        user.learningProgressReports.unshift(record);
         return ["learning-courses", "learning.progress_report_generated", `${record.reportNumber} progress report generated for ${course.title}.`, record];
       },
       transcript: () => {
@@ -52546,13 +53285,13 @@ async function api(req, res, url) {
           transcriptNumber: `AN-TRN-${String(nextRecordSequence(db, "learningTranscripts")).padStart(3, "0")}`,
           learnerName: user.name,
           activeCourse: course.title,
-          completedCourses: (db.profile.completedCourses || []).map(courseId => db.courses.find(item => item.id === courseId)?.title || courseId),
-          certificates: (db.profile.certificates || []).map(cert => cert.certificateNumber || cert.id),
+          completedCourses: (user.completedCourses || []).map(courseId => db.courses.find(item => item.id === courseId)?.title || courseId),
+          certificates: (user.certificates || []).map(cert => cert.certificateNumber || cert.id),
           readiness: db.profile.readiness,
           status: "issued",
           createdAt: now
         };
-        db.profile.learningTranscripts.unshift(record);
+        user.learningTranscripts.unshift(record);
         return ["learning-certificates", "learning.transcript_issued", `${record.transcriptNumber} transcript issued for ${user.name}.`, record];
       },
       cohort: () => {
@@ -52562,12 +53301,14 @@ async function api(req, res, url) {
           courseId: course.id,
           courseTitle: course.title,
           cohortName: body.cohortName || `${course.track} rural learner cohort`,
-          learnerCount: Number(body.learnerCount || 24),
+          // Found live (legacy server.js route sweep, low severity -- display-only, no money/security
+          // impact): an explicit learnerCount:0 was treated as missing and silently replaced with 24.
+          learnerCount: body.learnerCount !== undefined && Number.isFinite(Number(body.learnerCount)) && Number(body.learnerCount) >= 0 ? Number(body.learnerCount) : 24,
           facilitator: body.facilitator || "Community learning facilitator",
           status: "active",
           createdAt: now
         };
-        db.profile.learningCohorts.unshift(record);
+        user.learningCohorts.unshift(record);
         return ["learning-courses", "learning.cohort_created", `${record.cohortNumber} cohort created for ${course.title}.`, record];
       }
     };
@@ -52575,11 +53316,11 @@ async function api(req, res, url) {
     if (!maker) return send(res, 400, { error: "Unsupported advanced learning action" });
     const [providerId, action, detail, record] = maker();
     ["learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts"].forEach(key => {
-      db.profile[key] = db.profile[key].slice(0, 20);
+      user[key] = user[key].slice(0, 20);
     });
-    db.profile.activeCourseId = course.id;
-    db.profile.learningStreak += 1;
-    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.25).toFixed(2));
+    user.activeCourseId = course.id;
+    user.learningStreak += 1;
+    user.learningHours = Number((Number(user.learningHours || 0) + 0.25).toFixed(2));
     recalcReadiness(db.profile);
     logIntegration(db, { providerId, module: "Learning", action, detail, metadata: { recordId: record.id, courseId: course.id, type } });
     addActivity(db.profile, detail);
@@ -52651,14 +53392,20 @@ async function api(req, res, url) {
       if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
         return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
       }
+      // Found live (legacy server.js route sweep): same falsy-zero-override gap as the money-logic
+      // audit already fixed on timesheet/payroll/evaluation just below -- an explicit rate:0 (an
+      // unpaid/volunteer placement) was treated as missing and silently replaced with a fabricated $64,
+      // then added unconditionally to the real db.profile.earnings ledger.
+      const requestedRate = Number(db.profile.applications[0]?.rate);
       const shift = {
         id: crypto.randomUUID(),
         role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
         startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
         status: "scheduled",
-        estimatedEarnings: Number(db.profile.applications[0]?.rate) || 64
+        estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
       };
       db.profile.shiftSchedule.unshift(shift);
+      db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
       db.profile.nextShift = `${shift.role} - ${new Date(shift.startsAt).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
       db.profile.readiness = Math.min(100, db.profile.readiness + 6);
       db.profile.earnings += shift.estimatedEarnings;
@@ -52704,7 +53451,7 @@ async function api(req, res, url) {
     const role = db.roles.find(item => item.id === body.roleId);
     if (!role) return send(res, 404, { error: "Role not found" });
     ensureWorkforceProfile(db.profile);
-    const readiness = roleReadiness(db.profile, role);
+    const readiness = roleReadiness(db.profile, user, role);
     if (!readiness.eligible) {
       const certificateText = readiness.missingCertificates.length ? ` and certificate(s): ${readiness.missingCertificates.join(", ")}` : "";
       return send(res, 409, { error: `${role.title} needs ${readiness.missingReadiness}% more readiness${certificateText}` });
@@ -52809,14 +53556,17 @@ async function api(req, res, url) {
         return ["workforce-shifts", "timesheet.submitted", `${record.timesheetNumber} timesheet submitted for ${record.hours} hours.`, record];
       },
       payroll: () => {
-        const latestTimesheet = db.profile.timesheets[0] || { hours: 6, timesheetNumber: "AN-TIME-AUTO" };
-        // Found live (money-logic audit): the same falsy-zero-override gap
-        // as timesheet.hours above, but on a real, persisted money ledger --
-        // an explicit amount:0 (a payroll correction) was silently replaced
-        // with a fabricated positive amount, and a negative or non-finite
-        // amount was accepted outright with no check, corrupting
-        // db.profile.earnings below (including permanently NaN-poisoning it
-        // for a non-numeric amount).
+        // Found live (workforce/advanced sibling audit): unlike /api/workforce/action's "shift" (which
+        // refuses to schedule a second shift while one is already scheduled, closing an unbounded-replay
+        // path) and "interview" (readiness>=50 gate), this action had no gate at all -- it could be the
+        // very first workforce action a brand-new user ever took, and it fell back to a fully synthetic
+        // timesheet ({hours:6, timesheetNumber:"AN-TIME-AUTO"}) when none existed, so it was also fully
+        // unconditionally repeatable: every call credited db.profile.earnings again with no dedup tied to
+        // a specific timesheet, the same unbounded-replay shape the "shift" fix explicitly closed one
+        // function above but was never mirrored here. Now requires a real, still-unpaid submitted
+        // timesheet, and marks it paid on approval so the same timesheet can never be paid twice.
+        const latestTimesheet = (db.profile.timesheets || []).find(item => item.status === "submitted");
+        if (!latestTimesheet) return { refused: "Submit a timesheet before payroll can be approved." };
         const requestedAmount = Number(body.amount);
         const record = {
           id: crypto.randomUUID(),
@@ -52826,16 +53576,20 @@ async function api(req, res, url) {
           status: "approved",
           approvedAt: now
         };
+        latestTimesheet.status = "paid";
         db.profile.payrollApprovals.unshift(record);
         db.profile.earnings = Number(db.profile.earnings || 0) + record.amount;
         return ["workforce-hris", "payroll.approved", `${record.payrollNumber} payroll approved for $${record.amount}.`, record];
       },
       evaluation: () => {
-        // Found live (money-logic audit): same falsy-zero-override gap --
-        // an explicit score:0 (recording a genuinely failing review) was
-        // silently replaced with a strong passing 92, while readiness was
-        // still bumped upward below as if a good review had occurred. Also
-        // had no upper bound, unlike readiness/quizScore's own 100 caps.
+        // Found live (workforce/advanced sibling audit): unlike /api/workforce/action's "interview"
+        // (readiness>=50 gate) and "shift" (interviews>=1 gate), this action had no prerequisite at all --
+        // repeated calls with no real interview, mentor assignment, or quiz ever completed could reach
+        // 100% readiness, the exact field roleReadiness() uses to gate real role applications (including
+        // high-minReadiness roles) via /api/workforce/apply. A performance review presupposes the person
+        // has actually been engaged, so this now requires the same interviews>=1 gate "shift" already
+        // uses.
+        if ((db.profile.interviews || 0) < 1) return { refused: "Schedule an interview before a performance review." };
         const requestedScore = Number(body.score);
         const record = {
           id: crypto.randomUUID(),
@@ -52866,7 +53620,9 @@ async function api(req, res, url) {
     };
     const handler = actions[type];
     if (!handler) return send(res, 400, { error: "Unsupported advanced workforce action" });
-    const [providerId, action, detail, record] = handler();
+    const result = handler();
+    if (result?.refused) return send(res, 409, { error: result.refused });
+    const [providerId, action, detail, record] = result;
     // Found live (advanced-route numbering/cap audit): unlike every comparable "advanced" handler in
     // this file (learning/advanced, map/advanced, trade/advanced all cap their per-type arrays right
     // after the maker runs), none of these six were ever capped -- unbounded growth in db.profile on
@@ -52928,7 +53684,7 @@ async function api(req, res, url) {
         contactMethod: "Low-bandwidth callback",
         caregiverName: "Community accessibility aide"
       });
-      db.profile.healthIntakes.unshift(intake);
+      addHealthIntake(db, intake);
       shadowWriteHealthIntakeToPostgres(intake);
       ensureTelehealthEncounterForIntake(db.profile, intake, {
         lifecycleState: "intake-started",
@@ -53007,7 +53763,7 @@ async function api(req, res, url) {
         createdAt: new Date().toISOString()
       }, body, { needSummary: `${country.name} care plan review` }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const carePlan = withHealthProvenance({
@@ -53055,7 +53811,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} consent and privacy review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53114,7 +53870,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} vitals and triage review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53176,7 +53932,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} referral review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53236,7 +53992,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} follow-up review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53292,7 +54048,7 @@ async function api(req, res, url) {
         needSummary: `${country.name} accessible telehealth review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) {
-        db.profile.healthIntakes.unshift(intake);
+        addHealthIntake(db, intake);
         shadowWriteHealthIntakeToPostgres(intake);
       }
       const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -53398,7 +54154,7 @@ async function api(req, res, url) {
       caregiverName: "Community health aide"
     }, { defaultFields: ["fallbackIntake"] });
     if (!db.profile.healthIntakes.find(item => item.id === activeIntake.id)) {
-      db.profile.healthIntakes.unshift(activeIntake);
+      addHealthIntake(db, activeIntake);
       shadowWriteHealthIntakeToPostgres(activeIntake);
     }
     activeIntake.patientName = patientName || activeIntake.patientName;
@@ -53756,7 +54512,7 @@ async function api(req, res, url) {
       needSummary: "Mobile clinic revenue workflow",
       contactMethod: "voice callback, SMS, or WhatsApp"
     }, { defaultFields: ["fallbackIntake"] });
-    if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+    if (!db.profile.healthIntakes.find(item => item.id === intake.id)) addHealthIntake(db, intake);
     shadowWriteHealthIntakeToPostgres(intake);
     const mobileClinic = (db.profile.mobileClinicRequests || [])[0]?.mobileClinic || nearestRuralHealthSites(db, { label: country.name, lat: country.lat, lng: country.lng, country: country.name }, "mobile-clinic", 1)[0];
     const providerName = String(body.providerName || mobileClinic?.name || `${country.name} Mobile Clinic Team`).trim();
@@ -53773,11 +54529,16 @@ async function api(req, res, url) {
     const amount = body.amount !== undefined ? Number(body.amount) : (type === "clinic-service-menu" ? 0 : 1500);
     const paymentMethod = String(body.paymentMethod || "mobile money, cash receipt, card, or sponsor voucher").trim();
     const previous = db.profile.mobileClinicRevenueRecords[0] || null;
+    // Found live (legacy server.js route sweep): amount itself was already fixed just above to honor
+    // an explicit 0 (a legitimately free/waived/sponsored visit) -- but this serviceMenu, built from
+    // that same amount, still re-applied `amount || 1500` to every displayed price, so a genuinely free
+    // visit still showed "Mobile clinic visit: 1500" on the patient/provider-facing receipt. amount is
+    // already a fully resolved finite number at this point; no further fallback is needed or correct.
     const serviceMenu = [
-      { name: "Mobile clinic visit", price: amount || 1500, currency, note: "Provider confirms clinical service before payment is requested." },
-      { name: "Vitals and intake support", price: Math.max(300, Math.round((amount || 1500) * 0.35)), currency, note: "Non-diagnostic collection and handoff support." },
-      { name: "Telehealth referral handoff", price: Math.max(500, Math.round((amount || 1500) * 0.45)), currency, note: "Referral packet and communication workflow." },
-      { name: "Pharmacy/supply coordination", price: Math.max(400, Math.round((amount || 1500) * 0.4)), currency, note: "Availability, route, and compliance evidence." }
+      { name: "Mobile clinic visit", price: amount, currency, note: "Provider confirms clinical service before payment is requested." },
+      { name: "Vitals and intake support", price: Math.max(300, Math.round(amount * 0.35)), currency, note: "Non-diagnostic collection and handoff support." },
+      { name: "Telehealth referral handoff", price: Math.max(500, Math.round(amount * 0.45)), currency, note: "Referral packet and communication workflow." },
+      { name: "Pharmacy/supply coordination", price: Math.max(400, Math.round(amount * 0.4)), currency, note: "Availability, route, and compliance evidence." }
     ];
     const statusMap = {
       "clinic-service-menu": "service menu published",
@@ -53883,7 +54644,7 @@ async function api(req, res, url) {
       contactMethod: "Voice callback plus SMS summary",
       caregiverName: "Community accessibility aide"
     }, { simulation: true });
-    db.profile.healthIntakes.unshift(intake);
+    addHealthIntake(db, intake);
     const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
       lifecycleState: "intake-started",
       demoRecord: true,
@@ -54042,7 +54803,7 @@ async function api(req, res, url) {
         accessibilityNeeds: "Captions, audio narration, caregiver handoff",
         contactMethod: "Low-bandwidth callback"
       }, { defaultFields: ["fallbackIntake"] });
-      db.profile.healthIntakes.unshift(intake);
+      addHealthIntake(db, intake);
       shadowWriteHealthIntakeToPostgres(intake);
     }
     const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
@@ -54054,11 +54815,18 @@ async function api(req, res, url) {
     });
     const type = body.type || "appointment";
     const now = new Date().toISOString();
+    // Found live (legacy server.js route sweep): every maker below numbered records via
+    // `<array>.length + 1`, but storeLimit caps every one of these same arrays to 20 right after each
+    // insert -- once an array reaches 20 entries, .length is pinned at 20 forever, so every record of
+    // that type past the 20th gets an identical "unique" number (e.g. every appointment past the 20th is
+    // "AN-APT-021"). Same bug class already fixed elsewhere in this file (learning/advanced's quiz
+    // maker, PR #758's learning/workforce numbering fix) via nextRecordSequence -- this route was never
+    // converted. Switched every maker here to the same real, ever-growing per-type sequence.
     const makers = {
       appointment: () => {
         const record = {
           id: crypto.randomUUID(),
-          appointmentNumber: `AN-APT-${String(db.profile.telehealthAppointments.length + 1).padStart(3, "0")}`,
+          appointmentNumber: `AN-APT-${String(nextRecordSequence(db, "telehealthAppointments")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54076,7 +54844,7 @@ async function api(req, res, url) {
       provider: () => {
         const record = {
           id: crypto.randomUUID(),
-          assignmentNumber: `AN-PROV-${String(db.profile.telehealthProviderAssignments.length + 1).padStart(3, "0")}`,
+          assignmentNumber: `AN-PROV-${String(nextRecordSequence(db, "telehealthProviderAssignments")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54093,7 +54861,7 @@ async function api(req, res, url) {
       history: () => {
         const record = {
           id: crypto.randomUUID(),
-          historyNumber: `AN-HIST-${String(db.profile.patientHistoryRecords.length + 1).padStart(3, "0")}`,
+          historyNumber: `AN-HIST-${String(nextRecordSequence(db, "patientHistoryRecords")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54110,7 +54878,7 @@ async function api(req, res, url) {
       prescription: () => {
         const record = {
           id: crypto.randomUUID(),
-          packetNumber: `AN-RX-${String(db.profile.telehealthPrescriptionPackets.length + 1).padStart(3, "0")}`,
+          packetNumber: `AN-RX-${String(nextRecordSequence(db, "telehealthPrescriptionPackets")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54125,7 +54893,7 @@ async function api(req, res, url) {
       emergency: () => {
         const record = {
           id: crypto.randomUUID(),
-          escalationNumber: `AN-ESC-${String(db.profile.telehealthEmergencyEscalations.length + 1).padStart(3, "0")}`,
+          escalationNumber: `AN-ESC-${String(nextRecordSequence(db, "telehealthEmergencyEscalations")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54141,7 +54909,7 @@ async function api(req, res, url) {
       note: () => {
         const record = {
           id: crypto.randomUUID(),
-          noteNumber: `AN-NOTE-${String(db.profile.careTeamNotes.length + 1).padStart(3, "0")}`,
+          noteNumber: `AN-NOTE-${String(nextRecordSequence(db, "careTeamNotes")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54156,7 +54924,7 @@ async function api(req, res, url) {
       outcome: () => {
         const record = {
           id: crypto.randomUUID(),
-          outcomeNumber: `AN-OUT-${String(db.profile.telehealthOutcomeReviews.length + 1).padStart(3, "0")}`,
+          outcomeNumber: `AN-OUT-${String(nextRecordSequence(db, "telehealthOutcomeReviews")).padStart(3, "0")}`,
           intakeId: intake.id,
           encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
@@ -54567,6 +55335,16 @@ async function api(req, res, url) {
     // balance to Infinity (and it self-perpetuates, since Number(Infinity||0)
     // stays Infinity on every later read, unlike NaN which resets to 0).
     if (!Number.isFinite(requestedAmount)) return send(res, 400, { error: "Wallet amount must be a finite number." });
+    // Found live (money-logic audit, real-fund-minting finding): a credit had no
+    // ceiling at all -- the real UI only ever sends a fixed $120 "M-Pesa payment,"
+    // but nothing stopped a direct caller from crediting any amount, repeatedly,
+    // with no real payment provider ever verifying it. Debits are unaffected
+    // (already bounded by the balance-floor check below); only unverified credits
+    // are capped, well above the UI's own $120 so legitimate use is untouched.
+    const WALLET_CREDIT_CAP = 1000;
+    if (requestedAmount > WALLET_CREDIT_CAP) {
+      return send(res, 400, { error: `A wallet credit cannot exceed $${WALLET_CREDIT_CAP} per request without a real, verified payment provider.` });
+    }
     const tx = {
       id: crypto.randomUUID(),
       provider: body.provider || "Wallet",
@@ -54824,53 +55602,63 @@ async function api(req, res, url) {
       },
       release: () => {
         const latestQuote = db.profile.tradeQuotes[0];
+        // Found live (trade/advanced sibling audit, same shape just fixed in /api/workforce/advanced's
+        // payroll action): the dedup guard below only ever fires when a quote exists ("latestQuote &&
+        // ..."), so when no quote has ever been sent (tradeQuotes is empty, its real starting state --
+        // confirmed absent from the base db.json fixture), the guard is silently false-y and release
+        // falls straight through -- not just once, but on every subsequent call, since there's still no
+        // quote to ever mark "released". The credited amount then falls back to a fully fabricated
+        // product price (or 650), crediting real, spendable db.profile.wallet funds an unbounded number
+        // of times for a transaction that never had a real quote, buyer, or escrow behind it. Requiring a
+        // real quote to exist closes this the same way payroll now requires a real timesheet.
+        if (!latestQuote) {
+          throw Object.assign(new Error("Send a quote before releasing payment."), { httpStatus: 409 });
+        }
         // Found live (money-logic audit): nothing marked a quote as
         // "already released" -- the same quote could be released an
         // unlimited number of times (a double-click, a client retry, or a
-        // replayed request), crediting the wallet again in full every time.
-        // Executed proof: three identical release calls against the same
-        // quote credited $650 three times (wallet: 650 -> 1300 -> 1950)
-        // with the quote's own status field never even read. Guards the
-        // same way nexus/farmwork/parties.js's delivery/payment recording
-        // already does elsewhere in this codebase (refuse a second
-        // transition once a record leaves its initial state).
-        if (latestQuote && latestQuote.status === "released") {
+        // replayed request). Still guarded even though release no longer
+        // credits real funds (below) -- a record shouldn't claim the same
+        // escrow quote was released twice. Guards the same way
+        // nexus/farmwork/parties.js's delivery/payment recording already
+        // does elsewhere in this codebase (refuse a second transition once
+        // a record leaves its initial state). latestQuote is guaranteed
+        // truthy here -- the !latestQuote guard just above already throws
+        // otherwise -- so no further null-check is needed.
+        if (latestQuote.status === "released") {
           throw Object.assign(new Error("This quote has already been released -- payment was not credited again."), { httpStatus: 409 });
         }
         // Found live (money-logic audit): same Infinity-bypass shape as
-        // quote() above -- an explicit non-finite amount would be credited
-        // to the wallet as-is, permanently corrupting the stored balance.
+        // quote() above -- an explicit non-finite amount would have been
+        // credited to the wallet as-is, permanently corrupting the stored
+        // balance.
         const requestedAmount = Number(body.amount);
         if (body.amount !== undefined && !Number.isFinite(requestedAmount)) {
           throw Object.assign(new Error("Release amount must be a finite number."), { httpStatus: 400 });
         }
-        // Found live (trade sibling sweep, same shape as quote() above): the Infinity guard correctly
-        // accepts an explicit amount of 0, but this still built the stored/credited amount with
-        // `body.amount || ...`, silently discarding a real, explicitly-requested 0 and crediting the
-        // wallet with latestQuote.price (or 650) instead -- a real, unintended wallet credit the caller
-        // never asked for.
+        // Found live (money-logic audit, real-fund-minting finding): this
+        // credited the real spendable wallet based solely on a quote the
+        // SAME caller had just created, with no real payment provider ever
+        // verifying anything -- confirmed live that looping quote(price)
+        // then release an unlimited number of times minted an unlimited,
+        // caller-chosen amount into a real balance spendable elsewhere in
+        // the app. No real payment provider is wired into this escrow flow
+        // at all, so it can no longer credit real funds -- it still records
+        // what WOULD have been released, for the same record-keeping/UI
+        // purposes as before, just without the wallet mutation.
         const record = {
           id: crypto.randomUUID(),
           releaseNumber: `AN-REL-${String(db.profile.paymentReleases.length + 1).padStart(3, "0")}`,
           quoteNumber: latestQuote?.quoteNumber || null,
           amount: body.amount !== undefined ? requestedAmount : Number(latestQuote?.price || product?.price || 650),
           status: "released",
+          realFundsCredited: false,
           createdAt: now
         };
         db.profile.paymentReleases.unshift(record);
         db.profile.paymentReleases = db.profile.paymentReleases.slice(0, 50);
         if (latestQuote) latestQuote.status = "released";
-        db.profile.wallet = Number(db.profile.wallet || 0) + record.amount;
-        db.profile.walletTransactions.unshift({
-          id: crypto.randomUUID(),
-          provider: "Escrow release",
-          amount: record.amount,
-          type: "credit",
-          status: "posted",
-          createdAt: now
-        });
-        db.profile.walletTransactions = db.profile.walletTransactions.slice(0, 100);
-        return ["trade-payments", "payment.released", `${record.releaseNumber} payment released for $${record.amount}.`, record];
+        return ["trade-payments", "payment.released", `${record.releaseNumber} escrow release recorded for $${record.amount} -- no real payment provider is connected, so this did not credit your spendable wallet.`, record];
       }
     };
     const handler = actions[type];
@@ -56073,6 +56861,12 @@ async function api(req, res, url) {
     // instead of a confusing "call needs setup" response.
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot start a real call." });
     const body = await readBody(req);
+    // Found live (communications/notifications audit): unlike this function's OTHER callers (the Cloud
+    // Agent's approval-gated communications.outbound_call step, and the conversational dispatcher's own
+    // staged "call X" -> "yes" confirmation flow), this direct REST route had no confirmation gate of any
+    // kind -- any authenticated, non-restricted user could place a real, billed Twilio call to a
+    // client-supplied recipient with a single unconfirmed POST.
+    if (body.confirmed !== true) return send(res, 400, { error: "Pass confirmed: true to place a real outbound call.", status: "confirmation_required" });
     const record = await createOutboundCallWorkflow(db, user, body);
     await writeDb(db);
     const state = publicState(db, user);
@@ -56120,17 +56914,26 @@ async function api(req, res, url) {
     // canUse(user,"notifications") (Standard User, Provider Reviewer, Admin)
     // could trigger a real Twilio SMS/WhatsApp send to a client-supplied
     // recipient.
-    const delivery = ["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send")
-      ? await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text: message })
-      : { attempted: false, ok: true, status: "local-notification-only" };
-    addNotification(db.profile, { module: moduleName, providerId, channel, message, createdBy: user.name, deliveryStatus: delivery.status });
+    // Found live (communications/notifications audit): unlike server/providers/communicationsBridgeProvider.js's
+    // sendSms/sendWhatsapp (which require confirmed:true and refuse any message matching
+    // SENSITIVE_COMMUNICATION_PATTERN before sending), this route had neither a confirmation gate nor a
+    // content scan -- a single unconfirmed POST with arbitrary free text reached a real Twilio send.
+    const wantsRealSend = ["sms-delivery", "whatsapp-delivery"].includes(providerId) && !userIsRestrictedFrom(user, "communications-send");
+    const delivery = !wantsRealSend
+      ? { attempted: false, ok: true, status: "local-notification-only" }
+      : body.confirmed !== true
+        ? { attempted: false, ok: false, status: "confirmation-required-for-live-send" }
+        : SENSITIVE_COMMUNICATION_PATTERN.test(message)
+          ? { attempted: false, ok: false, status: "blocked-sensitive-content" }
+          : await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text: message });
+    addNotification(db.profile, { module: moduleName, providerId, channel, message, createdBy: user?.email || "Ask Nexus", deliveryStatus: delivery.status });
     logIntegration(db, {
       providerId,
       module: moduleName,
       action: "notification.sent",
       status: delivery.ok || !delivery.attempted ? "success" : "needs-setup",
       detail: delivery.ok ? message : `${message} Delivery status: ${delivery.status}.`,
-      metadata: { channel, createdBy: user.name, delivery }
+      metadata: { channel, createdBy: user?.email || "Ask Nexus", delivery }
     });
     addActivity(db.profile, `${moduleName} notification sent: ${message}`);
     await writeDb(db);
@@ -56551,6 +57354,16 @@ server.on("error", error => {
 server.on("upgrade", (req, socket, head) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (url.pathname !== "/api/voice/phone/stream" || !phoneRealtimeStreamingEnabled(process.env)) {
+    socket.destroy();
+    return;
+  }
+  // Found live (CSRF/session/rate-limit audit): this listener is entirely separate from the
+  // http.createServer request listener that calls rateLimit() on every ordinary request -- upgrade
+  // requests never passed through the blanket limiter at all. Opening a socket here is cheap (the
+  // expensive part, a real OpenAI Realtime connection, only happens after a validly-signed token arrives
+  // in the stream's own "start" frame), but nothing capped how many upgrade attempts an unauthenticated
+  // caller could make. Reuses the same (now proxy-aware) rateLimit() budget as everything else.
+  if (!rateLimit(req, 60, 60_000)) {
     socket.destroy();
     return;
   }

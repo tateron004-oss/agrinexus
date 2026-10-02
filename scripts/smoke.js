@@ -24,10 +24,16 @@ let serverProcess = null;
 function resetConversationMemory(db) {
   db.profile = db.profile || {};
   db.profile.agentPendingAction = null;
-  db.profile.activeCourseId = "digital-foundations";
-  db.profile.completedCourses = (db.profile.completedCourses || []).filter(courseId => courseId !== "digital-foundations");
-  db.profile.certificates = (db.profile.certificates || []).filter(item => item.courseId !== "digital-foundations");
-  db.profile.enrollments = (db.profile.enrollments || []).filter(item => item.courseId !== "digital-foundations");
+  // Course-enrollment cross-user collision fix: these learning fields moved
+  // off db.profile onto the signed-in user's own db.users[] entry -- reset
+  // them there instead, for the user this smoke run logs in as below.
+  const smokeUser = (db.users || []).find(item => item.email === "user@agrinexus.org");
+  if (smokeUser) {
+    smokeUser.activeCourseId = "digital-foundations";
+    smokeUser.completedCourses = (smokeUser.completedCourses || []).filter(courseId => courseId !== "digital-foundations");
+    smokeUser.certificates = (smokeUser.certificates || []).filter(item => item.courseId !== "digital-foundations");
+    smokeUser.enrollments = (smokeUser.enrollments || []).filter(item => item.courseId !== "digital-foundations");
+  }
   db.profile.agentMemory = {
     ...(db.profile.agentMemory || {}),
     activeClarification: null,

@@ -126,16 +126,27 @@ class BehaviorSpine {
     const existing = await consents.active({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, taskId: priorTask.taskId, stepId });
     if (existing) return existing;
     // A capped scope (message sends, calls) stops the action rather than consenting once the person's daily allowance is used.
-    if (consents.countGrantedSince) {
-      for (const cap of dailyCaps(tool.consent_scope, step)) {
-        const used = await consents.countGrantedSince({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, hours: 24, channel: cap.channel });
-        if (used >= cap.limit) return { limitReached: true, limit: cap.limit, noun: cap.noun };
-      }
-    }
-    const granted = await consents.grant({ tenantId: context.tenantId, subjectId: context.userId, taskId: priorTask.taskId, scope: tool.consent_scope,
+    const grantArgs = { tenantId: context.tenantId, subjectId: context.userId, taskId: priorTask.taskId, scope: tool.consent_scope,
       purpose: policy.purpose, policyVersion: policy.policyVersion, recipient: consentRecipient(tool.consent_scope, step),
       receipt: { source: "user-confirmation", channel: channel || "api", sendChannel: consentSendChannel(tool.consent_scope, step), taskId: priorTask.taskId, stepId, commandId: command.commandId,
-        correlationId: command.correlationId, confirmation: String(text || "").slice(0, 200), grantedAt: new Date().toISOString() } });
+        correlationId: command.correlationId, confirmation: String(text || "").slice(0, 200), grantedAt: new Date().toISOString() } };
+    let granted;
+    if (consents.grantIfUnderCap) {
+      // The real repository checks every cap and grants inside one locked transaction, closing the
+      // check-then-grant race a separate countGrantedSince()-then-grant() sequence can't (see
+      // grantIfUnderCap's own comment in nexus/consent/repository.js).
+      const result = await consents.grantIfUnderCap({ ...grantArgs, caps: dailyCaps(tool.consent_scope, step) });
+      if (result?.limitReached) return result;
+      granted = result;
+    } else {
+      if (consents.countGrantedSince) {
+        for (const cap of dailyCaps(tool.consent_scope, step)) {
+          const used = await consents.countGrantedSince({ tenantId: context.tenantId, subjectId: context.userId, scope: tool.consent_scope, hours: 24, channel: cap.channel });
+          if (used >= cap.limit) return { limitReached: true, limit: cap.limit, noun: cap.noun };
+        }
+      }
+      granted = await consents.grant(grantArgs);
+    }
     // Found live (record-repository/consent follow-up audit): the actual
     // moment of informed consent -- a real person hearing/reading the
     // prompt and saying yes -- was never written to the audit trail here,

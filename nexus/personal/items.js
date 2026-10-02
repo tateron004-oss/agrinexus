@@ -107,10 +107,18 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
   // insert inside one advisory-lock-guarded transaction instead. Fall back to the old two-call form for
   // any memory implementation that doesn't provide it (e.g. test doubles), where there is no real
   // concurrent-request race to guard against in the first place.
-  const add = async content => {
+  // `isDuplicate`, when passed, is checked inside the same locked transaction as the cap check (see
+  // addPersonalItemUnlessFull's own comment) -- closing the check-then-act race the caller used to have
+  // by looking up an existing duplicate itself, separately, before ever calling add().
+  const add = async (content, isDuplicate = null) => {
     if (memory.addPersonalItemUnlessFull) {
-      const result = await memory.addPersonalItemUnlessFull({ ...scope, content, maxItems: MAX_ITEMS });
+      const result = await memory.addPersonalItemUnlessFull({ ...scope, content, maxItems: MAX_ITEMS, isDuplicate });
+      if (result.duplicate) return { duplicate: result.duplicate };
       return !result.full;
+    }
+    if (isDuplicate) {
+      const duplicate = (await memory.listPersonalItems({ ...scope, kind: content.kind })).map(row => row.content).find(isDuplicate);
+      if (duplicate) return { duplicate };
     }
     if ((await memory.listPersonalItems({ ...scope })).length >= MAX_ITEMS) return false;
     await memory.addPersonalItem({ ...scope, content });
@@ -122,9 +130,10 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
       case "todo-add": {
         if (!request.text) return null;
         const text1 = request.text.slice(0, MAX_TEXT);
-        const existing = (await list("todo")).find(row => row.content.list === request.list && !row.content.done && words(row.content.text).join(" ") === words(text1).join(" "));
-        if (existing) return `${text1} is already on your ${LIST_NOUN[request.list]}.`;
-        if (!await add({ kind: "todo", list: request.list, text: text1, done: false })) return full;
+        const isDuplicate = existing => existing.list === request.list && !existing.done && words(existing.text).join(" ") === words(text1).join(" ");
+        const result = await add({ kind: "todo", list: request.list, text: text1, done: false }, isDuplicate);
+        if (result?.duplicate) return `${text1} is already on your ${LIST_NOUN[request.list]}.`;
+        if (!result) return full;
         const open = (await list("todo")).filter(row => row.content.list === request.list && !row.content.done).length;
         return `Added ${text1} to your ${LIST_NOUN[request.list]}. You have ${open} open ${open === 1 ? "item" : "items"}.`;
       }
@@ -171,10 +180,11 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
         if (request.missing === "title") return "What is the event called? For example, \"add vet visit to my calendar tomorrow at 10am\".";
         if (request.missing === "day") return `What day is ${request.title}? Say it again with a day, like "tomorrow" or "25 September".`;
         if (request.day < today) return `${describeDay(request.day, today)} has already passed. Tell me a day that is still ahead.`;
-        const duplicate = (await list("event")).find(row => row.content.day === request.day && row.content.time === request.time && words(row.content.text).join(" ") === words(request.title).join(" "));
-        if (duplicate) return `${eventLine(duplicate.content, today)} is already on your calendar.`;
         const event = { kind: "event", text: request.title.slice(0, MAX_TEXT), day: request.day, time: request.time };
-        if (!await add(event)) return full;
+        const isDuplicate = existing => existing.day === event.day && existing.time === event.time && words(existing.text).join(" ") === words(event.text).join(" ");
+        const result = await add(event, isDuplicate);
+        if (result?.duplicate) return `${eventLine(result.duplicate, today)} is already on your calendar.`;
+        if (!result) return full;
         return `Added to your calendar: ${eventLine(event, today)}. I will mention it in your morning brief that day.`;
       }
       case "event-list": {

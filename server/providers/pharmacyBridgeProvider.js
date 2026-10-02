@@ -108,11 +108,18 @@ function save(body = {}, db, env = process.env) {
   if (disabled) return disabled;
   const confirmation = requireConfirmation(body, PROVIDER, action);
   if (confirmation) return confirmation;
+  const name = safeText(body.name || body.title || "Pharmacy option", 160);
+  const category = safeText(body.category || body.serviceType, 120);
+  const typedLocation = safeText(body.typedLocation || body.location || body.city, 160);
+  // Found live (fresh-module audit): unlike questionDraft() below, this save path never scanned its own
+  // user-controlled fields before persisting them.
+  const blocked = guardMedicalText(PROVIDER, action, [name, category, typedLocation], false);
+  if (blocked) return blocked;
   const record = saveRecord(db, SAVED, localRecord("pharmacy-save", body, {
     pharmacyId: safeText(body.pharmacyId || body.id, 120),
-    name: safeText(body.name || body.title || "Pharmacy option", 160),
-    category: safeText(body.category || body.serviceType, 120),
-    typedLocation: safeText(body.typedLocation || body.location || body.city, 160)
+    name,
+    category,
+    typedLocation
   }));
   return response(PROVIDER, action, "completed", "Pharmacy option saved locally after confirmation. No pharmacy was contacted.", { pharmacy: record });
 }

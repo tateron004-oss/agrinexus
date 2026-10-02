@@ -94,7 +94,17 @@ async function executeAction(input = {}, db = {}, env = process.env) {
     result.auditEvent = recordRuntimeAudit(db, result);
     return result;
   }
-  const primaryCapability = getCapability(input.capabilityId || plan.capabilities[0]);
+  // input.capabilityId is a raw, caller-supplied field (POST /api/nexus/runtime/execute
+  // passes the request body straight through). Trusting it unconditionally let a caller
+  // plan an easy, low-risk goal (empty missingInformation) and then swap in an unrelated,
+  // more sensitive capabilityId at execute time -- running a capability whose own
+  // missingInformation/requiresConfirmation gates were never evaluated against the real
+  // goal. Only honor it when it is one of the capabilities the planner actually selected
+  // for this goal; otherwise fall back to the plan's own primary capability.
+  const requestedCapabilityId = input.capabilityId && plan.capabilities.includes(input.capabilityId)
+    ? input.capabilityId
+    : plan.capabilities[0];
+  const primaryCapability = getCapability(requestedCapabilityId);
   if (!primaryCapability) {
     const result = blockedResult(plan, "blocked_unknown_capability", "The selected capability is not registered.");
     result.auditEvent = recordRuntimeAudit(db, result);

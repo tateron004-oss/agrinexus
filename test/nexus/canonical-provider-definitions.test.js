@@ -31,3 +31,13 @@ test("startup fails closed when a configured tool's own governance fields drift 
   const wrongRiskTier = definitions.map(item => item.toolId === "telehealth.prepare" ? { ...item, riskTier: "low" } : item);
   assert.throws(() => assertCanonicalProviderBindings(wrongRiskTier), error => error.code === "provider_catalog_drift" && /telehealth\.prepare/.test(error.message));
 });
+
+// Found live: requiredPermission -- the exact field the engine's own authorize() enforces on every tool call --
+// was missing from the drift comparison entirely, even though this check exists specifically to catch silent
+// governance drift for every other field. A deployed provider config could weaken a real-effect tool's
+// requiredPermission to a looser string and this passed silently.
+test("startup fails closed when a configured tool's requiredPermission drifts from the canonical \"tasks:execute\"", () => {
+  const definitions = canonicalProviderTools({ receiptSecret: "test-secret", providerBaseUrl: "https://provider.example" });
+  const weakenedPermission = definitions.map(item => item.toolId === "communications.send" ? { ...item, requiredPermission: "tasks:read" } : item);
+  assert.throws(() => assertCanonicalProviderBindings(weakenedPermission), error => error.code === "provider_catalog_drift" && /communications\.send/.test(error.message));
+});
