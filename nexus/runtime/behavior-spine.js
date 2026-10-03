@@ -38,6 +38,17 @@ class BehaviorSpine {
     return this.resolveExecution({ command: planned.command, plan: planned.plan, execution, task, context });
   }
 
+  // The structured-intake counterpart to turn(): the plan already came from a completed voice
+  // intake's own collected answers (agent.intake(), via structured-intakes.js), never from the
+  // AI planner, so there is no plan.response/plan.clarification branch to handle here -- a
+  // structured intake's plan always has real steps to execute.
+  async intakeTurn({ input, context }) {
+    const planned = await this.agent.intake({ input, context });
+    const execution = await this.engine.executeTask({ context, taskId: planned.task.taskId });
+    const task = await this.tasks.get({ tenantId: context.tenantId, taskId: planned.task.taskId, includeSteps: true });
+    return this.resolveExecution({ command: planned.command, plan: planned.plan, execution, task, context });
+  }
+
   // Resumes a task left in awaiting_confirmation by turn(): approves or
   // rejects the pending step, then continues the same task through the same
   // execution states turn() itself handles, rather than letting a fresh

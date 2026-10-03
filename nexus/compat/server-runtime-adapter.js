@@ -550,6 +550,18 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
           locale: request.locale, text: body.text }, context: turnContext });
         send(res, result.completed ? 200 : 202, result); return true;
+      } else if (url.pathname === "/api/nexus/runtime/behavior/intake" && req.method === "POST") {
+        // The completion step for a voice-driven guided intake (public/kyro-voice-intake.js +
+        // public/kyro-intake-forms.js): the answers were already collected and validated client-side,
+        // so this takes them directly rather than re-parsing a synthesized sentence through the AI
+        // planner. Same envelope/auth/error handling as behavior/turn above -- a client that already
+        // knows how to render a nexus.behavior-turn.v1 response needs no special-casing for this route.
+        if (!active.behavior?.intakeTurn) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy write fallback was used.", code: "behavior_spine_unavailable" }); return true; }
+        const intakeContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
+        const result = await active.behavior.intakeTurn({ input: { correlationId: request.context.requestId,
+          conversationId: body.conversationId, channel: request.channel, locale: request.locale,
+          intakeId: body.intakeId, values: body.values || {} }, context: intakeContext });
+        send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/confirm" && req.method === "POST") {
         if (!active.behavior?.confirm) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
         const result = await active.behavior.confirm({ input: { correlationId: request.context.requestId,

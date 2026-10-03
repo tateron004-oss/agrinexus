@@ -241,6 +241,59 @@ test("behavior confirm resumes a pending task+step through the authoritative spi
   assert.equal(response.result.body.legacyFallbackUsed, false);
 });
 
+test("behavior/intake turns a completed voice intake's structured answers into a committed, verified task", async () => {
+  let intakeInput;
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
+    behavior: { intakeTurn: async input => { intakeInput = input; return { schema: "nexus.behavior-turn.v1",
+      completed: true, application: "workforce", taskId: "tsk_intake_1", legacyFallbackUsed: false }; } } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
+    permissions: ["tasks:execute"] }), readJson: async () => ({ intakeId: "resume", values: { name: "Amina Wanjiru", skills: "farming" } }),
+    createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "request-intake-1" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/intake"), response.send);
+  assert.equal(response.result.status, 200);
+  assert.equal(intakeInput.input.intakeId, "resume");
+  assert.equal(intakeInput.input.values.name, "Amina Wanjiru");
+  assert.equal(intakeInput.input.correlationId, "request-intake-1");
+  assert.equal(response.result.body.legacyFallbackUsed, false);
+});
+
+test("behavior/intake requires authentication, exactly like behavior/turn", async () => {
+  let runtimeCreated = false;
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => null, readJson: async () => ({ intakeId: "resume", values: {} }),
+    createRuntimeFn: () => { runtimeCreated = true; return { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {} }; } });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/behavior/intake"), response.send);
+  assert.equal(response.result.status, 401); assert.equal(runtimeCreated, false);
+});
+
+test("behavior/intake fails closed when the behavior spine has no intakeTurn method", async () => {
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {} };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
+    permissions: ["tasks:execute"] }), readJson: async () => ({ intakeId: "resume", values: { name: "Amina" } }),
+    createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "request-intake-3" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/intake"), response.send);
+  assert.equal(response.result.status, 503);
+  assert.equal(response.result.body.code, "behavior_spine_unavailable");
+});
+
+test("behavior/intake maps a structured-intake validation error (e.g. missing name) to its real status code", async () => {
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} },
+    behavior: { intakeTurn: async () => { const error = new Error("A resume needs the person's name.");
+      error.name = "NexusRuntimeError"; error.code = "resume_name_required"; error.status = 422; throw error; } } };
+  const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
+    permissions: ["tasks:execute"] }), readJson: async () => ({ intakeId: "resume", values: { skills: "farming" } }),
+    createRuntimeFn: () => runtime });
+  const response = responseCapture();
+  await adapter.handle({ method: "POST", headers: { "x-request-id": "request-intake-4" } }, {},
+    new URL("http://local/api/nexus/runtime/behavior/intake"), response.send);
+  assert.equal(response.result.status, 422);
+  assert.equal(response.result.body.code, "resume_name_required");
+});
+
 test("behavior confirm fails closed when the behavior spine has no confirm method", async () => {
   const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: {} };
   const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1",
