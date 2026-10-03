@@ -37,7 +37,8 @@
   // whole utterance or requires an explicit "repeat/say ... that/again"-style object (so "repeat
   // customers" or "bus stop attendant" are still answers), and the natural-language tier only
   // applies to short utterances.
-  const WAKE_PREFIX = /^(?:hey[, ]+)?(?:kyro|kiro|cairo|chatroom|nexus)[, ]+/;
+  const WAKE_NAMES = "kyro|kiro|kairo|cairo|cyro|kyra|kira|chiro|kayro|chatroom|nexus";
+  const WAKE_PREFIX = new RegExp(`^(?:hey[, ]+)?(?:${WAKE_NAMES})[, ]+`);
   const CONTROL_PATTERNS = {
     cancel: /^(please )?(cancel|quit|exit|never ?mind|forget (it|this|that)|i don'?t want (this|it|to)|i want to (stop|quit))( (this|it|that|the (resume|r[ée]sum[ée]|form)))?( please)?$/i,
     repeat: /^(repeat|say (that|it) again|what( was that| did you say)?|pardon|sorry|i didn'?t (hear|understand|get) (that|you))\??$/i,
@@ -63,11 +64,19 @@
     /^come again\b/
   ];
   const MAX_NATURAL_CONTROL_WORDS = 14;
+  const MAX_DIRECTED_WORDS = 30;
   // Ends a repeatable field's "anything else?" loop. Natural phrasing, not just "that's all".
   const DONE_COLLECTING = /^(?:(?:no|nope|okay|ok|yes)[, ]+)?(?:(?:that'?s|that is|it'?s|it is) (?:all|it|everything|enough|about it)|(?:i'?m|i am) (?:done|finished|good)|(?:nothing|no) (?:else|more)|(?:all )?(?:done|finished)|nope|no more|that'?ll do|that will do)(?: for now)?(?:[, ]+(?:thank you|thanks|please))?$/i;
   // A "switch" needs an explicit wake word + a clearly new request, or "new request" verbatim --
   // deliberately narrow, so a hesitant or rambling answer is never mistaken for topic-switching.
-  const SWITCH_PATTERN = /^(?:hey[, ]+)?(?:kyro|kiro|cairo|chatroom|nexus)[, ]+(open|show|play|find|call|what|where|tell|start|go to|take me to)\b|^new request\b/i;
+  const SWITCH_PATTERN = new RegExp(`^(?:hey[, ]+)?(?:${WAKE_NAMES})[, ]+(open|show|play|find|call|what|where|tell|start|go to|take me to)\\b|^new request\\b`, "i");
+  // Said TO Kyro rather than answering it ("you're doing it again", "I'm telling you to stop"). Never
+  // an answer to a form field. Pausing hands the conversation back to Kyro's normal replies so the
+  // person gets a real response instead of silence while their frustration piles up as "answers".
+  const DIRECTED_AT_KYRO = /^(?:(?:ok(?:ay)?|well|so|no|hey)[, ]+)*(?:you'?re|you are|you keep|you did|you just|you said|you didn'?t|why (?:are|did|do|can'?t) you|are you|did you|do you)\b|\b(?:i'?m|i am) (?:not asking|telling you|trying to tell)\b|\b(?:telling|told) you to\b|\b(?:you|please|just) stop\b|\bstop (?:asking|doing|saying|talking|interrupting)\b/i;
+  // "Let's start over" -- wipes the answers and begins again. Anchored to a leading command shape so a
+  // real answer that merely contains "start ... again" is not mistaken for it.
+  const RESTART_PATTERN = /^(?:(?:ok(?:ay)?|well|so|please|no|yes)[, ]+)*(?:(?:can|could) (?:we|you|i)|let'?s|i (?:want|need|would like) to|we (?:should|need to)|why don'?t we)?\s*(?:start|begin)\b[^.?!]{0,40}\b(?:over|again|from scratch|from the (?:top|start|beginning))\b|^(?:(?:ok(?:ay)?|well|so|please)[, ]+)*(?:restart|start over|begin again)\b/i;
   const CHANGE_PATTERN = /^change (my |the )?(.+)$/i;
 
   function wordCount(text) { return String(text || "").split(/\s+/).filter(Boolean).length; }
@@ -100,6 +109,10 @@
       && (/\b(?:you|your|kyro)\b/.test(stripped) || /^(?:what|why|how|who|where|when|which|huh|pardon|sorry)\b/.test(stripped))) return "repeat";
     if (CONTROL_PATTERNS.back.test(stripped)) return "back";
     if (CONTROL_PATTERNS.skip.test(stripped)) return "skip";
+    if (words <= MAX_DIRECTED_WORDS) {
+      if (RESTART_PATTERN.test(stripped)) return "restart";
+      if (DIRECTED_AT_KYRO.test(stripped)) return "pause-talk";
+    }
     return null;
   }
 
@@ -111,13 +124,17 @@
 
   function normalizeName(raw) {
     let value = String(raw || "")
-      .replace(/^\s*(my name is|i am|i'm|it's|its|this is|call me|name[:\s]+)\s*/i, "")
+      .replace(/^\s*(my (?:full |first |last )?name is|my name'?s|the name is|i am|i'm|it's|its|this is|call me|name[:\s]+)\s*/i, "")
       .replace(/\s+please\s*$/i, "")
       .replace(/[.!]+$/g, "")
       .replace(/\s+/g, " ")
       .trim();
     if (value.length < 2 || value.length > 60) return { ok: false, reason: "length" };
     if (/\d/.test(value)) return { ok: false, reason: "digits" };
+    // Found live: "Perfect, let's begin" was accepted as a person's name. Real names are a few words
+    // of letters; chatter is longer or full of ordinary conversation words.
+    if (value.split(" ").length > 5) return { ok: false, reason: "not-a-name" };
+    if (/[?!,;:]/.test(value) || /\b(?:let'?s|begin|start|perfect|okay|ok|ready|stop|please|thanks|thank|hello|yes|no|kyro|kairo)\b/i.test(value)) return { ok: false, reason: "not-a-name" };
     return { ok: true, value };
   }
 
@@ -437,6 +454,20 @@
       return decision("confirm", `${summary} Shall I make it now? Say yes, or tell me which part to change.`);
     }
 
+    // Wipes every answer and goes back to the first question ("let's start over").
+    function doRestart() {
+      for (const key of Object.keys(values)) delete values[key];
+      for (const key of Object.keys(attempts)) delete attempts[key];
+      for (const key of Object.keys(repeatBuffer)) delete repeatBuffer[key];
+      skipped.clear();
+      history.length = 0;
+      returnToConfirm = false;
+      pausedFromPhase = null;
+      index = nextUnskippedIndex(0);
+      phase = "asking";
+      return decision("ask", `Okay, let's start over. ${currentField().question}`);
+    }
+
     function doCancel() {
       phase = "cancelled";
       return decision("cancelled", "");
@@ -522,6 +553,13 @@
         return { consumed: false, action: "paused", say: "", field: currentField(), values: { ...values }, snapshot: snap() };
       }
       if (control === "cancel") return doCancel();
+      if (control === "restart") return doRestart();
+      if (control === "pause-talk") {
+        enterPaused("talk");
+        return decision("paused", typeof definition.talkLine === "string" && definition.talkLine
+          ? definition.talkLine
+          : "Okay, I stopped. Your answers are saved. Tell me what is wrong, or say continue to go on, or cancel to stop.");
+      }
       // "Hold on" / "wait" / "stop for a minute" / a bare "stop": keep every answer, close nothing for
       // good, and tell the person how to carry on or cancel. Consumed (not passed on as a new
       // command), unlike a wake-word switch.
