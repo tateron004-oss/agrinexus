@@ -650,8 +650,24 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
         if (tenantCounts.get(tenantId) >= dailyAutonomousTaskCapPerTenant) continue;
         const businessName = candidate.business_name || "your business workspace";
         const dueLeads = Array.isArray(candidate.due_leads) ? candidate.due_leads.filter(lead => lead?.name) : [];
-        const names = dueLeads.map(lead => lead.followUpDate ? `${lead.name} (due ${lead.followUpDate})` : lead.name).join(", ");
+        const nameFor = lead => lead.followUpDate ? `${lead.name} (due ${lead.followUpDate})` : lead.name;
+        const names = dueLeads.map(nameFor).join(", ");
         const outreachLead = dueLeads.find(lead => contactChannel(lead.contact));
+        // Found live: when outreachLead exists, this used to build a SINGLE-step task (just the
+        // communications.send draft for that one lead) -- despite this function's own comment above
+        // promising "Any other due leads in the same workspace ... still get the original consolidated,
+        // self-directed reminders.schedule nudge -- never silently dropped just because one lead got an
+        // outreach draft instead." A second due lead with no usable contact (or any lead found later in
+        // the array than the first contactable one) was in fact silently dropped: claimCooldown only
+        // allows one nudge per workspace per cooldownMs window, so the next sweep simply finds the same
+        // contactable lead again and repeats the same single-lead draft, starving every OTHER due lead's
+        // follow-up for as long as the first lead's outreach sits unconfirmed. Now builds a second,
+        // independent reminders.schedule step for the other due leads whenever any exist, ordered BEFORE
+        // the confirmation-gated send step so it still completes (the engine runs ready steps with no
+        // dependsOn in sequence order, one at a time, and only pauses the task once it reaches a step that
+        // needs confirmation) even if the owner never confirms, or explicitly declines, the draft.
+        const otherDueLeads = outreachLead ? dueLeads.filter(lead => lead !== outreachLead) : [];
+        const otherNames = otherDueLeads.map(nameFor).join(", ");
         const claim = await runtime.records.claimCooldown({ tenantId, ownerId, recordKey: candidate.record_id,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: LEAD_FOLLOWUP_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
           data: { reason: "lead_followup_due", recordId: candidate.record_id, dueLeads, outreachDrafted: Boolean(outreachLead), outreachLeadName: outreachLead?.name || null },
@@ -665,10 +681,13 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
             const channel = contactChannel(outreachLead.contact);
             const needPhrase = outreachLead.need ? ` about ${outreachLead.need}` : "";
             const draftMessage = `Hi ${outreachLead.name}, this is a follow-up from ${businessName}${needPhrase}. Please let us know if you have any questions or need anything else.`;
+            const steps = [];
+            if (otherNames) steps.push({ title: "Schedule a follow-up reminder for the other due leads", toolId: "reminders.schedule",
+              input: { when: `Tomorrow, remind me to follow up with ${otherNames} in "${businessName}" -- their follow-up date already passed.` } });
+            steps.push({ title: `Send a follow-up ${channel} to ${outreachLead.name}`, toolId: "communications.send",
+              input: { channel, to: outreachLead.contact, message: draftMessage, subject: `Following up -- ${businessName}` } });
             task = await runtime.engine.create({ command, goal: `Draft a follow-up ${channel} to ${outreachLead.name} for ${businessName}`,
-              application: "business", riskTier: "regulated", autonomous: true,
-              steps: [{ title: `Send a follow-up ${channel} to ${outreachLead.name}`, toolId: "communications.send",
-                input: { channel, to: outreachLead.contact, message: draftMessage, subject: `Following up -- ${businessName}` } }] });
+              application: "business", riskTier: "regulated", autonomous: true, steps });
           } else {
             task = await runtime.engine.create({ command, goal: `Remind about a due follow-up in ${businessName}`,
               application: "business", riskTier: "low", autonomous: true, steps: [{ title: "Schedule a lead follow-up reminder",

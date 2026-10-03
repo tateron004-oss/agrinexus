@@ -156,13 +156,31 @@ test("situational-awareness.lead-followup-sweep still nudges the owner about OTH
   });
   const handlers = createHandlers({ runtime });
   await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} } });
-  // One task is created for the workspace this cycle (the outreach draft for
-  // the first contactable lead); John is not silently dropped -- he is
-  // recorded in the same nudge's dueLeads and will surface again on this
-  // sweep's own cooldown if Grace's outreach doesn't resolve things.
+  // One task is created for the workspace this cycle, but it now carries BOTH
+  // a real step for John -- not just an audit-trail mention in dueLeads --
+  // and the confirmation-gated outreach draft for Grace. The reminder step is
+  // ordered first (no dependsOn between the two, so the engine runs ready
+  // steps in sequence order) so John's reminder actually schedules even if
+  // Grace's draft sits unconfirmed or is declined outright.
   assert.equal(created.tasks.length, 1);
-  assert.equal(created.tasks[0].steps[0].toolId, "communications.send");
+  assert.equal(created.tasks[0].steps.length, 2, "John must get a real step, not just a mention in the audit trail");
+  assert.equal(created.tasks[0].steps[0].toolId, "reminders.schedule");
+  assert.match(created.tasks[0].steps[0].input.when, /John Kamau/);
+  assert.doesNotMatch(created.tasks[0].steps[0].input.when, /Grace Otieno/, "Grace already gets her own outreach step, not a duplicate reminder");
+  assert.equal(created.tasks[0].steps[1].toolId, "communications.send");
+  assert.equal(created.tasks[0].steps[1].input.to, "grace@example.com");
   assert.deepEqual(created.nudgeRecords[0].data.dueLeads.map(lead => lead.name), ["Grace Otieno", "John Kamau"]);
+});
+
+test("situational-awareness.lead-followup-sweep drafts only the outreach step when the contactable lead is the only due lead", async () => {
+  const { runtime, created } = sweepFixture({
+    dueWorkspaces: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "Grace Chapel",
+      due_leads: [{ name: "Grace Otieno", followUpDate: "2026-01-01", contact: "grace@example.com" }] }]
+  });
+  const handlers = createHandlers({ runtime });
+  await handlers["situational-awareness.lead-followup-sweep"]({ job: { payload: {} } });
+  assert.equal(created.tasks[0].steps.length, 1, "no other due lead exists, so no extra reminder step is needed");
+  assert.equal(created.tasks[0].steps[0].toolId, "communications.send");
 });
 
 test("situational-awareness.lead-followup-sweep enforces the per-tenant daily autonomous-task cap", async () => {
