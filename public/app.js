@@ -47586,6 +47586,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
     return true;
   }
   if (normalized === "stop-speaking") {
+    cancelActiveRealtimeResponse(source || "user-stop-speaking");
     stopVoicePlayback({ hard: true, reason: source });
     updateNexusOsVoiceRuntimeState({ mode: "standby", listeningState: "idle", hearingState: "idle" }, source);
     setVoiceResponse("Stopped speaking. Voice remains available when microphone permission is active.", false, { allowVoiceFirst: false, source });
@@ -47598,6 +47599,7 @@ async function handleNexusOsVoiceControlAction(action = "toggle-listening", opti
   }
   if (normalized === "mute") {
     nexusOsConversationMuted = true;
+    cancelActiveRealtimeResponse(source || "user-mute");
     disableNexusVoiceForDemo("Nexus voice is muted. Text responses remain available.", { silent: true });
     updateNexusOsVoiceRuntimeState({ mode: "muted", listeningState: "idle" }, source);
     recordNexusOsConversationTurn("assistant", "Nexus voice is muted. Captions and read-only transcript remain available.", { source });
