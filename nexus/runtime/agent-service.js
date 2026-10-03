@@ -1,10 +1,60 @@
 "use strict";
 
 const { createCommand } = require("../contracts/command.js");
+const { structuredIntakePlan } = require("../intake/structured-intakes.js");
 
 class AgentService {
   constructor({ planner, engine, tasks, conversations, audit, cutover = null }) {
     Object.assign(this, { planner, engine, tasks, conversations, audit, cutover });
+  }
+
+  // The part of committing a plan to a real task that's identical whether the plan came from the
+  // AI planner (command()) or a completed structured voice intake (intake()): the cutover check,
+  // task creation, the assistant's "I created a plan" conversation turn, and the audit entry.
+  async #commitPlan({ command, context, plan, priorTask, auditMetadata = {} }) {
+    // Reasoning owns workspace selection. Cutover is checked only after the
+    // authoritative planner has selected an application, never from a legacy
+    // browser hint supplied before reasoning.
+    const governedPreCutover = context.acceptancePreCutover === true &&
+      context.acceptanceApplication === plan.application &&
+      context.permissions?.includes("acceptance:identity");
+    if (!governedPreCutover) await this.cutover?.requireAuthoritative(plan.application);
+    const task = await this.engine.create({ command, goal: plan.goal, application: plan.application,
+      riskTier: plan.riskTier, steps: plan.steps });
+    await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
+      actorId: null, role: "assistant", content: `I created a ${plan.steps.length}-step plan for: ${plan.goal}`,
+      provenance: { type: "plan", systemActor: "nexus-brain", taskId: task.taskId, correlationId: command.correlationId } });
+    await this.audit.record({ tenantId: context.tenantId, actorId: context.userId, correlationId: command.correlationId,
+      taskId: task.taskId, eventType: "brain.plan_committed", outcome: "planned",
+      metadata: { application: plan.application, planningAttempts: plan.planningAttempts, continuedFrom: priorTask?.taskId || null, ...auditMetadata } });
+    return { command, task, plan, action: priorTask ? "continue" : "create" };
+  }
+
+  // A foreign/absent conversationId is resolved to either the caller's own conversation or a fresh
+  // one, the same rule command() applies below -- shared so intake() can't be pointed at (or read
+  // the history of) a conversation it doesn't own just by supplying someone else's id.
+  async #ownConversationId({ requestedConversationId, context }) {
+    const conversationOwnerId = requestedConversationId
+      ? await this.conversations?.owner?.({ tenantId: context.tenantId, conversationId: requestedConversationId })
+      : null;
+    return conversationOwnerId && conversationOwnerId !== context.userId ? null : requestedConversationId;
+  }
+
+  // Turns a completed voice intake's already-collected, already-validated structured answers
+  // (see public/kyro-voice-intake.js) directly into a plan step and commits it through the same
+  // path as any other command -- deliberately skipping the AI planner/regex parser entirely, since
+  // the answers are already clean structured data, not a sentence that needs re-extracting.
+  async intake({ input, context }) {
+    const ownConversationId = await this.#ownConversationId({ requestedConversationId: input.conversationId || null, context });
+    const plan = structuredIntakePlan(input.intakeId, input.values);
+    const command = createCommand({ text: plan.goal, channel: input.channel || "voice", locale: input.locale,
+      correlationId: input.correlationId, conversationId: ownConversationId, tenantId: context.tenantId, actorId: context.userId });
+    await this.conversations?.ensure({ conversationId: command.conversationId, tenantId: context.tenantId,
+      ownerId: context.userId, title: plan.goal });
+    await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
+      actorId: context.userId, role: "user", content: `Answered the ${input.intakeId} questions by voice.`,
+      provenance: { channel: command.channel, locale: command.locale, correlationId: command.correlationId } });
+    return this.#commitPlan({ command, context, plan, priorTask: null, auditMetadata: { structuredIntake: input.intakeId } });
   }
 
   async command({ input, context }) {
@@ -15,11 +65,7 @@ class AgentService {
     // into this turn's planning context and write into their conversation under
     // a different actorId. Treat a foreign conversationId exactly like an absent
     // one: createCommand() below generates a fresh id when none is supplied.
-    const requestedConversationId = input.conversationId || null;
-    const conversationOwnerId = requestedConversationId
-      ? await this.conversations?.owner?.({ tenantId: context.tenantId, conversationId: requestedConversationId })
-      : null;
-    const ownConversationId = conversationOwnerId && conversationOwnerId !== context.userId ? null : requestedConversationId;
+    const ownConversationId = await this.#ownConversationId({ requestedConversationId: input.conversationId || null, context });
     const command = createCommand({ ...input, conversationId: ownConversationId, tenantId: context.tenantId, actorId: context.userId });
     const fetchedTask = command.taskId ? await this.tasks.get({ tenantId: context.tenantId, taskId: command.taskId }) : null;
     // A caller-supplied taskId is otherwise only tenant-scoped, not owner-scoped -- without this
@@ -52,22 +98,7 @@ class AgentService {
         taskId: priorTask?.taskId || null, eventType: "brain.clarification_requested", outcome: "clarifying", metadata: { question: plan.clarification } });
       return { command, task: priorTask, plan, action: "clarify" };
     }
-    // Reasoning owns workspace selection. Cutover is checked only after the
-    // authoritative planner has selected an application, never from a legacy
-    // browser hint supplied before reasoning.
-    const governedPreCutover = context.acceptancePreCutover === true &&
-      context.acceptanceApplication === plan.application &&
-      context.permissions?.includes("acceptance:identity");
-    if (!governedPreCutover) await this.cutover?.requireAuthoritative(plan.application);
-    const task = await this.engine.create({ command, goal: plan.goal, application: plan.application,
-      riskTier: plan.riskTier, steps: plan.steps });
-    await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
-      actorId: null, role: "assistant", content: `I created a ${plan.steps.length}-step plan for: ${plan.goal}`,
-      provenance: { type: "plan", systemActor: "nexus-brain", taskId: task.taskId, correlationId: command.correlationId } });
-    await this.audit.record({ tenantId: context.tenantId, actorId: context.userId, correlationId: command.correlationId,
-      taskId: task.taskId, eventType: "brain.plan_committed", outcome: "planned",
-      metadata: { application: plan.application, planningAttempts: plan.planningAttempts, continuedFrom: priorTask?.taskId || null } });
-    return { command, task, plan, action: priorTask ? "continue" : "create" };
+    return this.#commitPlan({ command, context, plan, priorTask });
   }
 }
 

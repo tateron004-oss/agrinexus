@@ -1291,6 +1291,12 @@ if (isConversationIntakeStale(activeConversationIntake)) {
   localStorage.removeItem("agrinexusConversationIntake");
   activeConversationIntake = null;
 }
+// A new, separate voice-driven guided-form engine (public/kyro-voice-intake.js + kyro-intake-forms.js),
+// deliberately unrelated to activeConversationIntake above or nexusActiveWorkflowState -- see the glue
+// functions just before genesisWorkspaceActionFromFinalTranscript for how it's wired into the real
+// OpenAI Realtime voice path. { engine, definition, onComplete, onCancel, source } when active, else null.
+let kyroActiveVoiceIntake = null;
+let kyroRealtimeBaseTurnDetection = null;
 let voiceEventStream = [];
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
@@ -30197,6 +30203,14 @@ function nexusOperationsActionForCommand(command = "") {
 }
 
 async function runNexusPersistentOperationsCommand(command = "", options = {}) {
+  // A typed "...resume..." command otherwise lands on prepare_resume_packet below -- a placeholder
+  // operations record, not a real résumé. Redirect a genuine résumé-build request to the Kyro voice
+  // intake engine instead (it works equally well typed, since this routes through the same
+  // applyKyroIntakeDecision as a spoken answer would).
+  if (!options.action && window.KyroIntakeForms?.isResumeBuildRequest?.(command)) {
+    startKyroResumeIntake({ seedUtterance: { id: "", text: command }, source: options.source || "typed" });
+    return { kyroVoiceIntake: true };
+  }
   const action = options.action || nexusOperationsActionForCommand(command);
   const response = await request("/api/nexus/operations/command", {
     method: "POST",
@@ -49828,6 +49842,9 @@ async function dispatchRealtimeToolCall(call = {}) {
 
 function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
   if (!realtimeVoiceSession) return;
+  if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") {
+    kyroActiveVoiceIntake.engine.pause("realtime-stopped");
+  }
   updateRealtimeControllerState("closed", "controller-cleanup-entered", { reason });
   const explicitShutdown = /explicit-stop|user-stop|signed-out|logout|pagehide|beforeunload|left-genesis|security|shutdown|application-shutdown/i.test(reason);
   const permanentStreamActive = nexusPermanentMicrophoneStream && realtimeVoiceSession.stream === nexusPermanentMicrophoneStream;
@@ -49919,6 +49936,13 @@ async function requestNexusOpenAiRealtimeSession(status = {}) {
 
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
+  // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
+  // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
+  // text) run alongside it. See routeKyroVoiceIntakeTranscript for the transcript-level guard.
+  if (kyroVoiceIntakeOwnsTurn(command)) {
+    return { ok: true, status: "completed", response: "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
+      executionVerified: false, blockedReason: null };
+  }
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
     toolName,
@@ -50107,11 +50131,14 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     if (eventType === "conversation.item.input_audio_transcription.completed" || finalizedUserAudioItem) {
       const content = Array.isArray(payload.item?.content) ? payload.item.content : [];
       const transcript = String(payload.acceptanceText || payload.transcript || payload.text || content.map(part => part.transcript || part.text || "").join(" ") || "").trim();
+      const kyroUtteranceId = payload.item_id || payload.item?.id || payload.transcript_id || "";
+      if (!routeKyroVoiceIntakeTranscript({ transcript, utteranceId: kyroUtteranceId, source: "realtime-transport" })) {
       const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({ transcript, transcriptId: payload.transcript_id || payload.item_id || payload.item?.id || "", sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "", role: payload.role || payload.item?.role || "user", isFinal: payload.is_final !== false }, genesisWorkspaceActionFromFinalTranscript);
       nexusGenesisVoiceDebugLog("browser-action-controller-transcript", { handled: controllerResult?.handled === true, duplicate: controllerResult?.duplicate === true, transcriptLength: transcript.length });
       if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
       if (!controllerResult?.handled && transcript) void executeGenesisWorkspaceFromFinalTranscript(transcript);
       if (!controllerResult?.handled && !transcript && payload.acceptanceText) void executeGenesisWorkspaceFromFinalTranscript(payload.acceptanceText);
+      }
     }
     if (eventType === "response.done") {
       markRealtimeResponseCompleted("response-completed");
@@ -50119,6 +50146,8 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
   }
   if (eventName === "final_user_transcript") {
     const transcript = String(payload.transcript || "").trim();
+    const kyroUtteranceId = payload.item_id || payload.transcript_id || "";
+    if (!routeKyroVoiceIntakeTranscript({ transcript, utteranceId: kyroUtteranceId, source: "realtime-history" })) {
     const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({
       transcript,
       transcriptId: payload.transcript_id || payload.item_id || "",
@@ -50133,6 +50162,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     });
     if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
     if (!controllerResult?.handled && transcript) void executeGenesisWorkspaceFromFinalTranscript(transcript);
+    }
   }
   if (eventName === "audio_start") {
     if (realtimeVoiceSession) {
@@ -50226,6 +50256,307 @@ function authoritativeGenesisActionForTurn(action = {}, result = {}) {
   };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Kyro voice intake (NEW): wires the generic, reusable public/kyro-voice-intake.js engine into
+// the real production voice path (OpenAI Realtime). This is deliberately separate from
+// activeConversationIntake/nexusActiveWorkflowState above -- see public/kyro-voice-intake.js and
+// public/kyro-intake-forms.js for the engine and the résumé form. Adding a second form later means
+// a new definition in kyro-intake-forms.js and a startKyroVoiceIntake() call site, not new glue here.
+// ---------------------------------------------------------------------------------------------
+
+function sendKyroRealtimeEvent(event) {
+  const transport = realtimeVoiceSession?.sdkSession?.transport;
+  if (!realtimeVoiceActive() || typeof transport?.sendEvent !== "function") return false;
+  try {
+    transport.sendEvent(event);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Realtime auto-responds to every turn by default (turn_detection.create_response, set server-side
+// in server.js) -- while a Kyro voice intake is active, that must be off so the model doesn't start
+// talking over the intake's own next question. Restoring re-applies whatever turn-detection config
+// this session actually started with, rather than resetting to the SDK's own defaults (which would
+// silently drop language/noise-reduction/eagerness settings this session negotiated at connect time).
+function setKyroRealtimeAutoResponse(enabled) {
+  const base = kyroRealtimeBaseTurnDetection || { type: "server_vad", create_response: true };
+  sendKyroRealtimeEvent({
+    type: "session.update",
+    session: { type: "realtime", audio: { input: { turn_detection: enabled
+      ? { ...base, create_response: true }
+      : { ...base, create_response: false, eagerness: base.eagerness || "low" } } } }
+  });
+}
+
+// Tells the model to say the given line verbatim, used for every spoken step of a Kyro voice
+// intake (next question, re-ask, confirm read-back, done). setVoiceResponse() goes silent whenever
+// Realtime owns the turn, so this sends a response.create with explicit instructions instead --
+// the same pattern already used for interrupting a response (cancelActiveRealtimeResponse), just
+// asking the model to speak specific text instead of stopping it. Falls back to setVoiceResponse
+// when Realtime isn't active (the legacy browser-voice path), so the engine works there too.
+function speakKyroIntakeLine(text, options = {}) {
+  const safeText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 600);
+  if (!safeText) return;
+  if (realtimeVoiceActive()) {
+    const sent = sendKyroRealtimeEvent({
+      type: "response.create",
+      response: {
+        instructions: `You are helping a person fill in a short form, one question at a time. Say the following to them now, in ${languageCode()}, warmly, slowly and clearly, exactly as written, with nothing added, removed, or paraphrased. Do not ask anything else and do not call any tool: ${JSON.stringify(safeText)}`,
+        tool_choice: "none",
+        output_modalities: ["audio"],
+        metadata: { source: "kyro-voice-intake", step: String(options.step || "") }
+      }
+    });
+    if (sent) return;
+  }
+  setVoiceResponse(safeText, true, { allowVoiceFirst: false, allowHandoff: false, source: "kyro-voice-intake" });
+}
+
+// A short system-role note the model can see on its NEXT turn, so it knows what the intake just
+// did without that information being spoken aloud itself.
+function injectKyroRealtimeContext(text) {
+  sendKyroRealtimeEvent({ type: "conversation.item.create", item: { type: "message", role: "system", content: [{ type: "input_text", text: String(text || "").slice(0, 600) }] } });
+}
+
+function ensureKyroVoiceIntakeStyles() {
+  if (document.getElementById("kyro-voice-intake-styles")) return;
+  const style = document.createElement("style");
+  style.id = "kyro-voice-intake-styles";
+  style.textContent = `
+    .kyro-voice-intake-panel{position:fixed;inset:0;z-index:2147482998;background:rgba(2,12,24,.92);display:grid;place-items:center;padding:16px;font-family:Inter,system-ui,sans-serif}
+    .kyro-voice-intake-card{width:min(640px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;box-shadow:0 28px 90px rgba(0,0,0,.5);padding:28px}
+    .kyro-voice-intake-card header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+    .kyro-voice-intake-card header strong{font-size:1.3rem;color:#073b4c}
+    .kyro-voice-intake-card header span{font-size:1rem;color:#5a7682;font-weight:700}
+    .kyro-voice-intake-question{font-size:1.6rem;line-height:1.3;color:#073b4c;font-weight:800;margin:14px 0}
+    .kyro-voice-intake-hint{color:#5a7682;font-size:1rem;margin:-8px 0 14px}
+    .kyro-voice-intake-answers{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:6px}
+    .kyro-voice-intake-answers li{background:#effcf7;border-radius:10px;padding:8px 12px;color:#07566b;font-size:1rem}
+    .kyro-voice-intake-typed{display:flex;gap:8px;margin:14px 0}
+    .kyro-voice-intake-typed input{flex:1;font-size:1.1rem;padding:12px;border:2px solid #9db9c2;border-radius:10px}
+    .kyro-voice-intake-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+    .kyro-voice-intake-actions button,.kyro-voice-intake-typed button{border:0;border-radius:12px;background:#07566b;color:#fff;padding:14px 18px;font-weight:800;font-size:1.05rem}
+    .kyro-voice-intake-actions [data-kyro-intake-action="cancel"]{background:#9b2c2c}
+    .kyro-voice-intake-actions [data-kyro-intake-action="confirm"]{background:#06a77d}
+    @media(max-width:600px){.kyro-voice-intake-panel{padding:0}.kyro-voice-intake-card{height:100%;max-height:none;border-radius:0}}
+  `;
+  document.head.appendChild(style);
+}
+
+function renderKyroVoiceIntakePanel(snapshot) {
+  if (snapshot) ensureKyroVoiceIntakeStyles();
+  let panel = document.getElementById("kyroVoiceIntakePanel");
+  if (!snapshot) {
+    panel?.remove();
+    return;
+  }
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "kyroVoiceIntakePanel";
+    panel.className = "kyro-voice-intake-panel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", snapshot.title || "Guided form");
+    document.body.appendChild(panel);
+  }
+  const field = snapshot.currentField;
+  const answeredEntries = Object.entries(snapshot.values || {}).filter(([, value]) => value !== undefined && value !== "" && !(Array.isArray(value) && !value.length));
+  const isConfirming = snapshot.phase === "confirming";
+  const isDone = snapshot.phase === "done";
+  panel.innerHTML = `
+    <div class="kyro-voice-intake-card">
+      <header>
+        <strong>${escapeHtml(snapshot.title || "Guided form")}</strong>
+        ${!isDone ? `<span>Question ${Math.min(snapshot.index + 1, snapshot.total)} of ${snapshot.total}</span>` : ""}
+      </header>
+      <p class="kyro-voice-intake-question">${escapeHtml(isConfirming ? "Review your answers" : (field?.question || ""))}</p>
+      ${field?.hint ? `<p class="kyro-voice-intake-hint">${escapeHtml(field.hint)}</p>` : ""}
+      ${answeredEntries.length ? `<ul class="kyro-voice-intake-answers">${answeredEntries.map(([key, value]) => `<li>✓ ${escapeHtml(Array.isArray(value) ? value.join("; ") : String(value))}</li>`).join("")}</ul>` : ""}
+      ${!isDone ? `
+        <div class="kyro-voice-intake-typed">
+          <input type="text" data-kyro-intake-typed-answer placeholder="Or type your answer here">
+          <button type="button" data-kyro-intake-action="typed-answer">Use this answer</button>
+        </div>
+        <div class="kyro-voice-intake-actions">
+          <button type="button" data-kyro-intake-action="repeat">Repeat</button>
+          ${!isConfirming && field && !field.required ? '<button type="button" data-kyro-intake-action="skip">Skip</button>' : ""}
+          <button type="button" data-kyro-intake-action="back">Go back</button>
+          ${isConfirming ? '<button type="button" data-kyro-intake-action="confirm">Yes, make it</button>' : ""}
+          <button type="button" data-kyro-intake-action="cancel">Stop</button>
+        </div>
+      ` : ""}
+    </div>`;
+}
+
+function kyroVoiceIntakeTypedAnswer() {
+  const input = document.querySelector("#kyroVoiceIntakePanel [data-kyro-intake-typed-answer]");
+  const value = input?.value?.trim();
+  if (input) input.value = "";
+  return value || "";
+}
+
+document.addEventListener("click", event => {
+  const button = event.target?.closest?.("[data-kyro-intake-action]");
+  if (!button || !kyroActiveVoiceIntake) return;
+  const action = button.dataset.kyroIntakeAction;
+  const { engine } = kyroActiveVoiceIntake;
+  let decision;
+  if (action === "repeat") decision = engine.repeat();
+  else if (action === "skip") decision = engine.skip();
+  else if (action === "back") decision = engine.back();
+  else if (action === "cancel") decision = engine.cancel();
+  else if (action === "confirm") decision = engine.confirm();
+  else if (action === "typed-answer") {
+    const value = kyroVoiceIntakeTypedAnswer();
+    if (!value) return;
+    decision = engine.handleUtterance(value, { utteranceId: `typed-${Date.now()}`, source: "typed" });
+  }
+  if (decision) applyKyroIntakeDecision(decision);
+});
+
+async function applyKyroIntakeDecision(decision) {
+  if (!decision) return;
+  renderKyroVoiceIntakePanel(decision.action === "done" || decision.action === "cancelled" ? null : decision.snapshot);
+  if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index });
+  if (decision.action === "cancelled") {
+    const active = kyroActiveVoiceIntake;
+    kyroActiveVoiceIntake = null;
+    setKyroRealtimeAutoResponse(true);
+    injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`);
+    speakKyroIntakeLine("Okay, I stopped. Nothing was saved.");
+    active?.onCancel?.();
+    return;
+  }
+  if (decision.action === "submit") {
+    const active = kyroActiveVoiceIntake;
+    if (!active) return;
+    try {
+      const result = await active.onComplete(decision.values);
+      if (result?.ok) {
+        const doneDecision = active.engine.markDone(result.say);
+        renderKyroVoiceIntakePanel(null);
+        speakKyroIntakeLine(doneDecision.say);
+        injectKyroRealtimeContext(result.contextNote || doneDecision.say);
+        kyroActiveVoiceIntake = null;
+        setKyroRealtimeAutoResponse(true);
+      } else {
+        const retryDecision = active.engine.submitFailed({ fieldKey: result?.fieldKey, message: result?.say });
+        applyKyroIntakeDecision(retryDecision);
+      }
+    } catch (error) {
+      const retryDecision = active.engine.submitFailed({ message: "I could not reach Kyro's server. Your answers are kept. Say yes to try again." });
+      applyKyroIntakeDecision(retryDecision);
+      nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-error", { message: error?.message || "unknown" });
+    }
+  }
+}
+
+// The reusable entry point every future voice-driven form calls to start a guided intake. Not
+// résumé-specific: `definition` is a plain public/kyro-intake-forms.js-style form definition.
+function startKyroVoiceIntake(definition, options = {}) {
+  if (kyroActiveVoiceIntake) kyroActiveVoiceIntake.engine.cancel();
+  if (realtimeVoiceActive()) {
+    try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
+  }
+  const engine = KyroVoiceIntake.create(definition, { seedUtterance: options.seedUtterance });
+  kyroActiveVoiceIntake = { engine, definition, onComplete: options.onComplete, onCancel: options.onCancel, source: options.source || "voice" };
+  if (realtimeVoiceActive()) setKyroRealtimeAutoResponse(false);
+  nexusGenesisVoiceDebugLog("kyro-voice-intake-started", { formId: definition.id, source: options.source || "voice" });
+  applyKyroIntakeDecision(engine.start());
+}
+
+function kyroVoiceIntakeOwnsTurn(command) {
+  if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return true;
+  return Boolean(window.KyroIntakeForms?.isResumeBuildRequest?.(command));
+}
+
+// Returns true when the transcript was consumed by a Kyro voice intake (caller must skip its own
+// legacy routing for this utterance). Order matters: an active intake's own crisis check runs
+// BEFORE anything else, preserving the same safety guarantee executeGenesisWorkspaceFromFinalTranscript
+// already gives every other transcript (see handleNexusMentalHealthBehavioralWellnessCommand below).
+function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
+  const trimmed = String(transcript || "").trim();
+  if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.isExpired(Date.now())) {
+    kyroActiveVoiceIntake = null;
+    setKyroRealtimeAutoResponse(true);
+    renderKyroVoiceIntakePanel(null);
+  }
+  if (!kyroActiveVoiceIntake) {
+    if (window.KyroIntakeForms?.isResumeBuildRequest?.(trimmed)) {
+      startKyroResumeIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
+    return false;
+  }
+  if (kyroActiveVoiceIntake.engine.phase === "paused") {
+    if (window.KyroIntakeForms?.isResumeContinueRequest?.(trimmed)) {
+      setKyroRealtimeAutoResponse(false);
+      applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.resume());
+      return true;
+    }
+    return false;
+  }
+  if (!trimmed) return true;
+  if (handleNexusMentalHealthBehavioralWellnessCommand(trimmed, { source: "kyro-voice-intake" })) {
+    kyroActiveVoiceIntake.engine.pause("safety");
+    renderKyroVoiceIntakePanel(null);
+    setKyroRealtimeAutoResponse(true);
+    return true;
+  }
+  const decision = kyroActiveVoiceIntake.engine.handleUtterance(trimmed, { utteranceId, source });
+  if (decision.action === "paused") {
+    setKyroRealtimeAutoResponse(true);
+    return false;
+  }
+  applyKyroIntakeDecision(decision);
+  return decision.consumed;
+}
+
+// --- résumé: the first real form wired into the engine above ---------------------------------
+
+async function submitKyroResumeIntake(values) {
+  const request = window.KyroIntakeForms?.resume?.toRequest?.(values) || {};
+  try {
+    const response = await fetch("/api/nexus/runtime/behavior/intake", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        intakeId: "resume",
+        values: request,
+        channel: "voice",
+        locale: languageCode(),
+        conversationId: typeof nexusAuthoritativeConversationId === "function" ? nexusAuthoritativeConversationId() : undefined,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      return { ok: false, say: "Please sign in first, then I can save your résumé." };
+    }
+    if (!response.ok) {
+      if (result.code === "resume_name_required") return { ok: false, fieldKey: "name", say: "I still need your name to make the résumé. What is your full name?" };
+      if (result.code === "resume_content_required") return { ok: false, fieldKey: "experience", say: "I need at least one thing for your résumé: work you have done, what you are good at, or your schooling." };
+      return { ok: false, say: result.error || "That didn't work. Say yes to try again." };
+    }
+    if (typeof processNexusAuthoritativeBehaviorResult === "function") {
+      await processNexusAuthoritativeBehaviorResult(result, "Résumé interview", { source: "kyro-voice-intake" }).catch(() => {});
+    }
+    return { ok: true, say: "Your résumé is ready. It is on the screen now. Press the Download button to keep it.",
+      contextNote: `The résumé interview finished. A résumé for ${values.name || "the person"} was saved and is shown on screen with a Download button.` };
+  } catch (error) {
+    nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-network-error", { message: error?.message || "unknown" });
+    return { ok: false, say: "I could not reach Kyro's server. Your answers are kept. Say yes to try again." };
+  }
+}
+
+function startKyroResumeIntake(options = {}) {
+  if (!window.KyroIntakeForms?.resume) return;
+  startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
+}
+
 function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const command = String(transcript || "").trim();
   const lower = command.toLowerCase();
@@ -50235,7 +50566,7 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const workforceRequest = explicitOpen && (
     /\b(job|jobs|workforce|employment|career|work search|farming work|resume)\b/.test(lower)
     || lower.includes("résumé")
-  );
+  ) && !window.KyroIntakeForms?.isResumeBuildRequest?.(command);
   const marketplaceRequest = /\b(?:marketplace|agritrade|buyer|seller|sell|selling|list)\b/.test(lower)
     && (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower));
   const telehealthRequest = explicitOpen && /\b(telehealth|virtual care|video visit)\b/.test(lower);
@@ -50480,6 +50811,21 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
     });
     realtimeVoiceSession.sdkController = controller;
     realtimeVoiceSession.sdkSession = controller.session;
+    // Captured so setKyroRealtimeAutoResponse() can restore exactly this session's own negotiated
+    // turn-detection config (type/eagerness/threshold/timing) when re-enabling auto-response,
+    // instead of resetting to the Realtime API's own unrelated defaults.
+    const negotiatedTurnDetection = sessionPayload.clientConfig?.audio?.input?.turnDetection;
+    if (negotiatedTurnDetection) {
+      kyroRealtimeBaseTurnDetection = {
+        type: negotiatedTurnDetection.type,
+        create_response: true,
+        interrupt_response: negotiatedTurnDetection.interruptResponse !== false,
+        ...(negotiatedTurnDetection.eagerness ? { eagerness: negotiatedTurnDetection.eagerness } : {}),
+        ...(Number.isFinite(negotiatedTurnDetection.threshold) ? { threshold: negotiatedTurnDetection.threshold } : {}),
+        ...(Number.isFinite(negotiatedTurnDetection.prefixPaddingMs) ? { prefix_padding_ms: negotiatedTurnDetection.prefixPaddingMs } : {}),
+        ...(Number.isFinite(negotiatedTurnDetection.silenceDurationMs) ? { silence_duration_ms: negotiatedTurnDetection.silenceDurationMs } : {})
+      };
+    }
     realtimeVoiceSession.stream = controller.mediaStream;
     realtimeVoiceSession.microphoneTrack = controller.microphoneTrack || micProof.track;
     realtimeVoiceSession.microphoneProof = {
@@ -57595,6 +57941,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     resetConversationStateForPriorityIntent(spokenCommand || command);
     if (runSimpleUserVoiceIntent(priorityFallbackIntent, spokenCommand || command)) return;
   }
+  if (routeKyroVoiceIntakeTranscript({ transcript: command || localizedCommand || rawCommand, utteranceId: "", source: "legacy-voice" })) return;
   if (activeConversationIntake && handleConversationIntakeAnswer(command || localizedCommand || rawCommand)) return;
   if (startConversationIntakeFromCommand(command || localizedCommand || rawCommand)) return;
   if (options.source === "voice" && isLikelySideConversationWithoutNexusCommand(command || localizedCommand || rawCommand)) {

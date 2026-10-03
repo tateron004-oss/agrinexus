@@ -137,6 +137,33 @@ test("behavior spine confirm() declines a pending step, cancels the task, and ne
   assert.equal(appended.at(-1).provenance.type, "declined_outcome");
 });
 
+test("behavior spine intakeTurn() executes a completed structured intake's plan through the same resolveExecution path as turn()", async () => {
+  const appended = [];
+  const intakeCommand = { commandId: "cmd_intake_1", correlationId: "trace-intake", conversationId: "cnv_intake_1", channel: "voice", text: "Create a resume for Amina" };
+  const spine = new BehaviorSpine({
+    workspaceStates: { stage: async value => { staged.push(value); }, acknowledge: async value => { staged.push(value); } },
+    agent: {
+      command: async () => assert.fail("intakeTurn must not call agent.command"),
+      intake: async ({ input }) => {
+        assert.equal(input.intakeId, "resume");
+        assert.equal(input.values.name, "Amina");
+        return { action: "create", command: intakeCommand,
+          plan: { application: "workforce", goal: "Create a resume for Amina", steps: [{ toolId: "resume.create" }] },
+          task: { taskId: "tsk_intake_1" } };
+      }
+    },
+    engine: { executeTask: async ({ taskId }) => { assert.equal(taskId, "tsk_intake_1"); return { state: "completed", completed: true, receipts: [{ receiptId: "rcp_intake_1" }] }; } },
+    tasks: { get: async () => ({ taskId: "tsk_intake_1", goal: "Create a resume for Amina", outcome: { verified: true, visibleOrAudible: true } }) },
+    conversations: { append: async value => appended.push(value) }
+  });
+  const result = await spine.intakeTurn({ input: { intakeId: "resume", values: { name: "Amina" } }, context });
+  assert.equal(result.completed, true);
+  assert.equal(result.application, "workforce");
+  assert.equal(result.taskId, "tsk_intake_1");
+  assert.deepEqual(result.outcome.receiptIds, ["rcp_intake_1"]);
+  assert.equal(appended.at(-1).provenance.type, "verified_outcome");
+});
+
 test("behavior spine confirm() rejects an unknown task and refuses a task owned by someone else", async () => {
   const spine = new BehaviorSpine({
     workspaceStates: { stage: async value => { staged.push(value); }, acknowledge: async value => { staged.push(value); } },
