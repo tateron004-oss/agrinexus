@@ -92,8 +92,13 @@
   }
 
   const RESUME_CONTINUE = /^\s*(?:continue|back to|keep going with|resume)\s+(?:my |the )?(?:r[ée]sum[ée]|cv)\b/i;
+  // Only ever consulted while a paused intake exists, so bare "continue"/"I'm ready" phrasing is safe
+  // here -- it can't be mistaken for anything else when nothing is paused. Also tolerates the wake
+  // word (and the recognizer's usual mishearings of it) in front.
+  const BARE_CONTINUE = /^\s*(?:(?:hey[, ]+)?(?:kyro|kiro|cairo|chatroom|nexus)[, ]+)?(?:ok(?:ay)?[, ]+)?(?:(?:i'?m |i am |we'?re |we are )?ready|continue|go on|go ahead|carry on|keep going|let'?s (?:continue|go|keep going|carry on)|(?:ok(?:ay)?[, ]+)?i'?m back)[ .!,]*(?:please)?[ .!]*$/i;
   function isResumeContinueRequest(text) {
-    return RESUME_CONTINUE.test(clean(text));
+    const value = clean(text);
+    return RESUME_CONTINUE.test(value) || BARE_CONTINUE.test(value);
   }
 
   const resume = Object.freeze({
@@ -101,6 +106,7 @@
     title: "Your résumé",
     intro: "I will ask you a few short questions, one at a time. You can say repeat, skip, go back, or stop at any time.",
     confirmBeforeSubmit: true,
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop the résumé.",
     fields: RESUME_FIELDS,
     validate: resumeValidate,
     readback: resumeReadback,

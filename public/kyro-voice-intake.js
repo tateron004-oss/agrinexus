@@ -27,35 +27,79 @@
   }
 
   // --- control-phrase classifier -------------------------------------------------------------
-  // Every pattern here is fully anchored (^...$), so a real, long answer like "I worked as a bus
-  // stop attendant for two years" can never be mistaken for a bare command -- only an utterance
-  // that IS (almost) nothing but the control phrase itself matches.
+  // Found live (first real voice test of the résumé intake): people don't say bare command words.
+  // Asked to "repeat", the speech recognizer heard "I'm sorry, can you repeat that, please?" and "I
+  // said I didn't hear you. Could you repeat that, please?", and "Kyro, stop for a minute" came back as
+  // "Chatroom, stop for a minute." -- none matched the original bare-word patterns, so every one was
+  // saved as an ANSWER (a skills entry, an education entry, a languages entry). The patterns below
+  // therefore accept the natural phrasings people really use, and a wake word the recognizer
+  // commonly mishears. They stay safe for real answers two ways: every pattern is anchored to the
+  // whole utterance or requires an explicit "repeat/say ... that/again"-style object (so "repeat
+  // customers" or "bus stop attendant" are still answers), and the natural-language tier only
+  // applies to short utterances.
+  const WAKE_PREFIX = /^(?:hey[, ]+)?(?:kyro|kiro|cairo|chatroom|nexus)[, ]+/;
   const CONTROL_PATTERNS = {
-    cancel: /^(please )?(cancel|stop|quit|exit|never ?mind|forget (it|this|that)|i don'?t want (this|it|to))( (this|it|that|the (resume|r[ée]sum[ée]|form)))?( please)?$/i,
+    cancel: /^(please )?(cancel|quit|exit|never ?mind|forget (it|this|that)|i don'?t want (this|it|to)|i want to (stop|quit))( (this|it|that|the (resume|r[ée]sum[ée]|form)))?( please)?$/i,
     repeat: /^(repeat|say (that|it) again|what( was that| did you say)?|pardon|sorry|i didn'?t (hear|understand|get) (that|you))\??$/i,
-    skip: /^(skip|pass|next|none|nothing|no|not now|i don'?t have (one|any|it))$/i,
+    skip: /^(skip|pass|next|none|nothing|no|not now|i don'?t have (one|any|it)|(i )?(don'?t know|no idea|not sure))$/i,
     back: /^(go back|back|previous|undo|that'?s wrong|wrong|change (that|the last( one)?))$/i,
     yes: /^(yes|yeah|yep|yup|sure|correct|that'?s right|that'?s correct|okay|ok)$/i,
     no: /^(no|nope|not quite|that'?s not right|that'?s not correct)$/i
   };
+  // "Pause" keeps everything said so far (unlike cancel). A bare "stop" is a pause, not a cancel: a
+  // person who says "stop" over Kyro's voice means "stop talking / wait", and throwing away ten
+  // minutes of answers for that would be far worse than waiting. Saying "cancel" cancels for good.
+  const PAUSE_PATTERN = /^(?:ok(?:ay)?[, ]+)?(?:please[, ]+)?(?:stop(?: (?:it|this|that|talking))?|(?:hold|hang) on(?: (?:a |one |just a )?(?:minute|moment|second|sec))?|wait(?: (?:a |one |just a )?(?:minute|moment|second|sec))?|pause|stop for (?:a |one |just a )?(?:minute|moment|second|sec)|give me (?:a |one |just a )?(?:minute|moment|second|sec)|(?:just )?(?:a |one )(?:minute|moment|second|sec)|i need (?:a |one )?(?:minute|moment|second|sec|break))(?: please)?$/i;
+  // Natural ways to ask Kyro to say the question again -- only ever tested against short utterances.
+  const REPEAT_NATURAL = [
+    /\b(?:can|could|would|will|please)\b[^.?!]{0,25}\b(?:repeat|say|ask)\b[^.?!]{0,25}\b(?:that|it|this|again|question|me)\b/,
+    /\b(?:repeat|say)\s+(?:that|it|this|the question|the last (?:one|part)|again)\b/,
+    /\bwhat (?:was|is) (?:the|that) question\b/,
+    /\bwhat did you (?:just )?say\b/,
+    /\bwhat (?:was|were) you saying\b/,
+    /\b(?:i )?(?:didn'?t|did not|couldn'?t|could not|can'?t|cannot|don'?t|do not) (?:hear|catch|understand|get) (?:you|that|it|what|the question)\b/,
+    /\b(?:i )?(?:don'?t|do not) understand\b/,
+    /^(?:i'?m )?sorry[, ]*(?:what|pardon)?$/,
+    /^come again\b/
+  ];
+  const MAX_NATURAL_CONTROL_WORDS = 14;
+  // Ends a repeatable field's "anything else?" loop. Natural phrasing, not just "that's all".
+  const DONE_COLLECTING = /^(?:(?:no|nope|okay|ok|yes)[, ]+)?(?:(?:that'?s|that is|it'?s|it is) (?:all|it|everything|enough|about it)|(?:i'?m|i am) (?:done|finished|good)|(?:nothing|no) (?:else|more)|(?:all )?(?:done|finished)|nope|no more|that'?ll do|that will do)(?: for now)?(?:[, ]+(?:thank you|thanks|please))?$/i;
   // A "switch" needs an explicit wake word + a clearly new request, or "new request" verbatim --
   // deliberately narrow, so a hesitant or rambling answer is never mistaken for topic-switching.
-  const SWITCH_PATTERN = /^(kyro|nexus)[, ]+(open|show|play|find|call|what|where|tell|start|go to|take me to)\b|^new request\b/i;
+  const SWITCH_PATTERN = /^(?:hey[, ]+)?(?:kyro|kiro|cairo|chatroom|nexus)[, ]+(open|show|play|find|call|what|where|tell|start|go to|take me to)\b|^new request\b/i;
   const CHANGE_PATTERN = /^change (my |the )?(.+)$/i;
 
+  function wordCount(text) { return String(text || "").split(/\s+/).filter(Boolean).length; }
+
+  function isDoneCollecting(text) {
+    const norm = normalizeText(text).replace(WAKE_PREFIX, "");
+    return DONE_COLLECTING.test(norm);
+  }
+
   function classifyControl(text, { inConfirm = false } = {}) {
-    const norm = normalizeText(text);
+    const raw = String(text || "").trim();
+    const norm = normalizeText(raw);
     if (!norm) return null;
-    if (SWITCH_PATTERN.test(norm)) return "switch";
+    // A recognizer-friendly wake word at the front never changes WHAT the person asked for.
+    const stripped = norm.replace(WAKE_PREFIX, "");
+    const words = wordCount(stripped);
     if (inConfirm) {
-      if (CONTROL_PATTERNS.yes.test(norm)) return "yes";
-      if (CHANGE_PATTERN.test(norm)) return "change";
-      if (CONTROL_PATTERNS.no.test(norm)) return "no";
+      if (CONTROL_PATTERNS.yes.test(stripped)) return "yes";
+      if (CHANGE_PATTERN.test(stripped)) return "change";
+      if (CONTROL_PATTERNS.no.test(stripped)) return "no";
     }
-    if (CONTROL_PATTERNS.cancel.test(norm)) return "cancel";
-    if (CONTROL_PATTERNS.repeat.test(norm)) return "repeat";
-    if (CONTROL_PATTERNS.back.test(norm)) return "back";
-    if (CONTROL_PATTERNS.skip.test(norm)) return "skip";
+    if (CONTROL_PATTERNS.cancel.test(stripped)) return "cancel";
+    if (PAUSE_PATTERN.test(stripped)) return "pause";
+    if (CONTROL_PATTERNS.repeat.test(stripped)) return "repeat";
+    if (words <= MAX_NATURAL_CONTROL_WORDS && REPEAT_NATURAL.some(pattern => pattern.test(stripped))) return "repeat";
+    if (SWITCH_PATTERN.test(norm)) return "switch";
+    // A short QUESTION put to Kyro ("do you understand?", "what do you mean?") is never an answer to
+    // a form field -- re-ask rather than saving it.
+    if (words <= MAX_NATURAL_CONTROL_WORDS && /\?\s*$/.test(raw)
+      && (/\b(?:you|your|kyro)\b/.test(stripped) || /^(?:what|why|how|who|where|when|which|huh|pardon|sorry)\b/.test(stripped))) return "repeat";
+    if (CONTROL_PATTERNS.back.test(stripped)) return "back";
+    if (CONTROL_PATTERNS.skip.test(stripped)) return "skip";
     return null;
   }
 
@@ -233,6 +277,20 @@
       return i;
     }
 
+    // What the person has said so far, in form order and WITH each field's label, including
+    // entries still being collected for a repeatable field. Lets the panel show "Skills: ..." instead
+    // of a bare list of values, so a misheard or misplaced answer is obvious at a glance.
+    function answeredList() {
+      const list = [];
+      for (const field of fields) {
+        let value = values[field.key];
+        if (value === undefined && repeatBuffer[field.key] && repeatBuffer[field.key].length) value = repeatBuffer[field.key];
+        if (value === undefined || value === "" || (Array.isArray(value) && !value.length)) continue;
+        list.push({ key: field.key, label: field.label, value: Array.isArray(value) ? value.slice() : value });
+      }
+      return list;
+    }
+
     function snap() {
       const field = currentField();
       return {
@@ -244,6 +302,7 @@
         total: fields.length,
         currentField: field ? { key: field.key, label: field.label, question: field.question, required: !!field.required, hint: field.hint || "" } : null,
         values: { ...values },
+        answers: answeredList(),
         skipped: Array.from(skipped)
       };
     }
@@ -327,8 +386,7 @@
       const control = classifyControl(rawText, { inConfirm: false });
       if (control === "repeat") return doRepeat();
       if (control === "back") return doBack();
-      const norm = normalizeText(rawText);
-      const isDone = control === "skip" || /^(that'?s all|that is all|nothing else|no more|done|finished)$/i.test(norm);
+      const isDone = control === "skip" || isDoneCollecting(rawText);
       if (isDone) {
         const arr = repeatBuffer[field.key] || [];
         values[field.key] = arr.slice();
@@ -444,6 +502,9 @@
       touch();
       if (phase === "submitting") return decision("busy", "");
       if (phase === "done" || phase === "cancelled") return { consumed: false, action: "ignored", say: "", snapshot: snap() };
+      // A paused intake never records anything as an answer: the caller decides whether this is a
+      // request to continue/cancel (see routeKyroVoiceIntakeTranscript) or an unrelated command.
+      if (phase === "paused") return { consumed: false, action: "ignored", say: "", snapshot: snap() };
       if (isDuplicate(meta.utteranceId, text)) return decision("duplicate", "");
       const trimmed = String(text || "").trim();
       if (!trimmed) return decision("duplicate", "");
@@ -461,6 +522,16 @@
         return { consumed: false, action: "paused", say: "", field: currentField(), values: { ...values }, snapshot: snap() };
       }
       if (control === "cancel") return doCancel();
+      // "Hold on" / "wait" / "stop for a minute" / a bare "stop": keep every answer, close nothing for
+      // good, and tell the person how to carry on or cancel. Consumed (not passed on as a new
+      // command), unlike a wake-word switch.
+      if (control === "pause") {
+        enterPaused("hold");
+        const holdLine = typeof definition.pausedLine === "string" && definition.pausedLine
+          ? definition.pausedLine
+          : "Okay, I will wait. Say continue when you are ready, or say cancel to stop.";
+        return decision("paused", holdLine);
+      }
 
       if (phase === "confirming") return handleConfirmAnswer(trimmed);
       if (phase === "more") return handleMoreAnswer(currentField(), trimmed);
@@ -531,5 +602,5 @@
     });
   }
 
-  return Object.freeze({ create, classifyControl, normalizers: NORMALIZERS, normalizeText });
+  return Object.freeze({ create, classifyControl, isDoneCollecting, normalizers: NORMALIZERS, normalizeText });
 });
