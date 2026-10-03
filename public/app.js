@@ -50721,6 +50721,32 @@ async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
   }
 }
 
+// Neither the session-token fetch nor the SDK's WebRTC connect has a time limit of its own. If either
+// stalls, realtimeVoiceStarting stays true and every later "start" call returns early, so the person
+// talks to a dead connection and retrying does nothing until the stall eventually clears (seen live:
+// ~2 minutes of silence). This turns a stall into a normal startup failure the catch block already
+// handles ("unavailable -- retry", flag cleared). A connection that completes after the timeout is
+// closed through onLateResolve so it can never leak a live microphone.
+const NEXUS_REALTIME_START_TIMEOUT_MS = 25000;
+function withRealtimeStartTimeout(promise, label, onLateResolve) {
+  let timer = null;
+  let timedOut = false;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      reject(new Error(`${label} took too long`));
+    }, NEXUS_REALTIME_START_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)).then(value => {
+    return value;
+  }, error => {
+    if (timedOut && typeof onLateResolve === "function") {
+      Promise.resolve(promise).then(late => { try { onLateResolve(late); } catch {} }, () => {});
+    }
+    throw error;
+  });
+}
+
 async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) {
   const sessionId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   if (!nexusRealtimeConversationIdentity) {
@@ -50769,10 +50795,10 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
   });
   let controller = null;
   try {
-    const [module, sessionPayload] = await Promise.all([
-      loadNexusOpenAiRealtimeAgentModule(),
-      requestNexusOpenAiRealtimeSession(status)
-    ]);
+    const [module, sessionPayload] = await withRealtimeStartTimeout(
+      Promise.all([loadNexusOpenAiRealtimeAgentModule(), requestNexusOpenAiRealtimeSession(status)]),
+      "Starting the voice session"
+    );
     updateRealtimeControllerState("connecting", "openai-agents-client-secret-issued", {
       model: sessionPayload.model || "",
       voice: sessionPayload.voice || "",
@@ -50785,7 +50811,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       voice: sessionPayload.voice || "",
       noPermanentKeyInBrowser: true
     });
-    controller = await module.startNexusOpenAiRealtimeGenesisSession({
+    controller = await withRealtimeStartTimeout(module.startNexusOpenAiRealtimeGenesisSession({
       clientSecret: sessionPayload.clientSecret,
       model: sessionPayload.model || status.model || "gpt-realtime-2.1",
       voice: sessionPayload.voice || status.voice || "marin",
@@ -50804,7 +50830,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
         });
       },
       onEvent: handleOpenAiAgentsRealtimeEvent
-    });
+    }), "Connecting the voice stream", late => late?.close?.("late-openai-agents-startup-after-timeout"));
     const micProof = normalizeRealtimeMicrophoneProof(controller);
     if (!micProof.hasLiveTrack) {
       throw new Error(`OpenAI Realtime did not acquire a live microphone track (${micProof.trackState}).`);
