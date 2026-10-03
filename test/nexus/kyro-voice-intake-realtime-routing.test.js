@@ -29,7 +29,7 @@ function loadGlue(overrides = {}) {
   const fakeDocument = {
     body: { appendChild() {} },
     head: { appendChild() {} },
-    getElementById() { return null; },
+    getElementById(id) { calls.getElementById = calls.getElementById || []; calls.getElementById.push(id); return null; },
     querySelector() { return null; },
     createElement() { return fakeElement(); },
     addEventListener() {}
@@ -130,6 +130,18 @@ test("a wake-word new request pauses the intake and is NOT consumed, so the call
   const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Kyro, open the map", utteranceId: "u2", source: "realtime-transport" });
   assert.equal(consumed, false, "a topic switch must fall through to normal command routing, not be swallowed");
   assert.equal(sandbox.getActiveIntake().engine.phase, "paused");
+});
+
+test("a wake-word new request also takes down the full-screen intake panel, same as the safety pause does", () => {
+  // The panel is a fixed, inset:0 overlay covering the whole viewport (see
+  // ensureKyroVoiceIntakeStyles/renderKyroVoiceIntakePanel in app.js). If it isn't explicitly
+  // closed when the intake pauses for a wake-word switch, it keeps blocking the screen while the
+  // user's new request (e.g. opening the map) is handled behind it.
+  const { sandbox, calls } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  calls.getElementById = [];
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Kyro, open the map", utteranceId: "u2", source: "realtime-transport" });
+  assert.ok(calls.getElementById.includes("kyroVoiceIntakePanel"), "renderKyroVoiceIntakePanel(null) must run to close the panel when pausing for a wake-word switch");
 });
 
 test("kyroVoiceIntakeOwnsTurn is true while an active (unpaused) intake exists, or for a fresh resume-build phrase", () => {
