@@ -268,6 +268,100 @@ test("normalizers: an invalid email is rejected, not silently accepted", () => {
   assert.equal(result.ok, false);
 });
 
+test("cancel during confirmation actually cancels, instead of just re-reading the summary", () => {
+  const form = sampleForm({
+    fields: [{ key: "name", label: "Name", question: "What is your name?", required: true, kind: "name" }]
+  });
+  const intake = KyroVoiceIntake.create(form, { now });
+  intake.start();
+  intake.handleUtterance("Amina", { utteranceId: "u1" });
+  const decision = intake.handleUtterance("never mind", { utteranceId: "u2" });
+  assert.equal(decision.action, "cancelled");
+  assert.equal(intake.phase, "cancelled");
+});
+
+test("back during confirmation actually re-opens the last field, instead of being swallowed", () => {
+  const form = sampleForm({
+    fields: [{ key: "name", label: "Name", question: "What is your name?", required: true, kind: "name" }]
+  });
+  const intake = KyroVoiceIntake.create(form, { now });
+  intake.start();
+  intake.handleUtterance("Amina", { utteranceId: "u1" });
+  const decision = intake.handleUtterance("previous", { utteranceId: "u2" });
+  assert.equal(decision.action, "ask");
+  assert.match(decision.say, /What is your name\?/);
+  assert.equal(intake.phase, "asking");
+});
+
+test("a wake-word new request during confirmation pauses instead of being swallowed as an unrecognized confirm reply", () => {
+  const form = sampleForm({
+    fields: [{ key: "name", label: "Name", question: "What is your name?", required: true, kind: "name" }]
+  });
+  const intake = KyroVoiceIntake.create(form, { now });
+  intake.start();
+  intake.handleUtterance("Amina", { utteranceId: "u1" });
+  const decision = intake.handleUtterance("Kyro, open the map", { utteranceId: "u2" });
+  assert.equal(decision.action, "paused");
+  assert.equal(decision.consumed, false, "the caller must still route this utterance to normal command handling");
+  assert.equal(intake.phase, "paused");
+});
+
+test("cancel while collecting a repeatable field's extra answers actually cancels, instead of being stored as a literal answer", () => {
+  const form = sampleForm({
+    fields: [
+      { key: "name", label: "Name", question: "What is your name?", required: true, kind: "name" },
+      { key: "experience", label: "Experience", question: "Tell me about work you have done.", required: false, kind: "sentences", repeatable: { moreQuestion: "Any other work? Or say that's all.", max: 5 } }
+    ]
+  });
+  const intake = KyroVoiceIntake.create(form, { now });
+  intake.start();
+  intake.handleUtterance("Amina", { utteranceId: "u1" });
+  intake.handleUtterance("I grew maize for five years", { utteranceId: "u2" });
+  const decision = intake.handleUtterance("never mind", { utteranceId: "u3" });
+  assert.equal(decision.action, "cancelled");
+  assert.equal(intake.phase, "cancelled");
+});
+
+test("a wake-word new request while collecting a repeatable field's extra answers pauses instead of being stored as a literal answer", () => {
+  const form = sampleForm({
+    fields: [
+      { key: "name", label: "Name", question: "What is your name?", required: true, kind: "name" },
+      { key: "experience", label: "Experience", question: "Tell me about work you have done.", required: false, kind: "sentences", repeatable: { moreQuestion: "Any other work? Or say that's all.", max: 5 } }
+    ]
+  });
+  const intake = KyroVoiceIntake.create(form, { now });
+  intake.start();
+  intake.handleUtterance("Amina", { utteranceId: "u1" });
+  intake.handleUtterance("I grew maize for five years", { utteranceId: "u2" });
+  const decision = intake.handleUtterance("Kyro, open the map", { utteranceId: "u3" });
+  assert.equal(decision.action, "paused");
+  assert.equal(decision.consumed, false, "the caller must still route this utterance to normal command handling");
+  assert.equal(intake.phase, "paused");
+  const resumed = intake.resume();
+  assert.match(resumed.say, /Any other work/);
+  assert.deepEqual(intake.snapshot().values.experience === undefined ? [] : intake.snapshot().values.experience, []);
+});
+
+test("repeat and back work normally while collecting a repeatable field's extra answers", () => {
+  const form = sampleForm({
+    fields: [
+      { key: "name", label: "Name", question: "What is your name?", required: true, kind: "name" },
+      { key: "experience", label: "Experience", question: "Tell me about work you have done.", required: false, kind: "sentences", repeatable: { moreQuestion: "Any other work? Or say that's all.", max: 5 } }
+    ]
+  });
+  const intake = KyroVoiceIntake.create(form, { now });
+  intake.start();
+  intake.handleUtterance("Amina", { utteranceId: "u1" });
+  intake.handleUtterance("I grew maize for five years", { utteranceId: "u2" });
+  const repeated = intake.handleUtterance("say that again", { utteranceId: "u3" });
+  assert.match(repeated.say, /Any other work/);
+  intake.handleUtterance("I also worked at a dairy", { utteranceId: "u4" });
+  const wentBack = intake.handleUtterance("go back", { utteranceId: "u5" });
+  assert.match(wentBack.say, /removed that/);
+  const decision = intake.handleUtterance("that's all", { utteranceId: "u6" });
+  assert.deepEqual(decision.values.experience, ["I grew maize for five years"]);
+});
+
 test("normalizers: list and sentences never split the text themselves", () => {
   const list = KyroVoiceIntake.normalizers.list("crop planning, irrigation, and livestock management");
   assert.equal(list.ok, true);

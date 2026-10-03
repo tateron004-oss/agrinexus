@@ -183,8 +183,20 @@
     let startedAt = now();
     let updatedAt = startedAt;
     let pauseReason = null;
+    let pausedFromPhase = null;
 
     function touch() { updatedAt = now(); }
+
+    // Remembers which phase we were in (asking/more/confirming) before pausing, so resume() can
+    // put the user back where they actually were instead of always falling back to the plain
+    // field question -- without this, pausing mid-"anything else?" collection or mid-confirmation
+    // and then resuming would silently drop back to re-asking the base question, out of step with
+    // what the engine would actually do next with the user's reply.
+    function enterPaused(reason) {
+      if (phase !== "paused") pausedFromPhase = phase;
+      phase = "paused";
+      pauseReason = reason || "paused";
+    }
 
     function recordUtterance(utteranceId, text) {
       if (utteranceId) {
@@ -313,6 +325,8 @@
 
     function handleMoreAnswer(field, rawText) {
       const control = classifyControl(rawText, { inConfirm: false });
+      if (control === "repeat") return doRepeat();
+      if (control === "back") return doBack();
       const norm = normalizeText(rawText);
       const isDone = control === "skip" || /^(that'?s all|that is all|nothing else|no more|done|finished)$/i.test(norm);
       if (isDone) {
@@ -342,6 +356,8 @@
         phase = "submitting";
         return decision("submit", "One moment.");
       }
+      if (control === "repeat") return doRepeat();
+      if (control === "back") return doBack();
       if (control === "change") {
         const match = CHANGE_PATTERN.exec(normalizeText(rawText));
         const target = match ? match[2] : "";
@@ -433,16 +449,22 @@
       if (!trimmed) return decision("duplicate", "");
       recordUtterance(meta.utteranceId, text);
 
-      if (phase === "confirming") return handleConfirmAnswer(trimmed);
-      if (phase === "more") return handleMoreAnswer(currentField(), trimmed);
-
-      const control = classifyControl(trimmed, { inConfirm: false });
+      // "switch" (wake-word new request) and "cancel" must be honored in every phase, including
+      // while confirming or while collecting a repeatable field's extra answers -- otherwise a
+      // user who says "stop"/"never mind" or issues a new wake-word command mid-confirmation or
+      // mid-"anything else?" gets that utterance silently swallowed (confirming) or, worse,
+      // recorded as literal answer text (more), instead of actually cancelling or being routed to
+      // normal command handling.
+      const control = classifyControl(trimmed, { inConfirm: phase === "confirming" });
       if (control === "switch") {
-        phase = "paused";
-        pauseReason = "switch";
+        enterPaused("switch");
         return { consumed: false, action: "paused", say: "", field: currentField(), values: { ...values }, snapshot: snap() };
       }
       if (control === "cancel") return doCancel();
+
+      if (phase === "confirming") return handleConfirmAnswer(trimmed);
+      if (phase === "more") return handleMoreAnswer(currentField(), trimmed);
+
       if (control === "repeat") return doRepeat();
       if (control === "back") return doBack();
       if (control === "skip") return doSkip();
@@ -474,10 +496,20 @@
       back: () => { touch(); return doBack(); },
       cancel: () => { touch(); return doCancel(); },
       confirm: () => { touch(); return handleConfirmAnswer("yes"); },
-      pause: (reason) => { touch(); phase = "paused"; pauseReason = reason || "paused"; return decision("paused", ""); },
+      pause: (reason) => { touch(); enterPaused(reason); return decision("paused", ""); },
       resume: () => {
         touch();
-        phase = phase === "paused" ? "asking" : phase;
+        if (phase !== "paused") return decision("ask", "");
+        phase = pausedFromPhase || "asking";
+        pausedFromPhase = null;
+        if (phase === "confirming") {
+          const summary = typeof definition.readback === "function" ? definition.readback(values) : defaultReadback(fields, values);
+          return decision("confirm", `Let's keep going. ${summary} Shall I make it now? Say yes, or tell me which part to change.`);
+        }
+        if (phase === "more") {
+          const field = currentField();
+          return decision("ask", `Let's keep going. ${field.repeatable.moreQuestion || "Anything else? Or say that's all."}`);
+        }
         const field = currentField();
         return decision("ask", field ? `Let's keep going. ${field.question}` : "");
       },
