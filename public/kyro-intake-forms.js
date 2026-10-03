@@ -83,12 +83,29 @@
   const RESUME_QUESTION = /^\s*(?:how|what|why|when|where|should|can you explain|tips|is it|do i)\b/i;
   const RESUME_AS_VERB = /\bresume\b.*\b(music|song|songs|playlist|lesson|work(?:flow)?|playing|my (?:course|training|work|shift))\b/i;
 
+  // Found live: "Hey Kyro, make a resume", "I'd like to build a resume" and "open the resume builder" did NOT
+  // start the voice interview (the strict pattern above wants the verb first), so the old manual typing
+  // form opened instead -- useless to someone who cannot type. Natural speech puts a greeting, the wake word
+  // (often misheard) and "I'd like to..." in front, so the check is: strip those, then look for a résumé word
+  // together with a wish/make verb, in a short sentence that is not a question about résumés.
+  const WAKE_LEAD = /^(?:(?:hey|hi|hello|ok(?:ay)?)[, ]+)?(?:(?:kyro|kiro|kairo|cairo|cyro|kyra|kira|chiro|kayro|chatroom|nexus)[, ]+)?/i;
+  const FILLER_LEAD = /^(?:(?:please|ok(?:ay)?|so|well|yes|now|and|um|uh)[, ]+)+/i;
+  const RESUME_WORD = /(?<![a-z])(?:r[ée]sum[ée]|cv|curriculum vitae)(?![a-zé])/i;
+  const RESUME_INTENT = /\b(?:make|create|build|write|prepare|draft|generate|start|begin|fill(?: out)?|put together|work on|open|launch|set up|help|need|want|(?:i'?d|i would|would) like|let'?s|give me|get me|do)\b/i;
+  const RESUME_BUILDER_NAME = /^(?:the |my |a )?(?:r[ée]sum[ée]|cv)(?: |-)?(?:builder|maker|generator|writer|helper)\.?$/i;
+  const MAX_RESUME_REQUEST_WORDS = 16;
+
   function isResumeBuildRequest(text) {
-    const value = clean(text);
+    const raw = clean(text).replace(/[’]/g, "'");
+    if (!raw) return false;
+    const value = raw.replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
     if (!value) return false;
     if (RESUME_QUESTION.test(value)) return false;
     if (RESUME_AS_VERB.test(value)) return false;
-    return RESUME_VERB_REQUEST.test(value);
+    if (RESUME_VERB_REQUEST.test(value)) return true;
+    if (value.split(/\s+/).length > MAX_RESUME_REQUEST_WORDS) return false;
+    if (!RESUME_WORD.test(value)) return false;
+    return RESUME_INTENT.test(value) || RESUME_BUILDER_NAME.test(value);
   }
 
   const RESUME_CONTINUE = /^\s*(?:continue|back to|keep going with|resume)\s+(?:my |the )?(?:r[ée]sum[ée]|cv)\b/i;
