@@ -50361,7 +50361,11 @@ function renderKyroVoiceIntakePanel(snapshot) {
     document.body.appendChild(panel);
   }
   const field = snapshot.currentField;
-  const answeredEntries = Object.entries(snapshot.values || {}).filter(([, value]) => value !== undefined && value !== "" && !(Array.isArray(value) && !value.length));
+  // Labeled ("Skills: ...") so a misheard or misplaced answer is obvious. Falls back to bare values
+  // for any snapshot that predates the labeled list.
+  const answeredEntries = Array.isArray(snapshot.answers)
+    ? snapshot.answers.map(entry => [entry.label, entry.value])
+    : Object.entries(snapshot.values || {}).filter(([, value]) => value !== undefined && value !== "" && !(Array.isArray(value) && !value.length)).map(([, value]) => ["", value]);
   const isConfirming = snapshot.phase === "confirming";
   const isDone = snapshot.phase === "done";
   panel.innerHTML = `
@@ -50372,7 +50376,7 @@ function renderKyroVoiceIntakePanel(snapshot) {
       </header>
       <p class="kyro-voice-intake-question">${escapeHtml(isConfirming ? "Review your answers" : (field?.question || ""))}</p>
       ${field?.hint ? `<p class="kyro-voice-intake-hint">${escapeHtml(field.hint)}</p>` : ""}
-      ${answeredEntries.length ? `<ul class="kyro-voice-intake-answers">${answeredEntries.map(([key, value]) => `<li>✓ ${escapeHtml(Array.isArray(value) ? value.join("; ") : String(value))}</li>`).join("")}</ul>` : ""}
+      ${answeredEntries.length ? `<ul class="kyro-voice-intake-answers">${answeredEntries.map(([label, value]) => `<li>✓ ${label ? `<strong>${escapeHtml(label)}:</strong> ` : ""}${escapeHtml(Array.isArray(value) ? value.join("; ") : String(value))}</li>`).join("")}</ul>` : ""}
       ${!isDone ? `
         <div class="kyro-voice-intake-typed">
           <input type="text" data-kyro-intake-typed-answer placeholder="Or type your answer here">
@@ -50491,8 +50495,17 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
   }
   if (kyroActiveVoiceIntake.engine.phase === "paused") {
     if (window.KyroIntakeForms?.isResumeContinueRequest?.(trimmed)) {
+      // While paused, auto-response was back on, so the model has most likely already started
+      // answering this "continue" by itself -- cut it off before the intake speaks its own line,
+      // the same way startKyroVoiceIntake does for the request that begins an intake.
+      try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
       setKyroRealtimeAutoResponse(false);
       applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.resume());
+      return true;
+    }
+    // "Cancel" is the way out of a paused intake (a pause keeps every answer until then).
+    if (KyroVoiceIntake.classifyControl(trimmed) === "cancel") {
+      applyKyroIntakeDecision(kyroActiveVoiceIntake.engine.cancel());
       return true;
     }
     return false;
@@ -50512,6 +50525,13 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // user's new request is handled behind it, and they see nothing happen.
     renderKyroVoiceIntakePanel(null);
     setKyroRealtimeAutoResponse(true);
+    // "Hold on" / "wait" / "stop for a minute" is a pause the intake itself answers (how to carry on,
+    // how to cancel), so it is consumed here; a wake-word switch is not -- it is a different request
+    // the caller still has to route.
+    if (decision.consumed && decision.say) {
+      speakKyroIntakeLine(decision.say);
+      return true;
+    }
     return false;
   }
   applyKyroIntakeDecision(decision);

@@ -19,7 +19,7 @@ function loadGlue(overrides = {}) {
   assert.ok(start > 0 && end > start, "could not locate the Kyro voice intake glue block in app.js");
 
   const events = [];
-  const calls = { legacyController: 0, genesisWorkspace: 0, crisis: [], debug: [] };
+  const calls = { legacyController: 0, genesisWorkspace: 0, crisis: [], debug: [], interrupts: 0 };
   const fakeElement = () => ({
     style: {}, dataset: {}, classList: { add() {}, remove() {} },
     setAttribute() {}, addEventListener() {}, appendChild() {}, remove() {},
@@ -42,7 +42,7 @@ function loadGlue(overrides = {}) {
     kyroActiveVoiceIntake: null,
     kyroRealtimeBaseTurnDetection: { type: "server_vad", create_response: true, threshold: 0.5 },
     realtimeVoiceSession: {
-      sdkController: { interrupt: () => {} },
+      sdkController: { interrupt: () => { calls.interrupts += 1; } },
       sdkSession: { transport: { sendEvent: event => { events.push(event); } } }
     },
     realtimeVoiceActive: () => true,
@@ -142,6 +142,68 @@ test("a wake-word new request also takes down the full-screen intake panel, same
   calls.getElementById = [];
   sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Kyro, open the map", utteranceId: "u2", source: "realtime-transport" });
   assert.ok(calls.getElementById.includes("kyroVoiceIntakePanel"), "renderKyroVoiceIntakePanel(null) must run to close the panel when pausing for a wake-word switch");
+});
+
+// Found live: "Kyro, stop for a minute" (heard as "Chatroom, stop for a minute.") and several
+// "can you repeat that, please?" sentences were all saved as answers. These pin the live wiring.
+test("a spoken 'repeat' sentence during an active intake re-asks the question over Realtime and saves nothing", () => {
+  const { sandbox, events } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  events.length = 0;
+  const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "I'm sorry, can you repeat that, please?", utteranceId: "u2", source: "realtime-transport" });
+  assert.equal(consumed, true);
+  assert.equal(sandbox.getActiveIntake().engine.snapshot().values.name, undefined, "the repeat request must not be recorded as the name");
+  const spoken = events.find(event => event.type === "response.create");
+  assert.ok(spoken, "Kyro must say the question again");
+  assert.match(spoken.response.instructions, /What is your full name/);
+});
+
+test("'stop for a minute' pauses, is consumed, tells the person how to continue, and hands the conversation back to Kyro", () => {
+  const { sandbox, events } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  events.length = 0;
+  const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Chatroom, stop for a minute.", utteranceId: "u2", source: "realtime-transport" });
+  assert.equal(consumed, true, "a hold is answered by the intake itself, not routed on as a new command");
+  assert.equal(sandbox.getActiveIntake().engine.phase, "paused");
+  const restore = events.find(event => event.type === "session.update");
+  assert.equal(restore.session.audio.input.turn_detection.create_response, true, "auto-response must be back on while paused");
+  const spoken = events.find(event => event.type === "response.create");
+  assert.match(spoken.response.instructions, /continue/i);
+  assert.match(spoken.response.instructions, /cancel/i);
+});
+
+test("saying 'I'm ready' while paused cuts off any reply already started, turns auto-response off, and re-asks the question", () => {
+  const { sandbox, events, calls } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Hold on", utteranceId: "u2", source: "realtime-transport" });
+  events.length = 0;
+  const interruptsBefore = calls.interrupts;
+  const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Okay, I'm ready", utteranceId: "u3", source: "realtime-transport" });
+  assert.equal(consumed, true);
+  assert.equal(calls.interrupts, interruptsBefore + 1, "the model's own auto-reply to 'I'm ready' must be interrupted");
+  assert.notEqual(sandbox.getActiveIntake().engine.phase, "paused");
+  const disable = events.find(event => event.type === "session.update");
+  assert.equal(disable.session.audio.input.turn_detection.create_response, false);
+  const spoken = events.find(event => event.type === "response.create");
+  assert.match(spoken.response.instructions, /What is your full name/);
+});
+
+test("saying 'cancel' while paused ends the intake for good", () => {
+  const { sandbox, events } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Wait", utteranceId: "u2", source: "realtime-transport" });
+  events.length = 0;
+  const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Cancel", utteranceId: "u3", source: "realtime-transport" });
+  assert.equal(consumed, true);
+  assert.equal(sandbox.getActiveIntake(), null, "the intake must be gone");
+  assert.ok(events.some(event => event.type === "response.create" && /Nothing was saved/.test(event.response.instructions)));
+});
+
+test("an unrelated utterance while paused is NOT consumed (it goes on to normal routing)", () => {
+  const { sandbox } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Can you make a resume for me?", utteranceId: "u1", source: "realtime-transport" });
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "Wait", utteranceId: "u2", source: "realtime-transport" });
+  assert.equal(sandbox.routeKyroVoiceIntakeTranscript({ transcript: "What is the weather in Kisumu?", utteranceId: "u3", source: "realtime-transport" }), false);
 });
 
 test("kyroVoiceIntakeOwnsTurn is true while an active (unpaused) intake exists, or for a fresh resume-build phrase", () => {
