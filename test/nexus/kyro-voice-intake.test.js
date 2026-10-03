@@ -85,9 +85,11 @@ test("cancel ends the intake instead of being recorded as an answer, but a real 
 
   const intakeB = KyroVoiceIntake.create(sampleForm(), { now });
   intakeB.start();
+  // A sentence containing "stop" is not a cancel. (It is too long to be a NAME, so the name field
+  // re-asks -- see the name-validation tests -- but the intake must stay open.)
   const answered = intakeB.handleUtterance("I was a bus stop attendant for two years", { utteranceId: "u1" });
-  assert.equal(answered.action, "ask");
-  assert.equal(answered.values.name, "I was a bus stop attendant for two years");
+  assert.notEqual(answered.action, "cancelled");
+  assert.equal(intakeB.phase, "asking");
 });
 
 test("a duplicate utterance id is ignored, not recorded as a second answer", () => {
