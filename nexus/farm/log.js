@@ -41,10 +41,12 @@ function reportDay(text, today) {
   return found.day > today ? { future: true } : { day: found.day };
 }
 
+// People say amounts loosely: "it rained about 12 mm".
+const APPROX = "(?:about |around |roughly |approximately |nearly |almost |close to )?";
 const RAIN = [
   new RegExp(`^(?:please )?(?:log|record|note|add)(?: down)?(?: that)?\\s+(?:(?:we|i) (?:got|had) )?${NUM}\\s*${LEN}\\s+(?:of )?rain(?:fall)?\\b(.*)$`, "i"),
-  new RegExp(`^(?:we|i) (?:got|had|received|recorded) ${NUM}\\s*${LEN}\\s+(?:of )?rain(?:fall)?\\b(.*)$`, "i"),
-  new RegExp(`^it rained ${NUM}\\s*${LEN}\\b(.*)$`, "i"),
+  new RegExp(`^(?:we|i) (?:got|had|received|recorded) ${APPROX}${NUM}\\s*${LEN}\\s+(?:of )?rain(?:fall)?\\b(.*)$`, "i"),
+  new RegExp(`^it rained ${APPROX}${NUM}\\s*${LEN}\\b(.*)$`, "i"),
   new RegExp(`^(?:the )?rain(?:fall)?(?: gauge)?\\s+(?:today |yesterday |last night |this morning )?(?:was|is|measured|read|reads)\\s+${NUM}\\s*${LEN}\\b(.*)$`, "i"),
   new RegExp(`^(?:please )?(?:log|record|note|add) rain(?:fall)?[:,]?\\s+${NUM}\\s*${LEN}\\b(.*)$`, "i")
 ];

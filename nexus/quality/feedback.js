@@ -21,7 +21,8 @@ const UP = [
   /^(?:good answer|great answer|that helped|that was useful|that is useful|thumbs up|👍)$/,
   /^(?:thanks|thank you),? (?:that|it) (?:helped|was (?:right|helpful|useful))$/
 ];
-const CORRECTION = /^(?:the )?(?:correct|right) (?:answer|one|price|number|figure) (?:is|was|should be)\s+(.+)$/;
+const SPOKEN_UP = /^(?:that|it|this) (?:really |very |truly )?(?:helped|was (?:really |very |truly )?(?:helpful|useful|right|correct))$/;
+const CORRECTION =/^(?:the )?(?:correct|right) (?:answer|one|price|number|figure) (?:is|was|should be)\s+(.+)$/;
 const REPORT = /^(?:show|give me|read|open) (?:me )?(?:the |my )?(?:kyro )?(?:feedback|quality) report$|^how (?:is|are) (?:kyro|the answers) doing$|^what(?:'s| is) (?:been )?flagged as wrong$/;
 
 function readFeedback(text) {
@@ -30,7 +31,9 @@ function readFeedback(text) {
   if (REPORT.test(t)) return { action: "report" };
   let m;
   for (const pattern of DOWN) if ((m = pattern.exec(t))) return { action: "rate", rating: "down", note: clean(m[1] || "") };
-  if (UP.some(pattern => pattern.test(t))) return { action: "rate", rating: "up" };
+  // Spoken praise comes with commas and a thank-you ("that helped, thank you", "that was really helpful").
+  const spoken = t.replace(/,/g, " ").replace(/\s+/g, " ").replace(/ (?:thanks|thank you)(?: so much| very much| a lot)?$/, "").trim();
+  if (UP.some(pattern => pattern.test(t) || pattern.test(spoken)) || SPOKEN_UP.test(spoken)) return { action: "rate", rating: "up" };
   if ((m = CORRECTION.exec(t))) return { action: "correct", note: clean(m[1]) };
   return null;
 }
