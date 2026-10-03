@@ -14,8 +14,11 @@ const MAX_ITEMS = 12;
 // are full sentences that often carry their own internal commas ("5 years managing a maize farm, overseeing 3
 // workers"), so those two keep splitting on semicolons/newlines only, same as before.
 const SPLIT = { list: /\s*[;\n]\s*|\s*,\s*|\s+and\s+/, sentence: /\s*[;\n]\s*/ };
+// Found live: an Oxford comma before "and" ("irrigation, and livestock management") left a stray
+// "and " stuck to the last item -- the comma already consumes the split point before "and", so
+// "and livestock management" survives as one item instead of "and" being stripped as a conjunction.
 const items = (value, limit = 120, kind = "sentence") => (Array.isArray(value) ? value : typeof value === "string" ? value.split(SPLIT[kind]) : [])
-  .map(item => clean(item).replace(/^[-*•]\s*/, "").slice(0, limit)).filter(Boolean).slice(0, MAX_ITEMS);
+  .map(item => clean(item).replace(/^[-*•]\s*/, "").replace(/^and\s+/i, "").slice(0, limit)).filter(Boolean).slice(0, MAX_ITEMS);
 
 // Returns { name, text, sections } or throws a coded error when there is not enough to write.
 function buildResume(input = {}) {

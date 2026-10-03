@@ -853,10 +853,15 @@ function resumePlan(text, catalog, byKind = {}) {
   const clarify = question => ({ goal, application: "workforce", riskTier: "low", clarification: question, steps: [] });
   const name = /\b(?:for|named|called|name is)\s+([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+){0,2})\b/.exec(goal)?.[1] || byKind.name || "";
   if (!name) return clarify('What name should go on your resume? You can also tell me once with "my name is …" and I will remember it.');
-  const skills = resumeField(goal, "skills?").split(/\s*,\s*|\s+and\s+/).filter(Boolean);
+  // An Oxford comma before "and" ("irrigation, and livestock management") leaves a stray "and "
+  // stuck to the last item -- the comma already consumes the split point before it, so strip it
+  // after splitting. These arrays reach build.js's items() as-is (it only re-splits strings), so
+  // this is the one place that needs to get it right for the skills/languages path.
+  const splitList = value => value.split(/\s*,\s*|\s+and\s+/).map(item => item.trim().replace(/^and\s+/i, "")).filter(Boolean);
+  const skills = splitList(resumeField(goal, "skills?"));
   const experience = resumeField(goal, "experience").split(/\s*;\s*/).filter(Boolean);
   const education = resumeField(goal, "education").split(/\s*;\s*/).filter(Boolean);
-  const languages = resumeField(goal, "languages?").split(/\s*,\s*|\s+and\s+/).filter(Boolean);
+  const languages = splitList(resumeField(goal, "languages?"));
   const known = Boolean(byKind.crops || byKind.livestock);
   if (!skills.length && !experience.length && !education.length && !known)
     return clarify('What should it say? Tell me your skills and experience, for example: "skills: crop planning, irrigation; experience: 5 years managing a maize farm".');

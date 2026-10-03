@@ -65,6 +65,15 @@ test("skills and languages given as a plain comma/'and'-joined string -- not jus
     "experience sentences keep their own internal commas intact -- only ;/newline splits those");
 });
 
+// Found live while testing Kyro by voice: the exact phrase typed, "Crop planning, irrigation, and
+// livestock management", uses an Oxford comma -- the fix above still left a stray "and " stuck to
+// the last item ("and livestock management") because the comma already consumes the split point
+// before "and", so the conjunction-stripping alternative in the regex never gets a chance to match.
+test("an Oxford comma before 'and' does not leave a stray 'and' stuck to the last item", () => {
+  const resume = buildResume({ name: "Amina", skills: "Crop planning, irrigation, and livestock management" });
+  assert.deepEqual(resume.sections.skills, ["Crop planning", "irrigation", "livestock management"]);
+});
+
 test("the executor splits a plain comma-joined skills/languages string the same way the deterministic planner's own pre-split array would", async () => {
   const execute = createResumeCreateExecutor({ env: {}, documents: null, memory: { async profile() { return []; } } });
   const result = await execute({ input: { name: "Amina", skills: "Crop planning, irrigation", languages: "Swahili and English" }, context });
@@ -90,6 +99,15 @@ test("the planner turns a plain resume request into the tool, asks when it lacks
   assert.equal(resumePlan("How do I write a resume?", catalog, { name: "Amina" }), null);
   assert.equal(resumePlan("Find farm jobs near Nakuru and make a resume", catalog, { name: "Amina", crops: "maize" }), null, "a multi-step request stays with the planner");
   assert.equal(resumePlan("Make my resume", { tools: [], applications: [] }, { name: "Amina" }), null);
+});
+
+// Found live while testing Kyro by voice: an Oxford comma before "and" in the planner's own
+// skills/languages field ("irrigation, and livestock management") left a stray "and " stuck to the
+// last item -- these arrays reach build.js's items() pre-split, so build.js's own fix never gets a
+// chance to run on them.
+test("the planner's own skills/languages splitting does not leave a stray 'and' from an Oxford comma", () => {
+  const plan = resumePlan("Create a resume for Amina Wanjiru. Skills: crop planning, irrigation, and livestock management.", catalog, {});
+  assert.deepEqual(plan.steps[0].input.skills, ["crop planning", "irrigation", "livestock management"]);
 });
 
 // Found live: "Give me a resume for a warehouse job" and "I need a resume
