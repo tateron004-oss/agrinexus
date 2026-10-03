@@ -50506,6 +50506,11 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
   }
   const decision = kyroActiveVoiceIntake.engine.handleUtterance(trimmed, { utteranceId, source });
   if (decision.action === "paused") {
+    // Same as the "safety" pause above: the intake is handing this turn off to normal command
+    // routing (e.g. "Kyro, open the map"), so the full-screen intake panel must come down too --
+    // otherwise it keeps covering the whole viewport (it's a fixed, inset:0 overlay) while the
+    // user's new request is handled behind it, and they see nothing happen.
+    renderKyroVoiceIntakePanel(null);
     setKyroRealtimeAutoResponse(true);
     return false;
   }
