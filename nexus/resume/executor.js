@@ -18,7 +18,9 @@ async function knownAbout(memory, context) {
     return byKind;
   } catch { return {}; }
 }
-const list = value => String(value || "").split(/\s*,\s*|\s+and\s+/).map(item => item.trim()).filter(Boolean);
+// An Oxford comma before "and" ("maize, beans, and sorghum") leaves a stray "and " stuck to the
+// last item since the comma already consumes the split point before it -- strip it after splitting.
+const list = value => String(value || "").split(/\s*,\s*|\s+and\s+/).map(item => item.trim().replace(/^and\s+/i, "")).filter(Boolean);
 // Whether the person (or the AI planner) actually gave anything for a field -- just a presence check, never a
 // parse. The real splitting happens exactly once, consistently, in build.js's items() (which already handles
 // both arrays and comma/"and"/semicolon-joined strings) -- this used to re-split skills/languages here first with

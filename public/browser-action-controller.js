@@ -245,9 +245,19 @@
   function resumeValues(shell) {
     return Object.fromEntries([...shell.querySelectorAll("[data-resume-field]")].map(field => [field.dataset.resumeField, field.value.trim()]));
   }
+  // Skills is a short, atomic field -- as likely to be typed as one comma/"and"-joined phrase
+  // ("crop planning, irrigation and livestock management") as separate lines. The server-side resume
+  // builder (nexus/resume/build.js) already splits on comma/"and" for this exact reason; this
+  // client-side builder had no splitting at all and dumped the raw string under one run-on line.
+  function resumeSkillLines(value) {
+    return String(value || "").split(/\s*[;\n]\s*|\s*,\s*|\s+and\s+/)
+      .map(item => item.trim().replace(/^and\s+/i, ""))
+      .filter(Boolean);
+  }
   function downloadResume(shell) {
     const value = resumeValues(shell);
-    const content = `${value.name || "YOUR NAME"}\n${value.contact || "Contact information"}\n\nPROFESSIONAL SUMMARY\n${value.summary || ""}\n\nEXPERIENCE\n${value.experience || ""}\n\nSKILLS\n${value.skills || ""}\n\nEDUCATION & TRAINING\n${value.education || ""}\n`;
+    const skills = resumeSkillLines(value.skills).map(skill => `- ${skill}`).join("\n");
+    const content = `${value.name || "YOUR NAME"}\n${value.contact || "Contact information"}\n\nPROFESSIONAL SUMMARY\n${value.summary || ""}\n\nEXPERIENCE\n${value.experience || ""}\n\nSKILLS\n${skills}\n\nEDUCATION & TRAINING\n${value.education || ""}\n`;
     const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = "nexus-resume.txt"; anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -906,6 +916,7 @@
     openAgricultureHelp,
     openMaizeDiseaseImages,
     openResumeBuilder,
+    getResumeSkillLines: resumeSkillLines,
     openSourceWebsites,
     setPilotEvidenceConsent,
     recordPilotEvidence,
