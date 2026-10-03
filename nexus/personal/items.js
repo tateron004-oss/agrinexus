@@ -25,6 +25,10 @@ function readRequest(text, today) {
   // calendar
   if ((m = /^(?:please )?(?:add|put|schedule|book|set up|create|pencil in)\s+(.+?)\s+(?:to|on|in|onto|into)\s+my\s+(?:calendar|schedule|diary)\b\s*(.*)$/i.exec(t)) || (m = /^(?:please )?(?:add to|put on|schedule on) my (?:calendar|schedule|diary)[:,]?\s+()(.+)$/i.exec(t)))
     return eventDetails(m[1], m[2], today);
+  // Spoken without "my calendar": "schedule a meeting with the cooperative on Monday at 10". Only an event noun
+  // (meeting, appointment, ...) plus a day/time word counts, so "put milk on Monday" is never read as an event.
+  if ((m = /^(?:please )?(?:schedule|book|set up|arrange|put in|put|add|plan)\s+((?:a |an |the |my )?(?:meeting|appointment|visit|interview|training|session|class|delivery|market day)\b.*?)\s+((?:on|at|for|next|this|tomorrow|today)\b.*)$/i.exec(t)))
+    return eventDetails(m[1], m[2], today);
   if ((m = /^(?:please )?(?:cancel|remove|delete|take off|take)\s+(.+?)\s+(?:from|off|on) my (?:calendar|schedule|diary)$/i.exec(t))) return { action: "event-remove", query: clean(m[1]) };
   if (/^(?:what(?:'s| is| are)|show|read|list|tell me|do i have anything on)\b.*\bmy (?:calendar|schedule|diary|events|appointments)\b/i.test(lower) ||
       /^(?:what do i have|what have i got|what(?:'s| is) on|do i have anything(?: on)?|what(?:'s| is) coming up)\s*(?:on |for )?(?:today|tomorrow|this week|next week)?$/i.test(lower)) {
@@ -33,7 +37,8 @@ function readRequest(text, today) {
 
   // notes
   if ((m = /^(?:please )?(?:take|make|save|add|leave) a note(?: to self)?(?: that| about)?[:,]?\s+(.+)$/i.exec(t)) || (m = /^(?:please )?note(?: down)?(?: that)?[:,]\s*(.+)$/i.exec(t)) ||
-      (m = /^(?:please )?(?:note down|jot down|note that)\s+(.+)$/i.exec(t))) return { action: "note-add", text: tidyTitle(m[1]) };
+      (m = /^(?:please )?(?:note down|jot down|note that)\s+(.+)$/i.exec(t)) ||
+      (m = /^(?:please )?(?:write|put|jot)(?: this| that| it)? down(?: that)?[:,]?\s+(.+)$/i.exec(t))) return { action: "note-add", text: tidyTitle(m[1]) };
   if (/^(?:what(?:'s| are| is)|show|read|list|tell me) (?:me )?(?:all )?(?:of )?(?:my )?notes$/.test(lower) || /^(?:show|read|list) me my notes$/.test(lower)) return { action: "note-list" };
   if ((m = /^(?:what did i note|what notes do i have|find my notes?|what(?:'s| is| are) my notes?) (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-find", query: clean(m[1]) };
   if ((m = /^(?:delete|remove|forget|erase) my notes? (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-remove", query: clean(m[1]) };
@@ -41,6 +46,8 @@ function readRequest(text, today) {
   // to-do and shopping lists
   const listRef = `(?:my |the )?(?:${LIST_WORDS}(?: list)?s?|list)`;
   if ((m = new RegExp(`^(?:please )?(?:add|put)\\s+(.+?)\\s+(?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
+  // "I need to buy fertilizer, put it on my list" -- the thing to keep comes first, then "put it on my list".
+  if ((m = new RegExp(`^(?:i need to|i have to|i must|i want to|i should)\\s+(.+?)[,.]?\\s+(?:and |then )?(?:please )?(?:put|add) (?:it|that|this) (?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
   if ((m = new RegExp(`^(?:please )?(?:add|put) (?:to|on) my ${LIST_WORDS}(?: list)?[:,]?\\s+(.+)$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[1]), text: tidyTitle(m[2]) };
   if ((m = new RegExp(`^(?:please )?(?:mark|tick off|tick|check off)\\s+(.+?)\\s+(?:as |off )?(?:done|complete|completed|finished)(?: on my ${LIST_WORDS}(?: list)?)?$`, "i").exec(t))) return { action: "todo-done", query: clean(m[1]), sure: true };
   if ((m = /^(?:i(?:'ve| have)?\s+)?(?:just )?(?:finished|completed|done with)\s+(.+)$/i.exec(t))) return { action: "todo-done", query: clean(m[1]), sure: false };
