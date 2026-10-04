@@ -56,6 +56,7 @@ const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
+const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const { HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
@@ -22269,7 +22270,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // word first, mirroring the connector-gated pattern used for glucose/
     // oxygen/temperature/pulse just below.
     const bp = command.match(new RegExp(`\\b(?:blood\\s*pressure|bp|systolic)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\s*(?:over|\\/)\\s*(\\d{2,3})\\b`, "i"));
-    const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
+    // Blood sugar: a number (decimals allowed: "7.2") and, when said, its unit -- mg/dL or mmol/L (see server/providers/bloodGlucose.js).
+    const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
     // Confirmed: unlike every other vital above, weight kept the old
@@ -22414,6 +22416,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         systolic: bp ? Number(bp[1]) : null,
         diastolic: bp ? Number(bp[2]) : null,
         glucose: glucose ? Number(glucose[1]) : null,
+        glucoseUnit: glucose ? (glucose[2] || "") : undefined,
         readingContext: args.readingContext || "voice-reported",
         // Dated when it was said, in a form that reads well aloud ("4 October 2026"), so the history shows when each reading was taken.
         dateTimeText: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: DEFAULT_TIME_ZONE }),
@@ -22423,12 +22426,23 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       writeAttempted = true;
       readingKind = bp ? "blood-pressure" : "blood-glucose";
       const bpAssessment = bp ? assessBloodPressure(bp[1], bp[2]) : null;
+      const glucoseResolved = glucose ? resolveGlucose(glucose[1], glucose[2]) : null;
+      const glucoseLevelNow = glucoseResolved && glucoseResolved.unit ? glucoseLevel(glucoseResolved) : null;
       if (bp && readingResult?.body?.data?.invalidReading) {
         // Not a possible reading ("900 over 20"): nothing was saved, and the person is told so and how to say it again.
         response = invalidReadingReply(bp[1], bp[2]);
       } else if (bp && readingSaved && bpAssessment?.level === "urgent") {
         // A very high reading gets plain, urgent guidance, not only the general "a single reading is not a diagnosis" line.
         response = urgentGuidance(bp[1], bp[2], command);
+      } else if (glucose && readingResult?.body?.data?.ambiguousUnit) {
+        // "35" could be mg/dL or mmol/L: nothing was saved, and the person is asked to say the unit.
+        response = ambiguousUnitReply(glucose[1]);
+      } else if (glucose && readingResult?.body?.data?.invalidReading) {
+        response = invalidGlucoseReply(glucose[1]);
+      } else if (glucose && readingSaved && glucoseLevelNow === "very-low") {
+        response = veryLowReply(glucoseResolved, command);
+      } else if (glucose && readingSaved && glucoseLevelNow === "very-high") {
+        response = veryHighReply(glucoseResolved, command);
       } else if (bp) {
         response = readingSaved
           ? `I saved the blood-pressure reading ${bp[1]} over ${bp[2]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`
@@ -22439,6 +22453,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           : `I noted the blood-glucose reading ${glucose[1]}, but saving it to your chronic-care record is unavailable right now. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`;
       }
       if (bp && readingSaved && bpAssessment?.level === "low") response = `${response} ${lowNote()}`;
+      if (glucose && readingSaved && glucoseLevelNow === "low") response = lowReply(glucoseResolved);
     } else if (rpmVital) {
       const rpmResult = nexusRealProviders.rpmBridge.deviceReading({
         metric: rpmVital.metric,
@@ -22595,7 +22610,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       extraData = { chronicCareReadings: savedReadings };
       response = savedReadings.length
         ? `You have ${savedReadings.length} saved chronic-care reading(s): ${savedReadings.slice(0, 5).map(r => {
-            const value = r.systolic && r.diastolic ? `${r.systolic}/${r.diastolic}` : r.glucose ? `glucose ${r.glucose}` : "reading";
+            const value = r.systolic && r.diastolic ? `${r.systolic}/${r.diastolic}` : r.glucose ? `glucose ${r.glucose}${r.glucoseUnit && r.glucoseUnit !== "unknown" ? ` ${r.glucoseUnit}` : ""}` : "reading";
             return `${value}${r.dateTimeText ? ` on ${r.dateTimeText}` : ""}`;
           }).join("; ")}. This is your saved history, not a diagnosis or trend interpretation -- discuss patterns with a qualified healthcare professional.`
         : "I don't have any saved chronic-care readings yet. Tell me a blood pressure or glucose reading to start tracking your history.";
