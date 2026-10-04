@@ -1,7 +1,8 @@
 "use strict";
 
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
-const { addDays, weekdayOf } = require("../personal/dates.js");
+const { addDays, weekdayOf, extractDay } = require("../personal/dates.js");
+const crmVoice = require("./crm-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 
 // Shared classify+extract+execute logic for business/nonprofit voice and
@@ -337,7 +338,7 @@ function extractInvoiceItemArgs(command = "", args = {}) {
   };
 }
 
-function extractGrantArgs(command = "", args = {}) {
+function extractGrantArgs(command = "", args = {}, options = {}) {
   const text = String(command || "");
   const funderMatch = text.match(/\b(?:from|with)\s+(?:the\s+)?([^"'.,\n]{2,80}?)(?=\s+for\b|[,.]|$)/i);
   const programMatch = text.match(/\b(?:called|named|titled)\s+["']?([^"'.,\n]{2,80})["']?/i);
@@ -357,7 +358,8 @@ function extractGrantArgs(command = "", args = {}) {
     // already fixed for invoice-item unitPrice/quantity.
     amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : 0,
     currency: String(args.currency || withCurrency?.currency || "USD").toUpperCase().slice(0, 3),
-    deadline: sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40)
+    deadline: isoDayOrText(sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40), options.today),
+    deadlineText: sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40)
   };
 }
 
@@ -390,7 +392,16 @@ function resolveGrant(grants, command = "") {
   return longestMatches.length === 1 ? longestMatches[0].grant : null;
 }
 
-function extractTaskArgs(command = "", args = {}) {
+// A day said by voice ("Friday", "15 October") as a real date (YYYY-MM-DD), because the follow-up and deadline reminder sweeps only read real dates: a due date saved as
+// the words "Friday" never fired a reminder. Left as spoken when it is not a day we can read, or when no "today" is known.
+function isoDayOrText(value, today) {
+  const text = String(value || "");
+  if (!text || !today || /^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const found = extractDay(text, today);
+  return found?.day || text;
+}
+
+function extractTaskArgs(command = "", args = {}, options = {}) {
   const text = String(command || "");
   const titleMatch = text.match(/\btask\s+(?:to|called|named|titled)\s+["']?([^"'.,\n]{2,120})["']?/i)
     || text.match(/\b(?:called|named|titled)\s+["']?([^"'.,\n]{2,120})["']?/i);
@@ -400,7 +411,9 @@ function extractTaskArgs(command = "", args = {}) {
   return {
     title: sanitizeText(args.title || (titleMatch ? titleMatch[1].trim() : ""), 200),
     assignee: sanitizeText(args.assignee || (assigneeMatch ? assigneeMatch[1].trim() : ""), 120),
-    dueDate: sanitizeText(args.dueDate || (dueMatch ? dueMatch[1].trim() : ""), 40),
+    dueDate: isoDayOrText(sanitizeText(args.dueDate || (dueMatch ? dueMatch[1].trim() : ""), 40), options.today),
+    // what was said, for reading back ("due Friday"); dueDate is what is stored
+    dueDateText: sanitizeText(args.dueDate || (dueMatch ? dueMatch[1].trim() : ""), 40),
     priority: sanitizeText(args.priority || (priorityMatch ? priorityMatch[1].toLowerCase() : "medium"), 20)
   };
 }
@@ -701,7 +714,7 @@ function computeBusinessDashboard(editable) {
 // load-bearing -- see each flag's inline note -- and must stay in sync with
 // server.js's legacy nexus_business_assistant handler, which uses this same
 // function (rather than a second, hand-maintained copy of these regexes).
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "listListings"]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "listListings", ...crmVoice.CRM_READ_INTENTS]);
 
 function classify(command = "") {
   // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
@@ -790,6 +803,9 @@ function classify(command = "") {
   // alongside the business/nonprofit/church word.
   const wantsCreateWorkspace = /\b(business|nonprofit|non-profit|ngo|church|congregation|parish)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command);
 
+  // Reading the workspace back ("who are my customers", "who owes me money") and the two small changes an owner makes most (mark an invoice paid, set a follow-up day).
+  const crmIntent = crmVoice.classifyCrm(command);
+  if (crmIntent) return crmIntent;
   if (wantsBusinessDashboard) return "dashboard";
   if (wantsFinanceSummary) return "financeSummary";
   if (wantsList) return "list";
@@ -891,6 +907,24 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   if (typeof businessRequest !== "function") throw new Error("A businessRequest bridge function is required.");
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
+
+  if (crmVoice.CRM_READ_INTENTS.includes(intent) || crmVoice.CRM_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const today = todayIn(new Date(), timeZone);
+    if (crmVoice.CRM_READ_INTENTS.includes(intent)) {
+      const response = crmVoice.readCrm(intent, { command, editable, workspace, today, formatMoney });
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = crmVoice.planCrmWrite(intent, { command, editable, workspace, today, formatMoney });
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
 
   if (intent === "dashboard") {
     const resolved = await resolveBusinessClient(businessRequest, command);
@@ -1061,7 +1095,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   }
 
   if (intent === "addGrant") {
-    const grant = extractGrantArgs(command, args);
+    const grant = extractGrantArgs(command, args, { today: todayIn(new Date(), timeZone) });
     if (!grant.funderName && !grant.program) return { status: "needs-input", response: "What is the name of the funder or the grant/funding program?", missingInformation: ["funderName"] };
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before tracking a grant.", missingInformation: ["businessName"] };
@@ -1095,13 +1129,13 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   }
 
   if (intent === "addTask") {
-    const task = extractTaskArgs(command, args);
+    const task = extractTaskArgs(command, args, { today: todayIn(new Date(), timeZone) });
     if (!task.title) return { status: "needs-input", response: "What is the task?", missingInformation: ["title"] };
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding tasks.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const assigneePhrase = task.assignee ? `, assigned to ${task.assignee}` : "";
-    const duePhrase = task.dueDate ? `, due ${task.dueDate}` : "";
+    const duePhrase = task.dueDateText ? `, due ${task.dueDateText}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add a task to "${workspaceName}": ${task.title}${assigneePhrase}${duePhrase}. Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, tasks: [...resolved.client.data.editable.tasks,
       { title: task.title, status: "todo", dueDate: task.dueDate, assignee: task.assignee, priority: task.priority }] };
