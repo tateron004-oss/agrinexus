@@ -61,12 +61,18 @@ function formatMoney(amount, currency = "") {
   return /^[$€£₦]$/.test(currency) ? `${currency}${shown}` : `${currency} ${shown}`;
 }
 
-// "at 45 per kg", "@ KSh 45/kg", "for 40 a kg" -> { amount, currency, per: "kg" }
+// "at 45 per kg", "@ KSh 45/kg", "for 40 a kg" -> { amount, currency, per: "kg", spokenAmount }
+// Weights and volumes are stored in kg and litres, so a price must be stated in the same unit: "40000 per tonne" is 40 per kg (a tonne is 1000 kg),
+// "2 per gram" is 2000 per kg. Found live: the unit was converted but the price was not, so 40000 per tonne was stored as 40000 per kg and every
+// total built on it (the board, orders, sales) came out 1000 times too big. `spokenAmount` is the number as it was actually said, which callers use
+// to tell "the money number is just the per-unit price echoed back" apart from a separately stated total.
 function parsePricePer(text) {
   const m = new RegExp(`(?:at|@|for|costing|price)\\s*(?:of )?(?:(${CURRENCY_WORD}|[$€£₦])\\s*)?${AMOUNT}\\s*(${CURRENCY_WORD})?\\s*(?:per|a|each|/|the)\\s*(${UNIT_WORDS})\\b`, "i").exec(clean(text));
   if (!m) return null;
   const entry = UNIT_TABLE.find(([pattern]) => pattern.test(m[4].toLowerCase()));
-  return { amount: round(num(m[2])), currency: currencyOf(m[1] || m[3]), per: entry ? entry[1] : m[4].toLowerCase() };
+  const spokenAmount = round(num(m[2]));
+  const factor = entry ? entry[2] : 1;
+  return { amount: factor === 1 ? spokenAmount : round(num(m[2]) / factor, 4), currency: currencyOf(m[1] || m[3]), per: entry ? entry[1] : m[4].toLowerCase(), spokenAmount };
 }
 
 // The first day named in the text (future or past words alike), or null.
