@@ -84,6 +84,20 @@ async function resolveBusinessClient(businessRequest, command = "") {
   return { clients, client: clients[0] };
 }
 
+// A time of day or day word, as in "on Saturdays", "at 3pm", "tomorrow", "next week".
+const NAME_STOP_TIME = "(?:tomorrow|today|tonight|saturdays?|sundays?|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|next|this|every|noon|\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)\\b|\\d{1,2}:\\d{2})";
+// The name is only the person's name, not the rest of the sentence ("Amina Wanjiru phone 0712345678", "Amina Wanjiru and she buys maize",
+// "John Otieno from Kisumu", "Peter Kamau on Saturdays"). It stops at the first word that is clearly not part of a name; at most five words.
+// "and" only ends the name when a lowercase word follows ("Hope and Light Foundation" is one name).
+const NAME_STOP_WORDS = new RegExp("\\s+(?:(?:phone|mobile|cell|email|e-mail|contact|number|who|whose|from|lives?|living|works?|she|he|they|that|which|because|is|was|has|had|owes?|pays?|paid|buys?|sells?|wants?|needs?|comes?|asked?)\\b|(?:on|at|by)\\s+" + NAME_STOP_TIME + ")", "i");
+const NAME_STOP_AND = /\s+and\s+(?=[a-z])/;
+function personNameOnly(raw = "") {
+  let text = String(raw || "").trim();
+  const cuts = [text.search(NAME_STOP_WORDS), text.search(NAME_STOP_AND)].filter(index => index > 0);
+  if (cuts.length) text = text.slice(0, Math.min(...cuts));
+  return text.split(/\s+/).slice(0, 5).join(" ").replace(/[\s.,;:-]+$/, "").trim();
+}
+
 function extractLeadArgs(command = "", args = {}) {
   const text = String(command || "");
   const nameMatch = text.match(/\b(?:named|called)\s+["']?([^"'.,\n]{2,80})["']?/i)
@@ -97,7 +111,7 @@ function extractLeadArgs(command = "", args = {}) {
   const contactMatch = text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   return {
-    name: sanitizeText(args.name || (nameMatch ? nameMatch[1].trim() : ""), 160),
+    name: sanitizeText(args.name || (nameMatch ? personNameOnly(nameMatch[1]) : ""), 160),
     type: sanitizeText(args.type || (typeMatch ? typeMatch[1].toLowerCase() : "customer"), 40),
     contact: sanitizeText(args.contact || (contactMatch ? contactMatch[1].trim() : ""), 160)
   };
@@ -118,7 +132,7 @@ function extractIntakeArgs(command = "", args = {}) {
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   const needMatch = text.match(/\b(?:needs?|regarding|about)\s+([^"'\n.]{3,300})(?:[.?!]|$)/i);
   return {
-    name: sanitizeText(args.name || (nameMatch ? nameMatch[1].trim() : ""), 160),
+    name: sanitizeText(args.name || (nameMatch ? personNameOnly(nameMatch[1]) : ""), 160),
     contact: sanitizeText(args.contact || (contactMatch ? contactMatch[1].trim() : ""), 160),
     need: sanitizeText(args.need || (needMatch ? needMatch[1].trim() : ""), 300)
   };
@@ -447,8 +461,32 @@ function resolveTask(tasks, command = "") {
   return longestMatches.length === 1 ? longestMatches[0] : null;
 }
 
+// "Add a showing at 12 Moi Avenue tomorrow at 3pm": a showing (viewing, site visit) is an appointment at a property, not a new property listing.
+// The title is the kind plus the place; the time words, if any, are kept apart as the start.
+const SHOWING_WORD = /\b(showing|viewing|site visit)\b/i;
+const START_TIME_TOKEN = new RegExp("(?:\\s+(?:on|at|by))?\\s+(?=" + NAME_STOP_TIME + "\\b)", "i");
+function extractShowingArgs(text) {
+  const m = SHOWING_WORD.exec(text);
+  if (!m) return null;
+  const kind = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+  let rest = text.slice(m.index + m[0].length).replace(/[.!?]+$/, "").trim();
+  let preposition = "at";
+  const lead = /^(at|of|for)\s+/i.exec(rest);
+  if (lead) { preposition = lead[1].toLowerCase(); rest = rest.slice(lead[0].length); }
+  let start = "";
+  const padded = " " + rest;
+  const time = START_TIME_TOKEN.exec(padded);
+  if (time) { start = padded.slice(time.index + time[0].length).trim(); rest = padded.slice(0, time.index).trim(); }
+  return { title: rest ? kind + " " + preposition + " " + rest : kind, start };
+}
+// "on Friday", "tomorrow at 3pm", "at 3pm": the little word that goes before the start, if any.
+const startPhraseFor = start => (!start ? "" : /^(?:tomorrow|today|tonight|next|this|every|noon|at |on )/i.test(start) ? " " + start : /^\d{1,2}(?::\d{2})?\s?(?:am|pm)\b|^\d{1,2}:\d{2}/i.test(start) ? " at " + start : " on " + start);
+
 function extractAppointmentArgs(command = "", args = {}) {
   const text = String(command || "");
+  // Said with the word "appointment", the existing reading below applies unchanged.
+  const showing = !/\bappointment\b/i.test(text) ? extractShowingArgs(text) : null;
+  if (showing) return { title: sanitizeText(args.title || showing.title, 200), start: sanitizeText(args.start || showing.start, 60) };
   const titleMatch = text.match(/\bappointment\s+(?:for|with|called|named|titled)\s+["']?(.+?)["']?(?=\s+(?:on|at)\s+|[,.]|$)/i)
     || text.match(/\b(?:called|named|titled)\s+["']?(.+?)["']?(?=\s+(?:on|at)\s+|[,.]|$)/i);
   const startMatch = text.match(/\b(?:on|at)\s+([^"'.,\n]{3,60})$/i);
@@ -493,7 +531,7 @@ function extractListingArgs(command = "", args = {}) {
   // "123 Main St", "456 Oak Avenue, Nairobi" -- a street number followed by
   // words, stopping before a price/status/bed-bath clause rather than
   // swallowing the rest of the sentence.
-  const addressMatch = text.match(/\b(\d{1,6}\s+[A-Za-z0-9][A-Za-z0-9 .,'-]{2,80}?)(?=\s+(?:for|at|priced|listed|status|with|is|as)\b|[,.]|$)/i);
+  const addressMatch = text.match(/\b(\d{1,6}\s+[A-Za-z0-9][A-Za-z0-9 .,'-]{2,80}?)(?=\s+(?:for|at|priced|listed|status|with|is|as|on|by|tomorrow|today|tonight|next|this)\b|[,.]|$)/i);
   // "dollars" (no $ sign, no k/K suffix) added: "List 789 Pine Rd for
   // 450,000 dollars" previously matched nothing at all and silently saved
   // the listing with price: 0, with no error or clarification shown.
@@ -730,7 +768,7 @@ function classify(command = "") {
     || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
-  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/i.test(command);
+  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/i.test(command) && !/\b(?:appointment|showing|viewing|site visit)\b/i.test(command);
   // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
   const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
@@ -746,7 +784,7 @@ function classify(command = "") {
   const wantsAddTask = /\b(?:add|create|new)\b/i.test(command) && /\btask\b/i.test(command);
   const wantsUpdateTaskStatus = !wantsAddTask && /\b(?:mark|update|set|change|complete|finish)\b/i.test(command) && /\btask\b/i.test(command);
   const wantsSyncAppointment = /\bsync\b/i.test(command) && /\b(appointment|calendar)\b/i.test(command);
-  const wantsAddAppointment = !wantsSyncAppointment && /\b(?:add|schedule|create|book|new)\b/i.test(command) && /\bappointment\b/i.test(command);
+  const wantsAddAppointment = !wantsSyncAppointment && /\b(?:add|schedule|create|book|arrange|set up|new)\b/i.test(command) && (/\bappointment\b/i.test(command) || /\b(?:showing|viewing|site visit)\b/i.test(command));
   // Core-essentials real estate support: property listings. "list a
   // property"/"add a listing" is a creation verb here, distinct from
   // wantsList's read-only "list my businesses" (a different noun entirely,
@@ -1168,7 +1206,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding appointments.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
-    const startPhrase = appointment.start ? ` on ${appointment.start}` : "";
+    const startPhrase = startPhraseFor(appointment.start);
     // Found live: nothing checked a new appointment's time against existing
     // ones -- two showings for the same property could be booked for the
     // identical slot with zero warning. This tool never books a real
