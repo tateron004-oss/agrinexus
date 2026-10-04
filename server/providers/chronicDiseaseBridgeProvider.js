@@ -15,6 +15,7 @@ const {
 
 const { blockedResponse } = require("./providerUtils");
 const { assessBloodPressure, invalidReadingReply } = require("./bloodPressure");
+const { resolveGlucose, invalidGlucoseReply, ambiguousUnitReply } = require("./bloodGlucose");
 
 const PROVIDER = "nexus-chronic-disease-bridge";
 const FLAG = "NEXUS_CHRONIC_DISEASE_BRIDGE_ENABLED";
@@ -126,6 +127,14 @@ function reading(body = {}, db, env = process.env) {
   if (hasPressure) {
     const assessment = assessBloodPressure(body.systolic, body.diastolic);
     if (!assessment.valid) return blockedResponse(PROVIDER, action, invalidReadingReply(body.systolic ?? "?", body.diastolic ?? "?"), { invalidReading: true, reason: assessment.reason });
+  }
+  // A blood-sugar reading must be a possible number in a known unit (mg/dL or mmol/L). "5000" is not a reading, and "35" could be either unit, so it is not guessed.
+  const glucoseGiven = body.glucose ?? body.bloodGlucose;
+  if (glucoseGiven !== null && glucoseGiven !== undefined && glucoseGiven !== "") {
+    const resolved = resolveGlucose(glucoseGiven, body.glucoseUnit);
+    if (resolved.ambiguous) return blockedResponse(PROVIDER, action, ambiguousUnitReply(resolved.value), { ambiguousUnit: true, value: resolved.value });
+    if (resolved.invalid) return blockedResponse(PROVIDER, action, invalidGlucoseReply(glucoseGiven), { invalidReading: true, reason: "glucose-out-of-range" });
+    body = { ...body, glucoseUnit: resolved.unit };
   }
   const record = saveRecord(db, READINGS, normalizeReading(body), 200);
   return response(PROVIDER, action, "completed", "Chronic disease reading saved locally for trend review. No diagnosis or medication advice was generated.", { reading: record });
