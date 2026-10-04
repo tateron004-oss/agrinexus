@@ -50320,6 +50320,104 @@ function injectKyroRealtimeContext(text) {
   sendKyroRealtimeEvent({ type: "conversation.item.create", item: { type: "message", role: "system", content: [{ type: "input_text", text: String(text || "").slice(0, 600) }] } });
 }
 
+// "Privacy & data": download a copy of your data, or permanently delete your account. This used to be a browser OK/Cancel box where OK
+// meant DELETE and Cancel meant EXPORT -- the opposite of what a person expects those buttons to do (and what a screen reader reads out).
+// It is now a real screen with plainly labelled buttons. Deleting still needs the person to type DELETE after pressing the delete button.
+function openPrivacyDataDialog() {
+  if (document.getElementById("privacyDataDialog")) return;
+  if (!document.getElementById("privacy-data-dialog-styles")) {
+    const style = document.createElement("style");
+    style.id = "privacy-data-dialog-styles";
+    style.textContent = `
+      .pd-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(2,12,24,.82);display:grid;place-items:center;padding:16px;font-family:inherit}
+      .pd-card{width:min(520px,100%);max-height:92vh;overflow:auto;background:#fff;color:#0b2530;border-radius:20px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+      .pd-card h2{margin:0 0 8px;font-size:1.5rem}
+      .pd-card p{margin:0 0 14px;font-size:1.05rem;line-height:1.45}
+      .pd-btn{display:block;width:100%;min-height:56px;margin:0 0 10px;padding:12px 16px;border:0;border-radius:14px;font-size:1.1rem;font-weight:700;cursor:pointer}
+      .pd-btn:focus-visible{outline:4px solid #f5b800;outline-offset:2px}
+      .pd-btn[disabled]{opacity:.45;cursor:not-allowed}
+      .pd-safe{background:#0b5d73;color:#fff}
+      .pd-danger{background:#a62b2b;color:#fff}
+      .pd-plain{background:#e4edf0;color:#0b2530}
+      .pd-erase{border:2px solid #a62b2b;border-radius:14px;padding:14px;margin:10px 0 0}
+      .pd-erase input{width:100%;box-sizing:border-box;min-height:52px;font-size:1.2rem;padding:8px 12px;margin:6px 0 12px;border:2px solid #5a7580;border-radius:10px;background:#fff;color:#0b2530}
+      .pd-status{min-height:1.4em;margin:6px 0 0;font-size:1rem}
+      .pd-status a{color:#0b5d73;font-weight:700}
+    `;
+    document.head.appendChild(style);
+  }
+  const overlay = document.createElement("div");
+  overlay.id = "privacyDataDialog";
+  overlay.className = "pd-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-labelledby", "privacyDataTitle");
+  overlay.innerHTML = `
+    <div class="pd-card">
+      <h2 id="privacyDataTitle">${escapeHtml(translateText("Your data"))}</h2>
+      <p>${escapeHtml(translateText("You can download a copy of everything you have saved here, or delete your account."))}</p>
+      <button type="button" class="pd-btn pd-safe" data-pd="export">${escapeHtml(translateText("Download a copy of my data"))}</button>
+      <p style="font-size:.95rem">${escapeHtml(translateText("This is safe. Nothing is deleted."))}</p>
+      <button type="button" class="pd-btn pd-danger" data-pd="erase-start">${escapeHtml(translateText("Delete my account and data"))}</button>
+      <div class="pd-erase" data-pd-erase hidden>
+        <p><strong>${escapeHtml(translateText("This cannot be undone."))}</strong> ${escapeHtml(translateText("Your account, your records, your uploaded files and your login will be permanently deleted."))}</p>
+        <label for="privacyDataConfirm">${escapeHtml(translateText("To confirm, type the word DELETE"))}</label>
+        <input id="privacyDataConfirm" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button type="button" class="pd-btn pd-danger" data-pd="erase-confirm" disabled>${escapeHtml(translateText("Yes, permanently delete everything"))}</button>
+        <button type="button" class="pd-btn pd-plain" data-pd="erase-cancel">${escapeHtml(translateText("No, keep my account"))}</button>
+      </div>
+      <button type="button" class="pd-btn pd-plain" data-pd="close">${escapeHtml(translateText("Close"))}</button>
+      <div class="pd-status" role="status" aria-live="polite" data-pd-status></div>
+    </div>`;
+  const previousFocus = document.activeElement;
+  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey, true); try { previousFocus?.focus?.(); } catch {} };
+  const onKey = event => { if (event.key === "Escape") { event.stopPropagation(); close(); } };
+  const status = overlay.querySelector("[data-pd-status]");
+  const erasePanel = overlay.querySelector("[data-pd-erase]");
+  const confirmInput = overlay.querySelector("#privacyDataConfirm");
+  const confirmBtn = overlay.querySelector('[data-pd="erase-confirm"]');
+  const setStatus = text => { status.textContent = text; };
+  confirmInput.addEventListener("input", () => { confirmBtn.disabled = confirmInput.value.trim().toUpperCase() !== "DELETE"; });
+  overlay.addEventListener("click", async event => {
+    if (event.target === overlay) { close(); return; }
+    const action = event.target.closest?.("[data-pd]")?.dataset.pd;
+    if (!action) return;
+    if (action === "close") { close(); return; }
+    if (action === "erase-start") { erasePanel.hidden = false; confirmInput.focus(); return; }
+    if (action === "erase-cancel") { erasePanel.hidden = true; confirmInput.value = ""; confirmBtn.disabled = true; setStatus(translateText("Okay. Your account was not deleted.")); return; }
+    if (action === "export") {
+      setStatus(translateText("Preparing your data..."));
+      try {
+        const result = await request("/api/account/export", { method: "POST" });
+        const records = Object.values(result.recordCounts || {}).reduce((a, b) => a + b, 0);
+        // Only a path on this site is ever linked.
+        const downloadPath = /^\/[^/\\]/.test(String(result.downloadPath || "")) ? String(result.downloadPath) : "";
+        status.innerHTML = `${escapeHtml(translateText("Your data is ready:"))} ${records} ${escapeHtml(translateText("records,"))} ${Number(result.uploadedFileCount || 0)} ${escapeHtml(translateText("files."))} ${downloadPath ? `<a href="${escapeHtml(downloadPath)}" target="_blank" rel="noopener">${escapeHtml(translateText("Open my download"))}</a>` : ""}`;
+      } catch (error) {
+        setStatus(error.message || translateText("Could not create your data export."));
+      }
+      return;
+    }
+    if (action === "erase-confirm") {
+      // The button is only enabled once DELETE is typed, but check again: a disabled button can be re-enabled from the console.
+      if (confirmInput.value.trim().toUpperCase() !== "DELETE") { setStatus(translateText("Type the word DELETE first.")); return; }
+      confirmBtn.disabled = true;
+      setStatus(translateText("Deleting..."));
+      try {
+        await request("/api/account/erase", { method: "POST", body: { confirmed: true } });
+        toast(translateText("Your account and data have been erased."));
+        location.reload();
+      } catch (error) {
+        confirmBtn.disabled = false;
+        setStatus(error.message || translateText("Could not erase your account."));
+      }
+    }
+  });
+  document.addEventListener("keydown", onKey, true);
+  document.body.appendChild(overlay);
+  overlay.querySelector('[data-pd="export"]').focus();
+}
+
 function ensureKyroVoiceIntakeStyles() {
   if (document.getElementById("kyro-voice-intake-styles")) return;
   const style = document.createElement("style");
@@ -62570,35 +62668,7 @@ function bindStatic() {
   // server's own confirmed:true gate, not just one click.
   const privacyDataBtn = $("#privacyDataBtn");
   if (privacyDataBtn) {
-    privacyDataBtn.onclick = async () => {
-      const wantsErase = window.confirm(
-        "Privacy & data for your AgriNexus account.\n\n" +
-        "Click OK to permanently DELETE your account and your data (communications, buyer contacts, drone missions, and other records you created; uploaded files; your login).\n" +
-        "Click Cancel to instead EXPORT a copy of that same data."
-      );
-      if (!wantsErase) {
-        try {
-          const result = await request("/api/account/export", { method: "POST" });
-          window.open(result.downloadPath, "_blank", "noopener");
-          toast(`Export ready: ${Object.values(result.recordCounts || {}).reduce((a, b) => a + b, 0)} record(s), ${result.uploadedFileCount || 0} file(s).`);
-        } catch (error) {
-          toast(error.message || "Could not create your data export.");
-        }
-        return;
-      }
-      const typed = window.prompt('This cannot be undone. Type "DELETE" to permanently erase your account and data.');
-      if (typed !== "DELETE") {
-        toast("Account erasure cancelled.");
-        return;
-      }
-      try {
-        await request("/api/account/erase", { method: "POST", body: { confirmed: true } });
-        toast("Your account and data have been erased.");
-        location.reload();
-      } catch (error) {
-        toast(error.message || "Could not erase your account.");
-      }
-    };
+    privacyDataBtn.onclick = () => openPrivacyDataDialog();
   }
 
   $("#countrySelect").onchange = async event => {
