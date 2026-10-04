@@ -2,6 +2,7 @@
 
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { addDays, weekdayOf } = require("../personal/dates.js");
+const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 
 // Shared classify+extract+execute logic for business/nonprofit voice and
 // typed commands (add a customer/donor, log an expense, create an invoice,
@@ -163,6 +164,9 @@ function currencyIn(text) {
 }
 // An amount written next to its currency: "$50", "KES 6,000", "6000 shillings". Null when there is none.
 function amountWithCurrency(text) {
+  // What was SAID: "two thousand shillings" -> "2000 shillings", "2 million shillings" -> "2000000 shillings" (nexus/i18n/spoken-input.js).
+  // Read from a copy, so names and notes keep the words that were used.
+  text = normalizeSpokenText(String(text || ""));
   const adjacent = new RegExp(`(?:(?<![a-z])(?:${ANY_CURRENCY})\\s?(${NUMBER}))|(?:(${NUMBER})\\s?(?:${ANY_CURRENCY})(?![a-z]))`, "i").exec(text);
   const raw = adjacent && (adjacent[1] || adjacent[2]);
   return raw ? { amount: Number(raw.replace(/,/g, "")), currency: currencyIn(adjacent[0]) } : null;
@@ -174,7 +178,7 @@ function formatMoney(currency, amount) {
 function extractTransactionArgs(command = "", args = {}) {
   const text = String(command || "");
   const withCurrency = amountWithCurrency(text);
-  const bare = withCurrency ? null : new RegExp(`\\b(?:of|for|worth)\\s+(${NUMBER})`, "i").exec(text);
+  const bare = withCurrency ? null : new RegExp(`\\b(?:of|for|worth)\\s+(${NUMBER})`, "i").exec(normalizeSpokenText(text));
   const rawAmount = args.amount !== undefined ? Number(args.amount) : withCurrency ? withCurrency.amount : bare ? Number(bare[1].replace(/,/g, "")) : NaN;
   const currency = String(args.currency || withCurrency?.currency || "").toUpperCase().slice(0, 3);
   // Found live: bare "paid" was an unconditional expense signal, checked
@@ -298,7 +302,8 @@ function extractInvoiceArgs(command = "", args = {}) {
 }
 
 function extractInvoiceItemArgs(command = "", args = {}) {
-  const text = String(command || "");
+  // "five bags of maize at five hundred shillings each" -> "5 bags of maize at 500 shillings each"
+  const text = normalizeSpokenText(String(command || ""));
   const invoiceMatch = text.match(/\b(INV-\d+)\b/i);
   let body = text;
   const colonIndex = text.lastIndexOf(":");
@@ -479,9 +484,11 @@ function extractListingArgs(command = "", args = {}) {
   // "dollars" (no $ sign, no k/K suffix) added: "List 789 Pine Rd for
   // 450,000 dollars" previously matched nothing at all and silently saved
   // the listing with price: 0, with no error or clarification shown.
-  const priceMatch = text.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/)
-    || text.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/)
-    || text.match(/\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s+dollars?\b/i);
+  // Read from a copy with spoken amounts as digits ("two million dollars" -> "2000000 dollars"); the address above keeps its own words.
+  const priceText = normalizeSpokenText(text);
+  const priceMatch = priceText.match(/\$\s?(\d+(?:,\d{3})*(?:\.\d{1,2})?)(?:\s?[kK]\b)?/)
+    || priceText.match(/\b(\d+(?:,\d{3})*)\s?[kK]\b/)
+    || priceText.match(/\b(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s+dollars?\b/i);
   // Found live (real-estate/GPS follow-up audit): only $/k-suffix/"dollars"
   // prices were recognized at all -- a listing priced in any of this app's
   // own primary-market local currencies (KES, UGX, NGN, etc., the exact

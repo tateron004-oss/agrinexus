@@ -122,10 +122,21 @@ function stripTrailingPunctuation(text) {
   return String(text ?? "").replace(/\s+/g, " ").trim().replace(/[.!,;:]+$/g, "").trim();
 }
 
+// "2 million", "2.5 million", "3 thousand", "1.2 billion" -> 2000000, 2500000, 3000, 1200000000. Without this, "Record income of 2 million shillings" was read as
+// an income of 2 (a million times too small) and "3 thousand shillings" as 3, saved silently. Only the WORDS thousand/million/billion are expanded:
+// a bare "k" or "m" could be kilometres, metres or a 5k run.
+const MAGNITUDES = { thousand: 1e3, million: 1e6, billion: 1e9 };
+function expandMagnitudes(text) {
+  return String(text ?? "").replace(/(\d[\d,]*(?:\.\d+)?)\s*(thousand|million|billion)\b/gi, (whole, digits, word) => {
+    const value = Number(digits.replace(/,/g, "")) * MAGNITUDES[word.toLowerCase()];
+    return Number.isFinite(value) ? String(Math.round(value * 100) / 100) : whole;
+  });
+}
+
 function normalizeSpokenText(text) {
   const raw = String(text ?? "");
   if (!raw.trim()) return raw;
-  return stripTrailingPunctuation(convertNumberWords(raw));
+  return stripTrailingPunctuation(expandMagnitudes(convertNumberWords(raw)));
 }
 
-module.exports = Object.freeze({ normalizeSpokenText, convertNumberWords, stripTrailingPunctuation });
+module.exports = Object.freeze({ normalizeSpokenText, convertNumberWords, stripTrailingPunctuation, expandMagnitudes });

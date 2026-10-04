@@ -1,7 +1,7 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { normalizeSpokenText, convertNumberWords, stripTrailingPunctuation } = require("../../nexus/i18n/spoken-input.js");
+const { normalizeSpokenText, convertNumberWords, stripTrailingPunctuation, expandMagnitudes } = require("../../nexus/i18n/spoken-input.js");
 
 // A transcript is not typed text: short replies end with a full stop ("Yes.", "Skip.") and amounts come as words ("forty kilos"). Every matcher in
 // the toolkits is written for "yes" and "40 kilos", so spoken input was missed (or, for "Skip.", saved as the answer).
@@ -50,4 +50,12 @@ test("trailing sentence punctuation is removed, a question mark is kept", () => 
   assert.equal(normalizeSpokenText("How many bags do I have?"), "How many bags do I have?");
   assert.equal(normalizeSpokenText(""), "");
   assert.equal(normalizeSpokenText("   "), "   ");
+});
+
+test("'2 million' / '3 thousand' are expanded (they were read as 2 and 3, a million / a thousand times too small)", () => {
+  for (const [input, expected] of [["2 million shillings", "2000000 shillings"], ["2.5 million", "2500000"], ["3 thousand shillings", "3000 shillings"], ["1,500 thousand", "1500000"], ["1.2 billion", "1200000000"], ["10 Million", "10000000"], ["a 5k run", "a 5k run"], ["5 km", "5 km"], ["20 m of rope", "20 m of rope"], ["2 millions", "2 millions"]]) {
+    assert.equal(expandMagnitudes(input), expected, input);
+  }
+  assert.equal(normalizeSpokenText("Record income of two million shillings."), "Record income of 2000000 shillings");
+  assert.equal(normalizeSpokenText("Spent three thousand five hundred on fuel"), "Spent 3500 on fuel");
 });
