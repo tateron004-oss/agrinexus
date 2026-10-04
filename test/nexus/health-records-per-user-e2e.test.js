@@ -91,7 +91,9 @@ test("account export includes the person's own records (and not anyone else's); 
   const payload = JSON.parse((await file.json()).content);
   const exportedReadings = payload.profileRecords.nexusChronicDiseaseReadings || [];
   assert.equal(exportedReadings.some(r => r.systolic === 111), true, "own reading is in the export");
-  assert.equal(JSON.stringify(payload).includes("151"), false, "the other person's reading must not be in the export");
+  // Check the records, not the text: a bare "151" also appears inside every record id (they contain the current time in milliseconds).
+  const everyHealthRecord = Object.values(payload.profileRecords).filter(Array.isArray).flat();
+  assert.equal(everyHealthRecord.some(record => record && record.systolic === 151), false, "the other person's reading must not be in the export");
   assert.equal(JSON.stringify(payload).includes("admin-only headache note"), false);
 
   const erased = await call("POST", "/api/account/erase", userCookie, { confirmed: true });

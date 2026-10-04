@@ -125,3 +125,27 @@ test("redactPhoneNumber never logs the full number, so an audit-log line can't l
   assert.notEqual(redacted, "+15551234567", "the full number must not appear verbatim");
   assert.match(redacted, /\*/, "a redacted number should contain masking characters");
 });
+
+// Found while working out how real users get onto the phone service: a number listed WITH an email whose account does not exist -- a typo in the list, or a person who
+// deleted their account -- fell through to the bare-number rule and was handed the ADMIN account. The number is the only thing a phone caller proves, so it must fail closed.
+test("a number listed with an email whose account does not exist gets NO identity (never the owner's)", () => {
+  const { resolveAuthorizedPhoneCaller } = loadAuthorization();
+  const env = { TWILIO_AUTHORIZED_CALLERS: "+15551234567:typo@agrinexus.org,+15559876543:staff@agrinexus.org" };
+  assert.equal(resolveAuthorizedPhoneCaller(fixtureDb(), { From: "+15551234567" }, env), null, "an unknown email must not become the Admin account");
+  assert.equal(resolveAuthorizedPhoneCaller(fixtureDb(), { From: "+15559876543" }, env)?.id, "u_staff", "the other entry is unaffected");
+});
+
+test("after a person deletes their account, their phone number stops working instead of reaching the owner's account", () => {
+  const { resolveAuthorizedPhoneCaller } = loadAuthorization();
+  const env = { TWILIO_AUTHORIZED_CALLERS: "+15559876543:staff@agrinexus.org" };
+  const before = fixtureDb();
+  assert.equal(resolveAuthorizedPhoneCaller(before, { From: "+15559876543" }, env)?.id, "u_staff");
+  const afterErase = { users: before.users.filter(user => user.email !== "staff@agrinexus.org") };
+  assert.equal(resolveAuthorizedPhoneCaller(afterErase, { From: "+15559876543" }, env), null);
+});
+
+test("the email in the list is matched ignoring case and spaces, and a bare number still means the owner", () => {
+  const { resolveAuthorizedPhoneCaller } = loadAuthorization();
+  assert.equal(resolveAuthorizedPhoneCaller(fixtureDb(), { From: "+15559876543" }, { TWILIO_AUTHORIZED_CALLERS: " +15559876543 : STAFF@AgriNexus.org " })?.id, "u_staff");
+  assert.equal(resolveAuthorizedPhoneCaller(fixtureDb(), { From: "+15551234567" }, { TWILIO_AUTHORIZED_CALLERS: "+15551234567" })?.id, "u_admin");
+});
