@@ -56759,6 +56759,40 @@ function renderNexusAuthoritativeDocument(outcome = {}) {
   return surface;
 }
 
+// A finished resume (resume.create). It belongs to the workforce workspace, which otherwise shows the generic data card, so this is
+// what gives the person the resume in plain words and the Download button. The saved file is the PDF; the text shown is read-only.
+function renderNexusAuthoritativeResume(outcome = {}) {
+  const data = outcome.data || {};
+  const host = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
+  if (!host) return null;
+  host.querySelector('[data-nexus-authoritative-outcome="true"]')?.remove();
+  const surface = document.createElement("section");
+  surface.dataset.nexusAuthoritativeOutcome = "true";
+  surface.dataset.nexusResume = "true";
+  surface.dataset.commandId = outcome.commandId;
+  surface.dataset.correlationId = outcome.correlationId;
+  surface.dataset.workspace = outcome.workspace;
+  surface.dataset.documentId = String(data.documentId);
+  surface.setAttribute("aria-label", "Your resume");
+  const heading = document.createElement("strong");
+  heading.textContent = data.alreadySaved ? "Your resume is ready (it was already saved, so no second copy was made)." : "Your resume is ready.";
+  const text = document.createElement("pre");
+  text.dataset.nexusResumeText = "true";
+  text.style.whiteSpace = "pre-wrap";
+  text.textContent = String(data.resumeText || "");
+  const status = document.createElement("p");
+  status.dataset.nexusDocumentStatus = "true";
+  status.textContent = "Press Download to keep it as a PDF file on this phone.";
+  const downloadButton = document.createElement("button");
+  downloadButton.type = "button";
+  downloadButton.dataset.nexusDocumentDownload = "true";
+  downloadButton.textContent = "Download";
+  downloadButton.addEventListener("click", () => downloadNexusAuthoritativeDocument(data.documentId, status));
+  surface.append(heading, text, status, downloadButton);
+  host.prepend(surface);
+  return surface;
+}
+
 function nexusMapOutcomeVerified(outcome = {}, data = {}) {
   const canvas = document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas");
   if (!canvas || !userMap) return false;
@@ -57040,6 +57074,8 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       ? document.querySelector('[data-nexus-provider-audio="true"], [data-nexus-youtube-player="true"] iframe')
     : presentation.kind === "document"
       ? renderNexusAuthoritativeDocument(outcome)
+      : outcome.data?.resume === true && nexusDocumentLifecycleComplete(outcome.data)
+        ? renderNexusAuthoritativeResume(outcome)
       : presentation.kind === "image-gallery"
         ? await renderNexusAuthoritativeImages(outcome)
       : presentation.kind === "video-gallery"

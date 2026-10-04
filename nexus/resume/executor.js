@@ -3,6 +3,7 @@
 const { buildResume } = require("./build.js");
 const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome } = require("../documents/executor.js");
 const { isFact } = require("../memory/profile-facts.js");
+const crypto = require("node:crypto");
 
 // Real executor for the "resume.create" canonical tool: builds the resume text from what the person told Kyro (see build.js) and saves it
 // through the same real, owner-scoped document export that documents.create uses, so it can be downloaded and reopened later.
@@ -28,6 +29,31 @@ const list = value => String(value || "").split(/\s*,\s*|\s+and\s+/).map(item =>
 // string into one run-on item before build.js ever got a chance to split it correctly.
 const hasContent = value => Array.isArray(value) ? value.some(item => String(item || "").trim()) : typeof value === "string" ? value.trim().length > 0 : false;
 
+// The same answers saved again within this long (a retry after a dropped connection, or "make my resume" said twice) give back the
+// resume that was already saved instead of a second copy.
+const SAME_RESUME_WINDOW_MS = 15 * 60 * 1000;
+const SECTION_NAME = /^(?:SUMMARY|SKILLS|EXPERIENCE|EDUCATION|LANGUAGES)$/;
+
+// The saved file is a PDF, which opens on any phone. The person's name is already the document title, so it is not repeated in the body,
+// and the section names get the heading style the PDF renderer understands.
+function fileBody(resume) {
+  return resume.text.split("\n").slice(1).map(line => (SECTION_NAME.test(line) ? `## ${line}` : line)).join("\n").trim();
+}
+
+async function alreadySaved(documents, context, fingerprint, now) {
+  if (!documents?.list || !documents?.get || !context?.tenantId || !context?.userId) return null;
+  try {
+    const rows = await documents.list({ tenantId: context.tenantId, ownerId: context.userId, limit: 20 });
+    const row = rows.find(item => item?.metadata?.fingerprint === fingerprint && now - new Date(item.created_at || item.updated_at || 0).getTime() < SAME_RESUME_WINDOW_MS);
+    if (!row?.metadata?.exportId) return null;
+    const reopened = await documents.get({ tenantId: context.tenantId, ownerId: context.userId, documentId: row.document_id });
+    if (!reopened || reopened.document_id !== row.document_id) return null;
+    return { ok: true, status: "completed", message: "This resume was already saved a moment ago, so it was not saved a second time.",
+      data: { exportId: row.metadata.exportId, filename: row.metadata.filename, format: row.document_type, bytes: Number(row.metadata.bytes) || 1 },
+      downloadPath: `/api/nexus/runtime/documents/${row.document_id}`, documentId: row.document_id, savedVersion: Number(reopened.version) || 1, reopenVerified: true, alreadySaved: true };
+  } catch { return null; }
+}
+
 function createResumeCreateExecutor({ env = process.env, documents = null, memory = null } = {}) {
   const saveDocument = createDocumentsCreateExecutor({ env, documents });
   return async function execute({ input = {}, context, taskId, stepId, idempotencyKey }) {
@@ -37,7 +63,9 @@ function createResumeCreateExecutor({ env = process.env, documents = null, memor
     const resume = buildResume({ name: input.name || known.name, phone: input.phone, email: input.email, location: input.location || known.location,
       skills: hasContent(input.skills) ? input.skills : grown, experience: input.experience, education: input.education,
       languages: hasContent(input.languages) ? input.languages : list(known.language) });
-    const saved = await saveDocument({ input: { title: `Resume - ${resume.name}`, content: resume.text, format: "txt" }, context, taskId, stepId, idempotencyKey });
+    const fingerprint = `resume:${crypto.createHash("sha256").update(`${context?.userId || ""}\n${resume.text}`).digest("hex").slice(0, 32)}`;
+    const saved = await alreadySaved(documents, context, fingerprint, Date.now())
+      || await saveDocument({ input: { title: `Resume - ${resume.name}`, content: fileBody(resume), format: "pdf", fingerprint }, context, taskId, stepId, idempotencyKey });
     return { ...saved, resume: true, resumeName: resume.name, resumeText: resume.text, sections: Object.fromEntries(Object.entries(resume.sections).map(([key, items]) => [key, items.length])) };
   };
 }

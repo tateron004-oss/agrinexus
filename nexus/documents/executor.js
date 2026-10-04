@@ -81,7 +81,9 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
         const bytes = require("node:fs").readFileSync(data.localPath);
         const checksum = crypto.createHash("sha256").update(bytes).digest("hex");
         const document = await documents.create({ tenantId: context.tenantId, ownerId: context.userId,
-          taskId, title: body.title, documentType: body.format, metadata: { exportId: data.exportId, filename: data.filename } });
+          taskId, title: body.title, documentType: body.format,
+          // fingerprint: an optional short label a caller can use to recognise "this exact thing was already saved" (see nexus/resume/executor.js).
+          metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
         const version = await documents.addVersion({ documentId: document.document_id, tenantId: context.tenantId,
           content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath },
           objectKey: `local:${data.filename}`, checksum, createdBy: context.userId });
