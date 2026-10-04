@@ -3,6 +3,7 @@
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { continueGuided, expired, YES, NO } = require("../farmwork/guided.js");
 const { clean } = require("../farmwork/parse.js");
+const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const profile = require("./profile.js");
 const patients = require("./patients.js");
 const visits = require("./visits.js");
@@ -45,7 +46,7 @@ async function healthWorkTurn({ text, store, tenantId, userId, now = new Date(),
   const wrapped = track(store); const open = sessionsOf(store);
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   let hasData = null;
-  const ctx = { text: clean(text), store: wrapped, tenantId, userId, now, zone, today: localDay(now, zone), roles, memory, notifications, nameOf,
+  const ctx = { text: normalizeSpokenText(clean(text)), store: wrapped, tenantId, userId, now, zone, today: localDay(now, zone), roles, memory, notifications, nameOf,
     hasHealthData: async () => { if (hasData === null) { try { hasData = (await store.listAll({ tenantId, userId, limit: 50 })).some(row => row.collection !== "audit"); } catch { hasData = false; } } return hasData; },
     // Calendar items are made by the modules with a patient number only, never a name (see visits.js).
     personal: memory?.addPersonalItem ? { add: content => memory.addPersonalItem({ tenantId, userId, content }) } : null };

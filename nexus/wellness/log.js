@@ -1,6 +1,7 @@
 "use strict";
 
 const { reportDay } = require("../farm/log.js");
+const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const { extractPeriod, addDays, describeDay } = require("../personal/dates.js");
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
@@ -145,7 +146,7 @@ async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), t
   if (!store?.addEntry || !store?.listEntries || !store?.removeEntry || !store?.setGoal || !store?.addEntryUnlessCapped) return null;
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   const today = localDay(now, zone);
-  const request = readRequest(text, today);
+  const request = readRequest(normalizeSpokenText(text), today); // what was SAID: "forty kilos" -> "40 kilos" (nexus/i18n/spoken-input.js)
   if (!request) return null;
   const scope = { tenantId, userId };
   try {

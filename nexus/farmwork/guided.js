@@ -9,9 +9,9 @@ const { normalizeRecipient } = require("../communications/send-request.js");
 // is open at most (it expires after 30 minutes), and while it is open the person's next words are answers to it, unless they ask a question
 // instead ("what is the weather?"), in which case Kyro says what it is waiting for and how to leave.
 const SESSION_MINUTES = 30;
-const SKIP_WORDS = /^(?:skip|pass|not sure|i don'?t know|dont know|none|no idea|n\/a|later)$/i;
-const YES = /^(?:yes|yeah|yep|ok|okay|sure|confirm|do it|go ahead|please do)$/i;
-const NO = /^(?:no|nope|don'?t|do not|not now)$/i;
+const SKIP_WORDS = /^(?:skip(?: it| this| that| this one| that one| please)?|pass|not sure|i don'?t know|dont know|none|no idea|n\/a|later)$/i;
+const YES = /^(?:yes|yeah|yep|yup|ok|okay|sure|confirm|do it|go ahead|please do|(?:yes|yeah|yep|ok|okay|sure)[, ]+(?:please|do it|go ahead|delete it|remove it|that'?s right|that is right))$/i;
+const NO = /^(?:no|nope|don'?t|do not|not now|no thanks|no thank you|no please don'?t|no don'?t|please don'?t|don'?t do it)$/i;
 
 const PARSERS = {
   text(raw, q) { const v = clean(raw).replace(/^["“]|["”]$/g, ""); return v && v.length <= (q.max || 80) ? { value: v } : { hint: `Please keep it short (${q.max || 80} letters at most).` }; },
