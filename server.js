@@ -55,6 +55,7 @@ const googleCloudTranslationProvider = require("./server/google-cloud-translatio
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
+const { HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
 const {
   isUsableEnvValue,
@@ -3099,8 +3100,11 @@ function knownUnownedProfileGaps(profile, db = null) {
   // bridge providers) genuinely carry no owner field of any kind -- the same
   // honest, already-accepted "no owner field exists" gap as
   // HEALTH_PROFILE_ARRAY_KEYS/orders above, just not yet disclosed here.
-  if (hasAny(["nexusPharmacyIntakes", "nexusSavedPharmacies", "nexusMedicalSupportIntakes", "nexusChronicDiseaseReadings", "nexusRpmDeviceReadings", "nexusRtmActivityEntries", "nexusMobileClinicIntakes", "nexusPatientSupportIntakes", "nexusSavedPatientSupportResources"])) {
-    gaps.push("Locally-saved pharmacy/chronic-disease/remote-monitoring preparation records have no per-account owner field today and are not included.");
+  // Readings, intakes, sessions and saved clinics/pharmacies saved through the medical bridge providers now carry their owner
+  // (server/providers/healthRecordScope.js), so a person's own are exported and erased. Only records saved BEFORE that, which have no owner,
+  // cannot be attributed to anyone and are still listed here.
+  if (HEALTH_BRIDGE_KEYS.some(key => Array.isArray(profile?.[key]) && profile[key].some(record => !record?.ownerId))) {
+    gaps.push("Medical preparation records (readings, intakes, sessions, saved clinics and pharmacies) saved before per-account ownership was recorded cannot be attributed to an account and are not included.");
   }
   if (db && NEXUS_PILOT_AUDIT_TRAIL_ARRAY_KEYS.some(key => (db[key] || []).length > 0)) {
     gaps.push("Nexus's own audit/consent/integration/routing log entries are retained as an audit/compliance trail and are not included.");
@@ -3138,8 +3142,8 @@ function knownUnownedProfileGaps(profile, db = null) {
   // provider's OWN intake/session/plan store was missed when this list was
   // built. workflowOrchestratorBridgeProvider.js's plan record is a plain
   // object literal with no owner field at all, same as the arrays above.
-  if (hasAny(["nexusDroneMissionRequests", "nexusRpmIntakes", "nexusRtmIntakes", "nexusFitnessTrainingPlans", "nexusSavedMobileClinics", "nexusWorkflowPlans", "nexusChronicDiseaseIntakes", "nexusTelehealthBridgeIntakes", "nexusTelehealthBridgeSessions"])) {
-    gaps.push("Locally-saved drone-bridge mission requests, RPM/RTM/telehealth-bridge/chronic-disease intake and session preparation records, fitness training plans, saved mobile clinics, and workflow plans have no per-account owner field today and are not included.");
+  if (hasAny(["nexusDroneMissionRequests", "nexusWorkflowPlans"])) {
+    gaps.push("Locally-saved drone-bridge mission requests and workflow plans have no per-account owner field today and are not included.");
   }
   // Found live (exhaustive follow-up sweep, same bug shape as the three
   // blocks above): every remaining db.profile array in server.js's own
@@ -22396,6 +22400,9 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // happened" shape already fixed for nexus_lists/push reminders elsewhere
     // in this dispatcher. writeAttempted tracks that a real write-capable
     // bridge call was made (whether or not it ended up persisting).
+    // Readings and intakes saved by voice belong to the person who said them: the providers below read and write ONLY this person's records
+    // (see server/providers/healthRecordScope.js). Without it they shared one array across every account.
+    const healthDb = scopeHealthDb(db, user?.id || user?.email || "anonymous");
     let writeAttempted = false;
     let readingKind = "";
     let extraData = {};
@@ -22407,7 +22414,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         glucose: glucose ? Number(glucose[1]) : null,
         readingContext: args.readingContext || "voice-reported",
         confirmed: wantsHealthActionConfirmed
-      }, db, process.env);
+      }, healthDb, process.env);
       readingSaved = Boolean(readingResult?.body?.ok && readingResult.body.status === "completed");
       writeAttempted = true;
       readingKind = bp ? "blood-pressure" : "blood-glucose";
@@ -22427,7 +22434,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         unit: rpmVital.unit,
         dataSource: "voice-reported",
         confirmed: wantsHealthActionConfirmed
-      }, db, process.env);
+      }, healthDb, process.env);
       readingSaved = Boolean(rpmResult?.body?.ok && rpmResult.body.status === "completed");
       writeAttempted = true;
       readingKind = rpmVital.label;
@@ -22441,7 +22448,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         weeklySessionTarget: args.weeklySessionTarget,
         durationWeeks: args.durationWeeks,
         confirmed: wantsHealthActionConfirmed
-      }, db, process.env);
+      }, healthDb, process.env);
       readingSaved = Boolean(planResult?.body?.ok && planResult.body.status === "completed");
       writeAttempted = true;
       readingKind = "training plan";
@@ -22457,7 +22464,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         participationMinutes: workoutMinutes,
         completed: true,
         confirmed: wantsHealthActionConfirmed
-      }, db, process.env);
+      }, healthDb, process.env);
       readingSaved = Boolean(workoutResult?.body?.ok && workoutResult.body.status === "completed");
       writeAttempted = true;
       readingKind = "workout";
@@ -22465,7 +22472,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         ? `I logged your ${workoutMinutes}-minute ${workoutKind} to your fitness record.`
         : `I noted that workout, but saving it to your fitness record is unavailable right now.`;
     } else if (fitnessProgressMatch) {
-      const progressResult = nexusRealProviders.rtmBridge.fitnessProgress({}, db);
+      const progressResult = nexusRealProviders.rtmBridge.fitnessProgress({}, healthDb);
       const summary = progressResult?.body?.data?.summary;
       extraData = { fitnessProgress: summary };
       response = summary && summary.sessionCount
@@ -22477,7 +22484,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         activityDescription: rtmExercise ? "Exercise/therapy activity completed (voice-reported)" : "Medication adherence note (voice-reported)",
         completed: true,
         confirmed: wantsHealthActionConfirmed
-      }, db, process.env);
+      }, healthDb, process.env);
       readingSaved = Boolean(rtmResult?.body?.ok && rtmResult.body.status === "completed");
       writeAttempted = true;
       readingKind = rtmExercise ? "activity participation" : "medication adherence note";
@@ -22559,7 +22566,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const bridge = /\brpm\b/i.test(command) ? nexusRealProviders.rpmBridge
         : /\brtm\b/i.test(command) ? nexusRealProviders.rtmBridge
         : nexusRealProviders.chronicDiseaseBridge;
-      const reportResult = bridge.providerReport({}, db);
+      const reportResult = bridge.providerReport({}, healthDb);
       const report = reportResult?.body?.data?.report || {};
       const rows = report.readingTableSummary || [];
       const summaryResponse = rows.length
@@ -22571,7 +22578,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       return { ...common, capability: "nexus_health_preparation", status: "provider-summary-prepared", response: summaryResponse,
         receipt, evidenceReceipt: receipt, localOnly: true, executionAttempted: true, executionVerified: true, report };
     } else if (wantsChronicHistory) {
-      const readingsResult = nexusRealProviders.chronicDiseaseBridge.readings(db);
+      const readingsResult = nexusRealProviders.chronicDiseaseBridge.readings(healthDb);
       const savedReadings = readingsResult?.body?.data?.readings || [];
       extraData = { chronicCareReadings: savedReadings };
       response = savedReadings.length
@@ -47908,7 +47915,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedDeviceRecords(user)), ...(await collectOwnedNexusMemoryRecords(user)), ...(await collectOwnedNexusArtifactRecords(user)) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedHealthBridgeRecords(db, user.id), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedDeviceRecords(user)), ...(await collectOwnedNexusMemoryRecords(user)), ...(await collectOwnedNexusArtifactRecords(user)) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
@@ -47954,7 +47961,7 @@ async function api(req, res, url) {
     if (body.confirmed !== true) {
       return send(res, 400, { ok: false, status: "confirmation_required", error: "Pass confirmed: true to permanently erase this account. This cannot be undone." });
     }
-    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id), ...eraseUserLearningRecords(user) };
+    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...(() => { const removed = eraseOwnedHealthBridgeRecords(db, user.id); return removed ? { medicalBridgeRecords: removed } : {}; })(), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id), ...eraseUserLearningRecords(user) };
     const uploadDirPath = nexusUploads.uploadDir(process.env);
     const ownedUploads = nexusUploads.listUploadsForUser(uploadDirPath, user.id);
     let removedUploadCount = 0;
@@ -49741,28 +49748,31 @@ async function api(req, res, url) {
     return sendProviderResult(res, result);
   }
 
+  // Every route below reads or writes what ONE person saved: scope the providers to the signed-in person so they can only ever see and add
+  // their own records (server/providers/healthRecordScope.js). The status routes need no db and no sign-in.
+  const healthDb = user ? scopeHealthDb(db, user.id || user.email || "anonymous") : null;
   const medicalGetRoutes = {
     "/api/nexus/tools/medical-support/status": () => ({ ok: true, ...nexusRealProviders.medicalSupportBridge.status() }),
-    "/api/nexus/tools/medical-support/intakes": () => nexusRealProviders.medicalSupportBridge.intakes(db),
+    "/api/nexus/tools/medical-support/intakes": () => nexusRealProviders.medicalSupportBridge.intakes(healthDb),
     "/api/nexus/tools/chronic-disease/status": () => ({ ok: true, ...nexusRealProviders.chronicDiseaseBridge.status() }),
-    "/api/nexus/tools/chronic-disease/intakes": () => nexusRealProviders.chronicDiseaseBridge.intakes(db),
-    "/api/nexus/tools/chronic-disease/readings": () => nexusRealProviders.chronicDiseaseBridge.readings(db),
+    "/api/nexus/tools/chronic-disease/intakes": () => nexusRealProviders.chronicDiseaseBridge.intakes(healthDb),
+    "/api/nexus/tools/chronic-disease/readings": () => nexusRealProviders.chronicDiseaseBridge.readings(healthDb),
     "/api/nexus/tools/rpm/status": () => ({ ok: true, ...nexusRealProviders.rpmBridge.status() }),
-    "/api/nexus/tools/rpm/device-readings": () => nexusRealProviders.rpmBridge.deviceReadings(db),
+    "/api/nexus/tools/rpm/device-readings": () => nexusRealProviders.rpmBridge.deviceReadings(healthDb),
     "/api/nexus/tools/rtm/status": () => ({ ok: true, ...nexusRealProviders.rtmBridge.status() }),
-    "/api/nexus/tools/rtm/activity-entries": () => nexusRealProviders.rtmBridge.activityEntries(db),
+    "/api/nexus/tools/rtm/activity-entries": () => nexusRealProviders.rtmBridge.activityEntries(healthDb),
     "/api/nexus/tools/telehealth/status": () => ({ ok: true, ...nexusRealProviders.telehealthBridge.status() }),
-    "/api/nexus/tools/telehealth/intakes": () => nexusRealProviders.telehealthBridge.intakes(db),
-    "/api/nexus/tools/telehealth/sessions": () => nexusRealProviders.telehealthBridge.sessions(db),
+    "/api/nexus/tools/telehealth/intakes": () => nexusRealProviders.telehealthBridge.intakes(healthDb),
+    "/api/nexus/tools/telehealth/sessions": () => nexusRealProviders.telehealthBridge.sessions(healthDb),
     "/api/nexus/tools/mobile-clinics/status": () => ({ ok: true, ...nexusRealProviders.mobileClinicBridge.status() }),
     "/api/nexus/tools/mobile-clinics/search": () => nexusRealProviders.mobileClinicBridge.search(Object.fromEntries(url.searchParams.entries())),
-    "/api/nexus/tools/mobile-clinics/intakes": () => nexusRealProviders.mobileClinicBridge.intakes(db),
+    "/api/nexus/tools/mobile-clinics/intakes": () => nexusRealProviders.mobileClinicBridge.intakes(healthDb),
     "/api/nexus/tools/pharmacy/status": () => ({ ok: true, ...nexusRealProviders.pharmacyBridge.status() }),
     "/api/nexus/tools/pharmacy/search": () => nexusRealProviders.pharmacyBridge.search(Object.fromEntries(url.searchParams.entries())),
-    "/api/nexus/tools/pharmacy/intakes": () => nexusRealProviders.pharmacyBridge.intakes(db),
+    "/api/nexus/tools/pharmacy/intakes": () => nexusRealProviders.pharmacyBridge.intakes(healthDb),
     "/api/nexus/tools/patient-support/status": () => ({ ok: true, ...nexusRealProviders.patientSupportBridge.status() }),
     "/api/nexus/tools/patient-support/resources": () => nexusRealProviders.patientSupportBridge.resources(Object.fromEntries(url.searchParams.entries())),
-    "/api/nexus/tools/patient-support/intakes": () => nexusRealProviders.patientSupportBridge.intakes(db)
+    "/api/nexus/tools/patient-support/intakes": () => nexusRealProviders.patientSupportBridge.intakes(healthDb)
   };
 
   // The medicalGetRoutes/medicalPostRoutes dispatch tables persist real
@@ -49875,13 +49885,13 @@ async function api(req, res, url) {
     const result = url.pathname === "/api/nexus/tools/telehealth/session/create"
       ? await withActionLifecycle(db, {
           provider: "telehealth-bridge", action: "telehealth.session.create", body: medicalPostBody, actorId: user.id || user.email || "",
-          execute: () => nexusRealProviders[providerKey][methodName](medicalPostBody, db),
+          execute: () => nexusRealProviders[providerKey][methodName](medicalPostBody, healthDb),
           verify: async sessionResult => {
             const session = sessionResult?.body?.data?.session || {};
             return { verified: Boolean(session.liveRoomCreated), note: session.liveRoomCreated ? "Provider returned a real, live video room." : "No real video room was confirmed." };
           }
         })
-      : await nexusRealProviders[providerKey][methodName](medicalPostBody, db);
+      : await nexusRealProviders[providerKey][methodName](medicalPostBody, healthDb);
     if (shouldPersist && result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
   }

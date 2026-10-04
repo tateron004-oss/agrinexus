@@ -67,6 +67,8 @@ test("account export honestly discloses that locally-saved pharmacy/medical-supp
   const exportRes = await fetch(`${base}/api/account/export`, { method: "POST", headers: { "content-type": "application/json", cookie } });
   const exportBody = await exportRes.json();
   assert.equal(exportRes.status, 200, JSON.stringify(exportBody));
-  assert.ok(exportBody.knownGaps.some(gap => /pharmacy|chronic-disease|remote-monitoring/i.test(gap)),
-    "the export must honestly disclose the unowned pharmacy/medical-support preparation records gap, not imply completeness");
+  // Records saved through the medical bridge providers now carry their owner and are exported/erased with their person; this record was
+  // seeded WITHOUT one (as every record saved before ownership was recorded), so it still cannot be attributed and must still be disclosed.
+  assert.ok(exportBody.knownGaps.some(gap => /saved before per-account ownership was recorded/i.test(gap)),
+    "the export must honestly disclose records it cannot attribute to an account, not imply completeness");
 });

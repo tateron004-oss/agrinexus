@@ -47,6 +47,8 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
       if (user?.role === "Investor" && ["communications-send", "external-transaction", "health-record-write", "account-provider-link"].includes(restriction)) return true;
       return false;
     },
+    // Real implementation: the spoken health branch reads/writes only the speaker's own records (server/providers/healthRecordScope.js).
+    scopeHealthDb: require("../../server/providers/healthRecordScope.js").scopeHealthDb,
     nexusRealProviders: {
       twilio: twilio || {},
       email: email || {},
