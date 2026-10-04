@@ -91,7 +91,7 @@ async function handleMoney(ctx) {
     // if they were kg. A bag/crate isn't a fixed weight, so this can't be
     // silently converted -- only multiply when the units genuinely match.
     if (quantity && per && !money && quantity.unit === per.per) { amount = round(quantity.value * per.amount); currency = per.currency; }
-    else if (quantity && per && money && money.amount === per.amount) {
+    else if (quantity && per && money && money.amount === per.spokenAmount) {
       // money.amount === per.amount here almost always means parseMoney
       // read the SAME number out of "at 200 per kg" that parsePricePer
       // also read -- not a genuine separate flat total (confirmed live:
@@ -166,7 +166,7 @@ async function handleMoney(ctx) {
     // echoes the SAME number back when there is no separately-stated total,
     // so comparing money.amount to per.amount (not scanning for the word
     // "for") is what actually distinguishes the two cases.
-    if (quantity && per && quantity.unit === per.per && money.amount === per.amount) { amount = round(quantity.value * per.amount); currency = per.currency || currency; }
+    if (quantity && per && quantity.unit === per.per && money.amount === per.spokenAmount) { amount = round(quantity.value * per.amount); currency = per.currency || currency; }
     const itemMatch = quantity ? new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:for|at|from|@)\\b.*)?$`, "i").exec(rest) : /^(?:some |a |an )?(.+?)(?:\s+(?:for|at|from|@)\b.*)?$/i.exec(rest);
     const item = clean(itemMatch?.[1] || "").toLowerCase();
     if (!item || item.length > 60) return null;
