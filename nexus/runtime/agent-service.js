@@ -72,14 +72,25 @@ class AgentService {
     // check any tenant member could pull another user's task goal/state/outcome into their own
     // planning turn (and into the raw API response) just by guessing/reusing a taskId.
     const priorTask = fetchedTask && fetchedTask.ownerId === context.userId ? fetchedTask : null;
-    await this.conversations?.ensure({ conversationId: command.conversationId, tenantId: context.tenantId,
+    // deterministicOnly: the spoken path asks only for the answers Kyro can give and save itself (no AI model, no tool steps). When the
+    // planner has no such answer the turn is deferred to the caller's own pipeline, so nothing is written for it -- no conversation row,
+    // no stored message, no task -- until there is a real answer to record.
+    const deterministicOnly = context?.deterministicOnly === true;
+    const ensureConversation = () => this.conversations?.ensure({ conversationId: command.conversationId, tenantId: context.tenantId,
       ownerId: context.userId, title: priorTask?.goal || command.text });
-    const conversationHistory = this.conversations
-      ? await this.conversations.recent({ tenantId: context.tenantId, conversationId: command.conversationId, limit: 24 }) : [];
-    await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
+    const appendUserMessage = () => this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
       actorId: context.userId, role: "user", content: command.text,
       provenance: { channel: command.channel, locale: command.locale, correlationId: command.correlationId } });
+    if (!deterministicOnly) await ensureConversation();
+    const conversationHistory = this.conversations && !deterministicOnly
+      ? await this.conversations.recent({ tenantId: context.tenantId, conversationId: command.conversationId, limit: 24 }) : [];
+    if (!deterministicOnly) await appendUserMessage();
     const plan = await this.planner.plan({ command, context, priorTask, conversationHistory });
+    if (deterministicOnly) {
+      if (plan.deferred || !plan.response || plan.modelAnswered === true) return { command, task: priorTask, plan, action: "defer" };
+      await ensureConversation();
+      await appendUserMessage();
+    }
     if (plan.response) {
       await this.conversations?.append({ tenantId: context.tenantId, conversationId: command.conversationId,
         actorId: null, role: "assistant", content: plan.response,

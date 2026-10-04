@@ -54,6 +54,7 @@ const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
+const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
 const {
   isUsableEnvValue,
@@ -19832,6 +19833,42 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
       cloudinaryAsset: cloudinaryResult.asset || null
     };
   }
+  // Notes, lists, calendar, farm log, remembered facts, feedback, the circle, check-ins and the rest only exist in the planner behind the
+  // typed path. Ask it first for the answers it can give and save without the AI model; anything else (and any failure) falls through to
+  // the pipeline below unchanged. A crisis phrase is left to that pipeline's own safety handling, as before.
+  const voiceLanguage = args.language || body.language || user.language || "en";
+  const crisisSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
+  if (!(crisisSignal?.crisisOverride === true || crisisSignal?.state === "medical_emergency")) {
+    const authoritativeVoiceUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const planned = authoritativeVoiceUser
+      ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: authoritativeVoiceUser, text: command, language: voiceLanguage })
+      : null;
+    if (planned) {
+      safeGenesisVoiceStageEvent(db, {
+        correlationId,
+        stage: "tool-call-completed",
+        success: true,
+        route: dispatchRoute,
+        intent: "planner-deterministic-answer",
+        sourceFunction: "deterministicVoiceAnswer",
+        toolName: body.name || body.toolName || "nexus_capability_router"
+      });
+      return {
+        ok: true,
+        correlationId,
+        capability: "conversation",
+        status: "completed",
+        response: planned.response,
+        providerAttempted: false,
+        providerSucceeded: false,
+        executionAttempted: true,
+        executionVerified: planned.verified === true,
+        missingInformation: [],
+        blockedReason: null,
+        translationProvider: null
+      };
+    }
+  }
   const { result } = await runCompanionSafeAgentCommand(db, user, {
     command,
     correlationId,
@@ -19839,7 +19876,7 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     outputMode: "voice",
     conversational: true,
     mode: "user",
-    targetLanguage: args.language || body.language || user.language || "en",
+    targetLanguage: voiceLanguage,
     note: dispatchNote
   });
   const envelope = normalizeNexusResponseEnvelope(result, {
