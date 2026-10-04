@@ -100,7 +100,12 @@ function readRequest(text, today) {
   if ((m = /^how much water (?:did|have) i (?:drink|drunk|had)\b(.*)$/.exec(lower))) return { action: "summary", metric: "water", period: extractPeriod(m[1], today) || extractPeriod("today", today) };
   if (/^(?:what are|show) my personal (?:bests?|records?|pbs?)$/.test(lower)) return { action: "bests" };
   if (/^(?:show|read) (?:me )?my (?:training|wellness|workout|fitness) log$/.test(lower)) return { action: "show" };
-  if (/^(?:undo|delete|remove) (?:my )?last (?:wellness|training|workout|sleep|weight|mood|water|fitness)(?: log)?(?: entry)?$/.test(lower)) return { action: "undo" };
+  // "undo my last workout" removes the last WORKOUT, "undo my last sleep entry" the last sleep entry; only "wellness"/"training log"/"fitness log" mean "whatever was added last".
+  if ((m = /^(?:undo|delete|remove) (?:my )?last (wellness|training|workout|sleep|weight|mood|water|fitness)(?: log)?(?: entry)?$/.exec(lower))) {
+    const kind = m[1];
+    const wanted = { workout: "workout", sleep: "sleep", weight: "weight", mood: "mood", water: "water" }[kind] || null;
+    return { action: "undo", metric: wanted, label: wanted || "" };
+  }
   // First person only, like the self-harm/safety patterns elsewhere in the
   // companion tier ("my coach is a veteran athlete" is not about the
   // speaker). "veteran"/"athlete" both carry idiomatic senses ("veteran
@@ -220,8 +225,8 @@ async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), t
         return `Your latest entries: ${[...entries].sort((a, b) => b.day.localeCompare(a.day)).slice(0, 6).map(item => `${when(item.day, today)}: ${describeEntry(item)}`).join("; ")}.`;
       }
       case "undo": {
-        const last = entries[0];
-        if (!last) return "There is nothing in your log to undo.";
+        const last = request.metric ? entries.find(item => item.metric === request.metric) : entries[0];
+        if (!last) return request.metric && entries.length ? `There is no ${request.label} entry in your log to undo. Nothing was removed.` : "There is nothing in your log to undo.";
         await store.removeEntry({ ...scope, memoryId: last.memoryId });
         return `Removed your last entry: ${describeEntry(last)} for ${when(last.day, today)}.`;
       }
