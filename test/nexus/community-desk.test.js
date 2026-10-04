@@ -334,3 +334,60 @@ test("through the planner these are conversational answers with no tool, and sta
   assert.match((await plan("Show open reports", ["admin"])).response, /^1 open: #1 \(water, open\)/);
   await assert.rejects(plan("Show open reports", []), /no model/, "without the admin role it is ordinary talk and reaches the model");
 });
+
+// ---- "announce test:" -- a rehearsal that reaches only the sender ----
+test("announce test: is read, and 'announce:' still means a real announcement", () => {
+  assert.deepEqual(readDeskRequest("Announce test: Water off Thursday"), { action: "announce-test", text: "Water off Thursday" });
+  assert.equal(readDeskRequest("broadcast test:   Clinic opens Monday").action, "announce-test");
+  assert.equal(readDeskRequest("Announce: Water off Thursday").action, "announce");
+  assert.equal(readDeskRequest("Announce testing the new borehole"), null);
+});
+
+test("a test announcement reaches only the staff member who sent it, is never recorded, and never uses up the daily limit", async () => {
+  const d = desk(fakeStore({ recipients: ["u1", "u2", "u3", "staff"] }));
+  const staff = { userId: "staff", roles: ["admin"] };
+  assert.equal(await d.say("Announce test: Water off Thursday"), null, "a citizen cannot send one");
+  const reply = await d.say("Announce test: Water off Thursday", staff);
+  assert.match(reply, /^Test sent to you only\. Nobody else received it/);
+  assert.deepEqual(d.pushes.map(push => push.userId), ["staff"], "only the sender got a push");
+  assert.match(d.pushes[0].content.title, /only you got this/);
+  assert.equal(d.store.rows.some(row => row.content.kind === "announcement" || row.content.kind === "pending"), false, "nothing is recorded and nothing is left waiting to confirm");
+  // The three real announcements a day are all still available afterwards.
+  for (let i = 0; i < MAX_ANNOUNCEMENTS_PER_DAY; i += 1) {
+    await d.say("Announce test: Another rehearsal", staff);
+    await d.say(`Announce: Real notice number ${i + 1}`, staff);
+    assert.match(await d.say("Confirm announcement", staff), /^Sent to 4 people/);
+  }
+});
+
+test("a test cannot be confirmed into a real announcement by accident", async () => {
+  const d = desk(fakeStore({ recipients: ["u1", "staff"] }));
+  const staff = { userId: "staff", roles: ["admin"] };
+  await d.say("Announce test: Water off Thursday", staff);
+  assert.match(await d.say("Confirm announcement", staff), /^There is no announcement waiting/);
+  assert.equal(d.pushes.length, 1, "only the original test push exists");
+});
+
+test("if the sender's own device has no alerts on, the test says so instead of claiming it was sent", async () => {
+  const d = desk(fakeStore({ recipients: ["u1", "u2"] }));
+  const reply = await d.say("Announce test: Water off Thursday", { userId: "staff", roles: ["admin"] });
+  assert.match(reply, /alerts are not turned on/);
+  assert.match(reply, /Nothing was sent to anyone/);
+  assert.equal(d.pushes.length, 0);
+});
+
+test("the exact per-person device check is used when the store has one (the capped recipient list is not trusted)", async () => {
+  const store = fakeStore({ recipients: [] });
+  store.hasPushDevice = async ({ userId }) => userId === "staff";
+  const d = desk(store);
+  assert.match(await d.say("Announce test: Water off Thursday", { userId: "staff", roles: ["admin"] }), /^Test sent to you only/);
+});
+
+test("CommunityRepository.hasPushDevice asks about exactly one person and one tenant", async () => {
+  const seen = [];
+  const repo = new CommunityRepository({ async query(sql, params) { seen.push({ sql, params }); return { rows: params[1] === "yes" ? [{ "?column?": 1 }] : [] }; } });
+  assert.equal(await repo.hasPushDevice({ tenantId: "t1", userId: "yes" }), true);
+  assert.equal(await repo.hasPushDevice({ tenantId: "t1", userId: "no" }), false);
+  assert.deepEqual(seen[0].params, ["t1", "yes"]);
+  assert.match(seen[0].sql, /tenant_id=\$1 and user_id=\$2 and state='active' and push_state='registered'/);
+});
