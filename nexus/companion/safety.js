@@ -30,15 +30,44 @@ const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g
 // "emergency" alone and "help ... now" alone stay tightly anchored, since
 // unanchoring those specific short, generic phrases would trigger on
 // unrelated mentions ("emergency contact list", "I need help with my maize").
+// Found by testing real sentences (an alert is a REAL push to real people, so both directions matter):
+//  * "I've fallen behind on my loan" and "tell my circle I'll be late" sent an emergency alert -- the fall pattern had no idea about the
+//    ordinary meanings of "fallen", and every "tell/message/contact my circle" was read as an alert, whatever followed.
+//  * "I fell and can't get up" (no "I" right before "can't get up"), "I slipped and hurt my back" and "call an ambulance" were missed.
+// The rule kept from before: when it is ambiguous, ALERT. Only phrases that are plainly something else (a debt, a falling-in-love, an
+// "I'll be late" message) are carved out.
+const NOT_A_FALL = "(?!\\s+(?:behind|asleep|back asleep|in love|out with|out of|for\\b|short|apart|ill|sick|into debt|off the wagon|from grace|through|away|upon|on hard times|on)\\b)";
 const IMMEDIATE = [
   /^(?:this is (?:an )?)?emergency$/,
   /^i need (?:urgent |emergency )?help (?:now|right now|immediately)$/,
-  /\bi(?:'ve| have) fallen\b/,
-  /\bi (?:can'?t|cannot|can not) get up\b/,
-  /\bi(?:'m| am) (?:in danger|badly hurt|hurt badly|seriously hurt|having a (?:heart attack|stroke))\b/,
-  /\b(?:please )?(?:alert|call|tell|notify|message|contact) my (?:trusted )?circle\b/,
+  new RegExp(`\\bi(?:'ve| have) fallen\\b${NOT_A_FALL}`),
+  new RegExp(`\\bi (?:just )?(?:fell|slipped|tripped|collapsed)\\b(?!\\s+(?:up|asleep|back asleep|in love|for\\b|behind|out with|short|apart|ill|sick|into debt|off the wagon)\\b)`),
+  /\b(?:i )?(?:can'?t|cannot|can not|am unable to|am not able to) get up\b/,
+  /\bi(?:'m| am) (?:in danger|badly hurt|hurt badly|seriously hurt|having a (?:heart attack|stroke)|bleeding (?:badly|heavily))\b/,
+  /\bi (?:can'?t|cannot|can not) breathe\b/,
+  /^(?:please )?(?:call|get|send|phone) (?:me )?(?:an |the )?(?:ambulance|paramedics?)\b/,
+  /^(?:(?:please|help|quick|kyro)[, ]+)*i need (?:an |the )?ambulance\b/,
   /\b(?:please )?send (?:an )?(?:emergency )?alert to my (?:trusted )?circle\b/
 ];
+// "alert my circle" and its relatives. The verb matters: "alert/notify" is an emergency word, "tell/message/contact/call/text" is just as often
+// "tell my circle I'll be late". Whatever follows decides: nothing (or only "now/please") alerts; real emergency vocabulary alerts; with an
+// alert verb anything not plainly calm alerts; with a talking verb anything else is a message, not an alert.
+const CIRCLE_REQUEST = /\b(?:please )?(alert|notify|call|tell|message|contact|text) my (?:trusted )?circle\b(.*)$/;
+const CIRCLE_TAIL_FILLER = /^[\s,.!]*(?:(?:right )?now|please|immediately|asap|quickly|thank you|thanks|that)?[\s,.!]*(?:(?:right )?now|please|immediately|asap)?[\s,.!]*$/;
+const CIRCLE_EMERGENCY = /\b(?:help|emergency|danger|trouble|hurt|injured|bleeding|breath(?:e|ing)|unconscious|dying|dead|fire|attack|urgent(?:ly)?|fallen|fell|collapsed|ambulance|accident|stroke|attacked|robbed|kidnapped|unsafe|scared|afraid)\b/;
+const CIRCLE_NOT_EMERGENCY = /\b(?:not|no|isn'?t|wasn'?t|false|just testing|testing)\b[^.]{0,14}\b(?:emergency|alarm|alert|danger)\b/;
+const CIRCLE_CALM = /\b(?:late|delayed?|running behind|safe|ok(?:ay)?|fine|well|arrived?|arriving|home|birthday|dinner|lunch|meeting|tomorrow|tonight|later|thank(?:s| you)|good news|soon|visit|visiting|coming|on my way|party|wedding|funeral|market|church)\b/;
+function circleAlertRequested(lower) {
+  const match = CIRCLE_REQUEST.exec(lower);
+  if (!match) return false;
+  const verb = match[1];
+  const tail = match[2] || "";
+  if (CIRCLE_TAIL_FILLER.test(tail)) return true;
+  if (CIRCLE_NOT_EMERGENCY.test(tail)) return false;
+  if (CIRCLE_EMERGENCY.test(tail)) return true;
+  if (verb === "alert" || verb === "notify") return !CIRCLE_CALM.test(tail);
+  return false;
+}
 const ASK_FIRST = /^(?:please )?(?:help|help me|i need help|i need some help)$/;
 // Found live (companion audit): plain, first-person, unambiguous crisis statements were missed entirely --
 // treated as ordinary chat with zero acknowledgment -- because the adjacent common wordings for phrasings
@@ -78,9 +107,23 @@ const IMMEDIATE_SW = [
   /\bniko hatarini\b/,
   /\bnimejeruhiwa (?:vibaya|sana)\b/,
   /\bnina (?:shambulio la moyo|kiharusi)\b/,
-  /\b(?:tafadhali )?(?:arifu|mwambie|wasiliana na|mjulishe|waarifu|wajulishe) (?:mzunguko wangu|watu wangu wa karibu)\b/,
   /\b(?:tafadhali )?tuma tahadhari (?:ya dharura )?kwa mzunguko wangu\b/
 ];
+// Same idea as circleAlertRequested above, for Kiswahili ("mwambie mzunguko wangu nimechelewa" is "tell my circle I am late", not an alert).
+const CIRCLE_REQUEST_SW = /\b(?:tafadhali )?(arifu|waarifu|mwambie|mjulishe|wajulishe|wasiliana na) (?:mzunguko wangu|watu wangu wa karibu)\b(.*)$/;
+const CIRCLE_TAIL_FILLER_SW = /^[\s,.!]*(?:sasa(?: hivi)?|tafadhali|haraka|mara moja)?[\s,.!]*(?:sasa(?: hivi)?|tafadhali|haraka)?[\s,.!]*$/;
+const CIRCLE_EMERGENCY_SW = /\b(?:msaada|dharura|hatari|hatarini|jeruhiwa|nimejeruhiwa|nimeanguka|ameanguka|moto|shambulio|wizi|ugonjwa mkali|siwezi kupumua|anakufa|amekufa|ajali)\b/;
+const CIRCLE_CALM_SW = /\b(?:nimechelewa|chelewa|salama|sawa|nimefika|nafika|nyumbani|kesho|usiku|baadaye|asante|harusi|mkutano|sherehe|chakula|ziara)\b/;
+function circleAlertRequestedSw(lower) {
+  const match = CIRCLE_REQUEST_SW.exec(lower);
+  if (!match) return false;
+  const verb = match[1];
+  const tail = match[2] || "";
+  if (CIRCLE_TAIL_FILLER_SW.test(tail)) return true;
+  if (CIRCLE_EMERGENCY_SW.test(tail)) return true;
+  if (verb === "arifu" || verb === "waarifu") return !CIRCLE_CALM_SW.test(tail);
+  return false;
+}
 const ASK_FIRST_SW = /^(?:tafadhali )?(?:msaada|nisaidie|naomba msaada|nahitaji msaada|ninahitaji msaada)$/;
 const SELF_HARM_SW = [
   /\b(?:nataka|ninataka|ningependa|nimeamua) kufa\b/,
@@ -101,8 +144,8 @@ function readSafetyDetailed(text) {
   // first-person emergency that included even a little elaboration -- see
   // the IMMEDIATE comment above. The patterns themselves are now the only
   // gate (still bounded by this function's own 400-char overall cap above).
-  if (IMMEDIATE.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "en" };
-  if (IMMEDIATE_SW.some(pattern => pattern.test(lower))) return { kind: "emergency", language: "sw" };
+  if (IMMEDIATE.some(pattern => pattern.test(lower)) || circleAlertRequested(lower)) return { kind: "emergency", language: "en" };
+  if (IMMEDIATE_SW.some(pattern => pattern.test(lower)) || circleAlertRequestedSw(lower)) return { kind: "emergency", language: "sw" };
   if (ASK_FIRST.test(lower)) return { kind: "ask", language: "en" };
   if (ASK_FIRST_SW.test(lower)) return { kind: "ask", language: "sw" };
   if (SELF_HARM.some(pattern => pattern.test(raw))) return { kind: "self_harm", language: "en" };
