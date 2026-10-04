@@ -17,6 +17,7 @@ const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
+const { hasReminderTimePhrase } = require("../reminders/time-phrase.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
@@ -1089,7 +1090,7 @@ function completeRemainingWorkspacePlan(text, catalog) {
   // "in 2 minutes" and weekdays used to be missing, so "Remind me to ... in 2 minutes" fell through to the
   // AI planner, whose invented input shape was ignored and which was silently scheduled for tomorrow.
   if (/\b(remind|reminder)\b/i.test(goal) &&
-      /\b(tomorrow|today|tonight|later today|this afternoon|in\s+\d{1,3}\s*(?:minutes?|mins?|hours?|hrs?|days?|weeks?)|(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)|\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i.test(goal) &&
+      hasReminderTimePhrase(goal) &&
       /\b(save|schedule|remind)\b/i.test(goal))
     return plan("reminders", "reminders.schedule", "Persist governed reminder", { reminder: goal, when: goal });
   if (/\b(queue|queued)\b/i.test(goal) && /\boffline\b/i.test(goal) && /\b(sync|synchronize|synchronise)\b/i.test(goal) &&

@@ -77,11 +77,12 @@ test("an unrecognized/invalid IANA zone falls back to the default zone rather th
   assert.equal(scheduledAt, "2026-09-21T15:00:00.000Z");
 });
 
-test("'next Monday' with no explicit time keeps today's current time-of-day, in the caller's own zone, on the correct future calendar day", () => {
-  // 2026-09-21 is a Monday; "monday" with no explicit time should land 7 days later at the same real local time-of-day.
+test("'next Monday' with no time said is 9am that day, in the caller's own zone, on the correct future calendar day", () => {
+  // 2026-09-21 is a Monday; "monday" with no time said lands 7 days later at 9am local. (It used to keep whatever time it happened to be right now, so a reminder
+  // asked for at 5am or at 3:30pm fired at 5am or 3:30pm -- an arbitrary time nobody asked for.)
   const now = new Date("2026-09-21T12:00:00Z"); // 05:00 Pacific
   const { scheduledAt } = parseAssistantReminderTime("remind me monday to renew the lease", { timeZone: "America/Los_Angeles", now });
-  assert.equal(scheduledAt, "2026-09-28T12:00:00.000Z", "same 05:00 Pacific time-of-day, seven days later");
+  assert.equal(scheduledAt, "2026-09-28T16:00:00.000Z", "09:00 Pacific (PDT, UTC-7), seven days later");
 });
 
 test("no recognizable time phrase falls back to ~24 hours out, never in the past", () => {
