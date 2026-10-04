@@ -233,3 +233,32 @@ test("through the planner a wellness report is a conversational answer with no t
   const plan = await p.plan({ command: { text: "I ran 5 km in 30 minutes", channel: "typed", locale: "en", tenantId: "t1", actorId: "u1", conversationId: "c" }, context: { can: () => true, roles: [], timeZone: "Africa/Nairobi" } });
   assert.equal(plan.application, "conversation"); assert.deepEqual(plan.steps, []); assert.match(plan.response, /^Logged 5 km run in 30 minutes/);
 });
+
+// Found live: "undo my last workout" removed whatever entry was added last (a weight or a night's sleep), because the kind of entry the
+// person named was thrown away.
+test("undo my last <kind> removes the last entry of that kind and nothing else", async () => {
+  const store = fakeStore();
+  await say(store, "I ran 5 km in 30 minutes");
+  await say(store, "I slept 7 hours");
+  await say(store, "I weigh 70 kg");
+  assert.match(await say(store, "Undo my last workout"), /^Removed your last entry: 5 km run in 30 minutes/);
+  const left = await store.listEntries({ tenantId: "t1", userId: "u1" });
+  assert.deepEqual(left.map(row => row.content.metric).sort(), ["sleep", "weight"], "the sleep and weight entries are untouched");
+  assert.match(await say(store, "Delete my last sleep entry"), /^Removed your last entry: 7 hours of sleep/);
+  assert.deepEqual((await store.listEntries({ tenantId: "t1", userId: "u1" })).map(row => row.content.metric), ["weight"]);
+});
+
+test("undo my last <kind> with none of that kind says so and removes nothing", async () => {
+  const store = fakeStore();
+  await say(store, "I slept 7 hours");
+  assert.equal(await say(store, "Undo my last workout"), "There is no workout entry in your log to undo. Nothing was removed.");
+  assert.equal((await store.listEntries({ tenantId: "t1", userId: "u1" })).length, 1);
+});
+
+test("undo my last wellness/training/fitness entry still means the most recent entry of any kind", async () => {
+  const store = fakeStore();
+  await say(store, "I ran 5 km in 30 minutes");
+  await say(store, "I slept 7 hours");
+  assert.match(await say(store, "Undo my last wellness entry"), /^Removed your last entry: 7 hours of sleep/);
+  assert.match(await say(store, "Undo my last training log entry"), /^Removed your last entry: 5 km run/);
+});
