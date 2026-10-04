@@ -58,6 +58,7 @@ const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridg
 const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
 const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
+const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
 const { HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
 const {
@@ -10847,6 +10848,9 @@ function adminSnapshot(db, providers = runtimeProviders(db)) {
   ];
   return {
     users: (db.users || []).map(user => ({ id: user.id, name: user.name, email: user.email, role: user.role, country: user.country })),
+    // Who may phone Kyro: numbers added here (editable) and the older Render-setting list (read-only, masked -- it can only be changed in Render).
+    phoneCallers: phoneCallerRegistry.adminView(db),
+    phoneCallersFromSettings: twilioAuthorizedCallers(process.env).map(item => ({ phone: redactPhoneNumber(item.phone), email: item.email, owner: !item.email })),
     subscribers: profile.subscriberAccounts,
     supportTickets: profile.supportTickets,
     usage: {
@@ -18437,6 +18441,10 @@ function phoneExternalPartyNumber(body = {}, env = process.env) {
 function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
   const caller = phoneExternalPartyNumber(body, env);
   if (!caller) return null;
+  // Numbers the owner added in the admin panel (db.phoneCallers) are checked first. Each belongs to one account by id; if that account is gone the caller gets
+  // NO identity (never the owner's), same as a listed-with-email number below.
+  const managed = Array.isArray(db.phoneCallers) ? db.phoneCallers.find(item => item && item.phone === caller) : null;
+  if (managed) return db.users.find(item => item.id === managed.userId) || null;
   const authorized = twilioAuthorizedCallers(env);
   const match = authorized.find(item => item.phone === caller);
   if (!match) return null;
@@ -18473,7 +18481,10 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
 // Restricting the fallback to the actual owner tier (Admin) means a
 // non-owner caller with no listed number instead gets startConnectCall's own
 // existing, honest "Your own phone number is required" refusal.
-function nexusOwnPhoneForUser(user, env = process.env) {
+function nexusOwnPhoneForUser(user, env = process.env, db = null) {
+  // A number added in the admin panel for this exact account wins over the Render list.
+  const managed = user?.id && Array.isArray(db?.phoneCallers) ? db.phoneCallers.find(item => item && item.userId === user.id) : null;
+  if (managed) return managed.phone;
   const authorized = twilioAuthorizedCallers(env);
   const email = String(user?.email || "").toLowerCase();
   const byEmail = email && authorized.find(item => item.email === email);
@@ -21818,14 +21829,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         })
       : channel === "call" && wantsListenAndRemember
         ? await withActionLifecycle(db, {
-            provider: "twilio", action: "call.connect_and_listen", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, userId: user?.id || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
-            execute: () => nexusRealProviders.twilio.startConnectAndListenCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, userId: user?.id || "", confirmed: args.confirmed }, process.env),
+            provider: "twilio", action: "call.connect_and_listen", body: { userPhone: nexusOwnPhoneForUser(user, process.env, db), targetPhone: recipient, targetName: targetNameArg, userId: user?.id || "", confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+            execute: () => nexusRealProviders.twilio.startConnectAndListenCall({ userPhone: nexusOwnPhoneForUser(user, process.env, db), targetPhone: recipient, targetName: targetNameArg, userId: user?.id || "", confirmed: args.confirmed }, process.env),
             verify: verifyRealProviderId("Call")
           })
         : channel === "call" && wantsConnectCall
           ? await withActionLifecycle(db, {
-              provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
-              execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env), targetPhone: recipient, targetName: targetNameArg, confirmed: args.confirmed }, process.env),
+              provider: "twilio", action: "call.connect", body: { userPhone: nexusOwnPhoneForUser(user, process.env, db), targetPhone: recipient, targetName: targetNameArg, confirmed: args.confirmed }, actorId: user?.id || realUserEmail || "",
+              execute: () => nexusRealProviders.twilio.startConnectCall({ userPhone: nexusOwnPhoneForUser(user, process.env, db), targetPhone: recipient, targetName: targetNameArg, confirmed: args.confirmed }, process.env),
               verify: verifyRealProviderId("Call")
             })
           : channel === "call"
@@ -47945,7 +47956,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/account/export" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (user.guest) return send(res, 400, { ok: false, error: "Guest sessions have no persistent account data to export." });
-    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedHealthBridgeRecords(db, user.id), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedDeviceRecords(user)), ...(await collectOwnedNexusMemoryRecords(user)), ...(await collectOwnedNexusArtifactRecords(user)) };
+    const ownedRecords = { ...collectOwnedProfileRecords(db.profile, user.email), ...collectOwnedHealthBridgeRecords(db, user.id), ...(phoneCallerRegistry.callersForUser(db, user.id).length ? { phoneAccessNumbers: phoneCallerRegistry.callersForUser(db, user.id).map(row => ({ phone: row.phone, label: row.label || "", addedAt: row.createdAt })) } : {}), ...collectOwnedTelehealthRecords(db, user.id), ...collectOwnedNexusContentRecords(db, user.id), ...collectOwnedOperationsRecords(db, user.id), ...collectUserLearningRecords(user), ...(await collectOwnedDeviceRecords(user)), ...(await collectOwnedNexusMemoryRecords(user)), ...(await collectOwnedNexusArtifactRecords(user)) };
     const ownedUploads = nexusUploads.listUploadsForUser(nexusUploads.uploadDir(process.env), user.id)
       .map(meta => ({ fileId: meta.fileId, originalFilename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes, uploadedAt: meta.uploadedAt, downloadPath: `/api/nexus/upload/file?fileId=${encodeURIComponent(meta.fileId)}` }));
     const exportPayload = {
@@ -47991,7 +48002,7 @@ async function api(req, res, url) {
     if (body.confirmed !== true) {
       return send(res, 400, { ok: false, status: "confirmation_required", error: "Pass confirmed: true to permanently erase this account. This cannot be undone." });
     }
-    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...(() => { const removed = eraseOwnedHealthBridgeRecords(db, user.id); return removed ? { medicalBridgeRecords: removed } : {}; })(), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id), ...eraseUserLearningRecords(user) };
+    const removedProfileRecords = { ...eraseOwnedProfileRecords(db.profile, user.email), ...(() => { const removed = eraseOwnedHealthBridgeRecords(db, user.id); return removed ? { medicalBridgeRecords: removed } : {}; })(), ...(() => { const removed = phoneCallerRegistry.removeCallersForUser(db, user.id); return removed ? { phoneAccessNumbers: removed } : {}; })(), ...eraseOwnedTelehealthRecords(db, user.id), ...eraseOwnedNexusContentRecords(db, user.id), ...eraseOwnedOperationsRecords(db, user.id), ...eraseUserLearningRecords(user) };
     const uploadDirPath = nexusUploads.uploadDir(process.env);
     const ownedUploads = nexusUploads.listUploadsForUser(uploadDirPath, user.id);
     let removedUploadCount = 0;
@@ -50803,7 +50814,7 @@ async function api(req, res, url) {
 </Response>`);
     }
     const owner = phoneScreeningOwner(db);
-    const ownerPhone = owner ? nexusOwnPhoneForUser(owner, process.env) : "";
+    const ownerPhone = owner ? nexusOwnPhoneForUser(owner, process.env, db) : "";
     if (!ownerPhone) {
       await writeDb(db);
       logIntegration(db, {
@@ -51654,6 +51665,39 @@ async function api(req, res, url) {
       metadata: { subscriberId: account.id, plan: account.plan, seats: account.seats }
     });
     addActivity(db.profile, `Subscriber invited: ${account.email}.`);
+    await writeDb(db);
+    return send(res, 200, publicState(db, user));
+  }
+
+  // Phone numbers allowed to phone Kyro, managed by the owner (replaces editing TWILIO_AUTHORIZED_CALLERS in Render and restarting). Admin only.
+  if (url.pathname === "/api/admin/phone-callers" && req.method === "POST") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow phone number management" });
+    const body = await readBody(req);
+    ensureOperationsProfile(db.profile);
+    const result = phoneCallerRegistry.addOrUpdateCaller(db, { phone: body.phone, email: body.email, label: body.label, actorEmail: user.email, normalizePhone: normalizePhoneNumber });
+    if (!result.ok) return send(res, result.status, { error: result.error });
+    addUsageEvent(db.profile, { module: "Admin", action: result.updated ? "phone_caller.updated" : "phone_caller.added", detail: `${redactPhoneNumber(result.caller.phone)} linked to ${result.caller.email}.` });
+    logIntegration(db, {
+      providerId: "phone-voice", module: "Platform", action: result.updated ? "phone_caller.updated" : "phone_caller.added",
+      detail: `A phone number was ${result.updated ? "re-linked" : "added"} for Kyro phone access.`,
+      metadata: { phone: redactPhoneNumber(result.caller.phone), email: result.caller.email, by: user.email }
+    });
+    await writeDb(db);
+    return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/admin/phone-callers/remove" && req.method === "POST") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow phone number management" });
+    const body = await readBody(req);
+    ensureOperationsProfile(db.profile);
+    const removed = phoneCallerRegistry.removeCaller(db, String(body.id || ""));
+    if (!removed) return send(res, 404, { error: "That phone number is not on the list" });
+    addUsageEvent(db.profile, { module: "Admin", action: "phone_caller.removed", detail: `${redactPhoneNumber(removed.phone)} removed from Kyro phone access.` });
+    logIntegration(db, {
+      providerId: "phone-voice", module: "Platform", action: "phone_caller.removed",
+      detail: "A phone number was removed from Kyro phone access.",
+      metadata: { phone: redactPhoneNumber(removed.phone), email: removed.email, by: user.email }
+    });
     await writeDb(db);
     return send(res, 200, publicState(db, user));
   }

@@ -41046,6 +41046,7 @@ function render() {
   // as their guest display name and have it execute in an admin's authenticated session the next time they
   // opened this panel.
   $("#adminUsers").innerHTML = (data.admin?.users || []).map(user => `<div><strong>${escapeHtml(user.name)}</strong><span>${escapeHtml(user.role)} - ${escapeHtml(user.email)}</span></div>`).join("");
+  renderAdminPhoneNumbers(data.admin);
   $("#adminSubscribers").innerHTML = (data.admin?.subscribers || []).length
     ? data.admin.subscribers.map(subscriber => `<div><strong>${escapeHtml(subscriber.name)}</strong><span>${escapeHtml(subscriber.status)} - ${escapeHtml(subscriber.email)} - ${escapeHtml(subscriber.plan)} - ${escapeHtml(subscriber.seats)} seat(s)</span></div>`).join("")
     : "<div>No pilot subscribers invited yet.</div>";
@@ -45681,6 +45682,47 @@ async function mutate(path, body, success) {
     updateNexusBehaviorLayer("ready", error.message || "Workflow needs attention.");
     toast(error.message);
   }
+}
+
+// Admin "Phone numbers for Kyro" card: who may phone Kyro and as which account. Every value goes through escapeHtml (names/notes are typed by people).
+function renderAdminPhoneNumbers(admin) {
+  const box = $("#adminPhoneNumbers");
+  if (!box) return;
+  const rows = (admin?.phoneCallers || []).map(row => {
+    const who = row.accountMissing ? "Account no longer exists - this number gets no access" : `${row.name || row.email} (${row.role})`;
+    const note = row.label ? ` - ${row.label}` : "";
+    return `<div><strong>${escapeHtml(row.phone)}</strong><span>${escapeHtml(who)} - ${escapeHtml(row.email)}${escapeHtml(note)}</span><button type="button" data-phone-caller-remove="${escapeHtml(row.id)}">Remove</button></div>`;
+  });
+  const fromSettings = (admin?.phoneCallersFromSettings || []).map(row =>
+    `<div><strong>${escapeHtml(row.phone)}</strong><span>${escapeHtml(row.owner ? "Owner (set in Render, read-only)" : `${row.email} (set in Render, read-only)`)}</span></div>`);
+  box.innerHTML = rows.concat(fromSettings).join("") || "<div>No numbers yet. Add one below.</div>";
+}
+
+async function submitAdminPhoneCaller(event) {
+  event.preventDefault();
+  const phone = $("#phoneCallerPhone").value.trim();
+  const email = $("#phoneCallerEmail").value.trim();
+  const label = $("#phoneCallerLabel").value.trim();
+  if (!phone || !email) return toast("Enter the phone number and the account email.");
+  await mutate("/api/admin/phone-callers", { phone, email, label }, "Phone number saved. That person can phone Kyro now.");
+  if (!$("#phoneCallerForm")) return;
+  // mutate() toasts its own errors; clear the boxes only when the new number is now on the list.
+  const normalized = phone.replace(/[^\d+]/g, "");
+  if ((data.admin?.phoneCallers || []).some(row => row.phone.replace(/[^\d+]/g, "") === normalized)) $("#phoneCallerForm").reset();
+}
+
+// Removing is two taps (no browser confirm box): the first turns the button into "Tap again to remove" for a few seconds.
+function onAdminPhoneNumbersClick(event) {
+  const button = event.target.closest("[data-phone-caller-remove]");
+  if (!button) return;
+  event.preventDefault();
+  if (button.dataset.armed !== "true") {
+    button.dataset.armed = "true";
+    button.textContent = "Tap again to remove";
+    setTimeout(() => { if (button.isConnected) { button.dataset.armed = ""; button.textContent = "Remove"; } }, 4000);
+    return;
+  }
+  mutate("/api/admin/phone-callers/remove", { id: button.dataset.phoneCallerRemove }, "Phone number removed. It can no longer phone Kyro.");
 }
 
 async function runLiveInvestorDemoMode() {
@@ -62838,6 +62880,8 @@ function bindStatic() {
   $("#startOnboardingBtn").onclick = () => openWorkflowModal(workflowConfig("onboarding", "start", { dataset: {} }));
   $("#openSupportBtn").onclick = () => openWorkflowModal(workflowConfig("support", "ticket", { dataset: {} }));
   $("#inviteSubscriberBtn").onclick = () => openWorkflowModal(workflowConfig("subscriber", "invite", { dataset: {} }));
+  $("#phoneCallerForm")?.addEventListener("submit", submitAdminPhoneCaller);
+  $("#adminPhoneNumbers")?.addEventListener("click", onAdminPhoneNumbersClick);
   $("#addTestUserBtn").onclick = () => openWorkflowModal(workflowConfig("test-user", "create", { dataset: {} }));
   $("#addAdminUserBtn").onclick = () => openWorkflowModal(workflowConfig("admin-user", "create", { dataset: {} }));
   $("#addInvestorUserBtn").onclick = () => openWorkflowModal(workflowConfig("investor-user", "create", { dataset: {} }));

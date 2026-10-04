@@ -1949,6 +1949,17 @@
                 <button id="addInvestorUserBtn">Add investor</button>
               </div>
             </article>
+            <article id="adminPhoneNumbersCard">
+              <h3>Phone numbers for Kyro</h3>
+              <p class="muted">A person whose number is listed here can phone Kyro and is treated as their own account. Anyone not listed is screened.</p>
+              <div id="adminPhoneNumbers" class="activity"></div>
+              <form id="phoneCallerForm" class="action-row" autocomplete="off">
+                <input id="phoneCallerPhone" type="tel" inputmode="tel" placeholder="Phone, e.g. +254712345678" aria-label="Phone number with country code" required>
+                <input id="phoneCallerEmail" type="email" placeholder="Their account email" aria-label="Email of the account this number belongs to" required>
+                <input id="phoneCallerLabel" type="text" maxlength="60" placeholder="Note (optional), e.g. Mama Amina" aria-label="Note">
+                <button type="submit" id="addPhoneCallerBtn">Add number</button>
+              </form>
+            </article>
             <article>
               <h3>Subscribers</h3>
               <div id="adminSubscribers" class="activity"></div>
