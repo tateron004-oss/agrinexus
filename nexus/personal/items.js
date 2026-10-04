@@ -10,6 +10,11 @@ const clean = value => String(value ?? "").replace(/\s+/g, " ").trim();
 const LIST_WORDS = "(to-?do|todo|task|shopping|grocery|groceries)";
 const listNameOf = word => (/shopping|grocer/i.test(word) ? "shopping" : "todo");
 const LIST_NOUN = { todo: "to-do list", shopping: "shopping list" };
+const MAX_LIST_ITEMS_AT_ONCE = 20;
+// "milk, eggs and bread"
+const naturalList = values => (values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`);
+// "milk, eggs and bread" / "milk and eggs" -> ["milk", "eggs", "bread"]
+const splitListItems = value => String(value || "").replace(/[.!]+$/, "").split(/\s*,\s*|\s+and\s+|\s*;\s*/i).map(item => item.replace(/^(?:and|some|a|an|the)\s+/i, "").trim()).filter(Boolean).slice(0, MAX_LIST_ITEMS_AT_ONCE);
 const MAX_ITEMS = 300;
 const MAX_TEXT = 200;
 
@@ -45,6 +50,14 @@ function readRequest(text, today) {
 
   // to-do and shopping lists
   const listRef = `(?:my |the )?(?:${LIST_WORDS}(?: list)?s?|list)`;
+  // "Make a shopping list with milk, eggs and bread" / "start a to-do list: fix the gate, buy seed": the items go straight onto the shopping / to-do list
+  // that "what's on my shopping list" reads. (This used to reach the generic checklist maker, a SEPARATE store that question never looks at, so the
+  // list was "created" and then "what's on my shopping list" said it was empty.) A list with a name of its own ("a checklist for planting day") and a
+  // plain "make a shopping list" with nothing to put on it still go to the checklist maker.
+  if ((m = new RegExp(`^(?:please )?(?:make|create|start|set up|write|build|prepare)\\s+(?:me\\s+)?(?:a |an |my |the |a new |another )?${LIST_WORDS}\\s+list\\s*(?:with|including|containing|of|:)\\s*:?\\s*(.+)$`, "i").exec(t))) {
+    const items = splitListItems(m[2]);
+    if (items.length) return { action: "todo-add-many", list: listNameOf(m[1]), items };
+  }
   if ((m = new RegExp(`^(?:please )?(?:add|put)\\s+(.+?)\\s+(?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
   // "I need to buy fertilizer, put it on my list" -- the thing to keep comes first, then "put it on my list".
   if ((m = new RegExp(`^(?:i need to|i have to|i must|i want to|i should)\\s+(.+?)[,.]?\\s+(?:and |then )?(?:please )?(?:put|add) (?:it|that|this) (?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
@@ -143,6 +156,21 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
         if (!result) return full;
         const open = (await list("todo")).filter(row => row.content.list === request.list && !row.content.done).length;
         return `Added ${text1} to your ${LIST_NOUN[request.list]}. You have ${open} open ${open === 1 ? "item" : "items"}.`;
+      }
+      case "todo-add-many": {
+        const added = []; const already = [];
+        for (const raw of request.items) {
+          const text1 = tidyTitle(raw).slice(0, MAX_TEXT);
+          if (!text1) continue;
+          const isDuplicate = existing => existing.list === request.list && !existing.done && words(existing.text).join(" ") === words(text1).join(" ");
+          const result = await add({ kind: "todo", list: request.list, text: text1, done: false }, isDuplicate);
+          if (result?.duplicate) { already.push(text1); continue; }
+          if (!result) return added.length ? `I added ${naturalList(added)} to your ${LIST_NOUN[request.list]}, but then it was full. ${full}` : full;
+          added.push(text1);
+        }
+        if (!added.length && !already.length) return null;
+        const open = (await list("todo")).filter(row => row.content.list === request.list && !row.content.done).length;
+        return `${added.length ? `Added ${naturalList(added)} to your ${LIST_NOUN[request.list]}.` : `Those are already on your ${LIST_NOUN[request.list]}.`}${added.length && already.length ? ` ${naturalList(already)} ${already.length === 1 ? "was" : "were"} already there.` : ""} You have ${open} open ${open === 1 ? "item" : "items"}.`;
       }
       case "todo-list": {
         const rows = (await list("todo")).filter(row => row.content.list === request.list);
