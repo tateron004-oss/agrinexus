@@ -42,6 +42,10 @@ const IMMEDIATE = [
   /^i need (?:urgent |emergency )?help (?:now|right now|immediately)$/,
   new RegExp(`\\bi(?:'ve| have) fallen\\b${NOT_A_FALL}`),
   new RegExp(`\\bi (?:just )?(?:fell|slipped|tripped|collapsed)\\b(?!\\s+(?:up|asleep|back asleep|in love|for\\b|behind|out with|short|apart|ill|sick|into debt|off the wagon)\\b)`),
+  // "I've had a fall" / "I just had a bad fall" / "I had a fall just now": a fall that has just happened. A fall in sales or prices, or one long ago ("last year"), is not.
+  /\bi(?:'ve| have) (?:just )?had a (?:bad |nasty |serious |terrible )?fall\b(?!\s+in\s+(?:sales|prices?|income|profits?|yields?|demand|temperature|grades|business|value|numbers|weight|crops?|harvest))(?!\s+(?:last|before|years?|months?|weeks?|ago)\b)/,
+  /\bi just had a (?:bad |nasty |serious )?fall\b/,
+  /\bi had a (?:bad |nasty |serious )?fall (?:just now|a (?:minute|moment|few minutes) ago|today|this morning|earlier)\b/,
   /\b(?:i )?(?:can'?t|cannot|can not|am unable to|am not able to) get up\b/,
   /\bi(?:'m| am) (?:in danger|badly hurt|hurt badly|seriously hurt|having a (?:heart attack|stroke)|bleeding (?:badly|heavily))\b/,
   /\bi (?:can'?t|cannot|can not) breathe\b/,

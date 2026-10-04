@@ -13,6 +13,9 @@ const {
   queueOffline
 } = require("./medicalBridgeUtils");
 
+const { blockedResponse } = require("./providerUtils");
+const { assessBloodPressure, invalidReadingReply } = require("./bloodPressure");
+
 const PROVIDER = "nexus-chronic-disease-bridge";
 const FLAG = "NEXUS_CHRONIC_DISEASE_BRIDGE_ENABLED";
 const INTAKES = "nexusChronicDiseaseIntakes";
@@ -88,7 +91,8 @@ function normalizeReading(body = {}) {
   const conditionFocus = safeText(body.conditionFocus || body.condition || "diabetes", 80).toLowerCase();
   return localRecord("chronic-reading", body, {
     conditionFocus: CONDITIONS.has(conditionFocus) ? conditionFocus : "unknown_provider_review_needed",
-    dateTimeText: safeText(body.dateTimeText || body.dueAt || "not provided", 120),
+    // A reading with no date said is dated when it was recorded; "not provided" made the history useless for a trend.
+    dateTimeText: safeText(body.dateTimeText || body.dueAt || new Date().toISOString().slice(0, 10), 120),
     glucose: numberOrNull(body.glucose || body.bloodGlucose),
     glucoseUnit: safeText(body.glucoseUnit || "unknown", 20),
     readingContext: safeText(body.readingContext || "unknown", 80),
@@ -116,6 +120,13 @@ function reading(body = {}, db, env = process.env) {
   if (confirmation) return confirmation;
   const blocked = guardMedicalText(PROVIDER, action, [body.notes, body.symptoms, body.foodActivityNote], false);
   if (blocked) return blocked;
+  // A blood pressure needs both numbers and they must be able to be a real reading ("900 over 20" is a misheard or mistyped number, not a health
+  // record). Nothing is saved for it.
+  const hasPressure = [body.systolic, body.diastolic].some(value => value !== null && value !== undefined && value !== "");
+  if (hasPressure) {
+    const assessment = assessBloodPressure(body.systolic, body.diastolic);
+    if (!assessment.valid) return blockedResponse(PROVIDER, action, invalidReadingReply(body.systolic ?? "?", body.diastolic ?? "?"), { invalidReading: true, reason: assessment.reason });
+  }
   const record = saveRecord(db, READINGS, normalizeReading(body), 200);
   return response(PROVIDER, action, "completed", "Chronic disease reading saved locally for trend review. No diagnosis or medication advice was generated.", { reading: record });
 }

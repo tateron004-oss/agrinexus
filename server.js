@@ -55,6 +55,8 @@ const googleCloudTranslationProvider = require("./server/google-cloud-translatio
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
+const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
+const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const { HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
 const {
@@ -22413,12 +22415,21 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         diastolic: bp ? Number(bp[2]) : null,
         glucose: glucose ? Number(glucose[1]) : null,
         readingContext: args.readingContext || "voice-reported",
+        // Dated when it was said, in a form that reads well aloud ("4 October 2026"), so the history shows when each reading was taken.
+        dateTimeText: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: DEFAULT_TIME_ZONE }),
         confirmed: wantsHealthActionConfirmed
       }, healthDb, process.env);
       readingSaved = Boolean(readingResult?.body?.ok && readingResult.body.status === "completed");
       writeAttempted = true;
       readingKind = bp ? "blood-pressure" : "blood-glucose";
-      if (bp) {
+      const bpAssessment = bp ? assessBloodPressure(bp[1], bp[2]) : null;
+      if (bp && readingResult?.body?.data?.invalidReading) {
+        // Not a possible reading ("900 over 20"): nothing was saved, and the person is told so and how to say it again.
+        response = invalidReadingReply(bp[1], bp[2]);
+      } else if (bp && readingSaved && bpAssessment?.level === "urgent") {
+        // A very high reading gets plain, urgent guidance, not only the general "a single reading is not a diagnosis" line.
+        response = urgentGuidance(bp[1], bp[2], command);
+      } else if (bp) {
         response = readingSaved
           ? `I saved the blood-pressure reading ${bp[1]} over ${bp[2]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`
           : `I noted the blood-pressure reading ${bp[1]} over ${bp[2]}, but saving it to your chronic-care record is unavailable right now. A single reading does not establish a diagnosis. Discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`;
@@ -22427,6 +22438,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
           ? `I saved the blood-glucose reading ${glucose[1]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`
           : `I noted the blood-glucose reading ${glucose[1]}, but saving it to your chronic-care record is unavailable right now. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`;
       }
+      if (bp && readingSaved && bpAssessment?.level === "low") response = `${response} ${lowNote()}`;
     } else if (rpmVital) {
       const rpmResult = nexusRealProviders.rpmBridge.deviceReading({
         metric: rpmVital.metric,

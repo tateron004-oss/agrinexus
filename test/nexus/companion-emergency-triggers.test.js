@@ -21,7 +21,8 @@ test("real emergencies still alert (nothing that used to alert has been lost)", 
     "tell my circle I need help", "tell my circle it's an emergency", "tell my circle I've fallen", "message my circle I'm in trouble",
     "alert my circle my husband is not breathing", "notify my circle I am hurt", "tell my circle I am being attacked",
     "send an emergency alert to my circle", "send alert to my trusted circle",
-    "call an ambulance", "please call an ambulance", "get an ambulance", "I need an ambulance", "please I need an ambulance"
+    "call an ambulance", "please call an ambulance", "get an ambulance", "I need an ambulance", "please I need an ambulance",
+    "I've had a fall", "I have had a fall", "I've had a bad fall", "I just had a fall", "I have had a nasty fall in the kitchen", "I had a fall just now", "I had a bad fall this morning"
   ]) assert.equal(kind(phrase), "emergency", phrase);
 });
 
@@ -33,7 +34,8 @@ test("ordinary sentences that share words with an emergency do NOT send an alert
     "alert my circle that I arrived home", "notify my circle about the wedding tomorrow", "tell my circle it's not an emergency",
     "contact my circle about dinner", "text my circle I'm on my way", "alert my circle I'm fine",
     "how do I call an ambulance", "do I need an ambulance for a small cut", "what number is the ambulance",
-    "I need help with my maize", "emergency contact list", "who is in my circle"
+    "I need help with my maize", "emergency contact list", "who is in my circle",
+    "I've had a fall in sales this month", "I've had a fall in income", "prices have had a fall", "I had a fall last year", "I've had a fall before", "I had a fall two years ago", "I've had a fall in prices for maize"
   ]) assert.notEqual(kind(phrase), "emergency", phrase);
 });
 
