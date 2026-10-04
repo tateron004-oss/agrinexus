@@ -35,6 +35,8 @@ function readDeskRequest(text) {
     const status = named || (verb === "close" ? "closed" : verb === "resolve" ? "resolved" : verb === "reopen" ? "open" : "");
     return status ? { action: "update", number: Number(m[2]), status, note: clean(m[4]).slice(0, 200) } : null;
   }
+  // A rehearsal that reaches only the sender, so staff (and testers) can see exactly what an announcement looks like without anyone else receiving it.
+  if ((m = /^(?:announce|broadcast)\s+test\s*:\s*(.{5,300})$/i.exec(t))) return { action: "announce-test", text: clean(m[1]) };
   if ((m = /^(?:announce|broadcast|send an announcement)(?: to (?:everyone|all))?\s*:\s*(.{5,300})$/i.exec(t))) return { action: "announce", text: clean(m[1]) };
   if (/^confirm (?:the )?announcement$/.test(lower)) return { action: "confirm-announcement" };
   if (/^cancel (?:the )?announcement$/.test(lower)) return { action: "cancel-announcement" };
@@ -121,6 +123,14 @@ async function communityTurn({ text, store, notifications, tenantId, userId, nam
         const count = recipients.filter(id => !optedOut.has(id)).length;
         await store.setPending({ tenantId, userId, content: { kind: "pending", text: request.text, expiresAt: new Date(now.getTime() + PENDING_MINUTES * 60000).toISOString() } });
         return `Ready to send to ${count} ${count === 1 ? "person" : "people"} with alerts on (anyone who opted out is left out): "${request.text}". Say "confirm announcement" within ${PENDING_MINUTES} minutes to send it, or "cancel announcement".`;
+      }
+      case "announce-test": {
+        if (!staff) return null;
+        // Only the sender, never recorded, never counted against the daily limit. If their own device has no alerts on there is nothing to send to, so say so.
+        const hasDevice = typeof store.hasPushDevice === "function" ? await store.hasPushDevice({ tenantId, userId }) : (await store.pushRecipients({ tenantId, limit: 5000 })).includes(String(userId));
+        if (!hasDevice) return "I can't send you a test because alerts are not turned on for this device. Turn on alerts first, then say it again. Nothing was sent to anyone.";
+        await push(userId, "Test announcement (only you got this)", request.text, `announce-test:${userId}:${now.getTime()}`);
+        return `Test sent to you only. Nobody else received it, and it doesn't count toward today's limit. To send it to the community, say "announce: ${request.text}".`;
       }
       case "cancel-announcement": {
         if (!staff) return null;

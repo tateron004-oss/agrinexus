@@ -130,6 +130,12 @@ class CommunityRepository {
     for (const row of rows) await this.softDelete({ tenantId, memoryId: row.memoryId, purpose: "community_notices" });
     return rows.length > 0;
   }
+  // Can this one person receive a push? (An exact check, not a scan of the capped recipient list.)
+  async hasPushDevice({ tenantId, userId }) {
+    const result = await this.db.query(`select 1 from nexus_devices
+      where tenant_id=$1 and user_id=$2 and state='active' and push_state='registered' and push_endpoint is not null and push_key_ciphertext is not null limit 1`, [tenantId, String(userId)]);
+    return (result.rows || result).length > 0;
+  }
   // People in this community whose devices can receive a push. Only this tenant's devices are ever read.
   async pushRecipients({ tenantId, limit = 5000 }) {
     const result = await this.db.query(`select distinct user_id from nexus_devices
