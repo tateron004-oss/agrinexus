@@ -19,7 +19,10 @@
 // upsetting reply to a false match.
 const VETERAN = /\bi(?:'m| am) (?:a |an )?(?:military |army |navy |air force |marine corps |combat |former )?veteran\b/i;
 const ELDERLY_WORDS = /\bi(?:'m| am) (?:elderly|a senior citizen|an older (?:person|adult)|getting (?:up there|older)|a senior)\b/i;
-const ELDERLY_AGE = /\bi(?:'m| am) (\d{2,3})(?: years? old)?\b/i;
+// A number only counts as an AGE when it is said as one: "I'm 70", "I'm 70 years old", "I am 72 and I live alone", "I'm 65, how do I use this".
+// "I'm 70 kg", "I'm 80 meters away", "I am 100 percent sure" and "I'm 90 km from Nakuru" are not ages: the number must be followed by "years old"
+// (or similar), the end of the sentence, a comma, or "and"/"but"/"so".
+const ELDERLY_AGE = /\bi(?:'m| am) (\d{2,3})(?:[\s-]*(?:years?|yrs?)(?:[\s-]*old)?|\s*y\/?o)?(?=\s*(?:[.,;!?]|$)|\s+(?:and|but|so)\b)/i;
 
 // -> "veteran" | "elderly" | null
 function readAudienceIntro(text) {

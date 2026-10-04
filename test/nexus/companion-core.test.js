@@ -610,3 +610,13 @@ test("someone who declined is not asked again for 30 days, and the reply reveals
   await ask(w, "Add amina@example.com to my circle");
   assert.equal(w.pushes.length, 1, "after 30 days they may be asked again");
 });
+
+// Found live: any number after "I'm" counted as an age, so "I'm 70 kg", "I'm 80 meters away" or "I am 100 percent sure" got the senior reply.
+test("a number is an age only when it is said as one (not a weight, distance or percentage)", () => {
+  const { readAudienceIntro } = require("../../nexus/companion/audience.js");
+  for (const text of ["I'm 70 kg", "I am 70 kg", "I'm 80 meters away", "I am 100 percent sure", "I'm 90 km from Nakuru", "I'm 70 today", "I'm 75 kilos", "I am 65 percent done"]) assert.equal(readAudienceIntro(text), null, text);
+  for (const text of ["I'm 70", "I'm 70.", "I'm 70 years old", "I am 70 years old.", "I'm 68 years", "I am 66 yo", "I am 72 and I live alone", "I'm 65, how do I use this", "I'm 80!", "I'm 70-year-old"]) assert.equal(readAudienceIntro(text), "elderly", text);
+  assert.equal(readAudienceIntro("I'm 40 years old"), null, "under 65 is not an elderly introduction");
+  assert.equal(readAudienceIntro("I'm 140"), null, "over 130 is not an age");
+  assert.equal(readAudienceIntro("I'm a senior citizen"), "elderly");
+});
