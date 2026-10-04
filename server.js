@@ -18442,7 +18442,10 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
   if (!match) return null;
   if (match.email) {
     const byEmail = db.users.find(item => String(item.email || "").toLowerCase() === match.email);
-    if (byEmail) return byEmail;
+    // A number listed WITH an email belongs to that account and no other. If that account does not exist (a typo in the list, or the person deleted their
+    // account), the caller gets NO identity -- never the owner's. This used to fall through to the bare-number rule below and hand the Admin account to
+    // that number.
+    return byEmail || null;
   }
   // A bare "phone" entry (no ":email") authorizes the default account
   // owner -- the same identity every call used to get unconditionally,

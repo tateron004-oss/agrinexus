@@ -96,7 +96,8 @@ test("export finds a person's own records and erase removes only theirs", () => 
   const exported = collectOwnedHealthBridgeRecords(db, "amina");
   assert.deepEqual(Object.keys(exported).sort(), ["nexusChronicDiseaseReadings", "nexusRpmDeviceReadings"]);
   assert.equal(exported.nexusChronicDiseaseReadings[0].systolic, 150);
-  assert.equal(JSON.stringify(exported).includes("120"), false, "Brian's reading must not be in Amina's export");
+  // Check the records, not the text: a bare "120" can also appear inside a record id (they contain the current time in milliseconds).
+  assert.equal(Object.values(exported).flat().some(record => record.systolic === 120), false, "Brian's reading must not be in Amina's export");
   assert.equal(eraseOwnedHealthBridgeRecords(db, "amina"), 2);
   assert.deepEqual(collectOwnedHealthBridgeRecords(db, "amina"), {});
   assert.equal(db.profile.nexusChronicDiseaseReadings.length, 1, "Brian's record remains");
