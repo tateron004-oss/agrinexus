@@ -1,6 +1,7 @@
 "use strict";
 
 const { extractDay, extractPeriod, addDays, weekdayOf, describeDay } = require("../personal/dates.js");
+const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
 // A farm log the person keeps by talking: rainfall, soil moisture, tank levels and harvests, with totals on request and a warning when a
@@ -183,7 +184,7 @@ async function farmLogTurn({ text, memory, tenantId, userId, now = new Date(), t
   if (!memory?.addFarmEntry || !memory?.listFarmEntries || !memory?.removeFarmEntry || !memory?.addFarmEntryUnlessCapped) return null;
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   const today = localDay(now, zone);
-  const request = readRequest(text, today);
+  const request = readRequest(normalizeSpokenText(text), today); // what was SAID: "forty kilos" -> "40 kilos" (nexus/i18n/spoken-input.js)
   if (!request) return null;
   const scope = { tenantId, userId };
   try {

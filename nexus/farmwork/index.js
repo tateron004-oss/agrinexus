@@ -3,6 +3,7 @@
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { continueGuided, expired, YES, NO } = require("./guided.js");
 const { clean } = require("./parse.js");
+const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const fields = require("./fields.js");
 const tasks = require("./tasks.js");
 const inventory = require("./inventory.js");
@@ -49,7 +50,8 @@ async function farmWorkTurn({ text, store, tenantId, userId, now = new Date(), t
   const wrapped = track(store);
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   let entries = null; let hasFarm = null;
-  const ctx = { text: clean(text), store: wrapped, tenantId, userId, now, zone, today: localDay(now, zone), roles, memory, notifications, nameOf,
+  // What was SAID: "Yes." / "Skip." lose their full stop and "forty kilos" becomes "40 kilos" (nexus/i18n/spoken-input.js).
+  const ctx = { text: normalizeSpokenText(clean(text)), store: wrapped, tenantId, userId, now, zone, today: localDay(now, zone), roles, memory, notifications, nameOf,
     hasFarmData: async () => { if (hasFarm === null) { try { hasFarm = (await store.listAll({ tenantId, userId, limit: 1 })).length > 0; } catch { hasFarm = false; } } return hasFarm; },
     farmEntries: async () => { if (entries === null) { try { entries = memory?.listFarmEntries ? (await memory.listFarmEntries({ tenantId, userId })).map(row => row.content) : []; } catch { entries = []; } } return entries; },
     personal: memory?.addPersonalItem ? { add: content => memory.addPersonalItem({ tenantId, userId, content }), list: async () => (await memory.listPersonalItems({ tenantId, userId })).map(row => row.content) } : null };
