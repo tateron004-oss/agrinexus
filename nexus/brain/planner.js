@@ -299,6 +299,12 @@ class OpenEndedPlanner {
     // taken from an unrelated web page. Nexus holds no such record, so it says so instead of guessing.
     const personalRecord = personalRecordQuestionPlan(command.text);
     if (personalRecord) return Object.freeze({ ...personalRecord, planningAttempts: 0 });
+    // A caller that only wants the answers Kyro can give and SAVE without the AI model (the spoken path: see
+    // nexus/compat/voice-planner-bridge.js) stops here. Everything above is deterministic; everything below may call the model
+    // or build tool steps, which that caller leaves to its own pipeline.
+    if (context?.deterministicOnly === true) {
+      return Object.freeze({ deferred: true, goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0 });
+    }
     // Jokes and riddles are not web searches ("Tell me a joke" returned a stitched-together search snippet).
     if (isLightChatRequest(command.text) && typeof this.model.respond === "function") {
       const answer = await this.model.respond({ goal: command.text, locale, tenantId: command.tenantId,

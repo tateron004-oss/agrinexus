@@ -21,6 +21,9 @@ class BehaviorSpine {
 
   async turn({ input, context }) {
     const planned = await this.agent.command({ input, context });
+    // Only for a caller that asked for deterministic answers alone (context.deterministicOnly): there was none, so nothing was created
+    // and the caller carries on with its own pipeline.
+    if (planned.action === "defer") return { schema: "nexus.behavior-turn.v1", authoritative: true, deferred: true, completed: false, state: "deferred", response: "" };
     // A plain conversational answer (greeting, "who are you", a general question answered without tools) has
     // no task to execute or render. AgentService already returned it; it used to fall through to
     // executeTask(planned.task.taskId) with no task and surface as a 503 "runtime unavailable".
