@@ -31224,7 +31224,7 @@ function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
         : "";
     return {
       intent: "assistant.reminder_scheduled",
-      response: `Done. I will remind you to ${reminder.task} ${reminder.whenLabel}.${contactLine}`,
+      response: `Done. I will remind you ${/^about\s/i.test(reminder.task) ? "" : "to "}${reminder.task} ${reminder.whenLabel}.${contactLine}`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: reminder.section, reminder, suggestedReplies: ["list reminders", "what should I do next", "call contact"] }
     };
