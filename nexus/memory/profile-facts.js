@@ -12,12 +12,19 @@ const WORKS = ["farmer", "trader", "teacher", "nurse", "driver", "student", "sho
 
 const NOT_A_NAME = new Set(["fine", "good", "well", "great", "ok", "okay", "sure", "sorry", "tired", "hungry", "sick", "ill", "happy", "sad", "here", "there", "back", "ready", "busy", "late", "new", "old",
   "kenyan", "african", "farmer", "student", "nexus", "kyro", "not", "just", "from", "in", "at", "on", "the", "a", "an", "also", "still", "very", "so", "trying", "looking", "wondering", "going", "coming", "working"]);
-const NOT_A_PLACE = new Set(["a", "an", "the", "my", "our", "your", "this", "that", "here", "there", "home", "house", "town", "village", "city", "country", "countryside", "area", "place", "farm", "field", "garden", "shop", "office", "bed", "trouble", "need", "love", "doubt", "charge", "general"]);
+const NOT_A_PLACE = new Set(["a", "an", "the", "my", "our", "your", "this", "that", "here", "there", "home", "house", "town", "village", "city", "country", "countryside", "area", "place", "farm", "field", "garden", "shop", "office", "bed", "trouble", "need", "love", "doubt", "charge", "general", "size", "total", "all", "school", "class", "church", "hospital", "touch", "love",
+  "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+  "spring", "summer", "autumn", "winter", "season", "seasons", "rain", "rains", "dry", "wet", "today", "tomorrow", "yesterday", "morning", "evening", "night", "week", "month", "year", "time", "future", "past"]);
 const NOT_A_CROP = new Set(["a", "an", "the", "my", "some", "many", "few", "crops", "crop", "things", "thing", "food", "plants", "plant", "stuff", "it", "them", "that", "this", "everything", "anything", "nothing", "well", "here", "there", "own", "land", "farm", "living"]);
 const LIVESTOCK = ["cows", "cattle", "goats", "sheep", "pigs", "chickens", "hens", "ducks", "turkeys", "rabbits", "bees", "donkeys", "camels", "cow", "goat", "pig", "chicken", "hen", "duck", "turkey", "rabbit", "donkey", "camel", "beehives", "hives"];
 const LANGUAGES = { swahili: "Swahili", kiswahili: "Swahili", english: "English", french: "French", hausa: "Hausa", yoruba: "Yoruba", igbo: "Igbo", amharic: "Amharic", luganda: "Luganda", kinyarwanda: "Kinyarwanda",
   somali: "Somali", zulu: "Zulu", xhosa: "Xhosa", arabic: "Arabic", portuguese: "Portuguese", kikuyu: "Kikuyu", luo: "Luo", kalenjin: "Kalenjin", lingala: "Lingala", shona: "Shona", twi: "Twi" };
 const QUESTION_OPENER = /^(?:what|which|who|whom|whose|when|where|why|how|can|could|would|should|will|shall|do|does|did|is|are|am|was|were|have|has|tell|show|find|give|make|send|call|text|email|remind|set|add|create|play|open|list|help)\b/i;
+
+const ASKS_FOR_SOMETHING = /\b(?:remind(?:er)?|how (?:much|many|do|can|to|long|often)|what|why|can you|could you|would you|will you|i need|i want|i'd like|i would like|tell me|show me|help me|find|calculate|schedule|plan|call|text|send|set up|add|create|open|play|price|prices|cost|dose|should i|do i|must i)\b/i;
+// What may follow a stated size or kind of work: the end of the sentence or the next clause, not more words that change the meaning
+// ("5 acres of problems", "a farmer no more", "a farmer's son", "Farmer John", "a student of life").
+const CLAUSE_END = "(?=\\s*$|\\s*[,.!;]|\\s+(?:and|but|in|near|at|from|here|now|too|also|by|since|who|with|for|where)\\b)";
 
 const clean = value => String(value ?? "").replace(/\s+/g, " ").trim();
 const titleCase = value => value.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(" ");
@@ -43,6 +50,9 @@ function extractProfileStatement(text) {
   const original = clean(text);
   // "Call me Otieno" is a statement about a name; every other opener that starts with "call" (or any command word) is a request.
   if (!original || original.length > 220 || /[?]/.test(original) || (QUESTION_OPENER.test(original) && !/^call me\b/i.test(original))) return [];
+  // A statement that also asks for something ("I am a farmer, please remind me to water the maize at 6pm", "I have 5 acres, how much fertilizer do I need") is a
+  // request first: nothing is saved from it, so the request is carried out and the fact can be said again on its own.
+  if (ASKS_FOR_SOMETHING.test(original.replace(/\b(?:you can |people )?call me\b/gi, " "))) return [];
   const facts = new Map(); const add = (kind, value) => { if (value && !facts.has(kind)) facts.set(kind, value); };
   const sentence = original.replace(/^(?:hello|hi|hey|ok|okay|so|well)[,!.\s]+/i, "");
 
@@ -69,14 +79,14 @@ function extractProfileStatement(text) {
 
   // "I have 5 acres", "my farm is about 2 hectares", "we farm three acres": the size of the farm, as said.
   const sizeSentence = normalizeSpokenText(sentence);
-  const size = /\b(?:(?:i|we) (?:have|own|farm|cultivate|manage|work)|my (?:farm|land|shamba|plot|holding) is|our (?:farm|land|shamba|plot|holding) is)\s+(?:about |around |roughly |over |almost |nearly |only |just )?(\d+(?:\.\d+)?)\s*(acres?|hectares?|ha)\b/i.exec(sizeSentence);
+  const size = new RegExp(`\\b(?:(?:i|we) (?:have|own|farm|cultivate|manage|work)|my (?:farm|land|shamba|plot|holding) is|our (?:farm|land|shamba|plot|holding) is)\\s+(?:about |around |roughly |over |almost |nearly |only |just )?(\\d+(?:\\.\\d+)?)\\s*(acres?|hectares?|ha)\\b(?:\\s+of (?:land|farmland|farm|shamba))?(?:\\s+in (?:size|total))?${CLAUSE_END}`, "i").exec(sizeSentence);
   if (size && Number(size[1]) > 0 && Number(size[1]) <= 100000) {
     const unit = /^ha/i.test(size[2]) ? "hectares" : /^hectare/i.test(size[2]) ? "hectares" : "acres";
     const count = Number(size[1]);
     add("farmSize", `${count} ${count === 1 ? unit.replace(/s$/, "") : unit}`);
   }
   // "I am a farmer", "I work as a nurse", "my job is teaching" (not: only the listed kinds of work).
-  const work = new RegExp(`\\b(?:i am|i'm|i’m|i work as|my job is|my work is|by profession i am)\\s+(?:an? |the )?(${WORKS.join("|")})s?\\b`, "i").exec(sentence)?.[1];
+  const work = new RegExp(`\\b(?:i am|i'm|i’m|i work as|my job is|my work is|by profession i am)\\s+(?:an? |the )?(${WORKS.join("|")})${CLAUSE_END}`, "i").exec(sentence)?.[1];
   if (work) add("work", work.toLowerCase());
 
   const spoken = new RegExp(`\\b(?:i speak|i prefer|my language is|speak to me in|talk to me in|reply in|answer in|respond in|write to me in)\\s+(${Object.keys(LANGUAGES).join("|")})\\b`, "i").exec(sentence)?.[1];
