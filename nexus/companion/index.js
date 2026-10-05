@@ -3,7 +3,7 @@
 const { circleTurn, readCircleRequest } = require("./circle.js");
 const { safetyTurn, safeTurn, readSafety, readSafe } = require("./safety.js");
 const { createEmergencyLocation } = require("./emergency-location.js");
-const { createCheckinService, parseCheckinControl, readCheckinAnswer } = require("./checkins.js");
+const { createCheckinService, parseCheckinControl, readCheckinAnswer, MIN_GRACE_HOURS, MAX_GRACE_HOURS } = require("./checkins.js");
 const { createMedicationService, readMedicationRequest } = require("./medications.js");
 const { readAudienceIntro, audienceIntroReply } = require("./audience.js");
 const { formatTimeOfDay } = require("../brief/schedule.js");
@@ -77,14 +77,23 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
 
       const control = parseCheckinControl(command.text);
       if (control) {
+        const outOfRange = Number.isFinite(control.graceHours) && !(control.graceHours >= MIN_GRACE_HOURS && control.graceHours <= MAX_GRACE_HOURS);
+        if (outOfRange) return `I can wait between ${MIN_GRACE_HOURS} and ${MAX_GRACE_HOURS} hours before telling the people you chose. Nothing was changed.`;
+        if (control.action === "wait") {
+          const current = await checkins.status(scope);
+          if (!current) return 'You don\'t have daily check-ins yet. Say "check in on me every morning at 8" first, and add "and tell my circle after 6 hours" if you want a different wait.';
+          const saved = await checkins.enable({ ...scope, timeOfDay: current.timeOfDay, timeZone: current.timeZone, graceHours: control.graceHours });
+          const members = saved.sharingWith?.length ? saved.sharingWith.join(", ") : "";
+          return `Done. If I can't reach you and you say nothing to me for ${saved.graceHours} hour${saved.graceHours === 1 ? "" : "s"}, I'll tell ${members || "the people you choose to share your check-ins with"} that your check-in was missed. Only that, never your answers.`;
+        }
         if (control.action === "stop") return await checkins.disable(scope) ? "Done. I've stopped your daily check-ins." : "You don't have daily check-ins set up.";
         if (control.action === "status") {
           const current = await checkins.status(scope);
-          return current ? `I check in on you every day at ${formatTimeOfDay(current.timeOfDay)} (${current.timeZone} time). Say "stop my check-ins" any time.` : 'You don\'t have daily check-ins. Say "check in on me every morning at 8" to start.';
+          return current ? `I check in on you every day at ${formatTimeOfDay(current.timeOfDay)} (${current.timeZone} time). If you don't answer for ${current.graceHours || 3} hours, the people you share check-ins with are told. Say "stop my check-ins" or "tell my circle if I don't answer for 6 hours" any time.` : 'You don\'t have daily check-ins. Say "check in on me every morning at 8" to start.';
         }
         if (!control.timeOfDay) return "What time each day? For example 8am or 7:30.";
         const zoneGiven = Boolean(context?.timeZone) && validTimeZone(context.timeZone) === context.timeZone;
-        const saved = await checkins.enable({ ...scope, timeOfDay: control.timeOfDay, timeZone: zoneGiven ? context.timeZone : DEFAULT_TIME_ZONE });
+        const saved = await checkins.enable({ ...scope, timeOfDay: control.timeOfDay, timeZone: zoneGiven ? context.timeZone : DEFAULT_TIME_ZONE, graceHours: control.graceHours });
         const notes = [
           saved.sharingWith?.length
             ? `If I can't reach you and you say nothing to me for ${saved.graceHours} hours, I'll tell ${saved.sharingWith.join(", ")} — only that, never your answers.`
