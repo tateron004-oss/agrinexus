@@ -47,6 +47,16 @@ class DocumentRepository {
     return (result.rows || result)[0] || null;
   }
 
+  // The file copy kept with the latest version (see nexus/documents/executor.js), as base64, for the document's owner only. null when there is none
+  // (an older document, a file too big to keep, or one that has been erased).
+  async getFileContent({ tenantId, ownerId, documentId }) {
+    const result = await this.db.query(`select v.content->>'contentBase64' as content_base64
+      from nexus_documents d
+      join lateral (select content from nexus_document_versions where document_id=d.document_id order by version desc limit 1) v on true
+      where d.tenant_id=$1 and d.owner_id=$2 and d.document_id=$3 and d.deleted_at is null`, [tenantId, ownerId, documentId]);
+    return (result.rows || result)[0]?.content_base64 || null;
+  }
+
   // Archive, never delete: the document is hidden from get/list (they skip anything with deleted_at) but its row, versions and
   // stored file all stay. Tenant AND owner scoped like get(), so only the person who created it can archive it. Returns the
   // archived document's id and title, or null when there is no such active document for this owner.
