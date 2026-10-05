@@ -65,11 +65,14 @@ const MONTH_WORDS = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:
 const DATE_PHRASE = new RegExp(`\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+(?:${MONTH_WORDS})\\b|\\b(?:${MONTH_WORDS})\\s+\\d{1,2}(?:st|nd|rd|th)?\\b`, "i");
 const UNIT_MS = { minute: 60 * 1000, hour: 60 * 60 * 1000 };
 
-function parseAssistantReminderTime(text = "", options = {}) {
+// Plain misspellings of the words a time is made of ("tomorow at 6"), so they are read as the time they mean and not dropped in favour of a guess.
+const fixTimeSpelling = text => String(text || "").replace(/\b(?:tomorow|tommorow|tommorrow|tomorro|tomorrw|tmrw|2morrow|2moro|tomoro)\b/gi, "tomorrow").replace(/\bo['’]?clock\b/gi, "oclock");
+
+function parseTimeInner(text = "", options = {}) {
   const zone = validTimeZone(options.timeZone || DEFAULT_TIME_ZONE);
   const nowInstant = options.now instanceof Date ? options.now : new Date();
   const now = localParts(nowInstant, zone);
-  const lower = String(text || "").toLowerCase();
+  const lower = fixTimeSpelling(text).toLowerCase();
   const addMs = ms => new Date(nowInstant.getTime() + ms);
 
   const period = (lower.match(/\b(morning|midday|noon|afternoon|evening|night)\b/) || [])[1] || "";
@@ -119,6 +122,7 @@ function parseAssistantReminderTime(text = "", options = {}) {
   const relativeNumber = lower.match(/\bin\s+(\d{1,3})\s*(minute|minutes|min|hour|hours|hr|day|days|week|weeks)\b/);
   const relativeWord = lower.match(/\bin\s+(half\s+an?|an?|one|a\s+couple\s+of|a\s+few)\s+(minute|minutes|hour|hours|day|days|week|weeks)\b/);
   const relative = relativeNumber || relativeWord;
+  if (/\bin\s+(?:an?|one)\s+hours?\s+and\s+a\s+half\b/.test(lower)) return { scheduledAt: addMs(90 * UNIT_MS.minute).toISOString(), whenLabel: "in an hour and a half" };
   if (relative) {
     let amount = relativeNumber ? Number(relativeNumber[1]) : /half/.test(relativeWord[1]) ? 0.5 : /couple/.test(relativeWord[1]) ? 2 : /few/.test(relativeWord[1]) ? 3 : 1;
     const unit = relative[2];
@@ -186,10 +190,23 @@ function parseAssistantReminderTime(text = "", options = {}) {
       return { scheduledAt: candidates[0].toISOString(), whenLabel: explicitTime[0].replace(/^at\s+/, "").trim() };
     }
     const scheduled = atLocalDay(0, parsedClock, true);
-    return { scheduledAt: scheduled.toISOString(), whenLabel: explicitTime ? explicitTime[0].replace(/^at\s+/, "").trim() : namedClock[1] };
+    // That time has already passed today, so it is for tomorrow: said so, not left for the person to find out when nothing arrives.
+    const tomorrowNote = localParts(scheduled, zone).day !== now.day ? " tomorrow" : "";
+    return { scheduledAt: scheduled.toISOString(), whenLabel: `${explicitTime ? explicitTime[0].replace(/^at\s+/, "").trim() : namedClock[1]}${tomorrowNote}` };
   }
   const fallback = addMs(24 * 60 * 60 * 1000);
   return { scheduledAt: fallback.toISOString(), whenLabel: "tomorrow" };
+}
+
+// The time a reminder is set for, and how it is said back. A date that was said but could not be used (a day that does not exist, or one that has passed) is named in the
+// words said back instead of quietly becoming "tomorrow".
+function parseAssistantReminderTime(text = "", options = {}) {
+  const result = parseTimeInner(text, options);
+  const said = fixTimeSpelling(text).toLowerCase().match(DATE_PHRASE);
+  if (said && !/^(?:on |in )/.test(result.whenLabel)) {
+    return { ...result, whenLabel: `${result.whenLabel} (I could not use "${said[0]}": it is not a real day, or it has passed)` };
+  }
+  return result;
 }
 
 // Every word group that names a time. One list, used to find the time in a sentence (hasReminderTimePhrase), to match a reminder request in the planner, and to cut the
@@ -200,20 +217,22 @@ const TIME_WORDS = [
   // longest first: the alternation takes the first that matches, so "tomorrow morning" must be tried before "tomorrow"
   `(?:tomorrow|today)\\s+${PART_OF_DAY}`, "tomorrow", "today", "tonight", "later today", `this\\s+${PART_OF_DAY}`,
   "in\\s+\\d{1,3}\\s*(?:minutes?|mins?|hours?|hrs?|days?|weeks?)",
-  "in\\s+(?:half\\s+an?|an?|one|a\\s+couple\\s+of|a\\s+few)\\s+(?:minutes?|hours?|days?|weeks?)",
+  "in\\s+(?:half\\s+an?|an?|one|a\\s+couple\\s+of|a\\s+few)\\s+(?:minutes?|hours?|days?|weeks?)(?:\\s+and\\s+a\\s+half)?",
   `(?:(?:on|next|this)\\s+)?(?:${WEEKDAYS})(?:\\s+${PART_OF_DAY})?`,
   "(?:at\\s+)?(?:noon|midday|midnight)",
+  "(?:at\\s+)?\\d{1,2}\\s*oclock",
+  `(?:in|during)\\s+the\\s+${PART_OF_DAY}`,
   "(?:at\\s+)?\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)",
   "at\\s+(?:1[0-2]|0?[1-9])(?::[0-5]\\d)?(?![\\d:]|\\s*(?:am|pm|kg|bags?|%|percent|per|each|units?))",
   `(?:on\\s+)?\\d{4}-\\d{2}-\\d{2}`,
-  `(?:on\\s+)?(?:the\\s+)?\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+(?:${MONTH_WORDS})`,
-  `(?:on\\s+)?(?:${MONTH_WORDS})\\s+\\d{1,2}(?:st|nd|rd|th)?`
+  `(?:on\\s+)?(?:the\\s+)?\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+(?:${MONTH_WORDS})(?:,?\\s+\\d{4})?`,
+  `(?:on\\s+)?(?:${MONTH_WORDS})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`
 ];
 const TIME_ALTERNATION = TIME_WORDS.join("|");
 const REMINDER_TIME_PHRASE = new RegExp(`\\b(?:${TIME_ALTERNATION})\\b`, "i");
 
 function extractAssistantReminderTask(text = "") {
-  const source = String(text || "")
+  const source = fixTimeSpelling(text)
     .replace(/\bnexus\b/ig, " ")
     .replace(/\b(hey|please|can you|could you|would you)\b/ig, " ")
     .replace(/\s+/g, " ")
@@ -236,7 +255,7 @@ function extractAssistantReminderTask(text = "") {
 // True only when the sentence names a time parseAssistantReminderTime really understands. Without one the parser
 // silently falls back to "tomorrow", so callers that must not guess (the spoken reminder tool) check this first.
 function hasReminderTimePhrase(text = "") {
-  return REMINDER_TIME_PHRASE.test(String(text || ""));
+  return REMINDER_TIME_PHRASE.test(fixTimeSpelling(text));
 }
 
 module.exports = Object.freeze({ parseAssistantReminderTime, extractAssistantReminderTask, hasReminderTimePhrase, REMINDER_TIME_PHRASE, DEFAULT_TIME_ZONE });
