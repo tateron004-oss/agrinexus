@@ -1,6 +1,9 @@
 "use strict";
 
 const { t, both, languageOf } = require("../i18n/index.js");
+// What people say when they may hurt themselves or someone else, or are being hurt: ONE list shared with the typed-chat, phone and voice readers (public/kyro-crisis-phrases.js).
+const crisisPhrases = require("../../public/kyro-crisis-phrases.js");
+const SWAHILI_WORDS = /\b(?:nimechoka|natamani|nataka|ninataka|napenda|ningependa|sina|nafikiria|ninafikiria|afadhali|heri|bora nife|maisha|bunduki|kisu|sumu|sitaki)\b/;
 
 // Emergencies and moments of crisis. Two things happen here and they are deliberately different:
 //
@@ -66,16 +69,19 @@ const IMMEDIATE = [
 // "alert my circle" and its relatives. The verb matters: "alert/notify" is an emergency word, "tell/message/contact/call/text" is just as often
 // "tell my circle I'll be late". Whatever follows decides: nothing (or only "now/please") alerts; real emergency vocabulary alerts; with an
 // alert verb anything not plainly calm alerts; with a talking verb anything else is a message, not an alert.
-const CIRCLE_REQUEST = /\b(?:please )?(alert|notify|call|tell|message|contact|text) my (?:trusted )?circle\b(.*)$/;
+// The people named: the circle, or "my family" / "my people" for any verb; "my daughter/son/children" only with an alert verb ("tell my son I'll be home" is a message, not an alert).
+const CIRCLE_REQUEST = /\b(?:please )?(alert|notify|call|tell|message|contact|text) (my (?:trusted )?circle|my family|my people|my (?:daughter|son|children|kids|wife|husband))\b(.*)$/;
 const CIRCLE_TAIL_FILLER = /^[\s,.!]*(?:(?:right )?now|please|immediately|asap|quickly|thank you|thanks|that)?[\s,.!]*(?:(?:right )?now|please|immediately|asap)?[\s,.!]*$/;
 const CIRCLE_EMERGENCY = /\b(?:help|emergency|danger|trouble|hurt|injured|bleeding|breath(?:e|ing)|unconscious|dying|dead|fire|attack|urgent(?:ly)?|fallen|fell|collapsed|ambulance|accident|stroke|attacked|robbed|kidnapped|unsafe|scared|afraid)\b/;
 const CIRCLE_NOT_EMERGENCY = /\b(?:not|no|isn'?t|wasn'?t|false|just testing|testing)\b[^.]{0,14}\b(?:emergency|alarm|alert|danger)\b/;
-const CIRCLE_CALM = /\b(?:late|delayed?|running behind|safe|ok(?:ay)?|fine|well|arrived?|arriving|home|birthday|dinner|lunch|meeting|tomorrow|tonight|later|thank(?:s| you)|good news|soon|visit|visiting|coming|on my way|party|wedding|funeral|market|church)\b/;
+const CIRCLE_CALM = /\b(?:late|delayed?|running behind|safe|ok(?:ay)?|fine|well|arrived?|arriving|home|birthday|dinner|lunch|meeting|tomorrow|tonight|later|thank(?:s| you)|good news|soon|visit|visiting|coming|on my way|party|wedding|funeral|market|church|headache|cold|cough|tired|hungry|sleepy|busy|cooking|working|bored|lonely)\b/;
 function circleAlertRequested(lower) {
   const match = CIRCLE_REQUEST.exec(lower);
   if (!match) return false;
   const verb = match[1];
-  const tail = match[2] || "";
+  const tail = match[3] || "";
+  const group = /circle|family|people/.test(match[2]);
+  if (!group && verb !== "alert" && verb !== "notify") return false;
   if (CIRCLE_TAIL_FILLER.test(tail)) return true;
   if (CIRCLE_NOT_EMERGENCY.test(tail)) return false;
   if (CIRCLE_EMERGENCY.test(tail)) return true;
@@ -152,18 +158,34 @@ const SELF_HARM_SW = [
 function readSafetyDetailed(text) {
   const raw = clean(text);
   if (!raw || raw.length > 400) return null;
-  const lower = raw.toLowerCase().replace(/[.!?]+$/g, "");
+  // Slang and typing slips brought to plain words for the emergency patterns ("i cant breath", "i faln", "heart atack").
+  const lower = crisisPhrases.normalize(raw).replace(/[.!?]+$/g, "");
   // Found live (safety-critical): this 70-char cap, combined with the
   // whole-string-anchored patterns above, silently dropped any real
   // first-person emergency that included even a little elaboration -- see
   // the IMMEDIATE comment above. The patterns themselves are now the only
   // gate (still bounded by this function's own 400-char overall cap above).
-  if (IMMEDIATE.some(pattern => pattern.test(lower)) || circleAlertRequested(lower)) return { kind: "emergency", language: "en" };
+  // An ordinary or past thing that only sounds like an emergency ("I cannot get up in the morning", "my friend was not breathing when we found him in the war") must not push a
+  // real alert to someone's family.
+  const notAnEmergency = crisisPhrases.notAnEmergency(raw);
+  if (!notAnEmergency && (IMMEDIATE.some(pattern => pattern.test(lower)) || circleAlertRequested(lower))) return { kind: "emergency", language: "en" };
   if (IMMEDIATE_SW.some(pattern => pattern.test(lower)) || circleAlertRequestedSw(lower)) return { kind: "emergency", language: "sw" };
   if (ASK_FIRST.test(lower)) return { kind: "ask", language: "en" };
   if (ASK_FIRST_SW.test(lower)) return { kind: "ask", language: "sw" };
-  if (SELF_HARM.some(pattern => pattern.test(raw))) return { kind: "self_harm", language: "en" };
-  if (SELF_HARM_SW.some(pattern => pattern.test(lower))) return { kind: "self_harm", language: "sw" };
+  // "I took all my pills" (most often just taking medicine) gets a calm check-in, not an alert.
+  if (crisisPhrases.mightBeOverdose(raw)) return { kind: "ask", language: "en" };
+  // Fainting, a face drooping, slurred speech, one side weak, shaking and sweating, a low sugar: the calm urgent reply with the number to call and the offer to alert the circle.
+  if (crisisPhrases.medicalUrgent(raw)) return { kind: "ask", language: "en" };
+  const weapon = crisisPhrases.mentionsMeans(raw) ? { weapon: true } : {};
+  if (SELF_HARM.some(pattern => pattern.test(raw))) return { kind: "self_harm", language: "en", ...weapon };
+  if (SELF_HARM_SW.some(pattern => pattern.test(lower))) return { kind: "self_harm", language: "sw", ...weapon };
+  if (crisisPhrases.selfHarm(raw)) return { kind: "self_harm", language: SWAHILI_WORDS.test(lower) ? "sw" : "en", ...weapon };
+  if (crisisPhrases.harmOthers(raw)) return { kind: "harm_others", language: "en" };
+  if (crisisPhrases.abuse(raw)) return { kind: "abuse", language: "en" };
+  // Someone asking for a PIN, a password or money by phone or message: said plainly, never to share it.
+  if (crisisPhrases.scam(raw)) return { kind: "scam", language: "en" };
+  // "remember that my mpesa pin is 4821": never saved as a note or a fact, and never read back.
+  if (crisisPhrases.storesSecret(raw)) return { kind: "secret", language: "en" };
   return null;
 }
 // "emergency" | "ask" | "self_harm" | null
@@ -260,7 +282,12 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
       ? t(language, "safety.askWithCircle", { names: members.map(member => member.otherName).join(", "), number })
       : t(language, "safety.askNoCircle", { number });
   }
-  return t(language, "safety.selfHarm", { circle: members.length ? t(language, "safety.selfHarmCircle", { names: members.map(member => member.otherName).join(", ") }) : "" });
+  if (kind === "scam") return t(language, "safety.scam");
+  if (kind === "secret") return t(language, "safety.secretRefused");
+  const circleOffer = members.length ? t(language, "safety.selfHarmCircle", { names: members.map(member => member.otherName).join(", ") }) : "";
+  if (kind === "harm_others") return t(language, "safety.harmOthers", { circle: circleOffer });
+  if (kind === "abuse") return t(language, "safety.abuse", { circle: circleOffer });
+  return t(language, found.weapon ? "safety.selfHarmWeapon" : "safety.selfHarm", { circle: circleOffer });
 }
 
 module.exports = Object.freeze({ safetyTurn, safeTurn, readSafety, readSafetyDetailed, readSafe, safeLanguage, alertCircle });

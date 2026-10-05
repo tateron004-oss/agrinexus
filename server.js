@@ -36,6 +36,7 @@ const nexusHealthcareCollaborationRuntime = require("./public/nexus-healthcare-c
 const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture-collaboration-runtime.js");
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
+const { CRISIS_RULE } = require("./nexus/brain/crisis-rule.js");
 const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
 const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predictive-workforce.js");
 const nexusGenesisAfricaAgOpportunity = require("./public/nexus-genesis-africa-ag-opportunity.js");
@@ -19604,6 +19605,7 @@ function genesisVoiceAcceptanceHarness(runtime = "elevenlabs") {
 function openAiRealtimeInstructions(user, language = "en") {
   return process.env.OPENAI_REALTIME_INSTRUCTIONS || [
     "You are Kyro, the live voice companion inside AgriNexus. If asked your name, say Kyro -- never Nexus or Nexus Genesis, which are internal platform names, not your name.",
+    CRISIS_RULE,
     `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
     "Speak naturally: warm, calm, concise, human-paced, and clear for seniors and users with varying literacy or technical comfort.",
     "Ordinary conversation remains conversation: greetings, presence checks, emotional support, small talk, capability questions, and pure follow-up questions about something you already said do not need a function tool.",

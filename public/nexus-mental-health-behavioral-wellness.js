@@ -2,6 +2,10 @@
   "use strict";
 
   const CAPABILITY_ID = "mental_health_behavioral_wellness";
+  // The shared list of crisis wording (public/kyro-crisis-phrases.js): the same one the companion reader uses, so the typed, phone and voice paths agree. In the browser it is a script loaded before this one.
+  const crisisPhrases = (typeof module !== "undefined" && module.exports && typeof require === "function") ? require("./kyro-crisis-phrases.js") : globalScope.KyroCrisisPhrases;
+  const sharedCrisis = text => Boolean(crisisPhrases && (crisisPhrases.selfHarm(text) || crisisPhrases.harmOthers(text)));
+  const sharedAbuse = text => Boolean(crisisPhrases && crisisPhrases.abuse(text));
   const MODEL_VERSION = "nexus-mental-health-state-machine.v1";
 
   const TRUSTED_EVIDENCE_COLLECTIONS = Object.freeze([
@@ -228,6 +232,7 @@
     if (!text) return false;
     return CRISIS_PATTERNS.some(pattern => pattern.test(text))
       || CRISIS_PATTERNS_SW.some(pattern => pattern.test(text))
+      || sharedCrisis(input) || sharedAbuse(input)
       || SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text))
       || MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text))
       || HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text))
@@ -373,7 +378,7 @@
     const action = detectRequestedAction(text);
     const matchedSignals = [];
 
-    if (CRISIS_PATTERNS.some(pattern => pattern.test(text)) || CRISIS_PATTERNS_SW.some(pattern => pattern.test(text))) {
+    if (CRISIS_PATTERNS.some(pattern => pattern.test(text)) || CRISIS_PATTERNS_SW.some(pattern => pattern.test(text)) || sharedCrisis(input)) {
       matchedSignals.push("direct_crisis_or_immediate_danger_language");
       return {
         capabilityId: CAPABILITY_ID,
@@ -388,7 +393,7 @@
       };
     }
 
-    if (SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text))) {
+    if (SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text)) || sharedAbuse(input)) {
       matchedSignals.push("safeguarding_or_abuse_language");
       return {
         capabilityId: CAPABILITY_ID,

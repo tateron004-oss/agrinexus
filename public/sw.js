@@ -11,6 +11,7 @@ const APP_SHELL = [
   `/nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1`,
   `/nexus-os-health-workforce-safety-pack.js?v=nexus-os-health-workforce-safety-1`,
   `/kyro-offline-notes.js?v=kyro-offline-notes-1`,
+  `/kyro-crisis-phrases.js?v=kyro-crisis-phrases-1`,
   `/kyro-navigation.js?v=kyro-navigation-1`,
   `/kyro-emergency.js?v=kyro-emergency-1`,
   `/kyro-voice-intake.js?v=kyro-voice-intake-1`,
