@@ -22,6 +22,9 @@ function normalizeRecipient(channel, value) {
   if (channel === "email") return EMAIL.test(raw) ? raw : null;
   const phone = raw.replace(/[\s().-]/g, "");
   if (!PHONE.test(phone)) return null;
+  // Kenya, Tanzania, Uganda and Rwanda numbers are always 9 digits after the country code, so "+25471234" (5 digits) is a mistake, not a number to dial or text.
+  const national = /^\+(?:254|255|256|250)(\d+)$/.exec(phone);
+  if (national && national[1].length !== 9) return null;
   if (channel === "call" && PREMIUM_OR_SPECIAL.test(phone)) return null;
   return phone;
 }

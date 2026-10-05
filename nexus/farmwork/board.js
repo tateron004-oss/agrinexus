@@ -51,6 +51,18 @@ async function handle(ctx) {
     return mine.length ? `Your listings: ${mine.map(describeListing).join("; ")}.` : "You have nothing on the board.";
   }
 
+  // "mark my maize listing sold", "mark my listing for maize as sold": the one open listing for that, taken off the board as sold.
+  if ((m = /^(?:please )?mark my (?:(?:listing|ad|advert|post) (?:for|of|about) (?:my |the |some )?(.+?)|(?!listing\b|listings\b)(.+?) (?:listing|ad|advert|post)) (?:as )?(sold|done)$/i.exec(t))) {
+    const wanted = clean(m[1] || m[2]).toLowerCase();
+    const mine = (await ctx.store.listPublic({ tenantId: ctx.tenantId, collection: "listing" })).filter(record => record.userId === ctx.userId && record.data.status === "active");
+    const matches = mine.filter(record => String(record.data.item || "").toLowerCase().includes(wanted) || wanted.includes(String(record.data.item || "").toLowerCase()));
+    if (!matches.length) return mine.length ? `I can't find an open listing of yours for ${wanted}. Yours: ${mine.map(describeListing).join("; ")}.` : "You have nothing on the board.";
+    if (matches.length > 1) return `You have ${matches.length} open listings for ${wanted}: ${matches.map(describeListing).join("; ")}. Say "mark listing" and its number "sold".`;
+    const only = matches[0];
+    await ctx.store.update({ ...scope, record: { ...only, data: { ...only.data, status: "sold", closedOn: ctx.today } } });
+    return `Marked listing ${only.number} as sold and taken it off the board.`;
+  }
+
   // "remove my listing for maize", "take down my maize listing": by what it is for, when that is only one of the person's open listings. Several, or none, are said, never guessed.
   if ((m = /^(?:please )?(?:remove|delete|take down|close) my (?:listing|ad|advert|post) (?:for|of|about) (?:my |the |some )?(.+?)$/i.exec(t)) || (m = /^(?:please )?(?:remove|delete|take down|close) my (?!listing\b|listings\b)(.+?) (?:listing|ad|advert|post)$/i.exec(t))) {
     const wanted = clean(m[1]).toLowerCase();

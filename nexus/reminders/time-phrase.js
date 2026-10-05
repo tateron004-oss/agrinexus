@@ -66,7 +66,11 @@ const DATE_PHRASE = new RegExp(`\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b\\d{1,2}(?:st|nd|r
 const UNIT_MS = { minute: 60 * 1000, hour: 60 * 60 * 1000 };
 
 // Plain misspellings of the words a time is made of ("tomorow at 6"), so they are read as the time they mean and not dropped in favour of a guess.
-const fixTimeSpelling = text => String(text || "").replace(/\b(?:tomorow|tommorow|tommorrow|tomorro|tomorrw|tmrw|2morrow|2moro|tomoro)\b/gi, "tomorrow").replace(/\bo['’]?clock\b/gi, "oclock");
+// A spelled-out number of minutes, hours, days or weeks ("in two minutes", "in ten minutes") is read as the digits, so it is not missed and turned into "tomorrow". ("one" stays: "in one hour" is read as it was.)
+const NUMBER_WORDS = Object.freeze({ two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, "forty five": 45, sixty: 60 });
+const fixTimeSpelling = text => String(text || "").replace(/\b(?:tomorow|tommorow|tommorrow|tomorro|tomorrw|tmrw|2morrow|2moro|tomoro)\b/gi, "tomorrow").replace(/\bo['’]?clock\b/gi, "oclock")
+  .replace(/\bin\s+(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty[ -]five|sixty)\s+(minutes?|mins?|hours?|hrs?|days?|weeks?)\b/gi,
+    (whole, word, unit) => `in ${NUMBER_WORDS[word.toLowerCase().replace("-", " ")]} ${unit}`);
 
 function parseTimeInner(text = "", options = {}) {
   const zone = validTimeZone(options.timeZone || DEFAULT_TIME_ZONE);

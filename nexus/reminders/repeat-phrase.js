@@ -228,6 +228,8 @@ function readRepeatRequest(rawText) {
     if (unusual.kind === "hourly") times = unusual.times;
     else {
       times = readTimes(lower.replace(taskPart(lower), " "), part);
+      // "twice a day at 9" gives one time for two: asked about, not silently set at 8 am and 8 pm. With no time at all the usual times are used.
+      if (unusual.kind === "times" && times.length > 0 && times.length < unusual.count) return { action: "need-times", count: unusual.count };
       if (unusual.kind === "times") times = times.length >= unusual.count ? times.slice(0, unusual.count) : unusual.defaults;
       else if (!times.length) times = [clock(PART_OF_DAY[part] === undefined ? 9 : PART_OF_DAY[part], 0)];
     }

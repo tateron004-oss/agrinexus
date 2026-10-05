@@ -132,7 +132,9 @@ function readQuestion(text, today) {
   }
   // "How much did I harvest this year?", "How much maize did I harvest?", "How many bags of maize have I harvested?" (the crop is optional; "harvest" and "harvested" both count;
   // the unit the person names is only how they said it, so "bags of maize" asks about maize). This used to need "harvested" and a crop, so the plainest question got no answer.
-  if ((m = /^how (?:much|many) (?:(.+?) )?(?:have|did) (?:i|we) (?:harvest(?:ed)?|pick(?:ed)?|collect(?:ed)?|gather(?:ed)?|thresh(?:ed)?)\b\s*(.*)$/.exec(t))) {
+  // "how much did I collect from my customers / in rent / in fees" is about money owed to the person, not a harvest.
+  if (!/\b(?:customers?|clients?|buyers?|tenants?|members?|rent|dues|fees?|payments?|loans?|debts?|taxes|money|cash|shillings)\b/.test(t)
+    && (m = /^how (?:much|many) (?:(.+?) )?(?:have|did) (?:i|we) (?:harvest(?:ed)?|pick(?:ed)?|collect(?:ed)?|gather(?:ed)?|thresh(?:ed)?)\b\s*(.*)$/.exec(t))) {
     const subject = clean(m[1] || "").replace(/^(?:kgs?|kilos?|kilograms?|tonnes?|tons?|bags?|sacks?|crates?|bunch(?:es)?|litres?|liters?)(?: of)?\s*/, "");
     return { action: "sum-harvest", crop: cropFrom(subject), period: extractPeriod(m[2], today) || extractPeriod("this year", today) };
   }

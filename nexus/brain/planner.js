@@ -452,8 +452,8 @@ class OpenEndedPlanner {
 function ordinaryConversationPlan(text, context = {}) {
   const goal = String(text || "").trim();
   const normalized = goal.toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").trim();
-  const greeting = /^(?:(?:hello|hi|hey|good (?:morning|afternoon|evening))\s+)?nexus(?:[, ]+(?:this is|i am|i'm|its|it's)\s+([a-z][a-z .'-]{0,60}))?$/.exec(normalized) ||
-    /^(?:hello|hi|hey|good (?:morning|afternoon|evening))(?:\s+nexus)?(?:[, ]+(?:this is|i am|i'm|its|it's)\s+([a-z][a-z .'-]{0,60}))?$/.exec(normalized);
+  const greeting = /^(?:(?:hello|hi|hey|good (?:morning|afternoon|evening))\s+)?(?:nexus|kyro)(?:[, ]+(?:this is|i am|i'm|its|it's)\s+([a-z][a-z .'-]{0,60}))?$/.exec(normalized) ||
+    /^(?:hello|hi|hey|good (?:morning|afternoon|evening))(?:\s+(?:nexus|kyro))?(?:[, ]+(?:this is|i am|i'm|its|it's)\s+([a-z][a-z .'-]{0,60}))?$/.exec(normalized);
   if (greeting) {
     const suppliedName = String(greeting[1] || "").trim().split(/\s+/)[0];
     const knownName = String(context.userPreferences?.preferredName || context.preferredName || "").trim().split(/\s+/)[0];

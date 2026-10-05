@@ -64,7 +64,8 @@ async function repeatReminderTurn({ text, store, tenantId, userId, timeZone, now
   try {
     const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
     switch (request.action) {
-      case "unsupported": return 'I can repeat a reminder every day, every weekday, on named days, every other day or every few days, every other week, on a day of the month, every few hours, or several times a day, for example "remind me every morning at 8 to check the pump". I can\'t do yearly, every few months, or vague repeats like "every few days". Nothing was set.';
+      case "unsupported": return 'I can repeat a reminder every day, every weekday, on named days, every other day or every 3 days, every other week, on a day of the month, every 2 hours, or several times a day, for example "remind me every morning at 8 to check the pump". I can\'t do yearly, every few months, or vague repeats like "every few days". Nothing was set.';
+      case "need-times": return `You said ${request.count === 2 ? "twice" : request.count === 3 ? "three times" : "four times"} a day with one time. Which ${request.count} times? For example, say "remind me ${request.count === 2 ? "twice a day at 9 and 5" : "three times a day at 8, 1 and 6"} to take my pills". Nothing was set yet.`;
       case "need-day": return 'Which day of the week? For example, say "remind me every Monday at 9 to call the buyer". Nothing was set yet.';
       case "need-day-of-month": return 'Which day of the month? For example, say "remind me on the 15th of every month to pay rent". Nothing was set yet.';
       case "need-task": return 'What should I remind you about? For example, say "remind me every morning at 8 to check the pump". Nothing was set yet.';
