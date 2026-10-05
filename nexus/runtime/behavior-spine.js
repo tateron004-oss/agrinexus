@@ -5,6 +5,7 @@ const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createCommand } = require("../contracts/command.js");
 const crypto = require("node:crypto");
 const businessDispatch = require("../business/voice-dispatch.js");
+const { parseAssistantReminderTime, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
 // Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
@@ -188,7 +189,7 @@ class BehaviorSpine {
     }
     if (execution.state === "awaiting_render") {
       const result = envelope({ command, plan, task, execution, state: "render_required", completed: false,
-        response: "Nexus completed the governed execution and is rendering the verified result.",
+        response: reminderSetResponse(plan, context) || "Nexus completed the governed execution and is rendering the verified result.",
         outcome: { verified: true, renderVerified: false, reason: "renderer_acknowledgement_required" } });
       await this.workspaceStates.stage({ tenantId: context.tenantId, ownerId: context.userId,
         taskId: task.taskId, outcome: result.render });
@@ -219,6 +220,24 @@ class BehaviorSpine {
       legacyFallbackUsed: false, taskId: input.taskId, commandId: input.commandId,
       state: execution.state, completed: execution.completed, outcome: execution.outcome });
   }
+}
+
+// What is said after a one-time reminder is set: the task and the time, in the person's own words and time zone, not "Nexus completed the governed execution".
+// It reads the time the same way the reminder was scheduled (the same parser and the same time zone), so what is said is what was set.
+function reminderSetResponse(plan, context) {
+  try {
+    const step = (plan?.steps || []).find(item => item?.toolId === "reminders.schedule");
+    if (!step) return "";
+    const input = step.input || {};
+    const rawText = String(input.when || input.reminder || input.text || input.message || input.title || "").trim();
+    if (!rawText && !Number(input.timeOffsetMinutes)) return "";
+    const offset = Number(input.timeOffsetMinutes);
+    const when = Number.isFinite(offset) && offset > 0 && offset <= 60 * 24 * 365
+      ? `in ${offset} minute${offset === 1 ? "" : "s"}`
+      : parseAssistantReminderTime(rawText, { timeZone: context?.timeZone }).whenLabel;
+    const task = extractAssistantReminderTask(String(input.reminder || input.title || rawText).trim());
+    return `Okay. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${task} ${when}.`;
+  } catch { return ""; }
 }
 
 function completedResponse(task) {

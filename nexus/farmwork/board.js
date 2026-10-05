@@ -51,6 +51,18 @@ async function handle(ctx) {
     return mine.length ? `Your listings: ${mine.map(describeListing).join("; ")}.` : "You have nothing on the board.";
   }
 
+  // "remove my listing for maize", "take down my maize listing": by what it is for, when that is only one of the person's open listings. Several, or none, are said, never guessed.
+  if ((m = /^(?:please )?(?:remove|delete|take down|close) my (?:listing|ad|advert|post) (?:for|of|about) (?:my |the |some )?(.+?)$/i.exec(t)) || (m = /^(?:please )?(?:remove|delete|take down|close) my (?!listing\b|listings\b)(.+?) (?:listing|ad|advert|post)$/i.exec(t))) {
+    const wanted = clean(m[1]).toLowerCase();
+    const mine = (await ctx.store.listPublic({ tenantId: ctx.tenantId, collection: "listing" })).filter(record => record.userId === ctx.userId && record.data.status === "active");
+    const matches = mine.filter(record => String(record.data.item || "").toLowerCase().includes(wanted) || wanted.includes(String(record.data.item || "").toLowerCase()));
+    if (!matches.length) return mine.length ? `I can't find an open listing of yours for ${wanted}. Yours: ${mine.map(describeListing).join("; ")}.` : "You have nothing on the board.";
+    if (matches.length > 1) return `You have ${matches.length} open listings for ${wanted}: ${matches.map(describeListing).join("; ")}. Say "remove listing" and its number.`;
+    const only = matches[0];
+    await ctx.store.update({ ...scope, record: { ...only, data: { ...only.data, status: "closed", closedOn: ctx.today } } });
+    return `Removed listing ${only.number} (${describeListing(only)}) from the board.`;
+  }
+
   if ((m = /^(?:please )?(remove|delete|take down|close) listing #?(\d{1,6})$/i.exec(t)) || (m = /^(?:please )?mark listing #?(\d{1,6}) (?:as )?(sold|done|closed)$/i.exec(t))) {
     const number = Number(/^\d/.test(m[1]) ? m[1] : m[2]); const sold = /sold|done/i.test(m[1] + m[2]);
     const record = (await ctx.store.listPublic({ tenantId: ctx.tenantId, collection: "listing" })).find(item => item.number === number);

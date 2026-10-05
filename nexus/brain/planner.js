@@ -964,6 +964,12 @@ function completeDocumentPlan(text, catalog) {
   // "Create a document called Farm Plan that says: I will plant maize in March, and save it": the document holds what it should say, not the
   // whole spoken request. With no body named, the sentence is kept as before.
   const body = goal.match(/\b(?:that says|which says|saying|that reads|containing|with the (?:text|words|content))\s*[:,]?\s+(.+?)(?:[,.]?\s+(?:and|then)\s+(?:save|open|reopen|persist)\b.*)?$/i)?.[1]?.trim().replace(/^["']|["']$/g, "");
+  // "Make me a report about maize prices and save it" names a subject but not what the report says. Saving the request sentence and calling it a report would be a document
+  // with nothing in it, so Kyro asks what it should say instead. A request with no subject ("Create and save a farming plan document") is kept as before.
+  if (!(body && body.length >= 2) && !namedTitle && /\b(?:about|regarding|covering|concerning)\s+\S/i.test(goal)) {
+    return { goal, application: "documents", riskTier: "low", steps: [],
+      clarification: "I can save a document, but I do not write it for you: saving that would only copy your request into it. What should it say? For example: \"Create a document called Maize Prices that says the prices I noted this week, and save it\"." };
+  }
   const content = body && body.length >= 2 ? body.slice(0, 4000) : (goal.length > 4000 ? goal.slice(0, 4000) : goal);
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "create-document", title: "Create, save, and verify document",
