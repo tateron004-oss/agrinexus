@@ -13,6 +13,7 @@ const CATEGORIES = [["seed", /\b(?:seeds?|seedlings?|cuttings?|vines)\b/i], ["fe
 const categoryOf = name => (CATEGORIES.find(([, pattern]) => pattern.test(name)) || ["other"])[0];
 const stem = word => word.replace(/ies$/, "y").replace(/(?:es|s)$/, "");
 const keyOf = name => clean(name).toLowerCase().replace(/\b(?:of|my|the|some|more)\b/g, "").split(" ").filter(Boolean).map(stem).join(" ");
+const NOT_STOCK = /^(?:animals?|livestock|cattle|cows?|bulls?|goats?|sheep|pigs?|chickens?|hens?|poultry|rabbits?|ducks?|donkeys?|fields?|plots?|acres?|hectares?|workers?|employees?|staff|customers?|buyers?|members?|tasks?|money|cash|loans?|debts?|children|kids)$/i;
 const QTY = `(\\d[\\d,]*(?:\\.\\d+)?\\s*(?:${UNIT_WORDS}))`;
 const STORE = "(?:inventory|stock|store|storeroom|store room|barn|shed|granary)";
 const tidyName = raw => clean(raw).toLowerCase().replace(/^(?:of|more|some|the|my)\s+/, "").replace(/[.,;]+$/g, "");
@@ -102,9 +103,12 @@ async function handle(ctx) {
   }
 
   if ((m = /^how (?:much|many) (.+?) (?:do i have|is there|have i got|is left|is in stock|do we have|are left)(?: in (?:stock|the store|my inventory))?$/i.exec(t))) {
-    const items = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(items, m[1]);
-    if (!found.length) return items.length ? `I don't have ${clean(m[1])} in your stock.` : null;
-    return `You have ${totals(found)} of ${found.length === 1 ? found[0].data.name : clean(m[1])}.`;
+    // "How many bags of seed do I have": the thing asked about is the seed, not "bags of seed" (the unit is only how they said it).
+    const subject = clean(m[1]).replace(new RegExp(`^(?:${UNIT_WORDS})\\b(?:\\s+of)?\\s+(?=\\S)`, "i"), "");
+    const items = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(items, subject);
+    // Animals, fields, people and money are other tools' questions, not stock: leave them for those.
+    if (!found.length) return items.length && !NOT_STOCK.test(subject) ? `I don't have ${subject} in your stock.` : null;
+    return `You have ${totals(found)} of ${found.length === 1 ? found[0].data.name : subject}.`;
   }
   if (new RegExp(`^(?:show|list|read|what(?:'s| is) in) (?:me )?(?:my |the )?${STORE}$`, "i").test(t) || /^what do i have in (?:stock|store)$/.test(lower)) {
     const items = await ctx.store.list({ ...scope, collection: "stock" });

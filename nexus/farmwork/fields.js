@@ -172,11 +172,16 @@ async function handle(ctx) {
     if (picked?.ambiguous) return `Which one: ${picked.ambiguous.map(field => field.data.name).join(" or ")}?`;
   }
 
-  if ((m = /^(?:please )?(?:plant|planted|sow|sowed|sown) (.+?) (?:in|on|at) (?:my )?(?:field |plot )?(.+?)(?: field| plot)?(?: (?:on|today|yesterday|this week|last week).*)?$/i.exec(t))) {
+  if ((m = /^(?:please )?(?:(?:i|we) )?(?:just )?(plant|planted|sow|sowed|sown) (.+?) (?:in|on|at) (?:my )?(?:field |plot )?(.+?)(?: field| plot)?(?: (?:on|today|yesterday|this week|last week).*)?$/i.exec(t))) {
+    // The words after the verb: m[2] is what was planted, m[3] the field (m[1] is the verb itself).
+    m = [m[0], m[2], m[3], m[1]];
     const fields = await ctx.store.list({ ...scope, collection: "field" });
     const picked = pickByName(fields, m[2].replace(/\s+(?:on|today|yesterday)\b.*$/i, ""));
     if (!picked?.record) return picked?.ambiguous ? `Which one: ${picked.ambiguous.map(field => field.data.name).join(" or ")}?` : `I don't have a field called ${clean(m[2])}. Say "add a field called ${titleCase(m[2])}" first.`;
-    const day = anyDay(t.replace(m[1], ""), ctx.today) || ctx.today;
+    let day = anyDay(t.replace(m[1], ""), ctx.today) || ctx.today;
+    // "I planted maize on 12 March", said in October, means the March that has passed, not next March: a past-tense planting never lands in the future
+    // unless a year was said ("plant maize on 12 March" is the person's plan, so it stays as said).
+    if (/^(?:planted|sowed|sown)$/i.test(m[3]) && day > ctx.today && !/\b\d{4}\b/.test(t)) day = `${Number(day.slice(0, 4)) - 1}${day.slice(4)}`;
     await ctx.store.update({ ...scope, record: { ...picked.record, data: { ...picked.record.data, crop: clean(m[1]).toLowerCase(), planted: day } } });
     return `Noted: ${clean(m[1]).toLowerCase()} planted in ${picked.record.data.name} ${describeDay(day, ctx.today)}. Say "make a crop calendar for ${picked.record.data.name}" and I'll put the usual jobs on your calendar.`;
   }

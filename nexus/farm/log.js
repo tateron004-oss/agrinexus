@@ -130,7 +130,12 @@ function readQuestion(text, today) {
     const soil = Boolean(m[1] === "soil moisture");
     return { action: "latest", metric: soil ? "soil" : "tank", place: soil ? placeFrom(m[3]) : placeFrom(m[3] || "", clean(m[2] ?? m[1] ?? "")) };
   }
-  if ((m = /^how much (.+?) (?:have|did) (?:i|we) (?:harvested?|picked|collected|gathered|threshed)\b\s*(.*)$/.exec(t))) return { action: "sum-harvest", crop: cropFrom(m[1]), period: extractPeriod(m[2], today) || extractPeriod("this year", today) };
+  // "How much did I harvest this year?", "How much maize did I harvest?", "How many bags of maize have I harvested?" (the crop is optional; "harvest" and "harvested" both count;
+  // the unit the person names is only how they said it, so "bags of maize" asks about maize). This used to need "harvested" and a crop, so the plainest question got no answer.
+  if ((m = /^how (?:much|many) (?:(.+?) )?(?:have|did) (?:i|we) (?:harvest(?:ed)?|pick(?:ed)?|collect(?:ed)?|gather(?:ed)?|thresh(?:ed)?)\b\s*(.*)$/.exec(t))) {
+    const subject = clean(m[1] || "").replace(/^(?:kgs?|kilos?|kilograms?|tonnes?|tons?|bags?|sacks?|crates?|bunch(?:es)?|litres?|liters?)(?: of)?\s*/, "");
+    return { action: "sum-harvest", crop: cropFrom(subject), period: extractPeriod(m[2], today) || extractPeriod("this year", today) };
+  }
   if ((m = /^(?:what(?:'s| is| was)|show|tell me) (?:my |the |our )?(?:total )?(?:harvest|yield)s?\b\s*(.*)$/.exec(t))) return { action: "sum-harvest", crop: "", period: extractPeriod(m[1], today) || extractPeriod("this year", today) };
   if (/^(?:show|read|what(?:'s| is| are)) (?:me )?(?:my |the )?(?:farm log|recent readings|what i(?:'ve| have) logged)$/.test(t) || /^what have i logged$/.test(t)) return { action: "show" };
   if (/^(?:undo|delete|remove)(?: my)? (?:last|latest) (?:farm |log )?(?:entry|reading|record)$/.test(t) || /^undo that (?:reading|entry)$/.test(t)) return { action: "undo" };

@@ -142,6 +142,8 @@ function extractPeriod(text, today) {
   if (/\bthis week\b/.test(t)) return { from: addDays(today, -((weekdayOf(today) + 6) % 7)), to: today, label: "this week" };
   if (/\blast month\b/.test(t)) { const last = addDays(monthStart(today), -1); return { from: monthStart(last), to: last, label: "last month" }; }
   if (/\bthis month\b/.test(t)) return { from: monthStart(today), to: today, label: "this month" };
+  // "last year" is the previous calendar year. It used to be unread, so a question about last year was silently answered for a different period.
+  if (/\blast year\b/.test(t)) { const year = Number(today.slice(0, 4)) - 1; return { from: `${year}-01-01`, to: `${year}-12-31`, label: "last year" }; }
   if (/\b(?:this year|this season|so far this year)\b/.test(t)) return { from: `${today.slice(0, 4)}-01-01`, to: today, label: /season/.test(t) ? "this season" : "this year" };
   if (/\byesterday\b/.test(t)) return { from: addDays(today, -1), to: addDays(today, -1), label: "yesterday" };
   if (/\btoday\b/.test(t)) return { from: today, to: today, label: "today" };
