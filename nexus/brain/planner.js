@@ -705,6 +705,17 @@ function completeHealthRecordPlan(text, catalog) {
       toolId: "health.record", input: { intakeType: readingType, readingType, ...input },
       dependsOn: [], fallbackToolIds: [] }] });
 
+  // Two readings in one sentence ("my sugar is 8 and my BP is 140/90"): only the first used to be saved and the other was dropped without a word. Each reading is saved on its own, so each one is
+  // checked and confirmed on its own: say so, and save nothing yet, rather than silently keep one.
+  const given = [];
+  if (/\b(?:blood\s*pressure|bp)\b[^\d]{0,40}\d{2,3}\s*(?:over|\/)\s*\d{2,3}\b/i.test(goal) || /\b\d{2,3}\s*(?:over|\/)\s*\d{2,3}\b[^.]{0,40}\b(?:blood\s*pressure|bp)\b/i.test(goal)) given.push({ name: "blood pressure", example: "my blood pressure as 140 over 90" });
+  if (/\b(?:blood\s*sugar|glucose|sugar)\b[^\d.]{0,25}\d/i.test(goal)) given.push({ name: "blood sugar", example: "my blood sugar as 8 mmol" });
+  if (/\b(?:oxygen|o2|spo2|pulse\s*ox)\b[^\d]{0,25}\d{2,3}\b/i.test(goal)) given.push({ name: "oxygen", example: "my oxygen as 96" });
+  if (/\b(?:pulse|heart\s*rate)\b[^\d]{0,25}\d{2,3}\b/i.test(goal)) given.push({ name: "pulse", example: "my pulse as 78" });
+  if (given.length >= 2 && (wantsRecord || /\bmy\b/i.test(goal))) {
+    return notARealReading(`You gave me ${given.length} readings (${given.map(item => item.name).join(" and ")}). I save one reading at a time so each is checked on its own, and nothing has been saved yet. Say, for example, "record ${given[0].example}", and then the next one.`);
+  }
+
   if (isReported("(?:blood\\s*pressure|bp)") && /\b(?:blood\s*pressure|bp)\b/i.test(goal)) {
     const bpMatch = goal.match(/\b(?:blood\s*pressure|bp)\b[^\d]{0,40}(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/i) ||
       goal.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b[^.]{0,40}\b(?:blood\s*pressure|bp)\b/i);
