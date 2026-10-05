@@ -117,6 +117,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const providers = createProviderCatalog({ env, fetchFn });
   const acceptance = new ProductionAcceptanceRepository(db);
   const path2Evidence = new Path2EvidenceRepository(db);
+  // Built here, before LOCAL_EXECUTORS, because the executors below are created at once (a const used before this line would stop the whole runtime from starting).
+  const repeatReminderRecords = new RepeatReminderRepository(db);
   // A growing set of canonical tools gets a REAL local/direct executor
   // instead of the scripts/provider-engines.js mock every other tool here
   // still uses -- none of these can produce that mock's signed HMAC
@@ -126,7 +128,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   // reusable pattern for adding more, not a ceiling.
   const LOCAL_EXECUTORS = {
     "reminders.schedule": { create: () => createReminderScheduleExecutor({ notifications }), verify: verifyReminderScheduleOutcome, method: "local_notification_enqueue" },
-    "reminders.list": { create: () => createRemindersListExecutor({ notifications, repeatStore: repeatReminderRecords }), verify: verifyRemindersListOutcome, method: "real_reminder_lookup" },
+    "reminders.list": { create: () => createRemindersListExecutor({ notifications }), verify: verifyRemindersListOutcome, method: "real_reminder_lookup" },
     "reminders.cancel": { create: () => createRemindersCancelExecutor({ notifications }), verify: verifyRemindersCancelOutcome, method: "real_reminder_cancel" },
     "communications.send": { create: () => createCommunicationsSendExecutor({ env }), verify: verifyCommunicationsSendOutcome, method: "real_provider_send" },
     "documents.create": { create: () => createDocumentsCreateExecutor({ env, documents }), verify: verifyDocumentsCreateOutcome, method: "real_local_export" },
@@ -193,7 +195,6 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   // query a background job needs -- one instance, reused, not a second copy.
   const wellnessRecords = new WellnessRepository(db);
   const brief = createBriefService({ notifications, settings: new BriefSettingsRepository(db), memory, farmRecords, healthRecords, devices, autonomyControl });
-  const repeatReminderRecords = new RepeatReminderRepository(db);
   const repeatReminders = createRepeatReminderService({ notifications, store: repeatReminderRecords, devices });
   const alerts = createWeatherAlertService({ notifications, settings: new WeatherAlertSettingsRepository(db), memory, devices, autonomyControl });
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
