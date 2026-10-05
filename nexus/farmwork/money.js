@@ -22,7 +22,9 @@ function incomeCategory(text) {
   return /\b(?:maize|beans?|cassava|rice|wheat|sorghum|millet|tomato(?:es)?|potato(?:es)?|cabbage|kale|onions?|bananas?|coffee|tea|groundnuts?|vegetables?|fruit|crops?|harvest|grain)\b/i.test(text) ? "crops" : "other";
 }
 
-const defaultCurrency = records => (records.find(record => record.data.currency)?.data.currency) || "";
+// An amount said with no currency takes the one the person has always used. If they have used more than one, nothing is guessed: it is recorded with no currency
+// (a Kenyan farmer's "800" must not become UGX because the last entry happened to be in UGX).
+const defaultCurrency = records => { const used = new Set(records.map(record => record.data.currency).filter(Boolean)); return used.size === 1 ? [...used][0] : ""; };
 
 // Not everything someone buys or sells is farm business. A sale or purchase that matches no farm word is only recorded for a person who already
 // keeps farm records; for anyone else it is left to normal planning ("I sold my old car").
@@ -117,7 +119,8 @@ async function handleMoney(ctx) {
       // a secondary bookkeeping note on an already-recorded sale (not the primary action), so it retries
       // against the latest qty rather than asking the user to redo the whole sale.
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        const stock = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(stock, item).filter(entry => entry.data.unit === quantity.unit);
+        const stock = await ctx.store.list({ ...scope, collection: "stock" }); // Only harvested goods (or goods of the same kind as what was sold) come out of stock: selling maize must not take kilos out of the maize SEED.
+        const found = findItems(stock, item).filter(entry => entry.data.unit === quantity.unit && (entry.data.category === "other" || entry.data.category === categoryOf(item)));
         if (found.length !== 1) break;
         const left = round(Math.max(0, found[0].data.qty - quantity.value), 3);
         const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });
