@@ -15,6 +15,8 @@ const EXPENSE_CATEGORIES = [["seed", /\b(?:seeds?|seedlings?)\b/i], ["fertiliser
   ["equipment", /\b(?:tools?|repair|equipment|tractor|hoe|panga|pump|sprayer|machine|spare)/i], ["water", /\b(?:water|irrigation|borehole|pipes?)\b/i], ["rent", /\b(?:rent|lease)\b/i]];
 const expenseCategory = text => (EXPENSE_CATEGORIES.find(([, pattern]) => pattern.test(text)) || ["other"])[0];
 const ON_CREDIT = /\b(?:on credit|on account|on loan|(?:will|to|promised to|promises to|said (?:he|she|they) will) pay(?: me)? (?:later|next|on|after|in|tomorrow|at the end)|pay(?:s|ing)? (?:me )?(?:later|next week|next month|tomorrow|on friday)|has not paid|hasn't paid|have not paid|haven't paid|yet to pay|not yet paid|owes? me|unpaid|pay(?:ment)? (?:is )?(?:later|pending))\b/i;
+// Said about something BOUGHT: "on credit", "will pay later", "I owe him", "not paid yet".
+const PURCHASE_ON_CREDIT = /\b(?:on credit|on account|on loan|(?:will|to|promised to|i(?:'ll| will)|we(?:'ll| will)) pay(?: him| her| them| it)? (?:later|next|on|after|in|tomorrow|at the end)|pay(?:ing)? (?:later|next week|next month|tomorrow|on friday)|(?:have not|haven't|not yet|yet to) paid|unpaid|i owe|we owe|owing)\b/i;
 const STOCKED = new Set(["seed", "fertiliser", "chemicals", "feed", "equipment"]);
 const stockCategory = { seed: "seed", fertiliser: "fertiliser", chemicals: "chemical", feed: "feed", equipment: "tool" };
 
@@ -124,7 +126,7 @@ async function ledgerFixes(ctx, t, lower) {
     if (!rows.length) return "Nobody owes you anything that I know of.";
     const by = {};
     for (const record of rows) { const who = record.data.party || "Someone"; (by[who] = by[who] || []).push(record); }
-    return `Owed to you: ${Object.entries(by).map(([who, list]) => `${who} ${showTotals(list.reduce((acc, record) => { const key = currencyKey(rows, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.amount); return acc; }, {}))}`).join("; ")}. Say "${Object.keys(by)[0]} paid" when one of them pays.`;
+    return `Owed to you: ${Object.entries(by).map(([who, list]) => `${who} ${showTotals(list.reduce((acc, record) => { const key = currencyKey(rows, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.amount); return acc; }, {}))}`).join("; ")}.${Object.keys(by).some(who => who !== "Someone") ? ` Say "${Object.keys(by).find(who => who !== "Someone")} paid" when one of them pays.` : ' Next time say who you sold to ("to Otieno") so I can tell you who owes you.'}`;
   }
   // "Otieno paid", "mark Otieno as paid", "Otieno paid me 2000": a sale on credit is counted as income when it is paid.
   const settle = /^(?:mark )?([A-Za-z][A-Za-z' -]{1,30}?)(?: has| have)? (?:paid|settled)(?: me)?(?: in full| everything| it all| back| what (?:he|she|they) owed)?$/i.exec(t) || /^mark ([A-Za-z][A-Za-z' -]{1,30}?) as paid$/i.exec(t);
@@ -148,9 +150,42 @@ async function ledgerFixes(ctx, t, lower) {
         paid = round(paid + paying); paying = 0;
       }
     }
-    const left = (await all()).filter(record => record.data.unpaid && record.data.party === who);
+    const left = (await all()).filter(record => record.data.type === "income" && record.data.unpaid && record.data.party === who);
     const currency = owed[0].data.currency;
     return `Recorded: ${who} paid ${formatMoney(paid, currency)}, now counted as income.${left.length ? ` ${who} still owes ${showTotals(sum(left.map(record => ({ data: { ...record.data, unpaid: false, type: "income" } })), "income"))}.` : ` ${who} owes you nothing now.`}`;
+  }
+  // What the farmer owes for things bought on credit. The cost counts when the thing is bought; what is still owed is tracked separately until it is paid.
+  const owedByMe = async () => (await all()).filter(record => record.data.type === "expense" && record.data.unpaid && record.data.owing > 0);
+  if (/^(?:who|which (?:shops?|suppliers?|sellers?)) do (?:i|we) (?:still )?owe(?: money)?$|^(?:what|how much) do (?:i|we) (?:still )?owe(?: (?:in total|altogether|them|suppliers?))?$|^(?:show|list) (?:my )?(?:debts|what i owe|unpaid bills|supplier debts|bills i owe)$/.test(lower)) {
+    const rows = await owedByMe();
+    if (!rows.length) return "You don't owe anyone anything that I know of.";
+    const by = {};
+    for (const record of rows) { const who = record.data.party || "Someone"; (by[who] = by[who] || []).push(record); }
+    const total = list => list.reduce((acc, record) => { const key = currencyKey(rows, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.owing); return acc; }, {});
+    return `You owe: ${Object.entries(by).map(([who, list]) => `${who} ${showTotals(total(list))}`).join("; ")}. Total ${showTotals(total(rows))}.${Object.keys(by).some(who => who !== "Someone") ? ` Say "I paid ${Object.keys(by).find(who => who !== "Someone")}" when you pay.` : ""}`;
+  }
+  // "I paid Wanjiru", "I paid Wanjiru 5000", "I cleared my debt with Wanjiru": paying off what is owed is NOT a new cost (the cost was counted when it was bought), so it is never recorded as a second expense.
+  const clearedAll = /^(?:i |we )?(?:have |'ve )?(?:paid|settled|cleared)(?: back| off)? ([A-Za-z][A-Za-z' -]{1,30}?)(?: in full| everything| it all| back| what (?:i|we) owed)?$/i.exec(t)
+    || /^(?:i |we )?(?:have |'ve )?(?:paid|settled|cleared)(?: off)? (?:my |our |the )?(?:debt|bill|balance|account)(?: with| to| at) ([A-Za-z][A-Za-z' -]{1,30})$/i.exec(t);
+  const clearedSome = clearedAll ? null : /^(?:i |we )?(?:have |'ve )?paid ([A-Za-z][A-Za-z' -]{1,30}?)(?: back)? (.+?)(?: of it| so far| today| towards it| on account)?$/i.exec(t);
+  const creditor = (clearedAll || clearedSome)?.[1]?.trim();
+  if (creditor && !NOT_A_NAME.test(creditor) && !/^(?:for|the|my|our|out|off|back|up|in|it|them|him|her)\b/i.test(creditor)) {
+    const mine = (await owedByMe()).filter(record => record.data.party && nameKey(record.data.party) === nameKey(creditor)).sort((a, b) => String(a.data.day).localeCompare(String(b.data.day)));
+    if (mine.length) {
+      const who = mine[0].data.party;
+      let paying = clearedAll ? Infinity : null;
+      if (clearedSome) { const said = parseMoney(`paid ${clearedSome[2]}`) || parseMoney(clearedSome[2]) || bareAmount(clearedSome[2]); if (!said) return null; paying = said.amount; }
+      let paid = 0;
+      for (const record of mine) {
+        if (!(paying > 0)) break;
+        const take = paying === Infinity ? record.data.owing : Math.min(paying, record.data.owing);
+        const owing = round(record.data.owing - take);
+        await ctx.store.update({ ...scope, record: { ...record, data: { ...record.data, owing, unpaid: owing > 0, ...(owing > 0 ? {} : { paidOn: ctx.entryDay || ctx.today }) } } });
+        paid = round(paid + take); paying = paying === Infinity ? Infinity : round(paying - take);
+      }
+      const left = (await owedByMe()).filter(record => nameKey(record.data.party || "") === nameKey(who));
+      return `Recorded: you paid ${who} ${formatMoney(paid, mine[0].data.currency)} of what you owed. That is not a new cost: it was counted when you bought it.${left.length ? ` You still owe ${who} ${showTotals(left.reduce((acc, record) => { const key = currencyKey(left, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.owing); return acc; }, {}))}.` : ` You owe ${who} nothing now.`}`;
+    }
   }
   // "that should be 8000", "change that to 8000", "I meant 800": the last entry is corrected, only when it was made today or yesterday.
   if ((m = /^(?:no[, ]+)?(?:that should (?:be|have been)|change (?:that|it|the last (?:one|entry|sale|expense|income|record|payment)) to|correct (?:that|it|the last (?:one|entry|sale|expense|income|record)) to|make (?:that|it)|actually it was|actually it is|(?:sorry,? )?i meant|sorry,? it was)\s+(.+)$/i.exec(t))) {
@@ -209,7 +244,7 @@ async function handleMoney(ctx) {
     // "10 bags at 3000 each", "5 chickens at 600 each": the price is for ONE, the sale is the count times it.
     const each = parseEachPrice(rest); const count = each && !quantity ? parseCount(rest) : null;
     const itemMatch = quantity ? new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:for|at|to|@)\\b.*)?$`, "i").exec(rest) : /^(?:some |my )?(.+?)(?:\s+(?:for|at|to|@)\b.*)?$/i.exec(rest);
-    const item = count ? count.item.replace(/^(?:some|my|the)\s+/, "") : clean(itemMatch?.[1] || "").toLowerCase().replace(/^(?:some|my|the)\s+/, "");
+    const item = (count ? count.item.replace(/^(?:some|my|the)\s+/, "") : clean(itemMatch?.[1] || "").toLowerCase().replace(/^(?:some|my|the)\s+/, "")).replace(/\s+(?:on (?:credit|account|loan)|(?:to be )?paid later|unpaid)$/i, "");
     let amount = money?.amount; let currency = money?.currency || "";
     // Found live (money-math audit): neither branch checked that the
     // quantity's unit (bags, crates, sacks) matched the price's "per" unit
@@ -305,17 +340,21 @@ async function handleMoney(ctx) {
     const each = parseEachPrice(rest); const count = each && !quantity ? parseCount(rest) : null;
     if (each && (quantity || count)) { amount = round((quantity || count).value * each.amount); currency = each.currency || currency; }
     const itemMatch = quantity ? new RegExp(`${quantity.matched.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*(?:of )?(.+?)(?:\\s+(?:for|at|from|@)\\b.*)?$`, "i").exec(rest) : /^(?:some |a |an )?(.+?)(?:\s+(?:for|at|from|@)\b.*)?$/i.exec(rest);
-    const item = count ? count.item : clean(itemMatch?.[1] || "").toLowerCase();
+    const item = (count ? count.item : clean(itemMatch?.[1] || "").toLowerCase()).replace(/\s+(?:on (?:credit|account|loan)|(?:to be )?paid later|unpaid)$/i, "");
     if (!item || item.length > 60) return null;
-    const seller = /\bfrom (?:my |the )?([A-Za-z][A-Za-z' -]{1,30}?)(?:\s+(?:for|at|@)\b|$)/.exec(rest)?.[1];
+    const seller = /\bfrom (?:my |the )?([A-Za-z][A-Za-z' -]{1,30}?)(?:\s+(?:for|at|@|on)\b|$)/.exec(rest)?.[1];
+    // Bought on credit: the cost counts now, and what is still owed to the seller is tracked until it is paid.
+    const onCredit = PURCHASE_ON_CREDIT.test(rest);
     const category = expenseCategory(item);
     const fields = await ctx.store.list({ ...scope, collection: "field" }); const field = fieldIn(fields, t);
-    const result = await recordMoney(ctx, { type: "expense", category, amount, currency, party: seller ? titleCase(seller) : "", field: field?.data.name || "", item, qty: (quantity || count)?.value || null, unit: quantity?.unit || "", note: `bought ${item}` });
+    const result = await recordMoney(ctx, { type: "expense", category, amount, currency, party: seller ? titleCase(seller) : "", field: field?.data.name || "", item, qty: (quantity || count)?.value || null, unit: quantity?.unit || "", note: `bought ${item}`, ...(onCredit ? { unpaid: true, owing: amount } : {}) });
     if (result.refused) return result.refused;
     let stockNote = "";
     if (quantity && STOCKED.has(category)) { const stock = await addStock(ctx, item, quantity); if (stock) stockNote = ` I added it to your stock (you now have ${unitLabel(stock.data.qty, stock.data.unit)} of ${stock.data.name}).`; }
     const month = result.all.filter(record => inPeriod(record, extractPeriod("this month", ctx.today)));
-    return `Recorded: bought ${quantity ? `${unitLabel(quantity.value, quantity.unit)} of ` : count ? `${count.value} ` : ""}${item}${seller ? ` from ${titleCase(seller)}` : ""} for ${formatMoney(amount, result.record.data.currency)} (${category}).${stockNote} Spent this month: ${showTotals(sum(month, "expense"))}.`;
+    const boughtWhat = `${quantity ? `${unitLabel(quantity.value, quantity.unit)} of ` : count ? `${count.value} ` : ""}${item}${seller ? ` from ${titleCase(seller)}` : ""}`;
+    if (onCredit) return `Recorded: bought ${boughtWhat} for ${formatMoney(amount, result.record.data.currency)} (${category}) on credit.${stockNote} It counts as a cost now, and I'll remember that you owe ${seller ? titleCase(seller) : "the seller"} ${formatMoney(amount, result.record.data.currency)}.${seller ? ` Say "I paid ${titleCase(seller)}" when you pay.` : ' Next time say who you bought it from ("from Wanjiru") so I can tell you who you owe.'} Spent this month: ${showTotals(sum(month, "expense"))}.`;
+    return `Recorded: bought ${boughtWhat} for ${formatMoney(amount, result.record.data.currency)} (${category}).${stockNote} Spent this month: ${showTotals(sum(month, "expense"))}.`;
   }
   if ((m = /^(?:i |we )?paid ([A-Za-z][A-Za-z']+(?: [A-Za-z][A-Za-z']+)?) (.+)$/i.exec(t)) && !/^(?:the|my|for|to|a|an|out|off|back|attention|up|in|it|them|him|her)\b/i.test(m[1]) && parseMoney(`paid ${m[1]} ${m[2]}`)) {
     const who = titleCase(m[1]); const money = parseMoney(`paid ${m[1]} ${m[2]}`); const forWhat = /\bfor (.+)$/i.exec(m[2])?.[1] || "labour";
