@@ -22,7 +22,7 @@ const { repeatReminderTurn } = require("../reminders/repeat-service.js");
 const { assessBloodPressure, invalidReadingReply } = require("../../server/providers/bloodPressure.js");
 const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
 const { contentGuardReply } = require("./content-guard.js");
-const { parseSwahiliReminder, NEED_TIME_SW, NEED_TASK_SW } = require("../reminders/swahili-reminder.js");
+const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
@@ -209,9 +209,11 @@ class OpenEndedPlanner {
     // answer "I need help now" or "I want to die" before this does.
     if (this.companion?.handle || this.companion?.turn) {
       // handle() also says when an emergency alert went out and a location should follow (plan.emergency, read by the phone); a companion that only has turn() gives just words.
+      // A plain "yes" to Kyro's own offer to alert the trusted circle ("say \"alert my circle\" and I'll message ...") IS that request: said so, the circle is alerted.
+      const companionCommand = alertOfferAccepted(command.text, conversationHistory) ? { ...command, text: "alert my circle" } : command;
       const companionResult = this.companion.handle
-        ? await this.companion.handle({ command, context }).catch(() => null)
-        : await this.companion.turn({ command, context }).then(words => (words ? { response: words } : null)).catch(() => null);
+        ? await this.companion.handle({ command: companionCommand, context }).catch(() => null)
+        : await this.companion.turn({ command: companionCommand, context }).then(words => (words ? { response: words } : null)).catch(() => null);
       if (companionResult?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionResult.response, ...(companionResult.emergency ? { emergency: Object.freeze({ ...companionResult.emergency }) } : {}), sourceRequired: false, planningAttempts: 0 });
     }
     // Requests for sexual or explicit material, betting tips, and tricks to hack, fake or scam are answered plainly with what Kyro can do instead, before any tool or AI model sees them (see content-guard.js).
@@ -241,6 +243,9 @@ class OpenEndedPlanner {
     }
     // "Remind me every morning at 8 to check the pump" / "show my repeating reminders" / "stop my daily reminder to ...": reminders that repeat (see reminders/repeat-service.js).
     // A reminder that happens once is not taken here; it carries on to reminders.schedule below.
+    // The same asked for in Kiswahili ("nikumbushe kila siku saa tatu asubuhi kunywa dawa", "acha kikumbusho cha ...", "onyesha vikumbusho vyangu"): read into the English form the existing service understands, answered in Kiswahili.
+    const swahiliRepeat = await swahiliRepeatingTurn({ text: command.text, store: this.repeatReminders, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+    if (swahiliRepeat) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: swahiliRepeat, sourceRequired: false, planningAttempts: 0 });
     const repeating = await repeatReminderTurn({ text: command.text, store: this.repeatReminders, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
     if (repeating) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: repeating, sourceRequired: false, planningAttempts: 0 });
     // Sleep, mood, workouts (with personal bests), weight and water the person reports, and goals (see wellness/log.js).
@@ -265,6 +270,16 @@ class OpenEndedPlanner {
     if (named?.clarification) return Object.freeze({ goal: String(command.text || "").trim(), application: "communications", riskTier: "regulated", clarification: named.clarification, steps: [], planningAttempts: 0 });
     if (named) command = { ...command, text: named.text };
     // To-do and shopping lists, notes and calendar events the person asks Kyro to keep (see personal/items.js).
+    // "Ongeza mkutano kwenye kalenda kesho saa nne asubuhi": a calendar event asked for in Kiswahili, read into the English form and answered in Kiswahili.
+    const swahiliCalendar = parseSwahiliCalendar(command.text);
+    if (swahiliCalendar) {
+      const say = response => Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0 });
+      if (swahiliCalendar.needTime) return say(NEED_TIME_SW);
+      if (swahiliCalendar.needTitle) return say(NEED_EVENT_TITLE_SW);
+      if (swahiliCalendar.needDay) return say(NEED_EVENT_DAY_SW);
+      const added = await personalTurn({ text: swahiliCalendar.english, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+      if (added) return say(/^Added to your calendar/.test(added) ? swahiliCalendar.replySw : added);
+    }
     const personal = await personalTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
     if (personal) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: personal, sourceRequired: false, planningAttempts: 0 });
     // What Kyro has learned about this person (see memory/profile-facts.js) is used wherever it helps: their first name in greetings,
@@ -699,7 +714,7 @@ function canonicalizeExplicitApplication(candidate, text, catalog) {
 // arbitrary noun -- so a completely unrelated "temp file 42" style
 // sentence (which also lacks the required "my" prefix or record/log verb)
 // still cannot fabricate a reading here either.
-const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|reads|reading|at|=|:)\\s*)*";
+const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|as|to|reads|reading|at|=|:)\\s*)*";
 
 function completeHealthRecordPlan(text, catalog) {
   const goal = String(text || "").trim();
@@ -750,14 +765,53 @@ function completeHealthRecordPlan(text, catalog) {
     if (match) { const value = Number(match[1]); if (value >= 50 && value <= 100) return makePlan("oxygen-saturation", { oxygenSaturation: value }); }
   }
   if (isReported("temp(?:erature)?")) {
-    const match = goal.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
-    if (match) { const value = Number(match[1]); if (value >= 70 && value <= 115) return makePlan("temperature", { temperature: value }); }
+    const match = goal.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)(?:\\s*°?\\s*(f|c|fahrenheit|celsius)\\b)?`, "i"));
+    if (match) {
+      const value = Number(match[1]);
+      // The unit is what was said ("37.5 C", "100.4 F"), else the size of the number: 30 to 45 can only be Celsius and 70 to 115 only Fahrenheit. Anything between is asked about, not saved.
+      const said = (match[2] || "").toLowerCase()[0];
+      const unit = said || (value >= 30 && value <= 45 ? "c" : value >= 70 && value <= 115 ? "f" : "");
+      if (unit === "c" && value >= 30 && value <= 45) return makePlan("temperature", { temperature: value, temperatureUnit: "C" });
+      if (unit === "f" && value >= 70 && value <= 115) return makePlan("temperature", { temperature: value, temperatureUnit: "F" });
+      return notARealReading(`I did not save this: ${value}${said ? ` ${said.toUpperCase()}` : ""} cannot be a real body temperature (about 30 to 45 in Celsius, or 70 to 115 in Fahrenheit). Please check the thermometer and tell me again, for example "my temperature is 37.5 C".`);
+    }
   }
   if (isReported("(?:pulse|heart\\s*rate)")) {
     const match = goal.match(new RegExp(`\\b(?:pulse|heart\\s*rate)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     if (match) { const value = Number(match[1]); if (value >= 20 && value <= 250) return makePlan("pulse", { pulse: value }); }
   }
   return null;
+}
+
+// A plain yes to the offer to alert the trusted circle. The last thing Kyro said (history is oldest first, and does not yet hold this message) has to be that offer, and nothing else in between.
+const ALERT_OFFER = /(?:say|sema)\s+["“]?(?:alert my circle|arifu mzunguko wangu)["”]?/i;
+const YES_TO_OFFER = /^(?:yes|yeah|yep|yup|ok(?:ay)?|sure|please|yes,? please|please do|do it|go ahead|yes,? do it|yes,? go ahead|alert them|yes,? alert them|yes,? alert (?:my )?circle|ndiyo|ndio|ndiyo tafadhali|tafadhali|sawa|fanya hivyo)[.!\s]*$/i;
+function alertOfferAccepted(text, history = []) {
+  if (!YES_TO_OFFER.test(String(text || "").trim())) return false;
+  const turns = (history || []).filter(turn => turn && String(turn.content || "").trim());
+  const last = turns[turns.length - 1];
+  return Boolean(last && last.role === "assistant" && ALERT_OFFER.test(String(last.content)));
+}
+
+// Repeating reminders in Kiswahili: read into the English sentence the existing service understands; the answer is Kiswahili when it worked, and the service's own words when it did not.
+async function swahiliRepeatingTurn({ text, store, tenantId, userId, timeZone }) {
+  if (!store?.add) return null;
+  const repeat = parseSwahiliRepeating(text);
+  if (repeat) {
+    if (repeat.needTime) return NEED_TIME_SW;
+    if (repeat.needTask) return NEED_TASK_SW;
+    if (repeat.needDay) return NEED_DAY_SW;
+    if (repeat.unsupported) return UNSUPPORTED_REPEAT_SW;
+    const reply = await repeatReminderTurn({ text: repeat.english, store, tenantId, userId, timeZone });
+    return /^Okay\. I will/.test(reply || "") ? repeat.replySw : reply;
+  }
+  const stop = parseSwahiliStop(text);
+  if (stop) {
+    const reply = await repeatReminderTurn({ text: stop.english, store, tenantId, userId, timeZone });
+    return /^Done|stopped/i.test(reply || "") ? stoppedReplySw(stop.task) : reply;
+  }
+  const list = parseSwahiliList(text);
+  return list ? repeatReminderTurn({ text: list.english, store, tenantId, userId, timeZone }) : null;
 }
 
 function completeSwahiliReminderPlan(text, catalog) {
