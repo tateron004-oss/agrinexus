@@ -57592,7 +57592,7 @@ async function replayKyroOfflineNotes() {
         timeZone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; } })() } }, 60000);
       if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true) throw new Error("Kyro did not accept the note yet.");
     } });
-    if (outcome.sent) toast(outcome.sent === 1 ? "I added the note you saved offline to your records." : `I added the ${outcome.sent} notes you saved offline to your records.`);
+    if (outcome.sent) toast(outcome.sent === 1 ? "I sent the note you saved offline to Kyro. Ask Kyro to check your records." : `I sent the ${outcome.sent} notes you saved offline to Kyro. Ask Kyro to check your records.`);
   } catch { /* try again next time the phone is online */ } finally { kyroOfflineReplayRunning = false; }
 }
 window.addEventListener("online", () => { setTimeout(replayKyroOfflineNotes, 1500); });
