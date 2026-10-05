@@ -23,7 +23,7 @@ const openAiAnswers = text => async () => ({ ok: true, status: 200, json: async 
 
 test("a price question with no search provider is not answered from memory, and says why", async () => {
   let called = 0;
-  const run = load(async () => { called += 1; return openAiAnswers("Maize is 4500 shillings a bag in Kisumu")(); }, { OPENAI_API_KEY: "sk-test" });
+  const run = load(async () => { called += 1; return openAiAnswers("Maize is 4500 shillings a bag in Kisumu")(); }, { OPENAI_API_KEY: "sk-test", OPENAI_WEB_SEARCH_ENABLED: "false" });
   for (const query of ["What is the price of maize in Kisumu today?", "How much is a bag of fertilizer?", "market price of beans in Nakuru", "maize selling at what rate per kg", "How much does a tractor cost?", "What is the exchange rate for shillings to dollars?"]) {
     const result = await run({ query }, {}, "receipt-1");
     assert.match(result.answer, /^I can't look up today's prices because no live price source is set up\./, query);
@@ -36,7 +36,7 @@ test("a price question with no search provider is not answered from memory, and 
 });
 
 test("any other answer from the model's memory carries a plain note that no source was checked", async () => {
-  const run = load(openAiAnswers("Rotate maize with beans to keep the soil healthy."), { OPENAI_API_KEY: "sk-test" });
+  const run = load(openAiAnswers("Rotate maize with beans to keep the soil healthy."), { OPENAI_API_KEY: "sk-test", OPENAI_WEB_SEARCH_ENABLED: "false" });
   const result = await run({ query: "Why should I rotate crops?" }, {}, "receipt-1");
   assert.equal(result.answer, "I could not check any sources for this, so this is general knowledge and may be out of date or wrong. Rotate maize with beans to keep the soil healthy.");
   assert.equal(result.unsourced, true);
@@ -47,7 +47,7 @@ test("any other answer from the model's memory carries a plain note that no sour
 });
 
 test("questions that only mention a number or a rate are not mistaken for price questions", async () => {
-  const run = load(openAiAnswers("Plant at the start of the rains."), { OPENAI_API_KEY: "sk-test" });
+  const run = load(openAiAnswers("Plant at the start of the rains."), { OPENAI_API_KEY: "sk-test", OPENAI_WEB_SEARCH_ENABLED: "false" });
   for (const query of ["When should I plant maize in Kisumu?", "How much water does maize need?", "What is the germination rate of beans?", "How do I rotate crops over 3 seasons?"]) {
     const result = await run({ query }, {}, "receipt-1");
     assert.match(result.answer, /^I could not check any sources/, query);
@@ -63,6 +63,6 @@ test("with a search provider the answer is sourced and unchanged", async () => {
 });
 
 test("a crop-advice request that must have approved sources still fails honestly rather than being answered from memory", async () => {
-  const run = load(openAiAnswers("guess"), { OPENAI_API_KEY: "sk-test" });
+  const run = load(openAiAnswers("guess"), { OPENAI_API_KEY: "sk-test", OPENAI_WEB_SEARCH_ENABLED: "false" });
   await assert.rejects(() => run({ query: "Why are my maize leaves yellow?", domainFilterRequired: true, includeDomains: ["fao.org"] }, {}, "receipt-1"), /No live reasoning or knowledge provider is configured/);
 });
