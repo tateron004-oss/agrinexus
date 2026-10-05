@@ -21,7 +21,11 @@ function invalidReadingReason(observation = {}) {
   if (has("glucose") && resolveGlucose(observation.glucose, "mg/dL").invalid) return `a blood sugar of ${observation.glucose} mg/dL cannot be a real reading`;
   if (has("oxygenSaturation") && !(observation.oxygenSaturation >= 50 && observation.oxygenSaturation <= 100)) return `an oxygen level of ${observation.oxygenSaturation} cannot be a real reading`;
   if (has("pulse") && !(observation.pulse >= 20 && observation.pulse <= 250)) return `a pulse of ${observation.pulse} cannot be a real reading`;
-  if (has("temperature") && !((observation.temperature >= 30 && observation.temperature <= 45) || (observation.temperature >= 70 && observation.temperature <= 115))) return `a temperature of ${observation.temperature} cannot be a real reading`;
+  if (has("temperature")) {
+    const t = observation.temperature; const unit = observation.temperatureUnit;
+    const real = unit === "C" ? t >= 25 && t <= 45 : unit === "F" ? t >= 77 && t <= 115 : (t >= 30 && t <= 45) || (t >= 70 && t <= 115);
+    if (!real) return `a temperature of ${t}${unit ? ` ${unit}` : ""} cannot be a real reading`;
+  }
   return null;
 }
 
@@ -39,6 +43,7 @@ function observationFrom(input) {
   const type = input.readingType || input.intakeType;
   if (type) observation.type = type;
   for (const key of READING_FIELDS) if (Number.isFinite(Number(input[key])) && input[key] !== null && input[key] !== "") observation[key] = Number(input[key]);
+  if (observation.temperature !== undefined && ["C", "F"].includes(input.temperatureUnit)) observation.temperatureUnit = input.temperatureUnit;
   return Object.keys(observation).some(key => key !== "type") ? observation : (explicit || {});
 }
 
@@ -62,6 +67,14 @@ function healthSafetyResponse(reading = {}) {
     if (level === "low") return "This blood sugar is lower than usual. If you feel shaky, sweaty, confused or faint, get help now and do not be alone, and contact your clinic today." + closing;
     if (level === "very-high") return "This blood sugar is very high. If you have vomiting, stomach pain, fast breathing, confusion, or you are very sleepy or very thirsty, get emergency help now, and contact your clinic today." + closing;
     return "Your blood sugar reading was recorded. A single reading does not establish a diagnosis; keep logging and share it with a clinician." + closing;
+  }
+  if (Number.isFinite(reading.temperature)) {
+    // In Celsius, whichever unit it was said in. These words are not a diagnosis, and should be reviewed by a clinician.
+    const celsius = reading.temperatureUnit === "F" || (!reading.temperatureUnit && reading.temperature > 60) ? (reading.temperature - 32) * 5 / 9 : reading.temperature;
+    if (celsius >= 39.5) return "This temperature is very high. Please get medical care today, and straight away for a baby or a small child, or if you have a stiff neck, a rash, confusion or trouble breathing. Until then rest, drink plenty of fluids and keep cool with light clothes." + closing;
+    if (celsius >= 38) return "This is a raised temperature (a fever). Rest, drink plenty of fluids and keep cool with light clothes. If it lasts more than a day or two, keeps rising, or you have a stiff neck, a rash, confusion or trouble breathing, get medical care; for a baby or a small child get care today." + closing;
+    if (celsius < 35) return "This temperature is lower than usual. Warm up with dry clothes and blankets and a warm drink, and get medical care if you are shivering a lot, very sleepy or confused." + closing;
+    return "This temperature is within a typical range. Keep logging if you are unwell so a clinician can look at the pattern." + closing;
   }
   return "Your reading was recorded. It has not been interpreted or diagnosed." + closing;
 }
