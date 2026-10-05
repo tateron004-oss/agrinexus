@@ -4,7 +4,7 @@ const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose
 const { addDays, weekdayOf, extractDay } = require("../personal/dates.js");
 const crmVoice = require("./crm-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
-const { whenOf } = require("../farmwork/parse.js");
+const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
 
 // Shared classify+extract+execute logic for business/nonprofit voice and
 // typed commands (add a customer/donor, log an expense, create an invoice,
@@ -212,11 +212,22 @@ function formatMoney(currency, amount) {
 const PLEDGE_NOTE = 'A pledge is a promise, not money received, so I have not added it to your income. When it is paid, say for example "received 5000 shillings donation from Maria" and I will log it.';
 const TYPE_QUESTION = transaction => `Is this ${transaction.amount} money you received (income) or money you paid out (an expense)? Say "income" or "expense" with it.`;
 const LEDGER_LIMIT = 200;
+// A sale "on credit" (or "will pay next week", "has not paid yet") is not money received. The ledger counts income when it arrives, so it is not logged until it is paid.
+const SALE_ON_CREDIT = /\b(?:on credit|on account|on loan|(?:will|to|promised to|promises to) pay(?: me)? (?:later|next|on|after|in|tomorrow|at the end)|pay(?:s|ing)? (?:me )?(?:later|next week|next month|tomorrow)|has not paid|hasn't paid|have not paid|haven't paid|yet to pay|not yet paid|owes? (?:me|us)|unpaid)\b/i;
+const CREDIT_NOTE = 'That sounds like a sale on credit: the money has not come in yet. The business ledger counts income when it is received, so I have not logged it. When it is paid, say for example "received 60000 shillings from Otieno for maize" and I will log it.';
 function extractTransactionArgs(command = "", args = {}) {
   const text = String(command || "");
   const withCurrency = amountWithCurrency(text);
   const bare = withCurrency ? null : new RegExp(`\\b(?:of|for|worth)\\s+(${NUMBER})`, "i").exec(normalizeSpokenText(text));
-  const rawAmount = args.amount !== undefined ? Number(args.amount) : withCurrency ? withCurrency.amount : bare ? Number(bare[1].replace(/,/g, "")) : NaN;
+  let rawAmount = args.amount !== undefined ? Number(args.amount) : withCurrency ? withCurrency.amount : bare ? Number(bare[1].replace(/,/g, "")) : NaN;
+  // "sold 10 bags of maize at 3000 shillings each": the price is for ONE, the money is the count times it. Found by the audit: only the price was logged.
+  if (args.amount === undefined) {
+    const said = normalizeSpokenText(text);
+    const each = parseEachPrice(said);
+    const after = /\b(?:sold|sell|bought|buy|purchased)\s+(.+)$/i.exec(said)?.[1] || "";
+    const counted = each && (parseQuantity(after) || parseCount(after));
+    if (each && counted) rawAmount = Math.round(counted.value * each.amount * 100) / 100;
+  }
   const currency = String(args.currency || withCurrency?.currency || "").toUpperCase().slice(0, 3);
   // Found live: bare "paid" was an unconditional expense signal, checked
   // before income words, even overriding an explicit "income" label --
@@ -261,6 +272,7 @@ function extractTransactionArgs(command = "", args = {}) {
     type: sanitizeText(args.type || type, 20),
     typeKnown,
     pledge,
+    onCredit: !args.type && type === "income" && SALE_ON_CREDIT.test(text),
     category: sanitizeText(args.category || category, 160),
     description: sanitizeText(args.description || text, 500)
   };
@@ -948,6 +960,7 @@ function precheck(command = "", args = {}) {
     if (!transaction.amount || transaction.amount <= 0) clarification = `What is the amount for this ${transaction.type}, and in which currency?`;
     else if (!transaction.currency) clarification = `Which currency is ${transaction.amount} in, for example shillings or dollars?`;
     else if (transaction.pledge) clarification = PLEDGE_NOTE;
+    else if (transaction.onCredit) clarification = CREDIT_NOTE;
     else if (!transaction.typeKnown) clarification = TYPE_QUESTION(transaction);
   } else if (intent === "addInvoiceItem") {
     const item = extractInvoiceItemArgs(command, args);
@@ -1139,6 +1152,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     if (!transaction.amount || transaction.amount <= 0) return { status: "needs-input", response: `What is the amount for this ${transaction.type}, and in which currency?`, missingInformation: ["amount"] };
     if (!transaction.currency) return { status: "needs-input", response: `Which currency is ${transaction.amount} in, for example shillings or dollars?`, missingInformation: ["currency"] };
     if (transaction.pledge) return { status: "needs-input", response: PLEDGE_NOTE, missingInformation: ["received"] };
+    if (transaction.onCredit) return { status: "needs-input", response: CREDIT_NOTE, missingInformation: ["received"] };
     if (!transaction.typeKnown) return { status: "needs-input", response: TYPE_QUESTION(transaction), missingInformation: ["type"] };
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before logging income or expenses.", missingInformation: ["businessName"] };
