@@ -18,11 +18,12 @@ const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/we
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 const { hasReminderTimePhrase } = require("../reminders/time-phrase.js");
+const { repeatReminderTurn } = require("../reminders/repeat-service.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, community, farmWork, healthWork, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, maxRepairAttempts });
   }
 
   // "Send me a weekly summary on Sunday at 6pm" / "stop my weekly summary" / "do I have a weekly summary?": opt-in, like the morning brief.
@@ -231,6 +232,10 @@ class OpenEndedPlanner {
       if (work?.report) return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: work.report.content, sourceRequired: false, planningAttempts: 0 });
       if (typeof work === "string") return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: work, sourceRequired: false, planningAttempts: 0 });
     }
+    // "Remind me every morning at 8 to check the pump" / "show my repeating reminders" / "stop my daily reminder to ...": reminders that repeat (see reminders/repeat-service.js).
+    // A reminder that happens once is not taken here; it carries on to reminders.schedule below.
+    const repeating = await repeatReminderTurn({ text: command.text, store: this.repeatReminders, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+    if (repeating) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: repeating, sourceRequired: false, planningAttempts: 0 });
     // Sleep, mood, workouts (with personal bests), weight and water the person reports, and goals (see wellness/log.js).
     const wellness = await wellnessTurn({ text: command.text, store: this.wellnessStore, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
     if (wellness) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: wellness, sourceRequired: false, planningAttempts: 0 });

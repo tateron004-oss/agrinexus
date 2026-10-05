@@ -72,6 +72,8 @@ const { HealthRecordRepository } = require("../healthwork/store.js");
 const { CheckinSettingsRepository, CheckinStateRepository } = require("../companion/checkin-store.js");
 const { MedicationRepository } = require("../companion/medication-store.js");
 const { WellnessRepository } = require("../wellness/store.js");
+const { RepeatReminderRepository } = require("../reminders/repeat-store.js");
+const { createRepeatReminderService } = require("../reminders/repeat-service.js");
 const { CommunityRepository } = require("../community/store.js");
 const { WeatherAlertSettingsRepository } = require("../alerts/settings.js");
 
@@ -191,18 +193,20 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   // query a background job needs -- one instance, reused, not a second copy.
   const wellnessRecords = new WellnessRepository(db);
   const brief = createBriefService({ notifications, settings: new BriefSettingsRepository(db), memory, farmRecords, healthRecords, devices, autonomyControl });
+  const repeatReminderRecords = new RepeatReminderRepository(db);
+  const repeatReminders = createRepeatReminderService({ notifications, store: repeatReminderRecords, devices });
   const alerts = createWeatherAlertService({ notifications, settings: new WeatherAlertSettingsRepository(db), memory, devices, autonomyControl });
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
   const circleRepository = new CircleRepository(db);
   const companion = createCompanion({ circle: circleRepository, checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memory, notifications, devices, autonomyControl });
-  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: wellnessRecords,
+  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: wellnessRecords, repeatReminders: repeatReminderRecords,
     community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) },
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
-  return Object.freeze({ config, adapter, db, brief, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
+  return Object.freeze({ config, adapter, db, brief, repeatReminders, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, farmRecords, healthRecords, wellnessRecords, businessRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });
