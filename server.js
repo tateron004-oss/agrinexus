@@ -2254,7 +2254,11 @@ let writeDbQueue = Promise.resolve();
 
 async function writeDb(db) {
   const stamping = profileOwnerStamping.getStore();
-  if (stamping && stamping.db === db && stamping.email) { try { stampNewProfileRecordsWithOwner(db, stamping.snapshot, stamping.email); } catch { /* a stamping problem must never block a save */ } }
+  if (stamping && stamping.db === db && stamping.email) {
+    try { stampNewProfileRecordsWithOwner(db, stamping.snapshot, stamping.email); } catch { /* a stamping problem must never block a save */ }
+    const waiting = db?.profile?.agentPendingAction;
+    if (waiting && typeof waiting === "object" && !waiting.by) waiting.by = String(stamping.email).trim().toLowerCase();
+  }
   if (usingPostgresState()) {
     await ensurePostgresState();
     await getPgPool().query(
@@ -2729,6 +2733,133 @@ function withoutOwnerMarks(profile) {
 }
 const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(item?.[field] || "").trim());
 
+// What a person types or says to Kyro (the command, Kyro's reply, what the agent "remembers" from it) is kept in the one shared profile. Found by the persona audit: any other signed-in
+// person, or a guest, could read it from /api/state ("he beats me", an HIV status, family planning kept from a husband), it was fed to the AI model as context for whoever asked next, and
+// most of it survived the person's account erasure. Now every such item carries who made it, other people are shown only their own, the model is given only the asker's own, and
+// erasure scrubs them. An item with no owner (made before this) is shown to nobody but an Admin.
+const agentActorEmail = () => String(profileOwnerStamping.getStore()?.email || "").trim().toLowerCase();
+const AGENT_MEMORY_PUBLIC_KEYS = ["activeAudience", "activeMission", "conversationQuality", "updatedAt", "lastStatus"];
+const AGENT_MEMORY_SHARED_HISTORY_ARRAYS = ["advisorHistory", "memoryTimeline", "reasoningHistory", "reasoningLanguageHistory", "outcomeLoopHistory", "conversationSupervisorHistory", "reasoningGovernanceHistory",
+  "conversationalModeHistory", "voiceMissionHistory", "clarificationHistory", "conversationalIntakes", "retrievals"];
+const AGENT_MEMORY_OWN_KEYS = ["lastCommand", "lastIntent", "lastResponse", "lastSummary", "lastReasoning", "turnCoach", "lastGoal"];
+function privateHistoryForViewer(profile, user) {
+  if (!profile || typeof profile !== "object" || user?.role === "Admin") return profile;
+  // Anyone else (including a caller who is not signed in) sees only what carries their own address; with none, nothing.
+  const email = String(user?.email || "").trim().toLowerCase();
+  const mine = item => Boolean(email) && profileRecordOwnedBy(item, email);
+  const view = { ...profile };
+  if (Array.isArray(profile.agentCommands)) view.agentCommands = profile.agentCommands.filter(mine);
+  if (Array.isArray(profile.agentConversation)) view.agentConversation = profile.agentConversation.filter(mine);
+  if (Array.isArray(profile.integrationEvents)) {
+    view.integrationEvents = profile.integrationEvents.map(event => (email && String(event?.by || "").toLowerCase() === email ? event : { ...event, detail: "Activity by someone else.", metadata: {} }));
+  }
+  if (profile.agentPendingAction && typeof profile.agentPendingAction === "object") view.agentPendingAction = email && String(profile.agentPendingAction.by || "").toLowerCase() === email ? profile.agentPendingAction : null;
+  const memory = profile.agentMemory;
+  if (memory && typeof memory === "object") {
+    let safe = {};
+    if (email && String(memory.updatedBy || "").toLowerCase() === email) {
+      // The person who spoke last keeps their own working context (a call waiting for a number, an intake in progress, ...). What stays out is every shared history of what everyone said.
+      safe = { ...memory };
+      for (const key of AGENT_MEMORY_SHARED_HISTORY_ARRAYS) if (key in safe) safe[key] = [];
+      for (const key of ["moduleMemory", "userNeeds"]) if (key in safe) safe[key] = {};
+      for (const key of ["longTermFacts", "preferences", "learnedPatterns", "safetyBoundaries"]) if (Array.isArray(safe[key])) safe[key] = safe[key].filter(item => String(item?.by || "").toLowerCase() === email);
+    } else {
+      for (const key of AGENT_MEMORY_PUBLIC_KEYS) if (key in memory) safe[key] = memory[key];
+    }
+    safe.rememberedContexts = (Array.isArray(memory.rememberedContexts) ? memory.rememberedContexts : []).filter(item => email && String(item?.by || "").toLowerCase() === email);
+    view.agentMemory = safe;
+  }
+  return view;
+}
+// Erasure, the part that cannot rely on an owner mark: the agent copies a command into many other places (module memory, advisor and mission histories, the timeline, the "last request"
+// slots...). The person's own commands and Kyro's answers to them are collected first, then every place in the shared profile that holds those exact words is emptied or dropped.
+function collectOwnWords(profile, email) {
+  const words = new Set();
+  const add = value => { const text = String(value || "").trim().toLowerCase(); if (text.length >= 12) words.add(text); };
+  for (const item of Array.isArray(profile?.agentCommands) ? profile.agentCommands : []) if (profileRecordOwnedBy(item, email)) { add(item.command); add(String(item.command || "").replace(/^remember(?:\s+that)?\s+/i, "")); add(String(item.command || "").replace(/^remember\s+/i, "")); add(item.response); }
+  for (const turn of Array.isArray(profile?.agentConversation) ? profile.agentConversation : []) if (profileRecordOwnedBy(turn, email)) add(turn.text);
+  for (const item of Array.isArray(profile?.agentMemory?.rememberedContexts) ? profile.agentMemory.rememberedContexts : []) if (String(item?.by || "").toLowerCase() === email) { add(item.command); add(item.response); }
+  return [...words];
+}
+function scrubWordsFromProfile(profile, words) {
+  if (!profile || !words?.length) return 0;
+  const variants = words.flatMap(word => [word, JSON.stringify(word).slice(1, -1)]);
+  const has = text => { const lower = String(text).toLowerCase(); return variants.some(word => lower.includes(word)); };
+  let changed = 0;
+  const scrub = node => {
+    if (Array.isArray(node)) {
+      for (let index = node.length - 1; index >= 0; index -= 1) {
+        const item = node[index];
+        if (typeof item === "string") { if (has(item)) { node.splice(index, 1); changed += 1; } }
+        else if (item && typeof item === "object") { if (has(JSON.stringify(item))) { node.splice(index, 1); changed += 1; } }
+      }
+    } else if (node && typeof node === "object") {
+      for (const [key, value] of Object.entries(node)) {
+        if (typeof value === "string") { if (has(value)) { node[key] = ""; changed += 1; } }
+        else if (value && typeof value === "object") scrub(value);
+      }
+    }
+  };
+  scrub(profile);
+  return changed;
+}
+// The action Kyro is waiting for a "yes" on is one slot in the shared profile. It belongs to the person who staged it: someone else's "yes" never confirms it, and they are not shown it.
+const ownPendingAction = (db, user) => {
+  const pending = db?.profile?.agentPendingAction;
+  if (!pending || typeof pending !== "object") return pending || null;
+  const by = String(pending.by || "").trim().toLowerCase();
+  return !by || by === String(user?.email || "").trim().toLowerCase() ? pending : null;
+};
+// The agent keeps ONE "what we are in the middle of" context (the active mission, intake, clarification, last reasoning, ...) in the shared profile. When a different person starts talking, the
+// last person's context is cleared first, so their words never become the new person's "goal" or "memory used" (found: B's command carried A's sentence into B's own record).
+const ACTIVE_AGENT_CONTEXT_KEYS = ["lastReasoning", "activeVoiceMission", "activeGuidedMission", "activeOutcomeLoop", "lastConversationalModeOrchestrator", "lastAutonomousBrainAppliedTo", "genesisConversation",
+  "nexusSessionContext", "activeIntake", "activeClarification", "activeSimpleTurn", "activeJarvisSession", "lastReasoningLanguageProduction"];
+function switchAgentContextTo(db, user) {
+  const memory = db?.profile?.agentMemory;
+  const email = String(user?.email || "").trim().toLowerCase();
+  const previous = String(memory?.updatedBy || "").trim().toLowerCase();
+  if (!memory || !email || !previous || previous === email) return false;
+  for (const key of ACTIVE_AGENT_CONTEXT_KEYS) delete memory[key];
+  memory.updatedBy = email;
+  return true;
+}
+// The turns of one person's own conversation, for the AI model's context.
+const ownConversationTurns = (profile, email) => (Array.isArray(profile?.agentConversation) ? profile.agentConversation : []).filter(turn => profileRecordOwnedBy(turn, String(email || "").trim().toLowerCase()));
+// Erasure: take the person's words out of the shared memory and the integration log (which is kept as an audit, but without what they said).
+function scrubPrivateHistoryFor(profile, email) {
+  const target = String(email || "").trim().toLowerCase();
+  const counts = {};
+  if (!target || !profile) return counts;
+  const memory = profile.agentMemory;
+  if (memory && typeof memory === "object") {
+    if (Array.isArray(memory.rememberedContexts)) {
+      const before = memory.rememberedContexts.length;
+      memory.rememberedContexts = memory.rememberedContexts.filter(item => String(item?.by || "").toLowerCase() !== target);
+      if (before !== memory.rememberedContexts.length) counts["agentMemory.rememberedContexts"] = before - memory.rememberedContexts.length;
+    }
+    for (const key of ["longTermFacts", "preferences", "learnedPatterns", "safetyBoundaries", "advisorHistory"]) {
+      if (!Array.isArray(memory[key])) continue;
+      const before = memory[key].length;
+      memory[key] = memory[key].filter(item => String(item?.by || "").toLowerCase() !== target);
+      if (before !== memory[key].length) counts[`agentMemory.${key}`] = before - memory[key].length;
+    }
+    if (String(memory.updatedBy || "").toLowerCase() === target) {
+      for (const key of AGENT_MEMORY_OWN_KEYS) if (key in memory) memory[key] = typeof memory[key] === "string" ? "" : null;
+      memory.updatedBy = "";
+      counts["agentMemory.last"] = 1;
+    }
+  }
+  if (Array.isArray(profile.integrationEvents)) {
+    let scrubbed = 0;
+    for (const event of profile.integrationEvents) {
+      if (String(event?.by || "").toLowerCase() !== target) continue;
+      event.detail = "Removed when the account was erased."; event.metadata = {}; event.by = ""; scrubbed += 1;
+    }
+    if (scrubbed) counts["integrationEvents.scrubbed"] = scrubbed;
+  }
+  return counts;
+}
+
 // What was already in the stamped arrays when the request began: record ids, and the record objects themselves (for records that have no id).
 function snapshotProfileRecordsForOwnerStamping(db) {
   const snapshot = new Map();
@@ -2792,6 +2923,7 @@ function eraseOwnedProfileRecords(profile, email) {
   const normalizedEmail = String(email || "").toLowerCase();
   const removedCounts = {};
   if (!normalizedEmail || !profile) return removedCounts;
+  const ownWords = collectOwnWords(profile, normalizedEmail);
   const removedThreadIds = new Set();
   if (Array.isArray(profile.communicationThreads)) {
     for (const thread of profile.communicationThreads) {
@@ -2809,6 +2941,9 @@ function eraseOwnedProfileRecords(profile, email) {
     const removed = before - profile[key].length;
     if (removed > 0) removedCounts[key] = removed;
   }
+  Object.assign(removedCounts, scrubPrivateHistoryFor(profile, normalizedEmail));
+  const scrubbedWords = scrubWordsFromProfile(profile, ownWords);
+  if (scrubbedWords) removedCounts.typedWordsScrubbed = scrubbedWords;
   return removedCounts;
 }
 
@@ -5644,7 +5779,7 @@ function learningProfileForClient(user) {
 const randomTemporaryPassword = () => crypto.randomBytes(12).toString("base64url");
 
 function profileForUser(profile, user) {
-  return withoutOwnerMarks(profileForUserByRole(profile, user));
+  return withoutOwnerMarks(privateHistoryForViewer(profileForUserByRole(profile, user), user));
 }
 
 function profileForUserByRole(profile, user) {
@@ -5760,7 +5895,7 @@ function publicState(db, user) {
     womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers, user),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
-    conversationEvidence: conversationEvidencePack(db),
+    conversationEvidence: conversationEvidencePack(user?.role !== "Admin" ? { ...db, profile: privateHistoryForViewer(db.profile, user) } : db),
     agentCapabilities,
     jarvisReadiness,
     jarvisProductionTen: jarvisProductionTenModel(db, providers),
@@ -5784,7 +5919,7 @@ function publicState(db, user) {
     governmentReadiness: governmentReadinessModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
-    missionTimeline: missionTimelineModel(db, user),
+    missionTimeline: missionTimelineModel(user?.role !== "Admin" ? { ...db, profile: privateHistoryForViewer(db.profile, user) } : db, user),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
     engineSetup: renderEngineEnvPlan(db),
@@ -11452,6 +11587,7 @@ function logIntegration(db, { providerId, module, action, status = "success", de
     status,
     detail,
     metadata,
+    by: agentActorEmail(),
     createdAt: new Date().toISOString()
   });
   db.profile.integrationEvents = db.profile.integrationEvents.slice(0, 50);
@@ -18153,12 +18289,12 @@ function reasoningGovernanceReview(db, user, command, result = {}, supervisor = 
 function commandRecord(db, user, command, result) {
   ensureAiProfile(db.profile);
   result = ensureSpeakableAgentResult(result);
-  addConversationTurn(db.profile, "user", command, { email: user.email });
+  addConversationTurn(db.profile, "user", command, { email: user.email }, user.email);
   addConversationTurn(db.profile, "assistant", result.response, {
     intent: result.intent,
     status: result.status || "completed",
     redirectSection: result.metadata?.redirectSection || null
-  });
+  }, user.email);
   const memory = db.profile.agentMemory;
   const remembered = {
     id: crypto.randomUUID(),
@@ -18166,6 +18302,7 @@ function commandRecord(db, user, command, result) {
     intent: result.intent,
     response: result.response,
     status: result.status || "completed",
+    by: String(user.email || "").trim().toLowerCase(),
     createdAt: new Date().toISOString()
   };
   memory.rememberedContexts = [remembered, ...(memory.rememberedContexts || [])].slice(0, 12);
@@ -18176,6 +18313,7 @@ function commandRecord(db, user, command, result) {
   if (result.intent === "conversation.confirmed" || result.metadata?.mode === "autopilot" || result.status === "completed") {
     memory.conversationQuality.confirmedActions = Number(memory.conversationQuality.confirmedActions || 0) + (result.intent === "conversation.confirmed" ? 1 : 0);
   }
+  memory.updatedBy = String(user.email || "").trim().toLowerCase();
   memory.lastCommand = command;
   memory.lastIntent = result.intent;
   memory.lastResponse = result.response;
@@ -23194,7 +23332,7 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
   if (!command) return null;
   const correlationId = genesisVoiceCorrelationId(body.correlationId);
   const language = body.targetLanguage || body.language || user.language || "en";
-  const recentTurns = (db.profile?.agentConversation || []).slice(-8).map(turn => ({
+  const recentTurns = ownConversationTurns(db.profile, user.email).slice(-8).map(turn => ({
     role: turn.role || "user",
     text: sanitizePilotText(turn.response || turn.command || turn.text || "", 500)
   }));
@@ -23808,7 +23946,7 @@ function commandGoal(command) {
     .trim();
 }
 
-function addConversationTurn(profile, role, text, metadata = {}) {
+function addConversationTurn(profile, role, text, metadata = {}, ownerEmail = agentActorEmail()) {
   ensureAiProfile(profile);
   if (!String(text || "").trim()) return null;
   const turn = {
@@ -23816,6 +23954,7 @@ function addConversationTurn(profile, role, text, metadata = {}) {
     role,
     text: String(text || "").trim(),
     metadata,
+    createdBy: String(ownerEmail || "").trim().toLowerCase(),
     createdAt: new Date().toISOString()
   };
   profile.agentConversation.push(turn);
@@ -23945,6 +24084,7 @@ function rememberAgentMemory(profile, text, metadata = {}) {
     module: memoryModuleForText(value, metadata),
     needs: memoryNeedSignals(value),
     source: metadata.source || "agent-command",
+    by: agentActorEmail(),
     confidence: Number(metadata.confidence || 0.78),
     uses: 1,
     createdAt: new Date().toISOString(),
@@ -23973,8 +24113,10 @@ function retrieveAgentMemories(profile, query, limit = 6) {
     ...(profile.agentMemory.advisorHistory || []).map(item => ({ ...item, text: item.event, category: "advisor-history", confidence: item.confidence || 0.66 })),
     ...(profile.agentMemory.rememberedContexts || []).map(item => ({ ...item, text: `${item.command || ""} ${item.intent || ""} ${item.response || ""}`, category: "recent-context", confidence: 0.62 }))
   ];
+  // When the person asking is known, only what THEY said is recalled: never another person's words.
+  const asker = agentActorEmail();
   const unique = new Map();
-  all.filter(Boolean).forEach(item => {
+  all.filter(item => item && (!asker || String(item.by || "").toLowerCase() === asker)).forEach(item => {
     const key = item.id || normalizeMemoryText(item.text || item.command || item.response || "");
     if (!unique.has(key)) unique.set(key, item);
   });
@@ -27974,7 +28116,7 @@ function continueVoiceRecovery(db, user, command) {
 function conversationFollowUpResponse(db, user, text, lower) {
   ensureAiProfile(db.profile);
   const memory = db.profile.agentMemory;
-  const pending = db.profile.agentPendingAction;
+  const pending = ownPendingAction(db, user);
   const recommendation = memory.lastRecommendedAction || smartNextActions(db, user).items[0] || null;
   const context = lastWorkflowContext(db.profile);
   const { wantsExplanation, wantsSource, wantsMission, wantsNavigation, wantsNext } = conversationFollowUpFlags(lower);
@@ -31370,7 +31512,7 @@ function buildAssistantActionMemory(db, user, command = "") {
     contactPhone: item.contactPhone || "",
     createdAt: item.createdAt || new Date().toISOString()
   });
-  const pending = db.profile.agentPendingAction;
+  const pending = ownPendingAction(db, user);
   if (pending) {
     add({
       title: `Waiting for confirmation: ${pending.action || pending.command || "pending action"}`,
@@ -33388,6 +33530,7 @@ function phase4RiskyActionForCommand(command = "") {
 }
 
 async function runAgentCommand(db, user, command, options = {}) {
+  switchAgentContextTo(db, user);
   ensureAiProfile(db.profile);
   const rawCommand = String(command || "");
   const invokedAgriNexus = /\b(agrinexus|agri\s+nexus|nexus)\b/i.test(rawCommand);
@@ -33519,7 +33662,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   // this closes both the cross-caller and cross-channel confirmation-hijack
   // paths the audit found.
   const topPendingAction = (() => {
-    const pending = db.profile.agentPendingAction;
+    const pending = ownPendingAction(db, user);
     if (!pending) return null;
     if (options.inputMode === "phone" && options.sessionStartedAt) {
       const stagedAt = Date.parse(pending.createdAt || "");
@@ -35009,7 +35152,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     return smartCommand;
   }
   const wantsExecute = options.confirm === true || lower.includes("execute") || lower.includes("run it") || lower.includes("do it");
-  const pendingAction = db.profile.agentPendingAction;
+  const pendingAction = ownPendingAction(db, user);
   const phoneContactCommand = await phoneContactMemoryCommandResponse(db, user, text, lower, options);
   if (phoneContactCommand) return phoneContactCommand;
 
@@ -36032,7 +36175,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     targetLanguage: commandLanguage
   });
   const conversationalModeOrchestrator = nexusGenesisConversationalModeOrchestrator.orchestrate(command, {
-    recentTurns: db.profile.agentConversation || [],
+    recentTurns: ownConversationTurns(db.profile, user.email),
     activeTopic: db.profile.agentMemory?.activeTopic || db.profile.agentMemory?.lastTopic || body.modeContext?.section || body.mode || "general",
     priorTopics: db.profile.agentMemory?.priorTopics || [],
     activeWorkflows: db.profile.agentMemory?.activeWorkflows || [],
