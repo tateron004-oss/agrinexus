@@ -60,6 +60,11 @@ const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = re
 const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
+const communicationsSetup = require("./server/providers/communicationsStatus.js");
+const twilioProvider = require("./server/providers/twilioProvider.js");
+const emailProvider = require("./server/providers/emailProvider.js");
+const communicationsTestLog = new Map(); // owner id -> when their recent real tests went out
+const COMMUNICATIONS_TESTS_PER_HOUR = 6;
 const { HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
 const {
@@ -51807,6 +51812,45 @@ async function api(req, res, url) {
     });
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  // What it takes to get texts, WhatsApp, email and phone calls working, and a test that goes only to the owner's own phone or account email (see server/providers/communicationsStatus.js).
+  if (url.pathname === "/api/admin/communications/status" && req.method === "GET") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow viewing communications setup" });
+    const callerCount = (Array.isArray(db.phoneCallers) ? db.phoneCallers.length : 0) + twilioAuthorizedCallers(process.env).length;
+    return send(res, 200, { ok: true, ...communicationsSetup.describeCommunications(process.env, { ownPhone: nexusOwnPhoneForUser(user, process.env, db), adminEmail: user.email, authorizedCallerCount: callerCount }) });
+  }
+  if (url.pathname === "/api/admin/communications/test" && req.method === "POST") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow sending communications tests" });
+    const body = await readBody(req);
+    const channel = String(body.channel || "").toLowerCase();
+    if (!["sms", "whatsapp", "call", "email"].includes(channel)) return send(res, 400, { error: "Choose sms, whatsapp, call or email." });
+    if (body.confirm !== true) return send(res, 400, { error: "Confirm that you want a real test sent to yourself (confirm: true)." });
+    // A few tests an hour, whatever the channel: this reaches a real phone or inbox and a real provider.
+    const now = Date.now();
+    const recent = (communicationsTestLog.get(user.id) || []).filter(time => now - time < 3600 * 1000);
+    if (recent.length >= COMMUNICATIONS_TESTS_PER_HOUR) return send(res, 429, { error: `That is ${COMMUNICATIONS_TESTS_PER_HOUR} tests in the last hour. Wait a little, then try again.` });
+    // Only ever to the owner themselves: the phone number linked to their own account, or their own account email.
+    const ownPhone = channel === "email" ? "" : nexusOwnPhoneForUser(user, process.env, db);
+    const ownEmail = channel === "email" ? String(user.email || "").trim() : "";
+    if (channel === "email" ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownEmail) : !ownPhone) {
+      return send(res, 409, { error: channel === "email" ? "Your account has no valid email address to test with." : "I need your own phone number first: add it under \"Phone numbers for Kyro\" in the Admin screen, linked to your account." });
+    }
+    communicationsTestLog.set(user.id, [...recent, now]);
+    let result;
+    try {
+      result = channel === "sms" ? await twilioProvider.sendSms({ confirmed: true, to: ownPhone, message: communicationsSetup.TEST_TEXT.sms }, process.env)
+        : channel === "whatsapp" ? await twilioProvider.sendWhatsapp({ confirmed: true, to: ownPhone, message: communicationsSetup.TEST_TEXT.whatsapp }, process.env)
+        : channel === "call" ? await twilioProvider.startCall({ confirmed: true, to: ownPhone, message: communicationsSetup.TEST_TEXT.call }, process.env)
+        : await emailProvider.send({ confirmed: true, to: ownEmail, subject: communicationsSetup.TEST_TEXT.email.subject, text: communicationsSetup.TEST_TEXT.email.text }, process.env);
+    } catch (error) {
+      result = { body: { status: "failed", message: String(error?.message || "The test failed.") } };
+    }
+    const summary = communicationsSetup.summarizeTest(channel, result);
+    logIntegration(db, { providerId: channel === "email" ? "email-delivery" : channel === "sms" ? "sms-delivery" : channel === "whatsapp" ? "whatsapp-delivery" : "phone-voice", module: "Platform", action: "communications.test",
+      detail: `A ${channel} test to the owner's own ${channel === "email" ? "email" : "phone"} ended: ${summary.outcome}.`, metadata: { channel, outcome: summary.outcome, errorCode: summary.errorCode, to: channel === "email" ? communicationsSetup.maskEmail(ownEmail) : redactPhoneNumber(ownPhone), by: user.email } });
+    await writeDb(db);
+    return send(res, 200, { ok: summary.ok, test: { ...summary, to: channel === "email" ? communicationsSetup.maskEmail(ownEmail) : communicationsSetup.maskPhone(ownPhone) } });
   }
 
   if (url.pathname === "/api/admin/test-user" && req.method === "POST") {
