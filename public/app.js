@@ -49541,6 +49541,7 @@ window.NexusPath1Certification = Object.freeze({
 function updateRealtimeControllerState(state, eventType, extra = {}) {
   if (!NEXUS_REALTIME_CONTROLLER_STATES.includes(state)) return;
   if (realtimeVoiceSession) realtimeVoiceSession.controllerState = state;
+  try { kyroStallWatchdogObserve(state, eventType, extra); } catch { /* watching must never break the session */ }
   const snapshot = realtimeControllerSnapshot({
     eventType,
     state,
@@ -49642,6 +49643,78 @@ function scheduleRealtimeRecovery(reason = "connection-state") {
     });
   }, 1200);
 }
+
+// ---- Stall watchdog (public/kyro-stall-watchdog.js) ------------------------------------------------------------------------------------------
+// A session can look connected and still never answer: nothing in scheduleRealtimeRecovery() below notices that, because it only restarts a connection
+// that has visibly failed. This watches every turn the person finishes speaking: if no reply starts in a few seconds it asks the model to answer the
+// turn it already heard, and if there is still nothing it restarts the voice session by itself, so a stall heals instead of lasting minutes. Every
+// time it fires it sends a small report (timings and states, no speech and no personal data) so the real cause can be read from the server log.
+let kyroStallWatchdog = null;
+function kyroStallWatchdogInstance() {
+  if (kyroStallWatchdog || !window.KyroStallWatchdog) return kyroStallWatchdog;
+  kyroStallWatchdog = window.KyroStallWatchdog.createStallWatchdog({
+    // Not while a guided interview is running: it turns the automatic reply off on purpose and speaks its own questions.
+    canWatch: () => Boolean(realtimeVoiceSession?.active) && !(kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused"),
+    onNudge: () => {
+      if (!realtimeVoiceSession?.active || realtimeVoiceSession.responseInProgress) return;
+      sendKyroRealtimeEvent({ type: "response.create" });
+    },
+    onRestart: detail => { reportKyroVoiceStall("no-response", detail); restartRealtimeVoiceAfterStall("no-response-watchdog"); },
+    onToolStuck: detail => { reportKyroVoiceStall("tool-stuck", detail); restartRealtimeVoiceAfterStall("tool-stuck-watchdog"); },
+    onEvent: event => nexusGenesisVoiceDebugLog(`kyro-stall-${event.type}`, event)
+  });
+  return kyroStallWatchdog;
+}
+
+// Called for every realtime controller state change (see updateRealtimeControllerState): turns those into "a reply is owed" / "a reply started".
+function kyroStallWatchdogObserve(state, eventType, extra = {}) {
+  const dog = kyroStallWatchdogInstance();
+  if (!dog) return;
+  const reason = String(eventType || "");
+  if (state === "processing" && /^(?:user-speech-stopped|input-audio-committed)$/.test(reason)) dog.userTurnCommitted(reason);
+  else if (state === "processing" && reason === "openai-agents-tool-dispatch-started") dog.toolStarted(extra.toolName);
+  else if (reason === "openai-agents-tool-dispatch-completed") { dog.toolEnded(); dog.userTurnCommitted("after-tool"); }
+  else if (state === "user-speaking" || state === "interrupted") dog.userSpeechStarted();
+  else if (state === "responding" || (state === "listening" && /response-completed|output-audio-finished|agent-response-completed/.test(reason))) dog.activity(reason);
+  else if (state === "closed") dog.reset({ keepRestarts: true });
+}
+
+function restartRealtimeVoiceAfterStall(reason) {
+  const session = realtimeVoiceSession;
+  if (!session?.active || realtimeVoiceStarting) return;
+  try { toast("I lost you for a moment. Reconnecting..."); } catch { /* the restart still happens */ }
+  const preservedPermanentStream = nexusPermanentMicrophoneStream && session.stream === nexusPermanentMicrophoneStream ? nexusPermanentMicrophoneStream : null;
+  stopRealtimeVoiceSession(`Realtime voice restarted after a stall: ${reason}`);
+  startRealtimeVoiceSession({
+    source: "stall-watchdog-restart",
+    preverifiedMicrophoneStream: preservedPermanentStream,
+    conversationIdentity: session.conversationIdentity || nexusRealtimeConversationIdentity,
+    turnIndex: Number(session.turnIndex || 0),
+    recovery: true
+  });
+}
+
+// What the server log needs to find the cause: where the session was when it went quiet. No speech, names or other personal data.
+function reportKyroVoiceStall(kind, detail = {}) {
+  try {
+    const session = realtimeVoiceSession || {};
+    const body = JSON.stringify({
+      kind, build: AGRINEXUS_BUILD_VERSION, sessionId: session.sessionId || "", turnIndex: Number(session.turnIndex || 0),
+      controllerState: session.controllerState || "", lastModelEvent: session.lastModelEvent || "", lastToolEvent: session.lastToolEvent || "",
+      inboundAudioState: session.inboundAudioState || "", responseInProgress: Boolean(session.responseInProgress),
+      connectionState: String(session.connectionState || ""), peerState: session.peerConnection?.connectionState || "",
+      micTrack: session.microphoneTrack?.readyState || session.microphoneProof?.trackState || "", micMuted: Boolean(session.microphoneTrack?.muted),
+      online: navigator.onLine !== false, tabVisible: document.visibilityState || "", intakeActive: Boolean(kyroActiveVoiceIntake),
+      waitedMs: Number(detail.waitedMs || 0), nudges: Number(detail.nudges || 0), restarts: Number(detail.restarts || 0),
+      toolName: String(detail.toolName || ""), toolRunningMs: Number(detail.toolRunningMs || 0), sinceLastActivityMs: Number(detail.sinceLastActivityMs || 0),
+      lastActivity: String(detail.lastActivity || ""), userAgent: String(navigator.userAgent || "").slice(0, 160)
+    });
+    fetch("/api/voice/realtime/stall-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
+  } catch { /* a report must never break the voice session */ }
+}
+
+// Load the voice status shortly after the page opens (it is public and small), so tapping the orb does not wait for it.
+window.setTimeout(() => { try { loadRealtimeVoiceStatus().catch(() => {}); } catch { /* the first tap loads it instead */ } }, 2500);
 
 async function loadRealtimeVoiceStatus(options = {}) {
   if (!options.force && realtimeVoiceStatusCache && Date.now() - (realtimeVoiceStatusCache.checkedAt || 0) < 60000) {
@@ -51110,10 +51183,14 @@ async function startRealtimeVoiceSession(options = {}) {
   if (realtimeVoiceActive()) return true;
   if (realtimeVoiceStarting) return true;
   realtimeVoiceStarting = true;
+  // A session the person starts themselves gets a fresh allowance of automatic restarts; one the watchdog started keeps counting.
+  if (options.recovery !== true) { try { kyroStallWatchdogInstance()?.reset(); } catch { /* optional */ } }
   try {
     const sessionId = `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     nexusGenesisVoiceDebugLog("runtime-selected", { runtime: "realtime", sessionId });
-    const statusPayload = await loadRealtimeVoiceStatus({ force: true });
+    // The status is already loaded when the page opens and is kept for a minute: asking the server again on every start added a full round trip before the
+    // microphone even began connecting. The session request below checks readiness itself and refuses if the runtime is not ready.
+    const statusPayload = await loadRealtimeVoiceStatus({ force: options.recovery === true });
     const status = statusPayload?.realtimeVoice || {};
     if (status.runtime === "disabled") throw new Error(status.note || "Nexus voice is disabled.");
     if (status.runtime !== "realtime") return false;

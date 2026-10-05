@@ -19791,6 +19791,17 @@ function nexusRealtimeRuntimeStatus(env = process.env) {
   };
 }
 
+// How long a spoken request may take before Kyro answers with a plain "that is taking longer" instead of staying silent.
+const NEXUS_REALTIME_TOOL_DEADLINE_MS = Number(process.env.NEXUS_REALTIME_TOOL_DEADLINE_MS || 15000);
+function nexusRealtimeToolTimeoutResult(body = {}) {
+  const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
+  return {
+    ok: false, status: "timed-out", capability: "realtime-tool-deadline", executionAttempted: false, executionVerified: false,
+    response: "That is taking longer than I expected. Please ask me again in a moment.",
+    correlationId: body.correlationId || "", command: String(args.command || body.command || "").slice(0, 200)
+  };
+}
+
 async function dispatchNexusRealtimeTool(db, user, body = {}) {
   const correlationId = genesisVoiceCorrelationId(body.correlationId);
   const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
@@ -56803,6 +56814,30 @@ async function api(req, res, url) {
     }
   }
 
+  // The browser reports when a voice session stalled (a turn went unanswered, or a tool hung) and what state it was in, so the cause can be read from the
+  // server log. Only a fixed set of short fields is kept: no speech, no names, nothing personal.
+  if (url.pathname === "/api/voice/realtime/stall-report" && req.method === "POST") {
+    if (!rateLimit(req, 12, 60_000)) return send(res, 429, { error: "Too many stall reports", category: "rate-limited" });
+    if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    const body = await readBody(req);
+    const authContext = resolveGenesisVoiceAuthContext(req, db, user, { language: "en", issueGuest: false });
+    if (!authContext.authenticated) return send(res, 401, { ok: false, error: "Sign in required" });
+    const text = (value, max = 80) => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, max);
+    const number = value => (Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number(value), 3_600_000)) : 0);
+    const report = {
+      kind: ["no-response", "tool-stuck"].includes(body.kind) ? body.kind : "unknown", build: text(body.build, 40), sessionId: text(body.sessionId), turnIndex: number(body.turnIndex),
+      controllerState: text(body.controllerState), lastModelEvent: text(body.lastModelEvent), lastToolEvent: text(body.lastToolEvent), inboundAudioState: text(body.inboundAudioState),
+      responseInProgress: body.responseInProgress === true, connectionState: text(body.connectionState), peerState: text(body.peerState), micTrack: text(body.micTrack),
+      micMuted: body.micMuted === true, online: body.online !== false, tabVisible: text(body.tabVisible, 20), intakeActive: body.intakeActive === true,
+      waitedMs: number(body.waitedMs), nudges: number(body.nudges), restarts: number(body.restarts), toolName: text(body.toolName), toolRunningMs: number(body.toolRunningMs),
+      sinceLastActivityMs: number(body.sinceLastActivityMs), lastActivity: text(body.lastActivity), userAgent: text(body.userAgent, 160)
+    };
+    console.warn("[voice-stall]", JSON.stringify(report));
+    logIntegration(db, { providerId: "openai", module: "AI Voice", action: "voice.stall_reported", status: "warning", detail: `Voice session stalled (${report.kind}); the app restarted it.`, metadata: report, dispatch: false });
+    await writeDb(db);
+    return send(res, 200, { ok: true }, { "cache-control": "no-store" });
+  }
+
   if (url.pathname === "/api/voice/realtime/tool" && req.method === "POST") {
     if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many Nexus Realtime tool requests", category: "rate-limited" });
     if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
@@ -56863,10 +56898,20 @@ async function api(req, res, url) {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });
     }
-    const result = await dispatchNexusRealtimeTool(db, authContext.user, body);
+    // A spoken request must always get an answer. If the pipeline has not finished by the deadline, the model is given a plain spoken fallback so Kyro
+    // says something instead of going silent while the person waits. (The work itself is not cancelled; whatever it saves, it saves.)
+    const toolStartedAtMs = Date.now();
+    let toolTimedOut = false;
+    let deadlineTimer = null;
+    const result = await Promise.race([
+      dispatchNexusRealtimeTool(db, authContext.user, body).finally(() => clearTimeout(deadlineTimer)),
+      new Promise(resolve => { deadlineTimer = setTimeout(() => { toolTimedOut = true; resolve(nexusRealtimeToolTimeoutResult(body)); }, NEXUS_REALTIME_TOOL_DEADLINE_MS); })
+    ]);
+    const toolElapsedMs = Date.now() - toolStartedAtMs;
+    if (toolTimedOut || toolElapsedMs > 3000) console.warn("[voice-slow-tool]", JSON.stringify({ tool: toolName, ms: toolElapsedMs, timedOut: toolTimedOut, correlationId: String(body.correlationId || "").slice(0, 60) }));
     const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
     const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
-    await writeDb(db);
+    if (!toolTimedOut) await writeDb(db);
     return send(res, 200, { ...result, genesisAction }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });

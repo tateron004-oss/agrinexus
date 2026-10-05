@@ -15,6 +15,7 @@ const APP_SHELL = [
   `/kyro-emergency.js?v=kyro-emergency-1`,
   `/kyro-voice-intake.js?v=kyro-voice-intake-1`,
   `/kyro-intake-forms.js?v=kyro-intake-forms-1`,
+  `/kyro-stall-watchdog.js?v=kyro-stall-watchdog-1`,
   "/icons/agri-nexus-192.png",
   "/icons/agri-nexus-512.png",
   "/icons/agri-nexus-icon.svg",
