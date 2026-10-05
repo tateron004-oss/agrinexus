@@ -42,7 +42,8 @@
   const CONTROL_PATTERNS = {
     cancel: /^(please )?(cancel|quit|exit|never ?mind|forget (it|this|that)|i don'?t want (this|it|to)|i want to (stop|quit))( (this|it|that|the (resume|r[ée]sum[ée]|form)))?( please)?$/i,
     repeat: /^(repeat|say (that|it) again|what( was that| did you say)?|pardon|sorry|i didn'?t (hear|understand|get) (that|you))\??$/i,
-    skip: /^(skip|pass|next|none|nothing|no|not now|i don'?t have (one|any|it)|(i )?(don'?t know|no idea|not sure))$/i,
+    // "none" in the many ways people say it ("I have none", "n/a", "no experience", "I do not have any"): an optional question is skipped, never saved as the answer "I have none".
+    skip: /^(skip|pass|next|none|nothing|no|nope|nil|n\/?a|not now|no thanks|no thank you|not any|i have (none|nothing|not got any)|i (do not|don'?t) have (one|any|it|anything)|i have no (experience|school|training|education|email|phone|skills?|languages?)|no (experience|school|training|education|email|phone|skills?|languages?)|(i )?(don'?t know|no idea|not sure))$/i,
     back: /^(go back|back|previous|undo|that'?s wrong|wrong|change (that|the last( one)?))$/i,
     yes: /^(yes|yeah|yep|yup|sure|correct|that'?s right|that'?s correct|okay|ok)$/i,
     no: /^(no|nope|not quite|that'?s not right|that'?s not correct)$/i

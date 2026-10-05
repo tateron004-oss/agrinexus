@@ -21,6 +21,8 @@ const { hasReminderTimePhrase } = require("../reminders/time-phrase.js");
 const { repeatReminderTurn } = require("../reminders/repeat-service.js");
 const { assessBloodPressure, invalidReadingReply } = require("../../server/providers/bloodPressure.js");
 const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
+const { contentGuardReply } = require("./content-guard.js");
+const { parseSwahiliReminder, NEED_TIME_SW, NEED_TASK_SW } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
@@ -212,6 +214,9 @@ class OpenEndedPlanner {
         : await this.companion.turn({ command, context }).then(words => (words ? { response: words } : null)).catch(() => null);
       if (companionResult?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionResult.response, ...(companionResult.emergency ? { emergency: Object.freeze({ ...companionResult.emergency }) } : {}), sourceRequired: false, planningAttempts: 0 });
     }
+    // Requests for sexual or explicit material, betting tips, and tricks to hack, fake or scam are answered plainly with what Kyro can do instead, before any tool or AI model sees them (see content-guard.js).
+    const guarded = contentGuardReply(command.text);
+    if (guarded) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: guarded.reply, sourceRequired: false });
     // The health worker's record-keeping (patients, visits, immunisations, pregnancies, follow-ups, clinic stock, referral letters, monthly reports:
     // see healthwork/) comes before the farm toolkit; each answers only words plainly for it, and an open guided question is answered first.
     for (const [toolkit, turn, stepId, restriction] of [[this.healthWork, healthWorkTurn, "health-report", "health-record-write"], [this.farmWork, farmWorkTurn, "farm-report", null]]) {
@@ -339,6 +344,9 @@ class OpenEndedPlanner {
     // communications word.
     const remindersManage = completeRemindersManagePlan(command.text, catalog);
     if (remindersManage) return Object.freeze({ ...remindersManage, planningAttempts: 1 });
+    // "Nikumbushe kesho saa tatu asubuhi kunywesha ng'ombe": a reminder asked for in Kiswahili (Swahili clock and day words), scheduled by the same scheduler.
+    const swahiliReminder = completeSwahiliReminderPlan(command.text, catalog);
+    if (swahiliReminder) return Object.freeze({ ...swahiliReminder, planningAttempts: 1 });
     const completeTelehealthIntake = completeTelehealthIntakePlan(command.text, catalog);
     if (completeTelehealthIntake) return Object.freeze({ ...completeTelehealthIntake, planningAttempts: 1 });
     const completeMarketplaceSearch = completeMarketplaceSearchPlan(command.text, catalog);
@@ -750,6 +758,17 @@ function completeHealthRecordPlan(text, catalog) {
     if (match) { const value = Number(match[1]); if (value >= 20 && value <= 250) return makePlan("pulse", { pulse: value }); }
   }
   return null;
+}
+
+function completeSwahiliReminderPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  const parsed = parseSwahiliReminder(goal);
+  if (!parsed) return null;
+  if (!catalog.tools.some(tool => tool.toolId === "reminders.schedule") || !catalog.applications.some(app => app.applicationId === "reminders")) return null;
+  if (parsed.needTime || parsed.needTask) return { goal, application: "reminders", riskTier: "low", clarification: parsed.needTask ? NEED_TASK_SW : NEED_TIME_SW, steps: [], sourceRequired: false };
+  return { goal, application: "reminders", riskTier: "low", clarification: null, sourceRequired: false,
+    steps: [{ clientStepId: "reminders-schedule", title: "Persist governed reminder", toolId: "reminders.schedule",
+      input: { reminder: parsed.task, when: parsed.when, language: "sw", whenSw: parsed.whenSw }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function completeTelehealthIntakePlan(text, catalog) {

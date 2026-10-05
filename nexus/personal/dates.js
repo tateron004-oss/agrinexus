@@ -59,6 +59,11 @@ const DAY_FORMS = [
   { pattern: /\bday after tomorrow\b/i, read: (m, today) => addDays(today, 2) },
   { pattern: /\byesterday\b/i, read: (m, today) => addDays(today, -1) },
   { pattern: /\btomorrow\b/i, read: (m, today) => addDays(today, 1) },
+  // Kiswahili: "keshokutwa" (the day after tomorrow) and "kesho" (tomorrow), and the days of the week. "Leo" and "jana" are left out on purpose: they are also common names.
+  { pattern: /\bkeshokutwa\b/i, read: (m, today) => addDays(today, 2) },
+  { pattern: /\bkesho\b/i, read: (m, today) => addDays(today, 1) },
+  { pattern: /\b(jumatatu|jumanne|jumatano|alhamisi|ijumaa|jumamosi|jumapili)\b/i,
+    read: (m, today) => { const index = { jumapili: 0, jumatatu: 1, jumanne: 2, jumatano: 3, alhamisi: 4, ijumaa: 5, jumamosi: 6 }[m[1].toLowerCase()]; const ahead = (index - weekdayOf(today) + 7) % 7; return addDays(today, ahead === 0 ? 7 : ahead); } },
   { pattern: /\b(?:today|tonight)\b/i, read: (m, today) => today },
   { pattern: /\bin (\d{1,2}) (day|days|week|weeks|month|months)\b/i, read: (m, today) => /^month/i.test(m[2]) ? addMonths(today, Number(m[1])) : addDays(today, Number(m[1]) * (/^week/i.test(m[2]) ? 7 : 1)) },
   { pattern: new RegExp(`\\b(?:(?:on|next|this)\\s+)?${WEEKDAY_PATTERN}\\b`, "i"),
