@@ -167,6 +167,8 @@ test("account export discloses the cloudAgentAudit gap even when none of its alr
   for (const key of ["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "workflowIntelligence", "aiRuns", "mentorNotes"]) {
     db.profile[key] = [];
   }
+  // New records are now stamped with their owner when saved; the disclosure is for records saved before that (no owner), so make them look like those.
+  for (const record of db.profile.cloudAgentAudit) delete record.createdBy;
   fs.writeFileSync(tempDbPath, JSON.stringify(db));
 
   const exportRes = await fetch(`${base}/api/account/export`, { method: "POST", headers: { "content-type": "application/json", cookie: adminCookie } });

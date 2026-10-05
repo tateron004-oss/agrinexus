@@ -2252,6 +2252,8 @@ async function readDb() {
 let writeDbQueue = Promise.resolve();
 
 async function writeDb(db) {
+  const stamping = profileOwnerStamping.getStore();
+  if (stamping && stamping.db === db && stamping.email) { try { stampNewProfileRecordsWithOwner(db, stamping.snapshot, stamping.email); } catch { /* a stamping problem must never block a save */ } }
   if (usingPostgresState()) {
     await ensurePostgresState();
     await getPgPool().query(
@@ -2691,6 +2693,57 @@ function recordExportOwnership(db, user, exportId) {
 // separate Spotify-disconnect endpoint anywhere in the codebase.
 const PROFILE_OWNER_FIELDS = ["createdBy", "requestedBy", "userEmail"];
 
+// Records a person creates in the shared db.profile arrays (workforce paperwork, trade quotes, map zones, health intakes, saved providers, ...) used to be
+// written with no owner field at all, so the account download could not include them and an erasure could not remove them. collectOwnedProfileRecords /
+// eraseOwnedProfileRecords already scan EVERY db.profile array for createdBy / requestedBy / userEmail, so the fix is to make sure new records carry one: when
+// a request that changes data saves the database (writeDb), every NEW record in these arrays that has no owner is stamped createdBy = the signed-in person.
+// "New" means its id (or, with no id, the object itself) was not there when the request began, so an existing record someone else made is never taken over.
+// Not stamped, on purpose: audit and compliance logs, and the financial ledger (wallet transactions, platform fees and revenue, checkout and payment-release
+// records, call receipts), which are kept for accounting and audit and so are neither exported nor erased with an account.
+const PROFILE_OWNER_STAMP_KEYS_EXTRA = [
+  "orders", "marketplaceListings", "offlineQueue", "droneMissionRequests", "nexusSavedProviders", "nexusProviderNotes", "nexusDroneMissionRequests", "nexusWorkflowPlans",
+  "agentExecutions", "evidenceExports", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops",
+  "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "cloudAgentAudit", "workflowIntelligence", "aiRuns", "mentorNotes",
+  "tradeLogisticsRecords", "tradeMessages", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "providerOutreach", "droneFindings", "shiftSchedule",
+  "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations",
+  "applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests",
+  "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"
+];
+const profileOwnerStamping = new (require("node:async_hooks").AsyncLocalStorage)();
+const profileStampKeys = () => [...new Set([...(typeof HEALTH_PROFILE_ARRAY_KEYS !== "undefined" ? HEALTH_PROFILE_ARRAY_KEYS : []), ...PROFILE_OWNER_STAMP_KEYS_EXTRA])];
+const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(item?.[field] || "").trim());
+
+// What was already in the stamped arrays when the request began: record ids, and the record objects themselves (for records that have no id).
+function snapshotProfileRecordsForOwnerStamping(db) {
+  const snapshot = new Map();
+  for (const key of profileStampKeys()) {
+    const list = db?.profile?.[key];
+    if (!Array.isArray(list)) continue;
+    const ids = new Set(); const objects = new WeakSet();
+    for (const item of list) { if (item && typeof item === "object") { objects.add(item); if (item.id !== undefined && item.id !== null) ids.add(String(item.id)); } }
+    snapshot.set(key, { ids, objects });
+  }
+  return snapshot;
+}
+function stampNewProfileRecordsWithOwner(db, snapshot, email) {
+  const owner = String(email || "").trim().toLowerCase();
+  if (!owner || !db?.profile || !snapshot) return 0;
+  let stamped = 0;
+  for (const key of profileStampKeys()) {
+    const list = db.profile[key];
+    if (!Array.isArray(list)) continue;
+    const before = snapshot.get(key);
+    for (const item of list) {
+      if (!item || typeof item !== "object" || Array.isArray(item) || profileRecordHasOwner(item)) continue;
+      const known = before && (before.objects.has(item) || (item.id !== undefined && item.id !== null && before.ids.has(String(item.id))));
+      if (known) continue;
+      item.createdBy = owner;
+      stamped += 1;
+    }
+  }
+  return stamped;
+}
+
 function profileRecordOwnedBy(item, normalizedEmail) {
   if (!item || typeof item !== "object") return false;
   return PROFILE_OWNER_FIELDS.some(field => String(item[field] || "").toLowerCase() === normalizedEmail);
@@ -3088,11 +3141,13 @@ function knownUnownedProfileGaps(profile, db = null) {
   const operationsStore = db?.nexusPersistentOperations || null;
   const gaps = [];
   const hasAny = keys => keys.some(key => Array.isArray(profile?.[key]) && profile[key].length > 0);
-  if (hasAny([...HEALTH_PROFILE_ARRAY_KEYS])) {
-    gaps.push("Shared clinical/telehealth records (health intakes, care plans, telehealth encounters, etc.) have no per-account owner field today and are not included.");
+  // Records that DO have an owner are exported and erased with the account (see stampNewProfileRecordsWithOwner), so only records with none are a gap.
+  const hasUnowned = keys => keys.some(key => Array.isArray(profile?.[key]) && profile[key].some(item => item && typeof item === "object" && !PROFILE_OWNER_FIELDS.some(field => String(item[field] || "").trim())));
+  if (hasUnowned([...HEALTH_PROFILE_ARRAY_KEYS])) {
+    gaps.push("Shared clinical/telehealth records (health intakes, care plans, telehealth encounters, etc.) saved before per-account ownership was recorded have no owner and are not included.");
   }
-  if (hasAny(["orders"])) {
-    gaps.push("Marketplace trade orders have no per-account owner field today and are not included.");
+  if (hasUnowned(["orders"])) {
+    gaps.push("Marketplace trade orders saved before per-account ownership was recorded have no owner and are not included.");
   }
   if (operationsStore && [...NEXUS_OPERATIONS_AUDIT_TRAIL_COLLECTIONS].some(key => (operationsStore[key] || []).length > 0)) {
     gaps.push("Nexus Operations' own action receipts, consent records, audit log, archive records, and status-change history are retained as an audit/compliance trail and are not included.");
@@ -3130,8 +3185,8 @@ function knownUnownedProfileGaps(profile, db = null) {
   // reading each object literal), but were never added to this disclosure
   // list when that one was built, so export/erase silently omitted them with
   // no caveat at all.
-  if (hasAny(["marketplaceListings", "offlineQueue", "droneMissionRequests", "nexusSavedProviders", "nexusProviderNotes"])) {
-    gaps.push("Locally-saved marketplace listings, offline queue items, drone mission requests, and saved provider contacts/notes have no per-account owner field today and are not included.");
+  if (hasUnowned(["marketplaceListings", "offlineQueue", "droneMissionRequests", "nexusSavedProviders", "nexusProviderNotes"])) {
+    gaps.push("Locally-saved marketplace listings, offline queue items, drone mission requests, and saved provider contacts/notes saved before per-account ownership was recorded have no owner and are not included.");
   }
   // Found live (follow-up provider sweep, same bug shape as the two blocks
   // above, found in provider files not yet checked against this disclosure
@@ -3146,8 +3201,8 @@ function knownUnownedProfileGaps(profile, db = null) {
   // provider's OWN intake/session/plan store was missed when this list was
   // built. workflowOrchestratorBridgeProvider.js's plan record is a plain
   // object literal with no owner field at all, same as the arrays above.
-  if (hasAny(["nexusDroneMissionRequests", "nexusWorkflowPlans"])) {
-    gaps.push("Locally-saved drone-bridge mission requests and workflow plans have no per-account owner field today and are not included.");
+  if (hasUnowned(["nexusDroneMissionRequests", "nexusWorkflowPlans"])) {
+    gaps.push("Locally-saved drone-bridge mission requests and workflow plans saved before per-account ownership was recorded have no owner and are not included.");
   }
   // Found live (exhaustive follow-up sweep, same bug shape as the three
   // blocks above): every remaining db.profile array in server.js's own
@@ -3161,20 +3216,27 @@ function knownUnownedProfileGaps(profile, db = null) {
   // createdBy/requestedBy/userEmail (PROFILE_OWNER_FIELDS), so -- same as its cloudAgentQueue/
   // cloudAgentCorrections siblings already in this bucket -- it was never picked up by
   // collectOwnedProfileRecords/eraseOwnedProfileRecords, but was missing from this disclosure list.
-  if (hasAny(["agentExecutions", "evidenceExports", "integrationEvents", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "cloudAgentAudit", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
-    gaps.push("Agent/AI orchestration evidence, integration event logs, and cloud-agent run/correction records have no per-account owner field today and are not included.");
+  if (hasUnowned(["agentExecutions", "evidenceExports", "noVendorUpgradeRuns", "localScenarioMissions", "offlineReasoningRuns", "operationalEfficiencyRuns", "autonomousOperatingLoops", "collectiveIntelligenceRuns", "collectiveEvolutionProposals", "frontierBrainRuns", "cloudAgentQueue", "cloudAgentCorrections", "cloudAgentAudit", "workflowIntelligence", "aiRuns", "mentorNotes"])) {
+    gaps.push("Agent/AI orchestration evidence and cloud-agent run/correction records saved before per-account ownership was recorded have no owner and are not included.");
   }
-  if (hasAny(["twilioCallStatusReceipts", "tradeLogisticsRecords", "tradeMessages", "walletTransactions", "platformTransactionFees", "platformRevenueLedger", "paymentCheckoutRecords", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "paymentReleases", "providerOutreach", "droneFindings", "shiftSchedule"])) {
-    gaps.push("Trade/logistics/finance preparation records (quotes, inspections, cold-chain checks, export readiness, contract packets, payment releases, wallet transactions, and related evidence) have no per-account owner field today and are not included.");
+  if (hasAny(["integrationEvents"])) {
+    gaps.push("Integration event logs are retained as an audit/compliance trail and are not included.");
   }
-  if (hasAny(["fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations"])) {
-    gaps.push("Advanced map/logistics planning records (field zones, facility routes, disruption and risk layers, evidence packets, farmer locations) have no per-account owner field today and are not included.");
+  if (hasUnowned(["tradeLogisticsRecords","tradeMessages","tradeQuotes","qualityInspections","coldChainChecks","exportReadiness","contractPackets","providerOutreach","droneFindings","shiftSchedule"])) {
+    gaps.push("Trade/logistics preparation records (quotes, inspections, cold-chain checks, export readiness, contract packets, and related evidence) saved before per-account ownership was recorded have no owner and are not included.");
+  }
+  // The financial ledger is kept for accounting and audit, so it is neither exported nor erased with an account.
+  if (hasAny(["twilioCallStatusReceipts","walletTransactions","platformTransactionFees","platformRevenueLedger","paymentCheckoutRecords","paymentReleases"])) {
+    gaps.push("Financial ledger records (wallet transactions, platform fees and revenue, checkout and payment-release records, call receipts) are retained for accounting and audit and are not included.");
+  }
+  if (hasUnowned(["fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations"])) {
+    gaps.push("Advanced map/logistics planning records (field zones, facility routes, disruption and risk layers, evidence packets, farmer locations) saved before per-account ownership was recorded have no owner and are not included.");
   }
   // Found live (export/erasure sibling sweep): db.profile.applications (workforce role applications --
   // roleTitle/status/rate/source) has no owner field either, same as its siblings in this bucket, but
   // was missing from the disclosure list.
-  if (hasAny(["applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
-    gaps.push("Advanced workforce operations records (role applications, onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) have no per-account owner field today and are not included.");
+  if (hasUnowned(["applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests"])) {
+    gaps.push("Advanced workforce operations records (role applications, onboarding, documents, timesheets, payroll approvals, performance reviews, shift requests) saved before per-account ownership was recorded have no owner and are not included.");
   }
   // Course-enrollment cross-user collision fix: these fields used to live
   // on this same shared db.profile blob (hence the gap this block used to
@@ -3185,8 +3247,8 @@ function knownUnownedProfileGaps(profile, db = null) {
   // predates that migration, is never read by current code, and is left in
   // place untouched per this project's archive-don't-delete convention, so
   // it is intentionally not re-disclosed here either.
-  if (hasAny(["nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"])) {
-    gaps.push("Locally-saved health/workforce governance feedback, offline sync history, legacy voice reminders, field-visit plans, saved learning resources, and marketplace notes have no per-account owner field today and are not included.");
+  if (hasUnowned(["nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"])) {
+    gaps.push("Locally-saved health/workforce governance feedback, offline sync history, legacy voice reminders, field-visit plans, saved learning resources, and marketplace notes saved before per-account ownership was recorded have no owner and are not included.");
   }
   gaps.push("If you have used AgriNexus's newer Postgres-backed companion/reminders/health-toolkit features, request their erasure separately via /api/nexus/runtime/privacy/deletions.");
   return gaps;
@@ -46033,6 +46095,8 @@ async function api(req, res, url) {
   const db = await readDb();
   const usersChanged = ensureDefaultUsers(db);
   const user = currentUser(req, db);
+  // From here to the end of this request, saves stamp the owner on the records it creates (see profileOwnerStamping). Reads never change data, so skip them.
+  if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
 
   if (url.pathname === "/api/healthz" && req.method === "GET") {
     const status = integrationStatus(db);
