@@ -103,7 +103,11 @@ class BehaviorSpine {
       throw error;
     }
     const task = await this.tasks.get({ tenantId: context.tenantId, taskId, includeSteps: true });
-    return this.resolveExecution({ command, plan, execution, task, context });
+    // The screen acknowledges what it showed with the ids the TASK was made under (the engine checks them against the task), so the result of a confirmation
+    // carries those. The confirmation's own command (above) stays the one recorded with the consent. Without this, "yes" completed the write but the
+    // acknowledgement was refused with 409 and the task stayed "verifying" for ever.
+    const resultCommand = { ...command, commandId: task?.commandId || command.commandId, correlationId: task?.correlationId || command.correlationId };
+    return this.resolveExecution({ command: resultCommand, plan, execution, task, context });
   }
 
   // What the person is asked before they say yes. A step that will write their health information says exactly what
