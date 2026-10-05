@@ -12,9 +12,12 @@
   // never kept: those must happen when the person is really there, never later on their behalf. Guided questions and anything that needs an
   // answer are not kept either. A note is dated when it reaches Kyro, and the person is told so.
   const KEY = "kyro.offlineNotes.v1";
-  const MAX_NOTES = 50;
+  // How much a phone keeps while it has no signal: up to 200 notes of up to 400 characters. A note older than three days is dropped, not sent: the farm
+  // book records a note on the day it reaches Kyro (a sale or a spend would land in the wrong day, even the wrong month), so a note that is days late would
+  // be a wrong record. Notes stay on the phone only and are removed as soon as they are sent.
+  const MAX_NOTES = 200;
   const MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
-  const MAX_LENGTH = 200;
+  const MAX_LENGTH = 400;
 
   const RECORDING = [
     /^(?:i |we )?(?:sold|spent|paid out|bought|purchased|used|applied|fed|harvested|planted|sowed|weeded|sprayed|vaccinated|dewormed|weighed|milked|collected)\s+\S/i,
@@ -86,5 +89,5 @@
     return { sent, left: list.length };
   }
 
-  return Object.freeze({ isRecordable, shouldKeep, add, pending, drain, datedText, KEY, MAX_NOTES });
+  return Object.freeze({ isRecordable, shouldKeep, add, pending, drain, datedText, KEY, MAX_NOTES, MAX_AGE_MS, MAX_LENGTH });
 });
