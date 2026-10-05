@@ -54676,7 +54676,7 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
     return true;
   }
   const opened = workspace === "map"
-    ? openGenesisRealtimeMapWorkspace(payload, command)
+    ? openGenesisRealtimeMapWorkspace(result?.mapRoute && typeof result.mapRoute === "object" ? { ...payload, ...result.mapRoute } : payload, command)
     : openNexusCapability(capabilityId, {
       command,
       source: "openai-realtime",
@@ -54752,11 +54752,33 @@ function waitForStableUserMapCanvas(maxWaitMs = 900, intervalMs = 30) {
   });
 }
 
+// The real road route the server computed (OpenStreetMap + OSRM, or Google Maps when configured): its points, the two place names and a plain summary
+// ("about 160 km, around 3 h 10 min by road"). null when the outcome carries no usable geometry, so the older straight-line drawing between two known
+// cities still applies.
+function genesisRoadRoute(payload = {}) {
+  const raw = Array.isArray(payload.routeGeometry) ? payload.routeGeometry : [];
+  const points = raw.map(pair => (Array.isArray(pair) ? [Number(pair[0]), Number(pair[1])] : null))
+    .filter(pair => pair && Number.isFinite(pair[0]) && Number.isFinite(pair[1]) && Math.abs(pair[0]) <= 90 && Math.abs(pair[1]) <= 180);
+  if (points.length < 2) return null;
+  const meters = Number(payload.distanceMeters);
+  const seconds = Number(payload.durationSeconds);
+  const parts = [];
+  if (Number.isFinite(meters) && meters > 0) { const km = meters / 1000; parts.push(`about ${km >= 10 ? Math.round(km) : Math.round(km * 10) / 10} km`); }
+  if (Number.isFinite(seconds) && seconds > 0) {
+    const minutes = Math.max(1, Math.round(seconds / 60));
+    parts.push(`around ${minutes >= 60 ? `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ""}` : `${minutes} min`} by road`);
+  }
+  return { points, origin: String(payload.origin || "the start").trim().slice(0, 80), destination: String(payload.destination || "the end").trim().slice(0, 80), summary: parts.join(", ") };
+}
+
 function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
   const country = africanMapCountryTarget(payload.country || command);
   const hasRouteEndpoints = Boolean(String(payload.origin || "").trim() && String(payload.destination || "").trim());
+  const road = hasRouteEndpoints ? genesisRoadRoute(payload) : null;
   const target = hasRouteEndpoints ? null : genesisRealtimeMapTarget(payload);
-  const response = target
+  const response = road
+    ? `I opened the map with the road route from ${road.origin} to ${road.destination}${road.summary ? `: ${road.summary}` : ""}.`
+    : target
     ? `I opened the real map centered on ${target.name}${payload.country ? `, ${payload.country}` : ""}.`
     : "I opened the real map. You can zoom, drag, inspect places, and plan a route.";
   const opened = country
@@ -54764,7 +54786,22 @@ function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
     : openFullScaleUserMap(response, { suppressSpeech: true });
   if (!opened) return false;
   document.body.dataset.genesisMapSurface = "full-scale-leaflet";
-  if (hasRouteEndpoints) {
+  if (road) {
+    // The real road, drawn exactly as the server computed it: any place the map service could find, not only the cities this page happens to list.
+    document.body.dataset.genesisMapLocation = `${road.origin} to ${road.destination}`;
+    waitForStableUserMapCanvas().then(() => {
+      if (!userMap) return;
+      userMapLayers.route?.clearLayers?.();
+      userMapLayers.markers?.clearLayers?.();
+      L.polyline(road.points, { color: "#14b8a6", weight: 5, opacity: 0.9 }).addTo(userMapLayers.route);
+      L.marker(road.points[0]).addTo(userMapLayers.markers).bindPopup(`<strong>${escapeHtml(road.origin)}</strong>`);
+      L.marker(road.points[road.points.length - 1]).addTo(userMapLayers.markers)
+        .bindPopup(`<strong>${escapeHtml(road.destination)}</strong>${road.summary ? `<br>${escapeHtml(road.summary)}` : ""}`).openPopup();
+      userMap.fitBounds(road.points, { padding: [32, 32] });
+      safeInvalidateLeafletMap(userMap);
+      document.querySelector("#map .user-simple-module > details.user-module-more")?.setAttribute("open", "true");
+    });
+  } else if (hasRouteEndpoints) {
     const places = africanCityLocationCatalog();
     const resolvePlace = value => {
       const normalized = normalizeToolText(value);

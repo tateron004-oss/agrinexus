@@ -65,7 +65,7 @@ test("route and single-target draws wait for a stable canvas instead of racing o
   // the canvas to actually become stable first closes that race.
   assert.doesNotMatch(openMap, /window\.setTimeout\(\(\) => \{[\s\S]*?\}, 360\)/);
   const routeDrawCount = (openMap.match(/waitForStableUserMapCanvas\(\)\.then\(/g) || []).length;
-  assert.equal(routeDrawCount, 2, "both the route-endpoints and single-target branches must wait for a stable canvas");
+  assert.equal(routeDrawCount, 3, "the real-road, the known-city route and the single-target branches must all wait for a stable canvas");
 
   const helperStart = appSource.indexOf("function waitForStableUserMapCanvas(");
   assert.notEqual(helperStart, -1);
