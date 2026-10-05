@@ -166,6 +166,8 @@ async function wellnessTurn({ text, store, tenantId, userId, now = new Date(), t
         const added = await store.addEntryUnlessCapped({ ...scope, content: entry, maxEntries: MAX_ENTRIES });
         if (added.capped) return "Your log is full. Tell me to undo the last entry, or ask me for a summary first.";
         let line = `Logged ${describeEntry(entry)} for ${when(entry.day, today)}.`;
+        // The lowest mood score is not just a number to file: a plain, kind word and a pointer to a real person.
+        if (entry.metric === "mood" && Number(entry.value) <= 1) line += " That is the lowest score. I am sorry today is so hard. If it feels like too much, please talk to someone you trust, and if you might harm yourself, call your local emergency number now. I am here if you want to tell me about it.";
         if (entry.metric === "workout") {
           const week = extractPeriod("this week", today);
           const count = [...entries, entry].filter(item => item.metric === "workout" && inPeriod(item, week)).length;

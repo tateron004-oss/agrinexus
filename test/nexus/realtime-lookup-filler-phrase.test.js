@@ -27,7 +27,7 @@ function sliceFunction(name) {
   return source.slice(start, end);
 }
 
-const box = { process: { env: {} } };
+const box = { process: { env: {} }, CRISIS_RULE: "" };
 vm.createContext(box);
 vm.runInContext(sliceFunction("openAiRealtimeInstructions"), box);
 const instructions = box.openAiRealtimeInstructions({ displayName: "Test User" }, "en");

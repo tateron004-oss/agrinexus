@@ -42,7 +42,7 @@ function extractFunction(name) {
 // spoken "create a checklist called Farm Supplies" had nothing steering the
 // model toward the real, persisted lists tool.
 test("the realtime (voice/phone) instructions explicitly call out nexus_lists for checklist/to-do requests", () => {
-  const context = { process: { env: {} } };
+  const context = { process: { env: {} }, CRISIS_RULE: "" };
   vm.createContext(context);
   const instructions = vm.runInContext(`${extractFunction("openAiRealtimeInstructions")}\nopenAiRealtimeInstructions({ email: "test@example.com" }, "en");`, context);
   assert.match(instructions, /\bnexus_lists\b/, "the realtime instructions must mention nexus_lists");
