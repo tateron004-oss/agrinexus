@@ -1,5 +1,8 @@
 "use strict";
 
+const { assessBloodPressure } = require("../../server/providers/bloodPressure.js");
+const { glucoseLevel } = require("../../server/providers/bloodGlucose.js");
+
 // Consent given by explicitly confirming ONE specific action.
 //
 // AuthoritativeTaskEngine refuses to run a tool with a consentScope unless an active consent exists. Until now the only
@@ -58,10 +61,28 @@ const clip = (value, limit) => String(value ?? "").replace(/\s+/g, " ").trim().s
 function describeReading(input = {}) {
   const has = key => input[key] !== undefined && input[key] !== null && input[key] !== "" && Number.isFinite(Number(input[key]));
   if (has("systolic") && has("diastolic")) return `blood pressure ${Number(input.systolic)} over ${Number(input.diastolic)}`;
-  if (has("glucose")) return `blood glucose ${Number(input.glucose)}`;
+  if (has("glucose")) return input.glucoseUnit === "mmol/L" && has("glucoseSaid") ? `blood sugar ${Number(input.glucoseSaid)} millimoles per litre (about ${Number(input.glucose)} milligrams per decilitre)` : `blood glucose ${Number(input.glucose)}${input.glucoseUnit === "mg/dL" ? " milligrams per decilitre" : ""}`;
   if (has("oxygenSaturation")) return `oxygen saturation ${Number(input.oxygenSaturation)} percent`;
   if (has("temperature")) return `temperature ${Number(input.temperature)}`;
   if (has("pulse")) return `pulse ${Number(input.pulse)}`;
+  return "";
+}
+
+// A reading that is very high or very low is said plainly BEFORE the question about saving it, so the person is told what to do even if they never answer. General safety
+// information only (Kyro does not diagnose); the wording must be reviewed by a clinician before it is relied on, like the spoken wording in server/providers.
+function urgentReadingLead(input = {}) {
+  const has = key => input[key] !== undefined && input[key] !== null && input[key] !== "" && Number.isFinite(Number(input[key]));
+  if (has("systolic") && has("diastolic")) {
+    const level = assessBloodPressure(input.systolic, input.diastolic).level;
+    if (level === "urgent") return "This is a very high blood pressure. If you have chest pain, trouble breathing, a bad headache, weakness or numbness, confusion, trouble speaking or changes in your sight, get emergency help now: call your local emergency number or go to the nearest clinic. If you feel well, sit quietly for five minutes and measure again. ";
+    if (level === "low") return "This is lower than many people's usual reading. If you feel dizzy, faint or unwell, sit or lie down and get medical help. ";
+  }
+  if (has("glucose")) {
+    const level = glucoseLevel({ unit: "mg/dL", value: Number(input.glucose) });
+    if (level === "very-low") return "This is a very low blood sugar. If you feel shaky, sweaty, confused, very sleepy or faint, get emergency help now: call your local emergency number or go to the nearest clinic, and do not be alone. ";
+    if (level === "low") return "This is lower than usual. If you feel shaky, sweaty, confused or faint, get help now and do not be alone, and contact your clinic today. ";
+    if (level === "very-high") return "This is a very high blood sugar. If you have vomiting, stomach pain, fast breathing, confusion, or you are very sleepy or very thirsty, get emergency help now: call your local emergency number or go to the nearest clinic. ";
+  }
   return "";
 }
 
@@ -84,7 +105,7 @@ function informedConfirmationPrompt({ scope, step }) {
     return `I can save this telehealth intake to your own health records${concern ? `: "${concern}"` : ""}. It is not shared with or sent to any provider. Say yes to consent and save it, or no to cancel.`;
   }
   const what = describeReading(input) || clip(step?.title, 100).toLowerCase() || "this health information";
-  return `I can save this to your own health records: ${what}. It stays in your records and is not shared with anyone. Say yes to consent and save it, or no to cancel.`;
+  return `${urgentReadingLead(input)}I can save this to your own health records: ${what}. It stays in your records and is not shared with anyone. Say yes to consent and save it, or no to cancel.`;
 }
 
 module.exports = Object.freeze({ userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt, describeReading, POLICIES });
