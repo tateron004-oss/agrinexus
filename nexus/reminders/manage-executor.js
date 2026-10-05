@@ -1,6 +1,7 @@
 "use strict";
 
 const { extractAssistantReminderTask } = require("./time-phrase.js");
+const { whenWords } = require("./repeat-service.js");
 
 // Real executors for reminders.list and reminders.cancel. reminders.schedule
 // could always create a reminder but nothing could show or remove one, so a
@@ -37,16 +38,22 @@ function subjectMatches(storedText, subject) {
   return subject.split(" ").every(word => words.includes(word));
 }
 
-function createRemindersListExecutor({ notifications }) {
+function createRemindersListExecutor({ notifications, repeatStore = null }) {
   if (!notifications?.listReminders) throw new Error("A notification repository is required.");
   return async function execute({ context }) {
     const rows = await notifications.listReminders({ tenantId: context.tenantId, userId: context.userId });
+    // Reminders that repeat live in their own store: they are listed too, so "what are my reminders" is not "none" for someone who only has repeating ones.
+    let repeating = [];
+    if (repeatStore?.list) { try { repeating = await repeatStore.list({ tenantId: context.tenantId, userId: context.userId }); } catch { repeating = []; } }
+    const repeatLines = repeating.map(row => `${String(row.task || "Untitled reminder")} (repeats ${whenWords(row.days, row.timeOfDay, row)})`);
+    const total = rows.length + repeatLines.length;
     return {
-      count: rows.length,
-      reminders: rows.map(describe),
+      count: total,
+      reminders: [...rows.map(describe), ...repeatLines],
       reminderIds: rows.map(row => row.notification_id),
-      summary: rows.length
-        ? `You have ${rows.length} upcoming reminder${rows.length === 1 ? "" : "s"}.`
+      repeatingCount: repeatLines.length,
+      summary: total
+        ? `You have ${total} reminder${total === 1 ? "" : "s"}${repeatLines.length ? ` (${repeatLines.length} that repeat)` : ""}.`
         : "You have no upcoming reminders."
     };
   };
