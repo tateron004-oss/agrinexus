@@ -50470,7 +50470,8 @@ function openPrivacyDataDialog() {
   overlay.innerHTML = `
     <div class="pd-card">
       <h2 id="privacyDataTitle">${escapeHtml(translateText("Your data"))}</h2>
-      <p>${escapeHtml(translateText("You can download a copy of everything you have saved here, or delete your account."))}</p>
+      <p>${escapeHtml(translateText("You can download a copy of what you have saved here, or delete your account."))}</p>
+      <p style="font-size:.95rem">${escapeHtml(translateText("Some things are kept and are not in the download or the deletion: records saved before we marked who owns them, and payment and audit records. The download lists what was left out."))}</p>
       <button type="button" class="pd-btn pd-safe" data-pd="export">${escapeHtml(translateText("Download a copy of my data"))}</button>
       <p style="font-size:.95rem">${escapeHtml(translateText("This is safe. Nothing is deleted."))}</p>
       <button type="button" class="pd-btn pd-danger" data-pd="erase-start">${escapeHtml(translateText("Delete my account and data"))}</button>
@@ -50507,7 +50508,7 @@ function openPrivacyDataDialog() {
         const records = Object.values(result.recordCounts || {}).reduce((a, b) => a + b, 0);
         // Only a path on this site is ever linked.
         const downloadPath = /^\/[^/\\]/.test(String(result.downloadPath || "")) ? String(result.downloadPath) : "";
-        status.innerHTML = `${escapeHtml(translateText("Your data is ready:"))} ${records} ${escapeHtml(translateText("records,"))} ${Number(result.uploadedFileCount || 0)} ${escapeHtml(translateText("files."))} ${downloadPath ? `<a href="${escapeHtml(downloadPath)}" target="_blank" rel="noopener">${escapeHtml(translateText("Open my download"))}</a>` : ""}`;
+        status.innerHTML = `${escapeHtml(translateText("Your data is ready:"))} ${records} ${escapeHtml(translateText("records,"))} ${Number(result.uploadedFileCount || 0)} ${escapeHtml(translateText("files."))} ${downloadPath ? `<a href="${escapeHtml(downloadPath)}" target="_blank" rel="noopener">${escapeHtml(translateText("Open my download"))}</a>` : ""}${Array.isArray(result.knownGaps) && result.knownGaps.length ? `<br><small>${escapeHtml(translateText("Not included:"))} ${result.knownGaps.slice(0, 12).map(gap => escapeHtml(String(gap))).join(" ")}</small>` : ""}`;
       } catch (error) {
         setStatus(error.message || translateText("Could not create your data export."));
       }
@@ -50520,7 +50521,7 @@ function openPrivacyDataDialog() {
       setStatus(translateText("Deleting..."));
       try {
         await request("/api/account/erase", { method: "POST", body: { confirmed: true } });
-        toast(translateText("Your account and data have been erased."));
+        toast(translateText("Your account and your records have been erased. Payment and audit records are kept."));
         location.reload();
       } catch (error) {
         confirmBtn.disabled = false;

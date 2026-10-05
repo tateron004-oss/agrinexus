@@ -2691,7 +2691,8 @@ function recordExportOwnership(db, user, exportId) {
 // live third-party OAuth refresh token behind forever, under an internal
 // userId with no UI or API path left to find or revoke it -- there is no
 // separate Spotify-disconnect endpoint anywhere in the codebase.
-const PROFILE_OWNER_FIELDS = ["createdBy", "requestedBy", "userEmail"];
+// "_ownerEmail" is the owner mark put on records at save time (see below). It is its own field, and is left out of what other people are shown (profileForUser).
+const PROFILE_OWNER_FIELDS = ["createdBy", "requestedBy", "userEmail", "_ownerEmail"];
 
 // Records a person creates in the shared db.profile arrays (workforce paperwork, trade quotes, map zones, health intakes, saved providers, ...) used to be
 // written with no owner field at all, so the account download could not include them and an erasure could not remove them. collectOwnedProfileRecords /
@@ -2710,7 +2711,21 @@ const PROFILE_OWNER_STAMP_KEYS_EXTRA = [
   "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"
 ];
 const profileOwnerStamping = new (require("node:async_hooks").AsyncLocalStorage)();
-const profileStampKeys = () => [...new Set([...(typeof HEALTH_PROFILE_ARRAY_KEYS !== "undefined" ? HEALTH_PROFILE_ARRAY_KEYS : []), ...PROFILE_OWNER_STAMP_KEYS_EXTRA])];
+// Audit-trail arrays are never stamped, so an account erasure cannot remove them: they are kept, like the financial ledger.
+const PROFILE_AUDIT_KEYS = new Set(["cloudAgentAudit", "offlineSyncHistory", "agentExecutions", "telehealthProviderActions", "integrationEvents"]);
+const profileStampKeys = () => [...new Set([...(typeof HEALTH_PROFILE_ARRAY_KEYS !== "undefined" ? HEALTH_PROFILE_ARRAY_KEYS : []), ...PROFILE_OWNER_STAMP_KEYS_EXTRA])].filter(key => !PROFILE_AUDIT_KEYS.has(key));
+// The owner mark is for the download and the erasure only: nobody else is shown another person's email.
+function withoutOwnerMarks(profile) {
+  if (!profile || typeof profile !== "object") return profile;
+  let copy = null;
+  for (const key of profileStampKeys()) {
+    const list = profile[key];
+    if (!Array.isArray(list) || !list.some(item => item && typeof item === "object" && "_ownerEmail" in item)) continue;
+    copy = copy || { ...profile };
+    copy[key] = list.map(item => { if (!item || typeof item !== "object" || !("_ownerEmail" in item)) return item; const { _ownerEmail, ...rest } = item; return rest; });
+  }
+  return copy || profile;
+}
 const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(item?.[field] || "").trim());
 
 // What was already in the stamped arrays when the request began: record ids, and the record objects themselves (for records that have no id).
@@ -2737,7 +2752,7 @@ function stampNewProfileRecordsWithOwner(db, snapshot, email) {
       if (!item || typeof item !== "object" || Array.isArray(item) || profileRecordHasOwner(item)) continue;
       const known = before && (before.objects.has(item) || (item.id !== undefined && item.id !== null && before.ids.has(String(item.id))));
       if (known) continue;
-      item.createdBy = owner;
+      item._ownerEmail = owner;
       stamped += 1;
     }
   }
@@ -5625,6 +5640,10 @@ function learningProfileForClient(user) {
 }
 
 function profileForUser(profile, user) {
+  return withoutOwnerMarks(profileForUserByRole(profile, user));
+}
+
+function profileForUserByRole(profile, user) {
   // The existing health-record projection below was written for the
   // Investor role, but db.profile is one shared, non-per-user blob -- a
   // self-service guest session (/api/auth/guest-session, zero
