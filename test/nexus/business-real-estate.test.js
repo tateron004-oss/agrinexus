@@ -165,7 +165,7 @@ test("adding a listing extracts address, price, beds/baths and property type, an
 
   const confirmed = await run({ command: "Add a listing at 123 Main Street for $450,000, 3 beds 2 baths, house", confirmed: true, businessRequest });
   assert.equal(confirmed.status, "completed");
-  assert.equal(confirmed.response, 'Listed 123 Main Street at $450000.00 in "Sunrise Realty" as active.');
+  assert.equal(confirmed.response, 'Listed 123 Main Street at $450,000.00 in "Sunrise Realty" as active.');
   const listing = saved.editable.listings[0];
   assert.deepEqual([listing.address, listing.price, listing.beds, listing.baths, listing.propertyType, listing.status],
     ["123 Main Street", 450000, 3, 2, "house", "active"]);
@@ -264,7 +264,7 @@ test("resolveListingIndex still allows a pronoun-style reference ('mark the list
 test("listing listings reads back real saved data, and says so honestly when there are none yet", async () => {
   const withListings = await run({ command: "Show me my listings", businessRequest: async () => ({ body: { clients: [listingClient([{ address: "123 Main Street", price: 450000, status: "active" }, { address: "456 Oak Avenue", price: 0, status: "pending" }])] } }) });
   assert.equal(withListings.status, "completed");
-  assert.match(withListings.response, /123 Main Street \(active, \$450000\.00\); 456 Oak Avenue \(pending\)/);
+  assert.match(withListings.response, /123 Main Street \(active, \$450,000\.00\); 456 Oak Avenue \(pending\)/);
 
   const none = await run({ command: "What listings do I have", businessRequest: async () => ({ body: { clients: [] } }) });
   assert.match(none.response, /has no listings yet/);
@@ -308,7 +308,7 @@ test("the dashboard's spoken listing value is always USD, never mislabeled with 
   };
   const result = await run({ command: "How's my business doing", businessRequest: async () => ({ body: { clients: [client] } }) });
   assert.equal(result.status, "completed");
-  assert.match(result.response, /worth \$250000\.00/);
+  assert.match(result.response, /worth \$250,000\.00/);
   assert.doesNotMatch(result.response, /worth KES/);
 });
 

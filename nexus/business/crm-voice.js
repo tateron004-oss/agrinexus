@@ -23,6 +23,8 @@ function classifyCrm(command = "") {
   if ((/\b(?:mark|set|update|change|record)\b[^.?!]{0,50}\b(?:invoices?|inv-?\d+)\b[^.?!]{0,50}\bpaid\b/i.test(text) || /\b(?:inv-?\d+|invoice\s+(?:number\s+)?#?\d+)\b[^.?!]{0,25}\b(?:is|was|has been|have been)\s+(?:now\s+)?paid\b/i.test(text)
     // a NAMED person paying ("Grace Otieno paid her invoice"); "I paid the invoice" is the owner paying a supplier, which is not this
     || /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:has\s+)?paid\s+(?:the|their|her|his)\s+invoice\b/.test(text)) && invoiceRef.test(text)) return "markInvoicePaid";
+  // "Remind me to follow up with Grace tomorrow" is a reminder (the reminder tools set it), not a follow-up date on Grace's row.
+  if (/^\s*(?:please\s+)?(?:hey\s+)?(?:kyro\s+)?remind\b/i.test(text)) return null;
   if (/\b(?:set|add|schedule|put|make)\b[^.?!]{0,20}\bfollow[- ]?ups?\b/i.test(text) || /\bfollow[- ]?up\s+with\s+\S.*\b(?:on|by|next|this|tomorrow|in)\b/i.test(text)) return "setFollowUp";
   if (WRITE_WORDS.test(text)) return null;
   const asks = new RegExp(`\\b(?:${READ_WORDS})\\b`, "i").test(text);
