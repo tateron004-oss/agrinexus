@@ -243,6 +243,9 @@ async function liveListingsEvidence(kind, input, receiptId) {
     note: "Live web search results; confirm details with the listing owner before acting.", savedProgress: receiptId };
 }
 
+// A question that only makes sense with a current figure: a price, a rate, a cost, "how much is...", the market today.
+const NEEDS_A_CURRENT_SOURCE = /\b(?:prices?|pric(?:ing|ed)|costs? of|cost to|how much (?:does|do|will) (?:it|they|a|an|one|the)\b[^?]*\bcost|exchange rate|going rate|market rate|interest rate|how much (?:is|are) (?:a|an|the|one)\b|per (?:kg|kilo|bag|sack|tonne|ton|litre|liter|crate))\b/i;
+const UNSOURCED_NOTE = "I could not check any sources for this, so this is general knowledge and may be out of date or wrong.";
 async function liveKnowledgeEvidence(input, common, receiptId) {
   const query = String(input.query || input.question || "").trim();
   const includeDomains = normalizedDomains(input.includeDomains);
@@ -286,6 +289,14 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
       content: body.answer, savedProgress: receiptId, provider: "tavily" };
     } catch (error) { lastProviderError = error; }
   }
+  // With no live search provider the only thing left is the model's own memory. That is never presented as a sourced answer: a question about a current
+  // price, rate or cost is not answered from memory at all (a made-up number is worse than none), and anything else carries a plain note that no source
+  // was checked, so a person (and anyone listening to it spoken) cannot mistake it for a checked fact.
+  if (!process.env.TAVILY_API_KEY && NEEDS_A_CURRENT_SOURCE.test(query)) {
+    const answer = "I can't look up today's prices because no live price source is set up. Prices change often, so please ask at your local market or co-op, or someone who sold recently.";
+    return { ...common, sources: [], answer, assessment: answer, crop: input.crop || "crop", observations: input.observations || [query], lesson: answer, content: answer,
+      savedProgress: receiptId, provider: "none", unsourced: true };
+  }
   if (process.env.OPENAI_API_KEY && input.domainFilterRequired !== true) {
     try {
     const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: {
@@ -296,8 +307,10 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
     const body = await response.json();
     const answer = String(body.output_text || body.output?.flatMap(item => item.content || []).find(item => item.type === "output_text")?.text || "").trim();
     if (!answer) throw Object.assign(new Error("Reasoning provider returned no usable answer."), { code: "knowledge_outcome_unverified" });
-    return { ...common, answer, assessment: answer, crop: input.crop || "crop", observations: input.observations || [query],
-      lesson: answer, content: answer, savedProgress: receiptId, provider: "openai" };
+    // No source was checked for this one (a live search provider is not set up), so say so before the answer.
+    const noted = `${UNSOURCED_NOTE} ${answer}`;
+    return { ...common, sources: [], answer: noted, assessment: noted, crop: input.crop || "crop", observations: input.observations || [query],
+      lesson: noted, content: noted, savedProgress: receiptId, provider: "openai", unsourced: true };
     } catch (error) { lastProviderError = error; }
   }
   if (lastProviderError) throw lastProviderError;
