@@ -16,11 +16,24 @@ const PART_OF_DAY = { morning: 8, afternoon: 14, evening: 18, night: 21 };
 const ASKS_FOR_REMINDER = /\b(?:remind(?:\s+(?:me|us))?|reminder|notify me|alert me|nudge me|ping me)\b/i;
 // A question ABOUT reminders is not a request for one.
 const QUESTION = /^\s*(?:how|what|why|can i|could i|is it|is there|do you|does it|are you able)\b/i;
-const UNSUPPORTED = /\b(?:every (?:few|several)\b|every (?:year|minute)\b|each year\b|(?:yearly|annually)\b|every (?:other|second|third|fourth|\d+) (?:months?|minutes?|years?)\b|every \d+ (?:months?|minutes?|years?)\b|twice a (?:week|month))/i;
+const UNSUPPORTED = /\b(?:every (?:few|several)\b|every (?:year|minute)\b|each year\b|(?:yearly|annually)\b|every (?:other|second|third|fourth|\d+) (?:months?|minutes?|years?)\b|every \d+ (?:months?|minutes?|years?)\b|twice a (?:week|month)|(?:three|four|five|\d+) times (?:a|per|each) (?:week|month)\b|once a (?:month|year)\b|every (?:other|second|third|fourth) (?:morning|afternoon|evening|night)\b|every 1 (?:days?|weeks?|hours?)\b)/i;
 const REPEAT_COUNT_WORD = { other: 2, second: 2, third: 3, fourth: 4 };
 const repeatCount = word => (/^\d+$/.test(String(word)) ? Number(word) : REPEAT_COUNT_WORD[String(word)] || 0);
 const MINUTES = (hour, minute) => hour * 60 + minute;
 const hhmm = minutes => clock(Math.floor(minutes / 60) % 24, minutes % 60);
+// "daily", "weekly" and "Tuesdays" are a repeat only when they are not describing a thing in the task: "remind me daily to check the pump" and
+// "take my pills daily at 8" repeat, "remind me at 5 to do the daily check" and "call the Tuesdays group" do not. A weak cue counts when what follows it is
+// the end, a time, or "to" / "reminder"; a noun after it ("check", "report", "group") means it belongs to the task.
+const CUE_FOLLOWER = /^\s*(?:$|[,.;!?]|(?:at|on|in|around|by|and|from|between|to|about|reminders?|starting|until|till)\b|\d|noon\b|midnight\b)/i;
+const weakCue = (text, pattern) => {
+  const all = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`);
+  let match;
+  while ((match = all.exec(text))) {
+    if (CUE_FOLLOWER.test(text.slice(match.index + match[0].length))) return match;
+    if (match[0].length === 0) all.lastIndex += 1;
+  }
+  return null;
+};
 const DAILY = new RegExp(`\\b(?:every|each)\\s+(?:single\\s+)?(day|morning|afternoon|evening|night)\\b|\\b(daily)\\b`, "i");
 const WEEKDAYS = /\b(?:every|each)\s+week\s?days?\b|\bweek\s?days\b|\b(?:monday|mon)\s+(?:to|through|thru|-)\s+(?:friday|fri)\b/i;
 const EVERY_DAYS = new RegExp(`\\b(?:every|each)\\s+(${DAY_WORD}(?:\\s*(?:,|and|&)\\s*${DAY_WORD})*)\\b`, "i");
@@ -136,14 +149,19 @@ function pickDays(text) {
     const numbers = [...every[1].matchAll(new RegExp(DAY_WORD, "ig"))].map(item => dayNumber(item[0])).filter(number => number !== undefined);
     if (numbers.length) return { days: [...new Set(numbers)].sort((a, b) => a - b), partOfDay: "" };
   }
-  const plural = PLURAL_DAYS.exec(text);
+  const plural = weakCue(text, PLURAL_DAYS);
   if (plural) {
     const numbers = [...plural[1].matchAll(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s/ig)].map(item => dayNumber(item[1]));
     if (numbers.length) return { days: [...new Set(numbers)].sort((a, b) => a - b), partOfDay: "" };
   }
   const daily = DAILY.exec(text);
-  if (daily) { const word = (daily[1] || "").toLowerCase(); return { days: "daily", partOfDay: PART_OF_DAY[word] ? word : "" }; }
-  if (WEEKLY.test(text)) return { days: "weekly-no-day", partOfDay: "" };
+  if (daily && (daily[1] || weakCue(text, /\bdaily\b/i))) { const word = (daily[1] || "").toLowerCase(); return { days: "daily", partOfDay: PART_OF_DAY[word] ? word : "" }; }
+  if (/\b(?:every|each)\s+week\b/i.test(text) || /\bonce a week\b/i.test(text) || weakCue(text, /\bweekly\b/i)) {
+    // "weekly on Friday", "once a week on Mondays and Thursdays": the day comes after.
+    const named = new RegExp(`\\bon\\s+(${DAY_WORD}s?(?:\\s*(?:,|and|&)\\s*${DAY_WORD}s?)*)\\b`, "i").exec(text);
+    const numbers = named ? [...named[1].matchAll(new RegExp(DAY_WORD, "ig"))].map(item => dayNumber(item[0])).filter(number => number !== undefined) : [];
+    return numbers.length ? { days: [...new Set(numbers)].sort((a, b) => a - b), partOfDay: "" } : { days: "weekly-no-day", partOfDay: "" };
+  }
   return null;
 }
 
@@ -156,12 +174,12 @@ const STRIP = [
   /\b(?:twice|two times|three times|thrice|four times)\s+(?:a|per|each)\s+day\b/ig,
   /\bon\s+(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)day\b(?:\s*(?:,|and|&)\s*(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)day\b)*/ig,
   new RegExp(`\\b(?:every|each)\\s+(?:single\\s+)?(?:day|morning|afternoon|evening|night)\\b`, "ig"),
-  /\b(?:every|each)\s+week\s?days?\b/ig, /\bweek\s?days\b/ig, /\b(?:monday|mon)\s+(?:to|through|thru|-)\s+(?:friday|fri)\b/ig,
-  new RegExp(`\\b(?:every|each)\\s+${DAY_WORD}(?:\\s*(?:,|and|&)\\s*${DAY_WORD})*\\b`, "ig"),
+  /\b(?:every|each)\s+week\s?days?\b/ig, /\b(?:on\s+)?week\s?days\b/ig, /\b(?:monday|mon)\s+(?:to|through|thru|-)\s+(?:friday|fri)\b/ig,
+  new RegExp(`\\b(?:every|each)\\s+${DAY_WORD}(?:\\s*(?:,|and|&)\\s*${DAY_WORD})*(?:\\s+(?:morning|afternoon|evening|night)s?)?\\b`, "ig"),
   /\b(?:on\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s(?:\s*(?:,|and|&)\s*(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s)*\b/ig,
   /\b(?:every|each)\s+week\b/ig, /\b(?:daily|weekly)\b/ig,
   /\b(?:at\s+)?noon\b/ig, /\b(?:at\s+)?midnight\b/ig,
-  /\b(?:at|by|around)\s+\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?(?:\s+(?:and|,)\s*\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)*/ig,
+  /\b(?:at|by|around)\s+\d{1,2}(?:[:.]\d{2})?(?:\s*(?:a\.?m\.?|p\.?m\.?))?(?:(?:\s+and\s+|\s*,\s*)\d{1,2}(?:[:.]\d{2})?(?:\s*(?:a\.?m\.?|p\.?m\.?))?)*/ig,
   /\b\d{1,2}[:.]\d{2}\s*(?:a\.?m\.?|p\.?m\.?)?/ig, /\b\d{1,2}\s*(?:a\.?m\.?|p\.?m\.?)\b/ig,
   /\b(?:in the|during the)\s+(?:morning|afternoon|evening|night)\b/ig
 ];
@@ -185,7 +203,8 @@ function readRepeatRequest(rawText) {
   if (stopAll) return { action: "stop", all: true, explicit: true };
   const stopWords = /^(?:please )?(?:stop|cancel|delete|remove|end)\b/.test(lower);
   if (stopWords) {
-    const explicit = /\b(?:repeating|recurring|regular|daily|weekly)\s+reminders?\b|\bevery\s+(?:day|morning|afternoon|evening|night|week)\b|\b(?:daily|weekly)\b/.test(lower);
+    const explicit = /\b(?:repeating|recurring|regular|daily|weekly)\s+reminders?\b|\bevery\s+(?:day|morning|afternoon|evening|night|week|other|second|third|\d+)\b/.test(lower)
+      || new RegExp(`\\bevery\\s+${DAY_WORD}\\b`).test(lower) || Boolean(weakCue(lower, /\b(?:daily|weekly)\b/i));
     const reminding = /^(?:please )?stop reminding me\b/.test(lower);
     const aboutReminder = /\breminders?\b/.test(lower);
     if (!(explicit || reminding || (aboutReminder && /\b(?:repeat|recurring)\b/.test(lower)))) return null;
@@ -222,9 +241,12 @@ function readRepeatRequest(rawText) {
   if (picked.days === "weekly-no-day") return { action: "need-day" };
   const task = taskFrom(text);
   if (!task) return { action: "need-task" };
-  let times = readTimes(lower.replace(taskPart(lower), " "), picked.partOfDay);
+  // "every day at 5 in the morning", "every Sunday evening": the part of the day can come after the day words too (but not from inside the task).
+  const cue = lower.replace(taskPart(lower), " ");
+  const partOfDay = picked.partOfDay || (new RegExp(`(?:\\b(?:in the|during the)\\s+|\\b(?:day|${DAY_WORD})s?\\s+)(morning|afternoon|evening|night)\\b`).exec(cue) || [])[1] || "";
+  let times = readTimes(cue, partOfDay);
   if (!times.length) {
-    const hour = PART_OF_DAY[picked.partOfDay];
+    const hour = PART_OF_DAY[partOfDay];
     times = [clock(hour === undefined ? 9 : hour, 0)];
   }
   return { action: "add", task, times: times.slice(0, 4), days: picked.days };

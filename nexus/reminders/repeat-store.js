@@ -10,6 +10,9 @@ const JOB_TYPE = "reminder.repeat";
 const PARKED = "2100-01-01T00:00:00.000Z";
 const MAX_PER_PERSON = 20;
 
+// Saying "every other day at 8, check the pump" again on another day is the same reminder, not a second one with the opposite days.
+const withoutAnchor = days => { if (!days || typeof days !== "object" || Array.isArray(days)) return days; const { anchor, ...rest } = days; return rest; };
+
 const shape = row => ({ scheduleId: row.schedule_id, tenantId: row.tenant_id, userId: row.owner_id, task: row.payload?.task || "", timeOfDay: row.payload?.timeOfDay || "",
   ...(Array.isArray(row.payload?.timesOfDay) && row.payload.timesOfDay.length > 1 ? { timesOfDay: row.payload.timesOfDay } : {}),
   ...(row.payload?.hourly ? { hourly: row.payload.hourly } : {}),
@@ -28,7 +31,7 @@ class RepeatReminderRepository {
     const run = async db => {
       const existing = await db.query(`select schedule_id,payload from nexus_schedules where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active'`, [tenantId, userId, JOB_TYPE]);
       const rows = existing.rows || existing;
-      const same = rows.find(row => String(row.payload?.task || "").toLowerCase() === task.toLowerCase() && row.payload?.timeOfDay === timeOfDay && JSON.stringify(row.payload?.days) === JSON.stringify(days) && JSON.stringify(row.payload?.timesOfDay || null) === JSON.stringify(payload.timesOfDay || null));
+      const same = rows.find(row => String(row.payload?.task || "").toLowerCase() === task.toLowerCase() && row.payload?.timeOfDay === timeOfDay && JSON.stringify(withoutAnchor(row.payload?.days)) === JSON.stringify(withoutAnchor(days)) && JSON.stringify(row.payload?.timesOfDay || null) === JSON.stringify(payload.timesOfDay || null));
       if (same) return { duplicate: true, scheduleId: same.schedule_id };
       if (rows.length >= MAX_PER_PERSON) return { capped: true };
       const created = await db.query(`insert into nexus_schedules (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)
