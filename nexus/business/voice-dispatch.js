@@ -4,6 +4,7 @@ const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose
 const { addDays, weekdayOf, extractDay } = require("../personal/dates.js");
 const crmVoice = require("./crm-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
+const { whenOf } = require("../farmwork/parse.js");
 
 // Shared classify+extract+execute logic for business/nonprofit voice and
 // typed commands (add a customer/donor, log an expense, create an invoice,
@@ -208,6 +209,9 @@ function formatMoney(currency, amount) {
   return currency === "USD" || !currency ? `$${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${currency} ${Number(amount).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
+const PLEDGE_NOTE = 'A pledge is a promise, not money received, so I have not added it to your income. When it is paid, say for example "received 5000 shillings donation from Maria" and I will log it.';
+const TYPE_QUESTION = transaction => `Is this ${transaction.amount} money you received (income) or money you paid out (an expense)? Say "income" or "expense" with it.`;
+const LEDGER_LIMIT = 200;
 function extractTransactionArgs(command = "", args = {}) {
   const text = String(command || "");
   const withCurrency = amountWithCurrency(text);
@@ -237,6 +241,10 @@ function extractTransactionArgs(command = "", args = {}) {
   const ambiguousPaidAsExpense = !receivedPayment && /\bpaid\b/i.test(text);
   const type = explicitExpenseWord || ambiguousPaidAsExpense || receivedBillOrInvoice ? "expense"
     : receivedPayment || explicitIncomeWord ? "income" : "expense";
+  // Found by the audit: "log a payment of 5000" or "record a transaction of 5000" was silently saved as an EXPENSE, and "we got a pledge of 5000" as income. With no word that says which way the money
+  // went, it is asked; a pledge is a promise, not money received, so it is not added to income until it is paid.
+  const typeKnown = Boolean(args.type) || explicitExpenseWord || ambiguousPaidAsExpense || receivedBillOrInvoice || receivedPayment || explicitIncomeWord;
+  const pledge = /\bpledg(?:e|ed|es|ing)\b/i.test(text) && !/\b(?:received|fulfil+ed|honou?red|paid|came in|collected|redeemed)\b/i.test(text);
   // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
   const soldItem = text.match(/\b(?:sold|sell|nimeuza)\s+(.+?)\s+(?:for|at|kwa)\b/i);
   const spentOn = text.match(/\b(?:on|for|kwa)\s+(?![\d$€₦]|shilingi\b)([^\n,.]{2,60})/i);
@@ -251,6 +259,8 @@ function extractTransactionArgs(command = "", args = {}) {
     amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : null,
     currency,
     type: sanitizeText(args.type || type, 20),
+    typeKnown,
+    pledge,
     category: sanitizeText(args.category || category, 160),
     description: sanitizeText(args.description || text, 500)
   };
@@ -937,6 +947,8 @@ function precheck(command = "", args = {}) {
     const transaction = extractTransactionArgs(command, args);
     if (!transaction.amount || transaction.amount <= 0) clarification = `What is the amount for this ${transaction.type}, and in which currency?`;
     else if (!transaction.currency) clarification = `Which currency is ${transaction.amount} in, for example shillings or dollars?`;
+    else if (transaction.pledge) clarification = PLEDGE_NOTE;
+    else if (!transaction.typeKnown) clarification = TYPE_QUESTION(transaction);
   } else if (intent === "addInvoiceItem") {
     const item = extractInvoiceItemArgs(command, args);
     // Found live (business-module follow-up audit): extractInvoiceItemArgs already correctly parses and
@@ -1126,9 +1138,13 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const transaction = extractTransactionArgs(command, args);
     if (!transaction.amount || transaction.amount <= 0) return { status: "needs-input", response: `What is the amount for this ${transaction.type}, and in which currency?`, missingInformation: ["amount"] };
     if (!transaction.currency) return { status: "needs-input", response: `Which currency is ${transaction.amount} in, for example shillings or dollars?`, missingInformation: ["currency"] };
+    if (transaction.pledge) return { status: "needs-input", response: PLEDGE_NOTE, missingInformation: ["received"] };
+    if (!transaction.typeKnown) return { status: "needs-input", response: TYPE_QUESTION(transaction), missingInformation: ["type"] };
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before logging income or expenses.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    // A workspace keeps 200 money entries. Found by the audit: the 201st was refused with a generic error nobody could act on.
+    if ((resolved.client.data?.editable?.transactions || []).length >= LEDGER_LIMIT) return { status: "needs-input", response: `"${workspaceName}" already holds ${LEDGER_LIMIT} money entries, which is the most one workspace keeps, so I have not added this one. Ask me for a summary of what is there, then start a new workspace for the next period, or remove entries you no longer need.`, missingInformation: [] };
     const categoryPhrase = transaction.category ? ` for ${transaction.category}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can log a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}". Should I go ahead?` };
     // A donation from someone already on the list is tied to them ("Donation from Maria Chen"), and every donation is categorised as one, so "show my donations" can find it.
@@ -1136,7 +1152,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const donorSaid = isDonation ? /\bfrom\s+([A-Z][A-Za-z .'-]{1,60}?)(?=\s+(?:for|on|today|yesterday|this)\b|[,.]|$)/.exec(transaction.description) : null;
     const donorLead = donorSaid ? (resolved.client.data.editable.leads || []).find(row => String(row.name || "").trim().toLowerCase() === donorSaid[1].trim().toLowerCase()) : null;
     const editable = { ...resolved.client.data.editable, transactions: [...resolved.client.data.editable.transactions,
-      { date: todayIn(new Date(), timeZone), type: transaction.type, category: transaction.category || (isDonation ? "donation" : ""), amount: transaction.amount, currency: transaction.currency,
+      { date: whenOf(command, todayIn(new Date(), timeZone))?.day || todayIn(new Date(), timeZone), type: transaction.type, category: transaction.category || (isDonation ? "donation" : ""), amount: transaction.amount, currency: transaction.currency,
         description: donorLead ? `Donation from ${donorLead.name}` : transaction.description }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
