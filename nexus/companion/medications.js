@@ -17,6 +17,16 @@ const GENERIC = /^(?:meds|medication|medications|medicine|medicines|pills|tablet
 const MEDICINE_WORD = /\b(?:medications?|medicines?|pills?|tablets?|capsules?|vitamins?|supplements?|insulin|inhalers?)\b/i;
 const MAX_MEDICATIONS = 12;
 const GRACE_HOURS = 2;
+const MIN_GRACE_HOURS = 1; const MAX_GRACE_HOURS = 12;
+// A person's own wait before the people they chose are told a dose is waiting ("tell my circle if I miss a dose for 1 hour", "wait 3 hours before
+// telling my circle about a missed dose"). Applies to all of their medicines; a new medicine takes the same wait.
+function readDoseWait(t) {
+  let m;
+  if ((m = /^(?:please )?(?:wait|give me|allow) (\d+(?:\.\d+)?) hours? before (?:telling|alerting|notifying|contacting) (?:my circle|anyone|them|my family|my people) (?:about )?(?:a |my )?(?:missed )?(?:doses?|medicines?|medications?|meds)$/i.exec(t))
+    || (m = /^(?:please )?(?:tell|alert|notify|contact) (?:my circle|them|my family|my people) if i (?:miss|forget|skip|haven'?t taken|have not taken) (?:a |my )?(?:doses?|medicines?|medications?|meds)(?: for| within| after| in)? (\d+(?:\.\d+)?) hours?$/i.exec(t))
+    || (m = /^(?:please )?(?:set|change|make|update) my (?:medicine|medication|dose|meds?) (?:follow-?up|wait|grace)(?: wait| time)?(?: to| at| for)? (\d+(?:\.\d+)?) hours?$/i.exec(t))) return Number(m[1]);
+  return null;
+}
 
 // "8am and 8pm", "morning and evening", "8:30, 14:00" -> ["08:00","20:00"] or null when any part cannot be read.
 function parseTimes(text) {
@@ -61,6 +71,8 @@ function readMedicationRequest(text) {
     if (!(drug?.dose || MEDICINE_WORD.test(t))) return null;
     return drug ? { action: "add", ...drug, times: [NAMED_TIMES[m[2].toLowerCase()]] } : { action: "add", invalid: "name" };
   }
+  const wait = readDoseWait(t);
+  if (wait !== null) return { action: "grace", hours: wait };
   if (/^(?:what|which) (?:medications?|medicines?|meds|pills) (?:do i|am i) (?:take|taking|on)$/i.test(t) || /^(?:show|list|what are) my (?:medications?|medicines?|meds)$/i.test(t)) return { action: "list" };
   if ((m = /^stop reminding me (?:about|to take) (?:my )?(.+)$/i.exec(t)) || (m = /^(?:remove|delete) (?:my )?(.+?) from my (?:medications?|medicines?|meds)$/i.exec(t))) return { action: "remove", query: clean(m[1]).toLowerCase() };
   if ((m = /^i (?:just )?(?:took|have taken|'ve taken|had) (?:my |the |some )?(.+?)(?: (?:already|just now|now|today))?$/i.exec(t))) return { action: "taken", query: clean(m[1]).toLowerCase().replace(/^(?:morning|evening|night|midday|afternoon)\s+/, "") };
@@ -108,11 +120,21 @@ function createMedicationService({ store, circle = null, push, notifications, de
       const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
       const meds = await store.listMedications({ tenantId, userId });
       switch (request.action) {
+        case "grace": {
+          if (!(request.hours >= MIN_GRACE_HOURS && request.hours <= MAX_GRACE_HOURS)) return `I can wait between ${MIN_GRACE_HOURS} and ${MAX_GRACE_HOURS} hours before telling the people you chose. Nothing was changed.`;
+          if (!meds.length) return 'You have no medicine reminders yet. Say "add medication metformin 500mg at 8am and 8pm" first.';
+          for (const item of meds) await store.updateMedication({ tenantId, userId, memoryId: item.memoryId, content: { ...item.content, graceHours: request.hours } });
+          const members = await sharing({ tenantId, userId }).catch(() => []);
+          return members.length
+            ? `Done. If a dose stays unconfirmed for ${request.hours} hour${request.hours === 1 ? "" : "s"}, I'll tell ${members.map(link => link.otherName).join(", ")} that a dose is waiting. Only that, never which medicine or the dose.`
+            : `Done. I'll wait ${request.hours} hour${request.hours === 1 ? "" : "s"}. Nobody is told anything yet: invite someone ("add name@example.com to my circle") and say "share my medication reminders with <name>" so they can be told.`;
+        }
         case "add": {
           if (request.invalid === "name") return 'Tell me the medicine like this: "add medication metformin 500mg at 8am and 8pm".';
           if (request.invalid === "times") return `I couldn't read the times for ${request.name}. Try "at 8am and 8pm" or "in the morning and evening".`;
           const existing = meds.find(item => item.content.name === request.name);
-          const content = { kind: "medication", name: request.name, dose: request.dose, times: request.times, timeZone: zone, active: true, createdAt: at.toISOString() };
+          const inheritedWait = existing?.content.graceHours ?? meds.find(item => item.content.graceHours)?.content.graceHours;
+          const content = { kind: "medication", name: request.name, dose: request.dose, times: request.times, timeZone: zone, active: true, createdAt: at.toISOString(), ...(inheritedWait ? { graceHours: inheritedWait } : {}) };
           if (existing) await store.updateMedication({ tenantId, userId, memoryId: existing.memoryId, content: { ...existing.content, ...content, createdAt: existing.content.createdAt } });
           else {
             const added = await store.addMedicationUnlessCapped({ tenantId, userId, content, maxMedications: MAX_MEDICATIONS });
@@ -201,7 +223,9 @@ function createMedicationService({ store, circle = null, push, notifications, de
       if (!notifications?.enqueue) return result;
       const paused = new Map();
       const isPaused = async tenantId => { if (!paused.has(tenantId)) paused.set(tenantId, autonomyControl?.isPaused ? await autonomyControl.isPaused({ tenantId }).catch(() => false) : false); return paused.get(tenantId); };
-      for (const med of await store.listAllActiveMedications({ limit: 2000 })) {
+      const allMedications = await store.listAllActiveMedications({ limit: 2000 });
+      const graceByMedication = new Map(allMedications.map(item => [item.memoryId, Number(item.content?.graceHours) >= MIN_GRACE_HOURS ? Number(item.content.graceHours) : GRACE_HOURS]));
+      for (const med of allMedications) {
         result.checked += 1;
         const zone = validTimeZone(med.content.timeZone || DEFAULT_TIME_ZONE);
         const today = dayFor(at, zone);
@@ -224,7 +248,7 @@ function createMedicationService({ store, circle = null, push, notifications, de
       }
       for (const dose of await store.listPendingDoses({ limit: 2000 })) {
         const promptedAt = new Date(dose.promptedAt);
-        if (Number.isNaN(promptedAt.getTime()) || at.getTime() < promptedAt.getTime() + GRACE_HOURS * 3600 * 1000) continue;
+        if (Number.isNaN(promptedAt.getTime()) || at.getTime() < promptedAt.getTime() + (graceByMedication.get(dose.medId) ?? GRACE_HOURS) * 3600 * 1000) continue;
         if (await isPaused(dose.tenantId)) continue;
         const members = await sharing({ tenantId: dose.tenantId, userId: dose.userId }).catch(() => []);
         if (!members.length) {

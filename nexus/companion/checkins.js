@@ -2,6 +2,7 @@
 
 const { parseTimeOfDay, formatTimeOfDay, isDueNow } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE, localDay } = require("../brief/compose.js");
+const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 
 // A daily check-in a person asks for ("Check in on me every morning at 8"). Kyro asks how they are; they answer in their own words. If they
 // never answer AND say nothing to Kyro at all for a few hours, the members of their circle whom they chose ("share my check-ins with
@@ -10,8 +11,29 @@ const { validTimeZone, DEFAULT_TIME_ZONE, localDay } = require("../brief/compose
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
 const first = name => clean(name).split(" ")[0];
 
-// "check in on me every morning at 8", "turn on daily check-ins", "stop my check-ins", "do I have check-ins?"
+const MIN_GRACE_HOURS = 1; const MAX_GRACE_HOURS = 24;
+// How long Kyro waits after a check-in goes unanswered before it tells the people the person chose: "tell my circle if I don't answer for 6 hours",
+// "wait 2 hours before telling my circle about a missed check-in", "set my check-in follow-up to 4 hours". Returns { hours } or null.
+function readCheckinWait(text) {
+  const t = clean(normalizeSpokenText(String(text || ""))).toLowerCase().replace(/[.!?]+$/g, "");
+  if (!t || t.length > 160) return null;
+  const hours = value => Number(value);
+  let m;
+  if ((m = /^(?:please )?(?:wait|give me|allow) (\d+(?:\.\d+)?) hours? before (?:telling|alerting|notifying|contacting) (?:my circle|anyone|them|my family|my people)(?: about (?:a |my )?(?:missed )?check-?ins?)?$/.exec(t))
+    || (m = /^(?:please )?(?:tell|alert|notify|contact) (?:my circle|them|my family|my people) if i (?:don'?t|do not|haven'?t|have not) (?:answer|reply|respond|answered|replied|responded)(?: (?:to )?(?:my )?check-?ins?)?(?: for| within| after| in)? (\d+(?:\.\d+)?) hours?$/.exec(t))
+    || (m = /^(?:please )?(?:set|change|make|update) my check-?in (?:follow-?up|wait|grace)(?: wait| time)?(?: to| at| for)? (\d+(?:\.\d+)?) hours?$/.exec(t))) return { hours: hours(m[1]) };
+  return null;
+}
+// "...and tell my circle after 6 hours" at the end of a request to start check-ins.
+function readCheckinWaitClause(t) {
+  const m = /\b(?:and )?(?:tell|alert|notify|contact) (?:my circle|them|my family|my people)(?: if i (?:don'?t|do not) answer)?(?: for| after| within| in)? (\d+(?:\.\d+)?) hours?\b/.exec(t);
+  return m ? { hours: Number(m[1]) } : null;
+}
+
+// "check in on me every morning at 8", "turn on daily check-ins", "stop my check-ins", "do I have check-ins?", "tell my circle if I don't answer for 6 hours"
 function parseCheckinControl(text) {
+  const wait = readCheckinWait(text);
+  if (wait) return { action: "wait", graceHours: wait.hours };
   const t = clean(text).toLowerCase().replace(/[.!?]+$/g, "");
   if (!t || t.length > 120 || !/check(?:ing)?[ -]?ins?\b|check (?:in )?(?:on|with) me\b/.test(t)) return null;
   if (/\bshar(?:e|ing)\b/.test(t)) return null; // "stop sharing my check-ins with Amina" is about the circle, not about stopping check-ins
@@ -20,7 +42,8 @@ function parseCheckinControl(text) {
   if (!/^(?:please )?(?:check (?:in )?(?:on|with) me|turn on|start|set up|enable|i want|i'd like|i would like|can you|could you|kyro,? check)\b/.test(t)) return null;
   const at = /\b(?:at|around)\s+(\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)/.exec(t)?.[1];
   const timeOfDay = at ? parseTimeOfDay(at) : "08:00";
-  return { action: "enable", timeOfDay, timeGiven: Boolean(at) };
+  const clause = readCheckinWaitClause(normalizeSpokenText(t));
+  return { action: "enable", timeOfDay, timeGiven: Boolean(at), ...(clause ? { graceHours: clause.hours } : {}) };
 }
 
 // How a person answers a check-in: "ok" | "low" | "tell" (ask Kyro to tell their circle) | null
@@ -38,8 +61,8 @@ function createCheckinService({ settings, state, circle, push, notifications, de
   const nameOf = async ({ tenantId, userId }) => (memoryUserName ? await memoryUserName({ tenantId, userId }) : "") || "Someone in your circle";
 
   return {
-    async enable({ tenantId, userId, timeOfDay, timeZone }) {
-      const saved = await settings.set({ tenantId, userId, timeOfDay, timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE) });
+    async enable({ tenantId, userId, timeOfDay, timeZone, graceHours }) {
+      const saved = await settings.set({ tenantId, userId, timeOfDay, timeZone: validTimeZone(timeZone || DEFAULT_TIME_ZONE), ...(Number.isFinite(graceHours) ? { graceHours } : {}) });
       let pushable = true;
       try { pushable = devices?.listPushable ? (await devices.listPushable({ tenantId, userId })).length > 0 : true; } catch { pushable = true; }
       const members = await sharing({ tenantId, userId }).catch(() => []);
@@ -161,4 +184,4 @@ function createCheckinService({ settings, state, circle, push, notifications, de
   };
 }
 
-module.exports = Object.freeze({ createCheckinService, parseCheckinControl, readCheckinAnswer, formatTimeOfDay });
+module.exports = Object.freeze({ createCheckinService, parseCheckinControl, readCheckinAnswer, readCheckinWait, formatTimeOfDay, MIN_GRACE_HOURS, MAX_GRACE_HOURS });
