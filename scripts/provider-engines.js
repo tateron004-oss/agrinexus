@@ -226,11 +226,43 @@ async function liveImageEvidence(input, common) {
 // They now return real web search results with their source URLs, and fail
 // honestly (like liveKnowledgeEvidence) when the provider is unavailable or
 // finds nothing, rather than presenting an invented listing as a result.
+// Live web search through the OpenAI key that is already set up (no separate search key needed). Returns the answer with the pages it cited, or null
+// when it is switched off (OPENAI_WEB_SEARCH_ENABLED=false) or has no key. Throws when the provider fails; returns an empty source list when it cited nothing
+// (the caller must not call that a sourced answer).
+const OPENAI_WEB_SEARCH_PROMPT = "Answer for a farmer in two or three short plain sentences, using current information from the web. Give the figure and where and when it applies. Say plainly if you could not find it. Do not use markdown, links or lists. Question: ";
+function openAiWebSearchEnabled() { return Boolean(process.env.OPENAI_API_KEY) && String(process.env.OPENAI_WEB_SEARCH_ENABLED || "").toLowerCase() !== "false"; }
+function cleanSearchUrl(value) {
+  try { const url = new URL(String(value)); url.searchParams.delete("utm_source"); return /^https:$/.test(url.protocol) ? url.toString() : ""; } catch { return ""; }
+}
+async function openAiWebSearch(query) {
+  if (!openAiWebSearchEnabled()) return null;
+  const response = await fetch("https://api.openai.com/v1/responses", { method: "POST", headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
+    body: JSON.stringify({ model: process.env.OPENAI_WEB_SEARCH_MODEL || process.env.OPENAI_MODEL || "gpt-5-mini", reasoning: { effort: "low" }, tools: [{ type: "web_search" }],
+      input: OPENAI_WEB_SEARCH_PROMPT + query, max_output_tokens: 1500 }) });
+  if (!response.ok) throw Object.assign(new Error(`Web search provider returned ${response.status}.`), { code: "knowledge_provider_failed" });
+  const body = await response.json();
+  const content = (body.output || []).filter(item => item?.type === "message").flatMap(item => item.content || []).filter(item => item?.type === "output_text");
+  const text = content.map(item => item.text || "").join(" ");
+  const seen = new Set();
+  const sources = content.flatMap(item => item.annotations || []).filter(item => item?.type === "url_citation").map(item => ({ title: String(item.title || "").trim(), url: cleanSearchUrl(item.url) }))
+    .filter(item => item.url && !seen.has(item.url) && seen.add(item.url)).map(item => ({ title: item.title || item.url, url: item.url })).slice(0, 5);
+  // The citations are returned as sources; the spoken/written answer should not also carry the markdown links.
+  const answer = text.replace(/\s*\(\[[^\]]*\]\([^)]*\)\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\s+/g, " ").trim();
+  return { answer, sources };
+}
+
 const LISTING_HINTS = Object.freeze({ jobs: "job openings vacancies apply", marketplace: "for sale buy sell prices listings" });
 async function liveListingsEvidence(kind, input, receiptId) {
   const query = String(input.query || "").trim();
   if (!query) throw Object.assign(new Error("A search request is required."), { code: "listings_query_required" });
-  if (!process.env.TAVILY_API_KEY) throw Object.assign(new Error("No live search provider is configured."), { code: "listings_provider_unavailable" });
+  if (!process.env.TAVILY_API_KEY) {
+    const found = openAiWebSearchEnabled() ? await openAiWebSearch(`${query} ${LISTING_HINTS[kind]}`) : null;
+    if (!found) throw Object.assign(new Error("No live search provider is configured."), { code: "listings_provider_unavailable" });
+    if (!found.sources.length) throw Object.assign(new Error("Live search returned no results with sources."), { code: "listings_outcome_unverified" });
+    const listings = found.sources.map(item => `${item.title} - ${item.url}`);
+    return { sources: found.sources, source: found.sources[0], listings, selectedListing: listings[0], count: listings.length, provider: "openai-web-search", summary: found.answer,
+      note: "Live web search results; confirm details with the listing owner before acting.", savedProgress: receiptId };
+  }
   const response = await fetch("https://api.tavily.com/search", { method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: `${query} ${LISTING_HINTS[kind]}`, search_depth: "advanced", include_answer: false, max_results: 8 }) });
   if (!response.ok) throw Object.assign(new Error(`Live search provider returned ${response.status}.`), { code: "listings_provider_failed" });
@@ -289,11 +321,25 @@ async function liveKnowledgeEvidence(input, common, receiptId) {
       content: body.answer, savedProgress: receiptId, provider: "tavily" };
     } catch (error) { lastProviderError = error; }
   }
+  // No Tavily (or it found nothing): search the web through the OpenAI key. A question that must stay inside approved domains is not sent here.
+  let webSearchTried = false;
+  if (input.domainFilterRequired !== true && openAiWebSearchEnabled()) {
+    webSearchTried = true;
+    try {
+      const found = await openAiWebSearch(query);
+      if (found && found.answer && found.sources.length) {
+        return { ...common, sources: found.sources, source: found.sources[0], answer: found.answer, assessment: found.answer, crop: input.crop || "crop",
+          observations: input.observations || [query], lesson: found.answer, content: found.answer, savedProgress: receiptId, provider: "openai-web-search" };
+      }
+    } catch (error) { lastProviderError = error; }
+  }
   // With no live search provider the only thing left is the model's own memory. That is never presented as a sourced answer: a question about a current
   // price, rate or cost is not answered from memory at all (a made-up number is worse than none), and anything else carries a plain note that no source
   // was checked, so a person (and anyone listening to it spoken) cannot mistake it for a checked fact.
   if (!process.env.TAVILY_API_KEY && NEEDS_A_CURRENT_SOURCE.test(query)) {
-    const answer = "I can't look up today's prices because no live price source is set up. Prices change often, so please ask at your local market or co-op, or someone who sold recently.";
+    const answer = webSearchTried
+      ? "I could not find a checked price for that just now. Prices change often, so please ask at your local market or co-op, or someone who sold recently."
+      : "I can't look up today's prices because no live price source is set up. Prices change often, so please ask at your local market or co-op, or someone who sold recently.";
     return { ...common, sources: [], answer, assessment: answer, crop: input.crop || "crop", observations: input.observations || [query], lesson: answer, content: answer,
       savedProgress: receiptId, provider: "none", unsourced: true };
   }
