@@ -163,6 +163,10 @@ function parseTimeInner(text = "", options = {}) {
     const daysAhead = (weekdayIndex - now.weekdayIndex + 7) % 7 || 7;
     return { scheduledAt: atLocalDay(daysAhead, dayClock()).toISOString(), whenLabel: `${dayNames[weekdayIndex]}${timeLabel()}` };
   }
+  // "the day after tomorrow" is two days on. It used to be read as "tomorrow", so the reminder came a day early.
+  if (/\bday after tomorrow\b/.test(lower)) {
+    return { scheduledAt: atLocalDay(2, dayClock()).toISOString(), whenLabel: `the day after tomorrow${timeLabel()}` };
+  }
   if (/\btomorrow\b/.test(lower)) {
     return { scheduledAt: atLocalDay(1, dayClock()).toISOString(), whenLabel: `tomorrow${timeLabel()}` };
   }
@@ -219,7 +223,7 @@ const WEEKDAYS = "sunday|monday|tuesday|wednesday|thursday|friday|saturday";
 const PART_OF_DAY = "(?:morning|afternoon|evening|night)";
 const TIME_WORDS = [
   // longest first: the alternation takes the first that matches, so "tomorrow morning" must be tried before "tomorrow"
-  `(?:tomorrow|today)\\s+${PART_OF_DAY}`, "tomorrow", "today", "tonight", "later today", `this\\s+${PART_OF_DAY}`,
+  `(?:the\\s+)?day\\s+after\\s+tomorrow(?:\\s+${PART_OF_DAY})?`, `(?:tomorrow|today)\\s+${PART_OF_DAY}`, "tomorrow", "today", "tonight", "later today", `this\\s+${PART_OF_DAY}`,
   "in\\s+\\d{1,3}\\s*(?:minutes?|mins?|hours?|hrs?|days?|weeks?)",
   "in\\s+(?:half\\s+an?|an?|one|a\\s+couple\\s+of|a\\s+few)\\s+(?:minutes?|hours?|days?|weeks?)(?:\\s+and\\s+a\\s+half)?",
   `(?:(?:on|next|this)\\s+)?(?:${WEEKDAYS})(?:\\s+${PART_OF_DAY})?`,

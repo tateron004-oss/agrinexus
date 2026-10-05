@@ -6,6 +6,7 @@ const { createCommand } = require("../contracts/command.js");
 const crypto = require("node:crypto");
 const businessDispatch = require("../business/voice-dispatch.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
+const { setReplySw } = require("../reminders/swahili-reminder.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
 // Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
@@ -229,6 +230,8 @@ function reminderSetResponse(plan, context) {
     const step = (plan?.steps || []).find(item => item?.toolId === "reminders.schedule");
     if (!step) return "";
     const input = step.input || {};
+    // Asked for in Kiswahili: answered in Kiswahili, in the words the person used for the time.
+    if (input.language === "sw" && input.whenSw && input.reminder) return setReplySw({ task: String(input.reminder).trim(), whenSw: String(input.whenSw).trim() });
     const rawText = String(input.when || input.reminder || input.text || input.message || input.title || "").trim();
     if (!rawText && !Number(input.timeOffsetMinutes)) return "";
     const offset = Number(input.timeOffsetMinutes);
