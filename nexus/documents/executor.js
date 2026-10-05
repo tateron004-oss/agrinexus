@@ -31,6 +31,10 @@ const crypto = require("node:crypto");
 // tight 4000-char echo-text cap, since real long-form content is exactly
 // what this executor is for.
 const MAX_DOCUMENT_CONTENT_LENGTH = 50000;
+// The file written to the app's own disk is lost whenever the app is updated (the disk is not kept between releases), and the worker that carries out an
+// erasure cannot see the web server's disk. So a copy of the file's bytes is also kept in the document's version record in the database, which survives
+// updates and is wiped by the same erasure that wipes the record. Only files up to this size are kept there; a bigger one stays on disk only.
+const MAX_STORED_FILE_BYTES = 3 * 1024 * 1024;
 // Found live (production outage, capability-testing the orb): the planning
 // model's tool-call schema has no enum constraint on documents.create's
 // format field -- it's free text, so the model plausibly writes "document",
@@ -85,7 +89,7 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
           // fingerprint: an optional short label a caller can use to recognise "this exact thing was already saved" (see nexus/resume/executor.js).
           metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
         const version = await documents.addVersion({ documentId: document.document_id, tenantId: context.tenantId,
-          content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath },
+          content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath, ...(bytes.length <= MAX_STORED_FILE_BYTES ? { contentBase64: bytes.toString("base64") } : {}) },
           objectKey: `local:${data.filename}`, checksum, createdBy: context.userId });
         // The "documents" capability's completion contract
         // (nexus/apps/capability-completion-contracts.js) requires

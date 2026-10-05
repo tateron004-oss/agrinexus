@@ -677,7 +677,11 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
             send(res, 200, { authoritative: true, document: formatDocumentSummary(document),
               contentBase64: bytes.toString("base64"), contentType: contentTypeForFormat(document.document_type) });
           } catch {
-            send(res, 404, { error: "The document record exists but its file is unavailable.", code: "document_file_missing" });
+            // The file on disk is gone (the app was updated since). Use the copy kept in the database, owner-scoped like the lookup above.
+            let kept = null;
+            try { kept = active.documents.getFileContent ? await active.documents.getFileContent({ tenantId: context.tenantId, ownerId: context.userId, documentId }) : null; } catch { kept = null; }
+            if (kept) send(res, 200, { authoritative: true, document: formatDocumentSummary(document), contentBase64: kept, contentType: contentTypeForFormat(document.document_type) });
+            else send(res, 404, { error: "The document record exists but its file is unavailable.", code: "document_file_missing" });
           }
           return true;
         }
