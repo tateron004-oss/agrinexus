@@ -49,6 +49,16 @@ const IMMEDIATE = [
   /\b(?:i )?(?:can'?t|cannot|can not|am unable to|am not able to) get up\b/,
   /\bi(?:'m| am) (?:in danger|badly hurt|hurt badly|seriously hurt|having a (?:heart attack|stroke)|bleeding (?:badly|heavily))\b/,
   /\bi (?:can'?t|cannot|can not) breathe\b/,
+  // Someone else's life in danger ("my mother is not breathing", "my baby is choking", "she has collapsed and will not wake up"), and being attacked: the circle is
+  // alerted and the number to call is given. Said by a person who is there and needs people to come; when it is ambiguous, ALERT.
+  /\b(?:my|our|the|a)\s+(?:\w+\s+){0,2}?(?:mother|mom|mum|mama|father|dad|baba|baby|child|son|daughter|husband|wife|brother|sister|grandmother|grandfather|grandma|grandpa|friend|neighbou?r|boy|girl|man|woman|patient)\s+(?:is|was|has|had|just)\s+(?:\w+\s+){0,2}?(?:not breathing(?!\s+fire)|stopped breathing|unconscious|unresponsive|collapsed|choking(?!\s+(?:on|with|from)\s+laugh|\s+up\b)|having a (?:seizure|fit|heart attack|stroke)|bleeding (?:badly|heavily)|(?:won'?t|will not|not) wak(?:e|ing) up|not responding)\b/,
+  /\b(?:he|she|they)\s+(?:is|was|has|have|just)\s+(?:\w+\s+){0,2}?(?:not breathing(?!\s+fire)|stopped breathing|unconscious|unresponsive|collapsed|choking(?!\s+(?:on|with|from)\s+laugh|\s+up\b)|having a (?:seizure|fit|heart attack|stroke))\b/,
+  /\bi(?:'m| am) being (?:attacked|beaten|robbed|chased)\b|\b(?:someone|somebody|a man|men|they) (?:is|are) (?:attacking|beating|chasing|trying to (?:kill|hurt|rob)) me\b/,
+  // Taking too much of a medicine or swallowing something poisonous ("I took too many tablets", "I have overdosed", "I drank pesticide"): not an everyday sentence.
+  /\bi(?:'ve| have)? (?:just )?(?:taken|took|swallowed|drank) (?:too (?:many|much)|an overdose of|a whole (?:bottle|packet|box|strip) of|a handful of)\s+(?:my |the |some |these )?(?:\w+\s+){0,2}?(?:tablets?|pills?|medicine|medication|drugs?|paracetamol|insulin|painkillers?|panadol|ibuprofen|aspirin|antibiotics?|capsules?|metformin|diazepam)\b/,
+  /\bi(?:'ve| have)? (?:just )?(?:taken|took) an overdose\b/,
+  /\bi(?:'ve| have|'m| am)? (?:just )?overdos(?:e|ed|ing)\b/,
+  /\bi(?:'ve| have)? (?:just )?(?:swallowed|drank|drunk|ate|eaten|taken) (?:some |a lot of |the )?(?:poison|pesticide|bleach|kerosene|paraffin|petrol|insecticide|rat poison|weedkiller|herbicide)\b/,
   /^(?:please )?(?:call|get|send|phone) (?:me )?(?:an |the )?(?:ambulance|paramedics?)\b/,
   /^(?:(?:please|help|quick|kyro)[, ]+)*i need (?:an |the )?ambulance\b/,
   /\b(?:please )?send (?:an )?(?:emergency )?alert to my (?:trusted )?circle\b/
@@ -88,7 +98,7 @@ const SELF_HARM = [
   /\bi(?:'m| am|'ve| have| just| really| sometimes| often)?\s+(?:\w+\s+){0,3}?(?:want(?:ed)? to (?:die(?!\s+laughing)|kill myself|end (?:it|my life))|kill(?:ing)? myself|end(?:ing)? my (?:own )?life|end it all|(?:don'?t|do not) want to (?:live|be alive|be here|go on)|want to disappear)\b/i,
   /\b(?:i'?m|i am|i keep|i have been|i've been|i sometimes|i often|i just|i can't stop)\s+(?:been )?think(?:ing)? (?:of|about) (?:suicide|dying|ending (?:it|it all|my life)|killing myself)\b/i,
   /\bi(?:'m| am| feel| have been|'ve been| am feeling)\s+(?:really |so |very |actually )?suicidal\b/i,
-  /\b(?:kill|hurt|harm) myself\b/i,
+  /\b(?:kill|hurt|harm)(?:ing)? myself\b/i,
   /\bcut(?:ting)? myself(?!\s+(?:a|some|the|off)\b)\b/i,
   /\bbetter off (?:dead|without me)\b/i,
   /\bno reason to (?:live|go on)\b/i,

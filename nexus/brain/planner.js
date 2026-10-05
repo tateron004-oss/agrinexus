@@ -635,7 +635,7 @@ function emergencyHealthGuidancePlan(text, catalog) {
   const normalized = goal.toLowerCase().replace(/[’]/g, "'");
   const bloodPressure = normalized.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/);
   const hypertensiveCrisis = bloodPressure && (Number(bloodPressure[1]) >= 180 || Number(bloodPressure[2]) >= 120);
-  const redFlag = /\b(chest pain|pressure (?:in|on) (?:my|the) chest|trouble breathing|cannot breathe|can't breathe|shortness of breath|face droop|one-sided weakness|(?:weak|weakness|numb|numbness) (?:on )?(?:my |the )?(?:one|left|right) side|one side (?:feels? )?(?:weak|numb)|slurred speech|sudden confusion|passed out|unconscious|seizure|heavy bleeding)\b/i.test(normalized);
+  const redFlag = /\b(chest pain|pressure (?:in|on) (?:my|the) chest|trouble breathing|cannot breathe|can't breathe|shortness of breath|face droop|one-sided weakness|(?:weak|weakness|numb|numbness) (?:on )?(?:my |the )?(?:one|left|right) side|one side (?:feels? )?(?:weak|numb)|slurred speech|sudden confusion|passed out|unconscious|unresponsive|seizure|heavy bleeding|(?:not|isn't|stopped|stops|stop) breathing|overdos(?:e|ed|ing)|took too (?:many|much)|swallowed (?:poison|bleach|pesticide|kerosene|paraffin)|poisoned|choking)\b/i.test(normalized);
   const explicitEmergency = /\b(medical emergency|health emergency|call (?:911|emergency services)|need (?:an |the )?ambulance)\b/i.test(normalized);
   if (!(redFlag || explicitEmergency || hypertensiveCrisis)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "health.emergency-guidance") ||
