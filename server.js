@@ -20603,13 +20603,16 @@ function stripTrailingExportMetaClauses(value = "") {
   return String(value || "")
     .replace(/\s+as\s+(?:a|an)\s+(?:pdf|docx|doc|word|txt|text|md|markdown|json|csv|xlsx|excel|pptx|ppt|html)\b[.!?]*$/i, "")
     .replace(/\s+titled?\s*[:\-]?\s*["']?[^"'.,\n]{2,80}["']?[.!?]*$/i, "")
+    // "..., and save it" is the person asking for the file, not part of what the document says.
+    .replace(/[,;]?\s+and\s+(?:save|keep|store|export|download)\s+(?:it|this|that)\b(?:\s+(?:as|to|in)\b[^.!?]*)?[.!?]*$/i, "")
     .trim();
 }
 
 function nexusOpenAiNativeExtractExportArgs(command = "", args = {}) {
   const text = String(command || "");
-  const titleMatch = text.match(/\btitled?\s*[:\-]?\s*["']?([^"'.,\n]{2,80})["']?/i);
-  const strippedTitle = titleMatch ? stripTrailingExportMetaClauses(titleMatch[1].trim()) : "";
+  // "titled Farm Plan", "called Farm Plan", "named Farm Plan": the title stops where the rest of the request begins ("that says ...", "saying ...", "with content ...", "and save it").
+  const titleMatch = text.match(/\b(?:titled?|called|named)\s*[:\-]?\s*["']?([^"'.,\n]{2,80})["']?/i);
+  const strippedTitle = titleMatch ? stripTrailingExportMetaClauses(titleMatch[1].replace(/\s+(?:that says|which says|saying|with content|containing|and (?:save|keep|store|export|download)\b).*$/i, "").trim()) : "";
   // csv/xlsx/pptx/html are recognized so a request for one of them is
   // honestly rejected by exportProvider's own "only json, txt, md, pdf, and
   // docx" message -- confirmed live, "Export this as a CSV" previously
