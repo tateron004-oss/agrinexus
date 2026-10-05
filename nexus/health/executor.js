@@ -7,7 +7,23 @@
 // versioned rows, optimistic concurrency) instead of the
 // scripts/provider-engines.js mock's fabricated receipt.
 const WORKSPACE_ID = "health-records";
-const { glucoseLevel } = require("../../server/providers/bloodGlucose.js");
+const { glucoseLevel, resolveGlucose } = require("../../server/providers/bloodGlucose.js");
+const { assessBloodPressure } = require("../../server/providers/bloodPressure.js");
+
+// A reading that cannot be real is never saved, whichever way it reached the executor. The typed and spoken paths already refuse these ("400 over 20", a sugar of 9000); a reading planned by the AI
+// model went straight through, so an impossible number became a saved health record and was then "interpreted". Returns the reason, or null when every number could be a real reading.
+function invalidReadingReason(observation = {}) {
+  const has = key => Number.isFinite(observation[key]);
+  if (has("systolic") || has("diastolic")) {
+    if (!(has("systolic") && has("diastolic"))) return "a blood pressure needs both numbers, the top and the bottom";
+    if (!assessBloodPressure(observation.systolic, observation.diastolic).valid) return `${observation.systolic} over ${observation.diastolic} cannot be a real blood pressure`;
+  }
+  if (has("glucose") && resolveGlucose(observation.glucose, "mg/dL").invalid) return `a blood sugar of ${observation.glucose} mg/dL cannot be a real reading`;
+  if (has("oxygenSaturation") && !(observation.oxygenSaturation >= 50 && observation.oxygenSaturation <= 100)) return `an oxygen level of ${observation.oxygenSaturation} cannot be a real reading`;
+  if (has("pulse") && !(observation.pulse >= 20 && observation.pulse <= 250)) return `a pulse of ${observation.pulse} cannot be a real reading`;
+  if (has("temperature") && !((observation.temperature >= 30 && observation.temperature <= 45) || (observation.temperature >= 70 && observation.temperature <= 115))) return `a temperature of ${observation.temperature} cannot be a real reading`;
+  return null;
+}
 
 // The planner (completeHealthRecordPlan) sends the reading at the top level of
 // the step input -- { intakeType, readingType, systolic, diastolic } or
@@ -65,6 +81,8 @@ function createHealthRecordExecutor({ records }) {
       throw Object.assign(new Error("This account type cannot write real health records."), { code: "health_record_write_restricted", status: 403 });
     }
     const observation = observationFrom(input);
+    const impossible = invalidReadingReason(observation);
+    if (impossible) throw Object.assign(new Error(`I did not save this: ${impossible}. Please check the number on your device and tell me again.`), { code: "health_reading_invalid", status: 422 });
     const inserted = await records.create({
       tenantId: context.tenantId,
       ownerId: context.userId,
@@ -104,4 +122,4 @@ function verifyHealthRecordOutcome({ result }) {
   return { verified, method: "real_record_write", reason: verified ? null : "record_write_incomplete" };
 }
 
-module.exports = Object.freeze({ createHealthRecordExecutor, verifyHealthRecordOutcome, healthSafetyResponse, observationFrom });
+module.exports = Object.freeze({ createHealthRecordExecutor, verifyHealthRecordOutcome, healthSafetyResponse, observationFrom, invalidReadingReason });

@@ -127,6 +127,13 @@ class MedicationRepository {
     const result = await this.db.query(sql, params);
     return Boolean((result.rows || result)[0]);
   }
+  // A medicine was stopped or removed: its doses that were still waiting (pending, or already alerted to the circle) are closed, so nobody is told "a dose is waiting" for it.
+  async cancelOpenDoses({ tenantId, userId, medId }) {
+    const result = await this.db.query(`update nexus_memory_items set content = jsonb_set(content, '{status}', '"cancelled"'), updated_at=now()
+      where tenant_id=$1 and principal_id=$2 and purpose='medications' and deleted_at is null and content->>'kind'='dose'
+      and content->>'medId'=$3 and content->>'status' in ('pending','alerted') returning memory_id`, [tenantId, userId, medId]);
+    return (result.rows || result).length;
+  }
   // Doses still waiting for the person to confirm, across communities.
   async listPendingDoses({ limit = 2000 } = {}) {
     const result = await this.db.query(`select memory_id,tenant_id,principal_id,content from nexus_memory_items

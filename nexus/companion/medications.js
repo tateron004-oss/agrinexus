@@ -51,10 +51,33 @@ function parseNameAndDose(raw) {
   return { name, dose: m ? `${m[2]} ${m[3].toLowerCase()}` : "" };
 }
 
-// { action: "add"|"list"|"remove"|"taken"|"did-i", ... } or null
+// A dose that looks like a typing slip: well above what is usually taken at once for a common medicine ("metformin 5000mg", "amlodipine 100mg", "digoxin 2.5mg"). Kyro cannot check doses and
+// says so; this only catches an extra zero or a wrong unit before it is saved as the person's reminder. Said again with "confirmed", it is saved as given. The numbers are the usual highest single
+// dose in mg; a dose more than twice that is asked about, never refused.
+const USUAL_HIGHEST_SINGLE_DOSE_MG = Object.freeze({ metformin: 1000, amlodipine: 10, lisinopril: 40, enalapril: 20, losartan: 100, atenolol: 100, hydrochlorothiazide: 50, simvastatin: 80, atorvastatin: 80,
+  glibenclamide: 10, gliclazide: 160, aspirin: 325, paracetamol: 1000, panadol: 1000, ibuprofen: 800, amoxicillin: 1000, prednisolone: 60, furosemide: 80, warfarin: 10, digoxin: 0.25, levothyroxine: 0.3, captopril: 50, nifedipine: 60 });
+const MG_PER = { mg: 1, g: 1000, mcg: 0.001, "µg": 0.001 };
+function unusualDose({ name, dose }) {
+  const m = /^(\d+(?:\.\d+)?)\s*(mg|g|mcg|µg)$/i.exec(String(dose || ""));
+  const usual = USUAL_HIGHEST_SINGLE_DOSE_MG[String(name || "").split(" ")[0]];
+  if (!m || !usual) return null;
+  const mg = Number(m[1]) * MG_PER[m[2].toLowerCase()];
+  return mg > usual * 2 ? { usual } : null;
+}
+// Said at the end of an "add medication" line to say the dose is exactly what the label says.
+const DOSE_CONFIRMED = /[,;]?\s*(?:and )?(?:(?:i )?confirm(?:ed)?|that(?:'s| is) (?:correct|right)|it(?:'s| is) (?:correct|right)|as prescribed|as (?:written )?on (?:the|my) label)\s*$/i;
+// Words that say WHEN or HOW a dose was taken, not which medicine ("this morning", "before breakfast", "at 8", "with food"): dropped so "I took my tablets this morning" means the tablets.
+const WHEN_TAIL = /(?:\s+(?:already|just now|now|today|yet|this (?:morning|afternoon|evening)|tonight|last night|earlier|a little while ago|(?:an? )?(?:hour|few hours|while|bit) ago|before (?:breakfast|lunch|dinner|supper|bed|bedtime|eating)|after (?:breakfast|lunch|dinner|supper|eating|food)|with (?:food|water|tea|milk|breakfast|lunch|dinner|supper)|on time|as (?:usual|prescribed|normal)|at \d{1,2}(?::\d{2})?\s?(?:am|pm|o'clock)?|at (?:noon|midday|night|bedtime)))+$/i;
+const NAME_LEAD = /^(?:(?:all|both)(?: of)?\s+)?(?:(?:my|the|some|those|these|our|a)\s+)?(?:(?:all|both)(?: of)?\s+)?(?:(?:morning|evening|night|midday|afternoon)\s+)?(?:one\s+|two\s+|three\s+|\d+\s+)?(?:dose of\s+)?(?:(?:my|the)\s+)?/i;
+const tidyQuery = value => clean(value).toLowerCase().replace(WHEN_TAIL, "").replace(NAME_LEAD, "").replace(/\s+/g, " ").trim();
+const THEM = /^(?:them|it|that|those|these|both|all)$/;
+
+// { action: "add"|"list"|"remove"|"taken"|"missed"|"did-i", ... } or null
 function readMedicationRequest(text) {
-  const t = clean(text).replace(/[.!?]+$/g, "");
+  let t = clean(text).replace(/[.!?]+$/g, "");
   if (!t || t.length > 160) return null;
+  const confirmedDose = DOSE_CONFIRMED.test(t) && /\b(?:add|remind|i take|i need to take|i'?m on|i am on)\b/i.test(t);
+  if (confirmedDose) t = t.replace(DOSE_CONFIRMED, "").trim();
   let m;
   if ((m = /^(?:please )?add (?:a )?(?:medication|medicine|med)(?: reminder)?:?\s+(.+?)\s+(?:(?:every ?day|daily|each day)\s+)?(?:at|around)\s+(.+)$/i.exec(t)) ||
       (m = /^(?:please )?remind me to take (?:my )?(.+?) (?:at|around) (.+?) (?:every ?day|daily|each day)$/i.exec(t)) ||
@@ -64,7 +87,7 @@ function readMedicationRequest(text) {
     if (!explicit && !(drug?.dose || MEDICINE_WORD.test(t))) return null;
     if (!drug) return { action: "add", invalid: "name" };
     if (!times) return { action: "add", invalid: "times", name: drug.name };
-    return { action: "add", ...drug, times };
+    return { action: "add", ...drug, times, ...(confirmedDose ? { confirmed: true } : {}) };
   }
   if ((m = /^(?:please )?(?:remind me to take|i take|i need to take) (?:my )?(.+?) every (morning|evening|night)$/i.exec(t))) {
     const drug = parseNameAndDose(m[1]);
@@ -74,9 +97,23 @@ function readMedicationRequest(text) {
   const wait = readDoseWait(t);
   if (wait !== null) return { action: "grace", hours: wait };
   if (/^(?:what|which) (?:medications?|medicines?|meds|pills) (?:do i|am i) (?:take|taking|on)$/i.test(t) || /^(?:show|list|what are) my (?:medications?|medicines?|meds)$/i.test(t)) return { action: "list" };
-  if ((m = /^stop reminding me (?:about|to take) (?:my )?(.+)$/i.exec(t)) || (m = /^(?:remove|delete) (?:my )?(.+?) from my (?:medications?|medicines?|meds)$/i.exec(t))) return { action: "remove", query: clean(m[1]).toLowerCase() };
-  if ((m = /^i (?:just )?(?:took|have taken|'ve taken|had) (?:my |the |some )?(.+?)(?: (?:already|just now|now|today))?$/i.exec(t))) return { action: "taken", query: clean(m[1]).toLowerCase().replace(/^(?:morning|evening|night|midday|afternoon)\s+/, "") };
-  if ((m = /^did i (?:take|have) (?:my |the )?(.+?)(?: (?:today|yet|already))?$/i.exec(t))) return { action: "did-i", query: clean(m[1]).toLowerCase().replace(/^(?:morning|evening|night|midday|afternoon)\s+/, "") };
+  // A medicine the person says they no longer take. Found by the audit: only "stop reminding me about X" ended the reminders, so after "my doctor stopped my metformin" the person's circle was still told
+  // "a dose is waiting" for a medicine they no longer take.
+  if ((m = /^stop reminding me (?:about|to take) (?:my )?(.+)$/i.exec(t)) || (m = /^(?:remove|delete) (?:my )?(.+?) from my (?:medications?|medicines?|meds)$/i.exec(t))
+    || (m = /^(?:i (?:have |'ve )?(?:stopped|quit) (?:taking )?|i(?:'m| am) no longer (?:taking |on )|i don'?t take |i do not take |my (?:doctor|clinician|nurse|pharmacist) (?:has )?(?:stopped|took me off|taken me off) )(?:my |the )?(.+?)(?: (?:now|today|already|for good))?$/i.exec(t))) {
+    const stoppedByPerson = !/^(?:stop reminding|remove|delete)\b/i.test(t);
+    return { action: "remove", query: clean(m[1]).toLowerCase(), ...(stoppedByPerson ? { stopped: true } : {}) };
+  }
+  // A dose the person says they did NOT take. Found by the audit: these fell through, so a missed dose was either not recorded or left looking unconfirmed.
+  if ((m = /^(?:i |i've |i have )?(?:just |actually )?(?:missed|forgot(?: to take)?|skipped|didn'?t take|did not take|didn'?t have|did not have)(?: my| the| a| some)?\s+(.+)$/i.exec(t))) {
+    const query = tidyQuery(m[1]);
+    if (query && query.split(" ").length <= 4) return { action: "missed", query };
+  }
+  if ((m = /^(?:i(?:'ve| have)? )?(?:just |already )?(?:took|taken|have taken|'ve taken|had|swallowed)\s+(.+)$/i.exec(t))) {
+    const query = tidyQuery(m[1]);
+    if (query && !/^(?:half|a quarter)\b/.test(clean(m[1]).toLowerCase())) return { action: "taken", query };
+  }
+  if ((m = /^did i (?:take|have) (?:my |the )?(.+?)(?: (?:today|yet|already))?$/i.exec(t))) return { action: "did-i", query: tidyQuery(m[1]) };
   return null;
 }
 
@@ -132,6 +169,8 @@ function createMedicationService({ store, circle = null, push, notifications, de
         case "add": {
           if (request.invalid === "name") return 'Tell me the medicine like this: "add medication metformin 500mg at 8am and 8pm".';
           if (request.invalid === "times") return `I couldn't read the times for ${request.name}. Try "at 8am and 8pm" or "in the morning and evening".`;
+          const odd = request.confirmed ? null : unusualDose(request);
+          if (odd) return `I haven't saved ${request.name} ${request.dose} yet: that is a lot more than is usually taken at once, so it may be a typing slip (an extra zero, or mg and g mixed up). I can't check doses. Please read the dose from your label or prescription and say it again, for example "add medication ${request.name} ${odd.usual} mg at ${timesWords(request.times)}". If ${request.dose} is exactly what the label says, add the word "confirmed" at the end.`;
           const existing = meds.find(item => item.content.name === request.name);
           const inheritedWait = existing?.content.graceHours ?? meds.find(item => item.content.graceHours)?.content.graceHours;
           const content = { kind: "medication", name: request.name, dose: request.dose, times: request.times, timeZone: zone, active: true, createdAt: at.toISOString(), ...(inheritedWait ? { graceHours: inheritedWait } : {}) };
@@ -158,19 +197,30 @@ function createMedicationService({ store, circle = null, push, notifications, de
           if (!found.length) return null; // "stop reminding me about the meeting" belongs to reminders
           if (found.length > 1) return `Which one: ${found.map(item => item.name).join(" or ")}?`;
           await store.removeMedication({ tenantId, userId, memoryId: found[0].memoryId });
-          return `Done. I've stopped reminding you about ${found[0].name}.`;
+          // Doses already waiting for this medicine must not stay "pending": the sweep would still tell the person's circle that "a dose is waiting" for a medicine that has been stopped.
+          await store.cancelOpenDoses?.({ tenantId, userId, medId: found[0].memoryId }).catch?.(() => {});
+          return request.stopped
+            ? `Done. I've stopped the reminders for ${found[0].name}. Please make sure your clinician or pharmacist knows you are no longer taking it. If a dose or time changed instead, say "add medication ${found[0].name} 500mg at 8am" with the new details.`
+            : `Done. I've stopped reminding you about ${found[0].name}.`;
         }
-        case "taken": case "did-i": {
+        case "taken": case "missed": case "did-i": {
           const mine = meds.map(item => ({ ...item.content, memoryId: item.memoryId }));
-          const found = matches(mine, request.query);
-          if (!found.length) return null; // "I took a walk" is just talk
           const today = dayFor(at, zone);
           const doses = await store.dosesForDay({ tenantId, userId, day: today });
+          const openFor = item => doses.some(dose => dose.medId === item.memoryId && ["pending", "alerted", "missed"].includes(dose.status) && !dose.reportedBy);
+          // "I took them" / "I took it" means the medicines a reminder is waiting on, and nothing else ("I took it back to the shop" is just talk).
+          // "I took my metformin and my insulin" is each of those.
+          const queries = THEM.test(request.query) ? [] : request.query.split(/\s*(?:,|&|\band\b)\s*(?:(?:my|the)\s+)?/).map(tidyQuery).filter(Boolean);
+          let found = THEM.test(request.query) ? mine.filter(openFor) : [...new Map(queries.flatMap(query => matches(mine, query)).map(item => [item.memoryId, item])).values()];
+          if (!found.length) return null; // "I took a walk" is just talk
+          for (const query of queries) { const these = matches(mine, query); if (!GENERIC.test(query) && these.length > 1) return `Which one: ${these.map(item => item.name).join(" or ")}?`; }
           if (request.action === "did-i") {
             return found.map(item => {
               const list = doses.filter(dose => dose.medId === item.memoryId);
               const taken = list.filter(dose => dose.status === "taken");
               if (taken.length) return `Yes — you logged ${item.name} at ${taken.map(dose => formatTimeOfDay(dose.takenLocal || dose.time)).join(" and ")} today.`;
+              const toldMissed = list.find(dose => dose.status === "missed" && dose.reportedBy === "person");
+              if (toldMissed) return `No — you told me you missed ${item.name} today.`;
               const waiting = list.find(dose => ["pending", "alerted", "missed"].includes(dose.status));
               return waiting ? `Not yet — the ${formatTimeOfDay(waiting.time)} dose of ${item.name} is waiting.` : `I haven't asked about ${item.name} yet today, and you haven't logged it.`;
             }).join(" ");
@@ -184,9 +234,21 @@ function createMedicationService({ store, circle = null, push, notifications, de
           // trusted circle. Bulk "I took my pills"-style generic-word matches are deliberately excluded
           // from this check (GENERIC.test) since matching every active medicine there is the intended,
           // already-tested behavior -- this only disambiguates a genuinely ambiguous NAMED match.
-          if (!GENERIC.test(request.query) && found.length > 1) return `Which one: ${found.map(item => item.name).join(" or ")}?`;
+          // (A named medicine that could mean more than one was already asked about above, per name.)
           const local = localClock(at, zone);
           const hhmm = `${String(Math.floor(local.minutes / 60)).padStart(2, "0")}:${String(local.minutes % 60).padStart(2, "0")}`;
+          if (request.action === "missed") {
+            // "I missed my metformin" / "I forgot my tablets": noted exactly as said, never as taken. The person has told Kyro themselves, so this is not a dose "waiting" for their circle to be asked about, and
+            // Kyro does not say whether to take it late or skip it.
+            const named = [];
+            for (const item of found) {
+              const waiting = doses.filter(dose => dose.medId === item.memoryId && ["pending", "alerted"].includes(dose.status)).sort((a, b) => a.time.localeCompare(b.time)).at(-1);
+              if (waiting) await store.updateDose({ tenantId, memoryId: waiting.memoryId, content: { ...waiting, status: "missed", reportedBy: "person", reportedAt: at.toISOString() }, expectedStatus: waiting.status });
+              else await store.createDose({ tenantId, userId, content: { medId: item.memoryId, name: item.name, day: today, time: hhmm, status: "missed", reportedBy: "person", reportedAt: at.toISOString(), extra: true } });
+              named.push(item.name);
+            }
+            return `Thank you for telling me. I've noted that you missed your ${named.join(" and ")}, and I have not marked it as taken. I can't tell you whether to take it late or leave it: please ask your pharmacist or clinic, and don't double up the next dose unless they say so.`;
+          }
           const notes = [];
           for (const item of found) {
             const waiting = doses.filter(dose => dose.medId === item.memoryId && ["pending", "alerted", "missed"].includes(dose.status)).sort((a, b) => a.time.localeCompare(b.time));
@@ -246,7 +308,15 @@ function createMedicationService({ store, circle = null, push, notifications, de
           result.prompted += 1;
         }
       }
+      // A medicine that is no longer active (removed, or stopped) can leave a dose "pending". The sweep must never tell a circle "a dose is waiting" for it: it is closed instead. Only done when the
+      // list of active medicines is complete (it is capped), so a long list can never close a real dose by mistake.
+      const activeMedicationIds = new Set(allMedications.map(item => item.memoryId));
+      const activeListComplete = allMedications.length < 2000;
       for (const dose of await store.listPendingDoses({ limit: 2000 })) {
+        if (activeListComplete && !activeMedicationIds.has(dose.medId)) {
+          await store.updateDose({ tenantId: dose.tenantId, memoryId: dose.memoryId, content: { ...dose, status: "cancelled", cancelledAt: at.toISOString() }, expectedStatus: "pending" });
+          continue;
+        }
         const promptedAt = new Date(dose.promptedAt);
         if (Number.isNaN(promptedAt.getTime()) || at.getTime() < promptedAt.getTime() + (graceByMedication.get(dose.medId) ?? GRACE_HOURS) * 3600 * 1000) continue;
         if (await isPaused(dose.tenantId)) continue;
