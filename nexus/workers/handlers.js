@@ -54,6 +54,8 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
       nonce: required(job.payload?.nonce, "Acceptance canary nonce") }),
     // Sends the morning brief to everyone whose brief is on and whose chosen local time has arrived (see nexus/brief/service.js).
     "brief.send-due": async () => (runtime.brief?.sendDue ? runtime.brief.sendDue({}) : { checked: 0, sent: 0 }),
+    // Sends each repeating reminder ("every morning at 8, check the pump") when its local time arrives (see nexus/reminders/repeat-service.js).
+    "reminders.repeat-send-due": async () => (runtime.repeatReminders?.sendDue ? runtime.repeatReminders.sendDue({}) : { checked: 0, sent: 0 }),
     // Warns everyone who turned weather alerts on when their forecast turns serious (see nexus/alerts/service.js).
     // Sends the weekly summary to everyone whose chosen weekday and time has arrived (see nexus/brief/weekly.js).
     // Asks people how they are when their check-in time comes, and follows up once on missed ones (see nexus/companion/checkins.js).

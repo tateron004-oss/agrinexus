@@ -97,6 +97,7 @@ async function main() {
   // Briefs go out at a chosen minute of the person's own day, so this checks about once a minute (a sent brief is remembered per local day).
   const briefIntervalMs = Number(process.env.NEXUS_BRIEF_POLL_MS || 60000);
   let lastBriefSweepAt = 0;
+  let lastRepeatReminderSweepAt = 0;
   // Weather changes slowly and the forecast service is free but shared, so alerts are checked every 30 minutes (towns are fetched once per pass).
   const weatherAlertIntervalMs = Number(process.env.NEXUS_WEATHER_ALERT_POLL_MS || 30 * 60 * 1000);
   let lastWeatherAlertSweepAt = 0;
@@ -118,6 +119,11 @@ async function main() {
       lastAgentSweepAt = Date.now();
       try { await handlers["agent.sweep-advanceable-tasks"]({ job: { payload: {} }, heartbeat: async () => {} }); }
       catch (error) { logger.error("worker.agent_sweep_failed", { error: { code: error.code, message: error.message } }); }
+    }
+    if (Date.now() - lastRepeatReminderSweepAt >= briefIntervalMs) {
+      lastRepeatReminderSweepAt = Date.now();
+      try { const outcome = await handlers["reminders.repeat-send-due"]({ job: { payload: {} }, heartbeat: async () => {} }); if (outcome?.sent) logger.info("worker.repeat_reminder_sweep", outcome); }
+      catch (error) { logger.error("worker.repeat_reminder_sweep_failed", { error: { code: error.code, message: error.message } }); }
     }
     if (Date.now() - lastBriefSweepAt >= briefIntervalMs) {
       lastBriefSweepAt = Date.now();
