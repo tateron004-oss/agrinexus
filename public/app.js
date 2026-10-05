@@ -43333,6 +43333,10 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
+// A new login made by an admin starts with a random password written in the form (to copy and hand over), never a well-known default.
+function newTemporaryPassword() {
+  try { const bytes = new Uint8Array(9); crypto.getRandomValues(bytes); return btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, "x"); } catch { return `Temp${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`; }
+}
 function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, redirectSection, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord }) {
   return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, redirectSection, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord };
 }
@@ -45332,7 +45336,7 @@ function workflowConfig(workflow, action, element) {
       fields: [
         { name: "name", label: "User name", value: "Test User", placeholder: "Example: Ron User" },
         { name: "email", label: "User email", value: "test-user@example.com", placeholder: "name@example.com" },
-        { name: "password", label: "Temporary password", type: "password", value: "User2026!", placeholder: "At least 8 characters" },
+        { name: "password", label: "Temporary password", type: "text", value: newTemporaryPassword(), placeholder: "Copy this password before you create the login" },
         {
           name: "country",
           label: "Country",
@@ -45381,7 +45385,7 @@ function workflowConfig(workflow, action, element) {
       fields: [
         { name: "name", label: "Admin name", value: "Admin Test User", placeholder: "Example: Ron Admin" },
         { name: "email", label: "Admin email", value: "admin-test@example.com", placeholder: "admin@example.com" },
-        { name: "password", label: "Temporary admin password", type: "password", value: "Admin2026!", placeholder: "At least 10 characters" },
+        { name: "password", label: "Temporary admin password", type: "text", value: newTemporaryPassword(), placeholder: "Copy this password before you create the login" },
         {
           name: "country",
           label: "Country",
@@ -45429,7 +45433,7 @@ function workflowConfig(workflow, action, element) {
       fields: [
         { name: "name", label: "Investor name", value: "Investor Test User", placeholder: "Example: Jane Investor" },
         { name: "email", label: "Investor email", value: "investor-test@example.com", placeholder: "name@example.com" },
-        { name: "password", label: "Temporary password", type: "password", value: "Investor2026!", placeholder: "At least 8 characters" },
+        { name: "password", label: "Temporary password", type: "text", value: newTemporaryPassword(), placeholder: "Copy this password before you create the login" },
         {
           name: "country",
           label: "Country",

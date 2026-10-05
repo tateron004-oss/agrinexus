@@ -5624,6 +5624,9 @@ function learningProfileForClient(user) {
   return { enrollments, completedCourses, certificates, womenChildrenLearningPlans, learningStreak, learningHours, learningAssignments, quizAttempts, instructorNotes, learningProgressReports, learningTranscripts, learningCohorts, learningAccommodations, activeCourseId, quizScore: quizScore || 0 };
 }
 
+// A login made by an admin with no password typed gets a random one (shown once to the admin), never a well-known default that anyone could guess.
+const randomTemporaryPassword = () => crypto.randomBytes(12).toString("base64url");
+
 function profileForUser(profile, user) {
   // The existing health-record projection below was written for the
   // Investor role, but db.profile is one shared, non-per-user blob -- a
@@ -51788,7 +51791,7 @@ async function api(req, res, url) {
     ensureOperationsProfile(db.profile);
     const email = String(body.email || "test-user@example.com").trim().toLowerCase();
     const name = String(body.name || "Test User").trim() || "Test User";
-    const password = String(body.password || "User2026!").trim();
+    const password = String(body.password || "").trim() || randomTemporaryPassword();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 8) return send(res, 400, { error: "Password must be at least 8 characters" });
     const existing = db.users.find(item => String(item.email || "").toLowerCase() === email);
@@ -51838,7 +51841,7 @@ async function api(req, res, url) {
     ensureOperationsProfile(db.profile);
     const email = String(body.email || "admin-test@example.com").trim().toLowerCase();
     const name = String(body.name || "Admin Test User").trim() || "Admin Test User";
-    const password = String(body.password || "Admin2026!").trim();
+    const password = String(body.password || "").trim() || randomTemporaryPassword();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 10) return send(res, 400, { error: "Admin password must be at least 10 characters" });
     const account = db.users.find(item => String(item.email || "").toLowerCase() === email);
@@ -51888,7 +51891,7 @@ async function api(req, res, url) {
     ensureOperationsProfile(db.profile);
     const email = String(body.email || "investor-test@example.com").trim().toLowerCase();
     const name = String(body.name || "Investor Test User").trim() || "Investor Test User";
-    const password = String(body.password || "Investor2026!").trim();
+    const password = String(body.password || "").trim() || randomTemporaryPassword();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 8) return send(res, 400, { error: "Password must be at least 8 characters" });
     const existing = db.users.find(item => String(item.email || "").toLowerCase() === email);
