@@ -159,6 +159,13 @@ function createRepeatReminderService({ notifications, store, devices = null, log
           for (const slot of slots) {
             if (!isDueNow({ timeOfDay: slot, timeZone: rule.timeZone, now: at, windowMinutes })) continue;
             const day = localClock(at, rule.timeZone).day;
+            // A time that had already passed when the reminder was made is not sent late ("every 2 hours" said at 14:20 starts at 16:00, not now).
+            const madeAt = rule.createdAt ? new Date(rule.createdAt) : null;
+            if (madeAt && !Number.isNaN(madeAt.getTime())) {
+              const made = localClock(madeAt, rule.timeZone);
+              const slotMinutes = minutesOfDay(slot);
+              if (made.day === day && slotMinutes !== null && slotMinutes <= made.minutes) continue;
+            }
             if (!runsOn(rule.days, day)) continue;
             // A single-time reminder keeps the original key, so a restart across this change never repeats one that was already sent today.
             const key = slots.length > 1 ? `reminder-repeat:${rule.scheduleId}:${day}:${slot}` : `reminder-repeat:${rule.scheduleId}:${day}`;
