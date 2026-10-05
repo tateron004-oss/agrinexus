@@ -933,7 +933,7 @@ function completeDocumentPlan(text, catalog) {
       !/\b(save|reopen|open again|persist)\b/i.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "documents.create") ||
       !catalog.applications.some(app => app.applicationId === "documents")) return null;
-  const namedTitle = goal.match(/(?:called|titled|named)\s+["']?(.+?)(?=["']?(?:,|\s+then\b|\s+and\s+(?:save|open|reopen)\b|\.|$))/i)?.[1]?.trim();
+  const namedTitle = goal.match(/(?:called|titled|named)\s+["']?(.+?)(?=["']?(?:,|:|\s+then\b|\s+and\s+(?:save|open|reopen)\b|\s+(?:that|which)\s+(?:says|reads)\b|\s+saying\b|\s+containing\b|\s+with the (?:text|words|content)\b|\.|$))/i)?.[1]?.trim();
   const format = requestedDocumentFormat(goal);
   // Found live: this fast path (unlike the LLM planning path, and unlike
   // nexusOpenAiNativeExtractExportArgs's own 4000-char sanitizePilotText cap)
@@ -943,7 +943,10 @@ function completeDocumentPlan(text, catalog) {
   // PDF/DOCX rendering with no row/length cap of its own, tying up the
   // single Node event loop for the whole process. Matches the same 4000-char
   // ceiling already used for free-text document content elsewhere.
-  const content = goal.length > 4000 ? goal.slice(0, 4000) : goal;
+  // "Create a document called Farm Plan that says: I will plant maize in March, and save it": the document holds what it should say, not the
+  // whole spoken request. With no body named, the sentence is kept as before.
+  const body = goal.match(/\b(?:that says|which says|saying|that reads|containing|with the (?:text|words|content))\s*[:,]?\s+(.+?)(?:[,.]?\s+(?:and|then)\s+(?:save|open|reopen|persist)\b.*)?$/i)?.[1]?.trim().replace(/^["']|["']$/g, "");
+  const content = body && body.length >= 2 ? body.slice(0, 4000) : (goal.length > 4000 ? goal.slice(0, 4000) : goal);
   return { goal, application: "documents", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "create-document", title: "Create, save, and verify document",
       toolId: "documents.create", input: { title: namedTitle || "Nexus document", content, reopenAfterSave: true, ...(format ? { format } : {}) },
