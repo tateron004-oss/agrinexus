@@ -19,6 +19,8 @@ const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 const { hasReminderTimePhrase } = require("../reminders/time-phrase.js");
 const { repeatReminderTurn } = require("../reminders/repeat-service.js");
+const { assessBloodPressure, invalidReadingReply } = require("../../server/providers/bloodPressure.js");
+const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
 
 class OpenEndedPlanner {
   constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
@@ -638,6 +640,12 @@ function emergencyHealthGuidancePlan(text, catalog) {
   const redFlag = /\b(chest pain|pressure (?:in|on) (?:my|the) chest|trouble breathing|cannot breathe|can't breathe|shortness of breath|face droop|one-sided weakness|(?:weak|weakness|numb|numbness) (?:on )?(?:my |the )?(?:one|left|right) side|one side (?:feels? )?(?:weak|numb)|slurred speech|sudden confusion|passed out|unconscious|unresponsive|seizure|heavy bleeding|(?:not|isn't|stopped|stops|stop) breathing|overdos(?:e|ed|ing)|took too (?:many|much)|swallowed (?:poison|bleach|pesticide|kerosene|paraffin)|poisoned|choking)\b/i.test(normalized);
   const explicitEmergency = /\b(medical emergency|health emergency|call (?:911|emergency services)|need (?:an |the )?ambulance)\b/i.test(normalized);
   if (!(redFlag || explicitEmergency || hypertensiveCrisis)) return null;
+  // A very high reading said plainly ("my blood pressure is 190 over 125") still gets the emergency guidance alone, straight away. When the person ALSO asks to save it
+  // ("...please save it") it is recorded, and the confirmation opens with the same urgent guidance, so they are told and the reading is kept. Numbers that cannot be a real
+  // reading ("400 over 20") are not an emergency at all: completeHealthRecordPlan says so and saves nothing.
+  const asksToSave = /\b(record|log|save|add|capture)\b/.test(normalized);
+  if (!redFlag && !explicitEmergency && bloodPressure && /\b(?:blood\s*pressure|bp)\b/.test(normalized)
+    && (asksToSave || !assessBloodPressure(bloodPressure[1], bloodPressure[2]).valid)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "health.emergency-guidance") ||
       !catalog.applications.some(app => app.applicationId === "health")) return null;
   return { goal, application: "health", riskTier: "critical", clarification: null,
@@ -691,6 +699,7 @@ function completeHealthRecordPlan(text, catalog) {
       !catalog.applications.some(app => app.applicationId === "health")) return null;
   const wantsRecord = /\b(record|log|save|add|capture)\b/i.test(goal);
   const isReported = vitalPhrase => wantsRecord || new RegExp(`\\bmy\\s+${vitalPhrase}\\b`, "i").test(goal);
+  const notARealReading = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
   const makePlan = (readingType, input) => ({ goal, application: "health", riskTier: "regulated", clarification: null,
     steps: [{ clientStepId: "record-reading", title: `Record ${readingType.replace(/-/g, " ")} reading`,
       toolId: "health.record", input: { intakeType: readingType, readingType, ...input },
@@ -701,12 +710,21 @@ function completeHealthRecordPlan(text, catalog) {
       goal.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b[^.]{0,40}\b(?:blood\s*pressure|bp)\b/i);
     if (bpMatch) {
       const systolic = Number(bpMatch[1]); const diastolic = Number(bpMatch[2]);
-      if (systolic >= 40 && systolic <= 300 && diastolic >= 20 && diastolic <= 200) return makePlan("blood-pressure", { systolic, diastolic });
+      // Numbers that cannot be a real reading ("400 over 20", "120 over 130") are said so and nothing is saved, the same as when the reading is spoken.
+      if (!assessBloodPressure(systolic, diastolic).valid) return notARealReading(invalidReadingReply(systolic, diastolic));
+      return makePlan("blood-pressure", { systolic, diastolic });
     }
   }
   if (isReported("(?:blood\\s*sugar|glucose)")) {
-    const match = goal.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
-    if (match) { const value = Number(match[1]); if (value >= 20 && value <= 600) return makePlan("blood-glucose", { glucose: value }); }
+    // A number with its unit when one is said ("7.2 mmol", "130 mg per dL"); mmol per litre is common in East Africa. The unit is taken from the words, else from the size of the
+    // number, and a number that could be either is asked about instead of saved.
+    const match = goal.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d+(?:\\.\\d+)?)\\s*(mmol(?:\\s*(?:/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:/|per)?\\s*d?l?)?`, "i"));
+    if (match) {
+      const resolved = resolveGlucose(match[1], (match[2] || "").trim());
+      if (resolved.invalid) return notARealReading(invalidGlucoseReply(match[1]));
+      if (resolved.ambiguous) return notARealReading(ambiguousUnitReply(match[1]));
+      return makePlan("blood-glucose", { glucose: Math.round(toMgdl(resolved)), glucoseUnit: resolved.unit, glucoseSaid: resolved.value });
+    }
   }
   if (isReported("(?:oxygen|o2|spo2|pulse\\s*ox)")) {
     const match = goal.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));

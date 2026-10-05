@@ -7,6 +7,7 @@
 // versioned rows, optimistic concurrency) instead of the
 // scripts/provider-engines.js mock's fabricated receipt.
 const WORKSPACE_ID = "health-records";
+const { glucoseLevel } = require("../../server/providers/bloodGlucose.js");
 
 // The planner (completeHealthRecordPlan) sends the reading at the top level of
 // the step input -- { intakeType, readingType, systolic, diastolic } or
@@ -38,6 +39,13 @@ function healthSafetyResponse(reading = {}) {
     if (systolic < 90 || diastolic < 60)
       return "This blood pressure reading is below the usual range. If you feel dizzy or faint, sit or lie down and seek care." + closing;
     return "This blood pressure reading is within a typical range. Keep logging so a clinician can look at trends." + closing;
+  }
+  if (Number.isFinite(reading.glucose)) {
+    const level = glucoseLevel({ unit: "mg/dL", value: reading.glucose });
+    if (level === "very-low") return "This blood sugar is very low. If you feel shaky, sweaty, confused, very sleepy or faint, get emergency help now and do not be alone; follow the plan your clinic gave you." + closing;
+    if (level === "low") return "This blood sugar is lower than usual. If you feel shaky, sweaty, confused or faint, get help now and do not be alone, and contact your clinic today." + closing;
+    if (level === "very-high") return "This blood sugar is very high. If you have vomiting, stomach pain, fast breathing, confusion, or you are very sleepy or very thirsty, get emergency help now, and contact your clinic today." + closing;
+    return "Your blood sugar reading was recorded. A single reading does not establish a diagnosis; keep logging and share it with a clinician." + closing;
   }
   return "Your reading was recorded. It has not been interpreted or diagnosed." + closing;
 }
