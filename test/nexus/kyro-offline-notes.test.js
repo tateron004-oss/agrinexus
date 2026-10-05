@@ -64,3 +64,17 @@ test("the page loads the notes module, the offline shell caches it, and the clie
   const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
   assert.match(app, /KyroOfflineNotes\?\.shouldKeep\(error, text\)/); assert.match(app, /replayKyroOfflineNotes/);
 });
+
+// A phone with no signal keeps up to 200 notes of up to 400 characters. Notes older than three days are still dropped (the book records a note on the day
+// it arrives, so a note days late would be a wrong record).
+test("the phone keeps 200 notes of up to 400 characters, and the three-day limit stays", () => {
+  assert.equal(notes.MAX_NOTES, 200); assert.equal(notes.MAX_LENGTH, 400); assert.equal(notes.MAX_AGE_MS, 3 * 24 * 60 * 60 * 1000);
+  const long = "Sold 200 kg of maize to Amina for 9000 shillings, " + "paid in cash at the market, ".repeat(10);
+  assert.ok(long.length > 200 && long.length <= 400, String(long.length));
+  assert.equal(notes.isRecordable(long), true);
+  assert.equal(notes.isRecordable("Sold " + "x".repeat(400)), false, "past 400 characters it is not a note");
+  const storage = memoryStorage();
+  for (let i = 0; i < 200; i += 1) assert.ok(notes.add("Sold " + (i + 1) + " kg of maize for 900", { storage, now: NOW }));
+  assert.equal(notes.add("Sold 1 kg of maize for 9", { storage, now: NOW }), 0, "the 201st is not kept");
+  assert.equal(notes.pending({ storage, now: NOW + 4 * 24 * 60 * 60 * 1000 }), 0, "after four days none is kept");
+});
