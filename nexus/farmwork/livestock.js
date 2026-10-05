@@ -103,7 +103,8 @@ async function handle(ctx) {
     const due = [...latest.values()].sort((a, b) => a.data.nextDue.localeCompare(b.data.nextDue));
     return due.length ? `Due: ${due.slice(0, 10).map(event => `${event.data.animal} ${event.data.detail ? `${event.data.detail} ` : ""}${EVENT_LABEL[event.data.type] || event.data.type} ${event.data.nextDue < ctx.today ? `was due ${describeDay(event.data.nextDue, ctx.today)}` : `due ${describeDay(event.data.nextDue, ctx.today)}`}`).join("; ")}.` : "Nothing is due in the next 30 days from the dates you gave me.";
   }
-  if ((m = /^(?:tell me about|show|describe|what about) (?:my )?(.+)$/i.exec(t)) && new RegExp(`\\b(?:${SPECIES_WORDS})\\b|\\d`, "i").test(m[1])) {
+  // "Tell me about Daisy", "How is Daisy?": only answered when the name really is one of this person's animals (otherwise "tell me about the weather" carries on).
+  if ((m = /^(?:tell me about|show|describe|what about|how is|how's|how are) (?:my )?(.+)$/i.exec(t)) && m[1].length <= 40) {
     const animals = await ctx.store.list({ ...scope, collection: "animal" }); const animal = findAnimal(animals, m[1]);
     if (animal) {
       const events = await eventsOf(ctx, animal);
@@ -115,6 +116,17 @@ async function handle(ctx) {
         upcoming ? `Next due: ${upcoming.data.detail ? `${upcoming.data.detail} ` : ""}${EVENT_LABEL[upcoming.data.type]} ${describeDay(upcoming.data.nextDue, ctx.today)}.` : "", breeding ? `Expected to give birth around ${describeDay(breeding.data.expected, ctx.today)} (a typical figure, not a promise).` : "",
         milk ? `Milk in the last 7 days: ${Math.round(milk * 10) / 10} L.` : "", animal.data.notes ? `Notes: ${animal.data.notes}` : ""].filter(Boolean).join(" ");
     }
+  }
+  // "How many animals do I have?", "How many goats do I have?": counted from the animal records (a flock record counts for its whole number).
+  if ((m = new RegExp(`^how many (animals|livestock|${SPECIES_WORDS}) (?:do|did) (?:i|we) (?:have|own|keep)(?: now| at the moment| in total)?$`, "i").exec(t))) {
+    const animals = (await ctx.store.list({ ...scope, collection: "animal" })).filter(animal => animal.data.status !== "gone");
+    if (!animals.length) return 'You have no animals recorded. Say "add a cow called Bella".';
+    const word = m[1].toLowerCase(); const wanted = /^(?:animals|livestock)$/.test(word) ? "" : speciesOf(word);
+    const matching = wanted ? animals.filter(animal => animal.data.species === wanted) : animals;
+    const total = matching.reduce((sum, animal) => sum + (Number(animal.data.count) > 1 ? Number(animal.data.count) : 1), 0);
+    const name = wanted ? (wanted === "sheep" ? wanted : wanted === "cattle" ? (total === 1 ? "cow or bull" : "cattle") : total === 1 ? wanted : `${wanted}s`) : (total === 1 ? "animal" : "animals");
+    if (!total) return `You have no ${name} recorded.`;
+    return `You have ${total} ${name}${wanted ? "" : " recorded"}.`;
   }
   if ((m = /^how much milk (?:did|has) (.+?) (?:give|given|produce|produced)(?: (today|yesterday|this week|this month))?$/i.exec(t))) {
     const animals = await ctx.store.list({ ...scope, collection: "animal" }); const animal = findAnimal(animals, m[1]);
