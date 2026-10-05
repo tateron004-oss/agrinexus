@@ -101,6 +101,9 @@ function extractForgetRequest(text) {
   if (!t || t.length > 80) return null;
   if (/^(?:please )?(?:forget|delete|remove|erase) (?:everything|all)(?: (?:you (?:know|remember|saved|have)|about me|that you know))?(?: about me)?$/.test(t)) return { kind: "all" };
   if (/^(?:please )?(?:forget|delete|remove|erase) (?:that|this|it)$/.test(t) || /^(?:please )?(?:forget|delete|remove|erase) what i (?:just )?(?:said|told you)$/.test(t)) return { kind: "last" };
+  // "forget that I keep chickens": the fact said again; the kind of fact it is is what is taken back (everything of that kind: goats and chickens are one fact).
+  const sayAgain = /^(?:please )?(?:forget|delete|remove|erase) (?:that )?(i(?:'m| am| keep| raise| own| have| grow| farm| live| work| speak| prefer| stay| cultivate)\b.+)$/.exec(t)?.[1];
+  if (sayAgain) { const again = extractProfileStatement(sayAgain.replace(/^i'm\b/, "i am")); if (again.length) return { kind: again[0].kind }; }
   const named = /^(?:please )?(?:forget|delete|remove|erase) (?:my|the|what you know about my)\s+(name|location|town|place|city|region|crops?|livestock|animals|language|farm size|size of my farm|land size|work|job|occupation|profession)$/.exec(t)?.[1];
   if (!named) return null;
   const kind = { name: "name", location: "location", town: "location", place: "location", city: "location", region: "location", crop: "crops", crops: "crops", livestock: "livestock", animals: "livestock", language: "language", "farm size": "farmSize", "size of my farm": "farmSize", "land size": "farmSize", work: "work", job: "work", occupation: "work", profession: "work" }[named];
