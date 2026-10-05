@@ -147,6 +147,17 @@ function extractPeriod(text, today) {
   if (/\b(?:this year|this season|so far this year)\b/.test(t)) return { from: `${today.slice(0, 4)}-01-01`, to: today, label: /season/.test(t) ? "this season" : "this year" };
   if (/\byesterday\b/.test(t)) return { from: addDays(today, -1), to: addDays(today, -1), label: "yesterday" };
   if (/\btoday\b/.test(t)) return { from: today, to: today, label: "today" };
+  // "in September", "for March 2025": a named month (the most recent one that has begun, when no year is said), and "in 2025": a whole calendar year. A question about a month used to
+  // be unread, so it was answered for a different period or not at all.
+  if ((m = new RegExp(`\\b(?:in|for|during|of)\\s+${MONTH_PATTERN}(?:\\s+(\\d{4}))?\\b`, "i").exec(t))) {
+    const month = monthIndex(m[1]);
+    const thisYear = Number(today.slice(0, 4));
+    const year = m[2] ? Number(m[2]) : month <= Number(today.slice(5, 7)) - 1 ? thisYear : thisYear - 1;
+    const first = makeDay(year, month, 1);
+    const last = addDays(makeDay(month === 11 ? year + 1 : year, month === 11 ? 0 : month + 1, 1), -1);
+    if (first) return { from: first, to: last, label: `in ${MONTH_NAMES[month][0].toUpperCase()}${MONTH_NAMES[month].slice(1)} ${year}` };
+  }
+  if ((m = /\b(?:in|for|during)\s+(20\d{2})\b/.exec(t))) return { from: `${m[1]}-01-01`, to: `${m[1]}-12-31`, label: `in ${m[1]}` };
   return null;
 }
 

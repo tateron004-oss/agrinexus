@@ -133,10 +133,34 @@ function expandMagnitudes(text) {
   });
 }
 
+// How money is written in everyday East African speech and texts. Found by the audit: "sold maize for 6k" was recorded as 6 and "200k" as 200 (a thousand times too small), "5000/=" and "200 bob"
+// and "Ksh.5000" were not read as money at all. Only done where the number is plainly money (after a currency word or symbol, after for / at / paid / cost / spent / worth / of, or before a
+// currency word), because a bare "5k" could be a 5 km run: "5kg" and "5k steps" are left alone.
+const CURRENCY_LEAD = "(?:ksh|kshs|kes|tsh|tshs|tzs|ugx|etb|ngn|ghs|zar|zmw|rwf|usd|shs?|[$€£₦])";
+const CURRENCY_TAIL = "(?:shillings?|ksh|kshs|kes|tsh|ugx|usd|dollars?|bob|bobs|birr|naira|cedis?)";
+const thousands = digits => { const value = Number(digits.replace(/,/g, "")) * 1000; return Number.isFinite(value) ? String(Math.round(value * 100) / 100) : null; };
+function expandMoneyShorthand(text) {
+  let out = String(text ?? "");
+  // "Ksh.5000" / "Ksh. 5,000" -> "Ksh 5000"
+  out = out.replace(new RegExp(`\\b(${CURRENCY_LEAD})\\.\\s?(?=\\d)`, "gi"), "$1 ");
+  // "5000/=" and "5,000/-" are shillings
+  out = out.replace(/(\d[\d,]*(?:\.\d+)?)\s*\/[=-](?![\w])/g, "$1 shillings");
+  // "elfu 6" is 6000
+  out = out.replace(/\belfu\s+(\d[\d,]*(?:\.\d+)?)\b/gi, (whole, digits) => thousands(digits) ?? whole);
+  // "6k": a thousand, in a money place
+  const kilo = "(\\d[\\d,]*(?:\\.\\d+)?)\\s?k(?![a-z0-9])(?!\\s*(?:g|m|of|steps?|run|walk)\\b)";
+  out = out.replace(new RegExp(`(${CURRENCY_LEAD}\\s*)${kilo}`, "gi"), (whole, lead, digits) => `${lead}${thousands(digits) ?? digits + "k"}`);
+  out = out.replace(new RegExp(`\\b((?:for|at|@|paid|pay|cost|costs|costing|spent|worth|of|price|total|earned|made|received|got)\\s+(?:about |around )?)${kilo}`, "gi"), (whole, lead, digits) => `${lead}${thousands(digits) ?? digits + "k"}`);
+  out = out.replace(new RegExp(`${kilo}(?=\\s*${CURRENCY_TAIL}\\b)`, "gi"), (whole, digits) => thousands(digits) ?? whole);
+  // "200 bob" / "200 bobs" are shillings (after "6k bob" has become "6000 bob")
+  out = out.replace(/(\d[\d,]*(?:\.\d+)?)\s*bobs?\b/gi, "$1 shillings");
+  return out;
+}
+
 function normalizeSpokenText(text) {
   const raw = String(text ?? "");
   if (!raw.trim()) return raw;
-  return stripTrailingPunctuation(expandMagnitudes(convertNumberWords(raw)));
+  return stripTrailingPunctuation(expandMoneyShorthand(expandMagnitudes(convertNumberWords(raw))));
 }
 
-module.exports = Object.freeze({ normalizeSpokenText, convertNumberWords, stripTrailingPunctuation, expandMagnitudes });
+module.exports = Object.freeze({ normalizeSpokenText, convertNumberWords, stripTrailingPunctuation, expandMagnitudes, expandMoneyShorthand });
