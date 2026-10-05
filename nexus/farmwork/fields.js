@@ -181,7 +181,12 @@ async function handle(ctx) {
     let day = anyDay(t.replace(m[1], ""), ctx.today) || ctx.today;
     // "I planted maize on 12 March", said in October, means the March that has passed, not next March: a past-tense planting never lands in the future
     // unless a year was said ("plant maize on 12 March" is the person's plan, so it stays as said).
-    if (/^(?:planted|sowed|sown)$/i.test(m[3]) && day > ctx.today && !/\b\d{4}\b/.test(t)) day = `${Number(day.slice(0, 4)) - 1}${day.slice(4)}`;
+    const pastTense = /^(?:planted|sowed|sown)$/i.test(m[3]);
+    const namedDay = /\b(?:mon|tues?|wednes|thurs?|fri|satur|sun)day\b/i.test(t) && !/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d|\b\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(t);
+    // "I planted maize on Friday" is the Friday that has passed (a week back at most), not the same date a year ago.
+    if (pastTense && day > ctx.today && !/\b\d{4}\b/.test(t)) day = namedDay ? addDays(day, -7) : `${Number(day.slice(0, 4)) - 1}${day.slice(4)}`;
+    // "last week" with no day named is a week ago, not today.
+    else if (pastTense && day === ctx.today && /\blast week\b/i.test(t) && !/\btoday\b/i.test(t)) day = addDays(ctx.today, -7);
     await ctx.store.update({ ...scope, record: { ...picked.record, data: { ...picked.record.data, crop: clean(m[1]).toLowerCase(), planted: day } } });
     return `Noted: ${clean(m[1]).toLowerCase()} planted in ${picked.record.data.name} ${describeDay(day, ctx.today)}. Say "make a crop calendar for ${picked.record.data.name}" and I'll put the usual jobs on your calendar.`;
   }
