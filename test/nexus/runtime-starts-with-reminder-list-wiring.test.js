@@ -14,7 +14,7 @@ test("the real Nexus runtime can be created", () => {
     process.env.NEXUS_DISABLE_LOCAL_ENV_FILES = "true";
     const { createRuntime } = require(${JSON.stringify(path.join(root, "nexus", "runtime", "create-runtime.js"))});
     const quiet = { info() {}, warn() {}, error() {}, log() {} };
-    const runtime = createRuntime({ env: { DATABASE_URL: "postgres://u:p@127.0.0.1:5432/x", DATABASE_SSL: "false", AGRINEXUS_STATE_STORE: "postgres", NEXUS_ACCEPTANCE_TOKEN: "t",
+    const runtime = createRuntime({ env: { DATABASE_URL: "postgres://127.0.0.1:5432/nexus_test", DATABASE_SSL: "false", AGRINEXUS_STATE_STORE: "postgres", NEXUS_ACCEPTANCE_TOKEN: "t",
       RENDER_GIT_COMMIT: "a".repeat(40), NEXUS_RELEASE_SHA: "a".repeat(40) }, logger: quiet });
     console.log("runtime created " + Object.keys(runtime).length);
     process.exit(0);`;
