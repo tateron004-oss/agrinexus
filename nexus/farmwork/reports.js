@@ -22,7 +22,7 @@ function table(rows, widths) { return rows.map(row => row.map((cell, i) => (i ==
 const formatOf = text => (/\bpdf\b/i.test(text) ? "pdf" : /\b(?:word|docx)\b/i.test(text) ? "docx" : "txt");
 
 const REPORTS = [
-  { id: "summary", pattern: /\b(?:farm )?(?:summary|overview|profile)\b/i, label: "farm summary" },
+  { id: "summary", pattern: /\b(?:(?:farm )?(?:summary|overview|profile)|farm report)\b/i, label: "farm summary" },
   { id: "expenses", pattern: /\b(?:expense|expenses|spending|costs)\b/i, label: "expense report" },
   { id: "income", pattern: /\b(?:income|sales|earnings|revenue)\b/i, label: "income report" },
   { id: "statement", pattern: /\b(?:profit|financial|profit and loss|statement|accounts)\b/i, label: "profit statement" },

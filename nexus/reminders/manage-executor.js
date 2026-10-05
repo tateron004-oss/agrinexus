@@ -11,9 +11,18 @@ const { whenWords } = require("./repeat-service.js");
 // the client's generic outcome card prints an array of objects as
 // "[object Object]".
 
-function describe(row) {
+// The time in the person's own time zone ("Tue, 6 Oct, 8:00 am"), not as a UTC timestamp. With no usable zone it is the UTC timestamp as before.
+function dueText(value, timeZone) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "no time set";
+  if (timeZone) {
+    try { return new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).format(date); } catch { /* fall back to UTC */ }
+  }
+  return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+function describe(row, timeZone = "") {
   const content = row.content || {};
-  const due = row.scheduled_at ? new Date(row.scheduled_at).toISOString().slice(0, 16).replace("T", " ") + " UTC" : "no time set";
+  const due = row.scheduled_at ? dueText(row.scheduled_at, timeZone) : "no time set";
   return `${String(content.reminderText || content.body || "Untitled reminder")} (due ${due})`;
 }
 
@@ -49,7 +58,7 @@ function createRemindersListExecutor({ notifications, repeatStore = null }) {
     const total = rows.length + repeatLines.length;
     return {
       count: total,
-      reminders: [...rows.map(describe), ...repeatLines],
+      reminders: [...rows.map(row => describe(row, context.timeZone)), ...repeatLines],
       reminderIds: rows.map(row => row.notification_id),
       repeatingCount: repeatLines.length,
       summary: total
@@ -85,15 +94,16 @@ function createRemindersCancelExecutor({ notifications }) {
     else if (subject.length >= 3) matches = rows.filter(row => subjectMatches(normalize((row.content || {}).reminderText || (row.content || {}).body), subject));
     else matches = [];
     const unresolved = reason => ({ cancelled: false, reason, matches: matches.length,
-      candidates: rows.map(describe), candidateIds: rows.map(row => row.notification_id) });
+      // When several match, the candidates are those several, not every reminder the person has.
+      candidates: (reason === "ambiguous" ? matches : rows).map(row => describe(row, context.timeZone)), candidateIds: (reason === "ambiguous" ? matches : rows).map(row => row.notification_id) });
     if (!wantedId && subject.length < 3) return unresolved("which_reminder");
     if (matches.length === 0) return unresolved("not_found");
     if (matches.length > 1) return unresolved("ambiguous");
     const target = matches[0];
     const cancelled = await notifications.cancelReminder({ tenantId: context.tenantId, userId: context.userId, notificationId: target.notification_id });
     if (!cancelled) return unresolved("no_longer_upcoming");
-    return { cancelled: true, reminderId: target.notification_id, reminder: describe(target),
-      summary: `Cancelled the reminder: ${describe(target)}` };
+    return { cancelled: true, reminderId: target.notification_id, reminder: describe(target, context.timeZone),
+      summary: `Cancelled the reminder: ${describe(target, context.timeZone)}` };
   };
 }
 
