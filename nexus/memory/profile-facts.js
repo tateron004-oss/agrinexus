@@ -3,9 +3,12 @@
 // What Kyro learns about a person from what they plainly say about themselves, and how they take it back.
 //
 // Deliberately narrow and deterministic (patterns, not guesses): a name, where they are, what they grow, what livestock they keep,
-// and the language they prefer. Nothing about health, money, other people or anything Kyro merely infers is ever a "fact" here.
+// the language they prefer, how big their farm is, and what work they do. Nothing about health, money, other people or anything Kyro merely infers is ever a "fact" here.
 // A statement is only recognized when it is a plain declarative sentence, so a question or a request is never mistaken for one.
-const KINDS = Object.freeze(["name", "location", "crops", "livestock", "language"]);
+const KINDS = Object.freeze(["name", "location", "crops", "livestock", "language", "farmSize", "work"]);
+const { normalizeSpokenText } = require("../i18n/spoken-input.js");
+// The kinds of work people plainly say they do. Only these: "I am a bit tired" or "I'm a fan" must never become a job.
+const WORKS = ["farmer", "trader", "teacher", "nurse", "driver", "student", "shopkeeper", "mechanic", "tailor", "carpenter", "vet", "veterinarian", "agronomist", "fisherman", "beekeeper", "butcher", "miller", "extension officer", "health worker", "community health worker", "midwife", "builder", "welder", "cook", "chef", "baker", "pastor", "retired"];
 
 const NOT_A_NAME = new Set(["fine", "good", "well", "great", "ok", "okay", "sure", "sorry", "tired", "hungry", "sick", "ill", "happy", "sad", "here", "there", "back", "ready", "busy", "late", "new", "old",
   "kenyan", "african", "farmer", "student", "nexus", "kyro", "not", "just", "from", "in", "at", "on", "the", "a", "an", "also", "still", "very", "so", "trying", "looking", "wondering", "going", "coming", "working"]);
@@ -64,6 +67,18 @@ function extractProfileStatement(text) {
     if (found.length && found.length <= 6) add("livestock", found.join(", "));
   }
 
+  // "I have 5 acres", "my farm is about 2 hectares", "we farm three acres": the size of the farm, as said.
+  const sizeSentence = normalizeSpokenText(sentence);
+  const size = /\b(?:(?:i|we) (?:have|own|farm|cultivate|manage|work)|my (?:farm|land|shamba|plot|holding) is|our (?:farm|land|shamba|plot|holding) is)\s+(?:about |around |roughly |over |almost |nearly |only |just )?(\d+(?:\.\d+)?)\s*(acres?|hectares?|ha)\b/i.exec(sizeSentence);
+  if (size && Number(size[1]) > 0 && Number(size[1]) <= 100000) {
+    const unit = /^ha/i.test(size[2]) ? "hectares" : /^hectare/i.test(size[2]) ? "hectares" : "acres";
+    const count = Number(size[1]);
+    add("farmSize", `${count} ${count === 1 ? unit.replace(/s$/, "") : unit}`);
+  }
+  // "I am a farmer", "I work as a nurse", "my job is teaching" (not: only the listed kinds of work).
+  const work = new RegExp(`\\b(?:i am|i'm|i’m|i work as|my job is|my work is|by profession i am)\\s+(?:an? |the )?(${WORKS.join("|")})s?\\b`, "i").exec(sentence)?.[1];
+  if (work) add("work", work.toLowerCase());
+
   const spoken = new RegExp(`\\b(?:i speak|i prefer|my language is|speak to me in|talk to me in|reply in|answer in|respond in|write to me in)\\s+(${Object.keys(LANGUAGES).join("|")})\\b`, "i").exec(sentence)?.[1];
   if (spoken) add("language", LANGUAGES[spoken.toLowerCase()]);
 
@@ -76,15 +91,15 @@ function extractForgetRequest(text) {
   if (!t || t.length > 80) return null;
   if (/^(?:please )?(?:forget|delete|remove|erase) (?:everything|all)(?: (?:you (?:know|remember|saved|have)|about me|that you know))?(?: about me)?$/.test(t)) return { kind: "all" };
   if (/^(?:please )?(?:forget|delete|remove|erase) (?:that|this|it)$/.test(t) || /^(?:please )?(?:forget|delete|remove|erase) what i (?:just )?(?:said|told you)$/.test(t)) return { kind: "last" };
-  const named = /^(?:please )?(?:forget|delete|remove|erase) (?:my|the|what you know about my)\s+(name|location|town|place|city|region|crops?|livestock|animals|language)$/.exec(t)?.[1];
+  const named = /^(?:please )?(?:forget|delete|remove|erase) (?:my|the|what you know about my)\s+(name|location|town|place|city|region|crops?|livestock|animals|language|farm size|size of my farm|land size|work|job|occupation|profession)$/.exec(t)?.[1];
   if (!named) return null;
-  const kind = { name: "name", location: "location", town: "location", place: "location", city: "location", region: "location", crop: "crops", crops: "crops", livestock: "livestock", animals: "livestock", language: "language" }[named];
+  const kind = { name: "name", location: "location", town: "location", place: "location", city: "location", region: "location", crop: "crops", crops: "crops", livestock: "livestock", animals: "livestock", language: "language", "farm size": "farmSize", "size of my farm": "farmSize", "land size": "farmSize", work: "work", job: "work", occupation: "work", profession: "work" }[named];
   return kind ? { kind } : null;
 }
 
 // How a saved fact reads back to the person.
 function describeFact({ kind, value }) {
-  return { name: `your name is ${value}`, location: `you are in ${value}`, crops: `you grow ${value}`, livestock: `you keep ${value}`, language: `you prefer ${value}` }[kind] || "";
+  return { name: `your name is ${value}`, location: `you are in ${value}`, crops: `you grow ${value}`, livestock: `you keep ${value}`, language: `you prefer ${value}`, farmSize: `your farm is ${value}`, work: `you work as ${/^[aeiou]/i.test(value) ? "an" : "a"} ${value}` }[kind] || "";
 }
 const sentenceFor = fact => { const text = describeFact(fact); return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}.` : ""; };
 const isFact = content => Boolean(content && typeof content === "object" && KINDS.includes(content.kind) && typeof content.value === "string" && content.value);
