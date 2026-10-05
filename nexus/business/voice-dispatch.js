@@ -37,10 +37,16 @@ function sanitizeText(value = "", maxLength = 480) {
     .slice(0, maxLength);
 }
 
+// "Green Acres Farm Supply in Kisumu" is a name and a place. A trailing " in <Capitalised place>" is cut off when there are at least two words before it ("Hope in Action" stays whole).
+function withoutTrailingPlace(name = "") {
+  const match = /^(.+?)\s+(?:in|at|based in|located in)\s+[A-Z][A-Za-z'-]*(?:\s+[A-Z][A-Za-z'-]*){0,2}$/.exec(String(name).trim());
+  return match && match[1].trim().split(/\s+/).length >= 2 ? match[1].trim() : String(name).trim();
+}
+
 function extractBusinessName(command = "", args = {}) {
   const text = String(command || "");
   const nameMatch = text.match(/\b(?:called|named|titled)\s+["']?([^"'.,\n]{2,80})["']?/i);
-  return sanitizeText(args.businessName || args.title || (nameMatch ? nameMatch[1].trim() : ""), 180);
+  return sanitizeText(args.businessName || args.title || (nameMatch ? withoutTrailingPlace(nameMatch[1].trim()) : ""), 180);
 }
 
 // Resolves which business/nonprofit workspace a voice command like "add a
@@ -98,17 +104,28 @@ function personNameOnly(raw = "") {
   return text.split(/\s+/).slice(0, 5).join(" ").replace(/[\s.,;:-]+$/, "").trim();
 }
 
+// A person's name as said: "Dr. John O'Neil" keeps its title (the dot after Dr/Mr/Mrs/Ms/Prof/Eng/Rev/Hon is dropped, so it does not end the name) and an apostrophe inside a name
+// ("O'Neil", "N'Dour") does not end it either.
+const PERSON_TITLES = /\b(Dr|Mr|Mrs|Ms|Prof|Eng|Rev|Hon|Fr|Sr|Jr)\.\s+/g;
+const NAME_AFTER_CALLED = /\b(?:named|called)\s+["']?((?:[^"'.,\n]|(?<=[A-Za-z])'(?=[A-Za-z])){2,80})["']?/i;
+// An email address said whole, dots and all ("maria@example.org"), before the looser contact readings that stop at a dot.
+const EMAIL_IN_TEXT = /([A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/;
+
 function extractLeadArgs(command = "", args = {}) {
-  const text = String(command || "");
-  const nameMatch = text.match(/\b(?:named|called)\s+["']?([^"'.,\n]{2,80})["']?/i)
+  const text = String(command || "").replace(PERSON_TITLES, "$1 ");
+  const nameMatch = text.match(NAME_AFTER_CALLED)
+    // "Add Grace Otieno to my customers", "Add Grace Otieno as a customer", "New customer: Grace Otieno"
+    || text.match(/\b[Aa]dd\s+([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,3})\s+(?:as|to)\s+(?:a |an |my |the |our )?(?:customer|donor|lead|client|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)s?\b/)
+    || text.match(/\b[Nn]ew\s+(?:customer|donor|lead|client|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\s*[:,-]\s*([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,3})/)
     || text.match(/\b(?:customer|donor|lead|client|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/);
   // "member"/"congregant" -- a church or congregation's own word for the
   // person being tracked -- is kept verbatim rather than forced into an
   // existing bucket; computeBusinessDashboard below counts it too.
   // "buyer"/"seller"/"tenant"/"landlord" -- a real estate workspace's own
   // words for the person being tracked -- follow the same pattern.
-  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/i);
-  const contactMatch = text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
+  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)s?\b/i);
+  const contactMatch = text.match(EMAIL_IN_TEXT)
+    || text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   return {
     name: sanitizeText(args.name || (nameMatch ? personNameOnly(nameMatch[1]) : ""), 160),
@@ -125,10 +142,11 @@ function extractLeadArgs(command = "", args = {}) {
 // "take an intake for Grace Otieno" doesn't have its name swallowed by the
 // looser "named/called" pattern matching something later in the sentence.
 function extractIntakeArgs(command = "", args = {}) {
-  const text = String(command || "");
+  const text = String(command || "").replace(PERSON_TITLES, "$1 ");
   const nameMatch = text.match(/\bintake\s+for\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/i)
-    || text.match(/\b(?:named|called)\s+["']?([^"'.,\n]{2,80})["']?/i);
-  const contactMatch = text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
+    || text.match(NAME_AFTER_CALLED);
+  const contactMatch = text.match(EMAIL_IN_TEXT)
+    || text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
   const needMatch = text.match(/\b(?:needs?|regarding|about)\s+([^"'\n.]{3,300})(?:[.?!]|$)/i);
   return {
@@ -187,7 +205,7 @@ function amountWithCurrency(text) {
   return raw ? { amount: Number(raw.replace(/,/g, "")), currency: currencyIn(adjacent[0]) } : null;
 }
 function formatMoney(currency, amount) {
-  return currency === "USD" || !currency ? `$${Number(amount).toFixed(2)}` : `${currency} ${Number(amount).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  return currency === "USD" || !currency ? `$${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${currency} ${Number(amount).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
 function extractTransactionArgs(command = "", args = {}) {
@@ -364,9 +382,12 @@ function extractGrantArgs(command = "", args = {}, options = {}) {
   const deadlineMatch = text.match(/\bdeadline\s+(?:is\s+|of\s+)?["']?([^"'.,\n]{3,40})["']?/i)
     || text.match(/\bdue\s+(?:by\s+|on\s+)?["']?([^"'.,\n]{3,40})["']?/i);
   const rawAmount = args.amount !== undefined ? Number(args.amount) : (withCurrency ? withCurrency.amount : NaN);
+  // "from/with deadline Friday" is no funder; "called Clean Water Fund from the Gates Foundation" is the program "Clean Water Fund" and the funder, not one long program name.
+  const funderOnly = funderMatch && !/^(?:deadline|due|a deadline|the deadline)\b/i.test(funderMatch[1].trim()) ? funderMatch[1].trim() : "";
+  const programOnly = programMatch ? programMatch[1].replace(/\s+(?:from|with|for|deadline|due|worth)\b.*$/i, "").trim() : "";
   return {
-    funderName: sanitizeText(args.funderName || (funderMatch ? funderMatch[1].trim() : ""), 160),
-    program: sanitizeText(args.program || (programMatch ? programMatch[1].trim() : ""), 160),
+    funderName: sanitizeText(args.funderName || funderOnly, 160),
+    program: sanitizeText(args.program || programOnly, 160),
     // Found live: a negative amount (reachable via direct tool-call
     // arguments) passed straight through with no sign check, the same gap
     // already fixed for invoice-item unitPrice/quantity.
@@ -422,9 +443,11 @@ function extractTaskArgs(command = "", args = {}, options = {}) {
   const assigneeMatch = text.match(/\bassign(?:ed)?\s+to\s+["']?([A-Z][A-Za-z .'-]{1,60})["']?/i);
   const dueMatch = text.match(/\bdue\s+(?:by\s+|on\s+)?["']?([^"'.,\n]{3,40})["']?/i);
   const priorityMatch = text.match(/\b(low|medium|high|urgent)\s*priority\b/i) || text.match(/\bpriority\s*(?:is|:)?\s*(low|medium|high|urgent)\b/i);
+  // With no commas ("call the borehole contractor due Friday") the title would swallow the due date and the owner: it stops where those begin.
+  const titleOnly = titleMatch ? titleMatch[1].replace(/\s+(?:due|assigned?\s+to|(?:low|medium|high|urgent)\s*priority|priority\b|by\s+(?:tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next)).*$/i, "").trim() : "";
   return {
-    title: sanitizeText(args.title || (titleMatch ? titleMatch[1].trim() : ""), 200),
-    assignee: sanitizeText(args.assignee || (assigneeMatch ? assigneeMatch[1].trim() : ""), 120),
+    title: sanitizeText(args.title || titleOnly, 200),
+    assignee: sanitizeText(args.assignee || (assigneeMatch ? assigneeMatch[1].replace(/\s+(?:due|(?:low|medium|high|urgent)\b|priority\b).*$/i, "").trim() : ""), 120),
     dueDate: isoDayOrText(sanitizeText(args.dueDate || (dueMatch ? dueMatch[1].trim() : ""), 40), options.today),
     // what was said, for reading back ("due Friday"); dueDate is what is stored
     dueDateText: sanitizeText(args.dueDate || (dueMatch ? dueMatch[1].trim() : ""), 40),
@@ -463,7 +486,7 @@ function resolveTask(tasks, command = "") {
 
 // "Add a showing at 12 Moi Avenue tomorrow at 3pm": a showing (viewing, site visit) is an appointment at a property, not a new property listing.
 // The title is the kind plus the place; the time words, if any, are kept apart as the start.
-const SHOWING_WORD = /\b(showing|viewing|site visit)\b/i;
+const SHOWING_WORD = /\b(showing|viewing|site visit|open house)\b/i;
 const START_TIME_TOKEN = new RegExp("(?:\\s+(?:on|at|by))?\\s+(?=" + NAME_STOP_TIME + "\\b)", "i");
 function extractShowingArgs(text) {
   const m = SHOWING_WORD.exec(text);
@@ -487,6 +510,15 @@ function extractAppointmentArgs(command = "", args = {}) {
   // Said with the word "appointment", the existing reading below applies unchanged.
   const showing = !/\bappointment\b/i.test(text) ? extractShowingArgs(text) : null;
   if (showing) return { title: sanitizeText(args.title || showing.title, 200), start: sanitizeText(args.start || showing.start, 60) };
+  // "appointment for site visit at 12 Moi Avenue tomorrow at 3pm": the start is where the DAY or TIME begins ("tomorrow at 3pm"), not the first "at", so the place stays in the title.
+  const whole = /\bappointment\s+(?:for|with|called|named|titled)\s+["']?(.+?)["']?[.!?]*$/i.exec(text);
+  if (whole) {
+    const padded = " " + whole[1];
+    const time = START_TIME_TOKEN.exec(padded);
+    if (time && padded.slice(0, time.index).trim().length >= 2) {
+      return { title: sanitizeText(args.title || padded.slice(0, time.index).trim(), 200), start: sanitizeText(args.start || padded.slice(time.index + time[0].length).trim(), 60) };
+    }
+  }
   const titleMatch = text.match(/\bappointment\s+(?:for|with|called|named|titled)\s+["']?(.+?)["']?(?=\s+(?:on|at)\s+|[,.]|$)/i)
     || text.match(/\b(?:called|named|titled)\s+["']?(.+?)["']?(?=\s+(?:on|at)\s+|[,.]|$)/i);
   const startMatch = text.match(/\b(?:on|at)\s+([^"'.,\n]{3,60})$/i);
@@ -752,7 +784,7 @@ function computeBusinessDashboard(editable) {
 // load-bearing -- see each flag's inline note -- and must stay in sync with
 // server.js's legacy nexus_business_assistant handler, which uses this same
 // function (rather than a second, hand-maintained copy of these regexes).
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "listListings", ...crmVoice.CRM_READ_INTENTS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS]);
 
 function classify(command = "") {
   // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
@@ -768,7 +800,9 @@ function classify(command = "") {
     || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
-  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)\b/i.test(command) && !/\b(?:appointment|showing|viewing|site visit)\b/i.test(command);
+  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)s?\b/i.test(command) && !/\btask\b/i.test(command) && !/\b(?:appointment|showing|viewing|site visit|open house)\b/i.test(command)
+    // "Create a volunteer coordination plan" or "a donor stewardship plan" is a plan about people, not a new person to add.
+    && !/\b(?:plan|strategy|outline|handbook|programme|program)\b/i.test(command);
   // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
   const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
@@ -784,7 +818,7 @@ function classify(command = "") {
   const wantsAddTask = /\b(?:add|create|new)\b/i.test(command) && /\btask\b/i.test(command);
   const wantsUpdateTaskStatus = !wantsAddTask && /\b(?:mark|update|set|change|complete|finish)\b/i.test(command) && /\btask\b/i.test(command);
   const wantsSyncAppointment = /\bsync\b/i.test(command) && /\b(appointment|calendar)\b/i.test(command);
-  const wantsAddAppointment = !wantsSyncAppointment && /\b(?:add|schedule|create|book|arrange|set up|new)\b/i.test(command) && (/\bappointment\b/i.test(command) || /\b(?:showing|viewing|site visit)\b/i.test(command));
+  const wantsAddAppointment = !wantsSyncAppointment && /\b(?:add|schedule|create|book|arrange|set up|new)\b/i.test(command) && (/\bappointment\b/i.test(command) || /\b(?:showing|viewing|site visit|open house)\b/i.test(command));
   // Core-essentials real estate support: property listings. "list a
   // property"/"add a listing" is a creation verb here, distinct from
   // wantsList's read-only "list my businesses" (a different noun entirely,
@@ -796,7 +830,9 @@ function classify(command = "") {
   // Widened with a real street-address pattern as an alternate noun signal.
   const looksLikeStreetAddress = /\b\d+\s+[a-z0-9.'-]+(?:\s+[a-z0-9.'-]+){0,4}\s+(?:street|st|avenue|ave|road|rd|drive|dr|lane|ln|way|court|ct|boulevard|blvd|place|pl)\b/i.test(command);
   const wantsAddListing = /\b(?:add|create|new|list)\b/i.test(command) && (/\b(listing|property)\b/i.test(command) || looksLikeStreetAddress) && !/\b(?:my|show|what|which)\b/i.test(command);
-  const wantsUpdateListingStatus = !wantsAddListing && /\b(?:mark|update|set|change)\b/i.test(command) && /\b(listing|property)\b/i.test(command);
+  // "Mark 123 Main Street as sold": a street address with a status word is a listing status change even without the word "listing".
+  const wantsUpdateListingStatus = !wantsAddListing && /\b(?:mark|update|set|change)\b/i.test(command)
+    && (/\b(listing|property)\b/i.test(command) || (looksLikeStreetAddress && new RegExp(`\\b${LISTING_STATUS_WORDS}\\b`, "i").test(command)));
   const wantsListListings = !wantsAddListing && !wantsUpdateListingStatus && /\b(listings?|properties)\b/i.test(command) && /\b(?:show|list|what|which|my|do i have)\b/i.test(command);
   const wantsGenerateDocuments = /\b(?:create|generate|draft|make)\b/i.test(command) && /\b(service agreement|contract|intake form|client intake|application checklist)\b/i.test(command);
   const wantsGenerateBusinessPlanPdf = /\bbusiness plan\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|document)\b/i.test(command);
@@ -839,12 +875,18 @@ function classify(command = "") {
   // the app, so it must not swallow unrelated text into a bogus "create a
   // workspace called <command>" plan. Require an explicit start/create verb
   // alongside the business/nonprofit/church word.
-  const wantsCreateWorkspace = /\b(business|nonprofit|non-profit|ngo|church|congregation|parish)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command);
+  // "Create a business plan for my bakery" asks for a plan, not for a workspace called by that whole sentence, so a plan, proposal or strategy word is not a workspace request.
+  const wantsCreateWorkspace = /\b(business|nonprofit|non-profit|ngo|church|congregation|parish)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command)
+    && !/\b(?:plan|proposal|strategy|pitch|forecast|budget)\b/i.test(command);
 
   // Reading the workspace back ("who are my customers", "who owes me money") and the two small changes an owner makes most (mark an invoice paid, set a follow-up day).
   const crmIntent = crmVoice.classifyCrm(command);
   if (crmIntent) return crmIntent;
+  // "Show my donations", "How much have donors given", "What did Maria Chen donate" (a question about gifts already logged; "record a donation ..." is a log).
+  const wantsDonationSummary = !wantsLogTransaction && !/\b(?:log|record|add|track|create|start|new)\b/i.test(command)
+    && /\b(?:donations?|donated|donate|donors? (?:have |has )?(?:given|gave))\b/i.test(command) && /\b(?:show|list|what|how much|total|who|tell me|give me)\b/i.test(command);
   if (wantsBusinessDashboard) return "dashboard";
+  if (wantsDonationSummary) return "donationSummary";
   if (wantsFinanceSummary) return "financeSummary";
   if (wantsList) return "list";
   if (wantsAddLead) return "addLead";
@@ -984,8 +1026,38 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
       : "";
-    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customers, ${dashboard.donors} donors, ${dashboard.sponsors} sponsors, ${dashboard.volunteers} volunteers${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} ${formatMoney(dashboard.invoiceCurrency, dashboard.invoiceTotal)} invoiced${dashboard.otherInvoiceCurrencies.length ? `, not counting invoices in ${dashboard.otherInvoiceCurrencies.join(", ")}` : ""} with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; ${formatMoney(dashboard.grantsRequestedCurrency, dashboard.grantsRequested)} in grants tracked${dashboard.otherGrantRequestedCurrencies.length ? `, not counting grants in ${dashboard.otherGrantRequestedCurrencies.join(", ")}` : ""}, ${formatMoney(dashboard.grantsAwardedCurrency, dashboard.grantsAwarded)} awarded${dashboard.otherGrantAwardedCurrencies.length ? `, not counting awarded grants in ${dashboard.otherGrantAwardedCurrencies.join(", ")}` : ""}; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customer${dashboard.customers === 1 ? "" : "s"}, ${dashboard.donors} donor${dashboard.donors === 1 ? "" : "s"}, ${dashboard.sponsors} sponsor${dashboard.sponsors === 1 ? "" : "s"}, ${dashboard.volunteers} volunteer${dashboard.volunteers === 1 ? "" : "s"}${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} ${formatMoney(dashboard.invoiceCurrency, dashboard.invoiceTotal)} invoiced${dashboard.otherInvoiceCurrencies.length ? `, not counting invoices in ${dashboard.otherInvoiceCurrencies.join(", ")}` : ""} with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; ${formatMoney(dashboard.grantsRequestedCurrency, dashboard.grantsRequested)} in grants tracked${dashboard.otherGrantRequestedCurrencies.length ? `, not counting grants in ${dashboard.otherGrantRequestedCurrencies.join(", ")}` : ""}, ${formatMoney(dashboard.grantsAwardedCurrency, dashboard.grantsAwarded)} awarded${dashboard.otherGrantAwardedCurrencies.length ? `, not counting awarded grants in ${dashboard.otherGrantAwardedCurrencies.join(", ")}` : ""}; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
     return { status: "completed", localOnly: true, response, businessDashboard: dashboard, summary: response };
+  }
+
+  // "Show my donations", "How much have donors given": the donations logged in the workspace, per currency (never added across currencies) and per giver when one was named.
+  if (intent === "donationSummary") {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) {
+      const response = "You have no business or nonprofit workspace yet, so no donations are recorded. Tell me its name and I can start one.";
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    const gifts = (resolved.client.data.editable.transactions || []).filter(row => row.type === "income" && (row.category === "donation" || /\bdonat(?:ion|ed)\b/i.test(row.description || "")));
+    if (!gifts.length) {
+      const response = `No donations are logged in "${workspaceName}" yet. Say, for example, "record a donation of 50 dollars from Maria Chen".`;
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const byCurrency = new Map();
+    for (const gift of gifts) {
+      const code = String(gift.currency || "USD").toUpperCase();
+      const entry = byCurrency.get(code) || { total: 0, count: 0, givers: new Map() };
+      entry.total += Number(gift.amount) || 0; entry.count += 1;
+      const giver = /^Donation from (.+)$/.exec(gift.description || "")?.[1];
+      if (giver) entry.givers.set(giver, (entry.givers.get(giver) || 0) + (Number(gift.amount) || 0));
+      byCurrency.set(code, entry);
+    }
+    const parts = [...byCurrency.entries()].map(([code, entry]) => {
+      const named = [...entry.givers.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([giver, total]) => `${giver} ${formatMoney(code, total)}`);
+      return `${formatMoney(code, entry.total)} from ${entry.count} gift${entry.count === 1 ? "" : "s"}${named.length ? ` (${named.join(", ")})` : ""}`;
+    });
+    const response = `Donations in "${workspaceName}": ${parts.join("; ")}.`;
+    return { status: "completed", localOnly: true, response, summary: response, businessRecord: null };
   }
 
   if (intent === "financeSummary") {
@@ -1019,6 +1091,12 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before adding customers or donors.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
+    // The same person added twice is said, not saved twice.
+    const alreadyThere = (resolved.client.data.editable.leads || []).find(row => String(row.name || "").trim().toLowerCase() === lead.name.toLowerCase() && String(row.type || "customer").toLowerCase() === lead.type);
+    if (alreadyThere) {
+      const response = `${lead.name} is already on your list as a ${lead.type} in "${workspaceName}", so I did not add them again.`;
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add ${lead.name} as a ${lead.type} to "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, leads: [...resolved.client.data.editable.leads,
       { name: lead.name, contact: lead.contact, type: lead.type, need: "", stage: "new", nextAction: "", followUpDate: "" }] };
@@ -1053,11 +1131,16 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const categoryPhrase = transaction.category ? ` for ${transaction.category}` : "";
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can log a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}". Should I go ahead?` };
+    // A donation from someone already on the list is tied to them ("Donation from Maria Chen"), and every donation is categorised as one, so "show my donations" can find it.
+    const isDonation = transaction.type === "income" && /\bdonat(?:ion|ed)\b/i.test(transaction.description);
+    const donorSaid = isDonation ? /\bfrom\s+([A-Z][A-Za-z .'-]{1,60}?)(?=\s+(?:for|on|today|yesterday|this)\b|[,.]|$)/.exec(transaction.description) : null;
+    const donorLead = donorSaid ? (resolved.client.data.editable.leads || []).find(row => String(row.name || "").trim().toLowerCase() === donorSaid[1].trim().toLowerCase()) : null;
     const editable = { ...resolved.client.data.editable, transactions: [...resolved.client.data.editable.transactions,
-      { date: todayIn(new Date(), timeZone), type: transaction.type, category: transaction.category, amount: transaction.amount, currency: transaction.currency, description: transaction.description }] };
+      { date: todayIn(new Date(), timeZone), type: transaction.type, category: transaction.category || (isDonation ? "donation" : ""), amount: transaction.amount, currency: transaction.currency,
+        description: donorLead ? `Donation from ${donorLead.name}` : transaction.description }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
-    const response = `Logged a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}".`;
+    const response = `Logged a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}".${donorLead ? ` Recorded as a donation from ${donorLead.name}.` : ""}`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 

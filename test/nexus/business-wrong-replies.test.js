@@ -49,7 +49,7 @@ test("real listings and the older appointment phrasing are unchanged", () => {
   assert.equal(classify("add a customer named Grace"), "addLead");
   assert.equal(classify("add a buyer named Grace Otieno"), "addLead");
   assert.deepEqual(extractAppointmentArgs("Add an appointment called Client meeting on Friday at 2pm"), { title: "Client meeting", start: "Friday at 2pm" });
-  assert.equal(extractAppointmentArgs("Schedule an appointment for a showing at 123 Main St on Friday 2pm").title, "a showing");
+  assert.deepEqual(JSON.parse(JSON.stringify(extractAppointmentArgs("Schedule an appointment for a showing at 123 Main St on Friday 2pm"))), { title: "a showing at 123 Main St", start: "Friday 2pm" }, "the place stays in the title and the start is the day and time");
 });
 
 test("a listing's address stops before a day or time word", () => {
