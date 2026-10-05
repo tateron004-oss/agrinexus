@@ -30,7 +30,9 @@ test("what people say is read as a repeating reminder, with the right days, time
 });
 
 test("a repeat that cannot be done is said plainly, and a missing day or task is asked for", () => {
-  for (const text of ["remind me every other day to water the plants", "remind me monthly to pay rent", "remind me every 2 hours to drink water", "remind me twice a day to take my pills"]) assert.deepEqual(readRepeatRequest(text), { action: "unsupported" }, text);
+  for (const text of ["remind me every few days to call mama", "remind me every 3 months to service the tractor", "remind me yearly to renew the licence", "remind me twice a month to check the books", "remind me every minute to blink"]) assert.deepEqual(readRepeatRequest(text), { action: "unsupported" }, text);
+  assert.deepEqual(readRepeatRequest("remind me monthly to pay rent"), { action: "need-day-of-month" });
+  assert.deepEqual(readRepeatRequest("remind me every other week to call mama"), { action: "need-day" });
   assert.deepEqual(readRepeatRequest("remind me every week to call mama"), { action: "need-day" });
   assert.deepEqual(readRepeatRequest("remind me every day"), { action: "need-task" });
 });
@@ -93,7 +95,8 @@ test("saying the same one again does not add a second, and the limit is honest",
 
 test("unsupported or unclear requests set nothing and say so", async () => {
   const store = fakeStore();
-  assert.match(await say(store, "remind me every other day to water the plants"), /can't do every other day.*Nothing was set\./);
+  assert.match(await say(store, "remind me every few days to water the plants"), /can't do yearly.*Nothing was set\./);
+  assert.match(await say(store, "remind me monthly to pay rent"), /^Which day of the month\?.*Nothing was set yet\./);
   assert.match(await say(store, "remind me every week to call mama"), /^Which day of the week\?.*Nothing was set yet\./);
   assert.match(await say(store, "remind me every day"), /^What should I remind you about\?.*Nothing was set yet\./);
   assert.equal(store.rows.length, 0);
