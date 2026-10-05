@@ -46,9 +46,12 @@ function extractProfileStatement(text) {
   const named = /\b(?:my name is|my name's|call me|you can call me|people call me)\s+([^,.!]+?)(?=\s+(?:and|but|i|we)\b|[,.!]|$)/i.exec(sentence)?.[1] || /^I(?:'m| am|’m)\s+([A-Z][A-Za-z'’-]+(?: [A-Z][A-Za-z'’-]+)?)[.!]*$/.exec(sentence)?.[1];
   if (named) add("name", properName(named, NOT_A_NAME));
 
-  const where = /\b(?:i live in|i'm based in|i am based in|i’m based in|we live in|my farm is (?:in|near)|our farm is (?:in|near)|i farm in|we farm in|i'm farming in|i am farming in)\s+([^,.!]+?)(?=\s+(?:and|but|where|because)\b|[,.!]|$)/i.exec(sentence)?.[1]
+  const where = /\b(?:i live in|i live near|we live near|i live close to|we live close to|i stay in|i stay near|we stay in|i'm based in|i am based in|i’m based in|we live in|my farm is (?:in|near)|our farm is (?:in|near)|i farm in|we farm in|i'm farming in|i am farming in)\s+([^,.!]+?)(?=\s+(?:and|but|where|because)\b|[,.!]|$)/i.exec(sentence)?.[1]
     || /\b(?:grow|farm|plant|cultivate|raise|keep)\b[^.!]*?\s(?:in|near)\s+([^,.!]+?)(?=\s+(?:and|but|where|because)\b|[,.!]|$)/i.exec(sentence)?.[1];
   if (where) add("location", properName(where, NOT_A_PLACE));
+  // "I am from Nakuru", "I come from Kitale": only when the place is written as a name (capital letter), so "I come from work" or "I am from the market" is not a place.
+  const origin = /\b(?:[Ii] come from|[Ww]e come from|[Ii] am from|[Ii]'m from|[Ii]’m from)\s+([A-Z][A-Za-z'’-]*(?: [A-Z][A-Za-z'’-]*)?)(?=\s+(?:and|but|where|because)\b|[,.!]|$)/.exec(sentence)?.[1];
+  if (origin) add("location", properName(origin, NOT_A_PLACE));
 
   const grows = /\b(?:i|we)\s+(?:mainly |mostly |also )?(?:grow|farm|plant|cultivate)\s+(.+?)(?=\s+(?:in|near|on|at)\s|[.!]|$)/i.exec(sentence)?.[1];
   if (grows && !/^(?:in|near|on|at)\b/i.test(grows)) { const crops = listOf(grows, NOT_A_CROP); if (crops.length) add("crops", crops.join(", ")); }

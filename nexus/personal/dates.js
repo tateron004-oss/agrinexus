@@ -92,6 +92,16 @@ function extractTime(text) {
   }
   const twentyFour = /\bat\s+([01]?\d|2[0-3]):([0-5]\d)\b/i.exec(source);
   if (twentyFour) return { time: `${pad(twentyFour[1])}:${twentyFour[2]}`, text: `${source.slice(0, twentyFour.index)} ${source.slice(twentyFour.index + twentyFour[0].length)}` };
+  // "at 10", "at 3": no am/pm said. 7 to 11 is the morning, 12 is noon and 1 to 6 is the afternoon (the reply always says the time, so a wrong guess is heard).
+  // Not when a unit or a thing follows ("at 3 acres", "at 5 percent"): only the end, a comma, or a word like "on" / "to" / a day word.
+  const bare = /\bat\s+(\d{1,2})(?![\d:.])(?=\s*(?:$|[.,;!?]|(?:to|on|in|for|and|with|tomorrow|today|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b))/i.exec(source);
+  if (bare) {
+    const hour = Number(bare[1]);
+    if (hour >= 1 && hour <= 12) {
+      const twentyFourHour = hour === 12 ? 12 : hour <= 6 ? hour + 12 : hour;
+      return { time: `${pad(twentyFourHour)}:00`, text: `${source.slice(0, bare.index)} ${source.slice(bare.index + bare[0].length)}` };
+    }
+  }
   const noon = /\b(?:at\s+)?(noon|midday)\b/i.exec(source);
   if (noon) return { time: "12:00", text: `${source.slice(0, noon.index)} ${source.slice(noon.index + noon[0].length)}` };
   return null;

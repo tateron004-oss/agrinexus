@@ -35,7 +35,9 @@ function readRequest(text, today) {
   if ((m = /^(?:please )?(?:schedule|book|set up|arrange|put in|put|add|plan)\s+((?:a |an |the |my )?(?:meeting|appointment|visit|interview|training|session|class|delivery|market day)\b.*?)\s+((?:on|at|for|next|this|tomorrow|today)\b.*)$/i.exec(t)))
     return eventDetails(m[1], m[2], today);
   if ((m = /^(?:please )?(?:cancel|remove|delete|take off|take)\s+(.+?)\s+(?:from|off|on) my (?:calendar|schedule|diary)$/i.exec(t))) return { action: "event-remove", query: clean(m[1]) };
-  if (/^(?:what(?:'s| is| are)|show|read|list|tell me|do i have anything on)\b.*\bmy (?:calendar|schedule|diary|events|appointments)\b/i.test(lower) ||
+  if (/^(?:what(?:'s| is| are)|what do i have|what have i got|show|read|list|tell me|do i have anything on)\b.*\bmy (?:calendar|schedule|diary|events|appointments)\b/i.test(lower) ||
+      // "What do I have on Monday?", "What's on Friday?", "Do I have anything next Tuesday?", "What do I have on 12 October?": one named day.
+      /^(?:what do i have|what have i got|what(?:'s| is) on|do i have anything(?: on)?|what(?:'s| is) happening|what(?:'s| is) planned)\s*(?:on |for |this |next )?(?:(?:mon|tues|wednes|thurs|fri|satur|sun)day|\d{1,2}(?:st|nd|rd|th)?(?: of)? [a-z]{3,9}|[a-z]{3,9} \d{1,2}(?:st|nd|rd|th)?)(?: please)?$/i.test(lower) ||
       /^(?:what do i have|what have i got|what(?:'s| is) on|do i have anything(?: on)?|what(?:'s| is) coming up)\s*(?:on |for )?(?:today|tomorrow|this week|next week)?$/i.test(lower)) {
     return { action: "event-list", range: extractRange(lower, today) };
   }
