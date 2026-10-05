@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Messages and calls setup · Kyro Genesis | AgriNexus</title>
+  <link rel="stylesheet" href="/communications-setup.css">
+  <script src="/communications-setup.js" defer></script>
+</head>
+<body>
+  <header>
+    <a href="/">← Kyro Genesis</a>
+    <p class="eyebrow">Owner only</p>
+    <h1>Messages and calls setup</h1>
+    <p class="lede">Get Kyro's texts, WhatsApp, email and phone calls working, one at a time. Each card below reads the real server settings, tells you exactly what is missing, and can send a test to <strong>your own</strong> phone or inbox (never anyone else's).</p>
+  </header>
+  <p id="notice" role="status" aria-live="polite">Checking your sign-in…</p>
+  <main>
+    <section aria-labelledby="where">
+      <h2 id="where">Where things stand</h2>
+      <div id="cards" class="cards"></div>
+      <p id="whose" class="small"></p>
+    </section>
+
+    <section aria-labelledby="steps">
+      <h2 id="steps">Setup checklist</h2>
+      <p>Do them in this order. Changing a setting in Render redeploys the app (a minute or two); then reload this page and test again. Keep keys and tokens in Render only: never paste them into Kyro, an email or a chat.</p>
+
+      <details open>
+        <summary>1. Phone calls (nothing new to set up)</summary>
+        <ol>
+          <li>In Render, open the <b>nexus-genesis-certified</b> service, then <b>Environment</b>. Check these are set: <code>PHONE_PROVIDER=twilio</code>, <code>PUBLIC_BASE_URL=https://nexus-genesis-certified.onrender.com</code>, <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, <code>TWILIO_PHONE_NUMBER</code> (a voice-capable Twilio number), <code>PHONE_REALTIME_STREAMING_ENABLED=true</code>.</li>
+          <li>In the Twilio console, open that number. Under <b>Voice</b>, set <b>A call comes in</b> to a Webhook, HTTP POST, <code>https://nexus-genesis-certified.onrender.com/api/voice/phone/incoming</code>, and the status callback to <code>…/api/voice/phone/call-status</code>.</li>
+          <li>In the Admin screen, open <b>Phone numbers for Kyro</b> and add <b>your own</b> mobile number, linked to your own account. Only listed numbers are answered as themselves; everyone else is screened and put through to you.</li>
+          <li>To let Kyro place calls, also set <code>NEXUS_CALLS_ENABLED=true</code>.</li>
+          <li>Use <b>Send myself a test</b> on the Phone calls card: your phone should ring and speak a short message. Then phone Kyro's number from your listed phone. <b>Never test by dialling from a phone that is not on the list.</b></li>
+        </ol>
+        <p class="small">A Twilio <em>trial</em> account can only call numbers you have verified in the Twilio console.</p>
+      </details>
+
+      <details>
+        <summary>2. Email (about 30 minutes)</summary>
+        <ol>
+          <li>Create a SendGrid account and an <b>API key</b> with the <b>Mail Send</b> permission (Resend works too: use <code>NEXUS_EMAIL_PROVIDER=resend</code> and <code>RESEND_API_KEY</code>).</li>
+          <li>In SendGrid open <b>Settings, Sender Authentication</b>. Fastest start: <b>Verify a Single Sender</b> with an address you control and click the link SendGrid emails you. Before real users, choose <b>Authenticate Your Domain</b> instead (you add a few DNS records) so mail is not treated as spam.</li>
+          <li>In Render set: <code>NEXUS_EMAIL_ENABLED=true</code>, <code>NEXUS_EMAIL_PROVIDER=sendgrid</code>, <code>SENDGRID_API_KEY</code>, and <code>NEXUS_EMAIL_FROM</code> = the exact verified address. <b>Kyro reads <code>NEXUS_EMAIL_FROM</code> for the sender; <code>SENDGRID_FROM_EMAIL</code> is not used.</b></li>
+          <li>Use <b>Send myself a test</b> on the Email card. It goes to your account's own email. Check the inbox and the spam folder.</li>
+        </ol>
+        <p class="small">Kyro only sends an email after the person confirms it, and cannot read email.</p>
+      </details>
+
+      <details>
+        <summary>3. WhatsApp (sandbox first, business approval in parallel)</summary>
+        <ol>
+          <li>In the Twilio console open <b>Messaging, Try it out, Send a WhatsApp message</b>. Note the sandbox number and your join code.</li>
+          <li>On your phone, open WhatsApp and send <code>join your-code</code> to the sandbox number. Only phones that did this can receive sandbox messages.</li>
+          <li>In Render set <code>NEXUS_WHATSAPP_ENABLED=true</code> and <code>TWILIO_WHATSAPP_FROM=whatsapp:+14155238886</code> (use the sandbox number Twilio shows).</li>
+          <li>Use <b>Send myself a test</b> on the WhatsApp card.</li>
+          <li><b>For real users</b>, start this now because it takes days: in Twilio open <b>Messaging, Senders, WhatsApp senders</b>, register your business number and complete Meta's business verification. Then register <b>message templates</b> (a reminder, an alert, an appointment notice): outside a 24-hour window after a person messages you, WhatsApp only allows approved templates. Finally change <code>TWILIO_WHATSAPP_FROM</code> to your approved number.</li>
+        </ol>
+      </details>
+
+      <details>
+        <summary>4. Text messages (do last)</summary>
+        <ol>
+          <li>In Twilio open <b>Messaging, Settings, Geo permissions</b> and enable every country you will text (otherwise error 21408).</li>
+          <li>Make sure the sending number is accepted by the carriers in each country. This is what error <b>30032</b> means: the number is not registered for texting. A toll-free number needs toll-free verification; some countries need a registered sender ID or a local number. Twilio's regulatory guidelines page for each country says which.</li>
+          <li>In Render set <code>NEXUS_SMS_ENABLED=true</code> (or <code>NEXUS_MESSAGES_ENABLED=true</code> for all channels) and <code>TWILIO_FROM_NUMBER</code> (or <code>TWILIO_PHONE_NUMBER</code>) to the sender.</li>
+          <li>Use <b>Send myself a test</b> on the Text messages card. It waits a moment and then reports what the phone network said, not just that Twilio accepted it.</li>
+        </ol>
+      </details>
+    </section>
+
+    <section aria-labelledby="fails">
+      <h2 id="fails">If a test fails</h2>
+      <p>The test result names the cause in plain words. The common ones:</p>
+      <ul class="codes">
+        <li><b>30032</b> the sending number is not registered for texting. Complete verification or registration in Twilio, or send from a registered number.</li>
+        <li><b>21408</b> country not enabled. Turn it on under Geo permissions.</li>
+        <li><b>21608</b> trial account: verify the recipient in Twilio, or upgrade.</li>
+        <li><b>63015 / 63007 / 63016</b> WhatsApp: join the sandbox, set a real WhatsApp sender, or use an approved template.</li>
+        <li><b>Email 403</b> the sender address is not verified with the email provider.</li>
+        <li><b>20003 / email 401</b> the account details or API key in Render are wrong.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
