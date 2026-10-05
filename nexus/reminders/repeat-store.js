@@ -11,6 +11,8 @@ const PARKED = "2100-01-01T00:00:00.000Z";
 const MAX_PER_PERSON = 20;
 
 const shape = row => ({ scheduleId: row.schedule_id, tenantId: row.tenant_id, userId: row.owner_id, task: row.payload?.task || "", timeOfDay: row.payload?.timeOfDay || "",
+  ...(Array.isArray(row.payload?.timesOfDay) && row.payload.timesOfDay.length > 1 ? { timesOfDay: row.payload.timesOfDay } : {}),
+  ...(row.payload?.hourly ? { hourly: row.payload.hourly } : {}),
   days: row.payload?.days || "daily", timeZone: row.payload?.timeZone || row.timezone, createdAt: row.created_at });
 
 class RepeatReminderRepository {
@@ -19,13 +21,14 @@ class RepeatReminderRepository {
   // Adds one repeating reminder, unless the person already has 20 or already has this exact one (same words, time and days).
   // The count and the insert share one per-person lock, so two quick requests cannot both pass the limit.
   // -> { scheduleId } | { capped: true } | { duplicate: true, scheduleId }
-  async add({ tenantId, userId, task, timeOfDay, days, timeZone }) {
+  async add({ tenantId, userId, task, timeOfDay, days, timeZone, timesOfDay = null, hourly = null }) {
     if (!tenantId || !userId || !task || !timeOfDay || !days || !timeZone) throw new Error("Tenant, user, task, time, days and time zone are required.");
-    const payload = { task, timeOfDay, days, timeZone };
+    // timesOfDay: one reminder that fires at several times a day (every 2 hours); hourly only describes it for reading back.
+    const payload = { task, timeOfDay, days, timeZone, ...(Array.isArray(timesOfDay) && timesOfDay.length > 1 ? { timesOfDay } : {}), ...(hourly ? { hourly } : {}) };
     const run = async db => {
       const existing = await db.query(`select schedule_id,payload from nexus_schedules where tenant_id=$1 and owner_id=$2 and job_type=$3 and state='active'`, [tenantId, userId, JOB_TYPE]);
       const rows = existing.rows || existing;
-      const same = rows.find(row => String(row.payload?.task || "").toLowerCase() === task.toLowerCase() && row.payload?.timeOfDay === timeOfDay && JSON.stringify(row.payload?.days) === JSON.stringify(days));
+      const same = rows.find(row => String(row.payload?.task || "").toLowerCase() === task.toLowerCase() && row.payload?.timeOfDay === timeOfDay && JSON.stringify(row.payload?.days) === JSON.stringify(days) && JSON.stringify(row.payload?.timesOfDay || null) === JSON.stringify(payload.timesOfDay || null));
       if (same) return { duplicate: true, scheduleId: same.schedule_id };
       if (rows.length >= MAX_PER_PERSON) return { capped: true };
       const created = await db.query(`insert into nexus_schedules (schedule_id,tenant_id,owner_id,job_type,payload,cadence,timezone,next_run_at,state)

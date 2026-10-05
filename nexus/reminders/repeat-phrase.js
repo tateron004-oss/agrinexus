@@ -4,7 +4,8 @@ const { extractAssistantReminderTask } = require("./time-phrase.js");
 
 // Reading a repeating reminder out of what a person said: "remind me every morning at 8 to check the pump", "every Monday at 9 remind me to call
 // the buyer", "remind me to take my pills daily at 8am and 8pm", "stop my daily reminder to check the pump", "show my repeating reminders".
-// It only reads words. It never guesses: a repeat it cannot do ("every other day", "monthly") is said plainly instead of becoming a one-time reminder.
+// Also: "every other day", "every 3 days", "every other Monday", "every 2 weeks on Friday", "on the 15th of every month", "every 2 hours", "twice a day".
+// It only reads words. It never guesses: a repeat it cannot do ("every few days", "every 3 months", "yearly") is said plainly instead of becoming a one-time reminder.
 
 const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 const DAY_WORD = "(?:sun|mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?)(?:day)?";
@@ -15,7 +16,11 @@ const PART_OF_DAY = { morning: 8, afternoon: 14, evening: 18, night: 21 };
 const ASKS_FOR_REMINDER = /\b(?:remind(?:\s+(?:me|us))?|reminder|notify me|alert me|nudge me|ping me)\b/i;
 // A question ABOUT reminders is not a request for one.
 const QUESTION = /^\s*(?:how|what|why|can i|could i|is it|is there|do you|does it|are you able)\b/i;
-const UNSUPPORTED = /\b(?:every (?:other|second|third|fourth|\d+)\b|every (?:hour|few|month|year)\b|each (?:month|year)\b|(?:monthly|yearly|annually|fortnightly|hourly|bi-?weekly|twice a (?:day|week))\b|every \d+ (?:minutes?|hours?|days?|weeks?|months?))/i;
+const UNSUPPORTED = /\b(?:every (?:few|several)\b|every (?:year|minute)\b|each year\b|(?:yearly|annually)\b|every (?:other|second|third|fourth|\d+) (?:months?|minutes?|years?)\b|every \d+ (?:months?|minutes?|years?)\b|twice a (?:week|month))/i;
+const REPEAT_COUNT_WORD = { other: 2, second: 2, third: 3, fourth: 4 };
+const repeatCount = word => (/^\d+$/.test(String(word)) ? Number(word) : REPEAT_COUNT_WORD[String(word)] || 0);
+const MINUTES = (hour, minute) => hour * 60 + minute;
+const hhmm = minutes => clock(Math.floor(minutes / 60) % 24, minutes % 60);
 const DAILY = new RegExp(`\\b(?:every|each)\\s+(?:single\\s+)?(day|morning|afternoon|evening|night)\\b|\\b(daily)\\b`, "i");
 const WEEKDAYS = /\b(?:every|each)\s+week\s?days?\b|\bweek\s?days\b|\b(?:monday|mon)\s+(?:to|through|thru|-)\s+(?:friday|fri)\b/i;
 const EVERY_DAYS = new RegExp(`\\b(?:every|each)\\s+(${DAY_WORD}(?:\\s*(?:,|and|&)\\s*${DAY_WORD})*)\\b`, "i");
@@ -56,6 +61,74 @@ function readTimes(text, partOfDay) {
   return times;
 }
 
+// A bare clock time in a window ("8", "6pm", "7:30 am"). With no am/pm: 7 to 11 is the morning, 12 noon, 1 to 6 the afternoon.
+function windowTime(hourText, minuteText, suffixText, defaultAfternoonBelow = 7) {
+  let hour = Number(hourText); const minute = minuteText === undefined ? 0 : Number(minuteText);
+  const suffix = String(suffixText || "").replace(/\./g, "");
+  if (!Number.isInteger(hour) || minute > 59) return null;
+  if (suffix) { if (hour < 1 || hour > 12) return null; hour = suffix === "pm" ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour); }
+  else if (hour > 23) return null;
+  else if (hour >= 1 && hour < defaultAfternoonBelow) hour += 12;
+  return MINUTES(hour, minute);
+}
+const WINDOW = /(?:from|between)\s+(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:to|and|until|till|-)\s*(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/i;
+const MONTH_DAY = /\b(?:on\s+)?the\s+(\d{1,2})(?:st|nd|rd|th)\b(?:\s+of\s+(?:every|each|the)\s+month)?|\b(?:every|each)\s+month\s+(?:on\s+)?(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\b/i;
+const LAST_DAY = /\b(?:on\s+)?the last day of (?:every|each|the) month\b|\blast day of (?:every|each) month\b/i;
+
+// Repeats beyond daily / weekdays / named days. Returns { kind, ... }, { action: "need-day" | "need-day-of-month" | "unsupported" } or null.
+function readUnusualRepeat(lower) {
+  let m;
+  // several times a day
+  if (/\b(?:twice|two times)\s+(?:a|per|each)\s+day\b/.test(lower)) return { kind: "times", count: 2, defaults: ["08:00", "20:00"] };
+  if (/\b(?:three times|thrice)\s+(?:a|per|each)\s+day\b/.test(lower)) return { kind: "times", count: 3, defaults: ["08:00", "14:00", "20:00"] };
+  if (/\bfour times\s+(?:a|per|each)\s+day\b/.test(lower)) return { kind: "times", count: 4, defaults: ["07:00", "12:00", "17:00", "21:00"] };
+  // every N hours, within a window (8 am to 8 pm unless the person says another)
+  if ((m = /\b(?:every|each)\s+(other|second|third|\d+)?\s*hours?\b|\bhourly\b/.exec(lower))) {
+    const every = m[1] ? repeatCount(m[1]) : 1;
+    if (!(every >= 1 && every <= 12)) return { action: "unsupported" };
+    let from = MINUTES(8, 0); let to = MINUTES(20, 0); let defaultWindow = true;
+    const win = WINDOW.exec(lower);
+    if (win) {
+      const first = windowTime(win[1], win[2], win[3]);
+      let second = windowTime(win[4], win[5], win[6], 1);
+      if (first === null || second === null) return { action: "unsupported" };
+      // "from 8 to 6" with no am/pm: the end is the same evening, so it comes after the start.
+      if (!win[6] && second <= first && second + 720 < 1440) second += 720;
+      if (second <= first) return { action: "unsupported" };
+      from = first; to = second; defaultWindow = false;
+    }
+    const times = [];
+    for (let at = from; at <= to; at += every * 60) times.push(hhmm(at));
+    if (times.length > 16) return { action: "unsupported" };
+    return { kind: "hourly", every, from: hhmm(from), to: hhmm(to), times, defaultWindow };
+  }
+  // every other day, every 3 days
+  if ((m = /\bevery\s+(other|second|third|fourth|\d+)\s+days?\b/.exec(lower))) {
+    const every = repeatCount(m[1]);
+    if (every >= 2 && every <= 60) return { kind: "interval", unit: "day", every };
+    if (every > 60) return { action: "unsupported" };
+  }
+  // every other Monday, every 2 weeks (on Friday), fortnightly
+  const weekWord = new RegExp(`\\bevery\\s+(other|second|third|fourth|\\d+)\\s+(?:weeks?\\b|(${DAY_WORD})s?\\b)|\\b(?:fortnightly|bi-?weekly)\\b`, "i");
+  if ((m = weekWord.exec(lower))) {
+    const every = /fortnightly|bi-?weekly/i.test(m[0]) ? 2 : repeatCount(m[1]);
+    if (!(every >= 2 && every <= 12)) return { action: "unsupported" };
+    const named = [...lower.matchAll(new RegExp(DAY_WORD, "ig"))].map(item => dayNumber(item[0])).filter(number => number !== undefined);
+    const weekdays = [...new Set(m[2] ? [dayNumber(m[2])] : named)].sort((a, b) => a - b);
+    if (!weekdays.length) return { action: "need-day" };
+    return { kind: "interval", unit: "week", every, weekdays };
+  }
+  // monthly, on the 15th of every month, on the last day of the month
+  if (/\bmonthly\b|\b(?:every|each)\s+month\b/.test(lower) || LAST_DAY.test(lower) || /\bof (?:every|each) month\b/.test(lower)) {
+    if (LAST_DAY.test(lower)) return { kind: "monthly", dayOfMonth: 31, last: true };
+    const day = MONTH_DAY.exec(lower);
+    const number = day ? Number(day[1] || day[2]) : 0;
+    if (number >= 1 && number <= 31) return { kind: "monthly", dayOfMonth: number, last: false };
+    return { action: "need-day-of-month" };
+  }
+  return null;
+}
+
 function pickDays(text) {
   if (WEEKDAYS.test(text)) return { days: "weekdays", partOfDay: "" };
   const every = EVERY_DAYS.exec(text);
@@ -75,6 +148,13 @@ function pickDays(text) {
 }
 
 const STRIP = [
+  /\bevery\s+(?:other|second|third|fourth|\d+)\s+(?:days?|weeks?|hours?)\b/ig,
+  new RegExp(`\\bevery\\s+(?:other|second|third|fourth|\\d+)\\s+${DAY_WORD}s?\\b`, "ig"),
+  /\b(?:on\s+)?the\s+\d{1,2}(?:st|nd|rd|th)\b(?:\s+of\s+(?:every|each|the)\s+month)?/ig, /\b(?:on\s+)?the last day of (?:every|each|the) month\b/ig, /\bof (?:every|each) month\b/ig,
+  /\b(?:every|each)\s+(?:month|hour)\b/ig, /\b(?:hourly|monthly|fortnightly|bi-?weekly)\b/ig,
+  /\b(?:from|between)\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?\s*(?:to|and|until|till|-)\s*\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?/ig,
+  /\b(?:twice|two times|three times|thrice|four times)\s+(?:a|per|each)\s+day\b/ig,
+  /\bon\s+(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)day\b(?:\s*(?:,|and|&)\s*(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)day\b)*/ig,
   new RegExp(`\\b(?:every|each)\\s+(?:single\\s+)?(?:day|morning|afternoon|evening|night)\\b`, "ig"),
   /\b(?:every|each)\s+week\s?days?\b/ig, /\bweek\s?days\b/ig, /\b(?:monday|mon)\s+(?:to|through|thru|-)\s+(?:friday|fri)\b/ig,
   new RegExp(`\\b(?:every|each)\\s+${DAY_WORD}(?:\\s*(?:,|and|&)\\s*${DAY_WORD})*\\b`, "ig"),
@@ -117,6 +197,26 @@ function readRepeatRequest(rawText) {
   if (QUESTION.test(text) && !/^(?:can|could|would) you\b/i.test(text)) return null;
   if (!ASKS_FOR_REMINDER.test(text)) return null;
   if (UNSUPPORTED.test(lower)) return { action: "unsupported" };
+  const unusual = readUnusualRepeat(lower);
+  if (unusual?.action) return unusual;
+  if (unusual) {
+    const task = taskFrom(text);
+    if (!task) return { action: "need-task" };
+    const part = (/\b(morning|afternoon|evening|night)\b/.exec(lower) || [])[1] || "";
+    const calm = pickDays(lower);
+    const outer = calm && (calm.days === "weekdays" || Array.isArray(calm.days)) ? calm.days : "daily";
+    let times;
+    if (unusual.kind === "hourly") times = unusual.times;
+    else {
+      times = readTimes(lower.replace(taskPart(lower), " "), part);
+      if (unusual.kind === "times") times = times.length >= unusual.count ? times.slice(0, unusual.count) : unusual.defaults;
+      else if (!times.length) times = [clock(PART_OF_DAY[part] === undefined ? 9 : PART_OF_DAY[part], 0)];
+    }
+    const days = unusual.kind === "times" || unusual.kind === "hourly" ? outer
+      : unusual.kind === "monthly" ? { unit: "month", every: 1, dayOfMonth: unusual.dayOfMonth, last: unusual.last }
+      : unusual.unit === "week" ? { unit: "week", every: unusual.every, weekdays: unusual.weekdays } : { unit: "day", every: unusual.every };
+    return { action: "add", task, times: times.slice(0, 16), days, ...(unusual.kind === "hourly" ? { hourly: { every: unusual.every, from: unusual.from, to: unusual.to, defaultWindow: unusual.defaultWindow } } : {}) };
+  }
   const picked = pickDays(lower);
   if (!picked) return null;
   if (picked.days === "weekly-no-day") return { action: "need-day" };
