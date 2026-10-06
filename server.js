@@ -2718,7 +2718,7 @@ const PROFILE_OWNER_STAMP_KEYS_EXTRA = [
   "tradeLogisticsRecords", "tradeMessages", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "providerOutreach", "droneFindings", "shiftSchedule",
   "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations",
   "applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests",
-  "buyerContacts", "tradeMessageThreads",
+  "buyerContacts", "tradeMessageThreads", "voiceSessions", "assistantReminders",
   "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"
 ];
 const profileOwnerStamping = new (require("node:async_hooks").AsyncLocalStorage)();
@@ -2747,13 +2747,17 @@ const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(
 
 // Whose money and trade records a person is shown: their own, and those with no personal owner mark (the demo data and anything made before owner marks existed). An Admin is shown all.
 const MONEY_VIEW_KEYS = ["orders", "tradeMessages", "tradeMessageThreads", "buyerContacts", "tradeQuotes", "contractPackets", "tradeLogisticsRecords", "qualityInspections", "coldChainChecks", "exportReadiness", "providerOutreach", ...LEDGER_VIEW_KEYS];
+// Everything else a person makes in the shared lists (spoken and chat sessions, reminders, workforce paperwork, payroll and reviews, saved providers and notes, field locations, drone requests, ...) is theirs
+// too. Only what is meant for everyone to see is left out of this: public listings, the shared map layers, field findings, and the review queues staff work from.
+const SHARED_BY_DESIGN_KEYS = new Set(["marketplaceListings", "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "droneFindings", "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue"]);
+const personalViewKeys = () => [...new Set([...MONEY_VIEW_KEYS, ...profileStampKeys().filter(key => !HEALTH_PROFILE_ARRAY_KEYS.has(key) && !SHARED_BY_DESIGN_KEYS.has(key))])];
 const ownerOfRecord = item => [...PROFILE_OWNER_FIELDS, "_ledgerOwner"].map(field => String(item?.[field] || "").trim().toLowerCase()).filter(value => value.includes("@"));
 const recordOwnedByAnotherPerson = (item, viewerEmail) => Boolean(item && typeof item === "object") && ownerOfRecord(item).some(value => value !== viewerEmail);
 function moneyRecordsForViewer(profile, user) {
   if (!profile || !user || user.role === "Admin") return profile;
   const viewer = String(user.email || "").trim().toLowerCase();
   let copy = null;
-  for (const key of MONEY_VIEW_KEYS) {
+  for (const key of personalViewKeys()) {
     const list = profile[key];
     if (!Array.isArray(list)) continue;
     const kept = list.filter(item => !recordOwnedByAnotherPerson(item, viewer));
