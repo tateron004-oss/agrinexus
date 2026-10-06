@@ -5787,6 +5787,25 @@ function profileForUser(profile, user) {
   return withoutOwnerMarks(privateHistoryForViewer(profileForUserByRole(profile, user), user));
 }
 
+// Health records belong to the person who made them. Found by a live check against a copy of the app: a second signed-in Standard User received the first user's health intake (patient name and needs)
+// in /api/state, and in the cloud-agent status and audit routes that return the same data, because db.profile is one shared record and only investors and guests were given a redacted view. A Standard
+// User now sees the health records they made, and any record that carries no personal owner mark (the demo data and records made before owner marks existed); an Admin and a Provider Reviewer, whose job
+// is to see them, still see everything. A record owned by another person is left out.
+const HEALTH_SEEN_BY_ALL_ROLES = new Set(["Admin", "Provider Reviewer"]);
+function healthRecordsForViewer(profile, user) {
+  if (!profile || !user || HEALTH_SEEN_BY_ALL_ROLES.has(user.role)) return profile;
+  const viewer = String(user.email || "").trim().toLowerCase();
+  const ownedByAnotherPerson = item => PROFILE_OWNER_FIELDS.some(field => { const value = String(item?.[field] || "").trim().toLowerCase(); return value.includes("@") && value !== viewer; });
+  let copy = null;
+  for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
+    const list = profile[key];
+    if (!Array.isArray(list)) continue;
+    const kept = list.filter(item => !(item && typeof item === "object" && ownedByAnotherPerson(item)));
+    if (kept.length !== list.length) { copy = copy || { ...profile }; copy[key] = kept; }
+  }
+  return copy || profile;
+}
+
 function profileForUserByRole(profile, user) {
   // The existing health-record projection below was written for the
   // Investor role, but db.profile is one shared, non-per-user blob -- a
@@ -5795,7 +5814,8 @@ function profileForUserByRole(profile, user) {
   // a full Standard User and would see every real chronic-care/telehealth
   // record ever created in this workspace, unredacted. Route guests
   // through the same projection as investors rather than skipping it.
-  if (!profile || !isRestrictedHealthViewer(user)) return profile;
+  if (!profile) return profile;
+  if (!isRestrictedHealthViewer(user)) return healthRecordsForViewer(profile, user);
   const projected = { ...profile };
   for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
     if (Array.isArray(profile[key])) projected[key] = profile[key].map(record => projectHealthRecordForUser(record, user, key));
