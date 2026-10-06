@@ -125,9 +125,10 @@ function stripTrailingPunctuation(text) {
 // "2 million", "2.5 million", "3 thousand", "1.2 billion" -> 2000000, 2500000, 3000, 1200000000. Without this, "Record income of 2 million shillings" was read as
 // an income of 2 (a million times too small) and "3 thousand shillings" as 3, saved silently. Only the WORDS thousand/million/billion are expanded:
 // a bare "k" or "m" could be kilometres, metres or a 5k run.
-const MAGNITUDES = { thousand: 1e3, million: 1e6, billion: 1e9 };
+const MAGNITUDES = { hundred: 1e2, thousand: 1e3, million: 1e6, billion: 1e9 };
 function expandMagnitudes(text) {
-  return String(text ?? "").replace(/(\d[\d,]*(?:\.\d+)?)\s*(thousand|million|billion)\b/gi, (whole, digits, word) => {
+  // "3 hundred" is 300 (it was read as 3)
+  return String(text ?? "").replace(/(\d[\d,]*(?:\.\d+)?)\s*(hundred|thousand|million|billion)\b/gi, (whole, digits, word) => {
     const value = Number(digits.replace(/,/g, "")) * MAGNITUDES[word.toLowerCase()];
     return Number.isFinite(value) ? String(Math.round(value * 100) / 100) : whole;
   });
@@ -152,6 +153,8 @@ function expandMoneyShorthand(text) {
   out = out.replace(new RegExp(`(${CURRENCY_LEAD}\\s*)${kilo}`, "gi"), (whole, lead, digits) => `${lead}${thousands(digits) ?? digits + "k"}`);
   out = out.replace(new RegExp(`\\b((?:for|at|@|paid|pay|cost|costs|costing|spent|worth|of|price|total|earned|made|received|got)\\s+(?:about |around )?)${kilo}`, "gi"), (whole, lead, digits) => `${lead}${thousands(digits) ?? digits + "k"}`);
   out = out.replace(new RegExp(`${kilo}(?=\\s*${CURRENCY_TAIL}\\b)`, "gi"), (whole, digits) => thousands(digits) ?? whole);
+  // "sold maize for 1 500" / "paid 12 000": a space between the thousands, in a money place only (a count of kilos or bags is never joined)
+  out = out.replace(new RegExp(`\\b((?:for|at|@|paid|pay|cost|costs|costing|spent|worth|price|total|earned|made|received|got)\\s+(?:about |around )?|${CURRENCY_LEAD}\\s*)(\\d{1,3}) (\\d{3})(?![\\d,.]|\\s*(?:kgs?|kilos?|grams?|g|litres?|liters?|acres?|bags?|sacks?|crates?|%|percent|days?|hours?|pieces?|heads?))`, "gi"), (whole, lead, a, b) => `${lead}${a}${b}`);
   // "200 bob" / "200 bobs" are shillings (after "6k bob" has become "6000 bob")
   out = out.replace(/(\d[\d,]*(?:\.\d+)?)\s*bobs?\b/gi, "$1 shillings");
   return out;
@@ -160,7 +163,9 @@ function expandMoneyShorthand(text) {
 function normalizeSpokenText(text) {
   const raw = String(text ?? "");
   if (!raw.trim()) return raw;
-  return stripTrailingPunctuation(expandMoneyShorthand(expandMagnitudes(convertNumberWords(raw))));
+  // "3 hundred" first, while it is still a digit and a word: the word reader would turn the lone "hundred" into 100 and leave "3 100".
+  const digitHundreds = raw.replace(/(\d[\d,]*(?:\.\d+)?)\s*hundred\b/gi, (whole, digits) => { const value = Number(digits.replace(/,/g, "")) * 100; return Number.isFinite(value) ? String(Math.round(value * 100) / 100) : whole; });
+  return stripTrailingPunctuation(expandMoneyShorthand(expandMagnitudes(convertNumberWords(digitHundreds))));
 }
 
 module.exports = Object.freeze({ normalizeSpokenText, convertNumberWords, stripTrailingPunctuation, expandMagnitudes, expandMoneyShorthand });

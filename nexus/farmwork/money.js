@@ -23,7 +23,7 @@ const stockCategory = { seed: "seed", fertiliser: "fertiliser", chemicals: "chem
 function incomeCategory(text) {
   if (/\b(?:milk)\b/i.test(text)) return "milk"; if (/\b(?:eggs?)\b/i.test(text)) return "eggs";
   if (/\b(?:cows?|cattle|bulls?|heifers?|calf|goats?|sheep|pigs?|chickens?|hens?|rabbits?|animals?|livestock)\b/i.test(text)) return "livestock";
-  return /\b(?:maize|beans?|cassava|rice|wheat|sorghum|millet|tomato(?:es)?|potato(?:es)?|cabbage|kale|onions?|bananas?|coffee|tea|groundnuts?|vegetables?|fruit|crops?|harvest|grain)\b/i.test(text) ? "crops" : "other";
+  return /\b(?:maize|beans?|cassava|rice|wheat|sorghum|millet|tomato(?:es)?|potato(?:es)?|cabbage|kale|onions?|bananas?|coffee|tea|groundnuts?|vegetables?|fruit|crops?|harvest|grain|sukuma(?: wiki)?|spinach|managu|saget|terere|cowpeas?|lettuce|coriander|dhania|capsicum|carrots?|pumpkins?|watermelons?|mangoe?s?|avocados?|passion fruits?|pineapples?|sweet potatoes?|arrow ?roots?|sugar ?cane|sunflowers?|peas|green grams?|pigeon peas)\b/i.test(text) ? "crops" : "other";
 }
 
 // An amount said with no currency takes the one the person has always used. If they have used more than one, nothing is guessed: it is recorded with no currency
@@ -46,19 +46,24 @@ const currencyKey = (records, currency) => {
 // Not everything someone buys or sells is farm business. A sale or purchase that matches no farm word is only recorded for a person who already
 // keeps farm records; for anyone else it is left to normal planning ("I sold my old car").
 const NOT_FARM = Symbol("not-farm");
+const MAX_AMOUNT = 100000000;
 
 async function recordMoney(ctx, entry) {
   if (entry.category === "other" && !(await ctx.hasFarmData())) throw NOT_FARM;
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   const all = await ctx.store.list({ ...scope, collection: "money" });
   if (all.length >= 5000) return { refused: "Your money records are full (five thousand entries). Ask me for a summary, then remove some." };
+  // A mis-heard or mistyped extra digit would otherwise sit in every total for good. Nothing is saved; the person is asked to say it again.
+  if (!(entry.amount > 0) || entry.amount > MAX_AMOUNT) return { refused: `${formatMoney(entry.amount, entry.currency)} looks wrong, so I have not recorded it. I only record amounts up to ${formatMoney(MAX_AMOUNT, entry.currency)}. Please say it again with the right amount.` };
   const currency = isSpecific(entry.currency) ? entry.currency : entry.currency === "shillings" ? specificCurrency(all, SHILLING_KINDS) || "shillings" : defaultCurrency(all) || "";
   const record = await ctx.store.add({ ...scope, collection: "money", data: { ...entry, currency, day: entry.day || ctx.entryDay || ctx.today } });
   return { record, all: [record, ...all] };
 }
 
 // Money still owed to the farmer (a sale on credit) is not income yet: it is counted when it is paid.
-const isCounted = record => !(record.data.type === "income" && record.data.unpaid);
+// Household costs ("paid school fees 12000") are kept but are not the farm's, so they are not in its totals or profit.
+const HOUSEHOLD = /^(?:school fees|fees|school|food|groceries|airtime|electricity|water bill|church|tithe|funeral|wedding|hospital|medical|doctor|shopping|bills?|dowry|bride price|harambee|contribution)$/i;
+const isCounted = record => !(record.data.type === "income" && record.data.unpaid) && record.data.category !== "household";
 const sum = (records, type) => records.filter(record => record.data.type === type && isCounted(record)).reduce((acc, record) => { const key = currencyKey(records, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.amount); return acc; }, {});
 const showTotals = totals => { const entries = Object.entries(totals); return entries.length ? entries.map(([currency, amount]) => formatMoney(amount, currency)).join(" and ") : "0"; };
 const inPeriod = (record, period) => record.data.day >= period.from && record.data.day <= period.to;
@@ -82,7 +87,10 @@ function splitCompound(text) {
   if (!m) return [text];
   const pieces = m[2].split(/\s*(?:,|;|\band\b|\bplus\b|\bthen\b)\s+(?=\S)/i).map(clean).filter(Boolean);
   if (pieces.length < 2 || pieces.length > 6) return [text];
-  const sentences = pieces.map(piece => `${m[1]} ${piece}`);
+  // A part that has its own verb ("bought seed for 2000", "paid the transporter 500") keeps it. It used to be given the first verb, so a purchase after a sale became "sold bought seed"
+  // and was counted as income.
+  const subject = /^(?:i|we) /i.test(m[1]) ? `${m[1].split(" ")[0]} ` : "";
+  const sentences = pieces.map(piece => (/^(?:sold|bought|purchased|spent|paid)\b/i.test(piece) ? `${subject}${piece}` : `${m[1]} ${piece}`));
   return sentences.every(sentence => parseMoney(sentence)) ? sentences : [text];
 }
 const RECORDING = /^(?:i |we )?(?:sold|bought|purchased|spent|paid|received|got|earned|made)\b|^(?:income|expense)\s*[:,-]|^(?:mark )?[A-Za-z][A-Za-z' -]{1,30}? (?:has |have )?paid\b/i;
@@ -97,7 +105,16 @@ async function handle(ctx) {
       const when = whenOf(text, ctx.today);
       if (when?.day && when.text) run = { ...ctx, text: when.text, entryDay: when.day };
     }
-    const dated = reply => (reply && run.entryDay && /^Recorded:/.test(reply) ? `${reply} Dated ${describeDay(run.entryDay, ctx.today)}.` : reply);
+    // "sold maize some time ago for 5000": no day was given, so it is dated today, and the person is told how to change it.
+    const vague = RECORDING.test(text) && !run.entryDay && /\b(?:some time ago|a while ago|long ago|a few days ago|earlier this (?:week|month)|the other day|last (?:week|month|season)|a week ago|weeks ago|months ago)\b/i.test(text);
+    const dated = reply => (reply && run.entryDay && /^Recorded:/.test(reply) ? `${reply} Dated ${describeDay(run.entryDay, ctx.today)}.`
+      : reply && vague && /^Recorded:/.test(reply) ? `${reply} I did not have a day, so it is dated today. Say "yesterday", "last Friday" or a date like "10 September" to give the day.` : reply);
+    // "I sold maize and paid the transporter 500": the 500 is the cost, and the sale has no price. It used to be recorded as a sale of 500. Nothing is guessed: ask for the price.
+    const unpriced = /^(?:i |we )?(sold|bought|purchased)\s+(.+?)\s+(?:and|then|plus)\s+(?:i |we )?(?:paid|bought|purchased|spent|sold)\b/i.exec(clean(run.text));
+    if (unpriced && !/\d/.test(unpriced[2])) {
+      const thing = unpriced[2].replace(/^(?:the|some|my)\s+/i, "");
+      return `I can't tell what the ${thing} ${unpriced[1] === "sold" ? "sold" : "cost"} for. Nothing is recorded yet. Tell me each one on its own, like "${unpriced[1]} ${unpriced[2]} for 5000", and then the other one.`;
+    }
     const parts = splitCompound(clean(run.text).replace(/[.!?]+$/g, ""));
     if (parts.length === 1) return dated(await handleMoney(run));
     const replies = []; const unread = [];
@@ -213,7 +230,8 @@ async function ledgerFixes(ctx, t, lower) {
 }
 
 async function handleMoney(ctx) {
-  const t = clean(ctx.text).replace(/[.!?]+$/g, ""); const lower = t.toLowerCase();
+  // "paid 300 for the pickup" / "paid 2000 on fuel" is a cost, the same as "spent 300 on the pickup" (it was not read at all). "paid 5000 to Wanjiru" and "paid Wanjiru 5000" are left as they are.
+  const t = clean(ctx.text).replace(/[.!?]+$/g, "").replace(/^((?:i |we )?)paid ((?:(?:ksh|kshs|kes|tsh|ugx|usd|[$€£])\s?)?\d[\d,]*(?:\.\d+)?(?: shillings| dollars)?) (?:for|on) (?!me\b|us\b)/i, "$1spent $2 on "); const lower = t.toLowerCase();
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   let m;
   const fixed = await ledgerFixes(ctx, t, lower);
@@ -357,10 +375,18 @@ async function handleMoney(ctx) {
     return `Recorded: bought ${boughtWhat} for ${formatMoney(amount, result.record.data.currency)} (${category}).${stockNote} Spent this month: ${showTotals(sum(month, "expense"))}.`;
   }
   if ((m = /^(?:i |we )?paid ([A-Za-z][A-Za-z']+(?: [A-Za-z][A-Za-z']+)?) (.+)$/i.exec(t)) && !/^(?:the|my|for|to|a|an|out|off|back|attention|up|in|it|them|him|her)\b/i.test(m[1]) && parseMoney(`paid ${m[1]} ${m[2]}`)) {
-    const who = titleCase(m[1]); const money = parseMoney(`paid ${m[1]} ${m[2]}`); const forWhat = /\bfor (.+)$/i.exec(m[2])?.[1] || "labour";
-    const result = await recordMoney(ctx, { type: "expense", category: expenseCategory(forWhat) === "other" ? "labour" : expenseCategory(forWhat), amount: money.amount, currency: money.currency, party: who, item: forWhat.toLowerCase().slice(0, 60), note: `paid ${who}` });
+    // "paid school fees 12000": the two words are not a person. Kept as a household cost, out of the farm's profit, and said so.
+    if (HOUSEHOLD.test(m[1])) {
+      const thing = m[1].toLowerCase(); const paid = parseMoney(`paid ${m[1]} ${m[2]}`);
+      const saved = await recordMoney(ctx, { type: "expense", category: "household", amount: paid.amount, currency: paid.currency, item: thing, note: `paid ${thing}` });
+      if (saved.refused) return saved.refused;
+      return `Recorded: paid ${thing} ${formatMoney(paid.amount, saved.record.data.currency)} (household). I keep household costs out of your farm profit.`;
+    }
+    // Nobody is assumed to be labour: with no reason said it goes under "other", and the person is told how to say it.
+    const who = titleCase(m[1]); const money = parseMoney(`paid ${m[1]} ${m[2]}`); const said = /\bfor (.+)$/i.exec(m[2])?.[1]; const forWhat = said || "payment";
+    const result = await recordMoney(ctx, { type: "expense", category: expenseCategory(forWhat), amount: money.amount, currency: money.currency, party: who, item: forWhat.toLowerCase().slice(0, 60), note: `paid ${who}` });
     if (result.refused) return result.refused;
-    return `Recorded: paid ${who} ${formatMoney(money.amount, result.record.data.currency)} for ${forWhat.toLowerCase().slice(0, 60)}.`;
+    return `Recorded: paid ${who} ${formatMoney(money.amount, result.record.data.currency)}${said ? ` for ${forWhat.toLowerCase().slice(0, 60)}` : ""}.${said ? "" : ' I did not have a reason, so it is under "other". Say "for labour" or "for transport" next time so it goes under the right cost.'}`;
   }
 
   // ---- asking ----
