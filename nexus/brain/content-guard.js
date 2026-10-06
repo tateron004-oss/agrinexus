@@ -7,7 +7,7 @@ const { investmentGuardReply } = require("./investment-guard.js");
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 
 // ---- explicit material ----
-const EXPLICIT_TERM = /\b(?:porn(?:ography|o)?|xxx|nudes?|naked (?:pictures?|photos?|pics?|videos?|girls?|women|men|boys|ladies)|sex (?:videos?|tapes?|pictures?|pics?|chat|sites?)|erotic(?:a)?|hentai|onlyfans|sexting|strip ?tease|adult (?:videos?|sites?|content))\b/;
+const EXPLICIT_TERM = /\b(?:porn(?:ography|o)?|xxx|nudes?|naked (?:pictures?|photos?|pics?|videos?|girls?|women|men|boys|ladies)|sex (?:videos?|tapes?|pictures?|pics?|chat|sites?)|erotic(?:a)?|hentai|onlyfans|sexting|strip ?tease|adult (?:videos?|sites?|content)|explicit (?:videos?|pictures?|photos?|pics?|content|material|images?|sites?|websites?|movies?|clips?))\b/;
 const EXPLICIT_REQUEST = /\b(?:show|find|send|get|give|download|watch|see|search(?: for)?|looking for|link(?:s)? to|sites? for|websites? for|where (?:can|do|could) (?:i|we) (?:watch|find|see|get|download)|i want|i need|let me see|can i (?:see|get|have))\b/;
 // A question ABOUT it (is it harmful, my child watches it, how do I stop) is a different thing and is answered normally.
 const EXPLICIT_QUESTION_ABOUT = /\b(?:addict(?:ed|ion)?|harm(?:ful)?|bad for|dangerous|effects? of|why (?:is|are|do)|should i|ashamed|quit|stop (?:watching|looking)|my (?:son|daughter|child|children|brother|sister|husband|wife|boyfriend|girlfriend|student|pupil)|block(?:ing)?|parental|filter|report|abuse|blackmail|leaked|shared my)\b/;
