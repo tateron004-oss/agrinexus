@@ -68,9 +68,21 @@ const UNIT_MS = { minute: 60 * 1000, hour: 60 * 60 * 1000 };
 // Plain misspellings of the words a time is made of ("tomorow at 6"), so they are read as the time they mean and not dropped in favour of a guess.
 // A spelled-out number of minutes, hours, days or weeks ("in two minutes", "in ten minutes") is read as the digits, so it is not missed and turned into "tomorrow". ("one" stays: "in one hour" is read as it was.)
 const NUMBER_WORDS = Object.freeze({ two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, "forty five": 45, sixty: 60 });
-const fixTimeSpelling = text => String(text || "").replace(/\b(?:tomorow|tommorow|tommorrow|tomorro|tomorrw|tmrw|2morrow|2moro|tomoro)\b/gi, "tomorrow").replace(/\bo['’]?clock\b/gi, "oclock")
+// Other ways people say a clock time, brought to the plain forms below ("at 3:30", "at 7pm", "in 150 minutes"), so they are read as the time they mean. Found by the persona audit: "at 12 noon" was
+// midnight, "half past 3", "quarter to 5" and "after 2 hours" were not read and quietly became tomorrow, "at 7 in the evening" was said back as "7", "by 5pm" cut the word "by" out of the task.
+const plainClockWords = text => String(text)
+  .replace(/\b(?:at\s+)?12(?::00)?\s*(noon|midday|midnight)\b/gi, (whole, word) => `at ${word}`)
+  .replace(/\b(?:at\s+)?half\s+past\s+(\d{1,2})\b/gi, (whole, hour) => `at ${hour}:30`)
+  .replace(/\b(?:at\s+)?quarter\s+past\s+(\d{1,2})\b/gi, (whole, hour) => `at ${hour}:15`)
+  .replace(/\b(?:at\s+)?quarter\s+to\s+(\d{1,2})\b/gi, (whole, hour) => `at ${Number(hour) <= 1 ? 12 : Number(hour) - 1}:45`)
+  .replace(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s+(?:in\s+the\s+|of\s+the\s+)(morning|afternoon|evening)\b/gi, (whole, hour, minute, part) => `at ${hour}${minute ? `:${minute}` : ""}${/^morning/i.test(part) ? "am" : "pm"}`)
+  .replace(/\b(?:by|around|about)\s+(?=(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{1,2}:\d{2}|\d{1,2}\s*o['’]?clock)\b)/gi, "at ")
+  .replace(/\baround\s+(\d{1,2})(?=\s+to\b)/gi, "at $1")
+  .replace(/\bin\s+(\d{1,2})(?:\s+and\s+a\s+half|\.5)\s+(hours?|hrs?)\b/gi, (whole, hours) => `in ${Number(hours) * 60 + 30} minutes`)
+  .replace(/\bafter\s+(\d{1,3}\s*(?:minutes?|mins?|hours?|hrs?)|an?\s+(?:hour|minute)|half\s+an?\s+hour)\b/gi, "in $1");
+const fixTimeSpelling = text => plainClockWords(String(text || "").replace(/\b(?:tomorow|tommorow|tommorrow|tomorro|tomorrw|tmrw|2morrow|2moro|tomoro)\b/gi, "tomorrow").replace(/\bo['’]?clock\b/gi, "oclock")
   .replace(/\bin\s+(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty[ -]five|sixty)\s+(minutes?|mins?|hours?|hrs?|days?|weeks?)\b/gi,
-    (whole, word, unit) => `in ${NUMBER_WORDS[word.toLowerCase().replace("-", " ")]} ${unit}`);
+    (whole, word, unit) => `in ${NUMBER_WORDS[word.toLowerCase().replace("-", " ")]} ${unit}`));
 
 function parseTimeInner(text = "", options = {}) {
   const zone = validTimeZone(options.timeZone || DEFAULT_TIME_ZONE);
@@ -154,6 +166,18 @@ function parseTimeInner(text = "", options = {}) {
     }
   }
 
+  // "on the 22nd" (no month): the next time that day of the month comes round, this month if it has not passed. A month with no such day (the 31st) is skipped.
+  const dayOfMonth = lower.match(/\bon\s+the\s+(\d{1,2})(?:st|nd|rd|th)\b(?!\s+(?:of\s+)?(?:\w+\s+)?(?:\d{4}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/);
+  if (dayOfMonth && Number(dayOfMonth[1]) >= 1 && Number(dayOfMonth[1]) <= 31) {
+    const wanted = Number(dayOfMonth[1]); const clock = dayClock();
+    for (let step = 0; step < 14; step += 1) {
+      const monthIndex = now.month - 1 + step; const year = now.year + Math.floor(monthIndex / 12); const month = (monthIndex % 12) + 1;
+      if (wanted > new Date(Date.UTC(year, month, 0)).getUTCDate()) continue;
+      const scheduled = zonedTimeToUtc(year, month, wanted, clock.hour, clock.minute, 0, zone);
+      if (scheduled.getTime() > nowInstant.getTime()) return { scheduledAt: scheduled.toISOString(), whenLabel: `on the ${dayOfMonth[1]}${dayOfMonth[0].match(/(st|nd|rd|th)\b/)[1]}${timeLabel()}` };
+    }
+  }
+
   const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   // Picking the weekday that appears EARLIEST IN THE TEXT (not earliest in the Sun-Sat array) matches what a person said first: "friday, not sunday".
   const weekdayPositions = dayNames.map(day => lower.indexOf(day)).map((position, index) => ({ index, position }));
@@ -186,6 +210,14 @@ function parseTimeInner(text = "", options = {}) {
     let scheduled = zonedTimeToUtc(now.year, now.month, now.day, parsedClock ? parsedClock.hour : targetHour, parsedClock ? parsedClock.minute : 0, 0, zone);
     if (scheduled.getTime() <= nowInstant.getTime()) scheduled = new Date(nowInstant.getTime() + (thisPeriod ? 60 : 3 * 60) * 60 * 1000);
     return { scheduledAt: scheduled.toISOString(), whenLabel: thisPeriod ? `this ${thisPeriod[1]}` : "later today" };
+  }
+  // "in the evening" with no day: this evening if it has not come, else tomorrow's. It used to become "tomorrow" at the default time.
+  const inPart = !parsedClock && lower.match(/\b(?:in|during)\s+the\s+(morning|afternoon|evening|night)\b/);
+  if (inPart) {
+    let scheduled = zonedTimeToUtc(now.year, now.month, now.day, PERIOD_HOUR[inPart[1]], 0, 0, zone);
+    const tomorrowNote = scheduled.getTime() <= nowInstant.getTime();
+    if (tomorrowNote) { const next = addLocalDays(now, 1); scheduled = zonedTimeToUtc(next.year, next.month, next.day, PERIOD_HOUR[inPart[1]], 0, 0, zone); }
+    return { scheduledAt: scheduled.toISOString(), whenLabel: `in the ${inPart[1]}${tomorrowNote ? " tomorrow" : ""}` };
   }
   if (parsedClock) {
     // A clock time and nothing else ("at 6pm", "at noon", "at 5"): the next time it comes round. A bare hour such as "at 5" is the next 5 o'clock, am or pm,
@@ -234,7 +266,11 @@ const TIME_WORDS = [
   "at\\s+(?:1[0-2]|0?[1-9])(?::[0-5]\\d)?(?![\\d:]|\\s*(?:am|pm|kg|bags?|%|percent|per|each|units?))",
   `(?:on\\s+)?\\d{4}-\\d{2}-\\d{2}`,
   `(?:on\\s+)?(?:the\\s+)?\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+(?:${MONTH_WORDS})(?:,?\\s+\\d{4})?`,
-  `(?:on\\s+)?(?:${MONTH_WORDS})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`
+  `(?:on\\s+)?(?:${MONTH_WORDS})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`,
+  // after the month forms, so "on the 22nd of October" is taken whole
+  "on\\s+the\\s+\\d{1,2}(?:st|nd|rd|th)\\b",
+  // a 24-hour clock time ("at 15:30")
+  "at\\s+(?:1[3-9]|2[0-3]):[0-5]\\d(?![\\d:])"
 ];
 const TIME_ALTERNATION = TIME_WORDS.join("|");
 const REMINDER_TIME_PHRASE = new RegExp(`\\b(?:${TIME_ALTERNATION})\\b`, "i");
