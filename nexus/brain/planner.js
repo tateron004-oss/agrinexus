@@ -162,9 +162,11 @@ class OpenEndedPlanner {
       const statement = extractContactStatement(command.text);
       if (statement?.invalid) return answer(`I need ${statement.name}'s number with the country code, like +254712345678, so I can dial or text it.`);
       if (statement) {
-        const saved = await memory.saveContact({ ...scope, ...statement });
+        // A number written the Kenyan way ("0712345678") is saved as +254..., and said so: the same digits could be Ugandan or Tanzanian.
+        const { assumedKenya, ...contact } = statement;
+        const saved = await memory.saveContact({ ...scope, ...contact });
         if (saved.full) return answer(`You have too many saved contacts to add another. Say "forget" one first, or ask "who are my contacts?"`);
-        return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}. Say "forget ${statement.name}" any time, or "who are my contacts?"`);
+        return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}.${assumedKenya ? ` I took it as a Kenyan number. For another country, say it with the country code, like "save ${statement.name}'s number as +256712345678".` : ""} Say "forget ${statement.name}" any time, or "who are my contacts?"`);
       }
       const request = extractContactRequest(command.text);
       if (!request) return null;
