@@ -51966,7 +51966,8 @@ async function api(req, res, url) {
   if (url.pathname === "/api/admin/communications/test" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow sending communications tests" });
     const body = await readBody(req);
-    const channel = String(body.channel || "").toLowerCase();
+    // The status card for phone calls is called "calls", so that is what the setup page sends for it: both spellings are the call test.
+    const channel = String(body.channel || "").toLowerCase().replace(/^calls$/, "call");
     if (!["sms", "whatsapp", "call", "email"].includes(channel)) return send(res, 400, { error: "Choose sms, whatsapp, call or email." });
     if (body.confirm !== true) return send(res, 400, { error: "Confirm that you want a real test sent to yourself (confirm: true)." });
     // A few tests an hour, whatever the channel: this reaches a real phone or inbox and a real provider.
