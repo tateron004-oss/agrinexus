@@ -11,7 +11,8 @@ test("statements that give someone's number or email are understood, and anythin
   assert.deepEqual(extractContactStatement("Save Amina Wanjiru's number as +254 712 345 678"), { name: "Amina Wanjiru", phone: "+254712345678" });
   assert.deepEqual(extractContactStatement("Otieno's email is otieno@example.com"), { name: "Otieno", email: "otieno@example.com" });
   assert.deepEqual(extractContactStatement("Add contact Wanjiru +254711000111"), { name: "Wanjiru", phone: "+254711000111" });
-  assert.deepEqual(extractContactStatement("Save Otieno's number as 0712345678"), { name: "Otieno", invalid: "number" });
+  assert.deepEqual(extractContactStatement("Save Otieno's number as 0712345678"), { name: "Otieno", phone: "+254712345678", assumedKenya: true }, "a Kenyan number written the Kenyan way is saved as +254, and said so");
+  assert.deepEqual(extractContactStatement("Save Otieno's number as 0712345"), { name: "Otieno", invalid: "number" }, "a number that is too short is still refused");
   assert.equal(extractContactStatement("My number is +254712345678"), null);
   assert.equal(extractContactStatement("What is Otieno's number?"), null);
   assert.equal(extractContactStatement("Save my number as +254712345678"), null);
@@ -171,7 +172,7 @@ test("saving, updating, listing, looking up and forgetting a contact all answer 
   assert.equal((await ask(p, "Forget Otieno")).response, "Done. I've forgotten Otieno.");
   assert.equal((await ask(p, "Forget Otieno")).response, "I don't have a contact called Otieno.");
   assert.match((await ask(p, "Who are my contacts?")).response, /^You have no saved contacts/);
-  assert.match((await ask(p, "Save Otieno's number as 0712345678")).response, /country code/);
+  assert.match((await ask(p, "Save Otieno's number as 0712345")).response, /country code/);
   assert.equal(memory.rows.length, 2, "an unusable number is never saved");
 });
 
@@ -241,4 +242,41 @@ test("'forget' about a reminder, meeting, appointment, visit, note, or event is 
     assert.equal(extractContactRequest(text), null, text);
   }
   assert.deepEqual(extractContactRequest("Forget Otieno"), { action: "forget", name: "Otieno" }, "a genuine bare-name forget is unaffected by the domain-noun exclusions");
+});
+
+// Found by the persona audit: a Kenyan number written the way everyone writes it ("0712 345 678") was refused ("I need the country code"), "save the midwife's number" and "save Mary Wanjiku as 0712..."
+// were not read, and "what's the midwife's number" was not answered.
+test("a Kenyan number is saved as +254 and the person is told so; other countries are never guessed", async () => {
+  const memory = fakeMemory(); const p = planner(memory);
+  const saved = (await ask(p, "Save Otieno's number as 0712 345 678")).response;
+  assert.match(saved, /^Saved Otieno: \+254712345678\. I took it as a Kenyan number\. For another country, say it with the country code/);
+  assert.equal(memory.rows[0].content.phone, "+254712345678");
+  assert.ok(!("assumedKenya" in memory.rows[0].content), "the note is said, not stored");
+  assert.doesNotMatch((await ask(p, "Save Wanjiru's number as +256712345678")).response, /Kenyan number/, "a number with its country code is never second-guessed");
+  for (const text of ["0712-345-678", "254712345678", "712345678", "0112345678"]) assert.ok(extractContactStatement(`Save Peter's number as ${text}`).phone.startsWith("+254"), text);
+  for (const text of ["071234", "07123456789", "0612345678", "+25471234"]) assert.ok(!extractContactStatement(`Save Peter's number as ${text}`)?.phone, text);
+});
+
+test("people and numbers said in other ways are saved and found: a role, two or three names, the number first", async () => {
+  const memory = fakeMemory(); const p = planner(memory);
+  assert.match((await ask(p, "save the midwife's number as 0712345678")).response, /^Saved Midwife: \+254712345678/);
+  assert.match((await ask(p, "Save Mary Wanjiku as 0722111222")).response, /^Saved Mary Wanjiku: \+254722111222/);
+  assert.match((await ask(p, "save Omar Abdi Hassan's number as 0733111222")).response, /^Saved Omar Abdi Hassan: \+254733111222/);
+  assert.match((await ask(p, "add Mary 0744111222 to my contacts")).response, /^Saved Mary: \+254744111222/);
+  assert.match((await ask(p, "save number 0755111222 for Otieno")).response, /^Saved Otieno: \+254755111222/);
+  assert.match((await ask(p, "my sister's number is 0766111222")).response, /^Saved Sister: \+254766111222/);
+  assert.equal((await ask(p, "what's the midwife's number")).response, "Midwife: +254712345678.");
+  assert.equal((await ask(p, "show Otieno's number")).response, "Otieno: +254755111222.");
+  assert.equal((await ask(p, "what is the number for Mary Wanjiku")).response, "Mary Wanjiku: +254722111222.");
+  const text = await ask(p, "Text Mary Wanjiku saying I am on my way");
+  assert.deepEqual(text.steps[0].input, { channel: "sms", to: "+254722111222", message: "I am on my way", contactName: "Mary Wanjiku" });
+  const midwife = await ask(p, "Call the midwife and say I am coming");
+  assert.equal(midwife.steps[0].input.to, "+254712345678");
+});
+
+test("things that only look like a contact are not saved as one", () => {
+  for (const text of ["save maize 5000", "add 5 bags 0712345678", "save the date 2026", "save gate number 12345678", "my number is 0712345678", "remember pump 12345678", "add milk to my shopping list"]) {
+    const found = extractContactStatement(text);
+    assert.ok(!found || found.invalid || !found.phone, `${text} -> ${JSON.stringify(found)}`);
+  }
 });
