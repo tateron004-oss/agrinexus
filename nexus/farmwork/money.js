@@ -205,19 +205,38 @@ async function ledgerFixes(ctx, t, lower) {
     }
   }
   // "that should be 8000", "change that to 8000", "I meant 800": the last entry is corrected, only when it was made today or yesterday.
-  if ((m = /^(?:no[, ]+)?(?:that should (?:be|have been)|change (?:that|it|the last (?:one|entry|sale|expense|income|record|payment)) to|correct (?:that|it|the last (?:one|entry|sale|expense|income|record)) to|make (?:that|it)|actually it was|actually it is|(?:sorry,? )?i meant|sorry,? it was)\s+(.+)$/i.exec(t))) {
+  if ((m = /^(?:no[, ]+)?(?:that should (?:be|have been)|change (?:that|it|(?:my |the )?last (?:one|entry|sale|expense|income|record|payment)) to|correct (?:that|it|(?:my |the )?last (?:one|entry|sale|expense|income|record)) to|make (?:that|it)|actually it was|actually it is|(?:sorry,? )?i meant|sorry,? it was)\s+(?!(?:an? )?(?:expense|sale|income|cost|spending)$)(.+)$/i.exec(t))) {
     const money = parseMoney(m[1]) || bareAmount(m[1]);
     if (!money || !(money.amount > 0)) return null;
-    const last = (await all())[0];
-    if (!last) return "There is nothing recorded to change.";
+    // "the last SALE" is the last sale, not whatever was recorded last: it used to change a later expense and say so as if it were the sale.
+    const named = /\blast (sale|income|expense|payment)\b/i.exec(t)?.[1];
+    const wantedType = named ? (/sale|income/i.test(named) ? "income" : "expense") : null;
+    const last = wantedType ? (await all()).find(record => record.data.type === wantedType) : (await all())[0];
+    if (!last) return wantedType ? `I have no ${wantedType === "income" ? "sale" : "expense"} recorded to change.` : "There is nothing recorded to change.";
     const age = Date.now() - Date.parse(last.createdAt);
     if (Number.isFinite(age) && age > 2 * 24 * 3600 * 1000) return `The last thing I recorded was ${describeRecord(last)}, a while ago, so I have not changed it. Say "delete the ${last.data.amount} ${last.data.type === "income" ? "sale" : "expense"}" and record it again.`;
     const before = describeRecord(last);
     await ctx.store.update({ ...scope, record: { ...last, data: { ...last.data, amount: money.amount, ...(isSpecific(money.currency) ? { currency: money.currency } : {}) } } });
     return `Changed: ${before} is now ${formatMoney(money.amount, isSpecific(money.currency) ? money.currency : last.data.currency)}. Stock changes it made are not reversed.`;
   }
+  // "change my last sale to an expense", "make the last entry an expense", "the last one was an expense, not a sale": the same entry, the other kind. Not for one that is on credit.
+  if ((m = /^(?:no[, ]+)?(?:(?:change|make|turn|switch|record|count)\s+(?:that|it|(?:my |the )?last (?:one|entry|sale|expense|income|record|payment))\s+(?:to |into |as )?(?:an? )?(expense|cost|spending|sale|income)|(?:that|it|(?:my |the )?last (?:one|entry|record))\s+(?:was|is)\s+(?:an? )?(expense|cost|spending|sale|income)(?:,?\s+not\s+(?:an? )?(?:expense|cost|spending|sale|income))?)$/i.exec(t))) {
+    const toType = /expense|cost|spending/i.test(m[1] || m[2]) ? "expense" : "income";
+    const named = /\blast (sale|income|expense|payment)\b/i.exec(t)?.[1];
+    const fromType = named ? (/sale|income/i.test(named) ? "income" : "expense") : null;
+    const last = fromType ? (await all()).find(record => record.data.type === fromType) : (await all())[0];
+    if (!last) return "There is nothing recorded to change.";
+    if (last.data.type === toType) return `It is already ${toType === "income" ? "a sale" : "an expense"}: ${describeRecord(last)}. Nothing was changed.`;
+    const age = Date.now() - Date.parse(last.createdAt);
+    if (Number.isFinite(age) && age > 2 * 24 * 3600 * 1000) return `The last thing I recorded was ${describeRecord(last)}, a while ago, so I have not changed it. Say "delete the ${last.data.amount} ${last.data.type === "income" ? "sale" : "expense"}" and record it again.`;
+    if (last.data.unpaid || last.data.owing) return `That one is on credit (${describeRecord(last)}), so I have not changed it. Delete it and record it again the way it happened.`;
+    const before = describeRecord(last);
+    const words = `${last.data.item || ""} ${last.data.note || ""}`;
+    await ctx.store.update({ ...scope, record: { ...last, data: { ...last.data, type: toType, category: toType === "expense" ? expenseCategory(words) : incomeCategory(words) } } });
+    return `Changed: ${before} is now ${toType === "income" ? "a sale" : "an expense"}. Stock changes it made are not reversed.`;
+  }
   // "delete the 5000 sale", "remove the maize sale"
-  if ((m = /^(?:delete|remove|cancel|scrap) (?:the |my )?(.+?) (sales?|expenses?|income|purchases?|entry|record|payment)$/i.exec(t)) && !/^last$/i.test(m[1].trim())) {
+  if ((m =/^(?:delete|remove|cancel|scrap) (?:the |my )?(.+?) (sales?|expenses?|income|purchases?|entry|record|payment)$/i.exec(t)) && !/^last$/i.test(m[1].trim())) {
     const what = clean(m[1]).toLowerCase(); const kind = /sale|income/i.test(m[2]) ? "income" : /expense|purchase/i.test(m[2]) ? "expense" : "";
     const amountSaid = (parseMoney(what) || bareAmount(what))?.amount;
     const rows = (await all()).filter(record => (!kind || record.data.type === kind) && (amountSaid ? record.data.amount === amountSaid : `${record.data.item || ""} ${record.data.note || ""} ${record.data.category || ""} ${record.data.party || ""}`.toLowerCase().includes(what)));
@@ -231,7 +250,10 @@ async function ledgerFixes(ctx, t, lower) {
 
 async function handleMoney(ctx) {
   // "paid 300 for the pickup" / "paid 2000 on fuel" is a cost, the same as "spent 300 on the pickup" (it was not read at all). "paid 5000 to Wanjiru" and "paid Wanjiru 5000" are left as they are.
-  const t = clean(ctx.text).replace(/[.!?]+$/g, "").replace(/^((?:i |we )?)paid ((?:(?:ksh|kshs|kes|tsh|ugx|usd|[$€£])\s?)?\d[\d,]*(?:\.\d+)?(?: shillings| dollars)?) (?:for|on) (?!me\b|us\b)/i, "$1spent $2 on "); const lower = t.toLowerCase();
+  // "paid 5000 till number 123456", "paid 2000 to paybill 247247 account 5521": the till or paybill is how it was paid, not who. It is a cost, and the number is not kept.
+  const t = clean(ctx.text).replace(/[.!?]+$/g, "").replace(/\s+(?:to |at |via |using |through |on |by )?(?:the )?(?:till|buy ?goods|pay ?bill|lipa na m-?pesa)(?: number| no\.?)?\s*\d{4,8}(?:\s+(?:account|acc|a\/c)(?: number| no\.?)?\s*\S+)?/i, "")
+    .replace(/^((?:i |we )?)paid ((?:(?:ksh|kshs|kes|tsh|ugx|usd|[$€£])\s?)?\d[\d,]*(?:\.\d+)?(?: shillings| dollars)?)$/i, "$1spent $2 on payment")
+    .replace(/^((?:i |we )?)paid ((?:(?:ksh|kshs|kes|tsh|ugx|usd|[$€£])\s?)?\d[\d,]*(?:\.\d+)?(?: shillings| dollars)?) (?:for|on) (?!me\b|us\b)/i, "$1spent $2 on "); const lower = t.toLowerCase();
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   let m;
   const fixed = await ledgerFixes(ctx, t, lower);
