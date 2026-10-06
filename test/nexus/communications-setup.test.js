@@ -133,6 +133,13 @@ test.describe("communications setup routes (real server)", () => {
     const calls = await call("/api/admin/communications/test", adminCookie, { channel: "call", confirm: true });
     assert.equal(calls.json.test.outcome, "off");
     assert.match(calls.json.test.next, /status cards/);
+    // Found live: the setup page sends the status card's own id for the phone-call test, which is "calls", and the test route only knew "call" ("Choose sms, whatsapp, call or email.").
+    const status = await call("/api/admin/communications/status", adminCookie, undefined, "GET");
+    const cardIds = status.json.channels.map(channel => channel.id);
+    assert.ok(cardIds.includes("calls"), "the phone-call card is called calls");
+    const fromCard = await call("/api/admin/communications/test", adminCookie, { channel: "calls", confirm: true });
+    assert.equal(fromCard.status, 200, "what the page sends for the phone-call card is accepted");
+    assert.equal(fromCard.json.test.outcome, "off");
     const email = await call("/api/admin/communications/test", adminCookie, { channel: "email", to: "someone-else@example.org", confirm: true });
     assert.equal(email.json.test.outcome, "needs-setup");
     assert.match(email.json.test.to, /^a\*\*\*@/, "the owner's own account email, masked");

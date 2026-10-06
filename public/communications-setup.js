@@ -3,7 +3,7 @@
   const byId = id => document.getElementById(id);
   const notice = text => { byId("notice").textContent = text; };
   const STATE_LABEL = { ready: "Set up", off: "Switched off", "needs-setup": "Needs setup", simulated: "Pretend only" };
-  const TEST_LABEL = { sms: "text", whatsapp: "WhatsApp message", call: "call", email: "email" };
+  const TEST_LABEL = { sms: "text", whatsapp: "WhatsApp message", call: "phone call", calls: "phone call", email: "email" };
 
   async function api(path, method = "GET", body) {
     const response = await fetch(`/api/admin/communications${path}`, { method, credentials: "same-origin", headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
