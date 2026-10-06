@@ -165,7 +165,13 @@ function pickDays(text) {
   return null;
 }
 
+// "every morning and evening", "morning and night": two parts of the day, every day. Found by the persona audit: only the first was kept ("and evening to take my medicine" became the task).
+const TWO_PARTS = /\b(?:every |each |in the )?(morning|afternoon|evening|night)s?\s+and\s+(?:in the |every |each )?(morning|afternoon|evening|night)s?\b/i;
+// "every first Thursday", "the last Friday of every month": a day of the week within the month, which is not a repeat Kyro can do. It used to become a single reminder on the next Thursday.
+const NTH_WEEKDAY = new RegExp(`\\b(?:every|each)\\s+(?:first|last|1st)\\s+${DAY_WORD}\\b|\\b(?:first|last|1st)\\s+${DAY_WORD}\\s+of\\s+(?:every|each|the)\\s+month\\b`, "i");
+
 const STRIP = [
+  new RegExp(TWO_PARTS.source, "ig"),
   /\bevery\s+(?:other|second|third|fourth|\d+)\s+(?:days?|weeks?|hours?)\b/ig,
   new RegExp(`\\bevery\\s+(?:other|second|third|fourth|\\d+)\\s+${DAY_WORD}s?\\b`, "ig"),
   /\b(?:on\s+)?the\s+\d{1,2}(?:st|nd|rd|th)\b(?:\s+of\s+(?:every|each|the)\s+month)?/ig, /\b(?:on\s+)?the last day of (?:every|each|the) month\b/ig, /\bof (?:every|each) month\b/ig,
@@ -216,6 +222,17 @@ function readRepeatRequest(rawText) {
   if (QUESTION.test(text) && !/^(?:can|could|would) you\b/i.test(text)) return null;
   if (!ASKS_FOR_REMINDER.test(text)) return null;
   if (UNSUPPORTED.test(lower)) return { action: "unsupported" };
+  if (NTH_WEEKDAY.test(lower)) return { action: "unsupported-nth" };
+  // "remind me every morning and evening to take my medicine" is one reminder at each part of the day, every day, unless a day or a date is named ("tomorrow morning and evening").
+  const twoParts = TWO_PARTS.exec(lower);
+  // "tomorrow morning and evening" is two one-time reminders, which is not one sentence Kyro can set: said, not quietly set for the morning only.
+  if (twoParts && twoParts[1] !== twoParts[2] && /\b(?:tomorrow|today|tonight|this|next|on\s+(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)day|on the \d)\b/.test(lower)) return { action: "unsupported-two" };
+  if (twoParts && twoParts[1] !== twoParts[2]) {
+    const task = taskFrom(text);
+    if (!task) return { action: "need-task" };
+    const times = [PART_OF_DAY[twoParts[1]], PART_OF_DAY[twoParts[2]]].sort((a, b) => a - b).map(hour => clock(hour, 0));
+    return { action: "add", task, times, days: "daily" };
+  }
   const unusual = readUnusualRepeat(lower);
   if (unusual?.action) return unusual;
   if (unusual) {
