@@ -2718,25 +2718,56 @@ const PROFILE_OWNER_STAMP_KEYS_EXTRA = [
   "tradeLogisticsRecords", "tradeMessages", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "providerOutreach", "droneFindings", "shiftSchedule",
   "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations",
   "applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests",
+  "buyerContacts", "tradeMessageThreads",
   "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"
 ];
 const profileOwnerStamping = new (require("node:async_hooks").AsyncLocalStorage)();
 // Audit-trail arrays are never stamped, so an account erasure cannot remove them: they are kept, like the financial ledger.
 const PROFILE_AUDIT_KEYS = new Set(["cloudAgentAudit", "offlineSyncHistory", "agentExecutions", "telehealthProviderActions", "integrationEvents"]);
-const profileStampKeys = () => [...new Set([...(typeof HEALTH_PROFILE_ARRAY_KEYS !== "undefined" ? HEALTH_PROFILE_ARRAY_KEYS : []), ...PROFILE_OWNER_STAMP_KEYS_EXTRA])].filter(key => !PROFILE_AUDIT_KEYS.has(key));
-// The owner mark is for the download and the erasure only: nobody else is shown another person's email.
+// Money and trade records that the books keep (so an account erasure leaves them) but that other people must not read: wallet postings, payment checkouts, the trade event feed and the notification feed. They carry
+// "_ledgerOwner" (who made them), which only decides who is shown them: it is not used by the account download or the erasure, unlike "_ownerEmail".
+const LEDGER_VIEW_KEYS = ["walletTransactions", "paymentCheckoutRecords", "tradeEvents", "notifications"];
+const profileStampKeys = () => [...new Set([...(typeof HEALTH_PROFILE_ARRAY_KEYS !== "undefined" ? HEALTH_PROFILE_ARRAY_KEYS : []), ...PROFILE_OWNER_STAMP_KEYS_EXTRA])].filter(key => !PROFILE_AUDIT_KEYS.has(key)).concat(LEDGER_VIEW_KEYS);
+// The owner mark is for the download, the erasure and for deciding who is shown a record: nobody else is shown another person's email.
 function withoutOwnerMarks(profile) {
   if (!profile || typeof profile !== "object") return profile;
   let copy = null;
+  const marked = item => item && typeof item === "object" && ("_ownerEmail" in item || "_ledgerOwner" in item);
   for (const key of profileStampKeys()) {
     const list = profile[key];
-    if (!Array.isArray(list) || !list.some(item => item && typeof item === "object" && "_ownerEmail" in item)) continue;
+    if (!Array.isArray(list) || !list.some(marked)) continue;
     copy = copy || { ...profile };
-    copy[key] = list.map(item => { if (!item || typeof item !== "object" || !("_ownerEmail" in item)) return item; const { _ownerEmail, ...rest } = item; return rest; });
+    copy[key] = list.map(item => { if (!marked(item)) return item; const { _ownerEmail, _ledgerOwner, ...rest } = item; return rest; });
+  }
+  // who made each line of the activity feed is kept next to it, in the same order, and is not shown
+  if ("activityBy" in profile) { copy = copy || { ...profile }; delete copy.activityBy; }
+  return copy || profile;
+}
+const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(item?.[field] || "").trim()) || Boolean(String(item?._ledgerOwner || "").trim());
+
+// Whose money and trade records a person is shown: their own, and those with no personal owner mark (the demo data and anything made before owner marks existed). An Admin is shown all.
+const MONEY_VIEW_KEYS = ["orders", "tradeMessages", "tradeMessageThreads", "buyerContacts", "tradeQuotes", "contractPackets", "tradeLogisticsRecords", "qualityInspections", "coldChainChecks", "exportReadiness", "providerOutreach", ...LEDGER_VIEW_KEYS];
+const ownerOfRecord = item => [...PROFILE_OWNER_FIELDS, "_ledgerOwner"].map(field => String(item?.[field] || "").trim().toLowerCase()).filter(value => value.includes("@"));
+const recordOwnedByAnotherPerson = (item, viewerEmail) => Boolean(item && typeof item === "object") && ownerOfRecord(item).some(value => value !== viewerEmail);
+function moneyRecordsForViewer(profile, user) {
+  if (!profile || !user || user.role === "Admin") return profile;
+  const viewer = String(user.email || "").trim().toLowerCase();
+  let copy = null;
+  for (const key of MONEY_VIEW_KEYS) {
+    const list = profile[key];
+    if (!Array.isArray(list)) continue;
+    const kept = list.filter(item => !recordOwnedByAnotherPerson(item, viewer));
+    if (kept.length !== list.length) { copy = copy || { ...profile }; copy[key] = kept; }
+  }
+  if (Array.isArray(profile.activity) && Array.isArray(profile.activityBy) && profile.activityBy.some(by => String(by || "").includes("@") && String(by).toLowerCase() !== viewer)) {
+    copy = copy || { ...profile };
+    copy.activity = profile.activity.filter((line, index) => { const by = String(profile.activityBy[index] || "").toLowerCase(); return !(by.includes("@") && by !== viewer); });
   }
   return copy || profile;
 }
-const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(item?.[field] || "").trim());
+// The orders a person may look up or change by id (or the latest of): their own and unmarked ones. An Admin may use any.
+const ordersForUser = (db, user) => (db.profile.orders || []).filter(order => user?.role === "Admin" || !recordOwnedByAnotherPerson(order, String(user?.email || "").trim().toLowerCase()));
+const orderForUser = (db, user, orderId) => { const usable = ordersForUser(db, user); return orderId ? usable.find(item => item.id === orderId) : usable[usable.length - 1]; };
 
 // What a person types or says to Kyro (the command, Kyro's reply, what the agent "remembers" from it) is kept in the one shared profile. Found by the persona audit: any other signed-in
 // person, or a guest, could read it from /api/state ("he beats me", an HIV status, family planning kept from a husband), it was fed to the AI model as context for whoever asked next, and
@@ -2889,7 +2920,7 @@ function stampNewProfileRecordsWithOwner(db, snapshot, email) {
       if (!item || typeof item !== "object" || Array.isArray(item) || profileRecordHasOwner(item)) continue;
       const known = before && (before.objects.has(item) || (item.id !== undefined && item.id !== null && before.ids.has(String(item.id))));
       if (known) continue;
-      item._ownerEmail = owner;
+      item[LEDGER_VIEW_KEYS.includes(key) ? "_ledgerOwner" : "_ownerEmail"] = owner;
       stamped += 1;
     }
   }
@@ -5784,7 +5815,7 @@ function learningProfileForClient(user) {
 const randomTemporaryPassword = () => crypto.randomBytes(12).toString("base64url");
 
 function profileForUser(profile, user) {
-  return withoutOwnerMarks(privateHistoryForViewer(profileForUserByRole(profile, user), user));
+  return withoutOwnerMarks(moneyRecordsForViewer(privateHistoryForViewer(profileForUserByRole(profile, user), user), user));
 }
 
 // Health records belong to the person who made them. Found by a live check against a copy of the app: a second signed-in Standard User received the first user's health intake (patient name and needs)
@@ -5920,7 +5951,7 @@ function publicState(db, user) {
     womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers, user),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
-    conversationEvidence: conversationEvidencePack(user?.role !== "Admin" ? { ...db, profile: privateHistoryForViewer(db.profile, user) } : db),
+    conversationEvidence: conversationEvidencePack(user?.role !== "Admin" ? { ...db, profile: moneyRecordsForViewer(healthRecordsForViewer(privateHistoryForViewer(db.profile, user), user), user) } : db),
     agentCapabilities,
     jarvisReadiness,
     jarvisProductionTen: jarvisProductionTenModel(db, providers),
@@ -5944,7 +5975,7 @@ function publicState(db, user) {
     governmentReadiness: governmentReadinessModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
-    missionTimeline: missionTimelineModel(user?.role !== "Admin" ? { ...db, profile: privateHistoryForViewer(db.profile, user) } : db, user),
+    missionTimeline: missionTimelineModel(user?.role !== "Admin" ? { ...db, profile: moneyRecordsForViewer(healthRecordsForViewer(privateHistoryForViewer(db.profile, user), user), user) } : db, user),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
     engineSetup: renderEngineEnvPlan(db),
@@ -11135,6 +11166,8 @@ function activeContext(db) {
 function addActivity(profile, message) {
   profile.activity.unshift(`${new Date().toISOString()} ${message}`);
   profile.activity = profile.activity.slice(0, 25);
+  // Who caused each line is kept in a parallel list, newest first like the feed, so that other people are not shown a line about someone else's money, health or trade (see moneyRecordsForViewer).
+  profile.activityBy = [agentActorEmail(), ...(Array.isArray(profile.activityBy) ? profile.activityBy : [])].slice(0, 25);
 }
 
 function addWorkflowNote(profile, note, label = "Workflow note") {
@@ -11345,9 +11378,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     error.httpStatus = 403;
     throw error;
   }
-  let order = body.orderId
-    ? db.profile.orders.find(item => item.id === body.orderId)
-    : db.profile.orders[db.profile.orders.length - 1];
+  let order = orderForUser(db, user, body.orderId);
   const product = order
     ? (db.products || []).find(item => item.id === order.productId)
     : selectedTradeProduct(db, body.productId, country);
@@ -12242,9 +12273,7 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
   ensureTradeProfile(db.profile);
   const provider = paymentProviderMode(body);
   const { country, route } = activeContext(db);
-  const order = body.orderId
-    ? db.profile.orders.find(item => item.id === body.orderId)
-    : db.profile.orders[db.profile.orders.length - 1];
+  const order = orderForUser(db, user, body.orderId);
   const product = order
     ? (db.products || []).find(item => item.id === order.productId)
     : selectedTradeProduct(db, body.productId, country);
@@ -55694,9 +55723,7 @@ async function api(req, res, url) {
     // already respect an explicit orderId. With two open orders, a request
     // explicitly targeting order-1 silently advanced order-2 instead,
     // leaving order-1 unchanged with no indication of the mismatch.
-    const order = body.orderId
-      ? db.profile.orders.find(item => item.id === body.orderId)
-      : db.profile.orders[db.profile.orders.length - 1];
+    const order = orderForUser(db, user, body.orderId);
     if (!order) return send(res, 409, { error: "Create an order first" });
     // Found live (drone/logistics follow-up audit): order.stage and
     // order.stageIndex are two independently-written fields for the same
@@ -55741,9 +55768,7 @@ async function api(req, res, url) {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade workflows" });
     const body = await readBody(req);
     ensureTradeProfile(db.profile);
-    const order = body.orderId
-      ? db.profile.orders.find(item => item.id === body.orderId)
-      : db.profile.orders[db.profile.orders.length - 1];
+    const order = orderForUser(db, user, body.orderId);
     if (!order) return send(res, 409, { error: "Create an order first" });
     const trackingResult = await refreshOrderLogisticsTracking(db, order, user, "logistics.manual_tracking_refresh");
     addActivity(db.profile, trackingResult.delivery?.ok ? `Live shipment tracking refreshed for ${order.orderNumber}.` : `Shipment tracking refreshed for ${order.orderNumber}.`);
