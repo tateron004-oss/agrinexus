@@ -56,6 +56,7 @@ const googleCloudTranslationProvider = require("./server/google-cloud-translatio
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
+const { contentGuardReply } = require("./nexus/brain/content-guard.js");
 const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
 const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
@@ -23384,6 +23385,9 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
   if (!status.enabled || !status.configured) return null;
   const command = sanitizePilotText(body.command || body.text || "", 900);
   if (!command) return null;
+  // Betting tips, hacking, "double your money" offers and investment advice (what to buy, sell or trade, price calls, exchanges, promised returns) are never sent to the AI model: they fall through to
+  // runAgentCommand, which answers them with the fixed guard reply (see nexus/brain/content-guard.js). The phone line and the older command route come through here.
+  if (contentGuardReply(command)) return null;
   const correlationId = genesisVoiceCorrelationId(body.correlationId);
   const language = body.targetLanguage || body.language || user.language || "en";
   const recentTurns = ownConversationTurns(db.profile, user.email).slice(-8).map(turn => ({
@@ -33605,6 +33609,17 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `Yes ${name}, how can I assist you?`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need a clinic", "my crop is bad", "start a course"] }
+    };
+  }
+  // The same plain-wording guards the planner applies before anything else answers (betting tips, hacking and faking, "double your money", investment advice). This older path is what the phone line
+  // and the older command route use, and the fallback when the planner cannot be reached, so it must not answer these differently.
+  const guarded = contentGuardReply(text);
+  if (guarded) {
+    return {
+      intent: `conversation.guard.${guarded.kind}`,
+      response: guarded.reply,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, contentGuard: guarded.kind }
     };
   }
   if (isLanguageCommand(lower)) {
