@@ -19,7 +19,7 @@ assert.ok(start > 0 && end > start, "the stamping code must stay extractable");
 function load() {
   const sandbox = { require, WeakSet, Set, Map, Array, Object, String, JSON };
   vm.createContext(sandbox);
-  vm.runInContext(`${source.slice(start, end)}\nthis.snapshot = snapshotProfileRecordsForOwnerStamping; this.stamp = stampNewProfileRecordsWithOwner; this.keys = profileStampKeys; this.hide = withoutOwnerMarks;`, sandbox);
+  vm.runInContext(`${source.slice(start, end)}\nthis.snapshot = snapshotProfileRecordsForOwnerStamping; this.stamp = stampNewProfileRecordsWithOwner; this.keys = profileStampKeys; this.hide = withoutOwnerMarks; this.ownerFields = PROFILE_OWNER_FIELDS;`, sandbox);
   return sandbox;
 }
 
@@ -52,15 +52,22 @@ test("a copy of an existing record (changed by someone else) keeps no new owner;
   assert.equal(db.profile.workforceDocuments[2]._ownerEmail, "amina@example.org");
 });
 
-test("the financial ledger and the audit logs are never stamped, so they are retained", () => {
-  const { snapshot, stamp, keys } = load();
-  const db = { profile: { walletTransactions: [], platformRevenueLedger: [], paymentCheckoutRecords: [], integrationEvents: [], usageEvents: [], activity: [], twilioCallStatusReceipts: [], paymentReleases: [] } };
+test("the audit logs are never stamped, and the financial ledger only gets a view mark that the download and the erasure do not use, so both are retained", () => {
+  const { snapshot, stamp, keys, ownerFields } = load();
+  const db = { profile: { walletTransactions: [], paymentCheckoutRecords: [], tradeEvents: [], notifications: [], platformRevenueLedger: [], integrationEvents: [], usageEvents: [], activity: [], twilioCallStatusReceipts: [], paymentReleases: [] } };
   const before = snapshot(db);
   for (const key of Object.keys(db.profile)) db.profile[key].push({ id: `${key}-1` });
-  assert.equal(stamp(db, before, "amina@example.org"), 0);
-  for (const key of ["walletTransactions", "platformRevenueLedger", "paymentCheckoutRecords", "integrationEvents", "twilioCallStatusReceipts", "paymentReleases", "cloudAgentAudit", "offlineSyncHistory", "agentExecutions", "telehealthProviderActions"]) assert.equal(keys().includes(key), false, key);
+  assert.equal(stamp(db, before, "amina@example.org"), 4, "only the four ledger lists other people must not be shown");
+  for (const key of ["walletTransactions", "paymentCheckoutRecords", "tradeEvents", "notifications"]) {
+    assert.equal(db.profile[key][0]._ledgerOwner, "amina@example.org", key);
+    assert.equal(db.profile[key][0]._ownerEmail, undefined, `${key} is never given the mark the download and the erasure read`);
+  }
+  for (const key of ["platformRevenueLedger", "integrationEvents", "usageEvents", "activity", "twilioCallStatusReceipts", "paymentReleases"]) assert.deepEqual(db.profile[key][0], { id: `${key}-1` }, `${key} is not stamped`);
+  assert.equal(ownerFields.includes("_ledgerOwner"), false, "the erasure and the download do not look at the view mark");
+  for (const key of ["platformRevenueLedger", "integrationEvents", "twilioCallStatusReceipts", "paymentReleases", "cloudAgentAudit", "offlineSyncHistory", "agentExecutions", "telehealthProviderActions"]) assert.equal(keys().includes(key), false, key);
   assert.equal(keys().includes("workforceOnboarding"), true);
   assert.equal(keys().includes("tradeQuotes"), true);
+  assert.equal(keys().includes("buyerContacts"), true);
 });
 
 test("the owner mark is never shown to other people", () => {
