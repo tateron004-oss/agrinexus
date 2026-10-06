@@ -3,6 +3,7 @@
 // Requests a young person (or anyone) may make that Kyro should not simply carry out: finding sexual or explicit material, betting tips and "sure odds", and tricks to hack, fake or scam. Found by the
 // persona audits: all of these went straight to the AI model, which could send them to a web search. They are answered here, plainly and without lecturing, with something Kyro CAN do instead.
 // The fixed rules only catch plain requests; the AI prompts carry the same rule (nexus/brain/crisis-rule.js) for everything else. Wording should be reviewed by a youth organisation.
+const { investmentGuardReply } = require("./investment-guard.js");
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 
 // ---- explicit material ----
@@ -39,7 +40,8 @@ function contentGuardReply(text) {
   }
   if (FRAUD_REQUEST.test(t)) return { kind: "fraud", reply: REPLIES.fraud };
   if (SCHEME.test(t)) return { kind: "scheme", reply: REPLIES.scheme };
-  return null;
+  // Never says what to buy, sell or trade, predicts a price, picks an exchange, or promises a return (see investment-guard.js).
+  return investmentGuardReply(text);
 }
 
 module.exports = Object.freeze({ contentGuardReply, REPLIES });
