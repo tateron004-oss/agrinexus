@@ -197,6 +197,8 @@ function readSafetyDetailed(text) {
   // A sign that needs a health worker now, or today: pregnancy, labour, bleeding after a birth, a baby, a child, poison, a burn, a snake bite.
   const sign = care.careSign(raw);
   if (sign) return { kind: "care", category: sign.category, language: spokenLanguage };
+  // "How much paracetamol can I give my baby?", "is ibuprofen safe in pregnancy?": no dose from Kyro, and who to ask.
+  if (care.medicineQuestion(raw)) return { kind: "care", category: "medicine", language: spokenLanguage };
   if (care.grief(raw)) return { kind: "grief", language: spokenLanguage };
   // Someone asking for a PIN, a password or money by phone or message: said plainly, never to share it.
   if (crisisPhrases.scam(raw)) return { kind: "scam", language: "en" };
@@ -312,7 +314,7 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
   if (kind === "baby_at_risk") return t(language, "safety.babyAtRisk", { circle: circleOffer });
   if (kind === "care") {
     // "Take the baby to a clinic today" is not an emergency and does not offer to alert anyone; every other sign says where to go now, then offers.
-    const today = found.category === "baby_today" || found.category === "child_today";
+    const today = ["baby_today", "child_today", "pregnancy_bp", "medicine"].includes(found.category);
     return t(language, `safety.care.${found.category}`, { go: today ? "" : t(language, "safety.care.go", { circle: circleOffer }) });
   }
   return t(language, found.weapon ? "safety.selfHarmWeapon" : "safety.selfHarm", { circle: circleOffer });

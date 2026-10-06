@@ -79,7 +79,7 @@
     /\b(?:blur\w*|blurry|vision (?:is )?(?:blur\w*|bad|dim)|cannot see (?:well|properly)|can'?t see (?:well|properly)|seeing (?:spots|flashes)|ukungu|naona ukungu)\b/,
     /\b(?:swollen|swelling|swell\w*|vimevimba|uvimbe)\b[^.!?]{0,30}\b(?:face|hands?|eyes|uso|mikono)\b|\b(?:face|hands?)\b[^.!?]{0,20}\b(?:swollen|swelling|vimevimba)\b/,
     /\b(?:severe|very bad|too much|terrible|bad|strong|makali|sana)\b[^.!?]{0,25}\b(?:belly|stomach|abdominal|tumbo)\b[^.!?]{0,15}\b(?:pain|hurts?|uma|linauma|maumivu)?\b|\b(?:belly|stomach|tumbo)\b[^.!?]{0,15}\b(?:pain|hurts|linauma)\b[^.!?]{0,20}\b(?:severe|very|too much|sana|makali)\b/,
-    /\b(?:fever|high temperature|chills and fever|homa|temperature (?:of )?(?:3[89]|4\d))\b/,
+    /\b(?:fever|high temperature|chills and fever|homa|temperature (?:is |of |was |at )?(?:3[89]|4\d)|temp(?:erature)? (?:is |of |was |at )?(?:10[0-9]|1[1-9]\d))\b/,
     /\b(?:baby|mtoto)\b[^.!?]{0,25}\b(?:has ?n[o']t|not|stopped|no longer|hasogei|hasongi|hasogei)\b[^.!?]{0,15}\b(?:mov\w*|kick\w*|sogea|sogei)\b|\b(?:not|haven'?t|have not|hasn'?t)\b[^.!?]{0,15}\b(?:felt|feel|feeling|seen)\b[^.!?]{0,15}\b(?:baby|the baby)\b[^.!?]{0,10}\b(?:move\w*|kick\w*)\b|\bmtoto (?:tumboni )?hasogei\b|\bhasogei tangu\b/,
     /\b(?:water|waters|maji)\b[^.!?]{0,15}\b(?:broke|broken|burst|leak\w*|yamenitoka|yamevunjika|yamepasuka|yamevuja)\b|\b(?:my )?waters? (?:have )?broke(?:n)?\b|\bmaji ya uzazi yamepasuka\b/,
     /\b(?:fell|fall|fallen|slipped|nilianguka|nimeanguka|kicked|hit|punched)\b[^.!?]{0,40}\b(?:belly|stomach|tumbo|on my belly)\b|\b(?:i )?(?:fell|slipped|have fallen|nilianguka|nimeanguka|nimeteleza)\b/,
@@ -115,6 +115,15 @@
     if (hasChild && !hasBaby && !NOT_A_SIGN.test(plain) && any(CHILD_NOW, plain)) return { category: "child" };
     if (hasBaby && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain)) && any(CHILD_NOW, plain)) return { category: "baby" };
     if (hasChild && /\b(?:fell|ameanguka|fallen|baby fell off|fell off)\b/.test(plain) && /\b(?:head|kichwa|crying a lot|bleeding|damu)\b/.test(plain)) return { category: "injury" };
+    // A raised blood pressure in pregnancy is not a number to log: 140/90 needs a health worker the same day, 160/110 now. A question about it ("is 150/95 safe in pregnancy?") is answered too.
+    const pressure = plain.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/);
+    if (pregnant && pressure) {
+      const top = Number(pressure[1]); const bottom = Number(pressure[2]);
+      if (top > bottom && top >= 90 && top <= 300 && bottom >= 40 && bottom <= 200) {
+        if (top >= 160 || bottom >= 110) return { category: "pregnancy_bp_high" };
+        if (top >= 140 || bottom >= 90) return { category: "pregnancy_bp" };
+      }
+    }
     if (pregnant && !NOT_A_SIGN.test(plain) && !notNow && any(PREG_SIGNS, plain)) return { category: "pregnancy" };
     if (!notNow && !NOT_A_SIGN.test(plain) && any([PREG_SIGNS[7], PREG_SIGNS[8]], plain)) return { category: "pregnancy" };
     if (hasChild && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain)) && any(CHILD_TODAY, plain)) return { category: hasBaby ? "baby_today" : "child_today" };
@@ -199,6 +208,16 @@
 
   const adultContext = text => /\b(?:my )?(?:husband|man|partner|boyfriend|ex|mume|in-laws?|baba watoto)\b|\bpregnan|\bmimba\b|\bmjamzito\b|\bmy (?:baby|child|children|kids)\b|\bmtoto wangu\b|\bmy husban\b|\bmi husband\b/.test(normalize(text));
   const test = (patterns, text, limit = 500) => { const plain = normalize(text); return plain.length > 0 && plain.length <= limit && any(patterns, plain); };
+  // Asking for a dose, or whether a medicine is safe, for a baby, a child, in pregnancy or while breastfeeding: Kyro cannot give a dose and says who can. Not a reminder or a record
+  // ("remind me to give my baby his medicine at 8"), and not a question about animals.
+  const MEDICINE_THING = /\b(?:ibuprofen|brufen|paracetamol|panadol|acetaminophen|aspirin|diclofenac|amoxicillin|amoxil|antibiotics?|cough (?:syrup|medicine)|medicines?|medications?|tablets?|pills?|syrup|drops|dawa|vidonge|metronidazole|flagyl|coartem|artemether|malaria (?:medicine|tablets?)|quinine|iron (?:tablets?|pills?)|folic acid|herbs?|herbal|traditional medicine|painkillers?|laxatives?|antihistamines?|piriton|dexamethasone|steroids?|ointment|cream)\b/;
+  const MEDICINE_QUESTION = /\b(?:how (?:much|many|often)|what (?:dose|dosage)|dose|dosage|can i (?:take|give|use|drink)|can (?:my|a) (?:baby|child|toddler|son|daughter|pregnant woman)|can she (?:take|have)|can he (?:take|have)|is it (?:safe|ok|okay|alright)|is (?:\w+ ){1,3}safe|safe (?:to|for|in)|should i (?:take|give)|may i (?:take|give)|nitumie|naweza kumpa|nimpe|ni salama|kiasi gani)\b/;
+  const MEDICINE_AUDIENCE = /\b(?:pregnan\w*|breastfeed\w*|breast feeding|nursing mother|expecting|baby|babies|newborn|infant|toddler|child|children|kid|kids|my \d+[ -]?(?:year|month|week)s?[ -]?old|mtoto|mjamzito|mimba|ninanyonyesha)\b/;
+  const NOT_A_QUESTION_ABOUT_DOSE = /\b(?:remind|reminder|schedule|record|log|add (?:a|my)|save|buy|bought|price|cost|sell|selling|stock|order|cow|goat|sheep|dog|cat|chicken|hens?|calf|calves|cattle|livestock|ng'ombe|mbuzi)\b/;
+  const medicineQuestion = text => {
+    const plain = normalize(text);
+    return plain.length > 0 && plain.length <= 300 && MEDICINE_THING.test(plain) && MEDICINE_QUESTION.test(plain) && MEDICINE_AUDIENCE.test(plain) && !NOT_A_QUESTION_ABOUT_DOSE.test(plain);
+  };
   const INFO_QUESTION = /^(?:what (?:is|are)|how do i know|how can i|how to|is it normal|can you (?:tell|explain)|tell me about|explain)\b/;
   const postnatal = text => !INFO_QUESTION.test(normalize(text)) && test(POSTNATAL, text);
   const friendCrisis = text => test(FRIEND_CRISIS, text);
@@ -209,5 +228,5 @@
   const selfHarmMore = text => test(SELF_HARM_MORE, text);
   const notViolence = text => NOT_VIOLENCE.test(normalize(text));
 
-  return Object.freeze({ normalize, careSign, friendCrisis, postnatal, babyAtRisk, grief, abuseMore, abuseOther, selfHarmMore, adultContext, notViolence });
+  return Object.freeze({ normalize, careSign, friendCrisis, postnatal, babyAtRisk, grief, abuseMore, abuseOther, selfHarmMore, adultContext, notViolence, medicineQuestion });
 });
