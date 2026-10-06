@@ -139,7 +139,8 @@ class OpenEndedPlanner {
     const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
     try {
       const forget = extractForgetRequest(command.text);
-      if (forget) return answer(forgottenNotice(await memory.forgetProfile({ ...scope, kind: forget.kind })));
+      // "Forget everything" takes back what Kyro learned about the person, and says that is all it is: notes, contacts, records and reminders are kept, and how to remove them.
+      if (forget) return answer(`${forgottenNotice(await memory.forgetProfile({ ...scope, kind: forget.kind }))}${forget.kind === "all" ? ' That is what I had learned about you. Your notes, contacts, records and reminders are kept: to remove everything, open "Privacy and data" in the app.' : ""}`);
       const stated = extractProfileStatement(command.text);
       if (!stated.length) return null;
       const replaced = []; const saved = [];
@@ -265,6 +266,9 @@ class OpenEndedPlanner {
     // "That was wrong" / "that helped" / "the correct answer is ...": feedback on Kyro's last answer, kept for the team (see quality/feedback.js).
     const answerFeedback = await feedbackTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, history: conversationHistory, roles: context?.roles || [] });
     if (answerFeedback) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: answerFeedback, sourceRequired: false, planningAttempts: 0 });
+    // "Forget everything", "delete all my data": not done by voice, and said plainly. It used to be answered "I don't have that saved, so there is nothing to forget", or reach the AI model.
+    const bulk = extractForgetRequest(command.text) ? null : bulkForgetReply(command.text);
+    if (bulk) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: bulk, sourceRequired: false, planningAttempts: 0 });
     const profile = await this.profileTurn(command);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
     const contactsAnswer = await this.contactsTurn(command);
@@ -784,6 +788,14 @@ function completeHealthRecordPlan(text, catalog) {
     if (match) { const value = Number(match[1]); if (value >= 20 && value <= 250) return makePlan("pulse", { pulse: value }); }
   }
   return null;
+}
+
+// Wiping everything Kyro knows cannot be undone, so it is not done by a spoken or typed sentence. The person is told plainly, and shown the one-at-a-time way that does work.
+const BULK_FORGET = /^(?:please |kyro,? )*(?:forget|delete|erase|clear|wipe|remove|reset)\s+(?:absolutely |literally )?(?:everything(?: (?:you know|you have|you remember|that i(?:'ve| have)? (?:told|said to) you))?(?: about me)?|all of (?:it|that|this)|all (?:of )?(?:that|it)|all my (?:data|memory|memories|history|information|info|personal (?:data|information|details)|details|account)|my (?:whole |entire )?(?:account|data|memory|memories|history)|what i (?:told|said to) you|everything i (?:told|said to) you|(?:all )?(?:the )?things? i (?:told|said to) you)(?: and (?:everything|all(?: of it)?|my data))?(?: please)?$/i;
+function bulkForgetReply(text) {
+  const t = String(text || "").trim().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").replace(/\s+/g, " ");
+  if (!t || t.length > 90 || !BULK_FORGET.test(t)) return null;
+  return 'I can\'t clear everything by voice or by typing here, because it can\'t be undone and I want to be sure it is you. To remove your data, open "Privacy and data" in the app and delete it there. To take back one thing at a time, say, for example, "forget that I keep chickens" or "forget Otieno". Nothing was deleted.';
 }
 
 // A plain yes to the offer to alert the trusted circle: see companion/offer.js (the offer is the last sentence, as a question, and the yes is the very next message).

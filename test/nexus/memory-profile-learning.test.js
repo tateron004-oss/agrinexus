@@ -51,14 +51,15 @@ test("forget that, forget a kind, and forget everything take facts back and say 
   assert.equal((await ask(p, "Forget that")).response, "Done. I've forgotten that you are in Kisumu.");
   assert.equal((await ask(p, "Forget my name")).response, "Done. I've forgotten that your name is Amina.");
   assert.equal((await ask(p, "Forget my name")).response, "I don't have that saved, so there is nothing to forget.");
-  assert.equal((await ask(p, "Forget everything about me")).response, "Done. I've forgotten that you grow maize.");
+  // "everything" is what Kyro learned about the person, and it says so: notes, contacts, records and reminders are kept, and where to remove them
+  assert.equal((await ask(p, "Forget everything about me")).response, 'Done. I\'ve forgotten that you grow maize. That is what I had learned about you. Your notes, contacts, records and reminders are kept: to remove everything, open "Privacy and data" in the app.');
   assert.deepEqual(await memory.profile({ userId: "u1" }), []);
 });
 
 test("what is remembered belongs to one person only", async () => {
   const memory = fakeMemory(); const p = planner(memory);
   await ask(p, "I live in Kisumu", "u1");
-  assert.equal((await ask(p, "Forget everything", "u2")).response, "I don't have that saved, so there is nothing to forget.");
+  assert.match((await ask(p, "Forget everything", "u2")).response, /^I don't have that saved, so there is nothing to forget\. That is what I had learned about you\./);
   assert.equal((await memory.profile({ userId: "u1" })).length, 1, "another person cannot forget it");
 });
 

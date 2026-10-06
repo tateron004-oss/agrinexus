@@ -85,7 +85,7 @@ module.exports = Object.freeze({
   "circle.list": "Mzunguko wako: {lines}.{hint}",
   "circle.hint": " Ikiwa unataka waweze kukupata wakati wa dharura, sema \"shiriki eneo langu wakati wa dharura\".",
   "circle.removeMissing": "Simwoni {who} kwenye mzunguko wako.",
-  "circle.removeDone": "Sawa. {name} ameondolewa kwenye mzunguko wako na hataambiwa chochote tena.",
+  "circle.removeDone": "Sawa. {name} ameondolewa kwenye mzunguko wako na hataambiwa chochote tena. Atapata ujumbe mfupi kwamba umemtoa.",
   "circle.updateTitle": "Taarifa ya mzunguko",
   "circle.removedBody": "{name} amekuondoa kwenye mzunguko wake wa watu anaowaamini.",
   "circle.notYet": "{who} bado hajakubali mwaliko wako.",

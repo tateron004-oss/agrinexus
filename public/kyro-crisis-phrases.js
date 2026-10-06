@@ -155,7 +155,9 @@
     /\b(?:should i|can i|do i) (?:give|tell|send|share) (?:him |her |them |the \w+ )?(?:my|the) (?:pin|password|otp)\b/,
     /\bgive (?:him|her|them) my (?:pin|password)\b/
   ];
-  const SECRET = /\b(?:pin|passcode|password|cvv|cvc|otp|secret code|card number|account number)\b[^.!?]{0,25}\b(?:is|are|was|:|=)\s*[a-z0-9]*\d/;
+  // The secret and its value: "my pin is 4821", "pin: 4821", and also the value straight after it ("add my pin 4821 to my notes", "write down my pin as 4821", "keep my pin 1234 safe"),
+  // and the code to a safe, door, gate or lock.
+  const SECRET = /\b(?:pin|passcode|password|cvv|cvc|otp|secret code|card number|account number|(?:safe|door|gate|lock) (?:code|combination)|code (?:to|for) the (?:safe|door|gate|lock)|combination)\b(?:[^.!?]{0,25}\b(?:is|are|was|as|:|=)\s*[a-z0-9]*\d|\s+(?:of |for )?[a-z0-9]{0,6}\d{3,})/;
 
   // A weapon or the means is named alongside the thought: the reply adds a plain line about putting distance between the person and it.
   const MEANS = /\b(?:gun|pistol|rifle|weapon|firearm|knife|rope|noose|razor|blade|pills|tablets|poison|pesticide|bunduki|kisu|sumu)\b/;
@@ -178,7 +180,7 @@
   const notAnEmergency = text => any(NOT_AN_EMERGENCY, normalize(text));
   const scam = text => { const plain = normalize(text); return plain.length > 0 && plain.length <= 500 && any(SCAM, plain); };
   // "remember that my mpesa pin is 4821": a secret asked to be saved (the words to save it AND a number after pin/password).
-  const storesSecret = text => { const plain = normalize(text); return /\b(?:remember|note|write|save|store|put|keep|add|record|jot)\b/.test(plain) && SECRET.test(plain); };
+  const storesSecret = text => { const plain = normalize(text); return /\b(?:remember|note|write|save|store|put|keep|add|record|jot|remind|memorise|memorize|log)\b/.test(plain) && SECRET.test(plain); };
   const medicalUrgent = text => { const plain = normalize(text); return plain.length > 0 && plain.length <= 500 && any(MEDICAL_URGENT, plain); };
   const mentionsMeans = text => MEANS.test(normalize(text));
   // "I took all my pills": most often an ordinary report of taking medicine, so it is not a crisis phrase, but it is worth a calm check-in unless it is plainly about today's dose.

@@ -85,7 +85,7 @@ function extractContactRequest(text) {
   const forget = /^(?:please )?forget (?:(?:the )?contact )?(?:for )?(.+?)(?: from my contacts)?$/.exec(t)?.[1]
     || /^(?:please )?(?:delete|remove|erase) (?:the )?contact (?:for )?(.+)$/.exec(t)?.[1]
     || /^(?:please )?(?:delete|remove|erase) (.+?) from my contacts$/.exec(t)?.[1];
-  if (forget && !/^(?:that|this|it|everything|all|my (?:name|location|town|place|city|region|crops?|livestock|animals|language))/.test(forget)) {
+  if (forget && !/^(?:that|this|it|everything|all|my (?:name|location|town|place|city|region|crops?|livestock|animals|language|farm|land|fields?|family|business|job|work|age|children|kids))/.test(forget)) {
     const name = contactName(forget.replace(/'s (?:phone |mobile |cell )?(?:number|email|email address|e-mail)$/, ""));
     if (name) return { action: "forget", name };
   }
