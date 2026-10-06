@@ -340,7 +340,7 @@ test("a member can decline, and either side can leave or remove at any time, and
   assert.equal((await w.circle.activeMembers({ tenantId: "t1", personId: "u-baba" })).length, 0);
   assert.equal(await ask(w, "Who am I looking out for?", "u-amina"), "You're not in anyone's circle right now.");
   await inCircle(w, { member: "u-joseph", relationship: "son" });
-  assert.match(await ask(w, "Remove Joseph from my circle"), /^Done\. Joseph Otieno is out of your circle and will no longer be told anything\./);
+  assert.match(await ask(w, "Remove Joseph from my circle"), /^Done\. Joseph Otieno is out of your circle and will no longer be told anything\. They will get a short message that you took them out\./);
   assert.equal(await ask(w, "Who is in my circle?"), 'Your circle is empty. Say "add name@example.com to my circle" to invite someone you trust.');
   assert.equal(await ask(w, "Remove Kamau from my circle"), "I don't see Kamau in your circle.");
 });

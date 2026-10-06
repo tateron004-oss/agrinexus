@@ -81,7 +81,7 @@ module.exports = Object.freeze({
   "circle.list": "Your circle: {lines}.{hint}",
   "circle.hint": " If you want them to be able to find you in an emergency, say \"share my location in emergencies\".",
   "circle.removeMissing": "I don't see {who} in your circle.",
-  "circle.removeDone": "Done. {name} is out of your circle and will no longer be told anything.",
+  "circle.removeDone": "Done. {name} is out of your circle and will no longer be told anything. They will get a short message that you took them out.",
   "circle.updateTitle": "Circle update",
   "circle.removedBody": "{name} has taken you out of their trusted circle.",
   "circle.notYet": "{who} hasn't said yes to your invitation yet.",
