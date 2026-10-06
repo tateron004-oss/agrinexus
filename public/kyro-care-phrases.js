@@ -1,0 +1,213 @@
+(function (root, factory) {
+  const crisis = typeof module === "object" && module.exports ? require("./kyro-crisis-phrases.js") : root.KyroCrisisPhrases;
+  const api = factory(crisis);
+  if (typeof module === "object" && module.exports) module.exports = api;
+  else root.KyroCarePhrases = api;
+})(typeof window !== "undefined" ? window : globalThis, function (crisis) {
+  "use strict";
+
+  // What a mother, or someone caring for a mother or a small child, may say when something is wrong: danger signs in pregnancy, labour, a newborn or a child that need a health worker NOW, and the
+  // hard things after a birth (feeling you cannot cope, fear of hurting the baby, a baby lost), a partner who hurts her, or someone else being harmed. Found by the persona audit ("Mama Achieng"): about
+  // 155 of 250 danger-sign sentences, English and Kiswahili, got no urgent guidance at all. Like kyro-crisis-phrases.js this only RECOGNISES; the replies live in nexus/i18n and must be reviewed by a
+  // clinician, a midwife and a women's or children's protection organisation before they are relied on. It leans toward catching: a false trigger costs one calm reply.
+  const normalize = text => crisis.normalize(text)
+    .replace(/\bbleding\b|\bbleeding\b|\bbleedin\b/g, "bleeding")
+    .replace(/\bbreething\b|\bbreathin\b/g, "breathing")
+    .replace(/\bnt moving\b/g, "not moving")
+    .replace(/\bno breathing\b/g, "not breathing")
+    .replace(/\bdiarrhea\b|\bdiarhoea\b/g, "diarrhoea")
+    .replace(/\s+/g, " ").trim();
+  const any = (patterns, text) => patterns.some(pattern => pattern.test(text));
+
+  // ---- who and what ----
+  const PREGNANT = /\b(?:pregnan\w*|expecting|antenatal|mimba|mjamzito|nina mimba|\d+\s*(?:weeks?|months?) (?:pregnant|along)|(?:weeks?|months?) pregnant|miezi \w+ ya mimba)\b/;
+  const BABY = /\b(?:baby|babies|newborn|new born|new-born|infant|mtoto mchanga|mtoto)\b/;
+  const CHILD_WORDS = /\b(?:child|children|kid|toddler|son|daughter|boy|girl|baby|newborn|infant|mtoto|binti|mwanangu|kijana)\b|\b\d+[ -]?(?:year|month|week)s?[ -]?old\b/;
+  const MINE = /\b(?:my|our|the|mtoto wangu|mwanangu|binti yangu)\b/;
+  const BLEED = /\b(?:bleed\w*|losing blood|blood (?:is )?(?:coming|flowing|pouring)|heavy blood|damu(?: nyingi)?|kutokwa(?: na)? damu|ninatokwa(?: na)? damu|ninatoka damu|nimeanza kutokwa|anatokwa damu|inatoka damu)\b/;
+  const FIT = /\b(?:fits?|convuls\w*|seizures?|kifafa|degedege|fitting)\b/;
+  const BIRTH_DONE = /\b(?:delivered|gave birth|just given birth|after (?:birth|delivery|giving birth)|the placenta|placenta is not out|nimejifungua|baada ya kuzaa|nimezaa)\b/;
+  const NOT_NOW = /\b(?:next (?:week|month)|soon|due (?:in|on)|in (?:a )?(?:week|month|december|january|february|march|april|may|june|july|august|september|october|november)|weeks? (?:from now|to go)|when (?:the )?(?:baby|labou?r)|what to do|how do i know|is it normal|signs? of|what is)\b/;
+
+  // ---- tiers: "now" is a health worker immediately; "today" is a clinic the same day ----
+  // Poison, a swallowed object, a burn, a snake bite: each has its own first-aid line.
+  const SWALLOW_VERB = /\b(?:swallow\w*|drank|drunk|ate|eaten|took|taken|licked|chewed|amekunywa|amemeza|amekula|amelamba)\b/;
+  const SWALLOW_THING = /\b(?:batter(?:y|ies)|kerosene|paraffin|petrol|diesel|bleach|detergent|washing (?:powder|liquid)|poison\w*|pesticide|rat poison|insecticide|acid|medicines?|tablets?|pills?|iron (?:tablets?|pills?)|malaria (?:medicine|tablets?)|coins?|beans?|stones?|something|kitu|sumu|mafuta ya taa|dawa|vidonge|sarafu|betri)\b/;
+  const BURN = /\b(?:burn\w*|scald\w*|hot (?:water|oil|porridge|tea|soup)|touched the fire|fell in(?:to)? the fire|ameungua|ameungua na moto|maji moto|moto)\b/;
+  const SNAKE = /\b(?:snake|nyoka)\b/;
+  const SNAKE_BITE = /\b(?:bit|bitten|bite|bites|sting|stung|amemuuma|ameuma|amenigonga|amemgonga|kuuma|kung'ata|ameng'ata)\b/;
+
+  // ---- baby (a few weeks to a year) and small child danger signs ----
+  const BABY_NOW = [
+    /\b(?:not (?:feeding|breastfeeding|sucking|taking (?:the )?breast)|won'?t (?:feed|suck|breastfeed)|refus\w* (?:to )?(?:feed|breast)|hanyonyi|hanyonyi)\b/,
+    /\b(?:very sleepy|too sleepy|cannot (?:be )?wake|can'?t (?:be )?wake|will not wake|won'?t wake|floppy|limp|weak and sleepy|mtoto amelala sana|hawezi kuamka)\b/,
+    /\b(?:fever|hot body|very hot|high temperature|temperature (?:of )?(?:3[89]|4\d)|mwili moto|homa)\b/,
+    /\b(?:cold (?:and )?(?:not moving|and weak|body)|not crying|did not cry|no cry|hasn'?t cried|hailii)\b/,
+    /\b(?:yellow|jaundice|manjano)\b/,
+    /\b(?:breathing (?:very )?fast|fast breathing|chest (?:is )?pull\w*|chest pulling in|grunting|panting|hapumui|anapumua kwa shida|anapumua haraka|hapumui vizuri|blue (?:lips|skin|colou?r)?|turning blue|is blue)\b/,
+    /\b(?:cord|kitovu)\b[^.!?]{0,40}\b(?:red|pus|smell\w*|bleed\w*|infect\w*|usaha|damu|inanuka)\b|\b(?:red|pus|smell\w*|bleed\w*|usaha)\b[^.!?]{0,20}\b(?:cord|kitovu)\b/,
+    /\b(?:green vomit|vomiting green|bile|vomit\w* everything|cannot keep (?:anything|milk) down|belly (?:is )?(?:very )?(?:big|hard|swollen)|stomach (?:is )?(?:very )?(?:big|hard|swollen))\b/,
+    /\b(?:not passed urine|no urine|hasn'?t (?:passed|had) (?:any )?urine|sunken (?:eyes|fontanelle|soft spot)|fontanelle (?:is )?sunken|hajakojoa)\b/,
+    /\b(?:stiff neck|bulging fontanelle|pus in the eyes?|pus (?:from|in) (?:the )?eyes?)\b/,
+    /\b(?:fits?|convuls\w*|seizures?|kifafa|degedege|shaking all over)\b/,
+    /\b(?:diarrhoea|kuhara|anaharisha)\b[^.!?]{0,40}\b(?:very weak|weak|sunken|blood|damu|dehydrat\w*|not drinking|hanywi)\b|\b(?:very weak|weak|sunken eyes|blood)\b[^.!?]{0,30}\b(?:diarrhoea|kuhara)\b/
+  ];
+  const CHILD_NOW = [
+    /\b(?:fits?|convuls\w*|seizures?|kifafa|degedege|fitting)\b/,
+    /\b(?:unconscious|not (?:waking|responding)|won'?t wake|will not wake|cannot (?:be )?wake|passed out|collapsed|amezimia|amepoteza fahamu|hajitambui|hasemi)\b/,
+    /\b(?:not breathing|stopped breathing|hapumui|anapumua kwa shida|hapumui vizuri|difficulty breathing|struggling to breathe|breathing (?:very )?fast|chest (?:is )?pull\w*|wheezing and (?:cannot|can'?t)|turning blue|blue lips)\b/,
+    /\b(?:stiff neck)\b[^.!?]{0,40}\b(?:fever|homa)\b|\b(?:fever|homa)\b[^.!?]{0,40}\b(?:stiff neck)\b|\brash (?:that )?(?:does ?n[o']t|doesn'?t|will not) fade\b|\bpurple (?:rash|spots)\b/,
+    /\b(?:very pale|very weak|too weak|cannot (?:stand|walk|drink)|can'?t (?:stand|walk|drink)|not drinking|hanywi|sunken eyes|passing blood|blood in (?:the )?(?:stool|poo)|anaharisha damu|dark urine|swollen (?:face|feet) and (?:hands|urine))\b/,
+    /\b(?:nearly drowned|almost drowned|fell in(?:to)? the (?:water|river|well|pond)|has fallen in the water|was under (?:the )?water)\b/,
+    /\b(?:fell|fallen|hit (?:his|her|the) head|head injury|bumped (?:his|her) head|ameanguka|amepiga kichwa)\b[^.!?]{0,60}\b(?:not waking|vomit\w*|bleeding|sleepy|confused|drowsy|fits?|hasn'?t cried|won'?t wake|kichwa|anatapika|damu)\b/,
+    /\b(?:very thin|swollen feet|looks very thin)\b[^.!?]{0,40}\b(?:swollen|thin|not eating)\b/
+  ];
+  const CHILD_TODAY = [
+    /\b(?:fever|hot body|high temperature|mwili moto|homa)\b/,
+    /\b(?:diarrhoea|kuhara|anaharisha|vomiting|vomits|kutapika|anatapika)\b/,
+    /\b(?:cough(?:ing)? for (?:\d+|three|four|five|a few|many) days|cough for (?:\d+|three|four|five) days|kikohozi)\b[^.!?]{0,30}\b(?:days|siku)?\b/,
+    /\b(?:wheez\w*|not eating|refus\w* (?:to )?eat|very thin|swollen feet|rash all over)\b/
+  ];
+  // "my baby has a cold and a blocked nose", "my child has a fever for 3 days": the first is not a danger sign, the second is a same-day clinic visit.
+  const NOT_A_SIGN = /\b(?:teething|just a cold|blocked nose|runny nose|a cold and|sleeps? (?:too much|a lot|all day)|crying (?:a lot|all the time)|cries a lot|is it normal|how (?:do|can|should)|what (?:is|are|should)|when (?:should|do|can)|can i|should i)\b/;
+
+  // ---- pregnancy and birth ----
+  const PREG_SIGNS = [
+    BLEED,
+    FIT,
+    /\b(?:severe|very bad|terrible|bad|strong|makali)\b[^.!?]{0,20}\b(?:headache|head ache|maumivu ya kichwa)\b|\bheadache\b[^.!?]{0,30}\b(?:blur\w*|vision|eyes|swollen)\b/,
+    /\b(?:blur\w*|blurry|vision (?:is )?(?:blur\w*|bad|dim)|cannot see (?:well|properly)|can'?t see (?:well|properly)|seeing (?:spots|flashes)|ukungu|naona ukungu)\b/,
+    /\b(?:swollen|swelling|swell\w*|vimevimba|uvimbe)\b[^.!?]{0,30}\b(?:face|hands?|eyes|uso|mikono)\b|\b(?:face|hands?)\b[^.!?]{0,20}\b(?:swollen|swelling|vimevimba)\b/,
+    /\b(?:severe|very bad|too much|terrible|bad|strong|makali|sana)\b[^.!?]{0,25}\b(?:belly|stomach|abdominal|tumbo)\b[^.!?]{0,15}\b(?:pain|hurts?|uma|linauma|maumivu)?\b|\b(?:belly|stomach|tumbo)\b[^.!?]{0,15}\b(?:pain|hurts|linauma)\b[^.!?]{0,20}\b(?:severe|very|too much|sana|makali)\b/,
+    /\b(?:fever|high temperature|chills and fever|homa|temperature (?:of )?(?:3[89]|4\d))\b/,
+    /\b(?:baby|mtoto)\b[^.!?]{0,25}\b(?:has ?n[o']t|not|stopped|no longer|hasogei|hasongi|hasogei)\b[^.!?]{0,15}\b(?:mov\w*|kick\w*|sogea|sogei)\b|\b(?:not|haven'?t|have not|hasn'?t)\b[^.!?]{0,15}\b(?:felt|feel|feeling|seen)\b[^.!?]{0,15}\b(?:baby|the baby)\b[^.!?]{0,10}\b(?:move\w*|kick\w*)\b|\bmtoto (?:tumboni )?hasogei\b|\bhasogei tangu\b/,
+    /\b(?:water|waters|maji)\b[^.!?]{0,15}\b(?:broke|broken|burst|leak\w*|yamenitoka|yamevunjika|yamepasuka|yamevuja)\b|\b(?:my )?waters? (?:have )?broke(?:n)?\b|\bmaji ya uzazi yamepasuka\b/,
+    /\b(?:fell|fall|fallen|slipped|nilianguka|nimeanguka|kicked|hit|punched)\b[^.!?]{0,40}\b(?:belly|stomach|tumbo|on my belly)\b|\b(?:i )?(?:fell|slipped|have fallen|nilianguka|nimeanguka|nimeteleza)\b/,
+    /\b(?:dizz\w*|faint\w*|kizunguzungu|nimezimia)\b/,
+    /\b(?:vomiting all day|cannot keep (?:any )?food down|can'?t keep (?:any )?food down|nimetapika siku nzima|kutapika siku nzima)\b/,
+    /\b(?:pain|maumivu|uchungu)\b[^.!?]{0,20}\b(?:and|na)\b[^.!?]{0,20}\b(?:bleed\w*|damu)\b/
+  ];
+  const LABOUR = [
+    /\b(?:in labou?r|labou?r (?:pains?|has started|started|is starting)|contractions?|my pains? (?:have )?started|pains? every \d+ minutes|going into labou?r|nimeanza kuhisi uchungu|uchungu umeanza|nina uchungu|uchungu wa kuzaa)\b/,
+    /\b(?:the )?baby (?:is )?(?:coming|crowning)\b|\bbaby's coming\b|\bi can see the (?:baby'?s )?head\b|\bmtoto anakuja\b|\bnimeanza kujifungua\b/,
+    /\bi think i am going into labou?r\b/
+  ];
+
+  // The sign a sentence shows, or null. { category } where category is one of:
+  //   labour, pregnancy, postpartum, baby, baby_today, child, child_today, poison, burn, snake, injury
+  function careSign(text) {
+    const plain = normalize(text);
+    if (!plain || plain.length > 500) return null;
+    const pregnant = PREGNANT.test(plain) && !/\b(?:not|no longer|never|am not|isn'?t|am n'?t) (?:\w+ )?pregnant\b/.test(plain);
+    const hasBaby = BABY.test(plain);
+    const hasChild = CHILD_WORDS.test(plain);
+    const notNow = NOT_NOW.test(plain);
+    // swallowed / burned / bitten: the person is almost always talking about a child, and these are urgent for anyone
+    if (SWALLOW_VERB.test(plain) && SWALLOW_THING.test(plain) && (hasChild || /\b(?:i|we)\b/.test(plain) && /\b(?:poison|pesticide|bleach|kerosene|paraffin|rat poison)\b/.test(plain)) && !NOT_A_SIGN.test(plain) && !/\bi (?:took|take|have taken|just took) my\b/.test(plain)) return { category: "poison" };
+    if (SNAKE.test(plain) && SNAKE_BITE.test(plain) && !/\b(?:saw|see|killed|how to|what to do about|cow|goat|dog|sheep|chicken|cat|calf|ng'ombe|mbuzi|mbwa|kuku)\b/.test(plain)) return { category: "snake" };
+    if (BURN.test(plain) && (hasChild || /\b(?:i|my)\b/.test(plain)) && /\b(?:burn\w*|scald\w*|ameungua|touched the fire|hot (?:water|oil))\b/.test(plain) && !NOT_A_SIGN.test(plain) && !/\b(?:sunburn|burn(?:ing)? (?:the )?(?:rubbish|waste|charcoal|maize|field|bush)|burnt (?:the )?(?:food|maize|rice))\b/.test(plain)) return { category: "burn" };
+    if (any(LABOUR, plain) && !notNow && !/\bnext week\b/.test(plain)) return { category: "labour" };
+    if (BLEED.test(plain) && BIRTH_DONE.test(plain)) return { category: "postpartum" };
+    if (/\b(?:miscarriage|lost (?:the|my) (?:pregnancy|baby)|mimba imeharibika|nimeharibu mimba)\b/.test(plain) && BLEED.test(plain)) return { category: "pregnancy" };
+    // a baby only a few weeks old, or any baby: danger signs
+    if (hasBaby && !NOT_A_SIGN.test(plain) && !pregnant && (MINE.test(plain) || /\bmtoto\b/.test(plain)) && any(BABY_NOW, plain) && !/\b(?:my baby (?:was|is) (?:born|due)|born (?:small|early))\b/.test(plain)) return { category: "baby" };
+    if (/\b(?:born|was born|nimejifungua|nimezaa)\b/.test(plain) && hasBaby && /\b(?:not crying|is not crying|does not cry|small|1\.\d ?kg|very small|7 months|early|cold)\b/.test(plain)) return { category: "baby" };
+    if (hasChild && !hasBaby && !NOT_A_SIGN.test(plain) && any(CHILD_NOW, plain)) return { category: "child" };
+    if (hasBaby && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain)) && any(CHILD_NOW, plain)) return { category: "baby" };
+    if (hasChild && /\b(?:fell|ameanguka|fallen|baby fell off|fell off)\b/.test(plain) && /\b(?:head|kichwa|crying a lot|bleeding|damu)\b/.test(plain)) return { category: "injury" };
+    if (pregnant && !NOT_A_SIGN.test(plain) && !notNow && any(PREG_SIGNS, plain)) return { category: "pregnancy" };
+    if (!notNow && !NOT_A_SIGN.test(plain) && any([PREG_SIGNS[7], PREG_SIGNS[8]], plain)) return { category: "pregnancy" };
+    if (hasChild && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain)) && any(CHILD_TODAY, plain)) return { category: hasBaby ? "baby_today" : "child_today" };
+    return null;
+  }
+
+  // ---- after a birth ----
+  // Feeling you cannot cope, empty, angry or sad since the baby came: common, treatable, and to be told to a health worker. Never answered as a task.
+  const POSTNATAL = [
+    /\b(?:don'?t|do not|cannot|can'?t|could not|couldn'?t) (?:want|love|feel|bond|cope)\b[^.!?]{0,25}\b(?:the baby|my baby|this baby|my child|my children|the child)\b/,
+    /\b(?:i )?(?:can'?t|cannot|can not|could not) cope\b[^.!?]{0,20}\b(?:with )?(?:the )?(?:baby|my baby|my children|the children|motherhood|being a mother)\b/,
+    /\b(?:siwezi|sijisikii|sipendi)\b[^.!?]{0,20}\b(?:kumpenda|kumtunza|mtoto)\b|\bsipendi mtoto huyu\b|\bnimechoka sana na (?:huyu )?mtoto\b/,
+    /\b(?:i )?(?:don'?t|do not) feel anything for (?:my|the) (?:baby|child)\b/,
+    /\bi (?:feel|am) (?:like )?(?:a )?(?:bad|terrible|useless|failing as a?) (?:mother|mum|mom)\b|\bi(?:'m| am) (?:a )?(?:bad|terrible|useless) (?:mother|mum|mom)\b|\bi(?:'m| am) failing my (?:children|baby|child)\b|\bi feel i am failing my (?:children|baby|child)\b/,
+    /\bi wish i (?:did not|didn'?t|had not|hadn'?t) have (?:this|the|a) (?:baby|child)\b|\bi regret having (?:this baby|a baby|children|kids)\b|\bi do not want (?:this|the) baby\b|\bi don'?t want (?:this|the) baby\b/,
+    /\bbaby blues\b|\bpost-?natal depress\w*\b/,
+    /\b(?:since|after) (?:the baby|i gave birth|giving birth|i had the baby|the birth)\b[^.!?]{0,60}\b(?:sad|cry\w*|empty|low|depress\w*|can'?t cope|cannot cope|hopeless|numb|angry|anxious|scared all the time|not (?:sleeping|eating)|go mad|going mad)\b/,
+    /\bi (?:feel|am) (?:so )?(?:sad|low|empty|numb|hopeless)\b[^.!?]{0,40}\b(?:since|after) (?:the baby|i gave birth|giving birth)\b/,
+    /\b(?:i )?(?:cry|crying) every day\b[^.!?]{0,40}\b(?:baby|since|after)\b|\bi cannot get out of bed\b[^.!?]{0,30}\b(?:baby|since)\b|\bi (?:don'?t|do not) want to get out of bed to feed the baby\b/,
+    /\bi(?:'m| am) (?:too|so) tired to (?:look after|care for) (?:my )?(?:baby|children|child)\b|\bi am so tired i could scream at the (?:child|baby|children)\b|\bi am angry all the time at my (?:children|baby|child)\b/,
+    /\bi want to run away and leave (?:my )?(?:baby|children|child|kids)\b|\bsometimes i want to leave the baby and run away\b|\bmy (?:baby|children) (?:is|are) better off with (?:another|someone else|a different) (?:mother|mum|mom|person)\b/,
+    /\b(?:baby|child|children|kids)\b[^.!?]{0,25}\b(?:would be|is|are|will be) (?:much )?better (?:off )?without me\b/,
+    /\bi cry every day and i don'?t want to see anyone\b|\bi am so low since i gave birth\b|\bi have not slept in days since the baby\b/
+  ];
+  // Thoughts or acts that could hurt the baby: shaking, throwing, hitting, voices. A different, urgent reply from low mood.
+  const BABY_AT_RISK = [
+    /\b(?:want|wanted|feel like|felt like|going to|could|might|will) (?:to )?(?:shake|throw|smother|suffocate|drop|hit|beat|strangle|hurt|harm|kill)\b[^.!?]{0,20}\b(?:the baby|my baby|my child|the child|my son|my daughter|baby)\b/,
+    /\b(?:i )?(?:shook|have shaken|hit|beat|threw|dropped|slapped|smothered)\b[^.!?]{0,15}\b(?:the baby|my baby|my child|my son|my daughter|the child)\b/,
+    /\bi (?:think about|keep thinking about|have (?:bad )?thoughts? about) (?:hurting|harming|killing|shaking) (?:my|the) (?:baby|child|children)\b|\bi have bad thoughts about the baby\b/,
+    /\bi hear voices\b[^.!?]{0,40}\b(?:baby|child|hurt|kill)\b|\bvoices (?:telling|tell|are telling) me to (?:hurt|kill|harm)\b/,
+    /\bi am so angry i could (?:hurt|hit|harm|kill|shake) (?:my |the )?(?:child|baby|children|kids)\b/,
+    /\bi want to (?:throw|give away|sell|abandon|leave) (?:the |my |this )?baby (?:away)?\b|\bi want to sell my baby\b|\bi want to take the baby and die\b/,
+    /\b(?:nataka|nitamuua|nitamdhuru|naogopa nitamdhuru|nataka kumuua|nataka kumpiga)\b[^.!?]{0,20}\b(?:mtoto|kumdhuru|kumuua)\b|\bnaogopa nitamdhuru mtoto\b|\bnataka kumuua mtoto\b/,
+    /\bi (?:hit|slapped|beat) my (?:child|baby|son|daughter)\b[^.!?]{0,30}\b(?:too hard|bleeding|and (?:he|she) is)\b/
+  ];
+  // A baby lost: miscarriage, stillbirth, a child who died. Grief first; bleeding or pain is a danger sign (careSign) and is answered before this.
+  const GRIEF = [
+    /\b(?:i had a miscarriage|i have a miscarriage|i(?:'ve| have) had a miscarriage|i lost (?:the |my )(?:baby|pregnancy|child|son|daughter)|my (?:baby|child|son|daughter) (?:died|has died|is dead|passed away)|my baby was stillborn|stillbirth)\b/,
+    /\b(?:mtoto wangu amefariki|mtoto amefariki|mimba imeharibika|nimepoteza mtoto|nimepoteza mimba|mtoto amekufa)\b/
+  ];
+
+  // ---- being hurt by a partner, and others being hurt ----
+  const PARTNER = "(?:my )?(?:husband|man|partner|boyfriend|ex|ex-husband|baba (?:watoto|\\w+)|mume wangu|mume|mpenzi wangu|he|she)";
+  const HIT_VERB = "(?:beat(?:s|ing)?|beaten|hit(?:s|ting)?|slap(?:s|ped|ping)?|chok(?:es|ed|ing)|kick(?:s|ed|ing)|punch(?:es|ed|ing)|whip(?:s|ped)?|stab(?:s|bed)?|burn(?:s|ed|t)|threaten(?:s|ed|ing)?|attack(?:s|ed|ing)?|abus(?:es|ed|ing))";
+  const ABUSE_MORE = [
+    new RegExp(`\\b${PARTNER} (?:is |was |has |keeps |always )?${HIT_VERB} (?:me|my (?:belly|stomach|face|head|back)|us)\\b`),
+    new RegExp(`\\b(?:he|my husband|my man|my partner|husband) (?:is )?${HIT_VERB} me\\b`),
+    /\b(?:i am|i'?m|i feel) (?:so )?(?:afraid|scared|terrified|frightened) (?:of|for) (?:my )?(?:husband|man|partner|boyfriend|him|home|going home|my life)\b|\b(?:naogopa|ninaogopa) (?:mume wangu|nyumbani|kurudi nyumbani)\b|\bi am afraid to go home\b|\bsijisikii salama nyumbani\b/,
+    /\b(?:he|my husband|my man|husband) (?:will|is going to|threatens to|said he will|says he will|has threatened to) (?:kill|beat|hurt|stab|burn) me\b|\bi'?m afraid he will (?:kill|hurt|beat) me\b|\bhe (?:will|is going to) kill me\b|\bameniambia ataniua\b|\bataniua\b/,
+    /\b(?:he|my husband|my man) (?:has|had) a (?:panga|knife|machete|gun|stick)\b[^.!?]{0,30}\b(?:looking for me|outside|coming|is here)\b|\bhe is outside the door and he is drunk\b/,
+    /\bi (?:am|'m) hiding (?:from|at)\b[^.!?]{0,40}\b(?:husband|him|his|house)\b|\bi ran away from (?:home|my husband|him)\b|\bi have nowhere to sleep (?:tonight )?with my (?:child|children|baby)\b|\b(?:he|my husband|my man) (?:threw|has thrown|throws|chased|has chased|locked|has locked|kicked|has kicked) (?:me|us)\b[^.!?]{0,30}\b(?:out|house|home|in|room)\b|\b(?:he|my husband) (?:has )?(?:thrown|chased) me out\b|\bamenifukuza (?:nyumbani|na mtoto)\b|\bnimefukuzwa nyumbani\b/,
+    /\b(?:he|my husband|my man) (?:forces?|forced|makes?|made) (?:himself on )?me\b[^.!?]{0,30}\b(?:sleep with|sex|to have sex|himself)\b|\b(?:he|my husband) forces himself on me\b|\bhe (?:raped|rapes) me\b|\bhe forces me to sleep with him\b|\b(?:a|some) man forced me\b|\bmume wangu ananilazimisha\b|\bnimebakwa\b|\balinibaka\b|\bananibaka\b/,
+    /\b(?:he|my husband) (?:takes|took|has taken|forces me to give|makes me give|won'?t let me keep) (?:all )?(?:my )?(?:market )?(?:money|pesa)\b|\bananiambia nimpe pesa zote\b|\bananinyang'anya pesa\b|\b(?:he|my husband) (?:does not|doesn'?t|will not|won'?t|never) (?:let|allow) me (?:go|to go|leave|out|see)\b|\b(?:he|my husband) (?:locked|locks) me in\b|\b(?:he|my husband) (?:checks|reads|has taken) my phone\b|\bhe does not let me go to the clinic\b/,
+    /\b(?:mume wangu|ananipiga|ananichapa|amenipiga|ananipiga mimi|ananipiga kila siku)\b[^.!?]{0,30}\b(?:ananipiga|amenipiga|ananichapa|mimi na mtoto|na nina mimba|jana|kila siku)?\b|\bmume wangu (?:ananipiga|amenipiga|ananichapa)\b|\b(?:ananipiga|ananichapa|amenipiga)\b/,
+    /\b(?:he|my husband|my man|husband|my husban|mi husband|my in-laws?) (?:\w+ ){0,2}(?:beats?|hits?|hit|slapped|beat)\b[^.!?]{0,10}\bme\b|\bhusband (?:beat|hit) me again\b|\bmy man beats me\b|\bhe is beating me\b|\bhe (?:beats|hit|slapped|kicked) me\b/
+  ];
+  // Someone else is being hurt (a neighbour, a friend, a child), or a girl is at risk of being cut or married off.
+  const ABUSE_OTHER = [
+    /\b(?:he|my husband|her husband|his father|the father|their father) (?:beats?|hits?|is beating|is hitting|beat|hit|slaps?|whips?) (?:my|the|his|her|their) (?:\d+[ -]?year[ -]?old|child|children|kids?|son|daughter|baby|toddler)\b|\bmy son is being beaten\b|\bhe beats my child\b|\bhe hit my daughter\b|\bmy husband beats my \d+ ?year old\b/,
+    /\b(?:my )?(?:neighbou?r|neighbou?r'?s|friend|friend'?s|sister|sister'?s|cousin|colleague)\b[^.!?]{0,30}\b(?:beat(?:s|ing)?|hit(?:s|ting)?|locks?|locked|abus\w*|rap\w*)\b[^.!?]{0,20}\b(?:her|his|them|child|children|in|wife|daughter|son)\b/,
+    /\b(?:a man|someone|somebody|my daughter'?s teacher|the teacher|a teacher|uncle|stepfather|my boss)\b[^.!?]{0,25}\b(?:touched|touches|molest\w*|rap\w*|asking (?:her|him) for sex|forced)\b[^.!?]{0,20}\b(?:my daughter|my son|my niece|my child|her|him|girl|boy)\b/,
+    /\bmy (?:daughter|niece|sister|cousin)'?s? (?:teacher )?(?:is|was) asking (?:her )?for sex\b|\bmy daughter'?s teacher is asking her for sex\b/,
+    /\b(?:they|he|she|my (?:mother in law|father|grandmother|aunt|uncle)|the family|elders?|wazee)\b[^.!?]{0,30}\b(?:want|wants|plan|planning|are going|going|says?|insist\w*|wanataka|anataka)\b[^.!?]{0,30}\b(?:cut|circumcis\w*|mutilat\w*|marry off|marry|kumkeketa|kumtahiri|kumuoza)\b[^.!?]{0,30}\b(?:my )?(?:daughter|niece|girl|binti|mtoto|sister|her)\b|\b(?:wanataka|anataka) (?:kumkeketa|kumtahiri|kumuoza) (?:binti|mtoto)\b/,
+    /\bmy (?:niece|daughter|sister|cousin) is being (?:married off|forced to marry|married)\b[^.!?]{0,20}\b(?:at )?\d{1,2}\b|\bmarried off at 1\d\b/,
+    /\bmy (?:sister|niece|daughter|cousin) is 1\d(?: years? old)? and (?:is )?pregnant\b|\bmy (?:\d{1,2}[ -]?year[ -]?old|1\d[ -]?year[ -]?old|young) (?:sister|niece|daughter|cousin) is pregnant\b|\bmy (?:sister|niece|cousin) is pregnant and (?:she is|is) (?:only )?1\d\b|\bmy 1\d year old sister is pregnant\b|\bmy sister is pregnant and she is only 1\d\b|\bmdogo wangu ana mimba ana miaka 1\d\b/,
+    /\b(?:i am|i'?m|i was) afraid (?:that )?(?:my husband|he|she|they|someone|the father) (?:will|might|is going to) (?:hurt|hit|kill|beat|harm) (?:the|my) (?:baby|child|children)\b/
+  ];
+  // A friend or relative who says she wants to die: stay with her, do not leave her alone, help her reach someone. Not the reply for abuse.
+  const FRIEND_CRISIS = [
+    /\bmy (?:friend|sister|brother|mother|mum|mom|father|dad|son|daughter|cousin|neighbou?r|colleague|husband|wife|aunt|uncle)\b[^.!?]{0,30}\b(?:wants? to (?:die|kill (?:herself|himself|themselves))|is suicidal|says (?:she|he|they) wants? to die|talks? about (?:dying|suicide|killing (?:herself|himself))|(?:tried|trying) to kill (?:herself|himself)|has (?:swallowed|taken) (?:poison|too many))\b/
+  ];
+  // not violence: "my husband beats me at draughts", "he hit me up on whatsapp"
+  const NOT_VIOLENCE = /\b(?:at (?:draughts|checkers|cards|chess|football|a game|scrabble|dominoes|bao|ludo)|hit me up|beats me to (?:the|it|market)|beat me to (?:the|it)|beat me in|beats me in|hit me with the ball|with the ball)\b/;
+
+  // ---- wanting to die, more ways ----
+  const SELF_HARM_MORE = [
+    /\b(?:i )?(?:want|wanna|going|will|am going|plan|planning|intend|decided) (?:to )?(?:drink|swallow|take) (?:poison|pesticide|bleach|rat poison|kerosene|paraffin|all my pills|an overdose)\b|\bi(?:'ll| will) (?:drink|swallow) (?:poison|pesticide|bleach|rat poison)\b/,
+    /\bnitajiua\b|\bnitakunywa sumu\b|\bnataka kuruka (?:mto|kutoka|chini)\b|\bnataka kunywa sumu\b/,
+    /\bi want to take the baby and die\b|\bi want to (?:die|kill myself) (?:with|and) (?:the )?(?:baby|my baby|my children)\b|\bnataka kufa na mtoto\b/,
+    /\bi want to jump (?:in|into|off|from) (?:the )?(?:river|bridge|well|building|tree|cliff)\b/
+  ];
+
+  const adultContext = text => /\b(?:my )?(?:husband|man|partner|boyfriend|ex|mume|in-laws?|baba watoto)\b|\bpregnan|\bmimba\b|\bmjamzito\b|\bmy (?:baby|child|children|kids)\b|\bmtoto wangu\b|\bmy husban\b|\bmi husband\b/.test(normalize(text));
+  const test = (patterns, text, limit = 500) => { const plain = normalize(text); return plain.length > 0 && plain.length <= limit && any(patterns, plain); };
+  const INFO_QUESTION = /^(?:what (?:is|are)|how do i know|how can i|how to|is it normal|can you (?:tell|explain)|tell me about|explain)\b/;
+  const postnatal = text => !INFO_QUESTION.test(normalize(text)) && test(POSTNATAL, text);
+  const friendCrisis = text => test(FRIEND_CRISIS, text);
+  const babyAtRisk = text => test(BABY_AT_RISK, text);
+  const grief = text => test(GRIEF, text);
+  const abuseMore = text => { const plain = normalize(text); return plain.length > 0 && plain.length <= 500 && !NOT_VIOLENCE.test(plain) && any(ABUSE_MORE, plain); };
+  const abuseOther = text => { const plain = normalize(text); return plain.length > 0 && plain.length <= 500 && !NOT_VIOLENCE.test(plain) && any(ABUSE_OTHER, plain); };
+  const selfHarmMore = text => test(SELF_HARM_MORE, text);
+  const notViolence = text => NOT_VIOLENCE.test(normalize(text));
+
+  return Object.freeze({ normalize, careSign, friendCrisis, postnatal, babyAtRisk, grief, abuseMore, abuseOther, selfHarmMore, adultContext, notViolence });
+});

@@ -4,6 +4,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
+const { accepted: acceptedAlertOffer } = require("../companion/offer.js");
 const { farmLogTurn } = require("../farm/log.js");
 const { farmWorkTurn } = require("../farmwork/index.js");
 const { healthWorkTurn } = require("../healthwork/index.js");
@@ -783,15 +784,8 @@ function completeHealthRecordPlan(text, catalog) {
   return null;
 }
 
-// A plain yes to the offer to alert the trusted circle. The last thing Kyro said (history is oldest first, and does not yet hold this message) has to be that offer, and nothing else in between.
-const ALERT_OFFER = /(?:say|sema)\s+["“]?(?:alert my circle|arifu mzunguko wangu)["”]?/i;
-const YES_TO_OFFER = /^(?:yes|yeah|yep|yup|ok(?:ay)?|sure|please|yes,? please|please do|do it|go ahead|yes,? do it|yes,? go ahead|alert them|yes,? alert them|yes,? alert (?:my )?circle|ndiyo|ndio|ndiyo tafadhali|tafadhali|sawa|fanya hivyo)[.!\s]*$/i;
-function alertOfferAccepted(text, history = []) {
-  if (!YES_TO_OFFER.test(String(text || "").trim())) return false;
-  const turns = (history || []).filter(turn => turn && String(turn.content || "").trim());
-  const last = turns[turns.length - 1];
-  return Boolean(last && last.role === "assistant" && ALERT_OFFER.test(String(last.content)));
-}
+// A plain yes to the offer to alert the trusted circle: see companion/offer.js (the offer is the last sentence, as a question, and the yes is the very next message).
+const alertOfferAccepted = acceptedAlertOffer;
 
 // Repeating reminders in Kiswahili: read into the English sentence the existing service understands; the answer is Kiswahili when it worked, and the service's own words when it did not.
 async function swahiliRepeatingTurn({ text, store, tenantId, userId, timeZone }) {

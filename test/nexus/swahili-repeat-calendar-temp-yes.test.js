@@ -96,14 +96,17 @@ test("a body temperature typed as a sentence is saved with its unit, an impossib
 test("a plain yes to the offer to alert the circle IS the request, and only right after the offer", async () => {
   const seen = [];
   const s = setup({ companion: { async handle({ command }) { seen.push(command.text); return command.text === "alert my circle" ? { response: "I've alerted Grace." } : null; } } });
-  const offer = "I'm here. If this is urgent, say \"alert my circle\" and I'll message Grace right away. If you might be in danger, please call your local emergency number now.";
+  // The offer is the LAST sentence, as a question (companion/offer.js). Kyro's other questions, and the old "say alert my circle" wording, are not it.
+  const offer = "I'm here. If you might be in danger, please call your local emergency number now. Or tell me what's happening. Do you want me to alert Grace right now?";
   assert.equal((await s.ask("yes", [{ role: "user", content: "help" }, { role: "assistant", content: offer }])).response, "I've alerted Grace.");
-  assert.equal((await s.ask("Yes please.", [{ role: "assistant", content: "I can alert Grace right now — just say \"alert my circle\". I'm here." }])).response, "I've alerted Grace.");
-  assert.equal((await s.ask("ndiyo", [{ role: "assistant", content: "Naweza kutuma tahadhari: sema \"arifu mzunguko wangu\"." }])).response, "I've alerted Grace.");
+  assert.equal((await s.ask("Yes please.", [{ role: "assistant", content: "I'm here, and I'm listening. Do you want me to alert Grace right now?" }])).response, "I've alerted Grace.");
+  assert.equal((await s.ask("ndiyo", [{ role: "assistant", content: "Niko hapa, na ninakusikiliza. Unataka nitume tahadhari kwa Grace sasa hivi?" }])).response, "I've alerted Grace.");
   seen.length = 0;
   // not the offer, something said in between, or not a yes: nothing is sent
-  for (const [text, history] of [["yes", [{ role: "assistant", content: "Okay, done." }]], ["yes", [{ role: "assistant", content: offer }, { role: "user", content: "hello" }]], ["no", [{ role: "assistant", content: offer }]], ["yes", []]]) {
+  for (const [text, history] of [["yes", [{ role: "assistant", content: "Okay, done." }]], ["yes", [{ role: "assistant", content: offer }, { role: "user", content: "hello" }]], ["no", [{ role: "assistant", content: offer }]], ["yes", []],
+    ["yes", [{ role: "assistant", content: "I'm here. Tell me what's happening, or say \"alert my circle\" and I'll message Grace right away." }]],
+    ["yes", [{ role: "assistant", content: "Do you want me to alert Grace right now? Or would you rather tell me what's happening?" }]]]) {
     await s.ask(text, history).catch(() => null);
   }
-  assert.deepEqual(seen, ["yes", "yes", "no", "yes"], "the companion only ever saw the person's own words");
+  assert.deepEqual(seen, ["yes", "yes", "no", "yes", "yes", "yes"], "the companion only ever saw the person's own words");
 });

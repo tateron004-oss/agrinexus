@@ -3,6 +3,9 @@
 const { t, both, languageOf } = require("../i18n/index.js");
 // What people say when they may hurt themselves or someone else, or are being hurt: ONE list shared with the typed-chat, phone and voice readers (public/kyro-crisis-phrases.js).
 const crisisPhrases = require("../../public/kyro-crisis-phrases.js");
+// Danger signs in pregnancy, birth, a baby or a child, the hard things after a birth, and a partner or someone else hurting a woman or child (public/kyro-care-phrases.js).
+const care = require("../../public/kyro-care-phrases.js");
+const CARE_SWAHILI = /\b(?:mtoto|mimba|mjamzito|mume|nina|nimeanza|nimejifungua|nimezaa|ameanguka|anatapika|damu|uchungu|kifafa|degedege|homa|nyoka|sumu|ananipiga|amenipiga|ananichapa|hapumui|ameungua|nimebakwa|ataniua|naogopa|nimepoteza|nimeharibu|binti|mwanangu|nimechoka|sijisikii|sipendi|siwezi|nataka|amemeza|amekunywa|amelala|hanyonyi|ananibaka|alinibaka|amenifukuza|nitajiua)\b/;
 const SWAHILI_WORDS = /\b(?:nimechoka|natamani|nataka|ninataka|napenda|ningependa|sina|nafikiria|ninafikiria|afadhali|heri|bora nife|maisha|bunduki|kisu|sumu|sitaki)\b/;
 
 // Emergencies and moments of crisis. Two things happen here and they are deliberately different:
@@ -179,9 +182,22 @@ function readSafetyDetailed(text) {
   const weapon = crisisPhrases.mentionsMeans(raw) ? { weapon: true } : {};
   if (SELF_HARM.some(pattern => pattern.test(raw))) return { kind: "self_harm", language: "en", ...weapon };
   if (SELF_HARM_SW.some(pattern => pattern.test(lower))) return { kind: "self_harm", language: "sw", ...weapon };
-  if (crisisPhrases.selfHarm(raw)) return { kind: "self_harm", language: SWAHILI_WORDS.test(lower) ? "sw" : "en", ...weapon };
+  // Someone else who wants to die ("my friend says she wants to die"): stay with them, do not leave them alone. Before the shared list, which may read it as the speaker's own.
+  const spokenLanguage = CARE_SWAHILI.test(lower) ? "sw" : "en";
+  if (care.friendCrisis(raw)) return { kind: "friend_crisis", language: spokenLanguage };
+  if (crisisPhrases.selfHarm(raw) || care.selfHarmMore(raw)) return { kind: "self_harm", language: SWAHILI_WORDS.test(lower) || CARE_SWAHILI.test(lower) ? "sw" : "en", ...weapon };
+  // Thoughts of hurting the baby, or having hurt it: before the general "might hurt someone" reply, because the first thing to do is different (put the baby down somewhere safe).
+  if (care.babyAtRisk(raw)) return { kind: "baby_at_risk", language: spokenLanguage };
   if (crisisPhrases.harmOthers(raw)) return { kind: "harm_others", language: "en" };
-  if (crisisPhrases.abuse(raw)) return { kind: "abuse", language: "en" };
+  // Someone else is being hurt, or a girl is at risk of being cut or married off: not the reply for the person being hurt.
+  if (care.abuseOther(raw)) return { kind: "abuse_other", language: spokenLanguage };
+  // A woman hurt by a partner is not the same as a child hurt by an adult: the wording differs (a clinic for injuries, pregnancy, who in the area helps).
+  if (!care.notViolence(raw) && (crisisPhrases.abuse(raw) || care.abuseMore(raw))) return { kind: "abuse", adult: care.adultContext(raw), language: spokenLanguage };
+  if (care.postnatal(raw)) return { kind: "postnatal", language: spokenLanguage };
+  // A sign that needs a health worker now, or today: pregnancy, labour, bleeding after a birth, a baby, a child, poison, a burn, a snake bite.
+  const sign = care.careSign(raw);
+  if (sign) return { kind: "care", category: sign.category, language: spokenLanguage };
+  if (care.grief(raw)) return { kind: "grief", language: spokenLanguage };
   // Someone asking for a PIN, a password or money by phone or message: said plainly, never to share it.
   if (crisisPhrases.scam(raw)) return { kind: "scam", language: "en" };
   // "remember that my mpesa pin is 4821": never saved as a note or a fact, and never read back.
@@ -284,9 +300,21 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
   }
   if (kind === "scam") return t(language, "safety.scam");
   if (kind === "secret") return t(language, "safety.secretRefused");
+  // The offer to alert the circle is always the last sentence, as a question (see offer.js).
   const circleOffer = members.length ? t(language, "safety.selfHarmCircle", { names: members.map(member => member.otherName).join(", ") }) : "";
   if (kind === "harm_others") return t(language, "safety.harmOthers", { circle: circleOffer });
-  if (kind === "abuse") return t(language, "safety.abuse", { circle: circleOffer });
+  // No offer to alert the circle to a person who is being hurt: it may include the person doing it. Someone who wants a person told says who.
+  if (kind === "abuse") return t(language, found.adult ? "safety.abuseAdult" : "safety.abuse");
+  if (kind === "abuse_other") return t(language, "safety.abuseOther");
+  if (kind === "friend_crisis") return t(language, "safety.friendCrisis");
+  if (kind === "grief") return t(language, "safety.grief");
+  if (kind === "postnatal") return t(language, "safety.postnatal", { circle: circleOffer });
+  if (kind === "baby_at_risk") return t(language, "safety.babyAtRisk", { circle: circleOffer });
+  if (kind === "care") {
+    // "Take the baby to a clinic today" is not an emergency and does not offer to alert anyone; every other sign says where to go now, then offers.
+    const today = found.category === "baby_today" || found.category === "child_today";
+    return t(language, `safety.care.${found.category}`, { go: today ? "" : t(language, "safety.care.go", { circle: circleOffer }) });
+  }
   return t(language, found.weapon ? "safety.selfHarmWeapon" : "safety.selfHarm", { circle: circleOffer });
 }
 

@@ -34,7 +34,7 @@ test("everyday sentences that share the words are not read as a crisis", () => {
 });
 
 test("someone else's feelings are not read as the speaker's own, but the speaker's own still count in the same message", () => {
-  assert.equal(kind("my brother said he wants to die"), null);
+  assert.equal(kind("my brother said he wants to die"), "friend_crisis", "stay with him: not his words as hers, and not nothing");
   assert.equal(kind("I want to die laughing, that joke was great"), null);
   assert.equal(kind("my friend says she wished she was dead, and honestly I want to die too"), "self_harm");
 });
@@ -48,7 +48,7 @@ test("saying something about hurting another person, or being hurt, is answered 
   const push = async (...args) => { pushed.push(args); };
   const abuse = await safetyTurn({ text: "my uncle touched me", circle, push, tenantId: "t", userId: "u1", userName: "Amina" });
   assert.match(abuse, /not your fault/i);
-  assert.match(abuse, /alert my circle/);
+  assert.doesNotMatch(abuse, /alert (?:my circle|Grace)/, "no offer to alert the circle to someone being hurt: it may include the person hurting them");
   const others = await safetyTurn({ text: "I feel like hitting my wife", circle, push, tenantId: "t", userId: "u1", userName: "Amina" });
   assert.match(others, /step away/i);
   const weapon = await safetyTurn({ text: "I keep looking at my gun", circle, push, tenantId: "t", userId: "u1", userName: "Amina" });
@@ -71,7 +71,7 @@ test("fainting, stroke signs and a low sugar get the calm urgent reply with the 
     "I'm sweating and shaking", "my BP is 150/95 and I fainted", "I had a seizure"]) assert.equal(kind(phrase), "ask", phrase);
   const reply = await safetyTurn({ text: "my BP is 150/95 and I fainted", circle: { activeMembers: async () => [{ otherId: "u2", otherName: "Grace", shares: {} }] }, push: async () => {}, tenantId: "t", userId: "u1", userName: "Amina" });
   assert.match(reply, /emergency number/i);
-  assert.match(reply, /alert my circle/);
+  assert.match(reply, /Do you want me to alert Grace right now\?$/);
   assert.equal(kind("I took all my pills"), "ask");
   assert.equal(kind("I took all my pills this morning"), null);
 });

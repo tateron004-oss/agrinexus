@@ -82,8 +82,12 @@ class AgentService {
       actorId: context.userId, role: "user", content: command.text,
       provenance: { channel: command.channel, locale: command.locale, correlationId: command.correlationId } });
     if (!deterministicOnly) await ensureConversation();
-    const conversationHistory = this.conversations && !deterministicOnly
-      ? await this.conversations.recent({ tenantId: context.tenantId, conversationId: command.conversationId, limit: 24 }) : [];
+    // The spoken path normally reads no history, but a short reply ("yes") may be the answer to what Kyro just asked, such as the offer to alert the
+    // trusted circle (companion/offer.js): then, and only then, it reads the last few turns.
+    const mayAnswerKyro = deterministicOnly && String(command.text || "").trim().length <= 40;
+    const conversationHistory = this.conversations && (!deterministicOnly || mayAnswerKyro)
+      ? await this.conversations.recent({ tenantId: context.tenantId, conversationId: command.conversationId, limit: deterministicOnly ? 4 : 24 })
+        .catch(error => { if (!deterministicOnly) throw error; return []; }) : [];
     if (!deterministicOnly) await appendUserMessage();
     const plan = await this.planner.plan({ command, context, priorTask, conversationHistory });
     if (deterministicOnly) {
