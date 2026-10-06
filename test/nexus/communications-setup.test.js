@@ -42,6 +42,13 @@ test("fully set up channels are ready, and the notes catch the mistakes people m
   assert.ok(channelOf(status, "whatsapp").notes.some(note => /pre-approved message template/.test(note)));
   assert.ok(channelOf(status, "calls").notes.some(note => /\/api\/voice\/phone\/incoming/.test(note)));
   assert.ok(channelOf(status, "calls").notes.some(note => /2 numbers are on the list/.test(note)));
+  // What happens to a number that is not on the list is said as it is, from the one setting that decides it: off unless it is exactly "true"
+  const callNotes = environment => channelOf(setup.describeCommunications({ ...env, ...environment }, { authorizedCallerCount: 1 }), "calls").notes.join(" | ");
+  assert.match(callNotes({}), /told politely that it is not authorized and the call ends\. Nothing rings the owner's phone/);
+  assert.match(callNotes({ PHONE_SCREENING_ENABLED: "false" }), /Nothing rings the owner's phone/);
+  assert.match(callNotes({ PHONE_SCREENING_ENABLED: "true" }), /put through to the owner's real phone, up to 5 times a day[\s\S]*remove PHONE_SCREENING_ENABLED/);
+  assert.match(callNotes({ PHONE_SCREENING_ENABLED: "true", PHONE_SCREENING_DAILY_BRIDGE_CAP: "2" }), /up to 2 times a day/);
+  assert.doesNotMatch(callNotes({}), /screened and connected to the owner/, "the old wording that said every stranger rings the owner is gone");
   const free = setup.describeCommunications({ ...env, NEXUS_EMAIL_FROM: "me@gmail.com" }, {});
   assert.equal(channelOf(free, "email").state, "ready");
   assert.ok(channelOf(free, "email").notes.some(note => /free-mail sender/.test(note)));
