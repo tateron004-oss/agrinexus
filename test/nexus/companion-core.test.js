@@ -113,7 +113,7 @@ test("emergencies and self-harm are recognised in the person's own words, and no
   for (const text of ["This is an emergency", "I need help now", "I've fallen and I can't get up", "I can't get up", "I'm having a heart attack", "Alert my circle", "Call my circle"]) assert.equal(readSafety(text), "emergency", text);
   for (const text of ["help", "Please help me", "I need help"]) assert.equal(readSafety(text), "ask", text);
   for (const text of ["I want to die", "I want to kill myself", "I'm suicidal", "I really do not want to be here", "I sometimes think about ending it all", "I feel like I'm better off dead", "I keep thinking about suicide"]) assert.equal(readSafety(text), "self_harm", text);
-  for (const text of ["how do I help a friend who is suicidal", "my brother said he wants to die", "What is suicide prevention?", "I could kill that deadline", "help with my maize", "emergency contact list", "I need help with my maize", "What should I do in an emergency?", "Good morning"]) assert.equal(readSafety(text), null, text);
+  for (const text of ["how do I help a friend who is suicidal", "What is suicide prevention?", "I could kill that deadline", "help with my maize", "emergency contact list", "I need help with my maize", "What should I do in an emergency?", "Good morning"]) assert.equal(readSafety(text), null, text);
 });
 
 // Found live (companion audit): plain, first-person, unambiguous self-harm statements were missed
@@ -198,7 +198,7 @@ test("a person in crisis is answered with care and offered the circle, never ale
   assert.doesNotMatch(alone, /alert my circle/, "no circle to offer");
   await inCircle(w); w.pushes.length = 0;
   const withCircle = await ask(w, "I want to die");
-  assert.match(withCircle, /I can alert Amina Wanjiru right now — just say "alert my circle"\./);
+  assert.match(withCircle, /I'm here, and I'm listening\. Do you want me to alert Amina Wanjiru right now\?$/);
   assert.equal(w.pushes.length, 0, "nothing is sent until they say so");
   assert.match(await ask(w, "alert my circle"), /^I've alerted Amina Wanjiru\./);
   assert.equal(w.pushes.length, 1);

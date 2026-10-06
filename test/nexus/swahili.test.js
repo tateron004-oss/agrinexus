@@ -122,8 +122,8 @@ test("an alert reaches another person's phone in both languages, so nobody gets 
 
 test("asking for help first, the crisis reply, and the all-clear all work in Swahili, and a bare 'sawa' never ends an alert", async () => {
   const w = await world();
-  assert.equal(await w.say("msaada", "en"), "Niko hapa. Ikiwa ni jambo la dharura, sema \"arifu mzunguko wangu\" nami nitatuma ujumbe kwa Amina Wanjiru, Joseph Otieno mara moja. Ikiwa uko hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi. Au niambie kinachoendelea.");
-  assert.match(await w.say("nataka kufa"), /^Pole sana kwa unavyojisikia.*Naweza kutuma tahadhari kwa Amina Wanjiru, Joseph Otieno sasa hivi — sema tu "arifu mzunguko wangu"\. Niko hapa, na ninakusikiliza\.$/s);
+  assert.equal(await w.say("msaada", "en"), "Niko hapa. Ikiwa uko hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi. Au niambie kinachoendelea. Unataka nitume tahadhari kwa Amina Wanjiru, Joseph Otieno sasa hivi?");
+  assert.match(await w.say("nataka kufa"), /^Pole sana kwa unavyojisikia.*Niko hapa, na ninakusikiliza\. Unataka nitume tahadhari kwa Amina Wanjiru, Joseph Otieno sasa hivi\?$/s);
   assert.equal(w.pushes.length, 0, "asking or a crisis reply alerts nobody until the person says so");
   assert.match(await (await world({ members: [] })).say("msaada"), /^Niko hapa\. Ikiwa uko hatarini/);
   const alerted = await world(); await alerted.say("arifu mzunguko wangu"); assert.equal(alerted.pushes.length, 2);
