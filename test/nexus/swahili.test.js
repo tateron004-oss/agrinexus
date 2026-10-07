@@ -105,7 +105,7 @@ async function world({ members = ["u-amina", "u-joseph"], optIn = false } = {}) 
 
 test("a Swahili emergency is answered in Swahili whatever the app's language, and an English one in a Swahili app is answered in Swahili too", async () => {
   const w = await world(); const swahili = await w.handle("Nahitaji msaada sasa hivi", "en");
-  assert.equal(swahili.response, "Nimetuma tahadhari kwa Amina Wanjiru, Joseph Otieno. Ikiwa uko hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi. Niko hapa nawe.");
+  assert.equal(swahili.response, "Nimetuma tahadhari kwa Amina Wanjiru, Joseph Otieno. Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi. Niko hapa nawe.");
   assert.equal(swahili.emergency.language, "sw");
   const fresh = await world(); const english = await fresh.handle("I need help now", "sw"); assert.match(english.response, /^Nimetuma tahadhari kwa Amina Wanjiru, Joseph Otieno\./); assert.equal(english.emergency.language, "sw");
   const plain = await world(); assert.match((await plain.handle("I need help now", "en")).response, /^I've alerted /); assert.equal((await plain.handle("hello", "sw")), null);
@@ -122,10 +122,10 @@ test("an alert reaches another person's phone in both languages, so nobody gets 
 
 test("asking for help first, the crisis reply, and the all-clear all work in Swahili, and a bare 'sawa' never ends an alert", async () => {
   const w = await world();
-  assert.equal(await w.say("msaada", "en"), "Niko hapa. Ikiwa uko hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi. Au niambie kinachoendelea. Unataka nitume tahadhari kwa Amina Wanjiru, Joseph Otieno sasa hivi?");
+  assert.equal(await w.say("msaada", "en"), "Niko hapa. Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi. Au niambie kinachoendelea. Unataka nitume tahadhari kwa Amina Wanjiru, Joseph Otieno sasa hivi?");
   assert.match(await w.say("nataka kufa"), /^Pole sana kwa unavyojisikia.*Niko hapa, na ninakusikiliza\. Unataka nitume tahadhari kwa Amina Wanjiru, Joseph Otieno sasa hivi\?$/s);
   assert.equal(w.pushes.length, 0, "asking or a crisis reply alerts nobody until the person says so");
-  assert.match(await (await world({ members: [] })).say("msaada"), /^Niko hapa\. Ikiwa uko hatarini/);
+  assert.match(await (await world({ members: [] })).say("msaada"), /^Niko hapa. Ikiwa unaweza kuwa hatarini/);
   const alerted = await world(); await alerted.say("arifu mzunguko wangu"); assert.equal(alerted.pushes.length, 2);
   for (const text of ["sawa", "ndiyo", "asante", "niko sawa"]) assert.notEqual((await alerted.handle(text, "sw"))?.emergency?.ended, true, text);
   assert.equal(alerted.db.rows.find(row => row.content.kind === "alert").content.ended, false);
@@ -172,7 +172,7 @@ test("inviting and answering an invitation work in Swahili, and the other person
 
 test("the location that follows an alert is worded in both languages, and the phone tells the person in the language of the alert", async () => {
   const w = await world({ optIn: true }); const result = await w.handle("dharura", "sw");
-  assert.match(result.response, /^Nimetuma tahadhari kwa Amina Wanjiru, Joseph Otieno\. Nitatuma eneo lako kwa Amina Wanjiru, Joseph Otieno mara tu simu yako itakaponiambia uko wapi\. Ikiwa uko hatarini/); assert.equal(result.emergency.shareLocation, true); assert.equal(result.emergency.language, "sw");
+  assert.match(result.response, /^Nimetuma tahadhari kwa Amina Wanjiru, Joseph Otieno\. Nitatuma eneo lako kwa Amina Wanjiru, Joseph Otieno mara tu simu yako itakaponiambia uko wapi\. Ikiwa unaweza kuwa hatarini/); assert.equal(result.emergency.shareLocation, true); assert.equal(result.emergency.language, "sw");
   const shared = await w.companion.shareEmergencyLocation({ tenantId: "t1", userId: "u-baba", alertId: result.emergency.alertId, position: { lat: -1.2921, lng: 36.8219, accuracy: 12 } });
   assert.deepEqual(shared.body.shared, ["Amina Wanjiru", "Joseph Otieno"]);
   const push = w.pushes.filter(item => /location|eneo/.test(item.content.title)).at(-1); assert.equal(push.content.title, "Dharura: eneo la Baba Kamau / Emergency: Baba Kamau's location");
