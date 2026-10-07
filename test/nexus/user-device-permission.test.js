@@ -18,7 +18,7 @@ assert.ok(start > 0 && end > start, "could not locate authoritativeRuntimeUser i
 
 function runtimeUser(user) {
   const sandbox = { deterministicAuthoritativeUserId: id => `auth-${id}`, usingPostgresState: () => false,
-    NEXUS_AUTHORITATIVE_TENANT_ID: "tenant-1" };
+    NEXUS_AUTHORITATIVE_TENANT_ID: "tenant-1", currentTenantId: () => "tenant-1", ensureBusinessTenant: async () => "tenant-1" };
   vm.createContext(sandbox);
   vm.runInContext(source.slice(start, end) + "\nthis.run = authoritativeRuntimeUser;", sandbox);
   return sandbox.run(user);

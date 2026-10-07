@@ -18,7 +18,7 @@ const store = new AsyncLocalStorage();
 
 const validSpaceId = id => typeof id === "string" && /^[a-z0-9][a-z0-9-]{1,39}$/.test(id) && id !== DEFAULT_SPACE;
 // The store holds the space and, for a business, what it sends as (its own settings and linked numbers; see server/businessSender.js), loaded once when the request is routed.
-const contextOf = (space, info) => ({ space: space || DEFAULT_SPACE, settings: (info && info.settings) || {}, numbers: (info && info.numbers) || [] });
+const contextOf = (space, info) => ({ space: space || DEFAULT_SPACE, name: (info && info.name) || "", settings: (info && info.settings) || {}, numbers: (info && info.numbers) || [] });
 const currentSpace = () => store.getStore()?.space || DEFAULT_SPACE;
 const currentContext = () => store.getStore() || contextOf(DEFAULT_SPACE);
 const runInSpace = (space, work, info) => store.run(contextOf(space, info), work);
@@ -26,6 +26,18 @@ const enterSpace = (space, info) => store.enterWith(contextOf(space, info));
 
 // Where a space's record lives next to the default one (file mode). Postgres mode uses the same id as the row key instead.
 const spaceDbPath = (defaultPath, space) => (space === DEFAULT_SPACE ? defaultPath : path.join(path.dirname(defaultPath), `${path.basename(defaultPath, ".json")}.space-${space}.json`));
+
+// The newer engine (tasks, memory, reminders, notifications, devices, the worker) labels every row with a tenant. The default space keeps the tenant it has always had; each business gets its own,
+// derived from its id so it is the same on every server and every restart, and cannot collide with another business's.
+const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
+function tenantIdFor(space) {
+  if (!space || space === DEFAULT_SPACE) return DEFAULT_TENANT_ID;
+  const hex = require("node:crypto").createHash("sha256").update(`kyro-business-tenant:${space}`).digest("hex").slice(0, 32).split("");
+  hex[12] = "5";
+  hex[16] = ((Number.parseInt(hex[16], 16) & 3) | 8).toString(16);
+  const value = hex.join("");
+  return `${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
+}
 
 const emailKey = value => String(value ?? "").trim().toLowerCase();
 const numberKey = value => String(value ?? "").replace(/[^\d+]/g, "");
@@ -188,6 +200,6 @@ function isPlatformOwner(user, env = process.env, space = currentSpace()) {
 }
 
 module.exports = Object.freeze({
-  DEFAULT_SPACE, validSpaceId, currentSpace, currentContext, runInSpace, enterSpace, spaceDbPath, createFileDirectory, createPostgresDirectory, newSpaceRecord, neutralProfile,
+  DEFAULT_SPACE, DEFAULT_TENANT_ID, tenantIdFor, validSpaceId, currentSpace, currentContext, runInSpace, enterSpace, spaceDbPath, createFileDirectory, createPostgresDirectory, newSpaceRecord, neutralProfile,
   platformOwnerEmails, isPlatformOwner, emailKey, numberKey, cleanName
 });

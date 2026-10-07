@@ -173,7 +173,23 @@ function cleanupSpotifyOAuthStates(now = Date.now()) {
     if (now - Number(entry?.createdAt || 0) > SPOTIFY_OAUTH_STATE_TTL_MS) spotifyOAuthStates.delete(state);
   }
 }
-const NEXUS_AUTHORITATIVE_TENANT_ID = "00000000-0000-0000-0000-000000000001";
+const NEXUS_AUTHORITATIVE_TENANT_ID = businessSpaces.DEFAULT_TENANT_ID;
+// The newer engine's tenant for the current request: the default tenant, or the business's own. A tenant row must exist before anything references it, so it is created once, the first time a business needs it.
+const currentTenantId = () => businessSpaces.tenantIdFor(businessSpaces.currentSpace());
+const ensuredTenantRows = new Set();
+async function ensureBusinessTenant(pool, space = businessSpaces.currentSpace(), name = businessSpaces.currentContext().name) {
+  const tenantId = businessSpaces.tenantIdFor(space);
+  if (space === businessSpaces.DEFAULT_SPACE || ensuredTenantRows.has(tenantId)) return tenantId;
+  await pool.query("insert into tenants (id, name, slug) values ($1, $2, $3) on conflict do nothing", [tenantId, String(name || space).slice(0, 120) || space, `business-${space}`]);
+  ensuredTenantRows.add(tenantId);
+  return tenantId;
+}
+// A sign-in account written to Postgres belongs to the tenant of the business it was made in.
+async function pgCreateUserHere(fields, space = businessSpaces.currentSpace(), name = businessSpaces.currentContext().name) {
+  const pool = getPgPool();
+  const tenantId = await ensureBusinessTenant(pool, space, name);
+  return pgUsers.createUser(pool, { ...fields, tenantId });
+}
 const authoritativeNexusRuntime = createServerRuntimeAdapter({
   resolveUser: async req => authoritativeRuntimeUser(currentUser(req, await readDb())),
   readJson: readBody,
@@ -216,8 +232,10 @@ async function authoritativeRuntimeUser(user) {
     // run and correctly erase a deletion request was unreachable by anyone.
     : ["tasks:create", "tasks:read", "tasks:execute", "memory:read", "memory:write", "devices:write", "privacy:delete"];
   let resolvedId = authoritativeUserId;
+  const tenantId = currentTenantId();
   if (usingPostgresState()) {
     const pool = getPgPool();
+    await ensureBusinessTenant(pool);
     const email = String(user.email || `${user.id}@local.agrinexus.invalid`).toLowerCase();
     // Found live (production outage): authoritativeUserId is deterministically derived from the legacy
     // user.id, but a real row can already exist under a DIFFERENT id for the same (tenant_id, email) --
@@ -232,23 +250,23 @@ async function authoritativeRuntimeUser(user) {
     // reuse ITS id rather than blindly inserting under the freshly-computed one -- a real users.id may
     // already be referenced by other rows (tasks, memory, devices) created under it, so an existing
     // identity's id must never be repointed.
-    const existing = await pool.query(`select id from users where tenant_id=$1 and lower(email)=$2 limit 1`, [NEXUS_AUTHORITATIVE_TENANT_ID, email]);
+    const existing = await pool.query(`select id from users where tenant_id=$1 and lower(email)=$2 limit 1`, [tenantId, email]);
     resolvedId = existing.rows[0]?.id || authoritativeUserId;
     await pool.query(`insert into users(id,tenant_id,email,display_name,password_hash,status)
       values($1,$2,$3,$4,$5,'active') on conflict(id) do update set
       display_name=excluded.display_name,status='active',updated_at=now()`,
-    [resolvedId, NEXUS_AUTHORITATIVE_TENANT_ID, email, user.name || "Nexus User", "legacy-auth-bound"]);
+    [resolvedId, tenantId, email, user.name || "Nexus User", "legacy-auth-bound"]);
     await pool.query(`insert into nexus_organization_memberships(tenant_id,user_id,role,permissions,state)
       values($1,$2,$3,$4,'active') on conflict(tenant_id,user_id,role) do update set
       permissions=excluded.permissions,state='active',updated_at=now()`,
-    [NEXUS_AUTHORITATIVE_TENANT_ID, resolvedId, role, permissions]);
+    [tenantId, resolvedId, role, permissions]);
   }
   return {
     ...user,
     legacyUserId: user.id,
     id: resolvedId,
-    tenantId: NEXUS_AUTHORITATIVE_TENANT_ID,
-    organizationId: NEXUS_AUTHORITATIVE_TENANT_ID,
+    tenantId,
+    organizationId: tenantId,
     roles: [role],
     permissions
   };
@@ -1962,8 +1980,10 @@ function usingPostgresAuditEvents() {
 
 function shadowWriteAuditEventToPostgres({ action, entityType, entityId, actorEmail, metadata }) {
   if (!usingPostgresAuditEvents()) return;
+  const here = { space: businessSpaces.currentSpace(), name: businessSpaces.currentContext().name };
   Promise.resolve()
-    .then(() => pgAuditEvents.recordAuditEvent(getPgPool(), { action, entityType, entityId, actorEmail, metadata }))
+    .then(() => ensureBusinessTenant(getPgPool(), here.space, here.name))
+    .then(tenantId => pgAuditEvents.recordAuditEvent(getPgPool(), { action, entityType, entityId, actorEmail, metadata, tenantId }))
     .catch(error => {
       console.error("[audit-event] Postgres shadow-write failed:", error.message);
       recordServerError({ source: "audit-event-shadow-write", message: error.message });
@@ -1972,8 +1992,10 @@ function shadowWriteAuditEventToPostgres({ action, entityType, entityId, actorEm
 
 function shadowWriteAiRunToPostgres({ runType, provider, model, prompt, responseText, responseMetadata }) {
   if (!usingPostgresAuditEvents() || !responseText) return;
+  const here = { space: businessSpaces.currentSpace(), name: businessSpaces.currentContext().name };
   Promise.resolve()
-    .then(() => pgAuditEvents.recordAiRun(getPgPool(), { runType, provider, model, prompt, responseText, responseMetadata }))
+    .then(() => ensureBusinessTenant(getPgPool(), here.space, here.name))
+    .then(tenantId => pgAuditEvents.recordAiRun(getPgPool(), { runType, provider, model, prompt, responseText, responseMetadata, tenantId }))
     .catch(error => {
       console.error("[ai-run] Postgres shadow-write failed:", error.message);
       recordServerError({ source: "ai-run-shadow-write", message: error.message });
@@ -2048,12 +2070,15 @@ function resolveRealPgUserByEmail(userEmail) {
 
 function shadowWriteWorkforceRoleToPostgres(job) {
   if (!usingPostgresWorkforce() || !job) return;
+  const here = { space: businessSpaces.currentSpace(), name: businessSpaces.currentContext().name };
   Promise.resolve()
-    .then(() => pgWorkforce.createWorkforceRole(getPgPool(), {
+    .then(() => ensureBusinessTenant(getPgPool(), here.space, here.name))
+    .then(tenantId => pgWorkforce.createWorkforceRole(getPgPool(), {
       title: job.title,
       level: job.level,
       countryId: job.country,
-      minReadiness: job.minReadiness
+      minReadiness: job.minReadiness,
+      tenantId
     }))
     .then(role => role && patchPersistedRecord(
       "jobOpportunities",
@@ -2080,12 +2105,15 @@ function shadowWriteTradeOrderToPostgres(transaction) {
   // is expected legacy data, not a config error, so skip it quietly rather
   // than attempting a write pg-trade.js would throw on for an unmapped value.
   if (!usingPostgresTrade() || !transaction?.country) return;
+  const here = { space: businessSpaces.currentSpace(), name: businessSpaces.currentContext().name };
   Promise.resolve()
-    .then(() => pgTrade.upsertTradeOrder(getPgPool(), {
+    .then(() => ensureBusinessTenant(getPgPool(), here.space, here.name))
+    .then(tenantId => pgTrade.upsertTradeOrder(getPgPool(), {
       orderNumber: transaction.transactionId,
       countryId: transaction.country,
       stage: transaction.status,
-      totalAmount: Number(transaction.settledAmount ?? transaction.amount) || 0
+      totalAmount: Number(transaction.settledAmount ?? transaction.amount) || 0,
+      tenantId
     }))
     .catch(error => {
       console.error("[trade-order] Postgres shadow-write failed:", error.message);
@@ -2103,11 +2131,14 @@ function usingPostgresCourses() {
 
 function shadowWriteCourseProgressToPostgres(progressEntry, userEmail) {
   if (!usingPostgresCourses() || !progressEntry?.resourceId || !userEmail) return;
+  const here = { space: businessSpaces.currentSpace(), name: businessSpaces.currentContext().name };
   Promise.resolve()
-    .then(() => pgCourses.upsertCourse(getPgPool(), {
+    .then(() => ensureBusinessTenant(getPgPool(), here.space, here.name))
+    .then(tenantId => pgCourses.upsertCourse(getPgPool(), {
       code: progressEntry.resourceId,
       title: progressEntry.title,
-      track: progressEntry.category
+      track: progressEntry.category,
+      tenantId
     }))
     .then(async course => {
       if (!course) return;
@@ -2191,12 +2222,15 @@ function shadowWriteHealthIntakeToPostgres(intake) {
   // this guard matters at this single write point rather than trusting
   // every caller to check first.
   if (!usingPostgresHealthIntakes() || !intake || intake.simulation === true) return;
+  const here = { space: businessSpaces.currentSpace(), name: businessSpaces.currentContext().name };
   Promise.resolve()
-    .then(() => pgHealthIntakes.createIntake(getPgPool(), {
+    .then(() => ensureBusinessTenant(getPgPool(), here.space, here.name))
+    .then(tenantId => pgHealthIntakes.createIntake(getPgPool(), {
       countryId: intake.countryId,
       patientRef: intake.patientRef,
       needSummary: intake.needSummary,
-      riskLevel: intake.riskLevel
+      riskLevel: intake.riskLevel,
+      tenantId
     }))
     .catch(error => {
       console.error("[health-intake] Postgres shadow-write failed:", error.message);
@@ -52096,7 +52130,7 @@ async function api(req, res, url) {
       };
       db.users.push(account);
       if (usingPostgresAuth()) {
-        await pgUsers.createUser(getPgPool(), { email, displayName: name, password })
+        await pgCreateUserHere({ email, displayName: name, password })
           .catch(error => console.error("[team] Postgres shadow-write failed:", error.message));
       }
       teamLog("team_member.created", `${email} added to the team.`, { userId: account.id });
@@ -52225,7 +52259,8 @@ async function api(req, res, url) {
         return send(res, 409, { error: error.message });
       }
       if (usingPostgresAuth()) {
-        await pgUsers.createUser(getPgPool(), { email: adminEmail, displayName: adminName, password })
+        // The new business's first Admin belongs to the NEW business's tenant, not the platform's.
+        await pgCreateUserHere({ email: adminEmail, displayName: adminName, password }, id, name)
           .catch(error => console.error("[platform] Postgres shadow-write failed:", error.message));
       }
       forgetSpaceInfo(id);
@@ -52423,7 +52458,7 @@ async function api(req, res, url) {
     account.lastUpdatedAt = new Date().toISOString();
     if (!db.users.some(item => item.id === account.id)) db.users.push(account);
     if (usingPostgresAuth()) {
-      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password })
+      await pgCreateUserHere({ email: account.email, displayName: account.name, password })
         .catch(error => console.error("[admin] test-user Postgres shadow-write failed:", error.message));
     }
     addUsageEvent(db.profile, { module: "Admin", action: "test_user.created", detail: `${account.email} User-only test login created.` });
@@ -52473,7 +52508,7 @@ async function api(req, res, url) {
     adminAccount.lastUpdatedAt = new Date().toISOString();
     if (!account) db.users.push(adminAccount);
     if (usingPostgresAuth()) {
-      await pgUsers.createUser(getPgPool(), { email: adminAccount.email, displayName: adminAccount.name, password })
+      await pgCreateUserHere({ email: adminAccount.email, displayName: adminAccount.name, password })
         .catch(error => console.error("[admin] admin-user Postgres shadow-write failed:", error.message));
     }
     addUsageEvent(db.profile, { module: "Admin", action: "admin_user.created", detail: `${adminAccount.email} Admin test login created.` });
@@ -52523,7 +52558,7 @@ async function api(req, res, url) {
     account.lastUpdatedAt = new Date().toISOString();
     if (!db.users.some(item => item.id === account.id)) db.users.push(account);
     if (usingPostgresAuth()) {
-      await pgUsers.createUser(getPgPool(), { email: account.email, displayName: account.name, password })
+      await pgCreateUserHere({ email: account.email, displayName: account.name, password })
         .catch(error => console.error("[admin] investor-user Postgres shadow-write failed:", error.message));
     }
     addUsageEvent(db.profile, { module: "Admin", action: "investor_user.created", detail: `${account.email} Investor-only test login created.` });
