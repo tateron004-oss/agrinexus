@@ -79,15 +79,15 @@ test("the many ways of saying 'put it on the list'", async () => {
     ["Kyro, um, add salt to the shopping list, thank you", "Added salt to your shopping list. You have 5 open items."],
     ["jot down tea in my shopping list", "Added tea to your shopping list. You have 6 open items."],
     ["add fix the gate to my to do list", "Added fix the gate to your to-do list. You have 1 open item."],
-    ["add buy paint and call the vet to my to-do list", "Added buy paint and call the vet to your to-do list. You have 3 open items."],
-    ["add call mum and dad to my to-do list", "Added call mum and dad to your to-do list. You have 4 open items."],
-    ["todo: pay the workers", "Added pay the workers to your to-do list. You have 5 open items."],
+    ["add buy paint and call the vet to my to-do list", "Added buy paint and call the vet to your to-do list. You have 2 open items."],
+    ["add call mum and dad to my to-do list", "Added call mum and dad to your to-do list. You have 3 open items."],
+    ["todo: pay the workers", "Added pay the workers to your to-do list. You have 4 open items."],
     ["put cement on the list", /^Which list: your shopping list or your to-do list\?/],
-    ["what is on my to do list", "On your to-do list: 1, fix the gate; 2, buy paint; 3, call the vet; 4, call mum and dad; 5, pay the workers."],
+    ["what is on my to do list", "On your to-do list: 1, fix the gate; 2, buy paint and call the vet; 3, call mum and dad; 4, pay the workers."],
     ["read my shopping list", /^On your shopping list: 1, milk; 2, eggs; 3, bread; 4, sugar; 5, salt; 6, tea\.$/],
     ["tell me what is on my shopping list", /^On your shopping list: 1, milk/],
     ["what do I need to buy", /^On your shopping list: 1, milk/],
-    ["tick off fix the gate", "Done. Ticked off fix the gate. 4 still open."],
+    ["tick off fix the gate", "Done. Ticked off fix the gate. 3 still open."],
     ["I bought the sugar", "Done. Ticked off sugar. 5 still open."],
     ["mark tea as done on my shopping list", "Done. Ticked off tea. 4 still open."]
   ]);
@@ -153,7 +153,8 @@ test("a calendar time said with the part of the day is read, not left in the tit
 test("list names and items are read the same way every time", () => {
   assert.deepEqual(splitListItems("milk, eggs and bread", "shopping"), ["milk", "eggs", "bread"]);
   assert.deepEqual(splitListItems("milk na mayai", "shopping"), ["milk", "mayai"]);
-  assert.deepEqual(splitListItems("fix the gate and buy paint", "todo"), ["fix the gate", "buy paint"]);
+  assert.deepEqual(splitListItems("fix the gate and buy paint", "todo"), ["fix the gate and buy paint"], "a to-do keeps its own wording");
+  assert.deepEqual(splitListItems("fix the gate, buy paint", "todo"), ["fix the gate", "buy paint"]);
   assert.deepEqual(splitListItems("call mum and dad", "todo"), ["call mum and dad"]);
   assert.deepEqual(splitListItems("two and a half kilos of rice", "shopping"), ["two and a half kilos of rice"]);
   assert.deepEqual(splitListItems("the milk, a loaf, some eggs", "shopping"), ["milk", "loaf", "eggs"]);

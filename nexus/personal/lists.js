@@ -47,7 +47,6 @@ const nounOf = (list, sw = false) => {
 
 // ---- splitting "milk, eggs and bread" into separate things ----
 const NUMBER_WORD = /^(?:\d+(?:[.,]\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|half|moja|mbili|tatu|nne|tano)$/i;
-const ACTION_VERBS = "fix|buy|call|pay|clean|check|send|book|visit|pick|water|feed|plant|harvest|repair|collect|take|bring|get|make|finish|write|order|sell|renew|wash|cook|paint|clear|weed|spray|prune|dip|vaccinate|text|email|remind|see|meet|go|ask|tell|buy|nunua|piga|lipa|safisha|kagua|tuma|pelekea|nenda|angalia|rekebisha|panda|vuna|mwagilia";
 function splitListItems(value, list = "shopping") {
   const source = clean(value).replace(/[.!]+$/, "");
   if (!source) return [];
@@ -60,7 +59,7 @@ function splitListItems(value, list = "shopping") {
     const merged = [];
     for (const part of parts) {
       const last = merged.length ? merged[merged.length - 1] : null;
-      const joinBack = last !== null && (NUMBER_WORD.test(last) || /^(?:a half|half|a quarter|quarter|a third)\b/i.test(part) || (list === "todo" && !new RegExp(`^(?:${ACTION_VERBS})\\b`, "i").test(part)));
+      const joinBack = last !== null && (NUMBER_WORD.test(last) || /^(?:a half|half|a quarter|quarter|a third)\b/i.test(part) || list === "todo");
       if (joinBack) merged[merged.length - 1] = `${last} and ${part}`; else merged.push(part);
     }
     pieces.push(...merged);
@@ -85,7 +84,8 @@ const addRequest = (itemsText, ref, sw, extra = {}) => {
   if (!where) return null;
   const items = splitListItems(itemsText, where.list || "shopping");
   if (!items.length) return null;
-  return items.length === 1 ? { action: "todo-add", list: where.list, text: items[0], sw, ...extra } : { action: "todo-add-many", list: where.list, items, sw, ...extra };
+  const swahili = sw ? { sw: true } : {};
+  return items.length === 1 ? { action: "todo-add", list: where.list, text: items[0], ...swahili, ...extra } : { action: "todo-add-many", list: where.list, items, ...swahili, ...extra };
 };
 const SW_VERBS = /^(?:weka|ongeza|andika|ingiza|tia|ondoa|futa|toa|nisomee|onyesha|nionyeshe|soma|angalia|nimenunua|nimemaliza|alama|safisha)\b/i;
 const looksSwahili = text => SW_VERBS.test(text) || /\b(?:orodha|manunuzi|kwenye|katika|yangu|kazi)\b/i.test(text);
