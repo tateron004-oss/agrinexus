@@ -10,9 +10,11 @@ const { addStock, categoryOf, keyOf, findItems } = require("./inventory.js");
 // The farm's money: what was spent, what was earned, and the profit, by month, season, field or kind of cost. Amounts are exactly what the
 // farmer says; Kyro adds nothing and estimates nothing. A sale takes the goods out of stock when they are in stock, and a purchase of
 // seed, fertiliser, chemicals, feed or tools puts them in, and Kyro says so each time so nothing changes silently.
-const EXPENSE_CATEGORIES = [["seed", /\b(?:seeds?|seedlings?)\b/i], ["fertiliser", /\b(?:fertili[sz]ers?|npk|urea|dap|manure|lime)\b/i], ["chemicals", /\b(?:pesticides?|herbicides?|fungicides?|insecticides?|chemicals?|spray)\b/i], ["feed", /\b(?:feed|hay|silage|bran|fodder|mineral|pellets?|mash)\b/i],
+const EXPENSE_CATEGORIES = [["seed", /\b(?:seeds?|seedlings?)\b/i], ["fertiliser", /\b(?:fertili[sz]ers?|npk|urea|dap|manure|lime)\b/i], ["chemicals", /\b(?:pesticides?|herbicides?|fungicides?|insecticides?|chemicals?|spray)\b/i], ["feed", /\b(?:feed|hay|silage|bran|fodder|mineral|pellets?|mash|dairy meal|calf meal|pig meal|layers? meal)\b/i],
   ["labour", /\b(?:labou?r|wages?|worker|workers|salary|casual|weeding|ploughing|harvesting help)\b/i], ["transport", /\b(?:transport|fuel|diesel|petrol|matatu|lorry|truck|boda|delivery|fare)\b/i], ["veterinary", /\b(?:vet|veterinary|vaccine|vaccination|drugs?|medicine|treatment|dip|deworm)/i],
-  ["equipment", /\b(?:tools?|repair|equipment|tractor|hoe|panga|pump|sprayer|machine|spare)/i], ["water", /\b(?:water|irrigation|borehole|pipes?)\b/i], ["rent", /\b(?:rent|lease)\b/i]];
+  ["equipment", /\b(?:tools?|repair|equipment|tractor|hoe|panga|pump|sprayer|machine|spare)/i], ["water", /\b(?:water|irrigation|borehole|pipes?)\b/i], ["rent", /\b(?:rent|lease)\b/i],
+  // A shop's own costs. They come LAST so a farm word (seed, feed, fuel...) still wins: "stock" is what a shopkeeper buys to sell again, "utilities" is electricity and the like.
+  ["stock", /\b(?:stock|inventory|goods|merchandise|wholesale|restock(?:ing)?|supplies)\b/i], ["utilities", /\b(?:electricity|power|kplc|tokens?|internet|wifi|airtime|bundles?|licen[sc]es?|permits?)\b/i]];
 const expenseCategory = text => (EXPENSE_CATEGORIES.find(([, pattern]) => pattern.test(text)) || ["other"])[0];
 const ON_CREDIT = /\b(?:on credit|on account|on loan|(?:will|to|promised to|promises to|said (?:he|she|they) will) pay(?: me)? (?:later|next|on|after|in|tomorrow|at the end)|pay(?:s|ing)? (?:me )?(?:later|next week|next month|tomorrow|on friday)|has not paid|hasn't paid|have not paid|haven't paid|yet to pay|not yet paid|owes? me|unpaid|pay(?:ment)? (?:is )?(?:later|pending))\b/i;
 // Said about something BOUGHT: "on credit", "will pay later", "I owe him", "not paid yet".
@@ -49,21 +51,23 @@ const NOT_FARM = Symbol("not-farm");
 const MAX_AMOUNT = 100000000;
 
 async function recordMoney(ctx, entry) {
-  if (entry.category === "other" && !(await ctx.hasFarmData())) throw NOT_FARM;
+  // `ctx.anyGoods` is set by the everyday-bookkeeping module (books.js): a shopkeeper's shoes, soap or airtime are business too, so nobody needs farm records first.
+  if (entry.category === "other" && !ctx.anyGoods && !(await ctx.hasFarmData())) throw NOT_FARM;
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   const all = await ctx.store.list({ ...scope, collection: "money" });
   if (all.length >= 5000) return { refused: "Your money records are full (five thousand entries). Ask me for a summary, then remove some." };
   // A mis-heard or mistyped extra digit would otherwise sit in every total for good. Nothing is saved; the person is asked to say it again.
   if (!(entry.amount > 0) || entry.amount > MAX_AMOUNT) return { refused: `${formatMoney(entry.amount, entry.currency)} looks wrong, so I have not recorded it. I only record amounts up to ${formatMoney(MAX_AMOUNT, entry.currency)}. Please say it again with the right amount.` };
   const currency = isSpecific(entry.currency) ? entry.currency : entry.currency === "shillings" ? specificCurrency(all, SHILLING_KINDS) || "shillings" : defaultCurrency(all) || "";
-  const record = await ctx.store.add({ ...scope, collection: "money", data: { ...entry, currency, day: entry.day || ctx.entryDay || ctx.today } });
+  const record = await ctx.store.add({ ...scope, collection: "money", data: { ...entry, currency, day: entry.day || ctx.entryDay || ctx.today, ...(ctx.payment && !entry.payment ? { payment: ctx.payment } : {}) } });
   return { record, all: [record, ...all] };
 }
 
 // Money still owed to the farmer (a sale on credit) is not income yet: it is counted when it is paid.
 // Household costs ("paid school fees 12000") are kept but are not the farm's, so they are not in its totals or profit.
 const HOUSEHOLD = /^(?:school fees|fees|school|food|groceries|airtime|electricity|water bill|church|tithe|funeral|wedding|hospital|medical|doctor|shopping|bills?|dowry|bride price|harambee|contribution)$/i;
-const isCounted = record => !(record.data.type === "income" && record.data.unpaid) && record.data.category !== "household";
+// A standalone debt ("John owes me 800", "I owe the supplier 5000", books.js) is not income or a cost until it is paid: the payment is what is counted, as its own entry.
+const isCounted = record => !(record.data.type === "income" && record.data.unpaid) && !(record.data.type === "expense" && record.data.debt) && record.data.category !== "household";
 const sum = (records, type) => records.filter(record => record.data.type === type && isCounted(record)).reduce((acc, record) => { const key = currencyKey(records, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.amount); return acc; }, {});
 const showTotals = totals => { const entries = Object.entries(totals); return entries.length ? entries.map(([currency, amount]) => formatMoney(amount, currency)).join(" and ") : "0"; };
 const inPeriod = (record, period) => record.data.day >= period.from && record.data.day <= period.to;
@@ -392,15 +396,23 @@ async function handleMoney(ctx) {
   // ---- asking ----
   const recordsOf = async () => ctx.store.list({ ...scope, collection: "money" });
   if ((m = new RegExp(String.raw`^how much (?:did|have) (?:i|we) (?:spend|spent)(?: on (.+?))?(?: (${PERIOD}))?$`, "i").exec(t)) || (m = new RegExp(String.raw`^(?:what (?:is|are)|show) my (?:total )?(?:expenses|spending|costs)(?: (${PERIOD}))?$`, "i").exec(t))) {
-    const period = periodOf(`${m[2] || m[1] || ""}`, ctx.today, "this month"); const what = /^how much/i.test(t) ? m[1] : "";
-    let rows = (await recordsOf()).filter(record => record.data.type === "expense" && inPeriod(record, period));
+    // "how much did I spend ON THE FARM this month" asks about everything: "the farm" is not a kind of cost to filter by (it used to find nothing and answer "I have no the farm spending").
+    const period = periodOf(`${m[2] || m[1] || ""}`, ctx.today, "this month"); let what = /^how much/i.test(t) ? m[1] : "";
+    if (what && /^(?:the |my |our )?(?:farm|business|shop|stall|duka|kiosk|work|everything|all|money|farming|farm work)$/i.test(clean(what))) what = "";
+    let rows = (await recordsOf()).filter(record => record.data.type === "expense" && !record.data.debt && inPeriod(record, period));
     if (what) rows = rows.filter(record => `${record.data.item || ""} ${record.data.category}`.toLowerCase().includes(clean(what).toLowerCase().replace(/^(?:the |my )/, "")) || record.data.field?.toLowerCase().includes(nameKey(what)));
-    return rows.length ? `You spent ${showTotals(sum(rows, "expense"))}${what ? ` on ${clean(what)}` : ""} ${period.label} (${plural(rows.length, "entry", "entries")}).` : `I have no ${what ? `${clean(what)} ` : ""}spending recorded for ${period.label.replace(/^in /, "")}.`;
+    const whatShown = clean(what).replace(/^(?:the|my|our) /i, "");
+    return rows.length ? `You spent ${showTotals(sum(rows, "expense"))}${what ? ` on ${whatShown}` : ""} ${period.label} (${plural(rows.length, "entry", "entries")}).` : `I have no ${what ? `${whatShown} ` : ""}spending recorded for ${period.label.replace(/^in /, "")}.`;
   }
   if ((m = new RegExp(String.raw`^how much (?:did|have) (?:i|we) (?:earn|earned|make|made|get|got|sell|sold)(?: (${PERIOD}))?$`, "i").exec(t)) || (m = new RegExp(String.raw`^(?:what (?:is|are)|show) my (?:total )?(?:income|earnings|sales|revenue)(?: (${PERIOD}))?$`, "i").exec(t))) {
     const period = periodOf(m[1] || "", ctx.today, "this month");
-    const rows = (await recordsOf()).filter(record => record.data.type === "income" && isCounted(record) && inPeriod(record, period));
-    return rows.length ? `You earned ${showTotals(sum(rows, "income"))} ${period.label} (${plural(rows.length, "entry", "entries")}).` : `I have no income recorded for ${period.label.replace(/^in /, "")}.`;
+    const everything = await recordsOf();
+    const rows = everything.filter(record => record.data.type === "income" && isCounted(record) && inPeriod(record, period));
+    if (rows.length) return `You earned ${showTotals(sum(rows, "income"))} ${period.label} (${plural(rows.length, "entry", "entries")}).`;
+    // Never a flat "no income" when something IS recorded for the time asked: sales still waiting to be paid are not income yet, and say so.
+    const waiting = everything.filter(record => record.data.type === "income" && record.data.unpaid && inPeriod(record, period));
+    if (waiting.length) return `I have no income recorded ${period.label} yet, but ${plural(waiting.length, "sale")} on credit (${showTotals(waiting.reduce((acc, record) => { const key = currencyKey(waiting, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.amount); return acc; }, {}))}) ${waiting.length === 1 ? "is" : "are"} waiting to be paid. I count a credit sale as income when it is paid.`;
+    return `I have no income recorded for ${period.label.replace(/^in /, "")}.`;
   }
   if ((m = new RegExp(String.raw`^(?:what(?:'s| is)|show|how much is) my (?:profit|net income|margin)(?: (${PERIOD}))?$`, "i").exec(t)) || (m = new RegExp(String.raw`^am i (?:making a )?(?:profit|money)(?: (${PERIOD}))?$`, "i").exec(t)) || /^how(?:'s| is) my (?:profit|farm)(?: doing)?$/.test(lower)) {
     const period = periodOf(m?.[1] || "", ctx.today, "this year");
@@ -426,7 +438,7 @@ async function handleMoney(ctx) {
   }
   if ((m = new RegExp(String.raw`^(?:show|what are) my expenses by (?:category|kind|type)(?: (${PERIOD}))?$`, "i").exec(t))) {
     const period = periodOf(m[1] || "", ctx.today, "this year");
-    const rows = (await recordsOf()).filter(record => record.data.type === "expense" && inPeriod(record, period));
+    const rows = (await recordsOf()).filter(record => record.data.type === "expense" && !record.data.debt && inPeriod(record, period));
     if (!rows.length) return `I have no spending recorded for ${period.label.replace(/^in /, "")}.`;
     // Found live (real-estate/GPS follow-up audit): this used to sum every
     // row's raw amount together regardless of currency, then label the
@@ -464,4 +476,4 @@ async function handleMoney(ctx) {
   return null;
 }
 
-module.exports = Object.freeze({ handle, recordMoney, expenseCategory, incomeCategory, sum, profitOf, showTotals, NOT_FARM });
+module.exports = Object.freeze({ handle, recordMoney, expenseCategory, incomeCategory, sum, profitOf, showTotals, NOT_FARM, isCounted, inPeriod, currencyKey, isSpecific, describeRecord, PERIOD });

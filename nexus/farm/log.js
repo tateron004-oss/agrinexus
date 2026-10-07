@@ -46,7 +46,7 @@ function reportDay(text, today) {
 const APPROX = "(?:about |around |roughly |approximately |nearly |almost |close to )?";
 const RAIN = [
   new RegExp(`^(?:please )?(?:log|record|note|add)(?: down)?(?: that)?\\s+(?:(?:we|i) (?:got|had) )?${NUM}\\s*${LEN}\\s+(?:of )?rain(?:fall)?\\b(.*)$`, "i"),
-  new RegExp(`^(?:we|i) (?:got|had|received|recorded) ${APPROX}${NUM}\\s*${LEN}\\s+(?:of )?rain(?:fall)?\\b(.*)$`, "i"),
+  new RegExp(`^(?:(?:we|i) )?(?:got|had|received|recorded) ${APPROX}${NUM}\\s*${LEN}\\s+(?:of )?rain(?:fall)?\\b(.*)$`, "i"),
   new RegExp(`^it rained ${APPROX}${NUM}\\s*${LEN}\\b(.*)$`, "i"),
   new RegExp(`^(?:the )?rain(?:fall)?(?: gauge)?\\s+(?:today |yesterday |last night |this morning )?(?:was|is|measured|read|reads)\\s+${NUM}\\s*${LEN}\\b(.*)$`, "i"),
   new RegExp(`^(?:please )?(?:log|record|note|add) rain(?:fall)?[:,]?\\s+${NUM}\\s*${LEN}\\b(.*)$`, "i")
@@ -94,11 +94,20 @@ function readRequest(text, today) {
     if (value <= 0 || value > 100000000) return { action: "refuse", reason: "amount", value };
     return { action: "log", metric: "harvest", value, unit, place: placeFrom(t.slice(t.toLowerCase().indexOf(m[3].toLowerCase()) + m[3].length)), crop, day: when.day };
   }
-  if ((m = new RegExp(`^(?:please )?(?:(?:log|record|note|add)(?: down)?(?: that)?\\s+)?(?:(?:we|i)\\s+)?(?:collected|gathered|got) ${NUM}\\s*eggs\\b(.*)$`, "i").exec(t))) {
+  // "collected 42 eggs", "got 42 eggs", and the way a farmer really says it: "the hens laid 42 eggs", "my chickens have laid 30 eggs today".
+  if ((m = new RegExp(`^(?:please )?(?:(?:log|record|note|add)(?: down)?(?: that)?\\s+)?(?:(?:(?:the |my |our )?(?:hens|chickens|birds|layers|ducks|flock|poultry)(?: have| had)?\\s+(?:laid|produced)|(?:(?:we|i)\\s+)?(?:collected|gathered|got|picked))\\s+(?:a total of |about |around )?)${NUM}\\s*eggs\\b(.*)$`, "i").exec(t))) {
     const when = reportDay(m[2], today); const value = num(m[1]);
     if (when.future) return { action: "refuse", reason: "future" };
     if (value <= 0 || value > 100000) return { action: "refuse", reason: "amount", value };
     return { action: "log", metric: "harvest", value: Math.round(value), unit: "egg", place: "", crop: "eggs", day: when.day };
+  }
+  // Milk from the herd, not one named cow: "I milked 18 litres", "got 18 litres of milk", "log 30 litres of milk today". Only the day may follow, so "add 2 litres of milk to my shopping list" is never a milk reading.
+  if ((m = new RegExp(`^(?:please )?(?:(?:(?:log|record|note)(?: down)?(?: that)?\\s+)|(?:(?:we|i)\\s+)?(?:milked|got|collected|gathered)\\s+)(?:a total of |about |around )?${NUM}\\s*(?:litres|liters)\\s+(?:of\\s+)?milk(?:\\s+(today|yesterday|this morning|this evening|tonight|last night|\\d{1,2} days? ago))?$`, "i").exec(t)) ||
+      (m = new RegExp(`^(?:please )?(?:(?:we|i)\\s+)?milked\\s+(?:a total of |about |around )?${NUM}\\s*(?:litres|liters)(?:\\s+(today|yesterday|this morning|this evening|tonight|last night|\\d{1,2} days? ago))?$`, "i").exec(t))) {
+    const when = reportDay(m[2] || "", today); const value = num(m[1]);
+    if (when.future) return { action: "refuse", reason: "future" };
+    if (value <= 0 || value > 100000) return { action: "refuse", reason: "amount", value };
+    return { action: "log", metric: "harvest", value: round(value), unit: "litres", place: "", crop: "milk", day: when.day };
   }
   // the person's own warning levels
   if ((m = new RegExp(`^(?:please )?(?:warn|alert|tell|let|notify|remind) me (?:if|when) (?:the |my )?(.+?) (?:goes |drops |falls |gets |dips |is )?(?:below|under|lower than|less than) ${NUM}\\s*(${PCT}|litres|liters)$`, "i").exec(lower))) {
@@ -139,6 +148,8 @@ function readQuestion(text, today) {
     return { action: "sum-harvest", crop: cropFrom(subject), period: extractPeriod(m[2], today) || extractPeriod("this year", today) };
   }
   if ((m = /^(?:what(?:'s| is| was)|show|tell me) (?:my |the |our )?(?:total )?(?:harvest|yield)s?\b\s*(.*)$/.exec(t))) return { action: "sum-harvest", crop: "", period: extractPeriod(m[1], today) || extractPeriod("this year", today) };
+  // "how many eggs did I get this week", "how much milk did we get today": what was logged (not what was sold: that is the money records).
+  if ((m = /^how (?:much|many) (milk|eggs)(?: (?:did|have) (?:i|we|my \w+|the \w+)(?: (?:get|got|collect|collected|gather|gathered|milk|milked|produce|produced|lay|laid))?| (?:do|did) (?:i|we) have)?\s*(.*)$/.exec(t)) && !/\b(?:sell|sold|buy|bought|cost|price|spend|spent)\b/.test(t)) return { action: "sum-harvest", crop: m[1], period: extractPeriod(m[2], today) || extractPeriod("this week", today) };
   if (/^(?:show|read|what(?:'s| is| are)) (?:me )?(?:my |the )?(?:farm log|recent readings|what i(?:'ve| have) logged)$/.test(t) || /^what have i logged$/.test(t)) return { action: "show" };
   if (/^(?:undo|delete|remove)(?: my)? (?:last|latest) (?:farm |log )?(?:entry|reading|record)$/.test(t) || /^undo that (?:reading|entry)$/.test(t)) return { action: "undo" };
   if (/^(?:what|which) (?:farm )?alerts (?:do i have|have i set|are set)$/.test(t) || /^(?:show|list) my (?:farm )?alerts$/.test(t)) return { action: "alert-list" };
@@ -309,4 +320,4 @@ function farmDigest(rows, today) {
   return parts.slice(0, 3).join(" ");
 }
 
-module.exports = Object.freeze({ farmLogTurn, readRequest, farmDigest, reportDay, MAX_ENTRIES });
+module.exports = Object.freeze({ farmLogTurn, readRequest, farmDigest, reportDay, describeReading, whenWords, MAX_ENTRIES });

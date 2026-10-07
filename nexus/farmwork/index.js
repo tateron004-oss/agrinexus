@@ -21,11 +21,15 @@ const swahiliLedger = require("./swahili-ledger.js");
 const swahiliLand = require("./swahili-land.js");
 const swahiliPeople = require("./swahili-people.js");
 const swahiliBusiness = require("./swahili-business.js");
+const books = require("./books.js");
+const herd = require("./herd.js");
+const undo = require("./books-undo.js");
 
 // The farm toolkit's front door. Order: an open guided conversation first (the person's words are its answers), then each tool in turn.
 // A tool answers only when the words are plainly for it (returns null otherwise), so everything else carries on to normal planning.
 // A tool may answer with a string (a conversational reply) or { plan } (a governed step, such as a printable report).
-const MODULES = [swahiliLedger, swahili, swahiliLand, swahiliPeople, swahiliBusiness, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
+// books.js is the English bookkeeping front door ("sold maize 4500", "John owes me 800", "what did I earn today"): it turns what people really say into the careful phrasing the tools below read.
+const MODULES = [swahiliLedger, swahili, swahiliLand, swahiliPeople, swahiliBusiness, undo, books, herd, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
 const { YES_SW, NO_SW } = require("../i18n/swahili-words.js");
 const TEMPLATES = Object.assign({}, ...MODULES.map(mod => mod.templates || {}));
 const CONFIRMS = Object.assign({
