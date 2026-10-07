@@ -12,7 +12,8 @@ const { spawn } = require("node:child_process");
 // reply) and the assistant reminders. Everything a person makes in the shared lists is now theirs; only public listings, the shared map layers, field findings and the staff review queues are shared.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4991;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-personal-private-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-personal-private-uploads-"));

@@ -51,6 +51,9 @@ const CASES = [
 ];
 
 test("the older command routes and the spoken tool's fallback answer these requests with the fixed guard replies", async () => {
+  // /api/agent/execute runs one of the caller's OWN plans (a person never runs someone else's, see cross-account-privacy.test.js), so this person makes one first;
+  // the page it returns then carries the reply to the command just typed.
+  assert.equal((await post("/api/agent/plan", { goal: "Check my farm plan for the week" })).status, 200);
   for (const [text, expected] of CASES) {
     const typed = await post("/api/agent/command", { command: text });
     assert.equal(typed.status, 200, text);

@@ -117,7 +117,9 @@ test("'Remember ...' that cannot be kept says so plainly: nothing is saved for a
   assert.ok(!stateAfter.includes(`${marker}3`), "nothing a guest asked to remember was stored");
 
   const secret = await say(userCookie, "Remember that my password is hunter2");
-  assert.match(secret.response, /won.t remember that kind of detail.*no note was saved/i);
+  // The refusal for a PIN, password or card number is the shared safety reply (safety.secretRefused), the same on every route.
+  assert.match(secret.response, /I won.t save a PIN, password or card number/i);
+  assert.doesNotMatch(secret.response, /saved:/i);
   const kept = (await post("/api/agent/command", userCookie, { command: "what do you remember", conversational: true })).json.profile.agentMemory;
   for (const key of ["preferences", "longTermFacts", "learnedPatterns", "safetyBoundaries", "moduleMemory", "userNeeds", "memoryTimeline"]) assert.ok(!JSON.stringify(kept[key] || []).includes("hunter2"), `${key} holds no secret`);
 

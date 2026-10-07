@@ -10,7 +10,8 @@ const path = require("node:path");
 // Kyro reads the reading back and asks; only a yes saves it. What was saved is checked in the app's own readings, never from the reply text.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15990;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "health-by-voice-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

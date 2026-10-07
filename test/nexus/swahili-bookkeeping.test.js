@@ -10,13 +10,12 @@ const NOW = new Date("2026-10-07T09:00:00Z"); // Wednesday 7 October 2026 in Nai
 // Runs one case: each sentence is said in turn to a fresh person. Returns the replies, the money records and the farm log.
 async function runCase(say, { seed = false } = {}) {
   const store = fakeFarmStore(); const memory = fakeMemory();
-  const log = await memory.listFarmEntries();
-  memory.addFarmEntryUnlessCapped = async ({ content }) => { log.push({ content }); return { added: true }; };
   if (seed) await store.add({ tenantId: "t1", userId: "u1", collection: "field", data: { name: "Home", status: "active" } });
   const replies = [];
   for (const text of [].concat(say)) replies.push(await farmWorkTurn({ text, store, tenantId: "t1", userId: "u1", now: NOW, timeZone: "Africa/Nairobi", memory, nameOf: async () => "Amina" }));
   const rows = store.rows.filter(row => !row.deleted && row.collection === "money").map(row => row.data);
-  return { replies, rows, log: log.map(entry => entry.content) };
+  // The shared fake keeps its own farm log (it returns a copy each time), so what was written is read back from it.
+  return { replies, rows, log: (await memory.listFarmEntries()).map(entry => entry.content) };
 }
 const subset = (actual, expected) => Object.entries(expected).every(([key, value]) => actual[key] === value);
 

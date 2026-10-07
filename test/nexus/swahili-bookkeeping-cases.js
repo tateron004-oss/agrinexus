@@ -235,7 +235,8 @@ const CASES = [
   ["nimepata elfu mbili", { ...none, replies: [null] }],
   ["ndiyo", { ...none, replies: [null] }],
   ["I sold maize for 1000 shillings", { rows: [inc(1000, { currency: "shillings" })], reply: /^Recorded: sold maize/ }],
-  ["Mama Njeri owes me 800", { ...none, replies: [null] }]
+  // English wording is no longer left to planning: the English bookkeeping front door (books.js) records a standalone debt, as a debt and not as income.
+  ["Mama Njeri owes me 800", { rows: [{ type: "income", amount: 800, party: "Mama Njeri", unpaid: true }], reply: /^Recorded: Mama Njeri owes you 800/ }]
 ];
 
 module.exports = Object.freeze({ CASES, NOW, YESTERDAY });

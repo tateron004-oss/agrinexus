@@ -147,7 +147,8 @@ test("the planner's reply (with a circle) uses the same reader: urgent care offe
 
 // ---- the real routes ----
 const root = path.resolve(__dirname, "..", "..");
-const port = 15850;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "danger-gaps-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

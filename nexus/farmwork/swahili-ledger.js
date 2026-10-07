@@ -167,7 +167,8 @@ const owedToMe = rows => rows.filter(record => record.data.type === "income" && 
 const iOwe = rows => rows.filter(record => record.data.type === "expense" && record.data.unpaid && record.data.owing > 0);
 const sameParty = (record, who) => Boolean(record.data.party) && nameKey(record.data.party) === nameKey(who);
 const asIncome = records => records.map(record => ({ data: { ...record.data, unpaid: false, type: "income" } }));
-const asOwing = records => records.map(record => ({ data: { ...record.data, unpaid: false, type: "expense", category: "other", amount: record.data.owing } }));
+// `debt: false`: money.js sum() leaves a standalone debt out of cost totals (a debt is not a cost until it is paid), but here the remaining debt itself is what is being added up.
+const asOwing = records => records.map(record => ({ data: { ...record.data, unpaid: false, debt: false, type: "expense", category: "other", amount: record.data.owing } }));
 const groupBy = records => { const by = {}; for (const record of records) { const who = record.data.party || "Mtu fulani"; (by[who] = by[who] || []).push(record); } return by; };
 
 // A customer pays (all, or some): the oldest unpaid sales are settled first, exactly as the English tool does it ("Otieno paid 500").

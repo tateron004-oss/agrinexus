@@ -76,7 +76,7 @@ const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety
 async function careSafetyReply(text, user) {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en") });
+  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en"), country: user?.country });
   return reply ? { kind: found.kind, reply } : null;
 }
 // The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already

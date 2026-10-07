@@ -61,7 +61,7 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
       const allClear = await safeTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, locale: command.locale });
       if (allClear) return allClear;
 
-      const safety = await safetyTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, locale: command.locale, recordAlert: circle.recordAlert ? args => circle.recordAlert(args) : null });
+      const safety = await safetyTurn({ text: command.text, circle, push: send, ...scope, now: now(), outcome, locale: command.locale, country: context?.country, recordAlert: circle.recordAlert ? args => circle.recordAlert(args) : null });
       if (safety) return safety;
 
       // A veteran or elderly person self-identifying: real, already-built features surfaced honestly (see audience.js) -- never a

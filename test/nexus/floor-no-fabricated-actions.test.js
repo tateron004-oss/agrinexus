@@ -10,7 +10,8 @@ const path = require("node:path");
 // issue a certificate, enrol them, or move their job application. These tests drive both the spoken tool route and the older command route and check the reply AND the stored state.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15870;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "floor-guard-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

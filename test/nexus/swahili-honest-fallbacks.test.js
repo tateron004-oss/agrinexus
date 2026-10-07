@@ -11,7 +11,8 @@ const path = require("node:path");
 // or came back in English tagged "[SW]", or with the internal planning note ("Understand the person's goal and guide one step at a time") in it; and "nataka kujiua" was answered in English.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15817;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sw-honest-"));
 const dbFile = path.join(dir, "db.json");

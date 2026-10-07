@@ -1086,7 +1086,7 @@ function requestContext(req, user, isRestrictedFrom = () => false) {
   // handling), but this context -- the one built for every real live user request -- did not. Harmless
   // today (authoritativeRuntimeUser() only ever grants an explicit permission list, never "*"), but kept
   // consistent so a future admin/superuser permission model doesn't silently fail under this context.
-  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has("*") || permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
+  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), country: String(user.country || ""), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has("*") || permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
 }
 
 function acceptanceContext(principal, values = {}) {

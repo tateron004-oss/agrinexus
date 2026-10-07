@@ -18,7 +18,8 @@ const { t } = require("../../nexus/i18n/index.js");
 //  5. A wider read-back found more of the same shape: support tickets, video sessions, platform drafts / searches / day plans, the user-testing memory and "execute my plan".
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15931;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-cross-account-"));
 const tempDbPath = path.join(tempDir, "db.json");

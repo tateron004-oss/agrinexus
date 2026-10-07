@@ -287,13 +287,23 @@ async function safeTurn({ text, circle, push, tenantId, userId, userName, now = 
   return told.length ? t(language, "safety.allClearTold", { names: told.join(", ") }) : t(language, "safety.allClearClosed");
 }
 
+// The emergency numbers the platform states elsewhere (Kenya 999 or 112, Nigeria 112). For any other country, or when the country is not known, no number is named: "your local emergency number".
+function emergencyNumberForCountry(country = "") {
+  const place = String(country || "").trim().toLowerCase();
+  if (/\bkenya\b/.test(place)) return { country: "Kenya", numbers: "999 or 112" };
+  if (/\bnigeria\b/.test(place)) return { country: "Nigeria", numbers: "112" };
+  return null;
+}
+
 // Returns the words to answer with, or null when this is not a safety moment. `recordAlert` remembers an alert so the person's location can follow it, and
 // `outcome` (optional) receives { emergency: { alertId, shareLocation, ... } } so the phone knows to send it; both are optional.
-async function safetyTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), recordAlert = null, outcome = null, locale = "en" }) {
+async function safetyTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), recordAlert = null, outcome = null, locale = "en", country = "" }) {
   const found = readSafetyDetailed(text);
   if (!found) return null;
   const kind = found.kind; const language = found.language === "sw" ? "sw" : languageOf(locale);
-  const number = t(language, "safety.number");
+  // When the person's country is known and the platform has its number, the reply names it (never the U.S. number); otherwise it says "your local emergency number".
+  const known = emergencyNumberForCountry(country);
+  const number = known ? t(language, "safety.numberIn", { numbers: known.numbers, country: known.country }) : t(language, "safety.number");
   const members = circle?.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }).catch(() => []) : [];
   if (kind === "emergency") {
     if (!members.length) return t(language, "safety.noCircle", { number });
@@ -338,4 +348,4 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
   return t(language, found.weapon ? "safety.selfHarmWeapon" : "safety.selfHarm", { circle: circleOffer });
 }
 
-module.exports = Object.freeze({ safetyTurn, safeTurn, readSafety, readSafetyDetailed, readSafe, safeLanguage, alertCircle });
+module.exports = Object.freeze({ emergencyNumberForCountry, safetyTurn, safeTurn, readSafety, readSafetyDetailed, readSafe, safeLanguage, alertCircle });

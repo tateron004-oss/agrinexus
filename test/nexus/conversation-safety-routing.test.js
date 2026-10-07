@@ -10,7 +10,8 @@ const path = require("node:path");
 // health sentences were staged as a learning course or a weather question, and a later "yes" completed it; and the emergency reply named only the U.S. number.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15830;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://127.0.0.1:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "conversation-safety-"));
 const dbPath = path.join(dir, "db.json");
