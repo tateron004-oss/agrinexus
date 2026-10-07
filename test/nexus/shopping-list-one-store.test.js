@@ -74,5 +74,7 @@ test("lists with a name of their own, and a bare 'make a list', still go to the 
 test("adding one item the old way, and reading, are unchanged", async () => {
   const { ask } = planner();
   assert.match((await ask("Add milk and eggs to my shopping list")).response, /^Added milk and eggs to your shopping list/);
-  assert.match((await ask("What's on my shopping list?")).response, /milk and eggs/);
+  // "milk and eggs" is now two things on the list (so "remove milk" takes out only the milk), read back as two numbered items
+  const read = (await ask("What's on my shopping list?")).response;
+  assert.match(read, /1, milk; 2, eggs/);
 });
