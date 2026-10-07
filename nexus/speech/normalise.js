@@ -110,12 +110,12 @@ const SW_FORMS = [["weke|wekee|wekea", "weka"], ["ongeze|ongezee|ongezea", "onge
 for (const [forms, plain] of SW_FORMS) {
   lead(`(?:naomba[ ,]+(?:tafadhali[ ,]+)?)?(?:tafadhali[ ,]+)?(?:unaweza (?:kuni)?|u)?ni(?:${forms})(?![\\p{L}])[ ,]*`, "polite-sw", hasRest, `${plain} `);
 }
-lead(`(?:naomba[ ,]+)?(?:tafadhali[ ,]+)?(?:unaweza|naomba)[ ,]+(?:kuni)?(?=(?:weka|ongeza|andika|tuma|ondoa|futa|soma|onyesha|kumbusha)\\b)`, "polite-sw", hasRest);
+lead(`(?:naomba[ ,]+)?(?:tafadhali[ ,]+)?(?:unaweza|naomba)[ ,]+(?:kuni|ku)?(?=(?:weka|ongeza|andika|tuma|ondoa|futa|soma|onyesha|kumbusha)\\b)`, "polite-sw", hasRest);
 lead(`(?:tafadhali[ ,]+)?nisaidie[ ,]+(?:ku)?(?=(?:weka|ongeza|andika|tuma|ondoa|futa|soma|onyesha|kumbusha)\\b)`, "polite-sw", hasRest);
 // English wrappers. They only apply when a real request follows ("can you swim" is left alone).
 const MODALS = "(?:could|can|would|will|may|might)";
 const ADV = "(?:[ ,]+(?:please|kindly|maybe|just|possibly|perhaps|quickly|simply|actually|now|also))*";
-lead(`${MODALS} (?:you|u|ya)${ADV}[ ,]+`, "polite", looksLikeRequest);
+lead(`${MODALS} (?:you|u|ya)${ADV}[ ,]+`, "polite", rest => looksLikeRequest(rest) && !/^help(?! me\b)/i.test(rest));
 lead(`${MODALS} (?:i|we) (?:please )?(?:ask|get|have|request) (?:you|u) (?:to |for )?`, "polite", looksLikeRequest);
 lead(`(?:i(?:'d| would| will) (?:like|love|want|appreciate)|i (?:want|need|wish|ask|require)|i'?d (?:like|love)) (?:you|u|it if you could|it if you can)(?: to)? `, "polite", looksLikeRequest);
 lead(`(?:i was wondering|i wonder|i am wondering|i'?m wondering|i just wondered) (?:if |whether )?(?:you )?(?:could|can|would|might)${ADV}[ ,]*`, "polite", looksLikeRequest);
@@ -313,7 +313,7 @@ const ASR_FIXES = [
   [/\btoo\s+(?=(?:my|the|your|our|a|an)\s)/gi, "to "],
   [/\btoo\s+(?=(?:take|call|buy|pay|get|do|go|send|check|feed|water|plant|harvest|visit|meet|pick|bring|see)\b)/gi, "to "],
   [/\bshop(?:ing|pin|in)\b/gi, "shopping"],
-  [/\bcalend[ae]r\b/gi, m => (/^calendar$/i.test(m) ? m : "calendar")],
+  [/\bcalend[ae]r\b/gi, m => (/^calendar$/i.test(m) ? m : /^[A-Z]/.test(m) ? "Calendar" : "calendar")],
   [/\bto?mm?or+ow\b/gi, "tomorrow"],
   [/^wat\s+(?=is|are|was|do|did)/i, "what "],
   [/\bwether\b/gi, "weather"],

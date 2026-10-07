@@ -60,7 +60,7 @@ function splitListItems(value, list = "shopping") {
     const merged = [];
     for (const part of parts) {
       const last = merged.length ? merged[merged.length - 1] : null;
-      const joinBack = last !== null && (NUMBER_WORD.test(last) || /^(?:a half|half|a quarter|quarter|a third)\b/i.test(part) || (list !== "shopping" && !new RegExp(`^(?:${ACTION_VERBS})\\b`, "i").test(part)));
+      const joinBack = last !== null && (NUMBER_WORD.test(last) || /^(?:a half|half|a quarter|quarter|a third)\b/i.test(part) || (list === "todo" && !new RegExp(`^(?:${ACTION_VERBS})\\b`, "i").test(part)));
       if (joinBack) merged[merged.length - 1] = `${last} and ${part}`; else merged.push(part);
     }
     pieces.push(...merged);
@@ -144,7 +144,7 @@ function readListRequest(text) {
     const where = parseListRef(m[2]);
     if (where) return { action: "todo-remove", list: where.list, query: clean(m[1]), sw };
   }
-  if ((m = new RegExp(`^(?:please )?(?:remove|delete|drop|ondoa|futa|toa)\\s+(?:the |some )?([\\p{L}][\\p{L}' -]{0,40})$`, "iu").exec(t)) && !/\b(?:contact|note|notes|reminder|reminders|event|calendar|account|data|everything|all|memory|history|photo|file|document)\b/i.test(m[1]))
+  if ((m = new RegExp(`^(?:please )?(?:remove|delete|drop|ondoa|futa|toa)\\s+(?:the |some )?([\\p{L}][\\p{L}' -]{0,40})$`, "iu").exec(t)) && !/\b(?:contact|note|notes|reminder|reminders|event|calendar|account|data|everything|all|memory|history|photo|file|document|list|lists|orodha)\b/i.test(m[1]))
     return { action: "todo-remove", list: null, query: clean(m[1]), sw, bare: true };
 
   // clearing: finished items, or everything (asked about first)

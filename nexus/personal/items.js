@@ -151,7 +151,7 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
   const full = sw ? "Orodha zako zimejaa. Niambie nifute kazi zilizokamilika, au nifute madokezo fulani kwanza." : "Your lists are full. Tell me to clear finished to-dos, or delete some notes or events first.";
   const yourNoun = name => (sw ? (name === "shopping" ? "orodha yako ya manunuzi" : name === "todo" ? "orodha yako ya kazi" : `orodha yako ya ${name}`) : `your ${nounOf(name)}`);
   const openCount = (rows, name) => rows.filter(row => row.content.list === name && !row.content.done).length;
-  const youHave = n => (sw ? `Una vitu ${n} ${n === 1 ? "kilichobaki" : "vilivyobaki"}.` : `You have ${n} open ${n === 1 ? "item" : "items"}.`);
+  const youHave = n => (sw ? (n === 1 ? "Una kitu 1 kilichobaki." : `Una vitu ${n} vilivyobaki.`) : `You have ${n} open ${n === 1 ? "item" : "items"}.`);
   // The lists a person has something on, with how many things are open on each ("shopping" and "todo" first, then lists with names of their own).
   const listsInUse = rows => {
     const names = [];
