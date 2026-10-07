@@ -74,6 +74,7 @@ const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
 const teamManagement = require("./server/teamManagement.js");
 const businessSpaces = require("./server/businessSpaces.js");
+const platformAudit = require("./server/platformAudit.js");
 const businessSender = require("./server/businessSender.js");
 const senderOverride = require("./server/providers/senderOverride.js");
 // What the current request sends as. In the default space this is process.env itself; inside a business it is a copy carrying that business's own numbers and settings (and none of the platform's).
@@ -52217,7 +52218,7 @@ async function api(req, res, url) {
     if (!teamManagement.canManageTeam(user)) return send(res, 403, { error: "Only a business manager can manage a team." });
     const teamView = extra => ({
       ok: true,
-      manager: { name: user.name, email: user.email, admin: user.role === "Admin" },
+      manager: { name: user.name, email: user.email, admin: user.role === "Admin", language: user.language || "" },
       limit: user.role === "Admin" ? null : teamManagement.MAX_TEAM_SIZE,
       team: teamManagement.listedUsers(db, user).map(item => teamManagement.shapeUser(item, db)),
       ...extra
@@ -52343,13 +52344,21 @@ async function api(req, res, url) {
         };
       }));
     };
-    if (url.pathname === "/api/platform/businesses" && req.method === "GET") return send(res, 200, { ok: true, businesses: await businessList() });
+    if (url.pathname === "/api/platform/businesses" && req.method === "GET") return send(res, 200, { ok: true, viewer: { language: user.language || "" }, businesses: await businessList() });
+    // The platform owner's activity record (see server/platformAudit.js): kept in the default space's record, so a business's Admin can never read it and erasing a business does not erase it.
+    if (url.pathname === "/api/platform/audit" && req.method === "GET") {
+      return send(res, 200, { ok: true, viewer: { language: user.language || "" }, entries: platformAudit.list(db, { business: url.searchParams.get("business"), limit: url.searchParams.get("limit") }) });
+    }
     if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
     if (!authRateLimit(req, "platform-write", 30, 300_000)) return send(res, 429, { error: "Too many changes in a short time. Wait a few minutes, then try again." });
     const body = await readBody(req);
-    const platformLog = (action, detail, metadata = {}) => {
+    // The business's name as it is now, taken BEFORE a change (an erase removes it), so the activity record can say which business it was.
+    const auditedId = String(body.id ?? "").trim().toLowerCase();
+    const auditedName = auditedId && businessSpaces.validSpaceId(auditedId) ? (await spaceDirectory.info(auditedId).catch(() => null))?.name || "" : "";
+    const platformLog = (action, detail, metadata = {}, facts = {}) => {
       addUsageEvent(db.profile, { module: "Platform", action, detail });
       logIntegration(db, { providerId: "auth-users", module: "Platform", action, detail, metadata: { ...metadata, by: user.email } });
+      platformAudit.record(db, { by: user.email, action, businessId: metadata.businessId, businessName: facts.businessName ?? auditedName, facts });
     };
 
     if (url.pathname === "/api/platform/businesses") {
@@ -52394,7 +52403,7 @@ async function api(req, res, url) {
           .catch(error => console.error("[platform] Postgres shadow-write failed:", error.message));
       }
       forgetSpaceInfo(id);
-      platformLog("business.created", `Business ${id} created with first Admin ${adminEmail}.`, { businessId: id });
+      platformLog("business.created", `Business ${id} created with first Admin ${adminEmail}.`, { businessId: id }, { businessName: name, adminEmail });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList(), created: { id, name, adminEmail, password } });
     }
@@ -52407,7 +52416,7 @@ async function api(req, res, url) {
       if (!next.ok) return send(res, 400, { error: next.error });
       await spaceDirectory.setSettings(id, next.settings);
       forgetSpaceInfo(id);
-      platformLog("business.settings_changed", `Sender settings changed for business ${id}.`, { businessId: id, keys: Object.keys(body).filter(key => key in businessSender.SETTING_FORMATS) });
+      platformLog("business.settings_changed", `Sender settings changed for business ${id}.`, { businessId: id, keys: Object.keys(body).filter(key => key in businessSender.SETTING_FORMATS) }, { fields: Object.keys(body).filter(key => key in businessSender.SETTING_FORMATS) });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList() });
     }
@@ -52419,7 +52428,7 @@ async function api(req, res, url) {
       await spaceDirectory.setClosed(id, closing);
       forgetSpaceInfo(id);
       const ended = closing ? await revokeSessionsForSpace(id) : 0;
-      platformLog(closing ? "business.closed" : "business.reopened", closing ? `Business ${id} closed; ${ended} sign-in(s) ended.` : `Business ${id} reopened.`, { businessId: id });
+      platformLog(closing ? "business.closed" : "business.reopened", closing ? `Business ${id} closed; ${ended} sign-in(s) ended.` : `Business ${id} reopened.`, { businessId: id }, closing ? { signInsEnded: ended } : {});
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList() });
     }
@@ -52465,7 +52474,7 @@ async function api(req, res, url) {
         return result;
       }, info));
       if (summary.engineErasuresFailed) {
-        platformLog("business.erase_incomplete", `Erasing business ${id} stopped: ${summary.engineErasuresFailed} of ${summary.people} people's data could not be queued for erasure. Nothing was deleted.`, { businessId: id, failed: summary.engineErasuresFailed });
+        platformLog("business.erase_incomplete", `Erasing business ${id} stopped: ${summary.engineErasuresFailed} of ${summary.people} people's data could not be queued for erasure. Nothing was deleted.`, { businessId: id, failed: summary.engineErasuresFailed }, { people: summary.people, engineErasuresFailed: summary.engineErasuresFailed });
         await writeDb(db);
         return send(res, 502, { ok: false, error: `The erase was stopped and nothing was deleted: ${summary.engineErasuresFailed} of ${summary.people} people's data could not be queued for erasure (${summary.failedPeople.join(", ")}). The business is still closed. Try again in a minute.`, erased: { id, ...summary } });
       }
@@ -52473,7 +52482,7 @@ async function api(req, res, url) {
       await deleteBusinessRecord(id);
       await spaceDirectory.removeSpace(id);
       forgetSpaceInfo(id);
-      platformLog("business.erased", `Business ${id} erased: ${summary.people} people, ${summary.uploadsRemoved} uploaded files removed, ${summary.engineApplicable ? `${summary.engineErasuresQueued} engine erasures queued` : "no engine data (no database)"}.`, { businessId: id, ...summary });
+      platformLog("business.erased", `Business ${id} erased: ${summary.people} people, ${summary.uploadsRemoved} uploaded files removed, ${summary.engineApplicable ? `${summary.engineErasuresQueued} engine erasures queued` : "no engine data (no database)"}.`, { businessId: id, ...summary }, { people: summary.people, uploadsRemoved: summary.uploadsRemoved, engineErasuresQueued: summary.engineErasuresQueued });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList(), erased: { id, ...summary } });
     }
@@ -52485,7 +52494,7 @@ async function api(req, res, url) {
       if (!(await spaceDirectory.exists(id))) return send(res, 404, { error: "There is no business with that id." });
       try { await spaceDirectory.linkNumber(number, id); } catch (error) { const reply = directoryFailureReply(error); return send(res, reply.status, { error: reply.error }); }
       forgetSpaceInfo(id);
-      platformLog("business.number_linked", `${redactPhoneNumber(number)} linked to business ${id}.`, { businessId: id, phone: redactPhoneNumber(number) });
+      platformLog("business.number_linked", `${redactPhoneNumber(number)} linked to business ${id}.`, { businessId: id, phone: redactPhoneNumber(number) }, { phone: redactPhoneNumber(number) });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList() });
     }
