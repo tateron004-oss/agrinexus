@@ -998,7 +998,7 @@ for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => process.exi
   assert(ambiguousApply.commandResult.intent === "workforce.application_help");
   assert(ambiguousApply.commandResult.status === "needs-details");
   assert(!ambiguousApply.profile.agentPendingAction);
-  const conversationalApply = await call("/api/agent/command", { command: "Please submit my job application", conversational: true, inputMode: "voice", outputMode: "voice" });
+  const conversationalApply = await call("/api/agent/command", { command: "Please submit my job application for the Telehealth Access Assistant role", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(conversationalApply.commandResult.intent === "conversation.pending_action");
   assert(conversationalApply.commandResult.status === "needs-confirmation");
   assert(conversationalApply.profile.agentPendingAction.kind === "workforce-application");
@@ -1173,16 +1173,19 @@ for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => process.exi
   assert(autopilotConfirm.commandResult.metadata.mode === "autopilot");
   assert(autopilotConfirm.profile.agentExecutions[0].status === "completed");
   assert(autopilotConfirm.profile.integrationEvents.some(event => event.action === "agent.autopilot_executed"));
+  // A spoken "complete my lesson" no longer marks a lesson done that was never shown (the lesson is completed in the Learning section), and a spoken
+  // "issue my certificate" only lists a certificate that the lessons and quiz above really earned (/api/learning/certificate); neither stages a confirmation to fabricate one.
   const lessonFlow = await stagedThenConfirmed("Nexus complete my lesson");
   const lessonCommand = lessonFlow.result;
-  assert(lessonFlow.staged && lessonFlow.staged.commandResult.metadata.pendingActionType === "lesson_completion");
-  assert(lessonCommand.commandResult.intent === "conversation.confirmed");
+  assert(!lessonFlow.staged);
+  assert(lessonCommand.commandResult.intent === "learning.complete_lesson_declined");
   assert(lessonCommand.commandResult.metadata.redirectSection === "learning");
-  assert(/Completed the next .* lesson/.test(lessonCommand.commandResult.response));
+  assert(/can't mark one as done/.test(lessonCommand.commandResult.response));
   const certificateFlow = await stagedThenConfirmed("Nexus issue my certificate");
   const certificateCommand = certificateFlow.result;
-  assert(certificateFlow.staged);
-  assert(certificateCommand.commandResult.intent === "conversation.confirmed");
+  assert(!certificateFlow.staged);
+  assert(certificateCommand.commandResult.intent === "learning.certificates");
+  assert(/AN-CERT-\d+/.test(certificateCommand.commandResult.response));
   assert(certificateCommand.profile.certificates.length >= 1);
   const vitalsCommand = await call("/api/agent/command", { command: "Nexus capture vitals for telehealth", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(vitalsCommand.commandResult.intent === "health.vitals");

@@ -57,6 +57,7 @@ const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
+const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // The same safety answers the planner gives before anything else (danger signs in pregnancy or for a baby, someone in danger or being hurt, self-harm, scams, medicine doses for a baby or in pregnancy), for the
 // older paths: the phone line, the older command route, and the fallback when the planner cannot be reached. Those cannot alert a circle, so the answer says what to do and whom to call, and never offers to alert anyone.
@@ -9949,7 +9950,8 @@ function extractContactNameWithPhone(text = "", fallbackName = "") {
   const source = String(text || "");
   const phone = extractPhoneNumberFromText(source);
   if (!phone) return contactDisplayName(fallbackName);
-  const beforePhone = source.slice(0, source.indexOf(source.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""));
+  const beforePhone = source.slice(0, source.indexOf(source.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""))
+    .replace(/^\s*(?:hifadhi|weka|andika|ongeza|kumbuka)\s+(?:namba|nambari|simu)(?:\s+ya)?\s+/i, "");
   const nameMatch = beforePhone.match(/\b(?:remember|save|add|store)?\s*(?:that\s+)?(?:my\s+)?([a-zA-Z][a-zA-Z\s'.-]{1,48}?)(?:'s| is| number| phone| contact| at|:)?\s*$/i);
   const candidate = contactDisplayName(nameMatch?.[1] || fallbackName);
   const noise = /^(his|her|their|the|this|that|number|phone|contact|is|at|for)$/i;
@@ -10333,7 +10335,9 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   ensurePhoneContactBook(db);
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(command);
-  const saveContactSignal = /\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command));
+  const saveContactSignal = (/\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command)))
+    // "Hifadhi namba ya Juma +254..." (save Juma's number) is saving a contact, not asking for a call.
+    || (/\b(hifadhi|weka|andika|ongeza|kumbuka)\b/.test(normalizeSpeechForIntent(command)) && /\b(namba|nambari|simu|mawasiliano)\b/.test(normalizeSpeechForIntent(command)));
   const reminderSignal = /\b(remind|reminder|notify|notification)\b/.test(normalizeSpeechForIntent(command));
   if ((pendingContactCall && phone) || saveContactSignal || reminderSignal) return null;
   if (!isCallIntentCommand(command)) return null;
@@ -13975,16 +13979,29 @@ function tradeOperationalCommunicationBrief(db, user, text) {
   };
 }
 
-function submitBestWorkforceApplication(db, user, command = "") {
+// A job application that is already further along must not be sent backwards by a later, weaker step ("match me" or a gap review moving "Application Submitted" back to "Agent Matched").
+const CANDIDATE_STAGES_PAST_MATCHING = new Set(["Application Submitted", "Applied", "Shortlist", "Interview", "Placement Pool", "Shift Ready", "Paid Placement", "Performance Review"]);
+function setEarlyCandidateStage(profile, stage) {
+  if (CANDIDATE_STAGES_PAST_MATCHING.has(profile.candidateStage)) return;
+  profile.candidateStage = stage;
+}
+// The simulated hiring engine (no WORKFORCE_HRIS webhook and key configured) never reaches an employer; a reply about an application must say so.
+function workforceEngineIsLive() {
+  const runtime = providerRuntime("workforce-hris");
+  return Boolean(runtime.webhookUrl && runtime.apiKey) && runtime.mode !== "sandbox";
+}
+
+function submitBestWorkforceApplication(db, user, command = "", options = {}) {
   ensureWorkforceProfile(db.profile);
   const requested = String(command || "").toLowerCase();
-  const role = db.roles.find(item => requested.includes(item.title.toLowerCase()))
-    || db.roles.find(item => roleReadiness(db.profile, user, item).eligible)
-    || db.roles[0];
+  const role = (options.roleId ? db.roles.find(item => item.id === options.roleId) : null)
+    || db.roles.find(item => requested.includes(item.title.toLowerCase()))
+    || (options.roleId ? null : db.roles.find(item => roleReadiness(db.profile, user, item).eligible))
+    || (options.roleId ? null : db.roles[0]);
   if (!role) return { status: "needs-role", response: "No workforce roles are available yet." };
   const readiness = roleReadiness(db.profile, user, role);
   if (!readiness.eligible) {
-    db.profile.candidateStage = "Readiness Gap Review";
+    setEarlyCandidateStage(db.profile, "Readiness Gap Review");
     logIntegration(db, {
       providerId: "workforce-notifications",
       module: "Workforce",
@@ -13997,7 +14014,10 @@ function submitBestWorkforceApplication(db, user, command = "") {
       status: "needs-readiness",
       role,
       readiness,
-      response: `${role.title} is the best role to review, but you need ${readiness.missingReadiness}% more readiness${readiness.missingCertificates.length ? ` and ${readiness.missingCertificates.length} certificate gap(s)` : ""}. I opened the workforce path so you can close the gaps.`
+      response: options.roleId
+        // The person named this role: say plainly what is missing and that nothing was submitted.
+        ? `I can't submit the ${role.title} application yet: ${[readiness.missingReadiness > 0 ? `you need ${readiness.missingReadiness}% more readiness` : "", readiness.missingCertificates.length ? `you are missing ${readiness.missingCertificates.length} required certificate(s)` : ""].filter(Boolean).join(" and ") || "your profile is not ready"}. Nothing was submitted. Finish the related course and its quiz first.`
+        : `${role.title} is the best role to review, but you need ${readiness.missingReadiness}% more readiness${readiness.missingCertificates.length ? ` and ${readiness.missingCertificates.length} certificate gap(s)` : ""}. I opened the workforce path so you can close the gaps.`
     };
   }
   let application = db.profile.applications.find(item => item.roleId === role.id);
@@ -14036,7 +14056,7 @@ function submitBestWorkforceApplication(db, user, command = "") {
     status: "completed",
     role,
     application,
-    response: `I submitted the ${role.title} application and opened the workforce workspace. Next step: interview support and shift scheduling.`
+    response: `I submitted the ${role.title} application and opened the workforce workspace.${workforceEngineIsLive() ? "" : " This is a practice application: no employer has received it."} Next step: interview support and shift scheduling.`
   };
 }
 
@@ -14108,15 +14128,35 @@ function completeAgentQuiz(db, user) {
   return `Completed the ${course.title} quiz workflow with score ${enrollment.score}.`;
 }
 
+// Whether this person has genuinely finished a course: every lesson of it done and a real quiz result (the same 25-point bar /api/learning/certificate asks for). Certificates gate job eligibility,
+// so this is never satisfied by a voice command alone. state: "none" (no course started) | "lessons" | "quiz" | "eligible" | "have" (already holds the certificate).
+function learningCertificateStatus(db, user) {
+  ensureLearningProfile(user);
+  const rows = (user.enrollments || []).map(enrollment => {
+    const course = (db.courses || []).find(item => item.id === enrollment.courseId);
+    if (!course) return null;
+    const total = (course.modules || []).length;
+    const done = new Set(enrollment.completedModules || []).size;
+    return { course, enrollment, total, done, lessonsDone: total > 0 && done >= total, quizDone: Number(enrollment.score || 0) >= 25, has: (user.certificates || []).find(item => item.courseId === course.id) || null };
+  }).filter(Boolean);
+  if (!rows.length) return { state: "none" };
+  const ready = rows.find(row => row.lessonsDone && row.quizDone && !row.has);
+  if (ready) return { state: "eligible", ...ready };
+  const held = rows.find(row => row.has);
+  if (held) return { state: "have", ...held };
+  const closest = rows.slice().sort((a, b) => (Number(b.quizDone) + b.done) - (Number(a.quizDone) + a.done))[0];
+  return { state: closest.lessonsDone ? "quiz" : "lessons", ...closest };
+}
+
 function issueAgentCertificate(db, user) {
   ensureLearningProfile(user);
-  const course = activeLearningCourse(db, user);
-  if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(user, course.id);
-  if (!enrollment || Number(enrollment.score || 0) < 25) {
-    completeAgentQuiz(db, user);
-    enrollment = getEnrollment(user, course.id);
-  }
+  const status = learningCertificateStatus(db, user);
+  if (status.state === "have") return `You already hold ${status.has.certificateNumber} for ${status.course.title}. Nothing new was issued.`;
+  if (status.state === "none") return "No certificate was issued: you haven't finished a course yet.";
+  if (status.state === "lessons") return `No certificate was issued: ${status.course.title} still has lessons to finish (${status.done} of ${status.total} done).`;
+  if (status.state === "quiz") return `No certificate was issued: the quiz result for ${status.course.title} is still missing.`;
+  const course = status.course;
+  const enrollment = status.enrollment;
   enrollment.status = "completed";
   enrollment.progress = 100;
   enrollment.completedAt = enrollment.completedAt || new Date().toISOString();
@@ -18010,22 +18050,9 @@ async function executeAgentTool(db, user, step) {
     if (!role) throw new Error("No workforce role catalog is available.");
     const readiness = roleReadiness(db.profile, user, role);
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
-    let application = db.profile.applications.find(item => item.roleId === role.id);
-    if (readiness.eligible && !application) {
-      application = {
-        id: crypto.randomUUID(),
-        roleId: role.id,
-        roleTitle: role.title,
-        status: "agent-submitted",
-        submittedAt: new Date().toISOString(),
-        rate: role.rate
-      };
-      db.profile.applications.unshift(application);
-      db.profile.candidateStage = "Agent Matched";
-      db.profile.placements = db.profile.applications.length;
-    } else {
-      db.profile.candidateStage = readiness.eligible ? "Agent Matched" : "Readiness Gap Review";
-    }
+    // Matching a person to a role is not applying: it used to write an "agent-submitted" application for the best-fitting role (the seeded Field Operations Agent) the person never asked to apply for.
+    const application = db.profile.applications.find(item => item.roleId === role.id) || null;
+    setEarlyCandidateStage(db.profile, readiness.eligible ? "Agent Matched" : "Readiness Gap Review");
     logIntegration(db, {
       providerId: "workforce-jobs",
       module: "Workforce",
@@ -18210,8 +18237,9 @@ async function executeAgentTool(db, user, step) {
     // already-guarded settlement path (createTradeLogisticsWorkflow's type:"settlement" -- requires a real
     // order, requires it be Delivered, refuses a second settlement, and pays the actual order.total-based
     // amount) closes this instead of patching the fabricated number.
-    const order = db.profile.orders[db.profile.orders.length - 1];
-    if (!order) return "There's no trade order to post a payment for yet. Create or advance an order first.";
+    // A step that names its order (a confirmed "settle order X" from the older command route) settles exactly that order; the cloud agent's mission plan still names none and uses the latest one.
+    const order = step.orderId ? db.profile.orders.find(item => item.id === step.orderId) : db.profile.orders[db.profile.orders.length - 1];
+    if (!order) return step.orderId ? "I couldn't find that order any more, so nothing was posted." : "There's no trade order to post a payment for yet. Create or advance an order first.";
     try {
       const { record } = await createTradeLogisticsWorkflow(db, user, { type: "settlement", orderId: order.id });
       return `Posted a real settlement payout of ${record.currency} ${record.sellerNetAmount} for ${order.orderNumber}.`;
@@ -28570,6 +28598,8 @@ function localizedWorkflowPhrase(lower) {
     { patterns: ["connecte moi", "conectame", "niunganishe"], command: "connect me to a provider" },
     { patterns: ["postuler", "solicitar trabajo", "omba kazi"], command: "apply for that job" },
     { patterns: ["terminer lecon", "completa mi leccion", "kamilisha somo"], command: "complete my lesson" },
+    { patterns: ["endelea na kozi", "endelea na masomo"], command: "continue my course" },
+    { patterns: ["nilinganishe na nafasi"], command: "match me to a role" },
     { patterns: ["contacter acheteur", "contacta comprador", "wasiliana na mnunuzi"], command: "contact my buyer" },
     { patterns: ["rapport acheteur", "actualizacion comprador", "taarifa kwa mnunuzi"], command: "AgriTrade prepare a buyer update" },
     { patterns: ["risque route", "riesgo ruta", "hatari ya njia"], command: "check my route risk" },
@@ -29535,7 +29565,8 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(text);
   const callName = extractContactNameFromCall(text);
-  const saveContactSignal = /\b(remember|save|store|add)\b/.test(lower) && /\b(number|phone|contact|call)\b/.test(lower);
+  const saveContactSignal = (/\b(remember|save|store|add)\b/.test(lower) && /\b(number|phone|contact|call)\b/.test(lower))
+    || (/\b(hifadhi|weka|andika|ongeza|kumbuka)\b/.test(lower) && /\b(namba|nambari|simu|mawasiliano)\b/.test(lower));
   const numberMentioned = /\d(?:[\d\s().-]{6,}\d)/.test(String(text || ""));
 
   if (numberMentioned && !phone) {
@@ -29710,10 +29741,15 @@ async function executePendingAgentAction(db, user, pending) {
     };
   }
   if (pending.kind === "workforce-application") {
-    const result = submitBestWorkforceApplication(db, user, pending.command || "Apply for role");
+    // An application is only ever recorded for the role that was named when it was staged, never for whichever seeded role happens to fit best.
+    if (!pending.roleId) {
+      return { intent: "workforce.application_help", response: "I don't know which job you want to apply for, so nothing was submitted. Say \"apply for\" and the role name.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "workforce", noExecutionAuthorized: true } };
+    }
+    const result = submitBestWorkforceApplication(db, user, pending.command || "Apply for role", { roleId: pending.roleId });
     return {
       intent: result.status === "completed" ? "workforce.application_submitted" : "workforce.application_help",
-      response: `Done. ${result.response}`,
+      // "Done." only when the application was really recorded; a readiness gap or a missing role is not done.
+      response: result.status === "completed" ? `Done. ${result.response}` : result.response,
       status: result.status,
       metadata: { conversationMode: true, redirectSection: "workforce", roleId: result.role?.id || null, applicationId: result.application?.id || null, readiness: result.readiness || null }
     };
@@ -29746,12 +29782,17 @@ async function executePendingAgentAction(db, user, pending) {
       metadata: { conversationMode: true, ...(result.metadata || {}) }
     };
   }
+  // A payment confirmation runs only for the one order that was named in the prompt the person said yes to. A pending payment with no order (an older staged one, or a loose keyword match) moves nothing.
+  if (pending.tool === "trade.wallet_payment" && !(pending.orderId && (db.profile.orders || []).some(order => order.id === pending.orderId))) {
+    return { intent: "trade.wallet_payment_refused", response: "I can't send money for you, and no order was named for this payment, so nothing was posted or moved. Use your M-Pesa or bank app to pay someone.", status: "completed", metadata: { conversationMode: true, redirectSection: "trade", noExecutionAuthorized: true, realFundsCredited: false } };
+  }
   if (pending.tool) {
     const step = {
       id: crypto.randomUUID(),
       module: pending.module,
       tool: pending.tool,
       action: pending.action,
+      orderId: pending.orderId || "",
       detail: pending.purpose || `Confirmed conversation command: ${pending.command}`,
       contactName: pending.contactName || "",
       recipientPhone: pending.recipientPhone || pending.to || "",
@@ -30002,6 +30043,8 @@ function aiResultIsRealModelAnswer(result) {
 async function routeAgenticCommand(db, user, command, options = {}) {
   const plan = await planAgenticTool(db, user, command);
   if (!plan) return null;
+  // The planner picked a tool from loose words; a tool that writes demo records runs (or is even offered) only when the person plainly asked for it. A model answer (ai.copilot) is handled below.
+  if (plan.tool !== "ai.copilot" && !floorGuard.toolMayRunFromLooseText(plan.tool, command)) return null;
   logIntegration(db, {
     providerId: plan.planner === "openai-agent-planner" ? "openai" : "agent-router",
     module: "AI",
@@ -32059,9 +32102,15 @@ function utilityAppointmentAnswer(db, options = {}) {
   return "I do not see an appointment time saved yet. I can open telehealth scheduling or workforce scheduling and help create one.";
 }
 
-function utilityShipmentEtaAnswer(db) {
+function utilityShipmentEtaAnswer(db, text = "") {
   const { route } = activeContext(db);
-  const latestOrder = latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
+  // "where is my delivery order 1234" asks about order 1234. It used to answer with whichever order was newest (often a seeded demo lot) as if it were that one.
+  const askedNumber = /\border\s*(?:no\.?|number|num|#)?\s*#?([a-z0-9][a-z0-9-]{1,30})\b/i.exec(String(text || ""));
+  const askedOrder = askedNumber ? tradeOrderNamedInText(db, text) : null;
+  if (askedNumber && /\d/.test(askedNumber[1]) && !askedOrder) {
+    return `I couldn't find an order numbered ${askedNumber[1]} in your records, so I can't tell you where it is. Please check the number, or tell me the order number again. Nothing was changed.`;
+  }
+  const latestOrder = askedOrder || latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
   const checkpoints = route.checkpoints || [];
   const activeCheckpoint = latestOrder?.checkpoint || db.profile.activeCheckpoint || checkpoints[0] || "pickup";
   const index = Math.max(0, checkpoints.findIndex(checkpoint => checkpoint === activeCheckpoint));
@@ -33259,7 +33308,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
                 : kind === "health-safety"
                   ? await utilityHealthSafetyAnswer(db, text, options)
       : kind === "shipment"
-        ? utilityShipmentEtaAnswer(db)
+        ? utilityShipmentEtaAnswer(db, text)
         : kind === "appointment"
           ? utilityAppointmentAnswer(db, options)
             : kind === "next-step"
@@ -33784,7 +33833,19 @@ async function informationalBuyerConversationResponse(db, user, text = "", optio
   };
 }
 
-function phase4RiskyActionForCommand(command = "") {
+// The trade order a person plainly named ("settle order AN-ORD-AGENT-023", "pay for order 1234"), or null when none was named or no such order exists. Never "the latest order".
+function tradeOrderNamedInText(db, text) {
+  const orders = db?.profile?.orders || [];
+  const source = String(text || "");
+  const id = /\b(AN-ORD-[A-Z0-9-]+)\b/i.exec(source);
+  if (id) return orders.find(order => String(order.orderNumber || "").toLowerCase() === id[1].toLowerCase()) || null;
+  const number = /\border\s*(?:no\.?|number|num|#)?\s*#?(\d{1,9})\b/i.exec(source);
+  if (!number) return null;
+  return orders.find(order => String(order.orderNumber || "") === number[1] || Number((/(\d+)$/.exec(String(order.orderNumber || "")) || [])[1]) === Number(number[1])) || null;
+}
+const TRADE_CURRENCY_BY_COUNTRY = { kenya: "KES", nigeria: "NGN", drc: "CDF" };
+
+function phase4RiskyActionForCommand(command = "", db = null) {
   const lower = normalizeSpeechForIntent(command);
   const base = {
     confidence: 0.94,
@@ -33827,17 +33888,138 @@ function phase4RiskyActionForCommand(command = "") {
   if (/\b(schedule|book|set up)\b.*\b(appointment|visit|provider|doctor|telehealth)\b/.test(lower)) {
     return gate({ module: "Healthcare", tool: "health.followup", action: "schedule appointment", section: "health", pendingActionType: "appointment", confirmationPrompt: "I can prepare the appointment details. Before I schedule anything, please confirm. Do you want me to schedule the appointment now?" });
   }
-  if (/\b(make|send|submit|create)\b.*\b(payment|pay|checkout|wallet|mpesa|m-pesa)\b|\bmake payment\b/.test(lower)) {
-    return gate({ module: "AgriTrade", tool: "trade.wallet_payment", action: "make payment", section: "trade", pendingActionType: "payment", confirmationPrompt: "I can prepare the payment step. Before any payment action, please confirm. Do you want me to continue with payment now?" });
-  }
-  if (/\b(issue|create|generate)\b.*\b(certificate|credential)\b|\bissue certificate\b/.test(lower)) {
-    return gate({ module: "Learning", tool: "learning.certificate", action: "issue certificate", section: "learning", pendingActionType: "certificate", confirmationPrompt: "I can prepare the certificate. Before I issue it, please confirm. Do you want me to issue the certificate now?" });
+  // A payment is only ever staged for an order the person named, and the prompt says which order, how much and who gets it. "Send 5000 to John on mpesa", "make a payment", "pay" with no order
+  // used to stage a payment with no amount or recipient whose "yes" then settled the LAST order, whatever it was. Kyro cannot send mobile money (see floorGuard.moneyRequest); the only thing it can
+  // post is the settlement record of a delivered trade order, which credits the practice ledger and never moves real money.
+  if (/\b(settle|settlement|release|post|payout|pay out|pay)\b/.test(lower)) {
+    const named = tradeOrderNamedInText(db, command);
+    if (named) {
+      const currency = TRADE_CURRENCY_BY_COUNTRY[String(named.countryId || "").toLowerCase()] || "USD";
+      const amount = Number(named.total ?? named.amount ?? 0);
+      const seller = "the seller on that order";
+      return gate({
+        module: "AgriTrade", tool: "trade.wallet_payment", action: `post the settlement for ${named.orderNumber}`, section: "trade", pendingActionType: "payment", orderId: named.id,
+        confirmationPrompt: `I can post the settlement for order ${named.orderNumber}: ${currency} ${amount} to ${seller}. This only records the settlement on your practice wallet record, and it works only once the order is marked Delivered. No real money is sent. Do you want me to post it now?`
+      });
+    }
   }
   if (/\b(run|start|test)\b.*\b(provider test|provider tests|provider engine|provider engines|live service check|service check)\b/.test(lower)) {
     return gate({ module: "Integrations", tool: "integrations.test_all", action: "run provider test", section: "integrations", pendingActionType: "admin_provider_test", confirmationPrompt: "I can run the provider test. This may touch admin/provider checks, so please confirm. Do you want me to run the provider test now?" });
   }
   if (/\b(complete|finish)\b.*\b(lesson|course step)\b|\bcomplete lesson\b/.test(lower)) {
     return gate({ module: "Learning", tool: "learning.complete_lesson", action: "complete lesson", section: "learning", pendingActionType: "lesson_completion", confirmationPrompt: "I can complete the lesson step. Before I mark anything complete, please confirm. Do you want me to complete the lesson now?" });
+  }
+  return null;
+}
+
+// What a person plainly asked, answered from what is stored (or honestly), before the loose keyword router can read the same words as a state-changing demo workflow on seeded data.
+// Questions, lists and statements never create an order, enrol anyone, issue a certificate, stage a payment or move a job application. See nexus/brain/floor-guard.js.
+function floorGuardReply(db, user, text, rawText, options = {}, stage = "early") {
+  const lang = floorGuard.languageOf(rawText || text, options.targetLanguage || user?.language);
+  const sw = lang === "sw";
+  const R = floorGuard.COURSE_REPLIES[lang];
+  const fill = floorGuard.fill;
+  // Whatever was waiting for a "yes" belonged to something the person has now moved on from; it must not be confirmed by the next bare "yes".
+  const reply = (intent, response, extra = {}) => (ownPendingAction(db, user) && (db.profile.agentPendingAction = null), { intent, response, status: "completed", metadata: { conversationMode: true, redirectSection: extra.redirectSection || "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, floorGuard: intent, responseLanguage: lang, ...extra } });
+  const join = items => items.join(", ");
+  const rolesText = () => join((db.roles || []).map(role => `${role.title}${role.country ? ` (${role.country})` : ""}`));
+  const certList = () => {
+    const certs = user?.certificates || [];
+    if (!certs.length) return sw ? "Huna vyeti bado. Maliza kozi na jaribio lake ili kupata cheti." : "You have no certificates yet. Finish a course and its quiz to earn one.";
+    const items = certs.map(item => `${item.certificateNumber} (${item.title})`);
+    return sw ? `Vyeti ulivyo navyo: ${join(items)}.` : `Your certificates: ${join(items)}.`;
+  };
+  const applicationsList = () => {
+    const apps = db.profile?.applications || [];
+    if (!apps.length) return R.applicationsNone;
+    const items = apps.map(item => `${item.roleTitle || item.roleId} (${item.status})`);
+    const stage = db.profile?.candidateStage ? (sw ? ` Hatua yako: ${db.profile.candidateStage}.` : ` Your stage: ${db.profile.candidateStage}.`) : "";
+    return sw ? `Maombi yako ya kazi: ${join(items)}.${stage}` : `Your job applications: ${join(items)}.${stage}`;
+  };
+
+  if (floorGuard.smsRequest(text)) return reply("communications.sms_declined", floorGuard.SMS_REPLIES[lang], { redirectSection: "agent", messageSent: false });
+
+  if (stage === "late") {
+    const lateWork = floorGuard.workRequest(text);
+    if (lateWork?.kind !== "jobs-question") return null;
+  }
+  // Money. Kyro cannot send mobile money or touch a bank; a balance it cannot see is not guessed; a sale or a receipt is a record, not a payment.
+  const money = floorGuard.moneyRequest(text);
+  if (money && !(money === "send" && tradeOrderNamedInText(db, text))) {
+    return reply(`money.${money}`, floorGuard.MONEY_REPLIES[lang][money], { redirectSection: "trade", realFundsCredited: false, moneyMoved: false });
+  }
+
+  // Certificates.
+  const cert = floorGuard.certificateRequest(text);
+  if (cert) {
+    if (cert.kind === "certificate-list") return reply("learning.certificates", certList(), { redirectSection: "learning" });
+    if (cert.kind === "certificate-lost") return reply("learning.certificate_copy", fill(R.certificateLost, { list: certList() }), { redirectSection: "learning" });
+    if (cert.kind === "jobs-question") return reply("workforce.jobs_question", (db.roles || []).length ? fill(R.jobsQuestion, { roles: rolesText() }) : R.noRoles, { redirectSection: "workforce" });
+    const status = learningCertificateStatus(db, user);
+    if (status.state === "have") return reply("learning.certificates", certList(), { redirectSection: "learning" });
+    if (status.state === "none") return reply("learning.certificate_not_ready", R.certificateNotYet, { redirectSection: "learning" });
+    if (status.state === "lessons") return reply("learning.certificate_not_ready", fill(R.certificateNeedLessons, { course: status.course.title, done: status.done, total: status.total }), { redirectSection: "learning" });
+    if (status.state === "quiz") return reply("learning.certificate_not_ready", fill(R.certificateNeedQuiz, { course: status.course.title }), { redirectSection: "learning" });
+    const issued = issueAgentCertificate(db, user);
+    return reply("learning.certificate", sw ? `Nimemaliza. ${issued}` : `Done. ${issued}`, { redirectSection: "learning", executionVerified: true });
+  }
+
+  // Learning questions and lists, answered read-only; "continue my course" / "enrol me" are the only wordings that change anything (see floorGuard.learningRequest).
+  const learning = floorGuard.learningRequest(text);
+  if (learning) {
+    if (learning.kind === "lesson-language") return reply("learning.lesson_language", R.lessonLanguage, { redirectSection: "learning" });
+    if (learning.kind === "complete-lesson") return reply("learning.complete_lesson_declined", R.completeLesson, { redirectSection: "learning" });
+    if (learning.kind === "quiz") return reply("learning.quiz_declined", R.quiz, { redirectSection: "learning" });
+    if (learning.kind === "courses-list") {
+      const titles = (db.courses || []).map(course => course.title);
+      if (!titles.length) return reply("learning.courses", R.noCourses, { redirectSection: "learning" });
+      const active = getEnrollment(user, user?.activeCourseId);
+      const activeCourse = active ? (db.courses || []).find(course => course.id === active.courseId) : null;
+      const line = sw
+        ? `Kozi ninazoziona: ${join(titles)}.${activeCourse ? ` Uko kwenye ${activeCourse.title} (${Number(active.progress || 0)}%).` : ""} Sema "endelea na kozi yangu" ili kuanza au kuendelea. Hakuna kilichobadilishwa.`
+        : `The courses I can see: ${join(titles)}.${activeCourse ? ` You are on ${activeCourse.title} (${Number(active.progress || 0)}%).` : ""} Say "continue my course" to start or carry on. Nothing was changed.`;
+      return reply("learning.courses", line, { redirectSection: "learning" });
+    }
+    if (learning.kind === "progress") {
+      ensureLearningProfile(user);
+      const rows = (user.enrollments || []).map(item => ({ item, course: (db.courses || []).find(course => course.id === item.courseId) })).filter(row => row.course);
+      if (!rows.length) return reply("learning.progress", R.noProgress, { redirectSection: "learning" });
+      const items = rows.map(({ item, course }) => `${course.title} ${Number(item.progress || 0)}%`);
+      const finished = (user.completedCourses || []).length;
+      const line = sw
+        ? `Maendeleo yako: ${join(items)}. Kozi ulizomaliza: ${finished}. Hakuna kilichobadilishwa.`
+        : `Your progress: ${join(items)}. Courses finished: ${finished}. Nothing was changed.`;
+      return reply("learning.progress", line, { redirectSection: "learning" });
+    }
+  }
+
+  // Work questions and lists.
+  const work = floorGuard.workRequest(text);
+  if (work) {
+    if (work.kind === "applications-list") return reply("workforce.applications", applicationsList(), { redirectSection: "workforce" });
+    if (work.kind === "application-withdraw") return reply("workforce.application_withdraw_declined", fill(R.withdraw, { list: applicationsList() }), { redirectSection: "workforce" });
+    // A question about which jobs exist is answered late (just before the keyword router), so the richer career answers earlier in runAgentCommand still get first go at it.
+    if (work.kind === "jobs-question" && stage === "late") return reply("workforce.jobs_question", (db.roles || []).length ? fill(R.jobsQuestion, { roles: rolesText() }) : R.noRoles, { redirectSection: "workforce" });
+    if (work.kind === "apply") {
+      const asked = floorGuard.askedRoleName(text);
+      if (!(db.roles || []).length) return reply("workforce.application_help", R.noRoles, { redirectSection: "workforce" });
+      if (!asked) return { ...reply("workforce.application_help", fill(R.applyWhich, { roles: rolesText() }), { redirectSection: "workforce" }), status: "needs-details" };
+      const found = floorGuard.matchRoles(db.roles, asked);
+      if (!found.length) return { ...reply("workforce.application_help", fill(R.applyNotFound, { asked, roles: rolesText() }), { redirectSection: "workforce" }), status: "needs-details" };
+      if (found.length > 1) return { ...reply("workforce.application_help", fill(R.applyWhich, { roles: join(found.map(role => role.title)) }), { redirectSection: "workforce" }), status: "needs-details" };
+      const role = found[0];
+      // The caller already confirmed (options.confirm, the same flag the older branches honour): record it for the named role now.
+      if (options.confirm === true) {
+        const result = submitBestWorkforceApplication(db, user, text, { roleId: role.id });
+        return { ...reply(result.status === "completed" ? "workforce.application_submitted" : "workforce.application_help", result.response, { redirectSection: "workforce", roleId: role.id, applicationId: result.application?.id || null }), status: result.status };
+      }
+      const staged = stageAgentAction(db, text, {
+        kind: "workforce-application", module: "Workforce", action: `apply for ${role.title}`, section: "workforce", pendingActionType: "application", roleId: role.id,
+        confidence: 0.94, constitutionPhase: "phase-4-confirmation-gate", allowedConfirmations: sw ? ["yes", "confirm", "do it", "ndiyo", "sawa"] : ["yes", "confirm", "do it"], phase4HighRisk: true,
+        confirmationPrompt: fill(R.applyPrompt, { role: role.title, country: role.country || "", practice: workforceEngineIsLive() ? R.practiceLive : R.practice })
+      });
+      return { ...staged, metadata: { ...(staged.metadata || {}), responseLanguage: lang } };
+    }
   }
   return null;
 }
@@ -33870,11 +34052,13 @@ async function runAgentCommand(db, user, command, options = {}) {
   // and the older command route use, and the fallback when the planner cannot be reached, so it must not answer these differently.
   const guarded = contentGuardReply(text);
   if (guarded) {
+    // A scam warning leaves nothing staged: a bare "yes" right after it must not confirm whatever was waiting before.
+    if (/^scam-/.test(guarded.kind) && ownPendingAction(db, user)) db.profile.agentPendingAction = null;
     return {
       intent: `conversation.guard.${guarded.kind}`,
       response: guarded.reply,
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, contentGuard: guarded.kind }
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, contentGuard: guarded.kind, ...(guarded.language ? { responseLanguage: guarded.language } : {}) }
     };
   }
   // And the care and safety answers the planner gives first (see careSafetyReply above).
@@ -33887,6 +34071,10 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, careSafety: careSafe.kind }
     };
   }
+  // Questions, lists and statements about money, certificates, courses, applications and jobs are answered from stored data (or honestly) here, so the loose keyword router below can never read them as
+  // a request to create an order, stage a payment, issue a certificate or enrol or move an application on the seeded demo data.
+  const floorAnswer = floorGuardReply(db, user, text, rawCommand, options);
+  if (floorAnswer) return floorAnswer;
   if (isLanguageCommand(lower)) {
     const language = languageFromCommand(text);
     if (!language) {
@@ -33897,7 +34085,7 @@ async function runAgentCommand(db, user, command, options = {}) {
         metadata: { conversationMode: true, redirectSection: "dashboard", languageChangeRequested: true, noExecutionAuthorized: true }
       };
     }
-    const gatedLanguageChange = phase4RiskyActionForCommand(text);
+    const gatedLanguageChange = phase4RiskyActionForCommand(text, db);
     if (gatedLanguageChange) return stageAgentAction(db, text, gatedLanguageChange);
   }
   if (conversational && isGlobalVoiceStopIntent(text)) {
@@ -34092,7 +34280,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   // execute branches fixed in the same commit). Always computing it,
   // regardless of conversational, only ever adds a staged-confirmation
   // response -- it cannot turn a safe path unsafe.
-  const phase4RiskyAction = phase4RiskyActionForCommand(text);
+  const phase4RiskyAction = phase4RiskyActionForCommand(text, db);
   if (phase4RiskyAction) return stageAgentAction(db, text, phase4RiskyAction);
   if (conversational && shouldHandleActiveClarificationAnswer(db, text, lower)) {
     const clarified = continueClarification(db, user, text);
@@ -35503,11 +35691,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   const phoneContactCommand = await phoneContactMemoryCommandResponse(db, user, text, lower, options);
   if (phoneContactCommand) return phoneContactCommand;
 
-  if (/(complete|finish|advance).*(my\s+)?lesson|next lesson/.test(lower)) {
-    const result = await executeAgentTool(db, user, { tool: "learning.complete_lesson" });
-    return { intent: "learning.complete_lesson", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
-  }
-
+  // (A bare "complete my lesson" / "next lesson" used to mark a lesson done that was never shown, and a bare "certificate" used to issue one. Both are answered in floorGuardReply now.)
   if (/(orchestrate|elevate|optimi[sz]e|review).*(platform|mission|everything|all modules|whole system|ai)/.test(lower) || /(what should we do next|highest value next step|best next step)/.test(lower)) {
     const result = await aiOrchestrationReview(db, user, { type: "copilot", note: text });
     return {
@@ -35515,27 +35699,6 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `I reviewed the whole platform. Best next move: ${result.orchestration.recommendation}. I saved the AI run, workflow intelligence, and provider evidence.`,
       status: "completed",
       metadata: { conversationMode: conversational, redirectSection: result.orchestration.topAction.section || "dashboard", orchestrationId: result.orchestration.id, topAction: result.orchestration.topAction }
-    };
-  }
-
-  if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
-    const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
-    return {
-      intent: "learning.certificate",
-      response: `I can help with your certificate. ${result} Which course did you finish?`,
-      status: "needs-details",
-      metadata: {
-        conversationMode: conversational,
-        redirectSection: "learning",
-        moduleSignal: { module: "Learning", section: "learning" },
-        frontierCommunication: {
-          urgency: "normal",
-          nextQuestion: "Which course did you finish?",
-          confidence: 0.94,
-          responseShape: "confirm certificate need, route to learning, ask one learner-friendly next question"
-        },
-        suggestedReplies: ["show my progress", "start next course", "read the lesson"]
-      }
     };
   }
 
@@ -36237,7 +36400,11 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
-  const deepIntent = deepVoiceIntent(lower);
+  // A keyword in a sentence is not a request: the tools that write to the shared demo records run from here only when the person plainly asked for exactly that.
+  const jobsAnswer = floorGuardReply(db, user, text, rawCommand, options, "late");
+  if (jobsAnswer) return jobsAnswer;
+  const deepIntentCandidate = deepVoiceIntent(lower);
+  const deepIntent = deepIntentCandidate && floorGuard.toolMayRunFromLooseText(deepIntentCandidate.tool, text) ? deepIntentCandidate : null;
   if (deepIntent) {
     if (!wantsExecute) {
       return stageAgentAction(db, text, { module: deepIntent.module, tool: deepIntent.tool, action: deepIntent.action, section: deepIntent.section });
@@ -36452,7 +36619,9 @@ async function runAgentCommand(db, user, command, options = {}) {
     { keys: ["map", "route", "risk"], tool: "map.route_risk", module: "Maps", action: "Assess route" },
     { keys: ["copilot", "ai", "question", "recommend"], tool: "ai.copilot", module: "AI", action: "Run copilot" }
   ];
-  const matched = toolByCommand.find(item => item.keys.some(key => lower.includes(key)));
+  // Short keywords such as "ai" and "order" appear inside ordinary sentences ("Friday", "text John that his order is ready", "how much water does tomato need"): the demo tools that write records
+  // (an order for the seeded coffee lot, a drone field task, a scan, an enrolment, a role match) run only when asked for plainly. Anything else falls through to the honest "could not do that".
+  const matched = toolByCommand.find(item => item.keys.some(key => lower.includes(key)) && floorGuard.toolMayRunFromLooseText(item.tool, text));
   if (matched) {
     if (!wantsExecute && (options.stageOnly || conversational)) {
       return stageAgentAction(db, text, { module: matched.module, tool: matched.tool, action: matched.action, section: sectionForAgentModule(matched.module) });
