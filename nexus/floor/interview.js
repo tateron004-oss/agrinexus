@@ -87,7 +87,8 @@ const OTHER_REQUEST = /^(?:what(?:'s| is| are)? the (?:weather|time|date|price)|
 // ---- what starts one ----
 // A request to PRACTISE ("practice interview", "ask me interview questions", "prepare me for an interview", "help me prepare for an interview"), not a request to be told about interviews
    // ("explain how to prepare for a job interview", "what are common interview questions"), which the learning catalog answers.
-const PRACTICE_EN = /\b(?:practi[cs]e|mock|rehearse|rehearsal)\b.*\binterviews?\b|\binterviews?\b.*\b(?:practi[cs]e|mock)\b|\bask me\b.*\binterview|\b(?:prepare me|get me ready|help me (?:to )?(?:prepare|get ready)|help me with)\b.*\binterview/;
+const PRACTICE_EN = /\b(?:practi[cs]e|mock|rehearse|rehearsal)\b.*\binterviews?\b|\binterviews?\b.*\b(?:practi[cs]e|mock)\b|\bask me\b.*\binterview|\b(?:prepare me|get me ready|help me (?:to )?(?:prepare|get ready)|help me with)\b.*\binterview|^(?:prepare|get ready|prep) for (?:an? |my |the )?(?:job )?interviews?$/;
+// The last alternative is the bare form: the shared front door (server/frontDoor.js, normalise.js) takes a polite "help me" off the front of a sentence, so "help me prepare for an interview" arrives as "prepare for an interview".
 const EXPLAIN_LEAD = /^(?:explain|what|how|why|when|where|which|who|tell me about|teach me about|describe|list)\b/;
 const PRACTICE_SW = /\bmahojiano\b.*\b(?:kujiandaa|mazoezi|zoezi|maswali|majaribio|jaribio)\b|\b(?:kujiandaa|mazoezi|maswali|nifanyishe|nisaidie)\b.*\bmahojiano\b|\bmazoezi ya mahojiano\b/;
 const SCHEDULE_EN = /\b(?:schedule|book|arrange|set up|fix|organi[sz]e|plan)\b.*\binterviews?\b|\bwhen is my interview\b|\bmy (?:next )?interview\b.*\b(?:when|time|date)\b/;

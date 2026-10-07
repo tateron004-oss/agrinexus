@@ -45,8 +45,9 @@ function isCancelAllRequest(text) {
 function readCancelRequest(text) {
   const raw = clean(text); const lower = raw.toLowerCase().replace(/[.!?]+$/g, "");
   if (isCancelAllRequest(lower)) return null;
-  if (!/\b(?:cancel|clear|delete|remove|forget|scrap|futa|ondoa|ghairi)\b/.test(lower) || !/\b(?:reminder|follow[- ]?up|kikumbusho)\b/.test(lower)) return null;
-  const id = /\bREM-\d{1,5}\b/i.exec(raw);
+  if (!/\b(?:cancel|clear|delete|remove|forget|scrap|futa|ondoa|ghairi)\b/.test(lower) || !/\b(?:reminder|follow[- ]?up|kikumbusho|rem-?\d{1,6})\b/.test(lower)) return null;
+  const idMatch = /\bREM-?(\d{1,6})\b/i.exec(raw);
+  const id = idMatch ? [`REM-${idMatch[1].padStart(3, "0")}`] : null;
   const subject = (/\b(?:reminder|kikumbusho)\s+(?:to|about|for|of|cha|kuhusu|ya)\s+(.{2,120})$/i.exec(lower)
     || /\b(?:cancel|delete|remove|clear|forget|scrap)\s+(?:my|the|that|this)?\s*(.{2,80}?)\s+reminder\b/i.exec(lower) || [])[1] || "";
   const cleaned = subject.replace(/^(?:my|the|that|this|last|latest|previous|next|a|an)\s+/i, "").replace(/\s+(?:please|now)$/i, "").trim();

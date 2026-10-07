@@ -12,7 +12,8 @@ const path = require("node:path");
 // What was STORED is checked through the app's own list, not from the reply text. The user is the seeded local test account (Nigeria: Africa/Lagos).
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15950;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://127.0.0.1:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "reminders-journeys-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

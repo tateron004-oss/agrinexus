@@ -177,7 +177,7 @@ function marker(expected) {
 test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), path.join(dir, "db.json"));
   server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), SESSION_SECRET: "danger-gaps-secret-for-the-test-0123456", AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"),
-    OPENAI_API_KEY: "", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" }, stdio: "ignore", windowsHide: true });
+    OPENAI_API_KEY: "", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_TEST_REMINDER_STORE: "memory" }, stdio: "ignore", windowsHide: true });
   await waitFor(`${base}/api/healthz`);
   const login = await post("/api/login", { email: "user@agrinexus.org", password: "User2026!" });
   assert.equal(login.status, 200);

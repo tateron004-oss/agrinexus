@@ -14,7 +14,8 @@ const path = require("node:path");
 // These run a real server with no AI key, no database and no Twilio, signed in as the seeded local test account.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15970;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "front-door-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -33,7 +34,7 @@ const typed = async command => { const r = await post("/api/agent/command", { co
 test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), path.join(dir, "db.json"));
   server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), SESSION_SECRET: "front-door-secret-for-the-test-0123456789", AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"),
-    OPENAI_API_KEY: "", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000",
+    OPENAI_API_KEY: "", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_TEST_REMINDER_STORE: "memory", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000",
     TWILIO_ACCOUNT_SID: "", TWILIO_AUTH_TOKEN: "", TWILIO_PHONE_NUMBER: "" }, stdio: "ignore", windowsHide: true });
   await waitFor(`${base}/api/healthz`);
   const login = await post("/api/login", { email: "user@agrinexus.org", password: "User2026!" });

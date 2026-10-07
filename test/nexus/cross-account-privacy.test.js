@@ -50,7 +50,7 @@ const has = text => String(text).toLowerCase().includes(MARK);
 
 test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), tempDbPath);
-  server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, AGRINEXUS_SPACES_PATH: path.join(tempDir, "spaces.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000", NEXUS_FILE_STORAGE_DIR: path.join(tempDir, "uploads") }, stdio: "ignore" });
+  server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, AGRINEXUS_SPACES_PATH: path.join(tempDir, "spaces.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_TEST_REMINDER_STORE: "memory", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000", NEXUS_FILE_STORAGE_DIR: path.join(tempDir, "uploads") }, stdio: "ignore" });
   for (let i = 0; i < 100; i += 1) { try { if ((await fetch(`${base}/api/healthz`)).ok) break; } catch { await wait(150); } }
   adminCookie = await login("admin@agrinexus.org", "Admin2026!");
   aEmail = `a-${crypto.randomUUID().slice(0, 8)}@example.com`; bEmail = `b-${crypto.randomUUID().slice(0, 8)}@example.com`;

@@ -66,7 +66,7 @@ test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), path.join(dir, "db.json"));
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json" },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_TEST_REMINDER_STORE: "memory", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json" },
     stdio: "ignore", windowsHide: true
   });
   await waitFor(`${base}/api/healthz`);
@@ -284,10 +284,12 @@ test("after every lesson and a real quiz result, asking for the certificate issu
 
 // ---------------------------------------------------------------------------------------------- text messages and saving numbers
 for (const [route, ask] of both) {
-  test(`${route}: an SMS stays an SMS (declined), and saving a number never stages a call`, async () => {
+  test(`${route}: an SMS stays an SMS (shown back for a yes, nothing sent yet), and saving a number never stages a call`, async () => {
     const sms = await unchanged("sms", () => ask("Send an sms to +254712345678 saying hello"));
-    assert.match(sms.response, /can't send text messages/i);
+    // The front door (frontDoor.readMessageRequest) stages it behind a yes with the words and the number read back; it is never a call, and nothing goes out before the yes.
+    assert.match(sms.response, /Send "hello" to \+254 712 345 678/);
     assert.doesNotMatch(sms.intent, /call\./);
+    await ask("no");
     const save = await ask("Hifadhi namba ya Juma +254722111222");
     assert.doesNotMatch(save.intent, /call\.|pending_action/);
     assert.equal((await state()).pending, null);

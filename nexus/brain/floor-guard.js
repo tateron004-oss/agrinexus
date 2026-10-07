@@ -45,6 +45,10 @@ function moneyRequest(text) {
   const t = clean(text);
   if (!t || t.length > 300) return null;
   if (/\bpay(?:ing)? (?:attention|respect|heed|a visit|tribute|homage|a compliment)\b/.test(t)) return null;
+  // "remind me tomorrow at 9 to pay the school fees" asks for a reminder, not for a payment to be made: the reminder toolkit answers it.
+  if (/\b(?:remind me|reminder (?:to|about|for)|set (?:a|an) reminder|nikumbushe|nikumbusha|niwekee kikumbusho)\b/.test(t)) return null;
+  // "tuma ujumbe kwa +254... hello" is a text message (staged behind a yes elsewhere), not a request to send money.
+  if (/\btuma (?:ujumbe|sms|meseji)\b/.test(t)) return null;
   if (BALANCE.some(pattern => pattern.test(t))) return "balance";
   // A receipt or a sale is something that already happened; it is not a request to move money, even when it names mpesa or "pay" in a past tense.
   if (MONEY_IN.some(pattern => pattern.test(t)) && !/^(?:please )?(?:send|transfer|withdraw|pay|tuma)\b/.test(t)) return "record";

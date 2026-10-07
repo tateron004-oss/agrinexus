@@ -11,7 +11,8 @@ const path = require("node:path");
 // certificate or a candidate stage. State is read back through the app's own API.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 16010;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "work-floor-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

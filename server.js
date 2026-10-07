@@ -32405,7 +32405,7 @@ async function assistantReminderCommandResponse(db, user, text, lower, options =
       db.profile.agentMemory.lastStatus = "assistant-reminder-changed";
       db.profile.agentMemory.lastSummary = `Changed ${item.reminderNumber || "a reminder"}: ${item.task} ${timing.readback}.`;
       db.profile.agentMemory.updatedAt = now.toISOString();
-      if (change.justSet && !sw) return reminderReply("assistant.reminder_rescheduled", `Done. I moved your reminder ${/^about\s/i.test(item.task) ? "" : "to "}${item.task} to ${timing.readback}.`, { section: item.section || "agent", extra: { reminder: reminderAfter } });
+      if (change.justSet && !sw) return reminderReply("assistant.reminder_rescheduled", `Done. I moved your reminder ${/^about\s/i.test(item.task) ? "" : "to "}${item.task} to ${String(timing.readback).replace(/^at\s+/i, "")}.`, { section: item.section || "agent", extra: { reminder: reminderAfter } });
       return reminderReply("assistant.reminder_changed", M.changed[sw ? "sw" : "en"](item, sw ? timing.readbackSw : timing.readback), { section: item.section || "agent", extra: { reminder: reminderAfter } });
     }
     // cancel one: found by its words or number, never guessed, and only among the person's own
@@ -34570,7 +34570,9 @@ function floorGuardReply(db, user, text, rawText, options = {}, stage = "early")
     return sw ? `Maombi yako ya kazi: ${join(items)}.${stage}` : `Your job applications: ${join(items)}.${stage}`;
   };
 
-  if (floorGuard.smsRequest(text)) return reply("communications.sms_declined", floorGuard.SMS_REPLIES[lang], { redirectSection: "agent", messageSent: false });
+  // A text or WhatsApp message to a number or a saved person is staged behind a yes by stageMessageIntent (the words and the number read back; "yes" sends it, or says plainly that it could not). Only a
+  // request that reader does not take (no number, no words) is declined here, and it is never turned into a call either way.
+  if (floorGuard.smsRequest(text) && !frontDoor.readMessageRequest(rawText || text)) return reply("communications.sms_declined", floorGuard.SMS_REPLIES[lang], { redirectSection: "agent", messageSent: false });
 
   if (stage === "late") {
     const lateWork = floorGuard.workRequest(text);

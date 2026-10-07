@@ -41,7 +41,7 @@ test.before(async () => {
   writeDb(seeded);
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: dbPath, AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000" },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: dbPath, AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_TEST_REMINDER_STORE: "memory", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000" },
     stdio: "ignore", windowsHide: true
   });
   await waitFor(`${base}/api/healthz`);
@@ -79,7 +79,7 @@ test("'stop reminding me about my pills' cancels the reminder, or asks which one
   const stop = await say("stop reminding me about my pills");
   assert.doesNotMatch(stop, /I stopped/);
   assert.match(stop, /Canceled REM-\d+: take my tablets/);
-  assert.match(await say("what are my reminders"), /do not have active reminders/i);
+  assert.match(await say("what are my reminders"), /do not have any reminders/i);
 
   await say("remind me to take my tablets at 8pm");
   await say("remind me to call the buyer at 10am tomorrow");
@@ -93,20 +93,20 @@ test("'stop reminding me about my pills' cancels the reminder, or asks which one
   assert.match(listed, /call the buyer/);
   const only = await say("stop reminding me about my tablets");
   assert.match(only, /Canceled REM-\d+: take my tablets/);
-  const buyer = /REM-\d+/.exec(await say("what are my reminders"))[0];
-  assert.match(await say(`cancel ${buyer}`), new RegExp(`Canceled ${buyer}: call the buyer`));
-  assert.match(await say("cancel REM-999"), /do not see an active reminder/);
+  // The list reads the reminders in words (not numbers); the other one is cancelled by what it says.
+  assert.match(await say("cancel my reminder to call the buyer"), /Canceled REM-\d+: call the buyer/);
+  assert.match(await say("cancel REM-999"), /could not find a reminder like that/);
 });
 
 test("'actually make it 9pm' moves the reminder that was just set", async () => {
   const set = await say("remind me to take my tablets at 8pm");
-  assert.match(set, /8pm/);
+  assert.match(set, /8(?::00)? ?pm/i);
   const moved = await say("actually make it 9pm");
   assert.doesNotMatch(moved, /I stopped/);
-  assert.match(moved, /moved your reminder.*take my tablets.*9pm/i);
+  assert.match(moved, /moved your reminder.*take my tablets.*9(?::00)? ?pm/i);
   const listed = await say("what are my reminders");
-  assert.match(listed, /9pm/);
-  assert.doesNotMatch(listed, /8pm/);
+  assert.match(listed, /9(?::00)? ?pm/i);
+  assert.doesNotMatch(listed, /8(?::00)? ?pm/i);
   // With nothing set a moment ago, "make it 9pm" changes nothing and says so rather than claiming it did.
   await say("cancel my reminder");
   assert.doesNotMatch(await say("actually make it 9pm"), /moved your reminder/i);

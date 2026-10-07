@@ -53,7 +53,7 @@ async function userLanguage(cookie) {
 
 test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), path.join(dir, "db.json"));
-  server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" }, stdio: "ignore", windowsHide: true });
+  server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_TEST_REMINDER_STORE: "memory" }, stdio: "ignore", windowsHide: true });
   await waitFor(`${base}/api/healthz`);
   userCookie = await login("user@agrinexus.org", "User2026!");
   const adminCookie = await login("admin@agrinexus.org", "Admin2026!");
