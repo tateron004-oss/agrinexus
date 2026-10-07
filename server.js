@@ -67,6 +67,15 @@ async function careSafetyReply(text, user) {
   const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en") });
   return reply ? { kind: found.kind, reply } : null;
 }
+// The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already
+// exists for the companion (nexus/i18n/sw.js safety.*), never new wording. null when it does not apply or the shared reader has no Kiswahili case for the words (the English packet is then kept).
+async function swahiliCrisisReply(text, language, user) {
+  const found = readCompanionSafety(text);
+  if (!found) return null;
+  if (found.language !== "sw" && !/^sw\b/i.test(String(language || ""))) return null;
+  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: "sw" });
+  return reply ? String(reply).trim() : null;
+}
 // Sync form, for the places that only need to know whether it applies.
 const careSafetyApplies = text => Boolean(readCompanionSafety(text));
 const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
@@ -21558,6 +21567,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(effectiveMentalHealthText),
       screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(effectiveMentalHealthText)
     });
+    const swahiliReply = await swahiliCrisisReply(effectiveMentalHealthText, language, user);
+    if (swahiliReply) { packet.userVisibleStatus = swahiliReply; packet.responseLanguage = "sw"; }
     return { ...common, capability: "mental-health-behavioral-wellness", status: "completed",
       response: packet.userVisibleStatus, mentalHealth: packet,
       noDiagnosis: true, noProviderContacted: true, noEmergencyDispatch: true };
@@ -23800,98 +23811,15 @@ function deepVoiceIntent(lower) {
   return null;
 }
 
-function localTranslateText(text, targetLanguage) {
-  const value = String(text || "");
-  const language = targetLanguage || "en";
-  if (language === "en") return value;
-  const lower = value.toLowerCase();
-  if (/\b(until real providers arrive|pre-provider|without providers|provider-ready|provider ready|platform records and local context)\b/.test(lower)) {
-    const readinessTranslations = {
-      fr: "Jusqu'a l'arrivee des vrais fournisseurs, Nexus peut executer les workflows guides d'apprentissage, de main-d'oeuvre, de telesante, de commerce agricole, de drones, de cartes, de voix, de memoire et d'audit avec les donnees de la plateforme et le contexte local. Je dirai clairement ce qui est en direct, ce qui est local et ce qui exige des identifiants.",
-      sw: "Mpaka watoa huduma wa moja kwa moja waunganishwe, Nexus inaweza kuendesha mtiririko wa kujifunza, kazi, afya kwa mbali, biashara ya mazao, droni, ramani, sauti, kumbukumbu na ukaguzi kwa kutumia rekodi za jukwaa na muktadha wa ndani. Nitasema wazi kilicho hai, kilicho cha ndani, na kinachohitaji nywila au funguo za huduma.",
-      ar: "حتى وصول مزودي الخدمة الحقيقيين، يستطيع نكسس تشغيل مسارات التعلم والعمل والصحة عن بعد والتجارة الزراعية والطائرات بدون طيار والخرائط والصوت والذاكرة والتدقيق باستخدام سجلات المنصة والسياق المحلي. سأوضح ما هو مباشر، وما هو محلي، وما يحتاج إلى بيانات اعتماد.",
-      es: "Hasta que lleguen los proveedores reales, Nexus puede ejecutar flujos guiados de aprendizaje, fuerza laboral, telesalud, comercio agricola, drones, mapas, voz, memoria y auditoria con registros de la plataforma y contexto local. Dire claramente que esta en vivo, que es local y que necesita credenciales."
-    };
-    if (readinessTranslations[language]) return readinessTranslations[language];
-  }
-  const voicePhrases = {
-    fr: [
-      [["telehealth", "intake"], "Votre admission de telesante est ouverte. AgriNexus a cree le dossier et le prochain suivi."],
-      [["vitals"], "Les signes vitaux ont ete captures et ajoutes au dossier de telesante."],
-      [["consent"], "Le consentement de telesante a ete enregistre."],
-      [["referral"], "La reference de soins a ete creee."],
-      [["follow-up"], "Le suivi a ete planifie."],
-      [["buyer"], "Le contact acheteur est pret avec un message prepare pour votre produit."],
-      [["application"], "AgriNexus a examine la candidature et a enregistre la prochaine etape de main-d'oeuvre."],
-      [["lesson"], "La lecon suivante est terminee et la progression a ete mise a jour."],
-      [["certificate"], "Le certificat a ete emis et ajoute au profil."],
-      [["drone"], "Le flux drone est termine et les preuves terrain sont enregistrees."],
-      [["provider"], "Les moteurs fournisseurs ont ete testes et les resultats sont enregistres."],
-      [["profile"], "Le profil unifie est pret avec les informations principales."],
-      [["opened"], "Espace ouvert. Vous pouvez continuer ici."]
-    ],
-    sw: [
-      [["farmer", "inspect", "maize", "leaves"], "Mkulima anapaswa kukagua majani ya mahindi."],
-      [["telehealth", "intake"], "Usajili wa afya kwa mbali umefunguliwa. AgriNexus imeunda rekodi na hatua inayofuata."],
-      [["vitals"], "Vipimo muhimu vimechukuliwa na kuongezwa kwenye rekodi ya afya."],
-      [["consent"], "Ridhaa ya huduma ya afya kwa mbali imerekodiwa."],
-      [["referral"], "Rufaa ya huduma imeundwa."],
-      [["follow-up"], "Ufuatiliaji umepangwa."],
-      [["buyer"], "Mawasiliano na mnunuzi yako tayari pamoja na ujumbe wa bidhaa yako."],
-      [["application"], "AgriNexus imekagua ombi la kazi na kurekodi hatua inayofuata."],
-      [["lesson"], "Somo linalofuata limekamilika na maendeleo yamesasishwa."],
-      [["certificate"], "Cheti kimetolewa na kuongezwa kwenye wasifu."],
-      [["drone"], "Mtiririko wa droni umekamilika na ushahidi wa shamba umehifadhiwa."],
-      [["provider"], "Mifumo ya watoa huduma imejaribiwa na matokeo yamehifadhiwa."],
-      [["profile"], "Wasifu wa pamoja uko tayari na taarifa muhimu."],
-      [["opened"], "Sehemu imefunguliwa. Unaweza kuendelea hapa."]
-    ],
-    ar: [
-      [["telehealth", "intake"], "تم فتح إدخال الصحة عن بعد. أنشأ أجري نكسس السجل والخطوة التالية."],
-      [["vitals"], "تم تسجيل العلامات الحيوية وإضافتها إلى ملف الصحة."],
-      [["consent"], "تم تسجيل موافقة الصحة عن بعد."],
-      [["referral"], "تم إنشاء الإحالة الصحية."],
-      [["follow-up"], "تم جدولة المتابعة."],
-      [["buyer"], "تم تجهيز التواصل مع المشتري ورسالة المنتج."],
-      [["application"], "راجع أجري نكسس طلب العمل وسجل الخطوة التالية."],
-      [["lesson"], "تم إكمال الدرس التالي وتحديث التقدم."],
-      [["certificate"], "تم إصدار الشهادة وإضافتها إلى الملف."],
-      [["drone"], "اكتمل مسار الدرون وتم حفظ أدلة الحقل."],
-      [["provider"], "تم اختبار محركات الخدمة وحفظ النتائج."],
-      [["profile"], "الملف الموحد جاهز مع المعلومات الأساسية."],
-      [["opened"], "تم فتح القسم. يمكنك المتابعة هنا."]
-    ]
-  };
-  voicePhrases.es = [
-    [["language", "spanish"], "Listo. Cambie el idioma a espanol. Las frases y respuestas de AgriTrade ahora usaran espanol."],
-    [["agritrade", "helps"], "AgriTrade ayuda a agricultores y equipos comerciales a pasar del cultivo al comprador y al pago. Puedo ayudar con cultivos, compradores, pedidos, pagos, logistica, calidad, exportacion e inteligencia de drones."],
-    [["telehealth", "intake"], "La admision de telesalud esta lista con apoyo por voz."],
-    [["vitals"], "Los signos vitales fueron capturados y agregados al registro de salud."],
-    [["buyer"], "El contacto con el comprador esta listo con un mensaje preparado para su producto."],
-    [["application"], "AgriNexus reviso la solicitud y guardo el siguiente paso de trabajo."],
-    [["lesson"], "La leccion se completo y el progreso fue actualizado."],
-    [["certificate"], "El certificado fue emitido y agregado al perfil."],
-    [["drone"], "El flujo de dron se completo y la evidencia del campo fue guardada."],
-    [["provider"], "Los motores de proveedores fueron probados y los resultados fueron guardados."],
-    [["opened"], "Espacio abierto. Puede continuar aqui."]
-  ];
-  const match = (voicePhrases[language] || []).find(([keys]) => keys.every(key => lower.includes(key)));
-  if (match) return match[1];
-  const labels = {
-    fr: "[FR]",
-    sw: "[SW]",
-    ar: "[AR]",
-    es: "[ES]"
-  };
-  return `${labels[language] || `[${language.toUpperCase()}]`} ${value}`;
-}
+// The offline translator lives in nexus/i18n/local-translate.js (it must never turn an honest "nothing was saved" into a success sentence).
+const { localTranslateText, AGENT_NOT_HANDLED_RESPONSE } = require("./nexus/i18n/local-translate.js");
 
-async function translateDynamicContent(db, user, { text, targetLanguage, sourceLanguage = "en", context = "platform" }) {
+async function translateDynamicContent(db, user, { text, targetLanguage, sourceLanguage = "en", context = "platform", intent = "" }) {
   const runtime = providerRuntime("translation");
   const evidenceContext = /\b(source|evidence|citation|receipt|provenance|source_followup|current_knowledge|weather)\b/i.test(`${context || ""} ${text || ""}`);
   let translatedText = evidenceContext && targetLanguage && targetLanguage !== "en"
-    ? `[${String(targetLanguage).toUpperCase()}] ${String(text || "")}`
-    : localTranslateText(text, targetLanguage);
+    ? (targetLanguage === "sw" ? String(text || "") : `[${String(targetLanguage).toUpperCase()}] ${String(text || "")}`)
+    : localTranslateText(text, targetLanguage, { intent, context });
   let provider = "local-dictionary";
   if (runtime.googleTranslationConfigured && targetLanguage && targetLanguage !== sourceLanguage) {
     try {
@@ -24098,7 +24026,8 @@ async function translateAgentCommandResult(db, user, result = {}, options = {}) 
         text: result.response,
         sourceLanguage: responseLanguage,
         targetLanguage,
-        context: `agent-command:${result.intent || "unknown"}`
+        context: `agent-command:${result.intent || "unknown"}`,
+        intent: result.intent || ""
       });
   const translatedResult = {
     ...result,
@@ -25155,43 +25084,55 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
       audience: "patient, caregiver, elder, or mobile clinic user",
       likelyNeed: /\b(medicine|pharmacy|drug|remedy|pills)\b/.test(value) ? "medicine or pharmacy access" : "care access",
       plainGoal: "Help the person understand the safe next care step without diagnosing.",
+      spokenGoal: "I am not a doctor, but I can help you find the safest next care step.",
       nextQuestion: "Where are you, and is this an emergency right now?",
-      safetyRule: "Do not diagnose. Ask about danger signs and guide to urgent help when needed."
+      safetyRule: "Do not diagnose. Ask about danger signs and guide to urgent help when needed.",
+      spokenSafety: "I will not diagnose, but I can help you find urgent help if there are danger signs."
     },
     Learning: {
       audience: "student, learner, parent, or low-literacy user",
       likelyNeed: "a lesson explained in simple words",
       plainGoal: "Help the learner choose one skill and complete one small step.",
+      spokenGoal: "I can help you choose one skill and take one small step.",
       nextQuestion: "What do you want to learn today?",
-      safetyRule: "Keep instructions short and offer audio, captions, or slower speech."
+      safetyRule: "Keep instructions short and offer audio, captions, or slower speech.",
+      spokenSafety: "I can go slower, or use audio and captions, if that helps."
     },
     Workforce: {
       audience: "job seeker, graduate, worker, or family supporter",
       likelyNeed: /\b(graduated|degree|university|biochemistry|biology|chemistry)\b/.test(value) ? "career guidance after school" : "job access",
       plainGoal: "Help the person understand realistic roles and prepare one application step.",
+      spokenGoal: "I can help you look at realistic jobs and prepare one application step.",
       nextQuestion: "What country do you want to work in, and what skill or school background do you have?",
-      safetyRule: "Do not promise a job. Explain options and prepare the next application step."
+      safetyRule: "Do not promise a job. Explain options and prepare the next application step.",
+      spokenSafety: "I cannot promise a job, but I can prepare the next application step."
     },
     AgriTrade: {
       audience: "farmer, seller, buyer, cooperative, or family farm",
       likelyNeed: /\b(bad|sick|disease|pest|dry|yellow|dying)\b/.test(value) ? "crop problem guidance" : "market, buyer, or delivery help",
       plainGoal: "Help the farmer protect the crop, understand market choices, and move one step toward selling or delivery.",
+      spokenGoal: "I can help you protect your crop and move one step toward selling it.",
       nextQuestion: "What crop is it, and what village or area is the farm in?",
-      safetyRule: "Do not guess crop disease as fact. Ask for photo, location, crop, and urgency."
+      safetyRule: "Do not guess crop disease as fact. Ask for photo, location, crop, and urgency.",
+      spokenSafety: "I will not guess the crop problem. The crop, the place and a photo help me."
     },
     Maps: {
       audience: "traveler, driver, health worker, farmer, or logistics user",
       likelyNeed: "location, route, or nearby service guidance",
       plainGoal: "Help the person see where to go and what route or place matters.",
+      spokenGoal: "I can help you see where to go.",
       nextQuestion: "What place are you starting from, and where do you need to go?",
-      safetyRule: "Use map/provider data when available and explain uncertainty clearly."
+      safetyRule: "Use map/provider data when available and explain uncertainty clearly.",
+      spokenSafety: "I will tell you if I am not sure about a place or a route."
     },
     Platform: {
       audience: "non-technical user",
       likelyNeed: "general guidance",
       plainGoal: "Understand the person's goal and guide one step at a time.",
+      spokenGoal: "I want to be sure I help with the right thing.",
       nextQuestion: "Tell me what you need: health, crops, work, learning, map, or market.",
-      safetyRule: "Avoid technical language and ask only one question."
+      safetyRule: "Avoid technical language and ask only one question.",
+      spokenSafety: "I will keep this simple, one question at a time."
     }
   };
   const selected = models[moduleName] || models.Platform;
@@ -25516,7 +25457,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
     const resilienceQuestion = resilience.nextQuestionByModule?.[moduleSignal.module] || resilience.nextQuestion;
     return [
       resilience.plainOpening,
-      moduleSignal.module === "Healthcare" ? ruralSupport.safetyRule : ruralSupport.plainGoal,
+      moduleSignal.module === "Healthcare" ? ruralSupport.spokenSafety : ruralSupport.spokenGoal,
       resilienceQuestion
     ].join(" ");
   }
@@ -25524,27 +25465,27 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
     if (stakeholderAudience.key === "grandma") {
       return [
         "I hear you.",
-        moduleSignal.module === "Healthcare" ? "I am not a doctor, but I can help you find the safest next care step." : ruralSupport.plainGoal,
+        moduleSignal.module === "Healthcare" ? "I am not a doctor, but I can help you find the safest next care step." : ruralSupport.spokenGoal,
         stakeholderAudience.nextQuestion
       ].join(" ");
     }
     if (africaStyle.active && !kenyaStyle.active) {
       return [
         africaStyle.intentOpeners[moduleSignal.module] || africaStyle.intentOpeners.Platform,
-        moduleSignal.module === "Healthcare" ? africaStyle.medicalSafety.boundary : ruralSupport.plainGoal,
+        moduleSignal.module === "Healthcare" ? africaStyle.medicalSafety.boundary : ruralSupport.spokenGoal,
         frontierCommunication.nextQuestion
       ].join(" ");
     }
     if (kenyaStyle.active) {
       return [
         kenyaStyle.intentOpeners[moduleSignal.module] || kenyaStyle.intentOpeners.Platform,
-        ruralSupport.safetyRule,
+        ruralSupport.spokenSafety,
         frontierCommunication.nextQuestion
       ].join(" ");
     }
     return [
       `${frontierCommunication.teachBack}`,
-      frontierCommunication.urgency === "high" ? frontierCommunication.safeguards[0] || ruralSupport.safetyRule : ruralSupport.plainGoal,
+      frontierCommunication.urgency === "high" ? frontierCommunication.safeguards[0] || ruralSupport.spokenSafety : ruralSupport.spokenGoal,
       frontierCommunication.nextQuestion
     ].join(" ");
   }
@@ -30017,7 +29958,7 @@ async function planAgenticTool(db, user, command) {
 }
 
 // Shared by the planner's open-question branch and the last-resort branch of runAgentCommand: one honest sentence when nothing real handled the request.
-const AGENT_NOT_HANDLED_RESPONSE = `I couldn't do that one just now, and nothing was saved. Try saying it another way, or name a module and action, like "AgriTrade prepare buyer update" or "Telehealth start intake."`;
+// (AGENT_NOT_HANDLED_RESPONSE is defined in nexus/i18n/local-translate.js, beside its Kiswahili version.)
 
 // A real model answered only when the provider is not one of the canned offline fallbacks (offline-simulation, offline-after-*).
 function aiResultIsRealModelAnswer(result) {
@@ -36542,6 +36483,8 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
       screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(command)
     });
+    const swahiliReply = await swahiliCrisisReply(command, commandLanguage, user);
+    if (swahiliReply) { packet.userVisibleStatus = swahiliReply; packet.responseLanguage = "sw"; }
     // Matches this function's normal { result, companionUnderstanding,
     // companionRouteOutcome } return shape -- callers destructure `result`
     // unconditionally and some mutate result.metadata directly. Deliberately

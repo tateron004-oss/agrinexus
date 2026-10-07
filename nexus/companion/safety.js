@@ -6,7 +6,7 @@ const crisisPhrases = require("../../public/kyro-crisis-phrases.js");
 // Danger signs in pregnancy, birth, a baby or a child, the hard things after a birth, and a partner or someone else hurting a woman or child (public/kyro-care-phrases.js).
 const care = require("../../public/kyro-care-phrases.js");
 const CARE_SWAHILI = /\b(?:mtoto|mimba|mjamzito|mume|nina|nimeanza|nimejifungua|nimezaa|ameanguka|anatapika|damu|uchungu|kifafa|degedege|homa|nyoka|sumu|ananipiga|amenipiga|ananichapa|hapumui|ameungua|nimebakwa|ataniua|naogopa|nimepoteza|nimeharibu|binti|mwanangu|nimechoka|sijisikii|sipendi|siwezi|nataka|amemeza|amekunywa|amelala|hanyonyi|ananibaka|alinibaka|amenifukuza|nitajiua)\b/;
-const SWAHILI_WORDS = /\b(?:nimechoka|natamani|nataka|ninataka|napenda|ningependa|sina|nafikiria|ninafikiria|afadhali|heri|bora nife|maisha|bunduki|kisu|sumu|sitaki)\b/;
+const SWAHILI_WORDS = /\b(?:nimechoka|natamani|nataka|ninataka|napenda|ningependa|sina|nafikiria|ninafikiria|afadhali|heri|bora nife|maisha|bunduki|kisu|sumu|sitaki|najidhuru|ninajidhuru|nimejidhuru)\b/;
 
 // Emergencies and moments of crisis. Two things happen here and they are deliberately different:
 //
