@@ -12,6 +12,7 @@ const {
   safeJson
 } = require("./providerUtils");
 const nexusUploads = require("../uploads.js");
+const businessSpaces = require("../businessSpaces.js");
 
 function status(env = process.env) {
   const localEnabled = envEnabled("NEXUS_FILE_UPLOAD_ENABLED", env);
@@ -120,7 +121,7 @@ async function analyze(body = {}, env = process.env, user = null) {
     // have it analyzed -- see canAccessUpload's own comment for why this
     // cannot be skipped now that uploads are a reachable feature.
     const meta = nexusUploads.readMeta(nexusUploads.uploadDir(env), fileId);
-    if (!nexusUploads.canAccessUpload(meta, user)) {
+    if (!nexusUploads.canAccessUpload(meta, user, businessSpaces.currentSpace())) {
       return blockedResponse(readiness.provider, action, "You do not have access to that uploaded file.");
     }
     const stats = fs.statSync(filePath);

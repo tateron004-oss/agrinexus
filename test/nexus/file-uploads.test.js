@@ -268,7 +268,7 @@ test("the download route enforces real per-uploader ownership via canAccessUploa
   const body = source.slice(start, start + 1300);
   const flagIndex = body.indexOf('nexusFlagEnabled(process.env, "NEXUS_FILE_UPLOAD_ENABLED")');
   const authIndex = body.indexOf("if (!user)");
-  const canAccessIndex = body.indexOf("nexusUploads.canAccessUpload(meta, user)");
+  const canAccessIndex = body.indexOf("nexusUploads.canAccessUpload(meta, user, businessSpaces.currentSpace())");
   const readIndex = body.indexOf("fs.readFile(filePath");
   assert.ok(flagIndex !== -1, "the download route must also honor the file-upload feature flag, not just the upload route");
   assert.ok(authIndex !== -1 && canAccessIndex !== -1 && readIndex !== -1, "expected auth check, ownership check, and file read all present");
@@ -291,8 +291,8 @@ test("the document-analysis tool falls back to the most recently uploaded file w
 const docProviderSource = fs.readFileSync(path.join(__dirname, "../../server/providers/documentProvider.js"), "utf8");
 
 test("documentProvider.analyze checks real ownership before reading an uploaded file's contents", () => {
-  assert.match(docProviderSource, /nexusUploads\.canAccessUpload\(meta, user\)/);
-  const ownershipCheckIndex = docProviderSource.indexOf("canAccessUpload(meta, user)");
+  assert.match(docProviderSource, /nexusUploads\.canAccessUpload\(meta, user, businessSpaces\.currentSpace\(\)\)/);
+  const ownershipCheckIndex = docProviderSource.indexOf("canAccessUpload(meta, user, businessSpaces.currentSpace())");
   const readFileIndex = docProviderSource.indexOf("fs.readFileSync(filePath)");
   assert.ok(ownershipCheckIndex !== -1 && readFileIndex !== -1 && ownershipCheckIndex < readFileIndex);
 });

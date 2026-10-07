@@ -16,7 +16,9 @@ const { AsyncLocalStorage } = require("node:async_hooks");
 const DEFAULT_SPACE = "default";
 const store = new AsyncLocalStorage();
 
-const validSpaceId = id => typeof id === "string" && /^[a-z0-9][a-z0-9-]{1,39}$/.test(id) && id !== DEFAULT_SPACE;
+// 2 to 40 lowercase letters, digits and dashes, starting and ending with a letter or digit. A few words are kept back so an id can never be mistaken for something else (or collide with a built-in property).
+const RESERVED_IDS = new Set([DEFAULT_SPACE, "admin", "platform", "system", "root", "api", "constructor", "prototype", "hasownproperty", "valueof", "tostring"]);
+const validSpaceId = id => typeof id === "string" && /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])$/.test(id) && !RESERVED_IDS.has(id);
 // The store holds the space and, for a business, what it sends as (its own settings and linked numbers; see server/businessSender.js), loaded once when the request is routed.
 const contextOf = (space, info) => ({ space: space || DEFAULT_SPACE, name: (info && info.name) || "", settings: (info && info.settings) || {}, numbers: (info && info.numbers) || [] });
 const currentSpace = () => store.getStore()?.space || DEFAULT_SPACE;
@@ -42,7 +44,13 @@ function tenantIdFor(space) {
 const emailKey = value => String(value ?? "").trim().toLowerCase();
 const numberKey = value => String(value ?? "").replace(/[^\d+]/g, "");
 const NAME_MAX = 80;
-const cleanName = value => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, NAME_MAX);
+// Control characters, and the invisible or direction-changing ones (zero-width, left-to-right/right-to-left overrides) that could make one name look like another, are removed.
+const cleanName = value => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/g, "").replace(/\s+/g, " ").trim().slice(0, NAME_MAX);
+
+// An error the directory raises on purpose (a name is taken, no such business) can be shown to a person as it is; anything else (a damaged file, a database failure) must not be, so it is not marked.
+const safe = message => Object.assign(new Error(message), { userSafe: true });
+const TRANSIENT_FILE_ERRORS = new Set(["EPERM", "EBUSY", "EACCES", "EMFILE"]);
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Both backends answer the same questions, all async:
 //   spaceForEmail(email) -> id | "default"        spaceForNumber(number) -> id | null        exists(id) -> boolean
@@ -50,8 +58,16 @@ const cleanName = value => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g,
 //   info(id) -> { id, name, settings, numbers[], closedAt } | null        setSettings(id, settings)  (what the business sends as; see server/businessSender.js)
 //   setClosed(id, closed) (a closed business is reached by nobody: sign-in, sessions and phone numbers all stop at the front door; nothing is deleted)        removeSpace(id) (the directory entries only)
 function createFileDirectory(filePath) {
+  // Only "there is no file yet" means an empty directory. A file that is damaged, or cannot be read just now, must never be taken for an empty one: the next change would save over it and lose every
+  // business. A read that collides with a save in progress (Windows reports EPERM/EBUSY) is simply tried again.
   const load = async () => {
-    try { return JSON.parse(await fs.promises.readFile(filePath, "utf8")); } catch { return { spaces: {}, emails: {}, numbers: {} }; }
+    for (let attempt = 1; ; attempt += 1) {
+      try { return JSON.parse(await fs.promises.readFile(filePath, "utf8")); } catch (error) {
+        if (error.code === "ENOENT") return { spaces: {}, emails: {}, numbers: {} };
+        if (TRANSIENT_FILE_ERRORS.has(error.code) && attempt < 10) { await pause(15 * attempt); continue; }
+        throw Object.assign(new Error("The business directory is not available right now. Nothing was changed."), { userSafe: true, httpStatus: 503, detail: error instanceof SyntaxError ? "directory file is damaged" : "directory file could not be read" });
+      }
+    }
   };
   let writing = Promise.resolve();
   // Changes are serialised so two at once cannot overwrite each other.
@@ -62,7 +78,12 @@ function createFileDirectory(filePath) {
       const temp = `${filePath}.tmp-${process.pid}-${Date.now()}`;
       await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
       await fs.promises.writeFile(temp, JSON.stringify(data, null, 2));
-      await fs.promises.rename(temp, filePath);
+      for (let attempt = 1; ; attempt += 1) {
+        try { await fs.promises.rename(temp, filePath); break; } catch (error) {
+          if (!TRANSIENT_FILE_ERRORS.has(error.code) || attempt >= 10) { await fs.promises.rm(temp, { force: true }).catch(() => {}); throw error; }
+          await pause(15 * attempt);
+        }
+      }
       return result;
     });
     writing = run.catch(() => {});
@@ -70,34 +91,34 @@ function createFileDirectory(filePath) {
   };
   return {
     kind: "file",
-    exists: async id => Boolean((await load()).spaces[id]),
-    spaceForEmail: async email => { const data = await load(); const id = data.emails[emailKey(email)]; return id && data.spaces[id] ? id : DEFAULT_SPACE; },
-    spaceForNumber: async number => { const data = await load(); const id = data.numbers[numberKey(number)]; return id && data.spaces[id] ? id : null; },
+    exists: async id => Object.hasOwn((await load()).spaces, id),
+    spaceForEmail: async email => { const data = await load(); const key = emailKey(email); const id = Object.hasOwn(data.emails, key) ? data.emails[key] : null; return id && Object.hasOwn(data.spaces, id) ? id : DEFAULT_SPACE; },
+    spaceForNumber: async number => { const data = await load(); const key = numberKey(number); const id = Object.hasOwn(data.numbers, key) ? data.numbers[key] : null; return id && Object.hasOwn(data.spaces, id) ? id : null; },
     createSpace: (id, { name = "" } = {}) => change(data => {
-      if (!validSpaceId(id)) throw new Error("A business id is 2 to 40 lowercase letters, digits or dashes.");
-      if (data.spaces[id]) throw new Error("That business already exists.");
+      if (!validSpaceId(id)) throw safe("A business id is 2 to 40 lowercase letters, digits or dashes.");
+      if (Object.hasOwn(data.spaces, id)) throw safe("That business already exists.");
       data.spaces[id] = { name: cleanName(name), createdAt: new Date().toISOString() };
     }),
     linkEmail: (email, id) => change(data => {
-      if (!data.spaces[id]) throw new Error("No such business.");
+      if (!Object.hasOwn(data.spaces, id)) throw safe("No such business.");
       const key = emailKey(email);
-      if (data.emails[key] && data.emails[key] !== id) throw new Error("That email already belongs to another business.");
+      if (Object.hasOwn(data.emails, key) && data.emails[key] !== id) throw safe("That email already belongs to another business.");
       data.emails[key] = id;
     }),
     linkNumber: (number, id) => change(data => {
-      if (!data.spaces[id]) throw new Error("No such business.");
+      if (!Object.hasOwn(data.spaces, id)) throw safe("No such business.");
       const key = numberKey(number);
-      if (data.numbers[key] && data.numbers[key] !== id) throw new Error("That phone number already belongs to another business.");
+      if (Object.hasOwn(data.numbers, key) && data.numbers[key] !== id) throw safe("That phone number already belongs to another business.");
       data.numbers[key] = id;
     }),
     unlinkNumber: number => change(data => { delete data.numbers[numberKey(number)]; }),
     info: async id => {
       const data = await load();
-      const space = data.spaces[id];
+      const space = Object.hasOwn(data.spaces, id) ? data.spaces[id] : null;
       return space ? { id, name: space.name || "", settings: space.settings || {}, closedAt: space.closedAt || null, numbers: Object.keys(data.numbers).filter(key => data.numbers[key] === id) } : null;
     },
     setClosed: (id, closed) => change(data => {
-      if (!data.spaces[id]) throw new Error("No such business.");
+      if (!Object.hasOwn(data.spaces, id)) throw safe("No such business.");
       if (closed) data.spaces[id].closedAt = data.spaces[id].closedAt || new Date().toISOString(); else delete data.spaces[id].closedAt;
     }),
     removeSpace: id => change(data => {
@@ -106,7 +127,7 @@ function createFileDirectory(filePath) {
       delete data.spaces[id];
     }),
     setSettings: (id, settings) => change(data => {
-      if (!data.spaces[id]) throw new Error("No such business.");
+      if (!Object.hasOwn(data.spaces, id)) throw safe("No such business.");
       data.spaces[id].settings = settings;
     }),
     describe: async () => {
@@ -133,18 +154,18 @@ function createPostgresDirectory(getPool) {
   const query = async (sql, params) => { await ensure(); return getPool().query(sql, params); };
   const claim = async (table, column, key, id, label) => {
     const result = await query(`insert into ${table} (${column}, space_id) values ($1, $2) on conflict (${column}) do update set space_id = ${table}.space_id returning space_id`, [key, id]);
-    if (result.rows[0].space_id !== id) throw new Error(`That ${label} already belongs to another business.`);
+    if (result.rows[0].space_id !== id) throw safe(`That ${label} already belongs to another business.`);
   };
-  const requireSpace = async id => { if (!(await query("select 1 from agrinexus_business_spaces where id = $1", [id])).rowCount) throw new Error("No such business."); };
+  const requireSpace = async id => { if (!(await query("select 1 from agrinexus_business_spaces where id = $1", [id])).rowCount) throw safe("No such business."); };
   return {
     kind: "postgres",
     exists: async id => (await query("select 1 from agrinexus_business_spaces where id = $1", [id])).rowCount > 0,
     spaceForEmail: async email => (await query("select space_id from agrinexus_business_emails where email = $1", [emailKey(email)])).rows[0]?.space_id || DEFAULT_SPACE,
     spaceForNumber: async number => (await query("select space_id from agrinexus_business_numbers where number = $1", [numberKey(number)])).rows[0]?.space_id || null,
     createSpace: async (id, { name = "" } = {}) => {
-      if (!validSpaceId(id)) throw new Error("A business id is 2 to 40 lowercase letters, digits or dashes.");
+      if (!validSpaceId(id)) throw safe("A business id is 2 to 40 lowercase letters, digits or dashes.");
       const result = await query("insert into agrinexus_business_spaces (id, name) values ($1, $2) on conflict (id) do nothing returning id", [id, cleanName(name)]);
-      if (!result.rowCount) throw new Error("That business already exists.");
+      if (!result.rowCount) throw safe("That business already exists.");
     },
     linkEmail: async (email, id) => { await requireSpace(id); await claim("agrinexus_business_emails", "email", emailKey(email), id, "email"); },
     linkNumber: async (number, id) => { await requireSpace(id); await claim("agrinexus_business_numbers", "number", numberKey(number), id, "phone number"); },
@@ -157,7 +178,7 @@ function createPostgresDirectory(getPool) {
     },
     setClosed: async (id, closed) => {
       const result = await query(closed ? "update agrinexus_business_spaces set closed_at = coalesce(closed_at, now()) where id = $1 returning id" : "update agrinexus_business_spaces set closed_at = null where id = $1 returning id", [id]);
-      if (!result.rowCount) throw new Error("No such business.");
+      if (!result.rowCount) throw safe("No such business.");
     },
     removeSpace: async id => {
       await query("delete from agrinexus_business_emails where space_id = $1", [id]);
@@ -166,7 +187,7 @@ function createPostgresDirectory(getPool) {
     },
     setSettings: async (id, settings) => {
       const result = await query("update agrinexus_business_spaces set settings = $2::jsonb where id = $1 returning id", [id, JSON.stringify(settings || {})]);
-      if (!result.rowCount) throw new Error("No such business.");
+      if (!result.rowCount) throw safe("No such business.");
     },
     describe: async () => {
       const spaces = (await query("select id, name, settings, created_at, closed_at from agrinexus_business_spaces order by created_at", [])).rows;
