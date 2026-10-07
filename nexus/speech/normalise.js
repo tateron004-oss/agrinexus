@@ -94,7 +94,9 @@ const LEAD = [];
 const lead = (re, label, test = rest => rest.split(" ").length >= 1, as = "") => LEAD.push({ re: new RegExp(`^${re}`, "iu"), label, test, as });
 const hasRest = rest => rest.split(" ").filter(Boolean).length >= 1;
 // "Hello Nexus, this is Ron" is a greeting with an introduction, which the greeting readers want whole
-const notIntroduction = rest => hasTwo(rest) && !/^(?:this is|it is|it's|its|i am|i'm|im|mimi ni)\b/i.test(rest);
+let ACTIVE = { wakeBeforeQuestions: true };
+const firstWordOf = rest => (/^[\p{L}'-]+/u.exec(String(rest).toLowerCase()) || [""])[0];
+const notIntroduction = rest => hasTwo(rest) && !/^(?:this is|it is|it's|its|i am|i'm|im|mimi ni)\b/i.test(rest) && (ACTIVE.wakeBeforeQuestions !== false || !QUESTION_WORDS.has(firstWordOf(rest)));
 const hasTwo = rest => rest.split(" ").filter(Boolean).length >= 2;
 
 // wake words, with or without a greeting before them
@@ -346,7 +348,15 @@ function runPipeline(input, log, { allowShorten = true } = {}) {
   return t;
 }
 
-function normaliseSpoken(text, { language = "en" } = {}) {
+// options: language; wakeBeforeQuestions (default true): "Hey Nexus, are you with me today?" -> "are you with me today?". The older voice path reads "Hey Nexus" itself
+// in greetings and presence checks, so it asks for false: a wake word is then only dropped in front of a command.
+function normaliseSpoken(text, { language = "en", wakeBeforeQuestions = true } = {}) {
+  const before = ACTIVE;
+  ACTIVE = { wakeBeforeQuestions };
+  try { return normaliseOnce(text, language); } finally { ACTIVE = before; }
+}
+
+function normaliseOnce(text, language) {
   const original = String(text ?? "");
   const stripped = [];
   const clean = cleanText(original);

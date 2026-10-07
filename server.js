@@ -20367,7 +20367,7 @@ async function dispatchNexusRealtimeToolOnce(db, user, body = {}) {
   const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
   // The one front door (nexus/speech/normalise.js): the words below are what was meant; `saidCommand` is what was said, cleaned of invisible characters only, and is what
   // every safety reader sees as well, so nothing a person said is lost to the cleaning.
-  const spokenCommand = normaliseSpoken(String(args.command || body.command || ""), { language: args.language || body.language || user?.language });
+  const spokenCommand = normaliseSpoken(String(args.command || body.command || ""), { language: args.language || body.language || user?.language, wakeBeforeQuestions: false });
   const saidCommand = spokenCommand.clean;
   const command = spokenCommand.text.trim();
   const dispatchRoute = String(body.route || "/api/voice/realtime/tool");
@@ -21585,7 +21585,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   const language = args.language || context.language || user?.language || "en";
   // (typeof guard: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names)
   const rawInput = String(args.query || context.command || args.command || "");
-  const spokenInput = typeof normaliseSpoken === "function" ? normaliseSpoken(rawInput, { language }) : { text: rawInput, clean: rawInput };
+  const spokenInput = typeof normaliseSpoken === "function" ? normaliseSpoken(rawInput, { language, wakeBeforeQuestions: false }) : { text: rawInput, clean: rawInput };
   const saidInput = sanitizePilotText(spokenInput.clean.slice(-3000), 3000);
   // Only plain conversation is cleaned: the other tools (drafts, documents, lists...) take the words of a message or a document from the sentence, exactly as said.
   const command = sanitizePilotText(toolName === "nexus_general_conversation" ? spokenInput.text : (args.query || context.command || args.command || ""), 700);
@@ -36589,7 +36589,7 @@ async function runAgentCommand(db, user, command, options = {}) {
 async function runCompanionSafeAgentCommand(db, user, body = {}) {
   // The one front door (nexus/speech/normalise.js), for the typed route, the voice route and the phone line alike. The safety check below sees what was said as well as what
   // was meant (see `saidCommand`), so cleaning never hides a danger phrase.
-  const spokenFront = normaliseSpoken(String(body.command || ""), { language: body.targetLanguage || body.language || user?.language });
+  const spokenFront = normaliseSpoken(String(body.command || ""), { language: body.targetLanguage || body.language || user?.language, wakeBeforeQuestions: false });
   const saidCommand = spokenFront.clean;
   const command = spokenFront.text.trim();
   const inputMode = String(body.inputMode || "api").trim() || "api";

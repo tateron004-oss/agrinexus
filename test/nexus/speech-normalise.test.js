@@ -37,6 +37,14 @@ test("wake words and greetings in front of a request are dropped", () => {
   ], "wake word");
 });
 
+test("the older voice path can keep a wake word that opens a question or an introduction (its greeting readers want it)", () => {
+  assert.equal(normaliseSpoken("Hey Nexus, are you with me today?").text, "are you with me today?");
+  assert.equal(normaliseSpoken("Hey Nexus, are you with me today?", { wakeBeforeQuestions: false }).text, "Hey Nexus, are you with me today?");
+  assert.equal(normaliseSpoken("Hey Nexus, add milk to my list", { wakeBeforeQuestions: false }).text, "add milk to my list");
+  assert.equal(normaliseSpoken("Hello Nexus, this is Ron").text, "Hello Nexus, this is Ron", "an introduction is left whole");
+  assert.equal(normaliseSpoken("And what about beans?").text, "And what about beans?", "a follow-up keeps its 'and'");
+});
+
 test("fillers are dropped, even when they sit in the middle or at the end", () => {
   run([
     ["um add milk to my shopping list", "add milk to my shopping list"],
