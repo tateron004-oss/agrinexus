@@ -42,8 +42,8 @@ test("authoritativeRuntimeUser looks up an existing row by (tenant, email) befor
 
 test("both the users upsert and the membership upsert use the resolved id, not the raw derived one", () => {
   const fn = authoritativeRuntimeUserSource();
-  assert.match(fn, /\[resolvedId, NEXUS_AUTHORITATIVE_TENANT_ID, email, user\.name \|\| "Nexus User", "legacy-auth-bound"\]/, "the users upsert must use the resolved id");
-  assert.match(fn, /\[NEXUS_AUTHORITATIVE_TENANT_ID, resolvedId, role, permissions\]/, "the membership upsert must use the resolved id");
+  assert.match(fn, /\[resolvedId, tenantId, email, user\.name \|\| "Nexus User", "legacy-auth-bound"\]/, "the users upsert must use the resolved id");
+  assert.match(fn, /\[tenantId, resolvedId, role, permissions\]/, "the membership upsert must use the resolved id");
   assert.match(fn, /id: resolvedId,/, "the returned user object's id must be the resolved one, not the raw derived one");
 });
 

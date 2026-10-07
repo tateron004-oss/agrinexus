@@ -53,6 +53,7 @@ function loadFns({ statePostgres, pool }) {
     crypto, console,
     STATE_STORE: statePostgres ? "postgres" : "json",
     NEXUS_AUTHORITATIVE_TENANT_ID: "00000000-0000-0000-0000-000000000001",
+    currentTenantId: () => "00000000-0000-0000-0000-000000000001", ensureBusinessTenant: async () => "00000000-0000-0000-0000-000000000001",
     getPgPool: () => pool
   };
   vm.createContext(context);
