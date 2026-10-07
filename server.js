@@ -99,8 +99,19 @@ function looksLikeHealthReport(text) {
   const lower = String(text || "").toLowerCase();
   return HEALTH_REPORT_WORDS.test(lower) || careSafetyApplies(text);
 }
-const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
-const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
+const { healthReadingsTurn } = require("./nexus/health/readings-conversation.js");
+// Health readings said or typed (blood pressure, blood sugar, weight, pulse, temperature, oxygen), and what people ask about them (show, delete, correct, who can see, share with a nurse), plus the
+// medicine questions around them. Kyro reads a reading back and saves it only after a yes. Care and safety wording and the content guards still come first, so nothing here answers those.
+// Returns null when the sentence is not about health readings.
+function healthReadingsReply(db, user, text, options = {}) {
+  if (!text || contentGuardReply(text) || careSafetyApplies(text)) return null;
+  const turn = healthReadingsTurn({ db, user, text, language: options.language, confirmedByCaller: options.confirmedByCaller === true, canWrite: !userIsRestrictedFrom(user, "health-record-write") });
+  // While Kyro waits for a yes or a no about a reading, an older question that was left open must not also be answered by that yes.
+  if (turn?.requiresConfirmation && ownPendingAction(db, user)) db.profile.agentPendingAction = null;
+  return turn;
+}
+const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote, savedReply: bloodPressureSavedReply, notSavedReply: bloodPressureNotSavedReply } = require("./server/providers/bloodPressure.js");
+const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply, savedReply: glucoseSavedReply, notSavedReply: glucoseNotSavedReply } = require("./server/providers/bloodGlucose.js");
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
 const teamManagement = require("./server/teamManagement.js");
@@ -117,7 +128,7 @@ const twilioProvider = require("./server/providers/twilioProvider.js");
 const emailProvider = require("./server/providers/emailProvider.js");
 const communicationsTestLog = new Map(); // owner id -> when their recent real tests went out
 const COMMUNICATIONS_TESTS_PER_HOUR = 6;
-const { HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
+const { HEALTH_BRIDGE_KEYS, profileWithOwnHealthRecordsOnly, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
 const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
 const {
   isUsableEnvValue,
@@ -6096,7 +6107,8 @@ function healthRecordsForViewer(profile, user) {
     const kept = list.filter(item => !(item && typeof item === "object" && ownedByAnotherPerson(item)));
     if (kept.length !== list.length) { copy = copy || { ...profile }; copy[key] = kept; }
   }
-  return copy || profile;
+  // The readings and intakes saved through the medical bridge (blood pressure, blood sugar, weight, pulse...) carry their owner too: another person's are left out.
+  return profileWithOwnHealthRecordsOnly(copy || profile, [user.id, user.email]);
 }
 
 function profileForUserByRole(profile, user) {
@@ -6109,7 +6121,7 @@ function profileForUserByRole(profile, user) {
   // through the same projection as investors rather than skipping it.
   if (!profile) return profile;
   if (!isRestrictedHealthViewer(user)) return healthRecordsForViewer(profile, user);
-  const projected = { ...profile };
+  const projected = { ...profileWithOwnHealthRecordsOnly(profile, [user?.id, user?.email]) };
   for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
     if (Array.isArray(profile[key])) projected[key] = profile[key].map(record => projectHealthRecordForUser(record, user, key));
   }
@@ -20137,7 +20149,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "For everything else, prefer calling a tool over answering from your own knowledge. If the user reports a real fact Nexus can act on (a vital sign, a symptom, an intent to buy or sell, a place to find), or asks Nexus to do, check, find, save, track, plan, export, or remind something, call the matching tool below even if they phrased it as a statement rather than a command. Do not silently answer in conversation when a tool exists for the request — that leaves no real record and is a failure mode, not a shortcut.",
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
     "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
-    "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it.",
+    "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it. The tool reads the reading back and asks whether to save it: say that question to the person word for word, and when they answer yes or no (including ndiyo, sawa or hapana), call nexus_health_preparation again with exactly their answer. Nothing is saved until they say yes. The same tool shows, deletes and corrects their saved readings and answers who can see them; never say a reading was saved, deleted or shared unless the tool says so.",
     "When the user asks to start or join a telehealth video call, video visit, or virtual appointment with a doctor or provider, you must call nexus_health_preparation with the complete request, including any symptoms mentioned. This creates a real, provider-reviewed video visit -- it is never a communications/messaging request.",
     "When the user asks to create a fitness or training plan, reports a completed workout, run, or training session, or asks about their fitness or training progress, you must call nexus_health_preparation with the complete request. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
@@ -21768,6 +21780,23 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       fallbackUrl: music.url || ""
     };
   }
+  // Health readings said in plain words ("my blood pressure is 150 over 95", "sukari yangu 7.5", "delete my last reading", "show my BP readings", "who can see my health information"). Kyro reads the reading
+  // back and asks before saving; a yes saves it. The voice model's own confirmation flag (confirmation: true) means the person already said yes, so that one is saved straight away, as before.
+  if (toolName === "nexus_general_conversation" || toolName === "nexus_health_preparation") {
+    const healthTurn = healthReadingsReply(db, user, command, { language, confirmedByCaller: toolName === "nexus_health_preparation" && (args.confirmed === true || args.confirmation === true) });
+    if (healthTurn) {
+      const status = healthTurn.requiresConfirmation ? "confirmation-required" : healthTurn.saved ? "health-reading-saved" : healthTurn.wrote ? "health-records-changed" : "health-preparation-ready";
+      const receipt = nexusOpenAiNativeToolReceipt(db, toolName, command, status,
+        healthTurn.requiresConfirmation ? ["Read the health information back and asked before changing anything."]
+          : healthTurn.saved ? ["Saved the health reading to the person's own record."]
+          : healthTurn.wrote ? ["Changed the person's own saved health readings after they confirmed."]
+          : ["Answered a question about health readings; nothing was saved or changed."],
+        ["Nexus did not diagnose, prescribe, send health information, contact a provider, or replace clinical judgment."]);
+      return { ...common, capability: toolName === "nexus_health_preparation" ? "nexus_health_preparation" : "health-readings", status, response: healthTurn.response, receipt, evidenceReceipt: receipt, localOnly: true,
+        requiresConfirmation: healthTurn.requiresConfirmation === true,
+        executionAttempted: Boolean(healthTurn.wrote || healthTurn.attempted), executionVerified: Boolean(healthTurn.wrote) };
+    }
+  }
   if (toolName === "nexus_translation") {
     const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
     const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", arabic: "ar", portuguese: "pt" };
@@ -22930,7 +22959,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // oxygen/temperature/pulse just below.
     const bp = command.match(new RegExp(`\\b(?:blood\\s*pressure|bp|systolic)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\s*(?:over|\\/)\\s*(\\d{2,3})\\b`, "i"));
     // Blood sugar: a number (decimals allowed: "7.2") and, when said, its unit -- mg/dL or mmol/L (see server/providers/bloodGlucose.js).
-    const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
+    const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?![.,]\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
     // Confirmed: unlike every other vital above, weight kept the old
@@ -23103,13 +23132,9 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       } else if (glucose && readingSaved && glucoseLevelNow === "very-high") {
         response = veryHighReply(glucoseResolved, command);
       } else if (bp) {
-        response = readingSaved
-          ? `I saved the blood-pressure reading ${bp[1]} over ${bp[2]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`
-          : `I noted the blood-pressure reading ${bp[1]} over ${bp[2]}, but saving it to your chronic-care record is unavailable right now. A single reading does not establish a diagnosis. Discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`;
+        response = readingSaved ? bloodPressureSavedReply(bp[1], bp[2]) : bloodPressureNotSavedReply(bp[1], bp[2]);
       } else {
-        response = readingSaved
-          ? `I saved the blood-glucose reading ${glucose[1]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`
-          : `I noted the blood-glucose reading ${glucose[1]}, but saving it to your chronic-care record is unavailable right now. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`;
+        response = readingSaved ? glucoseSavedReply(glucose[1]) : glucoseNotSavedReply(glucose[1]);
       }
       if (bp && readingSaved && bpAssessment?.level === "low") response = `${response} ${lowNote()}`;
       if (glucose && readingSaved && glucoseLevelNow === "low") response = lowReply(glucoseResolved);
@@ -36987,6 +37012,25 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
         capability: "mental-health-behavioral-wellness", mentalHealth: packet,
         noDiagnosis: true, noProviderContacted: true, noEmergencyDispatch: true, metadata: {} },
       companionUnderstanding: null, companionRouteOutcome: null
+    };
+  }
+  // Health readings said or typed ("my blood pressure is 150 over 95", "show my BP readings", "delete my last reading", "who can see my health information") and the medicine questions around them: Kyro
+  // reads a reading back and saves it only after a yes (see nexus/health/readings-conversation.js). Like the crisis answer above, it is not written into the general command history.
+  const healthTurn = command ? healthReadingsReply(db, user, command, { language: commandLanguage }) : null;
+  if (healthTurn) {
+    return {
+      result: {
+        intent: "health.readings",
+        response: healthTurn.response,
+        status: healthTurn.requiresConfirmation ? "needs-confirmation" : "completed",
+        metadata: {
+          conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, healthReadings: healthTurn.kind || true,
+          executionAttempted: Boolean(healthTurn.wrote || healthTurn.attempted), executionVerified: Boolean(healthTurn.wrote),
+          ...(healthTurn.requiresConfirmation ? { confirmationRequired: true, executionDeferred: true, pendingActionType: "health-reading", allowedConfirmations: ["yes", "no"] } : {})
+        }
+      },
+      companionUnderstanding: null,
+      companionRouteOutcome: null
     };
   }
   const companionUnderstanding = companionUnderstandingClassification(command, {

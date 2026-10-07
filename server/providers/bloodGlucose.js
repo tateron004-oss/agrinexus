@@ -75,4 +75,12 @@ function veryHighReply(resolved, spokenText = "") {
   return `I saved the reading ${show(resolved)}. That is a very high blood sugar. ${act} If you feel well, measure again in a little while and contact your clinic today. I cannot give treatment advice or diagnose; this is general safety information.`;
 }
 
-module.exports = Object.freeze({ resolveGlucose, glucoseLevel, toMgdl, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply, LIMITS, AMBIGUOUS_BAND });
+// The everyday replies after a blood-sugar reading was saved (or could not be): the same wording on every route. `shown` is the value with its unit, e.g. "7.2 millimoles per litre".
+function savedReply(shown) {
+  return `I saved the blood-glucose reading ${shown} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`;
+}
+function notSavedReply(shown) {
+  return `I noted the blood-glucose reading ${shown}, but saving it to your chronic-care record is unavailable right now. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`;
+}
+
+module.exports = Object.freeze({ show, savedReply, notSavedReply, resolveGlucose, glucoseLevel, toMgdl, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply, LIMITS, AMBIGUOUS_BAND });

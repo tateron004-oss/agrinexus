@@ -41,8 +41,16 @@ function urgentGuidance(systolic, diastolic, spokenText = "") {
   return `${lead} ${act} ${rest}`;
 }
 
+// The everyday replies after a reading was saved (or could not be). Kept here, beside the urgent wording, so the spoken route, the typed route and the read-back-then-save flow all say the same thing.
+function savedReply(systolic, diastolic) {
+  return `I saved the blood-pressure reading ${systolic} over ${diastolic} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`;
+}
+function notSavedReply(systolic, diastolic) {
+  return `I noted the blood-pressure reading ${systolic} over ${diastolic}, but saving it to your chronic-care record is unavailable right now. A single reading does not establish a diagnosis. Discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`;
+}
+
 function lowNote() {
   return "That is lower than many people's usual reading. If you feel dizzy, faint or unwell, sit or lie down and get medical help.";
 }
 
-module.exports = Object.freeze({ assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote, LIMITS, URGENT, LOW });
+module.exports = Object.freeze({ assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote, savedReply, notSavedReply, LIMITS, URGENT, LOW, SYMPTOMS });
