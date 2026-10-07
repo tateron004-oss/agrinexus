@@ -85,6 +85,8 @@
     "workforce:live-check": "node scripts/workforce-live-check.js",
     "db:backup": "node scripts/db-backup.js",
     "db:restore": "node scripts/db-restore.js",
+    "state:backup": "node scripts/state-backup.js",
+    "state:restore": "node scripts/state-restore.js",
     "foundation:describe": "node foundation/scripts/describe-foundation.js",
     "foundation:migrate": "node foundation/scripts/migrate.js",
     "foundation:verify-db": "node foundation/scripts/verify-db.js",
