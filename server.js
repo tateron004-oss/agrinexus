@@ -7,6 +7,7 @@ const tls = require("tls");
 const { WebSocketServer } = require("ws");
 const { OpenAIRealtimeWebSocket } = require("@openai/agents-realtime");
 const nexusUploads = require("./server/uploads.js");
+const { collectBodyText } = require("./server/requestBody.js");
 const nexusJobSearchProvider = require("./server/nexus-job-search-source-provider.js");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
@@ -2894,7 +2895,8 @@ const MONEY_VIEW_KEYS = ["orders", "tradeMessages", "tradeMessageThreads", "buye
 const ownerOfRecord = item => [...PROFILE_OWNER_FIELDS, "_ledgerOwner"].map(field => String(item?.[field] || "").trim().toLowerCase()).filter(value => value.includes("@"));
 const recordOwnedByAnotherPerson = (item, viewerEmail) => Boolean(item && typeof item === "object") && ownerOfRecord(item).some(value => value !== viewerEmail);
 function moneyRecordsForViewer(profile, user) {
-  if (!profile || !user || user.role === "Admin") return profile;
+  if (!profile || user?.role === "Admin") return profile;
+  if (!user) user = { email: "" }; // not signed in: shown only what carries no personal owner mark (this used to return the whole profile, other people's records included)
   const viewer = String(user.email || "").trim().toLowerCase();
   let copy = null;
   for (const key of MONEY_VIEW_KEYS) {
@@ -3755,37 +3757,16 @@ function parseBodyText(req, data) {
   return parsed && typeof parsed === "object" ? parsed : {};
 }
 const requestFault = (message, httpStatus) => Object.assign(new Error(message), { httpStatus, userSafe: true });
+// Both readers stop keeping data the moment the limit is passed (see server/requestBody.js): a body over the limit is answered 413 and is never held in memory.
 function bufferBodyText(req) {
-  return new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", chunk => { data += chunk; if (data.length > 1_000_000) reject(new Error("Payload too large")); });
-    req.on("end", () => { req.bufferedBodyText = data; resolve(data); });
-    req.on("error", reject);
-  });
+  return collectBodyText(req, 1_000_000, requestFault).then(data => { req.bufferedBodyText = data; return data; });
 }
 function readBody(req) {
   if (typeof req.bufferedBodyText === "string") {
     try { return Promise.resolve(parseBodyText(req, req.bufferedBodyText)); } catch { return Promise.reject(requestFault("Invalid JSON", 400)); }
   }
-  return new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", chunk => {
-      data += chunk;
-      if (data.length > 20_000_000) reject(requestFault("Payload too large", 413));
-    });
-    req.on("end", () => {
-      try {
-        const contentType = String(req.headers["content-type"] || "");
-        if (!data) return resolve({});
-        if (contentType.includes("application/x-www-form-urlencoded")) {
-          return resolve(Object.fromEntries(new URLSearchParams(data)));
-        }
-        const parsed = JSON.parse(data);
-        resolve(parsed && typeof parsed === "object" ? parsed : {});
-      } catch {
-        reject(requestFault("Invalid JSON", 400));
-      }
-    });
+  return collectBodyText(req, 20_000_000, requestFault).then(data => {
+    try { return parseBodyText(req, data); } catch { throw requestFault("Invalid JSON", 400); }
   });
 }
 
@@ -5997,7 +5978,14 @@ function learningProfileForClient(user) {
 const randomTemporaryPassword = () => crypto.randomBytes(12).toString("base64url");
 
 function profileForUser(profile, user) {
-  return withoutOwnerMarks(moneyRecordsForViewer(privateHistoryForViewer(profileForUserByRole(profile, user), user), user));
+  const view = withoutOwnerMarks(moneyRecordsForViewer(privateHistoryForViewer(profileForUserByRole(profile, user), user), user));
+  // "Latest AI" is one shared line of text about the last thing anyone did (it can name a patient or quote a need); a caller who is not signed in is not shown it.
+  if (user || !view || typeof view !== "object") return view;
+  const anonymous = { ...view };
+  if (typeof anonymous.aiActivity === "string") anonymous.aiActivity = "";
+  // Reminders and spoken sessions are personal and, until they carry an owner mark, cannot be told apart by owner: a caller who is not signed in is shown none.
+  for (const key of ["assistantReminders", "voiceSessions"]) if (Array.isArray(anonymous[key])) anonymous[key] = [];
+  return anonymous;
 }
 
 // Health records belong to the person who made them. Found by a live check against a copy of the app: a second signed-in Standard User received the first user's health intake (patient name and needs)
@@ -6006,7 +5994,8 @@ function profileForUser(profile, user) {
 // is to see them, still see everything. A record owned by another person is left out.
 const HEALTH_SEEN_BY_ALL_ROLES = new Set(["Admin", "Provider Reviewer"]);
 function healthRecordsForViewer(profile, user) {
-  if (!profile || !user || HEALTH_SEEN_BY_ALL_ROLES.has(user.role)) return profile;
+  if (!profile || HEALTH_SEEN_BY_ALL_ROLES.has(user?.role)) return profile;
+  if (!user) user = { email: "" }; // not signed in: another person's health record is never shown (this used to return the whole profile)
   const viewer = String(user.email || "").trim().toLowerCase();
   const ownedByAnotherPerson = item => PROFILE_OWNER_FIELDS.some(field => { const value = String(item?.[field] || "").trim().toLowerCase(); return value.includes("@") && value !== viewer; });
   let copy = null;
@@ -46796,6 +46785,13 @@ async function api(req, res, url) {
     return send(res, 200, nexusUserTestingRuntime.userTestingReadinessSnapshot(db, process.env));
   }
 
+  // The testing notes are free text written by signed-in testers and kept in one shared list, so reading them, adding to them and every other change under /api/nexus/user-testing/ needs a sign-in. A caller
+  // with no session used to read every tester's notes, to fill the shared store without limit (GET e2e-harness alone added 24 records and 26 audit lines per call), and to get a server error from the routes
+  // that expect a person (memory, execute, verify). The read-only status, roles, providers, security and readiness views stay open.
+  if (url.pathname.startsWith("/api/nexus/user-testing/") && !user
+    && (req.method !== "GET" || url.pathname === "/api/nexus/user-testing/memory" || url.pathname === "/api/nexus/user-testing/e2e-harness")) {
+    return send(res, 401, { error: "Sign in required" });
+  }
   if (url.pathname === "/api/nexus/user-testing/memory" && req.method === "GET") {
     return send(res, 200, {
       ok: true,
@@ -47055,6 +47051,9 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/internet-services/search" && req.method === "POST") {
+    // This runs a real paid web search when a search key is set, so it needs a sign-in and the same AI/search budget as its siblings (/api/nexus/knowledge/query, /api/nexus/live-knowledge/query).
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const query = cleanOpsText(body.query || body.question || body.command || "", 700);
     if (!query) return send(res, 400, { ok: false, error: "query_required" });
@@ -58297,7 +58296,8 @@ async function api(req, res, url) {
 // session's user is the same one recordExportOwnership() recorded as the
 // export's creator at export time.
 async function serveExport(req, res, url) {
-  const requestedName = decodeURIComponent(url.pathname.slice("/exports/".length));
+  let requestedName;
+  try { requestedName = decodeURIComponent(url.pathname.slice("/exports/".length)); } catch { return send(res, 404, "Not found"); }
   if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx)$/i.test(requestedName)) return send(res, 404, "Not found");
   const db = await readDb();
   const user = currentUser(req, db);
@@ -58333,8 +58333,13 @@ function serveStatic(req, res, url) {
       res.end(data);
     });
   }
-  let filePath = url.pathname === "/" ? path.join(PUBLIC, "index.html") : path.join(PUBLIC, decodeURIComponent(url.pathname));
-  if (!filePath.startsWith(PUBLIC)) return send(res, 403, "Forbidden");
+  // A path that cannot be decoded ("%zz") or carries a NUL byte is not a file here: answered 404, not as a server error. The folder check includes the separator, so a sibling folder whose name merely
+  // starts with "public" (public-old, public_backup) can never be reached with "/../public-old/..".
+  let decodedPath;
+  try { decodedPath = decodeURIComponent(url.pathname); } catch { return send(res, 404, "Not found"); }
+  if (decodedPath.includes("\0")) return send(res, 404, "Not found");
+  let filePath = url.pathname === "/" ? path.join(PUBLIC, "index.html") : path.join(PUBLIC, decodedPath);
+  if (filePath !== PUBLIC && !filePath.startsWith(PUBLIC + path.sep)) return send(res, 403, "Forbidden");
   fs.readFile(filePath, (err, data) => {
     if (err) return send(res, 404, "Not found");
     const ext = path.extname(filePath);
@@ -58461,10 +58466,16 @@ function handleTwilioPhoneRealtimeStream(ws) {
   let closed = false;
   let capTimer = null;
   let goodbyeTimer = null;
+  let startSeen = false;
+  // A socket that never sends its signed "start" frame is closed: before that frame nothing has proved who is calling, so it must not be able to sit open for ever.
+  const startWaitMs = Math.min(Math.max(Number(process.env.PHONE_REALTIME_START_TIMEOUT_MS) || 15000, 1000), 60000);
+  const startTimer = setTimeout(() => { if (!startSeen) cleanup("no-start-frame"); }, startWaitMs);
+  startTimer.unref?.();
 
   const cleanup = async reason => {
     if (closed) return;
     closed = true;
+    clearTimeout(startTimer);
     if (capTimer) clearTimeout(capTimer);
     if (goodbyeTimer) clearTimeout(goodbyeTimer);
     try { transport?.close(); } catch {}
@@ -58484,10 +58495,20 @@ function handleTwilioPhoneRealtimeStream(ws) {
     }
   };
 
-  ws.on("message", async raw => {
+  // Found by a live probe: a frame that is valid JSON but not an object ("null", "5", "[]") made `frame.event` throw inside this async handler, an unhandled rejection that stopped the whole server for every
+  // caller, with no sign-in needed. Frames are now checked to be objects, and any other failure in the handler is logged instead of escaping.
+  ws.on("message", raw => {
+    handlePhoneStreamFrame(raw).catch(error => recordServerError({ source: "phone-realtime-frame", message: error.stack || error.message, context: { callSid } }));
+  });
+  const handlePhoneStreamFrame = async raw => {
     let frame;
     try { frame = JSON.parse(raw.toString()); } catch { return; }
+    if (!frame || typeof frame !== "object" || Array.isArray(frame)) return;
     if (frame.event === "start") {
+      // Only the first start frame counts; a second one on the same socket would open a second paid connection.
+      if (startSeen) return;
+      startSeen = true;
+      clearTimeout(startTimer);
       streamSid = frame.start?.streamSid || null;
       callSid = frame.start?.callSid || null;
       const params = frame.start?.customParameters || {};
@@ -58589,7 +58610,7 @@ function handleTwilioPhoneRealtimeStream(ws) {
     if (frame.event === "stop") {
       await cleanup("caller-hung-up");
     }
-  });
+  };
 
   ws.on("close", () => cleanup("websocket-closed"));
   ws.on("error", error => {
@@ -58598,7 +58619,8 @@ function handleTwilioPhoneRealtimeStream(ws) {
   });
 }
 
-const phoneRealtimeWss = new WebSocketServer({ noServer: true });
+// maxPayload: the library's default is 100 MiB per message, and the first message of a socket is parsed before anything proves who is calling. A Twilio media frame is a few hundred bytes; 256 KiB is far more than it needs.
+const phoneRealtimeWss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
 phoneRealtimeWss.on("connection", ws => handleTwilioPhoneRealtimeStream(ws));
 
 // The shape a new business starts from: the seed file that ships with the app (reference lists and an example profile whose data is stripped), never the live default record.
@@ -58646,6 +58668,8 @@ async function resolveRequestSpace(req, url) {
     // A business that does not exist, or has been closed, is not reached at all: a sign-in, a session, a cookie or a phone number for it lands in the default space, where it matches nothing.
     return info && !info.closedAt ? { space, info } : DEFAULT_ROUTE;
   } catch (error) {
+    // A body that is too large or a request that ended half way is answered as that (413 / 400) instead of carrying on to the sign-in with a body that was never read.
+    if (error?.userSafe && error.httpStatus >= 400 && error.httpStatus < 500) throw error;
     recordServerError({ source: "business-space-resolve", message: error.message });
     return DEFAULT_ROUTE;
   }
@@ -58661,7 +58685,8 @@ async function resolveRequestSpaceUnchecked(req, url) {
   }
   if (byEmail || byNumber) {
     let body = {};
-    try { body = parseBodyText(req, await bufferBodyText(req)); } catch { return businessSpaces.DEFAULT_SPACE; }
+    const bodyText = await bufferBodyText(req); // too large / cut off: the fault reaches the caller as a 413 / 400
+    try { body = parseBodyText(req, bodyText); } catch { return businessSpaces.DEFAULT_SPACE; }
     if (byEmail) return spaceDirectory.spaceForEmail(body.email);
     // A call: the business whose number is on OUR side of it. An incoming call dialled that number (To); for a call we placed, the status callbacks name it as the caller (From).
     // A number nobody has claimed is today's single global number, the default space.
@@ -58691,8 +58716,16 @@ function withSpaceChangeLock(space, work) {
 }
 const ADMIN_CHANGE_PATH = /^\/api\/(team|admin|platform)\//;
 
+// The request line and Host header come straight from the caller. A request line like "GET // HTTP/1.1" or a Host header with a space in it made new URL() throw outside any handler, which Node
+// treats as an unhandled rejection: the whole server stopped for everyone. Anything that cannot be read as a URL is now answered 400 and nothing else happens.
+function parseRequestUrl(req) {
+  try { return new URL(req.url, `http://${req.headers.host}`); } catch { /* try again without the Host header */ }
+  try { return new URL(req.url, "http://localhost"); } catch { return null; }
+}
+
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const url = parseRequestUrl(req);
+  if (!url) return send(res, 400, { error: "Bad request" });
   try {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
     const route = await resolveRequestSpace(req, url);
@@ -58729,8 +58762,8 @@ server.on("error", error => {
 // listener only routes the right path to that handler and rejects
 // everything else, including the feature being off.
 server.on("upgrade", (req, socket, head) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  if (url.pathname !== "/api/voice/phone/stream" || !phoneRealtimeStreamingEnabled(process.env)) {
+  const url = parseRequestUrl(req);
+  if (!url || url.pathname !== "/api/voice/phone/stream" || !phoneRealtimeStreamingEnabled(process.env)) {
     socket.destroy();
     return;
   }

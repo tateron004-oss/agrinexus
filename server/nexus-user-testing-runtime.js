@@ -86,6 +86,8 @@ function present(env, name) {
   return Boolean(value && value !== "false" && !/replace|example|your_|changeme/i.test(value));
 }
 
+const USER_TESTING_LIST_LIMITS = Object.freeze({ records: 2000, receipts: 1000, auditEvents: 1000, predictions: 1000, consentGates: 1000, executions: 1000, verifications: 1000 });
+
 function ensureUserTestingStore(db) {
   if (!db.profile || typeof db.profile !== "object") db.profile = {};
   if (!db.profile.nexusUserTestingRuntime || typeof db.profile.nexusUserTestingRuntime !== "object") {
@@ -94,6 +96,8 @@ function ensureUserTestingStore(db) {
   const store = db.profile.nexusUserTestingRuntime;
   for (const key of ["records", "receipts", "auditEvents", "predictions", "consentGates", "executions", "verifications"]) {
     if (!Array.isArray(store[key])) store[key] = [];
+    // Every list is newest first and none was ever limited, so the shared record grew with every call. The oldest entries beyond the limit are dropped (testing notes are kept longest).
+    if (store[key].length > USER_TESTING_LIST_LIMITS[key]) store[key].length = USER_TESTING_LIST_LIMITS[key];
   }
   return store;
 }

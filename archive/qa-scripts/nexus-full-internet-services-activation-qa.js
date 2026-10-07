@@ -314,7 +314,10 @@ async function runRuntimeQa() {
     assert(["blocked_missing_credentials", "consent_required", "confirmation_required", "local_prepared"].includes(smsPrepare.body.gate.gateStatus), "SMS should be gated or credential-blocked");
     assert(smsPrepare.body.receipt.whatDidNotHappen.join(" ").includes("did not expose secrets"), "SMS receipt should preserve secret boundary");
 
-    const search = await request("POST", "/api/nexus/internet-services/search", { query: "climate-smart agriculture Africa", laneId: "tavily-live-search" });
+    // A search can spend a real search key, so it needs a sign-in (the same as /api/nexus/knowledge/query).
+    const searchSignedOut = await request("POST", "/api/nexus/internet-services/search", { query: "climate-smart agriculture Africa", laneId: "tavily-live-search" });
+    assert.strictEqual(searchSignedOut.status, 401, "search endpoint should require a sign-in");
+    const search = await request("POST", "/api/nexus/internet-services/search", { query: "climate-smart agriculture Africa", laneId: "tavily-live-search" }, cookie);
     assert.strictEqual(search.status, 200, "search endpoint should respond");
     assert.strictEqual(search.body.ok, true, "search endpoint should be ok");
     assert.notStrictEqual(search.body.gateStatus, "live_executed", "unconfigured search should not claim live execution");
