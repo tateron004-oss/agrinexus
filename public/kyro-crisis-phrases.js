@@ -98,6 +98,8 @@
     /\bsina (?:sababu|sababu ya|sababu za) (?:ya )?kuishi\b/,
     /\bmaisha (?:yangu )?hayana (?:maana|thamani)\b/,
     /\b(?:nafikiria|ninafikiria|nimeamua) (?:kujiua|kujidhuru)\b/,
+    // "I am hurting myself" / "I have hurt myself on purpose": the verb alone is enough, it has no everyday meaning
+    /\b(?:najidhuru|ninajidhuru|nimejidhuru)\b/,
     /\bnina (?:bunduki|kisu|sumu)\b[^.!?]{0,60}\b(?:kuitumia|kujiua|kujidhuru|nafikiria)\b/
   ];
 
