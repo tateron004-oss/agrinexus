@@ -11,7 +11,7 @@ test("Start as User obtains a server-owned authoritative guest session", () => {
   assert.match(server, /\/api\/auth\/guest-session/);
   assert.match(server, /authType: "authoritative-guest"/);
   assert.match(server, /await authoritativeRuntimeUser\(guest\)/);
-  assert.match(server, /issueDurableAuthToken\(guest\.id\)/);
+  assert.match(server, /issueDurableAuthToken\(guest\.id, Date\.now\(\), process\.env, businessSpaces\.currentSpace\(\)\)/);
   assert.match(server, /guest: true/);
   assert.match(app, /request\("\/api\/auth\/guest-session"/);
   assert.match(app, /data\?\.auth\?\.authoritative !== true/);
