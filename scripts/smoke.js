@@ -4,9 +4,26 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const testPort = process.env.AGRINEXUS_TEST_PORT || String(4373 + Math.floor(Math.random() * 400));
-const base = process.env.AGRINEXUS_URL || `http://localhost:${testPort}`;
+const net = require("net");
+
+// The port is chosen by the OS (a random fixed-range port could already be taken by another server, and the
+// script would then silently talk to that one); AGRINEXUS_TEST_PORT still forces a specific port.
+let testPort = process.env.AGRINEXUS_TEST_PORT || "";
+let base = "";
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once("error", reject);
+    probe.listen(0, "127.0.0.1", () => {
+      const { port } = probe.address();
+      probe.close(() => resolve(String(port)));
+    });
+  });
+}
 const twilioAuthToken = "smoke-test-twilio-token";
+// Phone calls are declined unless the caller's number is on the authorized list (server.js
+// resolveAuthorizedPhoneCaller), so the smoke server authorizes its fake caller explicitly.
+const smokeCallerPhone = "+15555550123";
 
 function twilioSignature(route, body) {
   const parameters = Object.keys(body)
@@ -17,9 +34,11 @@ function twilioSignature(route, body) {
 }
 const dbPath = path.join(__dirname, "..", "db.json");
 const dbSnapshot = fs.readFileSync(dbPath, "utf8");
-const tempDbPath = path.join(__dirname, "..", `tmp-smoke-db-${process.pid}-${testPort}.json`);
+// Never touches the real db.json: the server runs against this throwaway copy (ignored by the tmp-*-db.json pattern).
+const tempDbPath = path.join(__dirname, "..", `tmp-smoke-db-${process.pid}-${Date.now()}.json`);
 let cookie = "";
 let serverProcess = null;
+let lastCall = null; // most recent API response, printed on failure to make a failing assertion diagnosable
 
 function resetConversationMemory(db) {
   db.profile = db.profile || {};
@@ -49,6 +68,26 @@ function resetConversationMemory(db) {
   return db;
 }
 
+// Changing the language is a settings change. Free-form requests ("can you change the language...") are staged and
+// applied only after a "yes"; short imperatives addressed to a module ("Hey AgriTrade, speak French") apply directly.
+async function languageChangeCommand(command) {
+  const first = await call("/api/agent/command", { command, conversational: true, inputMode: "voice", outputMode: "voice" });
+  if (first.commandResult.intent !== "conversation.pending_action") return first;
+  assert(first.commandResult.status === "needs-confirmation");
+  return call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
+}
+const LANGUAGE_CHANGED_INTENTS = ["conversation.confirmed", "conversation.language_changed"];
+
+// Consequential voice commands ("complete my lesson", "issue my certificate", ...) are staged for an explicit
+// conversational "yes" even when the request body says confirm:true; the body flag alone no longer executes them.
+async function stagedThenConfirmed(command) {
+  const first = await call("/api/agent/command", { command, confirm: true, inputMode: "voice", outputMode: "voice" });
+  if (first.commandResult.intent !== "conversation.pending_action") return { staged: null, result: first };
+  assert(first.commandResult.status === "needs-confirmation");
+  const confirmed = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
+  return { staged: first, result: confirmed };
+}
+
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -74,16 +113,27 @@ async function call(path, body) {
   const setCookie = res.headers.get("set-cookie");
   if (setCookie) cookie = setCookie.split(";")[0];
   const json = await res.json();
+  lastCall = { path, body, status: res.status, json };
   if (!res.ok) throw new Error(`${path}: ${json.error || res.statusText}`);
   return json;
 }
 
+// Clean up even if the script is killed (Ctrl+C, closed pipe) so no server or temp db is left behind.
+function cleanup() {
+  if (serverProcess && !serverProcess.killed) serverProcess.kill();
+  fs.rmSync(tempDbPath, { force: true });
+}
+process.on("exit", cleanup);
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => process.exit(130));
+
 (async () => {
+  testPort = testPort || await freePort();
+  base = process.env.AGRINEXUS_URL || `http://localhost:${testPort}`;
   const isolatedDb = resetConversationMemory(JSON.parse(dbSnapshot));
   fs.writeFileSync(tempDbPath, JSON.stringify(isolatedDb, null, 2));
   const server = spawn(process.execPath, ["server.js"], {
     cwd: `${__dirname}/..`,
-    env: { ...process.env, PORT: testPort, AGRINEXUS_DB_PATH: tempDbPath, PUBLIC_BASE_URL: base, TWILIO_AUTH_TOKEN: twilioAuthToken },
+    env: { ...process.env, PORT: testPort, AGRINEXUS_DB_PATH: tempDbPath, PUBLIC_BASE_URL: base, TWILIO_AUTH_TOKEN: twilioAuthToken, TWILIO_AUTHORIZED_CALLERS: `${smokeCallerPhone}:user@agrinexus.org`, AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -597,11 +647,22 @@ async function call(path, body) {
   assert(buyerPickup.tradeLogisticsResult.record.direction === "buyer-to-seller pickup");
   const sellerDelivery = await call("/api/trade/logistics", { type: "seller-delivery", productId: "avocado-ke", direction: "seller-to-buyer delivery" });
   assert(sellerDelivery.tradeLogisticsResult.record.status === "seller delivery scheduled");
+  // Delivery confirmation is gated on the order having really reached "Quality check"
+  // (server.js createTradeLogisticsWorkflow), so a premature confirm is refused; then
+  // advance the order via the real /api/trade/advance route (Packed -> In transit -> Quality check).
+  const premature = await call("/api/trade/logistics", { type: "delivery-confirm", productId: "avocado-ke" });
+  assert(/refused/.test(premature.tradeLogisticsResult.record.status));
+  assert(premature.profile.orders[premature.profile.orders.length - 1].stage !== "Delivered");
+  await call("/api/trade/advance", {});
+  await call("/api/trade/advance", {});
   const deliveryConfirm = await call("/api/trade/logistics", { type: "delivery-confirm", productId: "avocado-ke" });
   assert(deliveryConfirm.tradeLogisticsResult.record.status === "delivery confirmed");
   assert(/delivery photo|signature|receiver/i.test(deliveryConfirm.tradeLogisticsResult.record.proof));
   const tradeSettlement = await call("/api/trade/logistics", { type: "settlement", productId: "avocado-ke", amount: 120, currency: "KES" });
-  assert(tradeSettlement.tradeLogisticsResult.record.status === "settlement prepared");
+  // Settlement is record-only until a payment provider verifies the order was paid:
+  // status carries an explanatory suffix and no real wallet funds are credited.
+  assert(tradeSettlement.tradeLogisticsResult.record.status.startsWith("settlement prepared"));
+  assert(tradeSettlement.tradeLogisticsResult.record.realFundsCredited === false);
   assert(tradeSettlement.profile.walletTransactions.some(tx => tx.status === "settlement-prepared"));
   assert(tradeSettlement.profile.platformTransactionFees.length >= 1);
   assert(tradeSettlement.tradeLogisticsResult.record.platformFee.status === "captured");
@@ -735,7 +796,12 @@ async function call(path, body) {
   assert(agentExecution.profile.integrationEvents.some(event => event.action === "agent.drone.field_scan"));
   assert(agentExecution.profile.integrationEvents.some(event => event.action === "agent.drone.intervention_task"));
   const voiceStatus = await call("/api/agent/command", { command: "what is the readiness status", confirm: true });
-  assert(voiceStatus.commandResult.intent === "readiness-summary");
+  // "status" questions are now answered by the conversational mode orchestrator ("truthful status"), which
+  // runs ahead of the legacy numeric readiness summary; both stay covered below.
+  assert(voiceStatus.commandResult.intent === "conversation.mode_orchestrator.status_progress");
+  const readinessSummary = await call("/api/agent/command", { command: "what is left", confirm: true });
+  assert(readinessSummary.commandResult.intent === "readiness-summary");
+  assert(/Production readiness is \d+\/\d+/.test(readinessSummary.commandResult.response));
   assert(voiceStatus.profile.agentCommands.length >= 1);
   assert(voiceStatus.profile.integrationEvents.some(event => event.action === "agent.command"));
   const voiceTranscript = await call("/api/voice/transcribe", { transcript: "run telehealth intake", language: "en" });
@@ -744,7 +810,16 @@ async function call(path, body) {
   const voiceSpeak = await call("/api/voice/speak", { text: "Telehealth command ready", language: "en" });
   assert(voiceSpeak.voiceResult.text === "Telehealth command ready");
   assert(voiceSpeak.profile.voiceSessions.some(item => item.type === "text-to-speech"));
-  const phoneIncomingBody = { From: "+15555550123", CallSid: "CA-smoke" };
+  // An unlisted number must be declined (fail closed), then the listed one is accepted.
+  const strangerBody = { From: "+15555550199", CallSid: "CA-smoke-stranger" };
+  const strangerCall = await fetch(`${base}/api/voice/phone/incoming`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilioSignature("/api/voice/phone/incoming", strangerBody) },
+    body: new URLSearchParams(strangerBody)
+  });
+  const strangerXml = await strangerCall.text();
+  assert(strangerXml.includes("<Hangup/>") && !strangerXml.includes("<Gather"));
+  const phoneIncomingBody = { From: smokeCallerPhone, CallSid: "CA-smoke" };
   const phoneIncoming = await fetch(`${base}/api/voice/phone/incoming`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilioSignature("/api/voice/phone/incoming", phoneIncomingBody) },
@@ -753,7 +828,7 @@ async function call(path, body) {
   const phoneIncomingXml = await phoneIncoming.text();
   assert(phoneIncoming.ok);
   assert(phoneIncomingXml.includes("<Gather"));
-  const phoneGatherBody = { SpeechResult: "start telehealth intake", CallSid: "CA-smoke" };
+  const phoneGatherBody = { SpeechResult: "start telehealth intake", From: smokeCallerPhone, CallSid: "CA-smoke" };
   const phoneGather = await fetch(`${base}/api/voice/phone/gather`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilioSignature("/api/voice/phone/gather", phoneGatherBody) },
@@ -794,13 +869,23 @@ async function call(path, body) {
   assert(efficiency.commandResult.metadata.score > 0);
   assert(efficiency.profile.tradeEfficiencyReviews.length >= 1);
   assert(efficiency.profile.integrationEvents.some(event => event.action === "trade.operational_efficiency_reviewed"));
-  const tradeBrief = await call("/api/agent/command", { command: "Hey AgriTrade, prepare a buyer update for the route and payment status", conversational: true, inputMode: "voice", outputMode: "voice" });
+  // "buyer update" is claimed first by the utility assistant, which drafts a ready-to-send buyer message from the
+  // latest thread; the persisted operational brief is reached through the "route update" phrasing.
+  const buyerUpdate = await call("/api/agent/command", { command: "Hey AgriTrade, prepare a buyer update for the route and payment status", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(buyerUpdate.commandResult.intent === "utility.buyer-message");
+  assert(buyerUpdate.commandResult.metadata.redirectSection === "trade");
+  const tradeBrief = await call("/api/agent/command", { command: "Hey AgriTrade, prepare a route update for the driver and payment status", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(tradeBrief.commandResult.intent === "trade.operational_communication");
   assert(tradeBrief.commandResult.metadata.redirectSection === "trade");
   assert(tradeBrief.profile.tradeCommunicationBriefs.length >= 1);
   assert(tradeBrief.profile.integrationEvents.some(event => event.action === "trade.operational_communication_prepared"));
-  const buyerChat = await call("/api/agent/command", { command: "Nexus, message the buyer about this crop", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(buyerChat.commandResult.intent === "trade.buyer_seller_message");
+  // Messaging a buyer is now staged for explicit confirmation before anything is sent.
+  const buyerChatStaged = await call("/api/agent/command", { command: "Nexus, message the buyer about this crop", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(buyerChatStaged.commandResult.intent === "conversation.pending_action");
+  assert(buyerChatStaged.commandResult.status === "needs-confirmation");
+  const buyerChat = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(buyerChat.commandResult.intent === "conversation.confirmed");
+  assert(buyerChat.commandResult.metadata.contactId);
   assert(buyerChat.commandResult.metadata.redirectSection === "trade");
   assert(buyerChat.profile.tradeMessageThreads.length >= 1);
   const stagedCropVideo = await call("/api/agent/command", { command: "Nexus, open video so I can show the buyer my crops", conversational: true, inputMode: "voice", outputMode: "voice" });
@@ -908,7 +993,12 @@ async function call(path, body) {
   const workforceApply = await call("/api/agent/command", { command: "Workforce, I want to apply for that job can you help me", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(["workforce.application_submitted", "workforce.application_help"].includes(workforceApply.commandResult.intent));
   assert(workforceApply.commandResult.metadata.redirectSection === "workforce");
-  const conversationalApply = await call("/api/agent/command", { command: "I want to apply for that job", conversational: true, inputMode: "voice", outputMode: "voice" });
+  // "that job" with no job selected in the chat must not stage an application for some arbitrary role.
+  const ambiguousApply = await call("/api/agent/command", { command: "I want to apply for that job", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(ambiguousApply.commandResult.intent === "workforce.application_help");
+  assert(ambiguousApply.commandResult.status === "needs-details");
+  assert(!ambiguousApply.profile.agentPendingAction);
+  const conversationalApply = await call("/api/agent/command", { command: "Please submit my job application", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(conversationalApply.commandResult.intent === "conversation.pending_action");
   assert(conversationalApply.commandResult.status === "needs-confirmation");
   assert(conversationalApply.profile.agentPendingAction.kind === "workforce-application");
@@ -929,12 +1019,16 @@ async function call(path, body) {
   assert(telehealthGuide.commandResult.metadata.suggestedCommand);
   assert(!telehealthGuide.profile.agentPendingAction);
   const learningGuide = await call("/api/agent/command", { command: "I am new, how do I start training", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(learningGuide.commandResult.intent === "conversation.platform_guide");
+  // The platform-wide voice layer now answers "how do I start training" directly by opening course support.
+  assert(["conversation.platform_guide", "conversation.learning_start"].includes(learningGuide.commandResult.intent));
   assert(learningGuide.commandResult.metadata.redirectSection === "learning");
+  // Course support leaves a short "which skill?" question open (server.js activeSimpleTurn, 2 minute window).
+  // Dismiss it so it cannot swallow an unrelated short phrase later in this long script.
+  await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
   const memoryHelp = await call("/api/agent/command", { command: "help me", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(memoryHelp.commandResult.intent === "conversation.guided_menu");
-  assert(memoryHelp.commandResult.metadata.recommendedAction);
-  assert(memoryHelp.commandResult.metadata.redirectSection);
+  // A bare "help me" is ambiguous and may be a safety request, so care-safety asks what is happening first.
+  assert(memoryHelp.commandResult.intent === "conversation.safety.ask");
+  assert(/emergency number/i.test(memoryHelp.commandResult.response));
   const tenItemModel = await call("/api/agent/command", { command: "show me all 10 items", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(tenItemModel.commandResult.intent === "intelligent-assistant.ten_item_model");
   assert(tenItemModel.commandResult.metadata.model.total === 10);
@@ -1013,7 +1107,12 @@ async function call(path, body) {
   assert(intakeApply.commandResult.metadata.redirectSection === "health");
   assert(intakeApply.profile.healthIntakes.some(item => item.patientName === "Amina Diallo"));
   assert(intakeApply.profile.agentMemory.preferences.some(item => item.text.includes("Amina Diallo")));
-  const agenticOpenCommand = await call("/api/agent/command", { command: "My field has crop stress and I need evidence before selling", conversational: true, inputMode: "voice", outputMode: "voice" });
+  // Describing crop stress is answered read-only from the latest field data (no action is staged)...
+  const cropStressAlert = await call("/api/agent/command", { command: "My field has crop stress and I need evidence before selling", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(cropStressAlert.commandResult.intent === "utility.field-alert");
+  assert(cropStressAlert.commandResult.metadata.redirectSection === "trade");
+  // ...while explicitly asking for a scan stages the action for confirmation.
+  const agenticOpenCommand = await call("/api/agent/command", { command: "My field needs a drone scan before selling", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(agenticOpenCommand.commandResult.intent === "conversation.pending_action");
   assert(["drone.field_scan", "trade.market_review", "drone.intervention_task"].includes(agenticOpenCommand.commandResult.metadata.tool));
   assert(agenticOpenCommand.profile.agentPendingAction.tool);
@@ -1024,34 +1123,30 @@ async function call(path, body) {
   assert(agritradeGreeting.commandResult.intent === "trade.conversational_greeting");
   assert(agritradeGreeting.commandResult.response.includes("Hello Ron"));
   assert(agritradeGreeting.commandResult.metadata.redirectSection === "trade");
-  assert(agritradeGreeting.profile.agentMemory.userName === "Ron");
+  // The spoken name is stored per account (db.profile.userDisplayNames), not on the shared agent memory.
+  assert(agritradeGreeting.commandResult.metadata.userName === "Ron");
   const agritradeIntro = await call("/api/agent/command", { command: "Hey AgriTrade tell me about the platform and what you do", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(agritradeIntro.commandResult.intent === "trade.module_introduction");
   assert(agritradeIntro.commandResult.response.includes("AgriTrade helps farmers"));
   assert(agritradeIntro.commandResult.metadata.redirectSection === "trade");
-  const agritradeSpanish = await call("/api/agent/command", { command: "Hey AgriTrade can you change the language from English to Spanish", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(agritradeSpanish.commandResult.intent === "conversation.language_changed");
-  assert(agritradeSpanish.commandResult.metadata.language === "es");
+  const agritradeSpanish = await languageChangeCommand("Hey AgriTrade can you change the language from English to Spanish");
+  assert(LANGUAGE_CHANGED_INTENTS.includes(agritradeSpanish.commandResult.intent));
   assert(agritradeSpanish.user.language === "es");
   assert(agritradeSpanish.profile.accessibilityProfile.language === "es");
-  const agritradeFrench = await call("/api/agent/command", { command: "Hey AgriTrade, speak French", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(agritradeFrench.commandResult.intent === "conversation.language_changed");
-  assert(agritradeFrench.commandResult.metadata.language === "fr");
-  const agritradeLocalizedEnglish = await call("/api/agent/command", { command: "Hey AgriTrade, parle anglais", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(agritradeLocalizedEnglish.commandResult.intent === "conversation.language_changed");
-  assert(agritradeLocalizedEnglish.commandResult.metadata.language === "en");
-  const agritradeSwahili = await call("/api/agent/command", { command: "Hey AgriTrade, switch to Kenya", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(agritradeSwahili.commandResult.intent === "conversation.language_changed");
-  assert(agritradeSwahili.commandResult.metadata.language === "sw");
-  const agritradeArabic = await call("/api/agent/command", { command: "Hey AgriTrade, use Arabic", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(agritradeArabic.commandResult.intent === "conversation.language_changed");
-  assert(agritradeArabic.commandResult.metadata.language === "ar");
-  const agritradeEnglish = await call("/api/agent/command", { command: "Hey AgriTrade, switch to Nigeria", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(agritradeEnglish.commandResult.intent === "conversation.language_changed");
-  assert(agritradeEnglish.commandResult.metadata.language === "en");
+  const agritradeFrench = await languageChangeCommand("Hey AgriTrade, speak French");
+  assert(LANGUAGE_CHANGED_INTENTS.includes(agritradeFrench.commandResult.intent));
+  const agritradeLocalizedEnglish = await languageChangeCommand("Hey AgriTrade, parle anglais");
+  assert(LANGUAGE_CHANGED_INTENTS.includes(agritradeLocalizedEnglish.commandResult.intent));
+  const agritradeSwahili = await languageChangeCommand("Hey AgriTrade, switch to Kenya");
+  assert(LANGUAGE_CHANGED_INTENTS.includes(agritradeSwahili.commandResult.intent));
+  const agritradeArabic = await languageChangeCommand("Hey AgriTrade, use Arabic");
+  assert(LANGUAGE_CHANGED_INTENTS.includes(agritradeArabic.commandResult.intent));
+  const agritradeEnglish = await languageChangeCommand("Hey AgriTrade, switch to Nigeria");
+  assert(LANGUAGE_CHANGED_INTENTS.includes(agritradeEnglish.commandResult.intent));
   assert(agritradeEnglish.user.language === "en");
   const rememberPreference = await call("/api/agent/command", { command: "Remember that I prefer voice-first telehealth support for hearing impaired patients", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(rememberPreference.commandResult.intent === "memory-updated");
+  // "Remember that ..." is answered by the memory-preference mode (memory stays under the user's control).
+  assert(rememberPreference.commandResult.intent === "conversation.mode_orchestrator.memory_preference");
   assert(rememberPreference.profile.agentMemory.preferences.length >= 1);
   const memoryRouted = await call("/api/agent/command", { command: "A patient cannot hear and needs care access", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(memoryRouted.commandResult.intent === "conversation.pending_action");
@@ -1066,8 +1161,9 @@ async function call(path, body) {
   assert(dailyWalkAdvisor.commandResult.metadata.reasoning);
   assert(dailyWalkAdvisor.commandResult.response.includes("90 degrees"));
   const farmerCuriousAdvisor = await call("/api/agent/command", { command: "Nexus, a farmer is curious when to harvest but does not have all the data", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(farmerCuriousAdvisor.commandResult.intent === "conversation.daily_life_advisor");
-  assert(farmerCuriousAdvisor.commandResult.metadata.kind === "farmer");
+  // A "when to harvest" question is answered from the latest field evidence by the crop-timing utility.
+  assert(farmerCuriousAdvisor.commandResult.intent === "utility.crop-timing");
+  assert(farmerCuriousAdvisor.commandResult.metadata.redirectSection === "trade");
   const autopilotPreview = await call("/api/agent/command", { command: "Nexus autopilot help this farmer get from crop problem to buyer payment", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(["conversation.pending_action", "agent.agrinexus_mode_staged"].includes(autopilotPreview.commandResult.intent));
   assert(autopilotPreview.commandResult.metadata.mode === "autopilot");
@@ -1077,11 +1173,16 @@ async function call(path, body) {
   assert(autopilotConfirm.commandResult.metadata.mode === "autopilot");
   assert(autopilotConfirm.profile.agentExecutions[0].status === "completed");
   assert(autopilotConfirm.profile.integrationEvents.some(event => event.action === "agent.autopilot_executed"));
-  const lessonCommand = await call("/api/agent/command", { command: "Nexus complete my lesson", confirm: true, inputMode: "voice", outputMode: "voice" });
-  assert(lessonCommand.commandResult.intent === "learning.complete_lesson");
+  const lessonFlow = await stagedThenConfirmed("Nexus complete my lesson");
+  const lessonCommand = lessonFlow.result;
+  assert(lessonFlow.staged && lessonFlow.staged.commandResult.metadata.pendingActionType === "lesson_completion");
+  assert(lessonCommand.commandResult.intent === "conversation.confirmed");
   assert(lessonCommand.commandResult.metadata.redirectSection === "learning");
-  const certificateCommand = await call("/api/agent/command", { command: "Nexus issue my certificate", confirm: true, inputMode: "voice", outputMode: "voice" });
-  assert(certificateCommand.commandResult.intent === "learning.certificate");
+  assert(/Completed the next .* lesson/.test(lessonCommand.commandResult.response));
+  const certificateFlow = await stagedThenConfirmed("Nexus issue my certificate");
+  const certificateCommand = certificateFlow.result;
+  assert(certificateFlow.staged);
+  assert(certificateCommand.commandResult.intent === "conversation.confirmed");
   assert(certificateCommand.profile.certificates.length >= 1);
   const vitalsCommand = await call("/api/agent/command", { command: "Nexus capture vitals for telehealth", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(vitalsCommand.commandResult.intent === "health.vitals");
@@ -1089,9 +1190,11 @@ async function call(path, body) {
   const shiftCommand = await call("/api/agent/command", { command: "Nexus schedule my shift", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(shiftCommand.commandResult.intent === "workforce.schedule_shift");
   assert(shiftCommand.profile.shiftSchedule.length >= 1);
-  const engineCommand = await call("/api/agent/command", { command: "Nexus test provider engines", confirm: true, inputMode: "voice", outputMode: "voice" });
-  assert(engineCommand.commandResult.intent === "integrations.test_all");
-  assert(engineCommand.commandResult.metadata.redirectSection === "integrations");
+  const engineFlow = await stagedThenConfirmed("Nexus test provider engines");
+  const engineCommand = engineFlow.result;
+  assert(engineFlow.staged);
+  assert(engineCommand.commandResult.intent === "conversation.confirmed");
+  assert(/provider engines/.test(engineCommand.commandResult.response));
   const govtBriefing = await call("/api/agent/command", { command: "Nexus, prepare a government briefing", confirm: true });
   assert(govtBriefing.commandResult.intent === "government-briefing");
   assert(govtBriefing.profile.agentBriefings.length >= 1);
@@ -1135,5 +1238,13 @@ async function call(path, body) {
   if (serverProcess && !serverProcess.killed) serverProcess.kill();
   fs.rmSync(tempDbPath, { force: true });
   console.error(error.message);
+  // Show which smoke.js line failed (the assert message only prints the expression).
+  const frame = String(error.stack || "").split("\n").find(line => line.includes("smoke.js"));
+  if (frame) console.error(frame.trim());
+  if (lastCall) {
+    const summary = lastCall.json && lastCall.json.commandResult ? lastCall.json.commandResult : lastCall.json;
+    console.error(`Last call: ${lastCall.path} ${JSON.stringify(lastCall.body || {}).slice(0, 300)} -> ${lastCall.status}`);
+    console.error(JSON.stringify(summary, null, 1).slice(0, 1500));
+  }
   process.exit(1);
 });

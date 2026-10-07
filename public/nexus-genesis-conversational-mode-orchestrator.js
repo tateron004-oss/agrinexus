@@ -597,6 +597,19 @@
     return patterns.some((pattern) => pattern.test(lower));
   }
 
+  // True when the utterance is a greeting opener followed by nothing but an assistant name or a pleasantry.
+  function isGreetingOnly(lower) {
+    const withoutNames = String(lower || "").replace(/\b(nexus|agrinexus|agri nexus|agritrade|agri trade|kyro|there|everyone|again)\b/g, " ").replace(/\s+/g, " ").trim();
+    const opener = withoutNames.match(/^(hello|hi|hey|good morning|good afternoon|good evening|are you there|can you help me)\b/);
+    if (!opener) return false;
+    const remainder = withoutNames.slice(opener[0].length).replace(/[^a-z\s']/g, " ").replace(/\s+/g, " ").trim();
+    if (remainder === "" || /^(how are you( doing)?( today)?|how is it going|can you hear me( now| ok| okay)?|are you (there|with me|listening|ready)( today| now)?|can you help me)$/.test(remainder)) return true;
+    // "Hi, my name is Grace" is a self-introduction the greeting reply handles (it greets by name). When the caller
+    // addressed a specific module ("Hi AgriTrade, my name is Ron") that module's own greeting must answer instead.
+    const addressedModule = /\b(agritrade|agri trade)\b/.test(String(lower || ""));
+    return !addressedModule && /^(my name is|this is|i am|i'm) [a-z'-]+$/.test(remainder);
+  }
+
   function detectSignals(input = "", context = {}) {
     const raw = String(input || "").trim();
     const lower = norm(raw);
@@ -617,7 +630,9 @@
       status: hasAny(lower, [/\b(what is happening|are you still working|did it send|what is blocked|what are we waiting for|what step are we on|what failed|did you save|where is my shipment|status|progress)\b/]),
       hearingCheck: hasAny(lower, [/\b(can you hear me|do you hear me|are you listening|are you hearing me|you hear me|you listening|is the mic working|microphone working|mic working|are you there)\b/]),
       capabilityQuestion: hasAny(lower, [/\b(what can you do|what can do|what can nexus do|how can you help|what do you do|show me nexus modes|tell me about yourself|who are you)\b/]) && !/\b(patient|provider|doctor|clinic|pharmacy|medicine|medication|crop|farm|farmer|weather|platform|agri\s*nexus|agrinexus|nexus genesis)\b/.test(lower),
-      greeting: hasAny(lower, [/^(hello|hi|hey|good morning|good afternoon|good evening|hello nexus|nexus hello|are you there|can you help me)\b/, /\bi don't know what to ask\b/]),
+      // A greeting is only a greeting. "Hey AgriTrade, I want to speak to the buyer" or "Hi AgriTrade, my name is Ron"
+      // start with "hey"/"hi" but carry a request; treating them as greetings answered with the canned "Hello. I am Nexus."
+      greeting: isGreetingOnly(lower) || hasAny(lower, [/\bi don't know what to ask\b/]),
       casual: hasAny(lower, [/\b(how are you|difficult morning|i'm nervous|i am nervous|i'm tired|i am tired|frustrated|that was helpful|help me think|just need someone)\b/, /^(nexus,\s*)?(talk to me|can we talk|let'?s talk|just talk|speak with me|stay with me)\b/]),
       teaching: hasAny(lower, [/\b(explain simply|teach me|step by step|give me an example|show me how|quiz me|check whether i understand|repeat the last|use fewer words|use an analogy|explain it in my language)\b/]),
       professional: hasAny(lower, [/\b(professional analysis|clinical|clinician|pharmacist|agronomist|methodology|evidence strength|guideline|differential|implementation considerations|policy implications|limitations)\b/]),
@@ -634,7 +649,8 @@
       handoff: hasAny(lower, [/\b(summary for my doctor|send to pharmacist|share with caregiver|prepare a message for|handoff|referral|provider message|buyer message|family member|community worker)\b/]),
       uncertainty: hasAny(lower, [/\b(not certain|need more information|sources disagree|could not verify|do not want to guess|outdated|depends on your location|limited evidence|qualified professional)\b/]),
       memory: hasAny(lower, [/\b(remember that|do not remember|always ask before saving|show me what you remember|forget my role|do not mention this topic)\b/]),
-      failure: hasAny(lower, [/\b(microphone failed|can't hear|cannot hear|speech failed|network disconnect|provider timed out|could not save|source cannot be retrieved|lost connection)\b/])
+      // "A patient cannot hear and needs care access" describes a person's hearing need, not a microphone failure.
+      failure: !/\b(patient|he|she|they|grandma|grandmother|grandfather|child|someone|person|farmer|client|learner|student)\s+(can't|cannot|can not|cant|does not|doesn't)\s+hear\b/.test(lower) && hasAny(lower, [/\b(microphone failed|can't hear|cannot hear|speech failed|network disconnect|provider timed out|could not save|source cannot be retrieved|lost connection)\b/])
     };
     signals.openCuriosity = signals.hasQuestion && !signals.hasActionVerb && !signals.sourceRequest && !signals.status;
     return signals;
@@ -800,7 +816,7 @@
     const highRiskAction = signals.hasActionVerb && /\b(send|call|message|whatsapp|telegram|email|schedule|book|pay|submit|delete|share|dispatch|buy|checkout|refill|prescribe|diagnose)\b/.test(signals.lower);
     const existingRouterMustHandle = /\b(change|switch|set)\s+(the\s+)?language\s+(to\s+)?(english|spanish|french|swahili|arabic|portuguese)\b/.test(signals.lower)
       || /\b(speak|use)\s+(english|spanish|french|swahili|arabic|portuguese)\b/.test(signals.lower)
-      || /\b(what time is it|current time|what date is it|today's date|what needs my attention today|weather in|weather for|weather today|weather like|hows the weather|how's the weather|temp like|temperature in|forecast for|when should i harvest|remind me about|route delays|prepare a buyer message|field alert|health safety reminder|play .*music|stop .*music|manage this situation|what works without providers|how long until my shipment|what time is my appointment|what is next today|what should i do next)\b/.test(signals.lower)
+      || /\b(what time is it|current time|what date is it|today's date|what needs my attention today|weather in|weather for|weather today|weather like|hows the weather|how's the weather|temp like|temperature in|forecast for|when should i harvest|remind me about|route delays|prepare an? (?:buyer |trade |operations? |route |logistics |government |investor |ngo |donor )?(?:message|update|brief(?:ing)?|report)|field alert|health safety reminder|play .*music|stop .*music|manage this situation|what works without providers|how long until my shipment|what time is my appointment|what is next today|what should i do next|summari[sz]e my progress|my progress summary|progress summary)\b/.test(signals.lower)
       || /\b(what is photosynthesis|what causes malaria|why does .* matter for maize|what should a family know)\b/.test(signals.lower)
       || (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(signals.lower)
         || /\b(nexus genesis|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(signals.lower));
