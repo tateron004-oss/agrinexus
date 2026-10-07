@@ -54,6 +54,8 @@ module.exports = Object.freeze({
   "safety.clearBody": "{name} anasema yuko salama sasa. Eneo halitatumwa tena.",
   "safety.allClearTold": "Nafurahi kwamba uko salama. Nimetuma ujumbe kwa {names} kwamba uko sawa, na nimeacha kushiriki eneo lako.",
   "safety.allClearClosed": "Nafurahi kwamba uko salama. Nimefunga tahadhari.",
+  // Machine-drafted: needs a fluent speaker (and a vet or animal health officer) before it is relied on.
+  "safety.livestock": "Sina mwongozo wa daktari wa mifugo kuhusu mnyama mgonjwa, kwa hiyo siwezi kukuambia tatizo ni nini wala dawa ya kumpa. Tafadhali mwite daktari wa mifugo au mhudumu wa afya ya mifugo sasa hivi. Mpaka afike, mweke mnyama mtulivu na mbali na wengine.",
 
   // ---- the location that follows an alert ----
   "loc.title": "Dharura: eneo la {name}",

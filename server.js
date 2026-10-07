@@ -36649,7 +36649,8 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   // not be mistaken for a new conversational mode; only safety, privacy, interruption and repair keep priority.
   const intakeAnswerInProgress = Boolean(db.profile.agentMemory?.activeIntake)
     && !["emergency_safety", "privacy_sensitive", "interruption_turn_taking", "repair_correction"].includes(conversationalModeOrchestrator.primaryMode?.id);
-  if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response" && !intakeAnswerInProgress) {
+  // A care or safety sign ("my sugar is 2.1 and I am shaking and sweating and confused": "confused" read as a gentle chat) is never answered as small talk: it goes on to runAgentCommand, which gives the care answer first.
+  if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response" && !intakeAnswerInProgress && !careSafetyApplies(command)) {
     const directConversation = companionDirectConversationIntent(conversationalModeOrchestrator);
     let result = ensureSpeakableAgentResult({
       intent: directConversation.intent,

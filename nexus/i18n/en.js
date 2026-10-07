@@ -50,6 +50,8 @@ module.exports = Object.freeze({
   "safety.clearBody": "{name} says they are safe now. No more location will be sent.",
   "safety.allClearTold": "I'm glad you're safe. I've told {names} that you're okay, and I've stopped sharing your location.",
   "safety.allClearClosed": "I'm glad you're safe. I've closed the alert.",
+  // A sick animal: there is no veterinary guide in the app, so this says so and sends the farmer to a vet. To be reviewed by a vet or an animal health officer.
+  "safety.livestock": "I don't have a veterinary guide for a sick animal, so I can't tell you what is wrong or what to give it. Please call a vet or your animal health worker now. Until they come, keep the animal calm and apart from the others.",
 
   // ---- the location that follows an alert (companion/emergency-location.js) ----
   "loc.title": "Emergency: {name}'s location",
