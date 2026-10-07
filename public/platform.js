@@ -33,8 +33,10 @@
     const node = el("article", "card");
     const title = el("h3", "", item.name || item.id);
     title.append(el("span", "pill mgr", item.id));
+    if (item.closed) title.append(el("span", "pill off", "Closed"));
     node.append(title);
     node.append(el("p", "small", item.recordFound ? `${item.people} ${item.people === 1 ? "person" : "people"} · Admin: ${item.admins.join(", ") || "none"}` : "This business's record could not be read."));
+    if (item.usage) node.append(el("p", "small", `Use: ${item.usage.lastActivityAt ? `last activity ${new Date(item.usage.lastActivityAt).toLocaleDateString()}` : "no activity yet"} · ${item.usage.recentEvents} recent events · ${item.usage.orders} orders · ${item.usage.healthIntakes} health intakes · ${item.usage.aiRuns} AI runs (counts only, never the content)`));
     const numbers = el("ul", "phones");
     item.numbers.forEach(number => numbers.append(el("li", "", number)));
     if (!item.numbers.length) numbers.append(el("li", "small", "No phone number linked yet. Calls to your own number never reach this business."));
@@ -47,6 +49,11 @@
       return "A new password was made. It is shown once, at the top of the page.";
     }));
     actions.append(reset);
+    // Closing stops all access at once and deletes nothing; reopening brings it back as it was.
+    const toggle = el("button", item.closed ? "" : "secondary danger", item.closed ? "Reopen this business" : "Close this business");
+    toggle.addEventListener("click", () => act(toggle, () => api(item.closed ? "/businesses/reopen" : "/businesses/close", "POST", { id: item.id }),
+      () => (item.closed ? "Reopened. Its people can sign in again." : "Closed. Nobody in it can sign in or phone Kyro until you reopen it. Nothing was deleted.")));
+    actions.append(toggle);
     node.append(actions);
 
     const form = el("form", "row");
@@ -87,6 +94,23 @@
       act(save, () => api("/businesses/settings", "POST", body), () => "Saved. It applies to this business within about half a minute.");
     });
     node.append(settings);
+
+    // Erasing is permanent and only for a closed business: type the id again.
+    if (item.closed) {
+      const erase = el("form", "row");
+      erase.append(el("p", "small", "Erase for good: removes the business's record, its people's uploaded files and queues the usual verified erasure of everyone's data. This cannot be undone."));
+      const confirmLabel = el("label", "", `Type "${item.id}" to confirm`);
+      const confirmInput = el("input"); confirmInput.autocomplete = "off"; confirmLabel.append(confirmInput);
+      const go = el("button", "secondary danger", "Erase this business permanently"); go.type = "submit";
+      erase.append(confirmLabel, go);
+      erase.addEventListener("submit", event => {
+        event.preventDefault();
+        if (confirmInput.value.trim() !== item.id) { notice("Type the business id exactly to confirm."); return; }
+        act(go, () => api("/businesses/erase", "POST", { id: item.id, confirm: confirmInput.value.trim() }),
+          result => `${item.id} was erased: ${result.erased.people} people, ${result.erased.uploadsRemoved} uploaded files removed, ${result.erased.engineErasuresQueued} engine erasures queued.`);
+      });
+      node.append(erase);
+    }
     return node;
   }
 

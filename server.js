@@ -1953,6 +1953,23 @@ function usingPostgresAuth() {
 // endpoints has ever touched that email (no blob shadow row at all) -- a blob row that IS present and
 // flagged isSandboxTestAccount means one of these endpoints created it before, so re-running to reset
 // ITS password is still allowed, matching these routes' own intended repeat-use behavior.
+// An email is one person in one place. Inside a business, an account's email is linked to that business in the directory, so that signing in finds the business (without this a person added to a business could
+// never sign in). An email already used by another business, or by an account in the default space, is refused; in the default space, an email linked to a business is refused.
+async function refuseIfEmailTakenElsewhere(email, existingHere = null) {
+  const space = businessSpaces.currentSpace();
+  const linked = await spaceDirectory.spaceForEmail(email);
+  if (space === businessSpaces.DEFAULT_SPACE) return linked !== businessSpaces.DEFAULT_SPACE ? "That email already belongs to another business." : "";
+  if (linked !== businessSpaces.DEFAULT_SPACE && linked !== space) return "That email already belongs to another business.";
+  if (linked === businessSpaces.DEFAULT_SPACE && !existingHere) {
+    const platformRecord = await businessSpaces.runInSpace(businessSpaces.DEFAULT_SPACE, () => readDb());
+    if ((platformRecord.users || []).some(item => businessSpaces.emailKey(item.email) === businessSpaces.emailKey(email))) return "That email already belongs to an existing account.";
+  }
+  if (linked !== space) {
+    try { await spaceDirectory.linkEmail(email, space); } catch (error) { return error.message; }
+  }
+  return "";
+}
+
 async function refuseIfRealPostgresAccountExists(email, blobExisting) {
   if (blobExisting || !usingPostgresAuth()) return false;
   const pgUser = await pgUsers.findUserByEmail(getPgPool(), email).catch(() => null);
@@ -2646,6 +2663,19 @@ async function deleteSessionFromPostgres(sid) {
     console.error("[sessions] Postgres delete failed:", error.message);
     recordServerError({ source: "sessions-postgres-delete", message: error.message });
   }
+}
+
+// Ends every sign-in held inside one business (closing or erasing it).
+async function revokeSessionsForSpace(space) {
+  let ended = 0;
+  for (const [sid, entry] of sessions) {
+    if ((entry.space || "default") === space) { sessions.delete(sid); ended += 1; await deleteSessionFromPostgres(sid); }
+  }
+  if (sessionsPostgresEnabled()) {
+    try { await ensureSessionsPostgresTable(); await getPgPool().query("delete from agrinexus_sessions where space_id = $1", [space]); }
+    catch (error) { recordServerError({ source: "sessions-postgres-space-revoke", message: error.message }); }
+  }
+  return ended;
 }
 
 // Ends every sign-in a person holds (live sessions and "remember me" cookies), the same way /api/logout and a password reset do. Used when a business manager
@@ -52120,6 +52150,7 @@ async function api(req, res, url) {
       if (!teamManagement.validEmail(email)) return send(res, 400, { error: "Enter a valid email for the person." });
       const existing = db.users.find(item => teamManagement.emailKey(item.email) === email);
       if (existing || await refuseIfRealPostgresAccountExists(email, existing)) return send(res, 409, { error: "That email already belongs to an existing account." });
+      { const taken = await refuseIfEmailTakenElsewhere(email, existing); if (taken) return send(res, 409, { error: taken }); }
       if (user.role !== "Admin" && teamManagement.teamSize(db, user) >= teamManagement.MAX_TEAM_SIZE) return send(res, 400, { error: `A team can have up to ${teamManagement.MAX_TEAM_SIZE} people. Ask an Admin to raise it.` });
       const password = randomTemporaryPassword();
       const now = new Date().toISOString();
@@ -52208,8 +52239,14 @@ async function api(req, res, url) {
         const people = (record?.users || []).filter(item => item.status !== "deleted");
         return {
           id: row.id, name: row.name, createdAt: row.createdAt, recordFound: Boolean(record),
+          closed: Boolean(row.closedAt), closedAt: row.closedAt,
           admins: people.filter(item => item.role === "Admin").map(item => item.email),
           people: people.length,
+          // How much the business uses Kyro: counts and the last time, never what was in them.
+          usage: record ? {
+            recentEvents: (record.profile?.usageEvents || []).length, lastActivityAt: (record.profile?.usageEvents || [])[0]?.createdAt || null,
+            aiRuns: (record.profile?.aiRuns || []).length, orders: (record.profile?.orders || []).length, healthIntakes: (record.profile?.healthIntakes || []).length
+          } : null,
           numbers: row.numbers.map(number => teamManagement.maskPhone(number)),
           sends: {
             sms: maskSetting(row.settings?.smsFrom), whatsapp: maskSetting(row.settings?.whatsappFrom), email: String(row.settings?.emailFrom || ""),
@@ -52280,6 +52317,53 @@ async function api(req, res, url) {
       platformLog("business.settings_changed", `Sender settings changed for business ${id}.`, { businessId: id, keys: Object.keys(body).filter(key => key in businessSender.SETTING_FORMATS) });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList() });
+    }
+
+    if (url.pathname === "/api/platform/businesses/close" || url.pathname === "/api/platform/businesses/reopen") {
+      const id = String(body.id ?? "").trim().toLowerCase();
+      const closing = url.pathname.endsWith("/close");
+      if (!(await spaceDirectory.exists(id))) return send(res, 404, { error: "There is no business with that id." });
+      await spaceDirectory.setClosed(id, closing);
+      forgetSpaceInfo(id);
+      const ended = closing ? await revokeSessionsForSpace(id) : 0;
+      platformLog(closing ? "business.closed" : "business.reopened", closing ? `Business ${id} closed; ${ended} sign-in(s) ended.` : `Business ${id} reopened.`, { businessId: id });
+      await writeDb(db);
+      return send(res, 200, { ok: true, businesses: await businessList() });
+    }
+
+    // Erasing a business is permanent, so: the business must already be closed, and the id must be typed again. Every person's uploaded files are deleted, every person's engine data is queued for the usual
+    // verified erasure (the worker wipes the content and the stored files), and then the business's record and its directory entries are removed. The engine's tenant rows themselves stay as empty tombstones,
+    // exactly as they do when a single person erases their account.
+    if (url.pathname === "/api/platform/businesses/erase") {
+      const id = String(body.id ?? "").trim().toLowerCase();
+      const info = await spaceInfo(id);
+      if (!info) return send(res, 404, { error: "There is no business with that id." });
+      if (body.confirm !== id) return send(res, 400, { error: "Type the business id again to confirm. This cannot be undone." });
+      if (!info.closedAt) return send(res, 409, { error: "Close the business first. Erasing is only allowed for a closed business." });
+      const summary = await businessSpaces.runInSpace(id, async () => {
+        const record = await readDb().catch(() => null);
+        const result = { people: 0, uploadsRemoved: 0, engineErasuresQueued: 0, engineErasuresFailed: 0 };
+        const uploadDirPath = nexusUploads.uploadDir(process.env);
+        for (const person of (record?.users || []).filter(item => item.status !== "deleted")) {
+          result.people += 1;
+          for (const meta of nexusUploads.listUploadsForUser(uploadDirPath, person.id)) if (nexusUploads.deleteUpload(uploadDirPath, meta.fileId)) result.uploadsRemoved += 1;
+          try {
+            const authoritativeUser = await authoritativeRuntimeUser(person);
+            if (authoritativeUser) { await authoritativeNexusRuntime.requestDeletionRequest({ user: authoritativeUser }); result.engineErasuresQueued += 1; }
+          } catch (error) {
+            result.engineErasuresFailed += 1;
+            console.error("[business-erase] engine erasure request failed:", error.message);
+          }
+        }
+        return result;
+      }, info);
+      await revokeSessionsForSpace(id);
+      await deleteBusinessRecord(id);
+      await spaceDirectory.removeSpace(id);
+      forgetSpaceInfo(id);
+      platformLog("business.erased", `Business ${id} erased: ${summary.people} people, ${summary.uploadsRemoved} uploaded files removed, ${summary.engineErasuresQueued} engine erasures queued (${summary.engineErasuresFailed} could not be queued).`, { businessId: id, ...summary });
+      await writeDb(db);
+      return send(res, 200, { ok: true, businesses: await businessList(), erased: { id, ...summary } });
     }
 
     if (url.pathname === "/api/platform/businesses/number") {
@@ -52442,6 +52526,7 @@ async function api(req, res, url) {
     // because an admin happened to supply that account's email.
     if (existing && !existing.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
     if (await refuseIfRealPostgresAccountExists(email, existing)) return send(res, 409, { error: "That email already belongs to an existing account" });
+    { const taken = await refuseIfEmailTakenElsewhere(email, existing); if (taken) return send(res, 409, { error: taken }); }
     const account = existing || {
       id: crypto.randomUUID(),
       email,
@@ -52492,6 +52577,7 @@ async function api(req, res, url) {
     // login) just because the caller supplied that account's email.
     if (account && !account.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
     if (await refuseIfRealPostgresAccountExists(email, account)) return send(res, 409, { error: "That email already belongs to an existing account" });
+    { const taken = await refuseIfEmailTakenElsewhere(email, account); if (taken) return send(res, 409, { error: taken }); }
     const adminAccount = account || {
       id: crypto.randomUUID(),
       email,
@@ -52542,6 +52628,7 @@ async function api(req, res, url) {
     // account just because the caller supplied that account's email.
     if (existing && !existing.isSandboxTestAccount) return send(res, 409, { error: "That email already belongs to an existing account" });
     if (await refuseIfRealPostgresAccountExists(email, existing)) return send(res, 409, { error: "That email already belongs to an existing account" });
+    { const taken = await refuseIfEmailTakenElsewhere(email, existing); if (taken) return send(res, 409, { error: taken }); }
     const account = existing || {
       id: crypto.randomUUID(),
       email,
@@ -58297,7 +58384,8 @@ async function resolveRequestSpace(req, url) {
     const space = await resolveRequestSpaceUnchecked(req, url);
     if (!space || space === businessSpaces.DEFAULT_SPACE) return DEFAULT_ROUTE;
     const info = await spaceInfo(space);
-    return info ? { space, info } : DEFAULT_ROUTE;
+    // A business that does not exist, or has been closed, is not reached at all: a sign-in, a session, a cookie or a phone number for it lands in the default space, where it matches nothing.
+    return info && !info.closedAt ? { space, info } : DEFAULT_ROUTE;
   } catch (error) {
     recordServerError({ source: "business-space-resolve", message: error.message });
     return DEFAULT_ROUTE;

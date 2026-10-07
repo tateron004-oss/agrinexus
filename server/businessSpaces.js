@@ -47,7 +47,8 @@ const cleanName = value => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g,
 // Both backends answer the same questions, all async:
 //   spaceForEmail(email) -> id | "default"        spaceForNumber(number) -> id | null        exists(id) -> boolean
 //   createSpace(id, {name}) · linkEmail(email, id) · linkNumber(number, id) · unlinkNumber(number) · describe() -> [{ id, name, createdAt, emails[], numbers[], settings }]
-//   info(id) -> { id, name, settings, numbers[] } | null        setSettings(id, settings)  (what the business sends as; see server/businessSender.js)
+//   info(id) -> { id, name, settings, numbers[], closedAt } | null        setSettings(id, settings)  (what the business sends as; see server/businessSender.js)
+//   setClosed(id, closed) (a closed business is reached by nobody: sign-in, sessions and phone numbers all stop at the front door; nothing is deleted)        removeSpace(id) (the directory entries only)
 function createFileDirectory(filePath) {
   const load = async () => {
     try { return JSON.parse(await fs.promises.readFile(filePath, "utf8")); } catch { return { spaces: {}, emails: {}, numbers: {} }; }
@@ -93,8 +94,17 @@ function createFileDirectory(filePath) {
     info: async id => {
       const data = await load();
       const space = data.spaces[id];
-      return space ? { id, name: space.name || "", settings: space.settings || {}, numbers: Object.keys(data.numbers).filter(key => data.numbers[key] === id) } : null;
+      return space ? { id, name: space.name || "", settings: space.settings || {}, closedAt: space.closedAt || null, numbers: Object.keys(data.numbers).filter(key => data.numbers[key] === id) } : null;
     },
+    setClosed: (id, closed) => change(data => {
+      if (!data.spaces[id]) throw new Error("No such business.");
+      if (closed) data.spaces[id].closedAt = data.spaces[id].closedAt || new Date().toISOString(); else delete data.spaces[id].closedAt;
+    }),
+    removeSpace: id => change(data => {
+      for (const key of Object.keys(data.emails)) if (data.emails[key] === id) delete data.emails[key];
+      for (const key of Object.keys(data.numbers)) if (data.numbers[key] === id) delete data.numbers[key];
+      delete data.spaces[id];
+    }),
     setSettings: (id, settings) => change(data => {
       if (!data.spaces[id]) throw new Error("No such business.");
       data.spaces[id].settings = settings;
@@ -102,7 +112,7 @@ function createFileDirectory(filePath) {
     describe: async () => {
       const data = await load();
       return Object.entries(data.spaces).map(([id, info]) => ({
-        id, name: info.name || "", createdAt: info.createdAt || null, settings: info.settings || {},
+        id, name: info.name || "", createdAt: info.createdAt || null, closedAt: info.closedAt || null, settings: info.settings || {},
         emails: Object.keys(data.emails).filter(key => data.emails[key] === id),
         numbers: Object.keys(data.numbers).filter(key => data.numbers[key] === id)
       }));
@@ -116,6 +126,7 @@ function createPostgresDirectory(getPool) {
     const pool = getPool();
     await pool.query("create table if not exists agrinexus_business_spaces (id text primary key, name text not null default '', created_at timestamptz not null default now())");
     await pool.query("alter table agrinexus_business_spaces add column if not exists settings jsonb not null default '{}'::jsonb");
+    await pool.query("alter table agrinexus_business_spaces add column if not exists closed_at timestamptz");
     await pool.query("create table if not exists agrinexus_business_emails (email text primary key, space_id text not null references agrinexus_business_spaces(id))");
     await pool.query("create table if not exists agrinexus_business_numbers (number text primary key, space_id text not null references agrinexus_business_spaces(id))");
   })().catch(error => { ready = null; throw error; }));
@@ -139,21 +150,30 @@ function createPostgresDirectory(getPool) {
     linkNumber: async (number, id) => { await requireSpace(id); await claim("agrinexus_business_numbers", "number", numberKey(number), id, "phone number"); },
     unlinkNumber: async number => { await query("delete from agrinexus_business_numbers where number = $1", [numberKey(number)]); },
     info: async id => {
-      const space = (await query("select id, name, settings from agrinexus_business_spaces where id = $1", [id])).rows[0];
+      const space = (await query("select id, name, settings, closed_at from agrinexus_business_spaces where id = $1", [id])).rows[0];
       if (!space) return null;
       const numbers = (await query("select number from agrinexus_business_numbers where space_id = $1 order by number", [id])).rows.map(row => row.number);
-      return { id, name: space.name || "", settings: space.settings || {}, numbers };
+      return { id, name: space.name || "", settings: space.settings || {}, closedAt: space.closed_at ? new Date(space.closed_at).toISOString() : null, numbers };
+    },
+    setClosed: async (id, closed) => {
+      const result = await query(closed ? "update agrinexus_business_spaces set closed_at = coalesce(closed_at, now()) where id = $1 returning id" : "update agrinexus_business_spaces set closed_at = null where id = $1 returning id", [id]);
+      if (!result.rowCount) throw new Error("No such business.");
+    },
+    removeSpace: async id => {
+      await query("delete from agrinexus_business_emails where space_id = $1", [id]);
+      await query("delete from agrinexus_business_numbers where space_id = $1", [id]);
+      await query("delete from agrinexus_business_spaces where id = $1", [id]);
     },
     setSettings: async (id, settings) => {
       const result = await query("update agrinexus_business_spaces set settings = $2::jsonb where id = $1 returning id", [id, JSON.stringify(settings || {})]);
       if (!result.rowCount) throw new Error("No such business.");
     },
     describe: async () => {
-      const spaces = (await query("select id, name, settings, created_at from agrinexus_business_spaces order by created_at", [])).rows;
+      const spaces = (await query("select id, name, settings, created_at, closed_at from agrinexus_business_spaces order by created_at", [])).rows;
       const emails = (await query("select email, space_id from agrinexus_business_emails", [])).rows;
       const numbers = (await query("select number, space_id from agrinexus_business_numbers", [])).rows;
       return spaces.map(row => ({
-        id: row.id, name: row.name || "", createdAt: row.created_at ? new Date(row.created_at).toISOString() : null, settings: row.settings || {},
+        id: row.id, name: row.name || "", createdAt: row.created_at ? new Date(row.created_at).toISOString() : null, closedAt: row.closed_at ? new Date(row.closed_at).toISOString() : null, settings: row.settings || {},
         emails: emails.filter(item => item.space_id === row.id).map(item => item.email),
         numbers: numbers.filter(item => item.space_id === row.id).map(item => item.number)
       }));
