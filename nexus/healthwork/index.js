@@ -27,8 +27,7 @@ const CONFIRMS = Object.assign({
 }, ...MODULES.map(mod => mod.confirms || {}));
 
 // Which people have a guided conversation open (in this process), per store, so a message with none open costs no lookup. A lost one simply expires.
-const YES_SW = /^(?:ndiyo|ndio|sawa|naam|ok|sawa kabisa|endelea|fanya hivyo)$/i;
-const NO_SW = /^(?:hapana|la|siyo|sitaki|acha|usifanye|si sasa)$/i;
+const { YES_SW, NO_SW } = require("../i18n/swahili-words.js");
 const openByStore = new WeakMap();
 const sessionsOf = store => { let map = openByStore.get(store); if (!map) { map = new Map(); openByStore.set(store, map); } return map; };
 const keyOf = args => `${args.tenantId}:${args.userId}`;
