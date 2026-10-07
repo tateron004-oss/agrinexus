@@ -634,11 +634,14 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         send(res, 200, { authoritative: true, ...status.data }); return true;
       } else if (url.pathname === "/api/nexus/runtime/artifacts" && req.method === "POST") {
         if (!active.objectStorage) { send(res, 503, {error:"Shared object storage is unavailable.",code:"object_storage_unavailable"}); return true; }
-        const bytes=Buffer.from(String(body.contentBase64||""),"base64");
-        if (!bytes.length) { send(res,400,{error:"Artifact content is required.",code:"artifact_content_required"}); return true; }
-        const artifactId=`artifact_${crypto.randomUUID()}`; const key=active.objectStorage.key({tenantId:context.tenantId,ownerId:context.userId,artifactId,filename:body.filename||body.title||"artifact"});
-        const stored=await active.objectStorage.put({key,body:bytes,contentType:body.contentType,metadata:{tenant:context.tenantId,owner:context.userId}});
-        const artifact=await active.artifacts.create({artifactId,tenantId:context.tenantId,ownerId:context.userId,taskId:body.taskId,kind:body.kind||"document",title:body.title||body.filename||"Artifact",contentType:body.contentType,objectKey:key,checksum:stored.checksum,sizeBytes:stored.sizeBytes,metadata:body.metadata||{}});
+        // Storing a file is a write that costs real storage, so it is for a signed-in account that may keep things (a guest session, which anyone can start without signing up, may not), the file and its
+        // labels have size limits, a task it is attached to must be the caller's own, and each person has a storage allowance.
+        const checked = await checkArtifactUpload({ body, context, active, env });
+        if (checked.error) { send(res, checked.status, { error: checked.error, code: checked.code }); return true; }
+        const { bytes, fields } = checked;
+        const artifactId=`artifact_${crypto.randomUUID()}`; const key=active.objectStorage.key({tenantId:context.tenantId,ownerId:context.userId,artifactId,filename:fields.filename||fields.title||"artifact"});
+        const stored=await active.objectStorage.put({key,body:bytes,contentType:fields.contentType,metadata:{tenant:context.tenantId,owner:context.userId}});
+        const artifact=await active.artifacts.create({artifactId,tenantId:context.tenantId,ownerId:context.userId,taskId:fields.taskId,kind:fields.kind||"document",title:fields.title||fields.filename||"Artifact",contentType:fields.contentType,objectKey:key,checksum:stored.checksum,sizeBytes:stored.sizeBytes,metadata:fields.metadata});
         send(res,201,{artifact,contentStored:true}); return true;
       } else if (/^\/api\/nexus\/runtime\/artifacts\/[^/]+$/.test(url.pathname) && req.method === "GET") {
         const artifactId=decodeURIComponent(url.pathname.split("/").pop()); const artifact=await active.artifacts.get({tenantId:context.tenantId,ownerId:context.userId,artifactId});
@@ -1027,6 +1030,42 @@ async function acceptancePrincipalForTask(active, taskId) {
   const row = (result.rows || result)[0];
   if (!row) { const error = new Error("The pending task has no active production acceptance owner."); error.code = "acceptance_transaction_owner_unavailable"; throw error; }
   return Object.freeze({ tenantId: row.tenant_id, userId: row.user_id, role: row.role, permissions: row.permissions || [] });
+}
+
+function positiveNumber(value, fallback) { const number = Number(value); return Number.isFinite(number) && number > 0 ? number : fallback; }
+
+// -> { error, status, code } or { bytes, fields }. See the artifacts route above.
+async function checkArtifactUpload({ body, context, active, env }) {
+  const refuse = (status, code, error) => ({ status, code, error });
+  if (!context.can("memory:write")) return refuse(403, "permission_denied", "Sign in with a full account to store files.");
+  const text = (value, max) => (typeof value === "string" ? value.trim().slice(0, max) : "");
+  for (const field of ["filename", "title", "kind", "contentType", "taskId"]) {
+    if (body[field] !== undefined && body[field] !== null && typeof body[field] !== "string") return refuse(400, "artifact_field_invalid", `${field} must be text.`);
+  }
+  if (body.metadata !== undefined && body.metadata !== null && (typeof body.metadata !== "object" || Array.isArray(body.metadata) || JSON.stringify(body.metadata).length > 8192)) {
+    return refuse(400, "artifact_metadata_invalid", "metadata must be a small object (at most 8 KB).");
+  }
+  if (typeof body.contentBase64 !== "string") return refuse(400, "artifact_content_required", "Artifact content is required.");
+  const maxBytes = positiveNumber(env.NEXUS_ARTIFACT_MAX_BYTES, 10 * 1024 * 1024);
+  if (Math.floor(body.contentBase64.length * 3 / 4) > maxBytes) return refuse(413, "artifact_too_large", `A stored file can be at most ${Math.round(maxBytes / (1024 * 1024))} MB.`);
+  const bytes = Buffer.from(body.contentBase64, "base64");
+  if (!bytes.length) return refuse(400, "artifact_content_required", "Artifact content is required.");
+  if (bytes.length > maxBytes) return refuse(413, "artifact_too_large", `A stored file can be at most ${Math.round(maxBytes / (1024 * 1024))} MB.`);
+  const fields = { filename: text(body.filename, 200), title: text(body.title, 200), kind: text(body.kind, 60), contentType: text(body.contentType, 120) || undefined,
+    taskId: text(body.taskId, 100) || undefined, metadata: body.metadata || {} };
+  // A task this file is attached to must be the caller's own (the same rule as every other task route).
+  if (fields.taskId) {
+    const task = await active.tasks?.get?.({ tenantId: context.tenantId, taskId: fields.taskId, includeSteps: false });
+    if (!task || (task.ownerId !== context.userId && !context.hasRole("admin"))) return refuse(404, "task_not_found", "Task not found.");
+  }
+  // Each person has a storage allowance (files and bytes), so one account cannot fill the shared bucket.
+  if (active.artifacts?.usage) {
+    const usage = await active.artifacts.usage({ tenantId: context.tenantId, ownerId: context.userId });
+    if (usage.count >= positiveNumber(env.NEXUS_ARTIFACT_MAX_PER_PERSON, 200) || usage.bytes + bytes.length > positiveNumber(env.NEXUS_ARTIFACT_MAX_BYTES_PER_PERSON, 500 * 1024 * 1024)) {
+      return refuse(413, "artifact_quota_exceeded", "Your file storage is full. Remove files you no longer need, then try again.");
+    }
+  }
+  return { bytes, fields };
 }
 
 // A real IANA time zone name (like "Africa/Nairobi"); anything else, including non-strings, is ignored.

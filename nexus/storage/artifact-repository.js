@@ -23,6 +23,12 @@ class ArtifactRepository {
     const result=await this.db.query(`select * from nexus_artifacts where tenant_id=$1 and owner_id=$2 and artifact_id=$3 and deleted_at is null`,[tenantId,ownerId,artifactId]);
     return (result.rows||result)[0]||null;
   }
+  // How much one person already has stored (live files only): used for the per-person storage allowance.
+  async usage({ tenantId, ownerId }) {
+    const result = await this.db.query(`select count(*)::int as count, coalesce(sum(size_bytes),0)::float8 as bytes from nexus_artifacts where tenant_id=$1 and owner_id=$2 and deleted_at is null`, [tenantId, ownerId]);
+    const row = (result.rows || result)[0] || {};
+    return { count: Number(row.count) || 0, bytes: Number(row.bytes) || 0 };
+  }
   async remove({ tenantId, ownerId, artifactId }) {
     const result=await this.db.query(`update nexus_artifacts set state='deleted',deleted_at=now(),object_key=null,updated_at=now()
       where tenant_id=$1 and owner_id=$2 and artifact_id=$3 and deleted_at is null returning artifact_id`,[tenantId,ownerId,artifactId]);
