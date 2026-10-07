@@ -28,7 +28,7 @@ test("the screens: owner-only cards are hidden from a business's own Admin, the 
   }
 });
 
-// ---------- a real server: a database is "configured" but cannot be reached, so the engine cannot take erasure requests ----------
+// ---------- a real server: a database address is set but nothing answers there, so the engine cannot take erasure requests ----------
 const port = 15356;
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spaces-fixes-"));
@@ -45,7 +45,7 @@ const login = (email, password) => call("POST", "/api/login", { email, password 
 test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), defaultDb);
   server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, SESSION_SECRET: "fixes-secret-for-the-test-0123456789", PORT: String(port), AGRINEXUS_DB_PATH: defaultDb, AGRINEXUS_STATE_STORE: "json",
-    DATABASE_URL: "postgres://nobody:nothing@127.0.0.1:1/none", AGRINEXUS_SPACES_PATH: path.join(dir, "spaces-directory.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_FILE_STORAGE_DIR: path.join(dir, "uploads") }, stdio: "ignore", windowsHide: true });
+    DATABASE_URL: "postgres://127.0.0.1:1/none", AGRINEXUS_SPACES_PATH: path.join(dir, "spaces-directory.json"), OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_FILE_STORAGE_DIR: path.join(dir, "uploads") }, stdio: "ignore", windowsHide: true });
   await waitFor(`${base}/api/healthz`);
 });
 test.after(() => { server.kill(); fs.rmSync(dir, { recursive: true, force: true }); });
