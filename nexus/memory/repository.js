@@ -274,7 +274,8 @@ class MemoryRepository {
   }
 
   async listFarmEntries({ tenantId, userId, limit = 5000 }) {
-    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+    // created_at lets "undo my last entry" find the most recent thing across the farm log and the money and animal records.
+    const result = await this.db.query(`select memory_id,content,created_at from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='farm_log' and deleted_at is null
       order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 5000, 1), 5000)]);
     return (result.rows || result).filter(row => row.content && typeof row.content === "object" && row.content.kind);

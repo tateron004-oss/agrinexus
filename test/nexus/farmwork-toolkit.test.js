@@ -318,12 +318,19 @@ test("'bought N units for X per unit' records the real total (quantity times pri
   assert.match(await who.say("How much did I spend this month"), /15,000/);
 });
 
-test("someone with no farm records is not given farm books for ordinary buying and selling", async () => {
+// This used to say that a person with no farm records got nothing for "Sold my old car for 500000" or "Bought 2 kg of sugar for 300". A shopkeeper has no farm records and still keeps books, so
+// (books.js) ordinary buying and selling IS recorded for a fresh account, and the first such entry says how to take it back out. Questions and requests to pay are still never taken.
+test("someone with no farm records can keep a shop's books: ordinary buying and selling is recorded, with a way back", async () => {
   const who = farmer();
-  assert.equal(await who.say("Sold my old car for 500000"), null);
-  assert.equal(await who.say("Bought 2 kg of sugar for 300"), null);
-  assert.equal(who.store.rows.length, 0);
+  const car = await who.say("Sold my old car for 500000");
+  assert.match(car, /^Recorded: sold old car for 500,000\./);
+  assert.match(car, /say "undo"/, "a one-off sale that is not a trade word says how to take it out");
+  assert.match(await who.say("Bought 2 kg of sugar for 300"), /^Recorded: bought 2 kg of sugar for 300/);
+  assert.equal(who.store.rows.filter(row => row.collection === "money").length, 2);
   assert.match(await who.say("Sold 200 kg of maize for 9000"), /Recorded/, "a farm word is enough");
+  const quiet = farmer({ userId: "u9" });
+  for (const text of ["Should I buy a car?", "Pay 5000 to John", "I bought a new phone, it is great", "How much does sugar cost"]) assert.equal(await quiet.say(text), null, text);
+  assert.equal(quiet.store.rows.length, 0);
 });
 
 // ---------- buyers and suppliers ----------
