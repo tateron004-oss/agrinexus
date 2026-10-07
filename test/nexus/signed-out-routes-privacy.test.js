@@ -10,7 +10,8 @@ const path = require("node:path");
 // include other people's health intakes, activity lines, notifications, reminders and the "latest AI" line: a stranger could read a patient's name and needs in one request.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15760;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://127.0.0.1:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "signed-out-"));
 const MARK = "ZXQSIGNEDOUTMARK";

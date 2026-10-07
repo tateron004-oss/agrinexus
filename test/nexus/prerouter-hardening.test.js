@@ -13,7 +13,8 @@ const WebSocket = require("ws");
 // second and last used to stop the whole server for everyone (an unhandled rejection / an exception in an event handler), with no sign-in needed.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15750;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://127.0.0.1:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "prerouter-"));
 const siblingName = `public_prerouter_probe_${process.pid}`;

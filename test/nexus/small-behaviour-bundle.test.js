@@ -14,7 +14,8 @@ const { spawn } = require("node:child_process");
 //  4. "Hi AgriTrade, speak French" asks for a "yes" first, the same as a free-form request to change the language.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15702;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "small-behaviour-bundle-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
