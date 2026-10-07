@@ -4,7 +4,7 @@
 module.exports = Object.freeze({
   // ---- emergencies and crisis (companion/safety.js) ----
   "safety.number": "If you might be in danger, please call your local emergency number now.",
-  "safety.numberIn": "If you might be in danger, please call emergency services now: {numbers} in {country}.",
+  "safety.numberIn": "If you might be in danger, please call the emergency number now: {numbers} in {country}.",
   "safety.noCircle": "I don't have anyone in your circle yet, so I couldn't alert anyone. {number} Once you're safe, we can add people you trust: \"add name@example.com to my circle\".",
   "safety.alertFailed": "I tried to alert your circle but couldn't reach anyone just now. {number}",
   "safety.alerted": "I've alerted {names}.{extra} {number} I'm here with you.",

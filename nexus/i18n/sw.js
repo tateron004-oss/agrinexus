@@ -12,7 +12,7 @@
 module.exports = Object.freeze({
   // ---- emergencies and crisis ----
   "safety.number": "Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi.",
-  "safety.numberIn": "Ikiwa unaweza kuwa hatarini, tafadhali piga simu ya dharura sasa hivi: {numbers} nchini {country}.",
+  "safety.numberIn": "Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura sasa hivi: {numbers} nchini {country}.",
   "safety.noCircle": "Bado sina mtu yeyote kwenye mzunguko wako, kwa hivyo sikuweza kutuma tahadhari kwa mtu. {number} Ukiwa salama, tunaweza kuongeza watu unaowaamini: \"ongeza jina@mfano.com kwenye mzunguko wangu\".",
   "safety.alertFailed": "Nilijaribu kutuma tahadhari kwa mzunguko wako lakini sikuweza kumfikia mtu yeyote sasa hivi. {number}",
   "safety.alerted": "Nimetuma tahadhari kwa {names}.{extra} {number} Niko hapa nawe.",
