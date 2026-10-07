@@ -22,6 +22,7 @@ const { hasReminderTimePhrase } = require("../reminders/time-phrase.js");
 const { repeatReminderTurn } = require("../reminders/repeat-service.js");
 const { assessBloodPressure, invalidReadingReply } = require("../../server/providers/bloodPressure.js");
 const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
+const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js");
 const { contentGuardReply } = require("./content-guard.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
@@ -735,6 +736,39 @@ function completeHealthRecordPlan(text, catalog) {
       toolId: "health.record", input: { intakeType: readingType, readingType, ...input },
       dependsOn: [], fallbackToolIds: [] }] });
 
+  // The ways a reading is SAID that the patterns below do not read: number words ("one forty over ninety"), "140 by 90", "my sugar is 9.4" (no "blood"), a decimal comma ("8,5") or a spoken
+  // "point" ("7 point 2"), and Kiswahili ("presha yangu ni 160 juu ya 100", "sukari yangu 7.5"). The same reader the spoken route uses. Anything it cannot read whole is asked about, never saved cut short.
+  const fromSpokenForm = () => {
+    const spoken = parseSpokenReading(goal);
+    if (spoken && !spoken.ask && spoken.form !== "bare") {
+      if (spoken.vital === "bp") {
+        if (!assessBloodPressure(spoken.systolic, spoken.diastolic).valid) return notARealReading(invalidReadingReply(spoken.systolic, spoken.diastolic));
+        return makePlan("blood-pressure", { systolic: spoken.systolic, diastolic: spoken.diastolic });
+      }
+      if (spoken.vital === "glucose") {
+        const resolved = resolveGlucose(spoken.value, spoken.unit || "");
+        if (resolved.invalid) return notARealReading(invalidGlucoseReply(spoken.valueText));
+        if (resolved.ambiguous) return notARealReading(ambiguousUnitReply(spoken.valueText));
+        return makePlan("blood-glucose", { glucose: Math.round(toMgdl(resolved)), glucoseUnit: resolved.unit, glucoseSaid: resolved.value });
+      }
+      if (spoken.vital === "pulse" && spoken.value >= 20 && spoken.value <= 250) return makePlan("pulse", { pulse: spoken.value });
+      if (spoken.vital === "oxygen" && spoken.value >= 50 && spoken.value <= 100) return makePlan("oxygen-saturation", { oxygenSaturation: spoken.value });
+      if (spoken.vital === "temperature") {
+        const unit = spoken.unit || (spoken.value >= 30 && spoken.value <= 45 ? "C" : spoken.value >= 70 && spoken.value <= 115 ? "F" : "");
+        if (unit === "C" && spoken.value >= 30 && spoken.value <= 45) return makePlan("temperature", { temperature: spoken.value, temperatureUnit: "C" });
+        if (unit === "F" && spoken.value >= 70 && spoken.value <= 115) return makePlan("temperature", { temperature: spoken.value, temperatureUnit: "F" });
+      }
+    } else if (spoken && spoken.ask && spoken.ask !== "several" && (wantsRecord || /\bmy\b|\byangu\b|\bwangu\b/i.test(goal))) {
+      return notARealReading("I could not read that reading clearly (there was more than one number, or part of it was cut off), so nothing has been saved. Please say it again with just the one reading, for example \"my blood sugar is 7.2 mmol\" or \"my blood pressure is 140 over 90\".");
+    }
+    return null;
+  };
+  // A decimal comma ("8,5") or a spoken "point" is read by the patterns below as the part before it only ("8"), which would be recorded as a different reading. Those forms go to the whole-number reader first.
+  if (/\d,\d{1,2}(?!\d)|\b(?:point|nukta)\b/i.test(goal)) {
+    const early = fromSpokenForm();
+    if (early) return early;
+  }
+
   // Two readings in one sentence ("my sugar is 8 and my BP is 140/90"): only the first used to be saved and the other was dropped without a word. Each reading is saved on its own, so each one is
   // checked and confirmed on its own: say so, and save nothing yet, rather than silently keep one.
   const given = [];
@@ -787,7 +821,7 @@ function completeHealthRecordPlan(text, catalog) {
     const match = goal.match(new RegExp(`\\b(?:pulse|heart\\s*rate)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     if (match) { const value = Number(match[1]); if (value >= 20 && value <= 250) return makePlan("pulse", { pulse: value }); }
   }
-  return null;
+  return fromSpokenForm();
 }
 
 // Wiping everything Kyro knows cannot be undone, so it is not done by a spoken or typed sentence. The person is told plainly, and shown the one-at-a-time way that does work.
