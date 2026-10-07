@@ -118,14 +118,14 @@ lead(`(?:naomba[ ,]+)?(?:tafadhali[ ,]+)?(?:unaweza|naomba)[ ,]+(?:kuni|ku)?(?=(
 lead(`(?:tafadhali[ ,]+)?nisaidie[ ,]+(?:ku)?(?=(?:weka|ongeza|andika|tuma|ondoa|futa|soma|onyesha|kumbusha)\\b)`, "polite-sw", hasRest);
 // English wrappers. They only apply when a real request follows ("can you swim" is left alone).
 const MODALS = "(?:could|can|would|will|may|might)";
-const ADV = "(?:[ ,]+(?:please|kindly|maybe|just|possibly|perhaps|quickly|simply|actually|now|also))*";
+const ADV = "(?:[ ,]+(?:please|kindly|maybe|just|possibly|perhaps|quickly|simply|now|also))*";
 lead(`${MODALS} (?:you|u|ya)${ADV}[ ,]+`, "polite", rest => looksLikeRequest(rest) && !/^help(?! me\b)/i.test(rest));
 lead(`${MODALS} (?:i|we) (?:please )?(?:ask|get|have|request) (?:you|u) (?:to |for )?`, "polite", looksLikeRequest);
 lead(`(?:i(?:'d| would| will) (?:like|love|want|appreciate)|i (?:want|need|wish|ask|require)|i'?d (?:like|love)) (?:you|u|it if you could|it if you can)(?: to)? `, "polite", looksLikeRequest);
 lead(`(?:i was wondering|i wonder|i am wondering|i'?m wondering|i just wondered) (?:if |whether )?(?:you )?(?:could|can|would|might)${ADV}[ ,]*`, "polite", looksLikeRequest);
 lead(`(?:would|do) you mind(?: to)? `, "polite", looksLikeRequest);
 lead(`is it possible (?:for you )?to `, "polite", looksLikeRequest);
-lead(`(?:go ahead and|just|quickly|simply|also|actually|maybe|kindly) `, "polite", looksLikeRequest);
+lead(`(?:go ahead and|just|quickly|simply|also|maybe|kindly) `, "polite", looksLikeRequest);
 lead(`(?:help me|assist me)(?: to)? `, "polite", rest => looksLikeRequest(rest) && !/^(?:with|find|understand)\b/i.test(rest));
 lead(`(?:can|could|may|should|shall) i (?:please |just )?(?:tell|say|let) (?:you|u)(?: know)?(?: that)? `, "polite", rest => /^(?:i|we|my|it)\b/i.test(rest));
 lead(`(?:can|could|may|should|shall) i (?:please |just )?(?:log|record|register|enter|note|add|save|put down)(?: down)?(?: that)? `, "polite", rest => /^(?:i|we|my|it|the rain|rain)\b/i.test(rest));
@@ -148,7 +148,7 @@ const TRAILING = [
 // fillers that trail or lead
 const FILLER_WORD = /(?:^|\s)(?:um+|uh+|uhm+|uhh+|umm+|ehm+|hmm+|mmm+|erm+)(?=[\s,.!?;:]|$)/gi;
 const FILLER_ER = /(?:^|\s)(?:er|erm)(?=[\s,.!?;:]|$)/g; // lowercase only: "ER" is the emergency room
-const FILLER_PHRASES = [/(?:^|,\s*)(?:you know|i mean|like|kind of|sort of|basically|literally|yaani|unajua|sijui kwanini|actually),\s+/gi, /,?\s+(?:you know|i mean|yaani|unajua),?\s*$/i, /\s+(?:you know)\s+(?=(?:add|put|write|note|remind|call|text|send|save|show|read|remove|delete|what|how|who|when|where)\b)/gi];
+const FILLER_PHRASES = [/(?:^|,\s*)(?:you know|i mean|like|kind of|sort of|basically|literally|yaani|unajua|sijui kwanini),\s+/gi, /,?\s+(?:you know|i mean|yaani|unajua),?\s*$/i, /\s+(?:you know)\s+(?=(?:add|put|write|note|remind|call|text|send|save|show|read|remove|delete|what|how|who|when|where)\b)/gi];
 
 // ---- discourse markers: "...and anyway please add milk" ----
 const STRONG_MARKER = /\b(?:so anyway|but anyway|and anyway|anyways?|by the way|btw|ok(?:ay)? so anyway|anyway so|so yeah anyway)\b[ ,.:!-]*/gi;
