@@ -18,7 +18,7 @@ const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
-const { hasReminderTimePhrase } = require("../reminders/time-phrase.js");
+const { hasReminderTimePhrase, resolveReminderTime, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { repeatReminderTurn } = require("../reminders/repeat-service.js");
 const { assessBloodPressure, invalidReadingReply } = require("../../server/providers/bloodPressure.js");
 const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
@@ -499,7 +499,7 @@ class OpenEndedPlanner {
     for (let attempt = 0; attempt <= this.maxRepairAttempts; attempt += 1) {
       const candidate = canonicalizeExplicitApplication(await this.model.plan({ ...request, feedback, attempt }), command.text, catalog);
       const validation = validatePlan(candidate, catalog, context);
-      if (validation.valid) return Object.freeze({ ...personalizedSearch(validation.plan, known.byKind), planningAttempts: attempt + 1 });
+      if (validation.valid) return Object.freeze({ ...personalizedSearch(withClearReminderTime(validation.plan, command.text, locale), known.byKind), planningAttempts: attempt + 1 });
       feedback = validation.errors;
     }
     // No registered application or tool fits (a general question, arithmetic, "what do you remember about me").
@@ -558,6 +558,12 @@ function ordinaryConversationPlan(text, context = {}) {
     const now = context.now instanceof Date ? context.now : new Date();
     const at = timeZone => ({ date: new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(now),
       time: new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(now) });
+    // On the person's own clock when their zone is known (the device's, their saved one, or their country's), not East Africa and UTC.
+    if (context.timeZone && validTimeZone(context.timeZone) === context.timeZone) {
+      const mine = at(context.timeZone);
+      return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
+        response: /\bdate|day\b/.test(normalized) && !/\btime\b/.test(normalized) ? `Today is ${mine.date}.` : `It is ${mine.time} on ${mine.date} (${context.timeZone} time).` };
+    }
     const nairobi = at("Africa/Nairobi"), utc = at("UTC");
     return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
       response: `It is ${nairobi.time} on ${nairobi.date} in Nairobi (East Africa Time). In UTC that is ${utc.time}${utc.date === nairobi.date ? "" : ` on ${utc.date}`}. I do not know your time zone, so tell me if you are elsewhere.` };
@@ -903,15 +909,48 @@ async function swahiliRepeatingTurn({ text, store, tenantId, userId, timeZone })
   return list ? repeatReminderTurn({ text: list.english, store, tenantId, userId, timeZone }) : null;
 }
 
+// A Kiswahili reminder the clock-and-day reader above did not take: a length of time ("nikumbushe baada ya dakika ishirini kunywa dawa", "nusu saa"), or a time it could not read. The general time reader decides.
+const SWAHILI_REMIND_LEAD = /^(?:tafadhali\s+|naomba\s+)?(?:nikumbushe|nikumbushie|nikumbusheni|unikumbushe|niwekee\s+kikumbusho|weka\s+kikumbusho)\b/i;
+function swahiliGeneralReminder(goal) {
+  if (!SWAHILI_REMIND_LEAD.test(goal) || /\bkila\b/i.test(goal)) return null;
+  const timing = resolveReminderTime(goal, { language: "sw" });
+  if (timing.status === "ok") {
+    const task = extractAssistantReminderTask(goal);
+    return task === "follow up" ? { needTask: true } : { task, when: goal };
+  }
+  return { needTime: true, ask: timing.ask?.sw };
+}
+
+// A reminder whose time is unclear (a bare "at 6": morning or evening?) or missing is asked about, never set at a guessed time.
+function clarifyReminderTime(goal, locale = "en") {
+  const timing = resolveReminderTime(goal, { language: /^sw/i.test(locale) ? "sw" : undefined });
+  if (timing.status === "ok") return null;
+  return { goal, application: "reminders", riskTier: "low", clarification: timing.language === "sw" || /^sw/i.test(locale) ? timing.ask.sw : timing.ask.en, steps: [], sourceRequired: false };
+}
+// The same for a plan the AI model wrote: its reminder step is checked against what the person actually said.
+function withClearReminderTime(plan, goal, locale = "en") {
+  const step = (plan?.steps || []).find(item => item?.toolId === "reminders.schedule");
+  if (!step) return plan;
+  const input = step.input || {};
+  const offset = Number(input.timeOffsetMinutes);
+  if (Number.isFinite(offset) && offset > 0) return plan;
+  const said = String(input.when || input.reminder || input.text || input.message || input.title || goal || "").trim();
+  if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(said)) return plan;
+  const timing = resolveReminderTime(said, { language: /^sw/i.test(locale) ? "sw" : undefined });
+  if (timing.status === "ok") return plan;
+  return { goal: plan.goal || goal, application: "reminders", riskTier: "low", clarification: timing.language === "sw" || /^sw/i.test(locale) ? timing.ask.sw : timing.ask.en, steps: [], sourceRequired: false };
+}
+
 function completeSwahiliReminderPlan(text, catalog) {
   const goal = String(text || "").trim();
-  const parsed = parseSwahiliReminder(goal);
+  let parsed = parseSwahiliReminder(goal);
+  if (!parsed) parsed = swahiliGeneralReminder(goal);
   if (!parsed) return null;
   if (!catalog.tools.some(tool => tool.toolId === "reminders.schedule") || !catalog.applications.some(app => app.applicationId === "reminders")) return null;
-  if (parsed.needTime || parsed.needTask) return { goal, application: "reminders", riskTier: "low", clarification: parsed.needTask ? NEED_TASK_SW : NEED_TIME_SW, steps: [], sourceRequired: false };
+  if (parsed.needTime || parsed.needTask) return { goal, application: "reminders", riskTier: "low", clarification: parsed.needTask ? NEED_TASK_SW : (parsed.ask || NEED_TIME_SW), steps: [], sourceRequired: false };
   return { goal, application: "reminders", riskTier: "low", clarification: null, sourceRequired: false,
     steps: [{ clientStepId: "reminders-schedule", title: "Persist governed reminder", toolId: "reminders.schedule",
-      input: { reminder: parsed.task, when: parsed.when, language: "sw", whenSw: parsed.whenSw }, dependsOn: [], fallbackToolIds: [] }] };
+      input: { reminder: parsed.task, when: parsed.when, language: "sw", ...(parsed.whenSw ? { whenSw: parsed.whenSw } : {}) }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 function completeTelehealthIntakePlan(text, catalog) {
@@ -1310,8 +1349,11 @@ function completeRemainingWorkspacePlan(text, catalog) {
   // AI planner, whose invented input shape was ignored and which was silently scheduled for tomorrow.
   if (/\b(remind|reminder)\b/i.test(goal) &&
       hasReminderTimePhrase(goal) &&
-      /\b(save|schedule|remind)\b/i.test(goal))
-    return plan("reminders", "reminders.schedule", "Persist governed reminder", { reminder: goal, when: goal });
+      /\b(save|schedule|remind)\b/i.test(goal)) {
+    const scheduled = plan("reminders", "reminders.schedule", "Persist governed reminder", { reminder: goal, when: goal });
+    // A time that is unclear ("at 6": morning or evening?) is asked about instead of being set at a guess.
+    return scheduled && (clarifyReminderTime(goal) || scheduled);
+  }
   if (/\b(queue|queued)\b/i.test(goal) && /\boffline\b/i.test(goal) && /\b(sync|synchronize|synchronise)\b/i.test(goal) &&
       /\b(acknowledg(?:e|ement)|server|receipt|confirm)\b/i.test(goal))
     return plan("offline-queue", "offline.sync", "Synchronize governed offline operation",

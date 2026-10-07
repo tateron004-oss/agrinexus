@@ -5,7 +5,7 @@ const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createCommand } = require("../contracts/command.js");
 const crypto = require("node:crypto");
 const businessDispatch = require("../business/voice-dispatch.js");
-const { parseAssistantReminderTime, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
+const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { setReplySw } = require("../reminders/swahili-reminder.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
@@ -230,15 +230,23 @@ function reminderSetResponse(plan, context) {
     const step = (plan?.steps || []).find(item => item?.toolId === "reminders.schedule");
     if (!step) return "";
     const input = step.input || {};
-    // Asked for in Kiswahili: answered in Kiswahili, in the words the person used for the time.
-    if (input.language === "sw" && input.whenSw && input.reminder) return setReplySw({ task: String(input.reminder).trim(), whenSw: String(input.whenSw).trim() });
     const rawText = String(input.when || input.reminder || input.text || input.message || input.title || "").trim();
-    if (!rawText && !Number(input.timeOffsetMinutes)) return "";
     const offset = Number(input.timeOffsetMinutes);
-    const when = Number.isFinite(offset) && offset > 0 && offset <= 60 * 24 * 365
-      ? `in ${offset} minute${offset === 1 ? "" : "s"}`
-      : parseAssistantReminderTime(rawText, { timeZone: context?.timeZone }).whenLabel;
+    const hasOffset = Number.isFinite(offset) && offset > 0 && offset <= 60 * 24 * 365;
+    if (!rawText && !hasOffset) return "";
     const task = extractAssistantReminderTask(String(input.reminder || input.title || rawText).trim());
+    // Asked for in Kiswahili: answered in Kiswahili, with the time it was set for.
+    if (input.language === "sw" && input.reminder) {
+      const timing = hasOffset ? null : resolveReminderTime(rawText, { timeZone: context?.timeZone, language: "sw" });
+      const whenSw = hasOffset ? `baada ya dakika ${offset}, ${describeMoment(new Date(Date.now() + offset * 60000), { timeZone: context?.timeZone, language: "sw" })}`
+        : timing.status === "ok" ? timing.readbackSw : String(input.whenSw || "").trim();
+      return whenSw ? setReplySw({ task: String(input.reminder).trim(), whenSw }) : "";
+    }
+    // The time it was set for, read back in the person's own zone ("at 8:00 pm today"), so what is said is what was set.
+    const when = hasOffset
+      ? `in ${offset} minute${offset === 1 ? "" : "s"}, ${describeMoment(new Date(Date.now() + offset * 60000), { timeZone: context?.timeZone })}`
+      : (() => { const timing = resolveReminderTime(rawText, { timeZone: context?.timeZone }); return timing.status === "ok" ? timing.readback : ""; })();
+    if (!when) return "";
     return `Okay. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${task} ${when}.`;
   } catch { return ""; }
 }

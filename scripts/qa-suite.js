@@ -1897,6 +1897,8 @@ if (missing.length) {
   fail(`QA suite "${suiteName}" references missing script(s): ${missing.join(", ")}`);
 }
 
+// The QA scripts start servers with no database: reminders set by voice or in the command box are kept in memory there (never delivered), instead of being refused as "not saved".
+const qaEnv = { NEXUS_TEST_REMINDER_STORE: "memory", ...process.env };
 const passed = [];
 console.log(`[qa-suite] Running "${suiteName}" (${scripts.length} command${scripts.length === 1 ? "" : "s"})`);
 
@@ -1904,7 +1906,7 @@ for (const script of scripts) {
   console.log(`\n[qa-suite] ${formatCommand(script)}`);
   let result = spawnSync(process.execPath, [script], {
     cwd: root,
-    env: process.env,
+    env: qaEnv,
     stdio: "inherit",
     windowsHide: true
   });
@@ -1913,7 +1915,7 @@ for (const script of scripts) {
     console.warn(`[qa-suite] ${script} failed once; retrying transient child process`);
     result = spawnSync(process.execPath, [script], {
       cwd: root,
-      env: process.env,
+      env: qaEnv,
       stdio: "inherit",
       windowsHide: true
     });

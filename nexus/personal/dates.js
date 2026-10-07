@@ -2,6 +2,7 @@
 
 // Reading days and times out of everyday words ("tomorrow at 2pm", "on 25 September", "next friday"), in the person's own calendar.
 // Days are plain YYYY-MM-DD strings and times "HH:MM" (24-hour) in their local time, so nothing here depends on the server's zone.
+const { scanTime } = require("../reminders/time-grammar.js");
 const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 const MONTH_PATTERN = "(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)";
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -86,6 +87,11 @@ function extractDay(text, today) {
 // "at 2pm", "10:30 am", "at 14:00", "noon". Returns { time: "HH:MM", text } or null. A bare hour without am/pm is left alone.
 function extractTime(text) {
   const source = String(text || "");
+  // The clock said in words or with a part of the day ("ten in the morning", "half past seven in the evening", "saa mbili usiku"): read by the shared time reader. A bare hour is left to the rules below.
+  {
+    const found = scanTime(source).clocks.find(item => !item.ambiguous && item.hour !== undefined && !(item.bare && !item.period));
+    if (found) return { time: `${pad(found.hour)}:${pad(found.minute)}`, text: `${source.slice(0, found.start)} ${source.slice(found.end)}` };
+  }
   const clock = /(?:\bat\s+|@\s*|\b)(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)(?=[\s.,;!?]|$)/i.exec(source);
   if (clock) {
     let hour = Number(clock[1]); const minute = clock[2] === undefined ? 0 : Number(clock[2]);
