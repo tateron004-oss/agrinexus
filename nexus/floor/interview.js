@@ -121,7 +121,7 @@ const questionLine = (lang, index) => say(lang, "question", { n: index + 1, tota
 function begin(practice, lang, now) {
   practice.interview = { index: 0, lang, at: now };
   practice.lesson = null;
-  return { intent: "workforce.practice_interview", reply: `${say(lang, "intro")} ${questionLine(lang, 0)}` };
+  return { intent: "conversation.practice_interview", reply: `${say(lang, "intro")} ${questionLine(lang, 0)}` };
 }
 
 // One short tip. Only rules about the answer itself: how long it is, whether it has an example or a reason, and a pointer for this kind of question.
@@ -143,12 +143,12 @@ function interviewTurn(practice, text, lang, now) {
   if (!t) return null;
   session.at = now;
   session.lang = lang;
-  if (STOP.test(t)) { practice.interview = null; return { intent: "workforce.practice_interview", reply: say(lang, "stopped") }; }
-  if (REPEAT.test(t)) return { intent: "workforce.practice_interview", reply: questionLine(lang, session.index) };
+  if (STOP.test(t)) { practice.interview = null; return { intent: "conversation.practice_interview", reply: say(lang, "stopped") }; }
+  if (REPEAT.test(t)) return { intent: "conversation.practice_interview", reply: questionLine(lang, session.index) };
   const finish = prefix => {
-    if (session.index >= QUESTIONS.length - 1) { practice.interview = null; return { intent: "workforce.practice_interview", reply: `${prefix} ${say(lang, "last")}` }; }
+    if (session.index >= QUESTIONS.length - 1) { practice.interview = null; return { intent: "conversation.practice_interview", reply: `${prefix} ${say(lang, "last")}` }; }
     session.index += 1;
-    return { intent: "workforce.practice_interview", reply: `${prefix} ${questionLine(lang, session.index)}` };
+    return { intent: "conversation.practice_interview", reply: `${prefix} ${questionLine(lang, session.index)}` };
   };
   if (SKIP.test(t)) return finish(say(lang, "skipped"));
   // Another request altogether ("remind me...", "call...") is not an answer: leave the practice open and let Kyro answer it.

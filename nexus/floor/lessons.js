@@ -243,7 +243,7 @@ function begin(practice, trackKey, lang, now, { fromStart = false } = {}) {
   practice.lesson = { track: trackKey, index, phase: "check", misses: 0, lang, at: now };
   practice.interview = null;
   const lead = returning ? ` ${say(lang, "welcomeBack", { done: saved.next, total })}` : finishedBefore ? ` ${say(lang, "doneBefore")}` : "";
-  return { intent: "learning.practice_lesson", reply: `${say(lang, "intro")}${lead} ${present(track.steps[index], lang)}` };
+  return { intent: "conversation.practice_lesson", reply: `${say(lang, "intro")}${lead} ${present(track.steps[index], lang)}` };
 }
 
 function finishStep(practice, now) {
@@ -277,12 +277,12 @@ function lessonTurn(practice, text, lang, now, { hasPending = false } = {}) {
   lesson.at = now;
   lesson.lang = lang;
   if (RESTART.test(t)) return begin(practice, lesson.track, lang, now, { fromStart: true });
-  if (STOP.test(t) && !(hasPending && t === "hapana")) return { intent: "learning.practice_lesson", reply: endLesson(practice, lang, false) };
-  if (AGAIN.test(t)) return { intent: "learning.practice_lesson", reply: present(step, lang) };
+  if (STOP.test(t) && !(hasPending && t === "hapana")) return { intent: "conversation.practice_lesson", reply: endLesson(practice, lang, false) };
+  if (AGAIN.test(t)) return { intent: "conversation.practice_lesson", reply: present(step, lang) };
 
   const advance = () => {
     lesson.index += 1; lesson.phase = "check"; lesson.misses = 0;
-    return { intent: "learning.practice_lesson", reply: present(track.steps[lesson.index], lang) };
+    return { intent: "conversation.practice_lesson", reply: present(track.steps[lesson.index], lang) };
   };
   if (lesson.phase === "ready") {
     if (NEXT_STRICT.test(t) || NEXT_SOFT.test(t)) {
@@ -291,29 +291,29 @@ function lessonTurn(practice, text, lang, now, { hasPending = false } = {}) {
       return advance();
     }
     if (OTHER_REQUEST.test(t) || wordCount(t) > 2) return null;
-    return { intent: "learning.practice_lesson", reply: say(lang, "reprompt") };
+    return { intent: "conversation.practice_lesson", reply: say(lang, "reprompt") };
   }
   // phase "check": the question has been asked.
   if (NEXT_STRICT.test(t)) {
     const last = finishStep(practice, now);
-    if (last) return { intent: "learning.practice_lesson", reply: endLesson(practice, lang, true) };
+    if (last) return { intent: "conversation.practice_lesson", reply: endLesson(practice, lang, true) };
     return advance();
   }
   if (OTHER_REQUEST.test(t) || wordCount(t) > 6) return null;
   // While something else is waiting for a yes or a no, that word belongs to it, not to the lesson.
   if (hasPending && (NEXT_SOFT.test(t) || /^(?:no|hapana|cancel)$/.test(t))) return null;
   // "start", "ok", "ndiyo" after the question is asked is not an answer: it means "I am ready", so the step is said again.
-  if (NEXT_SOFT.test(t)) return { intent: "learning.practice_lesson", reply: present(step, lang) };
+  if (NEXT_SOFT.test(t)) return { intent: "conversation.practice_lesson", reply: present(step, lang) };
   if (matchesStep(step, text)) {
     const last = finishStep(practice, now);
-    if (last) return { intent: "learning.practice_lesson", reply: `${say(lang, "right")} ${step.recap[lang]} ${endLesson(practice, lang, true)}` };
-    return { intent: "learning.practice_lesson", reply: `${say(lang, "right")} ${step.recap[lang]} ${say(lang, "tail")}` };
+    if (last) return { intent: "conversation.practice_lesson", reply: `${say(lang, "right")} ${step.recap[lang]} ${endLesson(practice, lang, true)}` };
+    return { intent: "conversation.practice_lesson", reply: `${say(lang, "right")} ${step.recap[lang]} ${say(lang, "tail")}` };
   }
   lesson.misses += 1;
-  if (lesson.misses < 2) return { intent: "learning.practice_lesson", reply: say(lang, "wrongHint", { hint: step.hint[lang] }) };
+  if (lesson.misses < 2) return { intent: "conversation.practice_lesson", reply: say(lang, "wrongHint", { hint: step.hint[lang] }) };
   const last = finishStep(practice, now);
-  if (last) return { intent: "learning.practice_lesson", reply: `${say(lang, "reveal", { answer: step.answer[lang] })} ${step.recap[lang]} ${endLesson(practice, lang, true)}` };
-  return { intent: "learning.practice_lesson", reply: `${say(lang, "reveal", { answer: step.answer[lang] })} ${step.recap[lang]} ${say(lang, "tail")}` };
+  if (last) return { intent: "conversation.practice_lesson", reply: `${say(lang, "reveal", { answer: step.answer[lang] })} ${step.recap[lang]} ${endLesson(practice, lang, true)}` };
+  return { intent: "conversation.practice_lesson", reply: `${say(lang, "reveal", { answer: step.answer[lang] })} ${step.recap[lang]} ${say(lang, "tail")}` };
 }
 
 module.exports = Object.freeze({ TRACKS, LETTERS, lessonRequest, lessonTurn, begin, say, SESSION_MS, answerMatches, TEXT });

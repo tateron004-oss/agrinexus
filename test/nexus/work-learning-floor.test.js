@@ -25,7 +25,7 @@ test("'teach me to read' starts a letters lesson at once: one small step, then o
   const { say, practice } = conversation();
   const first = say("teach me to read");
   assert.equal(first.handled, true);
-  assert.equal(first.intent, "learning.practice_lesson");
+  assert.equal(first.intent, "conversation.practice_lesson");
   assert.match(first.reply, /short practice lesson inside Kyro\. It is not a certified course/);
   assert.match(first.reply, /The letter A\. A is for apple\. In Kiswahili, A is for asali, which means honey/);
   assert.match(first.reply, /Which letter does the word "apple" start with\?$/);
@@ -204,7 +204,7 @@ test("the lessons in Kiswahili: asked, answered and finished in Kiswahili", () =
 test("a practice interview asks one question at a time, gives one rule-based tip, never scores, and ends", () => {
   const { say, practice } = conversation();
   const start = say("practice interview");
-  assert.equal(start.intent, "workforce.practice_interview");
+  assert.equal(start.intent, "conversation.practice_interview");
   assert.match(start.reply, /This is practice only, no employer is involved and nothing is sent\./);
   assert.match(start.reply, /Question 1 of 6: Tell me about yourself\.$/);
   const short = say("I work");
@@ -251,10 +251,10 @@ test("interview practice can be stopped, handles other requests without swallowi
 test("'schedule interview' never shows a past date as upcoming and never books anything; clothes and how-to-answer questions get a short tip", () => {
   const { say } = conversation();
   const schedule = say("schedule interview");
-  assert.equal(schedule.intent, "workforce.interview_schedule_none");
+  assert.equal(schedule.intent, "conversation.interview_schedule_none");
   assert.match(schedule.reply, /I can't book an interview with an employer from here, and I have no interview saved for you/);
   assert.doesNotMatch(schedule.reply, /20\d\d|May|shift/);
-  assert.equal(say("book me an interview").intent, "workforce.interview_schedule_none");
+  assert.equal(say("book me an interview").intent, "conversation.interview_schedule_none");
   assert.match(say("nipangie mahojiano", "sw").reply, /^Siwezi kupanga mahojiano na mwajiri kutoka hapa/);
   assert.match(say("what should I wear to an interview").reply, /clean, neat clothes/);
   assert.match(say("how do i answer tell me about yourself").reply, /Here is a tip for "Tell me about yourself\.": A good answer has three parts/);
@@ -264,14 +264,14 @@ test("jobs and training: what Kyro really knows, said plainly, in the person's l
   const { say } = conversation();
   for (const phrase of ["find jobs near me", "find job", "i need work. any job", "show me available jobs", "any job for disabled people", "jobs for old people, i am 62", "i have no experience, where do i start looking for work", "i am a retired soldier looking for security job"]) {
     const reply = say(phrase);
-    assert.equal(reply.intent, "workforce.honest_job_search", phrase);
+    assert.equal(reply.intent, "conversation.honest_job_search", phrase);
     assert.match(reply.reply, /I can't search live job listings for your area, so I can't tell you what is open near you today/, phrase);
     assert.match(reply.reply, /roles loaded on the platform: Field Operations Agent, Telehealth Access Assistant\. I have not checked them with any employer/, phrase);
     assert.match(reply.reply, /make a CV[\s\S]*practise an interview[\s\S]*local employment office/, phrase);
     assert.doesNotMatch(reply.reply, /Where should I start the map|I submitted|applied|apply for/i, phrase);
   }
   const training = say("any training or apprenticeship near me");
-  assert.equal(training.intent, "workforce.honest_training_answer");
+  assert.equal(training.intent, "conversation.honest_training_answer");
   assert.match(training.reply, /I don't have a list of training places or apprenticeships near you, and I can't search for them live/);
   assert.match(say("scholarships for girls in kenya").reply, /I don't have a list of scholarships or bursaries[\s\S]*Be careful of anyone who asks you to pay money first/);
   const none = floor.turn({ text: "find jobs near me", requestedLanguage: "en", practice: floor.emptyPractice(), roles: [], now: 1 });
@@ -280,7 +280,7 @@ test("jobs and training: what Kyro really knows, said plainly, in the person's l
   const sw = conversation("sw");
   for (const phrase of ["nitafutie kazi karibu nami", "sina kazi, nisaidie kupata kazi ya kilimo", "sijawahi kufanya kazi, nianzie wapi"]) {
     const reply = sw.say(phrase);
-    assert.equal(reply.intent, "workforce.honest_job_search", phrase);
+    assert.equal(reply.intent, "conversation.honest_job_search", phrase);
     assert.equal(reply.language, "sw");
     assert.match(reply.reply, /^Siwezi kutafuta orodha za kazi za moja kwa moja za eneo lako[\s\S]*Sijazihakiki na mwajiri yeyote[\s\S]*ofisi ya ajira/, phrase);
   }
@@ -289,7 +289,8 @@ test("jobs and training: what Kyro really knows, said plainly, in the person's l
 
 test("requests that are about something else are not answered as a job search", () => {
   for (const phrase of ["apply for the telehealth assistant job", "naomba kazi ya field agent", "what is the status of my job application", "maombi yangu ya kazi yamefikia wapi", "how much does the field agent job pay",
-    "what jobs can i do with a form four certificate", "a man says i must pay 5000 shillings to get a job abroad", "I need to ask my boss for a day off from my job", "I want to work on my farm today", "I have a job", "show my applications", "withdraw my application"]) {
+    "what jobs can i do with a form four certificate", "a man says i must pay 5000 shillings to get a job abroad", "I need to ask my boss for a day off from my job", "I want to work on my farm today", "I have a job", "show my applications", "withdraw my application",
+    "I need training for farm jobs but my internet is weak", "I need work done on my roof", "find training videos on farm training"]) {
     assert.equal(work.jobRequestKind(phrase.toLowerCase()), null, phrase);
     assert.equal(floor.turn({ text: phrase, requestedLanguage: "en", practice: floor.emptyPractice(), roles: ROLES, now: 1 }).handled, false, phrase);
   }
@@ -299,7 +300,7 @@ test("a child under working age who works or wants to work gets a protective, no
   for (const [phrase, lang] of [["I am 15 and I want to work", "en"], ["i am 15 and i want a job", "en"], ["my daughter is 14 and works as a house girl", "en"], ["my son is twelve and he works at the market", "en"],
     ["nina miaka 15 na nataka kazi", "sw"], ["mtoto wangu wa miaka 14 anafanya kazi ya nyumbani", "sw"], ["child labour", "en"]]) {
     const reply = floor.turn({ text: phrase, requestedLanguage: lang, practice: floor.emptyPractice(), roles: ROLES, now: 1 });
-    assert.equal(reply.intent, "safeguarding.child_work", phrase);
+    assert.equal(reply.intent, "conversation.safeguarding.child_work", phrase);
     if (lang === "sw") assert.match(reply.reply, /anapaswa kuwa shuleni, si kazini[\s\S]*mwalimu unayemwamini[\s\S]*afisa wa watoto/, phrase);
     else assert.match(reply.reply, /belongs in school, not at work[\s\S]*trusted teacher[\s\S]*children's officer[\s\S]*local emergency number[\s\S]*I have not saved anything or applied for any job/, phrase);
     assert.doesNotMatch(reply.reply, /verify profile|shortlist|schedule a shift|apply now|Do you want me to/i, phrase);
@@ -313,7 +314,7 @@ test("a child under working age who works or wants to work gets a protective, no
 test("a CV asked for here is pointed at the app; nothing is claimed to be made", () => {
   const { say } = conversation();
   const build = say("make my CV");
-  assert.equal(build.intent, "resume.build_pointer");
+  assert.equal(build.intent, "conversation.resume_pointer");
   assert.match(build.reply, /I have not made a CV yet/);
   assert.match(say("download my CV").reply, /I can't send a file from here/);
   assert.match(say("nataka CV", "sw").reply, /Bado sijatengeneza CV/);

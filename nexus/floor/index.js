@@ -46,18 +46,18 @@ function turn({ text, requestedLanguage = "en", practice, roles = [], hasPending
   }
 
   // 2. A child who works or wants to work comes first: it is never answered as a job search.
-  if (childWork) return done({ intent: "safeguarding.child_work", reply: work.say(lang, "childWork") });
+  if (childWork) return done({ intent: "conversation.safeguarding.child_work", reply: work.say(lang, "childWork") });
 
   // 3. Starting a lesson or an interview practice.
-  if (lesson && lesson.offer) return done({ intent: "learning.practice_lesson_offer", reply: lessons.say(lang, "cantRead") });
+  if (lesson && lesson.offer) return done({ intent: "conversation.practice_lesson_offer", reply: lessons.say(lang, "cantRead") });
   if (lesson && lesson.track) return done(lessons.begin(practice, lesson.track, lang, now, { fromStart: lesson.fromStart }));
   if (talk) {
     if (talk.kind === "practice") return done(interview.begin(practice, lang, now));
-    if (talk.kind === "schedule") return done({ intent: "workforce.interview_schedule_none", reply: interview.say(lang, "schedule") });
-    if (talk.kind === "wear") return done({ intent: "workforce.interview_tip", reply: interview.say(lang, "wear") });
+    if (talk.kind === "schedule") return done({ intent: "conversation.interview_schedule_none", reply: interview.say(lang, "schedule") });
+    if (talk.kind === "wear") return done({ intent: "conversation.interview_tip", reply: interview.say(lang, "wear") });
     if (talk.kind === "howto") {
       const q = interview.QUESTIONS[talk.index];
-      return done({ intent: "workforce.interview_tip", reply: interview.say(lang, "askHow", { q: q[lang], tip: lang === "sw" ? q.tipSw : q.tipEn }) });
+      return done({ intent: "conversation.interview_tip", reply: interview.say(lang, "askHow", { q: q[lang], tip: lang === "sw" ? q.tipSw : q.tipEn }) });
     }
   }
 

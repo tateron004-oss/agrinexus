@@ -24,6 +24,8 @@ const JOB_SEARCH_SW = /\b(?:nitafutie|nataka|ninataka|natafuta|ninatafuta|tafuta
 const JOB_FOR_EN = /^(?:any |some |are there |what )?(?:jobs?|vacancies)\b(?: available)?(?: for\b| in\b| near\b| around\b)/;
 const MAX_SEARCH_WORDS = 24;
 const TRAINING = /\b(?:training|trainings|apprenticeships?|vocational|skills? training|technical (?:school|college)|polytechnic|mafunzo|ufundi|chuo cha ufundi)\b/;
+// Asking to LEARN something is not a search for work ("I need training for farm jobs"): the learning side answers that.
+const LEARNING_WORDS = /\b(?:training|trainings|courses?|lessons?|learn|learning|classes|class|study|teach|teaching|mafunzo|kozi|somo|masomo|kujifunza)\b/;
 const NEAR_ME = /\b(?:near me|nearby|around me|close to me|in my (?:area|town|village)|karibu nami|karibu na mimi|hapa karibu)\b/;
 const SCHOLARSHIP = /\b(?:scholarships?|bursar(?:y|ies)|school fees help|sponsorship for school|ufadhili wa masomo|udhamini wa masomo|msaada wa ada)\b/;
 
@@ -33,6 +35,7 @@ function jobRequestKind(t) {
   // "training near me" / "any apprenticeship": a place to train. "find training videos" or "teach me" are not.
   if (TRAINING.test(t) && (NEAR_ME.test(t) || /\b(?:apprenticeships?|vocational|polytechnic|technical (?:school|college)|ufundi|uanagenzi)\b/.test(t)) && !/\bteach\b|\bnifundishe\b|\bvideos?\b/.test(t)) return "training";
   if (t.split(" ").length > MAX_SEARCH_WORDS) return null;
+  if (LEARNING_WORDS.test(t)) return null;
   if (JOB_SEARCH_EN.test(t) || JOB_AROUND_EN.test(t) || JOB_FOR_EN.test(t) || JOB_SEARCH_SW.test(t)) return "jobs";
   return null;
 }
@@ -65,11 +68,11 @@ const roleList = roles => {
 };
 
 function jobsReply(kind, lang, roles) {
-  if (kind === "training") return { intent: "workforce.honest_training_answer", reply: say(lang, "training") };
-  if (kind === "scholarship") return { intent: "learning.honest_scholarship_answer", reply: say(lang, "scholarship") };
+  if (kind === "training") return { intent: "conversation.honest_training_answer", reply: say(lang, "training") };
+  if (kind === "scholarship") return { intent: "conversation.honest_scholarship_answer", reply: say(lang, "scholarship") };
   const titles = roleList(roles);
-  if (!titles.length) return { intent: "workforce.honest_job_search", reply: say(lang, "jobsNone") };
-  return { intent: "workforce.honest_job_search", reply: say(lang, "jobsListed", { roles: titles.join(", ") }) };
+  if (!titles.length) return { intent: "conversation.honest_job_search", reply: say(lang, "jobsNone") };
+  return { intent: "conversation.honest_job_search", reply: say(lang, "jobsListed", { roles: titles.join(", ") }) };
 }
 
 // ---- a child who works or wants to ----
@@ -106,9 +109,9 @@ function childWorkRequest(text) {
 function workTurn({ text, lang, roles, jobs = true }) {
   const t = prepare(text);
   if (!t) return null;
-  if (childWorkRequest(text)) return { intent: "safeguarding.child_work", reply: say(lang, "childWork") };
-  if (forms.isResumeDownloadRequest(text)) return { intent: "resume.download_pointer", reply: say(lang, "cvDownload") };
-  if (forms.isResumeBuildRequest(text)) return { intent: "resume.build_pointer", reply: say(lang, "cvPointer") };
+  if (childWorkRequest(text)) return { intent: "conversation.safeguarding.child_work", reply: say(lang, "childWork") };
+  if (forms.isResumeDownloadRequest(text)) return { intent: "conversation.resume_download_pointer", reply: say(lang, "cvDownload") };
+  if (forms.isResumeBuildRequest(text)) return { intent: "conversation.resume_pointer", reply: say(lang, "cvPointer") };
   const kind = jobs ? jobRequestKind(t) : null;
   if (kind) return jobsReply(kind, lang, roles);
   return null;

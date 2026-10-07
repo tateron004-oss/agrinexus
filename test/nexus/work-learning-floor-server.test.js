@@ -61,7 +61,7 @@ test("jobs and training questions get the plain truth, on the voice route and th
       assert.match(reply.text, /roles loaded on the platform: [A-Z][\w ]+/, phrase);
       assert.match(reply.text, /I have not checked them with any employer/, phrase);
       assert.doesNotMatch(reply.text, /map from|submitted|applied|verify profile|Generated supervised/i, phrase);
-      assert.equal(reply.intent, "workforce.honest_job_search", phrase);
+      assert.equal(reply.intent, "conversation.honest_job_search", phrase);
     }
     const training = await ask("training near me");
     assert.match(training.text, /I don't have a list of training places or apprenticeships near you/);
@@ -84,7 +84,7 @@ test("in Kiswahili the same questions are answered in Kiswahili", async () => {
 test("a reading lesson runs across requests: start, answer, next, again, stop, and carry on later", async () => {
   const before = await snapshot();
   const start = await voice("teach me to read");
-  assert.equal(start.intent, "learning.practice_lesson");
+  assert.equal(start.intent, "conversation.practice_lesson");
   assert.match(start.text, /short practice lesson inside Kyro\. It is not a certified course/);
   assert.match(start.text, /The letter A\. A is for apple\./);
   assert.match((await voice("a")).text, /^Yes, that's right\. A is for apple\./);
@@ -129,7 +129,7 @@ test("a practice interview: one question at a time, one tip, no scores, and noth
   const before = await snapshot();
   for (const phrase of ["ask me interview questions", "practice interview", "help me prepare for an interview"]) {
     const start = await voice(phrase);
-    assert.equal(start.intent, "workforce.practice_interview", phrase);
+    assert.equal(start.intent, "conversation.practice_interview", phrase);
     assert.match(start.text, /Question 1 of 6: Tell me about yourself\.$/, phrase);
     assert.doesNotMatch(start.text, /Generated supervised AI recommendation|tell me the main goal/i, phrase);
     await voice("stop");
@@ -164,7 +164,7 @@ test("a child who works or wants to gets a protective answer and no workflow is 
   for (const ask of [voice, agent]) {
     for (const phrase of ["I am 15 and I want to work", "my daughter is 14 and works as a house girl"]) {
       const reply = await ask(phrase);
-      assert.equal(reply.intent, "safeguarding.child_work", phrase);
+      assert.equal(reply.intent, "conversation.safeguarding.child_work", phrase);
       assert.match(reply.text, /belongs in school, not at work/);
       assert.match(reply.text, /trusted teacher[\s\S]*children's officer/);
       assert.doesNotMatch(reply.text, /verify profile|schedule shift|learning hub|Say or type "yes"|selected/i);
@@ -192,7 +192,7 @@ test("the learning tool (the model's own route) serves the same lessons, and lea
   };
   const lesson = await tool("teach me to read");
   assert.equal(lesson.capability, "work-and-learning");
-  assert.equal(lesson.intent, "learning.practice_lesson");
+  assert.equal(lesson.intent, "conversation.practice_lesson");
   assert.match(lesson.response, /The letter [A-Z]\. [A-Z] is for/);
   assert.equal(lesson.executionVerified, false);
   assert.match((await tool("stop")).response, /^Okay, we have stopped/);
@@ -213,6 +213,17 @@ test("one person's lesson is not another person's: a different account is not in
   const mine = await voice("a");
   assert.match(mine.text, /^Yes, that's right|^Not quite|^The answer is/, "the first account's lesson is still there");
   await voice("stop");
+});
+
+test("a floor answer goes through the same layers as every other answer: every stage of the activation trace is recorded", async () => {
+  for (const phrase of ["find jobs near me", "teach me letters", "practice interview", "I am 15 and I want to work"]) {
+    const reply = await agent(phrase);
+    const trace = reply.raw?.nexusResponse?.activationTrace;
+    assert.ok(trace, `${phrase} should carry an activation trace`);
+    for (const stage of trace.sharedLayerSequence) assert.notEqual(stage.active, false, `${phrase}: stage ${stage.stage} (${stage.detail})`);
+    assert.equal(reply.raw.nexusResponse.response, reply.text, "the spoken response and the command result agree");
+    await voice("stop");
+  }
 });
 
 test("ordinary requests are not caught by the floor", async () => {

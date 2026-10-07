@@ -83,13 +83,18 @@ function workLearningFloorTurn(db, user, command, requestedLanguage, { jobs = tr
   user.floorPractice = practice;
   return turn;
 }
-function workLearningFloorResult(turn) {
+function workLearningFloorResult(turn, layers = {}) {
   return ensureSpeakableAgentResult({
     intent: turn.intent,
     response: turn.reply,
     status: "completed",
     metadata: {
       conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, workLearningFloor: true,
+      inputMode: layers.inputMode, outputMode: layers.outputMode || undefined,
+      companionUnderstanding: layers.companionUnderstanding,
+      conversationalModeOrchestrator: layers.conversationalModeOrchestrator,
+      selectedConversationalModes: layers.conversationalModeOrchestrator?.selectedModeIds,
+      fakeCitationsAllowed: false, providerHandoffAuthorized: false, workflowOpened: false,
       // Already said in the person's own language: nothing after this may translate it again.
       responseLanguage: turn.language, language: turn.language, targetLanguage: turn.language
     }
@@ -36564,17 +36569,6 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     mode: body.mode,
     targetLanguage: commandLanguage
   });
-  // Practice lessons, practice interviews, jobs and training, a child who works: answered plainly before anything else can guess (nexus/floor).
-  const floorTurn = workLearningFloorTurn(db, user, command, commandLanguage);
-  if (floorTurn) {
-    const result = workLearningFloorResult(floorTurn);
-    commandRecord(db, user, command, result);
-    if (outputMode === "voice") {
-      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response, inputMode, language: floorTurn.language });
-    }
-    addWorkflowNote(db.profile, body.note, "Agent command note");
-    return { result, companionUnderstanding, companionRouteOutcome: { route: "work-learning-floor", noExecutionAuthorized: true, workflowOpened: false } };
-  }
   const conversationalModeOrchestrator = nexusGenesisConversationalModeOrchestrator.orchestrate(command, {
     recentTurns: ownConversationTurns(db.profile, user.email),
     activeTopic: db.profile.agentMemory?.activeTopic || db.profile.agentMemory?.lastTopic || body.modeContext?.section || body.mode || "general",
@@ -36657,6 +36651,36 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     db.profile.agentMemory.memoryScope = "restricted-by-user";
   } else if (conversationalModeOrchestrator.signals.memory && /\bremember that\b/i.test(command)) {
     db.profile.agentMemory.memoryScope = "consent-requested";
+  }
+  // Practice lessons, practice interviews, jobs and training, a child who works: answered plainly before anything else can guess (nexus/floor). It goes through the same layers as every
+  // other answer (the conversational orchestrator, the companion understanding, the action policy) so the response carries the same evidence.
+  const floorTurn = workLearningFloorTurn(db, user, command, commandLanguage);
+  if (floorTurn) {
+    const result = workLearningFloorResult(floorTurn, { inputMode, outputMode, companionUnderstanding, conversationalModeOrchestrator });
+    const agentAction = buildAgentActionMetadata({ userMessage: command, result, inputMode, outputMode: outputMode || undefined, language: floorTurn.language });
+    result.metadata = {
+      ...(result.metadata || {}),
+      agentAction,
+      policyDecision: agentAction.policyDecision || null,
+      nexusPlan: agentAction.nexusPlan || null,
+      plannerObservation: agentAction.plannerObservation || null
+    };
+    commandRecord(db, user, command, result);
+    if (outputMode === "voice") {
+      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response, inputMode, language: floorTurn.language });
+    }
+    addWorkflowNote(db.profile, body.note, "Agent command note");
+    return {
+      result,
+      companionUnderstanding,
+      companionRouteOutcome: {
+        route: "work-learning-floor",
+        primaryModeId: conversationalModeOrchestrator.primaryMode.id,
+        blendedModeIds: conversationalModeOrchestrator.blendedModes.map(mode => mode.id),
+        noExecutionAuthorized: true,
+        workflowOpened: false
+      }
+    };
   }
   const stabilizationRepair = await genesisStabilizationConversationRepair(db, user, command, {
     ...body,
