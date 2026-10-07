@@ -2556,6 +2556,26 @@ function recordLoginFailure(req, accountKey) {
 }
 function clearLoginFailures(accountKey) { if (accountKey) rateBuckets.delete(`auth:login:account:${accountKey}`); }
 
+// A budget that is only ever spent by a refused or abusive event (a wrong reset code), never by a success: look without counting, count the bad event separately.
+function failureBudgetOpen(key, limit) {
+  const bucket = rateBuckets.get(key);
+  return !bucket || Date.now() > bucket.resetAt || bucket.count < limit;
+}
+function recordFailure(key, limit, windowMs) { rateBucketCheck(key, limit, windowMs); }
+
+// Many people can share one internet address (a clinic, an office, a mobile carrier), so a signed-in person is limited per person (at that address), with a wider ceiling for the whole address. A guest or a
+// voice guest is made without any check, so those keep the original per-address budget exactly: making a new guest never earns a new budget.
+function accountableUser(user) {
+  return Boolean(user && user.id) && user.guest !== true && !/guest/i.test(String(user.authType || ""));
+}
+function perUserRateLimit(req, user, bucketName, limit, windowMs, ceilingMultiplier = 5) {
+  if (!accountableUser(user)) return authRateLimit(req, bucketName, limit, windowMs);
+  const address = rateLimitClientKey(req);
+  const personOk = rateBucketCheck(`auth:${bucketName}:user:${user.id}:${address}`, limit, windowMs);
+  const addressOk = rateBucketCheck(`auth:${bucketName}:ceiling:${address}`, limit * ceilingMultiplier, windowMs);
+  return personOk && addressOk;
+}
+
 // The AI/agent routes accept free-form text and end every call in a full
 // writeDb() of the single shared application-state blob (one JSON file or
 // one Postgres row, serialized through one write queue -- see the write-path
@@ -2566,10 +2586,10 @@ function clearLoginFailures(accountKey) { if (accountKey) rateBuckets.delete(`au
 // permissions) can otherwise keep the shared write path busy well within
 // that blanket limit. Give these routes their own tighter, separately-keyed
 // budget, the same way login/password-reset already have theirs.
-function aiAgentRateLimit(req) {
+function aiAgentRateLimit(req, user = null) {
   const configuredLimit = Number(process.env.AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW || 60);
   const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : 60;
-  return authRateLimit(req, "agent", effectiveLimit, 60_000);
+  return perUserRateLimit(req, user, "agent", effectiveLimit, 60_000);
 }
 
 function parseCookies(req) {
@@ -3653,6 +3673,22 @@ function resolveElevenLabsVoiceAuthContext(req, db, user, { language = "en", iss
     };
   }
   if (!issueGuest || !genesisVoiceGuestSessionsEnabled()) {
+    return {
+      ok: false,
+      authenticated: false,
+      authorized: false,
+      user: null,
+      authMechanism: "none",
+      sessionPresent: false,
+      setCookie: ""
+    };
+  }
+  // Making a new anonymous voice guest (no name, no check) is limited per address per hour (a shared address has room for a group) and overall (the sessions are held in memory), so a flood of new guests
+  // cannot be used to mint endless voice sessions. A guest who already has a cookie never reaches this point. Refused means "not signed in", the same as when guest voice is off.
+  const guestMintPerHour = Number(process.env.NEXUS_GENESIS_VOICE_GUESTS_PER_HOUR_PER_ADDRESS || 60);
+  const guestMintCap = Number(process.env.NEXUS_GENESIS_VOICE_GUEST_CAP || 2000);
+  if (genesisVoiceGuestSessions.size >= (Number.isFinite(guestMintCap) && guestMintCap > 0 ? guestMintCap : 2000)
+    || !authRateLimit(req, "voice-guest-mint", Number.isFinite(guestMintPerHour) && guestMintPerHour > 0 ? guestMintPerHour : 60, 3_600_000)) {
     return {
       ok: false,
       authenticated: false,
@@ -43018,6 +43054,8 @@ function nexusUploadReadiness(db, env = process.env) {
     acceptedFileTypes: nexusUploads.acceptedTypes(),
     maxFileSizeMb: Math.round(nexusUploads.maxUploadBytes(env) / (1024 * 1024)),
     totalQuotaMb: Math.round(nexusUploads.totalQuotaBytes(env) / (1024 * 1024)),
+    perBusinessQuotaMb: Math.round(nexusUploads.spaceQuotaBytes(env) / (1024 * 1024)),
+    perPersonQuotaMb: Math.round(nexusUploads.userQuotaBytes(env) / (1024 * 1024)),
     uploadEndpoint: "/api/nexus/upload",
     downloadEndpoint: "/api/nexus/upload/file",
     disabledUploadUiState: !enabled,
@@ -46514,6 +46552,17 @@ async function api(req, res, url) {
   // From here to the end of this request, saves stamp the owner on the records it creates (see profileOwnerStamping). Reads never change data, so skip them.
   if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
 
+  // Many routes answer a caller who is not signed in and then save something (preparing a message, a profile, a request record), and each save rewrites the whole shared record. Give anonymous changes one
+  // generous ceiling per address (120 a minute; AGRINEXUS_ANON_WRITE_RATE_LIMIT_PER_MINUTE) so nobody can use them to keep that write path busy. Signed-in people are never counted here, and the routes that
+  // have their own limits (sign-in, guest sessions, password reset, voice) or are called by a provider that proves who it is (Twilio, payment callbacks, webhooks) are left alone.
+  if (!user && (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE")
+    && !/^\/api\/(login|logout|auth\/|voice\/|trade\/payment-callback\/)|webhook|callback/i.test(url.pathname)) {
+    const anonymousLimit = Number(process.env.AGRINEXUS_ANON_WRITE_RATE_LIMIT_PER_MINUTE || 120);
+    if (!authRateLimit(req, "anonymous-write", Number.isFinite(anonymousLimit) && anonymousLimit > 0 ? anonymousLimit : 120, 60_000)) {
+      return send(res, 429, { error: "Too many requests. Please sign in, or wait a minute and try again." });
+    }
+  }
+
   if (url.pathname === "/api/healthz" && req.method === "GET") {
     const status = integrationStatus(db);
     return send(res, 200, {
@@ -47900,7 +47949,7 @@ async function api(req, res, url) {
       return send(res, 403, { ok: false, error: "File uploads are not enabled on this server yet.", noSecretValues: true });
     }
     if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
-    if (!rateLimit(req, 20, 10 * 60_000)) return send(res, 429, { ok: false, error: "Too many uploads. Please wait before trying again." });
+    if (!perUserRateLimit(req, user, "upload", 20, 10 * 60_000)) return send(res, 429, { ok: false, error: "Too many uploads. Please wait before trying again." });
     try {
       const meta = await nexusUploads.parseAndStoreUpload(req, { env: process.env, userId: user.id, space: businessSpaces.currentSpace() });
       db.profile = db.profile || {};
@@ -47924,7 +47973,7 @@ async function api(req, res, url) {
       return send(res, 200, { ok: true, fileId: meta.fileId, filename: meta.originalFilename, mimeType: meta.mimeType, sizeBytes: meta.sizeBytes });
     } catch (error) {
       const code = error?.message || "upload_failed";
-      const status = code === "payload_too_large" || code === "file_too_large" ? 413
+      const status = code === "payload_too_large" || code === "file_too_large" || code === "user_quota_exceeded" || code === "space_quota_exceeded" ? 413
         : code === "unsupported_file_type" || code === "content_does_not_match_declared_type" ? 415
         : code === "storage_quota_exceeded" ? 507
         : code === "no_file_in_request" ? 400
@@ -47935,6 +47984,8 @@ async function api(req, res, url) {
         unsupported_file_type: `Only ${nexusUploads.acceptedTypes().join(", ")} are accepted.`,
         content_does_not_match_declared_type: "The file's contents did not match its declared type.",
         storage_quota_exceeded: "Nexus file storage is full. Please try again later or contact support.",
+        user_quota_exceeded: `Your storage is full (${Math.round(nexusUploads.userQuotaBytes(process.env) / (1024 * 1024))} MB per person). Remove files you no longer need, then try again.`,
+        space_quota_exceeded: `Your business's storage is full (${Math.round(nexusUploads.spaceQuotaBytes(process.env) / (1024 * 1024))} MB). Remove files you no longer need, or ask the person in charge, then try again.`,
         no_file_in_request: "No file was found in the upload."
       };
       if (status === 500) recordServerError({ source: "nexus-upload", message: error.stack || error.message, context: { userId: user.id } });
@@ -48075,7 +48126,7 @@ async function api(req, res, url) {
   // line with that established pattern.
   if (["/api/nexus/intelligence/ask", "/api/nexus/knowledge/query", "/api/nexus/live-knowledge/query", "/api/nexus/live-knowledge/test"].includes(url.pathname) && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
-    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
   }
 
   if (url.pathname === "/api/nexus/intelligence/ask" && req.method === "POST") {
@@ -48189,7 +48240,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/email/send-packet" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
+    if (!perUserRateLimit(req, user, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await nexusEmailSendPacket(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -48199,7 +48250,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/communications/send-message" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (userIsRestrictedFrom(user, "communications-send")) return send(res, 403, { error: "This account type cannot send real messages." });
-    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
+    if (!perUserRateLimit(req, user, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await nexusCommunicationsSendMessage(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -48220,7 +48271,7 @@ async function api(req, res, url) {
   // no route-specific rate limit, the same missing-guard shape as the two routes just above.
   if (url.pathname === "/api/nexus/pharmacy/send-referral" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow pharmacy referrals" });
-    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
+    if (!perUserRateLimit(req, user, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await sendNexusProviderCoordinationPacket(db, "pharmacy", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -48237,7 +48288,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/mobile-clinic/send-request" && req.method === "POST") {
     if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic requests" });
-    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
+    if (!perUserRateLimit(req, user, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     const result = await sendNexusProviderCoordinationPacket(db, "mobile-clinic", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
@@ -49788,7 +49839,7 @@ async function api(req, res, url) {
   // Twilio cost and a real spam/harassment vector.
   if (["/api/nexus/tools/sms/send", "/api/nexus/tools/whatsapp/send", "/api/nexus/tools/call/start",
     "/api/nexus/tools/communications/sms/send", "/api/nexus/tools/communications/whatsapp/send", "/api/nexus/tools/communications/call/start"]
-    .includes(url.pathname) && req.method === "POST" && !authRateLimit(req, "real-communications-send", 20, 600_000)) {
+    .includes(url.pathname) && req.method === "POST" && !perUserRateLimit(req, user, "real-communications-send", 20, 600_000)) {
     return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
   }
 
@@ -50852,9 +50903,6 @@ async function api(req, res, url) {
   if (url.pathname === "/api/auth/guest-session" && req.method === "POST") {
     // Guest sessions are the demo's "Start as User": they exist in the default space only, never inside a business.
     if (businessSpaces.currentSpace() !== businessSpaces.DEFAULT_SPACE) return send(res, 403, { error: "Guest sessions are not available inside a business." });
-    if (!rateLimit(req, 20, 60_000)) {
-      return send(res, 429, { ok: false, error: "Too many guest session requests", code: "guest_session_rate_limited" });
-    }
     const body = await readBody(req);
     const displayName = String(body.name || "").replace(/\s+/g, " ").trim().slice(0, 80);
     const language = String(body.language || "en").trim().toLowerCase().slice(0, 12);
@@ -50862,6 +50910,18 @@ async function api(req, res, url) {
       return send(res, 400, { ok: false, error: "Your name is required", code: "guest_name_required" });
     }
     const existingUser = currentUser(req, db);
+    // Only making a NEW guest counts against the limits below (a guest coming back, or changing their name, makes nothing). The per-minute limit is unchanged; the hourly one and the cap on live guests stop an
+    // endless supply of new accounts, which cost every later request (the whole shared record is read and written each time). A shared address (a demo room, a clinic) has room for a whole group.
+    const guestLimitRefusal = () => {
+      if (!rateLimit(req, 20, 60_000)) return "Too many guest session requests";
+      const hourly = Number(process.env.AGRINEXUS_GUEST_SESSIONS_PER_HOUR_PER_ADDRESS || 120);
+      if (!authRateLimit(req, "guest-session-hourly", Number.isFinite(hourly) && hourly > 0 ? hourly : 120, 3_600_000)) return "Too many guest session requests";
+      return "";
+    };
+    if (!(existingUser?.guest === true)) {
+      const refusal = guestLimitRefusal();
+      if (refusal) return send(res, 429, { ok: false, error: refusal, code: "guest_session_rate_limited" });
+    }
     if (existingUser?.guest === true) {
       existingUser.name = displayName;
       existingUser.language = language;
@@ -50883,6 +50943,11 @@ async function api(req, res, url) {
     // before adding another one.
     const guestExpiryCutoff = Date.now() - sessionTtlMs();
     db.users = db.users.filter(item => !item.guest || new Date(item.updatedAt || item.createdAt || 0).getTime() > guestExpiryCutoff);
+    // A ceiling on live guest accounts overall, however many addresses the requests come from (AGRINEXUS_GUEST_ACCOUNT_CAP, default 5000). Expired guests were just removed, so this only bites during a flood.
+    const guestCap = Number(process.env.AGRINEXUS_GUEST_ACCOUNT_CAP || 5000);
+    if (db.users.filter(item => item.guest).length >= (Number.isFinite(guestCap) && guestCap > 0 ? guestCap : 5000)) {
+      return send(res, 503, { ok: false, error: "Guest sessions are very busy right now. Please try again in a few minutes.", code: "guest_sessions_full" });
+    }
 
     const guestId = `guest_${crypto.randomUUID()}`;
     const guest = {
@@ -51040,10 +51105,16 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/auth/password-reset" && req.method === "POST") {
-    if (!authRateLimit(req, "password-reset", 5, 300_000)) return send(res, 429, { error: "Too many reset requests. Try again in a few minutes." });
+    // Two limits. Per address: a generous ceiling (a clinic or an office shares one), and it is only for requests; a reset code being checked has its own budget below. Per email: at most 5 reset emails an
+    // hour to any one address, however many addresses the requests come from, so nobody can fill another person's inbox. It is keyed on the typed email whether or not an account exists, and a request over
+    // it gets the very same answer as any other without sending anything, so it cannot be used to find out which emails are registered. The code already sent keeps working.
+    if (!authRateLimit(req, "password-reset", 20, 600_000)) return send(res, 429, { error: "Too many reset requests. Try again in a few minutes." });
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     if (!email) return send(res, 400, { error: "Email is required" });
+    if (!rateBucketCheck(`auth:password-reset:email:${email.slice(0, 254)}`, 5, 3_600_000)) {
+      return send(res, 200, { ok: true, status: nexusEmailProviderStatus().configured ? "sent" : "queued-needs-provider" });
+    }
     const rawToken = crypto.randomBytes(24).toString("hex");
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -51077,7 +51148,9 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/auth/password-reset/confirm" && req.method === "POST") {
-    if (!authRateLimit(req, "password-reset", 5, 300_000)) return send(res, 429, { error: "Too many reset attempts. Try again in a few minutes." });
+    // Only a wrong or expired code uses up this budget (5 per address per 5 minutes), the way sign-in counts only refused attempts: a person who gets it right is never held back by neighbours on the same address.
+    const resetFailureKey = `auth:password-reset-confirm:${rateLimitClientKey(req)}`;
+    if (!failureBudgetOpen(resetFailureKey, 5)) return send(res, 429, { error: "Too many reset attempts. Try again in a few minutes." });
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     const token = String(body.token || "").trim();
@@ -51104,7 +51177,7 @@ async function api(req, res, url) {
     };
     if (usingPostgresAuth()) {
       const consumed = await pgUsers.consumeResetToken(getPgPool(), email, token, newPassword).catch(() => false);
-      if (!consumed) return send(res, 400, { error: "Invalid or expired reset code" });
+      if (!consumed) { recordFailure(resetFailureKey, 5, 300_000); return send(res, 400, { error: "Invalid or expired reset code" }); }
       // Keep the blob shadow copy in sync too, so a later AUTH_STORE rollback to
       // "blob", or any code path that still reads the blob's password field,
       // doesn't see the pre-reset value. currentUser()'s revocation check and
@@ -51125,7 +51198,7 @@ async function api(req, res, url) {
         && hashMatches
         && user.resetTokenExpiresAt
         && new Date(user.resetTokenExpiresAt).getTime() > Date.now();
-      if (!valid) return send(res, 400, { error: "Invalid or expired reset code" });
+      if (!valid) { recordFailure(resetFailureKey, 5, 300_000); return send(res, 400, { error: "Invalid or expired reset code" }); }
       user.password = pgUsers.hashPassword(newPassword);
       delete user.resetTokenHash;
       delete user.resetTokenExpiresAt;
@@ -56962,7 +57035,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/plan" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent planning" });
-    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     ensureAiProfile(db.profile);
     const goal = String(body.goal || "Create an AgriNexus cross-module plan.").trim();
@@ -57082,7 +57155,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/execute" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent execution" });
-    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     ensureAiProfile(db.profile);
     const plan = db.profile.agentPlans.find(item => item.id === body.planId) || db.profile.agentPlans[0];
@@ -57097,7 +57170,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/briefing" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent briefings" });
-    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const briefing = agentBriefing(db, user, body.purpose || "government presentation");
     await writeDb(db);
@@ -57108,7 +57181,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/reasoning-language" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent reasoning" });
-    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const command = String(body.command || "Review Nexus reasoning and language production").trim();
     const moduleSignal = conversationModuleSignal(command);
@@ -57132,7 +57205,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/command" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent commands" });
-    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const canonicalCommandLanguage = canonicalVoiceLanguage(body.targetLanguage || body.language || user.language || "en");
     const canonicalCommandInputMode = body.inputMode || "api";
@@ -57295,7 +57368,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/agent/conversation-core" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow conversation core" });
-    if (!aiAgentRateLimit(req)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const command = String(body.command || body.text || "").trim();
     const decision = await nexusConversationCoreDecision(db, user, command, {
@@ -57515,7 +57588,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/realtime/session" && req.method === "POST") {
-    if (!rateLimit(req, 30, 60_000)) return send(res, 429, { error: "Too many OpenAI Realtime session requests", category: "rate-limited" });
+    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-session", 30, 60_000, 10) : rateLimit(req, 30, 60_000))) return send(res, 429, { error: "Too many OpenAI Realtime session requests", category: "rate-limited" });
     if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
     const body = await readBody(req);
     const authContext = resolveGenesisVoiceAuthContext(req, db, user, {
@@ -57706,7 +57779,7 @@ async function api(req, res, url) {
   // The browser reports when a voice session stalled (a turn went unanswered, or a tool hung) and what state it was in, so the cause can be read from the
   // server log. Only a fixed set of short fields is kept: no speech, no names, nothing personal.
   if (url.pathname === "/api/voice/realtime/stall-report" && req.method === "POST") {
-    if (!rateLimit(req, 12, 60_000)) return send(res, 429, { error: "Too many stall reports", category: "rate-limited" });
+    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-stall", 12, 60_000, 10) : rateLimit(req, 12, 60_000))) return send(res, 429, { error: "Too many stall reports", category: "rate-limited" });
     if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
     const body = await readBody(req);
     const authContext = resolveGenesisVoiceAuthContext(req, db, user, { language: "en", issueGuest: false });
@@ -57728,7 +57801,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/realtime/tool" && req.method === "POST") {
-    if (!rateLimit(req, 90, 60_000)) return send(res, 429, { error: "Too many Nexus Realtime tool requests", category: "rate-limited" });
+    // A signed-in account is limited per person (at that address, with a wider ceiling for the address); everyone else keeps the per-address budget. A clinic's staff all use voice tools from one address.
+    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-tool", 90, 60_000, 10) : rateLimit(req, 90, 60_000))) return send(res, 429, { error: "Too many Nexus Realtime tool requests", category: "rate-limited" });
     if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
     const body = await readBody(req);
     const authContext = resolveGenesisVoiceAuthContext(req, db, user, {
@@ -57962,7 +58036,7 @@ async function api(req, res, url) {
     // Found live (rate-limiting audit): this real Twilio outbound-call
     // route had no route-specific rate limit, unlike the /api/nexus/tools/*
     // real-send routes now gated -- same real per-call Twilio cost.
-    if (!authRateLimit(req, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
+    if (!perUserRateLimit(req, user, "real-communications-send", 20, 600_000)) return send(res, 429, { error: "Too many real send/call requests. Please slow down." });
     // Found live (restriction-bypass follow-up audit): this route had no
     // restriction check at all, unlike every sibling real-send route
     // (/api/nexus/tools/sms/send, /api/communications/thread, etc.).

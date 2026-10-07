@@ -40,6 +40,18 @@ function totalQuotaBytes(env = process.env) {
   return Math.min(Math.max(Number(env.NEXUS_FILE_UPLOAD_TOTAL_QUOTA_MB) || 500, 10), 4000) * 1024 * 1024;
 }
 
+// The total above is one shared ceiling for the whole disk. These two keep one business, or one person, from using up all of it: each business (space) and each person has their own allowance, counted only
+// from their own files. Deleting a file frees its share at once, because usage is read back from the stored files rather than kept as a counter.
+function quotaBytes(rawValue, fallbackMb) {
+  return Math.min(Math.max(Number(rawValue) || fallbackMb, 1), 4000) * 1024 * 1024;
+}
+function spaceQuotaBytes(env = process.env) {
+  return quotaBytes(env.AGRINEXUS_UPLOAD_SPACE_QUOTA_MB, 500);
+}
+function userQuotaBytes(env = process.env) {
+  return quotaBytes(env.AGRINEXUS_UPLOAD_USER_QUOTA_MB, 50);
+}
+
 // Found live (security audit): unlike resolveUploadedFilePath just below,
 // this never basename()'d fileId or checked the result stayed inside dir --
 // a fileId like "../planted" resolved metaPath OUTSIDE the upload
@@ -84,6 +96,31 @@ function currentUsageBytes(dir) {
     } catch { /* file removed mid-scan; ignore */ }
   }
   return total;
+}
+
+// Bytes stored by one business (space) and by one person within it, read from the .meta.json sidecars (a file from before businesses existed belongs to the default space). Only a file with a sidecar
+// counts here, which is every file the upload route stores; an upload still being written has no sidecar yet.
+function usageForOwner(dir, { space = "default", userId = "" } = {}) {
+  const wantedSpace = String(space || "default");
+  const wantedUser = String(userId || "");
+  let spaceBytes = 0;
+  let userBytes = 0;
+  let entries;
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return { spaceBytes, userBytes };
+  }
+  for (const entry of entries) {
+    if (!entry.endsWith(".meta.json")) continue;
+    const meta = readMeta(dir, entry.slice(0, -".meta.json".length));
+    if (!meta || String(meta.space || "default") !== wantedSpace) continue;
+    const size = Number(meta.sizeBytes);
+    if (!Number.isFinite(size) || size <= 0) continue;
+    spaceBytes += size;
+    if (wantedUser && String(meta.uploadedBy || "") === wantedUser) userBytes += size;
+  }
+  return { spaceBytes, userBytes };
 }
 
 function magicBytesMatch(buffer, mimeType) {
@@ -240,6 +277,14 @@ function parseAndStoreUpload(req, { env = process.env, userId, space = "default"
           if (usage > totalQuotaBytes(env)) {
             throw Object.assign(new Error("storage_quota_exceeded"), { usage, quota: totalQuotaBytes(env) });
           }
+          // Each person and each business has an allowance of its own, counted from its own files only. Everything from here to the sidecar write is synchronous, so two uploads cannot both pass this check.
+          const owned = usageForOwner(dir, { space, userId });
+          if (userId && owned.userBytes + bytesWritten > userQuotaBytes(env)) {
+            throw Object.assign(new Error("user_quota_exceeded"), { usage: owned.userBytes, quota: userQuotaBytes(env) });
+          }
+          if (owned.spaceBytes + bytesWritten > spaceQuotaBytes(env)) {
+            throw Object.assign(new Error("space_quota_exceeded"), { usage: owned.spaceBytes, quota: spaceQuotaBytes(env) });
+          }
           fs.renameSync(tmpPath, finalPath);
           const meta = {
             fileId,
@@ -286,6 +331,9 @@ module.exports = Object.freeze({
   uploadDir,
   maxUploadBytes,
   totalQuotaBytes,
+  spaceQuotaBytes,
+  userQuotaBytes,
+  usageForOwner,
   currentUsageBytes,
   metaPath,
   readMeta,
