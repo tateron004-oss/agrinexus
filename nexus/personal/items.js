@@ -62,7 +62,11 @@ function readRequest(text, today) {
     const items = splitListItems(m[2]);
     if (items.length) return { action: "todo-add-many", list: listNameOf(m[1]), items };
   }
-  if ((m = new RegExp(`^(?:please )?(?:add|put)\\s+(.+?)\\s+(?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
+  if ((m = new RegExp(`^(?:please )?(?:add|put)\\s+(.+?)\\s+(?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) {
+    // "add milk, bread and sugar to my shopping list" is three things to buy, not one item called "milk, bread and sugar" (so each can be ticked off).
+    if (listNameOf(m[2] || "") === "shopping") { const items = splitListItems(m[1]); if (items.length > 1) return { action: "todo-add-many", list: "shopping", items }; }
+    return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
+  }
   // "I need to buy fertilizer, put it on my list" -- the thing to keep comes first, then "put it on my list".
   if ((m = new RegExp(`^(?:i need to|i have to|i must|i want to|i should)\\s+(.+?)[,.]?\\s+(?:and |then )?(?:please )?(?:put|add) (?:it|that|this) (?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
   if ((m = new RegExp(`^(?:please )?(?:add|put) (?:to|on) my ${LIST_WORDS}(?: list)?[:,]?\\s+(.+)$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[1]), text: tidyTitle(m[2]) };
