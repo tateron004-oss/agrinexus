@@ -37,6 +37,8 @@ const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
 const { CRISIS_RULE } = require("./nexus/brain/crisis-rule.js");
+const kyroCrisisPhrases = require("./public/kyro-crisis-phrases.js");
+const { t: nexusText } = require("./nexus/i18n/index.js");
 const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
 const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predictive-workforce.js");
 const nexusGenesisAfricaAgOpportunity = require("./public/nexus-genesis-africa-ag-opportunity.js");
@@ -2862,7 +2864,12 @@ const PROFILE_OWNER_STAMP_KEYS_EXTRA = [
   "tradeLogisticsRecords", "tradeMessages", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "providerOutreach", "droneFindings", "shiftSchedule",
   "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations",
   "applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests",
-  "buyerContacts", "tradeMessageThreads",
+  "buyerContacts", "tradeMessageThreads", "voiceSessions", "assistantReminders",
+  // more of what a person makes in the shared lists (found by the cross-account sweep): plans and briefings the agent made for them, drone and field work, onboarding, support tickets and the usage feed that
+  // names them, video sessions, their phone book; and, inside bigger records, the platform-intelligence drafts, searches and plans, and the user-testing memory (written "section.list")
+  "agentPlans", "agentBriefings", "droneMissions", "droneScans", "fieldInterventions", "onboardingRuns", "supportTickets", "womenFamilyRuns", "videoSessions", "phoneContacts",
+  "platformIntelligence.messageDrafts", "platformIntelligence.searchHistory", "platformIntelligence.dailyPlans", "platformIntelligence.imports",
+  "nexusUserTestingRuntime.records", "nexusUserTestingRuntime.receipts", "nexusUserTestingRuntime.predictions", "nexusUserTestingRuntime.executions",
   "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"
 ];
 const profileOwnerStamping = new (require("node:async_hooks").AsyncLocalStorage)();
@@ -2872,16 +2879,23 @@ const PROFILE_AUDIT_KEYS = new Set(["cloudAgentAudit", "offlineSyncHistory", "ag
 // "_ledgerOwner" (who made them), which only decides who is shown them: it is not used by the account download or the erasure, unlike "_ownerEmail".
 const LEDGER_VIEW_KEYS = ["walletTransactions", "paymentCheckoutRecords", "tradeEvents", "notifications"];
 const profileStampKeys = () => [...new Set([...(typeof HEALTH_PROFILE_ARRAY_KEYS !== "undefined" ? HEALTH_PROFILE_ARRAY_KEYS : []), ...PROFILE_OWNER_STAMP_KEYS_EXTRA])].filter(key => !PROFILE_AUDIT_KEYS.has(key)).concat(LEDGER_VIEW_KEYS);
+// A list can sit one level inside a bigger record ("platformIntelligence.messageDrafts"): read it, and replace it without changing the original.
+const profileListAt = (profile, key) => { const [head, tail] = String(key).split("."); const node = tail ? profile?.[head]?.[tail] : profile?.[head]; return Array.isArray(node) ? node : null; };
+function withProfileListAt(copy, key, list) {
+  const [head, tail] = String(key).split(".");
+  if (!tail) { copy[head] = list; return; }
+  copy[head] = { ...copy[head], [tail]: list };
+}
 // The owner mark is for the download, the erasure and for deciding who is shown a record: nobody else is shown another person's email.
 function withoutOwnerMarks(profile) {
   if (!profile || typeof profile !== "object") return profile;
   let copy = null;
   const marked = item => item && typeof item === "object" && ("_ownerEmail" in item || "_ledgerOwner" in item);
   for (const key of profileStampKeys()) {
-    const list = profile[key];
-    if (!Array.isArray(list) || !list.some(marked)) continue;
+    const list = profileListAt(copy || profile, key);
+    if (!list || !list.some(marked)) continue;
     copy = copy || { ...profile };
-    copy[key] = list.map(item => { if (!marked(item)) return item; const { _ownerEmail, _ledgerOwner, ...rest } = item; return rest; });
+    withProfileListAt(copy, key, list.map(item => { if (!marked(item)) return item; const { _ownerEmail, _ledgerOwner, ...rest } = item; return rest; }));
   }
   // who made each line of the activity feed is kept next to it, in the same order, and is not shown
   if ("activityBy" in profile) { copy = copy || { ...profile }; delete copy.activityBy; }
@@ -2891,17 +2905,45 @@ const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(
 
 // Whose money and trade records a person is shown: their own, and those with no personal owner mark (the demo data and anything made before owner marks existed). An Admin is shown all.
 const MONEY_VIEW_KEYS = ["orders", "tradeMessages", "tradeMessageThreads", "buyerContacts", "tradeQuotes", "contractPackets", "tradeLogisticsRecords", "qualityInspections", "coldChainChecks", "exportReadiness", "providerOutreach", ...LEDGER_VIEW_KEYS];
+// Everything else a person makes in the shared lists (spoken and chat sessions, reminders, workforce paperwork, payroll and reviews, saved providers and notes, field locations, drone requests, ...) is theirs
+// too. Only what is meant for everyone to see is left out of this: public listings, the shared map layers, field findings, and the review queues staff work from.
+const SHARED_BY_DESIGN_KEYS = new Set(["marketplaceListings", "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "droneFindings", "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue"]);
+const STRICTLY_OWN_VIEW_KEYS = new Set(["shiftSchedule"]);
+// Lists that are seeded with shared entries (the directory of clinics and desks) but that a person can add their own to: the seeded ones have no owner mark and stay shown; theirs (createdBy) are only theirs.
+// These are not stamped by the save, so the seeded entries are never taken as one person's.
+const VIEW_ONLY_KEYS = ["platformIntelligence.localDirectory"];
+const personalViewKeys = () => [...new Set([...MONEY_VIEW_KEYS, ...VIEW_ONLY_KEYS, ...profileStampKeys().filter(key => !HEALTH_PROFILE_ARRAY_KEYS.has(key) && !SHARED_BY_DESIGN_KEYS.has(key))])];
 const ownerOfRecord = item => [...PROFILE_OWNER_FIELDS, "_ledgerOwner"].map(field => String(item?.[field] || "").trim().toLowerCase()).filter(value => value.includes("@"));
 const recordOwnedByAnotherPerson = (item, viewerEmail) => Boolean(item && typeof item === "object") && ownerOfRecord(item).some(value => value !== viewerEmail);
 function moneyRecordsForViewer(profile, user) {
   if (!profile || !user || user.role === "Admin") return profile;
   const viewer = String(user.email || "").trim().toLowerCase();
   let copy = null;
-  for (const key of MONEY_VIEW_KEYS) {
-    const list = profile[key];
-    if (!Array.isArray(list)) continue;
-    const kept = list.filter(item => !recordOwnedByAnotherPerson(item, viewer));
-    if (kept.length !== list.length) { copy = copy || { ...profile }; copy[key] = kept; }
+  for (const key of personalViewKeys()) {
+    const list = profileListAt(copy || profile, key);
+    if (!list) continue;
+    // A person's own schedule is only what they made: the seeded demo shifts (no owner mark) are nobody's appointment, so no one is told "your next shift" from them.
+    const kept = list.filter(item => STRICTLY_OWN_VIEW_KEYS.has(key) ? ownerOfRecord(item).includes(viewer) : !recordOwnedByAnotherPerson(item, viewer));
+    if (kept.length !== list.length) { copy = copy || { ...profile }; withProfileListAt(copy, key, kept); }
+  }
+  // The persistent-memory store keeps its owner as the account id, not the email: other people's records, and what was worked out from them, are left out.
+  const memoryStore = profile.nexusPersistentMemory;
+  if (memoryStore && typeof memoryStore === "object" && Array.isArray(memoryStore.records) && memoryStore.records.some(record => record?.ownerId && record.ownerId !== user.id)) {
+    const records = memoryStore.records.filter(record => !record?.ownerId || record.ownerId === user.id);
+    const receiptIds = new Set(records.flatMap(record => record.receiptIds || []));
+    const predictive = memoryStore.predictiveContext && typeof memoryStore.predictiveContext === "object" ? memoryStore.predictiveContext : null;
+    copy = copy || { ...profile };
+    copy.nexusPersistentMemory = {
+      ...memoryStore,
+      records,
+      receipts: (memoryStore.receipts || []).filter(receipt => receiptIds.has(receipt?.id)),
+      ...(predictive ? { predictiveContext: { ...predictive, activeRecords: (predictive.activeRecords || []).filter(record => !record?.ownerId || record.ownerId === user.id), receipts: [], signals: [] } } : {})
+    };
+  }
+  // The usage feed (an operator's view of what was done) names who did each thing; other people's lines are not shown. Lines with no person named are kept.
+  if (Array.isArray(profile.usageEvents) && profile.usageEvents.some(event => String(event?.user || "").includes("@") && String(event.user).trim().toLowerCase() !== viewer)) {
+    copy = copy || { ...profile };
+    copy.usageEvents = profile.usageEvents.filter(event => !(String(event?.user || "").includes("@") && String(event.user).trim().toLowerCase() !== viewer));
   }
   if (Array.isArray(profile.activity) && Array.isArray(profile.activityBy) && profile.activityBy.some(by => String(by || "").includes("@") && String(by).toLowerCase() !== viewer)) {
     copy = copy || { ...profile };
@@ -2910,6 +2952,9 @@ function moneyRecordsForViewer(profile, user) {
   return copy || profile;
 }
 // The orders a person may look up or change by id (or the latest of): their own and unmarked ones. An Admin may use any.
+// The buyer contacts a person may use as a default (the first one): their own and any with no owner mark; an Admin: any.
+const visibleRecordsFor = (list, user) => (Array.isArray(list) ? list : []).filter(item => user?.role === "Admin" || !recordOwnedByAnotherPerson(item, String(user?.email || "").trim().toLowerCase()));
+const visibleBuyerContacts = (db, user) => visibleRecordsFor(db.profile.buyerContacts, user);
 const ordersForUser = (db, user) => (db.profile.orders || []).filter(order => user?.role === "Admin" || !recordOwnedByAnotherPerson(order, String(user?.email || "").trim().toLowerCase()));
 const orderForUser = (db, user, orderId) => { const usable = ordersForUser(db, user); return orderId ? usable.find(item => item.id === orderId) : usable[usable.length - 1]; };
 
@@ -2993,7 +3038,9 @@ const ownPendingAction = (db, user) => {
 // The agent keeps ONE "what we are in the middle of" context (the active mission, intake, clarification, last reasoning, ...) in the shared profile. When a different person starts talking, the
 // last person's context is cleared first, so their words never become the new person's "goal" or "memory used" (found: B's command carried A's sentence into B's own record).
 const ACTIVE_AGENT_CONTEXT_KEYS = ["lastReasoning", "activeVoiceMission", "activeGuidedMission", "activeOutcomeLoop", "lastConversationalModeOrchestrator", "lastAutonomousBrainAppliedTo", "genesisConversation",
-  "nexusSessionContext", "activeIntake", "activeClarification", "activeSimpleTurn", "activeJarvisSession", "lastReasoningLanguageProduction"];
+  "nexusSessionContext", "activeIntake", "activeClarification", "activeSimpleTurn", "activeJarvisSession", "lastReasoningLanguageProduction",
+  // a call waiting for a number, and the contact choices it offered: another person's reply must not complete it
+  "pendingContactCall"];
 function switchAgentContextTo(db, user) {
   const memory = db?.profile?.agentMemory;
   const email = String(user?.email || "").trim().toLowerCase();
@@ -3044,8 +3091,8 @@ function scrubPrivateHistoryFor(profile, email) {
 function snapshotProfileRecordsForOwnerStamping(db) {
   const snapshot = new Map();
   for (const key of profileStampKeys()) {
-    const list = db?.profile?.[key];
-    if (!Array.isArray(list)) continue;
+    const list = profileListAt(db?.profile, key);
+    if (!list) continue;
     const ids = new Set(); const objects = new WeakSet();
     for (const item of list) { if (item && typeof item === "object") { objects.add(item); if (item.id !== undefined && item.id !== null) ids.add(String(item.id)); } }
     snapshot.set(key, { ids, objects });
@@ -3057,8 +3104,8 @@ function stampNewProfileRecordsWithOwner(db, snapshot, email) {
   if (!owner || !db?.profile || !snapshot) return 0;
   let stamped = 0;
   for (const key of profileStampKeys()) {
-    const list = db.profile[key];
-    if (!Array.isArray(list)) continue;
+    const list = profileListAt(db.profile, key);
+    if (!list) continue;
     const before = snapshot.get(key);
     for (const item of list) {
       if (!item || typeof item !== "object" || Array.isArray(item) || profileRecordHasOwner(item)) continue;
@@ -3086,6 +3133,10 @@ function collectOwnedProfileRecords(profile, email) {
   for (const [key, value] of Object.entries(profile || {})) {
     if (!Array.isArray(value)) continue;
     const matches = value.filter(item => profileRecordOwnedBy(item, normalizedEmail));
+    if (matches.length) owned[key] = JSON.parse(JSON.stringify(matches));
+  }
+  for (const key of [...profileStampKeys(), ...VIEW_ONLY_KEYS].filter(name => name.includes("."))) {
+    const matches = (profileListAt(profile, key) || []).filter(item => profileRecordOwnedBy(item, normalizedEmail));
     if (matches.length) owned[key] = JSON.parse(JSON.stringify(matches));
   }
   return owned;
@@ -3120,6 +3171,14 @@ function eraseOwnedProfileRecords(profile, email) {
     });
     const removed = before - profile[key].length;
     if (removed > 0) removedCounts[key] = removed;
+  }
+  // the lists kept inside a bigger record ("platformIntelligence.messageDrafts", ...)
+  for (const key of [...profileStampKeys(), ...VIEW_ONLY_KEYS].filter(name => name.includes("."))) {
+    const list = profileListAt(profile, key);
+    if (!list) continue;
+    const [head, tail] = key.split(".");
+    const kept = list.filter(item => !profileRecordOwnedBy(item, normalizedEmail));
+    if (kept.length !== list.length) { profile[head][tail] = kept; removedCounts[key] = list.length - kept.length; }
   }
   Object.assign(removedCounts, scrubPrivateHistoryFor(profile, normalizedEmail));
   const scrubbedWords = scrubWordsFromProfile(profile, ownWords);
@@ -9974,7 +10033,9 @@ function upsertPhoneContact(db, user, { name, phone, relationship = "saved conta
   if (!cleanName || !cleanPhone) return null;
   const lookup = contactLookupKey(cleanName);
   const now = new Date().toISOString();
-  const existing = contacts.find(item => item.lookup === lookup || normalizePhoneNumber(item.phone) === cleanPhone);
+  // Only the person's own book is looked in: saving "Grace" never changes (or reuses) a contact somebody else saved.
+  const viewer = String(user?.email || "").trim().toLowerCase();
+  const existing = contacts.find(item => !recordOwnedByAnotherPerson(item, viewer) && (item.lookup === lookup || normalizePhoneNumber(item.phone) === cleanPhone));
   const record = {
     id: existing?.id || crypto.randomUUID(),
     name: cleanName,
@@ -10021,8 +10082,13 @@ function contactLookupMatches(a, b) {
   const wordsB = b.split(" ");
   return wordsA.every(word => wordsB.includes(word)) || wordsB.every(word => wordsA.includes(word));
 }
-function findPhoneContact(db, name = "") {
-  const contacts = ensurePhoneContactBook(db);
+// A person's phone book is theirs: the numbers they saved, plus any with no owner mark (made before owner marks existed). Never another person's.
+function phoneContactsForViewer(db, user) {
+  const viewer = memoryViewerEmail(user);
+  return ensurePhoneContactBook(db).filter(item => !recordOwnedByAnotherPerson(item, viewer));
+}
+function findPhoneContact(db, name = "", user = null) {
+  const contacts = phoneContactsForViewer(db, user);
   const lookup = contactLookupKey(name);
   if (!lookup) return null;
   return contacts.find(item => item.lookup === lookup)
@@ -10274,16 +10340,30 @@ function callableContactRecord(record = {}, source = "platform") {
   };
 }
 
-function callContactCandidates(db, target = {}) {
+// Whose numbers "call Grace" / "text Grace" may be looked up in. The shared lists hold every account's contacts, buyers, patients and job applicants, so a person is offered only:
+//  - their own saved contacts (and any with no owner mark), and their own buyer contacts (an Admin: all buyer contacts);
+//  - the shared directory of clinics, courses and desks (what was added by another person is not included);
+//  - the CRM leads, for an Admin only;
+//  - their own health intake and job application records, never anyone else's. A patient's or an applicant's number is not a contact for anybody else.
+function callableSourcesForViewer(db, user) {
+  const viewer = memoryViewerEmail(user);
+  if (!viewer) return [];
+  const admin = user?.role === "Admin" || (!user && profileOwnerStamping.getStore()?.role === "Admin");
+  const ownedBy = item => ownerOfRecord(item).includes(viewer);
+  const profile = db.profile;
+  return [
+    ...phoneContactsForViewer(db, user).map(item => callableContactRecord(item, "phoneContacts")),
+    ...(profile.buyerContacts || []).filter(item => admin || !recordOwnedByAnotherPerson(item, viewer)).map(item => callableContactRecord(item, "buyerContacts")),
+    ...(profile.healthIntakes || []).filter(ownedBy).map(item => callableContactRecord(item, "healthIntakes")),
+    ...(profile.applications || []).filter(ownedBy).map(item => callableContactRecord(item, "workforceApplications")),
+    ...((profile.platformIntelligence?.localDirectory || [])).filter(item => !recordOwnedByAnotherPerson(item, viewer)).map(item => callableContactRecord(item, "localDirectory")),
+    ...(admin ? (profile.platformIntelligence?.crmContacts || []) : []).map(item => callableContactRecord(item, "crmContacts"))
+  ];
+}
+
+function callContactCandidates(db, target = {}, user = null) {
   ensurePhoneContactBook(db);
-  const records = [
-    ...(db.profile.phoneContacts || []).map(item => callableContactRecord(item, "phoneContacts")),
-    ...(db.profile.buyerContacts || []).map(item => callableContactRecord(item, "buyerContacts")),
-    ...(db.profile.healthIntakes || []).map(item => callableContactRecord(item, "healthIntakes")),
-    ...(db.profile.applications || []).map(item => callableContactRecord(item, "workforceApplications")),
-    ...((db.profile.platformIntelligence?.localDirectory || [])).map(item => callableContactRecord(item, "localDirectory")),
-    ...((db.profile.platformIntelligence?.crmContacts || [])).map(item => callableContactRecord(item, "crmContacts"))
-  ].filter(item => item.name || item.phone || item.handle);
+  const records = callableSourcesForViewer(db, user).filter(item => item.name || item.phone || item.handle);
   const lookup = contactLookupKey(target.displayName || target.rawName || "");
   if (!lookup) return [];
   return records
@@ -10299,11 +10379,11 @@ function callContactCandidates(db, target = {}) {
     }));
 }
 
-function callIntentResolution(db, parsed = {}) {
+function callIntentResolution(db, parsed = {}, user = null) {
   const target = parsed.target || null;
   if (!target) return { status: "missing-target", matches: [] };
   if (target.type === "number" && target.e164Phone) return { status: "resolved", matches: [{ ...target, source: "direct-input" }] };
-  const matches = callContactCandidates(db, target);
+  const matches = callContactCandidates(db, target, user);
   if (target.type === "role") {
     const callable = matches.find(item => item.e164Phone || item.handle);
     if (!callable && !["provider", "buyer"].includes(target.displayName)) return { status: "missing-number", matches };
@@ -10341,12 +10421,12 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   const language = callIntentLanguage(options);
   const target = extractCallIntentTarget(command);
   const targetLookup = contactLookupKey(target?.displayName || target?.rawName || "");
-  const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).some(item => {
+  const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).filter(item => !recordOwnedByAnotherPerson(item, memoryViewerEmail(user))).some(item => {
     const reminderLookup = contactLookupKey(`${item.contactName || ""} ${item.task || ""}`);
     return contactLookupMatches(reminderLookup, targetLookup);
   });
   if (reminderContactMatch) return null;
-  const resolution = callIntentResolution(db, { target, provider });
+  const resolution = callIntentResolution(db, { target, provider }, user);
   if (resolution.status === "missing-target") {
     const providerMetadata = callProviderPublicMetadata(provider);
     db.profile.agentMemory.lastStatus = "call-target-needed";
@@ -11592,7 +11672,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     // walletTransactions). Trims the OLDEST orders (array front) since push() always appends at the end.
     if (db.profile.orders.length > 1000) db.profile.orders = db.profile.orders.slice(-1000);
   }
-  const buyerName = String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} verified buyer desk`).trim();
+  const buyerName = String(body.buyerName || visibleBuyerContacts(db, user)[0]?.buyerName || product?.buyerName || `${country.name} verified buyer desk`).trim();
   const sellerName = String(body.sellerName || user.name || "Farmer seller").trim();
   const productName = String(body.productName || order.product || product?.name || "Active crop lot").trim();
   const pickupLocation = String(body.pickupLocation || order.checkpoint || db.profile.activeCheckpoint || `${country.name} seller collection point`).trim();
@@ -12475,7 +12555,7 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
     productId: product?.id || order?.productId || null,
     productName: product?.name || order?.product || body.productName || "Crop transaction",
     buyerEmail: String(body.buyerEmail || user.email || "buyer@example.com").trim().toLowerCase(),
-    buyerName: String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} buyer`).trim(),
+    buyerName: String(body.buyerName || visibleBuyerContacts(db, user)[0]?.buyerName || product?.buyerName || `${country.name} buyer`).trim(),
     sellerName: String(body.sellerName || user.name || "Farmer seller").trim(),
     grossAmount,
     currency,
@@ -14000,7 +14080,7 @@ function submitBestWorkforceApplication(db, user, command = "") {
       response: `${role.title} is the best role to review, but you need ${readiness.missingReadiness}% more readiness${readiness.missingCertificates.length ? ` and ${readiness.missingCertificates.length} certificate gap(s)` : ""}. I opened the workforce path so you can close the gaps.`
     };
   }
-  let application = db.profile.applications.find(item => item.roleId === role.id);
+  let application = visibleRecordsFor(db.profile.applications, user).find(item => item.roleId === role.id);
   if (!application) {
     application = {
       id: crypto.randomUUID(),
@@ -14211,24 +14291,24 @@ function runWorkforceActionByAgent(db, user, type) {
     // Found live (drone/workforce audit): same unbounded-replay gap as the
     // REST /api/workforce/action "shift" handler -- refuse a second shift
     // while one is already scheduled and hasn't started yet.
-    if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+    if (ownRecordsOnly(db.profile.shiftSchedule, user).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
       return "A shift is already scheduled. Wait until it starts before scheduling another.";
     }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
     // Found live (legacy server.js route sweep): same falsy-zero-override gap as the REST
     // /api/workforce/action "shift" handler this mirrors -- an explicit rate:0 (an unpaid/volunteer
     // placement) was treated as missing and silently replaced with a fabricated $64.
-    const requestedRate = Number(db.profile.applications[0]?.rate);
+    const requestedRate = Number(visibleRecordsFor(db.profile.applications, user)[0]?.rate);
     const shift = {
       id: crypto.randomUUID(),
-      role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
+      role: visibleRecordsFor(db.profile.applications, user)[0]?.roleTitle || "Field Operations Agent",
       startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
       status: "scheduled",
       // Found live (calendar/session/export follow-up audit): this was a flat
       // literal regardless of which role the shift's own `role` field names --
       // a user placed into a higher-rate role saw the same estimate as one on
       // the cheapest role. Use the actually-applied role's real rate.
-      estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
+      estimatedEarnings: visibleRecordsFor(db.profile.applications, user)[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
     };
     db.profile.shiftSchedule.unshift(shift);
     // Found live (legacy server.js helper-function sweep): shiftSchedule grows unboundedly -- never
@@ -14641,7 +14721,8 @@ function platformIntelligenceSearch(db, user, query = "", filters = {}) {
   const type = String(filters.type || "").toLowerCase();
   const country = String(filters.country || "").toLowerCase();
   const tokens = tokenizeAgentText(`${query} ${type} ${country}`);
-  const sourceRecords = intelligence.localDirectory || [];
+  // the seeded directory and what this person added (an entry another person added is theirs)
+  const sourceRecords = (intelligence.localDirectory || []).filter(record => user?.role === "Admin" || !recordOwnedByAnotherPerson(record, memoryViewerEmail(user)));
   const scored = sourceRecords
     .filter(record => !type || String(record.type || "").toLowerCase() === type)
     .filter(record => !country || String(record.country || "").toLowerCase().includes(country) || String(record.region || "").toLowerCase().includes(country))
@@ -14727,17 +14808,20 @@ function platformIntelligenceDraft(db, user, body = {}) {
 
 function platformIntelligenceModel(db, user, query = "") {
   const intelligence = ensurePlatformIntelligenceProfile(db.profile);
-  const localRecords = intelligence.localDirectory || [];
+  // What this person is shown of the lists people add to: their own, and the seeded entries (an Admin: all).
+  const viewerEmail = memoryViewerEmail(user);
+  const shown = list => (list || []).filter(item => user?.role === "Admin" || !viewerEmail || !recordOwnedByAnotherPerson(item, viewerEmail));
+  const localRecords = shown(intelligence.localDirectory);
   const readyCounts = {
     localDirectory: localRecords.length,
     calendarLite: (intelligence.calendarLite || []).length,
     crmContacts: (intelligence.crmContacts || []).length,
-    messageDrafts: (intelligence.messageDrafts || []).length,
+    messageDrafts: shown(intelligence.messageDrafts).length,
     agentBlueprints: (intelligence.agentBlueprints || []).length,
-    imports: (intelligence.imports || []).length
+    imports: shown(intelligence.imports).length
   };
   const total = Object.values(readyCounts).reduce((sum, count) => sum + count, 0);
-  const latestSearch = (intelligence.searchHistory || [])[0] || null;
+  const latestSearch = shown(intelligence.searchHistory)[0] || null;
   return {
     status: "active-providerless-intelligence",
     summary: "Platform Intelligence lets Nexus use saved local directories, calendar-lite planning, CRM-style partner records, message drafts, and specialized local agents before live provider feeds are connected.",
@@ -14746,7 +14830,7 @@ function platformIntelligenceModel(db, user, query = "") {
     score: Math.min(100, 50 + Math.min(30, localRecords.length * 3) + Math.min(20, total)),
     latestSearch,
     directoryPreview: localRecords.slice(0, 8),
-    dailyPlan: (intelligence.dailyPlans || [])[0] || null,
+    dailyPlan: shown(intelligence.dailyPlans)[0] || null,
     crmPreview: (intelligence.crmContacts || []).slice(0, 5),
     agentBlueprints: (intelligence.agentBlueprints || []).slice(0, 6),
     suggestedCommands: [
@@ -18010,7 +18094,7 @@ async function executeAgentTool(db, user, step) {
     if (!role) throw new Error("No workforce role catalog is available.");
     const readiness = roleReadiness(db.profile, user, role);
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
-    let application = db.profile.applications.find(item => item.roleId === role.id);
+    let application = visibleRecordsFor(db.profile.applications, user).find(item => item.roleId === role.id);
     if (readiness.eligible && !application) {
       application = {
         id: crypto.randomUUID(),
@@ -18532,6 +18616,8 @@ function reasoningGovernanceReview(db, user, command, result = {}, supervisor = 
 function commandRecord(db, user, command, result) {
   ensureAiProfile(db.profile);
   result = ensureSpeakableAgentResult(result);
+  // A refused secret is not kept in the history or the learned memories either.
+  if (result?.metadata?.secretNotSaved) command = "(Asked to save a PIN or password: not kept.)";
   addConversationTurn(db.profile, "user", command, { email: user.email }, user.email);
   addConversationTurn(db.profile, "assistant", result.response, {
     intent: result.intent,
@@ -18605,7 +18691,7 @@ function agentBriefing(db, user, purpose = "government presentation") {
   const providers = runtimeProviders(db);
   const readiness = productionReadiness(providers);
   const { country, route } = activeContext(db);
-  const latestPlan = (db.profile.agentPlans || [])[0];
+  const latestPlan = visibleRecordsFor(db.profile.agentPlans, user)[0];
   const latestExecution = (db.profile.agentExecutions || [])[0];
   const briefing = {
     id: crypto.randomUUID(),
@@ -21476,6 +21562,13 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   };
 }
 
+function secretNotSavedReply(text, language = "en") {
+  const asked = kyroCrisisPhrases.secretLanguage(text);
+  if (!asked) return null;
+  const spoken = asked === "sw" || /^sw/i.test(String(language || "")) ? "sw" : "en";
+  return { language: spoken, response: nexusText(spoken, "safety.secretRefused") };
+}
+
 async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}, realUserEmail = user?.email) {
   // args.command is the tool-calling model's own required "command" argument
   // ("The user's plain-language Nexus request") -- confirmed live in
@@ -21571,6 +21664,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return { ...common, capability: "mental-health-behavioral-wellness", status: "completed",
       response: packet.userVisibleStatus, mentalHealth: packet,
       noDiagnosis: true, noProviderContacted: true, noEmergencyDispatch: true };
+  }
+  // A PIN, password, card or account number asked to be saved (English, Kiswahili, Sheng or Pidgin) is refused here, before any tool can keep it in a note, a memory, a list, a reminder or the history.
+  // The words are not echoed back and are not kept. (typeof guard: this function is also evaluated on its own by some tests.)
+  const secretRefusal = typeof secretNotSavedReply === "function" ? (secretNotSavedReply(rawCallerText, language) || secretNotSavedReply(command, language)) : null;
+  if (secretRefusal) {
+    return { ...common, command: "", capability: "nexus_memory", status: "completed", intent: "safety.secret_refused", response: secretRefusal.response, language: secretRefusal.language, secretNotSaved: true };
   }
   // A restricted account (today, only self-service guest sessions --
   // user.restrictions is set at /api/auth/guest-session with zero identity
@@ -24231,6 +24330,23 @@ function memoryBucket(profile, category) {
   return profile.agentMemory.longTermFacts;
 }
 
+// The "priority" slot is one value in the shared memory: it is only the asker's when they were the last to speak (switchAgentContextTo clears it for a newcomer's own words, not for this slot).
+const ownActiveMission = (db, user) => {
+  const memory = db?.profile?.agentMemory || {};
+  const viewer = memoryViewerEmail(user);
+  const lastBy = String(memory.updatedBy || "").trim().toLowerCase();
+  return !viewer || !lastBy || lastBy === viewer ? memory.activeMission || "" : "";
+};
+// What the reply may carry of the shared memory: the asker's own part of it (an Admin is shown all, as in the state view).
+const agentMemoryForReply = (db, user) => privateHistoryForViewer({ agentMemory: db.profile.agentMemory }, user || (agentActorEmail() ? { email: agentActorEmail(), role: profileOwnerStamping.getStore()?.role } : null)).agentMemory;
+const sameMemoryOwner = (a, b) => String(a?.by || "").trim().toLowerCase() === String(b?.by || "").trim().toLowerCase();
+// What Kyro "remembers about me" is the asker's own memories. Who is asking is the signed-in person of this request (or the one passed in); with nobody asking (the server's own bookkeeping) nothing is
+// filtered. An item with no owner mark is not shown to a person (as in privateHistoryForViewer): it may be words from before owner marks existed.
+function memoryViewerEmail(user) {
+  return String(user?.email || profileOwnerStamping.getStore()?.email || "").trim().toLowerCase();
+}
+const memoryItemIsViewers = (item, viewer) => !viewer || String(item?.by || "").trim().toLowerCase() === viewer;
+
 function normalizeMemoryText(text) {
   return String(text || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -24265,9 +24381,10 @@ function updateStructuredLongTermMemory(profile, item, metadata = {}) {
   item.tags = [...new Set([item.category, moduleName, ...needs].filter(Boolean).map(value => String(value).toLowerCase().replace(/\s+/g, "-")))].slice(0, 8);
 
   const moduleBucket = profile.agentMemory.moduleMemory[moduleName] || [];
-  const existingModule = moduleBucket.find(memory => memory.normalized === item.normalized);
+  const existingModule = moduleBucket.find(memory => memory.normalized === item.normalized && sameMemoryOwner(memory, item));
   const moduleItem = {
     id: item.id,
+    by: item.by || "",
     category: item.category,
     text: item.text,
     normalized: item.normalized,
@@ -24279,17 +24396,18 @@ function updateStructuredLongTermMemory(profile, item, metadata = {}) {
     updatedAt: item.updatedAt
   };
   profile.agentMemory.moduleMemory[moduleName] = existingModule
-    ? moduleBucket.map(memory => memory.normalized === item.normalized ? { ...memory, ...moduleItem, uses: Number(memory.uses || 0) + 1 } : memory).slice(0, 20)
+    ? moduleBucket.map(memory => memory === existingModule ? { ...memory, ...moduleItem, uses: Number(memory.uses || 0) + 1 } : memory).slice(0, 20)
     : [moduleItem, ...moduleBucket].slice(0, 20);
 
   needs.forEach(need => {
     const needBucket = profile.agentMemory.userNeeds[need] || [];
-    profile.agentMemory.userNeeds[need] = [{ id: item.id, module: moduleName, text: item.text, confidence: item.confidence, updatedAt: item.updatedAt }, ...needBucket.filter(memory => memory.id !== item.id)].slice(0, 12);
+    profile.agentMemory.userNeeds[need] = [{ id: item.id, by: item.by || "", module: moduleName, text: item.text, confidence: item.confidence, updatedAt: item.updatedAt }, ...needBucket.filter(memory => memory.id !== item.id)].slice(0, 12);
   });
 
   if (!metadata.noTimeline && metadata.source && /advisor|workflow|intake|conversation|trade|health|learning|workforce|drone|route/i.test(metadata.source)) {
     profile.agentMemory.advisorHistory = [{
       id: crypto.randomUUID(),
+      by: item.by || "",
       memoryId: item.id,
       module: moduleName,
       event: item.text,
@@ -24302,6 +24420,7 @@ function updateStructuredLongTermMemory(profile, item, metadata = {}) {
   if (!metadata.noTimeline) {
     profile.agentMemory.memoryTimeline = [{
       id: crypto.randomUUID(),
+      by: item.by || "",
       type: item.category,
       module: moduleName,
       title: item.text.length > 90 ? `${item.text.slice(0, 87)}...` : item.text,
@@ -24320,7 +24439,8 @@ function rememberAgentMemory(profile, text, metadata = {}) {
   const category = metadata.category || inferMemoryCategory(value);
   const bucket = memoryBucket(profile, category);
   const normalized = normalizeMemoryText(value);
-  const existing = bucket.find(item => item.normalized === normalized);
+  // The same words said by two different people are two memories, each their own: saying it again never hands back (or counts on) somebody else's item.
+  const existing = bucket.find(item => item.normalized === normalized && sameMemoryOwner(item, { by: agentActorEmail() }));
   if (existing) {
     existing.uses = Number(existing.uses || 0) + 1;
     existing.updatedAt = new Date().toISOString();
@@ -24394,18 +24514,22 @@ function retrieveAgentMemories(profile, query, limit = 6) {
   return scored;
 }
 
-function longTermMemorySummary(profile) {
+function longTermMemorySummary(profile, user) {
   ensureAiProfile(profile);
   const memory = profile.agentMemory;
-  const moduleNames = Object.keys(memory.moduleMemory || {});
-  const needNames = Object.keys(memory.userNeeds || {});
+  const viewer = memoryViewerEmail(user);
+  const mine = list => (Array.isArray(list) ? list : []).filter(item => memoryItemIsViewers(item, viewer));
+  const moduleMemory = Object.fromEntries(Object.entries(memory.moduleMemory || {}).map(([name, list]) => [name, mine(list)]).filter(([, list]) => list.length || !viewer));
+  const userNeeds = Object.fromEntries(Object.entries(memory.userNeeds || {}).map(([name, list]) => [name, mine(list)]).filter(([, list]) => list.length || !viewer));
+  const moduleNames = Object.keys(moduleMemory);
+  const needNames = Object.keys(userNeeds);
   const core = [
-    ...(memory.preferences || []),
-    ...(memory.learnedPatterns || []),
-    ...(memory.longTermFacts || []),
-    ...(memory.safetyBoundaries || [])
+    ...mine(memory.preferences),
+    ...mine(memory.learnedPatterns),
+    ...mine(memory.longTermFacts),
+    ...mine(memory.safetyBoundaries)
   ];
-  const preferred = (memory.preferences || []).slice(0, 3);
+  const preferred = mine(memory.preferences).slice(0, 3);
   const preferredIds = new Set(preferred.map(item => item.id));
   const topMemories = [
     ...preferred,
@@ -24415,15 +24539,18 @@ function longTermMemorySummary(profile) {
   ].slice(0, 5);
   const summary = {
     total: core.length,
-    modules: moduleNames.map(name => ({ name, count: (memory.moduleMemory[name] || []).length })).sort((a, b) => b.count - a.count),
-    needs: needNames.map(name => ({ name, count: (memory.userNeeds[name] || []).length })).sort((a, b) => b.count - a.count),
-    advisorEvents: (memory.advisorHistory || []).length,
-    timeline: (memory.memoryTimeline || []).slice(0, 8),
+    modules: moduleNames.map(name => ({ name, count: moduleMemory[name].length })).sort((a, b) => b.count - a.count),
+    needs: needNames.map(name => ({ name, count: userNeeds[name].length })).sort((a, b) => b.count - a.count),
+    advisorEvents: mine(memory.advisorHistory).length,
+    timeline: mine(memory.memoryTimeline).slice(0, 8),
     topMemories
   };
-  memory.lastMemorySummary = summary.total
+  const lastMemorySummary = summary.total
     ? `I remember ${summary.total} long-term item(s), ${summary.modules.length} module area(s), and ${summary.needs.length} user need signal(s).`
     : "No durable long-term memory has been saved yet.";
+  // Only the server's own bookkeeping writes the shared line back; a person's count is theirs and is not stored where the next person could read it.
+  if (!viewer) memory.lastMemorySummary = lastMemorySummary;
+  summary.lastMemorySummary = lastMemorySummary;
   return summary;
 }
 
@@ -24431,14 +24558,14 @@ function aiReasoningSnapshot(db, user, command, moduleSignal, memories = [], opt
   const { country, route } = activeContext(db);
   const text = String(command || "").trim();
   const lower = text.toLowerCase();
-  const memorySummary = longTermMemorySummary(db.profile);
+  const memorySummary = longTermMemorySummary(db.profile, user);
   const moduleName = moduleSignal?.module || conversationModuleSignal(text).module;
   const actionLikely = isActionRequest(lower);
   const sensitive = /\b(emergency|injury|doctor|medicine|diagnose|payment|wallet|apply|provider|call|message|consent|outbreak|ebola)\b/.test(lower);
   const userNeeds = [
     ...(db.profile.agentMemory.userModel?.accessibilityMode && db.profile.agentMemory.userModel.accessibilityMode !== "standard" ? [db.profile.agentMemory.userModel.accessibilityMode] : []),
     ...(db.profile.agentMemory.userModel?.communicationStyle ? [db.profile.agentMemory.userModel.communicationStyle] : []),
-    ...Object.keys(db.profile.agentMemory.userNeeds || {}).slice(0, 4)
+    ...memorySummary.needs.map(need => need.name).slice(0, 4)
   ].filter(Boolean);
   const optionsConsidered = [
     actionLikely ? "Run or stage the matching workflow" : "Answer conversationally first",
@@ -29587,7 +29714,7 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
 
   if (/\b(what number|which number|show number|do you have.*number)\b/.test(lower)) {
     const name = contactDisplayName(lower.replace(/\b(what number|which number|show number|do you have|for|is|saved|number|phone)\b/g, " "));
-    const contact = findPhoneContact(db, name);
+    const contact = findPhoneContact(db, name, user);
     if (contact) {
       return {
         intent: "phone.contact_lookup",
@@ -29599,7 +29726,7 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
   }
 
   if (/\b(call|phone|dial|ring)\b/.test(lower) && callName) {
-    const contact = findPhoneContact(db, callName);
+    const contact = findPhoneContact(db, callName, user);
     if (contact) return stagePhoneContactCall(db, text, contact, `call ${contact.name}`);
     const pending = {
       id: crypto.randomUUID(),
@@ -31713,7 +31840,7 @@ function createAssistantReminder(db, user, text, options = {}) {
   const timing = parseAssistantReminderTime(text, options);
   const moduleContext = assistantReminderModule(task);
   const callName = extractContactNameFromCall(task);
-  const contact = callName ? findPhoneContact(db, callName) : null;
+  const contact = callName ? findPhoneContact(db, callName, user) : null;
   const reminder = {
     id: crypto.randomUUID(),
     reminderNumber: `REM-${String(nextRecordSequence(db, "assistantReminders")).padStart(3, "0")}`,
@@ -31978,7 +32105,7 @@ function assistantActionMemoryCommandResponse(db, user, text, lower, options = {
     };
   }
   if (/call|phone|dial|ring/.test(`${top.title} ${top.command}`.toLowerCase()) && top.contactName) {
-    const contact = findPhoneContact(db, top.contactName);
+    const contact = findPhoneContact(db, top.contactName, user);
     if (contact) return stagePhoneContactCall(db, text, contact, `follow up: ${top.command || top.title}`);
     db.profile.agentMemory.pendingContactCall = {
       id: crypto.randomUUID(),
@@ -32043,9 +32170,14 @@ function utilityTimeAnswer(options = {}) {
   return `It is ${time} on ${date}.`;
 }
 
-function utilityAppointmentAnswer(db, options = {}) {
-  const appointment = nextRecordByDate(db.profile.telehealthAppointments || [], ["scheduledAt", "startsAt", "createdAt"]);
-  const shift = nextRecordByDate(db.profile.shiftSchedule || [], ["startsAt", "createdAt"]);
+// The appointments and shifts a person is told about are the ones they made. The shared lists also hold the seeded demo schedule and everyone else's, which are not theirs.
+const ownRecordsOnly = (list, user) => {
+  const viewer = memoryViewerEmail(user);
+  return (Array.isArray(list) ? list : []).filter(item => Boolean(viewer) && ownerOfRecord(item).includes(viewer));
+};
+function utilityAppointmentAnswer(db, options = {}, user = null) {
+  const appointment = nextRecordByDate(ownRecordsOnly(db.profile.telehealthAppointments, user), ["scheduledAt", "startsAt", "createdAt"]);
+  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt", "createdAt"]);
   if (appointment) {
     const when = formatUtilityDate(appointment.scheduledAt || appointment.startsAt, options.timeZone)
       || appointment.scheduleWindow
@@ -32056,7 +32188,7 @@ function utilityAppointmentAnswer(db, options = {}) {
     const when = formatUtilityDate(shift.startsAt, options.timeZone) || "the next scheduled shift window";
     return `I do not see a telehealth appointment yet. Your next workforce schedule item is ${shift.role || "a shift"} at ${when}, status ${shift.status || "scheduled"}.`;
   }
-  return "I do not see an appointment time saved yet. I can open telehealth scheduling or workforce scheduling and help create one.";
+  return "I don't see any appointments for you. I can open telehealth scheduling or workforce scheduling and help create one.";
 }
 
 function utilityShipmentEtaAnswer(db) {
@@ -32711,7 +32843,7 @@ function normalizeGenesisCommandResponse(result = {}, options = {}) {
 function updateNexusSessionContext(db, command = "", envelope = {}) {
   ensureAiProfile(db.profile);
   const context = {
-    lastFinalUserRequest: String(command || "").trim().slice(0, 500),
+    lastFinalUserRequest: secretNotSavedReply(command) ? "" : String(command || "").trim().slice(0, 500),
     lastSelectedIntent: envelope.intent || "unknown",
     lastCapability: envelope.capability || "general-assistant",
     lastCompleteAssistantResponse: envelope.response || "",
@@ -32976,8 +33108,8 @@ async function utilityCropTimingAnswer(db, text, options = {}) {
 }
 
 function utilityAppointmentReminderAnswer(db, user, options = {}) {
-  const appointment = nextRecordByDate(db.profile.telehealthAppointments || [], ["scheduledAt", "startsAt", "createdAt"]);
-  const shift = nextRecordByDate(db.profile.shiftSchedule || [], ["startsAt", "createdAt"]);
+  const appointment = nextRecordByDate(ownRecordsOnly(db.profile.telehealthAppointments, user), ["scheduledAt", "startsAt", "createdAt"]);
+  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt", "createdAt"]);
   const target = appointment
     ? `telehealth appointment ${appointment.appointmentNumber || ""}`.trim()
     : shift
@@ -33150,7 +33282,7 @@ function nexusPreProviderHardeningModel(db, user, text = "") {
   const providers = runtimeProviders(db);
   const connected = providers.filter(provider => provider.status === "connected");
   const providerReady = providers.filter(provider => provider.status !== "connected");
-  const memorySummary = longTermMemorySummary(db.profile);
+  const memorySummary = longTermMemorySummary(db.profile, user);
   const voiceProvider = process.env.VOICE_TTS_PROVIDER || process.env.VOICE_STT_PROVIDER || (process.env.OPENAI_API_KEY ? "openai-ready" : "browser/local");
   const ttsVoice = process.env.OPENAI_TTS_VOICE || "browser-default";
   const usage = {
@@ -33261,14 +33393,14 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       : kind === "shipment"
         ? utilityShipmentEtaAnswer(db)
         : kind === "appointment"
-          ? utilityAppointmentAnswer(db, options)
+          ? utilityAppointmentAnswer(db, options, user)
             : kind === "next-step"
               ? utilityNextStepAnswer(db, user)
             : kind === "situation-agent"
               ? `Situation Agent is active. ${utilityNextStepAnswer(db, user)}`
               : kind === "pre-provider-readiness"
                 ? preProviderModel.response
-            : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
+            : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options, user)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
   const situationAgent = nexusSituationAgentModel(db, user, text, kind);
   const redirectSection = ["shipment", "route-delay"].includes(kind) ? "map"
     : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health"
@@ -33885,6 +34017,16 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: careSafe.reply,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, careSafety: careSafe.kind }
+    };
+  }
+  // A PIN, password, card or account number asked to be saved (English, Kiswahili, Sheng or Pidgin) is never saved as a note, memory, list item or reminder, on any path that reaches here.
+  const secretRefusal = secretNotSavedReply(text, options.language);
+  if (secretRefusal) {
+    return {
+      intent: "safety.secret_refused",
+      response: secretRefusal.response,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, secretNotSaved: true, language: secretRefusal.language }
     };
   }
   if (isLanguageCommand(lower)) {
@@ -34640,11 +34782,11 @@ async function runAgentCommand(db, user, command, options = {}) {
     return {
       intent: "memory-updated",
       response: `I will remember this: ${db.profile.agentMemory.activeMission}.`,
-      metadata: { memory: db.profile.agentMemory }
+      metadata: { memory: agentMemoryForReply(db, user) }
     };
   }
   if (/\bwhat did i say\b.*\b(priority|goal|mission)\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b.*\b(priority|goal|mission)\b/.test(lower)) {
-    const remembered = db.profile.agentMemory.activeMission || longTermMemorySummary(db.profile).topMemories?.[0]?.text || "";
+    const remembered = ownActiveMission(db, user) || longTermMemorySummary(db.profile, user).topMemories?.[0]?.text || "";
     return {
       intent: "memory-recalled",
       response: remembered
@@ -34655,7 +34797,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
-    const summary = longTermMemorySummary(db.profile);
+    const summary = longTermMemorySummary(db.profile, user);
     const memories = summary.topMemories;
     const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
     const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
@@ -35926,7 +36068,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
-    const summary = longTermMemorySummary(db.profile);
+    const summary = longTermMemorySummary(db.profile, user);
     const memories = summary.topMemories;
     const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
     const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
@@ -36303,12 +36445,12 @@ async function runAgentCommand(db, user, command, options = {}) {
     return {
       intent: "memory-updated",
       response: `I will remember this: ${db.profile.agentMemory.activeMission}.`,
-      metadata: { memory: db.profile.agentMemory }
+      metadata: { memory: agentMemoryForReply(db, user) }
     };
   }
 
   if (/\bwhat did i say\b.*\b(priority|goal|mission)\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b.*\b(priority|goal|mission)\b/.test(lower)) {
-    const remembered = db.profile.agentMemory.activeMission || longTermMemorySummary(db.profile).topMemories?.[0]?.text || "";
+    const remembered = ownActiveMission(db, user) || longTermMemorySummary(db.profile, user).topMemories?.[0]?.text || "";
     return {
       intent: "memory-recalled",
       response: remembered
@@ -36320,7 +36462,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
-    const summary = longTermMemorySummary(db.profile);
+    const summary = longTermMemorySummary(db.profile, user);
     const memories = summary.topMemories;
     const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
     const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
@@ -36410,7 +36552,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (lower.includes("execute") && lower.includes("plan")) {
-    const plan = db.profile.agentPlans[0];
+    const plan = visibleRecordsFor(db.profile.agentPlans, user)[0];
     if (!plan) return { intent: "execute-agent-plan", response: "Create an agent plan first.", status: "needs-plan" };
     const execution = await executeAgentPlanObject(db, user, plan, options.note || "Approved from voice command");
     return { intent: "execute-agent-plan", response: execution.summary, status: execution.status, metadata: { planId: plan.id, executionId: execution.id } };
@@ -36493,6 +36635,15 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   // working behavior. Genuine psychological crisis / safeguarding concerns
   // have no such pre-existing coverage in this pipeline, so they still fire
   // here regardless of the conversational flag.
+  // A PIN, password or card number asked to be saved is refused before anything is recorded (not in the history, the voice log or the memories either).
+  const secretRefusal = secretNotSavedReply(command, commandLanguage);
+  if (secretRefusal) {
+    return {
+      result: { intent: "safety.secret_refused", response: secretRefusal.response, status: "completed", noExecutionAuthorized: true, secretNotSaved: true,
+        metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, secretNotSaved: true, language: secretRefusal.language } },
+      companionUnderstanding: null, companionRouteOutcome: null
+    };
+  }
   const mentalHealthSignal = command ? nexusMentalHealthBehavioralWellness.classifyState(command, {}) : null;
   const mentalHealthAlreadyHandledElsewhere =
     mentalHealthSignal?.state === "medical_emergency" && body.conversational === true;
@@ -46634,7 +46785,7 @@ async function api(req, res, url) {
   const usersChanged = businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE ? ensureDefaultUsers(db) : false;
   const user = currentUser(req, db);
   // From here to the end of this request, saves stamp the owner on the records it creates (see profileOwnerStamping). Reads never change data, so skip them.
-  if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
+  if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, role: user.role, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
 
   // Many routes answer a caller who is not signed in and then save something (preparing a message, a profile, a request record), and each save rewrites the whole shared record. Give anonymous changes one
   // generous ceiling per address (120 a minute; AGRINEXUS_ANON_WRITE_RATE_LIMIT_PER_MINUTE) so nobody can use them to keep that write path busy. Signed-in people are never counted here, and the routes that
@@ -46801,9 +46952,10 @@ async function api(req, res, url) {
       ok: true,
       records: nexusUserTestingRuntime.listMemoryRecords(db, {
         type: url.searchParams.get("type") || "",
-        includeArchived: url.searchParams.get("includeArchived") === "true"
+        includeArchived: url.searchParams.get("includeArchived") === "true",
+        viewer: user || { email: "", role: "" }
       }),
-      queryResults: url.searchParams.get("q") ? nexusUserTestingRuntime.searchMemoryRecords(db, url.searchParams.get("q")) : null,
+      queryResults: url.searchParams.get("q") ? nexusUserTestingRuntime.searchMemoryRecords(db, url.searchParams.get("q"), user || { email: "", role: "" }) : null,
       noSecretValues: true
     });
   }
@@ -46818,14 +46970,14 @@ async function api(req, res, url) {
   const userTestingUpdateMatch = url.pathname.match(/^\/api\/nexus\/user-testing\/memory\/([^/]+)\/update$/);
   if (userTestingUpdateMatch && req.method === "POST") {
     const body = await readBody(req);
-    const result = nexusUserTestingRuntime.updateMemoryRecord(db, userTestingUpdateMatch[1], body);
+    const result = nexusUserTestingRuntime.updateMemoryRecord(db, userTestingUpdateMatch[1], body, user || { email: "", role: "" });
     await writeDb(db);
     return send(res, result.ok ? 200 : 404, { ...result, noSecretValues: true });
   }
 
   const userTestingArchiveMatch = url.pathname.match(/^\/api\/nexus\/user-testing\/memory\/([^/]+)\/archive$/);
   if (userTestingArchiveMatch && req.method === "POST") {
-    const result = nexusUserTestingRuntime.archiveMemoryRecord(db, userTestingArchiveMatch[1]);
+    const result = nexusUserTestingRuntime.archiveMemoryRecord(db, userTestingArchiveMatch[1], user || { email: "", role: "" });
     await writeDb(db);
     return send(res, result.ok ? 200 : 404, { ...result, noSecretValues: true });
   }
@@ -52275,7 +52427,7 @@ async function api(req, res, url) {
     };
     db.profile.onboardingRuns.unshift(run);
     db.profile.onboardingRuns = db.profile.onboardingRuns.slice(0, 20);
-    addUsageEvent(db.profile, { module: "Onboarding", action: "onboarding.started", detail: `${scenario} onboarding run started by ${user.email}.` });
+    addUsageEvent(db.profile, { module: "Onboarding", action: "onboarding.started", detail: `${scenario} onboarding run started by ${user.email}.`, user: user.email });
     logIntegration(db, {
       providerId: "auth-users",
       module: "Platform",
@@ -52304,7 +52456,7 @@ async function api(req, res, url) {
     };
     db.profile.supportTickets.unshift(ticket);
     db.profile.supportTickets = db.profile.supportTickets.slice(0, 50);
-    addUsageEvent(db.profile, { module: ticket.module, action: "support.ticket_opened", detail: `${ticket.ticketNumber}: ${ticket.subject}` });
+    addUsageEvent(db.profile, { module: ticket.module, action: "support.ticket_opened", detail: `${ticket.ticketNumber} opened.`, user: ticket.requester });
     logIntegration(db, {
       providerId: "email-delivery",
       module: "Platform",
@@ -54635,20 +54787,20 @@ async function api(req, res, url) {
       // time, with no overlap check and no cap. Refusing a second shift
       // while one is already scheduled and hasn't started yet closes the
       // unbounded-replay path without blocking the normal one-at-a-time flow.
-      if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+      if (ownRecordsOnly(db.profile.shiftSchedule, user).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
         return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
       }
       // Found live (legacy server.js route sweep): same falsy-zero-override gap as the money-logic
       // audit already fixed on timesheet/payroll/evaluation just below -- an explicit rate:0 (an
       // unpaid/volunteer placement) was treated as missing and silently replaced with a fabricated $64,
       // then added unconditionally to the real db.profile.earnings ledger.
-      const requestedRate = Number(db.profile.applications[0]?.rate);
+      const requestedRate = Number(visibleRecordsFor(db.profile.applications, user)[0]?.rate);
       const shift = {
         id: crypto.randomUUID(),
-        role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
+        role: visibleRecordsFor(db.profile.applications, user)[0]?.roleTitle || "Field Operations Agent",
         startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
         status: "scheduled",
-        estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
+        estimatedEarnings: visibleRecordsFor(db.profile.applications, user)[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
       };
       db.profile.shiftSchedule.unshift(shift);
       db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
@@ -54702,7 +54854,7 @@ async function api(req, res, url) {
       const certificateText = readiness.missingCertificates.length ? ` and certificate(s): ${readiness.missingCertificates.join(", ")}` : "";
       return send(res, 409, { error: `${role.title} needs ${readiness.missingReadiness}% more readiness${certificateText}` });
     }
-    let application = db.profile.applications.find(item => item.roleId === role.id);
+    let application = visibleRecordsFor(db.profile.applications, user).find(item => item.roleId === role.id);
     if (!application) {
       application = {
         id: crypto.randomUUID(),
@@ -54752,7 +54904,7 @@ async function api(req, res, url) {
     if (!canUse(user, "workforce")) return send(res, 403, { error: "Role does not allow workforce workflows" });
     const body = await readBody(req);
     ensureWorkforceProfile(db.profile);
-    const role = db.profile.applications[0]?.roleTitle || (db.roles || [])[0]?.title || "Field Operations Agent";
+    const role = visibleRecordsFor(db.profile.applications, user)[0]?.roleTitle || (db.roles || [])[0]?.title || "Field Operations Agent";
     const now = new Date().toISOString();
     const type = body.type || "onboarding";
     const actions = {
@@ -57250,7 +57402,7 @@ async function api(req, res, url) {
     if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     ensureAiProfile(db.profile);
-    const plan = db.profile.agentPlans.find(item => item.id === body.planId) || db.profile.agentPlans[0];
+    const plan = visibleRecordsFor(db.profile.agentPlans, user).find(item => item.id === body.planId) || visibleRecordsFor(db.profile.agentPlans, user)[0];
     if (!plan) return send(res, 404, { error: "Agent plan not found" });
     const approved = body.approved !== false;
     if (!approved) return send(res, 409, { error: "Agent execution requires operator approval." });
