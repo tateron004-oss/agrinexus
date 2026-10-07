@@ -95,5 +95,5 @@
     act(button, () => api("/users", "POST", { name: form.elements.name.value, email: form.elements.email.value }), result => { form.reset(); return `${result.created.name} was added to your team.`; });
   });
 
-  api("/users").then(state => { render(state); notice(`Signed in as ${state.manager.name || state.manager.email}.`); }).catch(error => notice(error.message));
+  api("/users").then(state => { byId("addSection").hidden = false; render(state); notice(`Signed in as ${state.manager.name || state.manager.email}.`); }).catch(error => notice(error.message));
 })();

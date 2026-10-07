@@ -50880,12 +50880,31 @@ async function api(req, res, url) {
     const password = String(body.password || "");
     if (!email || !password.trim()) return send(res, 400, { error: "Email and password are required" });
     if (!authRateLimitByAccount("login", email, 6, 900_000)) return send(res, 429, { error: "Too many login attempts. Try again in a few minutes." });
+    // An email that belongs to a business reaches this point (the default space) only when that business is closed. It must not sign in here: with sign-in accounts held in Postgres a correct password would
+    // otherwise be accepted and a stray account made in the default record. A person who proves their password is told why; anyone else just gets the ordinary refusal.
+    if (businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE) {
+      const linkedBusiness = await spaceDirectory.spaceForEmail(email).catch(() => businessSpaces.DEFAULT_SPACE);
+      if (linkedBusiness !== businessSpaces.DEFAULT_SPACE) {
+        let validForBusiness = false;
+        if (usingPostgresAuth()) validForBusiness = Boolean(await pgUsers.verifyPassword(getPgPool(), email, password).catch(() => null));
+        else {
+          const closedRecord = await businessSpaces.runInSpace(linkedBusiness, () => readDb()).catch(() => null);
+          const closedPerson = (closedRecord?.users || []).find(item => String(item.email || "").toLowerCase() === email);
+          const stored = String(closedPerson?.password || "");
+          // The same scrypt cost whether or not the person exists, like the ordinary sign-in below.
+          const matches = pgUsers.verifyPasswordHash(password, stored.startsWith("scrypt:") ? stored : pgUsers.DUMMY_PASSWORD_HASH);
+          validForBusiness = Boolean(closedPerson) && stored.startsWith("scrypt:") && matches && closedPerson.status !== "deleted";
+        }
+        if (validForBusiness) return send(res, 403, { error: "This business has been closed. Ask the platform owner to reopen it." });
+        return send(res, 401, { error: "Invalid email or password." });
+      }
+    }
     let found;
     let blobBackfilled = false;
     let passwordMigrated = false;
     if (usingPostgresAuth()) {
       const pgUser = await pgUsers.verifyPassword(getPgPool(), email, password).catch(() => null);
-      if (!pgUser) return send(res, 401, { error: "Invalid demo credentials" });
+      if (!pgUser) return send(res, 401, { error: "Invalid email or password." });
       // Postgres is authoritative for the credential check; profile fields
       // (name, role, restrictions, etc.) still come from the blob shadow copy.
       found = db.users.find(item => String(item.email || "").toLowerCase() === email);
@@ -50918,8 +50937,8 @@ async function api(req, res, url) {
       // db.users, and with an unlucky pre-erasure password guess (or a still
       // -live session, now separately closed in eraseUserAccount) this login
       // path would never have refused it. status is set only by erasure.
-      if (candidate?.status === "deleted") return send(res, 401, { error: "Invalid demo credentials" });
-      if (!candidate || !validCredential) return send(res, 401, { error: "Invalid demo credentials" });
+      if (candidate?.status === "deleted") return send(res, 401, { error: "Invalid email or password." });
+      if (!candidate || !validCredential) return send(res, 401, { error: "Invalid email or password." });
       if (!isHashed) {
         // A legacy plaintext row from before passwords were hashed here. The
         // credential just verified correctly against it, so migrate it to a
@@ -52340,28 +52359,47 @@ async function api(req, res, url) {
       if (!info) return send(res, 404, { error: "There is no business with that id." });
       if (body.confirm !== id) return send(res, 400, { error: "Type the business id again to confirm. This cannot be undone." });
       if (!info.closedAt) return send(res, 409, { error: "Close the business first. Erasing is only allowed for a closed business." });
+      // Without a database there is no engine data to erase; with one, every person's erasure must be queued BEFORE anything is deleted, so that a failure leaves the business whole and the erase can be tried again.
+      const engineInUse = Boolean(process.env.DATABASE_URL);
       const summary = await businessSpaces.runInSpace(id, async () => {
         const record = await readDb().catch(() => null);
-        const result = { people: 0, uploadsRemoved: 0, engineErasuresQueued: 0, engineErasuresFailed: 0 };
+        const people = (record?.users || []).filter(item => item.status !== "deleted");
+        const result = { people: people.length, uploadsRemoved: 0, engineApplicable: engineInUse, engineErasuresQueued: 0, engineErasuresFailed: 0, failedPeople: [], signInsDisabled: 0 };
+        if (engineInUse) {
+          for (const person of people) {
+            try {
+              const authoritativeUser = await authoritativeRuntimeUser(person);
+              await authoritativeNexusRuntime.requestDeletionRequest({ user: authoritativeUser });
+              result.engineErasuresQueued += 1;
+            } catch (error) {
+              result.engineErasuresFailed += 1;
+              result.failedPeople.push(person.email);
+              console.error("[business-erase] engine erasure request failed:", error.message);
+            }
+          }
+        }
+        if (result.engineErasuresFailed) return result;
         const uploadDirPath = nexusUploads.uploadDir(process.env);
-        for (const person of (record?.users || []).filter(item => item.status !== "deleted")) {
-          result.people += 1;
+        for (const person of people) {
           for (const meta of nexusUploads.listUploadsForUser(uploadDirPath, person.id)) if (nexusUploads.deleteUpload(uploadDirPath, meta.fileId)) result.uploadsRemoved += 1;
-          try {
-            const authoritativeUser = await authoritativeRuntimeUser(person);
-            if (authoritativeUser) { await authoritativeNexusRuntime.requestDeletionRequest({ user: authoritativeUser }); result.engineErasuresQueued += 1; }
-          } catch (error) {
-            result.engineErasuresFailed += 1;
-            console.error("[business-erase] engine erasure request failed:", error.message);
+          // With sign-in accounts held in Postgres, the account must be switched off there too, or its owner could still sign in after the business is gone.
+          if (usingPostgresAuth()) {
+            const pgUser = await pgUsers.findUserByEmail(getPgPool(), person.email).catch(() => null);
+            if (pgUser && await pgUsers.disableUser(getPgPool(), pgUser.id).catch(() => false)) result.signInsDisabled += 1;
           }
         }
         return result;
       }, info);
+      if (summary.engineErasuresFailed) {
+        platformLog("business.erase_incomplete", `Erasing business ${id} stopped: ${summary.engineErasuresFailed} of ${summary.people} people's data could not be queued for erasure. Nothing was deleted.`, { businessId: id, failed: summary.engineErasuresFailed });
+        await writeDb(db);
+        return send(res, 502, { ok: false, error: `The erase was stopped and nothing was deleted: ${summary.engineErasuresFailed} of ${summary.people} people's data could not be queued for erasure (${summary.failedPeople.join(", ")}). The business is still closed. Try again in a minute.`, erased: { id, ...summary } });
+      }
       await revokeSessionsForSpace(id);
       await deleteBusinessRecord(id);
       await spaceDirectory.removeSpace(id);
       forgetSpaceInfo(id);
-      platformLog("business.erased", `Business ${id} erased: ${summary.people} people, ${summary.uploadsRemoved} uploaded files removed, ${summary.engineErasuresQueued} engine erasures queued (${summary.engineErasuresFailed} could not be queued).`, { businessId: id, ...summary });
+      platformLog("business.erased", `Business ${id} erased: ${summary.people} people, ${summary.uploadsRemoved} uploaded files removed, ${summary.engineApplicable ? `${summary.engineErasuresQueued} engine erasures queued` : "no engine data (no database)"}.`, { businessId: id, ...summary });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList(), erased: { id, ...summary } });
     }

@@ -9,7 +9,7 @@
     const response = await fetch(`/api/admin/communications${path}`, { method, credentials: "same-origin", headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
     const result = await response.json().catch(() => ({}));
     if (response.status === 401) throw new Error("Sign in to Kyro as the owner first (use the link at the top), then reload this page.");
-    if (response.status === 403) throw new Error("Only the owner (an Admin account) can open this page.");
+    if (response.status === 403) throw new Error("Only the platform owner can open this page.");
     if (!response.ok) throw new Error(result.error || "That did not work.");
     return result;
   }
