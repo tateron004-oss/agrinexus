@@ -18,7 +18,8 @@ const path = require("node:path");
 // back to "the most recent record this owner has" -- silently returns A's
 // real record back to B.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4711;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-anonymous-operations-cross-visitor-isolation-db.json");

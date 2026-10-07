@@ -11,7 +11,8 @@ const { spawn } = require("node:child_process");
 // next; and most of it was still there after the person erased their account. Now each person sees only their own, the model is given only the asker's own, and erasure takes them out.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4983;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-private-history-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-private-history-uploads-"));

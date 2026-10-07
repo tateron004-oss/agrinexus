@@ -14,7 +14,8 @@ const path = require("node:path");
 // simulated payment of -4800 USD" makes no sense for a sale/purchase line
 // item.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4653;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-operations-transaction-negative-amount-db.json");

@@ -13,7 +13,8 @@ const path = require("node:path");
 // it never overwrites a real pre-existing account, and the resulting login
 // gets full feature access but is locked out of admin/integrations/governance.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4606;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-investor-user-route-db.json");

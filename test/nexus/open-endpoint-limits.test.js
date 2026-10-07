@@ -12,8 +12,9 @@ const path = require("node:path");
 // anonymous caller could use to send email, make accounts or keep the write path busy have limits where they had none.
 
 const root = path.resolve(__dirname, "..", "..");
-const portA = 15540;
-const portB = 15541;
+const { freePortSync } = require("../helpers/free-port.js");
+const portA = freePortSync();
+const portB = freePortSync();
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "open-limits-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const sha = value => crypto.createHash("sha256").update(value).digest("hex");

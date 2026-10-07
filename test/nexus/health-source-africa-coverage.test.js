@@ -6,7 +6,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4511;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-health-source-africa-coverage-db.json");
@@ -107,7 +108,7 @@ test("a real citation from an African government health domain (.gov.ng) is clas
   });
   const providerPort = await new Promise(resolve => mockProvider.listen(0, "127.0.0.1", () => resolve(mockProvider.address().port)));
 
-  const altPort = 4512;
+  const altPort = freePortSync();
   const altBase = `http://localhost:${altPort}`;
   const altDbPath = path.join(root, "tmp-health-source-africa-classifier-db.json");
   fs.copyFileSync(dbPath, altDbPath);

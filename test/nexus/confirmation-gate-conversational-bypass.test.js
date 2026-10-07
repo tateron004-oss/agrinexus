@@ -20,7 +20,8 @@ const path = require("node:path");
 // a real Twilio call, in the most severe case. Fixed by dropping
 // `conversational` from every one of these gates.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4712;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-confirmation-gate-conversational-bypass-db.json");

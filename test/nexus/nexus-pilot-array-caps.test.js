@@ -17,7 +17,8 @@ const path = require("node:path");
 // two of the simplest, auth-free call sites (records, notifications) well past their new 200-item cap
 // and confirms the array itself stays bounded.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4823;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-nexus-pilot-array-caps-db.json");

@@ -15,7 +15,8 @@ const path = require("node:path");
 // Investor account could POST a health- or payment-flavored goal with {execute:true, approved:true} and
 // reach a real health-record write or a real wallet credit.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4736;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-cloud-agent-role-restriction-bypass-db.json");

@@ -13,7 +13,8 @@ const path = require("node:path");
 // nextRecordSequence(db, key) helper. Also fixed: shiftSchedule had no cap at any of its 3 write sites,
 // unlike virtually every other profile array in this file.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4800;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-intelligence-module-numbering-and-shift-cap-db.json");

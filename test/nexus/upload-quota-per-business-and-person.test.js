@@ -11,7 +11,8 @@ const uploads = require("../../server/uploads.js");
 // plainly that the storage is full; deleting a file frees its share at once; and erasing a business still removes its files.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15542;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "upload-quota-"));
 const uploadDir = path.join(dir, "uploads");

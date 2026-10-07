@@ -15,7 +15,8 @@ const path = require("node:path");
 // persisted db.profile.earnings ledger (including permanently NaN-poisoning
 // it for a non-numeric amount).
 const root = path.resolve(__dirname, "..", "..");
-const port = 4650;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-workforce-advanced-falsy-zero-db.json");

@@ -10,7 +10,8 @@ const path = require("node:path");
 // said (so it was the same for a note, a list, a reading), which read as an answer when nothing had been saved. It now says plainly that it could not do it and that nothing was saved.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15361;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "honest-fallback-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

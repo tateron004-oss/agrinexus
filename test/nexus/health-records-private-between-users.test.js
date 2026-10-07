@@ -12,7 +12,8 @@ const { spawn } = require("node:child_process");
 // demo and older records that carry no personal owner mark, and an Admin still sees everything.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4996;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-health-private-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-health-private-uploads-"));

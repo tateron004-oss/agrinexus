@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { freePortSync } = require("../helpers/free-port.js");
 
 // Found live (CSRF/session/rate-limit audit): rateLimit()/authRateLimit() keyed every bucket on
 // req.socket.remoteAddress -- the raw TCP peer of whatever connection this process itself accepted. The
@@ -50,7 +51,7 @@ let emailCounter = 0;
 const freshEmail = () => `zzproxy-keying-${Date.now()}-${++emailCounter}@example.com`;
 
 test("with AGRINEXUS_TRUST_PROXY=true, two distinct X-Forwarded-For clients get independent rate-limit budgets, not one shared bucket", async () => {
-  const port = 4741;
+  const port = freePortSync();
   const base = `http://localhost:${port}`;
   const tempDbPath = path.join(root, "tmp-rate-limit-trust-proxy-db.json");
   fs.copyFileSync(dbPath, tempDbPath);
@@ -81,7 +82,7 @@ test("with AGRINEXUS_TRUST_PROXY=true, two distinct X-Forwarded-For clients get 
 });
 
 test("without AGRINEXUS_TRUST_PROXY, X-Forwarded-For is ignored -- the safe default for a deployment not known to sit behind a trusted proxy", async () => {
-  const port = 4742;
+  const port = freePortSync();
   const base = `http://localhost:${port}`;
   const tempDbPath = path.join(root, "tmp-rate-limit-no-trust-proxy-db.json");
   fs.copyFileSync(dbPath, tempDbPath);

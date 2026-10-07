@@ -14,7 +14,8 @@ const path = require("node:path");
 // technically present. SPOTIFY_OAUTH_STATE_TTL_MS is env-configurable so this test can use a TTL of
 // milliseconds instead of the real 10-minute default.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4825;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-spotify-oauth-state-ttl-db.json");

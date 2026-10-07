@@ -10,7 +10,8 @@ const path = require("node:path");
 // server error that the same thing does NOT cause in the default space. (It found real ones: a payment checkout and an activity note both assumed the demo data existed.)
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15352;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spaces-sweep-"));
 const defaultDb = path.join(dir, "db.json");

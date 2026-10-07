@@ -13,7 +13,8 @@ const path = require("node:path");
 // underlying signals/nudges/learning really are computed from real account activity (buildAdaptiveSignals
 // reads db.profile directly), so it gets its own tailored notice rather than reusing the generic one.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4604;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-adaptive-autonomy-disclosure-db.json");

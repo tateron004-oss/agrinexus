@@ -59,7 +59,8 @@ test("the provider refuses an impossible reading and saves nothing, and dates a 
 
 // ---- the real spoken route, end to end ----
 const root = path.resolve(__dirname, "..", "..");
-const port = 4747;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-blood-pressure-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-bp-uploads-"));

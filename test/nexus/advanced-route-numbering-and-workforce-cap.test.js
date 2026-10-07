@@ -17,7 +17,8 @@ const path = require("node:path");
 // none of its six arrays were ever capped at all -- unbounded growth in db.profile on every real
 // workforce action.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4739;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-advanced-route-numbering-workforce-cap-db.json");

@@ -18,7 +18,8 @@ const path = require("node:path");
 // instead of caller's real zone" bug already fixed once for the reminders
 // pipeline.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4718;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-calendar-tool-timezone-mismatch-db.json");

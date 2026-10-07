@@ -13,7 +13,8 @@ const spaces = require("../../server/businessSpaces.js");
 // The platform owner (an Admin in the default space) creates businesses; a business's own Admin is never the platform owner and never reaches platform-level screens.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15350;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spaces-"));
 const defaultDb = path.join(dir, "db.json");

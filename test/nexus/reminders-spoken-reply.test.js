@@ -10,7 +10,8 @@ const { spawn } = require("node:child_process");
 // cut out of the sentence and the lead-in "remind me to" was left in the task. Through the real spoken route.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4753;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-reminders-spoken-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-rem-uploads-"));

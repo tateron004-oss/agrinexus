@@ -11,7 +11,8 @@ const path = require("node:path");
 // "Hello Pregnant And My". These run a real server with no AI key and no database, so the planner is not there, and the answers must still be right.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15358;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "care-older-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

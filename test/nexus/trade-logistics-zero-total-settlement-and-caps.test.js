@@ -12,7 +12,8 @@ const path = require("node:path");
 // that should settle for nothing. Also fixed: db.profile.orders and db.profile.enrollments grow
 // unboundedly, never capped anywhere in this file, unlike sibling arrays created in the same functions.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4801;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-trade-logistics-zero-total-settlement-and-caps-db.json");

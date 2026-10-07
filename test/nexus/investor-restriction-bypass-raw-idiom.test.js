@@ -14,7 +14,8 @@ const path = require("node:path");
 // the raw idiom instead of the centralized function -- reopening the Investor-specific bypass for a
 // real PHI write, a real SMS/WhatsApp send, and a real outbound Twilio call.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4724;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-investor-restriction-bypass-raw-idiom-db.json");
