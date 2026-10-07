@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>My team · Kyro Genesis | AgriNexus</title>
+  <link rel="stylesheet" href="/communications-setup.css">
+  <link rel="stylesheet" href="/team.css">
+  <script src="/team.js" defer></script>
+</head>
+<body>
+  <header>
+    <a href="/">← Kyro Genesis</a>
+    <p class="eyebrow">Business manager</p>
+    <h1>My team</h1>
+    <p class="lede">Add the people who work with you, give someone a new password, switch a person's account off when they leave, and link the phone they will use to talk to Kyro. You see only the people on <strong>your</strong> team, and nobody's private records.</p>
+  </header>
+  <p id="notice" role="status" aria-live="polite">Checking your sign-in…</p>
+  <main>
+    <section aria-labelledby="add">
+      <h2 id="add">Add a person</h2>
+      <form id="addForm" class="row" autocomplete="off">
+        <label>Name <input name="name" required maxlength="80" autocomplete="off"></label>
+        <label>Email <input name="email" type="email" required autocomplete="off"></label>
+        <button type="submit">Add to my team</button>
+      </form>
+      <p class="small" id="limit"></p>
+    </section>
+
+    <section id="secret" class="secretbox" hidden aria-live="polite">
+      <h2 id="secretTitle">Temporary password</h2>
+      <p id="secretText"></p>
+      <p><code id="secretPassword"></code></p>
+      <p class="small">This is shown <strong>once</strong>. Give it to the person privately (in person or in a message only they can read). Close this box and it is gone; you can always set a new one.</p>
+      <button type="button" id="secretClose" class="secondary">I have passed it on. Close</button>
+    </section>
+
+    <section aria-labelledby="people">
+      <h2 id="people">People on my team</h2>
+      <div id="team" class="cards"></div>
+    </section>
+  </main>
+</body>
+</html>

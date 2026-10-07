@@ -139,6 +139,17 @@ async function consumeResetToken(pool, email, token, newPassword) {
   return true;
 }
 
+// A password set by someone else (a business manager or an Admin resetting a team member's login). Any pending reset code is cleared with it.
+async function setPassword(pool, email, newPassword) {
+  const result = await pool.query(
+    `update users set password_hash = $2, password_reset_token_hash = null, password_reset_expires_at = null, updated_at = now()
+     where lower(email) = lower($1) and status = 'active'
+     returning id`,
+    [email, hashPassword(newPassword)]
+  );
+  return Boolean(result.rowCount);
+}
+
 // Real account erasure for AUTH_STORE=postgres: verifyPassword already
 // refuses any user whose status isn't 'active' (see above), so marking a
 // row 'deleted' here is what actually locks the account out, not just a
@@ -167,5 +178,6 @@ module.exports = {
   createUser,
   setPasswordResetToken,
   consumeResetToken,
+  setPassword,
   disableUser
 };
