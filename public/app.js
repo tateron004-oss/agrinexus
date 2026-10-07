@@ -18154,6 +18154,8 @@ function applyPermissions() {
   // The "My team" link is for a business manager (or an Admin). The server sends permissions.team; every other permission keeps the "missing means visible" rule below.
   const teamLink = $("#teamLink");
   if (teamLink) teamLink.hidden = data?.permissions?.team !== true;
+  const platformLink = $("#platformLink");
+  if (platformLink) platformLink.hidden = data?.permissions?.platform !== true;
   $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-government-action], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #runFrontierBrainBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
