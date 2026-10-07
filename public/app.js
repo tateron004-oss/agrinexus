@@ -10123,7 +10123,7 @@ function appointmentAnswer() {
       : "the next scheduled shift window";
     return `I do not see a telehealth appointment yet. Your next workforce schedule item is ${shift.role || "a shift"} at ${when}, status ${shift.status || "scheduled"}.`;
   }
-  return "I do not see an appointment time saved yet. I can open telehealth scheduling or workforce scheduling and help create one.";
+  return "I don't see any appointments for you. I can open telehealth scheduling or workforce scheduling and help create one.";
 }
 
 function shipmentEtaAnswer() {

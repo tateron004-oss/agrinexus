@@ -217,7 +217,8 @@ function readSafetyDetailed(text) {
   // Someone asking for a PIN, a password or money by phone or message: said plainly, never to share it.
   if (crisisPhrases.scam(raw)) return { kind: "scam", language: "en" };
   // "remember that my mpesa pin is 4821": never saved as a note or a fact, and never read back.
-  if (crisisPhrases.storesSecret(raw)) return { kind: "secret", language: "en" };
+  const secret = crisisPhrases.secretLanguage(raw);
+  if (secret) return { kind: "secret", language: secret };
   // Last, so that a person in trouble is always answered first: a sick animal gets the honest "no veterinary guide here, call a vet", never a person's first aid.
   if (livestock.isLivestockHealth(raw)) return { kind: "livestock", language: livestock.isSwahili(raw) ? "sw" : "en" };
   return null;
