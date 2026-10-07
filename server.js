@@ -2543,6 +2543,19 @@ function authRateLimitByAccount(bucketName, accountKey, limit = 6, windowMs = 90
   return rateBucketCheck(key, limit, windowMs);
 }
 
+// Sign-in budgets count FAILED attempts only. Counting every attempt meant a clinic, an office or a mobile carrier (many people behind one internet address) could not all sign in at the start of the
+// day: the 11th successful sign-in from the address in five minutes was refused, and so was a person's 7th sign-in in a quarter of an hour. A failed attempt is what an attacker produces, so the same
+// budgets (10 failures per address per 5 minutes, 6 per account per 15 minutes) still stop guessing, and a correct password clears that account's failures.
+function loginBudgetOpen(req, accountKey) {
+  const open = (key, limit) => { const bucket = rateBuckets.get(key); return !bucket || Date.now() > bucket.resetAt || bucket.count < limit; };
+  return open(`auth:login:${rateLimitClientKey(req)}`, 10) && (!accountKey || open(`auth:login:account:${accountKey}`, 6));
+}
+function recordLoginFailure(req, accountKey) {
+  rateBucketCheck(`auth:login:${rateLimitClientKey(req)}`, 10, 300_000);
+  if (accountKey) rateBucketCheck(`auth:login:account:${accountKey}`, 6, 900_000);
+}
+function clearLoginFailures(accountKey) { if (accountKey) rateBuckets.delete(`auth:login:account:${accountKey}`); }
+
 // The AI/agent routes accept free-form text and end every call in a full
 // writeDb() of the single shared application-state blob (one JSON file or
 // one Postgres row, serialized through one write queue -- see the write-path
@@ -50908,12 +50921,14 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/login" && req.method === "POST") {
-    if (!authRateLimit(req, "login", 10, 300_000)) return send(res, 429, { error: "Too many login attempts. Try again in a few minutes." });
+    if (!loginBudgetOpen(req, "")) return send(res, 429, { error: "Too many login attempts. Try again in a few minutes." });
     const body = await readBody(req);
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
     if (!email || !password.trim()) return send(res, 400, { error: "Email and password are required" });
-    if (!authRateLimitByAccount("login", email, 6, 900_000)) return send(res, 429, { error: "Too many login attempts. Try again in a few minutes." });
+    if (!loginBudgetOpen(req, email)) return send(res, 429, { error: "Too many login attempts. Try again in a few minutes." });
+    // A refused sign-in is the only thing that uses up the budgets (see loginBudgetOpen).
+    const loginRefused = () => { recordLoginFailure(req, email); return send(res, 401, { error: "Invalid email or password." }); };
     // An email that belongs to a business reaches this point (the default space) only when that business is closed. It must not sign in here: with sign-in accounts held in Postgres a correct password would
     // otherwise be accepted and a stray account made in the default record. A person who proves their password is told why; anyone else just gets the ordinary refusal.
     if (businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE) {
@@ -50930,7 +50945,7 @@ async function api(req, res, url) {
           validForBusiness = Boolean(closedPerson) && stored.startsWith("scrypt:") && matches && closedPerson.status !== "deleted";
         }
         if (validForBusiness) return send(res, 403, { error: "This business has been closed. Ask the platform owner to reopen it." });
-        return send(res, 401, { error: "Invalid email or password." });
+        return loginRefused();
       }
     }
     let found;
@@ -50938,7 +50953,7 @@ async function api(req, res, url) {
     let passwordMigrated = false;
     if (usingPostgresAuth()) {
       const pgUser = await pgUsers.verifyPassword(getPgPool(), email, password).catch(() => null);
-      if (!pgUser) return send(res, 401, { error: "Invalid email or password." });
+      if (!pgUser) return loginRefused();
       // Postgres is authoritative for the credential check; profile fields
       // (name, role, restrictions, etc.) still come from the blob shadow copy.
       found = db.users.find(item => String(item.email || "").toLowerCase() === email);
@@ -50971,8 +50986,8 @@ async function api(req, res, url) {
       // db.users, and with an unlucky pre-erasure password guess (or a still
       // -live session, now separately closed in eraseUserAccount) this login
       // path would never have refused it. status is set only by erasure.
-      if (candidate?.status === "deleted") return send(res, 401, { error: "Invalid email or password." });
-      if (!candidate || !validCredential) return send(res, 401, { error: "Invalid email or password." });
+      if (candidate?.status === "deleted") return loginRefused();
+      if (!candidate || !validCredential) return loginRefused();
       if (!isHashed) {
         // A legacy plaintext row from before passwords were hashed here. The
         // credential just verified correctly against it, so migrate it to a
@@ -50983,6 +50998,7 @@ async function api(req, res, url) {
       found = candidate;
     }
     // The password was right, so say plainly why it still will not work: the account has been switched off by whoever runs the team.
+    clearLoginFailures(email);
     if (found.status === "disabled") return send(res, 403, { error: "This account has been switched off. Ask the person in charge of your team." });
     if (usersChanged || blobBackfilled || passwordMigrated) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
