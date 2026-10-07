@@ -610,6 +610,18 @@
     return !addressedModule && /^(my name is|this is|i am|i'm) [a-z'-]+$/.test(remainder);
   }
 
+  // A real interruption ("Wait.", "Stop.", "Hold on a moment", "Actually, no") is the WHOLE utterance, or an interruption word followed by nothing but
+  // a pleasantry. The word "stop"/"actually"/"wait"/"pause" in the middle of a sentence is just a word: "my hand will not stop bleeding", "should I stop
+  // taking my ARVs", "stop reminding me about my pills" and "actually make it 9pm" are real requests (some of them safety questions) and must reach the
+  // handlers that deal with them instead of being answered "Okay, I stopped."
+  const INTERRUPTION_LEAD = "(?:wait|stop|hold on|hold up|pause|actually|before that|let me finish|one moment|one second|just a moment|just a second)";
+  const INTERRUPTION_TAIL = "(?:please|now|it|that|this|there|talking|speaking|a (?:moment|second|minute|sec)|one (?:moment|second|minute)|for (?:a|one) (?:moment|second|minute)|a bit|nexus|kyro|no|not that|sorry|okay|ok)";
+  const INTERRUPTION_ONLY = new RegExp(`^(?:(?:ok|okay|sorry|nexus|kyro|hey|please|no|oh)[ ,]+)*${INTERRUPTION_LEAD}(?:[ ,]+${INTERRUPTION_LEAD})*(?:[ ,]+${INTERRUPTION_TAIL}){0,3}$`);
+  function isInterruption(lower) {
+    const cleaned = String(lower || "").replace(/[.!?,;:]+/g, " ").replace(/\s+/g, " ").trim();
+    return cleaned !== "" && INTERRUPTION_ONLY.test(cleaned);
+  }
+
   function detectSignals(input = "", context = {}) {
     const raw = String(input || "").trim();
     const lower = norm(raw);
@@ -623,8 +635,9 @@
       hasActionVerb: /\b(send|call|message|whatsapp|telegram|email|schedule|book|pay|submit|delete|save|share|launch|apply|enroll|dispatch|buy|checkout|refill)\b/.test(lower),
       multiIntent: /\b(and then|then|after that|, and|;)\b/.test(lower),
       sourceRequest: hasAny(lower, [/\b(show|display|list)\b.*\b(source|sources|citation|citations|evidence)\b/, /\bwhere did that come from\b/, /\bwhich source\b/, /\bpeer[- ]reviewed\b/, /\bgovernment sources?\b/, /\bexperts disagree\b/, /\bevidence strength\b/]),
-      repair: hasAny(lower, [/\b(not what i meant|you misunderstood|you got it wrong|wrong patient|wrong crop|i meant|go back,?\s+that'?s wrong|forget the last|that answer is wrong|i didn't say|i did not say)\b/]),
-      interruption: hasAny(lower, [/\b(wait|stop|hold on|before that|actually|let me finish|pause)\b/]),
+      // "Actually, explain it more simply" asks the last answer to be redone: a correction, the way "actually" at the start of such a request always was (it used to be taken for "stop").
+      repair: hasAny(lower, [/^(?:actually|wait|no wait|sorry)[ ,]+(?:can you |could you |please )?(?:explain|say|tell|put|rephrase|repeat|show|use|give)\b/, /\b(not what i meant|you misunderstood|you got it wrong|wrong patient|wrong crop|i meant|go back,?\s+that'?s wrong|forget the last|that answer is wrong|i didn't say|i did not say)\b/]),
+      interruption: isInterruption(lower),
       privacy: hasAny(lower, [/\b(password|secret key|api key|account number|social security|ssn|medical record|patient id|payment card|credit card|exact address|private employment|confidential)\b/]),
       safety: hasAny(lower, [/\b(emergency|chest pain|can't breathe|cannot breathe|suicide|self[- ]harm|kill myself|poison|overdose|abuse|unsafe chemical|fraud|dangerous equipment|unlawful|illegal drone)\b/]),
       status: hasAny(lower, [/\b(what is happening|are you still working|did it send|what is blocked|what are we waiting for|what step are we on|what failed|did you save|where is my shipment|status|progress)\b/]),
@@ -814,7 +827,9 @@
     const primaryMode = modes[0] || BEHAVIOR_REGISTRY.find((mode) => mode.id === "clarification_discovery");
     const blendedModes = modes.slice(1, 5);
     const highRiskAction = signals.hasActionVerb && /\b(send|call|message|whatsapp|telegram|email|schedule|book|pay|submit|delete|share|dispatch|buy|checkout|refill|prescribe|diagnose)\b/.test(signals.lower);
-    const existingRouterMustHandle = /\b(change|switch|set)\s+(the\s+)?language\s+(to\s+)?(english|spanish|french|swahili|arabic|portuguese)\b/.test(signals.lower)
+    // "What is the emergency number in Kenya?" asks for a fact; the router that knows the person's country answers it. (Saying there IS an emergency still gets the safety reply.)
+    const asksEmergencyNumber = /\b(emergency|ambulance|police)\b.*\b(number|numbers|hotline)\b|\b(number|numbers|hotline)\b.*\b(for|to call|in an?)\b.*\b(emergency|ambulance|police)\b/.test(signals.lower);
+    const existingRouterMustHandle = asksEmergencyNumber || /\b(change|switch|set)\s+(the\s+)?language\s+(to\s+)?(english|spanish|french|swahili|arabic|portuguese)\b/.test(signals.lower)
       || /\b(speak|use)\s+(english|spanish|french|swahili|arabic|portuguese)\b/.test(signals.lower)
       || /\b(what time is it|current time|what date is it|today's date|what needs my attention today|weather in|weather for|weather today|weather like|hows the weather|how's the weather|temp like|temperature in|forecast for|when should i harvest|remind me about|route delays|prepare an? (?:buyer |trade |operations? |route |logistics |government |investor |ngo |donor )?(?:message|update|brief(?:ing)?|report)|field alert|health safety reminder|play .*music|stop .*music|manage this situation|what works without providers|how long until my shipment|what time is my appointment|what is next today|what should i do next|summari[sz]e my progress|my progress summary|progress summary)\b/.test(signals.lower)
       || /\b(what is photosynthesis|what causes malaria|why does .* matter for maize|what should a family know)\b/.test(signals.lower)

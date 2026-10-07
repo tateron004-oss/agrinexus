@@ -55205,7 +55205,7 @@ function nexusApplyJobBoundaryAnswer() {
 }
 
 function nexusUrgentChildBreathingAnswer() {
-  return "Call emergency services now if available, such as 911 in the U.S. A baby who is not breathing needs immediate emergency help. I am not a doctor and this app cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.";
+  return "Call your local emergency number now if you can. A baby who is not breathing needs immediate emergency help. I am not a doctor and this app cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.";
 }
 
 function nexusResilientConversationIntent(command = "") {

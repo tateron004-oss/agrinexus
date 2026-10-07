@@ -50,7 +50,16 @@ const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexu
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
 const { hasReminderTimePhrase } = require("./nexus/reminders/time-phrase.js");
-const { personalFirstName, spokenNameFromGreeting } = require("./server/nexus-greeting-name.js");
+const { personalFirstName, spokenNameFromGreeting, extractSpokenName, usableDisplayName } = require("./server/nexus-greeting-name.js");
+// The name saved for this account, only if it is really a name. Something saved before the name check existed ("Pregnant", "Running Out Of") is dropped and never spoken back.
+function storedDisplayName(db, user) {
+  const names = db?.profile?.userDisplayNames;
+  const saved = names && user?.id ? names[user.id] : "";
+  if (!saved) return "";
+  const clean = usableDisplayName(saved);
+  if (!clean) { delete names[user.id]; return ""; }
+  return clean;
+}
 const { conversationFollowUpFlags } = require("./server/nexus-conversation-followup-flags.js");
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
@@ -78,6 +87,15 @@ async function swahiliCrisisReply(text, language, user) {
 }
 // Sync form, for the places that only need to know whether it applies.
 const careSafetyApplies = text => Boolean(readCompanionSafety(text));
+// A sentence that tells Kyro about a person's symptom, injury, danger or medicine ("my child has had a cough for two weeks", "an elderly man collapsed in the heat", "a child ate pesticide"). These are health
+// reports, not requests to open a course, check the weather or run a workflow: the loose keyword routers (the learning-hub and weather matchers, the farm/daily advisors) must never pick them up on a word like
+// child, mother, women, heat or walk. Saying plainly "start the course" / "what is the weather" still reaches those routers.
+const HEALTH_REPORT_WORDS = /\b(cough(?:ing|ed)?|fever|feverish|vomit(?:ing|ed|s)?|diarrh(?:o)?ea|bleed(?:ing)?|bled|blood|collaps(?:e|ed|ing)|faint(?:ed|ing)?|passed out|unconscious|unresponsive|seizure|convuls(?:ion|ions|ing)|a fit|had a fit|fits|pregnan(?:t|cy)|labou?r|miscarr(?:y|iage)|poison(?:ed|ing)?|pesticide|overdos(?:e|ed)|dog bit|bitten|bit by|bit my|bit me|snake|burn(?:ed|t)|scald(?:ed)?|wound(?:ed)?|injur(?:y|ed|ies)|broken (?:arm|leg|bone)|fracture|rash|swollen|swelling|pain|painful|aching|ache|headache|dizzy|dizziness|breath(?:ing|less)?|chest|choking|sick|ill|unwell|infection|infected|malaria|cholera|typhoid|tuberculosis|\btb\b|hiv|arvs?|diabet(?:es|ic)|insulin|blood pressure|hypertens(?:ion|ive)|asthma|medicine|medication|tablets?|pills?|dose|doses|breastfeed(?:ing)?|family planning|contracepti(?:on|ve|ves)|menstrua(?:l|tion)|antenatal|danger signs?|newborn|baby|infant|immuni[sz]ation|vaccin(?:e|ated|ation)|raped|rape|abuse[ds]?|beat me|beaten|hit me|suicid(?:e|al)|self[- ]harm|hopeless|stroke|heart attack|ate (?:cassava|mushrooms?|something))\b/;
+const WORKFLOW_ASK_WORDS = /\b(?:start|open|begin|launch|enrol+|enroll|register|join|continue|complete|resume|issue|build|prepare|create)\b.*\b(?:course|courses|lesson|lessons|learning|hub|training|class|classes|programme|program|path|quiz|certificate|intake|captions?|checklist|report|summary|handoff|referral|workflow|mission)\b/;
+function looksLikeHealthReport(text) {
+  const lower = String(text || "").toLowerCase();
+  return HEALTH_REPORT_WORDS.test(lower) || careSafetyApplies(text);
+}
 const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
 const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
@@ -2995,9 +3013,13 @@ function scrubWordsFromProfile(profile, words) {
   return changed;
 }
 // The action Kyro is waiting for a "yes" on is one slot in the shared profile. It belongs to the person who staged it: someone else's "yes" never confirms it, and they are not shown it.
+// A staged action waits for a "yes" for a few minutes only: a "yes" a long time later is about something else, so it must not complete it.
+const PENDING_ACTION_MAX_AGE_MS = 5 * 60 * 1000;
 const ownPendingAction = (db, user) => {
   const pending = db?.profile?.agentPendingAction;
   if (!pending || typeof pending !== "object") return pending || null;
+  const stagedAt = Date.parse(pending.createdAt || "");
+  if (Number.isFinite(stagedAt) && Date.now() - stagedAt > PENDING_ACTION_MAX_AGE_MS) return null;
   const by = String(pending.by || "").trim().toLowerCase();
   return !by || by === String(user?.email || "").trim().toLowerCase() ? pending : null;
 };
@@ -6813,7 +6835,9 @@ function conversationResilienceModel(command = "", user = {}, model = {}) {
     || savedStyle.includes("rural");
   const fearOrStress = /\b(scared|afraid|fear|panic|worried|confused|i don't know|i dont know|help me|please|urgent|emergency|pain|sick|weak|lost|stuck)\b/.test(value);
   const fragmentSpeech = words.length > 0 && (words.length <= 6 || /\b(thing|bad|help|sick|hot|pain|crop|doctor|medicine|job|map|clinic)\b/.test(value));
-  const correctionOrMishear = /\b(stop|wrong|misheard|heard wrong|not that|no not|i mean|meant|again|repeat|say again|texas stop|nexis stop|nexus stop)\b/.test(value);
+  // "stop" only counts as a correction when it is the whole utterance ("stop", "nexus stop"); "my hand will not stop bleeding" is a person bleeding, not a mishearing.
+  const correctionOrMishear = /\b(wrong|misheard|heard wrong|not that|no not|i mean|meant|again|repeat|say again|texas stop|nexis stop|nexus stop)\b/.test(value)
+    || /^(?:please |ok |okay )?stop(?: it| that| please)?$/.test(String(value).trim());
   const correctedAwayFromHealth = /\b(not doctor|not health|not clinic|not medicine)\b.*\b(crop|farm|maize|cassava|field|buyer|sell|market)\b/.test(value)
     || /\b(crop|farm|maize|cassava|field|buyer|sell|market)\b.*\b(not doctor|not health|not clinic|not medicine)\b/.test(value);
   const medicalFragility = !correctedAwayFromHealth && /\b(baby|child|pregnant|elder|grandma|bleeding|breathe|breathing|unconscious|chest pain|fever|very hot|medicine|doctor|clinic|pharmacy|injury|pain|sick|dawa|magani|oogun|remedio|kliniki|daktari|likita)\b/.test(value);
@@ -7343,7 +7367,7 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
   const smart = smartNextActions(db, user, providers).items.slice(0, 4);
   const predictive = backendPredictiveAdvisorModel(db, user, command || "what needs attention");
   const { country, route } = activeContext(db);
-  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+  const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
   // Found live (device/notification ownership audit): db.profile.assistantReminders
   // is a single array shared by every account, with createdBy: user.email as the
   // only per-user attribution (same convention as nexusFieldDispatches' requestedBy).
@@ -23807,7 +23831,8 @@ function deepVoiceIntent(lower) {
   if (includesAny(["test providers", "test provider engines", "test engines", "provider check", "engine check"])) return { tool: "integrations.test_all", module: "Integrations", action: "Test providers", section: "integrations" };
   if (includesAny(["admin health", "health check", "admin check"])) return { tool: "admin.health_check", module: "Admin", action: "Admin health check", section: "admin" };
   if (includesAny(["profile summary", "my profile", "unified profile", "show my record"])) return { tool: "profile.summary", module: "Profile", action: "Show profile", section: "profile" };
-  if (includesAny(["ask ai", "copilot", "recommend", "what should i do"])) return { tool: "ai.copilot", module: "AI", action: "Run copilot", section: "agent" };
+  // "I am running out of my blood pressure pills, what should I do" is a health question, not a request to stage a copilot run that a later "yes" would start.
+  if (includesAny(["ask ai", "copilot", "recommend", "what should i do"]) && !looksLikeHealthReport(lower)) return { tool: "ai.copilot", module: "AI", action: "Run copilot", section: "agent" };
   return null;
 }
 
@@ -25347,7 +25372,8 @@ function updateConversationUserModel(profile, command, user) {
   const text = String(command || "").trim();
   const lower = text.toLowerCase();
   const model = profile.agentMemory.userModel || {};
-  const nameMatch = text.match(/\b(?:my name is|i am|i'm|this is)\s+([A-Z][a-zA-Z'-]{1,30})\b/);
+  const spokenNameForModel = extractSpokenName(text);
+  const nameMatch = spokenNameForModel ? [null, spokenNameForModel] : null;
   // A spoken/typed name belongs to the account that said it, not to the shared
   // global model -- store it per-account instead of on model.name (see
   // db.profile.userDisplayNames, the per-user store used by every greeting/
@@ -26455,7 +26481,7 @@ function nexusWorkforceDifferentiatorAnswer() {
 
 function localGeneralConversationAnswer(db, user, command = "", options = {}) {
   const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
-  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+  const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
   const detectedLanguage = detectGeneralConversationLanguage(command);
   const requestedLanguage = normalizeConversationLanguage(options.targetLanguage || user?.language || "en");
   const language = detectedLanguage || requestedLanguage || "en";
@@ -26666,7 +26692,7 @@ function normalizeConversationCoreDecision(decision = {}, fallback = {}) {
 function localNexusConversationCoreDecision(db, user, command = "", options = {}) {
   const text = stripNexusWakeWords(command);
   const lower = text.toLowerCase().replace(/\s+/g, " ").trim();
-  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+  const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
   const decision = (payload) => normalizeConversationCoreDecision({
     provider: "nexus-conversation-core-local",
     reason: "Local Nexus Conversation Core recognized a high-confidence platform intent.",
@@ -28474,7 +28500,7 @@ function socialConversationResponse(db, user, text, lower) {
   const greetingOpener = /^(hi|hello|hey|good morning|good afternoon|good evening|are you there|can you hear me)\b/.test(lower)
     && (greetingRemainder === "" || /^(how are you( doing)?( today)?|how is it going|can you hear me( now| ok| okay)?|are you (there|with me|listening|ready)( today| now)?)$/.test(greetingRemainder));
   if (greetingOpener) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user.name?.split(/\s+/)[0] || "there";
     db.profile.agentMemory.lastStatus = "conversation-ready";
     db.profile.agentMemory.lastSummary = `Hello ${name}. I am listening and ready to guide the next step.`;
     db.profile.agentMemory.updatedAt = new Date().toISOString();
@@ -28721,13 +28747,51 @@ function resilientConversationIntent(db, user, rawText = "") {
   return null;
 }
 
+// The emergency numbers the platform already states elsewhere (scripts/provider-engines.js "health.emergency-guidance": Kenya 999 or 112, Nigeria 112). For anywhere else, or when the country is not known,
+// say "your local emergency number" and name no number -- the people using Kyro are not in the U.S., and a made-up number is worse than none.
+function emergencyNumberFor(country = "") {
+  const place = String(country || "").trim().toLowerCase();
+  if (/\bkenya\b/.test(place)) return { country: "Kenya", numbers: "999 or 112" };
+  if (/\bnigeria\b/.test(place)) return { country: "Nigeria", numbers: "112" };
+  return null;
+}
+function emergencyCallLead(user) {
+  const known = emergencyNumberFor(user?.country);
+  return known ? `Call emergency services now if available (${known.numbers} in ${known.country}).` : "Call your local emergency number now if you can.";
+}
+// The whole sentence is only the person naming a condition they have ("I am pregnant", "I'm 6 months pregnant", "I am HIV positive and on treatment", "I am breastfeeding", "I am very stressed").
+function healthStatusStatement(lower = "") {
+  const value = String(lower || "").replace(/[.!?,]+/g, " ").replace(/\s+/g, " ").trim();
+  return /^(?:i am|i m|im|i'm) (?:(?:about |almost |around )?\d{1,2} (?:weeks?|months?)(?: and \d{1,2} (?:weeks?|days?))? |(?:very |so |really )?)?(?:pregnant|diabetic|hypertensive|asthmatic|epileptic|anaemic|anemic|breastfeeding|hiv positive|hiv negative|living with hiv|stressed|very stressed|expecting)(?: and (?:on|taking|using) [a-z ]{2,30})?$/.test(value);
+}
+function medicineStopQuestion(lower = "") {
+  const value = String(lower || "");
+  return /\b(should|can|could|may|is it ok(?:ay)?(?: to)?|is it safe(?: to)?|do i need to|must i)\s+(?:i\s+)?(stop|quit|skip|reduce|change|double|take less|take more|leave)\b.*\b(taking|using|my|the)\b.*\b(pills?|tablets?|medicines?|medications?|meds|arvs?|art|insulin|drugs?|treatment|doses?|antibiotics?|inhaler)\b/.test(value);
+}
+function emergencyNumberAnswer(text, user) {
+  const lower = normalizeSpeechForIntent(text);
+  const asksNumber = /\b(emergency|ambulance|police|fire brigade)\b.*\b(number|numbers|phone|hotline|line|contact)\b/.test(lower) || /\b(number|numbers|hotline)\b.*\b(for|to call|in an?)\b.*\b(emergency|ambulance|police)\b/.test(lower) || /\bwhat (?:do i|should i) (?:call|dial)\b.*\b(emergency|ambulance)\b/.test(lower);
+  if (!asksNumber || !/\b(what|which|give|tell|do you know|know|how|number|dial)\b/.test(lower)) return null;
+  const named = /\bkenya\b/.test(lower) ? "Kenya" : /\bnigeria\b/.test(lower) ? "Nigeria" : "";
+  // "...in Chile": a country named in the question that the platform has no number for is not answered with the asker's own country's number.
+  const askedAbout = (/\b(?:in|for|of)\s+([a-z]{3,}(?: [a-z]{3,})?)$/.exec(lower) || [])[1] || "";
+  const otherCountry = askedAbout && !named && !/^(?:an|the|my|case|emergency|emergencies|here|area|village|town|this|our|your|health|medical|ambulance|police|fire|kenya|nigeria|english|swahili|use|need|fact|real)\b/.test(askedAbout);
+  const known = emergencyNumberFor(named || (otherCountry ? "" : user?.country));
+  return known
+    ? `In ${known.country}, the emergency number is ${known.numbers}. I have not called anyone, and I cannot dispatch help for you.`
+    : "I do not have the emergency number for your country, so I will not guess. Call your local emergency number, or ask someone near you to call. Tell me the country you are in and I will tell you the number if I have it.";
+}
+
 function urgentHealthSafetyResponse(db, user, text = "") {
   const lower = normalizeSpeechForIntent(text);
   const vulnerablePerson = /\b(baby|child|kid|infant|mother|father|grandma|grandmother|elder|person|patient|my child|my baby)\b/.test(lower);
   const babyOrChildHealth = /\b(baby|child|kid|infant|my child|my baby)\b/.test(lower) && /\b(sick|hot|fever|weak|pain|vomit|cough|hurt|help|no english|no doctor)\b/.test(lower);
   const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|blood|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower);
   const healthNeed = /\b(sick|hurt|pain|injury|doctor|clinic|medicine|health|help|fever|hot)\b/.test(lower);
-  if (!(babyOrChildHealth || (dangerSign && (vulnerablePerson || healthNeed)))) return null;
+  // Someone who collapsed, fainted or cannot be woken is an emergency whoever it is ("an elderly man collapsed in the heat").
+  const collapsed = /\b(collapsed|collapse|fainted|passed out|unresponsive|not responding|cannot be woken|cant be woken|(?:will not|wont|cannot|cant) stop (?:the )?bleeding|bleeding (?:a lot|badly|heavily|too much)|bleeding (?:will not|wont|does not|doesnt) stop)\b/.test(lower);
+  if (!(babyOrChildHealth || collapsed || (dangerSign && (vulnerablePerson || healthNeed)))) return null;
+  if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
   db.profile.agentMemory.activeModule = "Healthcare";
   db.profile.agentMemory.lastStatus = "urgent-health-safety";
   db.profile.agentMemory.lastSummary = `Urgent health safety guidance for: ${text}`;
@@ -28735,7 +28799,7 @@ function urgentHealthSafetyResponse(db, user, text = "") {
   rememberAgentMemory(db.profile, `Urgent health concern reported: ${text}`, { source: "urgent-health-safety", category: "safety", module: "Healthcare", confidence: 0.97 });
   return {
     intent: "conversation.health_urgent_safety",
-    response: "Call emergency services now if available, such as 911 in the U.S. If the person cannot breathe, is bleeding badly, not waking, or getting worse, seek emergency help now. I am not a doctor and AgriNexus cannot replace emergency services. After you call, tell me where you are and whether the person is breathing normally.",
+    response: `${emergencyCallLead(user)} If the person cannot breathe, is bleeding badly, not waking, or getting worse, seek emergency help now. I am not a doctor and AgriNexus cannot replace emergency services. After you call, tell me where you are and whether the person is breathing normally.`,
     status: "urgent-guidance",
     metadata: {
       conversationMode: true,
@@ -29849,6 +29913,9 @@ function tokenizeAgentText(text) {
 }
 
 function planAgentToolLocally(command) {
+  // A health or danger report is never a keyword match for a course, a weather lookup or a trade tool ("my child has had a cough" scored on the word child and staged the women-and-children learning hub).
+  // Only an explicit ask to start/open/enrol something can still reach this router for such a sentence, and a sentence the care-and-safety reader recognises never can.
+  if (careSafetyApplies(command) || (looksLikeHealthReport(command) && !WORKFLOW_ASK_WORDS.test(String(command || "").toLowerCase()))) return null;
   const tokens = tokenizeAgentText(command);
   if (!tokens.length) return null;
   const scored = agentToolRegistry()
@@ -30577,31 +30644,9 @@ function roleGuidanceResponse(db, user, text) {
   };
 }
 
+// Only an explicit name statement ("my name is", "call me", "naitwa") or "I am <Capitalised name>" is a name -- never "I am pregnant", "I am tired", "I am a farmer" (see server/nexus-greeting-name.js).
 function extractConversationalName(text) {
-  const value = String(text || "").trim();
-  const patterns = [
-    /\bmy name is\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bthis is\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bi am\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bi'm\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bcall me\s+([a-z][a-z\s'-]{1,40})/i
-  ];
-  for (const pattern of patterns) {
-    const match = value.match(pattern);
-    if (match?.[1]) {
-      const candidate = match[1]
-        .replace(/[,.!?].*$/, "")
-        .trim()
-        .split(/\s+/)
-        .slice(0, 3);
-      const rawCandidate = candidate.join(" ").toLowerCase();
-      if (/^(tired|sad|scared|afraid|nervous|sick|hungry|lost|confused|overwhelmed|ready|new|fine|okay|ok|good|bad|hot|cold|happy|angry|worried)(\b|$)/.test(rawCandidate)) return "";
-      return candidate
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join(" ");
-    }
-  }
-  return "";
+  return extractSpokenName(text);
 }
 
 function languageFromCommand(text) {
@@ -31646,7 +31691,11 @@ function utilityAssistantKind(text, lower) {
   if (/\b(walk me through|guide me through|show me how|help me use|how do i use|how to use)\b/.test(lower)) return "";
   if (/\b(can you hear|hear me|understand|listen|talk|speak|communicate|english bad|bad english|broken english|not good english|wrong english|grandma talks|farmer talks)\b/.test(lower)) return "";
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
-  if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
+  if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) {
+    // "An elderly man collapsed in the heat" is a person in danger, not a weather question: the word heat must not send it to the forecast lookup.
+    if (looksLikeHealthReport(raw) && !/\b(weather|forecast|temperature|temp|rain)\b/.test(raw)) return "";
+    return "weather";
+  }
   if (spotifyMusicControlIntent(text) || musicAssistantIntent(text)) return "music";
   if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return "crop-timing";
   if (/\b(remind me|appointment reminder|reminder|remind|notify me|call reminder|visit reminder)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) return "appointment-reminder";
@@ -31723,6 +31772,56 @@ function createAssistantReminder(db, user, text, options = {}) {
   return reminder;
 }
 
+function cancelAssistantReminder(db, reminder) {
+  reminder.status = "canceled";
+  reminder.canceledAt = new Date().toISOString();
+  db.profile.agentMemory.lastStatus = "assistant-reminder-canceled";
+  db.profile.agentMemory.lastSummary = `Canceled ${reminder.reminderNumber}: ${reminder.task}.`;
+  db.profile.agentMemory.updatedAt = reminder.canceledAt;
+  logIntegration(db, { providerId: "openai", module: reminder.module || "Agent AI", action: "assistant.reminder_canceled", detail: `${reminder.reminderNumber} canceled.`, metadata: { reminderId: reminder.id }, dispatch: false });
+  return { intent: "assistant.reminder_canceled", response: `Canceled ${reminder.reminderNumber}: ${reminder.task}.`, status: "completed", metadata: { conversationMode: true, redirectSection: reminder.section || "agent", reminder } };
+}
+
+// "stop reminding me about my pills", "stop my reminders", "don't remind me to call Ron" -> { subject } (subject "" when none was named). Anything else -> null.
+function readStopRemindingRequest(lower = "") {
+  const t = String(lower || "").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim().replace(/^(?:ok(?:ay)?|please|nexus|kyro)[ ,]+/, "");
+  let m = /^(?:stop|quit) (?:reminding me|sending me reminders?|my reminders?|the reminders?)(?: (?:about|to|of|for|on))?(?: (.+))?$/.exec(t)
+    || /^(?:do not|don't|dont) (?:remind me|send me reminders?)(?: (?:about|to|of|for))?(?: (.+))?(?: any ?more| again)?$/.exec(t)
+    || /^no more reminders?(?: (?:about|for|to))?(?: (.+))?$/.exec(t);
+  if (!m) return null;
+  const subject = String(m[1] || "").replace(/\b(?:any ?more|again|please)\b/g, " ").replace(/^(?:my|the|a|an)\s+/, "").replace(/\s+/g, " ").trim();
+  return { subject };
+}
+// Pills, tablets, medicine, meds, drugs and the like are one subject for matching a reminder to what the person called it.
+const REMINDER_SUBJECT_SYNONYMS = [["pill", "pills", "tablet", "tablets", "medicine", "medicines", "medication", "medications", "meds", "drug", "drugs", "dose", "doses"]];
+function reminderSubjectTokens(value = "") {
+  const out = new Set();
+  for (const word of String(value || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)) {
+    if (!word || word.length < 3 || ["the", "and", "for", "about", "that", "this", "with", "any", "reminder", "reminders", "remind", "take", "taking", "your", "all"].includes(word)) continue;
+    const group = REMINDER_SUBJECT_SYNONYMS.find(set => set.includes(word));
+    out.add(group ? group[0] : word.replace(/s$/, ""));
+  }
+  return out;
+}
+function reminderMatchesSubject(reminder, subject) {
+  const wanted = reminderSubjectTokens(subject);
+  if (!wanted.size) return true;
+  const have = reminderSubjectTokens(`${reminder.task || ""} ${reminder.sourceCommand || ""}`);
+  return [...wanted].some(token => have.has(token));
+}
+// "actually make it 9pm", "change it to 9", "move it to 9:30 pm", "no, make that tomorrow at 7" -> the time words to read. Only a sentence that is nothing but that change counts.
+const REMINDER_TIME_CHANGE_WINDOW_MS = 30 * 60 * 1000;
+function readReminderTimeChange(text = "") {
+  const t = String(text || "").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim().replace(/^(?:ok(?:ay)?|no|nope|sorry|wait|actually|please|nexus|kyro)[ ,]+/i, "").replace(/^(?:ok(?:ay)?|no|actually|please)[ ,]+/i, "");
+  const m = /^(?:(?:make|set|change|move|put|reschedule|push|shift) (?:it|that|the reminder|that reminder|my reminder|it back|it forward)(?: time)?|(?:make|let'?s say|say) it)(?: (?:to|for|at|by))?\s+(.+)$/i.exec(t);
+  if (!m) return "";
+  const tail = m[1].trim();
+  const clock = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i.exec(tail);
+  if (clock) return `at ${tail}`;
+  return /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{1,2}:\d{2}|noon|midnight|tomorrow|tonight|morning|afternoon|evening|monday|tuesday|wednesday|thursday|friday|saturday|sunday|in \d{1,3} (?:minutes?|mins?|hours?|days?))\b/i.test(tail)
+    && !/\b(remind|reminder)\b/i.test(tail) ? (/\bat\b/i.test(tail) || /^(?:tomorrow|tonight|in |monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(tail) ? tail : tail.replace(/(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i, "at $1")) : "";
+}
+
 function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
   ensureAssistantReminders(db.profile);
   const hasExplicitReminderTime = /\b(in\s+\d{1,3}\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)|tomorrow|tonight|later today|this afternoon|sunday|monday|tuesday|wednesday|thursday|friday|saturday|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?)\b/.test(lower);
@@ -31739,21 +31838,57 @@ function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
       : "You do not have active reminders yet. Say, Nexus, remind me to call Ron tomorrow, or remind me to order medical supplies Friday.";
     return { intent: "assistant.reminders_listed", response, status: "completed", metadata: { conversationMode: true, redirectSection: "agent", reminders: active } };
   }
-  if (/\b(cancel|clear|delete|remove)\b/.test(lower) && /\b(reminder|reminders|follow up|follow-up)\b/.test(lower)) {
+  // "stop reminding me about my pills" and "don't remind me about the meeting any more" are a request to cancel, not the "stop" interruption: cancel the reminder they named, or ask which one.
+  const stopReminding = readStopRemindingRequest(lower);
+  if (stopReminding) {
+    const own = (db.profile.assistantReminders || []).filter(item => item.status !== "canceled" && item.createdBy === user?.email);
+    if (!own.length) return { intent: "assistant.no_reminder_to_cancel", response: "I do not see an active reminder to cancel. Nothing was changed.", status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent" } };
+    const matches = stopReminding.subject ? own.filter(item => reminderMatchesSubject(item, stopReminding.subject)) : own;
+    if (matches.length === 1) return cancelAssistantReminder(db, matches[0]);
+    const listed = (matches.length ? matches : own).slice(0, 5).map(item => `${item.reminderNumber}: ${item.task}, ${item.whenLabel}`).join(". ");
+    return {
+      intent: "assistant.reminder_which",
+      response: matches.length
+        ? `More than one reminder matches. ${listed}. Tell me which one to cancel, for example "cancel ${matches[0].reminderNumber}". Nothing was canceled.`
+        : `I could not find a reminder about ${stopReminding.subject}. Your reminders are: ${listed}. Tell me which one to cancel, for example "cancel ${own[0].reminderNumber}". Nothing was canceled.`,
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", reminders: (matches.length ? matches : own).slice(0, 5) }
+    };
+  }
+  // "actually make it 9pm" right after "remind me to take my tablets at 8pm" changes THAT reminder's time. It only applies to a reminder this person set a few minutes ago; with none, say so.
+  const changeTime = readReminderTimeChange(text);
+  if (changeTime) {
+    const own = (db.profile.assistantReminders || []).filter(item => item.status !== "canceled" && item.createdBy === user?.email);
+    const latest = own[0] || null;
+    const recent = latest && Date.now() - Date.parse(latest.updatedAt || latest.createdAt || 0) <= REMINDER_TIME_CHANGE_WINDOW_MS;
+    if (!recent) return null;
+    const timing = parseAssistantReminderTime(changeTime, options);
+    latest.scheduledAt = timing.scheduledAt;
+    latest.whenLabel = timing.whenLabel;
+    latest.updatedAt = new Date().toISOString();
+    for (const note of (db.profile.notifications || []).filter(item => item.reminderId === latest.id)) {
+      note.scheduledAt = latest.scheduledAt;
+      note.message = `${latest.reminderNumber}: ${latest.task} ${latest.whenLabel}.`;
+    }
+    db.profile.agentMemory.lastStatus = "assistant-reminder-rescheduled";
+    db.profile.agentMemory.lastSummary = `Reminder moved: ${latest.task} ${latest.whenLabel}.`;
+    db.profile.agentMemory.updatedAt = latest.updatedAt;
+    logIntegration(db, { providerId: "openai", module: latest.module || "Agent AI", action: "assistant.reminder_rescheduled", detail: `${latest.reminderNumber} moved to ${latest.whenLabel}.`, metadata: { reminderId: latest.id, scheduledAt: latest.scheduledAt }, dispatch: false });
+    return { intent: "assistant.reminder_rescheduled", response: `Done. I moved your reminder ${/^about\s/i.test(latest.task) ? "" : "to "}${latest.task} to ${latest.whenLabel}.`, status: "completed", metadata: { conversationMode: true, redirectSection: latest.section || "agent", reminder: latest } };
+  }
+  if (/\b(cancel|clear|delete|remove)\b/.test(lower) && /\b(reminder|reminders|follow up|follow-up|rem-?\d{1,6})\b/.test(lower)) {
     // Found live (device/notification ownership audit): unfiltered, this canceled
     // the FIRST active reminder in the whole shared workspace array, regardless of
     // who created it -- any signed-in user saying "cancel my reminder" could
     // silently cancel a different real account's medication/appointment/shift
     // reminder.
-    const reminder = (db.profile.assistantReminders || []).find(item => item.status !== "canceled" && item.createdBy === user?.email);
+    const ownActive = (db.profile.assistantReminders || []).filter(item => item.status !== "canceled" && item.createdBy === user?.email);
+    const numbered = /\brem-?(\d{1,6})\b/i.exec(lower);
+    const reminder = numbered
+      ? ownActive.find(item => String(item.reminderNumber || "").toLowerCase() === `rem-${numbered[1].padStart(3, "0")}`)
+      : ownActive[0];
     if (!reminder) return { intent: "assistant.no_reminder_to_cancel", response: "I do not see an active reminder to cancel.", status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent" } };
-    reminder.status = "canceled";
-    reminder.canceledAt = new Date().toISOString();
-    db.profile.agentMemory.lastStatus = "assistant-reminder-canceled";
-    db.profile.agentMemory.lastSummary = `Canceled ${reminder.reminderNumber}: ${reminder.task}.`;
-    db.profile.agentMemory.updatedAt = reminder.canceledAt;
-    logIntegration(db, { providerId: "openai", module: reminder.module || "Agent AI", action: "assistant.reminder_canceled", detail: `${reminder.reminderNumber} canceled.`, metadata: { reminderId: reminder.id }, dispatch: false });
-    return { intent: "assistant.reminder_canceled", response: `Canceled ${reminder.reminderNumber}: ${reminder.task}.`, status: "completed", metadata: { conversationMode: true, redirectSection: reminder.section || "agent", reminder } };
+    return cancelAssistantReminder(db, reminder);
   }
   if (/\b(remind me|set a reminder|set reminder|notify me|remember to|follow up)\b/.test(lower)) {
     const reminder = createAssistantReminder(db, user, text, options);
@@ -33362,6 +33497,8 @@ function dailyAdvisorKind(lower) {
 function isDailyAdvisorQuestion(lower) {
   const value = String(lower || "");
   if (isPublicHealthRiskQuestion(value)) return false;
+  // A medicine question ("should I stop taking my ARVs") or a person in danger is not a heat/walking tip. Only a mild heat-and-walking question about someone who is unwell stays with the daily advisor.
+  if (looksLikeHealthReport(value) && !(dailyAdvisorKind(value) === "walking-heat" && !/\b(collaps|faint|passed out|unconscious|unresponsive|seizure|bleed|breath|chest)/.test(value))) return false;
   if (/\b(start to finish|end to end|sell|buyer|payment|order|create order|contact buyer|apply for|submit application|run mission)\b/.test(value)) return false;
   const utilityKind = utilityAssistantKind(value, value);
   const weatherSafety = utilityKind === "weather" && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(value);
@@ -33683,7 +33820,7 @@ async function moduleGreetingResponse(db, user, text, lower) {
   const extractedName = extractConversationalName(text);
   const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help|track|route|gps|location)\b/.test(lower);
   if (hasActionRequest && !/\b(my name is|call me)\b/.test(lower)) return null;
-  const name = extractedName || db.profile.userDisplayNames?.[user?.id] || user.name?.split(/\s+/)[0] || "there";
+  const name = extractedName || storedDisplayName(db, user) || user.name?.split(/\s+/)[0] || "there";
   if (extractedName && user?.id) {
     db.profile.userDisplayNames = db.profile.userDisplayNames || {};
     db.profile.userDisplayNames[user.id] = extractedName;
@@ -33839,7 +33976,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const conversational = options.conversational === true;
   if (!text) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.greeting",
       response: `Yes ${name}, how can I assist you?`,
@@ -33861,11 +33998,41 @@ async function runAgentCommand(db, user, command, options = {}) {
   // And the care and safety answers the planner gives first (see careSafetyReply above).
   const careSafe = await careSafetyReply(text, user);
   if (careSafe) {
+    // A safety answer ends whatever was waiting for a "yes": the next "yes" must not complete a course or a call that was staged for something else.
+    if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
     return {
       intent: `conversation.safety.${careSafe.kind}`,
       response: careSafe.reply,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, careSafety: careSafe.kind }
+    };
+  }
+  // "What is the emergency number in Kenya?" is a question with a plain answer, not a report of an emergency.
+  const emergencyNumber = emergencyNumberAnswer(text, user);
+  if (emergencyNumber) {
+    return {
+      intent: "conversation.emergency_number",
+      response: emergencyNumber,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true }
+    };
+  }
+  // "I am pregnant" / "I am diabetic" / "I am HIV positive" is something the person is telling Kyro about themselves, not their name. It is acknowledged and nothing is saved from it.
+  if (healthStatusStatement(lower)) {
+    return {
+      intent: "conversation.health_status_noted",
+      response: "Thank you for telling me. I have not saved this as your name or in your health records. What would you like help with: a health question, finding a clinic, or something else?",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, suggestedReplies: ["find a clinic", "I have a health question", "something else"] }
+    };
+  }
+  // "Should I stop taking my ARVs because I feel fine?" is a medicine decision. Kyro does not decide it (same stance as the missed-dose answer: ask the pharmacist or clinic), and it is not a heat tip or an interruption.
+  if (medicineStopQuestion(lower)) {
+    return {
+      intent: "conversation.medicine_stop_question",
+      response: "I can't decide that for you, and stopping a medicine on your own can be risky. Please speak to your clinic, doctor or pharmacist before you stop or change it. I have not changed anything.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true }
     };
   }
   if (isLanguageCommand(lower)) {
@@ -33899,7 +34066,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (stabilizationRepair) return stabilizationRepair;
   const onboardingPhrase = /^(i am|i'm)\s+new\b/i.test(text) || /\b(how do i|where do i start|show me how|help me use|start training)\b/i.test(text);
   const spokenName = onboardingPhrase ? "" : extractConversationalName(text);
-  const directNameIntro = /^(my name is|i am|i'm|this is|call me)\b/i.test(text)
+  const directNameIntro = /^(my name is|i am|i'm|this is|call me|naitwa|ninaitwa|jina langu ni)\b/i.test(text)
     || /^(hi|hello|hey|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri\s+nexus)?[,:\-]?\s*(my name is|i am|i'm|this is|call me)\b/i.test(text);
   if (conversational
     && /\b(visually impaired|blind|cant see|can't see|visual|screen reader|large print)\b/.test(lower)
@@ -33984,8 +34151,14 @@ async function runAgentCommand(db, user, command, options = {}) {
       const sessionStart = Date.parse(options.sessionStartedAt);
       if (!Number.isFinite(stagedAt) || !Number.isFinite(sessionStart) || stagedAt < sessionStart) return null;
     }
+    // The topic changed: a health report is not an answer about a course, a call or a payment that was staged earlier, and a later "yes" must not complete that other thing.
+    if (!isAffirmativeCommand(lower) && !isNegativeCommand(lower) && !isVagueConfirmationCommand(lower) && looksLikeHealthReport(text) && String(pending.module || "") !== "Healthcare") {
+      db.profile.agentPendingAction = null;
+      return null;
+    }
     return pending;
   })();
+
   if (topPendingAction?.phase4HighRisk && isVagueConfirmationCommand(lower)) {
     return {
       intent: "conversation.confirmation_required",
@@ -34048,7 +34221,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", confirmationRequired: false, executionDeferred: false }
     };
   }
-  const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
+  // Not only for the conversational channel: the voice tool gateway and other API callers send the same words, and an emergency answer cannot depend on which door they came through.
+  const urgentHealth = urgentHealthSafetyResponse(db, user, text);
   if (urgentHealth) return urgentHealth;
   const backendCallIntent = conversational ? stageBackendCallIntent(db, user, text, options) : null;
   if (backendCallIntent) return backendCallIntent;
@@ -34218,7 +34392,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
@@ -34333,7 +34507,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     }
   }
   if (conversational && /^(good\s*morning|good\s*afternoon|good\s*evening|hello|hi|hey)\b(?:\s+(nexus|agrinexus|agri\s+nexus))?$/i.test(lower)) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.greeting",
       response: `Good morning ${name}. How can I assist you?`,
@@ -34342,7 +34516,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
@@ -34375,7 +34549,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home|main menu|main menu home|menu home)$/i.test(lower)
     || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
     || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower))) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.home",
       response: `Home is open, ${name}. What do you need next?`,
@@ -34427,7 +34601,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(baby|child|infant)\b.*\b(sick|hot|fever|weak|pain|vomit|cough|not breathing|cannot breathe|can't breathe|cant breathe)\b/.test(lower)) {
     return {
       intent: "conversation.health_urgent_child",
-      response: "Call emergency services now if available, such as 911 in the U.S. A baby who is not breathing needs immediate emergency help. I am not a doctor and AgriNexus cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.",
+      response: `${emergencyCallLead(user)} A baby who is not breathing needs immediate emergency help. I am not a doctor and AgriNexus cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.`,
       status: "urgent-guidance",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, frontierCommunication: { urgency: "high", nextQuestion: "After emergency help is called, where are you, and is the baby breathing normally?", confidence: 0.94 }, suggestedReplies: ["find emergency care", "call provider", "start intake"] }
     };
@@ -36525,7 +36699,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     accessibilityPreferences: db.profile.agentMemory?.accessibilityPreferences || {},
     // The name the person just said wins ("Hello Nexus, this is Ron"); an account called "Standard User" is not a name.
     // Falls back to this account's OWN previously-captured display name (never another account's), then the account name.
-    userName: spokenNameFromGreeting(command) || db.profile.userDisplayNames?.[user?.id] || personalFirstName(user)
+    userName: spokenNameFromGreeting(command) || storedDisplayName(db, user) || personalFirstName(user)
   });
   {
     const spokenGreetingName = spokenNameFromGreeting(command);
