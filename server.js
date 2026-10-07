@@ -62,6 +62,7 @@ const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, v
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
 const teamManagement = require("./server/teamManagement.js");
+const businessSpaces = require("./server/businessSpaces.js");
 const communicationsSetup = require("./server/providers/communicationsStatus.js");
 const twilioProvider = require("./server/providers/twilioProvider.js");
 const emailProvider = require("./server/providers/emailProvider.js");
@@ -118,6 +119,10 @@ const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
 const PUBLIC = path.join(ROOT, "public");
 const REQUIRE_LIVE_SERVICES = process.env.AGRINEXUS_REQUIRE_LIVE_SERVICES === "true";
 const STATE_STORE = process.env.AGRINEXUS_STATE_STORE || (process.env.DATABASE_URL ? "postgres" : "json");
+// Which business (space) an email, or a dialled phone number, belongs to. See server/businessSpaces.js.
+const spaceDirectory = STATE_STORE === "postgres"
+  ? businessSpaces.createPostgresDirectory(() => getPgPool())
+  : businessSpaces.createFileDirectory(process.env.AGRINEXUS_SPACES_PATH || path.join(path.dirname(DB_PATH), "spaces-directory.json"));
 const PROVIDER_WEBHOOK_TIMEOUT_MS = Number(process.env.PROVIDER_WEBHOOK_TIMEOUT_MS || 3000);
 const LIVE_SERVICE_TIMEOUT_MS = Number(process.env.LIVE_SERVICE_TIMEOUT_MS || 3000);
 const sessions = new Map();
@@ -2247,13 +2252,15 @@ async function ensurePostgresState() {
 // throughput roughly halved and p50 latency roughly doubled going from a
 // 300KB to a 1.2MB state file under the same concurrent load.
 async function readDb() {
+  const space = businessSpaces.currentSpace();
   if (usingPostgresState()) {
     await ensurePostgresState();
-    const result = await getPgPool().query("select state from agrinexus_app_state where id = $1", ["default"]);
+    const result = await getPgPool().query("select state from agrinexus_app_state where id = $1", [space]);
+    if (!result.rows[0]) throw new Error("Unknown business space");
     return result.rows[0].state;
   }
   await ensureRuntimeData();
-  const raw = await fs.promises.readFile(DB_PATH, "utf8");
+  const raw = await fs.promises.readFile(businessSpaces.spaceDbPath(DB_PATH, space), "utf8");
   return JSON.parse(raw);
 }
 
@@ -2270,7 +2277,7 @@ async function writeDb(db) {
     await ensurePostgresState();
     await getPgPool().query(
       "update agrinexus_app_state set state = $2::jsonb, updated_at = now() where id = $1",
-      ["default", JSON.stringify(db)]
+      [businessSpaces.currentSpace(), JSON.stringify(db)]
     );
     return;
   }
@@ -2291,8 +2298,9 @@ async function writeDb(db) {
   writeDbQueue = new Promise(resolve => { releaseNext = resolve; });
   await previousWrite;
   try {
-    await fs.promises.mkdir(path.dirname(DB_PATH), { recursive: true });
-    const tempPath = `${DB_PATH}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const targetPath = businessSpaces.spaceDbPath(DB_PATH, businessSpaces.currentSpace());
+    await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
+    const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     await fs.promises.writeFile(tempPath, JSON.stringify(db, null, 2) + "\n");
     // Windows can still throw EPERM renaming over a file that has a
     // concurrent reader's handle open at that exact instant (POSIX rename
@@ -2302,7 +2310,7 @@ async function writeDb(db) {
     // package uses).
     for (let attempt = 1; ; attempt += 1) {
       try {
-        await fs.promises.rename(tempPath, DB_PATH);
+        await fs.promises.rename(tempPath, targetPath);
         break;
       } catch (error) {
         if (error.code !== "EPERM" || attempt >= 10) throw error;
@@ -2492,12 +2500,13 @@ function durableAuthSecret(env = process.env) {
   return String(env.SESSION_SECRET || "").trim();
 }
 
-function issueDurableAuthToken(userId, now = Date.now(), env = process.env) {
+function issueDurableAuthToken(userId, now = Date.now(), env = process.env, space = "") {
   const secret = durableAuthSecret(env);
   if (!secret || !userId) return "";
   const ttlMs = Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
   const payload = Buffer.from(JSON.stringify({
     userId: String(userId),
+    ...(space && space !== "default" ? { space } : {}),
     issuedAt: now,
     expiresAt: now + ttlMs
   })).toString("base64url");
@@ -2569,17 +2578,18 @@ async function ensureSessionsPostgresTable() {
       expires_at timestamptz not null
     )
   `);
+  await pool.query("alter table agrinexus_sessions add column if not exists space_id text");
   sessionsPostgresReady = true;
 }
 
-async function persistSessionToPostgres(sid, userId, expiresAt) {
+async function persistSessionToPostgres(sid, userId, expiresAt, space = "") {
   if (!sessionsPostgresEnabled()) return;
   try {
     await ensureSessionsPostgresTable();
     await getPgPool().query(
-      `insert into agrinexus_sessions (sid, user_id, expires_at) values ($1, $2, $3)
-       on conflict (sid) do update set user_id = excluded.user_id, expires_at = excluded.expires_at`,
-      [sid, userId, new Date(expiresAt).toISOString()]
+      `insert into agrinexus_sessions (sid, user_id, expires_at, space_id) values ($1, $2, $3, $4)
+       on conflict (sid) do update set user_id = excluded.user_id, expires_at = excluded.expires_at, space_id = excluded.space_id`,
+      [sid, userId, new Date(expiresAt).toISOString(), space && space !== "default" ? space : null]
     );
   } catch (error) {
     console.error("[sessions] Postgres write failed:", error.message);
@@ -2621,9 +2631,9 @@ async function hydrateSessionsFromPostgres() {
   try {
     await ensureSessionsPostgresTable();
     await getPgPool().query("delete from agrinexus_sessions where expires_at <= now()");
-    const result = await getPgPool().query("select sid, user_id, expires_at from agrinexus_sessions");
+    const result = await getPgPool().query("select sid, user_id, expires_at, space_id from agrinexus_sessions");
     for (const row of result.rows) {
-      sessions.set(row.sid, { userId: row.user_id, expiresAt: new Date(row.expires_at).getTime() });
+      sessions.set(row.sid, { userId: row.user_id, expiresAt: new Date(row.expires_at).getTime(), space: row.space_id || "default" });
     }
     if (result.rows.length) console.log(`[sessions] restored ${result.rows.length} session(s) from Postgres after restart`);
   } catch (error) {
@@ -2632,7 +2642,7 @@ async function hydrateSessionsFromPostgres() {
   }
 }
 
-async function issueSession(sid, userId) {
+async function issueSession(sid, userId, space = "") {
   if (sessions.size > SESSIONS_SWEEP_THRESHOLD) {
     const now = Date.now();
     for (const [key, entry] of sessions) {
@@ -2645,8 +2655,8 @@ async function issueSession(sid, userId) {
     }
   }
   const expiresAt = Date.now() + sessionTtlMs();
-  sessions.set(sid, { userId, expiresAt });
-  await persistSessionToPostgres(sid, userId, expiresAt);
+  sessions.set(sid, { userId, expiresAt, space: space || "default" });
+  await persistSessionToPostgres(sid, userId, expiresAt, space);
 }
 
 function currentUser(req, db) {
@@ -3603,7 +3613,25 @@ function ensureDefaultUsers(db) {
   return changed;
 }
 
+// The space for a sign-in or a phone call depends on what is IN the body (the email, the dialled number), so those few routes read the body first; readBody() then replays it.
+function parseBodyText(req, data) {
+  const contentType = String(req.headers["content-type"] || "");
+  if (!data) return {};
+  if (contentType.includes("application/x-www-form-urlencoded")) return Object.fromEntries(new URLSearchParams(data));
+  return JSON.parse(data);
+}
+function bufferBodyText(req) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", chunk => { data += chunk; if (data.length > 1_000_000) reject(new Error("Payload too large")); });
+    req.on("end", () => { req.bufferedBodyText = data; resolve(data); });
+    req.on("error", reject);
+  });
+}
 function readBody(req) {
+  if (typeof req.bufferedBodyText === "string") {
+    try { return Promise.resolve(parseBodyText(req, req.bufferedBodyText)); } catch { return Promise.reject(new Error("Invalid JSON")); }
+  }
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", chunk => {
@@ -5945,7 +5973,7 @@ function publicState(db, user) {
     productIdentity: productIdentityMetadata(),
     user: user && { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language, businessManager: teamManagement.isBusinessManager(user) },
     // `team` is not a role permission: it is true for a business manager (and an Admin), and the screen shows the Team link only then.
-    permissions: user ? { ...permissionsForRole(user.role), team: teamManagement.canManageTeam(user) } : {},
+    permissions: user ? { ...permissionsForRole(user.role), team: teamManagement.canManageTeam(user), platform: businessSpaces.isPlatformOwner(user) } : {},
     // Never include the real password here -- this used to serialize every
     // seeded account's cleartext password (including Admin's) into every
     // publicState() response, reachable by any caller including a fully
@@ -5953,7 +5981,7 @@ function publicState(db, user) {
     // The client doesn't even read this field's password (public/app.js's
     // login picker uses its own hardcoded, password-less demoLoginProfiles
     // list), so there is no legitimate reason to ship it at all.
-    loginProfiles: DEFAULT_USERS.map(user => ({ name: user.name, email: user.email, role: user.role, country: user.country, language: user.language })),
+    loginProfiles: businessSpaces.currentSpace() !== businessSpaces.DEFAULT_SPACE ? [] : DEFAULT_USERS.map(user => ({ name: user.name, email: user.email, role: user.role, country: user.country, language: user.language })),
     countries: db.countries,
     routes: db.routes,
     courses: db.courses,
@@ -6009,7 +6037,7 @@ function publicState(db, user) {
     // /api/auth/guest-session). public/app.js already reads every admin.*
     // field defensively (data.admin?.users || []), so omitting it here for
     // non-admins is a safe, additive-only change.
-    admin: canUse(user, "admin") ? adminSnapshot(db, providers) : null,
+    admin: canUse(user, "admin") ? adminSnapshot(db, providers, { platform: businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE }) : null,
     profile: { ...profileForUser(db.profile, user), ...learningProfileForClient(user) }
   };
 }
@@ -11128,7 +11156,7 @@ function loadOptional(name) {
   }
 }
 
-function adminSnapshot(db, providers = runtimeProviders(db)) {
+function adminSnapshot(db, providers = runtimeProviders(db), { platform = true } = {}) {
   const profile = db.profile || {};
   ensureOperationsProfile(profile);
   const modules = [
@@ -11144,7 +11172,7 @@ function adminSnapshot(db, providers = runtimeProviders(db)) {
     users: (db.users || []).map(user => ({ id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, businessManager: teamManagement.isBusinessManager(user), teamManagerId: user.teamManagerId || null, active: user.status !== "disabled" })),
     // Who may phone Kyro: numbers added here (editable) and the older Render-setting list (read-only, masked -- it can only be changed in Render).
     phoneCallers: phoneCallerRegistry.adminView(db),
-    phoneCallersFromSettings: twilioAuthorizedCallers(process.env).map(item => ({ phone: redactPhoneNumber(item.phone), email: item.email, owner: !item.email })),
+    phoneCallersFromSettings: !platform ? [] : twilioAuthorizedCallers(process.env).map(item => ({ phone: redactPhoneNumber(item.phone), email: item.email, owner: !item.email })),
     subscribers: profile.subscriberAccounts,
     supportTickets: profile.supportTickets,
     usage: {
@@ -11157,8 +11185,8 @@ function adminSnapshot(db, providers = runtimeProviders(db)) {
       }, {})
     },
     modules,
-    readiness: productionReadiness(providers),
-    production: productionCompleteness(db, providers),
+    readiness: platform ? productionReadiness(providers) : null,
+    production: platform ? productionCompleteness(db, providers) : null,
     audit: [
       ...(profile.activity || []).map(item => ({ type: "activity", detail: item })),
       ...(profile.integrationEvents || []).map(item => ({ type: "integration", detail: `${item.providerName}: ${item.action}` })),
@@ -18801,11 +18829,12 @@ function nexusOwnPhoneForUser(user, env = process.env, db = null) {
 // rejected instead of granting account access.
 const PHONE_REALTIME_STREAM_TOKEN_TTL_MS = 120_000;
 
-function issuePhoneRealtimeStreamToken(userId, callSid, now = Date.now(), env = process.env) {
+function issuePhoneRealtimeStreamToken(userId, callSid, now = Date.now(), env = process.env, space = "") {
   const secret = durableAuthSecret(env);
   if (!secret || !userId || !callSid) return "";
   const payload = Buffer.from(JSON.stringify({
     userId: String(userId),
+    ...(space && space !== "default" ? { space } : {}),
     callSid: String(callSid),
     issuedAt: now,
     expiresAt: now + PHONE_REALTIME_STREAM_TOKEN_TTL_MS
@@ -46351,7 +46380,8 @@ function nexusDemoDataSandboxSummary() {
 
 async function api(req, res, url) {
   const db = await readDb();
-  const usersChanged = ensureDefaultUsers(db);
+  // The documented demo accounts exist only in the default space: a business space never gets them (they carry a published password).
+  const usersChanged = businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE ? ensureDefaultUsers(db) : false;
   const user = currentUser(req, db);
   // From here to the end of this request, saves stamp the owner on the records it creates (see profileOwnerStamping). Reads never change data, so skip them.
   if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
@@ -50692,6 +50722,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/auth/guest-session" && req.method === "POST") {
+    // Guest sessions are the demo's "Start as User": they exist in the default space only, never inside a business.
+    if (businessSpaces.currentSpace() !== businessSpaces.DEFAULT_SPACE) return send(res, 403, { error: "Guest sessions are not available inside a business." });
     if (!rateLimit(req, 20, 60_000)) {
       return send(res, 429, { ok: false, error: "Too many guest session requests", code: "guest_session_rate_limited" });
     }
@@ -50741,8 +50773,8 @@ async function api(req, res, url) {
     await authoritativeRuntimeUser(guest);
     await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
-    await issueSession(sid, guest.id);
-    const durableToken = issueDurableAuthToken(guest.id);
+    await issueSession(sid, guest.id, businessSpaces.currentSpace());
+    const durableToken = issueDurableAuthToken(guest.id, Date.now(), process.env, businessSpaces.currentSpace());
     const cookies = [
       setCookieHeader("agrinexus_sid", sid, {
         maxAge: 43_200,
@@ -50820,8 +50852,8 @@ async function api(req, res, url) {
     if (found.status === "disabled") return send(res, 403, { error: "This account has been switched off. Ask the person in charge of your team." });
     if (usersChanged || blobBackfilled || passwordMigrated) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
-    await issueSession(sid, found.id);
-    const durableToken = issueDurableAuthToken(found.id);
+    await issueSession(sid, found.id, businessSpaces.currentSpace());
+    const durableToken = issueDurableAuthToken(found.id, Date.now(), process.env, businessSpaces.currentSpace());
     const cookies = [
       setCookieHeader("agrinexus_sid", sid, {
         maxAge: 43_200,
@@ -51051,7 +51083,7 @@ async function api(req, res, url) {
       const streamUrl = phoneRealtimeStreamUrl(process.env);
       const authorizedCaller = resolveAuthorizedPhoneCaller(db, body);
       if (callSid && streamUrl && authorizedCaller) {
-        const token = issuePhoneRealtimeStreamToken(authorizedCaller.id, callSid, Date.now(), process.env);
+        const token = issuePhoneRealtimeStreamToken(authorizedCaller.id, callSid, Date.now(), process.env, businessSpaces.currentSpace());
         logIntegration(db, {
           providerId: "phone-voice",
           module: "AI",
@@ -51979,7 +52011,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/admin/subscriber" && req.method === "POST") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow subscriber management" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow subscriber management" });
     const body = await readBody(req);
     ensureOperationsProfile(db.profile);
     const email = String(body.email || "pilot-user@example.com").trim().toLowerCase();
@@ -52113,6 +52145,113 @@ async function api(req, res, url) {
     return send(res, 404, { error: "Not found" });
   }
 
+  // The platform owner's tools for businesses: list them, create one with its first Admin, link a phone number to one, and give its first Admin a new temporary password.
+  if (url.pathname.startsWith("/api/platform/")) {
+    if (!user) return send(res, 401, { error: "Sign in first." });
+    if (!businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Only the platform owner can manage businesses." });
+    const businessList = async () => {
+      const rows = await spaceDirectory.describe();
+      return Promise.all(rows.map(async row => {
+        const record = await businessSpaces.runInSpace(row.id, () => readDb()).catch(() => null);
+        const people = (record?.users || []).filter(item => item.status !== "deleted");
+        return {
+          id: row.id, name: row.name, createdAt: row.createdAt, recordFound: Boolean(record),
+          admins: people.filter(item => item.role === "Admin").map(item => item.email),
+          people: people.length,
+          numbers: row.numbers.map(number => teamManagement.maskPhone(number))
+        };
+      }));
+    };
+    if (url.pathname === "/api/platform/businesses" && req.method === "GET") return send(res, 200, { ok: true, businesses: await businessList() });
+    if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
+    if (!authRateLimit(req, "platform-write", 30, 300_000)) return send(res, 429, { error: "Too many changes in a short time. Wait a few minutes, then try again." });
+    const body = await readBody(req);
+    const platformLog = (action, detail, metadata = {}) => {
+      addUsageEvent(db.profile, { module: "Platform", action, detail });
+      logIntegration(db, { providerId: "auth-users", module: "Platform", action, detail, metadata: { ...metadata, by: user.email } });
+    };
+
+    if (url.pathname === "/api/platform/businesses") {
+      const id = String(body.id ?? "").trim().toLowerCase();
+      const name = businessSpaces.cleanName(body.name);
+      const adminName = businessSpaces.cleanName(body.adminName);
+      const adminEmail = teamManagement.emailKey(body.adminEmail);
+      if (!businessSpaces.validSpaceId(id)) return send(res, 400, { error: "The business id is 2 to 40 lowercase letters, digits or dashes (for example green-valley)." });
+      if (!name) return send(res, 400, { error: "Enter the business name." });
+      if (!adminName) return send(res, 400, { error: "Enter the name of the business's first Admin." });
+      if (!teamManagement.validEmail(adminEmail)) return send(res, 400, { error: "Enter a valid email for the first Admin." });
+      // An email is one person in one place: it must not already be an account here (the default space), nor be linked to any business.
+      const existing = db.users.find(item => teamManagement.emailKey(item.email) === adminEmail);
+      if (existing || await refuseIfRealPostgresAccountExists(adminEmail, existing)) return send(res, 409, { error: "That email already belongs to an existing account." });
+      if ((await spaceDirectory.spaceForEmail(adminEmail)) !== businessSpaces.DEFAULT_SPACE) return send(res, 409, { error: "That email already belongs to another business." });
+      if (await spaceDirectory.exists(id)) return send(res, 409, { error: "That business id is already taken." });
+      const password = randomTemporaryPassword();
+      const now = new Date().toISOString();
+      const country = String(body.country || user.country || "Kenya").trim() || "Kenya";
+      const adminAccount = {
+        id: crypto.randomUUID(), name: adminName, email: adminEmail, password: pgUsers.hashPassword(password), role: "Admin",
+        country, language: String(body.language || COUNTRY_LANGUAGE[country.toLowerCase()] || user.language || "en").trim() || "en", createdAt: now, lastUpdatedAt: now
+      };
+      try {
+        await createBusinessRecord(id, businessSpaces.newSpaceRecord(db, { adminAccount }));
+      } catch (error) { return send(res, 409, { error: error.message }); }
+      try {
+        await spaceDirectory.createSpace(id, { name });
+        await spaceDirectory.linkEmail(adminEmail, id);
+      } catch (error) {
+        await deleteBusinessRecord(id);
+        return send(res, 409, { error: error.message });
+      }
+      if (usingPostgresAuth()) {
+        await pgUsers.createUser(getPgPool(), { email: adminEmail, displayName: adminName, password })
+          .catch(error => console.error("[platform] Postgres shadow-write failed:", error.message));
+      }
+      knownSpaceIds.add(id);
+      platformLog("business.created", `Business ${id} created with first Admin ${adminEmail}.`, { businessId: id });
+      await writeDb(db);
+      return send(res, 200, { ok: true, businesses: await businessList(), created: { id, name, adminEmail, password } });
+    }
+
+    if (url.pathname === "/api/platform/businesses/number") {
+      const id = String(body.id ?? "").trim().toLowerCase();
+      const number = normalizePhoneNumber(body.number);
+      if (!number) return send(res, 400, { error: "Enter the phone number with its country code, starting with +, for example +254712345678." });
+      if (!(await spaceDirectory.exists(id))) return send(res, 404, { error: "There is no business with that id." });
+      try { await spaceDirectory.linkNumber(number, id); } catch (error) { return send(res, 409, { error: error.message }); }
+      platformLog("business.number_linked", `${redactPhoneNumber(number)} linked to business ${id}.`, { businessId: id, phone: redactPhoneNumber(number) });
+      await writeDb(db);
+      return send(res, 200, { ok: true, businesses: await businessList() });
+    }
+
+    if (url.pathname === "/api/platform/businesses/admin-reset") {
+      const id = String(body.id ?? "").trim().toLowerCase();
+      if (!(await spaceDirectory.exists(id))) return send(res, 404, { error: "There is no business with that id." });
+      const password = randomTemporaryPassword();
+      const reset = await businessSpaces.runInSpace(id, async () => {
+        const record = await readDb();
+        const admin = (record.users || []).find(item => item.role === "Admin" && item.status !== "deleted");
+        if (!admin) return null;
+        if (usingPostgresAuth()) {
+          const stored = await pgUsers.setPassword(getPgPool(), admin.email, password).catch(() => false);
+          if (!stored) return { failed: true };
+        }
+        admin.password = pgUsers.hashPassword(password);
+        delete admin.resetTokenHash;
+        delete admin.resetTokenExpiresAt;
+        if (admin.status === "disabled") delete admin.status;
+        await revokeSessionsForUser(admin);
+        await writeDb(record);
+        return { email: admin.email, name: admin.name };
+      });
+      if (!reset) return send(res, 404, { error: "That business has no Admin account." });
+      if (reset.failed) return send(res, 502, { error: "The password could not be changed just now. Try again in a minute." });
+      platformLog("business.admin_password_reset", `A new temporary password was set for the first Admin of ${id}.`, { businessId: id });
+      await writeDb(db);
+      return send(res, 200, { ok: true, businesses: await businessList(), reset: { id, name: reset.name, email: reset.email, password } });
+    }
+    return send(res, 404, { error: "Not found" });
+  }
+
   // Only an Admin makes someone a business manager, or says whose team an ordinary account is on. Nothing a manager can reach writes either field.
   if (url.pathname === "/api/admin/business-manager" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow business manager changes" });
@@ -52178,12 +52317,12 @@ async function api(req, res, url) {
 
   // What it takes to get texts, WhatsApp, email and phone calls working, and a test that goes only to the owner's own phone or account email (see server/providers/communicationsStatus.js).
   if (url.pathname === "/api/admin/communications/status" && req.method === "GET") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow viewing communications setup" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing communications setup" });
     const callerCount = (Array.isArray(db.phoneCallers) ? db.phoneCallers.length : 0) + twilioAuthorizedCallers(process.env).length;
     return send(res, 200, { ok: true, ...communicationsSetup.describeCommunications(process.env, { ownPhone: nexusOwnPhoneForUser(user, process.env, db), adminEmail: user.email, authorizedCallerCount: callerCount }) });
   }
   if (url.pathname === "/api/admin/communications/test" && req.method === "POST") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow sending communications tests" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow sending communications tests" });
     const body = await readBody(req);
     // The status card for phone calls is called "calls", so that is what the setup page sends for it: both spellings are the call test.
     const channel = String(body.channel || "").toLowerCase().replace(/^calls$/, "call");
@@ -52367,7 +52506,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/billing/checkout" && req.method === "POST") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow billing setup" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow billing setup" });
     const body = await readBody(req);
     const billingEvent = {
       providerId: "billing-subscriptions",
@@ -52539,7 +52678,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/admin/system/errors" && req.method === "GET") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow viewing system error logs" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing system error logs" });
     return send(res, 200, {
       ok: true,
       errors: recentServerErrors,
@@ -52556,7 +52695,7 @@ async function api(req, res, url) {
   // entry in /api/admin/system/errors. Each domain reports honestly when its own store flag isn't on,
   // rather than silently returning an empty list indistinguishable from "enabled but nothing written yet".
   if (url.pathname === "/api/admin/system/postgres-shadow-status" && req.method === "GET") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow viewing Postgres shadow-write status" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing Postgres shadow-write status" });
     const pool = getPgPool();
     const domain = async (enabled, loader) => {
       if (!enabled) return { enabled: false, rows: [] };
@@ -53040,7 +53179,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow executive demo runs" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow executive demo runs" });
     // Found live: same unguarded-replay shape as /api/demo/wow just above --
     // no idempotency guard at all, so a double-click/retry/repeat press
     // unconditionally re-added another duplicate demo order, health intake,
@@ -53318,7 +53457,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/demo/wow" && req.method === "POST") {
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow investor demo runs" });
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow investor demo runs" });
     // Found live: this handler had no idempotency guard at all -- unlike its
     // own certificate/badge/shift blocks just below (each correctly checks
     // "does this already exist?" before creating one), the order+wallet
@@ -57938,6 +58077,8 @@ function handleTwilioPhoneRealtimeStream(ws) {
       try {
         const claim = verifyPhoneRealtimeStreamToken(params.token, callSid, Date.now(), process.env);
         if (!claim) return cleanup("unauthorized-stream-token");
+        // The call belongs to one business: everything this stream reads or saves from here on uses that business's record.
+        businessSpaces.enterSpace(claim.space);
         const db = await readDb();
         user = db.users.find(item => String(item.id) === String(claim.userId)) || null;
         if (!user) return cleanup("unknown-user");
@@ -58041,14 +58182,72 @@ function handleTwilioPhoneRealtimeStream(ws) {
 const phoneRealtimeWss = new WebSocketServer({ noServer: true });
 phoneRealtimeWss.on("connection", ws => handleTwilioPhoneRealtimeStream(ws));
 
+// A new business's record is written once and never overwritten ("wx" / insert-if-absent); deleteBusinessRecord only undoes a creation that failed half way.
+async function createBusinessRecord(id, record) {
+  if (usingPostgresState()) {
+    await ensurePostgresState();
+    const result = await getPgPool().query("insert into agrinexus_app_state (id, state) values ($1, $2::jsonb) on conflict (id) do nothing returning id", [id, JSON.stringify(record)]);
+    if (!result.rowCount) throw new Error("That business already exists.");
+    return;
+  }
+  const file = businessSpaces.spaceDbPath(DB_PATH, id);
+  await fs.promises.mkdir(path.dirname(file), { recursive: true });
+  try { await fs.promises.writeFile(file, JSON.stringify(record, null, 2) + "\n", { flag: "wx" }); } catch (error) { throw error.code === "EEXIST" ? new Error("That business already exists.") : error; }
+}
+async function deleteBusinessRecord(id) {
+  if (usingPostgresState()) { await getPgPool().query("delete from agrinexus_app_state where id = $1 and id <> 'default'", [id]).catch(() => {}); return; }
+  await fs.promises.rm(businessSpaces.spaceDbPath(DB_PATH, id), { force: true }).catch(() => {});
+}
+
+// Which business this request belongs to, decided before the record is read. A signed-in request carries it in its session or remember-me cookie. A sign-in, a password reset and a phone call
+// have no session yet, so the space comes from the email in the body or the number that was dialled. Anything else is the default space.
+const knownSpaceIds = new Set();
+async function resolveRequestSpace(req, url) {
+  try { return await resolveRequestSpaceUnchecked(req, url); } catch (error) {
+    recordServerError({ source: "business-space-resolve", message: error.message });
+    return businessSpaces.DEFAULT_SPACE;
+  }
+}
+// A space named by a cookie must still exist; otherwise the request is treated as signed out in the default space (no such user there).
+async function knownSpaceOrDefault(space) {
+  if (!space || space === businessSpaces.DEFAULT_SPACE) return businessSpaces.DEFAULT_SPACE;
+  if (knownSpaceIds.has(space)) return space;
+  if (await spaceDirectory.exists(space)) { knownSpaceIds.add(space); return space; }
+  return businessSpaces.DEFAULT_SPACE;
+}
+async function resolveRequestSpaceUnchecked(req, url) {
+  // A sign-in or password reset names the business by its email, and that wins over any cookie left over from another business.
+  const byEmail = req.method === "POST" && ["/api/login", "/api/auth/password-reset", "/api/auth/password-reset/confirm"].includes(url.pathname);
+  const byNumber = req.method === "POST" && url.pathname.startsWith("/api/voice/phone/");
+  if (byEmail || byNumber) {
+    let body = {};
+    try { body = parseBodyText(req, await bufferBodyText(req)); } catch { return businessSpaces.DEFAULT_SPACE; }
+    if (byEmail) return spaceDirectory.spaceForEmail(body.email);
+    // A call: the business whose number is on OUR side of it. An incoming call dialled that number (To); for a call we placed, the status callbacks name it as the caller (From).
+    // A number nobody has claimed is today's single global number, the default space.
+    const outbound = /^outbound/i.test(String(body.Direction || body.direction || ""));
+    const ours = outbound ? (body.From || body.from || body.Caller || body.caller) : (body.To || body.to || body.Called || body.called);
+    return spaceDirectory.spaceForNumber(ours) || businessSpaces.DEFAULT_SPACE;
+  }
+  const cookies = parseCookies(req);
+  const sessionEntry = cookies.agrinexus_sid && sessions.get(cookies.agrinexus_sid);
+  if (sessionEntry && sessionEntry.expiresAt > Date.now()) return knownSpaceOrDefault(sessionEntry.space);
+  const durable = verifyDurableAuthToken(cookies.agrinexus_auth);
+  if (durable) return knownSpaceOrDefault(durable.space);
+  return businessSpaces.DEFAULT_SPACE;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
-    if (await authoritativeNexusRuntime.handle(req, res, url, send)) return;
-    if (url.pathname.startsWith("/api/")) return await api(req, res, url);
-    if (url.pathname.startsWith("/exports/")) return await serveExport(req, res, url);
-    return serveStatic(req, res, url);
+    const space = await resolveRequestSpace(req, url);
+    return await businessSpaces.runInSpace(space, async () => {
+      if (await authoritativeNexusRuntime.handle(req, res, url, send)) return;
+      if (url.pathname.startsWith("/api/")) return await api(req, res, url);
+      if (url.pathname.startsWith("/exports/")) return await serveExport(req, res, url);
+      return serveStatic(req, res, url);
+    });
   } catch (error) {
     // Log the real error server-side but never return its raw message to the
     // client -- an unhandled exception here can originate from a DB driver,

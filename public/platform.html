@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Businesses · Kyro Genesis | AgriNexus</title>
+  <link rel="stylesheet" href="/communications-setup.css">
+  <link rel="stylesheet" href="/team.css">
+  <script src="/platform.js" defer></script>
+</head>
+<body>
+  <header>
+    <a href="/">← Kyro Genesis</a>
+    <p class="eyebrow">Platform owner</p>
+    <h1>Businesses</h1>
+    <p class="lede">Each business has its own private space: its own people, records and phone list. Create a business with its first Admin, link the phone number it will use, and give its Admin a new temporary password if they are locked out. You cannot read a business's records from here.</p>
+  </header>
+  <p id="notice" role="status" aria-live="polite">Checking your sign-in…</p>
+  <main>
+    <section aria-labelledby="add">
+      <h2 id="add">Create a business</h2>
+      <form id="addForm" class="row" autocomplete="off">
+        <label>Business name <input name="name" required maxlength="80"></label>
+        <label>Business id <input name="id" required maxlength="40" pattern="[a-z0-9][a-z0-9\-]{1,39}" placeholder="green-valley" title="2 to 40 lowercase letters, digits or dashes"></label>
+        <label>First Admin's name <input name="adminName" required maxlength="80"></label>
+        <label>First Admin's email <input name="adminEmail" type="email" required></label>
+        <label>Country (optional) <input name="country" maxlength="60" placeholder="Kenya"></label>
+        <button type="submit">Create business</button>
+      </form>
+      <p class="small">The id cannot be changed later. The Admin's email must not already be used anywhere in Kyro.</p>
+    </section>
+
+    <section id="secret" class="secretbox" hidden aria-live="polite">
+      <h2 id="secretTitle">Temporary password</h2>
+      <p id="secretText"></p>
+      <p><code id="secretPassword"></code></p>
+      <p class="small">This is shown <strong>once</strong>. Give it to the person privately. Close this box and it is gone; you can always set a new one.</p>
+      <button type="button" id="secretClose" class="secondary">I have passed it on. Close</button>
+    </section>
+
+    <section aria-labelledby="list">
+      <h2 id="list">Your businesses</h2>
+      <div id="businesses" class="cards"></div>
+    </section>
+  </main>
+</body>
+</html>
