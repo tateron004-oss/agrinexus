@@ -27191,7 +27191,7 @@ function learnFromAgentCommand(db, user, command, result) {
 }
 
 function isAffirmativeCommand(lower) {
-  return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it)$/i.test(String(lower || "").trim());
+  return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it|ndiyo|ndio|naam|sawa|sawa kabisa|endelea|fanya hivyo)$/i.test(String(lower || "").trim());
 }
 
 function isExplicitConfirmationCommand(lower) {
@@ -27203,7 +27203,7 @@ function isVagueConfirmationCommand(lower) {
 }
 
 function isNegativeCommand(lower) {
-  return /^(no|nope|cancel|stop|not now|hold|wait|do not|don't)$/i.test(String(lower || "").trim());
+  return /^(no|nope|cancel|stop|not now|hold|wait|do not|don't|hapana|la|siyo|sitaki|acha|usifanye|si sasa)$/i.test(String(lower || "").trim());
 }
 
 function clearSimpleVoiceTurn(db) {
