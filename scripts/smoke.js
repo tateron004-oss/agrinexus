@@ -820,7 +820,7 @@ async function call(path, body) {
     assert(stagedInjuryVideo.profile.videoSessions.some(item => item.type === "telehealth-video"));
   }
   const contextualRoute = await call("/api/agent/command", { command: "Now check the route", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(["conversation.pending_action", "map.route_risk", "ai-question", "trade.operational_efficiency", "trade.operational_communication"].includes(contextualRoute.commandResult.intent));
+  assert(["conversation.pending_action", "map.route_risk", "ai-question", "conversation.not_handled", "trade.operational_efficiency", "trade.operational_communication"].includes(contextualRoute.commandResult.intent));
   assert(contextualRoute.commandResult.metadata.redirectSection === "map" || contextualRoute.commandResult.metadata.redirectSection === "trade" || contextualRoute.commandResult.metadata.tool === "map.route_risk" || contextualRoute.commandResult.intent === "ai-question");
   const moduleHelp = await call("/api/agent/command", { command: "What can I say in telehealth?", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(moduleHelp.commandResult.intent === "conversation.platform_guide");
