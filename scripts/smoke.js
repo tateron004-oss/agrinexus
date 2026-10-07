@@ -68,11 +68,10 @@ function resetConversationMemory(db) {
   return db;
 }
 
-// Changing the language is a settings change. Free-form requests ("can you change the language...") are staged and
-// applied only after a "yes"; short imperatives addressed to a module ("Hey AgriTrade, speak French") apply directly.
+// Changing the language is a settings change, so every way of asking for it ("can you change the language...", "Hey AgriTrade, speak French", "please speak French") is staged and applied only after a "yes".
 async function languageChangeCommand(command) {
   const first = await call("/api/agent/command", { command, conversational: true, inputMode: "voice", outputMode: "voice" });
-  if (first.commandResult.intent !== "conversation.pending_action") return first;
+  assert(first.commandResult.intent === "conversation.pending_action", `${command} must ask for a yes first`);
   assert(first.commandResult.status === "needs-confirmation");
   return call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
 }
@@ -1147,6 +1146,8 @@ for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => process.exi
   const rememberPreference = await call("/api/agent/command", { command: "Remember that I prefer voice-first telehealth support for hearing impaired patients", conversational: true, inputMode: "voice", outputMode: "voice" });
   // "Remember that ..." is answered by the memory-preference mode (memory stays under the user's control).
   assert(rememberPreference.commandResult.intent === "conversation.mode_orchestrator.memory_preference");
+  // ...and it says exactly what was kept (it used to answer with a generic paragraph that only sounded like a save).
+  assert(/^Saved: /.test(rememberPreference.commandResult.response));
   assert(rememberPreference.profile.agentMemory.preferences.length >= 1);
   const memoryRouted = await call("/api/agent/command", { command: "A patient cannot hear and needs care access", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(memoryRouted.commandResult.intent === "conversation.pending_action");

@@ -18246,7 +18246,8 @@ async function executeAgentTool(db, user, step) {
     // resulting droneScans/droneMissions/fieldInterventions record was silently excluded from that
     // user's /api/account/export and survived /api/account/erase untouched, forever.
     const { scan } = createDroneScan(db, { source: user.email });
-    return `Completed ${scan.scanRef} for ${scan.productName} with ${scan.cropHealthScore}% crop health.`;
+    // The figures come from the saved crop-lot record and the active country, not from a drone in the air, so the reply says so.
+    return `Completed ${scan.scanRef} for ${scan.productName} with ${scan.cropHealthScore}% crop health. This is an estimate from your saved crop-lot records, not a live drone flight: no drone is connected yet.`;
   }
 
   if (step.tool === "drone.flight_plan") {
@@ -24399,13 +24400,16 @@ function longTermMemorySummary(profile) {
   const memory = profile.agentMemory;
   const moduleNames = Object.keys(memory.moduleMemory || {});
   const needNames = Object.keys(memory.userNeeds || {});
+  // Never read back what another signed-in person told it; notes with no recorded speaker (the starter data) are shared.
+  const asker = agentActorEmail();
+  const mine = item => !asker || !item?.by || String(item.by).toLowerCase() === asker;
   const core = [
     ...(memory.preferences || []),
     ...(memory.learnedPatterns || []),
     ...(memory.longTermFacts || []),
     ...(memory.safetyBoundaries || [])
-  ];
-  const preferred = (memory.preferences || []).slice(0, 3);
+  ].filter(mine);
+  const preferred = (memory.preferences || []).filter(mine).slice(0, 3);
   const preferredIds = new Set(preferred.map(item => item.id));
   const topMemories = [
     ...preferred,
@@ -27173,11 +27177,38 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
   };
 }
 
+// "Remember that X", "remember I ...", "please remember ...", "don't forget that ...": a request to keep a fact. Returns the fact, or null when the sentence is something else ("remember to call the buyer" is a
+// reminder, "what do you remember" is a question, and a priority/goal/mission is kept by the older mission handler).
+const EXPLICIT_REMEMBER_PATTERN = /^\s*(?:(?:hey|hi|hello|ok|okay)[,\s]+)?(?:(?:kyro|nexus|agritrade|agri\s*trade)[,\s]+)?(?:(?:please|kindly)[,\s]+)?(?:(?:can|could|would) you\s+)?(?:remember|don['\u2019]?t forget|do not forget)\b[,:\s]*(?:that\b[,:\s]*)?(.+?)\s*$/i;
+function explicitRememberRequest(command) {
+  const match = EXPLICIT_REMEMBER_PATTERN.exec(String(command || ""));
+  if (!match) return null;
+  const fact = match[1].replace(/[\s,]+please[.!?\s]*$/i, "").replace(/[.!\s]+$/, "").trim().slice(0, 300);
+  if (fact.length < 3 || /\?$/.test(fact)) return null;
+  if (/^(to|what|when|how|why|who|where|which|if|me|about)\b/i.test(fact)) return null;
+  if (/\b(priority|goal|mission)\b/i.test(fact)) return null;
+  return fact;
+}
+// Credentials, card and bank numbers and government ID numbers are never kept as a remembered note.
+const SENSITIVE_REMEMBER_PATTERN = /\b(password|passcode|pin(?:\s+(?:code|number))?|cvv|cvc|card\s+(?:number|details)|credit\s+card|debit\s+card|bank\s+account|account\s+number|iban|routing\s+number|ssn|social\s+security|passport\s+number|national\s+id|id\s+number|api\s+key|secret\s+key|private\s+key|access\s+token)\b/i;
+// Saves the fact for this signed-in person only (each item carries who said it) and says exactly what happened, so the reply never claims more than was kept.
+function saveExplicitRemember(db, user, fact) {
+  const isGuest = !user?.email || user.guest === true || /^genesis-voice-guest/i.test(String(user.id || "")) || user.authType === "genesis-voice-guest";
+  if (isGuest) return { saved: false, reason: "guest", fact };
+  if (SENSITIVE_REMEMBER_PATTERN.test(fact)) return { saved: false, reason: "sensitive", fact };
+  const item = rememberAgentMemory(db.profile, fact, { source: "explicit-remember", category: inferMemoryCategory(fact), confidence: 0.95 });
+  if (!item) return { saved: false, reason: "empty", fact };
+  if (!item.by) item.by = String(user.email).trim().toLowerCase();
+  return { saved: true, fact, memoryId: item.id, category: item.category };
+}
+
 function learnFromAgentCommand(db, user, command, result) {
   ensureAiProfile(db.profile);
   updateConversationUserModel(db.profile, command, user);
   db.profile.agentMemory.conversationQuality.turns = Number(db.profile.agentMemory.conversationQuality.turns || 0) + 1;
   const lower = String(command || "").toLowerCase();
+  // An explicit "remember ..." was already answered (kept or declined) by its own handler; do not keep it a second way, or keep it when the reply said nothing was saved.
+  if (result?.metadata?.explicitRemember) return;
   if (lower.startsWith("remember ") || lower.includes("remember that")) {
     const fact = String(command || "").replace(/^remember\s+/i, "").replace(/remember that/i, "").trim();
     if (fact) rememberAgentMemory(db.profile, fact, { source: "explicit-remember", category: inferMemoryCategory(fact), confidence: 0.95 });
@@ -29307,7 +29338,11 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("conversation.clinic_map_help", "needs-location", "map", "I can show clinic and pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.", ["use my location", "find clinic", "find pharmacy"]);
   }
 
-  if (/\bdrone\b.*\b(red|yellow|bad|dry|area|spot|field|farm|mean|means)\b|\b(red|yellow|bad|dry)\b.*\b(area|spot)\b.*\b(farm|field|drone)\b/.test(value)) {
+  // "Please run a drone scan of my field before I sell" is a request to DO a scan, not a description of one ("the drone saw a red area"). Only a description is explained; a request to run one falls through
+  // to the scan handling below / the staged field-evidence scan, which asks for a "yes" before anything is started.
+  const droneScanRunRequest = /\b(run|start|do|perform|launch|order|begin|get|schedule|send|fly)\b.*\bdrone\b.*\b(scan|survey|flight|inspection)\b|\bdrone\s+(scan|survey)\b/.test(value)
+    && !/\b(red|yellow|saw|seen|shows?|showed|mean|means|says?)\b/.test(value);
+  if (!droneScanRunRequest && (/\bdrone\b.*\b(red|yellow|bad|dry|area|spot|field|farm|mean|means)\b|\b(red|yellow|bad|dry)\b.*\b(area|spot)\b.*\b(farm|field|drone)\b/.test(value))) {
     return response(
       "conversation.drone_simple_explanation",
       "needs-details",
@@ -29316,7 +29351,9 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       ["maize", "cassava", "run field scan"]
     );
   }
-  if (/\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b|\bscan my field\b/.test(value)) {
+  // A scan tied to selling ("...before I sell", for a buyer or a market) is left for the staged field-evidence scan further on, which waits for a "yes"; a bare "run drone scan" keeps this ready answer.
+  const droneScanForSale = droneScanRunRequest && /\b(field|farm|crop|crops|maize|cassava|avocado|harvest|produce)\b/.test(value) && /\b(buyer|sell|selling|quality|market|evidence|proof)\b/.test(value);
+  if (!droneScanForSale && /\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b|\bscan my field\b/.test(value)) {
     return response("drone.field_scan", "completed", "trade", "Drone scan is ready. Nexus can review crop health, pests, irrigation, field evidence, buyer proof, and the next farm action. Live drone footage connects when a drone provider is added.", ["explain crop evidence", "contact buyer", "track shipment"]);
   }
   if (/\b(explain|summarize|read)\b.*\b(crop evidence|field evidence|drone evidence)\b.*\b(simple|plain|easy)\b|\bcrop evidence\b/.test(value)) {
@@ -33682,7 +33719,7 @@ async function moduleGreetingResponse(db, user, text, lower) {
   if (!isTradeAddressed) return null;
   if (isLanguageCommand(lower)) {
     const language = languageFromCommand(text);
-    if (!language || !changeUserLanguage(db, user, language)) {
+    if (!language) {
       return {
         intent: "conversation.language_change",
         response: "I can change language to English, French, Kiswahili, Arabic, or Spanish. Tell me which one you want.",
@@ -33690,19 +33727,8 @@ async function moduleGreetingResponse(db, user, text, lower) {
         metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade" }
       };
     }
-    const label = voiceLanguageLabel(language);
-    db.profile.agentMemory.activeModule = "AgriTrade";
-    db.profile.agentMemory.lastStatus = "language-changed";
-    db.profile.agentMemory.lastSummary = `AgriTrade language changed to ${label}.`;
-    db.profile.agentMemory.updatedAt = new Date().toISOString();
-    rememberAgentMemory(db.profile, `User wants AgriTrade phrases and responses in ${label}.`, { source: "language-command", category: "preference", confidence: 0.94 });
-    addActivity(db.profile, `Voice command changed platform language to ${label}.`);
-    return {
-      intent: "conversation.language_changed",
-      response: `Language changed to ${label}. AgriTrade phrases and responses will use ${label}.`,
-      status: "completed",
-      metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade", language }
-    };
+    // Same rule as a free-form request: nothing changes until the person says yes (the confirmed change is applied by the language-change pending action).
+    return stageAgentAction(db, text, phase4LanguageChangeAction(text));
   }
   if (/(tell me about|what do you do|explain|describe|about the platform|about agritrade|how do you help)/.test(lower)) {
     db.profile.agentMemory.activeModule = "AgriTrade";
@@ -33784,6 +33810,32 @@ async function informationalBuyerConversationResponse(db, user, text = "", optio
   };
 }
 
+// Changing the language is a settings change, so every way of asking for it is staged and applied only after a "yes" (the same gate whether it is worded "change my language to French", "please speak French" or
+// "Hi AgriTrade, speak French").
+function phase4LanguageChangeAction(command = "") {
+  const language = languageFromCommand(command);
+  return {
+    confidence: 0.94,
+    constitutionPhase: "phase-4-confirmation-gate",
+    allowedConfirmations: ["yes", "confirm", "do it"],
+    phase4HighRisk: true,
+    kind: "language-change",
+    module: "Profile",
+    tool: "profile.language_change",
+    action: `change language${language ? ` to ${voiceLanguageLabel(language)}` : ""}`,
+    section: "profile",
+    language,
+    pendingActionType: "settings",
+    confirmationPrompt: `I can change your language${language ? ` to ${voiceLanguageLabel(language)}` : ""}. Please confirm before I change this setting. Do you want me to change it now?`
+  };
+}
+
+// A plain spoken switch such as "please speak French" / "reply in Spanish" (a named language, not a country).
+function isSpokenLanguageSwitchRequest(text = "") {
+  const lower = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /\b(speak|talk|respond|reply|answer|switch|change)\b\s*(?:to|in|into|over to)?\s*(?:me\s+in\s+)?(english|french|francais|spanish|espanol|arabic|swahili|kiswahili)\b/.test(lower);
+}
+
 function phase4RiskyActionForCommand(command = "") {
   const lower = normalizeSpeechForIntent(command);
   const base = {
@@ -33821,8 +33873,7 @@ function phase4RiskyActionForCommand(command = "") {
     return gate({ module: "Healthcare", tool: "health.consent", action: "share personal information", section: "health", pendingActionType: "privacy", confirmationPrompt: "I can prepare the information share. Before I share personal information, please confirm clearly. Do you want me to share it now?" });
   }
   if (/\b(change|set)\b.*\blanguage\b.*\b(spanish|french|arabic|english|swahili|kiswahili)\b/.test(lower)) {
-    const language = languageFromCommand(command);
-    return gate({ kind: "language-change", module: "Profile", tool: "profile.language_change", action: `change language${language ? ` to ${voiceLanguageLabel(language)}` : ""}`, section: "profile", language, pendingActionType: "settings", confirmationPrompt: `I can change your language${language ? ` to ${voiceLanguageLabel(language)}` : ""}. Please confirm before I change this setting. Do you want me to change it now?` });
+    return phase4LanguageChangeAction(command);
   }
   if (/\b(schedule|book|set up)\b.*\b(appointment|visit|provider|doctor|telehealth)\b/.test(lower)) {
     return gate({ module: "Healthcare", tool: "health.followup", action: "schedule appointment", section: "health", pendingActionType: "appointment", confirmationPrompt: "I can prepare the appointment details. Before I schedule anything, please confirm. Do you want me to schedule the appointment now?" });
@@ -33897,7 +33948,7 @@ async function runAgentCommand(db, user, command, options = {}) {
         metadata: { conversationMode: true, redirectSection: "dashboard", languageChangeRequested: true, noExecutionAuthorized: true }
       };
     }
-    const gatedLanguageChange = phase4RiskyActionForCommand(text);
+    const gatedLanguageChange = phase4RiskyActionForCommand(text) || (isSpokenLanguageSwitchRequest(text) ? phase4LanguageChangeAction(text) : null);
     if (gatedLanguageChange) return stageAgentAction(db, text, gatedLanguageChange);
   }
   if (conversational && isGlobalVoiceStopIntent(text)) {
@@ -36598,10 +36649,49 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
       updatedAt: new Date().toISOString()
     };
   }
-  if (conversationalModeOrchestrator.signals.memory && /\b(do not remember|don't remember|forget)\b/i.test(command)) {
+  const explicitRememberFact = explicitRememberRequest(command);
+  if (conversationalModeOrchestrator.signals.memory && /\b(do not remember|don't remember|forget)\b/i.test(command) && !explicitRememberFact) {
     db.profile.agentMemory.memoryScope = "restricted-by-user";
-  } else if (conversationalModeOrchestrator.signals.memory && /\bremember that\b/i.test(command)) {
+  } else if (conversationalModeOrchestrator.signals.memory && /\bremember that\b/i.test(command) && !explicitRememberFact) {
     db.profile.agentMemory.memoryScope = "consent-requested";
+  }
+  // An explicit "remember ..." is answered by what really happened: saved (and read back), or plainly not saved. It used to get a generic "memory is under your control" paragraph that sounded like a save.
+  if (explicitRememberFact && !db.profile.agentMemory?.activeIntake) {
+    const outcome = saveExplicitRemember(db, user, explicitRememberFact);
+    const rememberResponse = outcome.saved
+      ? `Saved: ${outcome.fact}. Ask me what I remember to hear it back.`
+      : outcome.reason === "sensitive"
+        ? "I won't remember that kind of detail (passwords, card, bank or ID numbers), so no note was saved. Please keep it private and don't say it here."
+        : "I can't save that for you from here, nothing was saved. Sign in with your own account and I can keep it.";
+    let rememberResult = ensureSpeakableAgentResult({
+      intent: "conversation.mode_orchestrator.memory_preference",
+      response: rememberResponse,
+      status: outcome.saved ? "completed" : "needs-review",
+      metadata: {
+        redirectSection: "dashboard",
+        inputMode,
+        outputMode: outputMode || undefined,
+        language: commandLanguage,
+        targetLanguage: commandLanguage,
+        companionUnderstanding,
+        conversationalModeOrchestrator,
+        selectedConversationalModes: conversationalModeOrchestrator.selectedModeIds,
+        explicitRemember: { saved: outcome.saved, reason: outcome.reason || null, memoryId: outcome.memoryId || null, fact: outcome.saved ? outcome.fact : null },
+        noExecutionAuthorized: true,
+        providerHandoffAuthorized: false
+      }
+    }, "conversation.mode_orchestrator.memory_preference");
+    rememberResult = await translateAgentCommandResult(db, user, rememberResult, { targetLanguage: commandLanguage });
+    commandRecord(db, user, command, rememberResult);
+    if (outputMode === "voice") {
+      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${rememberResult.response}`, { response: rememberResult.response, inputMode, language: commandLanguage });
+    }
+    addWorkflowNote(db.profile, body.note, "Agent command note");
+    return {
+      result: rememberResult,
+      companionUnderstanding,
+      companionRouteOutcome: { route: "explicit-remember", saved: outcome.saved, noExecutionAuthorized: true, workflowOpened: false }
+    };
   }
   const stabilizationRepair = await genesisStabilizationConversationRepair(db, user, command, {
     ...body,
@@ -52204,6 +52294,8 @@ async function api(req, res, url) {
     "/api/voice/realtime/tool"
   ]);
   if (!user && url.pathname !== "/api/config" && !boundedGenesisVoiceGuestRoutes.has(url.pathname)) {
+    // A support ticket needs to know who is asking (it is recorded against their email), so a signed-out caller is told that in plain words rather than a generic line.
+    if (url.pathname === "/api/support/ticket" && req.method === "POST") return send(res, 401, { error: "Please sign in to open a support ticket." });
     return send(res, 401, { error: "Sign in required" });
   }
 
@@ -52289,6 +52381,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/support/ticket" && req.method === "POST") {
+    // Never accept an anonymous ticket (it reads user.email below).
+    if (!user) return send(res, 401, { error: "Please sign in to open a support ticket." });
     const body = await readBody(req);
     ensureOperationsProfile(db.profile);
     const ticket = {
