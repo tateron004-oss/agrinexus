@@ -1,46 +1,56 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-title-key="platform.title">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Businesses · Kyro Genesis | AgriNexus</title>
   <link rel="stylesheet" href="/communications-setup.css">
   <link rel="stylesheet" href="/team.css">
+  <script src="/page-text.js" defer></script>
   <script src="/platform.js" defer></script>
 </head>
 <body>
   <header>
-    <a href="/">← Kyro Genesis</a>
-    <p class="eyebrow">Platform owner</p>
-    <h1>Businesses</h1>
-    <p class="lede">Each business has its own private space: its own people, records and phone list. Create a business with its first Admin, link the phone number it will use, and give its Admin a new temporary password if they are locked out. You cannot read a business's records from here.</p>
+    <a href="/" data-i18n="back">← Kyro Genesis</a>
+    <p class="eyebrow" data-i18n="platform.eyebrow">Platform owner</p>
+    <h1 data-i18n="platform.h1">Businesses</h1>
+    <p class="lede" data-i18n="platform.lede">Each business has its own private space: its own people, records and phone list. Create a business with its first Admin, link the phone number it will use, and give its Admin a new temporary password if they are locked out. You cannot read a business's records from here.</p>
   </header>
-  <p id="notice" role="status" aria-live="polite">Checking your sign-in…</p>
+  <p id="notice" role="status" aria-live="polite" data-i18n="checking">Checking your sign-in…</p>
   <main>
     <section id="addSection" aria-labelledby="add" hidden>
-      <h2 id="add">Create a business</h2>
+      <h2 id="add" data-i18n="platform.createTitle">Create a business</h2>
       <form id="addForm" class="row" autocomplete="off">
-        <label>Business name <input name="name" required maxlength="80"></label>
-        <label>Business id <input name="id" required maxlength="40" pattern="[a-z0-9][a-z0-9\-]{1,39}" placeholder="green-valley" title="2 to 40 lowercase letters, digits or dashes"></label>
-        <label>First Admin's name <input name="adminName" required maxlength="80"></label>
-        <label>First Admin's email <input name="adminEmail" type="email" required></label>
-        <label>Country (optional) <input name="country" maxlength="60" placeholder="Kenya"></label>
-        <button type="submit">Create business</button>
+        <label><span data-i18n="platform.businessName">Business name</span> <input name="name" required maxlength="80"></label>
+        <label><span data-i18n="platform.businessId">Business id</span> <input name="id" required maxlength="40" pattern="[a-z0-9][a-z0-9\-]{1,39}" placeholder="green-valley" title="2 to 40 lowercase letters, digits or dashes" data-i18n-title="platform.idHint"></label>
+        <label><span data-i18n="platform.adminName">First Admin's name</span> <input name="adminName" required maxlength="80"></label>
+        <label><span data-i18n="platform.adminEmail">First Admin's email</span> <input name="adminEmail" type="email" required></label>
+        <label><span data-i18n="platform.country">Country (optional)</span> <input name="country" maxlength="60" placeholder="Kenya"></label>
+        <button type="submit" data-i18n="platform.createButton">Create business</button>
       </form>
-      <p class="small">The id cannot be changed later. The Admin's email must not already be used anywhere in Kyro.</p>
+      <p class="small" data-i18n="platform.createNote">The id cannot be changed later. The Admin's email must not already be used anywhere in Kyro.</p>
     </section>
 
     <section id="secret" class="secretbox" hidden aria-live="polite">
-      <h2 id="secretTitle">Temporary password</h2>
+      <h2 id="secretTitle" data-i18n="secretTitle">Temporary password</h2>
       <p id="secretText"></p>
       <p><code id="secretPassword"></code></p>
-      <p class="small">This is shown <strong>once</strong>. Give it to the person privately. Close this box and it is gone; you can always set a new one.</p>
-      <button type="button" id="secretClose" class="secondary">I have passed it on. Close</button>
+      <p class="small" data-i18n="platform.secretNote">This is shown <strong>once</strong>. Give it to the person privately. Close this box and it is gone; you can always set a new one.</p>
+      <button type="button" id="secretClose" class="secondary" data-i18n="secretClose">I have passed it on. Close</button>
     </section>
 
     <section aria-labelledby="list">
-      <h2 id="list">Your businesses</h2>
+      <h2 id="list" data-i18n="platform.listTitle">Your businesses</h2>
       <div id="businesses" class="cards"></div>
+    </section>
+
+    <section id="activitySection" aria-labelledby="activityTitle" hidden>
+      <h2 id="activityTitle" data-i18n="activity.title">Activity</h2>
+      <p class="small" data-i18n="activity.intro">What the platform owner has done to businesses, newest first. It is kept here, outside every business, so erasing a business does not erase this record. Passwords are never recorded.</p>
+      <div class="row activity-filter">
+        <label><span data-i18n="activity.filter">Show activity for</span> <select id="activityFilter"></select></label>
+      </div>
+      <ul id="activity" class="activity"></ul>
     </section>
   </main>
 </body>
