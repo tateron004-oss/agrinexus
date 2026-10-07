@@ -50,7 +50,7 @@ test("the replies say what to do, do not save a reading nobody asked to save, gi
   assert.ok(offer.accepted("yes", [{ role: "assistant", content: high }]));
 
   const sameDay = await reply("I'm 7 months pregnant and my BP is 150 over 95");
-  assert.match(sameDay, /140 over 90 or more needs a health worker the same day[\s\S]*bad headache, blurred vision/);
+  assert.match(sameDay, /top number at 140 or more, or the bottom number at 90 or more, needs a health worker the same day[\s\S]*bad headache, blurred vision/);
   assert.match(sameDay, /I have not saved this reading/);
   assert.doesNotMatch(sameDay, /alert Grace/);
 

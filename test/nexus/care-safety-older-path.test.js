@@ -39,7 +39,7 @@ test.after(() => { server.kill(); fs.rmSync(dir, { recursive: true, force: true 
 test("on the older path the same care answers are given as by the planner, and none of them offers to alert anyone", async () => {
   const expected = [
     ["I am pregnant and my blood pressure is 160/110", /health worker needs to see you now[\s\S]*nearest clinic or hospital now/],
-    ["I'm 7 months pregnant and my BP is 150 over 95", /140 over 90 or more needs a health worker the same day[\s\S]*bad headache, blurred vision/],
+    ["I'm 7 months pregnant and my BP is 150 over 95", /top number at 140 or more, or the bottom number at 90 or more, needs a health worker the same day[\s\S]*bad headache, blurred vision/],
     ["how much paracetamol can I give my baby", /I can't give a dose[\s\S]*pharmacist, a nurse or a clinic[\s\S]*Never give aspirin to a child/],
     ["my baby is not feeding and has a fever", /A baby with these signs needs a health worker now/],
     ["Someone from the bank called asking for my PIN", /do not share your PIN, password or one-time code with anyone/i],
