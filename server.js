@@ -21587,7 +21587,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   const rawInput = String(args.query || context.command || args.command || "");
   const spokenInput = typeof normaliseSpoken === "function" ? normaliseSpoken(rawInput, { language }) : { text: rawInput, clean: rawInput };
   const saidInput = sanitizePilotText(spokenInput.clean.slice(-3000), 3000);
-  const command = sanitizePilotText(spokenInput.text, 700);
+  // Only plain conversation is cleaned: the other tools (drafts, documents, lists...) take the words of a message or a document from the sentence, exactly as said.
+  const command = sanitizePilotText(toolName === "nexus_general_conversation" ? spokenInput.text : (args.query || context.command || args.command || ""), 700);
   const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
   const common = {
     ok: true,
@@ -34183,7 +34184,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   // (a message is only ever STAGED here, behind a yes, so unlike a call it is read whether or not the caller is in conversational mode: the voice tools are not)
   const backendMessageIntent = stageMessageIntent(db, user, text, options);
   if (backendMessageIntent) return backendMessageIntent;
-  const backendCallIntent = (conversational || options.mode === "openai-native-agent") ? stageBackendCallIntent(db, user, text, options) : null;
+  const backendCallIntent = conversational ? stageBackendCallIntent(db, user, text, options) : null;
   if (backendCallIntent) return backendCallIntent;
   const reminderContactCommand = /\b(remind|reminder|notify|notification)\b/.test(lower);
   const prioritizedPhoneContactCommand = reminderContactCommand ? null : await phoneContactMemoryCommandResponse(db, user, text, lower, options);

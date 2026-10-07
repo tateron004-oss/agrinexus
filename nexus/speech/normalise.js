@@ -93,14 +93,16 @@ const MESSAGE_VERBS = new Set("text sms message whatsapp tell say send email e-m
 const LEAD = [];
 const lead = (re, label, test = rest => rest.split(" ").length >= 1, as = "") => LEAD.push({ re: new RegExp(`^${re}`, "iu"), label, test, as });
 const hasRest = rest => rest.split(" ").filter(Boolean).length >= 1;
+// "Hello Nexus, this is Ron" is a greeting with an introduction, which the greeting readers want whole
+const notIntroduction = rest => hasTwo(rest) && !/^(?:this is|it is|it's|its|i am|i'm|im|mimi ni)\b/i.test(rest);
 const hasTwo = rest => rest.split(" ").filter(Boolean).length >= 2;
 
 // wake words, with or without a greeting before them
-lead(`(?:${INTERJECTION}[ ,.!:-]+)?${WAKE}(?![\\w'-])[ ,.!:-]*`, "wake-word", hasTwo);
-lead(`${WAKE}(?![\\w'-])[ ,.!:-]*`, "wake-word", hasTwo);
+lead(`(?:${INTERJECTION}[ ,.!:-]+)?${WAKE}(?![\\w'-])[ ,.!:-]*`, "wake-word", notIntroduction);
+lead(`${WAKE}(?![\\w'-])[ ,.!:-]*`, "wake-word", notIntroduction);
 // a greeting or "ok so" in front of an actual request
 lead(`(?:${INTERJECTION})[ ,.!:-]+`, "greeting", looksLikeRequest);
-lead(`(?:ok(?:ay)?|alright|all right|right|well|so|now|then|and|but|basi|sasa|haya|sawa|eh|ah|oh)[ ,]+(?:so |then |now )?`, "discourse", looksLikeRequest);
+lead(`(?:ok(?:ay)?|alright|all right|right|well|basi|haya|eh|ah|oh)[ ,]+(?:so |then |now )?`, "discourse", looksLikeRequest);
 // politeness
 lead(`(?:please|pls|plz|kindly|tafadhali|tafadhalini|abeg|biko|jare|sha)(?:[ ,]+(?:please|pls|plz|kindly|tafadhali|abeg))*[ ,.]+`, "polite", hasRest);
 lead(`naomba(?:[ ,]+tafadhali)?[ ,]+`, "polite", looksLikeRequest);

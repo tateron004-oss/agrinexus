@@ -80,7 +80,10 @@ test("'call Juma simu' asks for Juma's number, and 'actually call him instead' a
   assert.doesNotMatch(juma, /Juma Simu/);
   const him = await tool("Actually call him instead");
   assert.doesNotMatch(him, /Him Instead|Him/);
-  assert.match(him, /Who should I call/i);
+  assert.ok(!fs.readFileSync(path.join(dir, "db.json"), "utf8").includes("Him Instead"), "'him instead' is never saved as a person");
+  const typedHim = await typed("Actually call him instead");
+  assert.doesNotMatch(typedHim.reply, /Him Instead/);
+  assert.match(typedHim.reply, /Who should I call/i);
 });
 
 test("a saved person is texted by name, and 'tell mama ...' is a message and not a health script", async () => {

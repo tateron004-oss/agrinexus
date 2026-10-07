@@ -238,7 +238,15 @@ class OpenEndedPlanner {
     } catch { return null; }
   }
 
-  async plan({ command, context, priorTask = null, conversationHistory = [] }) {
+  // The plan keeps the words the person actually said as its goal (the readers saw the cleaned request; see speech/normalise.js).
+  async plan(args) {
+    const plan = await this.planCleaned(args);
+    const said = normaliseSpoken(args?.command?.text);
+    if (plan && typeof plan === "object" && said.changed && plan.goal === said.text) return Object.freeze({ ...plan, goal: said.clean });
+    return plan;
+  }
+
+  async planCleaned({ command, context, priorTask = null, conversationHistory = [] }) {
     // The one front door for what a person says (see speech/normalise.js): wake words, fillers, polite wrappers, trailing thanks, stutters, rambling lead-ins and
     // invisible characters are cleaned away before the readers below see the request. The safety readers (the companion and the content guard) get the person's own
     // words (invisible characters removed) FIRST and the cleaned request second, so nothing a person said is ever lost to the cleaning; the AI model is given their own words too.
