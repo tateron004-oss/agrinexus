@@ -25715,13 +25715,22 @@ function backendSmartCommandResponse(db, user, command = "", options = {}) {
   return null;
 }
 
+// Same trigger publicHealthRiskBriefing's dispatch uses. Such questions get the safety-first briefing (never
+// "region clear" without an official source check) instead of a generic live-search or heat-safety answer.
+function isPublicHealthRiskQuestion(lower = "") {
+  const value = String(lower || "").toLowerCase();
+  return /(outbreak|infected|infection|ebola|disease risk|region safe|safe to deploy|safe for telehealth)/.test(value)
+    && /(telehealth|health|region|congo|drc|uganda|africa|outreach)/.test(value);
+}
+
 function isCurrentKnowledgeQuestion(command = "") {
   const lower = String(command || "").toLowerCase().trim();
   if (!lower) return false;
+  if (isPublicHealthRiskQuestion(lower)) return false;
   if (/\b(weather|temperature|temp|too hot|safe to walk|walk today|rain|raining|forecast)\b/.test(lower)) return false;
   if (/\b(find|show|open|need|want)\b.*\b(clinic|pharmacy|hospital)\b/.test(lower)
     || /\b(clinic|pharmacy|hospital)\b.*\b(near me|nearby|near|closest|map|route)\b/.test(lower)) return false;
-  if (/\b(track|show|open|follow|monitor)\b.*\b(route|shipment|delivery|farm to market|market route)\b/.test(lower)) return false;
+  if (/\b(track|show|open|follow|monitor|check)\b.*\b(route|shipment|delivery|farm to market|market route)\b/.test(lower)) return false;
   const questionStart = /^(what|what's|whats|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search|research)\b/.test(lower);
   const currentSignal = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability|source|sources|source-backed|cite|citation|research)\b/.test(lower);
   const definitionShape = /^(what is|what's|whats|explain|define|tell me about|describe|teach me)\b/.test(lower) && !currentSignal;
@@ -26134,6 +26143,11 @@ function localKnowledgeFallbackAnswer(db, command = "", live = {}) {
   return `I can answer from platform context, but I do not have live internet evidence for that question yet. Connect the web-search provider to make this a current, source-aware answer.`;
 }
 
+function isOwnPlatformDataExplanation(lower = "") {
+  return /\b(drone|scan|field|health|education|learning|workforce|job|course)\s+data\b/.test(lower)
+    && /\b(simple|plain|explain|summarize|read|interpret)\b/.test(lower);
+}
+
 function isEverydayEncyclopediaQuestion(command = "") {
   const lower = String(command || "").toLowerCase().trim();
   if (!lower) return false;
@@ -26151,6 +26165,9 @@ function isEverydayEncyclopediaQuestion(command = "") {
     || /\b(partner|provider|practitioner|ngo|government)\b.*\b(healthcare|health care|medical|clinic|telehealth)\b/.test(lower)) return false;
   if (/\b(crop|field|drone)\s+evidence\b/.test(lower)
     && /\b(simple|plain|explain|summarize|read|interpret)\b/.test(lower)) return false;
+  // "explain the drone data in simple farmer language" is about the user's OWN platform data (answered by
+  // isSimpleDataExplanation / simpleDataExplanationResponse), not a general-knowledge question about drones.
+  if (isOwnPlatformDataExplanation(lower)) return false;
   if (/\b(different from|difference between|what makes this different|normal app|ordinary app)\b/.test(lower)
     && /\b(app|platform|agrinexus|nexus|this)\b/.test(lower)) return false;
   if (/\b(you|yourself|with me|talk about|talk to me|chat|conversation|working on|been working|something interesting)\b/.test(lower)
@@ -26297,6 +26314,9 @@ function isGeneralConversationQuestion(command = "") {
   const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   if (!lower) return false;
   if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command)) return false;
+  if (isOwnPlatformDataExplanation(lower)) return false;
+  // Memory recall ("what have you learned") is answered from stored memories, not open-ended small talk.
+  if (/\b(what do you remember|what have you learned|show memory)\b/.test(lower)) return false;
   if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language|track|show map|find clinic|need doctor|need medicine|sell crop|need work|start course)\b/.test(lower)) return false;
   if (/\b(are you|who are you|what are you|what is|what's|explain|describe|tell me about)\b.*\b(nexus|agrinexus|agri nexus|platform)\b/.test(lower)
     || /\b(nexus|agrinexus|agri nexus|platform)\b.*\b(are you|who are you|what are you|what is|what's|explain|describe|tell me about)\b/.test(lower)) return false;
@@ -26398,6 +26418,12 @@ function nexusRealPrototypeFoundationAnswer(command = "") {
   return "Nexus is the actual prototype foundation for a full multilingual access platform. It is source-ready and provider-ready by design, but live regulated actions remain disabled until verified connectors, consent, user approval, provider confirmation where needed, and audit logging are in place.";
 }
 
+// "track my route in real time" is a route-tracking request, not a question about which real-time data
+// sources Nexus integrates with, so it must reach the map handler instead of the prototype-foundation answer.
+function isLiveRouteTrackingRequest(lower = "") {
+  return /\b(track|follow|monitor)\b.*\b(route|shipment|delivery|truck|driver|order)\b/.test(String(lower || ""));
+}
+
 function nexusPhase17StandardUserSafeAnswer(command = "") {
   const lower = normalizeSpeechForIntent(command);
   if (!lower) return null;
@@ -26408,7 +26434,7 @@ function nexusPhase17StandardUserSafeAnswer(command = "") {
     || /\b(help farmers? in africa|farmers? in africa|farmers? across africa|african farmers?)\b/.test(lower)) {
     return "For farmers and rural communities, Nexus can guide crop and field support, irrigation learning, market and AgriTrade review, workforce training, transportation-to-care, pharmacy and mobile clinic access, and source-backed next steps. Live buyer contact, payments, provider contact, location sharing, or regulated health actions require verified connectors, consent, approval, and audit controls.";
   }
-  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process a payment|process payment|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(lower)) {
+  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process a payment|process payment|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(lower) && !isLiveRouteTrackingRequest(lower)) {
     return nexusRealPrototypeFoundationAnswer(command);
   }
   if (/\b(i need telehealth|need telehealth|telehealth help|telehealth access|prepare telehealth)\b/.test(lower)) {
@@ -28438,7 +28464,18 @@ function conversationFollowUpResponse(db, user, text, lower) {
 
 function socialConversationResponse(db, user, text, lower) {
   ensureAiProfile(db.profile);
-  if (/^(hi|hello|hey|good morning|good afternoon|good evening|are you there|can you hear me)\b/.test(lower)) {
+  // A greeting is only a greeting. "Hey AgriTrade, track my route in real time" or "Hi AgriTrade, speak French" start with
+  // "hey"/"hi" but are requests; answering them with the canned "Hello ... I am here with you" swallowed the request
+  // before any router saw it. After the opener and any assistant name, nothing but a pleasantry may remain.
+  const greetingRemainder = String(lower || "")
+    .replace(/^(hi|hello|hey|good morning|good afternoon|good evening|are you there|can you hear me)\b/, " ")
+    .replace(/\b(nexus|agrinexus|agri nexus|agritrade|agri trade|kyro|there|everyone|again)\b/g, " ")
+    .replace(/[^a-z\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const greetingOpener = /^(hi|hello|hey|good morning|good afternoon|good evening|are you there|can you hear me)\b/.test(lower)
+    && (greetingRemainder === "" || /^(how are you( doing)?( today)?|how is it going|can you hear me( now| ok| okay)?|are you (there|with me|listening|ready)( today| now)?)$/.test(greetingRemainder));
+  if (greetingOpener) {
     const name = db.profile.userDisplayNames?.[user?.id] || user.name?.split(/\s+/)[0] || "there";
     db.profile.agentMemory.lastStatus = "conversation-ready";
     db.profile.agentMemory.lastSummary = `Hello ${name}. I am listening and ready to guide the next step.`;
@@ -29091,7 +29128,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   }
   const requestedMapCountry = africanMapCountryTarget(db, value);
 
-  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(value)) {
+  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(value) && !isLiveRouteTrackingRequest(value)) {
     return response(
       "conversation.real_prototype_foundation",
       "completed",
@@ -29408,7 +29445,9 @@ function explicitWorkspaceOpenResponse(db, user, text = "", lower = "") {
   if (/\b(pharmacy|medicine|refill)\b/.test(value)) {
     return response("conversation.medicine_help", "needs-details", "health", "I opened pharmacy support. I cannot prescribe or approve refills, but I can help organize the question for a pharmacist or clinician.", ["medicine question", "prepare refill question", "find pharmacy support"]);
   }
-  if (/\b(marketplace|agritrade|trade|buyer|seller)\b/.test(value)) {
+  // A video/camera request ("open video so I can show the buyer my crops") has its own staged buyer-video action
+  // further down the command pipeline; this generic marketplace fallback must not swallow it.
+  if (/\b(marketplace|agritrade|trade|buyer|seller)\b/.test(value) && !/\b(video|camera|face[- ]to[- ]face)\b/.test(value)) {
     return response("conversation.crop_sale_help", "needs-details", "trade", "I opened AgriTrade support for marketplace planning. Tell me the crop, quantity, location, or buyer context, and I will prepare the next safe step without a transaction.", ["sell crop", "buyer message", "route support"]);
   }
   if (/\b(map|maps|route|field visit|location)\b/.test(value)) {
@@ -31580,6 +31619,13 @@ async function musicProviderCommandResponse(db, user, text, options = {}) {
 
 function utilityAssistantKind(text, lower) {
   const raw = String(text || "").toLowerCase();
+  // Outbreak / regional-safety questions belong to publicHealthRiskBriefing, not the heat/"is it safe" reminder.
+  if (isPublicHealthRiskQuestion(lower)) return "";
+  // An autopilot / end-to-end mission ("autopilot help this farmer get from crop problem to buyer payment") is a
+  // multi-step mission, not a single field alert just because it mentions a "crop problem".
+  if (/\bautopilot\b|\b(start to finish|end to end)\b/.test(lower)) return "";
+  // "schedule my shift" is a workforce action, not a lookup of the next appointment.
+  if (/\b(schedule|book|arrange|assign)\b.*\bshift\b/.test(lower)) return "";
   if (/\b(walk me through|guide me through|show me how|help me use|how do i use|how to use)\b/.test(lower)) return "";
   if (/\b(can you hear|hear me|understand|listen|talk|speak|communicate|english bad|bad english|broken english|not good english|wrong english|grandma talks|farmer talks)\b/.test(lower)) return "";
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
@@ -33298,6 +33344,7 @@ function dailyAdvisorKind(lower) {
 
 function isDailyAdvisorQuestion(lower) {
   const value = String(lower || "");
+  if (isPublicHealthRiskQuestion(value)) return false;
   if (/\b(start to finish|end to end|sell|buyer|payment|order|create order|contact buyer|apply for|submit application|run mission)\b/.test(value)) return false;
   const utilityKind = utilityAssistantKind(value, value);
   const weatherSafety = utilityKind === "weather" && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(value);
@@ -34003,7 +34050,16 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const routePacketCommand = isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower);
   if (routePacketCommand) return tradeLocationRouteResponse(db, user, text, options);
-  const prioritizedUtilityCommand = routePacketCommand ? null : await utilityAssistantCommandResponse(db, user, text, lower, options);
+  // While a guided intake is waiting for an answer, an incidental word like "heat" or "walk" in that answer
+  // ("She needs heat exposure review") must not be hijacked into a weather lookup.
+  const intakeAnswerMentionsWeatherWord = conversational && Boolean(db.profile.agentMemory.activeIntake)
+    && utilityAssistantKind(text, lower) === "weather"
+    && !/\b(weather|forecast|temperature|temp)\b/.test(lower);
+  // "grandma wants to walk today but it is 90 degrees, is it too hot?" is a daily-safety question that already states
+  // the temperature; the generic "which city?" weather lookup must not pre-empt the daily-life advisor.
+  const weatherNeedsDailySafety = conversational && utilityAssistantKind(text, lower) === "weather"
+    && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(lower);
+  const prioritizedUtilityCommand = routePacketCommand || intakeAnswerMentionsWeatherWord || weatherNeedsDailySafety ? null : await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (prioritizedUtilityCommand) return prioritizedUtilityCommand;
   if (conversational && isPersonalAssistantBriefingCommand(lower)) {
     return nexusPersonalAssistantBriefing(db, user, text, runtimeProviders(db));
@@ -34060,7 +34116,9 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "guide me step by step", "open health access"] }
     };
   }
-  if (conversational && /\b(i don'?t know where to start|i do not know where to start|where do i start|guide me step by step|can you guide me|guide me|walk me through|help me step by step)\b/.test(lower)) {
+  // "walk me through telehealth" names a module: let moduleVoiceHelpResponse give that module's guide instead of the generic menu.
+  if (conversational && /\b(i don'?t know where to start|i do not know where to start|where do i start|guide me step by step|can you guide me|guide me|walk me through|help me step by step)\b/.test(lower)
+    && !moduleVoiceHelpResponse(db, text, lower)) {
     return {
       intent: "conversation.guided_menu",
       response: nexusStepByStepGuideAnswer(),
@@ -34294,7 +34352,9 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
     };
   }
-  const explicitWorkspaceOpen = explicitWorkspaceOpenResponse(db, user, text, lower);
+  // "start telehealth intake and ask me questions" asks for the guided question flow, not just an opened workspace.
+  const wantsGuidedIntakeQuestions = conversational && isIntakeStart(lower) && /\b(ask me|questions|interview me|one question at a time)\b/.test(lower);
+  const explicitWorkspaceOpen = wantsGuidedIntakeQuestions ? null : explicitWorkspaceOpenResponse(db, user, text, lower);
   if (explicitWorkspaceOpen) return explicitWorkspaceOpen;
   const healthVoiceAcceptance = healthAccessVoiceAcceptanceResponse(db, user, text, lower, options);
   if (healthVoiceAcceptance) return healthVoiceAcceptance;
@@ -36535,7 +36595,11 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
       }
     };
   }
-  if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response") {
+  // While a guided intake is waiting for an answer ("Captions and caregiver handoff"), keywords in that answer must
+  // not be mistaken for a new conversational mode; only safety, privacy, interruption and repair keep priority.
+  const intakeAnswerInProgress = Boolean(db.profile.agentMemory?.activeIntake)
+    && !["emergency_safety", "privacy_sensitive", "interruption_turn_taking", "repair_correction"].includes(conversationalModeOrchestrator.primaryMode?.id);
+  if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response" && !intakeAnswerInProgress) {
     const directConversation = companionDirectConversationIntent(conversationalModeOrchestrator);
     let result = ensureSpeakableAgentResult({
       intent: directConversation.intent,

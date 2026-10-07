@@ -123,6 +123,7 @@ jobs:
           run_check sensitive node "$CI_LOG_DIR/sensitive.cjs"
           run_check all-safe node scripts/qa-suite.js all-safe
           run_check nexus node --test test/nexus/*.test.js
+          run_check smoke node scripts/smoke.js
           run_check realtime-build node -e "require('esbuild').buildSync({entryPoints:['public/nexus-openai-realtime-agent.js'],outfile:process.env.CI_LOG_DIR+'/realtime-agent.mjs',bundle:true,format:'esm',platform:'browser',target:'es2020'})"
           run_check totals node "$CI_LOG_DIR/totals.cjs"
           # A changed protected baseline remains a real failure; never rewrite it here.
