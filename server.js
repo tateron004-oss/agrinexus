@@ -36339,14 +36339,13 @@ async function runAgentCommand(db, user, command, options = {}) {
     return { intent: matched.tool, response: result.result || result.error || `${matched.action} completed.`, status: result.status === "executed" ? "completed" : "needs-review", metadata: { tool: matched.tool, attempts: result.attempts } };
   }
 
-  const { country, route } = activeContext(db);
   if (conversational && isGeneralConversationQuestion(text)) {
     return generalConversationResponse(db, user, text, options);
   }
   if (String(command || "").trim().split(/\s+/).length <= 5 && conversational) return voiceRecoveryResponse(db);
-  const aiResult = await runAi("copilot", country, route, db.profile);
-  const run = recordAiRun(db, { type: "copilot", country, route, result: aiResult, module: "AI" });
-  return { intent: "ai-question", response: `${run.text} If you want me to act, say a module and action, like "AgriTrade prepare buyer update" or "Telehealth start intake."`, metadata: { runId: run.id, provider: run.provider } };
+  // Last resort. The old answer here was one fixed "AI copilot recommends..." paragraph that never saw what the person said (runAi takes no user text), so a note, list or reading that
+  // matched nothing looked answered when nothing had been done. Say so plainly instead.
+  return { intent: "conversation.not_handled", response: `I couldn't do that one just now, and nothing was saved. Try saying it another way, or name a module and action, like "AgriTrade prepare buyer update" or "Telehealth start intake."`, status: "needs-review", metadata: { handled: false } };
 }
 
 async function runCompanionSafeAgentCommand(db, user, body = {}) {
