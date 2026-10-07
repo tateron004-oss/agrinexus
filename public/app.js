@@ -18151,6 +18151,9 @@ function renderGovernmentReadinessPanel() {
 }
 
 function applyPermissions() {
+  // The "My team" link is for a business manager (or an Admin). The server sends permissions.team; every other permission keeps the "missing means visible" rule below.
+  const teamLink = $("#teamLink");
+  if (teamLink) teamLink.hidden = data?.permissions?.team !== true;
   $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-government-action], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #runFrontierBrainBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
@@ -41047,6 +41050,7 @@ function render() {
   // opened this panel.
   $("#adminUsers").innerHTML = (data.admin?.users || []).map(user => `<div><strong>${escapeHtml(user.name)}</strong><span>${escapeHtml(user.role)} - ${escapeHtml(user.email)}</span></div>`).join("");
   renderAdminPhoneNumbers(data.admin);
+  renderAdminBusinessManagers(data.admin);
   $("#adminSubscribers").innerHTML = (data.admin?.subscribers || []).length
     ? data.admin.subscribers.map(subscriber => `<div><strong>${escapeHtml(subscriber.name)}</strong><span>${escapeHtml(subscriber.status)} - ${escapeHtml(subscriber.email)} - ${escapeHtml(subscriber.plan)} - ${escapeHtml(subscriber.seats)} seat(s)</span></div>`).join("")
     : "<div>No pilot subscribers invited yet.</div>";
@@ -45700,6 +45704,33 @@ function renderAdminPhoneNumbers(admin) {
   const fromSettings = (admin?.phoneCallersFromSettings || []).map(row =>
     `<div><strong>${escapeHtml(row.phone)}</strong><span>${escapeHtml(row.owner ? "Owner (set in Render, read-only)" : `${row.email} (set in Render, read-only)`)}</span></div>`);
   box.innerHTML = rows.concat(fromSettings).join("") || "<div>No numbers yet. Add one below.</div>";
+}
+
+// Admin "Business managers" card: who runs a team, and whose team each person is on. Names and emails are typed by people, so every value goes through escapeHtml.
+function renderAdminBusinessManagers(admin) {
+  const box = $("#adminBusinessManagers");
+  if (!box) return;
+  const users = admin?.users || [];
+  const rows = users.filter(item => item.businessManager).map(manager => {
+    const team = users.filter(item => item.teamManagerId && item.teamManagerId === manager.id);
+    return `<div><strong>${escapeHtml(manager.name || manager.email)}</strong><span>${escapeHtml(manager.email)} - ${team.length ? escapeHtml(team.map(item => item.name || item.email).join(", ")) : "nobody on the team yet"}</span></div>`;
+  });
+  box.innerHTML = rows.join("") || "<div>No business managers yet.</div>";
+}
+
+async function submitAdminBusinessManager(event) {
+  event.preventDefault();
+  const action = event.submitter?.dataset?.businessManagerAction || "make";
+  runAdminBusinessManagerAction(action);
+}
+
+async function runAdminBusinessManagerAction(action) {
+  const email = $("#businessManagerEmail").value.trim();
+  const managerEmail = $("#businessManagerTeamOf").value.trim();
+  if (!email) return toast("Enter the account email.");
+  if (action === "assign" && !managerEmail) return toast("Enter the business manager's email to put this person on their team.");
+  const body = action === "assign" ? { email, managerEmail } : { email, enabled: action === "make" };
+  await mutate("/api/admin/business-manager", body, action === "assign" ? "That person is now on the manager's team." : action === "make" ? "That account is now a business manager. They see a My team link after they sign in again." : "That account is no longer a business manager.");
 }
 
 async function submitAdminPhoneCaller(event) {
@@ -63036,6 +63067,8 @@ function bindStatic() {
   $("#openSupportBtn").onclick = () => openWorkflowModal(workflowConfig("support", "ticket", { dataset: {} }));
   $("#inviteSubscriberBtn").onclick = () => openWorkflowModal(workflowConfig("subscriber", "invite", { dataset: {} }));
   $("#phoneCallerForm")?.addEventListener("submit", submitAdminPhoneCaller);
+  $("#businessManagerForm")?.addEventListener("submit", submitAdminBusinessManager);
+  $$("#businessManagerForm [data-business-manager-action]").forEach(button => { if (button.type === "button") button.addEventListener("click", () => runAdminBusinessManagerAction(button.dataset.businessManagerAction)); });
   $("#adminPhoneNumbers")?.addEventListener("click", onAdminPhoneNumbersClick);
   $("#addTestUserBtn").onclick = () => openWorkflowModal(workflowConfig("test-user", "create", { dataset: {} }));
   $("#addAdminUserBtn").onclick = () => openWorkflowModal(workflowConfig("admin-user", "create", { dataset: {} }));

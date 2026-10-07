@@ -61,6 +61,7 @@ const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = re
 const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
+const teamManagement = require("./server/teamManagement.js");
 const communicationsSetup = require("./server/providers/communicationsStatus.js");
 const twilioProvider = require("./server/providers/twilioProvider.js");
 const emailProvider = require("./server/providers/emailProvider.js");
@@ -2597,6 +2598,19 @@ async function deleteSessionFromPostgres(sid) {
   }
 }
 
+// Ends every sign-in a person holds (live sessions and "remember me" cookies), the same way /api/logout and a password reset do. Used when a business manager
+// resets a team member's password or switches the account off.
+async function revokeSessionsForUser(targetUser) {
+  if (!targetUser) return;
+  targetUser.authTokensRevokedAt = Date.now();
+  for (const [sid, entry] of sessions) {
+    if (entry.userId === targetUser.id) {
+      sessions.delete(sid);
+      await deleteSessionFromPostgres(sid);
+    }
+  }
+}
+
 // Called once, before the server starts accepting connections. A fresh
 // deploy's empty in-memory Map is repopulated from the durable copy, so an
 // account that was genuinely logged in a moment ago stays logged in.
@@ -2660,6 +2674,8 @@ function currentUser(req, db) {
   // token created before erasure (or a bug in eraseUserAccount's own session
   // cleanup) would otherwise keep authenticating a "deleted" identity.
   if (resolvedUser?.status === "deleted") return null;
+  // A team member switched off by their business manager (or an Admin) stops working at once, whatever session they already hold.
+  if (resolvedUser?.status === "disabled") return null;
   return resolvedUser;
 }
 
@@ -5927,8 +5943,9 @@ function publicState(db, user) {
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
   return {
     productIdentity: productIdentityMetadata(),
-    user: user && { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language },
-    permissions: user ? permissionsForRole(user.role) : {},
+    user: user && { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language, businessManager: teamManagement.isBusinessManager(user) },
+    // `team` is not a role permission: it is true for a business manager (and an Admin), and the screen shows the Team link only then.
+    permissions: user ? { ...permissionsForRole(user.role), team: teamManagement.canManageTeam(user) } : {},
     // Never include the real password here -- this used to serialize every
     // seeded account's cleartext password (including Admin's) into every
     // publicState() response, reachable by any caller including a fully
@@ -11124,7 +11141,7 @@ function adminSnapshot(db, providers = runtimeProviders(db)) {
     { name: "Maps/AI", status: "ready", records: (db.routes || []).length + (db.countries || []).length }
   ];
   return {
-    users: (db.users || []).map(user => ({ id: user.id, name: user.name, email: user.email, role: user.role, country: user.country })),
+    users: (db.users || []).map(user => ({ id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, businessManager: teamManagement.isBusinessManager(user), teamManagerId: user.teamManagerId || null, active: user.status !== "disabled" })),
     // Who may phone Kyro: numbers added here (editable) and the older Render-setting list (read-only, masked -- it can only be changed in Render).
     phoneCallers: phoneCallerRegistry.adminView(db),
     phoneCallersFromSettings: twilioAuthorizedCallers(process.env).map(item => ({ phone: redactPhoneNumber(item.phone), email: item.email, owner: !item.email })),
@@ -18722,7 +18739,9 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
   // Numbers the owner added in the admin panel (db.phoneCallers) are checked first. Each belongs to one account by id; if that account is gone the caller gets
   // NO identity (never the owner's), same as a listed-with-email number below.
   const managed = Array.isArray(db.phoneCallers) ? db.phoneCallers.find(item => item && item.phone === caller) : null;
-  if (managed) return db.users.find(item => item.id === managed.userId) || null;
+  // An account that has been switched off (or erased) is not answered, even though its number is still on the list.
+  const phoneAccountOn = account => (account && account.status !== "disabled" && account.status !== "deleted" ? account : null);
+  if (managed) return phoneAccountOn(db.users.find(item => item.id === managed.userId));
   const authorized = twilioAuthorizedCallers(env);
   const match = authorized.find(item => item.phone === caller);
   if (!match) return null;
@@ -18731,7 +18750,7 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
     // A number listed WITH an email belongs to that account and no other. If that account does not exist (a typo in the list, or the person deleted their
     // account), the caller gets NO identity -- never the owner's. This used to fall through to the bare-number rule below and hand the Admin account to
     // that number.
-    return byEmail || null;
+    return phoneAccountOn(byEmail);
   }
   // A bare "phone" entry (no ":email") authorizes the default account
   // owner -- the same identity every call used to get unconditionally,
@@ -50797,6 +50816,8 @@ async function api(req, res, url) {
       }
       found = candidate;
     }
+    // The password was right, so say plainly why it still will not work: the account has been switched off by whoever runs the team.
+    if (found.status === "disabled") return send(res, 403, { error: "This account has been switched off. Ask the person in charge of your team." });
     if (usersChanged || blobBackfilled || passwordMigrated) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
     await issueSession(sid, found.id);
@@ -51989,6 +52010,140 @@ async function api(req, res, url) {
   }
 
   // Phone numbers allowed to phone Kyro, managed by the owner (replaces editing TWILIO_AUTHORIZED_CALLERS in Render and restarting). Admin only.
+  // The Team tools: what a business manager (or an Admin) can do for the people on their team. Who counts as being on the team, and who can never be touched, is decided in server/teamManagement.js.
+  if (url.pathname.startsWith("/api/team/")) {
+    if (!user) return send(res, 401, { error: "Sign in first." });
+    if (!teamManagement.canManageTeam(user)) return send(res, 403, { error: "Only a business manager can manage a team." });
+    const teamView = extra => ({
+      ok: true,
+      manager: { name: user.name, email: user.email, admin: user.role === "Admin" },
+      limit: user.role === "Admin" ? null : teamManagement.MAX_TEAM_SIZE,
+      team: teamManagement.listedUsers(db, user).map(item => teamManagement.shapeUser(item, db)),
+      ...extra
+    });
+    const teamLog = (action, detail, metadata = {}) => {
+      addUsageEvent(db.profile, { module: "Team", action, detail });
+      logIntegration(db, { providerId: "auth-users", module: "Platform", action, detail, metadata: { ...metadata, by: user.email } });
+    };
+    if (url.pathname === "/api/team/users" && req.method === "GET") return send(res, 200, teamView());
+    if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
+    if (!authRateLimit(req, "team-write", 40, 300_000)) return send(res, 429, { error: "Too many changes in a short time. Wait a few minutes, then try again." });
+    const body = await readBody(req);
+
+    if (url.pathname === "/api/team/users") {
+      const name = String(body.name ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+      const email = teamManagement.emailKey(body.email);
+      if (!name) return send(res, 400, { error: "Enter the person's name." });
+      if (!teamManagement.validEmail(email)) return send(res, 400, { error: "Enter a valid email for the person." });
+      const existing = db.users.find(item => teamManagement.emailKey(item.email) === email);
+      if (existing || await refuseIfRealPostgresAccountExists(email, existing)) return send(res, 409, { error: "That email already belongs to an existing account." });
+      if (user.role !== "Admin" && teamManagement.teamSize(db, user) >= teamManagement.MAX_TEAM_SIZE) return send(res, 400, { error: `A team can have up to ${teamManagement.MAX_TEAM_SIZE} people. Ask an Admin to raise it.` });
+      const password = randomTemporaryPassword();
+      const now = new Date().toISOString();
+      const account = {
+        id: crypto.randomUUID(), email, name, password: pgUsers.hashPassword(password),
+        role: teamManagement.MANAGED_ROLE, country: user.country, language: user.language,
+        teamManagerId: user.role === "Admin" ? null : user.id, createdAt: now, lastUpdatedAt: now
+      };
+      db.users.push(account);
+      if (usingPostgresAuth()) {
+        await pgUsers.createUser(getPgPool(), { email, displayName: name, password })
+          .catch(error => console.error("[team] Postgres shadow-write failed:", error.message));
+      }
+      teamLog("team_member.created", `${email} added to the team.`, { userId: account.id });
+      await writeDb(db);
+      return send(res, 200, teamView({ created: { name, email, password } }));
+    }
+
+    if (url.pathname === "/api/team/users/reset-password") {
+      const found = teamManagement.manageableUser(db, user, body.email);
+      if (!found.ok) return send(res, found.status, { error: found.error });
+      const password = randomTemporaryPassword();
+      if (usingPostgresAuth()) {
+        const stored = await pgUsers.setPassword(getPgPool(), found.user.email, password).catch(() => false);
+        if (!stored) return send(res, 502, { error: "The password could not be changed just now. Try again in a minute." });
+      }
+      found.user.password = pgUsers.hashPassword(password);
+      delete found.user.resetTokenHash;
+      delete found.user.resetTokenExpiresAt;
+      await revokeSessionsForUser(found.user);
+      teamLog("team_member.password_reset", `A new temporary password was set for ${found.user.email}.`, { userId: found.user.id });
+      await writeDb(db);
+      return send(res, 200, teamView({ reset: { name: found.user.name, email: found.user.email, password } }));
+    }
+
+    if (url.pathname === "/api/team/users/status") {
+      const found = teamManagement.manageableUser(db, user, body.email);
+      if (!found.ok) return send(res, found.status, { error: found.error });
+      if (typeof body.active !== "boolean") return send(res, 400, { error: "Say whether the account should be on (active: true) or off (active: false)." });
+      if (body.active) { if (found.user.status === "disabled") delete found.user.status; }
+      else { found.user.status = "disabled"; await revokeSessionsForUser(found.user); }
+      teamLog(body.active ? "team_member.switched_on" : "team_member.switched_off", `${found.user.email} was switched ${body.active ? "on" : "off"}.`, { userId: found.user.id });
+      await writeDb(db);
+      return send(res, 200, teamView());
+    }
+
+    if (url.pathname === "/api/team/phone-numbers") {
+      const found = teamManagement.manageableUser(db, user, body.email);
+      if (!found.ok) return send(res, found.status, { error: found.error });
+      const normalized = normalizePhoneNumber(body.phone);
+      const linked = normalized ? phoneCallerRegistry.findByPhone(db, normalized) : null;
+      // A number already linked to someone outside this team is never moved (or even named): a manager cannot take a number over from another business.
+      if (linked && linked.userId !== found.user.id) {
+        const holder = db.users.find(item => item.id === linked.userId);
+        if (user.role !== "Admin" && !(holder && teamManagement.inTeamOf(user, holder))) return send(res, 409, { error: "That number is already linked to another account." });
+      }
+      if (!linked && phoneCallerRegistry.callersForUser(db, found.user.id).length >= 3) return send(res, 400, { error: "A person can have up to 3 phone numbers. Remove one first." });
+      const result = phoneCallerRegistry.addOrUpdateCaller(db, { phone: body.phone, email: found.user.email, label: body.label, actorEmail: user.email, normalizePhone: normalizePhoneNumber });
+      if (!result.ok) return send(res, result.status, { error: result.error });
+      teamLog(result.updated ? "phone_caller.updated" : "phone_caller.added", `${redactPhoneNumber(result.caller.phone)} linked to ${found.user.email}.`, { phone: redactPhoneNumber(result.caller.phone), userId: found.user.id });
+      await writeDb(db);
+      return send(res, 200, teamView());
+    }
+
+    if (url.pathname === "/api/team/phone-numbers/remove") {
+      const row = (Array.isArray(db.phoneCallers) ? db.phoneCallers : []).find(item => item.id === String(body.id || ""));
+      const holder = row && db.users.find(item => item.id === row.userId);
+      if (!row || !holder || holder.id === user.id || !teamManagement.inTeamOf(user, holder)) return send(res, 404, { error: "That phone number is not on your team's list." });
+      phoneCallerRegistry.removeCaller(db, row.id);
+      teamLog("phone_caller.removed", `${redactPhoneNumber(row.phone)} removed from ${holder.email}.`, { phone: redactPhoneNumber(row.phone), userId: holder.id });
+      await writeDb(db);
+      return send(res, 200, teamView());
+    }
+    return send(res, 404, { error: "Not found" });
+  }
+
+  // Only an Admin makes someone a business manager, or says whose team an ordinary account is on. Nothing a manager can reach writes either field.
+  if (url.pathname === "/api/admin/business-manager" && req.method === "POST") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow business manager changes" });
+    const body = await readBody(req);
+    const email = teamManagement.emailKey(body.email);
+    const target = teamManagement.ordinaryAccounts(db).find(item => teamManagement.emailKey(item.email) === email);
+    if (!target) return send(res, 404, { error: "There is no ordinary account with that email. Only a Standard User account can be a business manager." });
+    const changes = [];
+    if (typeof body.enabled === "boolean") {
+      if (body.enabled) { target.businessManager = true; target.teamManagerId = null; }
+      else delete target.businessManager;
+      changes.push(body.enabled ? "made a business manager" : "no longer a business manager");
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "managerEmail")) {
+      const managerEmail = teamManagement.emailKey(body.managerEmail);
+      if (!managerEmail) { delete target.teamManagerId; changes.push("taken off any team"); }
+      else {
+        const manager = teamManagement.ordinaryAccounts(db).find(item => teamManagement.emailKey(item.email) === managerEmail);
+        if (!manager || !teamManagement.isBusinessManager(manager)) return send(res, 404, { error: "That email is not a business manager. Make them one first." });
+        if (manager.id === target.id || teamManagement.isBusinessManager(target)) return send(res, 400, { error: "A business manager cannot be placed on another manager's team." });
+        target.teamManagerId = manager.id;
+        changes.push(`placed on ${manager.email}'s team`);
+      }
+    }
+    if (!changes.length) return send(res, 400, { error: "Say what to change: enabled (true or false) and/or managerEmail." });
+    addUsageEvent(db.profile, { module: "Admin", action: "business_manager.changed", detail: `${target.email}: ${changes.join(", ")}.` });
+    logIntegration(db, { providerId: "auth-users", module: "Platform", action: "business_manager.changed", detail: `${target.email}: ${changes.join(", ")}.`, metadata: { userId: target.id, by: user.email } });
+    await writeDb(db);
+    return send(res, 200, publicState(db, user));
+  }
+
   if (url.pathname === "/api/admin/phone-callers" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow phone number management" });
     const body = await readBody(req);

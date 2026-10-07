@@ -1,0 +1,23 @@
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.row label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem;flex:1 1 220px}
+input{font:inherit;padding:9px 10px;border:1px solid #9bb8b1;border-radius:8px;background:#fff;color:inherit;min-width:0}
+.secretbox{border:2px solid #1d6b5f;border-radius:10px;padding:4px 16px 14px;background:#fff}
+.secretbox code{font-size:1.25rem;letter-spacing:.04em;user-select:all;padding:6px 10px}
+.pill.on{background:#dcf3e6;color:#0f5a36;border-color:#a9dcc0}
+.pill.off{background:#eceff0;color:#3d4a4e;border-color:#cdd5d8}
+.pill.mgr{background:#e3ecfb;color:#1d3b73;border-color:#b3c7ea}
+.phones{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.phones li{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.card .row{align-items:flex-end}
+.card .row label{flex:1 1 140px}
+button.danger{background:#fff;color:#9a1f1f;border-color:#9a1f1f}
+.empty{padding:16px;border:1px dashed #9bb8b1;border-radius:10px}
+@media (prefers-color-scheme:dark){
+  input{background:#162a26;border-color:#2f4f48}
+  .secretbox{background:#162a26;border-color:#2a8f7e}
+  .pill.on{background:#12372a;color:#8fdcb0;border-color:#2c6a4b}
+  .pill.off{background:#1d2a2e;color:#b8c7cb;border-color:#34484d}
+  .pill.mgr{background:#1c2c4d;color:#b3c7ea;border-color:#34508a}
+  button.danger{background:#162a26;color:#f1a1a1;border-color:#f1a1a1}
+  .empty{border-color:#2f4f48}
+}
