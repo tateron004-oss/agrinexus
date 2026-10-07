@@ -76,11 +76,15 @@ test("what happens after a birth, and being hurt or hurting, each get their own 
 
 test("ordinary talk about babies, children, pregnancy, animals and farm work is left alone", () => {
   for (const text of ["how do I know if my baby is hungry", "my baby is teething", "I am not pregnant but I have a headache", "what are the signs of labour", "my wife is due next month",
-    "I burnt the maize", "I saw a snake in the field", "the baby fell asleep", "my child's school fees are due", "I bought a baby goat", "my cow is bleeding after calving",
-    "my goat is having a fit", "my hens have diarrhoea", "my baby smiled today", "my child has a runny nose", "I have a fever", "I have a headache", "my husband beats me at draughts",
+    "I burnt the maize", "I saw a snake in the field", "the baby fell asleep", "my child's school fees are due", "I bought a baby goat",
+    "my baby smiled today", "my child has a runny nose", "I have a fever", "I have a headache", "my husband beats me at draughts",
     "my son has a cough", "the baby is sleeping", "my daughter is 5 years old", "I am pregnant", "I am 5 months pregnant and feeling well", "my baby is 3 months old and feeding well",
-    "my cow has a fever", "he hit me up on whatsapp", "remind me to take my baby to the clinic tomorrow", "I need to buy a battery", "the pesticide is for the maize",
+    "he hit me up on whatsapp", "remind me to take my baby to the clinic tomorrow", "I need to buy a battery", "the pesticide is for the maize",
     "my mother is pregnant with a calf", "what is the best food for a pregnant woman", "show me my pregnancy visits"]) assert.equal(describe(text), null, text);
+});
+
+test("a sick animal is not a person's emergency: it gets the honest 'no veterinary guide here, call a vet' reply, never a person's first aid", () => {
+  for (const text of ["my cow is bleeding after calving", "my goat is having a fit", "my hens have diarrhoea", "my cow has a fever"]) assert.equal(describe(text), "livestock", text);
 });
 
 const circle = { activeMembers: async () => [{ otherId: "u2", otherName: "Grace", shares: {} }] };

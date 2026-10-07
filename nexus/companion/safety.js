@@ -5,7 +5,9 @@ const { t, both, languageOf } = require("../i18n/index.js");
 const crisisPhrases = require("../../public/kyro-crisis-phrases.js");
 // Danger signs in pregnancy, birth, a baby or a child, the hard things after a birth, and a partner or someone else hurting a woman or child (public/kyro-care-phrases.js).
 const care = require("../../public/kyro-care-phrases.js");
-const CARE_SWAHILI = /\b(?:mtoto|mimba|mjamzito|mume|nina|nimeanza|nimejifungua|nimezaa|ameanguka|anatapika|damu|uchungu|kifafa|degedege|homa|nyoka|sumu|ananipiga|amenipiga|ananichapa|hapumui|ameungua|nimebakwa|ataniua|naogopa|nimepoteza|nimeharibu|binti|mwanangu|nimechoka|sijisikii|sipendi|siwezi|nataka|amemeza|amekunywa|amelala|hanyonyi|ananibaka|alinibaka|amenifukuza|nitajiua)\b/;
+// A sick animal is not a sick person: no first aid for people, and no veterinary advice either (nexus/farmwork/livestock-health.js).
+const livestock = require("../farmwork/livestock-health.js");
+const CARE_SWAHILI = /\b(?:mtoto|mimba|mjamzito|mume|nina|nimeanza|nimejifungua|nimezaa|ameanguka|anatapika|damu|uchungu|kifafa|degedege|homa|nyoka|sumu|ananipiga|amenipiga|ananichapa|hapumui|ameungua|nimebakwa|ataniua|naogopa|nimepoteza|nimeharibu|binti|mwanangu|nimechoka|sijisikii|sipendi|siwezi|nataka|amemeza|amekunywa|amelala|hanyonyi|ananibaka|alinibaka|amenifukuza|nitajiua|wangu|yangu|mke|ujauzito|kifua|kizunguzungu|jasho|nimekunywa|nimemeza|nimekula|nimepulizia|nilipulizia|amezimia|haamki|hazindukani|hajitambui|hajibu|amelegea|kisukari|sukari|kiharusi|bibi|babu|mzee|amebakwa|alibakwa|kumdhuru|ninahisi|natetemeka|anatetemeka|tumboni|upande|wiki|miezi|ng'ombe|mbuzi|kondoo|kuku|uso|mkono|mguu|pumzi|hasemi|hawezi|kuongea)\b/;
 const SWAHILI_WORDS = /\b(?:nimechoka|natamani|nataka|ninataka|napenda|ningependa|sina|nafikiria|ninafikiria|afadhali|heri|bora nife|maisha|bunduki|kisu|sumu|sitaki|najidhuru|ninajidhuru|nimejidhuru)\b/;
 
 // Emergencies and moments of crisis. Two things happen here and they are deliberately different:
@@ -43,6 +45,8 @@ const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g
 // The rule kept from before: when it is ambiguous, ALERT. Only phrases that are plainly something else (a debt, a falling-in-love, an
 // "I'll be late" message) are carved out.
 const NOT_A_FALL = "(?!\\s+(?:behind|asleep|back asleep|in love|out with|out of|for\\b|short|apart|ill|sick|into debt|off the wagon|from grace|through|away|upon|on hard times|on)\\b)";
+// The adults a sentence can be about when one of them is in trouble (the child words are left to the child reply).
+const ADULT = "(?:mother|mom|mum|mama|father|dad|baba|husband|wife|brother|sister|grandmother|grandfather|grandma|grandpa|friend|neighbou?r|man|woman|patient|uncle|aunt|elder|farmer|worker|labou?rer|lady|person)";
 const IMMEDIATE = [
   /^(?:this is (?:an )?)?emergency$/,
   /^i need (?:urgent |emergency )?help (?:now|right now|immediately)$/,
@@ -58,6 +62,11 @@ const IMMEDIATE = [
   // Someone else's life in danger ("my mother is not breathing", "my baby is choking", "she has collapsed and will not wake up"), and being attacked: the circle is
   // alerted and the number to call is given. Said by a person who is there and needs people to come; when it is ambiguous, ALERT.
   /\b(?:my|our|the|a)\s+(?:\w+\s+){0,2}?(?:mother|mom|mum|mama|father|dad|baba|baby|child|son|daughter|husband|wife|brother|sister|grandmother|grandfather|grandma|grandpa|friend|neighbou?r|boy|girl|man|woman|patient)\s+(?:is|was|has|had|just)\s+(?:\w+\s+){0,2}?(?:not breathing(?!\s+fire)|stopped breathing|unconscious|unresponsive|collapsed|choking(?!\s+(?:on|with|from)\s+laugh|\s+up\b)|having a (?:seizure|fit|heart attack|stroke)|bleeding (?:badly|heavily)|(?:won'?t|will not|not) wak(?:e|ing) up|not responding)\b/,
+  // Found by the user-journey sweep: an adult who had a fit and will not wake, who cannot be woken, or who collapsed ("elderly man collapsed after farm work in the heat"). Adults only: a child gets the child reply.
+  new RegExp(`\\b(?:my|our|the|an?)\\s+(?:\\w+\\s+){0,2}?${ADULT}\\s+(?:has |had |have |just |is |was )*(?:had|having|got|has|have)\\s+(?:a |an )?(?:fit|fits|seizure|convulsions?)\\b[^.!?]{0,40}\\b(?:won'?t wake|will not wake|not wak\\w*|cannot be woken|can'?t be woken|unresponsive|unconscious|not responding|not breathing|collapsed|passed out)\\b`),
+  new RegExp(`\\b(?:my|our|the|an?)\\s+(?:\\w+\\s+){0,2}?${ADULT}\\s+(?:cannot|can'?t|could not|couldn'?t|can not) be (?:woken|waken)\\b`),
+  new RegExp(`\\b(?:my|our|the|an?)\\s+(?:\\w+\\s+){0,2}?${ADULT}\\s+(?:won'?t|will not|doesn'?t|does not|did not|didn'?t) (?:wake|respond)(?:\\s+up)?\\b(?!\\s+(?:up\\s+)?(?:for|to|in|early|until|till|when|before|at|on|by|this|the|tomorrow)\\b)`),
+  new RegExp(`\\b(?:an? |the |my |our )?(?:\\w+ ){0,2}?${ADULT}\\s+(?:suddenly |just )?(?:collapsed|fainted|passed out)\\b(?!\\s+(?:with|from)\\s+(?:laughter|laughing|joy|shock|excitement|hunger))(?![^.!?]{0,60}\\b(?:yesterday|last (?:week|month|year|night)|years? ago|months? ago|weeks? ago|days? ago|long ago|in the war|when i was)\\b)`),
   /\b(?:he|she|they)\s+(?:is|was|has|have|just)\s+(?:\w+\s+){0,2}?(?:not breathing(?!\s+fire)|stopped breathing|unconscious|unresponsive|collapsed|choking(?!\s+(?:on|with|from)\s+laugh|\s+up\b)|having a (?:seizure|fit|heart attack|stroke))\b/,
   /\bi(?:'m| am) being (?:attacked|beaten|robbed|chased)\b|\b(?:someone|somebody|a man|men|they) (?:is|are) (?:attacking|beating|chasing|trying to (?:kill|hurt|rob)) me\b/,
   // Taking too much of a medicine or swallowing something poisonous ("I took too many tablets", "I have overdosed", "I drank pesticide"): not an everyday sentence.
@@ -127,6 +136,7 @@ const IMMEDIATE_SW = [
   /^(?:tafadhali )?(?:nisaidie|nisaidieni) (?:sasa|sasa hivi|haraka|mara moja)$/,
   /\bnimeanguka\b/,
   /\bsiwezi(?: tena)? kuamka\b/,
+  /\bsiwezi kupumua\b/,
   /\bniko hatarini\b/,
   /\bnimejeruhiwa (?:vibaya|sana)\b/,
   /\bnina (?:shambulio la moyo|kiharusi)\b/,
@@ -147,6 +157,9 @@ function circleAlertRequestedSw(lower) {
   if (verb === "arifu" || verb === "waarifu") return !CIRCLE_CALM_SW.test(tail);
   return false;
 }
+// Someone else (not a child: a child gets the child reply) who has fainted, is unconscious, will not wake or has stopped breathing. "amezimia", "amepoteza fahamu", "hajitambui", "haamki", "hazindukani".
+const SW_UNRESPONSIVE = /\b(?:amezimia|amepoteza fahamu|hajitambui|haamki|hazindukani|hawezi kuamshwa|hapumui|ameacha kupumua)\b|\b(?:ameanguka|alianguka)\b[^.!?]{0,30}\b(?:hawezi kuamka|hajitambui|hasemi|haamki)\b|\b(?:ameanguka|alianguka)\b[^.!?]{0,40}\b(?:jua kali|joto kali|joto)\b/;
+const SW_CHILD = /\b(?:mtoto|mwanangu|watoto|binti|kijana|mchanga|kichanga)\b/;
 const ASK_FIRST_SW = /^(?:tafadhali )?(?:msaada|nisaidie|naomba msaada|nahitaji msaada|ninahitaji msaada)$/;
 const SELF_HARM_SW = [
   /\b(?:nataka|ninataka|ningependa|nimeamua) kufa\b/,
@@ -173,12 +186,13 @@ function readSafetyDetailed(text) {
   const notAnEmergency = crisisPhrases.notAnEmergency(raw);
   if (!notAnEmergency && (IMMEDIATE.some(pattern => pattern.test(lower)) || circleAlertRequested(lower))) return { kind: "emergency", language: "en" };
   if (IMMEDIATE_SW.some(pattern => pattern.test(lower)) || circleAlertRequestedSw(lower)) return { kind: "emergency", language: "sw" };
+  if (SW_UNRESPONSIVE.test(lower) && !SW_CHILD.test(lower)) return { kind: "emergency", language: "sw" };
   if (ASK_FIRST.test(lower)) return { kind: "ask", language: "en" };
   if (ASK_FIRST_SW.test(lower)) return { kind: "ask", language: "sw" };
   // "I took all my pills" (most often just taking medicine) gets a calm check-in, not an alert.
   if (crisisPhrases.mightBeOverdose(raw)) return { kind: "ask", language: "en" };
   // Fainting, a face drooping, slurred speech, one side weak, shaking and sweating, a low sugar: the calm urgent reply with the number to call and the offer to alert the circle.
-  if (crisisPhrases.medicalUrgent(raw)) return { kind: "ask", language: "en" };
+  if (crisisPhrases.medicalUrgent(raw)) return { kind: "ask", language: CARE_SWAHILI.test(lower) || SWAHILI_WORDS.test(lower) ? "sw" : "en" };
   const weapon = crisisPhrases.mentionsMeans(raw) ? { weapon: true } : {};
   if (SELF_HARM.some(pattern => pattern.test(raw))) return { kind: "self_harm", language: "en", ...weapon };
   if (SELF_HARM_SW.some(pattern => pattern.test(lower))) return { kind: "self_harm", language: "sw", ...weapon };
@@ -204,6 +218,8 @@ function readSafetyDetailed(text) {
   if (crisisPhrases.scam(raw)) return { kind: "scam", language: "en" };
   // "remember that my mpesa pin is 4821": never saved as a note or a fact, and never read back.
   if (crisisPhrases.storesSecret(raw)) return { kind: "secret", language: "en" };
+  // Last, so that a person in trouble is always answered first: a sick animal gets the honest "no veterinary guide here, call a vet", never a person's first aid.
+  if (livestock.isLivestockHealth(raw)) return { kind: "livestock", language: livestock.isSwahili(raw) ? "sw" : "en" };
   return null;
 }
 // "emergency" | "ask" | "self_harm" | null
@@ -301,6 +317,7 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
       : t(language, "safety.askNoCircle", { number });
   }
   if (kind === "scam") return t(language, "safety.scam");
+  if (kind === "livestock") return t(language, "safety.livestock");
   if (kind === "secret") return t(language, "safety.secretRefused");
   // The offer to alert the circle is always the last sentence, as a question (see offer.js).
   const circleOffer = members.length ? t(language, "safety.selfHarmCircle", { names: members.map(member => member.otherName).join(", ") }) : "";

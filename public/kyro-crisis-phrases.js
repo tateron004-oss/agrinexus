@@ -144,7 +144,31 @@
     /\b(?:sudden(?:ly)? (?:lost|loss of|can't see|cannot see|went blind)|i (?:suddenly )?can'?t see (?:anything|out of)|lost my (?:sight|vision))\b/,
     /\b(?:sweating|sweaty) and (?:shaking|shaky|trembling|confused)\b|\b(?:shaking|shaky|trembling) and (?:sweating|sweaty|confused)\b/,
     /\bmy (?:blood )?sugar is (?:very )?low\b|\bi think my sugar is low\b|\bsugar (?:crash|drop)(?:ped)?\b/,
-    /\bseizure|\bconvulsing\b/
+    /\bseizure|\bconvulsing\b/,
+    // Found by the user-journey sweep (these were answered as chat, a lesson offer or the weather). Said about the speaker or about someone beside them.
+    // Chest pain WITH sweating, breathlessness, an arm or jaw, nausea or feeling faint (chest pain alone is left to normal handling).
+    /\bchest\b[^.!?]{0,40}\b(?:pain\w*|hurts?|hurting|aching|tight\w*|pressure|heavy|crush\w*|squeez\w*)\b[^.!?]{0,80}\b(?:sweat\w*|short(?:ness)? of breath|breathless\w*|(?:difficult\w*|trouble|hard|struggl\w*) (?:to |in )?breath\w*|can'?t breathe|cannot breathe|left arm|jaw|nausea|faint\w*|dizz\w*)\b/,
+    /\b(?:sweat\w*|short(?:ness)? of breath|breathless\w*|left arm|jaw)\b[^.!?]{0,60}\bchest\b[^.!?]{0,25}\b(?:pain\w*|hurts?|tight\w*|pressure|heavy|squeez\w*)\b/,
+    /\bpains? (?:in|across|around) (?:my |his |her |the )?chest\b[^.!?]{0,80}\b(?:sweat\w*|short(?:ness)? of breath|breathless\w*|(?:difficult\w*|trouble|hard|struggl\w*) (?:to |in )?breath\w*|can'?t breathe|cannot breathe|left arm|jaw|nausea|faint\w*)\b/,
+    // Stroke signs about someone else, or sudden loss of speech, strength or sight.
+    /\b(?:suddenly|sudden|all of a sudden)\b[^.!?]{0,25}\b(?:can'?t|cannot|unable to|not able to|struggl\w* to) (?:speak|talk|walk|stand|move|see|understand)\b/,
+    /\b(?:can'?t|cannot|unable to|not able to|struggl\w* to) (?:speak|talk)(?: properly| well| clearly| normally)?\b[^.!?]{0,40}\b(?:suddenly|sudden|one side|face|arm|leg)\b/,
+    /\b(?:one|his|her) (?:arm|leg|hand|side)\b[^.!?]{0,25}\b(?:weak|numb|limp|droop\w*|paralys\w*|won'?t move|can'?t move|cannot move)\b/,
+    // A person with diabetes who is drowsy, confused or hard to wake, or whose breath smells of fruit.
+    /\bdiabet\w*\b[^.!?]{0,80}\b(?:drowsy|very sleepy|too sleepy|confused|unconscious|unresponsive|(?:won'?t|will not|cannot|can'?t) (?:be )?(?:wake|woken|waken)|not (?:responding|waking)|breathing fast|fruity)\b/,
+    /\b(?:blood sugar|my sugar|his sugar|her sugar|sugar level)\b[^.!?]{0,60}\b(?:drowsy|unconscious|unresponsive|(?:won'?t|will not|cannot|can'?t) (?:be )?(?:wake|woken|waken)|not (?:responding|waking))\b/,
+    /\bbreath\b[^.!?]{0,20}\b(?:smells?|smelling|smelt|smell)\b[^.!?]{0,15}\b(?:fruit\w*|sweet|acetone|nail polish|pear drops)\b|\bfruity (?:smelling )?breath\b|\bbreath (?:is )?fruity\b/,
+    // Kiswahili: chest pain with sweat or hard breathing, stroke signs, a drowsy person with diabetes, fruity breath, shaking with sweat.
+    /\b(?:kifua|moyo)\b[^.!?]{0,30}\b(?:kinauma|kinaniuma|kinamuuma|unauma|kinabana|kizito|kinakandamiza|maumivu|kinaumwa)\b[^.!?]{0,80}\b(?:jasho|kupumua kwa shida|napumua kwa shida|anapumua kwa shida|siwezi kupumua|hawezi kupumua|pumzi|mkono wa kushoto|kizunguzungu|kichefuchefu)\b/,
+    /\bmaumivu (?:ya|katika|kwenye) (?:kifua|moyo)\b[^.!?]{0,80}\b(?:jasho|kupumua kwa shida|napumua kwa shida|anapumua kwa shida|siwezi kupumua|hawezi kupumua|pumzi|mkono wa kushoto|kizunguzungu|kichefuchefu)\b/,
+    /\b(?:jasho|kupumua kwa shida|napumua kwa shida|anapumua kwa shida)\b[^.!?]{0,60}\b(?:kifua|moyo)\b[^.!?]{0,25}\b(?:kinauma|kinaniuma|kinamuuma|unauma|kinabana|kizito)\b/,
+    /\b(?:ana|amepata|anaonekana (?:kuwa )?na|nina|nimepata|ninahisi) kiharusi\b|\b(?:amepooza|nimepooza|amelemaa|nimelemaa)\b/,
+    /\b(?:hawezi|siwezi|anashindwa|ninashindwa|nashindwa) (?:tena )?(?:kuongea|kusema|kuzungumza|kutamka)\b|\b(?:anaongea|naongea|anasema|nasema|maneno) (?:kwa shida|vibaya|hayatoki|yamevurugika|yanakwama)\b|\bmaneno hayatoki\b|\bhasemi vizuri\b/,
+    /\buso\b[^.!?]{0,25}\b(?:umeinama|umepinda|umelegea|umeshuka|umepotoka|umevutika|umekufa ganzi)\b/,
+    /\b(?:mkono|mguu|upande)\b[^.!?]{0,25}\b(?:umelemaa|umepooza|umekufa ganzi|hauna nguvu|haufanyi kazi|hausogei|hausogezeki|umeishiwa nguvu)\b/,
+    /\b(?:kisukari|sukari)\b[^.!?]{0,80}\b(?:amelala sana|anasinzia|usingizi mwingi|amechanganyikiwa|nimechanganyikiwa|hajitambui|amezimia|hawezi kuamka|haamki|anapumua haraka|natetemeka|anatetemeka|natoka jasho|anatoka jasho|ametoka jasho)\b/,
+    /\bpumzi\b[^.!?]{0,20}\b(?:inanuka|inatoa harufu|ina harufu|yanuka)\b[^.!?]{0,15}\b(?:matunda|tunda|tamu)\b|\bharufu ya (?:matunda|tunda)\b[^.!?]{0,15}\bpumzi\b/,
+    /\b(?:natetemeka|anatetemeka)\b[^.!?]{0,25}\b(?:natoka jasho|anatoka jasho|nimechanganyikiwa|amechanganyikiwa)\b|\b(?:natoka jasho|anatoka jasho)\b[^.!?]{0,25}\b(?:natetemeka|anatetemeka)\b/
   ];
 
   // Scams aimed at people who are alone or elderly, and a PIN or password said out loud to be saved: Kyro answers with a plain "never share it", and never stores one.

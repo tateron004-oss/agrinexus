@@ -1,6 +1,8 @@
 "use strict";
 
 const { clean } = require("./parse.js");
+const { isLivestockHealth, animalNotPerson } = require("./livestock-health.js");
+const i18n = require("../i18n/index.js");
 
 // A farm knowledge library stored in the code itself: no lookup, no internet, nothing that can change under the farmer. Two kinds of guide:
 // SAFETY guides (chemicals, poisoning, snakebite, animal injuries, heat, machinery, fire, water, hygiene) and PRACTICE guides (storing grain,
@@ -54,12 +56,16 @@ function find(query) {
   const ranked = GUIDES.map(guide => ({ guide, points: score(guide, query) })).filter(item => item.points > 0).sort((a, b) => b.points - a.points);
   return ranked.length && (ranked.length === 1 || ranked[0].points > ranked[1].points) ? { guide: ranked[0].guide } : ranked.length ? { several: ranked.slice(0, 3).map(item => item.guide) } : null;
 }
+const renderFor = (guide, query) => guide.id === "animal-injury" && animalNotPerson(query) ? i18n.t("en", "safety.livestock") : render(guide);
 const render = guide => `${guide.title}. ${guide.text} ${guide.kind === "practice" ? "General farming guidance; check what suits your local conditions with your extension officer." : SAFETY_NOTE}`;
 
 async function handle(ctx) {
   const t = clean(ctx.text).replace(/[.!?]+$/g, ""); const lower = t.toLowerCase();
   let m;
 
+  // A poisoned or snake-bitten ANIMAL is never answered with the first aid for people below ("my cow drank pesticide"): there is no veterinary guide, so say so. (Other sick-animal sentences are answered by the shared
+  // safety reader before they get here; the guide lookups below hand the same reply back instead of the people-first-aid guide for animals, see renderFor.)
+  if (isLivestockHealth(t) && /\b(?:pesticide|poison\w*|chemical|insecticide|herbicide|weedkiller|snake|viper|cobra|puff adder|mamba)\b/i.test(t)) return i18n.t("en", "safety.livestock");
   // Someone is hurt or poisoned NOW: give the first response at once, before anything else.
   if (/\b(?:swallowed|drank|drunk|ingested|splashed|sprayed in|got .{0,20} in (?:his|her|my|their) (?:eyes?|mouth))\b.{0,40}\b(?:pesticide|poison|chemical|insecticide|herbicide|weedkiller)\b/i.test(t) || /\b(?:pesticide|insecticide|herbicide|chemical|poison)\b.{0,40}\b(?:poisoning|swallowed|in (?:his|her|my|their) (?:eyes?|mouth))\b/i.test(t)) return render(GUIDES.find(guide => guide.id === "pesticide-poisoning"));
   if (/\b(?:snake|viper|cobra|puff adder|mamba)\b.{0,30}\b(?:bit|bitten|bites|biting|bite)\b/i.test(t) || /\b(?:bitten|bit) by a (?:snake|viper|cobra|puff adder|mamba)\b/i.test(t)) return render(GUIDES.find(guide => guide.id === "snakebite"));
@@ -70,13 +76,13 @@ async function handle(ctx) {
   // "what should I do if a cow kicks someone": only answered when a guide clearly fits; otherwise it is an ordinary question for the AI.
   if ((m = /^(?:what|how) (?:should|do|can|must) (?:i|we|you) do (?:if|when|after|about|for)\s+(.+)$/i.exec(t))) {
     const found = find(m[1]);
-    return found?.guide && found.guide.kind === "emergency" ? render(found.guide) : null;
+    return found?.guide && found.guide.kind === "emergency" ? renderFor(found.guide, m[1]) : null;
   }
   if ((m = /^(?:(?:please )?(?:read|open|show|give me|tell me) (?:me )?(?:the |a )?)?(?:farm |safety )?guide (?:on|about|for|to)\s+(.+)$/i.exec(t)) || (m = /^guide\s*[:,-]\s*(.+)$/i.exec(t)) || (m = /^(?:farm )?safety\s*[:,-]\s*(.+)$/i.exec(t)) || (m = /^(?:first aid|first response) (?:for|after|if|when)\s+(.+)$/i.exec(t))) {
     const found = find(m[1]);
     if (!found) return `I don't have a guide on that. Say "list farm guides" to see what I keep, and ask your extension officer or a health worker about anything else.`;
     if (found.several) return `A few guides could fit: ${found.several.map(guide => guide.title).join("; ")}. Which one?`;
-    return render(found.guide);
+    return renderFor(found.guide, m[1]);
   }
   return null;
 }
