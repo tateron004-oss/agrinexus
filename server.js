@@ -10092,7 +10092,8 @@ function extractContactNameWithPhone(text = "", fallbackName = "") {
   const phone = extractPhoneNumberFromText(source);
   if (!phone) return contactDisplayName(fallbackName);
   const clean = normaliseSpoken(source).clean;
-  const beforePhone = clean.slice(0, clean.indexOf(clean.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""));
+  const beforePhone = clean.slice(0, clean.indexOf(clean.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""))
+    .replace(/^\s*(?:hifadhi|weka|andika|ongeza|kumbuka)\s+(?:namba|nambari|simu)(?:\s+ya)?\s+/i, "");
   // "Save John number" -> John; "Could you save Otieno's number as" -> Otieno; "Abeg save Otieno" -> Otieno; "Mama on" -> Mama; "text" (a message, not a name) -> no name
   const candidate = cleanContactName(beforePhone, { maxWords: 4 });
   return candidate ? contactDisplayName(candidate) : (cleanContactName(fallbackName, { maxWords: 4 }) ? contactDisplayName(cleanContactName(fallbackName, { maxWords: 4 })) : "");
