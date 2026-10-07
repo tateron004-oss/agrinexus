@@ -31,7 +31,7 @@
         <ol>
           <li>In Render, open the <b>nexus-genesis-certified</b> service, then <b>Environment</b>. Check these are set: <code>PHONE_PROVIDER=twilio</code>, <code>PUBLIC_BASE_URL=https://nexus-genesis-certified.onrender.com</code>, <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, <code>TWILIO_PHONE_NUMBER</code> (a voice-capable Twilio number), <code>PHONE_REALTIME_STREAMING_ENABLED=true</code>.</li>
           <li>In the Twilio console, open that number. Under <b>Voice</b>, set <b>A call comes in</b> to a Webhook, HTTP POST, <code>https://nexus-genesis-certified.onrender.com/api/voice/phone/incoming</code>, and the status callback to <code>…/api/voice/phone/call-status</code>.</li>
-          <li>In the Admin screen, open <b>Phone numbers for Kyro</b> and add <b>your own</b> mobile number, linked to your own account. Only listed numbers are answered as themselves; everyone else is screened and put through to you.</li>
+          <li>In the Admin screen, open <b>Phone numbers for Kyro</b> and add <b>your own</b> mobile number, linked to your own account. Only listed numbers are answered as themselves. A number that is not listed is told politely it is not authorized and the call ends; it only rings you if you have turned on <code>PHONE_SCREENING_ENABLED</code>.</li>
           <li>To let Kyro place calls, also set <code>NEXUS_CALLS_ENABLED=true</code>.</li>
           <li>Use <b>Send myself a test</b> on the Phone calls card: your phone should ring and speak a short message. Then phone Kyro's number from your listed phone. <b>Never test by dialling from a phone that is not on the list.</b></li>
         </ol>

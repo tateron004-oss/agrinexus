@@ -80,7 +80,15 @@ function describeCommunications(env = process.env, { ownPhone = "", adminEmail =
   const incomingOn = clean(env.PHONE_PROVIDER).toLowerCase() === "twilio";
   if (!incomingOn) phoneNotes.push("PHONE_PROVIDER is not twilio, so people cannot phone Kyro.");
   if (base) phoneNotes.push(`In the Twilio console, set the number's "A call comes in" webhook to ${base}/api/voice/phone/incoming (HTTP POST) and its status callback to ${base}/api/voice/phone/call-status.`);
-  phoneNotes.push(`${authorizedCallerCount} number${authorizedCallerCount === 1 ? " is" : "s are"} on the list of people who may phone Kyro as themselves; anyone else is screened and connected to the owner. Add yours under "Phone numbers for Kyro" in the Admin screen.`);
+  phoneNotes.push(`${authorizedCallerCount} number${authorizedCallerCount === 1 ? " is" : "s are"} on the list of people who may phone Kyro as themselves. Add a person's number, with their login email, under "Phone numbers for Kyro" in the Admin screen.`);
+  // What happens to a number that is NOT on the list depends on one setting (PHONE_SCREENING_ENABLED, off unless it is exactly "true"). Said as it is, so the owner is never surprised by a ring.
+  if (clean(env.PHONE_SCREENING_ENABLED) === "true") {
+    const cap = Number(env.PHONE_SCREENING_DAILY_BRIDGE_CAP);
+    const perDay = Number.isFinite(cap) && cap > 0 ? Math.min(cap, 50) : 5;
+    phoneNotes.push(`A number that is not on the list is asked who is calling and then put through to the owner's real phone, up to ${perDay} times a day. To stop any call ringing the owner, remove PHONE_SCREENING_ENABLED (or set it to false) in Render: such a caller is then told politely that the number is not authorized and the call ends.`);
+  } else {
+    phoneNotes.push("A number that is not on the list is told politely that it is not authorized and the call ends. Nothing rings the owner's phone (PHONE_SCREENING_ENABLED is off).");
+  }
   if (envEnabled("PHONE_REALTIME_STREAMING_ENABLED", env)) phoneNotes.push("Two-way voice conversation on the phone line is switched on."); else phoneNotes.push("PHONE_REALTIME_STREAMING_ENABLED is not true, so a caller is not connected to the live voice conversation.");
   const callChannel = describeTwilioChannel({ id: "calls", label: "Phone calls (Kyro calling out)", flag: callsFlag, extraMissing: [...(twilioFrom ? [] : ["TWILIO_FROM_NUMBER (or TWILIO_PHONE_NUMBER)"]), ...(base ? [] : ["PUBLIC_BASE_URL"])], from: twilioFrom, env, extraNotes: phoneNotes });
   channels.push({ ...callChannel, incoming: { on: incomingOn, authorizedCallers: authorizedCallerCount } });
