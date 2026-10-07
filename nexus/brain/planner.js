@@ -13,7 +13,7 @@ const { communityTurn } = require("../community/desk.js");
 const { feedbackTurn } = require("../quality/feedback.js");
 const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
-const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName } = require("../memory/contacts.js");
+const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
@@ -24,6 +24,7 @@ const { assessBloodPressure, invalidReadingReply } = require("../../server/provi
 const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
 const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js");
 const { contentGuardReply } = require("./content-guard.js");
+const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
@@ -146,7 +147,7 @@ class OpenEndedPlanner {
       if (!stated.length) return null;
       const replaced = []; const saved = [];
       for (const { kind, value } of stated) {
-        const result = await memory.saveProfileFact({ ...scope, kind, value, sourceText: command.text, conversationId: command.conversationId || null });
+        const result = await memory.saveProfileFact({ ...scope, kind, value, sourceText: command.spokenText || command.text, conversationId: command.conversationId || null });
         saved.push({ kind, value }); replaced.push(...(result?.replaced || []));
       }
       return answer(savedNotice(saved, replaced));
@@ -165,10 +166,12 @@ class OpenEndedPlanner {
       if (statement?.invalid) return answer(`I need ${statement.name}'s number with the country code, like +254712345678, so I can dial or text it.`);
       if (statement) {
         // A number written the Kenyan way ("0712345678") is saved as +254..., and said so: the same digits could be Ugandan or Tanzanian.
-        const { assumedKenya, ...contact } = statement;
+        const { assumedKenya, assumedCountry, ...contact } = statement;
         const saved = await memory.saveContact({ ...scope, ...contact });
         if (saved.full) return answer(`You have too many saved contacts to add another. Say "forget" one first, or ask "who are my contacts?"`);
-        return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}.${assumedKenya ? ` I took it as a Kenyan number. For another country, say it with the country code, like "save ${statement.name}'s number as +256712345678".` : ""} Say "forget ${statement.name}" any time, or "who are my contacts?"`);
+        // The number is said back so a wrong digit is heard; a number written the local way is turned into +country and that is said too.
+        const tookAs = assumedKenya ? "Kenyan" : assumedCountry === "Nigeria" ? "Nigerian" : "";
+        return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}.${tookAs ? ` I took it as a ${tookAs} number. For another country, say it with the country code, like "save ${statement.name}'s number as +256712345678".` : ""} Say "forget ${statement.name}" any time, or "who are my contacts?"`);
       }
       const request = extractContactRequest(command.text);
       if (!request) return null;
@@ -195,11 +198,38 @@ class OpenEndedPlanner {
     const memory = this.memory;
     if (!memory?.listContacts) return null;
     const parsed = parseNamedContactRequest(command.text);
-    if (!parsed) return null;
+    const loose = parsed ? null : parseLooseMessageRequest(command.text);
+    if (!parsed && !loose) return null;
     try {
       const contacts = (await memory.listContacts({ tenantId: command.tenantId, userId: command.actorId })).map(row => row.content);
-      const found = resolveContact(contacts, parsed.name);
       const clarify = question => ({ clarification: question });
+      if (loose) {
+        // "Text John I am late" / "tell mama I am coming" / "mtumie Otieno ujumbe kwamba niko njiani": no "saying", so where the name ends is found by asking which of the
+        // first one to three words is a person saved. Only a saved person (or a family word like "mama") is taken for a recipient, so "text me the price" is never this.
+        const sw = loose.swahili;
+        let chosen = null; let ambiguous = null;
+        for (let take = Math.min(3, loose.words.length); take >= 1 && !chosen && !ambiguous; take -= 1) {
+          const candidate = loose.words.slice(0, take).join(" ");
+          if (cleanContactName(candidate).split(" ").length !== take) continue; // "Otieno the" is one name and a spare word, not a two-word name
+          const found = resolveContact(contacts, candidate);
+          if (found?.contact) chosen = { contact: found.contact, take };
+          else if (found?.ambiguous) ambiguous = { list: found.ambiguous, take };
+        }
+        if (ambiguous) return clarify(sw ? `Ni yupi: ${ambiguous.list.map(contact => contact.name).join(" au ")}?` : `Which one: ${ambiguous.list.map(contact => contact.name).join(" or ")}?`);
+        if (!chosen) {
+          const first = cleanContactName(loose.words[0] || "");
+          if (first && FAMILY_WORDS.test(first)) return clarify(sw ? `Sina namba ya ${first}. Sema "hifadhi namba ya ${first} kama +254712345678" kwanza, au nipe namba yake.` : `I don't have a contact called ${first}. Say "save ${first}'s number as +254712345678" first, or give me their number.`);
+          return null;
+        }
+        const wantsEmail = loose.channel === "email";
+        const value = wantsEmail ? chosen.contact.email : chosen.contact.phone;
+        if (!value) return clarify(wantsEmail ? `I don't have an email for ${chosen.contact.name}. Say "save ${chosen.contact.name}'s email as name@example.com" first.`
+          : `I don't have a phone number for ${chosen.contact.name}. Say "save ${chosen.contact.name}'s number as +254712345678" first.`);
+        const message = loose.words.slice(chosen.take).join(" ").replace(/^(?:ujumbe|text|sms|message)\s+/i, "").replace(/^(?:kwamba|ya kwamba|wa kwamba|that|saying)\s+/i, "").trim();
+        if (!message) return clarify(sw ? `Ujumbe kwa ${chosen.contact.name} unasema nini?` : `What should the message to ${chosen.contact.name} say?`);
+        return { text: `${loose.channel === "email" ? "email" : loose.channel === "whatsapp" ? "whatsapp" : "text"} ${value} saying ${message}`, contactName: chosen.contact.name };
+      }
+      const found = resolveContact(contacts, parsed.name);
       if (found?.ambiguous) return clarify(`Which one: ${found.ambiguous.map(contact => contact.name).join(" or ")}?`);
       if (!found?.contact) return clarify(`I don't have a contact called ${parsed.name}. Say "save ${parsed.name}'s number as +254712345678" first, or give me their number.`);
       const value = parsed.wantsEmail ? found.contact.email : found.contact.phone;
@@ -209,20 +239,37 @@ class OpenEndedPlanner {
     } catch { return null; }
   }
 
-  async plan({ command, context, priorTask = null, conversationHistory = [] }) {
+  // The plan keeps the words the person actually said as its goal (the readers saw the cleaned request; see speech/normalise.js).
+  async plan(args) {
+    const plan = await this.planCleaned(args);
+    const said = normaliseSpoken(args?.command?.text);
+    if (plan && typeof plan === "object" && said.changed && plan.goal === said.text) return Object.freeze({ ...plan, goal: said.clean });
+    return plan;
+  }
+
+  async planCleaned({ command, context, priorTask = null, conversationHistory = [] }) {
+    // The one front door for what a person says (see speech/normalise.js): wake words, fillers, polite wrappers, trailing thanks, stutters, rambling lead-ins and
+    // invisible characters are cleaned away before the readers below see the request. The safety readers (the companion and the content guard) get the person's own
+    // words (invisible characters removed) FIRST and the cleaned request second, so nothing a person said is ever lost to the cleaning; the AI model is given their own words too.
+    const spoken = normaliseSpoken(command?.text, { language: command?.locale });
+    const saidText = spoken.clean;
+    if (command && spoken.text && spoken.text !== String(command.text || "")) command = { ...command, text: spoken.text, spokenText: saidText };
+    const safetyTexts = [...new Set([saidText, command?.text].filter(Boolean))];
     // Emergencies and crisis first, before anything else: then a person's check-ins and trusted circle (see companion/). Nothing else may
     // answer "I need help now" or "I want to die" before this does.
     if (this.companion?.handle || this.companion?.turn) {
-      // handle() also says when an emergency alert went out and a location should follow (plan.emergency, read by the phone); a companion that only has turn() gives just words.
-      // A plain "yes" to Kyro's own offer to alert the trusted circle ("say \"alert my circle\" and I'll message ...") IS that request: said so, the circle is alerted.
-      const companionCommand = alertOfferAccepted(command.text, conversationHistory) ? { ...command, text: "alert my circle" } : command;
-      const companionResult = this.companion.handle
-        ? await this.companion.handle({ command: companionCommand, context }).catch(() => null)
-        : await this.companion.turn({ command: companionCommand, context }).then(words => (words ? { response: words } : null)).catch(() => null);
-      if (companionResult?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionResult.response, ...(companionResult.emergency ? { emergency: Object.freeze({ ...companionResult.emergency }) } : {}), sourceRequired: false, planningAttempts: 0 });
+      for (const safetyText of safetyTexts) {
+        // handle() also says when an emergency alert went out and a location should follow (plan.emergency, read by the phone); a companion that only has turn() gives just words.
+        // A plain "yes" to Kyro's own offer to alert the trusted circle ("say \"alert my circle\" and I'll message ...") IS that request: said so, the circle is alerted.
+        const companionCommand = alertOfferAccepted(safetyText, conversationHistory) ? { ...command, text: "alert my circle" } : { ...command, text: safetyText };
+        const companionResult = this.companion.handle
+          ? await this.companion.handle({ command: companionCommand, context }).catch(() => null)
+          : await this.companion.turn({ command: companionCommand, context }).then(words => (words ? { response: words } : null)).catch(() => null);
+        if (companionResult?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: companionResult.response, ...(companionResult.emergency ? { emergency: Object.freeze({ ...companionResult.emergency }) } : {}), sourceRequired: false, planningAttempts: 0 });
+      }
     }
     // Requests for sexual or explicit material, betting tips, and tricks to hack, fake or scam are answered plainly with what Kyro can do instead, before any tool or AI model sees them (see content-guard.js).
-    const guarded = contentGuardReply(command.text);
+    const guarded = safetyTexts.map(contentGuardReply).find(Boolean);
     if (guarded) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: guarded.reply, sourceRequired: false });
     // The health worker's record-keeping (patients, visits, immunisations, pregnancies, follow-ups, clinic stock, referral letters, monthly reports:
     // see healthwork/) comes before the farm toolkit; each answers only words plainly for it, and an open guided question is answered first.
@@ -288,7 +335,7 @@ class OpenEndedPlanner {
       const added = await personalTurn({ text: swahiliCalendar.english, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
       if (added) return say(/^Added to your calendar/.test(added) ? swahiliCalendar.replySw : added);
     }
-    const personal = await personalTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
+    const personal = await personalTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, history: conversationHistory });
     if (personal) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: personal, sourceRequired: false, planningAttempts: 0 });
     // What Kyro has learned about this person (see memory/profile-facts.js) is used wherever it helps: their first name in greetings,
     // their town for a bare "weather" and for local farming searches, their language for direct answers, and as context for the planner.
@@ -343,11 +390,11 @@ class OpenEndedPlanner {
     }
     // Jokes and riddles are not web searches ("Tell me a joke" returned a stitched-together search snippet).
     if (isLightChatRequest(command.text) && typeof this.model.respond === "function") {
-      const answer = await this.model.respond({ goal: command.text, locale, tenantId: command.tenantId,
+      const answer = await this.model.respond({ goal: command.spokenText || command.text, locale, tenantId: command.tenantId,
         interactionProfile: createInteractionProfile({ locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
         conversationHistory: conversationHistory.slice(-24).map(safeTurn), memories: known.memories, capabilities: [] }).catch(() => null);
       if (typeof answer === "string" && answer.trim()) {
-        return Object.freeze({ goal: command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
           response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: 0 });
       }
     }
@@ -443,7 +490,7 @@ class OpenEndedPlanner {
     if (placeCall) return Object.freeze({ ...withContactName(placeCall, named?.contactName), planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
     if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
-    const request = { schema: "nexus.planning-request.v1", goal: command.text, locale: interactionProfile.locale,
+    const request = { schema: "nexus.planning-request.v1", goal: command.spokenText || command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile, tenantId: command.tenantId,
       conversationHistory: conversationHistory.slice(-24).map(safeTurn),
@@ -459,11 +506,11 @@ class OpenEndedPlanner {
     // That is not an error for the person asking: answer it directly, without tools and without claiming any
     // action or live data (see OpenAiPlanningModel.respond). Only if that also fails is the original error raised.
     if (typeof this.model.respond === "function") {
-      const answer = await this.model.respond({ goal: command.text, locale: interactionProfile.locale, interactionProfile, tenantId: command.tenantId,
+      const answer = await this.model.respond({ goal: command.spokenText || command.text, locale: interactionProfile.locale, interactionProfile, tenantId: command.tenantId,
         conversationHistory: request.conversationHistory, memories: request.memories,
         capabilities: catalog.applications.map(app => app.applicationId) }).catch(() => null);
       if (typeof answer === "string" && answer.trim()) {
-        return Object.freeze({ goal: command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
           response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: this.maxRepairAttempts + 1 });
       }
     }
@@ -1154,11 +1201,16 @@ function completeCommunicationPlan(text, catalog) {
 // starts like a send but lacks either gets a question, never a guess.
 const SEND_OPENER = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(?:(text|sms|whatsapp|whats app|e-?mail)\b|send\s+(?:an?\s+|the\s+)?(text(?:\s+message)?|sms|whatsapp(?:\s+message)?|e-?mail|message)\b)/i;
 const SEND_MESSAGE_CLAUSE = /(?:\b(?:saying|says|that says|to say|with the (?:message|text))\b[:,]?|:)\s*["“']?(.+?)["”']?\s*$/is;
+// A number said the way people say it at home ("0712 345 678", "08031234567") becomes +254... / +234... before the request is read, so the person is shown the full number to confirm.
+function localNumbersToInternational(goal) {
+  if (/\+\d/.test(goal)) return goal;
+  return goal.replace(/(?<![\d+])\d[\d\s().-]{6,16}\d(?![\d])/g, run => localPhoneToE164(run)?.phone || run);
+}
 const SEND_PHONE = /\+\d[\d\s().-]{6,18}\d/;
 const SEND_EMAIL = /[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+/;
 
 function sendMessagePlan(text, catalog) {
-  const goal = String(text || "").trim();
+  const goal = localNumbersToInternational(String(text || "").trim());
   const opener = SEND_OPENER.exec(goal);
   if (!opener) return null;
   if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
@@ -1190,7 +1242,7 @@ const CALL_MESSAGE_CLAUSE = /(?:\b(?:and|then)?\s*(?:say|saying|says|tell (?:the
 const PHONE_LIKE = /\b\d[\d\s().-]{6,18}\d\b/;
 
 function callPlan(text, catalog) {
-  const goal = String(text || "").trim();
+  const goal = localNumbersToInternational(String(text || "").trim());
   if (!CALL_OPENER.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "communications.send") ||
       !catalog.applications.some(app => app.applicationId === "communications")) return null;
@@ -1382,6 +1434,32 @@ function parseNamedContactRequest(text) {
   const name = contactName(match[3]);
   if (!name) return null;
   return { name, before: `${match[1]}${match[2]} `, rest: match[4], wantsEmail: /e-?mail/i.test(match[2]) };
+}
+// A message to a saved person with nothing between the name and the words: "Text John I am late", "WhatsApp Mama the meeting is at 3", "tell mama I am coming" (said to a
+// contact, never a health question), "mtumie Otieno ujumbe kwamba niko njiani", "tuma text kwa Otieno niko njiani". { channel, words, swahili } or null; the caller
+// decides where the name ends by looking at who is saved. A number or an email address as the recipient is left to the plain send request.
+const FAMILY_WORDS = /^(?:mama|mum|mummy|mom|mother|dad|daddy|baba|father|wife|husband|brother|sister|son|daughter|boss|auntie|aunt|uncle|grandma|grandmother|grandpa|grandfather|bibi|babu|shangazi|mjomba|dada|kaka|rafiki|mke|mume|mwanangu)$/i;
+const LOOSE_MESSAGE_REQUEST = [
+  [/^(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*(text|sms|whats ?app|e-?mail|message)\s+(?:to\s+)?(.+)$/is, 1, false],
+  [/^(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*send\s+(?:an?\s+|the\s+)?(text|sms|whats ?app|e-?mail|message)(?:\s+message)?\s+to\s+(.+)$/is, 1, false],
+  [/^(?:(?:please|kyro|nexus|can you|could you|would you)[, ]+)*tell\s+(?!me\b|us\b|you\b|them\b|him\b|her\b|everyone\b|people\b|anyone\b)(.+)$/is, 0, false],
+  [/^(?:mwambie|niambie|mwambieni)\s+(.+)$/is, 0, true],
+  [/^(?:mtumie|nitumie|mtumieni)\s+(.+)$/is, 0, true],
+  [/^tuma\s+(?:text|sms|ujumbe|message)\s+kwa\s+(.+)$/is, 0, true]
+];
+function parseLooseMessageRequest(text) {
+  const t = String(text || "").trim();
+  if (!t || /[\d@]/.test(t.split(/\s+/).slice(0, 2).join(" "))) return null;
+  for (const [pattern, channelGroup, swahili] of LOOSE_MESSAGE_REQUEST) {
+    const m = pattern.exec(t);
+    if (!m) continue;
+    const verb = channelGroup ? m[channelGroup].toLowerCase().replace(/\s+/g, "") : "text";
+    const rest = String(m[channelGroup ? 2 : 1] || "").trim();
+    const words = rest.split(/\s+/).filter(Boolean);
+    if (words.length < 1 || /^[\d+@]/.test(words[0])) return null;
+    return { channel: /whatsapp/.test(verb) ? "whatsapp" : /e-?mail/.test(verb) ? "email" : "sms", words, swahili };
+  }
+  return null;
 }
 function withContactName(plan, name) {
   if (!name || !plan?.steps?.length) return plan;

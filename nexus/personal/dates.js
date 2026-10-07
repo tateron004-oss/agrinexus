@@ -95,6 +95,22 @@ function extractTime(text) {
       return { time: `${pad(hour)}:${pad(minute)}`, text: `${source.slice(0, clock.index)} ${source.slice(clock.index + clock[0].length)}` };
     }
   }
+  // "at 10 in the morning", "at ten in the morning", "8 in the evening", "at nine at night": the part of the day says which hour is meant.
+  const HOUR_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
+  const partOfDay = /(?:\bat\s+|@\s*|\b)(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?::([0-5]\d))?\s*(?:o'?clock\s+)?(?:in the |in |at |this )(morning|afternoon|evening|night)\b/i.exec(source);
+  if (partOfDay) {
+    const hour = HOUR_WORDS[partOfDay[1].toLowerCase()] || Number(partOfDay[1]);
+    const minute = partOfDay[2] === undefined ? 0 : Number(partOfDay[2]);
+    const part = partOfDay[3].toLowerCase();
+    let hour24 = null;
+    if (hour >= 1 && hour <= 12) {
+      if (part === "morning") hour24 = hour === 12 ? null : hour;
+      else if (part === "afternoon") hour24 = hour === 12 ? 12 : hour + 12;
+      else if (part === "evening") hour24 = hour === 12 ? null : hour + 12;
+      else hour24 = hour === 12 ? 0 : hour >= 6 ? hour + 12 : hour; // night: 8 at night is 20:00, 1 at night is 01:00
+    }
+    if (hour24 !== null && hour24 < 24) return { time: `${pad(hour24)}:${pad(minute)}`, text: `${source.slice(0, partOfDay.index)} ${source.slice(partOfDay.index + partOfDay[0].length)}` };
+  }
   const twentyFour = /\bat\s+([01]?\d|2[0-3]):([0-5]\d)\b/i.exec(source);
   if (twentyFour) return { time: `${pad(twentyFour[1])}:${twentyFour[2]}`, text: `${source.slice(0, twentyFour.index)} ${source.slice(twentyFour.index + twentyFour[0].length)}` };
   // "at 10", "at 3": no am/pm said. 7 to 11 is the morning, 12 is noon and 1 to 6 is the afternoon (the reply always says the time, so a wrong guess is heard).

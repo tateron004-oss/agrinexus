@@ -33,7 +33,8 @@ const WORD = "[A-Za-z][A-Za-z'’-]{1,24}";
 function properName(raw, banned) {
   const words = clean(raw).replace(/[.!,;:]+$/, "").split(" ").filter(Boolean);
   if (!words.length || words.length > 2) return "";
-  if (words.some(word => !new RegExp(`^${WORD}$`).test(word) || banned.has(word.toLowerCase()))) return "";
+  // any alphabet, with its accents and combining marks: "Adébáyọ̀ Ọláwálé", "Wanjiku Mũthoni", "Ɗanjuma"
+  if (words.some(word => !/^[\p{L}\p{M}][\p{L}\p{M}'’-]{1,24}$/u.test(word) || banned.has(word.toLowerCase()))) return "";
   return titleCase(words.join(" "));
 }
 
