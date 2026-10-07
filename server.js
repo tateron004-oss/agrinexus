@@ -63,6 +63,12 @@ const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
 const teamManagement = require("./server/teamManagement.js");
 const businessSpaces = require("./server/businessSpaces.js");
+const businessSender = require("./server/businessSender.js");
+const senderOverride = require("./server/providers/senderOverride.js");
+// What the current request sends as. In the default space this is process.env itself; inside a business it is a copy carrying that business's own numbers and settings (and none of the platform's).
+// The Twilio and email providers apply the same swap themselves (server/providers/senderOverride.js), so a call that was handed process.env still sends as the right business.
+const providerEnv = (base = process.env) => senderOverride.resolve(base);
+senderOverride.setResolver(base => businessSender.businessSenderEnv(base, businessSpaces.currentContext()));
 const communicationsSetup = require("./server/providers/communicationsStatus.js");
 const twilioProvider = require("./server/providers/twilioProvider.js");
 const emailProvider = require("./server/providers/emailProvider.js");
@@ -3654,6 +3660,7 @@ function readBody(req) {
 }
 
 function readRawBody(req, maxBytes = 2_000_000) {
+  if (typeof req.bufferedBodyText === "string") return Promise.resolve(req.bufferedBodyText);
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -8595,7 +8602,7 @@ function runtimeProviders(db) {
         && mode === "twilio"
         && Boolean(process.env.TWILIO_ACCOUNT_SID)
         && Boolean(process.env.TWILIO_AUTH_TOKEN)
-        && Boolean(process.env.TWILIO_PHONE_NUMBER)
+        && Boolean(providerEnv().TWILIO_PHONE_NUMBER)
         && Boolean(process.env.PUBLIC_BASE_URL);
       const isTwilioMessaging = ["sms-delivery", "whatsapp-delivery"].includes(provider.id) && mode === "twilio";
       const hasTwilioMessaging = isTwilioMessaging && hasTwilioMessagingCore();
@@ -9738,11 +9745,11 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
 }
 
 function hasTwilioMessagingCore() {
-  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && providerEnv().TWILIO_PHONE_NUMBER);
 }
 
 function hasTwilioVoiceCore() {
-  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER && process.env.PUBLIC_BASE_URL);
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && providerEnv().TWILIO_PHONE_NUMBER && process.env.PUBLIC_BASE_URL);
 }
 
 function normalizeTwilioAddress(channel, value) {
@@ -10331,18 +10338,18 @@ function outboundCallRecipientForPurpose(purpose = "", body = {}) {
   const direct = normalizePhoneNumber(body.to || body.phone || body.recipientPhone || body.callbackNumber);
   if (direct) return direct;
   if (/(buyer|seller|trade|crop|order|delivery)/.test(lower)) {
-    return normalizePhoneNumber(process.env.TRADE_BUYER_PHONE || process.env.BUYER_PHONE || process.env.DEMO_CALL_TO);
+    return normalizePhoneNumber(providerEnv().TRADE_BUYER_PHONE || providerEnv().BUYER_PHONE || providerEnv().DEMO_CALL_TO);
   }
   if (/(health|telehealth|doctor|nurse|provider|clinic|care|patient|emergency)/.test(lower)) {
-    return normalizePhoneNumber(process.env.TELEHEALTH_PROVIDER_PHONE || process.env.HEALTH_PROVIDER_PHONE || process.env.DEMO_CALL_TO);
+    return normalizePhoneNumber(providerEnv().TELEHEALTH_PROVIDER_PHONE || providerEnv().HEALTH_PROVIDER_PHONE || providerEnv().DEMO_CALL_TO);
   }
   if (/(work|job|recruiter|workforce|employer)/.test(lower)) {
-    return normalizePhoneNumber(process.env.WORKFORCE_RECRUITER_PHONE || process.env.RECRUITER_PHONE || process.env.DEMO_CALL_TO);
+    return normalizePhoneNumber(providerEnv().WORKFORCE_RECRUITER_PHONE || providerEnv().RECRUITER_PHONE || providerEnv().DEMO_CALL_TO);
   }
   if (/(learning|course|teacher|instructor|training)/.test(lower)) {
-    return normalizePhoneNumber(process.env.LEARNING_SUPPORT_PHONE || process.env.DEMO_CALL_TO);
+    return normalizePhoneNumber(providerEnv().LEARNING_SUPPORT_PHONE || providerEnv().DEMO_CALL_TO);
   }
-  return normalizePhoneNumber(process.env.DEMO_CALL_TO || process.env.OUTBOUND_CALL_TO);
+  return normalizePhoneNumber(providerEnv().DEMO_CALL_TO || providerEnv().OUTBOUND_CALL_TO);
 }
 
 function twilioRecipientForProvider(providerId, body = {}) {
@@ -10350,18 +10357,18 @@ function twilioRecipientForProvider(providerId, body = {}) {
     return body.recipientWhatsapp
       || body.whatsappTo
       || body.to
-      || process.env.TRADE_BUYER_WHATSAPP_TO
-      || process.env.DEMO_WHATSAPP_TO
-      || process.env.WHATSAPP_TEST_TO
+      || providerEnv().TRADE_BUYER_WHATSAPP_TO
+      || providerEnv().DEMO_WHATSAPP_TO
+      || providerEnv().WHATSAPP_TEST_TO
       || "";
   }
   if (providerId === "sms-delivery") {
     return body.recipientPhone
       || body.smsTo
       || body.to
-      || process.env.TRADE_BUYER_SMS_TO
-      || process.env.DEMO_SMS_TO
-      || process.env.SMS_TEST_TO
+      || providerEnv().TRADE_BUYER_SMS_TO
+      || providerEnv().DEMO_SMS_TO
+      || providerEnv().SMS_TEST_TO
       || "";
   }
   return "";
@@ -10369,9 +10376,9 @@ function twilioRecipientForProvider(providerId, body = {}) {
 
 function twilioFromForProvider(providerId) {
   if (providerId === "whatsapp-delivery") {
-    return process.env.TWILIO_WHATSAPP_FROM || normalizeTwilioAddress("WhatsApp", process.env.TWILIO_PHONE_NUMBER);
+    return providerEnv().TWILIO_WHATSAPP_FROM || normalizeTwilioAddress("WhatsApp", providerEnv().TWILIO_PHONE_NUMBER);
   }
-  return process.env.TWILIO_SMS_FROM || process.env.TWILIO_PHONE_NUMBER || "";
+  return providerEnv().TWILIO_SMS_FROM || providerEnv().TWILIO_PHONE_NUMBER || "";
 }
 
 // Found live (communications/notifications audit): unlike server/providers/communicationsBridgeProvider.js's
@@ -10388,7 +10395,7 @@ async function sendTwilioMessage({ providerId, channel, to, text }) {
   const required = [
     ["TWILIO_ACCOUNT_SID", process.env.TWILIO_ACCOUNT_SID],
     ["TWILIO_AUTH_TOKEN", process.env.TWILIO_AUTH_TOKEN],
-    ["TWILIO_PHONE_NUMBER", process.env.TWILIO_PHONE_NUMBER],
+    ["TWILIO_PHONE_NUMBER", providerEnv().TWILIO_PHONE_NUMBER],
     [providerId === "whatsapp-delivery" ? "TRADE_BUYER_WHATSAPP_TO or DEMO_WHATSAPP_TO" : "TRADE_BUYER_SMS_TO or DEMO_SMS_TO", to]
   ];
   const missing = required.filter(([, value]) => !value).map(([key]) => key);
@@ -10428,7 +10435,7 @@ async function startTwilioOutboundCall({ to, message, context = "AgriNexus outbo
   const missing = [
     ["TWILIO_ACCOUNT_SID", process.env.TWILIO_ACCOUNT_SID],
     ["TWILIO_AUTH_TOKEN", process.env.TWILIO_AUTH_TOKEN],
-    ["TWILIO_PHONE_NUMBER", process.env.TWILIO_PHONE_NUMBER],
+    ["TWILIO_PHONE_NUMBER", providerEnv().TWILIO_PHONE_NUMBER],
     ["PUBLIC_BASE_URL", process.env.PUBLIC_BASE_URL],
     ["destination phone number", recipient]
   ].filter(([, value]) => !value).map(([key]) => key);
@@ -10436,7 +10443,7 @@ async function startTwilioOutboundCall({ to, message, context = "AgriNexus outbo
   const base = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
   const twimlUrl = `${base}/api/voice/phone/outbound-twiml?message=${encodeURIComponent(String(message || "").slice(0, 500))}`;
   const form = new URLSearchParams({
-    From: process.env.TWILIO_PHONE_NUMBER,
+    From: providerEnv().TWILIO_PHONE_NUMBER,
     To: recipient,
     Url: twimlUrl,
     Method: "POST",
@@ -10468,7 +10475,7 @@ async function startTwilioOutboundCall({ to, message, context = "AgriNexus outbo
       sid: payload.sid || "",
       callStatus: payload.status || "",
       to: recipient,
-      from: process.env.TWILIO_PHONE_NUMBER,
+      from: providerEnv().TWILIO_PHONE_NUMBER,
       twimlUrl,
       context,
       error: payload.message || payload.error_message || ""
@@ -11632,7 +11639,7 @@ async function dispatchProviderWebhook(db, event) {
   if (runtime.mode === "openai" && process.env.OPENAI_API_KEY) {
     return { attempted: false, ok: true, status: "openai-direct-ready" };
   }
-  if (event.providerId === "phone-voice" && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+  if (event.providerId === "phone-voice" && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && providerEnv().TWILIO_PHONE_NUMBER) {
     return { attempted: false, ok: true, status: "twilio-webhook-ready" };
   }
   if (["sms-delivery", "whatsapp-delivery"].includes(event.providerId) && hasTwilioMessagingCore()) {
@@ -12347,14 +12354,18 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
     platformFeeAmount,
     sellerNetAmount,
     routeName: route.name,
-    reference: `ANPAY-${Date.now()}-${String(nextRecordSequence(db, "paymentCheckoutRecords")).padStart(3, "0")}`,
+    // A payment callback arrives with no sign-in, so a business's reference carries the business (`.acme`) for the server to find its record. The default space's references are unchanged.
+    reference: `ANPAY-${Date.now()}-${String(nextRecordSequence(db, "paymentCheckoutRecords")).padStart(3, "0")}${businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE ? "" : `.${businessSpaces.currentSpace()}`}`,
     checkoutUrl: null,
     providerResponse: null,
     setupRequired: [],
     createdAt: new Date().toISOString()
   };
   const callbackBase = String(body.callbackUrl || process.env.PAYMENT_CALLBACK_URL || process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
-  if (provider === "paystack" && process.env.PAYSTACK_SECRET_KEY) {
+  // A business never collects into the platform's own account: without its own payout account (set by the platform owner) no real checkout is made.
+  const payoutMissing = businessSpaces.currentSpace() !== businessSpaces.DEFAULT_SPACE
+    && !(provider === "paystack" ? providerEnv().PAYSTACK_SUBACCOUNT_CODE : provider === "flutterwave" ? providerEnv().FLUTTERWAVE_SUBACCOUNT_ID : "");
+  if (provider === "paystack" && process.env.PAYSTACK_SECRET_KEY && !payoutMissing) {
     const payload = {
       email: checkout.buyerEmail,
       amount: paymentSubunitAmount(grossAmount, currency),
@@ -12370,8 +12381,8 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
         module: "AgriTrade"
       })
     };
-    if (process.env.PAYSTACK_SUBACCOUNT_CODE) {
-      payload.subaccount = process.env.PAYSTACK_SUBACCOUNT_CODE;
+    if (providerEnv().PAYSTACK_SUBACCOUNT_CODE) {
+      payload.subaccount = providerEnv().PAYSTACK_SUBACCOUNT_CODE;
       payload.transaction_charge = paymentSubunitAmount(platformFeeAmount, currency);
       payload.bearer = process.env.PAYSTACK_BEARER || "subaccount";
     } else {
@@ -12392,9 +12403,9 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
       checkout.status = "paystack-checkout-error";
       checkout.setupRequired.push(error.message);
     }
-  } else if (provider === "flutterwave" && process.env.FLUTTERWAVE_SECRET_KEY) {
-    const subaccounts = process.env.FLUTTERWAVE_SUBACCOUNT_ID ? [{
-      id: process.env.FLUTTERWAVE_SUBACCOUNT_ID,
+  } else if (provider === "flutterwave" && process.env.FLUTTERWAVE_SECRET_KEY && !payoutMissing) {
+    const subaccounts = providerEnv().FLUTTERWAVE_SUBACCOUNT_ID ? [{
+      id: providerEnv().FLUTTERWAVE_SUBACCOUNT_ID,
       transaction_charge_type: "flat",
       transaction_charge: platformFeeAmount
     }] : undefined;
@@ -12423,6 +12434,8 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
       checkout.status = "flutterwave-checkout-error";
       checkout.setupRequired.push(error.message);
     }
+  } else if (payoutMissing) {
+    checkout.setupRequired.push("This business has no payout account yet, so no real payment can be taken. Ask the platform owner to add it.");
   } else {
     checkout.setupRequired.push(provider === "paystack"
       ? "Add PAYSTACK_SECRET_KEY and PAYSTACK_SUBACCOUNT_CODE in Render."
@@ -18656,7 +18669,7 @@ async function createOutboundCallWorkflow(db, user, body = {}) {
     callNumber: `CALL-${String(nextRecordSequence(db, "outboundCalls")).padStart(3, "0")}`,
     purpose,
     to: recipient || "",
-    from: process.env.TWILIO_PHONE_NUMBER || "",
+    from: providerEnv().TWILIO_PHONE_NUMBER || "",
     message,
     status: delivery.ok ? "calling-live" : delivery.status,
     provider: "twilio",
@@ -18733,6 +18746,7 @@ async function phoneVoicePrompt(text, language) {
 // phoneExternalPartyNumber) must match an explicit, admin-configured
 // allowlist before any account identity is granted at all.
 function twilioAuthorizedCallers(env = process.env) {
+  env = senderOverride.resolve(env);
   return String(env.TWILIO_AUTHORIZED_CALLERS || "")
     .split(",")
     .map(entry => entry.trim())
@@ -18748,6 +18762,7 @@ function twilioAuthorizedCallers(env = process.env) {
 // call direction: for an inbound call that is `From`; for an outbound call
 // we placed (where `From` is always our own Twilio number), it is `To`.
 function phoneExternalPartyNumber(body = {}, env = process.env) {
+  env = senderOverride.resolve(env);
   const from = normalizePhoneNumber(body.From || body.from);
   const to = normalizePhoneNumber(body.To || body.to);
   const ours = [env.TWILIO_PHONE_NUMBER, env.TWILIO_FROM_NUMBER, env.TWILIO_NUMBER, env.TWILIO_VOICE_FROM_NUMBER]
@@ -18807,6 +18822,7 @@ function resolveAuthorizedPhoneCaller(db, body = {}, env = process.env) {
 // non-owner caller with no listed number instead gets startConnectCall's own
 // existing, honest "Your own phone number is required" refusal.
 function nexusOwnPhoneForUser(user, env = process.env, db = null) {
+  env = senderOverride.resolve(env);
   // A number added in the admin panel for this exact account wins over the Render list.
   const managed = user?.id && Array.isArray(db?.phoneCallers) ? db.phoneCallers.find(item => item && item.userId === user.id) : null;
   if (managed) return managed.phone;
@@ -18898,6 +18914,7 @@ function phoneRealtimeClassicFallbackUrl(env = process.env) {
 // this is a pure TwiML dial/record flow with no model or tool-call
 // involvement, so it cannot reopen the access hole PR #570 closed.
 function phoneScreeningEnabled(env = process.env) {
+  env = senderOverride.resolve(env);
   return env.PHONE_SCREENING_ENABLED === "true";
 }
 
@@ -32988,7 +33005,7 @@ function nexusPreProviderHardeningModel(db, user, text = "") {
       provider: voiceProvider,
       ttsVoice,
       openAiConfigured: Boolean(process.env.OPENAI_API_KEY),
-      twilioConfigured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
+      twilioConfigured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && providerEnv().TWILIO_PHONE_NUMBER),
       rule: "Use live voice when credentials are valid; otherwise keep browser/local fallback honest."
     },
     memory: {
@@ -52149,6 +52166,7 @@ async function api(req, res, url) {
   if (url.pathname.startsWith("/api/platform/")) {
     if (!user) return send(res, 401, { error: "Sign in first." });
     if (!businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Only the platform owner can manage businesses." });
+    const maskSetting = value => { const text = String(value || ""); return text.length > 8 ? `${text.slice(0, 4)}…${text.slice(-3)}` : text ? "set" : ""; };
     const businessList = async () => {
       const rows = await spaceDirectory.describe();
       return Promise.all(rows.map(async row => {
@@ -52158,7 +52176,11 @@ async function api(req, res, url) {
           id: row.id, name: row.name, createdAt: row.createdAt, recordFound: Boolean(record),
           admins: people.filter(item => item.role === "Admin").map(item => item.email),
           people: people.length,
-          numbers: row.numbers.map(number => teamManagement.maskPhone(number))
+          numbers: row.numbers.map(number => teamManagement.maskPhone(number)),
+          sends: {
+            sms: maskSetting(row.settings?.smsFrom), whatsapp: maskSetting(row.settings?.whatsappFrom), email: String(row.settings?.emailFrom || ""),
+            paystackPayout: maskSetting(row.settings?.paystackSubaccount), flutterwavePayout: maskSetting(row.settings?.flutterwaveSubaccount)
+          }
         };
       }));
     };
@@ -52193,7 +52215,7 @@ async function api(req, res, url) {
         country, language: String(body.language || COUNTRY_LANGUAGE[country.toLowerCase()] || user.language || "en").trim() || "en", createdAt: now, lastUpdatedAt: now
       };
       try {
-        await createBusinessRecord(id, businessSpaces.newSpaceRecord(db, { adminAccount }));
+        await createBusinessRecord(id, businessSpaces.newSpaceRecord(seedTemplate(), { adminAccount }));
       } catch (error) { return send(res, 409, { error: error.message }); }
       try {
         await spaceDirectory.createSpace(id, { name });
@@ -52206,10 +52228,23 @@ async function api(req, res, url) {
         await pgUsers.createUser(getPgPool(), { email: adminEmail, displayName: adminName, password })
           .catch(error => console.error("[platform] Postgres shadow-write failed:", error.message));
       }
-      knownSpaceIds.add(id);
+      forgetSpaceInfo(id);
       platformLog("business.created", `Business ${id} created with first Admin ${adminEmail}.`, { businessId: id });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList(), created: { id, name, adminEmail, password } });
+    }
+
+    if (url.pathname === "/api/platform/businesses/settings") {
+      const id = String(body.id ?? "").trim().toLowerCase();
+      const info = await spaceDirectory.info(id);
+      if (!info) return send(res, 404, { error: "There is no business with that id." });
+      const next = businessSender.normalizeSettings(info.settings, body);
+      if (!next.ok) return send(res, 400, { error: next.error });
+      await spaceDirectory.setSettings(id, next.settings);
+      forgetSpaceInfo(id);
+      platformLog("business.settings_changed", `Sender settings changed for business ${id}.`, { businessId: id, keys: Object.keys(body).filter(key => key in businessSender.SETTING_FORMATS) });
+      await writeDb(db);
+      return send(res, 200, { ok: true, businesses: await businessList() });
     }
 
     if (url.pathname === "/api/platform/businesses/number") {
@@ -52218,6 +52253,7 @@ async function api(req, res, url) {
       if (!number) return send(res, 400, { error: "Enter the phone number with its country code, starting with +, for example +254712345678." });
       if (!(await spaceDirectory.exists(id))) return send(res, 404, { error: "There is no business with that id." });
       try { await spaceDirectory.linkNumber(number, id); } catch (error) { return send(res, 409, { error: error.message }); }
+      forgetSpaceInfo(id);
       platformLog("business.number_linked", `${redactPhoneNumber(number)} linked to business ${id}.`, { businessId: id, phone: redactPhoneNumber(number) });
       await writeDb(db);
       return send(res, 200, { ok: true, businesses: await businessList() });
@@ -58078,7 +58114,9 @@ function handleTwilioPhoneRealtimeStream(ws) {
         const claim = verifyPhoneRealtimeStreamToken(params.token, callSid, Date.now(), process.env);
         if (!claim) return cleanup("unauthorized-stream-token");
         // The call belongs to one business: everything this stream reads or saves from here on uses that business's record.
-        businessSpaces.enterSpace(claim.space);
+        const streamInfo = claim.space && claim.space !== businessSpaces.DEFAULT_SPACE ? await spaceInfo(claim.space) : null;
+        if (claim.space && !streamInfo) return cleanup("unknown-business");
+        businessSpaces.enterSpace(streamInfo ? claim.space : businessSpaces.DEFAULT_SPACE, streamInfo);
         const db = await readDb();
         user = db.users.find(item => String(item.id) === String(claim.userId)) || null;
         if (!user) return cleanup("unknown-user");
@@ -58182,6 +58220,12 @@ function handleTwilioPhoneRealtimeStream(ws) {
 const phoneRealtimeWss = new WebSocketServer({ noServer: true });
 phoneRealtimeWss.on("connection", ws => handleTwilioPhoneRealtimeStream(ws));
 
+// The shape a new business starts from: the seed file that ships with the app (reference lists and an example profile whose data is stripped), never the live default record.
+let seedTemplateCache = null;
+function seedTemplate() {
+  if (!seedTemplateCache) seedTemplateCache = JSON.parse(fs.readFileSync(path.join(ROOT, "db.json"), "utf8"));
+  return seedTemplateCache;
+}
 // A new business's record is written once and never overwritten ("wx" / insert-if-absent); deleteBusinessRecord only undoes a creation that failed half way.
 async function createBusinessRecord(id, record) {
   if (usingPostgresState()) {
@@ -58201,24 +58245,38 @@ async function deleteBusinessRecord(id) {
 
 // Which business this request belongs to, decided before the record is read. A signed-in request carries it in its session or remember-me cookie. A sign-in, a password reset and a phone call
 // have no session yet, so the space comes from the email in the body or the number that was dialled. Anything else is the default space.
-const knownSpaceIds = new Set();
-async function resolveRequestSpace(req, url) {
-  try { return await resolveRequestSpaceUnchecked(req, url); } catch (error) {
-    recordServerError({ source: "business-space-resolve", message: error.message });
-    return businessSpaces.DEFAULT_SPACE;
-  }
+// A business's directory entry (its settings and linked numbers) is read at most every 30 seconds; a change made here is forgotten at once.
+const spaceInfoCache = new Map();
+async function spaceInfo(id) {
+  const hit = spaceInfoCache.get(id);
+  if (hit && Date.now() - hit.at < 30_000) return hit.info;
+  const info = await spaceDirectory.info(id);
+  spaceInfoCache.set(id, { at: Date.now(), info });
+  return info;
 }
-// A space named by a cookie must still exist; otherwise the request is treated as signed out in the default space (no such user there).
-async function knownSpaceOrDefault(space) {
-  if (!space || space === businessSpaces.DEFAULT_SPACE) return businessSpaces.DEFAULT_SPACE;
-  if (knownSpaceIds.has(space)) return space;
-  if (await spaceDirectory.exists(space)) { knownSpaceIds.add(space); return space; }
-  return businessSpaces.DEFAULT_SPACE;
+const forgetSpaceInfo = id => { spaceInfoCache.delete(id); };
+const DEFAULT_ROUTE = Object.freeze({ space: businessSpaces.DEFAULT_SPACE, info: null });
+// -> { space, info }. A space named by a cookie or a call must still exist; otherwise the request is treated as being in the default space (where that person is simply not found, or a number is declined).
+async function resolveRequestSpace(req, url) {
+  try {
+    const space = await resolveRequestSpaceUnchecked(req, url);
+    if (!space || space === businessSpaces.DEFAULT_SPACE) return DEFAULT_ROUTE;
+    const info = await spaceInfo(space);
+    return info ? { space, info } : DEFAULT_ROUTE;
+  } catch (error) {
+    recordServerError({ source: "business-space-resolve", message: error.message });
+    return DEFAULT_ROUTE;
+  }
 }
 async function resolveRequestSpaceUnchecked(req, url) {
   // A sign-in or password reset names the business by its email, and that wins over any cookie left over from another business.
   const byEmail = req.method === "POST" && ["/api/login", "/api/auth/password-reset", "/api/auth/password-reset/confirm"].includes(url.pathname);
   const byNumber = req.method === "POST" && url.pathname.startsWith("/api/voice/phone/");
+  // A payment callback (no sign-in) names its business inside the payment reference; the reference is only a pointer, the callback still has to pass its own signature or provider check.
+  if (url.pathname.startsWith("/api/trade/payment-callback/")) {
+    const text = req.method === "POST" ? await bufferBodyText(req) : url.search;
+    return /ANPAY-\d+-\d+\.([a-z0-9][a-z0-9-]{1,39})\b/.exec(text)?.[1] || businessSpaces.DEFAULT_SPACE;
+  }
   if (byEmail || byNumber) {
     let body = {};
     try { body = parseBodyText(req, await bufferBodyText(req)); } catch { return businessSpaces.DEFAULT_SPACE; }
@@ -58231,9 +58289,9 @@ async function resolveRequestSpaceUnchecked(req, url) {
   }
   const cookies = parseCookies(req);
   const sessionEntry = cookies.agrinexus_sid && sessions.get(cookies.agrinexus_sid);
-  if (sessionEntry && sessionEntry.expiresAt > Date.now()) return knownSpaceOrDefault(sessionEntry.space);
+  if (sessionEntry && sessionEntry.expiresAt > Date.now()) return sessionEntry.space || businessSpaces.DEFAULT_SPACE;
   const durable = verifyDurableAuthToken(cookies.agrinexus_auth);
-  if (durable) return knownSpaceOrDefault(durable.space);
+  if (durable) return durable.space || businessSpaces.DEFAULT_SPACE;
   return businessSpaces.DEFAULT_SPACE;
 }
 
@@ -58241,13 +58299,13 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
-    const space = await resolveRequestSpace(req, url);
-    return await businessSpaces.runInSpace(space, async () => {
+    const route = await resolveRequestSpace(req, url);
+    return await businessSpaces.runInSpace(route.space, async () => {
       if (await authoritativeNexusRuntime.handle(req, res, url, send)) return;
       if (url.pathname.startsWith("/api/")) return await api(req, res, url);
       if (url.pathname.startsWith("/exports/")) return await serveExport(req, res, url);
       return serveStatic(req, res, url);
-    });
+    }, route.info);
   } catch (error) {
     // Log the real error server-side but never return its raw message to the
     // client -- an unhandled exception here can originate from a DB driver,

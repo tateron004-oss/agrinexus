@@ -1,4 +1,5 @@
 const crypto = require("node:crypto");
+const senderOverride = require("./senderOverride.js");
 const {
   clean,
   envEnabled,
@@ -77,6 +78,7 @@ function simulatedTwilioResponse(provider, action, channel, to) {
 }
 
 function status(env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const baseMissing = twilioConfigured(env);
   const fromMissing = missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env);
   return {
@@ -97,6 +99,7 @@ function status(env = process.env) {
 }
 
 async function twilioPost(path, params, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const credentials = twilioCredentials(env);
   if (!credentials) throw new Error("Twilio credentials are not configured.");
   const auth = Buffer.from(`${credentials.username}:${credentials.password}`).toString("base64");
@@ -114,6 +117,7 @@ async function twilioPost(path, params, env = process.env) {
 }
 
 async function sendSms(body = {}, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const provider = "twilio";
   const action = "sms.send";
   if (!smsEnabled(env)) return disabledResponse(provider, action, "NEXUS_SMS_ENABLED");
@@ -149,6 +153,7 @@ async function sendSms(body = {}, env = process.env) {
 // One read-only look at a message Twilio has just accepted. Never throws: if the lookup fails, the send result stands with
 // whatever status Twilio returned when it accepted the message.
 async function twilioMessageProgress(sid, acceptedStatus, env = process.env, resource = "Messages") {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   let status = String(acceptedStatus || "").toLowerCase(), errorCode = null, errorMessage = "";
   try {
     const delay = Number(clean(env.NEXUS_SMS_STATUS_DELAY_MS) || 2000);
@@ -169,6 +174,7 @@ async function twilioMessageProgress(sid, acceptedStatus, env = process.env, res
 }
 
 async function sendWhatsapp(body = {}, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const provider = "twilio";
   const action = "whatsapp.send";
   if (!envEnabled("NEXUS_WHATSAPP_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_WHATSAPP_ENABLED");
@@ -197,6 +203,7 @@ async function sendWhatsapp(body = {}, env = process.env) {
 }
 
 async function startCall(body = {}, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const provider = "twilio";
   const action = "call.start";
   if (!envEnabled("NEXUS_CALLS_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_CALLS_ENABLED");
@@ -232,6 +239,7 @@ async function startCall(body = {}, env = process.env) {
 // deliver a one-way spoken announcement): here the TwiML never puts words
 // in Kyro's mouth beyond a one-line "connecting you" heads-up.
 async function startConnectCall(body = {}, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const provider = "twilio";
   const action = "call.connect";
   if (!envEnabled("NEXUS_CALLS_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_CALLS_ENABLED");
@@ -281,6 +289,7 @@ async function startConnectCall(body = {}, env = process.env) {
 // heads-up, the third party hears the required consent disclosure -- before
 // the two are bridged together.
 async function startConnectAndListenCall(body = {}, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const provider = "twilio";
   const action = "call.connect_and_listen";
   if (!envEnabled("NEXUS_CALLS_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_CALLS_ENABLED");
@@ -344,6 +353,7 @@ async function startConnectAndListenCall(body = {}, env = process.env) {
 // gate: this never starts a new call or reaches a new person, it only
 // changes what an already-live call the caller already answered does next.
 async function redirectCall(callSid, url, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   return twilioPost(`/Calls/${encodeURIComponent(callSid)}.json`, { Url: url, Method: "POST" }, env);
 }
 

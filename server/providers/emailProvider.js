@@ -10,6 +10,7 @@ const {
   failedResponse,
   safeJson
 } = require("./providerUtils");
+const senderOverride = require("./senderOverride.js");
 
 // What the email provider said about a refused request. SendGrid answers with { errors: [{ message, field }] } and Resend with
 // { message }; reading only those flat fields turned "The from address does not match a verified Sender Identity" into the bare
@@ -25,6 +26,7 @@ function provider(env = process.env) {
 }
 
 function status(env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const selected = provider(env);
   const enabled = envEnabled("NEXUS_EMAIL_ENABLED", env) || envEnabled("NEXUS_MESSAGES_ENABLED", env);
   const missingByProvider = {
@@ -44,6 +46,7 @@ function status(env = process.env) {
 }
 
 async function send(body = {}, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender settings (see server/businessSender.js)
   const selected = provider(env);
   const action = "email.send";
   if (!(envEnabled("NEXUS_EMAIL_ENABLED", env) || envEnabled("NEXUS_MESSAGES_ENABLED", env))) {

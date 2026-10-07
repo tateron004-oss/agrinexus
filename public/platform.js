@@ -61,6 +61,32 @@
       act(link, () => api("/businesses/number", "POST", { id: item.id, number: input.value }), () => "That number now belongs to this business: calls to it reach only this business's people.");
     });
     node.append(form);
+
+    // What this business sends as. Blank fields are left as they are; type "clear" in a field to remove it. A business never sends as the platform: with nothing set here it cannot send that kind of message.
+    const sends = item.sends || {};
+    const settings = el("form", "row");
+    settings.autocomplete = "off";
+    settings.append(el("p", "small", "Sends as (set by you; the business cannot change these)"));
+    const fields = [
+      ["smsFrom", "SMS sender", "+254712345678", sends.sms], ["whatsappFrom", "WhatsApp sender", "whatsapp:+254712345678", sends.whatsapp], ["emailFrom", "Email sender", "Green Valley <hello@yourdomain.com>", sends.email],
+      ["paystackSubaccount", "Paystack payout account", "ACCT_xxxxxxxx", sends.paystackPayout], ["flutterwaveSubaccount", "Flutterwave payout account", "RS_xxxxxxxx", sends.flutterwavePayout]
+    ];
+    const inputs = {};
+    fields.forEach(([key, text, example, current]) => {
+      const field = el("label", "", current ? `${text} (now ${current})` : `${text} (not set)`);
+      const input = el("input"); input.name = key; input.placeholder = example; input.maxLength = 120;
+      field.append(input); inputs[key] = input; settings.append(field);
+    });
+    const save = el("button", "secondary", "Save sender settings"); save.type = "submit";
+    settings.append(save);
+    settings.addEventListener("submit", event => {
+      event.preventDefault();
+      const body = { id: item.id };
+      Object.entries(inputs).forEach(([key, input]) => { const value = input.value.trim(); if (value) body[key] = value.toLowerCase() === "clear" ? "" : value; });
+      if (Object.keys(body).length === 1) { notice("Type a value in at least one field."); return; }
+      act(save, () => api("/businesses/settings", "POST", body), () => "Saved. It applies to this business within about half a minute.");
+    });
+    node.append(settings);
     return node;
   }
 

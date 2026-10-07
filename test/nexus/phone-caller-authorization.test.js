@@ -21,7 +21,8 @@ function loadAuthorization() {
     assert.ok(end > start, `could not find the end of ${name} in server.js`);
     return source.slice(start, end);
   };
-  const sandbox = { process: { env: {} } };
+  // The extracted functions look up the current business through these two (outside any business: the plain environment).
+  const sandbox = { process: { env: {} }, senderOverride: { resolve: env => env }, providerEnv: () => sandbox.process.env };
   vm.createContext(sandbox);
   vm.runInContext(
     extract("normalizePhoneNumber") + "\n" +
