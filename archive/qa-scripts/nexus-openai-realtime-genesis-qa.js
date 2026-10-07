@@ -151,7 +151,8 @@ function staticAssertions() {
   ].forEach(token => assert(server.includes(token), `server should include ${token}`));
 
   assert(server.includes('".mjs": "application/javascript; charset=utf-8"'), "server must serve Realtime ESM bundles with a JavaScript MIME type");
-  assert(server.includes('ext === ".mjs"'), "Realtime ESM bundles must bypass static caching during local acceptance");
+  // .mjs files are never served from a stale copy: the static delivery module makes the browser ask the server before reusing one (no-cache + ETag).
+  assert(/REVALIDATE_EXTENSIONS = new Set\(\[[^\]]*"\.mjs"/.test(read("server/static-delivery.js")), "Realtime ESM bundles must bypass static caching during local acceptance");
 
   [
     "startOpenAiAgentsRealtimeVoiceSession",

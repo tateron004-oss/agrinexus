@@ -1,22 +1,10 @@
 const CACHE_NAME = "agrinexus-pwa-__NEXUS_RELEASE_SHA__";
 const BUILD_VERSION = "__NEXUS_RELEASE_SHA__";
-const APP_SHELL = [
-  "/",
-  "/index.html",
-  `/styles.css?v=${BUILD_VERSION}`,
-  `/app.js?v=${BUILD_VERSION}`,
-  `/nexus-genesis-voice-runtime-manager.js?v=${BUILD_VERSION}`,
-  "/manifest.webmanifest",
+// Files cached at install besides the page itself. The page and every script/stylesheet it names are taken from the CURRENT index.html
+// (see shellUrlsFromPage), so the cache always holds one release: the index.html the server just sent and exactly the files that index.html names.
+// The ?v= list below is only the fallback used when the page names no scripts at all; it is not the preferred source.
+const SHELL_EXTRAS = [
   "/native-bridge.json",
-  `/nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1`,
-  `/nexus-os-health-workforce-safety-pack.js?v=nexus-os-health-workforce-safety-1`,
-  `/kyro-offline-notes.js?v=kyro-offline-notes-1`,
-  `/kyro-crisis-phrases.js?v=kyro-crisis-phrases-1`,
-  `/kyro-navigation.js?v=kyro-navigation-1`,
-  `/kyro-emergency.js?v=kyro-emergency-1`,
-  `/kyro-voice-intake.js?v=kyro-voice-intake-1`,
-  `/kyro-intake-forms.js?v=kyro-intake-forms-1`,
-  `/kyro-stall-watchdog.js?v=kyro-stall-watchdog-1`,
   "/icons/agri-nexus-192.png",
   "/icons/agri-nexus-512.png",
   "/icons/agri-nexus-icon.svg",
@@ -26,6 +14,53 @@ const APP_SHELL = [
   "/privacy.html",
   "/refund.html"
 ];
+const APP_SHELL = [
+  "/manifest.webmanifest",
+  `/styles.css?v=${BUILD_VERSION}`,
+  `/app.js?v=${BUILD_VERSION}`,
+  `/nexus-genesis-voice-runtime-manager.js?v=${BUILD_VERSION}`,
+  `/nexus-os-agrinexus-deployment-profile.js?v=nexus-os-agrinexus-deployment-1`,
+  `/nexus-os-health-workforce-safety-pack.js?v=nexus-os-health-workforce-safety-1`,
+  `/kyro-offline-notes.js?v=kyro-offline-notes-1`,
+  `/kyro-crisis-phrases.js?v=kyro-crisis-phrases-1`,
+  `/kyro-navigation.js?v=kyro-navigation-1`,
+  `/kyro-emergency.js?v=kyro-emergency-1`,
+  `/kyro-voice-intake.js?v=kyro-voice-intake-1`,
+  `/kyro-intake-forms.js?v=kyro-intake-forms-1`,
+  `/kyro-stall-watchdog.js?v=kyro-stall-watchdog-1`
+];
+
+// Local scripts, stylesheets and the manifest named by the page, exactly as the page names them (the server writes /file.js?v=<content hash>).
+function shellUrlsFromPage(html) {
+  const urls = new Set();
+  for (const match of String(html).matchAll(/\b(?:src|href)="(\/[^"#\s]+\.(?:js|mjs|css|webmanifest)(?:\?[^"#\s]*)?)"/g)) urls.add(match[1]);
+  return [...urls];
+}
+
+function sameOriginHttp(path) {
+  try {
+    const url = new URL(path, self.location.origin);
+    return ["http:", "https:"].includes(url.protocol) && url.origin === self.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+// Fills the new release's cache. The page is always fetched from the network (it is never stored by the browser, so this is the one request that
+// must reach the server); every other file is fetched with the default cache mode, so the browser answers from its own copy when the URL is a
+// content-hashed one, or asks the server "has this changed?" (a 304 with no body) when it is not. An unchanged file therefore costs no download
+// at install, whatever number of releases have passed since it was last fetched.
+async function populateShell(cache) {
+  const pageResponse = await fetch("/", { cache: "no-store" });
+  if (!pageResponse.ok) throw new Error("page unavailable");
+  const html = await pageResponse.clone().text();
+  const pageUrls = shellUrlsFromPage(html).filter(sameOriginHttp);
+  await cache.put("/", pageResponse.clone());
+  await cache.put("/index.html", pageResponse);
+  await cache.addAll(pageUrls.length ? pageUrls : APP_SHELL.filter(sameOriginHttp));
+  // Convenience files: a missing one must not stop the release from installing.
+  await Promise.allSettled(SHELL_EXTRAS.filter(sameOriginHttp).map(path => cache.add(path)));
+}
 
 async function purgeOldCaches() {
   const keys = await caches.keys();
@@ -72,14 +107,7 @@ async function safeCacheMatch(request) {
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL.filter(path => {
-        try {
-          const url = new URL(path, self.location.origin);
-          return ["http:", "https:"].includes(url.protocol) && url.origin === self.location.origin;
-        } catch {
-          return false;
-        }
-      })))
+      .then(cache => populateShell(cache))
       .then(() => self.skipWaiting())
       .catch(error => {
         console.warn("[AgriNexus service worker] install cache skipped", {

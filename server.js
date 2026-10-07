@@ -13,6 +13,8 @@ const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
 const pgUsers = require("./server/pg-users.js");
+const { applySecurityHeaders } = require("./server/security-headers.js");
+const { createStaticDelivery, APP_RELEASE_STAMPS } = require("./server/static-delivery.js");
 const pgHealthIntakes = require("./server/pg-health-intakes.js");
 const pgAuditEvents = require("./server/pg-audit-events.js");
 const pgWorkforce = require("./server/pg-workforce.js");
@@ -59306,36 +59308,20 @@ async function serveExport(req, res, url) {
   });
 }
 
+// Static files (public/ plus the vendored livekit module): content ETags, 304s, content-hashed asset URLs in index.html, and no-store for
+// documents and the service worker. All rules and the reasons are in server/static-delivery.js.
+const staticDelivery = createStaticDelivery({
+  publicDir: PUBLIC,
+  placeholder: NEXUS_RELEASE_PLACEHOLDER,
+  fillRelease: text => text.replaceAll(NEXUS_RELEASE_PLACEHOLDER, NEXUS_EFFECTIVE_RELEASE_SHA),
+  mime,
+  send,
+  stableStamps: { "app.js": APP_RELEASE_STAMPS },
+  extraFiles: { "/vendor/livekit-client/livekit-client.esm.mjs": path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs") }
+});
+
 function serveStatic(req, res, url) {
-  if (url.pathname === "/vendor/livekit-client/livekit-client.esm.mjs") {
-    const livekitPath = path.join(ROOT, "node_modules", "livekit-client", "dist", "livekit-client.esm.mjs");
-    return fs.readFile(livekitPath, (err, data) => {
-      if (err) return send(res, 404, "Not found");
-      res.writeHead(200, {
-        "content-type": "application/javascript; charset=utf-8",
-        "cache-control": "no-store",
-        "x-content-type-options": "nosniff"
-      });
-      res.end(data);
-    });
-  }
-  // A path that cannot be decoded ("%zz") or carries a NUL byte is not a file here: answered 404, not as a server error. The folder check includes the separator, so a sibling folder whose name merely
-  // starts with "public" (public-old, public_backup) can never be reached with "/../public-old/..".
-  let decodedPath;
-  try { decodedPath = decodeURIComponent(url.pathname); } catch { return send(res, 404, "Not found"); }
-  if (decodedPath.includes("\0")) return send(res, 404, "Not found");
-  let filePath = url.pathname === "/" ? path.join(PUBLIC, "index.html") : path.join(PUBLIC, decodedPath);
-  if (filePath !== PUBLIC && !filePath.startsWith(PUBLIC + path.sep)) return send(res, 403, "Forbidden");
-  fs.readFile(filePath, (err, data) => {
-    if (err) return send(res, 404, "Not found");
-    const ext = path.extname(filePath);
-    if ([".html", ".js", ".mjs", ".css", ".webmanifest"].includes(ext)) {
-      data = Buffer.from(data.toString("utf8").replaceAll(NEXUS_RELEASE_PLACEHOLDER, NEXUS_EFFECTIVE_RELEASE_SHA));
-    }
-    const cacheControl = ext === ".html" || ext === ".js" || ext === ".mjs" || ext === ".css" ? "no-store" : "public, max-age=3600";
-    res.writeHead(200, { "content-type": mime[ext] || "application/octet-stream", "cache-control": cacheControl });
-    res.end(data);
-  });
+  return staticDelivery.serve(req, res, url);
 }
 
 // --- Real-time two-way phone conversation bridge (Twilio Media Streams <->
@@ -59710,8 +59696,12 @@ function parseRequestUrl(req) {
 }
 
 const server = http.createServer(async (req, res) => {
+  // Security headers for every response, including the 400/429/500 answers below. See server/security-headers.js.
+  applySecurityHeaders(req, res);
   const url = parseRequestUrl(req);
   if (!url) return send(res, 400, { error: "Bad request" });
+  // Answers from the API and the export download can carry personal data: by default nothing may store them. A route that sets its own cache-control still wins.
+  if (/^\/(api|exports)\//.test(url.pathname)) res.setHeader("cache-control", "no-store");
   try {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
     const route = await resolveRequestSpace(req, url);
