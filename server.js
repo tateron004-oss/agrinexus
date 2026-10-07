@@ -77,6 +77,11 @@ const businessSpaces = require("./server/businessSpaces.js");
 const platformAudit = require("./server/platformAudit.js");
 const businessSender = require("./server/businessSender.js");
 const senderOverride = require("./server/providers/senderOverride.js");
+// The one front door for what a person says or types (wake words, fillers, politeness, stutters, invisible characters, rambling), the idempotency cache for tool calls,
+// and texting-vs-calling: see nexus/speech/normalise.js and server/frontDoor.js.
+const { normaliseSpoken } = require("./nexus/speech/normalise.js");
+const frontDoor = require("./server/frontDoor.js");
+const { cleanContactName, localPhoneToE164 } = require("./nexus/memory/contacts.js");
 // What the current request sends as. In the default space this is process.env itself; inside a business it is a copy carrying that business's own numbers and settings (and none of the platform's).
 // The Twilio and email providers apply the same swap themselves (server/providers/senderOverride.js), so a call that was handed process.env still sends as the right business.
 const providerEnv = (base = process.env) => senderOverride.resolve(base);
@@ -9911,7 +9916,8 @@ function ensurePhoneContactBook(db) {
 
 function contactDisplayName(value = "") {
   const cleaned = String(value || "")
-    .replace(/[^\p{L}\p{N}\s'.-]/gu, " ")
+    .replace(/['’]s\b/gi, "")
+    .replace(/[^\p{L}\p{M}\p{N}\s'.-]/gu, " ")
     .replace(/\b(please|now|today|thanks|thank you|phone|call|dial|ring|number|contact)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -9928,19 +9934,26 @@ function contactLookupKey(value = "") {
   return contactDisplayName(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
-function extractPhoneNumberFromText(text = "") {
-  const match = String(text || "").match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/);
-  return match ? normalizePhoneNumber(match[0]) : "";
+// A number with its +country code, or one written the way people say it at home (Kenya 0712 345 678, Nigeria 0803 123 4567) which becomes +254... / +234...; the caller says the result back.
+// Fullwidth and Arabic-Indic digits are read as ordinary digits.
+function extractPhoneNumberFromText(text = "", { allowLocal = true } = {}) {
+  const source = normaliseSpoken(String(text || "")).clean;
+  const match = source.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/);
+  if (!match) return "";
+  const direct = normalizePhoneNumber(match[0]);
+  if (direct || !allowLocal || /\+/.test(match[0])) return direct;
+  return localPhoneToE164(match[0])?.phone || "";
 }
 
 function extractContactNameFromCall(text = "") {
   const source = String(text || "");
-  const match = source.match(/\b(?:call|phone|dial|ring)\s+(?:my\s+|the\s+)?([a-zA-Z][a-zA-Z\s'.-]{1,48})/i);
+  const match = source.match(/\b(?:call|phone|dial|ring)\s+(?:my\s+|the\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,48})/iu);
   if (!match) return "";
   const raw = match[1]
     .replace(/\b(on|at|about|for|because|please|now|today|with|to|from)\b.*$/i, "")
     .trim();
-  const name = contactDisplayName(raw);
+  // only the real name: "Juma simu" -> Juma, "Mama's" -> Mama, "him instead" -> no name (ask who)
+  const name = cleanContactName(raw, { maxWords: 4 }) ? contactDisplayName(cleanContactName(raw, { maxWords: 4 })) : (/^(?:him|her|it|them|instead|again|too)\b/i.test(raw) ? "" : contactDisplayName(raw));
   const generic = /^(buyer|seller|provider|doctor|nurse|clinic|telehealth|recruiter|employer|instructor|teacher|support|caregiver|pharmacy|vendor|supplier|emergency)$/i;
   return name && !generic.test(name) ? name : "";
 }
@@ -9949,11 +9962,11 @@ function extractContactNameWithPhone(text = "", fallbackName = "") {
   const source = String(text || "");
   const phone = extractPhoneNumberFromText(source);
   if (!phone) return contactDisplayName(fallbackName);
-  const beforePhone = source.slice(0, source.indexOf(source.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""));
-  const nameMatch = beforePhone.match(/\b(?:remember|save|add|store)?\s*(?:that\s+)?(?:my\s+)?([a-zA-Z][a-zA-Z\s'.-]{1,48}?)(?:'s| is| number| phone| contact| at|:)?\s*$/i);
-  const candidate = contactDisplayName(nameMatch?.[1] || fallbackName);
-  const noise = /^(his|her|their|the|this|that|number|phone|contact|is|at|for)$/i;
-  return candidate && !noise.test(candidate) ? candidate : contactDisplayName(fallbackName);
+  const clean = normaliseSpoken(source).clean;
+  const beforePhone = clean.slice(0, clean.indexOf(clean.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""));
+  // "Save John number" -> John; "Could you save Otieno's number as" -> Otieno; "Abeg save Otieno" -> Otieno; "Mama on" -> Mama; "text" (a message, not a name) -> no name
+  const candidate = cleanContactName(beforePhone, { maxWords: 4 });
+  return candidate ? contactDisplayName(candidate) : (cleanContactName(fallbackName, { maxWords: 4 }) ? contactDisplayName(cleanContactName(fallbackName, { maxWords: 4 })) : "");
 }
 
 function inferContactRelationship(text = "") {
@@ -10159,11 +10172,14 @@ function callIntentLanguage(options = {}) {
 }
 
 function cleanCallTarget(value = "") {
-  return contactDisplayName(String(value || "")
+  const tidy = contactDisplayName(String(value || "")
     .replace(/\b(on|at|about|for|because|please|now|today|with|using|to|from|por|sur|kwa|pelo|pela|whatsapp|telegram|twilio)\b.*$/i, "")
     .replace(/\b(my|the|a|an|mi|mon|ma|meu|minha)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim());
+  // "Juma simu" -> Juma, "Mama's" -> Mama: only the real name is kept
+  const real = cleanContactName(tidy, { maxWords: 4 });
+  return real ? contactDisplayName(real) : tidy;
 }
 
 function extractCallIntentTarget(command = "") {
@@ -10186,7 +10202,7 @@ function extractCallIntentTarget(command = "") {
     .replace(/\s+(?:on|por|sur|kwa|pelo|pela|على)\s+.*$/iu, "")
     .trim();
   const lowerName = normalizeSpeechForIntent(rawName);
-  if (/^(them|someone|somebody|anyone|anybody|person|people|contact|that person|this person)$/i.test(lowerName)) return null;
+  if (/^(them|him|her|it|instead|again|someone|somebody|anyone|anybody|person|people|contact|that person|this person)(?:\s+(?:instead|again|now|please|too))?$/i.test(lowerName)) return null;
   const roleMap = [
     { pattern: /^(doctor|medico|medica|m[eé]dico|m[eé]decin|daktari|طبيب|الطبيب)$/i, label: "doctor", relationship: "health provider contact" },
     { pattern: /^(provider|proveedor|fournisseur|mtoa huduma|مزود|المزود)$/i, label: "provider", relationship: "health provider contact" },
@@ -10208,7 +10224,7 @@ function isCallIntentCommand(command = "") {
   const raw = String(command || "").trim();
   const lower = normalizeSpeechForIntent(raw);
   if (isAssistantAliasQuestion(lower)) return false;
-  return Boolean(extractPhoneNumberFromText(raw))
+  return Boolean(extractPhoneNumberFromText(raw, { allowLocal: false }))
     || /\b(call|phone|dial|ring)\b/.test(lower)
     || /\bllama\s+a\b|\bappelle\b|\bmpigie\b|\bpiga\s+simu\s+kwa\b|\bligar\s+para\b|\bligue\s+para\b|\bligar\s+pelo\b|\bligue\s+pelo\b/.test(lower)
     || /(?:اتصل|إتصل)\s+ب/u.test(raw);
@@ -10329,7 +10345,67 @@ function callIntentResolution(db, parsed = {}) {
   return { status: "missing-number", matches: [] };
 }
 
+// "Text +254712345678 saying hello", "sms 0712345678 I am coming", "WhatsApp Mama the meeting is at 3", "tuma ujumbe kwa +254... niko njiani", "tell mama I am coming": a MESSAGE.
+// The recipient and the exact words are shown back and the person must say yes; "yes" sends the message (or says honestly that it cannot). It is never turned into a call, and
+// a local number (0712..., 0803...) is converted to +254.../+234... and said back in full. Email and role requests ("text the buyer") stay with the older workflows.
+function stageMessageIntent(db, user, command = "", options = {}) {
+  const request = frontDoor.readMessageRequest(command);
+  if (!request || request.channel === "email") return null;
+  ensurePhoneContactBook(db);
+  const sw = request.swahili || callIntentLanguage(options) === "sw";
+  const channelLabel = request.channel === "whatsapp" ? "WhatsApp message" : "text";
+  const ask = (intent, response, metadata = {}) => ({ intent, response, status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent", ...metadata } });
+  let phone = request.phone || ""; let name = ""; let message = request.message || "";
+  if (request.invalid) return ask("message.number_invalid", sw ? "Sijaelewa namba hiyo. Nipe namba kamili, kwa mfano +254712345678 au 0712 345 678." : "I could not make out that number. Give me the whole number, like +254712345678 or 0712 345 678.");
+  if (!phone) {
+    const lookup = candidate => {
+      const found = callContactCandidates(db, { displayName: candidate, rawName: candidate }).filter(item => item.e164Phone);
+      const seen = new Set(found.map(item => item.e164Phone));
+      return seen.size ? found : [];
+    };
+    const matched = frontDoor.matchRecipient(request, lookup);
+    if (!matched) {
+      const first = cleanContactName(request.words[0] || "");
+      return ask("message.number_needed", sw
+        ? `Sina namba ya ${first || "mtu huyo"}. Nipe namba yake yenye msimbo wa nchi, kwa mfano "tuma ujumbe kwa +254712345678 niko njiani", au sema "hifadhi namba ya ${first || "Juma"} kama +254712345678" kwanza.`
+        : `I don't have a number for ${first || "that person"}. Give me their number with the country code, like "text +254712345678 saying I am on my way", or say "save ${first || "Juma"}'s number as +254712345678" first.`);
+    }
+    const phones = [...new Set(matched.found.map(item => item.e164Phone))];
+    if (phones.length > 1) return ask("message.multiple_matches", sw ? `Kuna zaidi ya mmoja anayeitwa ${matched.candidate}. Ni yupi? ${matched.found.map((item, index) => `${index + 1}. ${item.displayName}`).join(" ")}` : `I found more than one ${matched.candidate}. Which one? ${matched.found.map((item, index) => `${index + 1}. ${item.displayName}`).join(" ")}`);
+    phone = phones[0]; name = matched.found[0].displayName || matched.candidate; message = matched.message;
+  }
+  if (!message) return ask("message.text_needed", sw ? `Ujumbe unasema nini? Sema kwa mfano "tuma ujumbe kwa ${name || frontDoor.spokenPhone(phone)} niko njiani".` : `What should the ${channelLabel} say? For example: "text ${name || frontDoor.spokenPhone(phone)} saying I am on my way".`);
+  if (message.length > 500) return ask("message.too_long", sw ? "Ujumbe ni mrefu sana. Ufupishe kidogo." : "That message is too long to send. Please make it shorter.");
+  const label = name ? `${name} (${frontDoor.spokenPhone(phone)})` : frontDoor.spokenPhone(phone);
+  const staged = stageAgentAction(db, command, {
+    kind: "message",
+    module: "AI",
+    tool: "communications.send_message",
+    action: `Send ${channelLabel} to ${name || frontDoor.spokenPhone(phone)}`,
+    section: "agent",
+    pendingActionType: "outbound_message",
+    planner: "backend-message-intent",
+    confidence: 0.92,
+    rationale: "Nexus parsed a text or WhatsApp request and staged it behind explicit confirmation before sending anything.",
+    channel: request.channel,
+    to: phone,
+    recipientPhone: phone,
+    contactName: name,
+    message,
+    phase4HighRisk: true,
+    allowedConfirmations: ["yes", "confirm", "do it", "send it"],
+    userFacingPlan: `Say yes to send, or no to cancel.`,
+    confirmationPrompt: sw
+      ? `Nitume "${message}" kwa ${label}? Sema ndiyo ili kutuma, au hapana kughairi.`
+      : `Send "${message}" to ${label} as a ${channelLabel}? Say yes to send it, or no to cancel.`,
+    language: sw ? "sw" : "en"
+  });
+  return { ...staged, intent: "message.intent_staged", metadata: { ...(staged.metadata || {}), channel: request.channel, assumedCountry: request.assumedCountry || null } };
+}
+
 function stageBackendCallIntent(db, user, command = "", options = {}) {
+  // a request to text or message somebody is not a request to call them
+  if (frontDoor.readMessageRequest(command)) return null;
   ensurePhoneContactBook(db);
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(command);
@@ -20276,10 +20352,24 @@ function nexusRealtimeToolTimeoutResult(body = {}) {
   };
 }
 
+// A tool call that is sent again with the same correlationId and the same words (a network retry, a double tap) returns the FIRST result and repeats no side effect
+// (three retries of one call used to make three reminders and three blood-pressure readings). Calls with no correlationId are never merged. See server/frontDoor.js.
 async function dispatchNexusRealtimeTool(db, user, body = {}) {
+  const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
+  const said = String(args.command || body.command || "").trim();
+  const key = frontDoor.idempotencyKey(user?.id || user?.email, body.correlationId, [normaliseSpoken(said).text.toLowerCase(), String(args.language || body.language || ""), String(body.name || body.toolName || ""), args.confirmed === true]);
+  const result = await frontDoor.runOnce(key, () => dispatchNexusRealtimeToolOnce(db, user, body));
+  return key ? structuredClone(result) : result;
+}
+
+async function dispatchNexusRealtimeToolOnce(db, user, body = {}) {
   const correlationId = genesisVoiceCorrelationId(body.correlationId);
   const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
-  const command = String(args.command || body.command || "").trim();
+  // The one front door (nexus/speech/normalise.js): the words below are what was meant; `saidCommand` is what was said, cleaned of invisible characters only, and is what
+  // every safety reader sees as well, so nothing a person said is lost to the cleaning.
+  const spokenCommand = normaliseSpoken(String(args.command || body.command || ""), { language: args.language || body.language || user?.language });
+  const saidCommand = spokenCommand.clean;
+  const command = spokenCommand.text.trim();
   const dispatchRoute = String(body.route || "/api/voice/realtime/tool");
   const dispatchNote = String(body.note || "Nexus Realtime tool dispatch");
   const dispatchSource = dispatchRoute.includes("elevenlabs")
@@ -20344,7 +20434,8 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
   // the pipeline below unchanged. A crisis phrase is left to that pipeline's own safety handling, as before.
   const voiceLanguage = args.language || body.language || user.language || "en";
   const crisisSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
-  if (!(crisisSignal?.crisisOverride === true || crisisSignal?.state === "medical_emergency")) {
+  const saidCrisisSignal = saidCommand && saidCommand !== command ? nexusMentalHealthBehavioralWellness.classifyState(saidCommand, {}) : null;
+  if (!(crisisSignal?.crisisOverride === true || crisisSignal?.state === "medical_emergency" || saidCrisisSignal?.crisisOverride === true || saidCrisisSignal?.state === "medical_emergency")) {
     const authoritativeVoiceUser = await authoritativeRuntimeUser(user).catch(() => null);
     const planned = authoritativeVoiceUser
       ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: authoritativeVoiceUser, text: command, language: voiceLanguage })
@@ -21489,8 +21580,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // priority -- it is a deliberate, tool-specific refinement ("a concise
   // research or tool query when different from the original command"), not
   // a plain restatement, so a caller that explicitly sets it still wins.
-  const command = sanitizePilotText(args.query || context.command || args.command || "", 700);
+  // The one front door (nexus/speech/normalise.js) runs BEFORE the length cap, so a long, rambling message is cut down to the part that holds the request (and any danger
+  // phrase) instead of being truncated at 700 characters. What was said (invisible characters removed) is kept for the safety checks below.
   const language = args.language || context.language || user?.language || "en";
+  // (typeof guard: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names)
+  const rawInput = String(args.query || context.command || args.command || "");
+  const spokenInput = typeof normaliseSpoken === "function" ? normaliseSpoken(rawInput, { language }) : { text: rawInput, clean: rawInput };
+  const saidInput = sanitizePilotText(spokenInput.clean.slice(-3000), 3000);
+  const command = sanitizePilotText(spokenInput.text, 700);
   const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
   const common = {
     ok: true,
@@ -21553,7 +21650,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // (see runNexusOpenAiNativeAgentCommand), so classify that too and treat
   // either one tripping crisisOverride as sufficient -- this only adds
   // coverage, it never removes any existing check.
-  const rawCallerText = sanitizePilotText(context.command || "", 700);
+  const rawCallerText = sanitizePilotText(context.command || (saidInput !== command ? saidInput : ""), 3000);
   const mentalHealthSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
   const rawMentalHealthSignal = rawCallerText && rawCallerText !== command
     ? nexusMentalHealthBehavioralWellness.classifyState(rawCallerText, {})
@@ -29531,6 +29628,8 @@ function stagePhoneContactCall(db, command, contact, purpose = "") {
 
 async function phoneContactMemoryCommandResponse(db, user, text, lower, options = {}) {
   if (isAssistantAliasQuestion(lower)) return null;
+  // "text +254... saying hello" is a message, never a contact called "Text" and never a call (see stageMessageIntent)
+  if (frontDoor.readMessageRequest(text)) return null;
   ensurePhoneContactBook(db);
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(text);
@@ -29572,14 +29671,14 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
       return {
         ...staged,
         intent: "phone.contact_saved_call_ready",
-        response: `I saved ${contact.name}. Say yes and I will call ${contact.name}. Say no to save the number without calling now.`
+        response: `I saved ${contact.name} as ${frontDoor.spokenPhone(contact.phone)}. Say yes and I will call ${contact.name}. Say no to save the number without calling now.`
       };
     }
     db.profile.agentMemory.lastStatus = "phone-contact-saved";
     db.profile.agentMemory.lastSummary = `Saved ${contact.name} for future calls.`;
     return {
       intent: "phone.contact_saved",
-      response: `Saved ${contact.name}. You can say, "Nexus, call ${contact.name}" any time.`,
+      response: `Saved ${contact.name} as ${frontDoor.spokenPhone(contact.phone)}. If that number is not right, say it again. You can say, "Nexus, call ${contact.name}" any time.`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "agent", contact }
     };
@@ -29626,6 +29725,18 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
 async function executePendingAgentAction(db, user, pending) {
   if (!pending) return { intent: "conversation.no_pending_action", response: "There is no pending action to confirm.", status: "needs-input" };
   db.profile.agentPendingAction = null;
+  if (pending.kind === "message") {
+    // A confirmed TEXT or WhatsApp message. It is sent as a message (never turned into a call) and only if sending is really available; otherwise the person is told plainly it was not sent.
+    const channelLabel = pending.channel === "whatsapp" ? "WhatsApp message" : "text";
+    const label = pending.contactName || frontDoor.spokenPhone(pending.to);
+    const say = (intent, response, status, extra = {}) => ({ intent, response, status, metadata: { conversationMode: true, redirectSection: "agent", channel: pending.channel, executionConfirmed: true, messageSent: false, ...extra } });
+    if (userIsRestrictedFrom(user, "communications-send")) return say("message.not_sent", `This account type cannot send real messages, so I did not send your ${channelLabel} to ${label}. Nothing was sent.`, "blocked");
+    if (SENSITIVE_COMMUNICATION_PATTERN.test(pending.message)) return say("message.not_sent", `I did not send it: messages about health records, payments or passwords are not sent from here. Nothing was sent to ${label}.`, "blocked");
+    const delivery = await sendTwilioMessage({ providerId: pending.channel === "whatsapp" ? "whatsapp-delivery" : "sms-delivery", channel: pending.channel === "whatsapp" ? "WhatsApp" : "SMS", to: pending.to, text: pending.message });
+    logIntegration(db, { providerId: pending.channel === "whatsapp" ? "whatsapp-delivery" : "sms-delivery", module: "AI", action: "message.sent_by_voice", status: delivery.ok ? "success" : "needs-setup", detail: delivery.ok ? `${channelLabel} sent to ${label}.` : `${channelLabel} to ${label} not sent: ${delivery.status || delivery.error || "not available"}.`, metadata: { channel: pending.channel, delivery: { ok: Boolean(delivery.ok), status: delivery.status || null } }, dispatch: false });
+    if (delivery.ok) return say("message.sent", `Sent your ${channelLabel} to ${label}.`, "completed", { messageSent: true });
+    return say("message.not_sent", `I could not send your ${channelLabel} to ${label}: sending messages is not set up for this account yet, so nothing was sent. Your words were: "${pending.message}".`, "needs-setup", { deliveryStatus: delivery.status || null });
+  }
   if (pending.kind === "call" && pending.provider === "twilio") {
     const target = pending.target || {};
     const handoff = pending.handoff || callProviderHandoff("twilio", target);
@@ -34069,7 +34180,10 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
   if (urgentHealth) return urgentHealth;
-  const backendCallIntent = conversational ? stageBackendCallIntent(db, user, text, options) : null;
+  // (a message is only ever STAGED here, behind a yes, so unlike a call it is read whether or not the caller is in conversational mode: the voice tools are not)
+  const backendMessageIntent = stageMessageIntent(db, user, text, options);
+  if (backendMessageIntent) return backendMessageIntent;
+  const backendCallIntent = (conversational || options.mode === "openai-native-agent") ? stageBackendCallIntent(db, user, text, options) : null;
   if (backendCallIntent) return backendCallIntent;
   const reminderContactCommand = /\b(remind|reminder|notify|notification)\b/.test(lower);
   const prioritizedPhoneContactCommand = reminderContactCommand ? null : await phoneContactMemoryCommandResponse(db, user, text, lower, options);
@@ -36472,7 +36586,11 @@ async function runAgentCommand(db, user, command, options = {}) {
 }
 
 async function runCompanionSafeAgentCommand(db, user, body = {}) {
-  const command = String(body.command || "").trim();
+  // The one front door (nexus/speech/normalise.js), for the typed route, the voice route and the phone line alike. The safety check below sees what was said as well as what
+  // was meant (see `saidCommand`), so cleaning never hides a danger phrase.
+  const spokenFront = normaliseSpoken(String(body.command || ""), { language: body.targetLanguage || body.language || user?.language });
+  const saidCommand = spokenFront.clean;
+  const command = spokenFront.text.trim();
   const inputMode = String(body.inputMode || "api").trim() || "api";
   const outputMode = String(body.outputMode || "").trim();
   const commandLanguage = canonicalVoiceLanguage(body.targetLanguage || body.language || user.language);
@@ -36493,7 +36611,9 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   // working behavior. Genuine psychological crisis / safeguarding concerns
   // have no such pre-existing coverage in this pipeline, so they still fire
   // here regardless of the conversational flag.
-  const mentalHealthSignal = command ? nexusMentalHealthBehavioralWellness.classifyState(command, {}) : null;
+  const meantSignal = command ? nexusMentalHealthBehavioralWellness.classifyState(command, {}) : null;
+  const saidSignal = saidCommand && saidCommand !== command ? nexusMentalHealthBehavioralWellness.classifyState(saidCommand, {}) : null;
+  const mentalHealthSignal = meantSignal?.crisisOverride === true || !saidSignal ? meantSignal : (saidSignal.crisisOverride === true || saidSignal.state === "medical_emergency" ? saidSignal : meantSignal);
   const mentalHealthAlreadyHandledElsewhere =
     mentalHealthSignal?.state === "medical_emergency" && body.conversational === true;
   if (mentalHealthSignal?.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
@@ -57929,13 +58049,17 @@ async function api(req, res, url) {
     const openAiNativeToolNames = new Set(nexusOpenAiNativeToolSchemas().map(tool => tool.name));
     if (openAiNativeToolNames.has(toolName)) {
       const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
-      const result = await executeNexusOpenAiNativeTool(db, authContext.user, toolName, args, {
+      // The same correlationId and words sent again (a retry, a double tap) returns the first result and repeats nothing (server/frontDoor.js).
+      const idempotencyKey = frontDoor.idempotencyKey(authContext.user?.id || authContext.user?.email, body.correlationId,
+        [toolName, normaliseSpoken(String(args.query || args.command || body.command || "")).text.toLowerCase(), String(args.language || body.language || ""), args.confirmed === true]);
+      const fresh = await frontDoor.runOnce(idempotencyKey, () => executeNexusOpenAiNativeTool(db, authContext.user, toolName, args, {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
         language: args.language || body.language || authContext.user.language || "en",
         outputMode: "voice",
         timeZone: body.timeZone || args.timeZone
-      });
+      }));
+      const result = idempotencyKey ? structuredClone(fresh) : fresh;
       const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);
       return send(res, 200, { ...result, genesisAction }, {

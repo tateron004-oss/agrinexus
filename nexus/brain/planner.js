@@ -217,7 +217,7 @@ class OpenEndedPlanner {
         if (ambiguous) return clarify(sw ? `Ni yupi: ${ambiguous.list.map(contact => contact.name).join(" au ")}?` : `Which one: ${ambiguous.list.map(contact => contact.name).join(" or ")}?`);
         if (!chosen) {
           const first = cleanContactName(loose.words[0] || "");
-          if (first && FAMILY_WORDS.test(first)) return clarify(sw ? `Sina anwani ya ${first}. Sema "hifadhi namba ya ${first} kama +254712345678" kwanza, au nipe namba yake.` : `I don't have a contact called ${first}. Say "save ${first}'s number as +254712345678" first, or give me their number.`);
+          if (first && FAMILY_WORDS.test(first)) return clarify(sw ? `Sina namba ya ${first}. Sema "hifadhi namba ya ${first} kama +254712345678" kwanza, au nipe namba yake.` : `I don't have a contact called ${first}. Say "save ${first}'s number as +254712345678" first, or give me their number.`);
           return null;
         }
         const wantsEmail = loose.channel === "email";
