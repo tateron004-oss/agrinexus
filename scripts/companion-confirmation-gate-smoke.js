@@ -17,14 +17,19 @@ const gatedCases = [
   ["appelle Marie", "outbound_call"],
   ["mpigie Amina", "outbound_call"],
   ["اتصل بمحمد", "outbound_call"],
-  ["Submit my application", "application"],
   ["Create the order", "order"],
   ["Share my information", "privacy"],
   ["Change language to Spanish", "settings"],
   ["Schedule appointment", "appointment"],
-  ["Make payment", "payment"],
-  ["Issue certificate", "certificate"],
   ["Run provider test", "admin_provider_test"]
+];
+
+// These used to be staged for a "yes" that then acted on whatever seeded record was nearest: "Submit my application" applied to the best-fitting seeded role, "Make payment" settled the
+// last order, "Issue certificate" issued one nobody studied for. They now stage nothing: the router asks which job, says it cannot send money, and says what is missing for a certificate.
+const nothingStagedCases = [
+  ["Submit my application", "workforce.application_help", /Which job do you want to apply for/i],
+  ["Make payment", "money.send", /I can't send money for you/i],
+  ["Issue certificate", "learning.certificate_not_ready", /haven't finished a course yet/i]
 ];
 
 const lowRiskCases = [
@@ -127,6 +132,13 @@ async function command(prompt) {
       assert.strictEqual(metadata.constitutionPhase, "phase-4-confirmation-gate", `${prompt} should carry Phase 4 marker`);
       assert(state.profile?.agentPendingAction, `${prompt} should store a pending action`);
       await command("no");
+    }
+
+    for (const [prompt, intent, wording] of nothingStagedCases) {
+      const state = await command(prompt);
+      assert.strictEqual(state.commandResult?.intent, intent, `${prompt} should be answered plainly (${state.commandResult?.intent})`);
+      assert.match(state.commandResult?.response || "", wording, `${prompt} wording`);
+      assert(!state.profile?.agentPendingAction, `${prompt} must not stage anything`);
     }
 
     for (const prompt of lowRiskCases) {

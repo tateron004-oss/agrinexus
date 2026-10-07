@@ -99,7 +99,7 @@ test("a real job application submission is staged for confirmation, never submit
   // Deliberately avoids phase4RiskyActionForCommand's own "submit application"
   // phrasing (which always stages regardless of confirm) so this exercises
   // the workforce.apply_role branch's own, separate stage/execute gate.
-  const result = await cmd({ command: "apply for this workforce role" });
+  const result = await cmd({ command: "apply for the telehealth assistant role" });
   assert.equal(result.status, "needs-confirmation",
     "omitting conversational must still require explicit confirmation before a real job application is submitted");
 });
@@ -111,6 +111,6 @@ test("a real buyer contact message is staged for confirmation, never sent for re
 });
 
 test("explicit confirmation (options.confirm) still lets a real job application proceed, unaffected by the fix", async () => {
-  const result = await cmd({ command: "apply for this workforce role", confirm: true });
+  const result = await cmd({ command: "apply for the telehealth assistant role", confirm: true });
   assert.notEqual(result.status, "needs-confirmation", "an explicitly confirmed request must still be allowed to proceed");
 });

@@ -4,6 +4,7 @@
 // persona audits: all of these went straight to the AI model, which could send them to a web search. They are answered here, plainly and without lecturing, with something Kyro CAN do instead.
 // The fixed rules only catch plain requests; the AI prompts carry the same rule (nexus/brain/crisis-rule.js) for everything else. Wording should be reviewed by a youth organisation.
 const { investmentGuardReply } = require("./investment-guard.js");
+const { scamGuardReply } = require("./scam-guard.js");
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 
 // ---- explicit material ----
@@ -40,6 +41,9 @@ function contentGuardReply(text) {
   }
   if (FRAUD_REQUEST.test(t)) return { kind: "fraud", reply: REPLIES.fraud };
   if (SCHEME.test(t)) return { kind: "scheme", reply: REPLIES.scheme };
+  // Someone asking for a PIN, password or one-time code, a fee to get a job, a loan or a prize, or an ID copy going to a stranger (see scam-guard.js).
+  const scam = scamGuardReply(text);
+  if (scam) return scam;
   // Never says what to buy, sell or trade, predicts a price, picks an exchange, or promises a return (see investment-guard.js).
   return investmentGuardReply(text);
 }
