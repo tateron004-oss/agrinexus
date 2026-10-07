@@ -71,6 +71,9 @@ const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridg
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
+// The honest work-and-learning answers (nexus/floor): short practice lessons in reading and maths, practice interviews, what Kyro really knows about jobs and training, and a child who
+// works or wants to. Where a person got to in a practice lesson is kept on their own record (user.floorPractice).
+const workLearningFloor = require("./nexus/floor/index.js");
 // The same safety answers the planner gives before anything else (danger signs in pregnancy or for a baby, someone in danger or being hurt, self-harm, scams, medicine doses for a baby or in pregnancy), for the
 // older paths: the phone line, the older command route, and the fallback when the planner cannot be reached. Those cannot alert a circle, so the answer says what to do and whom to call, and never offers to alert anyone.
 async function careSafetyReply(text, user) {
@@ -112,6 +115,35 @@ function healthReadingsReply(db, user, text, options = {}) {
 }
 const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote, savedReply: bloodPressureSavedReply, notSavedReply: bloodPressureNotSavedReply } = require("./server/providers/bloodPressure.js");
 const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply, savedReply: glucoseSavedReply, notSavedReply: glucoseNotSavedReply } = require("./server/providers/bloodGlucose.js");
+// null unless the work-and-learning floor answers this turn. A safety or guarded message never goes through it (those have their own answers), and a bare yes while something else waits
+// for a confirmation belongs to that, not to a practice lesson.
+function workLearningFloorTurn(db, user, command, requestedLanguage, { jobs = true } = {}) {
+  const text = String(command || "").trim();
+  if (!user || !user.id || !text) return null;
+  if (contentGuardReply(text) || careSafetyApplies(text)) return null;
+  const practice = user.floorPractice && typeof user.floorPractice === "object" ? user.floorPractice : workLearningFloor.emptyPractice();
+  const turn = workLearningFloor.turn({ text, requestedLanguage, practice, roles: db.roles, hasPending: Boolean(ownPendingAction(db, user)), now: Date.now(), jobs });
+  if (!turn.handled) return null;
+  user.floorPractice = practice;
+  return turn;
+}
+function workLearningFloorResult(turn, layers = {}) {
+  return ensureSpeakableAgentResult({
+    intent: turn.intent,
+    response: turn.reply,
+    status: "completed",
+    metadata: {
+      conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, workLearningFloor: true,
+      inputMode: layers.inputMode, outputMode: layers.outputMode || undefined,
+      companionUnderstanding: layers.companionUnderstanding,
+      conversationalModeOrchestrator: layers.conversationalModeOrchestrator,
+      selectedConversationalModes: layers.conversationalModeOrchestrator?.selectedModeIds,
+      fakeCitationsAllowed: false, providerHandoffAuthorized: false, workflowOpened: false,
+      // Already said in the person's own language: nothing after this may translate it again.
+      responseLanguage: turn.language, language: turn.language, targetLanguage: turn.language
+    }
+  }, turn.intent);
+}
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
 const teamManagement = require("./server/teamManagement.js");
@@ -3247,6 +3279,8 @@ function collectUserLearningRecords(user) {
     if (Array.isArray(value) && value.length) owned[key] = JSON.parse(JSON.stringify(value));
   }
   if (user.learningAccessibilityProfile) owned.learningAccessibilityProfile = JSON.parse(JSON.stringify(user.learningAccessibilityProfile));
+  // How far the person got in the short practice lessons (nexus/floor); no answers are kept, only the progress.
+  if (user.floorPractice && typeof user.floorPractice === "object") owned.floorPractice = JSON.parse(JSON.stringify(user.floorPractice));
   return owned;
 }
 
@@ -3263,6 +3297,7 @@ function eraseUserLearningRecords(user) {
   user.learningStreak = 0;
   user.learningHours = 0;
   delete user.learningAccessibilityProfile;
+  if (user.floorPractice) { removedCounts.floorPractice = 1; delete user.floorPractice; }
   return removedCounts;
 }
 
@@ -20153,6 +20188,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user asks to start or join a telehealth video call, video visit, or virtual appointment with a doctor or provider, you must call nexus_health_preparation with the complete request, including any symptoms mentioned. This creates a real, provider-reviewed video visit -- it is never a communications/messaging request.",
     "When the user asks to create a fitness or training plan, reports a completed workout, run, or training session, or asks about their fitness or training progress, you must call nexus_health_preparation with the complete request. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
+    "While a short practice lesson or practice interview is under way (your last reply asked a question or said 'say next'), or when the user asks to be taught to read, write, count or do basic maths, asks to practise a job interview, asks for jobs, training, apprenticeships or scholarships near them, or says a child wants to work, you must call nexus_workforce_learning with their exact words, including a bare 'next', 'again' or 'stop' or an answer such as a letter or a number, and say what the tool returns.",
     "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning/monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
     "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
@@ -20901,6 +20937,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to see, find, show, or play videos of anything (including crop damage, pests, disease, farming technique, or any other subject), you must call nexus_visual_analysis with that request. This is a real video search (YouTube when configured, Wikimedia Commons otherwise) — never say video is unavailable without calling it first. If the user asks for both images and videos in the same request, call nexus_visual_analysis once with the full request text and both will be searched.",
     "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning or monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
     "When the user asks to learn something, or requests a lesson, course, or training topic, you must call nexus_workforce_learning.",
+    "While a short practice lesson or practice interview is under way (your last reply asked a question or said 'say next'), or when the user asks to be taught to read, write, count or do basic maths, asks to practise a job interview, asks for jobs, training, apprenticeships or scholarships near them, or says a child wants to work, you must call nexus_workforce_learning with their exact words, including a bare 'next', 'again' or 'stop' or an answer such as a letter or a number, and say what the tool returns.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
     "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks for a route, directions, or traffic between two places, you must call nexus_maps_route.",
@@ -21762,6 +21799,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       response: "This account type cannot use that action here. Sign in with a full account to continue.",
       restrictedCategory: restrictedToolCategory
     };
+  }
+  // The model may send a lesson, an interview practice or a jobs question to the learning tool: the same honest answers apply there (and a practice already under way keeps its turns).
+  if (toolName === "nexus_workforce_learning") {
+    // Job, training and scholarship questions stay with this tool's own job-search source (which says honestly when it is not configured); everything else here is answered by the floor.
+    const floorTurn = workLearningFloorTurn(db, user, rawCallerText || command, language, { jobs: false });
+    if (floorTurn) {
+      return { ...common, capability: "work-and-learning", status: "completed", intent: floorTurn.intent, response: floorTurn.reply, language: floorTurn.language,
+        providerAttempted: false, providerSucceeded: false, executionAttempted: false, executionVerified: false };
+    }
   }
   if (toolName === "nexus_general_conversation" && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
     const musicResult = await musicProviderCommandResponse(db, user, command, args);
@@ -31495,13 +31541,16 @@ function latestRecordByDate(items = [], dateKeys = ["startsAt", "createdAt", "sc
     })[0] || null;
 }
 
-function nextRecordByDate(items = [], dateKeys = ["startsAt", "scheduledAt", "createdAt"]) {
+// upcomingOnly: a record whose time has already passed is never "next" (a shift in May is not the next shift in October); with nothing ahead the answer is null.
+function nextRecordByDate(items = [], dateKeys = ["startsAt", "scheduledAt", "createdAt"], { upcomingOnly = false } = {}) {
   const now = Date.now();
   const dated = (items || []).map(item => {
     const time = dateKeys.map(key => Date.parse(item?.[key] || "")).find(Number.isFinite) || 0;
     return { item, time };
   }).filter(entry => entry.time);
-  return (dated.filter(entry => entry.time >= now).sort((a, b) => a.time - b.time)[0]
+  const ahead = dated.filter(entry => entry.time >= now).sort((a, b) => a.time - b.time)[0];
+  if (upcomingOnly) return ahead ? ahead.item : null;
+  return (ahead
     || dated.sort((a, b) => b.time - a.time)[0]
     || {}).item || null;
 }
@@ -32344,7 +32393,7 @@ const ownRecordsOnly = (list, user) => {
 };
 function utilityAppointmentAnswer(db, options = {}, user = null) {
   const appointment = nextRecordByDate(ownRecordsOnly(db.profile.telehealthAppointments, user), ["scheduledAt", "startsAt", "createdAt"]);
-  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt", "createdAt"]);
+  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt"], { upcomingOnly: true });
   if (appointment) {
     const when = formatUtilityDate(appointment.scheduledAt || appointment.startsAt, options.timeZone)
       || appointment.scheduleWindow
@@ -33282,7 +33331,7 @@ async function utilityCropTimingAnswer(db, text, options = {}) {
 
 function utilityAppointmentReminderAnswer(db, user, options = {}) {
   const appointment = nextRecordByDate(ownRecordsOnly(db.profile.telehealthAppointments, user), ["scheduledAt", "startsAt", "createdAt"]);
-  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt", "createdAt"]);
+  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt"], { upcomingOnly: true });
   const target = appointment
     ? `telehealth appointment ${appointment.appointmentNumber || ""}`.trim()
     : shift
@@ -37158,6 +37207,36 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
       result: rememberResult,
       companionUnderstanding,
       companionRouteOutcome: { route: "explicit-remember", saved: outcome.saved, noExecutionAuthorized: true, workflowOpened: false }
+    };
+  }
+  // Practice lessons, practice interviews, jobs and training, a child who works: answered plainly before anything else can guess (nexus/floor). It goes through the same layers as every
+  // other answer (the conversational orchestrator, the companion understanding, the action policy) so the response carries the same evidence.
+  const floorTurn = workLearningFloorTurn(db, user, command, commandLanguage);
+  if (floorTurn) {
+    const result = workLearningFloorResult(floorTurn, { inputMode, outputMode, companionUnderstanding, conversationalModeOrchestrator });
+    const agentAction = buildAgentActionMetadata({ userMessage: command, result, inputMode, outputMode: outputMode || undefined, language: floorTurn.language });
+    result.metadata = {
+      ...(result.metadata || {}),
+      agentAction,
+      policyDecision: agentAction.policyDecision || null,
+      nexusPlan: agentAction.nexusPlan || null,
+      plannerObservation: agentAction.plannerObservation || null
+    };
+    commandRecord(db, user, command, result);
+    if (outputMode === "voice") {
+      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response, inputMode, language: floorTurn.language });
+    }
+    addWorkflowNote(db.profile, body.note, "Agent command note");
+    return {
+      result,
+      companionUnderstanding,
+      companionRouteOutcome: {
+        route: "work-learning-floor",
+        primaryModeId: conversationalModeOrchestrator.primaryMode.id,
+        blendedModeIds: conversationalModeOrchestrator.blendedModes.map(mode => mode.id),
+        noExecutionAuthorized: true,
+        workflowOpened: false
+      }
     };
   }
   const stabilizationRepair = await genesisStabilizationConversationRepair(db, user, command, {

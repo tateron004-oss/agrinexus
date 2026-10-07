@@ -80,11 +80,73 @@
   const RESTART_PATTERN = /^(?:(?:ok(?:ay)?|well|so|please|no|yes)[, ]+)*(?:(?:can|could) (?:we|you|i)|let'?s|i (?:want|need|would like) to|we (?:should|need to)|why don'?t we)?\s*(?:start|begin)\b[^.?!]{0,40}\b(?:over|again|from scratch|from the (?:top|start|beginning))\b|^(?:(?:ok(?:ay)?|well|so|please)[, ]+)*(?:restart|start over|begin again)\b/i;
   const CHANGE_PATTERN = /^change (my |the )?(.+)$/i;
 
+  // --- Kiswahili --------------------------------------------------------------------------------
+  // The same control words in Kiswahili. Found by the user-journey sweep: "ruka" (skip) was saved as a skill, "ndiyo" (yes) as education, "ndio ni hayo tu"
+  // (that's all) as work experience and "jina langu ni Juma Otieno" as the full name "Jina langu ni Juma Otieno". A bare "acha" (stop) PAUSES, like a bare "stop"
+  // does in English: answers are kept and the person is told how to carry on ("endelea") or cancel ("ghairi"). First draft: a fluent speaker must review every word.
+  const SW_CONTROL = {
+    cancel: /^(?:tafadhali )?(?:ghairi|acha kabisa|sitaki tena|sitaki kuendelea|niache|usiendelee|achana na hii)(?: (?:hii|hili|yote|cv|wasifu))?(?: tafadhali)?$/,
+    repeat: /^(?:tafadhali )?(?:rudia|rudia tena|rudia swali|sema tena|sema hivyo tena|nirudie|naomba (?:urudie|kurudia)|unaweza kurudia|samahani|sikusikia|sikuelewa|sijaelewa|sijakusikia)(?: tafadhali)?$/,
+    skip: /^(?:tafadhali )?(?:ruka|pita|ruka hiyo|ruka swali|pita swali|rukia|nipitishe|hapana|la|hakuna|sina(?: (?:chochote|kitu|uzoefu(?: wowote)?|elimu|ujuzi|lugha|simu|barua pepe|cheti))?|sijui|sijawahi|sijasoma|hapana asante|la asante)$/,
+    back: /^(?:rudi|rudi nyuma|nyuma|rudi kwa (?:swali )?lililopita|si sahihi|sio sahihi|siyo sahihi|makosa|badilisha (?:hilo|hiyo|la mwisho))$/,
+    yes: /^(?:ndiyo|ndio|sawa|sawa sawa|sawa kabisa|naam|ni sahihi|ni kweli|kweli|hakika|poa|ndiyo sawa|ndio sawa|ndiyo ni sahihi)$/,
+    no: /^(?:hapana|la|siyo|sio|si sahihi|sio sahihi|siyo sahihi|bado)$/
+  };
+  const SW_PAUSE = /^(?:tafadhali )?(?:subiri|ngoja|simama|sitisha|acha|nyamaza|dakika moja|subiri kidogo|ngoja kidogo|acha kwanza|acha kidogo|nipe (?:dakika|muda)(?: moja)?|nahitaji (?:dakika|muda|mapumziko))(?: tafadhali)?$/;
+  const SW_REPEAT_NATURAL = /\b(?:sikuelewa|sijaelewa|sikusikia|sijasikia|rudia|sema tena|unasema nini|ulisema nini|swali ni nini)\b/;
+  const SW_DONE_COLLECTING = /^(?:(?:ndiyo|ndio|sawa|hapana|la)[, ]+)?(?:(?:ndiyo|ndio|ni) )?(?:hayo tu|hiyo tu|ni hayo|ni hiyo|hakuna zaidi|hakuna kingine|hakuna nyingine|hakuna tena|basi|tosha|imetosha|nimemaliza|nimeshamaliza|ndiyo basi|ndio basi|ndiyo hiyo|ndio hiyo)(?: (?:kwa sasa|asante))?(?:[, ]+(?:asante|tafadhali))?$/;
+  const SW_SWITCH = new RegExp(`^(?:hey[, ]+|hujambo[, ]+|habari[, ]+|mambo[, ]+)?(?:${WAKE_NAMES})[, ]+(?:fungua|onyesha|cheza|tafuta|piga|nini|wapi|niambie|anza|nenda|nifungulie|nionyeshe|nitafutie|niwekee)\\b|^ombi jipya\\b`, "i");
+  const SW_RESTART = /^(?:(?:sawa|tafadhali|ok)[, ]+)*(?:(?:tuanze|anza|nataka kuanza|naomba tuanze)\s+(?:upya|tena|kutoka mwanzo|kuanzia mwanzo)\b|anza upya\b|tuanze upya\b)/;
+  const SW_CHANGE = /^(?:badilisha|rekebisha|nataka kubadilisha|ninataka kubadilisha)\s+(?:(?:langu|lako|yangu|zangu|wangu|la|ya)\s+)?(.+)$/;
+  // Words that mean the speaker is using Kiswahili. Only distinctive ones count: "na" and "sana" also turn up in names and English chatter.
+  const SW_MARKERS = /\b(?:ndiyo|ndio|hapana|sawa|asante|tafadhali|naitwa|ninaitwa|jina|langu|yangu|wangu|zangu|nataka|ninataka|nipe|ruka|rudia|rudi|ghairi|naishi|ninaishi|ujuzi|elimu|kazi|sina|hakuna|habari|nimefanya|nimesoma|nililima|ninaweza|naweza|najua|ninajua|kusoma|kuandika|hayo|wasifu|mimi|katika|shule|kidato|miaka|nimemaliza|endelea|subiri|ngoja|acha)\b/g;
+  const SW_STRONG = /\b(?:ndiyo|ndio|hapana|asante|tafadhali|naitwa|ninaitwa|jina langu|ruka|rudia|ghairi|naishi|ninaishi|ujuzi|elimu|sina|hakuna|habari|nimefanya|nimesoma|nililima|ninaweza|naweza|najua|ninajua|hayo tu|wasifu|nimemaliza|endelea|subiri|ngoja|nataka|ninataka|yangu|wangu|zangu|nipe)\b/;
+  const EN_MARKERS = /\b(?:i|my|the|and|is|am|have|has|yes|no|skip|please|name|work|school|stop|cancel|back|repeat|that's|all|live|can|good|at)\b/g;
+  // Which language a sentence is in: "sw", "en", or null when it cannot tell (a name, a single word). Switching AWAY from Kiswahili needs a clear English
+  // sentence (strict), so a Swahili speaker who says the English word "skip" is not answered in English.
+  function detectLanguage(text, { strict = false } = {}) {
+    const norm = normalizeText(text);
+    if (!norm) return null;
+    if (SW_STRONG.test(norm)) return "sw";
+    const sw = (norm.match(SW_MARKERS) || []).length;
+    const en = (norm.match(EN_MARKERS) || []).length;
+    if (sw >= 2 && sw > en) return "sw";
+    if (sw === 0 && en >= (strict ? 2 : 1)) return "en";
+    return null;
+  }
+  function isBareYes(text) {
+    const stripped = normalizeText(text).replace(WAKE_PREFIX, "");
+    return CONTROL_PATTERNS.yes.test(stripped) || SW_CONTROL.yes.test(stripped);
+  }
+
+  // Everything the engine itself says, in both languages. {x} is filled in from the caller. The English text is what the original tests pin: keep it identical.
+  const MSG = {
+    en: {
+      gotIt: "Got it.", sorryRetry: "I didn't quite get that. {q}", orSkip: " Or say 'skip'.", moreDefault: "Anything else? Or say that's all.",
+      confirmTail: "Shall I make it now? Say yes, or tell me which part to change.", updated: "Updated.", notSure: "I'm not sure which part you mean. {summary} Say yes, or name the part to change.",
+      whichPart: "Which part should I change?", startOver: "Okay, let's start over. {q}", needThis: "I need this one to continue. {q}", removed: "Okay, removed that. {q}",
+      firstQuestion: "This is the first question. {q}", redo: "Let's redo that. {q}", talk: "Okay, I stopped. Your answers are saved. Tell me what is wrong, or say continue to go on, or cancel to stop.",
+      hold: "Okay, I will wait. Say continue when you are ready, or say cancel to stop.", keepGoing: "Let's keep going. {q}", oneMoment: "One moment.", failed: "That didn't work. Let's try again.",
+      failedYes: "That didn't work. Say yes to try again.", done: "All done.", here: "Here is what I have.", noAnswers: "I don't have any answers yet.",
+      yesFollow: "Okay. {q}", yesMore: "Okay, tell me. {q}"
+    },
+    sw: {
+      gotIt: "Sawa.", sorryRetry: "Samahani, sikuelewa vizuri. {q}", orSkip: " Au sema 'ruka'.", moreDefault: "Kuna kingine? Au sema ndio hayo tu.",
+      confirmTail: "Nikitengeneze sasa? Sema ndiyo, au niambie sehemu ya kubadilisha.", updated: "Nimebadilisha.", notSure: "Sijui unamaanisha sehemu gani. {summary} Sema ndiyo, au taja sehemu ya kubadilisha.",
+      whichPart: "Nibadilishe sehemu gani?", startOver: "Sawa, tuanze upya. {q}", needThis: "Ninahitaji jibu la swali hili ili kuendelea. {q}", removed: "Sawa, nimeondoa hicho. {q}",
+      firstQuestion: "Hili ndilo swali la kwanza. {q}", redo: "Tuirudie hiyo. {q}", talk: "Sawa, nimesimama. Majibu yako yamehifadhiwa. Niambie kuna tatizo gani, au sema endelea kuendelea, au ghairi kuacha.",
+      hold: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha.", keepGoing: "Tuendelee. {q}", oneMoment: "Subiri kidogo.", failed: "Haikufaulu. Tujaribu tena.",
+      failedYes: "Haikufaulu. Sema ndiyo kujaribu tena.", done: "Imekamilika.", here: "Hivi ndivyo nilivyoandika.", noAnswers: "Bado sina majibu yoyote.",
+      yesFollow: "Sawa. {q}", yesMore: "Sawa, niambie. {q}"
+    }
+  };
+  function fill(template, params) { return String(template).replace(/\{(\w+)\}/g, (whole, name) => (params && params[name] !== undefined ? params[name] : whole)).replace(/\s+$/g, ""); }
+
   function wordCount(text) { return String(text || "").split(/\s+/).filter(Boolean).length; }
 
   function isDoneCollecting(text) {
     const norm = normalizeText(text).replace(WAKE_PREFIX, "");
-    return DONE_COLLECTING.test(norm);
+    return DONE_COLLECTING.test(norm) || SW_DONE_COLLECTING.test(norm);
   }
 
   function classifyControl(text, { inConfirm = false } = {}) {
@@ -95,23 +157,23 @@
     const stripped = norm.replace(WAKE_PREFIX, "");
     const words = wordCount(stripped);
     if (inConfirm) {
-      if (CONTROL_PATTERNS.yes.test(stripped)) return "yes";
-      if (CHANGE_PATTERN.test(stripped)) return "change";
-      if (CONTROL_PATTERNS.no.test(stripped)) return "no";
+      if (CONTROL_PATTERNS.yes.test(stripped) || SW_CONTROL.yes.test(stripped)) return "yes";
+      if (CHANGE_PATTERN.test(stripped) || SW_CHANGE.test(stripped)) return "change";
+      if (CONTROL_PATTERNS.no.test(stripped) || SW_CONTROL.no.test(stripped)) return "no";
     }
-    if (CONTROL_PATTERNS.cancel.test(stripped)) return "cancel";
-    if (PAUSE_PATTERN.test(stripped)) return "pause";
-    if (CONTROL_PATTERNS.repeat.test(stripped)) return "repeat";
-    if (words <= MAX_NATURAL_CONTROL_WORDS && REPEAT_NATURAL.some(pattern => pattern.test(stripped))) return "repeat";
-    if (SWITCH_PATTERN.test(norm)) return "switch";
+    if (CONTROL_PATTERNS.cancel.test(stripped) || SW_CONTROL.cancel.test(stripped)) return "cancel";
+    if (PAUSE_PATTERN.test(stripped) || SW_PAUSE.test(stripped)) return "pause";
+    if (CONTROL_PATTERNS.repeat.test(stripped) || SW_CONTROL.repeat.test(stripped)) return "repeat";
+    if (words <= MAX_NATURAL_CONTROL_WORDS && (REPEAT_NATURAL.some(pattern => pattern.test(stripped)) || SW_REPEAT_NATURAL.test(stripped))) return "repeat";
+    if (SWITCH_PATTERN.test(norm) || SW_SWITCH.test(norm)) return "switch";
     // A short QUESTION put to Kyro ("do you understand?", "what do you mean?") is never an answer to
     // a form field -- re-ask rather than saving it.
     if (words <= MAX_NATURAL_CONTROL_WORDS && /\?\s*$/.test(raw)
       && (/\b(?:you|your|kyro)\b/.test(stripped) || /^(?:what|why|how|who|where|when|which|huh|pardon|sorry)\b/.test(stripped))) return "repeat";
-    if (CONTROL_PATTERNS.back.test(stripped)) return "back";
-    if (CONTROL_PATTERNS.skip.test(stripped)) return "skip";
+    if (CONTROL_PATTERNS.back.test(stripped) || SW_CONTROL.back.test(stripped)) return "back";
+    if (CONTROL_PATTERNS.skip.test(stripped) || SW_CONTROL.skip.test(stripped)) return "skip";
     if (words <= MAX_DIRECTED_WORDS) {
-      if (RESTART_PATTERN.test(stripped)) return "restart";
+      if (RESTART_PATTERN.test(stripped) || SW_RESTART.test(stripped)) return "restart";
       if (DIRECTED_AT_KYRO.test(stripped)) return "pause-talk";
     }
     return null;
@@ -120,13 +182,20 @@
   // --- default per-field-kind normalizers ----------------------------------------------------
   const SPOKEN_DIGITS = {
     zero: "0", oh: "0", o: "0", one: "1", two: "2", three: "3", four: "4", five: "5",
-    six: "6", seven: "7", eight: "8", nine: "9"
+    six: "6", seven: "7", eight: "8", nine: "9",
+    // Kiswahili digits ("sifuri"/"sufuri" is zero, "mbili" is two, ...).
+    sifuri: "0", sufuri: "0", moja: "1", mbili: "2", tatu: "3", nne: "4", tano: "5", sita: "6", saba: "7", nane: "8", tisa: "9"
   };
 
+  // "Jina langu ni Juma Otieno" / "Naitwa Juma" / "Mimi ni Juma": the name is what follows. "...na ninaishi Mombasa" (and I live in Mombasa) is not part of it.
+  const NAME_LEAD = /^\s*(?:my (?:full |first |last )?name is|my name'?s|the name is|i am|i'm|it's|its|this is|call me|name[:\s]+|jina langu(?: kamili)?(?: ni)?|jina la kwanza(?: ni)?|jina ni|naitwa|ninaitwa|mimi ni|mimi naitwa|mimi ninaitwa|jina)(?:\s+|$)/i;
+  const NAME_TAIL = /\s+(?:(?:and|na)\s+)?(?:i (?:live|stay|am|work|come)|ninaishi|naishi|ninatoka|natoka|nina|ninafanya|nafanya|nakaa|ninakaa)\b.*$/i;
+  const SW_CHATTER = /\b(?:ndiyo|ndio|hapana|asante|tafadhali|habari|jambo|hujambo|karibu|sawa|anza|ruka|rudia|ghairi|naam)\b/i;
   function normalizeName(raw) {
     let value = String(raw || "")
-      .replace(/^\s*(my (?:full |first |last )?name is|my name'?s|the name is|i am|i'm|it's|its|this is|call me|name[:\s]+)\s*/i, "")
-      .replace(/\s+please\s*$/i, "")
+      .replace(NAME_LEAD, "")
+      .replace(NAME_TAIL, "")
+      .replace(/\s+(?:please|tafadhali)\s*$/i, "")
       .replace(/[.!]+$/g, "")
       .replace(/\s+/g, " ")
       .trim();
@@ -135,7 +204,7 @@
     // Found live: "Perfect, let's begin" was accepted as a person's name. Real names are a few words
     // of letters; chatter is longer or full of ordinary conversation words.
     if (value.split(" ").length > 5) return { ok: false, reason: "not-a-name" };
-    if (/[?!,;:]/.test(value) || /\b(?:let'?s|begin|start|perfect|okay|ok|ready|stop|please|thanks|thank|hello|yes|no|kyro|kairo)\b/i.test(value)) return { ok: false, reason: "not-a-name" };
+    if (/[?!,;:]/.test(value) || /\b(?:let'?s|begin|start|perfect|okay|ok|ready|stop|please|thanks|thank|hello|yes|no|kyro|kairo)\b/i.test(value) || SW_CHATTER.test(value)) return { ok: false, reason: "not-a-name" };
     return { ok: true, value };
   }
 
@@ -162,8 +231,10 @@
   function normalizeEmail(raw) {
     let value = String(raw || "")
       .toLowerCase()
+      // "my email is ..." / "barua pepe yangu ni ..." / "imeili yangu ni ...": the address is what follows.
+      .replace(/^\s*(?:my (?:email|e-mail)(?: address)?(?: is)?|the (?:email|e-mail)(?: address)?(?: is)?|it is|it's|its|barua pepe(?: yangu)?(?: ni)?|imeili(?: yangu)?(?: ni)?|anwani(?: yangu)?(?: ni)?|email(?: yangu)?(?: ni)?)\s+/, "")
       .replace(/\s+at\s+/g, "@")
-      .replace(/\s+dot\s+/g, ".")
+      .replace(/\s+(?:dot|nukta)\s+/g, ".")
       .replace(/\s+underscore\s+/g, "_")
       .replace(/\s+dash\s+/g, "-")
       .replace(/\s+/g, "")
@@ -175,14 +246,25 @@
   // Deliberately does NOT split a list into items -- that stays solely in the one place each form
   // actually understands how to split correctly (e.g. nexus/resume/build.js's items()), so a
   // comma/"and" splitting bug only ever needs fixing in one place, not duplicated here too.
+  // A lead-in like "my skills are" / "ujuzi wangu ni" is not part of the list; "ninaweza kupika na kulima" is "kupika na kulima".
+  const LIST_LEAD = /^\s*(?:my (?:skills|languages) (?:are|is)|i (?:can|know how to|am good at|speak)|i know|ujuzi wangu ni|ujuzi wangu|stadi zangu ni|ninaweza kufanya|ninaweza|naweza|ninajua kufanya|ninajua|najua|ninafanya|nafanya|nina ujuzi wa|nazungumza|ninazungumza|lugha zangu ni|ninaongea|naongea|mimi ni mzuri katika)\s+/i;
   function normalizeList(raw) {
-    const value = String(raw || "").replace(/\s+/g, " ").trim();
+    const value = String(raw || "").replace(LIST_LEAD, "").replace(/\s+/g, " ").trim();
+    if (!value) return { ok: false, reason: "empty" };
+    return { ok: true, value };
+  }
+
+  // A town or village: "naishi Mombasa" / "I live in Kisumu" is "Mombasa" / "Kisumu".
+  const PLACE_LEAD = /^\s*(?:i (?:live|stay|am living|am staying) (?:in|at|near)|i(?:'m| am) from|i come from|my (?:town|village) is|(?:ninaishi|naishi|nakaa|ninakaa|ninatoka|natoka|ninatokea|natokea)(?:\s+(?:katika|kwa|huko|pale|mjini|kijiji cha|mji wa|eneo la))*|kijiji cha|mji wa)\s+/i;
+  function normalizePlace(raw) {
+    const value = String(raw || "").replace(PLACE_LEAD, "").replace(/[.!]+$/g, "").replace(/\s+/g, " ").trim();
     if (!value) return { ok: false, reason: "empty" };
     return { ok: true, value };
   }
 
   function normalizeSentences(raw) {
-    const value = String(raw || "").replace(/\s+/g, " ").trim();
+    // A sentence starts with a capital letter ("nilifanya kazi ya ushonaji" -> "Nilifanya kazi ya ushonaji"); nothing else is changed.
+    const value = String(raw || "").replace(/\s+/g, " ").trim().replace(/^\p{Ll}/u, letter => letter.toUpperCase());
     if (!value) return { ok: false, reason: "empty" };
     return { ok: true, value };
   }
@@ -198,6 +280,7 @@
     phone: normalizePhone,
     email: normalizeEmail,
     list: normalizeList,
+    place: normalizePlace,
     sentences: normalizeSentences,
     text: normalizePlainText
   });
@@ -211,18 +294,22 @@
     }
   }
 
-  function defaultReadback(fields, values) {
+  function defaultReadback(fields, values, lang = "en") {
     const parts = fields
       .filter(field => values[field.key] !== undefined && values[field.key] !== "")
       .map(field => {
         const value = values[field.key];
         const text = Array.isArray(value) ? value.join(", ") : String(value);
-        return `${field.label}: ${text}.`;
+        const label = lang === "sw" && field.sw && field.sw.label ? field.sw.label : field.label;
+        return `${label}: ${text}.`;
       });
-    return parts.length ? `Here is what I have. ${parts.join(" ")}` : "I don't have any answers yet.";
+    return parts.length ? `${MSG[lang].here} ${parts.join(" ")}` : MSG[lang].noAnswers;
   }
 
   // --- the engine -----------------------------------------------------------------------------
+  // Language: the engine speaks the language the person speaks. It starts in options.language (the app's language, "en" or "sw") or in the language of the
+  // request that began the intake, and follows the person if they change language part-way. A form supplies its Kiswahili wording in `sw` objects (on the
+  // definition and on each field); anything it does not translate is said in English rather than left blank.
   function create(definition, options = {}) {
     if (!definition || !Array.isArray(definition.fields) || !definition.fields.length) {
       throw new Error("KyroVoiceIntake.create requires a definition with a non-empty fields array");
@@ -231,6 +318,22 @@
     const idleTimeoutMs = Number.isFinite(options.idleTimeoutMs) ? options.idleTimeoutMs : DEFAULT_IDLE_TIMEOUT_MS;
     const fields = definition.fields;
     const intakeId = options.intakeId || `${definition.id || "intake"}-${now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    let lang = String(options.language || "").toLowerCase().startsWith("sw") ? "sw" : "en";
+    if (options.seedUtterance && options.seedUtterance.text) {
+      const seedLang = detectLanguage(options.seedUtterance.text, { strict: false });
+      if (seedLang) lang = seedLang;
+    }
+    const say = (key, params) => fill(MSG[lang][key], params);
+    const textOf = (holder, prop) => {
+      if (!holder) return "";
+      if (lang === "sw" && holder.sw && typeof holder.sw[prop] === "string" && holder.sw[prop]) return holder.sw[prop];
+      return typeof holder[prop] === "string" ? holder[prop] : "";
+    };
+    const questionOf = field => textOf(field, "question");
+    const moreOf = field => (lang === "sw" && field.sw && field.sw.moreQuestion) || (field.repeatable && field.repeatable.moreQuestion) || MSG[lang].moreDefault;
+    const readbackNow = () => (typeof definition.readback === "function" ? definition.readback(values, lang) : defaultReadback(fields, values, lang));
+    const confirmLine = prefix => `${prefix ? `${prefix} ` : ""}${readbackNow()} ${MSG[lang].confirmTail}`;
 
     let phase = "asking";
     let index = 0;
@@ -242,6 +345,7 @@
     let lastUtterance = null;
     const repeatBuffer = {};
     let returnToConfirm = false;
+    let validateMisses = 0;
     let startedAt = now();
     let updatedAt = startedAt;
     let pauseReason = null;
@@ -304,7 +408,7 @@
         let value = values[field.key];
         if (value === undefined && repeatBuffer[field.key] && repeatBuffer[field.key].length) value = repeatBuffer[field.key];
         if (value === undefined || value === "" || (Array.isArray(value) && !value.length)) continue;
-        list.push({ key: field.key, label: field.label, value: Array.isArray(value) ? value.slice() : value });
+        list.push({ key: field.key, label: textOf(field, "label") || field.label, value: Array.isArray(value) ? value.slice() : value });
       }
       return list;
     }
@@ -314,25 +418,26 @@
       return {
         intakeId,
         formId: definition.id,
-        title: definition.title || "",
+        title: textOf(definition, "title") || definition.title || "",
+        language: lang,
         phase,
         index,
         total: fields.length,
-        currentField: field ? { key: field.key, label: field.label, question: field.question, required: !!field.required, hint: field.hint || "" } : null,
+        currentField: field ? { key: field.key, label: textOf(field, "label") || field.label, question: questionOf(field), required: !!field.required, hint: textOf(field, "hint") || field.hint || "" } : null,
         values: { ...values },
         answers: answeredList(),
         skipped: Array.from(skipped)
       };
     }
 
-    function decision(action, say, extra = {}) {
-      return { consumed: true, action, say: say || "", field: currentField(), values: { ...values }, snapshot: snap(), ...extra };
+    function decision(action, line, extra = {}) {
+      return { consumed: true, action, say: line || "", language: lang, field: currentField(), values: { ...values }, snapshot: snap(), ...extra };
     }
 
     function askCurrent(prefix) {
       phase = "asking";
       const field = currentField();
-      const line = `${prefix ? `${prefix} ` : ""}${field.question}`;
+      const line = `${prefix ? `${prefix} ` : ""}${questionOf(field)}`;
       return decision("ask", line);
     }
 
@@ -342,26 +447,32 @@
     }
 
     function finishCollecting() {
-      const err = typeof definition.validate === "function" ? definition.validate(values) : null;
+      const err = typeof definition.validate === "function" ? definition.validate(values, { lang, misses: validateMisses }) : null;
       if (err && err.fieldKey) {
+        validateMisses += 1;
         const errIndex = fields.findIndex(field => field.key === err.fieldKey);
         index = errIndex >= 0 ? errIndex : 0;
         skipped.delete(currentField().key);
+        // Asked for the same thing three times: stop asking. Everything said so far is kept and "continue" picks it up again, so nobody is stuck in a loop.
+        if (err.pause) {
+          enterPaused("later");
+          return decision("paused", err.message);
+        }
         return reaskCurrent(err.message);
       }
+      validateMisses = 0;
       if (definition.confirmBeforeSubmit) {
         phase = "confirming";
-        const summary = typeof definition.readback === "function" ? definition.readback(values) : defaultReadback(fields, values);
-        return decision("confirm", `${summary} Shall I make it now? Say yes, or tell me which part to change.`);
+        return decision("confirm", confirmLine(""));
       }
       phase = "submitting";
-      return decision("submit", "One moment.");
+      return decision("submit", say("oneMoment"));
     }
 
     function advanceFromField() {
       index = nextUnskippedIndex(index + 1);
       if (index >= fields.length) return finishCollecting();
-      return askCurrent("Got it.");
+      return askCurrent(say("gotIt"));
     }
 
     function storeAnswerAndAdvance(field, value) {
@@ -371,8 +482,7 @@
       if (returnToConfirm) {
         returnToConfirm = false;
         phase = "confirming";
-        const summary = typeof definition.readback === "function" ? definition.readback(values) : defaultReadback(fields, values);
-        return decision("confirm", `Updated. ${summary} Shall I make it now? Say yes, or tell me which part to change.`);
+        return decision("confirm", confirmLine(say("updated")));
       }
       return advanceFromField();
     }
@@ -382,8 +492,8 @@
       if (!result.ok) {
         attempts[field.key] = (attempts[field.key] || 0) + 1;
         const canOfferSkip = !field.required && attempts[field.key] >= MAX_ATTEMPTS_BEFORE_SKIP_OFFER;
-        const base = field.retryPrompt || `I didn't quite get that. ${field.question}`;
-        return reaskCurrent(canOfferSkip ? `${base} Or say 'skip'.` : base);
+        const base = textOf(field, "retryPrompt") || say("sorryRetry", { q: questionOf(field) });
+        return reaskCurrent(canOfferSkip ? `${base}${MSG[lang].orSkip}` : base);
       }
       if (field.repeatable) {
         const arr = repeatBuffer[field.key] || (repeatBuffer[field.key] = []);
@@ -395,7 +505,7 @@
           delete repeatBuffer[field.key];
           return advanceFromField();
         }
-        return decision("ask", field.repeatable.moreQuestion || "Anything else? Or say that's all.");
+        return decision("ask", moreOf(field));
       }
       return storeAnswerAndAdvance(field, result.value);
     }
@@ -411,9 +521,10 @@
         delete repeatBuffer[field.key];
         return advanceFromField();
       }
+      if (isBareYes(rawText)) return decision("reask", say("yesMore", { q: moreOf(field) }));
       const result = normalizeAnswer(field, rawText);
       if (!result.ok) {
-        return decision("reask", `I didn't quite get that. ${field.repeatable.moreQuestion || "Anything else? Or say that's all."}`);
+        return decision("reask", say("sorryRetry", { q: moreOf(field) }));
       }
       const arr = repeatBuffer[field.key] || (repeatBuffer[field.key] = []);
       arr.push(result.value);
@@ -423,25 +534,26 @@
         delete repeatBuffer[field.key];
         return advanceFromField();
       }
-      return decision("ask", field.repeatable.moreQuestion || "Anything else? Or say that's all.");
+      return decision("ask", moreOf(field));
     }
 
     function handleConfirmAnswer(rawText) {
       const control = classifyControl(rawText, { inConfirm: true });
       if (control === "yes") {
         phase = "submitting";
-        return decision("submit", "One moment.");
+        return decision("submit", say("oneMoment"));
       }
       if (control === "repeat") return doRepeat();
       if (control === "back") return doBack();
       if (control === "change") {
-        const match = CHANGE_PATTERN.exec(normalizeText(rawText));
-        const target = match ? match[2] : "";
-        const field = fields.find(f => f.key.toLowerCase() === target || f.label.toLowerCase() === target
+        const norm = normalizeText(rawText);
+        const swMatch = SW_CHANGE.exec(norm);
+        const match = CHANGE_PATTERN.exec(norm);
+        const target = match ? match[2] : (swMatch ? swMatch[1] : "");
+        const field = fields.find(f => f.key.toLowerCase() === target || String(f.label).toLowerCase() === target
           || (f.aliases || []).some(alias => alias.toLowerCase() === target || target.includes(alias.toLowerCase())));
         if (!field) {
-          const summary = typeof definition.readback === "function" ? definition.readback(values) : defaultReadback(fields, values);
-          return decision("confirm", `I'm not sure which part you mean. ${summary} Say yes, or name the part to change.`);
+          return decision("confirm", say("notSure", { summary: readbackNow() }));
         }
         index = fields.indexOf(field);
         skipped.delete(field.key);
@@ -449,10 +561,9 @@
         return askCurrent();
       }
       if (control === "no") {
-        return decision("confirm", "Which part should I change?");
+        return decision("confirm", say("whichPart"));
       }
-      const summary = typeof definition.readback === "function" ? definition.readback(values) : defaultReadback(fields, values);
-      return decision("confirm", `${summary} Shall I make it now? Say yes, or tell me which part to change.`);
+      return decision("confirm", confirmLine(""));
     }
 
     // Wipes every answer and goes back to the first question ("let's start over").
@@ -464,9 +575,10 @@
       history.length = 0;
       returnToConfirm = false;
       pausedFromPhase = null;
+      validateMisses = 0;
       index = nextUnskippedIndex(0);
       phase = "asking";
-      return decision("ask", `Okay, let's start over. ${currentField().question}`);
+      return decision("ask", say("startOver", { q: questionOf(currentField()) }));
     }
 
     function doCancel() {
@@ -476,14 +588,13 @@
 
     function doRepeat() {
       if (phase === "confirming") {
-        const summary = typeof definition.readback === "function" ? definition.readback(values) : defaultReadback(fields, values);
-        return decision("confirm", `${summary} Shall I make it now? Say yes, or tell me which part to change.`);
+        return decision("confirm", confirmLine(""));
       }
       if (phase === "more") {
-        return decision("ask", currentField().repeatable.moreQuestion || "Anything else? Or say that's all.");
+        return decision("ask", moreOf(currentField()));
       }
       const field = currentField();
-      return decision("ask", field ? field.question : "");
+      return decision("ask", field ? questionOf(field) : "");
     }
 
     function doSkip() {
@@ -497,7 +608,7 @@
       const field = currentField();
       if (!field) return decision("ask", "");
       if (field.required) {
-        return reaskCurrent(`I need this one to continue. ${field.question}`);
+        return reaskCurrent(say("needThis", { q: questionOf(field) }));
       }
       skipped.add(field.key);
       return advanceFromField();
@@ -509,25 +620,25 @@
         const arr = repeatBuffer[field.key] || [];
         if (arr.length) {
           arr.pop();
-          return decision("ask", `Okay, removed that. ${field.repeatable.moreQuestion || "Anything else?"}`);
+          return decision("ask", say("removed", { q: lang === "sw" && field.sw && field.sw.moreQuestion ? field.sw.moreQuestion : ((field.repeatable && field.repeatable.moreQuestion) || (lang === "sw" ? "Kuna kingine?" : "Anything else?")) }));
         }
         phase = "asking";
-        return decision("ask", field.question);
+        return decision("ask", questionOf(field));
       }
       if (phase === "confirming") {
         index = prevUnskippedIndex(fields.length - 1);
         skipped.delete(currentField().key);
         phase = "asking";
-        return decision("ask", `Let's redo that. ${currentField().question}`);
+        return decision("ask", say("redo", { q: questionOf(currentField()) }));
       }
       if (index <= 0) {
         phase = "asking";
-        return decision("ask", `This is the first question. ${currentField().question}`);
+        return decision("ask", say("firstQuestion", { q: questionOf(currentField()) }));
       }
       index = prevUnskippedIndex(index - 1);
       skipped.delete(currentField().key);
       phase = "asking";
-      return decision("ask", `Let's redo that. ${currentField().question}`);
+      return decision("ask", say("redo", { q: questionOf(currentField()) }));
     }
 
     function handleUtterance(text, meta = {}) {
@@ -541,6 +652,8 @@
       const trimmed = String(text || "").trim();
       if (!trimmed) return decision("duplicate", "");
       recordUtterance(meta.utteranceId, text);
+      const spoken = detectLanguage(trimmed, { strict: true });
+      if (spoken) lang = spoken;
 
       // "switch" (wake-word new request) and "cancel" must be honored in every phase, including
       // while confirming or while collecting a repeatable field's extra answers -- otherwise a
@@ -551,25 +664,20 @@
       const control = classifyControl(trimmed, { inConfirm: phase === "confirming" });
       if (control === "switch") {
         enterPaused("switch");
-        return { consumed: false, action: "paused", say: "", field: currentField(), values: { ...values }, snapshot: snap() };
+        return { consumed: false, action: "paused", say: "", language: lang, field: currentField(), values: { ...values }, snapshot: snap() };
       }
       if (control === "cancel") return doCancel();
       if (control === "restart") return doRestart();
       if (control === "pause-talk") {
         enterPaused("talk");
-        return decision("paused", typeof definition.talkLine === "string" && definition.talkLine
-          ? definition.talkLine
-          : "Okay, I stopped. Your answers are saved. Tell me what is wrong, or say continue to go on, or cancel to stop.");
+        return decision("paused", textOf(definition, "talkLine") || MSG[lang].talk);
       }
       // "Hold on" / "wait" / "stop for a minute" / a bare "stop": keep every answer, close nothing for
       // good, and tell the person how to carry on or cancel. Consumed (not passed on as a new
       // command), unlike a wake-word switch.
       if (control === "pause") {
         enterPaused("hold");
-        const holdLine = typeof definition.pausedLine === "string" && definition.pausedLine
-          ? definition.pausedLine
-          : "Okay, I will wait. Say continue when you are ready, or say cancel to stop.";
-        return decision("paused", holdLine);
+        return decision("paused", textOf(definition, "pausedLine") || MSG[lang].hold);
       }
 
       if (phase === "confirming") return handleConfirmAnswer(trimmed);
@@ -578,6 +686,8 @@
       if (control === "repeat") return doRepeat();
       if (control === "back") return doBack();
       if (control === "skip") return doSkip();
+      // A bare "yes" / "ndiyo" to a question that wants a real answer ("Did you go to school? Tell me what") is not the answer.
+      if (isBareYes(trimmed)) return reaskCurrent(say("yesFollow", { q: questionOf(currentField()) }));
 
       return handleFieldAnswer(currentField(), trimmed);
     }
@@ -587,8 +697,9 @@
       index = nextUnskippedIndex(0);
       phase = "asking";
       const field = currentField();
-      const intro = definition.intro ? `${definition.intro} ` : "";
-      return decision("ask", `${intro}${field.question}`);
+      const introText = textOf(definition, "intro");
+      const intro = introText ? `${introText} ` : "";
+      return decision("ask", `${intro}${questionOf(field)}`);
     }
 
     function isExpired(atTime) {
@@ -613,33 +724,33 @@
         phase = pausedFromPhase || "asking";
         pausedFromPhase = null;
         if (phase === "confirming") {
-          const summary = typeof definition.readback === "function" ? definition.readback(values) : defaultReadback(fields, values);
-          return decision("confirm", `Let's keep going. ${summary} Shall I make it now? Say yes, or tell me which part to change.`);
+          return decision("confirm", confirmLine(say("keepGoing", { q: "" })));
         }
         if (phase === "more") {
           const field = currentField();
-          return decision("ask", `Let's keep going. ${field.repeatable.moreQuestion || "Anything else? Or say that's all."}`);
+          return decision("ask", say("keepGoing", { q: moreOf(field) }));
         }
         const field = currentField();
-        return decision("ask", field ? `Let's keep going. ${field.question}` : "");
+        return decision("ask", field ? say("keepGoing", { q: questionOf(field) }) : "");
       },
       markSubmitting: () => { touch(); phase = "submitting"; return decision("busy", ""); },
       submitFailed: (opts = {}) => {
         touch();
         if (opts.fieldKey) {
           const errIndex = fields.findIndex(f => f.key === opts.fieldKey);
-          if (errIndex >= 0) { index = errIndex; skipped.delete(currentField().key); return reaskCurrent(opts.message || "That didn't work. Let's try again."); }
+          if (errIndex >= 0) { index = errIndex; skipped.delete(currentField().key); return reaskCurrent(opts.message || say("failed")); }
         }
         phase = "confirming";
-        return decision("confirm", opts.message || "That didn't work. Say yes to try again.");
+        return decision("confirm", opts.message || say("failedYes"));
       },
-      markDone: (say) => { touch(); phase = "done"; return decision("done", say || "All done."); },
+      markDone: (line) => { touch(); phase = "done"; return decision("done", line || say("done")); },
       snapshot: snap,
       isExpired,
       get phase() { return phase; },
-      get pauseReason() { return pauseReason; }
+      get pauseReason() { return pauseReason; },
+      get language() { return lang; }
     });
   }
 
-  return Object.freeze({ create, classifyControl, isDoneCollecting, normalizers: NORMALIZERS, normalizeText });
+  return Object.freeze({ create, classifyControl, isDoneCollecting, detectLanguage, normalizers: NORMALIZERS, normalizeText });
 });

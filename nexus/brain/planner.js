@@ -998,29 +998,38 @@ const RESUME_REQUEST = /^\s*(?:(?:please|kyro|nexus|can you|could you|would you)
 // itself explicitly allows -- so "Can you make a resume for me?" silently fell through to the free-form AI
 // planner instead of this deterministic, well-tested fast path.
 const RESUME_QUESTION = /^\s*(?:how|what|why|when|where|should|can you explain|tips|is it|do i)\b/i;
+// The same request in Kiswahili ("nataka CV", "tengeneza wasifu wangu", "nitengenezee CV", "nipe CV yangu"); a question about CVs ("CV ni nini?", "jinsi ya kuandika CV")
+// and a request to download one that is already saved ("pakua CV yangu") are not requests to make one. The clarifying questions are then asked in Kiswahili too.
+const RESUME_REQUEST_SW = /^\s*(?:(?:tafadhali|kyro|nexus)[, ]+)*(?:tengeneza|nitengenezee|unitengenezee|niandikie|andika|nipe|naomba|nataka|ninataka|ninahitaji|nahitaji|nisaidie kutengeneza)\b[^.?!]{0,40}\b(?:cv|wasifu)\b/i;
+const RESUME_QUESTION_SW = /\b(?:ni nini|maana|jinsi ya|namna ya|nawezaje|ninawezaje|nifanyeje|pakua|niipakue|download)\b/i;
 function resumeField(text, label) {
-  const match = new RegExp(`\\b${label}\\s*(?:are|is|include|includes)?\\s*[:\\-]\\s*(.+?)(?=(?:\\.|;|,)?\\s+(?:skills?|experience|education|languages?|phone|email)\\s*[:\\-]|\\.\\s|$)`, "i").exec(text);
+  const match = new RegExp(`\\b${label}\\s*(?:are|is|include|includes|ni)?\\s*[:\\-]\\s*(.+?)(?=(?:\\.|;|,)?\\s+(?:skills?|ujuzi|experience|uzoefu|education|elimu|languages?|lugha|phone|simu|email)\\s*[:\\-]|\\.\\s|$)`, "i").exec(text);
   return match ? match[1].trim().replace(/[.]+$/, "") : "";
 }
 function resumePlan(text, catalog, byKind = {}) {
   const goal = String(text || "").trim();
-  if (!goal || goal.length > 600 || !RESUME_REQUEST.test(goal) || RESUME_QUESTION.test(goal)) return null;
+  const swahili = RESUME_REQUEST_SW.test(goal) && !RESUME_QUESTION_SW.test(goal);
+  if (!goal || goal.length > 600 || !(RESUME_REQUEST.test(goal) || swahili) || RESUME_QUESTION.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "resume.create") || !catalog.applications.some(app => app.applicationId === "workforce")) return null;
   const clarify = question => ({ goal, application: "workforce", riskTier: "low", clarification: question, steps: [] });
-  const name = /\b(?:for|named|called|name is)\s+([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+){0,2})\b/.exec(goal)?.[1] || byKind.name || "";
-  if (!name) return clarify('What name should go on your resume? You can also tell me once with "my name is …" and I will remember it.');
+  const name = /\b(?:for|named|called|name is|jina langu ni|naitwa|ninaitwa|kwa ajili ya)\s+([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+){0,2})\b/.exec(goal)?.[1] || byKind.name || "";
+  if (!name) return clarify(swahili
+    ? 'Jina gani liwe kwenye CV yako? Unaweza pia kuniambia mara moja kwa "jina langu ni …" nami nitalikumbuka.'
+    : 'What name should go on your resume? You can also tell me once with "my name is …" and I will remember it.');
   // An Oxford comma before "and" ("irrigation, and livestock management") leaves a stray "and "
   // stuck to the last item -- the comma already consumes the split point before it, so strip it
   // after splitting. These arrays reach build.js's items() as-is (it only re-splits strings), so
   // this is the one place that needs to get it right for the skills/languages path.
-  const splitList = value => value.split(/\s*,\s*|\s+and\s+/).map(item => item.trim().replace(/^and\s+/i, "")).filter(Boolean);
-  const skills = splitList(resumeField(goal, "skills?"));
-  const experience = resumeField(goal, "experience").split(/\s*;\s*/).filter(Boolean);
-  const education = resumeField(goal, "education").split(/\s*;\s*/).filter(Boolean);
-  const languages = splitList(resumeField(goal, "languages?"));
+  const splitList = value => value.split(/\s*,\s*|\s+and\s+|\s+na\s+/).map(item => item.trim().replace(/^and\s+/i, "")).filter(Boolean);
+  const skills = splitList(resumeField(goal, "(?:skills?|ujuzi)"));
+  const experience = resumeField(goal, "(?:experience|uzoefu)").split(/\s*;\s*/).filter(Boolean);
+  const education = resumeField(goal, "(?:education|elimu)").split(/\s*;\s*/).filter(Boolean);
+  const languages = splitList(resumeField(goal, "(?:languages?|lugha)"));
   const known = Boolean(byKind.crops || byKind.livestock);
   if (!skills.length && !experience.length && !education.length && !known)
-    return clarify('What should it say? Tell me your skills and experience, for example: "skills: crop planning, irrigation; experience: 5 years managing a maize farm".');
+    return clarify(swahili
+      ? 'CV iseme nini? Niambie ujuzi na uzoefu wako, kwa mfano: "ujuzi: kupanga mazao, umwagiliaji; uzoefu: miaka 5 ya kusimamia shamba la mahindi".'
+      : 'What should it say? Tell me your skills and experience, for example: "skills: crop planning, irrigation; experience: 5 years managing a maize farm".');
   const phone = SEND_PHONE.exec(goal)?.[0]?.replace(/[\s().-]/g, ""); const email = SEND_EMAIL.exec(goal)?.[0]?.replace(/[.,;:!?]+$/, "");
   const input = { name, ...(phone ? { phone } : {}), ...(email ? { email } : {}), skills, experience, education, languages };
   return { goal, application: "workforce", riskTier: "low", clarification: null,
