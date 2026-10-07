@@ -18156,6 +18156,8 @@ function applyPermissions() {
   if (teamLink) teamLink.hidden = data?.permissions?.team !== true;
   const platformLink = $("#platformLink");
   if (platformLink) platformLink.hidden = data?.permissions?.platform !== true;
+  // The messages-and-calls setup and the pilot subscribers belong to the platform owner; a business's own Admin is not shown cards that would only refuse them.
+  for (const id of ["adminCommunicationsCard", "adminSubscribersCard"]) { const card = $("#" + id); if (card) card.hidden = data?.permissions?.platform !== true; }
   $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-government-action], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #runFrontierBrainBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
@@ -45733,6 +45735,10 @@ async function runAdminBusinessManagerAction(action) {
   if (action === "assign" && !managerEmail) return toast("Enter the business manager's email to put this person on their team.");
   const body = action === "assign" ? { email, managerEmail } : { email, enabled: action === "make" };
   await mutate("/api/admin/business-manager", body, action === "assign" ? "That person is now on the manager's team." : action === "make" ? "That account is now a business manager. They see a My team link after they sign in again." : "That account is no longer a business manager.");
+  // mutate() toasts its own errors; clear the boxes only when the change is now in place.
+  const person = (data?.admin?.users || []).find(item => String(item.email || "").toLowerCase() === email.toLowerCase());
+  const worked = action === "assign" ? Boolean(person?.teamManagerId) : Boolean(person) && person.businessManager === (action === "make");
+  if (worked) $("#businessManagerForm")?.reset();
 }
 
 async function submitAdminPhoneCaller(event) {

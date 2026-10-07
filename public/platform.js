@@ -128,5 +128,5 @@
     act(form.querySelector("button"), () => api("/businesses", "POST", { name: field("name"), id: field("id"), adminName: field("adminName"), adminEmail: field("adminEmail"), country: field("country") }), result => { form.reset(); return `${result.created.name} was created.`; });
   });
 
-  api("/businesses").then(state => { render(state); notice("Signed in as the platform owner."); }).catch(error => notice(error.message));
+  api("/businesses").then(state => { byId("addSection").hidden = false; render(state); notice("Signed in as the platform owner."); }).catch(error => notice(error.message));
 })();
