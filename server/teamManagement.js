@@ -18,7 +18,14 @@ const MAX_TEAM_SIZE = 50;
 const MIN_PASSWORD_LENGTH = 8;
 
 const emailKey = value => String(value ?? "").trim().toLowerCase();
-const validEmail = value => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+// A plain, ASCII email only: no spaces, quotes, look-alike or invisible characters, no stray dots, at most 254 characters. (A look-alike or invisible-character address would be a second, different account that
+// looks the same on screen.)
+const validEmail = value => {
+  const text = String(value || "").trim();
+  return text.length <= 254 && !text.includes("..")
+    && /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-][A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{0,62}[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(text)
+    || /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(text) && text.length <= 254 && !text.includes("..");
+};
 const isBusinessManager = user => Boolean(user && user.role === MANAGED_ROLE && user.businessManager === true);
 // An Admin can use the Team tools too (they see the same list); a manager can while their own account is on.
 const canManageTeam = user => Boolean(user && user.status !== "deleted" && user.status !== "disabled" && (user.role === "Admin" || isBusinessManager(user)));

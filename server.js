@@ -1955,6 +1955,8 @@ function usingPostgresAuth() {
 // ITS password is still allowed, matching these routes' own intended repeat-use behavior.
 // An email is one person in one place. Inside a business, an account's email is linked to that business in the directory, so that signing in finds the business (without this a person added to a business could
 // never sign in). An email already used by another business, or by an account in the default space, is refused; in the default space, an email linked to a business is refused.
+// What a person is told when the directory refuses or fails: its own refusals as they are, anything else (a file or database problem) as a plain "try again", never the raw error.
+const directoryFailureReply = error => (error?.userSafe ? { status: 409, error: error.message } : { status: 503, error: "That could not be saved just now. Try again in a minute." });
 async function refuseIfEmailTakenElsewhere(email, existingHere = null) {
   const space = businessSpaces.currentSpace();
   const linked = await spaceDirectory.spaceForEmail(email);
@@ -1965,7 +1967,7 @@ async function refuseIfEmailTakenElsewhere(email, existingHere = null) {
     if ((platformRecord.users || []).some(item => businessSpaces.emailKey(item.email) === businessSpaces.emailKey(email))) return "That email already belongs to an existing account.";
   }
   if (linked !== space) {
-    try { await spaceDirectory.linkEmail(email, space); } catch (error) { return error.message; }
+    try { await spaceDirectory.linkEmail(email, space); } catch (error) { recordServerError({ source: "directory-link-email", message: error.message }); return directoryFailureReply(error).error; }
   }
   return "";
 }
@@ -3688,8 +3690,10 @@ function parseBodyText(req, data) {
   const contentType = String(req.headers["content-type"] || "");
   if (!data) return {};
   if (contentType.includes("application/x-www-form-urlencoded")) return Object.fromEntries(new URLSearchParams(data));
-  return JSON.parse(data);
+  const parsed = JSON.parse(data);
+  return parsed && typeof parsed === "object" ? parsed : {};
 }
+const requestFault = (message, httpStatus) => Object.assign(new Error(message), { httpStatus, userSafe: true });
 function bufferBodyText(req) {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -3700,13 +3704,13 @@ function bufferBodyText(req) {
 }
 function readBody(req) {
   if (typeof req.bufferedBodyText === "string") {
-    try { return Promise.resolve(parseBodyText(req, req.bufferedBodyText)); } catch { return Promise.reject(new Error("Invalid JSON")); }
+    try { return Promise.resolve(parseBodyText(req, req.bufferedBodyText)); } catch { return Promise.reject(requestFault("Invalid JSON", 400)); }
   }
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", chunk => {
       data += chunk;
-      if (data.length > 20_000_000) reject(new Error("Payload too large"));
+      if (data.length > 20_000_000) reject(requestFault("Payload too large", 413));
     });
     req.on("end", () => {
       try {
@@ -3715,9 +3719,10 @@ function readBody(req) {
         if (contentType.includes("application/x-www-form-urlencoded")) {
           return resolve(Object.fromEntries(new URLSearchParams(data)));
         }
-        resolve(JSON.parse(data));
+        const parsed = JSON.parse(data);
+        resolve(parsed && typeof parsed === "object" ? parsed : {});
       } catch {
-        reject(new Error("Invalid JSON"));
+        reject(requestFault("Invalid JSON", 400));
       }
     });
   });
@@ -40288,6 +40293,7 @@ function nexusGlobalCommunicationsPacketType(channel = "sms", phase = "preparati
 }
 
 function nexusGlobalCommunicationsChannelStatus(channel = "sms", env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   const normalized = String(channel || "sms").toLowerCase();
   const missing = [];
   let flagName = "NEXUS_MESSAGES_ENABLED";
@@ -40480,6 +40486,7 @@ function normalizeNexusEmailProvider(provider = "", env = process.env) {
 }
 
 function nexusEmailProviderStatus(env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   const selectedProvider = normalizeNexusEmailProvider("", env);
   const supportedProviders = [
     { provider: "smtp", requiredEnv: ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"], optionalEnv: ["SMTP_SECURE", "SMTP_REPLY_TO"] },
@@ -40607,6 +40614,7 @@ async function smtpCommand(socket, command, expected = /^[23]/) {
 }
 
 async function sendNexusSmtpEmail({ to, subject, text }, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   const host = String(env.SMTP_HOST || "").trim();
   const port = Number(env.SMTP_PORT || 587);
   const secure = String(env.SMTP_SECURE || "").toLowerCase() === "true" || port === 465;
@@ -40649,6 +40657,7 @@ async function sendNexusSmtpEmail({ to, subject, text }, env = process.env) {
 }
 
 async function sendNexusSendGridEmail({ to, subject, text }, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   const from = String(env.SENDGRID_FROM_EMAIL || "").trim();
   const replyTo = String(env.SENDGRID_REPLY_TO || "").trim();
   const response = await fetchWithTimeout("https://api.sendgrid.com/v3/mail/send", {
@@ -40803,6 +40812,7 @@ function buildNexusPasswordResetEmailBody({ resetToken, expiresAt }) {
 }
 
 async function sendNexusPasswordResetEmail(db, { to, resetToken, expiresAt, ownerId = null }, env = process.env) {
+  env = { ...env }; // a copy, so the business-sender swap does not apply: a password reset code is system mail, sent as the platform
   const status = nexusEmailProviderStatus(env);
   const subject = "Your Nexus password reset code";
   const text = buildNexusPasswordResetEmailBody({ resetToken, expiresAt });
@@ -40853,14 +40863,17 @@ function nexusCommunicationsFlagEnabled(env = process.env, channel = "sms") {
 }
 
 function nexusTwilioSmsFrom(env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   return String(env.TWILIO_PHONE_NUMBER || env.TWILIO_FROM_NUMBER || env.TWILIO_NUMBER || env.TWILIO_SMS_FROM || "").trim();
 }
 
 function nexusTwilioWhatsappFrom(env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   return String(env.TWILIO_WHATSAPP_FROM || "").trim();
 }
 
 function nexusCommunicationsMissingEnv(env = process.env, channel = "sms") {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   const base = [];
   if (!String(env.TWILIO_ACCOUNT_SID || "").trim()) base.push("TWILIO_ACCOUNT_SID");
   if (!String(env.TWILIO_AUTH_TOKEN || "").trim()) base.push("TWILIO_AUTH_TOKEN");
@@ -40983,6 +40996,7 @@ function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provid
 }
 
 async function sendNexusTwilioCommunication({ channel, to, message }, env = process.env) {
+  env = senderOverride.resolve(env); // inside a business, its own sender (see server/businessSender.js)
   const normalized = normalizeNexusCommunicationsChannel(channel);
   const from = normalized === "whatsapp"
     ? (nexusTwilioWhatsappFrom(env).startsWith("whatsapp:") ? nexusTwilioWhatsappFrom(env) : `whatsapp:${nexusTwilioWhatsappFrom(env)}`)
@@ -47855,7 +47869,7 @@ async function api(req, res, url) {
     if (!user) return send(res, 401, { ok: false, error: "Sign in required" });
     if (!rateLimit(req, 20, 10 * 60_000)) return send(res, 429, { ok: false, error: "Too many uploads. Please wait before trying again." });
     try {
-      const meta = await nexusUploads.parseAndStoreUpload(req, { env: process.env, userId: user.id });
+      const meta = await nexusUploads.parseAndStoreUpload(req, { env: process.env, userId: user.id, space: businessSpaces.currentSpace() });
       db.profile = db.profile || {};
       // Found live (uploads/telehealth/permissions follow-up audit): this
       // was a single global field, not scoped by user, despite the reader
@@ -47910,7 +47924,7 @@ async function api(req, res, url) {
     const fileId = String(url.searchParams.get("fileId") || "");
     const dir = nexusUploads.uploadDir(process.env);
     const meta = nexusUploads.readMeta(dir, fileId);
-    if (!nexusUploads.canAccessUpload(meta, user)) return send(res, 403, { ok: false, error: "Forbidden" });
+    if (!nexusUploads.canAccessUpload(meta, user, businessSpaces.currentSpace())) return send(res, 403, { ok: false, error: "Forbidden" });
     const filePath = nexusUploads.resolveUploadedFilePath(dir, fileId);
     if (!filePath || !fs.existsSync(filePath)) return send(res, 404, { ok: false, error: "Not found" });
     return fs.readFile(filePath, (err, data) => {
@@ -52163,7 +52177,7 @@ async function api(req, res, url) {
     const body = await readBody(req);
 
     if (url.pathname === "/api/team/users") {
-      const name = String(body.name ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+      const name = businessSpaces.cleanName(body.name);
       const email = teamManagement.emailKey(body.email);
       if (!name) return send(res, 400, { error: "Enter the person's name." });
       if (!teamManagement.validEmail(email)) return send(res, 400, { error: "Enter a valid email for the person." });
@@ -52306,13 +52320,18 @@ async function api(req, res, url) {
       };
       try {
         await createBusinessRecord(id, businessSpaces.newSpaceRecord(seedTemplate(), { adminAccount }));
-      } catch (error) { return send(res, 409, { error: error.message }); }
+      } catch (error) { const reply = error.userSafe ? { status: 409, error: error.message } : directoryFailureReply(error); return send(res, reply.status, { error: reply.error }); }
+      let directoryEntryMade = false;
       try {
         await spaceDirectory.createSpace(id, { name });
+        directoryEntryMade = true;
         await spaceDirectory.linkEmail(adminEmail, id);
       } catch (error) {
         await deleteBusinessRecord(id);
-        return send(res, 409, { error: error.message });
+        // Take back the directory entry only if THIS attempt made it (never another attempt's).
+        if (directoryEntryMade) await spaceDirectory.removeSpace(id).catch(() => {});
+        const reply = directoryFailureReply(error);
+        return send(res, reply.status, { error: reply.error });
       }
       if (usingPostgresAuth()) {
         // The new business's first Admin belongs to the NEW business's tenant, not the platform's.
@@ -52361,7 +52380,7 @@ async function api(req, res, url) {
       if (!info.closedAt) return send(res, 409, { error: "Close the business first. Erasing is only allowed for a closed business." });
       // Without a database there is no engine data to erase; with one, every person's erasure must be queued BEFORE anything is deleted, so that a failure leaves the business whole and the erase can be tried again.
       const engineInUse = Boolean(process.env.DATABASE_URL);
-      const summary = await businessSpaces.runInSpace(id, async () => {
+      const summary = await withSpaceChangeLock(id, () => businessSpaces.runInSpace(id, async () => {
         const record = await readDb().catch(() => null);
         const people = (record?.users || []).filter(item => item.status !== "deleted");
         const result = { people: people.length, uploadsRemoved: 0, engineApplicable: engineInUse, engineErasuresQueued: 0, engineErasuresFailed: 0, failedPeople: [], signInsDisabled: 0 };
@@ -52389,7 +52408,7 @@ async function api(req, res, url) {
           }
         }
         return result;
-      }, info);
+      }, info));
       if (summary.engineErasuresFailed) {
         platformLog("business.erase_incomplete", `Erasing business ${id} stopped: ${summary.engineErasuresFailed} of ${summary.people} people's data could not be queued for erasure. Nothing was deleted.`, { businessId: id, failed: summary.engineErasuresFailed });
         await writeDb(db);
@@ -52409,7 +52428,7 @@ async function api(req, res, url) {
       const number = normalizePhoneNumber(body.number);
       if (!number) return send(res, 400, { error: "Enter the phone number with its country code, starting with +, for example +254712345678." });
       if (!(await spaceDirectory.exists(id))) return send(res, 404, { error: "There is no business with that id." });
-      try { await spaceDirectory.linkNumber(number, id); } catch (error) { return send(res, 409, { error: error.message }); }
+      try { await spaceDirectory.linkNumber(number, id); } catch (error) { const reply = directoryFailureReply(error); return send(res, reply.status, { error: reply.error }); }
       forgetSpaceInfo(id);
       platformLog("business.number_linked", `${redactPhoneNumber(number)} linked to business ${id}.`, { businessId: id, phone: redactPhoneNumber(number) });
       await writeDb(db);
@@ -52420,7 +52439,7 @@ async function api(req, res, url) {
       const id = String(body.id ?? "").trim().toLowerCase();
       if (!(await spaceDirectory.exists(id))) return send(res, 404, { error: "There is no business with that id." });
       const password = randomTemporaryPassword();
-      const reset = await businessSpaces.runInSpace(id, async () => {
+      const reset = await withSpaceChangeLock(id, () => businessSpaces.runInSpace(id, async () => {
         const record = await readDb();
         const admin = (record.users || []).find(item => item.role === "Admin" && item.status !== "deleted");
         if (!admin) return null;
@@ -52435,7 +52454,7 @@ async function api(req, res, url) {
         await revokeSessionsForUser(admin);
         await writeDb(record);
         return { email: admin.email, name: admin.name };
-      });
+      }));
       if (!reset) return send(res, 404, { error: "That business has no Admin account." });
       if (reset.failed) return send(res, 502, { error: "The password could not be changed just now. Try again in a minute." });
       platformLog("business.admin_password_reset", `A new temporary password was set for the first Admin of ${id}.`, { businessId: id });
@@ -52555,7 +52574,7 @@ async function api(req, res, url) {
     const email = String(body.email || "test-user@example.com").trim().toLowerCase();
     const name = String(body.name || "Test User").trim() || "Test User";
     const password = String(body.password || "").trim() || randomTemporaryPassword();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
+    if (!teamManagement.validEmail(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 8) return send(res, 400, { error: "Password must be at least 8 characters" });
     const existing = db.users.find(item => String(item.email || "").toLowerCase() === email);
     // This route creates/resets throwaway sandbox logins, not general account
@@ -52606,7 +52625,7 @@ async function api(req, res, url) {
     const email = String(body.email || "admin-test@example.com").trim().toLowerCase();
     const name = String(body.name || "Admin Test User").trim() || "Admin Test User";
     const password = String(body.password || "").trim() || randomTemporaryPassword();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
+    if (!teamManagement.validEmail(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 10) return send(res, 400, { error: "Admin password must be at least 10 characters" });
     const account = db.users.find(item => String(item.email || "").toLowerCase() === email);
     // This route creates/resets throwaway sandbox Admin logins, not general
@@ -52657,7 +52676,7 @@ async function api(req, res, url) {
     const email = String(body.email || "investor-test@example.com").trim().toLowerCase();
     const name = String(body.name || "Investor Test User").trim() || "Investor Test User";
     const password = String(body.password || "").trim() || randomTemporaryPassword();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
+    if (!teamManagement.validEmail(email)) return send(res, 400, { error: "A valid email is required" });
     if (password.length < 8) return send(res, 400, { error: "Password must be at least 8 characters" });
     const existing = db.users.find(item => String(item.email || "").toLowerCase() === email);
     // Same guardrail as test-user/admin-user: this creates/resets throwaway
@@ -58391,12 +58410,12 @@ async function createBusinessRecord(id, record) {
   if (usingPostgresState()) {
     await ensurePostgresState();
     const result = await getPgPool().query("insert into agrinexus_app_state (id, state) values ($1, $2::jsonb) on conflict (id) do nothing returning id", [id, JSON.stringify(record)]);
-    if (!result.rowCount) throw new Error("That business already exists.");
+    if (!result.rowCount) throw Object.assign(new Error("That business already exists."), { userSafe: true });
     return;
   }
   const file = businessSpaces.spaceDbPath(DB_PATH, id);
   await fs.promises.mkdir(path.dirname(file), { recursive: true });
-  try { await fs.promises.writeFile(file, JSON.stringify(record, null, 2) + "\n", { flag: "wx" }); } catch (error) { throw error.code === "EEXIST" ? new Error("That business already exists.") : error; }
+  try { await fs.promises.writeFile(file, JSON.stringify(record, null, 2) + "\n", { flag: "wx" }); } catch (error) { throw error.code === "EEXIST" ? Object.assign(new Error("That business already exists."), { userSafe: true }) : error; }
 }
 async function deleteBusinessRecord(id) {
   if (usingPostgresState()) { await getPgPool().query("delete from agrinexus_app_state where id = $1 and id <> 'default'", [id]).catch(() => {}); return; }
@@ -58456,22 +58475,39 @@ async function resolveRequestSpaceUnchecked(req, url) {
   return businessSpaces.DEFAULT_SPACE;
 }
 
+// A business's record is read, changed and saved whole, so two changes arriving at once would each start from the same copy and the later save would silently wipe out the earlier one (found by a test that
+// added 20 people at once: all 20 were told "added", one survived). Admin changes (adding people, passwords, switching accounts, phone numbers, settings, the platform owner's tools) are short and rare, so they
+// are taken one at a time per business. Everyday requests (chat, voice, reads) are not queued: they can be long, and the same whole-record weakness there is a known, separate matter.
+const spaceChangeQueues = new Map();
+function withSpaceChangeLock(space, work) {
+  const previous = spaceChangeQueues.get(space) || Promise.resolve();
+  const run = previous.then(work, work);
+  const tail = run.then(() => {}, () => {});
+  spaceChangeQueues.set(space, tail);
+  tail.then(() => { if (spaceChangeQueues.get(space) === tail) spaceChangeQueues.delete(space); });
+  return run;
+}
+const ADMIN_CHANGE_PATH = /^\/api\/(team|admin|platform)\//;
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
     const route = await resolveRequestSpace(req, url);
-    return await businessSpaces.runInSpace(route.space, async () => {
+    const handle = () => businessSpaces.runInSpace(route.space, async () => {
       if (await authoritativeNexusRuntime.handle(req, res, url, send)) return;
       if (url.pathname.startsWith("/api/")) return await api(req, res, url);
       if (url.pathname.startsWith("/exports/")) return await serveExport(req, res, url);
       return serveStatic(req, res, url);
     }, route.info);
+    return await (req.method === "POST" && ADMIN_CHANGE_PATH.test(url.pathname) ? withSpaceChangeLock(route.space, handle) : handle());
   } catch (error) {
     // Log the real error server-side but never return its raw message to the
     // client -- an unhandled exception here can originate from a DB driver,
     // a null-deref, or another internal detail that shouldn't be exposed to
     // any caller, authenticated or not.
+    // A request the person got wrong (broken JSON, too large) or a service that is plainly unavailable (the business directory) is answered as that, not as a crash.
+    if (error?.userSafe && error.httpStatus >= 400 && error.httpStatus < 600) return send(res, error.httpStatus, { error: error.message });
     console.error("[unhandled]", error.stack || error.message);
     recordServerError({ source: "unhandled-request", message: error.stack || error.message, context: { path: url.pathname, method: req.method } });
     return send(res, 500, { error: "Server error" });

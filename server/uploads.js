@@ -110,10 +110,12 @@ function resolveUploadedFilePath(dir, fileId) {
 // caller-authorization work in server.js already established for this
 // codebase -- obscurity alone was exactly the kind of gap that let PR #570's
 // vulnerability exist for phone calls.
-function canAccessUpload(meta, user) {
+// The upload folder is shared by every business, so an Admin sees an upload only if it was made in THEIR business (files from before businesses existed belong to the default space). The person who uploaded a
+// file can always open it.
+function canAccessUpload(meta, user, space = "default") {
   if (!meta) return false;
   if (!user) return false;
-  if (user.role === "Admin") return true;
+  if (user.role === "Admin" && String(meta.space || "default") === String(space || "default")) return true;
   return String(meta.uploadedBy || "") === String(user.id || "");
 }
 
@@ -183,7 +185,7 @@ function readRawRequest(req, maxBytes) {
 // total-quota size limits, and -- only if every check passes -- writes it to
 // disk under a random id with the metadata sidecar needed for real ownership
 // checks later. Never writes a file that fails any check.
-function parseAndStoreUpload(req, { env = process.env, userId } = {}) {
+function parseAndStoreUpload(req, { env = process.env, userId, space = "default" } = {}) {
   return new Promise((resolve, reject) => {
     const dir = uploadDir(env);
     fs.mkdirSync(dir, { recursive: true });
@@ -245,6 +247,7 @@ function parseAndStoreUpload(req, { env = process.env, userId } = {}) {
             mimeType: declaredType,
             sizeBytes: bytesWritten,
             uploadedBy: String(userId || ""),
+            space: String(space || "default"),
             uploadedAt: new Date().toISOString()
           };
           fs.writeFileSync(metaPath(dir, fileId), JSON.stringify(meta));
