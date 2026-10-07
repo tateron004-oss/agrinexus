@@ -87,6 +87,7 @@
     "db:restore": "node scripts/db-restore.js",
     "state:backup": "node scripts/state-backup.js",
     "state:restore": "node scripts/state-restore.js",
+    "walkthrough": "node scripts/staging-walkthrough.js",
     "foundation:describe": "node foundation/scripts/describe-foundation.js",
     "foundation:migrate": "node foundation/scripts/migrate.js",
     "foundation:verify-db": "node foundation/scripts/verify-db.js",
