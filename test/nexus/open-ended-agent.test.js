@@ -507,7 +507,7 @@ test("the full planner never consults the AI model for a reminder with a relativ
   for (const text of ["Remind me to test push in 2 minutes.", "Remind me to call Ron in 3 hours", "Remind me on Friday to order supplies"]) {
     const plan = await planner.plan({ command: { text, tenantId: "t", actorId: "u", locale: "en", channel: "typed" }, context: { roles: [] } });
     assert.equal(plan.steps[0].toolId, "reminders.schedule", text);
-    assert.equal(plan.steps[0].input.when, text);
+    assert.equal(plan.steps[0].input.when, text.replace(/\.$/, ""), "the front door drops a closing full stop; the rest is the words as said");
   }
   assert.equal(modelCalls, 0);
 });
