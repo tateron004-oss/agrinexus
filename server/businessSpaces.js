@@ -17,9 +17,12 @@ const DEFAULT_SPACE = "default";
 const store = new AsyncLocalStorage();
 
 const validSpaceId = id => typeof id === "string" && /^[a-z0-9][a-z0-9-]{1,39}$/.test(id) && id !== DEFAULT_SPACE;
+// The store holds the space and, for a business, what it sends as (its own settings and linked numbers; see server/businessSender.js), loaded once when the request is routed.
+const contextOf = (space, info) => ({ space: space || DEFAULT_SPACE, settings: (info && info.settings) || {}, numbers: (info && info.numbers) || [] });
 const currentSpace = () => store.getStore()?.space || DEFAULT_SPACE;
-const runInSpace = (space, work) => store.run({ space: space || DEFAULT_SPACE }, work);
-const enterSpace = space => store.enterWith({ space: space || DEFAULT_SPACE });
+const currentContext = () => store.getStore() || contextOf(DEFAULT_SPACE);
+const runInSpace = (space, work, info) => store.run(contextOf(space, info), work);
+const enterSpace = (space, info) => store.enterWith(contextOf(space, info));
 
 // Where a space's record lives next to the default one (file mode). Postgres mode uses the same id as the row key instead.
 const spaceDbPath = (defaultPath, space) => (space === DEFAULT_SPACE ? defaultPath : path.join(path.dirname(defaultPath), `${path.basename(defaultPath, ".json")}.space-${space}.json`));
@@ -31,7 +34,8 @@ const cleanName = value => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g,
 
 // Both backends answer the same questions, all async:
 //   spaceForEmail(email) -> id | "default"        spaceForNumber(number) -> id | null        exists(id) -> boolean
-//   createSpace(id, {name}) · linkEmail(email, id) · linkNumber(number, id) · unlinkNumber(number) · describe() -> [{ id, name, createdAt, emails[], numbers[] }]
+//   createSpace(id, {name}) · linkEmail(email, id) · linkNumber(number, id) · unlinkNumber(number) · describe() -> [{ id, name, createdAt, emails[], numbers[], settings }]
+//   info(id) -> { id, name, settings, numbers[] } | null        setSettings(id, settings)  (what the business sends as; see server/businessSender.js)
 function createFileDirectory(filePath) {
   const load = async () => {
     try { return JSON.parse(await fs.promises.readFile(filePath, "utf8")); } catch { return { spaces: {}, emails: {}, numbers: {} }; }
@@ -74,10 +78,19 @@ function createFileDirectory(filePath) {
       data.numbers[key] = id;
     }),
     unlinkNumber: number => change(data => { delete data.numbers[numberKey(number)]; }),
+    info: async id => {
+      const data = await load();
+      const space = data.spaces[id];
+      return space ? { id, name: space.name || "", settings: space.settings || {}, numbers: Object.keys(data.numbers).filter(key => data.numbers[key] === id) } : null;
+    },
+    setSettings: (id, settings) => change(data => {
+      if (!data.spaces[id]) throw new Error("No such business.");
+      data.spaces[id].settings = settings;
+    }),
     describe: async () => {
       const data = await load();
       return Object.entries(data.spaces).map(([id, info]) => ({
-        id, name: info.name || "", createdAt: info.createdAt || null,
+        id, name: info.name || "", createdAt: info.createdAt || null, settings: info.settings || {},
         emails: Object.keys(data.emails).filter(key => data.emails[key] === id),
         numbers: Object.keys(data.numbers).filter(key => data.numbers[key] === id)
       }));
@@ -90,6 +103,7 @@ function createPostgresDirectory(getPool) {
   const ensure = () => ready || (ready = (async () => {
     const pool = getPool();
     await pool.query("create table if not exists agrinexus_business_spaces (id text primary key, name text not null default '', created_at timestamptz not null default now())");
+    await pool.query("alter table agrinexus_business_spaces add column if not exists settings jsonb not null default '{}'::jsonb");
     await pool.query("create table if not exists agrinexus_business_emails (email text primary key, space_id text not null references agrinexus_business_spaces(id))");
     await pool.query("create table if not exists agrinexus_business_numbers (number text primary key, space_id text not null references agrinexus_business_spaces(id))");
   })().catch(error => { ready = null; throw error; }));
@@ -112,12 +126,22 @@ function createPostgresDirectory(getPool) {
     linkEmail: async (email, id) => { await requireSpace(id); await claim("agrinexus_business_emails", "email", emailKey(email), id, "email"); },
     linkNumber: async (number, id) => { await requireSpace(id); await claim("agrinexus_business_numbers", "number", numberKey(number), id, "phone number"); },
     unlinkNumber: async number => { await query("delete from agrinexus_business_numbers where number = $1", [numberKey(number)]); },
+    info: async id => {
+      const space = (await query("select id, name, settings from agrinexus_business_spaces where id = $1", [id])).rows[0];
+      if (!space) return null;
+      const numbers = (await query("select number from agrinexus_business_numbers where space_id = $1 order by number", [id])).rows.map(row => row.number);
+      return { id, name: space.name || "", settings: space.settings || {}, numbers };
+    },
+    setSettings: async (id, settings) => {
+      const result = await query("update agrinexus_business_spaces set settings = $2::jsonb where id = $1 returning id", [id, JSON.stringify(settings || {})]);
+      if (!result.rowCount) throw new Error("No such business.");
+    },
     describe: async () => {
-      const spaces = (await query("select id, name, created_at from agrinexus_business_spaces order by created_at", [])).rows;
+      const spaces = (await query("select id, name, settings, created_at from agrinexus_business_spaces order by created_at", [])).rows;
       const emails = (await query("select email, space_id from agrinexus_business_emails", [])).rows;
       const numbers = (await query("select number, space_id from agrinexus_business_numbers", [])).rows;
       return spaces.map(row => ({
-        id: row.id, name: row.name || "", createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+        id: row.id, name: row.name || "", createdAt: row.created_at ? new Date(row.created_at).toISOString() : null, settings: row.settings || {},
         emails: emails.filter(item => item.space_id === row.id).map(item => item.email),
         numbers: numbers.filter(item => item.space_id === row.id).map(item => item.number)
       }));
@@ -125,14 +149,29 @@ function createPostgresDirectory(getPool) {
   };
 }
 
-// A new space's record. Deliberately NOT a copy of the default record (that holds the demo accounts and demo data): only the reference lists the app needs, an empty profile (the app fills in its
-// own defaults), and the one first account. No demo logins are ever added to a space (see api()).
+// A new space's profile: the SAME shape as the default profile (the app expects its lists and sections to exist), with none of its data. Lists are emptied, numbers are zero (no pretend wallet balance),
+// text is blank except the few settings that point into the reference lists, and yes/no switches are kept. Always built from the seed file that ships with the app, never from live data.
+const KEEP_TEXT = new Set(["activeCountryId", "activeRouteId", "activeCheckpoint", "routeStage", "activeCourseId", "learningPath", "careerTrack", "eligibility", "mentor", "candidateStage",
+  "language", "bandwidth", "status", "operatingMode", "activeAudience", "activeMission"]);
+function neutralProfile(source) {
+  const walk = (value, key) => {
+    if (Array.isArray(value)) return [];
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([name, inner]) => [name, walk(inner, name)]));
+    if (typeof value === "number") return 0;
+    if (typeof value === "string") return KEEP_TEXT.has(key) ? value : "";
+    return value;
+  };
+  return walk(source && typeof source === "object" ? source : {}, "");
+}
+
+// A new space's record. Deliberately NOT a copy of the default record (that holds the demo accounts and demo data): the reference lists the app needs, an empty profile of the usual shape, and the one
+// first account. No demo logins are ever added to a space (see api()).
 function newSpaceRecord(template, { adminAccount }) {
   return {
     users: [adminAccount],
     countries: template.countries || [], routes: template.routes || [], courses: template.courses || [], roles: template.roles || [],
     products: template.products || [], providers: template.providers || [],
-    profile: {}
+    profile: neutralProfile(template.profile)
   };
 }
 
@@ -149,6 +188,6 @@ function isPlatformOwner(user, env = process.env, space = currentSpace()) {
 }
 
 module.exports = Object.freeze({
-  DEFAULT_SPACE, validSpaceId, currentSpace, runInSpace, enterSpace, spaceDbPath, createFileDirectory, createPostgresDirectory, newSpaceRecord,
+  DEFAULT_SPACE, validSpaceId, currentSpace, currentContext, runInSpace, enterSpace, spaceDbPath, createFileDirectory, createPostgresDirectory, newSpaceRecord, neutralProfile,
   platformOwnerEmails, isPlatformOwner, emailKey, numberKey, cleanName
 });

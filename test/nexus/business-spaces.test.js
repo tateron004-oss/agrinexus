@@ -79,10 +79,13 @@ test("the platform owner: an Admin in the default space, optionally limited to P
 });
 
 test("a new space's record has the one first account and none of the demo accounts or data", () => {
-  const template = { countries: [{ id: "c" }], routes: [], users: [{ email: "admin@agrinexus.org" }], profile: { orders: [{ id: "demo" }] } };
+  const template = { countries: [{ id: "c" }], routes: [], users: [{ email: "admin@agrinexus.org" }], profile: { orders: [{ id: "demo" }], wallet: 5990, userId: "u_demo", activity: ["x"] } };
   const record = spaces.newSpaceRecord(template, { adminAccount: { id: "u1", email: "a@b.org" } });
   assert.deepEqual(record.users.map(user => user.email), ["a@b.org"]);
-  assert.deepEqual(record.profile, {});
+  assert.deepEqual(record.profile.orders, [], "no demo lists");
+  assert.equal(record.profile.wallet, 0, "no pretend balance");
+  assert.equal(record.profile.userId, "", "no demo user");
+  assert.ok(Array.isArray(record.profile.activity), "but the usual sections exist, so the app does not trip over a missing one");
   assert.equal(record.countries.length, 1);
 });
 

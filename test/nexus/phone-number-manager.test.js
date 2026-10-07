@@ -21,7 +21,8 @@ function loadServerFunctions() {
     assert.ok(start > 0, `could not locate ${name} in server.js`);
     return serverSource.slice(start, serverSource.indexOf("\nfunction ", start + 10));
   };
-  const sandbox = { process: { env: {} } };
+  // The extracted functions look up the current business through these two (outside any business: the plain environment).
+  const sandbox = { process: { env: {} }, senderOverride: { resolve: env => env }, providerEnv: () => sandbox.process.env };
   vm.createContext(sandbox);
   vm.runInContext(
     ["normalizePhoneNumber", "twilioAuthorizedCallers", "phoneExternalPartyNumber", "resolveAuthorizedPhoneCaller", "nexusOwnPhoneForUser"].map(extract).join("\n") +
