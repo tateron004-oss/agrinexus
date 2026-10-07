@@ -73,12 +73,12 @@ test("a one-time reminder is confirmed with the task and the time in the person'
     engine: { executeTask: async () => ({ state: "awaiting_render", completed: false, receipts: [{ receiptId: "r1" }] }) },
     tasks: { get: async () => ({ taskId: "tsk_r", steps: [] }) } });
   const result = await spine.turn({ input: {}, context: { tenantId: "tenant", userId: "user", timeZone: "Africa/Nairobi" } });
-  assert.equal(result.response, "Okay. I will remind you to check the water tank tomorrow morning.");
+  assert.match(result.response, /^Okay\. I will remind you to check the water tank at 8:00 am (?:today|tomorrow)\.$/, "the time it was set for (8:00 am) is said, not just 'morning'");
   const offset = { ...plan, steps: [{ toolId: "reminders.schedule", input: { reminder: "check the pump", timeOffsetMinutes: 30 } }] };
   const spine2 = new BehaviorSpine({ workspaceStates: { stage: async () => {}, acknowledge: async () => {} },
     agent: { command: async () => ({ action: "create", command, plan: offset, task: { taskId: "tsk_r" } }) },
     engine: { executeTask: async () => ({ state: "awaiting_render", completed: false, receipts: [] }) }, tasks: { get: async () => ({ taskId: "tsk_r", steps: [] }) } });
-  assert.equal((await spine2.turn({ input: {}, context: { tenantId: "tenant", userId: "user" } })).response, "Okay. I will remind you to check the pump in 30 minutes.");
+  assert.match((await spine2.turn({ input: {}, context: { tenantId: "tenant", userId: "user" } })).response, /^Okay\. I will remind you to check the pump in 30 minutes, at \d{1,2}:\d{2} (?:am|pm) (?:today|tomorrow)\.$/);
   const other = { ...plan, application: "maps", steps: [{ toolId: "maps.route", input: {} }] };
   const spine3 = new BehaviorSpine({ workspaceStates: { stage: async () => {}, acknowledge: async () => {} },
     agent: { command: async () => ({ action: "create", command, plan: other, task: { taskId: "tsk_r" } }) },

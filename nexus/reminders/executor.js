@@ -1,6 +1,6 @@
 "use strict";
 
-const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./time-phrase.js");
+const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("./time-phrase.js");
 
 function createReminderScheduleExecutor({ notifications }) {
   if (!notifications?.enqueue) throw new Error("A notification repository is required.");
@@ -11,21 +11,30 @@ function createReminderScheduleExecutor({ notifications }) {
     const rawText = String(input?.when || input?.reminder || input?.text || input?.message || input?.title || "").trim();
     const offsetMinutes = Number(input?.timeOffsetMinutes);
     const hasOffset = Number.isFinite(offsetMinutes) && offsetMinutes > 0 && offsetMinutes <= 60 * 24 * 365;
-    const { scheduledAt, whenLabel } = hasOffset
-      ? { scheduledAt: new Date(Date.now() + offsetMinutes * 60 * 1000).toISOString(), whenLabel: `in ${offsetMinutes} minute${offsetMinutes === 1 ? "" : "s"}` }
-      : parseAssistantReminderTime(rawText, { timeZone: context.timeZone });
+    let scheduledAt; let resolvedTime;
+    if (hasOffset) {
+      const when = new Date(Date.now() + offsetMinutes * 60 * 1000);
+      scheduledAt = when.toISOString();
+      resolvedTime = `in ${offsetMinutes} minute${offsetMinutes === 1 ? "" : "s"}, ${describeMoment(when, { timeZone: context.timeZone })}`;
+    } else {
+      // A time that is unclear (a bare "at 6"), contradicts itself, or is missing is never turned into a guess: nothing is scheduled, and the question to ask is the error.
+      const timing = resolveReminderTime(rawText, { timeZone: context.timeZone });
+      if (timing.status !== "ok") throw Object.assign(new Error(timing.ask?.en || "I need to know when to remind you. Nothing was set."), { code: "reminder_time_unclear", status: 422 });
+      scheduledAt = timing.scheduledAt;
+      resolvedTime = timing.readback;
+    }
     const task = extractAssistantReminderTask(String(input?.reminder || input?.title || rawText).trim());
     const notification = await notifications.enqueue({
       tenantId: context.tenantId,
       userId: context.userId,
       taskId,
       channel: "push",
-      content: { title: "Nexus reminder", body: task, reminderText: task, whenLabel },
+      content: { title: "Nexus reminder", body: task, reminderText: task, whenLabel: resolvedTime },
       scheduledAt: new Date(scheduledAt),
       idempotencyKey
     });
     return {
-      resolvedTime: whenLabel,
+      resolvedTime,
       scheduledAt,
       reminderId: notification.notification_id,
       notificationId: notification.notification_id,

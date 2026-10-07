@@ -16,6 +16,8 @@ const { executeProductionCase } = require("../path2/production-case.js");
 const { classifyRuntimeError } = require("../runtime/error-taxonomy.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createNavigationService } = require("../navigation/service.js");
+const { repeatTurnAnyLanguage } = require("../reminders/repeat-turn.js");
+const { resolveReminderTimeZone } = require("../reminders/time-zone.js");
 
 function safeDatabaseIdentifier(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
@@ -810,7 +812,16 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const result = await createControlApi(active).requestDeletion({ context, body: {} });
     return result.body;
   }
-  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest });
+  // The older command route and the phone line set, list and stop repeating reminders in the SAME store the planner uses (nexus_schedules, sent by the worker's own sweep), so a
+  // reminder that repeats there is one that is really delivered. Returns the words to answer with, or null when this is not about repeating reminders; throws when the store cannot
+  // be reached (the caller then says so plainly instead of claiming it was set). No AI model is needed.
+  async function repeatReminderTurnRequest({ text, user, timeZone }) {
+    const active = await runtime(); await active.ready;
+    if (!active.repeatReminderRecords) throw Object.assign(new Error("The repeating reminder store is unavailable."), { code: "repeat_store_unavailable", status: 503 });
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
+    return repeatTurnAnyLanguage({ text, store: active.repeatReminderRecords, tenantId: context.tenantId, userId: context.userId, timeZone: validIanaZone(timeZone) ? timeZone : context.timeZone });
+  }
+  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {
@@ -1035,6 +1046,13 @@ function validIanaZone(value) {
   try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; }
 }
 
+// The person's own clock (their saved zone, or their country's), so a time they say means their time on every path; the zone the device sends with a request still wins over this.
+function userClockZone(user) {
+  if (validIanaZone(user?.timeZone)) return user.timeZone;
+  const zone = resolveReminderTimeZone({ user, fallback: "" });
+  return zone || "";
+}
+
 function requestContext(req, user, isRestrictedFrom = () => false) {
   const roles = new Set([user.role, ...(user.roles || [])].filter(Boolean)); const permissions = new Set([...(user.permissions || [])].filter(Boolean));
   const requestId = String(req.headers["x-request-id"] || crypto.randomUUID());
@@ -1047,7 +1065,7 @@ function requestContext(req, user, isRestrictedFrom = () => false) {
   // handling), but this context -- the one built for every real live user request -- did not. Harmless
   // today (authoritativeRuntimeUser() only ever grants an explicit permission list, never "*"), but kept
   // consistent so a future admin/superuser permission model doesn't silently fail under this context.
-  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has("*") || permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
+  return Object.freeze({ requestId, correlationId: requestId, tenantId: String(user.tenantId || user.organizationId || "tenant_default"), userId: String(user.id), ...(userClockZone(user) ? { timeZone: userClockZone(user) } : {}), roles: [...roles], permissions: [...permissions], hasRole: role => roles.has(role), can: permission => permissions.has("*") || permissions.has(permission), isRestrictedFrom: restriction => isRestrictedFrom(user, restriction) });
 }
 
 function acceptanceContext(principal, values = {}) {
