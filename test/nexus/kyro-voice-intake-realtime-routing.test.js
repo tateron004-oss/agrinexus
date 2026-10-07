@@ -234,3 +234,44 @@ test("callNexusOpenAiRealtimeTool short-circuits with no network call when a Kyr
   assert.equal(result.executionVerified, false);
   assert.match(result.response, /already asking/);
 });
+
+// The same wiring in Kiswahili: asked, spoken and cancelled in the language the person speaks.
+test("a Kiswahili CV request starts the intake and Kyro is told to say the first question in Kiswahili", () => {
+  const { sandbox, events } = loadGlue();
+  const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "nataka CV", utteranceId: "u1", source: "realtime-transport" });
+  assert.equal(consumed, true);
+  const spoken = events.find(event => event.type === "response.create");
+  assert.ok(spoken, "the first question must be spoken");
+  assert.match(spoken.response.instructions, /in sw,/, "the model is told to speak Kiswahili");
+  assert.match(spoken.response.instructions, /Jina lako kamili ni nani\?/);
+  assert.doesNotMatch(spoken.response.instructions, /What is your full name/);
+});
+
+test("in Kiswahili: an answer is saved clean, 'ruka' skips, and 'ghairi' while paused ends it with a Kiswahili line", () => {
+  const { sandbox, events } = loadGlue();
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "nataka CV", utteranceId: "u1", source: "realtime-transport" });
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "jina langu ni Juma Otieno", utteranceId: "u2", source: "realtime-transport" });
+  assert.equal(sandbox.getActiveIntake().engine.snapshot().values.name, "Juma Otieno");
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "ruka", utteranceId: "u3", source: "realtime-transport" });
+  assert.equal(sandbox.getActiveIntake().engine.snapshot().skipped.includes("location"), true);
+  sandbox.routeKyroVoiceIntakeTranscript({ transcript: "subiri", utteranceId: "u4", source: "realtime-transport" });
+  assert.equal(sandbox.getActiveIntake().engine.phase, "paused");
+  events.length = 0;
+  const consumed = sandbox.routeKyroVoiceIntakeTranscript({ transcript: "ghairi", utteranceId: "u5", source: "realtime-transport" });
+  assert.equal(consumed, true);
+  assert.equal(sandbox.getActiveIntake(), null);
+  assert.ok(events.some(event => event.type === "response.create" && /Hakuna kilichohifadhiwa/.test(event.response.instructions)));
+});
+
+test("the intake panel's own words follow the language too", () => {
+  const tableStart = appSource.indexOf("const KYRO_INTAKE_TEXT = {");
+  const end = appSource.indexOf("// Realtime auto-responds to every turn by default");
+  assert.ok(tableStart > 0 && end > tableStart, "could not locate the intake text table in app.js");
+  const sandbox = {};
+  vm.createContext(sandbox);
+  vm.runInContext(`${appSource.slice(tableStart, end)}\nthis.t = kyroIntakeText;`, sandbox);
+  assert.equal(sandbox.t("question", "sw", { n: 2, total: 8 }), "Swali 2 kati ya 8");
+  assert.equal(sandbox.t("question", "en", { n: 2, total: 8 }), "Question 2 of 8");
+  assert.equal(sandbox.t("repeat", "sw"), "Rudia");
+  assert.equal(sandbox.t("review", "fr"), "Review your answers", "a language with no words falls back to English");
+});
