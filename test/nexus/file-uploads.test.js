@@ -259,7 +259,7 @@ test("the upload route requires sign-in and the feature flag before parsing anyt
   const body = source.slice(start, start + 700);
   assert.match(body, /nexusFlagEnabled\(process\.env, "NEXUS_FILE_UPLOAD_ENABLED"\)/);
   assert.match(body, /if \(!user\) return send\(res, 401,/);
-  assert.match(body, /rateLimit\(req, 20, 10 \* 60_000\)/);
+  assert.match(body, /perUserRateLimit\(req, user, "upload", 20, 10 \* 60_000\)/);
 });
 
 test("the download route enforces real per-uploader ownership via canAccessUpload before ever reading the file", () => {
