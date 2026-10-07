@@ -95,7 +95,8 @@ test("a call's other party is worked out against the BUSINESS's own number, not 
 });
 
 // ---------- the real server ----------
-const port = 15351;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spaces-providers-"));
 const defaultDb = path.join(dir, "db.json");

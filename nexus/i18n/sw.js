@@ -12,6 +12,7 @@
 module.exports = Object.freeze({
   // ---- emergencies and crisis ----
   "safety.number": "Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi.",
+  "safety.numberIn": "Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura sasa hivi: {numbers} nchini {country}.",
   "safety.noCircle": "Bado sina mtu yeyote kwenye mzunguko wako, kwa hivyo sikuweza kutuma tahadhari kwa mtu. {number} Ukiwa salama, tunaweza kuongeza watu unaowaamini: \"ongeza jina@mfano.com kwenye mzunguko wangu\".",
   "safety.alertFailed": "Nilijaribu kutuma tahadhari kwa mzunguko wako lakini sikuweza kumfikia mtu yeyote sasa hivi. {number}",
   "safety.alerted": "Nimetuma tahadhari kwa {names}.{extra} {number} Niko hapa nawe.",
@@ -54,6 +55,8 @@ module.exports = Object.freeze({
   "safety.clearBody": "{name} anasema yuko salama sasa. Eneo halitatumwa tena.",
   "safety.allClearTold": "Nafurahi kwamba uko salama. Nimetuma ujumbe kwa {names} kwamba uko sawa, na nimeacha kushiriki eneo lako.",
   "safety.allClearClosed": "Nafurahi kwamba uko salama. Nimefunga tahadhari.",
+  // Machine-drafted: needs a fluent speaker (and a vet or animal health officer) before it is relied on.
+  "safety.livestock": "Sina mwongozo wa daktari wa mifugo kuhusu mnyama mgonjwa, kwa hiyo siwezi kukuambia tatizo ni nini wala dawa ya kumpa. Tafadhali mwite daktari wa mifugo au mhudumu wa afya ya mifugo sasa hivi. Mpaka afike, mweke mnyama mtulivu na mbali na wengine.",
 
   // ---- the location that follows an alert ----
   "loc.title": "Dharura: eneo la {name}",

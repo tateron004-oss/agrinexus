@@ -15,7 +15,8 @@ const path = require("node:path");
 // even though identical content in title/category/description was already
 // correctly blocked.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4713;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-marketplace-offline-queue-safety-filter-db.json");

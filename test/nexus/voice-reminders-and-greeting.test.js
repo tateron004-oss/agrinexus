@@ -34,7 +34,9 @@ test("the orchestrator context uses the spoken name first, then this account's o
   // GLOBAL fallback shared by every account -- once anyone said "this is Ron",
   // every other account fell back to reading that same field. Fixed by
   // db.profile.userDisplayNames, keyed by the authenticated user's real id.
-  assert.match(server, /userName: spokenNameFromGreeting\(command\) \|\| db\.profile\.userDisplayNames\?\.\[user\?\.id\] \|\| personalFirstName\(user\)/);
+  // The remembered name is read through storedDisplayName(), which drops anything saved that is not really a name ("Pregnant"), still per account.
+  assert.match(server, /userName: spokenNameFromGreeting\(command\) \|\| storedDisplayName\(db, user\) \|\| personalFirstName\(user\)/);
+  assert.match(server, /function storedDisplayName\(db, user\) \{\s*const names = db\?\.profile\?\.userDisplayNames;\s*const saved = names && user\?\.id \? names\[user\.id\] : ""/);
   assert.doesNotMatch(server, /userName: db\.profile\.agentMemory\?\.userName \|\| user\.name\?\.split/);
   assert.doesNotMatch(server, /db\.profile\.agentMemory\.userName/, "the shared-global fallback must be fully removed, not just given a better fallback in front of it");
   assert.doesNotMatch(server, /agentMemory\.userModel\?\.name/, "the shared-global userModel.name fallback must be fully removed");

@@ -13,7 +13,8 @@ const path = require("node:path");
 // only ever checked "is anyone signed in," never whether the caller owns
 // the item -- any two authenticated users shared the exact same ID space.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4625;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-comms-notifications-outcomes-isolation-db.json");

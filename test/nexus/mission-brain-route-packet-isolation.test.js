@@ -15,7 +15,8 @@ const path = require("node:path");
 // delivery location text inside every OTHER account's own "mission brain"
 // response, both as an evidence string and as the full raw packet object.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4708;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-mission-brain-route-packet-isolation-db.json");

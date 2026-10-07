@@ -144,12 +144,16 @@ test("a send or call step with no usable recipient and words is rejected so the 
 // dial their own country's numbers) fell all the way through callPlan's own phone check to the free-form AI
 // planner with no guidance at all, even though sendMessagePlan already asks for the country code in this
 // exact situation for a text/WhatsApp/email send. "no digits at all" ("call me a taxi") must stay untouched.
+// Updated (front-door normaliser): a normal Kenyan (07xx / 01xx) or Nigerian (080x / 081x / 070x / 090x) number is now turned into +254... / +234... and shown for confirmation like any other,
+// so the person is no longer made to say "+254"; a number that is neither (not guessed) still gets the question.
 test("a call to a local-format number with no country code asks for one instead of silently falling through", () => {
-  assert.equal(callPlan("Call 0712345678 and say I am on my way", catalog).clarification,
+  assert.equal(callPlan("Call 0712345678 and say I am on my way", catalog).clarification, null);
+  assert.equal(callPlan("Call 0712345678 and say I am on my way", catalog).steps[0].input.to, "+254712345678");
+  assert.equal(callPlan("Phone 0712 345 678 and say hi", catalog).steps[0].input.to, "+254712345678");
+  assert.equal(callPlan("Call 0803 123 4567 and say hi", catalog).steps[0].input.to, "+2348031234567");
+  assert.equal(callPlan("Call 0612345678 and say I am on my way", catalog).clarification,
     "I need the full phone number with the country code to place a call, like +254712345678.");
-  assert.deepEqual(callPlan("Call 0712345678 and say I am on my way", catalog).steps, []);
-  assert.equal(callPlan("Phone 0712 345 678 and say hi", catalog).clarification,
-    "I need the full phone number with the country code to place a call, like +254712345678.");
+  assert.deepEqual(callPlan("Call 0612345678 and say I am on my way", catalog).steps, []);
   for (const other of ["Call me a taxi", "Call it a day", "Call my brother and say hi"])
     assert.equal(callPlan(other, catalog), null, other);
   assert.equal(callPlan("Call 0712345678 and say hi", { tools: [], applications: [] }), null);

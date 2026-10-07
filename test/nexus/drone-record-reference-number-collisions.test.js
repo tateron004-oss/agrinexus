@@ -17,7 +17,8 @@ const path = require("node:path");
 // number, breaking any downstream lookup that identifies a record by its
 // human-readable ref.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4720;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-drone-record-reference-number-collisions-db.json");

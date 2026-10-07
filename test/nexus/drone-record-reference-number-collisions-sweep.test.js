@@ -16,7 +16,8 @@ const path = require("node:path");
 // sibling record types). This is a follow-up commit on the same branch/PR
 // closing out every remaining confirmed instance.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4721;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-drone-record-reference-number-collisions-sweep-db.json");

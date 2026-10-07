@@ -98,6 +98,8 @@
     /\bsina (?:sababu|sababu ya|sababu za) (?:ya )?kuishi\b/,
     /\bmaisha (?:yangu )?hayana (?:maana|thamani)\b/,
     /\b(?:nafikiria|ninafikiria|nimeamua) (?:kujiua|kujidhuru)\b/,
+    // "I am hurting myself" / "I have hurt myself on purpose": the verb alone is enough, it has no everyday meaning
+    /\b(?:najidhuru|ninajidhuru|nimejidhuru)\b/,
     /\bnina (?:bunduki|kisu|sumu)\b[^.!?]{0,60}\b(?:kuitumia|kujiua|kujidhuru|nafikiria)\b/
   ];
 
@@ -142,7 +144,31 @@
     /\b(?:sudden(?:ly)? (?:lost|loss of|can't see|cannot see|went blind)|i (?:suddenly )?can'?t see (?:anything|out of)|lost my (?:sight|vision))\b/,
     /\b(?:sweating|sweaty) and (?:shaking|shaky|trembling|confused)\b|\b(?:shaking|shaky|trembling) and (?:sweating|sweaty|confused)\b/,
     /\bmy (?:blood )?sugar is (?:very )?low\b|\bi think my sugar is low\b|\bsugar (?:crash|drop)(?:ped)?\b/,
-    /\bseizure|\bconvulsing\b/
+    /\bseizure|\bconvulsing\b/,
+    // Found by the user-journey sweep (these were answered as chat, a lesson offer or the weather). Said about the speaker or about someone beside them.
+    // Chest pain WITH sweating, breathlessness, an arm or jaw, nausea or feeling faint (chest pain alone is left to normal handling).
+    /\bchest\b[^.!?]{0,40}\b(?:pain\w*|hurts?|hurting|aching|tight\w*|pressure|heavy|crush\w*|squeez\w*)\b[^.!?]{0,80}\b(?:sweat\w*|short(?:ness)? of breath|breathless\w*|(?:difficult\w*|trouble|hard|struggl\w*) (?:to |in )?breath\w*|can'?t breathe|cannot breathe|left arm|jaw|nausea|faint\w*|dizz\w*)\b/,
+    /\b(?:sweat\w*|short(?:ness)? of breath|breathless\w*|left arm|jaw)\b[^.!?]{0,60}\bchest\b[^.!?]{0,25}\b(?:pain\w*|hurts?|tight\w*|pressure|heavy|squeez\w*)\b/,
+    /\bpains? (?:in|across|around) (?:my |his |her |the )?chest\b[^.!?]{0,80}\b(?:sweat\w*|short(?:ness)? of breath|breathless\w*|(?:difficult\w*|trouble|hard|struggl\w*) (?:to |in )?breath\w*|can'?t breathe|cannot breathe|left arm|jaw|nausea|faint\w*)\b/,
+    // Stroke signs about someone else, or sudden loss of speech, strength or sight.
+    /\b(?:suddenly|sudden|all of a sudden)\b[^.!?]{0,25}\b(?:can'?t|cannot|unable to|not able to|struggl\w* to) (?:speak|talk|walk|stand|move|see|understand)\b/,
+    /\b(?:can'?t|cannot|unable to|not able to|struggl\w* to) (?:speak|talk)(?: properly| well| clearly| normally)?\b[^.!?]{0,40}\b(?:suddenly|sudden|one side|face|arm|leg)\b/,
+    /\b(?:one|his|her) (?:arm|leg|hand|side)\b[^.!?]{0,25}\b(?:weak|numb|limp|droop\w*|paralys\w*|won'?t move|can'?t move|cannot move)\b/,
+    // A person with diabetes who is drowsy, confused or hard to wake, or whose breath smells of fruit.
+    /\bdiabet\w*\b[^.!?]{0,80}\b(?:drowsy|very sleepy|too sleepy|confused|unconscious|unresponsive|(?:won'?t|will not|cannot|can'?t) (?:be )?(?:wake|woken|waken)|not (?:responding|waking)|breathing fast|fruity)\b/,
+    /\b(?:blood sugar|my sugar|his sugar|her sugar|sugar level)\b[^.!?]{0,60}\b(?:drowsy|unconscious|unresponsive|(?:won'?t|will not|cannot|can'?t) (?:be )?(?:wake|woken|waken)|not (?:responding|waking))\b/,
+    /\bbreath\b[^.!?]{0,20}\b(?:smells?|smelling|smelt|smell)\b[^.!?]{0,15}\b(?:fruit\w*|sweet|acetone|nail polish|pear drops)\b|\bfruity (?:smelling )?breath\b|\bbreath (?:is )?fruity\b/,
+    // Kiswahili: chest pain with sweat or hard breathing, stroke signs, a drowsy person with diabetes, fruity breath, shaking with sweat.
+    /\b(?:kifua|moyo)\b[^.!?]{0,30}\b(?:kinauma|kinaniuma|kinamuuma|unauma|kinabana|kizito|kinakandamiza|maumivu|kinaumwa)\b[^.!?]{0,80}\b(?:jasho|kupumua kwa shida|napumua kwa shida|anapumua kwa shida|siwezi kupumua|hawezi kupumua|pumzi|mkono wa kushoto|kizunguzungu|kichefuchefu)\b/,
+    /\bmaumivu (?:ya|katika|kwenye) (?:kifua|moyo)\b[^.!?]{0,80}\b(?:jasho|kupumua kwa shida|napumua kwa shida|anapumua kwa shida|siwezi kupumua|hawezi kupumua|pumzi|mkono wa kushoto|kizunguzungu|kichefuchefu)\b/,
+    /\b(?:jasho|kupumua kwa shida|napumua kwa shida|anapumua kwa shida)\b[^.!?]{0,60}\b(?:kifua|moyo)\b[^.!?]{0,25}\b(?:kinauma|kinaniuma|kinamuuma|unauma|kinabana|kizito)\b/,
+    /\b(?:ana|amepata|anaonekana (?:kuwa )?na|nina|nimepata|ninahisi) kiharusi\b|\b(?:amepooza|nimepooza|amelemaa|nimelemaa)\b/,
+    /\b(?:hawezi|siwezi|anashindwa|ninashindwa|nashindwa) (?:tena )?(?:kuongea|kusema|kuzungumza|kutamka)\b|\b(?:anaongea|naongea|anasema|nasema|maneno) (?:kwa shida|vibaya|hayatoki|yamevurugika|yanakwama)\b|\bmaneno hayatoki\b|\bhasemi vizuri\b/,
+    /\buso\b[^.!?]{0,25}\b(?:umeinama|umepinda|umelegea|umeshuka|umepotoka|umevutika|umekufa ganzi)\b/,
+    /\b(?:mkono|mguu|upande)\b[^.!?]{0,25}\b(?:umelemaa|umepooza|umekufa ganzi|hauna nguvu|haufanyi kazi|hausogei|hausogezeki|umeishiwa nguvu)\b/,
+    /\b(?:kisukari|sukari)\b[^.!?]{0,80}\b(?:amelala sana|anasinzia|usingizi mwingi|amechanganyikiwa|nimechanganyikiwa|hajitambui|amezimia|hawezi kuamka|haamki|anapumua haraka|natetemeka|anatetemeka|natoka jasho|anatoka jasho|ametoka jasho)\b/,
+    /\bpumzi\b[^.!?]{0,20}\b(?:inanuka|inatoa harufu|ina harufu|yanuka)\b[^.!?]{0,15}\b(?:matunda|tunda|tamu)\b|\bharufu ya (?:matunda|tunda)\b[^.!?]{0,15}\bpumzi\b/,
+    /\b(?:natetemeka|anatetemeka)\b[^.!?]{0,25}\b(?:natoka jasho|anatoka jasho|nimechanganyikiwa|amechanganyikiwa)\b|\b(?:natoka jasho|anatoka jasho)\b[^.!?]{0,25}\b(?:natetemeka|anatetemeka)\b/
   ];
 
   // Scams aimed at people who are alone or elderly, and a PIN or password said out loud to be saved: Kyro answers with a plain "never share it", and never stores one.
@@ -158,6 +184,14 @@
   // The secret and its value: "my pin is 4821", "pin: 4821", and also the value straight after it ("add my pin 4821 to my notes", "write down my pin as 4821", "keep my pin 1234 safe"),
   // and the code to a safe, door, gate or lock.
   const SECRET = /\b(?:pin|passcode|password|cvv|cvc|otp|secret code|card number|account number|(?:safe|door|gate|lock) (?:code|combination)|code (?:to|for) the (?:safe|door|gate|lock)|combination)\b(?:[^.!?]{0,25}\b(?:is|are|was|as|:|=)\s*[a-z0-9]*\d|\s+(?:of |for )?[a-z0-9]{0,6}\d{3,})/;
+
+  // The same in Kiswahili ("nenosiri langu ni simba123", "andika PIN yangu ni 4321", "weka namba yangu ya siri 5566", "namba ya kadi 4111..."), and as people write it mixed with English or
+  // Sheng ("pin yangu", "password yangu ni ...") or Nigerian Pidgin ("my pin na 4821", "abeg keep my password"). The words that save it are Kiswahili too.
+  // A Kiswahili wording needs review by a fluent speaker.
+  const SAVE_SW = /\b(?:kumbuka|nikumbushe|nikumbushie|kumbusha|andika|niandikie|weka|niwekee|hifadhi|nihifadhie|tunza|rekodi|ongeza|nakili|usisahau|shika|kumbukumbu)\b/;
+  const SECRET_NOUN_SW = "(?:nenosiri|neno (?:langu )?la siri|namba (?:yangu )?ya siri|nambari (?:yangu )?ya siri|namba ya (?:pini?|pin|kadi|akaunti|benki)|nambari ya (?:pini?|pin|kadi|akaunti|benki)|akaunti (?:yangu )?ya benki|msimbo (?:wangu )?wa siri|kodi ya siri|code ya siri|pini?|pin|passwordi?|password|passcode|cvv|cvc|otp|kadi namba|kadi nambari)";
+  const SECRET_SW = new RegExp(`\\b${SECRET_NOUN_SW}\\b(?:[^.!?]{0,30}\\b(?:ni|ndio|ndiyo|is|=|:)\\s*(?:namba |nambari )?[a-z0-9]*\\d|\\s+(?:yangu |langu )?(?:ni |ya |namba |nambari |no\\.? )?[a-z0-9]{0,6}\\d{3,})`);
+  const SECRET_PIDGIN = /\b(?:abeg|biko|jare|jor)\b[^.!?]{0,30}\b(?:keep|save|store|note|hold|write|remember|put)\b[^.!?]{0,20}\b(?:my )?(?:pin|password|passcode|otp|cvv|card number|account number)\b|\bmy (?:pin|password|passcode|otp|cvv)\s+(?:na|dey|be)\s+[a-z0-9]*\d/;
 
   // A weapon or the means is named alongside the thought: the reply adds a plain line about putting distance between the person and it.
   const MEANS = /\b(?:gun|pistol|rifle|weapon|firearm|knife|rope|noose|razor|blade|pills|tablets|poison|pesticide|bunduki|kisu|sumu)\b/;
@@ -180,7 +214,15 @@
   const notAnEmergency = text => any(NOT_AN_EMERGENCY, normalize(text));
   const scam = text => { const plain = normalize(text); return plain.length > 0 && plain.length <= 500 && any(SCAM, plain); };
   // "remember that my mpesa pin is 4821": a secret asked to be saved (the words to save it AND a number after pin/password).
-  const storesSecret = text => { const plain = normalize(text); return /\b(?:remember|note|write|save|store|put|keep|add|record|jot|remind|memorise|memorize|log)\b/.test(plain) && SECRET.test(plain); };
+  // secretLanguage -> "sw" when it was asked in Kiswahili, "en" for English, Sheng mixed with English or Pidgin, null when no secret is being saved.
+  const secretLanguage = text => {
+    const plain = normalize(text);
+    if (/\b(?:remember|note|write|save|store|put|keep|add|record|jot|remind|memorise|memorize|log)\b/.test(plain) && SECRET.test(plain)) return "en";
+    if (SECRET_PIDGIN.test(plain)) return "en";
+    if (SAVE_SW.test(plain) && SECRET_SW.test(plain)) return "sw";
+    return null;
+  };
+  const storesSecret = text => secretLanguage(text) !== null;
   const medicalUrgent = text => { const plain = normalize(text); return plain.length > 0 && plain.length <= 500 && any(MEDICAL_URGENT, plain); };
   const mentionsMeans = text => MEANS.test(normalize(text));
   // "I took all my pills": most often an ordinary report of taking medicine, so it is not a crisis phrase, but it is worth a calm check-in unless it is plainly about today's dose.
@@ -190,5 +232,5 @@
       && !/\b(?:today|this morning|tonight|this evening|already|as prescribed|on time|for the day|at \d|doctor|clinic)\b/.test(plain);
   };
 
-  return Object.freeze({ normalize, selfHarm, harmOthers, abuse, scam, storesSecret, medicalUrgent, notAnEmergency, mentionsMeans, mightBeOverdose, SELF_HARM, HARM_OTHERS, ABUSE, MEDICAL_URGENT, NOT_AN_EMERGENCY });
+  return Object.freeze({ normalize, selfHarm, harmOthers, abuse, scam, storesSecret, secretLanguage, medicalUrgent, notAnEmergency, mentionsMeans, mightBeOverdose, SELF_HARM, HARM_OTHERS, ABUSE, MEDICAL_URGENT, NOT_AN_EMERGENCY });
 });

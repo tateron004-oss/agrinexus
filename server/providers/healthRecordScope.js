@@ -20,7 +20,10 @@ const HEALTH_BRIDGE_KEYS = Object.freeze([
   "nexusRtmIntakes", "nexusRtmActivityEntries", "nexusFitnessTrainingPlans",
   "nexusTelehealthBridgeIntakes", "nexusTelehealthBridgeSessions"
 ]);
-const KEYS = new Set(HEALTH_BRIDGE_KEYS);
+// Short-lived working records that belong to a person too: what Kyro read back and is waiting for a yes or no on (see nexus/health/readings-conversation.js). Scoped and erased with a person's other health
+// records, but not part of the exported list above: they are not records of anything, only of a question that was asked a moment ago.
+const HEALTH_TRANSIENT_KEYS = Object.freeze(["nexusHealthVoicePending"]);
+const KEYS = new Set([...HEALTH_BRIDGE_KEYS, ...HEALTH_TRANSIENT_KEYS]);
 
 const isOwnedBy = (record, owner) => Boolean(record && typeof record === "object" && record.ownerId === owner);
 
@@ -94,7 +97,27 @@ function eraseOwnedHealthBridgeRecords(db, ownerId) {
     removed += db.profile[key].length - kept.length;
     db.profile[key] = kept;
   }
+  // The question Kyro may be waiting on goes too, but it is not counted as a record that was removed.
+  for (const key of HEALTH_TRANSIENT_KEYS) {
+    if (Array.isArray(db.profile[key])) db.profile[key] = db.profile[key].filter(record => !isOwnedBy(record, owner));
+  }
   return removed;
 }
 
-module.exports = Object.freeze({ HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords });
+// What a signed-in person is shown of the shared data: their own readings and intakes, and records that carry no owner at all (the demo data and anything saved before owners were recorded).
+// Another person's records, and the question Kyro may be waiting on for them, are left out. An Admin and a Provider Reviewer are shown everything by the caller, which does not use this.
+// Returns the same profile object when nothing needed removing.
+function profileWithOwnHealthRecordsOnly(profile, viewerIds) {
+  if (!profile || typeof profile !== "object") return profile;
+  const mine = new Set((Array.isArray(viewerIds) ? viewerIds : [viewerIds]).map(id => String(id ?? "").trim()).filter(Boolean));
+  let copy = null;
+  for (const key of [...HEALTH_BRIDGE_KEYS, ...HEALTH_TRANSIENT_KEYS]) {
+    const list = profile[key];
+    if (!Array.isArray(list)) continue;
+    const kept = list.filter(record => !(record && typeof record === "object" && record.ownerId && !mine.has(String(record.ownerId))));
+    if (kept.length !== list.length) { copy = copy || { ...profile }; copy[key] = kept; }
+  }
+  return copy || profile;
+}
+
+module.exports = Object.freeze({ HEALTH_BRIDGE_KEYS, HEALTH_TRANSIENT_KEYS, profileWithOwnHealthRecordsOnly, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords });

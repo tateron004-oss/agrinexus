@@ -3,32 +3,32 @@
 const { extractDay, extractTime, tidyTitle, extractRange, describeDay, addDays } = require("./dates.js");
 const { formatTimeOfDay } = require("../brief/schedule.js");
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
+const { normaliseSpoken } = require("../speech/normalise.js");
+const { readListRequest, confirmsClear, splitListItems, nounOf } = require("./lists.js");
 
 // To-do and shopping lists, notes, and a calendar: things the person tells Kyro to keep, in their own words, and asks for back later.
 // Nothing here is guessed or imported; a request that is not plainly one of these is left alone (returns null) for normal planning.
+// How a list is asked for (shopping, to-do, a list with a name of its own, in English or Kiswahili) is read by lists.js.
 const clean = value => String(value ?? "").replace(/\s+/g, " ").trim();
-const LIST_WORDS = "(to-?do|todo|task|shopping|grocery|groceries)";
-const listNameOf = word => (/shopping|grocer/i.test(word) ? "shopping" : "todo");
-const LIST_NOUN = { todo: "to-do list", shopping: "shopping list" };
-const MAX_LIST_ITEMS_AT_ONCE = 20;
 // "milk, eggs and bread"
 const naturalList = values => (values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`);
-// "milk, eggs and bread" / "milk and eggs" -> ["milk", "eggs", "bread"]
-const splitListItems = value => String(value || "").replace(/[.!]+$/, "").split(/\s*,\s*|\s+and\s+|\s*;\s*/i).map(item => item.replace(/^(?:and|some|a|an|the)\s+/i, "").trim()).filter(Boolean).slice(0, MAX_LIST_ITEMS_AT_ONCE);
+const naturalListSw = values => (values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} na ${values[values.length - 1]}`);
 const MAX_ITEMS = 300;
 const MAX_TEXT = 200;
+const MAX_NAMED_LISTS = 12;
 
 // ---- reading what was said ----
 
 // { action, ...details } or null. `today` is the person's local day, used to read days in calendar requests.
 function readRequest(text, today) {
-  const t = clean(text).replace(/[’]/g, "'");
+  // The one front door (speech/normalise.js) has usually cleaned this already; it is cheap and idempotent, so a caller that did not is covered too.
+  const t = normaliseSpoken(text).text.replace(/[’]/g, "'");
   if (!t || t.length > 260) return null;
   const lower = t.toLowerCase().replace(/[.!?]+$/g, "");
   let m;
 
   // calendar
-  if ((m = /^(?:please )?(?:add|put|schedule|book|set up|create|pencil in)\s+(.+?)\s+(?:to|on|in|onto|into)\s+my\s+(?:calendar|schedule|diary)\b\s*(.*)$/i.exec(t)) || (m = /^(?:please )?(?:add to|put on|schedule on) my (?:calendar|schedule|diary)[:,]?\s+()(.+)$/i.exec(t)))
+  if ((m = /^(?:please )?(?:add|put|schedule|book|set up|create|pencil in|weka|ongeza|andika)\s+(.+?)\s+(?:to|on|in|onto|into|kwenye|katika|kwa|ktk)\s+(?:my\s+|yangu\s+)?(?:calendar|schedule|diary|kalenda)\b(?:\s+yangu)?\s*(.*)$/i.exec(t)) || (m = /^(?:please )?(?:add to|put on|schedule on) my (?:calendar|schedule|diary)[:,]?\s+()(.+)$/i.exec(t)))
     return eventDetails(m[1], m[2], today);
   // Spoken without "my calendar": "schedule a meeting with the cooperative on Monday at 10". Only an event noun
   // (meeting, appointment, ...) plus a day/time word counts, so "put milk on Monday" is never read as an event.
@@ -42,36 +42,22 @@ function readRequest(text, today) {
     return { action: "event-list", range: extractRange(lower, today) };
   }
 
+  // to-do and shopping lists, and lists with a name of their own: before notes, so "write down milk on the shopping list" is a list item and not a note
+  const listRequest = readListRequest(t);
+  if (listRequest) return listRequest;
+
   // notes
   if ((m = /^(?:please )?(?:take|make|save|add|leave) a note(?: to self)?(?: (?:that|which|it) says| saying| that| about| of)?[:,]?\s+(.+)$/i.exec(t)) || (m = /^(?:please )?note(?: down)?(?: that)?[:,]\s*(.+)$/i.exec(t)) ||
       (m = /^(?:please )?(?:note down|jot down|note that)\s+(.+)$/i.exec(t)) ||
       (m = /^(?:please )?(?:write|put|jot)(?: this| that| it)? down(?: that)?[:,]?\s+(.+)$/i.exec(t))) return { action: "note-add", text: tidyTitle(m[1]) };
   // "Remember that the pump needs a new seal": kept as a note (a plain statement about the person, like "I grow maize", is saved as a fact before this is reached).
   if ((m = /^(?:please )?remember(?: this)?(?: that|:)\s+(.+)$/i.exec(t))) return { action: "note-add", text: tidyTitle(m[1]) };
+  // Kiswahili: "andika kwamba ng'ombe anachechemea" / "weka kumbukumbu: pampu inahitaji mpira mpya"
+  if ((m = /^(?:andika|weka kumbukumbu|kumbuka)(?: kwamba| ya| hii)?[:,]?\s+(.+)$/i.exec(t)) && !/\b(?:kwenye|katika)\s+(?:orodha|kalenda)\b/i.test(t)) return { action: "note-add", text: tidyTitle(m[1]) };
   if (/^(?:what(?:'s| are| is)|show|read|list|tell me) (?:me )?(?:all )?(?:of )?(?:my )?notes$/.test(lower) || /^(?:show|read|list) me my notes$/.test(lower)) return { action: "note-list" };
   if ((m = /^(?:what did i note|what notes do i have|find my notes?|what(?:'s| is| are) my notes?) (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-find", query: clean(m[1]) };
   if ((m = /^(?:delete|remove|forget|erase) my notes? (?:about|on|for|regarding)\s+(.+)$/i.exec(lower))) return { action: "note-remove", query: clean(m[1]) };
 
-  // to-do and shopping lists
-  const listRef = `(?:my |the )?(?:${LIST_WORDS}(?: list)?s?|list)`;
-  // "Make a shopping list with milk, eggs and bread" / "start a to-do list: fix the gate, buy seed": the items go straight onto the shopping / to-do list
-  // that "what's on my shopping list" reads. (This used to reach the generic checklist maker, a SEPARATE store that question never looks at, so the
-  // list was "created" and then "what's on my shopping list" said it was empty.) A list with a name of its own ("a checklist for planting day") and a
-  // plain "make a shopping list" with nothing to put on it still go to the checklist maker.
-  if ((m = new RegExp(`^(?:please )?(?:make|create|start|set up|write|build|prepare)\\s+(?:me\\s+)?(?:a |an |my |the |a new |another )?${LIST_WORDS}\\s+list\\s*(?:with|including|containing|of|:)\\s*:?\\s*(.+)$`, "i").exec(t))) {
-    const items = splitListItems(m[2]);
-    if (items.length) return { action: "todo-add-many", list: listNameOf(m[1]), items };
-  }
-  if ((m = new RegExp(`^(?:please )?(?:add|put)\\s+(.+?)\\s+(?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
-  // "I need to buy fertilizer, put it on my list" -- the thing to keep comes first, then "put it on my list".
-  if ((m = new RegExp(`^(?:i need to|i have to|i must|i want to|i should)\\s+(.+?)[,.]?\\s+(?:and |then )?(?:please )?(?:put|add) (?:it|that|this) (?:to|on|onto)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[2] || ""), text: tidyTitle(m[1]) };
-  if ((m = new RegExp(`^(?:please )?(?:add|put) (?:to|on) my ${LIST_WORDS}(?: list)?[:,]?\\s+(.+)$`, "i").exec(t))) return { action: "todo-add", list: listNameOf(m[1]), text: tidyTitle(m[2]) };
-  if ((m = new RegExp(`^(?:please )?(?:mark|tick off|tick|check off)\\s+(.+?)\\s+(?:as |off )?(?:done|complete|completed|finished)(?: on my ${LIST_WORDS}(?: list)?)?$`, "i").exec(t))) return { action: "todo-done", query: clean(m[1]), sure: true };
-  if ((m = /^(?:i(?:'ve| have)?\s+)?(?:just )?(?:finished|completed|done with)\s+(.+)$/i.exec(t))) return { action: "todo-done", query: clean(m[1]), sure: false };
-  if ((m = new RegExp(`^(?:please )?(?:remove|delete|take|cross)\\s+(.+?)\\s+(?:from|off|out of)\\s+${listRef}$`, "i").exec(t))) return { action: "todo-remove", list: listNameOf(m[2] || ""), query: clean(m[1]) };
-  if ((m = new RegExp(`^(?:please )?(?:clear|remove|delete) (?:all )?(?:my |the )?(?:completed|done|finished|ticked)(?: items)?(?: from)?(?: my)?(?: ${LIST_WORDS}(?: list)?s?)?$`, "i").exec(lower))) return { action: "todo-clear-done", list: listNameOf(m[1] || "") };
-  if ((m = new RegExp(`^(?:what(?:'s| is| are)|show|read|list|tell me)(?: me)?(?: what(?:'s| is| are) on)?(?: what(?:'s| is| are))? ?(?:on )?(?:all )?${listRef}$`, "i").exec(lower)) ||
-      (m = new RegExp(`^what(?:'s| is| do i have| have i got) ?(?:on )?my ${LIST_WORDS}(?: list)?s?$`, "i").exec(lower))) return { action: "todo-list", list: listNameOf(m[1] || m[2] || lower) };
   return null;
 }
 
@@ -87,8 +73,20 @@ function eventDetails(head, tail, today) {
 
 // ---- finding an item by the words the person used ----
 
-const STOP = new Set(["the", "a", "an", "my", "to", "and", "of", "for", "on", "in", "that", "about", "it"]);
-const words = value => clean(value).toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(" ").filter(word => word && !STOP.has(word));
+const STOP = new Set(["the", "a", "an", "my", "to", "and", "of", "for", "on", "in", "that", "about", "it", "some", "ya", "za", "na", "yangu"]);
+// letters of any script ("ng'ombe", "Ọ̀dọ́"), and "eggs" finds "egg"
+const stem = word => (word.length > 3 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word);
+const words = value => clean(value).toLowerCase().replace(/[^\p{L}\p{M}\p{N}' ]/gu, " ").split(" ").filter(word => word && !STOP.has(word)).map(stem);
+const ORDINALS = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, last: -1, "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5, "number one": 1, "number two": 2, "number three": 3 };
+
+// "the first item", "number 2", "item 3", "the last one" -> a position (1-based; -1 = last), else null
+function ordinalPosition(query) {
+  const q = clean(query).toLowerCase().replace(/^(?:the|my)\s+/, "");
+  let m;
+  if ((m = /^(first|second|third|fourth|fifth|last|1st|2nd|3rd|4th|5th)(?: (?:item|one|thing|task|entry))?$/.exec(q))) return ORDINALS[m[1]];
+  if ((m = /^(?:item|number|no\.?|#)\s*(\d{1,2})$/.exec(q)) || (m = /^(\d{1,2})(?:st|nd|rd|th)(?: (?:item|one|thing))?$/.exec(q))) return Number(m[1]);
+  return null;
+}
 
 // { item } | { ambiguous: [items] } | null
 function findItem(items, query) {
@@ -107,6 +105,7 @@ function findItem(items, query) {
 // ---- saying it back ----
 
 const sayList = (values, limit = 10) => `${values.slice(0, limit).join("; ")}${values.length > limit ? ` and ${values.length - limit} more` : ""}`;
+const sayListSw = (values, limit = 10) => `${values.slice(0, limit).join("; ")}${values.length > limit ? ` na ${values.length - limit} zaidi` : ""}`;
 function eventLine(event, today) {
   const when = describeDay(event.day, today);
   return `${event.time ? `${when} at ${formatTimeOfDay(event.time)}` : when}: ${event.text}`;
@@ -115,13 +114,15 @@ const byWhen = (a, b) => `${a.day} ${a.time || "00:00"}`.localeCompare(`${b.day}
 
 // ---- acting on it ----
 
-// Returns the words to answer with, or null when this is not for personal items. `memory` needs the personal item methods.
-async function personalTurn({ text, memory, tenantId, userId, now = new Date(), timeZone }) {
+// Returns the words to answer with, or null when this is not for personal items. `memory` needs the personal item methods. `history` (optional) is the
+// conversation so far, so a plain "yes" can answer Kyro's own "shall I clear the whole list?".
+async function personalTurn({ text, memory, tenantId, userId, now = new Date(), timeZone, history = [] }) {
   if (!memory?.addPersonalItem || !memory?.listPersonalItems) return null;
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   const today = localDay(now, zone);
-  const request = readRequest(text, today);
+  const request = confirmsClear(text, history) || readRequest(text, today);
   if (!request) return null;
+  const sw = request.sw === true;
   const scope = { tenantId, userId };
   const list = kind => memory.listPersonalItems({ ...scope, kind });
   // Found live (CAS-less-race audit): the real MemoryRepository does this check-then-insert as two
@@ -148,55 +149,138 @@ async function personalTurn({ text, memory, tenantId, userId, now = new Date(), 
     await memory.addPersonalItem({ ...scope, content });
     return true;
   };
-  const full = "Your lists are full. Tell me to clear finished to-dos, or delete some notes or events first.";
+  const full = sw ? "Orodha zako zimejaa. Niambie nifute kazi zilizokamilika, au nifute madokezo fulani kwanza." : "Your lists are full. Tell me to clear finished to-dos, or delete some notes or events first.";
+  const yourNoun = name => (sw ? (name === "shopping" ? "orodha yako ya manunuzi" : name === "todo" ? "orodha yako ya kazi" : `orodha yako ya ${name}`) : `your ${nounOf(name)}`);
+  const openCount = (rows, name) => rows.filter(row => row.content.list === name && !row.content.done).length;
+  const youHave = n => (sw ? (n === 1 ? "Una kitu 1 kilichobaki." : `Una vitu ${n} vilivyobaki.`) : `You have ${n} open ${n === 1 ? "item" : "items"}.`);
+  // The lists a person has something on, with how many things are open on each ("shopping" and "todo" first, then lists with names of their own).
+  const listsInUse = rows => {
+    const names = [];
+    for (const row of rows) if (row.content.list && !names.includes(row.content.list)) names.push(row.content.list);
+    const rank = name => (name === "shopping" ? 0 : name === "todo" ? 1 : 2);
+    return names.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  };
   try {
     switch (request.action) {
-      case "todo-add": {
-        if (!request.text) return null;
-        const text1 = request.text.slice(0, MAX_TEXT);
-        const isDuplicate = existing => existing.list === request.list && !existing.done && words(existing.text).join(" ") === words(text1).join(" ");
-        const result = await add({ kind: "todo", list: request.list, text: text1, done: false }, isDuplicate);
-        if (result?.duplicate) return `${text1} is already on your ${LIST_NOUN[request.list]}.`;
-        if (!result) return full;
-        const open = (await list("todo")).filter(row => row.content.list === request.list && !row.content.done).length;
-        return `Added ${text1} to your ${LIST_NOUN[request.list]}. You have ${open} open ${open === 1 ? "item" : "items"}.`;
-      }
-      case "todo-add-many": {
+      case "todo-add": case "todo-add-many": {
+        const all = await list("todo");
+        const addTexts = request.action === "todo-add" ? [request.text] : request.items;
+        let target = request.list;
+        if (!target) {
+          const used = listsInUse(all.filter(row => !row.content.done));
+          if (used.length === 1) target = used[0];
+          else if (!used.length) target = "todo"; // nothing on any list yet: "put it on my list" starts the to-do list, as it always has
+          else {
+            const what = naturalList(addTexts);
+            return sw ? `Niweke kwenye orodha ipi, ya manunuzi au ya kazi? Sema "weka ${what} kwenye orodha yangu ya manunuzi" au "weka ${what} kwenye orodha yangu ya kazi".`
+              : `Which list: your shopping list or your to-do list? Say "add ${what} to my shopping list" or "add ${what} to my to-do list".`;
+          }
+        }
+        if (!listsInUse(all).includes(target) && !["shopping", "todo"].includes(target) && listsInUse(all).filter(name => !["shopping", "todo"].includes(name)).length >= MAX_NAMED_LISTS)
+          return sw ? `Una orodha ${MAX_NAMED_LISTS} tayari. Futa moja kwanza.` : `You already have ${MAX_NAMED_LISTS} named lists. Clear one before starting another.`;
         const added = []; const already = [];
-        for (const raw of request.items) {
+        for (const raw of addTexts) {
           const text1 = tidyTitle(raw).slice(0, MAX_TEXT);
           if (!text1) continue;
-          const isDuplicate = existing => existing.list === request.list && !existing.done && words(existing.text).join(" ") === words(text1).join(" ");
-          const result = await add({ kind: "todo", list: request.list, text: text1, done: false }, isDuplicate);
+          const isDuplicate = existing => existing.list === target && !existing.done && words(existing.text).join(" ") === words(text1).join(" ");
+          const result = await add({ kind: "todo", list: target, text: text1, done: false }, isDuplicate);
           if (result?.duplicate) { already.push(text1); continue; }
-          if (!result) return added.length ? `I added ${naturalList(added)} to your ${LIST_NOUN[request.list]}, but then it was full. ${full}` : full;
+          if (!result) return added.length ? (sw ? `Nimeongeza ${naturalListSw(added)} kwenye ${yourNoun(target)}, lakini kisha ikajaa. ${full}` : `I added ${naturalList(added)} to your ${nounOf(target)}, but then it was full. ${full}`) : full;
           added.push(text1);
         }
         if (!added.length && !already.length) return null;
-        const open = (await list("todo")).filter(row => row.content.list === request.list && !row.content.done).length;
-        return `${added.length ? `Added ${naturalList(added)} to your ${LIST_NOUN[request.list]}.` : `Those are already on your ${LIST_NOUN[request.list]}.`}${added.length && already.length ? ` ${naturalList(already)} ${already.length === 1 ? "was" : "were"} already there.` : ""} You have ${open} open ${open === 1 ? "item" : "items"}.`;
+        const open = openCount(await list("todo"), target);
+        if (request.action === "todo-add" && added.length === 1) return sw ? `Nimeongeza ${added[0]} kwenye ${yourNoun(target)}. ${youHave(open)}` : `Added ${added[0]} to your ${nounOf(target)}. ${youHave(open)}`;
+        if (request.action === "todo-add" && already.length === 1 && !added.length) return sw ? `${already[0]} tayari iko kwenye ${yourNoun(target)}.` : `${already[0]} is already on your ${nounOf(target)}.`;
+        if (sw) return `${added.length ? `Nimeongeza ${naturalListSw(added)} kwenye ${yourNoun(target)}.` : `Hivyo tayari viko kwenye ${yourNoun(target)}.`}${added.length && already.length ? ` ${naturalListSw(already)} tayari ${already.length === 1 ? "ilikuwepo" : "vilikuwepo"}.` : ""} ${youHave(open)}`;
+        return `${added.length ? `Added ${naturalList(added)} to your ${nounOf(target)}.` : `Those are already on your ${nounOf(target)}.`}${added.length && already.length ? ` ${naturalList(already)} ${already.length === 1 ? "was" : "were"} already there.` : ""} ${youHave(open)}`;
       }
       case "todo-list": {
-        const rows = (await list("todo")).filter(row => row.content.list === request.list);
-        const open = rows.filter(row => !row.content.done).map(row => row.content.text).reverse(); const done = rows.length - open.length;
-        if (!open.length) return done ? `Everything on your ${LIST_NOUN[request.list]} is done. Say "clear my completed to-dos" to tidy up.` : `Your ${LIST_NOUN[request.list]} is empty. Say "add buy seed to my ${LIST_NOUN[request.list]}".`;
-        return `On your ${LIST_NOUN[request.list]}: ${sayList(open.map((item, i) => `${i + 1}, ${item}`))}.${done ? ` ${done} done.` : ""}`;
+        const all = await list("todo");
+        const readOne = target => {
+          const rows = all.filter(row => row.content.list === target);
+          const open = rows.filter(row => !row.content.done).map(row => row.content.text).reverse(); const done = rows.length - open.length;
+          if (!open.length) {
+            if (sw) return done ? `Kila kitu kwenye ${yourNoun(target)} kimekamilika. Sema "futa zilizokamilika" ili kusafisha.` : `${yourNoun(target)[0].toUpperCase()}${yourNoun(target).slice(1)} haina kitu. Sema "weka mbegu kwenye ${nounOf(target, true)}".`;
+            return done ? `Everything on your ${nounOf(target)} is done. Say "clear my completed to-dos" to tidy up.` : `Your ${nounOf(target)} is empty. Say "add buy seed to my ${nounOf(target)}".`;
+          }
+          return sw ? `Kwenye ${yourNoun(target)}: ${sayListSw(open.map((item, i) => `${i + 1}, ${item}`))}.${done ? ` ${done} zimekamilika.` : ""}`
+            : `On your ${nounOf(target)}: ${sayList(open.map((item, i) => `${i + 1}, ${item}`))}.${done ? ` ${done} done.` : ""}`;
+        };
+        if (request.list) return readOne(request.list);
+        const used = listsInUse(all.filter(row => !row.content.done));
+        if (used.length === 1) return readOne(used[0]);
+        if (!used.length) return sw ? 'Huna kitu kwenye orodha zako. Sema "weka maziwa kwenye orodha yangu ya manunuzi".' : 'Your lists are empty. Say "add milk to my shopping list" to start one.';
+        return used.map(readOne).join(" ");
+      }
+      case "lists-overview": {
+        const all = await list("todo");
+        const used = listsInUse(all);
+        if (!used.length) return sw ? 'Huna orodha bado. Sema "weka maziwa kwenye orodha yangu ya manunuzi" kuanza.' : 'You have no lists yet. Say "add milk to my shopping list" to start one.';
+        const parts = used.map(name => `${sw ? nounOf(name, true) : nounOf(name)} (${openCount(all, name)} ${sw ? "wazi" : "open"})`);
+        return sw ? `Una orodha: ${parts.join("; ")}.` : `You have: ${parts.join("; ")}.`;
       }
       case "todo-done": case "todo-remove": {
-        const rows = (await list("todo")).filter(row => request.list ? row.content.list === request.list : true);
+        const all = await list("todo");
+        const rows = all.filter(row => (request.list ? row.content.list === request.list : true));
         const candidates = request.action === "todo-done" ? rows.filter(row => !row.content.done) : rows;
-        const found = findItem(candidates, request.query);
-        if (found?.ambiguous) return `Which one: ${sayList(found.ambiguous.map(row => row.content.text), 5)}?`;
-        if (!found) return request.action === "todo-done" && !request.sure ? null : `I couldn't find ${request.query} on your lists.`;
-        if (request.action === "todo-remove") { await memory.removePersonalItem({ ...scope, memoryId: found.item.memory_id }); return `Removed ${found.item.content.text}.`; }
+        let found;
+        const position = ordinalPosition(request.query);
+        if (position !== null) {
+          // "the first item": numbered the way the list is read back (oldest first, open items only)
+          const scoped = request.list ? candidates.filter(row => !row.content.done).reverse() : (listsInUse(all.filter(row => !row.content.done)).length === 1 ? candidates.filter(row => !row.content.done).reverse() : null);
+          if (!scoped) return sw ? "Niambie ni orodha ipi, kwa mfano \"ondoa kitu cha kwanza kwenye orodha yangu ya manunuzi\"." : 'Which list? For example "remove the first item from my shopping list".';
+          const pick = position === -1 ? scoped[scoped.length - 1] : scoped[position - 1];
+          found = pick ? { item: pick } : null;
+        } else found = findItem(candidates, request.query);
+        if (found?.ambiguous) return sw ? `Ipi: ${sayListSw(found.ambiguous.map(row => row.content.text), 5)}?` : `Which one: ${sayList(found.ambiguous.map(row => row.content.text), 5)}?`;
+        if (!found) {
+          if (request.bare) return null;
+          if (request.action === "todo-done" && !request.sure) return null;
+          return sw ? `Sijapata ${request.query} kwenye orodha zako.` : `I couldn't find ${request.query} on your lists.`;
+        }
+        if (request.action === "todo-remove") {
+          // an older entry that holds several things in one ("milk, eggs and bread"): take out only the one asked for
+          const original = found.item.content.text;
+          const parts = splitListItems(original, found.item.content.list);
+          if (parts.length > 1 && position === null) {
+            const keep = parts.filter(part => !(words(part).length && words(request.query).every(word => words(part).includes(word))));
+            if (keep.length && keep.length < parts.length) {
+              await memory.updatePersonalItem({ ...scope, memoryId: found.item.memory_id, content: { ...found.item.content, text: keep.join(", ").slice(0, MAX_TEXT) } });
+              const removedParts = parts.filter(part => !keep.includes(part));
+              return sw ? `Nimeondoa ${naturalListSw(removedParts)}. ${naturalListSw(keep)} bado ${keep.length === 1 ? "iko" : "ziko"} kwenye orodha.` : `Removed ${naturalList(removedParts)}. ${naturalList(keep)} ${keep.length === 1 ? "is" : "are"} still on your ${nounOf(found.item.content.list)}.`;
+            }
+          }
+          await memory.removePersonalItem({ ...scope, memoryId: found.item.memory_id });
+          return sw ? `Nimeondoa ${found.item.content.text}.` : `Removed ${found.item.content.text}.`;
+        }
         await memory.updatePersonalItem({ ...scope, memoryId: found.item.memory_id, content: { ...found.item.content, done: true } });
         const left = rows.filter(row => !row.content.done && row.memory_id !== found.item.memory_id && row.content.list === found.item.content.list).length;
-        return `Done. Ticked off ${found.item.content.text}. ${left ? `${left} still open.` : "That was the last one."}`;
+        return sw ? `Sawa. Nimetia alama ${found.item.content.text}. ${left ? `Bado ${left} zimebaki.` : "Hicho kilikuwa cha mwisho."}` : `Done. Ticked off ${found.item.content.text}. ${left ? `${left} still open.` : "That was the last one."}`;
       }
       case "todo-clear-done": {
         const rows = (await list("todo")).filter(row => row.content.done && row.content.list === request.list);
         for (const row of rows) await memory.removePersonalItem({ ...scope, memoryId: row.memory_id });
+        if (sw) return rows.length ? `Nimeondoa vitu ${rows.length} vilivyokamilika.` : "Hakuna kilichokamilika cha kufuta.";
         return rows.length ? `Cleared ${rows.length} finished ${rows.length === 1 ? "item" : "items"}.` : "There was nothing finished to clear.";
+      }
+      case "todo-clear-all": {
+        const all = await list("todo");
+        let target = request.list;
+        if (!target) {
+          const used = listsInUse(all);
+          if (used.length !== 1) return sw ? 'Niambie ni orodha ipi, kwa mfano "futa orodha yangu ya manunuzi".' : 'Which list should I clear? Say "clear my shopping list" or "clear my to-do list".';
+          target = used[0];
+        }
+        const rows = all.filter(row => row.content.list === target);
+        if (!rows.length) return sw ? `${nounOf(target, true)} yako tayari haina kitu.` : `Your ${nounOf(target)} is already empty.`;
+        if (!request.confirmed) {
+          const mine = target === "shopping" ? "orodha yangu ya manunuzi" : target === "todo" ? "orodha yangu ya kazi" : `orodha yangu ya ${target}`;
+          return sw ? `Hii itaondoa vitu vyote ${rows.length} kwenye ${yourNoun(target)}. Sema "ndiyo, futa ${mine}" ili kuendelea.`
+            : `That would remove all ${rows.length} ${rows.length === 1 ? "item" : "items"} from your ${nounOf(target)}. Say "yes, clear my ${nounOf(target)}" to go ahead.`;
+        }
+        for (const row of rows) await memory.removePersonalItem({ ...scope, memoryId: row.memory_id });
+        return sw ? `Nimeondoa vitu ${rows.length} kwenye ${yourNoun(target)}.` : `Cleared your ${nounOf(target)}: removed ${rows.length} ${rows.length === 1 ? "item" : "items"}.`;
       }
       case "note-add": {
         if (!request.text) return null;

@@ -10,7 +10,8 @@ const path = require("node:path");
 // (reached when a multi-turn voice intake is confirmed) was one of the many
 // that let it grow without bound.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4803;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-conversational-health-intake-uncapped-db.json");

@@ -15,7 +15,8 @@ const path = require("node:path");
 // chronic-care/shipment/learning/applicant/employer records, just a write
 // path with literally no transition guard instead of a read-fallback.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4642;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-case-status-terminal-state-db.json");

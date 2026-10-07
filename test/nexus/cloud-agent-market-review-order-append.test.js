@@ -17,7 +17,8 @@ const path = require("node:path");
 // pushed there first, while the new one sat stuck at "Agent market review"
 // forever with no way for a later step to ever advance it.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4703;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-cloud-agent-market-review-order-append-db.json");

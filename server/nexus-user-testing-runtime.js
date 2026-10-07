@@ -86,6 +86,8 @@ function present(env, name) {
   return Boolean(value && value !== "false" && !/replace|example|your_|changeme/i.test(value));
 }
 
+const USER_TESTING_LIST_LIMITS = Object.freeze({ records: 2000, receipts: 1000, auditEvents: 1000, predictions: 1000, consentGates: 1000, executions: 1000, verifications: 1000 });
+
 function ensureUserTestingStore(db) {
   if (!db.profile || typeof db.profile !== "object") db.profile = {};
   if (!db.profile.nexusUserTestingRuntime || typeof db.profile.nexusUserTestingRuntime !== "object") {
@@ -94,6 +96,8 @@ function ensureUserTestingStore(db) {
   const store = db.profile.nexusUserTestingRuntime;
   for (const key of ["records", "receipts", "auditEvents", "predictions", "consentGates", "executions", "verifications"]) {
     if (!Array.isArray(store[key])) store[key] = [];
+    // Every list is newest first and none was ever limited, so the shared record grew with every call. The oldest entries beyond the limit are dropped (testing notes are kept longest).
+    if (store[key].length > USER_TESTING_LIST_LIMITS[key]) store[key].length = USER_TESTING_LIST_LIMITS[key];
   }
   return store;
 }
@@ -184,14 +188,23 @@ function createMemoryRecord(db, input = {}, user = {}) {
     source: "nexus_user_testing_runtime",
     noExecutionAuthorized: true
   };
+  // Who made it: another signed-in person is not shown it, and cannot change or archive it (an Admin can).
+  if (user?.email) record.createdBy = String(user.email).trim().toLowerCase();
   store.records.unshift(record);
   addAudit(store, "memory_record_created", `Created ${record.type} memory record for local user testing.`, { recordId: record.id, type });
   return record;
 }
 
-function updateMemoryRecord(db, id, patch = {}) {
+// A record made by someone else is theirs: not listed, found or changed for another person. Records with no owner mark (older ones) are left as they were. An Admin sees all.
+function recordVisibleTo(record, user) {
+  if (!user || user.role === "Admin") return true;
+  const owner = String(record?.createdBy || "").trim().toLowerCase();
+  return !owner || owner === String(user.email || "").trim().toLowerCase();
+}
+
+function updateMemoryRecord(db, id, patch = {}, user = null) {
   const store = ensureUserTestingStore(db);
-  const record = store.records.find(item => item.id === id);
+  const record = store.records.find(item => item.id === id && recordVisibleTo(item, user));
   if (!record) return { ok: false, status: "not_found" };
   record.title = cleanText(patch.title, record.title);
   record.summary = cleanText(patch.summary, record.summary);
@@ -201,9 +214,9 @@ function updateMemoryRecord(db, id, patch = {}) {
   return { ok: true, record, audit };
 }
 
-function archiveMemoryRecord(db, id) {
+function archiveMemoryRecord(db, id, user = null) {
   const store = ensureUserTestingStore(db);
-  const record = store.records.find(item => item.id === id);
+  const record = store.records.find(item => item.id === id && recordVisibleTo(item, user));
   if (!record) return { ok: false, status: "not_found" };
   record.archived = true;
   record.archivedAt = nowIso();
@@ -217,14 +230,15 @@ function listMemoryRecords(db, filters = {}) {
   return store.records.filter(record => {
     if (filters.type && record.type !== filters.type) return false;
     if (filters.includeArchived !== true && record.archived) return false;
+    if (filters.viewer !== undefined && !recordVisibleTo(record, filters.viewer)) return false;
     return true;
   });
 }
 
-function searchMemoryRecords(db, query = "") {
+function searchMemoryRecords(db, query = "", viewer = undefined) {
   const normalized = String(query || "").toLowerCase().trim();
-  if (!normalized) return listMemoryRecords(db);
-  return listMemoryRecords(db, { includeArchived: true }).filter(record =>
+  if (!normalized) return listMemoryRecords(db, { viewer });
+  return listMemoryRecords(db, { includeArchived: true, viewer }).filter(record =>
     `${record.title} ${record.summary} ${record.type}`.toLowerCase().includes(normalized)
   );
 }

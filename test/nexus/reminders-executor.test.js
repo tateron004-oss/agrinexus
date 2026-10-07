@@ -70,7 +70,7 @@ test("the AI planner's own field names (title + timeOffsetMinutes) schedule the 
   const due = new Date(enqueued[0].scheduledAt).getTime();
   assert.ok(due >= before + 119000 && due <= Date.now() + 121000, "due in about two minutes");
   assert.equal(result.reminder, "Test push"); assert.equal(enqueued[0].content.reminderText, "Test push");
-  assert.equal(result.resolvedTime, "in 2 minutes");
+  assert.match(result.resolvedTime, /^in 2 minutes, at \d{1,2}:\d{2} (?:am|pm) (?:today|tomorrow)$/);
 });
 
 test("an unusable offset is ignored and the user's own words still decide the time", async () => {
@@ -88,6 +88,6 @@ test("the deterministic { reminder, when } input is unchanged", async () => {
   const goal = "Remind me to check my crops in 30 minutes";
   const result = await createReminderScheduleExecutor({ notifications })({ input: { reminder: goal, when: goal }, context: { tenantId: "t", userId: "u" }, taskId: "tsk", idempotencyKey: "k" });
   assert.equal(result.reminder, "check my crops");
-  assert.equal(result.resolvedTime, "in 30 minutes");
+  assert.match(result.resolvedTime, /^in 30 minutes, at \d{1,2}:\d{2} (?:am|pm) (?:today|tomorrow)$/);
   assert.ok(new Date(enqueued[0].scheduledAt).getTime() - Date.now() < 31 * 60 * 1000);
 });

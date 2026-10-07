@@ -14,7 +14,8 @@ const path = require("node:path");
 // with a single unconfirmed request, carrying arbitrary free text (including health, payment, or
 // credential content) straight through with no filter at all.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4740;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-legacy-twilio-confirmation-content-filter-db.json");

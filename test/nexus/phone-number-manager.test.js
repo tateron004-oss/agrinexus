@@ -144,7 +144,8 @@ test("the admin screen has the card, the form, and escapes what people typed", (
 });
 
 // --- through the real server, as the real Admin and a real non-admin ---
-const port = 4851;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-phone-number-manager-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-phone-mgr-uploads-"));

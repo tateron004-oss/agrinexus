@@ -16,7 +16,8 @@ const path = require("node:path");
 // as "completed" even though a tool result was still waiting on the user's
 // explicit yes.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4802;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-openai-native-agent-command-confirmation-status-db.json");

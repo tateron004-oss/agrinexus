@@ -12,7 +12,8 @@ const path = require("node:path");
 // or investor access", approving one was refused with "Only admin can approve", and even a caller who
 // passed body.approved:true at creation time silently got a draft instead of an approved template.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4722;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-cloud-agent-role-case-mismatch-db.json");

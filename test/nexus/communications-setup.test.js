@@ -76,7 +76,8 @@ test("a failure is explained in plain words with the next step", () => {
 
 // ---- through the real server, as the real Admin and a real non-admin (no provider account is configured, so nothing real is ever sent) ----
 const root = path.resolve(__dirname, "..", "..");
-const port = 4977;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-communications-setup-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-comms-setup-uploads-"));

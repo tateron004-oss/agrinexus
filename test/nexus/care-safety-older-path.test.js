@@ -11,7 +11,8 @@ const path = require("node:path");
 // "Hello Pregnant And My". These run a real server with no AI key and no database, so the planner is not there, and the answers must still be right.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15358;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "care-older-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,7 +29,7 @@ const tool = async (command, language = "en") => (await post("/api/voice/realtim
 test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), path.join(dir, "db.json"));
   server = spawn(process.execPath, ["server.js"], { cwd: root, env: { ...process.env, PORT: String(port), SESSION_SECRET: "care-older-secret-for-the-test-0123456", AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "dir.json"),
-    OPENAI_API_KEY: "", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" }, stdio: "ignore", windowsHide: true });
+    OPENAI_API_KEY: "", DATABASE_URL: "", AGRINEXUS_STATE_STORE: "json", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", NEXUS_TEST_REMINDER_STORE: "memory" }, stdio: "ignore", windowsHide: true });
   await waitFor(`${base}/api/healthz`);
   const login = await post("/api/login", { email: "user@agrinexus.org", password: "User2026!" });
   assert.equal(login.status, 200);

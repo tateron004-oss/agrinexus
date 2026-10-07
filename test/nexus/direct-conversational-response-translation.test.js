@@ -16,7 +16,8 @@ const path = require("node:path");
 // aloud with a Spanish Twilio voice on a real phone call) while every
 // metadata field falsely claimed the response was already in Spanish.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4719;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-direct-conversational-response-translation-db.json");

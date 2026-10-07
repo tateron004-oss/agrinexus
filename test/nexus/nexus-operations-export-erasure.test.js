@@ -15,7 +15,8 @@ const path = require("node:path");
 // roles, skills, region) silently survived account erasure and was absent
 // from export, with no disclosed gap.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4709;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-nexus-operations-export-erasure-db.json");

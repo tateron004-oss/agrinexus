@@ -15,7 +15,8 @@ const path = require("node:path");
 // this file), and was entirely absent from account export/erasure despite genuinely being real
 // user-submitted content.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4737;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-field-dispatch-ownership-cap-erasure-db.json");

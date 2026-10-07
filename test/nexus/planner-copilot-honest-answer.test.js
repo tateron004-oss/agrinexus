@@ -6,6 +6,7 @@ const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { freePortSync } = require("../helpers/free-port.js");
 
 // The planner's open-question branch (ai.copilot) used to call runAi("copilot", ...) whose prompt never contained what the person said, so the answer was the same fixed
 // recommendation whatever they asked (and with no model configured, the fixed "AI copilot recommends..." paragraph). Now the person's words go into the prompt, and when no
@@ -38,7 +39,7 @@ async function ask(base, cookie, command) {
 }
 
 test("with no real model configured, an open question is told plainly that nothing was done, not given a fixed recommendation", async () => {
-  const port = 15440;
+  const port = freePortSync();
   const base = `http://localhost:${port}`;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "copilot-offline-"));
   const server = startServer(port, dir, {});
@@ -58,7 +59,7 @@ test("with no real model configured, an open question is told plainly that nothi
 });
 
 test("with a real model configured, the person's own words reach the model and its answer is returned", async () => {
-  const port = 15441;
+  const port = freePortSync();
   const base = `http://localhost:${port}`;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "copilot-webhook-"));
   const seen = [];
@@ -71,8 +72,8 @@ test("with a real model configured, the person's own words reach the model and i
       res.end(JSON.stringify({ text: "Test model: wait one week, prices in Nakuru usually firm up.", model: "test-model", id: "resp-1" }));
     });
   });
-  await new Promise(resolve => model.listen(15442, "127.0.0.1", resolve));
-  const server = startServer(port, dir, { AI_PROVIDER: "webhook", AI_WEBHOOK_URL: "http://127.0.0.1:15442/ai" });
+  await new Promise(resolve => model.listen(0, "127.0.0.1", resolve));
+  const server = startServer(port, dir, { AI_PROVIDER: "webhook", AI_WEBHOOK_URL: `http://127.0.0.1:${model.address().port}/ai` });
   try {
     await waitFor(`${base}/api/healthz`);
     const cookie = await signIn(base);

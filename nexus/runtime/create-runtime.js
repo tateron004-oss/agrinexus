@@ -207,7 +207,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
-  return Object.freeze({ config, adapter, db, brief, repeatReminders, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
+  return Object.freeze({ config, adapter, db, brief, repeatReminders, repeatReminderRecords, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, farmRecords, healthRecords, wellnessRecords, businessRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,
     engine, planner, agent, behavior, providers, adapters, verifiers, authority, authorityCoverage, acceptance, path2Evidence, objectStorage, ready,
     async close() { await adapter.close(); } });

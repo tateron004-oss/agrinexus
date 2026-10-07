@@ -10123,7 +10123,7 @@ function appointmentAnswer() {
       : "the next scheduled shift window";
     return `I do not see a telehealth appointment yet. Your next workforce schedule item is ${shift.role || "a shift"} at ${when}, status ${shift.status || "scheduled"}.`;
   }
-  return "I do not see an appointment time saved yet. I can open telehealth scheduling or workforce scheduling and help create one.";
+  return "I don't see any appointments for you. I can open telehealth scheduling or workforce scheduling and help create one.";
 }
 
 function shipmentEtaAnswer() {
@@ -50433,6 +50433,32 @@ function sendKyroRealtimeEvent(event) {
   }
 }
 
+// What the intake panel and the intake's own app-side lines say, in the language the person is speaking (the engine tells us: decision.language). Kiswahili is a
+// first draft that a fluent speaker must review. Anything missing falls back to English.
+const KYRO_INTAKE_TEXT = {
+  en: {
+    guided: "Guided form", question: "Question {n} of {total}", review: "Review your answers", typePlaceholder: "Or type your answer here", useAnswer: "Use this answer",
+    repeat: "Repeat", skip: "Skip", back: "Go back", confirm: "Yes, make it", stop: "Stop",
+    cancelled: "Okay, I stopped. Nothing was saved.", signIn: "Please sign in first, then I can save your résumé.",
+    nameNeeded: "I still need your name to make the résumé. What is your full name?",
+    failedRetry: "That didn't work. Say yes to try again.", offline: "I could not reach Kyro's server. Your answers are kept. Say yes to try again.",
+    ready: "Your résumé is ready. It is on the screen now. Press the Download button to keep it."
+  },
+  sw: {
+    guided: "Fomu ya maswali", question: "Swali {n} kati ya {total}", review: "Kagua majibu yako", typePlaceholder: "Au andika jibu lako hapa", useAnswer: "Tumia jibu hili",
+    repeat: "Rudia", skip: "Ruka", back: "Rudi nyuma", confirm: "Ndiyo, itengeneze", stop: "Acha",
+    cancelled: "Sawa, nimesimama. Hakuna kilichohifadhiwa.", signIn: "Tafadhali ingia kwanza, kisha nitaweza kuhifadhi CV yako.",
+    nameNeeded: "Bado ninahitaji jina lako ili nitengeneze CV. Jina lako kamili ni nani?",
+    failedRetry: "Haikufaulu. Sema ndiyo kujaribu tena.", offline: "Sikuweza kufikia seva ya Kyro. Majibu yako yamehifadhiwa. Sema ndiyo kujaribu tena.",
+    ready: "CV yako iko tayari. Iko kwenye skrini sasa. Bonyeza kitufe cha Pakua ili kuihifadhi."
+  }
+};
+function kyroIntakeText(key, language, params) {
+  const table = KYRO_INTAKE_TEXT[String(language || "").toLowerCase().startsWith("sw") ? "sw" : "en"];
+  const template = table[key] !== undefined ? table[key] : KYRO_INTAKE_TEXT.en[key];
+  return String(template ?? "").replace(/\{(\w+)\}/g, (whole, name) => (params && params[name] !== undefined ? String(params[name]) : whole));
+}
+
 // Realtime auto-responds to every turn by default (turn_detection.create_response, set server-side
 // in server.js) -- while a Kyro voice intake is active, that must be off so the model doesn't start
 // talking over the intake's own next question. Restoring re-applies whatever turn-detection config
@@ -50461,7 +50487,7 @@ function speakKyroIntakeLine(text, options = {}) {
     const sent = sendKyroRealtimeEvent({
       type: "response.create",
       response: {
-        instructions: `You are helping a person fill in a short form, one question at a time. Say the following to them now, in ${languageCode()}, warmly, slowly and clearly, exactly as written, with nothing added, removed, or paraphrased. Do not ask anything else and do not call any tool: ${JSON.stringify(safeText)}`,
+        instructions: `You are helping a person fill in a short form, one question at a time. Say the following to them now, in ${options.language || languageCode()}, warmly, slowly and clearly, exactly as written, with nothing added, removed, or paraphrased. Do not ask anything else and do not call any tool: ${JSON.stringify(safeText)}`,
         tool_choice: "none",
         output_modalities: ["audio"],
         metadata: { source: "kyro-voice-intake", step: String(options.step || "") }
@@ -50614,7 +50640,7 @@ function renderKyroVoiceIntakePanel(snapshot) {
     panel.id = "kyroVoiceIntakePanel";
     panel.className = "kyro-voice-intake-panel";
     panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", snapshot.title || "Guided form");
+    panel.setAttribute("aria-label", snapshot.title || kyroIntakeText("guided", snapshot.language));
     document.body.appendChild(panel);
   }
   const field = snapshot.currentField;
@@ -50625,26 +50651,27 @@ function renderKyroVoiceIntakePanel(snapshot) {
     : Object.entries(snapshot.values || {}).filter(([, value]) => value !== undefined && value !== "" && !(Array.isArray(value) && !value.length)).map(([, value]) => ["", value]);
   const isConfirming = snapshot.phase === "confirming";
   const isDone = snapshot.phase === "done";
+  const ui = key => kyroIntakeText(key, snapshot.language);
   panel.innerHTML = `
     <div class="kyro-voice-intake-card">
       <header>
-        <strong>${escapeHtml(snapshot.title || "Guided form")}</strong>
-        ${!isDone ? `<span>Question ${Math.min(snapshot.index + 1, snapshot.total)} of ${snapshot.total}</span>` : ""}
+        <strong>${escapeHtml(snapshot.title || ui("guided"))}</strong>
+        ${!isDone ? `<span>${escapeHtml(kyroIntakeText("question", snapshot.language, { n: Math.min(snapshot.index + 1, snapshot.total), total: snapshot.total }))}</span>` : ""}
       </header>
-      <p class="kyro-voice-intake-question">${escapeHtml(isConfirming ? "Review your answers" : (field?.question || ""))}</p>
+      <p class="kyro-voice-intake-question">${escapeHtml(isConfirming ? ui("review") : (field?.question || ""))}</p>
       ${field?.hint ? `<p class="kyro-voice-intake-hint">${escapeHtml(field.hint)}</p>` : ""}
       ${answeredEntries.length ? `<ul class="kyro-voice-intake-answers">${answeredEntries.map(([label, value]) => `<li>✓ ${label ? `<strong>${escapeHtml(label)}:</strong> ` : ""}${escapeHtml(Array.isArray(value) ? value.join("; ") : String(value))}</li>`).join("")}</ul>` : ""}
       ${!isDone ? `
         <div class="kyro-voice-intake-typed">
-          <input type="text" data-kyro-intake-typed-answer placeholder="Or type your answer here">
-          <button type="button" data-kyro-intake-action="typed-answer">Use this answer</button>
+          <input type="text" data-kyro-intake-typed-answer placeholder="${escapeHtml(ui("typePlaceholder"))}">
+          <button type="button" data-kyro-intake-action="typed-answer">${escapeHtml(ui("useAnswer"))}</button>
         </div>
         <div class="kyro-voice-intake-actions">
-          <button type="button" data-kyro-intake-action="repeat">Repeat</button>
-          ${!isConfirming && field && !field.required ? '<button type="button" data-kyro-intake-action="skip">Skip</button>' : ""}
-          <button type="button" data-kyro-intake-action="back">Go back</button>
-          ${isConfirming ? '<button type="button" data-kyro-intake-action="confirm">Yes, make it</button>' : ""}
-          <button type="button" data-kyro-intake-action="cancel">Stop</button>
+          <button type="button" data-kyro-intake-action="repeat">${escapeHtml(ui("repeat"))}</button>
+          ${!isConfirming && field && !field.required ? `<button type="button" data-kyro-intake-action="skip">${escapeHtml(ui("skip"))}</button>` : ""}
+          <button type="button" data-kyro-intake-action="back">${escapeHtml(ui("back"))}</button>
+          ${isConfirming ? `<button type="button" data-kyro-intake-action="confirm">${escapeHtml(ui("confirm"))}</button>` : ""}
+          <button type="button" data-kyro-intake-action="cancel">${escapeHtml(ui("stop"))}</button>
         </div>
       ` : ""}
     </div>`;
@@ -50663,6 +50690,11 @@ document.addEventListener("click", event => {
   const action = button.dataset.kyroIntakeAction;
   const { engine } = kyroActiveVoiceIntake;
   let decision;
+  // A pause (for example after nothing could be saved yet) keeps every answer; pressing any button other than Stop carries on.
+  if (engine.phase === "paused" && action !== "cancel") {
+    if (realtimeVoiceActive()) setKyroRealtimeAutoResponse(false);
+    engine.resume();
+  }
   if (action === "repeat") decision = engine.repeat();
   else if (action === "skip") decision = engine.skip();
   else if (action === "back") decision = engine.back();
@@ -50679,13 +50711,13 @@ document.addEventListener("click", event => {
 async function applyKyroIntakeDecision(decision) {
   if (!decision) return;
   renderKyroVoiceIntakePanel(decision.action === "done" || decision.action === "cancelled" ? null : decision.snapshot);
-  if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index });
+  if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language });
   if (decision.action === "cancelled") {
     const active = kyroActiveVoiceIntake;
     kyroActiveVoiceIntake = null;
     setKyroRealtimeAutoResponse(true);
     injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`);
-    speakKyroIntakeLine("Okay, I stopped. Nothing was saved.");
+    speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language });
     active?.onCancel?.();
     return;
   }
@@ -50693,11 +50725,11 @@ async function applyKyroIntakeDecision(decision) {
     const active = kyroActiveVoiceIntake;
     if (!active) return;
     try {
-      const result = await active.onComplete(decision.values);
+      const result = await active.onComplete(decision.values, { language: decision.language });
       if (result?.ok) {
         const doneDecision = active.engine.markDone(result.say);
         renderKyroVoiceIntakePanel(null);
-        speakKyroIntakeLine(doneDecision.say);
+        speakKyroIntakeLine(doneDecision.say, { language: decision.language });
         injectKyroRealtimeContext(result.contextNote || doneDecision.say);
         kyroActiveVoiceIntake = null;
         setKyroRealtimeAutoResponse(true);
@@ -50706,7 +50738,7 @@ async function applyKyroIntakeDecision(decision) {
         applyKyroIntakeDecision(retryDecision);
       }
     } catch (error) {
-      const retryDecision = active.engine.submitFailed({ message: "I could not reach Kyro's server. Your answers are kept. Say yes to try again." });
+      const retryDecision = active.engine.submitFailed({ message: kyroIntakeText("offline", decision.language) });
       applyKyroIntakeDecision(retryDecision);
       nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-error", { message: error?.message || "unknown" });
     }
@@ -50720,7 +50752,7 @@ function startKyroVoiceIntake(definition, options = {}) {
   if (realtimeVoiceActive()) {
     try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
   }
-  const engine = KyroVoiceIntake.create(definition, { seedUtterance: options.seedUtterance });
+  const engine = KyroVoiceIntake.create(definition, { seedUtterance: options.seedUtterance, language: languageCode() });
   kyroActiveVoiceIntake = { engine, definition, onComplete: options.onComplete, onCancel: options.onCancel, source: options.source || "voice" };
   if (realtimeVoiceActive()) setKyroRealtimeAutoResponse(false);
   nexusGenesisVoiceDebugLog("kyro-voice-intake-started", { formId: definition.id, source: options.source || "voice" });
@@ -50786,7 +50818,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     // how to cancel), so it is consumed here; a wake-word switch is not -- it is a different request
     // the caller still has to route.
     if (decision.consumed && decision.say) {
-      speakKyroIntakeLine(decision.say);
+      speakKyroIntakeLine(decision.say, { language: decision.language });
       return true;
     }
     return false;
@@ -50797,7 +50829,8 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
 
 // --- résumé: the first real form wired into the engine above ---------------------------------
 
-async function submitKyroResumeIntake(values) {
+async function submitKyroResumeIntake(values, context = {}) {
+  const language = context.language || languageCode();
   const request = window.KyroIntakeForms?.resume?.toRequest?.(values) || {};
   try {
     const response = await fetch("/api/nexus/runtime/behavior/intake", {
@@ -50809,28 +50842,31 @@ async function submitKyroResumeIntake(values) {
         intakeId: "resume",
         values: request,
         channel: "voice",
-        locale: languageCode(),
+        locale: language === "sw" ? "sw" : languageCode(),
         conversationId: typeof nexusAuthoritativeConversationId === "function" ? nexusAuthoritativeConversationId() : undefined,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       })
     });
     const result = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      return { ok: false, say: "Please sign in first, then I can save your résumé." };
+      return { ok: false, say: kyroIntakeText("signIn", language) };
     }
     if (!response.ok) {
-      if (result.code === "resume_name_required") return { ok: false, fieldKey: "name", say: "I still need your name to make the résumé. What is your full name?" };
-      if (result.code === "resume_content_required") return { ok: false, fieldKey: "experience", say: "I need at least one thing for your résumé: work you have done, what you are good at, or your schooling." };
-      return { ok: false, say: result.error || "That didn't work. Say yes to try again." };
+      if (result.code === "resume_name_required") return { ok: false, fieldKey: "name", say: kyroIntakeText("nameNeeded", language) };
+      if (result.code === "resume_content_required") {
+        const needs = window.KyroIntakeForms?.resume?.validate?.({}, { lang: language, misses: 0 });
+        return { ok: false, fieldKey: "experience", say: needs?.message || "I need at least one thing for your résumé: work you have done, what you are good at, or your schooling." };
+      }
+      return { ok: false, say: result.error || kyroIntakeText("failedRetry", language) };
     }
     if (typeof processNexusAuthoritativeBehaviorResult === "function") {
       await processNexusAuthoritativeBehaviorResult(result, "Résumé interview", { source: "kyro-voice-intake" }).catch(() => {});
     }
-    return { ok: true, say: "Your résumé is ready. It is on the screen now. Press the Download button to keep it.",
+    return { ok: true, say: kyroIntakeText("ready", language),
       contextNote: `The résumé interview finished. A résumé for ${values.name || "the person"} was saved and is shown on screen with a Download button.` };
   } catch (error) {
     nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-network-error", { message: error?.message || "unknown" });
-    return { ok: false, say: "I could not reach Kyro's server. Your answers are kept. Say yes to try again." };
+    return { ok: false, say: kyroIntakeText("offline", language) };
   }
 }
 
@@ -55205,7 +55241,7 @@ function nexusApplyJobBoundaryAnswer() {
 }
 
 function nexusUrgentChildBreathingAnswer() {
-  return "Call emergency services now if available, such as 911 in the U.S. A baby who is not breathing needs immediate emergency help. I am not a doctor and this app cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.";
+  return "Call your local emergency number now if you can. A baby who is not breathing needs immediate emergency help. I am not a doctor and this app cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.";
 }
 
 function nexusResilientConversationIntent(command = "") {

@@ -9,7 +9,8 @@ const { spawn } = require("node:child_process");
 // server used it when none was sent). A login made with no password now gets a random one, and the forms start with a random one written in them.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4861;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-admin-new-login-password-db.json");
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));

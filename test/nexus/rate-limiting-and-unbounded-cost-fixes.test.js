@@ -24,7 +24,8 @@ const path = require("node:path");
 // blanket ceiling indefinitely -- a real, uncapped Twilio cost.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4655;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-rate-limiting-fixes-db.json");

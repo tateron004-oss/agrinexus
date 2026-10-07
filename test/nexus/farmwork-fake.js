@@ -4,6 +4,10 @@
 // MemoryRepository the toolkit uses (personal calendar items, the farm log, profile facts, contacts). Not a test file itself.
 const { PUBLIC_COLLECTIONS } = require("../../nexus/farmwork/store.js");
 
+// One clock for every fake store: each stamp is later than the one before it, so "the most recent entry" is well defined even when two things are saved in the same millisecond.
+let lastStamp = 0;
+const stamp = () => { lastStamp = Math.max(lastStamp + 1, Date.now()); return new Date(lastStamp).toISOString(); };
+
 function fakeFarmStore() {
   const rows = []; let n = 0; const sessions = new Map();
   const live = () => rows.filter(row => !row.deleted);
@@ -11,13 +15,13 @@ function fakeFarmStore() {
   const shape = row => ({ memoryId: row.memoryId, userId: row.userId, number: row.number, collection: row.collection, data: JSON.parse(JSON.stringify(row.data)), createdAt: row.createdAt, updatedAt: row.updatedAt });
   return {
     rows, sessions,
-    async add({ tenantId, userId, collection, data }) { const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; rows.unshift(row); return shape(row); },
+    async add({ tenantId, userId, collection, data }) { const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: stamp(), updatedAt: stamp() }; rows.unshift(row); return shape(row); },
     // No `await` between the count check and the insert, so -- like the real store's advisory-lock-guarded
     // transaction -- this is atomic from the caller's point of view.
     async addUnlessPersonCapped({ tenantId, userId, collection, data, maxPerPerson }) {
       const count = live().filter(row => row.tenantId === tenantId && row.userId === userId && row.collection === collection && row.data.status === "active").length;
       if (count >= maxPerPerson) return { capped: true, count };
-      const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: stamp(), updatedAt: stamp() };
       rows.unshift(row);
       return { record: shape(row) };
     },
@@ -28,7 +32,7 @@ function fakeFarmStore() {
       const existing = live().filter(row => row.tenantId === tenantId && row.userId === userId && row.collection === collection).map(shape);
       const clash = findClash(existing);
       if (clash) return { clash };
-      const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      const row = { memoryId: `f${++n}`, tenantId, userId, collection, number: numberFor(tenantId, userId, collection), data: JSON.parse(JSON.stringify(data)), createdAt: stamp(), updatedAt: stamp() };
       rows.unshift(row);
       return { record: shape(row) };
     },
@@ -50,16 +54,20 @@ function fakeFarmStore() {
 }
 
 function fakeMemory({ farmEntries = [] } = {}) {
-  const personal = []; let n = 0; const profile = []; const contacts = []; const entries = farmEntries.map(content => ({ content }));
+  const personal = []; let n = 0; const profile = []; const contacts = []; const entries = farmEntries.map(content => ({ content, memory_id: `fe${++n}`, created_at: stamp() }));
   return {
     personal, profile, contacts,
     async addPersonalItem({ content }) { personal.unshift({ memory_id: `p${++n}`, content }); return { memoryId: `p${n}` }; },
     async listPersonalItems() { return personal.map(row => ({ memory_id: row.memory_id, content: row.content })); },
-    async listFarmEntries() { return entries; },
+    // the farm log (nexus/farm/log.js): newest first, each with the time it was saved
+    async listFarmEntries() { return entries.filter(row => !row.deleted).map(row => ({ memory_id: row.memory_id, content: row.content, created_at: row.created_at })); },
+    async addFarmEntry({ content }) { const row = { memory_id: `fe${++n}`, content, created_at: stamp() }; entries.unshift(row); return { memoryId: row.memory_id, content }; },
+    async addFarmEntryUnlessCapped({ content, maxEntries }) { if (entries.filter(row => !row.deleted).length >= maxEntries) return { capped: true }; const row = { memory_id: `fe${++n}`, content, created_at: stamp() }; entries.unshift(row); return { memoryId: row.memory_id, content }; },
+    async removeFarmEntry({ memoryId }) { const row = entries.find(item => item.memory_id === memoryId && !item.deleted); if (row) row.deleted = true; return Boolean(row); },
     async saveProfileFact({ kind, value }) { profile.push({ kind, value }); return { fact: { kind, value }, replaced: [] }; },
     async saveContact({ name, phone = "", email = "" }) { const i = contacts.findIndex(item => item.name.toLowerCase() === name.toLowerCase()); const content = { kind: "contact", name, phone, email }; if (i >= 0) contacts[i] = { ...contacts[i], ...content, phone: phone || contacts[i].phone, email: email || contacts[i].email }; else contacts.push(content); return { contact: content, updated: i >= 0 }; },
     async listContacts() { return contacts.map(content => ({ content })); }
   };
 }
 
-module.exports = Object.freeze({ fakeFarmStore, fakeMemory });
+module.exports = Object.freeze({ fakeFarmStore, fakeMemory, stamp });

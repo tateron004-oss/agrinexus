@@ -15,7 +15,8 @@ const path = require("node:path");
 // ready" never received it in their own notification list, reachable only
 // via the admin-all-records view.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4707;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-nexus-response-publish-notification-owner-db.json");

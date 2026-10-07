@@ -2,27 +2,40 @@
 
 const { clean, round, num, parseMoney, formatMoney } = require("../farmwork/parse.js");
 const { extractPeriod, addDays } = require("../personal/dates.js");
+const { normalizeNumbers, NOT_MONEY_BEFORE } = require("./swahili-numbers.js");
 
 // Swahili words the record-keeping tools share (farm and health): quantities and units, money, periods, dates. First draft: a fluent speaker must review
 // every word before it is relied on (see the Swahili review sheet). The records themselves are the same records the English tools keep.
 
+// ---- yes and no, as said in Swahili (the one list every Swahili confirmation uses; see also server.js isAffirmativeCommand / isNegativeCommand) ----
+const YES_SW = /^(?:ndiyo|ndio|sawa|naam|ok|okay|sawa kabisa|sawa sawa|ndiyo tafadhali|tafadhali|endelea|fanya hivyo)$/i;
+const NO_SW = /^(?:hapana|la|la hasha|siyo|sio|sitaki|acha|usifanye|si sasa|hapana asante|hapana tafadhali)$/i;
+
 // ---- units: Swahili puts the unit first ("kilo 200", "gunia 3") or after ("200 kg"); stored as the English toolkit stores them ----
 const UNITS = [[/^(?:kilo|kg|kgs)$/, "kg", 1], [/^(?:tani)$/, "kg", 1000], [/^(?:gramu)$/, "kg", 0.001], [/^(?:lita|l)$/, "L", 1], [/^(?:gunia|magunia)$/, "sack", 1], [/^(?:mfuko|mifuko)$/, "bag", 1],
-  [/^(?:debe|madebe)$/, "tin", 1], [/^(?:kreti|makreti)$/, "crate", 1], [/^(?:mkungu|mikungu)$/, "bunch", 1], [/^(?:kipande|vipande)$/, "piece", 1], [/^(?:pakiti|paketi)$/, "packet", 1],
+  [/^(?:debe|madebe)$/, "tin", 1], [/^(?:kreti|makreti)$/, "crate", 1], [/^(?:mkungu|mikungu|fungu|mafungu)$/, "bunch", 1], [/^(?:kipande|vipande)$/, "piece", 1], [/^(?:pakiti|paketi)$/, "packet", 1],
   [/^(?:chupa)$/, "bottle", 1], [/^(?:ndoo)$/, "bucket", 1], [/^(?:trei)$/, "tray", 1], [/^(?:ekari)$/, "acre", 1], [/^(?:hekta)$/, "ha", 1], [/^(?:dozi)$/, "dose", 1]];
-const UNIT_WORD = "kilo|kg|kgs|tani|gramu|lita|l|gunia|magunia|mfuko|mifuko|debe|madebe|kreti|makreti|mkungu|mikungu|kipande|vipande|pakiti|paketi|chupa|ndoo|trei|ekari|hekta|dozi";
+const UNIT_WORD = "kilo|kg|kgs|tani|gramu|lita|l|gunia|magunia|mfuko|mifuko|debe|madebe|kreti|makreti|mkungu|mikungu|fungu|mafungu|kipande|vipande|pakiti|paketi|chupa|ndoo|trei|ekari|hekta|dozi";
 const NUMBER = "\\d[\\d,]*(?:[.]\\d+)?";
 const unitOf = word => UNITS.find(([pattern]) => pattern.test(String(word).toLowerCase()));
 
 // "kilo 200", "200 kg", "gunia 3", "magunia 3" -> { value, unit, matched, index }; null when there is no amount with a unit.
+// Number words are read first ("magunia matatu" -> "magunia 3"), and "nusu" is a half ("kilo nusu", "nusu kilo"). A quantity whose number could be read two ways
+// ("kilo 2.500") carries `ambiguous: [..readings]` and the caller must ask.
 function parseQuantitySw(text) {
-  const t = clean(text);
+  const normalized = normalizeNumbers(clean(text)); const t = normalized.text;
+  const half = new RegExp(`\\b(?:nusu\\s+(${UNIT_WORD})|(${UNIT_WORD})\\s+nusu)\\b`, "i").exec(t);
+  if (half) { const entry = unitOf(half[1] || half[2]); if (entry) return { value: round(0.5 * entry[2], 3), unit: entry[1], index: half.index, matched: half[0] }; }
   const m = new RegExp(`\\b(${UNIT_WORD})\\s+(${NUMBER})\\b(?!\\s*(?:${UNIT_WORD})\\b)|(?<![\\d.,])(${NUMBER})\\s*(${UNIT_WORD})\\b`, "i").exec(t);
   if (!m) return null;
   const entry = unitOf(m[1] || m[4]); const raw = m[2] || m[3];
   if (!entry) return null;
   const value = round(num(raw.replace(/,/g, "")) * entry[2], 3);
-  return Number.isFinite(value) && value > 0 ? { value, unit: entry[1], index: m.index, matched: m[0] } : null;
+  if (!(Number.isFinite(value) && value > 0)) return null;
+  const doubtful = normalized.ambiguous && normalized.spans.find(span => span.ambiguous && String(span.value) === raw.replace(/,/g, ""));
+  // a weight written "2.500" is far more often 2.5 kg than 2,500 kg, so the decimal reading comes first
+  const readings = doubtful ? [...doubtful.values].reverse().map(v => round(v * entry[2], 3)) : null;
+  return { value: readings ? readings[0] : value, unit: entry[1], index: m.index, matched: m[0], ...(readings ? { ambiguous: readings } : {}) };
 }
 const UNIT_SHOWN = { kg: "kilo", L: "lita", sack: "gunia", bag: "mfuko", tin: "debe", crate: "kreti", bunch: "mkungu", piece: "vipande", packet: "pakiti", bottle: "chupa", bucket: "ndoo", tray: "trei", acre: "ekari", ha: "hekta", dose: "dozi" };
 const unitLabelSw = (value, unit) => `${UNIT_SHOWN[unit] || unit} ${value}`;
@@ -30,12 +43,28 @@ const unitLabelSw = (value, unit) => `${UNIT_SHOWN[unit] || unit} ${value}`;
 // ---- money ----
 const CURRENCY_WORDS = /^(?:shilingi|sh|shs|ksh|kshs|tsh|tshs|ush|ugx|kes|tzs|etb|birr|rwf|usd|dola|dola)$/i;
 // "shilingi 9000", "sh 9000", "9000", "KSh 9,000" -> { amount, currency }. A currency is kept as the person said it, and "shilingi" is the English tools' "shillings".
+// Number words and shorthand are read first ("elfu mbili mia tano", "2k", "bob mia mbili", "sh 300", "4,500/="). An amount that could be read two ways ("4.500": 4,500 or 4.5)
+// comes back as { amount, currency, ambiguous: [4500, 4.5] }: the caller must ask rather than record either.
 function parseMoneySw(text) {
-  const t = clean(text).replace(/\bshilingi\b/gi, "shillings").replace(/\bdola\b/gi, "dollars");
-  const found = parseMoney(t);
-  if (found) return found;
-  const bare = new RegExp(`(?<![\\d.,])(${NUMBER})(?![\\d.,]*\\s*(?:${UNIT_WORD})\\b)`).exec(t);
-  return bare ? { amount: num(bare[1].replace(/,/g, "")), currency: "" } : null;
+  const normalized = normalizeNumbers(clean(text));
+  const t = normalized.text.replace(/\bshilingi\b/gi, "shillings").replace(/\bdola\b/gi, "dollars")
+    .replace(/\bbob\s*(\d[\d,]*(?:\.\d+)?)/gi, "$1 shillings").replace(/(\d[\d,]*(?:\.\d+)?)\s*bobs?\b/gi, "$1 shillings")
+    .replace(/\bshs?\.?\s*(?=\d)/gi, "shillings ").replace(/(\d[\d,]*(?:\.\d+)?)\s*\/[=-](?![\w])/g, "$1 shillings");
+  const found = parseMoney(t) || bareAmount(t);
+  if (!found) return null;
+  const doubtful = normalized.ambiguous && Math.abs(found.amount - normalized.ambiguous.value) < 1e-9;
+  return doubtful ? { ...found, ambiguous: [...normalized.ambiguous.values] } : found;
+}
+// A bare number, when no currency or "for" word names it: the one after "kwa" if there is one, else the last that is not a quantity or a time ("saa tano", "siku tatu").
+function bareAmount(t) {
+  const pattern = new RegExp(`(?<![\\d.,])(${NUMBER})(?![\\d.,]*\\s*(?:${UNIT_WORD})\\b)`, "g"); const candidates = [];
+  for (const hit of t.matchAll(pattern)) {
+    const before = clean(t.slice(0, hit.index)).split(" ").pop().toLowerCase();
+    if (NOT_MONEY_BEFORE.has(before) || new RegExp(`^(?:${UNIT_WORD})$`, "i").test(before) || before === "kila") continue;
+    candidates.push({ raw: hit[1], viaKwa: before === "kwa" });
+  }
+  const pick = candidates.filter(candidate => candidate.viaKwa).pop() || candidates.pop();
+  return pick ? { amount: num(pick.raw.replace(/,/g, "")), currency: "" } : null;
 }
 const moneyShown = (amount, currency) => {
   const shown = Number(amount).toLocaleString("en", { maximumFractionDigits: 2 });
@@ -59,11 +88,11 @@ function englishItem(word) {
 const SW_NAMES = { maize: "mahindi", beans: "maharage", cassava: "mihogo", rice: "mchele", wheat: "ngano", sorghum: "mtama", millet: "ulezi", tomatoes: "nyanya", potatoes: "viazi", "sweet potatoes": "viazi vitamu", cabbage: "kabichi", kale: "sukuma wiki", onions: "vitunguu", bananas: "ndizi", coffee: "kahawa", tea: "chai", groundnuts: "karanga", vegetables: "mboga", fruit: "matunda", crops: "mazao",
   milk: "maziwa", eggs: "mayai", cow: "ng'ombe", goat: "mbuzi", sheep: "kondoo", pigs: "nguruwe", chickens: "kuku", rabbits: "sungura", livestock: "mifugo", seed: "mbegu", fertiliser: "mbolea", pesticide: "dawa ya kunyunyizia", feed: "chakula cha mifugo", mineral: "chumvi ya madini" };
 const swahiliItem = name => { const key = clean(name).toLowerCase(); return SW_NAMES[key] || key; };
-const CATEGORY_SW = { seed: "mbegu", fertiliser: "mbolea", chemicals: "dawa", feed: "chakula cha mifugo", labour: "vibarua", transport: "usafiri", veterinary: "huduma ya mifugo", equipment: "vifaa", water: "maji", rent: "kodi", other: "nyingine", crops: "mazao", livestock: "mifugo", milk: "maziwa", eggs: "mayai" };
+const CATEGORY_SW = { seed: "mbegu", fertiliser: "mbolea", chemicals: "dawa", feed: "chakula cha mifugo", labour: "vibarua", transport: "usafiri", veterinary: "huduma ya mifugo", equipment: "vifaa", water: "maji", rent: "kodi", other: "nyingine", household: "nyumbani", crops: "mazao", livestock: "mifugo", milk: "maziwa", eggs: "mayai" };
 const categorySw = category => CATEGORY_SW[category] || category;
 // Category of what was sold or bought, using the English tools' category names.
 const SW_INCOME = [["milk", /\bmaziwa\b/i], ["eggs", /\b(?:mayai|yai)\b/i], ["livestock", /\b(?:ng'?ombe|mbuzi|kondoo|nguruwe|kuku|sungura|mifugo|ndama|fahali|mnyama|wanyama)\b/i],
-  ["crops", /\b(?:mahindi|maharag[ew]|mihogo|muhogo|mchele|mpunga|ngano|mtama|ulezi|nyanya|viazi|kabichi|sukuma|vitunguu|kitunguu|ndizi|kahawa|chai|karanga|mboga|matunda|mazao|mavuno|nafaka)\b/i]];
+  ["crops", /\b(?:mahindi|maharag(?:e|we)|mihogo|muhogo|mchele|mpunga|ngano|mtama|ulezi|nyanya|viazi|kabichi|sukuma|vitunguu|kitunguu|ndizi|kahawa|chai|karanga|mboga|matunda|mazao|mavuno|nafaka)\b/i]];
 const incomeCategorySw = text => (SW_INCOME.find(([, pattern]) => pattern.test(text)) || ["other"])[0];
 const SW_EXPENSE = [["seed", /\b(?:mbegu|miche)\b/i], ["fertiliser", /\b(?:mbolea|samadi|chokaa)\b/i], ["chemicals", /\b(?:viuatilifu|dawa ya (?:kunyunyizia|wadudu|magugu|kuua)|dawa za (?:kunyunyizia|wadudu)|kemikali)\b/i], ["feed", /\b(?:chakula cha mifugo|lishe|majani makavu|pumba|malisho)\b/i],
   ["labour", /\b(?:vibarua|kibarua|mshahara|mishahara|wafanyakazi|mfanyakazi|kupalilia|kulima|kuvuna|ujira)\b/i], ["transport", /\b(?:usafiri|nauli|mafuta|dizeli|petroli|lori|gari|pikipiki|boda|matatu|kusafirisha)\b/i], ["veterinary", /\b(?:mifugo|daktari wa mifugo|chanjo|dawa ya (?:mifugo|ng'ombe|kuku|mbuzi)|kuogesha|dawa)\b/i],
@@ -140,4 +169,4 @@ const tagEnglish = tag => { const t = clean(tag).toLowerCase(); const m = new Re
 const tagShown = tag => { const m = /^(cow|goat|sheep|pig|chicken|rabbit|duck|donkey|camel|calf|lamb|kid|chick)\b\s*(.*)$/.exec(String(tag)); if (!m) return /^[a-z]/.test(String(tag)) ? String(tag).charAt(0).toUpperCase() + String(tag).slice(1) : String(tag); const hit = ANIMALS.find(entry => entry[1] === m[1]); return clean(`${hit[3]} ${m[2].replace(/^flock\b/, "kundi")}`); };
 
 // Only the date forms above are read ("wiki 3 zilizopita" and the like are not).
-module.exports = Object.freeze({ dayFromSw, splitDueSw, askOf, placeName, ANIMALS, ANIMAL_WORD, animalOf, tagEnglish, tagShown, UNITS, UNIT_WORD, NUMBER, parseQuantitySw, unitLabelSw, parseMoneySw, moneyShown, CURRENCY_WORDS, englishItem, swahiliItem, categorySw, incomeCategorySw, expenseCategorySw, periodSw, PERIODS, dayInEnglish, isDayWord, describeDaySw, MONTHS, DAYS, addDays });
+module.exports = Object.freeze({ YES_SW, NO_SW, dayFromSw, splitDueSw, askOf, placeName, ANIMALS, ANIMAL_WORD, animalOf, tagEnglish, tagShown, UNITS, UNIT_WORD, NUMBER, parseQuantitySw, unitLabelSw, parseMoneySw, moneyShown, CURRENCY_WORDS, englishItem, swahiliItem, categorySw, incomeCategorySw, expenseCategorySw, periodSw, PERIODS, dayInEnglish, isDayWord, describeDaySw, MONTHS, DAYS, addDays });

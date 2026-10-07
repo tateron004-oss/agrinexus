@@ -11,7 +11,8 @@ const path = require("node:path");
 // correct sign-in never lets a guesser reset the address's count.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15359;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "login-limit-"));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));

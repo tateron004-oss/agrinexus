@@ -4,6 +4,7 @@
 module.exports = Object.freeze({
   // ---- emergencies and crisis (companion/safety.js) ----
   "safety.number": "If you might be in danger, please call your local emergency number now.",
+  "safety.numberIn": "If you might be in danger, please call the emergency number now: {numbers} in {country}.",
   "safety.noCircle": "I don't have anyone in your circle yet, so I couldn't alert anyone. {number} Once you're safe, we can add people you trust: \"add name@example.com to my circle\".",
   "safety.alertFailed": "I tried to alert your circle but couldn't reach anyone just now. {number}",
   "safety.alerted": "I've alerted {names}.{extra} {number} I'm here with you.",
@@ -50,6 +51,8 @@ module.exports = Object.freeze({
   "safety.clearBody": "{name} says they are safe now. No more location will be sent.",
   "safety.allClearTold": "I'm glad you're safe. I've told {names} that you're okay, and I've stopped sharing your location.",
   "safety.allClearClosed": "I'm glad you're safe. I've closed the alert.",
+  // A sick animal: there is no veterinary guide in the app, so this says so and sends the farmer to a vet. To be reviewed by a vet or an animal health officer.
+  "safety.livestock": "I don't have a veterinary guide for a sick animal, so I can't tell you what is wrong or what to give it. Please call a vet or your animal health worker now. Until they come, keep the animal calm and apart from the others.",
 
   // ---- the location that follows an alert (companion/emergency-location.js) ----
   "loc.title": "Emergency: {name}'s location",

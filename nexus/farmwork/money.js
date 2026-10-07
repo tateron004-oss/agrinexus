@@ -10,9 +10,11 @@ const { addStock, categoryOf, keyOf, findItems } = require("./inventory.js");
 // The farm's money: what was spent, what was earned, and the profit, by month, season, field or kind of cost. Amounts are exactly what the
 // farmer says; Kyro adds nothing and estimates nothing. A sale takes the goods out of stock when they are in stock, and a purchase of
 // seed, fertiliser, chemicals, feed or tools puts them in, and Kyro says so each time so nothing changes silently.
-const EXPENSE_CATEGORIES = [["seed", /\b(?:seeds?|seedlings?)\b/i], ["fertiliser", /\b(?:fertili[sz]ers?|npk|urea|dap|manure|lime)\b/i], ["chemicals", /\b(?:pesticides?|herbicides?|fungicides?|insecticides?|chemicals?|spray)\b/i], ["feed", /\b(?:feed|hay|silage|bran|fodder|mineral|pellets?|mash)\b/i],
+const EXPENSE_CATEGORIES = [["seed", /\b(?:seeds?|seedlings?)\b/i], ["fertiliser", /\b(?:fertili[sz]ers?|npk|urea|dap|manure|lime)\b/i], ["chemicals", /\b(?:pesticides?|herbicides?|fungicides?|insecticides?|chemicals?|spray)\b/i], ["feed", /\b(?:feed|hay|silage|bran|fodder|mineral|pellets?|mash|dairy meal|calf meal|pig meal|layers? meal)\b/i],
   ["labour", /\b(?:labou?r|wages?|worker|workers|salary|casual|weeding|ploughing|harvesting help)\b/i], ["transport", /\b(?:transport|fuel|diesel|petrol|matatu|lorry|truck|boda|delivery|fare)\b/i], ["veterinary", /\b(?:vet|veterinary|vaccine|vaccination|drugs?|medicine|treatment|dip|deworm)/i],
-  ["equipment", /\b(?:tools?|repair|equipment|tractor|hoe|panga|pump|sprayer|machine|spare)/i], ["water", /\b(?:water|irrigation|borehole|pipes?)\b/i], ["rent", /\b(?:rent|lease)\b/i]];
+  ["equipment", /\b(?:tools?|repair|equipment|tractor|hoe|panga|pump|sprayer|machine|spare)/i], ["water", /\b(?:water|irrigation|borehole|pipes?)\b/i], ["rent", /\b(?:rent|lease)\b/i],
+  // A shop's own costs. They come LAST so a farm word (seed, feed, fuel...) still wins: "stock" is what a shopkeeper buys to sell again, "utilities" is electricity and the like.
+  ["stock", /\b(?:stock|inventory|goods|merchandise|wholesale|restock(?:ing)?|supplies)\b/i], ["utilities", /\b(?:electricity|power|kplc|tokens?|internet|wifi|airtime|bundles?|licen[sc]es?|permits?)\b/i]];
 const expenseCategory = text => (EXPENSE_CATEGORIES.find(([, pattern]) => pattern.test(text)) || ["other"])[0];
 const ON_CREDIT = /\b(?:on credit|on account|on loan|(?:will|to|promised to|promises to|said (?:he|she|they) will) pay(?: me)? (?:later|next|on|after|in|tomorrow|at the end)|pay(?:s|ing)? (?:me )?(?:later|next week|next month|tomorrow|on friday)|has not paid|hasn't paid|have not paid|haven't paid|yet to pay|not yet paid|owes? me|unpaid|pay(?:ment)? (?:is )?(?:later|pending))\b/i;
 // Said about something BOUGHT: "on credit", "will pay later", "I owe him", "not paid yet".
@@ -49,21 +51,23 @@ const NOT_FARM = Symbol("not-farm");
 const MAX_AMOUNT = 100000000;
 
 async function recordMoney(ctx, entry) {
-  if (entry.category === "other" && !(await ctx.hasFarmData())) throw NOT_FARM;
+  // `ctx.anyGoods` is set by the everyday-bookkeeping module (books.js): a shopkeeper's shoes, soap or airtime are business too, so nobody needs farm records first.
+  if (entry.category === "other" && !ctx.anyGoods && !(await ctx.hasFarmData())) throw NOT_FARM;
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   const all = await ctx.store.list({ ...scope, collection: "money" });
   if (all.length >= 5000) return { refused: "Your money records are full (five thousand entries). Ask me for a summary, then remove some." };
   // A mis-heard or mistyped extra digit would otherwise sit in every total for good. Nothing is saved; the person is asked to say it again.
   if (!(entry.amount > 0) || entry.amount > MAX_AMOUNT) return { refused: `${formatMoney(entry.amount, entry.currency)} looks wrong, so I have not recorded it. I only record amounts up to ${formatMoney(MAX_AMOUNT, entry.currency)}. Please say it again with the right amount.` };
   const currency = isSpecific(entry.currency) ? entry.currency : entry.currency === "shillings" ? specificCurrency(all, SHILLING_KINDS) || "shillings" : defaultCurrency(all) || "";
-  const record = await ctx.store.add({ ...scope, collection: "money", data: { ...entry, currency, day: entry.day || ctx.entryDay || ctx.today } });
+  const record = await ctx.store.add({ ...scope, collection: "money", data: { ...entry, currency, day: entry.day || ctx.entryDay || ctx.today, ...(ctx.payment && !entry.payment ? { payment: ctx.payment } : {}) } });
   return { record, all: [record, ...all] };
 }
 
 // Money still owed to the farmer (a sale on credit) is not income yet: it is counted when it is paid.
 // Household costs ("paid school fees 12000") are kept but are not the farm's, so they are not in its totals or profit.
 const HOUSEHOLD = /^(?:school fees|fees|school|food|groceries|airtime|electricity|water bill|church|tithe|funeral|wedding|hospital|medical|doctor|shopping|bills?|dowry|bride price|harambee|contribution)$/i;
-const isCounted = record => !(record.data.type === "income" && record.data.unpaid) && record.data.category !== "household";
+// A standalone debt ("John owes me 800", "I owe the supplier 5000", books.js) is not income or a cost until it is paid: the payment is what is counted, as its own entry.
+const isCounted = record => !(record.data.type === "income" && record.data.unpaid) && !(record.data.type === "expense" && record.data.debt) && record.data.category !== "household";
 const sum = (records, type) => records.filter(record => record.data.type === type && isCounted(record)).reduce((acc, record) => { const key = currencyKey(records, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.amount); return acc; }, {});
 const showTotals = totals => { const entries = Object.entries(totals); return entries.length ? entries.map(([currency, amount]) => formatMoney(amount, currency)).join(" and ") : "0"; };
 const inPeriod = (record, period) => record.data.day >= period.from && record.data.day <= period.to;
@@ -205,19 +209,38 @@ async function ledgerFixes(ctx, t, lower) {
     }
   }
   // "that should be 8000", "change that to 8000", "I meant 800": the last entry is corrected, only when it was made today or yesterday.
-  if ((m = /^(?:no[, ]+)?(?:that should (?:be|have been)|change (?:that|it|the last (?:one|entry|sale|expense|income|record|payment)) to|correct (?:that|it|the last (?:one|entry|sale|expense|income|record)) to|make (?:that|it)|actually it was|actually it is|(?:sorry,? )?i meant|sorry,? it was)\s+(.+)$/i.exec(t))) {
+  if ((m = /^(?:no[, ]+)?(?:that should (?:be|have been)|change (?:that|it|(?:my |the )?last (?:one|entry|sale|expense|income|record|payment)) to|correct (?:that|it|(?:my |the )?last (?:one|entry|sale|expense|income|record)) to|make (?:that|it)|actually it was|actually it is|(?:sorry,? )?i meant|sorry,? it was)\s+(?!(?:an? )?(?:expense|sale|income|cost|spending)$)(.+)$/i.exec(t))) {
     const money = parseMoney(m[1]) || bareAmount(m[1]);
     if (!money || !(money.amount > 0)) return null;
-    const last = (await all())[0];
-    if (!last) return "There is nothing recorded to change.";
+    // "the last SALE" is the last sale, not whatever was recorded last: it used to change a later expense and say so as if it were the sale.
+    const named = /\blast (sale|income|expense|payment)\b/i.exec(t)?.[1];
+    const wantedType = named ? (/sale|income/i.test(named) ? "income" : "expense") : null;
+    const last = wantedType ? (await all()).find(record => record.data.type === wantedType) : (await all())[0];
+    if (!last) return wantedType ? `I have no ${wantedType === "income" ? "sale" : "expense"} recorded to change.` : "There is nothing recorded to change.";
     const age = Date.now() - Date.parse(last.createdAt);
     if (Number.isFinite(age) && age > 2 * 24 * 3600 * 1000) return `The last thing I recorded was ${describeRecord(last)}, a while ago, so I have not changed it. Say "delete the ${last.data.amount} ${last.data.type === "income" ? "sale" : "expense"}" and record it again.`;
     const before = describeRecord(last);
     await ctx.store.update({ ...scope, record: { ...last, data: { ...last.data, amount: money.amount, ...(isSpecific(money.currency) ? { currency: money.currency } : {}) } } });
     return `Changed: ${before} is now ${formatMoney(money.amount, isSpecific(money.currency) ? money.currency : last.data.currency)}. Stock changes it made are not reversed.`;
   }
+  // "change my last sale to an expense", "make the last entry an expense", "the last one was an expense, not a sale": the same entry, the other kind. Not for one that is on credit.
+  if ((m = /^(?:no[, ]+)?(?:(?:change|make|turn|switch|record|count)\s+(?:that|it|(?:my |the )?last (?:one|entry|sale|expense|income|record|payment))\s+(?:to |into |as )?(?:an? )?(expense|cost|spending|sale|income)|(?:that|it|(?:my |the )?last (?:one|entry|record))\s+(?:was|is)\s+(?:an? )?(expense|cost|spending|sale|income)(?:,?\s+not\s+(?:an? )?(?:expense|cost|spending|sale|income))?)$/i.exec(t))) {
+    const toType = /expense|cost|spending/i.test(m[1] || m[2]) ? "expense" : "income";
+    const named = /\blast (sale|income|expense|payment)\b/i.exec(t)?.[1];
+    const fromType = named ? (/sale|income/i.test(named) ? "income" : "expense") : null;
+    const last = fromType ? (await all()).find(record => record.data.type === fromType) : (await all())[0];
+    if (!last) return "There is nothing recorded to change.";
+    if (last.data.type === toType) return `It is already ${toType === "income" ? "a sale" : "an expense"}: ${describeRecord(last)}. Nothing was changed.`;
+    const age = Date.now() - Date.parse(last.createdAt);
+    if (Number.isFinite(age) && age > 2 * 24 * 3600 * 1000) return `The last thing I recorded was ${describeRecord(last)}, a while ago, so I have not changed it. Say "delete the ${last.data.amount} ${last.data.type === "income" ? "sale" : "expense"}" and record it again.`;
+    if (last.data.unpaid || last.data.owing) return `That one is on credit (${describeRecord(last)}), so I have not changed it. Delete it and record it again the way it happened.`;
+    const before = describeRecord(last);
+    const words = `${last.data.item || ""} ${last.data.note || ""}`;
+    await ctx.store.update({ ...scope, record: { ...last, data: { ...last.data, type: toType, category: toType === "expense" ? expenseCategory(words) : incomeCategory(words) } } });
+    return `Changed: ${before} is now ${toType === "income" ? "a sale" : "an expense"}. Stock changes it made are not reversed.`;
+  }
   // "delete the 5000 sale", "remove the maize sale"
-  if ((m = /^(?:delete|remove|cancel|scrap) (?:the |my )?(.+?) (sales?|expenses?|income|purchases?|entry|record|payment)$/i.exec(t)) && !/^last$/i.test(m[1].trim())) {
+  if ((m =/^(?:delete|remove|cancel|scrap) (?:the |my )?(.+?) (sales?|expenses?|income|purchases?|entry|record|payment)$/i.exec(t)) && !/^last$/i.test(m[1].trim())) {
     const what = clean(m[1]).toLowerCase(); const kind = /sale|income/i.test(m[2]) ? "income" : /expense|purchase/i.test(m[2]) ? "expense" : "";
     const amountSaid = (parseMoney(what) || bareAmount(what))?.amount;
     const rows = (await all()).filter(record => (!kind || record.data.type === kind) && (amountSaid ? record.data.amount === amountSaid : `${record.data.item || ""} ${record.data.note || ""} ${record.data.category || ""} ${record.data.party || ""}`.toLowerCase().includes(what)));
@@ -231,7 +254,10 @@ async function ledgerFixes(ctx, t, lower) {
 
 async function handleMoney(ctx) {
   // "paid 300 for the pickup" / "paid 2000 on fuel" is a cost, the same as "spent 300 on the pickup" (it was not read at all). "paid 5000 to Wanjiru" and "paid Wanjiru 5000" are left as they are.
-  const t = clean(ctx.text).replace(/[.!?]+$/g, "").replace(/^((?:i |we )?)paid ((?:(?:ksh|kshs|kes|tsh|ugx|usd|[$€£])\s?)?\d[\d,]*(?:\.\d+)?(?: shillings| dollars)?) (?:for|on) (?!me\b|us\b)/i, "$1spent $2 on "); const lower = t.toLowerCase();
+  // "paid 5000 till number 123456", "paid 2000 to paybill 247247 account 5521": the till or paybill is how it was paid, not who. It is a cost, and the number is not kept.
+  const t = clean(ctx.text).replace(/[.!?]+$/g, "").replace(/\s+(?:to |at |via |using |through |on |by )?(?:the )?(?:till|buy ?goods|pay ?bill|lipa na m-?pesa)(?: number| no\.?)?\s*\d{4,8}(?:\s+(?:account|acc|a\/c)(?: number| no\.?)?\s*\S+)?/i, "")
+    .replace(/^((?:i |we )?)paid ((?:(?:ksh|kshs|kes|tsh|ugx|usd|[$€£])\s?)?\d[\d,]*(?:\.\d+)?(?: shillings| dollars)?)$/i, "$1spent $2 on payment")
+    .replace(/^((?:i |we )?)paid ((?:(?:ksh|kshs|kes|tsh|ugx|usd|[$€£])\s?)?\d[\d,]*(?:\.\d+)?(?: shillings| dollars)?) (?:for|on) (?!me\b|us\b)/i, "$1spent $2 on "); const lower = t.toLowerCase();
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   let m;
   const fixed = await ledgerFixes(ctx, t, lower);
@@ -392,15 +418,23 @@ async function handleMoney(ctx) {
   // ---- asking ----
   const recordsOf = async () => ctx.store.list({ ...scope, collection: "money" });
   if ((m = new RegExp(String.raw`^how much (?:did|have) (?:i|we) (?:spend|spent)(?: on (.+?))?(?: (${PERIOD}))?$`, "i").exec(t)) || (m = new RegExp(String.raw`^(?:what (?:is|are)|show) my (?:total )?(?:expenses|spending|costs)(?: (${PERIOD}))?$`, "i").exec(t))) {
-    const period = periodOf(`${m[2] || m[1] || ""}`, ctx.today, "this month"); const what = /^how much/i.test(t) ? m[1] : "";
-    let rows = (await recordsOf()).filter(record => record.data.type === "expense" && inPeriod(record, period));
+    // "how much did I spend ON THE FARM this month" asks about everything: "the farm" is not a kind of cost to filter by (it used to find nothing and answer "I have no the farm spending").
+    const period = periodOf(`${m[2] || m[1] || ""}`, ctx.today, "this month"); let what = /^how much/i.test(t) ? m[1] : "";
+    if (what && /^(?:the |my |our )?(?:farm|business|shop|stall|duka|kiosk|work|everything|all|money|farming|farm work)$/i.test(clean(what))) what = "";
+    let rows = (await recordsOf()).filter(record => record.data.type === "expense" && !record.data.debt && inPeriod(record, period));
     if (what) rows = rows.filter(record => `${record.data.item || ""} ${record.data.category}`.toLowerCase().includes(clean(what).toLowerCase().replace(/^(?:the |my )/, "")) || record.data.field?.toLowerCase().includes(nameKey(what)));
-    return rows.length ? `You spent ${showTotals(sum(rows, "expense"))}${what ? ` on ${clean(what)}` : ""} ${period.label} (${plural(rows.length, "entry", "entries")}).` : `I have no ${what ? `${clean(what)} ` : ""}spending recorded for ${period.label.replace(/^in /, "")}.`;
+    const whatShown = clean(what).replace(/^(?:the|my|our) /i, "");
+    return rows.length ? `You spent ${showTotals(sum(rows, "expense"))}${what ? ` on ${whatShown}` : ""} ${period.label} (${plural(rows.length, "entry", "entries")}).` : `I have no ${what ? `${whatShown} ` : ""}spending recorded for ${period.label.replace(/^in /, "")}.`;
   }
   if ((m = new RegExp(String.raw`^how much (?:did|have) (?:i|we) (?:earn|earned|make|made|get|got|sell|sold)(?: (${PERIOD}))?$`, "i").exec(t)) || (m = new RegExp(String.raw`^(?:what (?:is|are)|show) my (?:total )?(?:income|earnings|sales|revenue)(?: (${PERIOD}))?$`, "i").exec(t))) {
     const period = periodOf(m[1] || "", ctx.today, "this month");
-    const rows = (await recordsOf()).filter(record => record.data.type === "income" && isCounted(record) && inPeriod(record, period));
-    return rows.length ? `You earned ${showTotals(sum(rows, "income"))} ${period.label} (${plural(rows.length, "entry", "entries")}).` : `I have no income recorded for ${period.label.replace(/^in /, "")}.`;
+    const everything = await recordsOf();
+    const rows = everything.filter(record => record.data.type === "income" && isCounted(record) && inPeriod(record, period));
+    if (rows.length) return `You earned ${showTotals(sum(rows, "income"))} ${period.label} (${plural(rows.length, "entry", "entries")}).`;
+    // Never a flat "no income" when something IS recorded for the time asked: sales still waiting to be paid are not income yet, and say so.
+    const waiting = everything.filter(record => record.data.type === "income" && record.data.unpaid && inPeriod(record, period));
+    if (waiting.length) return `I have no income recorded ${period.label} yet, but ${plural(waiting.length, "sale")} on credit (${showTotals(waiting.reduce((acc, record) => { const key = currencyKey(waiting, record.data.currency); acc[key] = round((acc[key] || 0) + record.data.amount); return acc; }, {}))}) ${waiting.length === 1 ? "is" : "are"} waiting to be paid. I count a credit sale as income when it is paid.`;
+    return `I have no income recorded for ${period.label.replace(/^in /, "")}.`;
   }
   if ((m = new RegExp(String.raw`^(?:what(?:'s| is)|show|how much is) my (?:profit|net income|margin)(?: (${PERIOD}))?$`, "i").exec(t)) || (m = new RegExp(String.raw`^am i (?:making a )?(?:profit|money)(?: (${PERIOD}))?$`, "i").exec(t)) || /^how(?:'s| is) my (?:profit|farm)(?: doing)?$/.test(lower)) {
     const period = periodOf(m?.[1] || "", ctx.today, "this year");
@@ -426,7 +460,7 @@ async function handleMoney(ctx) {
   }
   if ((m = new RegExp(String.raw`^(?:show|what are) my expenses by (?:category|kind|type)(?: (${PERIOD}))?$`, "i").exec(t))) {
     const period = periodOf(m[1] || "", ctx.today, "this year");
-    const rows = (await recordsOf()).filter(record => record.data.type === "expense" && inPeriod(record, period));
+    const rows = (await recordsOf()).filter(record => record.data.type === "expense" && !record.data.debt && inPeriod(record, period));
     if (!rows.length) return `I have no spending recorded for ${period.label.replace(/^in /, "")}.`;
     // Found live (real-estate/GPS follow-up audit): this used to sum every
     // row's raw amount together regardless of currency, then label the
@@ -464,4 +498,4 @@ async function handleMoney(ctx) {
   return null;
 }
 
-module.exports = Object.freeze({ handle, recordMoney, expenseCategory, incomeCategory, sum, profitOf, showTotals, NOT_FARM });
+module.exports = Object.freeze({ handle, recordMoney, expenseCategory, incomeCategory, sum, profitOf, showTotals, NOT_FARM, isCounted, inPeriod, currencyKey, isSpecific, describeRecord, PERIOD });

@@ -7,6 +7,7 @@ const tls = require("tls");
 const { WebSocketServer } = require("ws");
 const { OpenAIRealtimeWebSocket } = require("@openai/agents-realtime");
 const nexusUploads = require("./server/uploads.js");
+const { collectBodyText } = require("./server/requestBody.js");
 const nexusJobSearchProvider = require("./server/nexus-job-search-source-provider.js");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
@@ -37,6 +38,8 @@ const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
 const { CRISIS_RULE } = require("./nexus/brain/crisis-rule.js");
+const kyroCrisisPhrases = require("./public/kyro-crisis-phrases.js");
+const { t: nexusText } = require("./nexus/i18n/index.js");
 const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
 const nexusGenesisPredictiveWorkforce = require("./public/nexus-genesis-predictive-workforce.js");
 const nexusGenesisAfricaAgOpportunity = require("./public/nexus-genesis-africa-ag-opportunity.js");
@@ -49,7 +52,16 @@ const nexusOsHealthNexusReferenceProfile = require("./public/nexus-os-healthnexu
 const nexusOsControlPlane = require("./server/nexusOsControlPlane.js");
 const nexusWeatherSourceProvider = require("./server/nexus-weather-source-provider.js");
 const { hasReminderTimePhrase } = require("./nexus/reminders/time-phrase.js");
-const { personalFirstName, spokenNameFromGreeting } = require("./server/nexus-greeting-name.js");
+const { personalFirstName, spokenNameFromGreeting, extractSpokenName, usableDisplayName } = require("./server/nexus-greeting-name.js");
+// The name saved for this account, only if it is really a name. Something saved before the name check existed ("Pregnant", "Running Out Of") is dropped and never spoken back.
+function storedDisplayName(db, user) {
+  const names = db?.profile?.userDisplayNames;
+  const saved = names && user?.id ? names[user.id] : "";
+  if (!saved) return "";
+  const clean = usableDisplayName(saved);
+  if (!clean) { delete names[user.id]; return ""; }
+  return clean;
+}
 const { conversationFollowUpFlags } = require("./server/nexus-conversation-followup-flags.js");
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
@@ -57,19 +69,81 @@ const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
+const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
+// The honest work-and-learning answers (nexus/floor): short practice lessons in reading and maths, practice interviews, what Kyro really knows about jobs and training, and a child who
+// works or wants to. Where a person got to in a practice lesson is kept on their own record (user.floorPractice).
+const workLearningFloor = require("./nexus/floor/index.js");
 // The same safety answers the planner gives before anything else (danger signs in pregnancy or for a baby, someone in danger or being hurt, self-harm, scams, medicine doses for a baby or in pregnancy), for the
 // older paths: the phone line, the older command route, and the fallback when the planner cannot be reached. Those cannot alert a circle, so the answer says what to do and whom to call, and never offers to alert anyone.
 async function careSafetyReply(text, user) {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en") });
+  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en"), country: user?.country });
   return reply ? { kind: found.kind, reply } : null;
+}
+// The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already
+// exists for the companion (nexus/i18n/sw.js safety.*), never new wording. null when it does not apply or the shared reader has no Kiswahili case for the words (the English packet is then kept).
+async function swahiliCrisisReply(text, language, user) {
+  const found = readCompanionSafety(text);
+  if (!found) return null;
+  if (found.language !== "sw" && !/^sw\b/i.test(String(language || ""))) return null;
+  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: "sw" });
+  return reply ? String(reply).trim() : null;
 }
 // Sync form, for the places that only need to know whether it applies.
 const careSafetyApplies = text => Boolean(readCompanionSafety(text));
-const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote } = require("./server/providers/bloodPressure.js");
-const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply } = require("./server/providers/bloodGlucose.js");
+// A sentence that tells Kyro about a person's symptom, injury, danger or medicine ("my child has had a cough for two weeks", "an elderly man collapsed in the heat", "a child ate pesticide"). These are health
+// reports, not requests to open a course, check the weather or run a workflow: the loose keyword routers (the learning-hub and weather matchers, the farm/daily advisors) must never pick them up on a word like
+// child, mother, women, heat or walk. Saying plainly "start the course" / "what is the weather" still reaches those routers.
+const HEALTH_REPORT_WORDS = /\b(cough(?:ing|ed)?|fever|feverish|vomit(?:ing|ed|s)?|diarrh(?:o)?ea|bleed(?:ing)?|bled|blood|collaps(?:e|ed|ing)|faint(?:ed|ing)?|passed out|unconscious|unresponsive|seizure|convuls(?:ion|ions|ing)|a fit|had a fit|fits|pregnan(?:t|cy)|labou?r|miscarr(?:y|iage)|poison(?:ed|ing)?|pesticide|overdos(?:e|ed)|dog bit|bitten|bit by|bit my|bit me|snake|burn(?:ed|t)|scald(?:ed)?|wound(?:ed)?|injur(?:y|ed|ies)|broken (?:arm|leg|bone)|fracture|rash|swollen|swelling|pain|painful|aching|ache|headache|dizzy|dizziness|breath(?:ing|less)?|chest|choking|sick|ill|unwell|infection|infected|malaria|cholera|typhoid|tuberculosis|\btb\b|hiv|arvs?|diabet(?:es|ic)|insulin|blood pressure|hypertens(?:ion|ive)|asthma|medicine|medication|tablets?|pills?|dose|doses|breastfeed(?:ing)?|family planning|contracepti(?:on|ve|ves)|menstrua(?:l|tion)|antenatal|danger signs?|newborn|baby|infant|immuni[sz]ation|vaccin(?:e|ated|ation)|raped|rape|abuse[ds]?|beat me|beaten|hit me|suicid(?:e|al)|self[- ]harm|hopeless|stroke|heart attack|ate (?:cassava|mushrooms?|something))\b/;
+const WORKFLOW_ASK_WORDS = /\b(?:start|open|begin|launch|enrol+|enroll|register|join|continue|complete|resume|issue|build|prepare|create)\b.*\b(?:course|courses|lesson|lessons|learning|hub|training|class|classes|programme|program|path|quiz|certificate|intake|captions?|checklist|report|summary|handoff|referral|workflow|mission)\b/;
+function looksLikeHealthReport(text) {
+  const lower = String(text || "").toLowerCase();
+  return HEALTH_REPORT_WORDS.test(lower) || careSafetyApplies(text);
+}
+const { healthReadingsTurn } = require("./nexus/health/readings-conversation.js");
+// Health readings said or typed (blood pressure, blood sugar, weight, pulse, temperature, oxygen), and what people ask about them (show, delete, correct, who can see, share with a nurse), plus the
+// medicine questions around them. Kyro reads a reading back and saves it only after a yes. Care and safety wording and the content guards still come first, so nothing here answers those.
+// Returns null when the sentence is not about health readings.
+function healthReadingsReply(db, user, text, options = {}) {
+  if (!text || contentGuardReply(text) || careSafetyApplies(text)) return null;
+  const turn = healthReadingsTurn({ db, user, text, language: options.language, confirmedByCaller: options.confirmedByCaller === true, canWrite: !userIsRestrictedFrom(user, "health-record-write") });
+  // While Kyro waits for a yes or a no about a reading, an older question that was left open must not also be answered by that yes.
+  if (turn?.requiresConfirmation && ownPendingAction(db, user)) db.profile.agentPendingAction = null;
+  return turn;
+}
+const { assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote, savedReply: bloodPressureSavedReply, notSavedReply: bloodPressureNotSavedReply } = require("./server/providers/bloodPressure.js");
+const { resolveGlucose, glucoseLevel, invalidGlucoseReply, ambiguousUnitReply, veryLowReply, lowReply, veryHighReply, savedReply: glucoseSavedReply, notSavedReply: glucoseNotSavedReply } = require("./server/providers/bloodGlucose.js");
+// null unless the work-and-learning floor answers this turn. A safety or guarded message never goes through it (those have their own answers), and a bare yes while something else waits
+// for a confirmation belongs to that, not to a practice lesson.
+function workLearningFloorTurn(db, user, command, requestedLanguage, { jobs = true } = {}) {
+  const text = String(command || "").trim();
+  if (!user || !user.id || !text) return null;
+  if (contentGuardReply(text) || careSafetyApplies(text)) return null;
+  const practice = user.floorPractice && typeof user.floorPractice === "object" ? user.floorPractice : workLearningFloor.emptyPractice();
+  const turn = workLearningFloor.turn({ text, requestedLanguage, practice, roles: db.roles, hasPending: Boolean(ownPendingAction(db, user)), now: Date.now(), jobs });
+  if (!turn.handled) return null;
+  user.floorPractice = practice;
+  return turn;
+}
+function workLearningFloorResult(turn, layers = {}) {
+  return ensureSpeakableAgentResult({
+    intent: turn.intent,
+    response: turn.reply,
+    status: "completed",
+    metadata: {
+      conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, workLearningFloor: true,
+      inputMode: layers.inputMode, outputMode: layers.outputMode || undefined,
+      companionUnderstanding: layers.companionUnderstanding,
+      conversationalModeOrchestrator: layers.conversationalModeOrchestrator,
+      selectedConversationalModes: layers.conversationalModeOrchestrator?.selectedModeIds,
+      fakeCitationsAllowed: false, providerHandoffAuthorized: false, workflowOpened: false,
+      // Already said in the person's own language: nothing after this may translate it again.
+      responseLanguage: turn.language, language: turn.language, targetLanguage: turn.language
+    }
+  }, turn.intent);
+}
 const { DEFAULT_TIME_ZONE } = require("./nexus/brief/compose.js");
 const phoneCallerRegistry = require("./server/phoneCallerRegistry.js");
 const teamManagement = require("./server/teamManagement.js");
@@ -77,6 +151,11 @@ const businessSpaces = require("./server/businessSpaces.js");
 const platformAudit = require("./server/platformAudit.js");
 const businessSender = require("./server/businessSender.js");
 const senderOverride = require("./server/providers/senderOverride.js");
+// The one front door for what a person says or types (wake words, fillers, politeness, stutters, invisible characters, rambling), the idempotency cache for tool calls,
+// and texting-vs-calling: see nexus/speech/normalise.js and server/frontDoor.js.
+const { normaliseSpoken } = require("./nexus/speech/normalise.js");
+const frontDoor = require("./server/frontDoor.js");
+const { cleanContactName, localPhoneToE164 } = require("./nexus/memory/contacts.js");
 // What the current request sends as. In the default space this is process.env itself; inside a business it is a copy carrying that business's own numbers and settings (and none of the platform's).
 // The Twilio and email providers apply the same swap themselves (server/providers/senderOverride.js), so a call that was handed process.env still sends as the right business.
 const providerEnv = (base = process.env) => senderOverride.resolve(base);
@@ -86,8 +165,11 @@ const twilioProvider = require("./server/providers/twilioProvider.js");
 const emailProvider = require("./server/providers/emailProvider.js");
 const communicationsTestLog = new Map(); // owner id -> when their recent real tests went out
 const COMMUNICATIONS_TESTS_PER_HOUR = 6;
-const { HEALTH_BRIDGE_KEYS, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
-const { parseAssistantReminderTime, extractAssistantReminderTask } = require("./nexus/reminders/time-phrase.js");
+const { HEALTH_BRIDGE_KEYS, profileWithOwnHealthRecordsOnly, scopeHealthDb, collectOwnedHealthBridgeRecords, eraseOwnedHealthBridgeRecords } = require("./server/providers/healthRecordScope.js");
+const { parseAssistantReminderTime, resolveReminderTime, extractAssistantReminderTask, describeMoment: describeReminderMoment } = require("./nexus/reminders/time-phrase.js");
+const floorReminders = require("./nexus/reminders/floor-reminders.js");
+const { classifyRepeatRequest, repeatTurnAnyLanguage, unreachableStore: unreachableRepeatStore } = require("./nexus/reminders/repeat-turn.js");
+const { resolveReminderTimeZone, resolveReminderTimeZoneDetail, isValidTimeZone, DEFAULT_TIME_ZONE: DEFAULT_REMINDER_TIME_ZONE } = require("./nexus/reminders/time-zone.js");
 const {
   isUsableEnvValue,
   loadLocalEnvFiles
@@ -2384,8 +2466,8 @@ async function writeDb(db) {
         await fs.promises.rename(tempPath, targetPath);
         break;
       } catch (error) {
-        if (error.code !== "EPERM" || attempt >= 10) throw error;
-        await new Promise(resolve => setTimeout(resolve, 25 * attempt));
+        if ((error.code !== "EPERM" && error.code !== "EBUSY") || attempt >= 40) throw error;
+        await new Promise(resolve => setTimeout(resolve, Math.min(25 * attempt, 250)));
       }
     }
   } finally {
@@ -2862,7 +2944,12 @@ const PROFILE_OWNER_STAMP_KEYS_EXTRA = [
   "tradeLogisticsRecords", "tradeMessages", "tradeQuotes", "qualityInspections", "coldChainChecks", "exportReadiness", "contractPackets", "providerOutreach", "droneFindings", "shiftSchedule",
   "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "farmerLocations",
   "applications", "workforceOnboarding", "workforceDocuments", "timesheets", "payrollApprovals", "performanceReviews", "shiftRequests",
-  "buyerContacts", "tradeMessageThreads",
+  "buyerContacts", "tradeMessageThreads", "voiceSessions", "assistantReminders",
+  // more of what a person makes in the shared lists (found by the cross-account sweep): plans and briefings the agent made for them, drone and field work, onboarding, support tickets and the usage feed that
+  // names them, video sessions, their phone book; and, inside bigger records, the platform-intelligence drafts, searches and plans, and the user-testing memory (written "section.list")
+  "agentPlans", "agentBriefings", "droneMissions", "droneScans", "fieldInterventions", "onboardingRuns", "supportTickets", "womenFamilyRuns", "videoSessions", "phoneContacts",
+  "platformIntelligence.messageDrafts", "platformIntelligence.searchHistory", "platformIntelligence.dailyPlans", "platformIntelligence.imports",
+  "nexusUserTestingRuntime.records", "nexusUserTestingRuntime.receipts", "nexusUserTestingRuntime.predictions", "nexusUserTestingRuntime.executions",
   "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue", "offlineSyncHistory", "nexusReminders", "nexusFieldVisitPlans", "nexusSavedLearningResources", "nexusLearningProgress", "nexusMarketplaceNotes"
 ];
 const profileOwnerStamping = new (require("node:async_hooks").AsyncLocalStorage)();
@@ -2872,16 +2959,23 @@ const PROFILE_AUDIT_KEYS = new Set(["cloudAgentAudit", "offlineSyncHistory", "ag
 // "_ledgerOwner" (who made them), which only decides who is shown them: it is not used by the account download or the erasure, unlike "_ownerEmail".
 const LEDGER_VIEW_KEYS = ["walletTransactions", "paymentCheckoutRecords", "tradeEvents", "notifications"];
 const profileStampKeys = () => [...new Set([...(typeof HEALTH_PROFILE_ARRAY_KEYS !== "undefined" ? HEALTH_PROFILE_ARRAY_KEYS : []), ...PROFILE_OWNER_STAMP_KEYS_EXTRA])].filter(key => !PROFILE_AUDIT_KEYS.has(key)).concat(LEDGER_VIEW_KEYS);
+// A list can sit one level inside a bigger record ("platformIntelligence.messageDrafts"): read it, and replace it without changing the original.
+const profileListAt = (profile, key) => { const [head, tail] = String(key).split("."); const node = tail ? profile?.[head]?.[tail] : profile?.[head]; return Array.isArray(node) ? node : null; };
+function withProfileListAt(copy, key, list) {
+  const [head, tail] = String(key).split(".");
+  if (!tail) { copy[head] = list; return; }
+  copy[head] = { ...copy[head], [tail]: list };
+}
 // The owner mark is for the download, the erasure and for deciding who is shown a record: nobody else is shown another person's email.
 function withoutOwnerMarks(profile) {
   if (!profile || typeof profile !== "object") return profile;
   let copy = null;
   const marked = item => item && typeof item === "object" && ("_ownerEmail" in item || "_ledgerOwner" in item);
   for (const key of profileStampKeys()) {
-    const list = profile[key];
-    if (!Array.isArray(list) || !list.some(marked)) continue;
+    const list = profileListAt(copy || profile, key);
+    if (!list || !list.some(marked)) continue;
     copy = copy || { ...profile };
-    copy[key] = list.map(item => { if (!marked(item)) return item; const { _ownerEmail, _ledgerOwner, ...rest } = item; return rest; });
+    withProfileListAt(copy, key, list.map(item => { if (!marked(item)) return item; const { _ownerEmail, _ledgerOwner, ...rest } = item; return rest; }));
   }
   // who made each line of the activity feed is kept next to it, in the same order, and is not shown
   if ("activityBy" in profile) { copy = copy || { ...profile }; delete copy.activityBy; }
@@ -2891,17 +2985,46 @@ const profileRecordHasOwner = item => PROFILE_OWNER_FIELDS.some(field => String(
 
 // Whose money and trade records a person is shown: their own, and those with no personal owner mark (the demo data and anything made before owner marks existed). An Admin is shown all.
 const MONEY_VIEW_KEYS = ["orders", "tradeMessages", "tradeMessageThreads", "buyerContacts", "tradeQuotes", "contractPackets", "tradeLogisticsRecords", "qualityInspections", "coldChainChecks", "exportReadiness", "providerOutreach", ...LEDGER_VIEW_KEYS];
+// Everything else a person makes in the shared lists (spoken and chat sessions, reminders, workforce paperwork, payroll and reviews, saved providers and notes, field locations, drone requests, ...) is theirs
+// too. Only what is meant for everyone to see is left out of this: public listings, the shared map layers, field findings, and the review queues staff work from.
+const SHARED_BY_DESIGN_KEYS = new Set(["marketplaceListings", "fieldZones", "facilityRoutes", "routeDisruptions", "mapRiskLayers", "mapEvidencePackets", "droneFindings", "nexusHealthEvidenceGovernanceQueue", "nexusWorkforceGovernanceQueue"]);
+const STRICTLY_OWN_VIEW_KEYS = new Set(["shiftSchedule"]);
+// Lists that are seeded with shared entries (the directory of clinics and desks) but that a person can add their own to: the seeded ones have no owner mark and stay shown; theirs (createdBy) are only theirs.
+// These are not stamped by the save, so the seeded entries are never taken as one person's.
+const VIEW_ONLY_KEYS = ["platformIntelligence.localDirectory"];
+const personalViewKeys = () => [...new Set([...MONEY_VIEW_KEYS, ...VIEW_ONLY_KEYS, ...profileStampKeys().filter(key => !HEALTH_PROFILE_ARRAY_KEYS.has(key) && !SHARED_BY_DESIGN_KEYS.has(key))])];
 const ownerOfRecord = item => [...PROFILE_OWNER_FIELDS, "_ledgerOwner"].map(field => String(item?.[field] || "").trim().toLowerCase()).filter(value => value.includes("@"));
 const recordOwnedByAnotherPerson = (item, viewerEmail) => Boolean(item && typeof item === "object") && ownerOfRecord(item).some(value => value !== viewerEmail);
 function moneyRecordsForViewer(profile, user) {
-  if (!profile || !user || user.role === "Admin") return profile;
+  if (!profile || user?.role === "Admin") return profile;
+  if (!user) user = { email: "" }; // not signed in: shown only what carries no personal owner mark (this used to return the whole profile, other people's records included)
   const viewer = String(user.email || "").trim().toLowerCase();
   let copy = null;
-  for (const key of MONEY_VIEW_KEYS) {
-    const list = profile[key];
-    if (!Array.isArray(list)) continue;
-    const kept = list.filter(item => !recordOwnedByAnotherPerson(item, viewer));
-    if (kept.length !== list.length) { copy = copy || { ...profile }; copy[key] = kept; }
+  for (const key of personalViewKeys()) {
+    const list = profileListAt(copy || profile, key);
+    if (!list) continue;
+    // A person's own schedule is only what they made: the seeded demo shifts (no owner mark) are nobody's appointment, so no one is told "your next shift" from them.
+    const kept = list.filter(item => STRICTLY_OWN_VIEW_KEYS.has(key) ? ownerOfRecord(item).includes(viewer) : !recordOwnedByAnotherPerson(item, viewer));
+    if (kept.length !== list.length) { copy = copy || { ...profile }; withProfileListAt(copy, key, kept); }
+  }
+  // The persistent-memory store keeps its owner as the account id, not the email: other people's records, and what was worked out from them, are left out.
+  const memoryStore = profile.nexusPersistentMemory;
+  if (memoryStore && typeof memoryStore === "object" && Array.isArray(memoryStore.records) && memoryStore.records.some(record => record?.ownerId && record.ownerId !== user.id)) {
+    const records = memoryStore.records.filter(record => !record?.ownerId || record.ownerId === user.id);
+    const receiptIds = new Set(records.flatMap(record => record.receiptIds || []));
+    const predictive = memoryStore.predictiveContext && typeof memoryStore.predictiveContext === "object" ? memoryStore.predictiveContext : null;
+    copy = copy || { ...profile };
+    copy.nexusPersistentMemory = {
+      ...memoryStore,
+      records,
+      receipts: (memoryStore.receipts || []).filter(receipt => receiptIds.has(receipt?.id)),
+      ...(predictive ? { predictiveContext: { ...predictive, activeRecords: (predictive.activeRecords || []).filter(record => !record?.ownerId || record.ownerId === user.id), receipts: [], signals: [] } } : {})
+    };
+  }
+  // The usage feed (an operator's view of what was done) names who did each thing; other people's lines are not shown. Lines with no person named are kept.
+  if (Array.isArray(profile.usageEvents) && profile.usageEvents.some(event => String(event?.user || "").includes("@") && String(event.user).trim().toLowerCase() !== viewer)) {
+    copy = copy || { ...profile };
+    copy.usageEvents = profile.usageEvents.filter(event => !(String(event?.user || "").includes("@") && String(event.user).trim().toLowerCase() !== viewer));
   }
   if (Array.isArray(profile.activity) && Array.isArray(profile.activityBy) && profile.activityBy.some(by => String(by || "").includes("@") && String(by).toLowerCase() !== viewer)) {
     copy = copy || { ...profile };
@@ -2910,6 +3033,9 @@ function moneyRecordsForViewer(profile, user) {
   return copy || profile;
 }
 // The orders a person may look up or change by id (or the latest of): their own and unmarked ones. An Admin may use any.
+// The buyer contacts a person may use as a default (the first one): their own and any with no owner mark; an Admin: any.
+const visibleRecordsFor = (list, user) => (Array.isArray(list) ? list : []).filter(item => user?.role === "Admin" || !recordOwnedByAnotherPerson(item, String(user?.email || "").trim().toLowerCase()));
+const visibleBuyerContacts = (db, user) => visibleRecordsFor(db.profile.buyerContacts, user);
 const ordersForUser = (db, user) => (db.profile.orders || []).filter(order => user?.role === "Admin" || !recordOwnedByAnotherPerson(order, String(user?.email || "").trim().toLowerCase()));
 const orderForUser = (db, user, orderId) => { const usable = ordersForUser(db, user); return orderId ? usable.find(item => item.id === orderId) : usable[usable.length - 1]; };
 
@@ -2984,16 +3110,22 @@ function scrubWordsFromProfile(profile, words) {
   return changed;
 }
 // The action Kyro is waiting for a "yes" on is one slot in the shared profile. It belongs to the person who staged it: someone else's "yes" never confirms it, and they are not shown it.
+// A staged action waits for a "yes" for a few minutes only: a "yes" a long time later is about something else, so it must not complete it.
+const PENDING_ACTION_MAX_AGE_MS = 5 * 60 * 1000;
 const ownPendingAction = (db, user) => {
   const pending = db?.profile?.agentPendingAction;
   if (!pending || typeof pending !== "object") return pending || null;
+  const stagedAt = Date.parse(pending.createdAt || "");
+  if (Number.isFinite(stagedAt) && Date.now() - stagedAt > PENDING_ACTION_MAX_AGE_MS) return null;
   const by = String(pending.by || "").trim().toLowerCase();
   return !by || by === String(user?.email || "").trim().toLowerCase() ? pending : null;
 };
 // The agent keeps ONE "what we are in the middle of" context (the active mission, intake, clarification, last reasoning, ...) in the shared profile. When a different person starts talking, the
 // last person's context is cleared first, so their words never become the new person's "goal" or "memory used" (found: B's command carried A's sentence into B's own record).
 const ACTIVE_AGENT_CONTEXT_KEYS = ["lastReasoning", "activeVoiceMission", "activeGuidedMission", "activeOutcomeLoop", "lastConversationalModeOrchestrator", "lastAutonomousBrainAppliedTo", "genesisConversation",
-  "nexusSessionContext", "activeIntake", "activeClarification", "activeSimpleTurn", "activeJarvisSession", "lastReasoningLanguageProduction"];
+  "nexusSessionContext", "activeIntake", "activeClarification", "activeSimpleTurn", "activeJarvisSession", "lastReasoningLanguageProduction",
+  // a call waiting for a number, and the contact choices it offered: another person's reply must not complete it
+  "pendingContactCall"];
 function switchAgentContextTo(db, user) {
   const memory = db?.profile?.agentMemory;
   const email = String(user?.email || "").trim().toLowerCase();
@@ -3044,8 +3176,8 @@ function scrubPrivateHistoryFor(profile, email) {
 function snapshotProfileRecordsForOwnerStamping(db) {
   const snapshot = new Map();
   for (const key of profileStampKeys()) {
-    const list = db?.profile?.[key];
-    if (!Array.isArray(list)) continue;
+    const list = profileListAt(db?.profile, key);
+    if (!list) continue;
     const ids = new Set(); const objects = new WeakSet();
     for (const item of list) { if (item && typeof item === "object") { objects.add(item); if (item.id !== undefined && item.id !== null) ids.add(String(item.id)); } }
     snapshot.set(key, { ids, objects });
@@ -3057,8 +3189,8 @@ function stampNewProfileRecordsWithOwner(db, snapshot, email) {
   if (!owner || !db?.profile || !snapshot) return 0;
   let stamped = 0;
   for (const key of profileStampKeys()) {
-    const list = db.profile[key];
-    if (!Array.isArray(list)) continue;
+    const list = profileListAt(db.profile, key);
+    if (!list) continue;
     const before = snapshot.get(key);
     for (const item of list) {
       if (!item || typeof item !== "object" || Array.isArray(item) || profileRecordHasOwner(item)) continue;
@@ -3086,6 +3218,10 @@ function collectOwnedProfileRecords(profile, email) {
   for (const [key, value] of Object.entries(profile || {})) {
     if (!Array.isArray(value)) continue;
     const matches = value.filter(item => profileRecordOwnedBy(item, normalizedEmail));
+    if (matches.length) owned[key] = JSON.parse(JSON.stringify(matches));
+  }
+  for (const key of [...profileStampKeys(), ...VIEW_ONLY_KEYS].filter(name => name.includes("."))) {
+    const matches = (profileListAt(profile, key) || []).filter(item => profileRecordOwnedBy(item, normalizedEmail));
     if (matches.length) owned[key] = JSON.parse(JSON.stringify(matches));
   }
   return owned;
@@ -3121,6 +3257,14 @@ function eraseOwnedProfileRecords(profile, email) {
     const removed = before - profile[key].length;
     if (removed > 0) removedCounts[key] = removed;
   }
+  // the lists kept inside a bigger record ("platformIntelligence.messageDrafts", ...)
+  for (const key of [...profileStampKeys(), ...VIEW_ONLY_KEYS].filter(name => name.includes("."))) {
+    const list = profileListAt(profile, key);
+    if (!list) continue;
+    const [head, tail] = key.split(".");
+    const kept = list.filter(item => !profileRecordOwnedBy(item, normalizedEmail));
+    if (kept.length !== list.length) { profile[head][tail] = kept; removedCounts[key] = list.length - kept.length; }
+  }
   Object.assign(removedCounts, scrubPrivateHistoryFor(profile, normalizedEmail));
   const scrubbedWords = scrubWordsFromProfile(profile, ownWords);
   if (scrubbedWords) removedCounts.typedWordsScrubbed = scrubbedWords;
@@ -3143,6 +3287,8 @@ function collectUserLearningRecords(user) {
     if (Array.isArray(value) && value.length) owned[key] = JSON.parse(JSON.stringify(value));
   }
   if (user.learningAccessibilityProfile) owned.learningAccessibilityProfile = JSON.parse(JSON.stringify(user.learningAccessibilityProfile));
+  // How far the person got in the short practice lessons (nexus/floor); no answers are kept, only the progress.
+  if (user.floorPractice && typeof user.floorPractice === "object") owned.floorPractice = JSON.parse(JSON.stringify(user.floorPractice));
   return owned;
 }
 
@@ -3159,6 +3305,7 @@ function eraseUserLearningRecords(user) {
   user.learningStreak = 0;
   user.learningHours = 0;
   delete user.learningAccessibilityProfile;
+  if (user.floorPractice) { removedCounts.floorPractice = 1; delete user.floorPractice; }
   return removedCounts;
 }
 
@@ -3755,37 +3902,16 @@ function parseBodyText(req, data) {
   return parsed && typeof parsed === "object" ? parsed : {};
 }
 const requestFault = (message, httpStatus) => Object.assign(new Error(message), { httpStatus, userSafe: true });
+// Both readers stop keeping data the moment the limit is passed (see server/requestBody.js): a body over the limit is answered 413 and is never held in memory.
 function bufferBodyText(req) {
-  return new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", chunk => { data += chunk; if (data.length > 1_000_000) reject(new Error("Payload too large")); });
-    req.on("end", () => { req.bufferedBodyText = data; resolve(data); });
-    req.on("error", reject);
-  });
+  return collectBodyText(req, 1_000_000, requestFault).then(data => { req.bufferedBodyText = data; return data; });
 }
 function readBody(req) {
   if (typeof req.bufferedBodyText === "string") {
     try { return Promise.resolve(parseBodyText(req, req.bufferedBodyText)); } catch { return Promise.reject(requestFault("Invalid JSON", 400)); }
   }
-  return new Promise((resolve, reject) => {
-    let data = "";
-    req.on("data", chunk => {
-      data += chunk;
-      if (data.length > 20_000_000) reject(requestFault("Payload too large", 413));
-    });
-    req.on("end", () => {
-      try {
-        const contentType = String(req.headers["content-type"] || "");
-        if (!data) return resolve({});
-        if (contentType.includes("application/x-www-form-urlencoded")) {
-          return resolve(Object.fromEntries(new URLSearchParams(data)));
-        }
-        const parsed = JSON.parse(data);
-        resolve(parsed && typeof parsed === "object" ? parsed : {});
-      } catch {
-        reject(requestFault("Invalid JSON", 400));
-      }
-    });
+  return collectBodyText(req, 20_000_000, requestFault).then(data => {
+    try { return parseBodyText(req, data); } catch { throw requestFault("Invalid JSON", 400); }
   });
 }
 
@@ -5997,7 +6123,14 @@ function learningProfileForClient(user) {
 const randomTemporaryPassword = () => crypto.randomBytes(12).toString("base64url");
 
 function profileForUser(profile, user) {
-  return withoutOwnerMarks(moneyRecordsForViewer(privateHistoryForViewer(profileForUserByRole(profile, user), user), user));
+  const view = withoutOwnerMarks(moneyRecordsForViewer(privateHistoryForViewer(profileForUserByRole(profile, user), user), user));
+  // "Latest AI" is one shared line of text about the last thing anyone did (it can name a patient or quote a need); a caller who is not signed in is not shown it.
+  if (user || !view || typeof view !== "object") return view;
+  const anonymous = { ...view };
+  if (typeof anonymous.aiActivity === "string") anonymous.aiActivity = "";
+  // Reminders and spoken sessions are personal and, until they carry an owner mark, cannot be told apart by owner: a caller who is not signed in is shown none.
+  for (const key of ["assistantReminders", "voiceSessions"]) if (Array.isArray(anonymous[key])) anonymous[key] = [];
+  return anonymous;
 }
 
 // Health records belong to the person who made them. Found by a live check against a copy of the app: a second signed-in Standard User received the first user's health intake (patient name and needs)
@@ -6006,7 +6139,8 @@ function profileForUser(profile, user) {
 // is to see them, still see everything. A record owned by another person is left out.
 const HEALTH_SEEN_BY_ALL_ROLES = new Set(["Admin", "Provider Reviewer"]);
 function healthRecordsForViewer(profile, user) {
-  if (!profile || !user || HEALTH_SEEN_BY_ALL_ROLES.has(user.role)) return profile;
+  if (!profile || HEALTH_SEEN_BY_ALL_ROLES.has(user?.role)) return profile;
+  if (!user) user = { email: "" }; // not signed in: another person's health record is never shown (this used to return the whole profile)
   const viewer = String(user.email || "").trim().toLowerCase();
   const ownedByAnotherPerson = item => PROFILE_OWNER_FIELDS.some(field => { const value = String(item?.[field] || "").trim().toLowerCase(); return value.includes("@") && value !== viewer; });
   let copy = null;
@@ -6016,7 +6150,8 @@ function healthRecordsForViewer(profile, user) {
     const kept = list.filter(item => !(item && typeof item === "object" && ownedByAnotherPerson(item)));
     if (kept.length !== list.length) { copy = copy || { ...profile }; copy[key] = kept; }
   }
-  return copy || profile;
+  // The readings and intakes saved through the medical bridge (blood pressure, blood sugar, weight, pulse...) carry their owner too: another person's are left out.
+  return profileWithOwnHealthRecordsOnly(copy || profile, [user.id, user.email]);
 }
 
 function profileForUserByRole(profile, user) {
@@ -6029,7 +6164,7 @@ function profileForUserByRole(profile, user) {
   // through the same projection as investors rather than skipping it.
   if (!profile) return profile;
   if (!isRestrictedHealthViewer(user)) return healthRecordsForViewer(profile, user);
-  const projected = { ...profile };
+  const projected = { ...profileWithOwnHealthRecordsOnly(profile, [user?.id, user?.email]) };
   for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
     if (Array.isArray(profile[key])) projected[key] = profile[key].map(record => projectHealthRecordForUser(record, user, key));
   }
@@ -6815,7 +6950,9 @@ function conversationResilienceModel(command = "", user = {}, model = {}) {
     || savedStyle.includes("rural");
   const fearOrStress = /\b(scared|afraid|fear|panic|worried|confused|i don't know|i dont know|help me|please|urgent|emergency|pain|sick|weak|lost|stuck)\b/.test(value);
   const fragmentSpeech = words.length > 0 && (words.length <= 6 || /\b(thing|bad|help|sick|hot|pain|crop|doctor|medicine|job|map|clinic)\b/.test(value));
-  const correctionOrMishear = /\b(stop|wrong|misheard|heard wrong|not that|no not|i mean|meant|again|repeat|say again|texas stop|nexis stop|nexus stop)\b/.test(value);
+  // "stop" only counts as a correction when it is the whole utterance ("stop", "nexus stop"); "my hand will not stop bleeding" is a person bleeding, not a mishearing.
+  const correctionOrMishear = /\b(wrong|misheard|heard wrong|not that|no not|i mean|meant|again|repeat|say again|texas stop|nexis stop|nexus stop)\b/.test(value)
+    || /^(?:please |ok |okay )?stop(?: it| that| please)?$/.test(String(value).trim());
   const correctedAwayFromHealth = /\b(not doctor|not health|not clinic|not medicine)\b.*\b(crop|farm|maize|cassava|field|buyer|sell|market)\b/.test(value)
     || /\b(crop|farm|maize|cassava|field|buyer|sell|market)\b.*\b(not doctor|not health|not clinic|not medicine)\b/.test(value);
   const medicalFragility = !correctedAwayFromHealth && /\b(baby|child|pregnant|elder|grandma|bleeding|breathe|breathing|unconscious|chest pain|fever|very hot|medicine|doctor|clinic|pharmacy|injury|pain|sick|dawa|magani|oogun|remedio|kliniki|daktari|likita)\b/.test(value);
@@ -7345,7 +7482,7 @@ function nexusPersonalAssistantBriefing(db, user, command = "", providers = runt
   const smart = smartNextActions(db, user, providers).items.slice(0, 4);
   const predictive = backendPredictiveAdvisorModel(db, user, command || "what needs attention");
   const { country, route } = activeContext(db);
-  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+  const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
   // Found live (device/notification ownership audit): db.profile.assistantReminders
   // is a single array shared by every account, with createdBy: user.email as the
   // only per-user attribution (same convention as nexusFieldDispatches' requestedBy).
@@ -9911,7 +10048,8 @@ function ensurePhoneContactBook(db) {
 
 function contactDisplayName(value = "") {
   const cleaned = String(value || "")
-    .replace(/[^\p{L}\p{N}\s'.-]/gu, " ")
+    .replace(/['’]s\b/gi, "")
+    .replace(/[^\p{L}\p{M}\p{N}\s'.-]/gu, " ")
     .replace(/\b(please|now|today|thanks|thank you|phone|call|dial|ring|number|contact)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -9928,19 +10066,26 @@ function contactLookupKey(value = "") {
   return contactDisplayName(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
-function extractPhoneNumberFromText(text = "") {
-  const match = String(text || "").match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/);
-  return match ? normalizePhoneNumber(match[0]) : "";
+// A number with its +country code, or one written the way people say it at home (Kenya 0712 345 678, Nigeria 0803 123 4567) which becomes +254... / +234...; the caller says the result back.
+// Fullwidth and Arabic-Indic digits are read as ordinary digits.
+function extractPhoneNumberFromText(text = "", { allowLocal = true } = {}) {
+  const source = normaliseSpoken(String(text || "")).clean;
+  const match = source.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/);
+  if (!match) return "";
+  const direct = normalizePhoneNumber(match[0]);
+  if (direct || !allowLocal || /\+/.test(match[0])) return direct;
+  return localPhoneToE164(match[0])?.phone || "";
 }
 
 function extractContactNameFromCall(text = "") {
   const source = String(text || "");
-  const match = source.match(/\b(?:call|phone|dial|ring)\s+(?:my\s+|the\s+)?([a-zA-Z][a-zA-Z\s'.-]{1,48})/i);
+  const match = source.match(/\b(?:call|phone|dial|ring)\s+(?:my\s+|the\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,48})/iu);
   if (!match) return "";
   const raw = match[1]
     .replace(/\b(on|at|about|for|because|please|now|today|with|to|from)\b.*$/i, "")
     .trim();
-  const name = contactDisplayName(raw);
+  // only the real name: "Juma simu" -> Juma, "Mama's" -> Mama, "him instead" -> no name (ask who)
+  const name = cleanContactName(raw, { maxWords: 4 }) ? contactDisplayName(cleanContactName(raw, { maxWords: 4 })) : (/^(?:him|her|it|them|instead|again|too)\b/i.test(raw) ? "" : contactDisplayName(raw));
   const generic = /^(buyer|seller|provider|doctor|nurse|clinic|telehealth|recruiter|employer|instructor|teacher|support|caregiver|pharmacy|vendor|supplier|emergency)$/i;
   return name && !generic.test(name) ? name : "";
 }
@@ -9949,11 +10094,12 @@ function extractContactNameWithPhone(text = "", fallbackName = "") {
   const source = String(text || "");
   const phone = extractPhoneNumberFromText(source);
   if (!phone) return contactDisplayName(fallbackName);
-  const beforePhone = source.slice(0, source.indexOf(source.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""));
-  const nameMatch = beforePhone.match(/\b(?:remember|save|add|store)?\s*(?:that\s+)?(?:my\s+)?([a-zA-Z][a-zA-Z\s'.-]{1,48}?)(?:'s| is| number| phone| contact| at|:)?\s*$/i);
-  const candidate = contactDisplayName(nameMatch?.[1] || fallbackName);
-  const noise = /^(his|her|their|the|this|that|number|phone|contact|is|at|for)$/i;
-  return candidate && !noise.test(candidate) ? candidate : contactDisplayName(fallbackName);
+  const clean = normaliseSpoken(source).clean;
+  const beforePhone = clean.slice(0, clean.indexOf(clean.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""))
+    .replace(/^\s*(?:hifadhi|weka|andika|ongeza|kumbuka)\s+(?:namba|nambari|simu)(?:\s+ya)?\s+/i, "");
+  // "Save John number" -> John; "Could you save Otieno's number as" -> Otieno; "Abeg save Otieno" -> Otieno; "Mama on" -> Mama; "text" (a message, not a name) -> no name
+  const candidate = cleanContactName(beforePhone, { maxWords: 4 });
+  return candidate ? contactDisplayName(candidate) : (cleanContactName(fallbackName, { maxWords: 4 }) ? contactDisplayName(cleanContactName(fallbackName, { maxWords: 4 })) : "");
 }
 
 function inferContactRelationship(text = "") {
@@ -9974,7 +10120,9 @@ function upsertPhoneContact(db, user, { name, phone, relationship = "saved conta
   if (!cleanName || !cleanPhone) return null;
   const lookup = contactLookupKey(cleanName);
   const now = new Date().toISOString();
-  const existing = contacts.find(item => item.lookup === lookup || normalizePhoneNumber(item.phone) === cleanPhone);
+  // Only the person's own book is looked in: saving "Grace" never changes (or reuses) a contact somebody else saved.
+  const viewer = String(user?.email || "").trim().toLowerCase();
+  const existing = contacts.find(item => !recordOwnedByAnotherPerson(item, viewer) && (item.lookup === lookup || normalizePhoneNumber(item.phone) === cleanPhone));
   const record = {
     id: existing?.id || crypto.randomUUID(),
     name: cleanName,
@@ -10021,8 +10169,13 @@ function contactLookupMatches(a, b) {
   const wordsB = b.split(" ");
   return wordsA.every(word => wordsB.includes(word)) || wordsB.every(word => wordsA.includes(word));
 }
-function findPhoneContact(db, name = "") {
-  const contacts = ensurePhoneContactBook(db);
+// A person's phone book is theirs: the numbers they saved, plus any with no owner mark (made before owner marks existed). Never another person's.
+function phoneContactsForViewer(db, user) {
+  const viewer = memoryViewerEmail(user);
+  return ensurePhoneContactBook(db).filter(item => !recordOwnedByAnotherPerson(item, viewer));
+}
+function findPhoneContact(db, name = "", user = null) {
+  const contacts = phoneContactsForViewer(db, user);
   const lookup = contactLookupKey(name);
   if (!lookup) return null;
   return contacts.find(item => item.lookup === lookup)
@@ -10159,11 +10312,14 @@ function callIntentLanguage(options = {}) {
 }
 
 function cleanCallTarget(value = "") {
-  return contactDisplayName(String(value || "")
+  const tidy = contactDisplayName(String(value || "")
     .replace(/\b(on|at|about|for|because|please|now|today|with|using|to|from|por|sur|kwa|pelo|pela|whatsapp|telegram|twilio)\b.*$/i, "")
     .replace(/\b(my|the|a|an|mi|mon|ma|meu|minha)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim());
+  // "Juma simu" -> Juma, "Mama's" -> Mama: only the real name is kept
+  const real = cleanContactName(tidy, { maxWords: 4 });
+  return real ? contactDisplayName(real) : tidy;
 }
 
 function extractCallIntentTarget(command = "") {
@@ -10186,7 +10342,7 @@ function extractCallIntentTarget(command = "") {
     .replace(/\s+(?:on|por|sur|kwa|pelo|pela|على)\s+.*$/iu, "")
     .trim();
   const lowerName = normalizeSpeechForIntent(rawName);
-  if (/^(them|someone|somebody|anyone|anybody|person|people|contact|that person|this person)$/i.test(lowerName)) return null;
+  if (/^(them|him|her|it|instead|again|someone|somebody|anyone|anybody|person|people|contact|that person|this person)(?:\s+(?:instead|again|now|please|too))?$/i.test(lowerName)) return null;
   const roleMap = [
     { pattern: /^(doctor|medico|medica|m[eé]dico|m[eé]decin|daktari|طبيب|الطبيب)$/i, label: "doctor", relationship: "health provider contact" },
     { pattern: /^(provider|proveedor|fournisseur|mtoa huduma|مزود|المزود)$/i, label: "provider", relationship: "health provider contact" },
@@ -10208,7 +10364,7 @@ function isCallIntentCommand(command = "") {
   const raw = String(command || "").trim();
   const lower = normalizeSpeechForIntent(raw);
   if (isAssistantAliasQuestion(lower)) return false;
-  return Boolean(extractPhoneNumberFromText(raw))
+  return Boolean(extractPhoneNumberFromText(raw, { allowLocal: false }))
     || /\b(call|phone|dial|ring)\b/.test(lower)
     || /\bllama\s+a\b|\bappelle\b|\bmpigie\b|\bpiga\s+simu\s+kwa\b|\bligar\s+para\b|\bligue\s+para\b|\bligar\s+pelo\b|\bligue\s+pelo\b/.test(lower)
     || /(?:اتصل|إتصل)\s+ب/u.test(raw);
@@ -10274,16 +10430,30 @@ function callableContactRecord(record = {}, source = "platform") {
   };
 }
 
-function callContactCandidates(db, target = {}) {
+// Whose numbers "call Grace" / "text Grace" may be looked up in. The shared lists hold every account's contacts, buyers, patients and job applicants, so a person is offered only:
+//  - their own saved contacts (and any with no owner mark), and their own buyer contacts (an Admin: all buyer contacts);
+//  - the shared directory of clinics, courses and desks (what was added by another person is not included);
+//  - the CRM leads, for an Admin only;
+//  - their own health intake and job application records, never anyone else's. A patient's or an applicant's number is not a contact for anybody else.
+function callableSourcesForViewer(db, user) {
+  const viewer = memoryViewerEmail(user);
+  if (!viewer) return [];
+  const admin = user?.role === "Admin" || (!user && profileOwnerStamping.getStore()?.role === "Admin");
+  const ownedBy = item => ownerOfRecord(item).includes(viewer);
+  const profile = db.profile;
+  return [
+    ...phoneContactsForViewer(db, user).map(item => callableContactRecord(item, "phoneContacts")),
+    ...(profile.buyerContacts || []).filter(item => admin || !recordOwnedByAnotherPerson(item, viewer)).map(item => callableContactRecord(item, "buyerContacts")),
+    ...(profile.healthIntakes || []).filter(ownedBy).map(item => callableContactRecord(item, "healthIntakes")),
+    ...(profile.applications || []).filter(ownedBy).map(item => callableContactRecord(item, "workforceApplications")),
+    ...((profile.platformIntelligence?.localDirectory || [])).filter(item => !recordOwnedByAnotherPerson(item, viewer)).map(item => callableContactRecord(item, "localDirectory")),
+    ...(admin ? (profile.platformIntelligence?.crmContacts || []) : []).map(item => callableContactRecord(item, "crmContacts"))
+  ];
+}
+
+function callContactCandidates(db, target = {}, user = null) {
   ensurePhoneContactBook(db);
-  const records = [
-    ...(db.profile.phoneContacts || []).map(item => callableContactRecord(item, "phoneContacts")),
-    ...(db.profile.buyerContacts || []).map(item => callableContactRecord(item, "buyerContacts")),
-    ...(db.profile.healthIntakes || []).map(item => callableContactRecord(item, "healthIntakes")),
-    ...(db.profile.applications || []).map(item => callableContactRecord(item, "workforceApplications")),
-    ...((db.profile.platformIntelligence?.localDirectory || [])).map(item => callableContactRecord(item, "localDirectory")),
-    ...((db.profile.platformIntelligence?.crmContacts || [])).map(item => callableContactRecord(item, "crmContacts"))
-  ].filter(item => item.name || item.phone || item.handle);
+  const records = callableSourcesForViewer(db, user).filter(item => item.name || item.phone || item.handle);
   const lookup = contactLookupKey(target.displayName || target.rawName || "");
   if (!lookup) return [];
   return records
@@ -10299,11 +10469,11 @@ function callContactCandidates(db, target = {}) {
     }));
 }
 
-function callIntentResolution(db, parsed = {}) {
+function callIntentResolution(db, parsed = {}, user = null) {
   const target = parsed.target || null;
   if (!target) return { status: "missing-target", matches: [] };
   if (target.type === "number" && target.e164Phone) return { status: "resolved", matches: [{ ...target, source: "direct-input" }] };
-  const matches = callContactCandidates(db, target);
+  const matches = callContactCandidates(db, target, user);
   if (target.type === "role") {
     const callable = matches.find(item => item.e164Phone || item.handle);
     if (!callable && !["provider", "buyer"].includes(target.displayName)) return { status: "missing-number", matches };
@@ -10329,11 +10499,73 @@ function callIntentResolution(db, parsed = {}) {
   return { status: "missing-number", matches: [] };
 }
 
+// "Text +254712345678 saying hello", "sms 0712345678 I am coming", "WhatsApp Mama the meeting is at 3", "tuma ujumbe kwa +254... niko njiani", "tell mama I am coming": a MESSAGE.
+// The recipient and the exact words are shown back and the person must say yes; "yes" sends the message (or says honestly that it cannot). It is never turned into a call, and
+// a local number (0712..., 0803...) is converted to +254.../+234... and said back in full. Email and role requests ("text the buyer") stay with the older workflows.
+function stageMessageIntent(db, user, command = "", options = {}) {
+  const request = frontDoor.readMessageRequest(command);
+  if (!request || request.channel === "email") return null;
+  ensurePhoneContactBook(db);
+  const sw = request.swahili || callIntentLanguage(options) === "sw";
+  const channelLabel = request.channel === "whatsapp" ? "WhatsApp message" : "text";
+  const ask = (intent, response, metadata = {}) => ({ intent, response, status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent", ...metadata } });
+  let phone = request.phone || ""; let name = ""; let message = request.message || "";
+  if (request.invalid) return ask("message.number_invalid", sw ? "Sijaelewa namba hiyo. Nipe namba kamili, kwa mfano +254712345678 au 0712 345 678." : "I could not make out that number. Give me the whole number, like +254712345678 or 0712 345 678.");
+  if (!phone) {
+    const lookup = candidate => {
+      const found = callContactCandidates(db, { displayName: candidate, rawName: candidate }).filter(item => item.e164Phone);
+      const seen = new Set(found.map(item => item.e164Phone));
+      return seen.size ? found : [];
+    };
+    const matched = frontDoor.matchRecipient(request, lookup);
+    if (!matched) {
+      const first = cleanContactName(request.words[0] || "");
+      return ask("message.number_needed", sw
+        ? `Sina namba ya ${first || "mtu huyo"}. Nipe namba yake yenye msimbo wa nchi, kwa mfano "tuma ujumbe kwa +254712345678 niko njiani", au sema "hifadhi namba ya ${first || "Juma"} kama +254712345678" kwanza.`
+        : `I don't have a number for ${first || "that person"}. Give me their number with the country code, like "text +254712345678 saying I am on my way", or say "save ${first || "Juma"}'s number as +254712345678" first.`);
+    }
+    const phones = [...new Set(matched.found.map(item => item.e164Phone))];
+    if (phones.length > 1) return ask("message.multiple_matches", sw ? `Kuna zaidi ya mmoja anayeitwa ${matched.candidate}. Ni yupi? ${matched.found.map((item, index) => `${index + 1}. ${item.displayName}`).join(" ")}` : `I found more than one ${matched.candidate}. Which one? ${matched.found.map((item, index) => `${index + 1}. ${item.displayName}`).join(" ")}`);
+    phone = phones[0]; name = matched.found[0].displayName || matched.candidate; message = matched.message;
+  }
+  if (!message) return ask("message.text_needed", sw ? `Ujumbe unasema nini? Sema kwa mfano "tuma ujumbe kwa ${name || frontDoor.spokenPhone(phone)} niko njiani".` : `What should the ${channelLabel} say? For example: "text ${name || frontDoor.spokenPhone(phone)} saying I am on my way".`);
+  if (message.length > 500) return ask("message.too_long", sw ? "Ujumbe ni mrefu sana. Ufupishe kidogo." : "That message is too long to send. Please make it shorter.");
+  const label = name ? `${name} (${frontDoor.spokenPhone(phone)})` : frontDoor.spokenPhone(phone);
+  const staged = stageAgentAction(db, command, {
+    kind: "message",
+    module: "AI",
+    tool: "communications.send_message",
+    action: `Send ${channelLabel} to ${name || frontDoor.spokenPhone(phone)}`,
+    section: "agent",
+    pendingActionType: "outbound_message",
+    planner: "backend-message-intent",
+    confidence: 0.92,
+    rationale: "Nexus parsed a text or WhatsApp request and staged it behind explicit confirmation before sending anything.",
+    channel: request.channel,
+    to: phone,
+    recipientPhone: phone,
+    contactName: name,
+    message,
+    phase4HighRisk: true,
+    allowedConfirmations: ["yes", "confirm", "do it", "send it"],
+    userFacingPlan: `Say yes to send, or no to cancel.`,
+    confirmationPrompt: sw
+      ? `Nitume "${message}" kwa ${label}? Sema ndiyo ili kutuma, au hapana kughairi.`
+      : `Send "${message}" to ${label} as a ${channelLabel}? Say yes to send it, or no to cancel.`,
+    language: sw ? "sw" : "en"
+  });
+  return { ...staged, intent: "message.intent_staged", metadata: { ...(staged.metadata || {}), channel: request.channel, assumedCountry: request.assumedCountry || null } };
+}
+
 function stageBackendCallIntent(db, user, command = "", options = {}) {
+  // a request to text or message somebody is not a request to call them
+  if (frontDoor.readMessageRequest(command)) return null;
   ensurePhoneContactBook(db);
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(command);
-  const saveContactSignal = /\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command));
+  const saveContactSignal = (/\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command)))
+    // "Hifadhi namba ya Juma +254..." (save Juma's number) is saving a contact, not asking for a call.
+    || (/\b(hifadhi|weka|andika|ongeza|kumbuka)\b/.test(normalizeSpeechForIntent(command)) && /\b(namba|nambari|simu|mawasiliano)\b/.test(normalizeSpeechForIntent(command)));
   const reminderSignal = /\b(remind|reminder|notify|notification)\b/.test(normalizeSpeechForIntent(command));
   if ((pendingContactCall && phone) || saveContactSignal || reminderSignal) return null;
   if (!isCallIntentCommand(command)) return null;
@@ -10341,12 +10573,12 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   const language = callIntentLanguage(options);
   const target = extractCallIntentTarget(command);
   const targetLookup = contactLookupKey(target?.displayName || target?.rawName || "");
-  const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).some(item => {
+  const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).filter(item => !recordOwnedByAnotherPerson(item, memoryViewerEmail(user))).some(item => {
     const reminderLookup = contactLookupKey(`${item.contactName || ""} ${item.task || ""}`);
     return contactLookupMatches(reminderLookup, targetLookup);
   });
   if (reminderContactMatch) return null;
-  const resolution = callIntentResolution(db, { target, provider });
+  const resolution = callIntentResolution(db, { target, provider }, user);
   if (resolution.status === "missing-target") {
     const providerMetadata = callProviderPublicMetadata(provider);
     db.profile.agentMemory.lastStatus = "call-target-needed";
@@ -11592,7 +11824,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     // walletTransactions). Trims the OLDEST orders (array front) since push() always appends at the end.
     if (db.profile.orders.length > 1000) db.profile.orders = db.profile.orders.slice(-1000);
   }
-  const buyerName = String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} verified buyer desk`).trim();
+  const buyerName = String(body.buyerName || visibleBuyerContacts(db, user)[0]?.buyerName || product?.buyerName || `${country.name} verified buyer desk`).trim();
   const sellerName = String(body.sellerName || user.name || "Farmer seller").trim();
   const productName = String(body.productName || order.product || product?.name || "Active crop lot").trim();
   const pickupLocation = String(body.pickupLocation || order.checkpoint || db.profile.activeCheckpoint || `${country.name} seller collection point`).trim();
@@ -12475,7 +12707,7 @@ async function initializeTradePaymentCheckout(db, user, body = {}) {
     productId: product?.id || order?.productId || null,
     productName: product?.name || order?.product || body.productName || "Crop transaction",
     buyerEmail: String(body.buyerEmail || user.email || "buyer@example.com").trim().toLowerCase(),
-    buyerName: String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} buyer`).trim(),
+    buyerName: String(body.buyerName || visibleBuyerContacts(db, user)[0]?.buyerName || product?.buyerName || `${country.name} buyer`).trim(),
     sellerName: String(body.sellerName || user.name || "Farmer seller").trim(),
     grossAmount,
     currency,
@@ -13975,16 +14207,29 @@ function tradeOperationalCommunicationBrief(db, user, text) {
   };
 }
 
-function submitBestWorkforceApplication(db, user, command = "") {
+// A job application that is already further along must not be sent backwards by a later, weaker step ("match me" or a gap review moving "Application Submitted" back to "Agent Matched").
+const CANDIDATE_STAGES_PAST_MATCHING = new Set(["Application Submitted", "Applied", "Shortlist", "Interview", "Placement Pool", "Shift Ready", "Paid Placement", "Performance Review"]);
+function setEarlyCandidateStage(profile, stage) {
+  if (CANDIDATE_STAGES_PAST_MATCHING.has(profile.candidateStage)) return;
+  profile.candidateStage = stage;
+}
+// The simulated hiring engine (no WORKFORCE_HRIS webhook and key configured) never reaches an employer; a reply about an application must say so.
+function workforceEngineIsLive() {
+  const runtime = providerRuntime("workforce-hris");
+  return Boolean(runtime.webhookUrl && runtime.apiKey) && runtime.mode !== "sandbox";
+}
+
+function submitBestWorkforceApplication(db, user, command = "", options = {}) {
   ensureWorkforceProfile(db.profile);
   const requested = String(command || "").toLowerCase();
-  const role = db.roles.find(item => requested.includes(item.title.toLowerCase()))
-    || db.roles.find(item => roleReadiness(db.profile, user, item).eligible)
-    || db.roles[0];
+  const role = (options.roleId ? db.roles.find(item => item.id === options.roleId) : null)
+    || db.roles.find(item => requested.includes(item.title.toLowerCase()))
+    || (options.roleId ? null : db.roles.find(item => roleReadiness(db.profile, user, item).eligible))
+    || (options.roleId ? null : db.roles[0]);
   if (!role) return { status: "needs-role", response: "No workforce roles are available yet." };
   const readiness = roleReadiness(db.profile, user, role);
   if (!readiness.eligible) {
-    db.profile.candidateStage = "Readiness Gap Review";
+    setEarlyCandidateStage(db.profile, "Readiness Gap Review");
     logIntegration(db, {
       providerId: "workforce-notifications",
       module: "Workforce",
@@ -13997,10 +14242,13 @@ function submitBestWorkforceApplication(db, user, command = "") {
       status: "needs-readiness",
       role,
       readiness,
-      response: `${role.title} is the best role to review, but you need ${readiness.missingReadiness}% more readiness${readiness.missingCertificates.length ? ` and ${readiness.missingCertificates.length} certificate gap(s)` : ""}. I opened the workforce path so you can close the gaps.`
+      response: options.roleId
+        // The person named this role: say plainly what is missing and that nothing was submitted.
+        ? `I can't submit the ${role.title} application yet: ${[readiness.missingReadiness > 0 ? `you need ${readiness.missingReadiness}% more readiness` : "", readiness.missingCertificates.length ? `you are missing ${readiness.missingCertificates.length} required certificate(s)` : ""].filter(Boolean).join(" and ") || "your profile is not ready"}. Nothing was submitted. Finish the related course and its quiz first.`
+        : `${role.title} is the best role to review, but you need ${readiness.missingReadiness}% more readiness${readiness.missingCertificates.length ? ` and ${readiness.missingCertificates.length} certificate gap(s)` : ""}. I opened the workforce path so you can close the gaps.`
     };
   }
-  let application = db.profile.applications.find(item => item.roleId === role.id);
+  let application = visibleRecordsFor(db.profile.applications, user).find(item => item.roleId === role.id);
   if (!application) {
     application = {
       id: crypto.randomUUID(),
@@ -14036,7 +14284,7 @@ function submitBestWorkforceApplication(db, user, command = "") {
     status: "completed",
     role,
     application,
-    response: `I submitted the ${role.title} application and opened the workforce workspace. Next step: interview support and shift scheduling.`
+    response: `I submitted the ${role.title} application and opened the workforce workspace.${workforceEngineIsLive() ? "" : " This is a practice application: no employer has received it."} Next step: interview support and shift scheduling.`
   };
 }
 
@@ -14108,15 +14356,35 @@ function completeAgentQuiz(db, user) {
   return `Completed the ${course.title} quiz workflow with score ${enrollment.score}.`;
 }
 
+// Whether this person has genuinely finished a course: every lesson of it done and a real quiz result (the same 25-point bar /api/learning/certificate asks for). Certificates gate job eligibility,
+// so this is never satisfied by a voice command alone. state: "none" (no course started) | "lessons" | "quiz" | "eligible" | "have" (already holds the certificate).
+function learningCertificateStatus(db, user) {
+  ensureLearningProfile(user);
+  const rows = (user.enrollments || []).map(enrollment => {
+    const course = (db.courses || []).find(item => item.id === enrollment.courseId);
+    if (!course) return null;
+    const total = (course.modules || []).length;
+    const done = new Set(enrollment.completedModules || []).size;
+    return { course, enrollment, total, done, lessonsDone: total > 0 && done >= total, quizDone: Number(enrollment.score || 0) >= 25, has: (user.certificates || []).find(item => item.courseId === course.id) || null };
+  }).filter(Boolean);
+  if (!rows.length) return { state: "none" };
+  const ready = rows.find(row => row.lessonsDone && row.quizDone && !row.has);
+  if (ready) return { state: "eligible", ...ready };
+  const held = rows.find(row => row.has);
+  if (held) return { state: "have", ...held };
+  const closest = rows.slice().sort((a, b) => (Number(b.quizDone) + b.done) - (Number(a.quizDone) + a.done))[0];
+  return { state: closest.lessonsDone ? "quiz" : "lessons", ...closest };
+}
+
 function issueAgentCertificate(db, user) {
   ensureLearningProfile(user);
-  const course = activeLearningCourse(db, user);
-  if (!course) throw new Error("No course catalog is available.");
-  let enrollment = getEnrollment(user, course.id);
-  if (!enrollment || Number(enrollment.score || 0) < 25) {
-    completeAgentQuiz(db, user);
-    enrollment = getEnrollment(user, course.id);
-  }
+  const status = learningCertificateStatus(db, user);
+  if (status.state === "have") return `You already hold ${status.has.certificateNumber} for ${status.course.title}. Nothing new was issued.`;
+  if (status.state === "none") return "No certificate was issued: you haven't finished a course yet.";
+  if (status.state === "lessons") return `No certificate was issued: ${status.course.title} still has lessons to finish (${status.done} of ${status.total} done).`;
+  if (status.state === "quiz") return `No certificate was issued: the quiz result for ${status.course.title} is still missing.`;
+  const course = status.course;
+  const enrollment = status.enrollment;
   enrollment.status = "completed";
   enrollment.progress = 100;
   enrollment.completedAt = enrollment.completedAt || new Date().toISOString();
@@ -14211,24 +14479,24 @@ function runWorkforceActionByAgent(db, user, type) {
     // Found live (drone/workforce audit): same unbounded-replay gap as the
     // REST /api/workforce/action "shift" handler -- refuse a second shift
     // while one is already scheduled and hasn't started yet.
-    if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+    if (ownRecordsOnly(db.profile.shiftSchedule, user).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
       return "A shift is already scheduled. Wait until it starts before scheduling another.";
     }
     db.profile.interviews = Math.max(Number(db.profile.interviews || 0), 1);
     // Found live (legacy server.js route sweep): same falsy-zero-override gap as the REST
     // /api/workforce/action "shift" handler this mirrors -- an explicit rate:0 (an unpaid/volunteer
     // placement) was treated as missing and silently replaced with a fabricated $64.
-    const requestedRate = Number(db.profile.applications[0]?.rate);
+    const requestedRate = Number(visibleRecordsFor(db.profile.applications, user)[0]?.rate);
     const shift = {
       id: crypto.randomUUID(),
-      role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
+      role: visibleRecordsFor(db.profile.applications, user)[0]?.roleTitle || "Field Operations Agent",
       startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
       status: "scheduled",
       // Found live (calendar/session/export follow-up audit): this was a flat
       // literal regardless of which role the shift's own `role` field names --
       // a user placed into a higher-rate role saw the same estimate as one on
       // the cheapest role. Use the actually-applied role's real rate.
-      estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
+      estimatedEarnings: visibleRecordsFor(db.profile.applications, user)[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
     };
     db.profile.shiftSchedule.unshift(shift);
     // Found live (legacy server.js helper-function sweep): shiftSchedule grows unboundedly -- never
@@ -14641,7 +14909,8 @@ function platformIntelligenceSearch(db, user, query = "", filters = {}) {
   const type = String(filters.type || "").toLowerCase();
   const country = String(filters.country || "").toLowerCase();
   const tokens = tokenizeAgentText(`${query} ${type} ${country}`);
-  const sourceRecords = intelligence.localDirectory || [];
+  // the seeded directory and what this person added (an entry another person added is theirs)
+  const sourceRecords = (intelligence.localDirectory || []).filter(record => user?.role === "Admin" || !recordOwnedByAnotherPerson(record, memoryViewerEmail(user)));
   const scored = sourceRecords
     .filter(record => !type || String(record.type || "").toLowerCase() === type)
     .filter(record => !country || String(record.country || "").toLowerCase().includes(country) || String(record.region || "").toLowerCase().includes(country))
@@ -14727,17 +14996,20 @@ function platformIntelligenceDraft(db, user, body = {}) {
 
 function platformIntelligenceModel(db, user, query = "") {
   const intelligence = ensurePlatformIntelligenceProfile(db.profile);
-  const localRecords = intelligence.localDirectory || [];
+  // What this person is shown of the lists people add to: their own, and the seeded entries (an Admin: all).
+  const viewerEmail = memoryViewerEmail(user);
+  const shown = list => (list || []).filter(item => user?.role === "Admin" || !viewerEmail || !recordOwnedByAnotherPerson(item, viewerEmail));
+  const localRecords = shown(intelligence.localDirectory);
   const readyCounts = {
     localDirectory: localRecords.length,
     calendarLite: (intelligence.calendarLite || []).length,
     crmContacts: (intelligence.crmContacts || []).length,
-    messageDrafts: (intelligence.messageDrafts || []).length,
+    messageDrafts: shown(intelligence.messageDrafts).length,
     agentBlueprints: (intelligence.agentBlueprints || []).length,
-    imports: (intelligence.imports || []).length
+    imports: shown(intelligence.imports).length
   };
   const total = Object.values(readyCounts).reduce((sum, count) => sum + count, 0);
-  const latestSearch = (intelligence.searchHistory || [])[0] || null;
+  const latestSearch = shown(intelligence.searchHistory)[0] || null;
   return {
     status: "active-providerless-intelligence",
     summary: "Platform Intelligence lets Nexus use saved local directories, calendar-lite planning, CRM-style partner records, message drafts, and specialized local agents before live provider feeds are connected.",
@@ -14746,7 +15018,7 @@ function platformIntelligenceModel(db, user, query = "") {
     score: Math.min(100, 50 + Math.min(30, localRecords.length * 3) + Math.min(20, total)),
     latestSearch,
     directoryPreview: localRecords.slice(0, 8),
-    dailyPlan: (intelligence.dailyPlans || [])[0] || null,
+    dailyPlan: shown(intelligence.dailyPlans)[0] || null,
     crmPreview: (intelligence.crmContacts || []).slice(0, 5),
     agentBlueprints: (intelligence.agentBlueprints || []).slice(0, 6),
     suggestedCommands: [
@@ -18010,22 +18282,9 @@ async function executeAgentTool(db, user, step) {
     if (!role) throw new Error("No workforce role catalog is available.");
     const readiness = roleReadiness(db.profile, user, role);
     if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
-    let application = db.profile.applications.find(item => item.roleId === role.id);
-    if (readiness.eligible && !application) {
-      application = {
-        id: crypto.randomUUID(),
-        roleId: role.id,
-        roleTitle: role.title,
-        status: "agent-submitted",
-        submittedAt: new Date().toISOString(),
-        rate: role.rate
-      };
-      db.profile.applications.unshift(application);
-      db.profile.candidateStage = "Agent Matched";
-      db.profile.placements = db.profile.applications.length;
-    } else {
-      db.profile.candidateStage = readiness.eligible ? "Agent Matched" : "Readiness Gap Review";
-    }
+    // Matching a person to a role is not applying: it used to write an "agent-submitted" application for the best-fitting role (the seeded Field Operations Agent) the person never asked to apply for.
+    const application = db.profile.applications.find(item => item.roleId === role.id) || null;
+    setEarlyCandidateStage(db.profile, readiness.eligible ? "Agent Matched" : "Readiness Gap Review");
     logIntegration(db, {
       providerId: "workforce-jobs",
       module: "Workforce",
@@ -18210,8 +18469,9 @@ async function executeAgentTool(db, user, step) {
     // already-guarded settlement path (createTradeLogisticsWorkflow's type:"settlement" -- requires a real
     // order, requires it be Delivered, refuses a second settlement, and pays the actual order.total-based
     // amount) closes this instead of patching the fabricated number.
-    const order = db.profile.orders[db.profile.orders.length - 1];
-    if (!order) return "There's no trade order to post a payment for yet. Create or advance an order first.";
+    // A step that names its order (a confirmed "settle order X" from the older command route) settles exactly that order; the cloud agent's mission plan still names none and uses the latest one.
+    const order = step.orderId ? db.profile.orders.find(item => item.id === step.orderId) : db.profile.orders[db.profile.orders.length - 1];
+    if (!order) return step.orderId ? "I couldn't find that order any more, so nothing was posted." : "There's no trade order to post a payment for yet. Create or advance an order first.";
     try {
       const { record } = await createTradeLogisticsWorkflow(db, user, { type: "settlement", orderId: order.id });
       return `Posted a real settlement payout of ${record.currency} ${record.sellerNetAmount} for ${order.orderNumber}.`;
@@ -18246,7 +18506,8 @@ async function executeAgentTool(db, user, step) {
     // resulting droneScans/droneMissions/fieldInterventions record was silently excluded from that
     // user's /api/account/export and survived /api/account/erase untouched, forever.
     const { scan } = createDroneScan(db, { source: user.email });
-    return `Completed ${scan.scanRef} for ${scan.productName} with ${scan.cropHealthScore}% crop health.`;
+    // The figures come from the saved crop-lot record and the active country, not from a drone in the air, so the reply says so.
+    return `Completed ${scan.scanRef} for ${scan.productName} with ${scan.cropHealthScore}% crop health. This is an estimate from your saved crop-lot records, not a live drone flight: no drone is connected yet.`;
   }
 
   if (step.tool === "drone.flight_plan") {
@@ -18532,6 +18793,8 @@ function reasoningGovernanceReview(db, user, command, result = {}, supervisor = 
 function commandRecord(db, user, command, result) {
   ensureAiProfile(db.profile);
   result = ensureSpeakableAgentResult(result);
+  // A refused secret is not kept in the history or the learned memories either.
+  if (result?.metadata?.secretNotSaved) command = "(Asked to save a PIN or password: not kept.)";
   addConversationTurn(db.profile, "user", command, { email: user.email }, user.email);
   addConversationTurn(db.profile, "assistant", result.response, {
     intent: result.intent,
@@ -18605,7 +18868,7 @@ function agentBriefing(db, user, purpose = "government presentation") {
   const providers = runtimeProviders(db);
   const readiness = productionReadiness(providers);
   const { country, route } = activeContext(db);
-  const latestPlan = (db.profile.agentPlans || [])[0];
+  const latestPlan = visibleRecordsFor(db.profile.agentPlans, user)[0];
   const latestExecution = (db.profile.agentExecutions || [])[0];
   const briefing = {
     id: crypto.randomUUID(),
@@ -20000,10 +20263,11 @@ function openAiRealtimeInstructions(user, language = "en") {
     "For everything else, prefer calling a tool over answering from your own knowledge. If the user reports a real fact Nexus can act on (a vital sign, a symptom, an intent to buy or sell, a place to find), or asks Nexus to do, check, find, save, track, plan, export, or remind something, call the matching tool below even if they phrased it as a statement rather than a command. Do not silently answer in conversation when a tool exists for the request — that leaves no real record and is a failure mode, not a shortcut.",
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
     "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
-    "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it.",
+    "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it. The tool reads the reading back and asks whether to save it: say that question to the person word for word, and when they answer yes or no (including ndiyo, sawa or hapana), call nexus_health_preparation again with exactly their answer. Nothing is saved until they say yes. The same tool shows, deletes and corrects their saved readings and answers who can see them; never say a reading was saved, deleted or shared unless the tool says so.",
     "When the user asks to start or join a telehealth video call, video visit, or virtual appointment with a doctor or provider, you must call nexus_health_preparation with the complete request, including any symptoms mentioned. This creates a real, provider-reviewed video visit -- it is never a communications/messaging request.",
     "When the user asks to create a fitness or training plan, reports a completed workout, run, or training session, or asks about their fitness or training progress, you must call nexus_health_preparation with the complete request. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
+    "While a short practice lesson or practice interview is under way (your last reply asked a question or said 'say next'), or when the user asks to be taught to read, write, count or do basic maths, asks to practise a job interview, asks for jobs, training, apprenticeships or scholarships near them, or says a child wants to work, you must call nexus_workforce_learning with their exact words, including a bare 'next', 'again' or 'stop' or an answer such as a letter or a number, and say what the tool returns.",
     "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning/monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
     "When the user asks to export something, or save it as a PDF or document, you must call nexus_document_export.",
@@ -20276,10 +20540,24 @@ function nexusRealtimeToolTimeoutResult(body = {}) {
   };
 }
 
+// A tool call that is sent again with the same correlationId and the same words (a network retry, a double tap) returns the FIRST result and repeats no side effect
+// (three retries of one call used to make three reminders and three blood-pressure readings). Calls with no correlationId are never merged. See server/frontDoor.js.
 async function dispatchNexusRealtimeTool(db, user, body = {}) {
+  const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
+  const said = String(args.command || body.command || "").trim();
+  const key = frontDoor.idempotencyKey(user?.id || user?.email, body.correlationId, [normaliseSpoken(said).text.toLowerCase(), String(args.language || body.language || ""), String(body.name || body.toolName || ""), args.confirmed === true]);
+  const result = await frontDoor.runOnce(key, () => dispatchNexusRealtimeToolOnce(db, user, body));
+  return key ? structuredClone(result) : result;
+}
+
+async function dispatchNexusRealtimeToolOnce(db, user, body = {}) {
   const correlationId = genesisVoiceCorrelationId(body.correlationId);
   const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
-  const command = String(args.command || body.command || "").trim();
+  // The one front door (nexus/speech/normalise.js): the words below are what was meant; `saidCommand` is what was said, cleaned of invisible characters only, and is what
+  // every safety reader sees as well, so nothing a person said is lost to the cleaning.
+  const spokenCommand = normaliseSpoken(String(args.command || body.command || ""), { language: args.language || body.language || user?.language, wakeBeforeQuestions: false });
+  const saidCommand = spokenCommand.clean;
+  const command = spokenCommand.text.trim();
   const dispatchRoute = String(body.route || "/api/voice/realtime/tool");
   const dispatchNote = String(body.note || "Nexus Realtime tool dispatch");
   const dispatchSource = dispatchRoute.includes("elevenlabs")
@@ -20344,7 +20622,8 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
   // the pipeline below unchanged. A crisis phrase is left to that pipeline's own safety handling, as before.
   const voiceLanguage = args.language || body.language || user.language || "en";
   const crisisSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
-  if (!(crisisSignal?.crisisOverride === true || crisisSignal?.state === "medical_emergency")) {
+  const saidCrisisSignal = saidCommand && saidCommand !== command ? nexusMentalHealthBehavioralWellness.classifyState(saidCommand, {}) : null;
+  if (!(crisisSignal?.crisisOverride === true || crisisSignal?.state === "medical_emergency" || saidCrisisSignal?.crisisOverride === true || saidCrisisSignal?.state === "medical_emergency")) {
     const authoritativeVoiceUser = await authoritativeRuntimeUser(user).catch(() => null);
     const planned = authoritativeVoiceUser
       ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: authoritativeVoiceUser, text: command, language: voiceLanguage })
@@ -20383,6 +20662,7 @@ async function dispatchNexusRealtimeTool(db, user, body = {}) {
     conversational: true,
     mode: "user",
     targetLanguage: voiceLanguage,
+    timeZone: body.timeZone || args.timeZone,
     note: dispatchNote
   });
   const envelope = normalizeNexusResponseEnvelope(result, {
@@ -20752,6 +21032,7 @@ function nexusOpenAiNativeSystemPrompt() {
     "When the user asks to see, find, show, or play videos of anything (including crop damage, pests, disease, farming technique, or any other subject), you must call nexus_visual_analysis with that request. This is a real video search (YouTube when configured, Wikimedia Commons otherwise) — never say video is unavailable without calling it first. If the user asks for both images and videos in the same request, call nexus_visual_analysis once with the full request text and both will be searched.",
     "When the user describes a crop or field problem, asks to send, fly, or request a drone for field scanning or monitoring, or asks to send, dispatch, or request a field agent, you must call nexus_agriculture.",
     "When the user asks to learn something, or requests a lesson, course, or training topic, you must call nexus_workforce_learning.",
+    "While a short practice lesson or practice interview is under way (your last reply asked a question or said 'say next'), or when the user asks to be taught to read, write, count or do basic maths, asks to practise a job interview, asks for jobs, training, apprenticeships or scholarships near them, or says a child wants to work, you must call nexus_workforce_learning with their exact words, including a bare 'next', 'again' or 'stop' or an answer such as a letter or a number, and say what the tool returns.",
     "When the user asks to track a shipment, check delivery or route status, browse or list marketplace/AgriTrade items, create a listing, or check payment readiness, you must call nexus_marketplace_logistics.",
     "When the user asks about current, hourly, or daily/weekly weather, temperature, or conditions in a place, or asks to compare weather between places, you must call nexus_weather.",
     "When the user asks for a route, directions, or traffic between two places, you must call nexus_maps_route.",
@@ -21476,6 +21757,13 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
   };
 }
 
+function secretNotSavedReply(text, language = "en") {
+  const asked = kyroCrisisPhrases.secretLanguage(text);
+  if (!asked) return null;
+  const spoken = asked === "sw" || /^sw/i.test(String(language || "")) ? "sw" : "en";
+  return { language: spoken, response: nexusText(spoken, "safety.secretRefused") };
+}
+
 async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}, realUserEmail = user?.email) {
   // args.command is the tool-calling model's own required "command" argument
   // ("The user's plain-language Nexus request") -- confirmed live in
@@ -21489,8 +21777,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // priority -- it is a deliberate, tool-specific refinement ("a concise
   // research or tool query when different from the original command"), not
   // a plain restatement, so a caller that explicitly sets it still wins.
-  const command = sanitizePilotText(args.query || context.command || args.command || "", 700);
+  // The one front door (nexus/speech/normalise.js) runs BEFORE the length cap, so a long, rambling message is cut down to the part that holds the request (and any danger
+  // phrase) instead of being truncated at 700 characters. What was said (invisible characters removed) is kept for the safety checks below.
   const language = args.language || context.language || user?.language || "en";
+  // (typeof guard: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names)
+  const rawInput = String(args.query || context.command || args.command || "");
+  const spokenInput = typeof normaliseSpoken === "function" ? normaliseSpoken(rawInput, { language, wakeBeforeQuestions: false }) : { text: rawInput, clean: rawInput };
+  const saidInput = sanitizePilotText(spokenInput.clean.slice(-3000), 3000);
+  // Only plain conversation is cleaned: the other tools (drafts, documents, lists...) take the words of a message or a document from the sentence, exactly as said.
+  const command = sanitizePilotText(toolName === "nexus_general_conversation" ? spokenInput.text : (args.query || context.command || args.command || ""), 700);
   const capability = args.capability || nexusOpenAiNativeToolChoiceHint(command);
   const common = {
     ok: true,
@@ -21553,7 +21848,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // (see runNexusOpenAiNativeAgentCommand), so classify that too and treat
   // either one tripping crisisOverride as sufficient -- this only adds
   // coverage, it never removes any existing check.
-  const rawCallerText = sanitizePilotText(context.command || "", 700);
+  const rawCallerText = sanitizePilotText(context.command || (saidInput !== command ? saidInput : ""), 3000);
   const mentalHealthSignal = nexusMentalHealthBehavioralWellness.classifyState(command, {});
   const rawMentalHealthSignal = rawCallerText && rawCallerText !== command
     ? nexusMentalHealthBehavioralWellness.classifyState(rawCallerText, {})
@@ -21568,9 +21863,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(effectiveMentalHealthText),
       screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(effectiveMentalHealthText)
     });
+    const swahiliReply = await swahiliCrisisReply(effectiveMentalHealthText, language, user);
+    if (swahiliReply) { packet.userVisibleStatus = swahiliReply; packet.responseLanguage = "sw"; }
     return { ...common, capability: "mental-health-behavioral-wellness", status: "completed",
       response: packet.userVisibleStatus, mentalHealth: packet,
       noDiagnosis: true, noProviderContacted: true, noEmergencyDispatch: true };
+  }
+  // A PIN, password, card or account number asked to be saved (English, Kiswahili, Sheng or Pidgin) is refused here, before any tool can keep it in a note, a memory, a list, a reminder or the history.
+  // The words are not echoed back and are not kept. (typeof guard: this function is also evaluated on its own by some tests.)
+  const secretRefusal = typeof secretNotSavedReply === "function" ? (secretNotSavedReply(rawCallerText, language) || secretNotSavedReply(command, language)) : null;
+  if (secretRefusal) {
+    return { ...common, command: "", capability: "nexus_memory", status: "completed", intent: "safety.secret_refused", response: secretRefusal.response, language: secretRefusal.language, secretNotSaved: true };
   }
   // A restricted account (today, only self-service guest sessions --
   // user.restrictions is set at /api/auth/guest-session with zero identity
@@ -21599,6 +21902,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       restrictedCategory: restrictedToolCategory
     };
   }
+  // The model may send a lesson, an interview practice or a jobs question to the learning tool: the same honest answers apply there (and a practice already under way keeps its turns).
+  if (toolName === "nexus_workforce_learning") {
+    // Job, training and scholarship questions stay with this tool's own job-search source (which says honestly when it is not configured); everything else here is answered by the floor.
+    const floorTurn = workLearningFloorTurn(db, user, rawCallerText || command, language, { jobs: false });
+    if (floorTurn) {
+      return { ...common, capability: "work-and-learning", status: "completed", intent: floorTurn.intent, response: floorTurn.reply, language: floorTurn.language,
+        providerAttempted: false, providerSucceeded: false, executionAttempted: false, executionVerified: false };
+    }
+  }
   if (toolName === "nexus_general_conversation" && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
     const musicResult = await musicProviderCommandResponse(db, user, command, args);
     const music = musicResult?.metadata?.music || {};
@@ -21615,6 +21927,23 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       testPlayback: musicResult?.metadata?.testPlayback || null,
       fallbackUrl: music.url || ""
     };
+  }
+  // Health readings said in plain words ("my blood pressure is 150 over 95", "sukari yangu 7.5", "delete my last reading", "show my BP readings", "who can see my health information"). Kyro reads the reading
+  // back and asks before saving; a yes saves it. The voice model's own confirmation flag (confirmation: true) means the person already said yes, so that one is saved straight away, as before.
+  if (toolName === "nexus_general_conversation" || toolName === "nexus_health_preparation") {
+    const healthTurn = healthReadingsReply(db, user, command, { language, confirmedByCaller: toolName === "nexus_health_preparation" && (args.confirmed === true || args.confirmation === true) });
+    if (healthTurn) {
+      const status = healthTurn.requiresConfirmation ? "confirmation-required" : healthTurn.saved ? "health-reading-saved" : healthTurn.wrote ? "health-records-changed" : "health-preparation-ready";
+      const receipt = nexusOpenAiNativeToolReceipt(db, toolName, command, status,
+        healthTurn.requiresConfirmation ? ["Read the health information back and asked before changing anything."]
+          : healthTurn.saved ? ["Saved the health reading to the person's own record."]
+          : healthTurn.wrote ? ["Changed the person's own saved health readings after they confirmed."]
+          : ["Answered a question about health readings; nothing was saved or changed."],
+        ["Nexus did not diagnose, prescribe, send health information, contact a provider, or replace clinical judgment."]);
+      return { ...common, capability: toolName === "nexus_health_preparation" ? "nexus_health_preparation" : "health-readings", status, response: healthTurn.response, receipt, evidenceReceipt: receipt, localOnly: true,
+        requiresConfirmation: healthTurn.requiresConfirmation === true,
+        executionAttempted: Boolean(healthTurn.wrote || healthTurn.attempted), executionVerified: Boolean(healthTurn.wrote) };
+    }
   }
   if (toolName === "nexus_translation") {
     const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
@@ -22778,7 +23107,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // oxygen/temperature/pulse just below.
     const bp = command.match(new RegExp(`\\b(?:blood\\s*pressure|bp|systolic)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\s*(?:over|\\/)\\s*(\\d{2,3})\\b`, "i"));
     // Blood sugar: a number (decimals allowed: "7.2") and, when said, its unit -- mg/dL or mmol/L (see server/providers/bloodGlucose.js).
-    const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
+    const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?![.,]\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
     const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
     // Confirmed: unlike every other vital above, weight kept the old
@@ -22951,13 +23280,9 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       } else if (glucose && readingSaved && glucoseLevelNow === "very-high") {
         response = veryHighReply(glucoseResolved, command);
       } else if (bp) {
-        response = readingSaved
-          ? `I saved the blood-pressure reading ${bp[1]} over ${bp[2]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Rest quietly and follow the measurement instructions for the device, then discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`
-          : `I noted the blood-pressure reading ${bp[1]} over ${bp[2]}, but saving it to your chronic-care record is unavailable right now. A single reading does not establish a diagnosis. Discuss repeated elevated readings with a qualified healthcare professional. Seek urgent medical help for severe symptoms such as chest pain, severe shortness of breath, fainting, new weakness, confusion, or a sudden severe headache.`;
+        response = readingSaved ? bloodPressureSavedReply(bp[1], bp[2]) : bloodPressureNotSavedReply(bp[1], bp[2]);
       } else {
-        response = readingSaved
-          ? `I saved the blood-glucose reading ${glucose[1]} to your chronic-care record so you and a provider can track the trend. A single reading does not establish a diagnosis. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`
-          : `I noted the blood-glucose reading ${glucose[1]}, but saving it to your chronic-care record is unavailable right now. Seek urgent medical help now for severe confusion, loss of consciousness, or signs of a severe low or high reading.`;
+        response = readingSaved ? glucoseSavedReply(glucose[1]) : glucoseNotSavedReply(glucose[1]);
       }
       if (bp && readingSaved && bpAssessment?.level === "low") response = `${response} ${lowNote()}`;
       if (glucose && readingSaved && glucoseLevelNow === "low") response = lowReply(glucoseResolved);
@@ -23523,6 +23848,8 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     conversational: false,
     mode: "openai-native-agent",
     targetLanguage: language,
+    // The device's clock (the request's timeZone) reaches the reminder and time answers on this path too; it used to be dropped here, so a Lagos caller's "tomorrow at 7" was set in East Africa time.
+    timeZone: context.timeZone || args.timeZone,
     note: `OpenAI-native Nexus tool gateway dispatched ${toolName}`
   });
   const envelope = normalizeNexusResponseEnvelope(routed.result, {
@@ -23806,102 +24133,20 @@ function deepVoiceIntent(lower) {
   if (includesAny(["test providers", "test provider engines", "test engines", "provider check", "engine check"])) return { tool: "integrations.test_all", module: "Integrations", action: "Test providers", section: "integrations" };
   if (includesAny(["admin health", "health check", "admin check"])) return { tool: "admin.health_check", module: "Admin", action: "Admin health check", section: "admin" };
   if (includesAny(["profile summary", "my profile", "unified profile", "show my record"])) return { tool: "profile.summary", module: "Profile", action: "Show profile", section: "profile" };
-  if (includesAny(["ask ai", "copilot", "recommend", "what should i do"])) return { tool: "ai.copilot", module: "AI", action: "Run copilot", section: "agent" };
+  // "I am running out of my blood pressure pills, what should I do" is a health question, not a request to stage a copilot run that a later "yes" would start.
+  if (includesAny(["ask ai", "copilot", "recommend", "what should i do"]) && !looksLikeHealthReport(lower)) return { tool: "ai.copilot", module: "AI", action: "Run copilot", section: "agent" };
   return null;
 }
 
-function localTranslateText(text, targetLanguage) {
-  const value = String(text || "");
-  const language = targetLanguage || "en";
-  if (language === "en") return value;
-  const lower = value.toLowerCase();
-  if (/\b(until real providers arrive|pre-provider|without providers|provider-ready|provider ready|platform records and local context)\b/.test(lower)) {
-    const readinessTranslations = {
-      fr: "Jusqu'a l'arrivee des vrais fournisseurs, Nexus peut executer les workflows guides d'apprentissage, de main-d'oeuvre, de telesante, de commerce agricole, de drones, de cartes, de voix, de memoire et d'audit avec les donnees de la plateforme et le contexte local. Je dirai clairement ce qui est en direct, ce qui est local et ce qui exige des identifiants.",
-      sw: "Mpaka watoa huduma wa moja kwa moja waunganishwe, Nexus inaweza kuendesha mtiririko wa kujifunza, kazi, afya kwa mbali, biashara ya mazao, droni, ramani, sauti, kumbukumbu na ukaguzi kwa kutumia rekodi za jukwaa na muktadha wa ndani. Nitasema wazi kilicho hai, kilicho cha ndani, na kinachohitaji nywila au funguo za huduma.",
-      ar: "حتى وصول مزودي الخدمة الحقيقيين، يستطيع نكسس تشغيل مسارات التعلم والعمل والصحة عن بعد والتجارة الزراعية والطائرات بدون طيار والخرائط والصوت والذاكرة والتدقيق باستخدام سجلات المنصة والسياق المحلي. سأوضح ما هو مباشر، وما هو محلي، وما يحتاج إلى بيانات اعتماد.",
-      es: "Hasta que lleguen los proveedores reales, Nexus puede ejecutar flujos guiados de aprendizaje, fuerza laboral, telesalud, comercio agricola, drones, mapas, voz, memoria y auditoria con registros de la plataforma y contexto local. Dire claramente que esta en vivo, que es local y que necesita credenciales."
-    };
-    if (readinessTranslations[language]) return readinessTranslations[language];
-  }
-  const voicePhrases = {
-    fr: [
-      [["telehealth", "intake"], "Votre admission de telesante est ouverte. AgriNexus a cree le dossier et le prochain suivi."],
-      [["vitals"], "Les signes vitaux ont ete captures et ajoutes au dossier de telesante."],
-      [["consent"], "Le consentement de telesante a ete enregistre."],
-      [["referral"], "La reference de soins a ete creee."],
-      [["follow-up"], "Le suivi a ete planifie."],
-      [["buyer"], "Le contact acheteur est pret avec un message prepare pour votre produit."],
-      [["application"], "AgriNexus a examine la candidature et a enregistre la prochaine etape de main-d'oeuvre."],
-      [["lesson"], "La lecon suivante est terminee et la progression a ete mise a jour."],
-      [["certificate"], "Le certificat a ete emis et ajoute au profil."],
-      [["drone"], "Le flux drone est termine et les preuves terrain sont enregistrees."],
-      [["provider"], "Les moteurs fournisseurs ont ete testes et les resultats sont enregistres."],
-      [["profile"], "Le profil unifie est pret avec les informations principales."],
-      [["opened"], "Espace ouvert. Vous pouvez continuer ici."]
-    ],
-    sw: [
-      [["farmer", "inspect", "maize", "leaves"], "Mkulima anapaswa kukagua majani ya mahindi."],
-      [["telehealth", "intake"], "Usajili wa afya kwa mbali umefunguliwa. AgriNexus imeunda rekodi na hatua inayofuata."],
-      [["vitals"], "Vipimo muhimu vimechukuliwa na kuongezwa kwenye rekodi ya afya."],
-      [["consent"], "Ridhaa ya huduma ya afya kwa mbali imerekodiwa."],
-      [["referral"], "Rufaa ya huduma imeundwa."],
-      [["follow-up"], "Ufuatiliaji umepangwa."],
-      [["buyer"], "Mawasiliano na mnunuzi yako tayari pamoja na ujumbe wa bidhaa yako."],
-      [["application"], "AgriNexus imekagua ombi la kazi na kurekodi hatua inayofuata."],
-      [["lesson"], "Somo linalofuata limekamilika na maendeleo yamesasishwa."],
-      [["certificate"], "Cheti kimetolewa na kuongezwa kwenye wasifu."],
-      [["drone"], "Mtiririko wa droni umekamilika na ushahidi wa shamba umehifadhiwa."],
-      [["provider"], "Mifumo ya watoa huduma imejaribiwa na matokeo yamehifadhiwa."],
-      [["profile"], "Wasifu wa pamoja uko tayari na taarifa muhimu."],
-      [["opened"], "Sehemu imefunguliwa. Unaweza kuendelea hapa."]
-    ],
-    ar: [
-      [["telehealth", "intake"], "تم فتح إدخال الصحة عن بعد. أنشأ أجري نكسس السجل والخطوة التالية."],
-      [["vitals"], "تم تسجيل العلامات الحيوية وإضافتها إلى ملف الصحة."],
-      [["consent"], "تم تسجيل موافقة الصحة عن بعد."],
-      [["referral"], "تم إنشاء الإحالة الصحية."],
-      [["follow-up"], "تم جدولة المتابعة."],
-      [["buyer"], "تم تجهيز التواصل مع المشتري ورسالة المنتج."],
-      [["application"], "راجع أجري نكسس طلب العمل وسجل الخطوة التالية."],
-      [["lesson"], "تم إكمال الدرس التالي وتحديث التقدم."],
-      [["certificate"], "تم إصدار الشهادة وإضافتها إلى الملف."],
-      [["drone"], "اكتمل مسار الدرون وتم حفظ أدلة الحقل."],
-      [["provider"], "تم اختبار محركات الخدمة وحفظ النتائج."],
-      [["profile"], "الملف الموحد جاهز مع المعلومات الأساسية."],
-      [["opened"], "تم فتح القسم. يمكنك المتابعة هنا."]
-    ]
-  };
-  voicePhrases.es = [
-    [["language", "spanish"], "Listo. Cambie el idioma a espanol. Las frases y respuestas de AgriTrade ahora usaran espanol."],
-    [["agritrade", "helps"], "AgriTrade ayuda a agricultores y equipos comerciales a pasar del cultivo al comprador y al pago. Puedo ayudar con cultivos, compradores, pedidos, pagos, logistica, calidad, exportacion e inteligencia de drones."],
-    [["telehealth", "intake"], "La admision de telesalud esta lista con apoyo por voz."],
-    [["vitals"], "Los signos vitales fueron capturados y agregados al registro de salud."],
-    [["buyer"], "El contacto con el comprador esta listo con un mensaje preparado para su producto."],
-    [["application"], "AgriNexus reviso la solicitud y guardo el siguiente paso de trabajo."],
-    [["lesson"], "La leccion se completo y el progreso fue actualizado."],
-    [["certificate"], "El certificado fue emitido y agregado al perfil."],
-    [["drone"], "El flujo de dron se completo y la evidencia del campo fue guardada."],
-    [["provider"], "Los motores de proveedores fueron probados y los resultados fueron guardados."],
-    [["opened"], "Espacio abierto. Puede continuar aqui."]
-  ];
-  const match = (voicePhrases[language] || []).find(([keys]) => keys.every(key => lower.includes(key)));
-  if (match) return match[1];
-  const labels = {
-    fr: "[FR]",
-    sw: "[SW]",
-    ar: "[AR]",
-    es: "[ES]"
-  };
-  return `${labels[language] || `[${language.toUpperCase()}]`} ${value}`;
-}
+// The offline translator lives in nexus/i18n/local-translate.js (it must never turn an honest "nothing was saved" into a success sentence).
+const { localTranslateText, AGENT_NOT_HANDLED_RESPONSE } = require("./nexus/i18n/local-translate.js");
 
-async function translateDynamicContent(db, user, { text, targetLanguage, sourceLanguage = "en", context = "platform" }) {
+async function translateDynamicContent(db, user, { text, targetLanguage, sourceLanguage = "en", context = "platform", intent = "" }) {
   const runtime = providerRuntime("translation");
   const evidenceContext = /\b(source|evidence|citation|receipt|provenance|source_followup|current_knowledge|weather)\b/i.test(`${context || ""} ${text || ""}`);
   let translatedText = evidenceContext && targetLanguage && targetLanguage !== "en"
-    ? `[${String(targetLanguage).toUpperCase()}] ${String(text || "")}`
-    : localTranslateText(text, targetLanguage);
+    ? (targetLanguage === "sw" ? String(text || "") : `[${String(targetLanguage).toUpperCase()}] ${String(text || "")}`)
+    : localTranslateText(text, targetLanguage, { intent, context });
   let provider = "local-dictionary";
   if (runtime.googleTranslationConfigured && targetLanguage && targetLanguage !== sourceLanguage) {
     try {
@@ -24108,7 +24353,8 @@ async function translateAgentCommandResult(db, user, result = {}, options = {}) 
         text: result.response,
         sourceLanguage: responseLanguage,
         targetLanguage,
-        context: `agent-command:${result.intent || "unknown"}`
+        context: `agent-command:${result.intent || "unknown"}`,
+        intent: result.intent || ""
       });
   const translatedResult = {
     ...result,
@@ -24231,6 +24477,23 @@ function memoryBucket(profile, category) {
   return profile.agentMemory.longTermFacts;
 }
 
+// The "priority" slot is one value in the shared memory: it is only the asker's when they were the last to speak (switchAgentContextTo clears it for a newcomer's own words, not for this slot).
+const ownActiveMission = (db, user) => {
+  const memory = db?.profile?.agentMemory || {};
+  const viewer = memoryViewerEmail(user);
+  const lastBy = String(memory.updatedBy || "").trim().toLowerCase();
+  return !viewer || !lastBy || lastBy === viewer ? memory.activeMission || "" : "";
+};
+// What the reply may carry of the shared memory: the asker's own part of it (an Admin is shown all, as in the state view).
+const agentMemoryForReply = (db, user) => privateHistoryForViewer({ agentMemory: db.profile.agentMemory }, user || (agentActorEmail() ? { email: agentActorEmail(), role: profileOwnerStamping.getStore()?.role } : null)).agentMemory;
+const sameMemoryOwner = (a, b) => String(a?.by || "").trim().toLowerCase() === String(b?.by || "").trim().toLowerCase();
+// What Kyro "remembers about me" is the asker's own memories. Who is asking is the signed-in person of this request (or the one passed in); with nobody asking (the server's own bookkeeping) nothing is
+// filtered. An item with no owner mark is not shown to a person (as in privateHistoryForViewer): it may be words from before owner marks existed.
+function memoryViewerEmail(user) {
+  return String(user?.email || profileOwnerStamping.getStore()?.email || "").trim().toLowerCase();
+}
+const memoryItemIsViewers = (item, viewer) => !viewer || String(item?.by || "").trim().toLowerCase() === viewer;
+
 function normalizeMemoryText(text) {
   return String(text || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -24265,9 +24528,10 @@ function updateStructuredLongTermMemory(profile, item, metadata = {}) {
   item.tags = [...new Set([item.category, moduleName, ...needs].filter(Boolean).map(value => String(value).toLowerCase().replace(/\s+/g, "-")))].slice(0, 8);
 
   const moduleBucket = profile.agentMemory.moduleMemory[moduleName] || [];
-  const existingModule = moduleBucket.find(memory => memory.normalized === item.normalized);
+  const existingModule = moduleBucket.find(memory => memory.normalized === item.normalized && sameMemoryOwner(memory, item));
   const moduleItem = {
     id: item.id,
+    by: item.by || "",
     category: item.category,
     text: item.text,
     normalized: item.normalized,
@@ -24279,17 +24543,18 @@ function updateStructuredLongTermMemory(profile, item, metadata = {}) {
     updatedAt: item.updatedAt
   };
   profile.agentMemory.moduleMemory[moduleName] = existingModule
-    ? moduleBucket.map(memory => memory.normalized === item.normalized ? { ...memory, ...moduleItem, uses: Number(memory.uses || 0) + 1 } : memory).slice(0, 20)
+    ? moduleBucket.map(memory => memory === existingModule ? { ...memory, ...moduleItem, uses: Number(memory.uses || 0) + 1 } : memory).slice(0, 20)
     : [moduleItem, ...moduleBucket].slice(0, 20);
 
   needs.forEach(need => {
     const needBucket = profile.agentMemory.userNeeds[need] || [];
-    profile.agentMemory.userNeeds[need] = [{ id: item.id, module: moduleName, text: item.text, confidence: item.confidence, updatedAt: item.updatedAt }, ...needBucket.filter(memory => memory.id !== item.id)].slice(0, 12);
+    profile.agentMemory.userNeeds[need] = [{ id: item.id, by: item.by || "", module: moduleName, text: item.text, confidence: item.confidence, updatedAt: item.updatedAt }, ...needBucket.filter(memory => memory.id !== item.id)].slice(0, 12);
   });
 
   if (!metadata.noTimeline && metadata.source && /advisor|workflow|intake|conversation|trade|health|learning|workforce|drone|route/i.test(metadata.source)) {
     profile.agentMemory.advisorHistory = [{
       id: crypto.randomUUID(),
+      by: item.by || "",
       memoryId: item.id,
       module: moduleName,
       event: item.text,
@@ -24302,6 +24567,7 @@ function updateStructuredLongTermMemory(profile, item, metadata = {}) {
   if (!metadata.noTimeline) {
     profile.agentMemory.memoryTimeline = [{
       id: crypto.randomUUID(),
+      by: item.by || "",
       type: item.category,
       module: moduleName,
       title: item.text.length > 90 ? `${item.text.slice(0, 87)}...` : item.text,
@@ -24320,7 +24586,8 @@ function rememberAgentMemory(profile, text, metadata = {}) {
   const category = metadata.category || inferMemoryCategory(value);
   const bucket = memoryBucket(profile, category);
   const normalized = normalizeMemoryText(value);
-  const existing = bucket.find(item => item.normalized === normalized);
+  // The same words said by two different people are two memories, each their own: saying it again never hands back (or counts on) somebody else's item.
+  const existing = bucket.find(item => item.normalized === normalized && sameMemoryOwner(item, { by: agentActorEmail() }));
   if (existing) {
     existing.uses = Number(existing.uses || 0) + 1;
     existing.updatedAt = new Date().toISOString();
@@ -24394,18 +24661,22 @@ function retrieveAgentMemories(profile, query, limit = 6) {
   return scored;
 }
 
-function longTermMemorySummary(profile) {
+function longTermMemorySummary(profile, user) {
   ensureAiProfile(profile);
   const memory = profile.agentMemory;
-  const moduleNames = Object.keys(memory.moduleMemory || {});
-  const needNames = Object.keys(memory.userNeeds || {});
+  const viewer = memoryViewerEmail(user);
+  const mine = list => (Array.isArray(list) ? list : []).filter(item => memoryItemIsViewers(item, viewer));
+  const moduleMemory = Object.fromEntries(Object.entries(memory.moduleMemory || {}).map(([name, list]) => [name, mine(list)]).filter(([, list]) => list.length || !viewer));
+  const userNeeds = Object.fromEntries(Object.entries(memory.userNeeds || {}).map(([name, list]) => [name, mine(list)]).filter(([, list]) => list.length || !viewer));
+  const moduleNames = Object.keys(moduleMemory);
+  const needNames = Object.keys(userNeeds);
   const core = [
-    ...(memory.preferences || []),
-    ...(memory.learnedPatterns || []),
-    ...(memory.longTermFacts || []),
-    ...(memory.safetyBoundaries || [])
+    ...mine(memory.preferences),
+    ...mine(memory.learnedPatterns),
+    ...mine(memory.longTermFacts),
+    ...mine(memory.safetyBoundaries)
   ];
-  const preferred = (memory.preferences || []).slice(0, 3);
+  const preferred = mine(memory.preferences).slice(0, 3);
   const preferredIds = new Set(preferred.map(item => item.id));
   const topMemories = [
     ...preferred,
@@ -24415,15 +24686,18 @@ function longTermMemorySummary(profile) {
   ].slice(0, 5);
   const summary = {
     total: core.length,
-    modules: moduleNames.map(name => ({ name, count: (memory.moduleMemory[name] || []).length })).sort((a, b) => b.count - a.count),
-    needs: needNames.map(name => ({ name, count: (memory.userNeeds[name] || []).length })).sort((a, b) => b.count - a.count),
-    advisorEvents: (memory.advisorHistory || []).length,
-    timeline: (memory.memoryTimeline || []).slice(0, 8),
+    modules: moduleNames.map(name => ({ name, count: moduleMemory[name].length })).sort((a, b) => b.count - a.count),
+    needs: needNames.map(name => ({ name, count: userNeeds[name].length })).sort((a, b) => b.count - a.count),
+    advisorEvents: mine(memory.advisorHistory).length,
+    timeline: mine(memory.memoryTimeline).slice(0, 8),
     topMemories
   };
-  memory.lastMemorySummary = summary.total
+  const lastMemorySummary = summary.total
     ? `I remember ${summary.total} long-term item(s), ${summary.modules.length} module area(s), and ${summary.needs.length} user need signal(s).`
     : "No durable long-term memory has been saved yet.";
+  // Only the server's own bookkeeping writes the shared line back; a person's count is theirs and is not stored where the next person could read it.
+  if (!viewer) memory.lastMemorySummary = lastMemorySummary;
+  summary.lastMemorySummary = lastMemorySummary;
   return summary;
 }
 
@@ -24431,14 +24705,14 @@ function aiReasoningSnapshot(db, user, command, moduleSignal, memories = [], opt
   const { country, route } = activeContext(db);
   const text = String(command || "").trim();
   const lower = text.toLowerCase();
-  const memorySummary = longTermMemorySummary(db.profile);
+  const memorySummary = longTermMemorySummary(db.profile, user);
   const moduleName = moduleSignal?.module || conversationModuleSignal(text).module;
   const actionLikely = isActionRequest(lower);
   const sensitive = /\b(emergency|injury|doctor|medicine|diagnose|payment|wallet|apply|provider|call|message|consent|outbreak|ebola)\b/.test(lower);
   const userNeeds = [
     ...(db.profile.agentMemory.userModel?.accessibilityMode && db.profile.agentMemory.userModel.accessibilityMode !== "standard" ? [db.profile.agentMemory.userModel.accessibilityMode] : []),
     ...(db.profile.agentMemory.userModel?.communicationStyle ? [db.profile.agentMemory.userModel.communicationStyle] : []),
-    ...Object.keys(db.profile.agentMemory.userNeeds || {}).slice(0, 4)
+    ...memorySummary.needs.map(need => need.name).slice(0, 4)
   ].filter(Boolean);
   const optionsConsidered = [
     actionLikely ? "Run or stage the matching workflow" : "Answer conversationally first",
@@ -25162,43 +25436,55 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
       audience: "patient, caregiver, elder, or mobile clinic user",
       likelyNeed: /\b(medicine|pharmacy|drug|remedy|pills)\b/.test(value) ? "medicine or pharmacy access" : "care access",
       plainGoal: "Help the person understand the safe next care step without diagnosing.",
+      spokenGoal: "I am not a doctor, but I can help you find the safest next care step.",
       nextQuestion: "Where are you, and is this an emergency right now?",
-      safetyRule: "Do not diagnose. Ask about danger signs and guide to urgent help when needed."
+      safetyRule: "Do not diagnose. Ask about danger signs and guide to urgent help when needed.",
+      spokenSafety: "I will not diagnose, but I can help you find urgent help if there are danger signs."
     },
     Learning: {
       audience: "student, learner, parent, or low-literacy user",
       likelyNeed: "a lesson explained in simple words",
       plainGoal: "Help the learner choose one skill and complete one small step.",
+      spokenGoal: "I can help you choose one skill and take one small step.",
       nextQuestion: "What do you want to learn today?",
-      safetyRule: "Keep instructions short and offer audio, captions, or slower speech."
+      safetyRule: "Keep instructions short and offer audio, captions, or slower speech.",
+      spokenSafety: "I can go slower, or use audio and captions, if that helps."
     },
     Workforce: {
       audience: "job seeker, graduate, worker, or family supporter",
       likelyNeed: /\b(graduated|degree|university|biochemistry|biology|chemistry)\b/.test(value) ? "career guidance after school" : "job access",
       plainGoal: "Help the person understand realistic roles and prepare one application step.",
+      spokenGoal: "I can help you look at realistic jobs and prepare one application step.",
       nextQuestion: "What country do you want to work in, and what skill or school background do you have?",
-      safetyRule: "Do not promise a job. Explain options and prepare the next application step."
+      safetyRule: "Do not promise a job. Explain options and prepare the next application step.",
+      spokenSafety: "I cannot promise a job, but I can prepare the next application step."
     },
     AgriTrade: {
       audience: "farmer, seller, buyer, cooperative, or family farm",
       likelyNeed: /\b(bad|sick|disease|pest|dry|yellow|dying)\b/.test(value) ? "crop problem guidance" : "market, buyer, or delivery help",
       plainGoal: "Help the farmer protect the crop, understand market choices, and move one step toward selling or delivery.",
+      spokenGoal: "I can help you protect your crop and move one step toward selling it.",
       nextQuestion: "What crop is it, and what village or area is the farm in?",
-      safetyRule: "Do not guess crop disease as fact. Ask for photo, location, crop, and urgency."
+      safetyRule: "Do not guess crop disease as fact. Ask for photo, location, crop, and urgency.",
+      spokenSafety: "I will not guess the crop problem. The crop, the place and a photo help me."
     },
     Maps: {
       audience: "traveler, driver, health worker, farmer, or logistics user",
       likelyNeed: "location, route, or nearby service guidance",
       plainGoal: "Help the person see where to go and what route or place matters.",
+      spokenGoal: "I can help you see where to go.",
       nextQuestion: "What place are you starting from, and where do you need to go?",
-      safetyRule: "Use map/provider data when available and explain uncertainty clearly."
+      safetyRule: "Use map/provider data when available and explain uncertainty clearly.",
+      spokenSafety: "I will tell you if I am not sure about a place or a route."
     },
     Platform: {
       audience: "non-technical user",
       likelyNeed: "general guidance",
       plainGoal: "Understand the person's goal and guide one step at a time.",
+      spokenGoal: "I want to be sure I help with the right thing.",
       nextQuestion: "Tell me what you need: health, crops, work, learning, map, or market.",
-      safetyRule: "Avoid technical language and ask only one question."
+      safetyRule: "Avoid technical language and ask only one question.",
+      spokenSafety: "I will keep this simple, one question at a time."
     }
   };
   const selected = models[moduleName] || models.Platform;
@@ -25413,7 +25699,8 @@ function updateConversationUserModel(profile, command, user) {
   const text = String(command || "").trim();
   const lower = text.toLowerCase();
   const model = profile.agentMemory.userModel || {};
-  const nameMatch = text.match(/\b(?:my name is|i am|i'm|this is)\s+([A-Z][a-zA-Z'-]{1,30})\b/);
+  const spokenNameForModel = extractSpokenName(text);
+  const nameMatch = spokenNameForModel ? [null, spokenNameForModel] : null;
   // A spoken/typed name belongs to the account that said it, not to the shared
   // global model -- store it per-account instead of on model.name (see
   // db.profile.userDisplayNames, the per-user store used by every greeting/
@@ -25523,7 +25810,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
     const resilienceQuestion = resilience.nextQuestionByModule?.[moduleSignal.module] || resilience.nextQuestion;
     return [
       resilience.plainOpening,
-      moduleSignal.module === "Healthcare" ? ruralSupport.safetyRule : ruralSupport.plainGoal,
+      moduleSignal.module === "Healthcare" ? ruralSupport.spokenSafety : ruralSupport.spokenGoal,
       resilienceQuestion
     ].join(" ");
   }
@@ -25531,27 +25818,27 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
     if (stakeholderAudience.key === "grandma") {
       return [
         "I hear you.",
-        moduleSignal.module === "Healthcare" ? "I am not a doctor, but I can help you find the safest next care step." : ruralSupport.plainGoal,
+        moduleSignal.module === "Healthcare" ? "I am not a doctor, but I can help you find the safest next care step." : ruralSupport.spokenGoal,
         stakeholderAudience.nextQuestion
       ].join(" ");
     }
     if (africaStyle.active && !kenyaStyle.active) {
       return [
         africaStyle.intentOpeners[moduleSignal.module] || africaStyle.intentOpeners.Platform,
-        moduleSignal.module === "Healthcare" ? africaStyle.medicalSafety.boundary : ruralSupport.plainGoal,
+        moduleSignal.module === "Healthcare" ? africaStyle.medicalSafety.boundary : ruralSupport.spokenGoal,
         frontierCommunication.nextQuestion
       ].join(" ");
     }
     if (kenyaStyle.active) {
       return [
         kenyaStyle.intentOpeners[moduleSignal.module] || kenyaStyle.intentOpeners.Platform,
-        ruralSupport.safetyRule,
+        ruralSupport.spokenSafety,
         frontierCommunication.nextQuestion
       ].join(" ");
     }
     return [
       `${frontierCommunication.teachBack}`,
-      frontierCommunication.urgency === "high" ? frontierCommunication.safeguards[0] || ruralSupport.safetyRule : ruralSupport.plainGoal,
+      frontierCommunication.urgency === "high" ? frontierCommunication.safeguards[0] || ruralSupport.spokenSafety : ruralSupport.spokenGoal,
       frontierCommunication.nextQuestion
     ].join(" ");
   }
@@ -26521,7 +26808,7 @@ function nexusWorkforceDifferentiatorAnswer() {
 
 function localGeneralConversationAnswer(db, user, command = "", options = {}) {
   const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
-  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+  const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
   const detectedLanguage = detectGeneralConversationLanguage(command);
   const requestedLanguage = normalizeConversationLanguage(options.targetLanguage || user?.language || "en");
   const language = detectedLanguage || requestedLanguage || "en";
@@ -26732,7 +27019,7 @@ function normalizeConversationCoreDecision(decision = {}, fallback = {}) {
 function localNexusConversationCoreDecision(db, user, command = "", options = {}) {
   const text = stripNexusWakeWords(command);
   const lower = text.toLowerCase().replace(/\s+/g, " ").trim();
-  const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+  const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
   const decision = (payload) => normalizeConversationCoreDecision({
     provider: "nexus-conversation-core-local",
     reason: "Local Nexus Conversation Core recognized a high-confidence platform intent.",
@@ -27173,11 +27460,38 @@ async function currentKnowledgeQuestionResponse(db, user, command = "", options 
   };
 }
 
+// "Remember that X", "remember I ...", "please remember ...", "don't forget that ...": a request to keep a fact. Returns the fact, or null when the sentence is something else ("remember to call the buyer" is a
+// reminder, "what do you remember" is a question, and a priority/goal/mission is kept by the older mission handler).
+const EXPLICIT_REMEMBER_PATTERN = /^\s*(?:(?:hey|hi|hello|ok|okay)[,\s]+)?(?:(?:kyro|nexus|agritrade|agri\s*trade)[,\s]+)?(?:(?:please|kindly)[,\s]+)?(?:(?:can|could|would) you\s+)?(?:remember|don['\u2019]?t forget|do not forget)\b[,:\s]*(?:that\b[,:\s]*)?(.+?)\s*$/i;
+function explicitRememberRequest(command) {
+  const match = EXPLICIT_REMEMBER_PATTERN.exec(String(command || ""));
+  if (!match) return null;
+  const fact = match[1].replace(/[\s,]+please[.!?\s]*$/i, "").replace(/[.!\s]+$/, "").trim().slice(0, 300);
+  if (fact.length < 3 || /\?$/.test(fact)) return null;
+  if (/^(to|what|when|how|why|who|where|which|if|me|about)\b/i.test(fact)) return null;
+  if (/\b(priority|goal|mission)\b/i.test(fact)) return null;
+  return fact;
+}
+// Credentials, card and bank numbers and government ID numbers are never kept as a remembered note.
+const SENSITIVE_REMEMBER_PATTERN = /\b(password|passcode|pin(?:\s+(?:code|number))?|cvv|cvc|card\s+(?:number|details)|credit\s+card|debit\s+card|bank\s+account|account\s+number|iban|routing\s+number|ssn|social\s+security|passport\s+number|national\s+id|id\s+number|api\s+key|secret\s+key|private\s+key|access\s+token)\b/i;
+// Saves the fact for this signed-in person only (each item carries who said it) and says exactly what happened, so the reply never claims more than was kept.
+function saveExplicitRemember(db, user, fact) {
+  const isGuest = !user?.email || user.guest === true || /^genesis-voice-guest/i.test(String(user.id || "")) || user.authType === "genesis-voice-guest";
+  if (isGuest) return { saved: false, reason: "guest", fact };
+  if (SENSITIVE_REMEMBER_PATTERN.test(fact)) return { saved: false, reason: "sensitive", fact };
+  const item = rememberAgentMemory(db.profile, fact, { source: "explicit-remember", category: inferMemoryCategory(fact), confidence: 0.95 });
+  if (!item) return { saved: false, reason: "empty", fact };
+  if (!item.by) item.by = String(user.email).trim().toLowerCase();
+  return { saved: true, fact, memoryId: item.id, category: item.category };
+}
+
 function learnFromAgentCommand(db, user, command, result) {
   ensureAiProfile(db.profile);
   updateConversationUserModel(db.profile, command, user);
   db.profile.agentMemory.conversationQuality.turns = Number(db.profile.agentMemory.conversationQuality.turns || 0) + 1;
   const lower = String(command || "").toLowerCase();
+  // An explicit "remember ..." was already answered (kept or declined) by its own handler; do not keep it a second way, or keep it when the reply said nothing was saved.
+  if (result?.metadata?.explicitRemember) return;
   if (lower.startsWith("remember ") || lower.includes("remember that")) {
     const fact = String(command || "").replace(/^remember\s+/i, "").replace(/remember that/i, "").trim();
     if (fact) rememberAgentMemory(db.profile, fact, { source: "explicit-remember", category: inferMemoryCategory(fact), confidence: 0.95 });
@@ -27191,7 +27505,7 @@ function learnFromAgentCommand(db, user, command, result) {
 }
 
 function isAffirmativeCommand(lower) {
-  return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it)$/i.test(String(lower || "").trim());
+  return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it|ndiyo|ndio|naam|sawa|sawa kabisa|endelea|fanya hivyo)$/i.test(String(lower || "").trim());
 }
 
 function isExplicitConfirmationCommand(lower) {
@@ -27203,7 +27517,7 @@ function isVagueConfirmationCommand(lower) {
 }
 
 function isNegativeCommand(lower) {
-  return /^(no|nope|cancel|stop|not now|hold|wait|do not|don't)$/i.test(String(lower || "").trim());
+  return /^(no|nope|cancel|stop|not now|hold|wait|do not|don't|hapana|la|siyo|sitaki|acha|usifanye|si sasa)$/i.test(String(lower || "").trim());
 }
 
 function clearSimpleVoiceTurn(db) {
@@ -28513,7 +28827,7 @@ function socialConversationResponse(db, user, text, lower) {
   const greetingOpener = /^(hi|hello|hey|good morning|good afternoon|good evening|are you there|can you hear me)\b/.test(lower)
     && (greetingRemainder === "" || /^(how are you( doing)?( today)?|how is it going|can you hear me( now| ok| okay)?|are you (there|with me|listening|ready)( today| now)?)$/.test(greetingRemainder));
   if (greetingOpener) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user.name?.split(/\s+/)[0] || "there";
     db.profile.agentMemory.lastStatus = "conversation-ready";
     db.profile.agentMemory.lastSummary = `Hello ${name}. I am listening and ready to guide the next step.`;
     db.profile.agentMemory.updatedAt = new Date().toISOString();
@@ -28570,6 +28884,8 @@ function localizedWorkflowPhrase(lower) {
     { patterns: ["connecte moi", "conectame", "niunganishe"], command: "connect me to a provider" },
     { patterns: ["postuler", "solicitar trabajo", "omba kazi"], command: "apply for that job" },
     { patterns: ["terminer lecon", "completa mi leccion", "kamilisha somo"], command: "complete my lesson" },
+    { patterns: ["endelea na kozi", "endelea na masomo"], command: "continue my course" },
+    { patterns: ["nilinganishe na nafasi"], command: "match me to a role" },
     { patterns: ["contacter acheteur", "contacta comprador", "wasiliana na mnunuzi"], command: "contact my buyer" },
     { patterns: ["rapport acheteur", "actualizacion comprador", "taarifa kwa mnunuzi"], command: "AgriTrade prepare a buyer update" },
     { patterns: ["risque route", "riesgo ruta", "hatari ya njia"], command: "check my route risk" },
@@ -28760,13 +29076,51 @@ function resilientConversationIntent(db, user, rawText = "") {
   return null;
 }
 
+// The emergency numbers the platform already states elsewhere (scripts/provider-engines.js "health.emergency-guidance": Kenya 999 or 112, Nigeria 112). For anywhere else, or when the country is not known,
+// say "your local emergency number" and name no number -- the people using Kyro are not in the U.S., and a made-up number is worse than none.
+function emergencyNumberFor(country = "") {
+  const place = String(country || "").trim().toLowerCase();
+  if (/\bkenya\b/.test(place)) return { country: "Kenya", numbers: "999 or 112" };
+  if (/\bnigeria\b/.test(place)) return { country: "Nigeria", numbers: "112" };
+  return null;
+}
+function emergencyCallLead(user) {
+  const known = emergencyNumberFor(user?.country);
+  return known ? `Call emergency services now if available (${known.numbers} in ${known.country}).` : "Call your local emergency number now if you can.";
+}
+// The whole sentence is only the person naming a condition they have ("I am pregnant", "I'm 6 months pregnant", "I am HIV positive and on treatment", "I am breastfeeding", "I am very stressed").
+function healthStatusStatement(lower = "") {
+  const value = String(lower || "").replace(/[.!?,]+/g, " ").replace(/\s+/g, " ").trim();
+  return /^(?:i am|i m|im|i'm) (?:(?:about |almost |around )?\d{1,2} (?:weeks?|months?)(?: and \d{1,2} (?:weeks?|days?))? |(?:very |so |really )?)?(?:pregnant|diabetic|hypertensive|asthmatic|epileptic|anaemic|anemic|breastfeeding|hiv positive|hiv negative|living with hiv|stressed|very stressed|expecting)(?: and (?:on|taking|using) [a-z ]{2,30})?$/.test(value);
+}
+function medicineStopQuestion(lower = "") {
+  const value = String(lower || "");
+  return /\b(should|can|could|may|is it ok(?:ay)?(?: to)?|is it safe(?: to)?|do i need to|must i)\s+(?:i\s+)?(stop|quit|skip|reduce|change|double|take less|take more|leave)\b.*\b(taking|using|my|the)\b.*\b(pills?|tablets?|medicines?|medications?|meds|arvs?|art|insulin|drugs?|treatment|doses?|antibiotics?|inhaler)\b/.test(value);
+}
+function emergencyNumberAnswer(text, user) {
+  const lower = normalizeSpeechForIntent(text);
+  const asksNumber = /\b(emergency|ambulance|police|fire brigade)\b.*\b(number|numbers|phone|hotline|line|contact)\b/.test(lower) || /\b(number|numbers|hotline)\b.*\b(for|to call|in an?)\b.*\b(emergency|ambulance|police)\b/.test(lower) || /\bwhat (?:do i|should i) (?:call|dial)\b.*\b(emergency|ambulance)\b/.test(lower);
+  if (!asksNumber || !/\b(what|which|give|tell|do you know|know|how|number|dial)\b/.test(lower)) return null;
+  const named = /\bkenya\b/.test(lower) ? "Kenya" : /\bnigeria\b/.test(lower) ? "Nigeria" : "";
+  // "...in Chile": a country named in the question that the platform has no number for is not answered with the asker's own country's number.
+  const askedAbout = (/\b(?:in|for|of)\s+([a-z]{3,}(?: [a-z]{3,})?)$/.exec(lower) || [])[1] || "";
+  const otherCountry = askedAbout && !named && !/^(?:an|the|my|case|emergency|emergencies|here|area|village|town|this|our|your|health|medical|ambulance|police|fire|kenya|nigeria|english|swahili|use|need|fact|real)\b/.test(askedAbout);
+  const known = emergencyNumberFor(named || (otherCountry ? "" : user?.country));
+  return known
+    ? `In ${known.country}, the emergency number is ${known.numbers}. I have not called anyone, and I cannot dispatch help for you.`
+    : "I do not have the emergency number for your country, so I will not guess. Call your local emergency number, or ask someone near you to call. Tell me the country you are in and I will tell you the number if I have it.";
+}
+
 function urgentHealthSafetyResponse(db, user, text = "") {
   const lower = normalizeSpeechForIntent(text);
   const vulnerablePerson = /\b(baby|child|kid|infant|mother|father|grandma|grandmother|elder|person|patient|my child|my baby)\b/.test(lower);
   const babyOrChildHealth = /\b(baby|child|kid|infant|my child|my baby)\b/.test(lower) && /\b(sick|hot|fever|weak|pain|vomit|cough|hurt|help|no english|no doctor)\b/.test(lower);
   const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|blood|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower);
   const healthNeed = /\b(sick|hurt|pain|injury|doctor|clinic|medicine|health|help|fever|hot)\b/.test(lower);
-  if (!(babyOrChildHealth || (dangerSign && (vulnerablePerson || healthNeed)))) return null;
+  // Someone who collapsed, fainted or cannot be woken is an emergency whoever it is ("an elderly man collapsed in the heat").
+  const collapsed = /\b(collapsed|collapse|fainted|passed out|unresponsive|not responding|cannot be woken|cant be woken|(?:will not|wont|cannot|cant) stop (?:the )?bleeding|bleeding (?:a lot|badly|heavily|too much)|bleeding (?:will not|wont|does not|doesnt) stop)\b/.test(lower);
+  if (!(babyOrChildHealth || collapsed || (dangerSign && (vulnerablePerson || healthNeed)))) return null;
+  if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
   db.profile.agentMemory.activeModule = "Healthcare";
   db.profile.agentMemory.lastStatus = "urgent-health-safety";
   db.profile.agentMemory.lastSummary = `Urgent health safety guidance for: ${text}`;
@@ -28774,7 +29128,7 @@ function urgentHealthSafetyResponse(db, user, text = "") {
   rememberAgentMemory(db.profile, `Urgent health concern reported: ${text}`, { source: "urgent-health-safety", category: "safety", module: "Healthcare", confidence: 0.97 });
   return {
     intent: "conversation.health_urgent_safety",
-    response: "Call emergency services now if available, such as 911 in the U.S. If the person cannot breathe, is bleeding badly, not waking, or getting worse, seek emergency help now. I am not a doctor and AgriNexus cannot replace emergency services. After you call, tell me where you are and whether the person is breathing normally.",
+    response: `${emergencyCallLead(user)} If the person cannot breathe, is bleeding badly, not waking, or getting worse, seek emergency help now. I am not a doctor and AgriNexus cannot replace emergency services. After you call, tell me where you are and whether the person is breathing normally.`,
     status: "urgent-guidance",
     metadata: {
       conversationMode: true,
@@ -29307,7 +29661,11 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("conversation.clinic_map_help", "needs-location", "map", "I can show clinic and pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.", ["use my location", "find clinic", "find pharmacy"]);
   }
 
-  if (/\bdrone\b.*\b(red|yellow|bad|dry|area|spot|field|farm|mean|means)\b|\b(red|yellow|bad|dry)\b.*\b(area|spot)\b.*\b(farm|field|drone)\b/.test(value)) {
+  // "Please run a drone scan of my field before I sell" is a request to DO a scan, not a description of one ("the drone saw a red area"). Only a description is explained; a request to run one falls through
+  // to the scan handling below / the staged field-evidence scan, which asks for a "yes" before anything is started.
+  const droneScanRunRequest = /\b(run|start|do|perform|launch|order|begin|get|schedule|send|fly)\b.*\bdrone\b.*\b(scan|survey|flight|inspection)\b|\bdrone\s+(scan|survey)\b/.test(value)
+    && !/\b(red|yellow|saw|seen|shows?|showed|mean|means|says?)\b/.test(value);
+  if (!droneScanRunRequest && (/\bdrone\b.*\b(red|yellow|bad|dry|area|spot|field|farm|mean|means)\b|\b(red|yellow|bad|dry)\b.*\b(area|spot)\b.*\b(farm|field|drone)\b/.test(value))) {
     return response(
       "conversation.drone_simple_explanation",
       "needs-details",
@@ -29316,7 +29674,9 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       ["maize", "cassava", "run field scan"]
     );
   }
-  if (/\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b|\bscan my field\b/.test(value)) {
+  // A scan tied to selling ("...before I sell", for a buyer or a market) is left for the staged field-evidence scan further on, which waits for a "yes"; a bare "run drone scan" keeps this ready answer.
+  const droneScanForSale = droneScanRunRequest && /\b(field|farm|crop|crops|maize|cassava|avocado|harvest|produce)\b/.test(value) && /\b(buyer|sell|selling|quality|market|evidence|proof)\b/.test(value);
+  if (!droneScanForSale && /\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b|\bscan my field\b/.test(value)) {
     return response("drone.field_scan", "completed", "trade", "Drone scan is ready. Nexus can review crop health, pests, irrigation, field evidence, buyer proof, and the next farm action. Live drone footage connects when a drone provider is added.", ["explain crop evidence", "contact buyer", "track shipment"]);
   }
   if (/\b(explain|summarize|read)\b.*\b(crop evidence|field evidence|drone evidence)\b.*\b(simple|plain|easy)\b|\bcrop evidence\b/.test(value)) {
@@ -29531,11 +29891,14 @@ function stagePhoneContactCall(db, command, contact, purpose = "") {
 
 async function phoneContactMemoryCommandResponse(db, user, text, lower, options = {}) {
   if (isAssistantAliasQuestion(lower)) return null;
+  // "text +254... saying hello" is a message, never a contact called "Text" and never a call (see stageMessageIntent)
+  if (frontDoor.readMessageRequest(text)) return null;
   ensurePhoneContactBook(db);
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(text);
   const callName = extractContactNameFromCall(text);
-  const saveContactSignal = /\b(remember|save|store|add)\b/.test(lower) && /\b(number|phone|contact|call)\b/.test(lower);
+  const saveContactSignal = (/\b(remember|save|store|add)\b/.test(lower) && /\b(number|phone|contact|call)\b/.test(lower))
+    || (/\b(hifadhi|weka|andika|ongeza|kumbuka)\b/.test(lower) && /\b(namba|nambari|simu|mawasiliano)\b/.test(lower));
   const numberMentioned = /\d(?:[\d\s().-]{6,}\d)/.test(String(text || ""));
 
   if (numberMentioned && !phone) {
@@ -29572,14 +29935,14 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
       return {
         ...staged,
         intent: "phone.contact_saved_call_ready",
-        response: `I saved ${contact.name}. Say yes and I will call ${contact.name}. Say no to save the number without calling now.`
+        response: `I saved ${contact.name} as ${frontDoor.spokenPhone(contact.phone)}. Say yes and I will call ${contact.name}. Say no to save the number without calling now.`
       };
     }
     db.profile.agentMemory.lastStatus = "phone-contact-saved";
     db.profile.agentMemory.lastSummary = `Saved ${contact.name} for future calls.`;
     return {
       intent: "phone.contact_saved",
-      response: `Saved ${contact.name}. You can say, "Nexus, call ${contact.name}" any time.`,
+      response: `Saved ${contact.name} as ${frontDoor.spokenPhone(contact.phone)}. If that number is not right, say it again. You can say, "Nexus, call ${contact.name}" any time.`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "agent", contact }
     };
@@ -29587,7 +29950,7 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
 
   if (/\b(what number|which number|show number|do you have.*number)\b/.test(lower)) {
     const name = contactDisplayName(lower.replace(/\b(what number|which number|show number|do you have|for|is|saved|number|phone)\b/g, " "));
-    const contact = findPhoneContact(db, name);
+    const contact = findPhoneContact(db, name, user);
     if (contact) {
       return {
         intent: "phone.contact_lookup",
@@ -29599,7 +29962,7 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
   }
 
   if (/\b(call|phone|dial|ring)\b/.test(lower) && callName) {
-    const contact = findPhoneContact(db, callName);
+    const contact = findPhoneContact(db, callName, user);
     if (contact) return stagePhoneContactCall(db, text, contact, `call ${contact.name}`);
     const pending = {
       id: crypto.randomUUID(),
@@ -29626,6 +29989,18 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
 async function executePendingAgentAction(db, user, pending) {
   if (!pending) return { intent: "conversation.no_pending_action", response: "There is no pending action to confirm.", status: "needs-input" };
   db.profile.agentPendingAction = null;
+  if (pending.kind === "message") {
+    // A confirmed TEXT or WhatsApp message. It is sent as a message (never turned into a call) and only if sending is really available; otherwise the person is told plainly it was not sent.
+    const channelLabel = pending.channel === "whatsapp" ? "WhatsApp message" : "text";
+    const label = pending.contactName || frontDoor.spokenPhone(pending.to);
+    const say = (intent, response, status, extra = {}) => ({ intent, response, status, metadata: { conversationMode: true, redirectSection: "agent", channel: pending.channel, executionConfirmed: true, messageSent: false, ...extra } });
+    if (userIsRestrictedFrom(user, "communications-send")) return say("message.not_sent", `This account type cannot send real messages, so I did not send your ${channelLabel} to ${label}. Nothing was sent.`, "blocked");
+    if (SENSITIVE_COMMUNICATION_PATTERN.test(pending.message)) return say("message.not_sent", `I did not send it: messages about health records, payments or passwords are not sent from here. Nothing was sent to ${label}.`, "blocked");
+    const delivery = await sendTwilioMessage({ providerId: pending.channel === "whatsapp" ? "whatsapp-delivery" : "sms-delivery", channel: pending.channel === "whatsapp" ? "WhatsApp" : "SMS", to: pending.to, text: pending.message });
+    logIntegration(db, { providerId: pending.channel === "whatsapp" ? "whatsapp-delivery" : "sms-delivery", module: "AI", action: "message.sent_by_voice", status: delivery.ok ? "success" : "needs-setup", detail: delivery.ok ? `${channelLabel} sent to ${label}.` : `${channelLabel} to ${label} not sent: ${delivery.status || delivery.error || "not available"}.`, metadata: { channel: pending.channel, delivery: { ok: Boolean(delivery.ok), status: delivery.status || null } }, dispatch: false });
+    if (delivery.ok) return say("message.sent", `Sent your ${channelLabel} to ${label}.`, "completed", { messageSent: true });
+    return say("message.not_sent", `I could not send your ${channelLabel} to ${label}: sending messages is not set up for this account yet, so nothing was sent. Your words were: "${pending.message}".`, "needs-setup", { deliveryStatus: delivery.status || null });
+  }
   if (pending.kind === "call" && pending.provider === "twilio") {
     const target = pending.target || {};
     const handoff = pending.handoff || callProviderHandoff("twilio", target);
@@ -29710,10 +30085,15 @@ async function executePendingAgentAction(db, user, pending) {
     };
   }
   if (pending.kind === "workforce-application") {
-    const result = submitBestWorkforceApplication(db, user, pending.command || "Apply for role");
+    // An application is only ever recorded for the role that was named when it was staged, never for whichever seeded role happens to fit best.
+    if (!pending.roleId) {
+      return { intent: "workforce.application_help", response: "I don't know which job you want to apply for, so nothing was submitted. Say \"apply for\" and the role name.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "workforce", noExecutionAuthorized: true } };
+    }
+    const result = submitBestWorkforceApplication(db, user, pending.command || "Apply for role", { roleId: pending.roleId });
     return {
       intent: result.status === "completed" ? "workforce.application_submitted" : "workforce.application_help",
-      response: `Done. ${result.response}`,
+      // "Done." only when the application was really recorded; a readiness gap or a missing role is not done.
+      response: result.status === "completed" ? `Done. ${result.response}` : result.response,
       status: result.status,
       metadata: { conversationMode: true, redirectSection: "workforce", roleId: result.role?.id || null, applicationId: result.application?.id || null, readiness: result.readiness || null }
     };
@@ -29746,12 +30126,17 @@ async function executePendingAgentAction(db, user, pending) {
       metadata: { conversationMode: true, ...(result.metadata || {}) }
     };
   }
+  // A payment confirmation runs only for the one order that was named in the prompt the person said yes to. A pending payment with no order (an older staged one, or a loose keyword match) moves nothing.
+  if (pending.tool === "trade.wallet_payment" && !(pending.orderId && (db.profile.orders || []).some(order => order.id === pending.orderId))) {
+    return { intent: "trade.wallet_payment_refused", response: "I can't send money for you, and no order was named for this payment, so nothing was posted or moved. Use your M-Pesa or bank app to pay someone.", status: "completed", metadata: { conversationMode: true, redirectSection: "trade", noExecutionAuthorized: true, realFundsCredited: false } };
+  }
   if (pending.tool) {
     const step = {
       id: crypto.randomUUID(),
       module: pending.module,
       tool: pending.tool,
       action: pending.action,
+      orderId: pending.orderId || "",
       detail: pending.purpose || `Confirmed conversation command: ${pending.command}`,
       contactName: pending.contactName || "",
       recipientPhone: pending.recipientPhone || pending.to || "",
@@ -29882,6 +30267,9 @@ function tokenizeAgentText(text) {
 }
 
 function planAgentToolLocally(command) {
+  // A health or danger report is never a keyword match for a course, a weather lookup or a trade tool ("my child has had a cough" scored on the word child and staged the women-and-children learning hub).
+  // Only an explicit ask to start/open/enrol something can still reach this router for such a sentence, and a sentence the care-and-safety reader recognises never can.
+  if (careSafetyApplies(command) || (looksLikeHealthReport(command) && !WORKFLOW_ASK_WORDS.test(String(command || "").toLowerCase()))) return null;
   const tokens = tokenizeAgentText(command);
   if (!tokens.length) return null;
   const scored = agentToolRegistry()
@@ -29991,7 +30379,7 @@ async function planAgenticTool(db, user, command) {
 }
 
 // Shared by the planner's open-question branch and the last-resort branch of runAgentCommand: one honest sentence when nothing real handled the request.
-const AGENT_NOT_HANDLED_RESPONSE = `I couldn't do that one just now, and nothing was saved. Try saying it another way, or name a module and action, like "AgriTrade prepare buyer update" or "Telehealth start intake."`;
+// (AGENT_NOT_HANDLED_RESPONSE is defined in nexus/i18n/local-translate.js, beside its Kiswahili version.)
 
 // A real model answered only when the provider is not one of the canned offline fallbacks (offline-simulation, offline-after-*).
 function aiResultIsRealModelAnswer(result) {
@@ -30002,6 +30390,8 @@ function aiResultIsRealModelAnswer(result) {
 async function routeAgenticCommand(db, user, command, options = {}) {
   const plan = await planAgenticTool(db, user, command);
   if (!plan) return null;
+  // The planner picked a tool from loose words; a tool that writes demo records runs (or is even offered) only when the person plainly asked for it. A model answer (ai.copilot) is handled below.
+  if (plan.tool !== "ai.copilot" && !floorGuard.toolMayRunFromLooseText(plan.tool, command)) return null;
   logIntegration(db, {
     providerId: plan.planner === "openai-agent-planner" ? "openai" : "agent-router",
     module: "AI",
@@ -30610,31 +31000,9 @@ function roleGuidanceResponse(db, user, text) {
   };
 }
 
+// Only an explicit name statement ("my name is", "call me", "naitwa") or "I am <Capitalised name>" is a name -- never "I am pregnant", "I am tired", "I am a farmer" (see server/nexus-greeting-name.js).
 function extractConversationalName(text) {
-  const value = String(text || "").trim();
-  const patterns = [
-    /\bmy name is\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bthis is\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bi am\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bi'm\s+([a-z][a-z\s'-]{1,40})/i,
-    /\bcall me\s+([a-z][a-z\s'-]{1,40})/i
-  ];
-  for (const pattern of patterns) {
-    const match = value.match(pattern);
-    if (match?.[1]) {
-      const candidate = match[1]
-        .replace(/[,.!?].*$/, "")
-        .trim()
-        .split(/\s+/)
-        .slice(0, 3);
-      const rawCandidate = candidate.join(" ").toLowerCase();
-      if (/^(tired|sad|scared|afraid|nervous|sick|hungry|lost|confused|overwhelmed|ready|new|fine|okay|ok|good|bad|hot|cold|happy|angry|worried)(\b|$)/.test(rawCandidate)) return "";
-      return candidate
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join(" ");
-    }
-  }
-  return "";
+  return extractSpokenName(text);
 }
 
 function languageFromCommand(text) {
@@ -31291,13 +31659,16 @@ function latestRecordByDate(items = [], dateKeys = ["startsAt", "createdAt", "sc
     })[0] || null;
 }
 
-function nextRecordByDate(items = [], dateKeys = ["startsAt", "scheduledAt", "createdAt"]) {
+// upcomingOnly: a record whose time has already passed is never "next" (a shift in May is not the next shift in October); with nothing ahead the answer is null.
+function nextRecordByDate(items = [], dateKeys = ["startsAt", "scheduledAt", "createdAt"], { upcomingOnly = false } = {}) {
   const now = Date.now();
   const dated = (items || []).map(item => {
     const time = dateKeys.map(key => Date.parse(item?.[key] || "")).find(Number.isFinite) || 0;
     return { item, time };
   }).filter(entry => entry.time);
-  return (dated.filter(entry => entry.time >= now).sort((a, b) => a.time - b.time)[0]
+  const ahead = dated.filter(entry => entry.time >= now).sort((a, b) => a.time - b.time)[0];
+  if (upcomingOnly) return ahead ? ahead.item : null;
+  return (ahead
     || dated.sort((a, b) => b.time - a.time)[0]
     || {}).item || null;
 }
@@ -31678,8 +32049,12 @@ function utilityAssistantKind(text, lower) {
   if (/\b(schedule|book|arrange|assign)\b.*\bshift\b/.test(lower)) return "";
   if (/\b(walk me through|guide me through|show me how|help me use|how do i use|how to use)\b/.test(lower)) return "";
   if (/\b(can you hear|hear me|understand|listen|talk|speak|communicate|english bad|bad english|broken english|not good english|wrong english|grandma talks|farmer talks)\b/.test(lower)) return "";
-  if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
-  if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
+  if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi|what day is it|what day is today|what is today|what's today|what is the date|what's the date|today's date|what date is it|which day is it|siku gani leo|leo ni siku gani|tarehe ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
+  if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) {
+    // "An elderly man collapsed in the heat" is a person in danger, not a weather question: the word heat must not send it to the forecast lookup.
+    if (looksLikeHealthReport(raw) && !/\b(weather|forecast|temperature|temp|rain)\b/.test(raw)) return "";
+    return "weather";
+  }
   if (spotifyMusicControlIntent(text) || musicAssistantIntent(text)) return "music";
   if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return "crop-timing";
   if (/\b(remind me|appointment reminder|reminder|remind|notify me|call reminder|visit reminder)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) return "appointment-reminder";
@@ -31707,19 +32082,23 @@ function assistantReminderModule(task = "") {
   return { module: "Agent AI", section: "agent", providerId: "openai" };
 }
 
-function createAssistantReminder(db, user, text, options = {}) {
+function createAssistantReminder(db, user, text, options = {}, resolved = null) {
   ensureAssistantReminders(db.profile);
-  const task = extractAssistantReminderTask(text);
-  const timing = parseAssistantReminderTime(text, options);
+  const task = resolved?.task || extractAssistantReminderTask(text);
+  const timing = resolved?.timing || parseAssistantReminderTime(text, options);
   const moduleContext = assistantReminderModule(task);
   const callName = extractContactNameFromCall(task);
-  const contact = callName ? findPhoneContact(db, callName) : null;
+  const contact = callName ? findPhoneContact(db, callName, user) : null;
   const reminder = {
     id: crypto.randomUUID(),
     reminderNumber: `REM-${String(nextRecordSequence(db, "assistantReminders")).padStart(3, "0")}`,
     task,
     scheduledAt: timing.scheduledAt,
     whenLabel: timing.whenLabel,
+    readback: timing.readback || "",
+    timeZone: timing.timeZone || options.timeZone || "",
+    correlationId: String(options.correlationId || ""),
+    notificationId: String(resolved?.notificationId || ""),
     module: moduleContext.module,
     section: moduleContext.section,
     status: "scheduled",
@@ -31735,72 +32114,346 @@ function createAssistantReminder(db, user, text, options = {}) {
     module: moduleContext.module,
     providerId: moduleContext.providerId,
     channel: "in-app assistant reminder",
-    message: `${reminder.reminderNumber}: ${task} ${timing.whenLabel}.`,
+    message: `${reminder.reminderNumber}: ${task} ${timing.readback || timing.whenLabel}.`,
     createdBy: user?.email || "Ask Nexus",
     reminderId: reminder.id,
     scheduledAt: reminder.scheduledAt
   });
-  rememberAgentMemory(db.profile, `Reminder set: ${task} ${timing.whenLabel}.`, { source: "assistant-reminder", category: "preference", module: moduleContext.module, confidence: 0.93 });
+  rememberAgentMemory(db.profile, `Reminder set: ${task} ${timing.readback || timing.whenLabel}.`, { source: "assistant-reminder", category: "preference", module: moduleContext.module, confidence: 0.93 });
   logIntegration(db, {
     providerId: moduleContext.providerId,
     module: moduleContext.module,
     action: "assistant.reminder_scheduled",
     status: "success",
-    detail: `${reminder.reminderNumber} scheduled: ${task} ${timing.whenLabel}.`,
+    detail: `${reminder.reminderNumber} scheduled: ${task} ${timing.readback || timing.whenLabel}.`,
     metadata: { reminderId: reminder.id, scheduledAt: reminder.scheduledAt, contactKnown: Boolean(contact) },
     dispatch: false
   });
   db.profile.agentMemory.lastStatus = "assistant-reminder-scheduled";
-  db.profile.agentMemory.lastSummary = `Reminder set: ${task} ${timing.whenLabel}.`;
+  db.profile.agentMemory.lastSummary = `Reminder set: ${task} ${timing.readback || timing.whenLabel}.`;
   db.profile.agentMemory.updatedAt = new Date().toISOString();
   return reminder;
 }
 
-function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
-  ensureAssistantReminders(db.profile);
-  const hasExplicitReminderTime = /\b(in\s+\d{1,3}\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)|tomorrow|tonight|later today|this afternoon|sunday|monday|tuesday|wednesday|thursday|friday|saturday|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?)\b/.test(lower);
-  if (!hasExplicitReminderTime && /\b(remind me|reminder|notify me)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) {
+// ---- reminders on the older command route and the phone line ----
+// Two stores exist: the DELIVERY store (nexus_notifications for one-time reminders, nexus_schedules for repeating ones), which the worker sends as push when the time comes, and the
+// legacy list db.profile.assistantReminders, which nothing delivers. A reminder asked for here is saved in the delivery store; the legacy list only keeps a mirror of it (for the
+// morning briefing and the older screens, carrying notificationId) and the reminders made before this change. If the delivery store cannot be reached the reminder is NOT saved and
+// the person is told so; it never falls back to the legacy list.
+let repeatStoreDownUntil = 0;
+async function repeatStoreTurn(user, text, timeZone) {
+  if (Date.now() < repeatStoreDownUntil) return { reachable: false };
+  let timer = null;
+  try {
+    const authUser = await authoritativeRuntimeUser(user);
+    const reply = await Promise.race([
+      authoritativeNexusRuntime.repeatReminderTurnRequest({ text, user: authUser, timeZone }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("repeating reminder store timed out")), 4000); })
+    ]);
+    return { reachable: true, reply };
+  } catch {
+    repeatStoreDownUntil = Date.now() + 10000;
+    return { reachable: false };
+  } finally { if (timer) clearTimeout(timer); }
+}
+let deliveryStoreDownUntil = 0;
+async function deliveryStoreFor(user) {
+  if (Date.now() < deliveryStoreDownUntil) return null;
+  let timer = null;
+  try {
+    const authUser = await authoritativeRuntimeUser(user);
+    return await Promise.race([
+      authoritativeNexusRuntime.deliveryRemindersFor({ user: authUser }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("reminder store timed out")), 4000); })
+    ]);
+  } catch {
+    deliveryStoreDownUntil = Date.now() + 10000;
+    return null;
+  } finally { if (timer) clearTimeout(timer); }
+}
+function reminderLanguageOf(text, options = {}) {
+  return options.language === "sw" || /\b(?:nikumbush\w*|unikumbush\w*|niwekee|vikumbusho|kikumbusho|kesho|leo|saa|dakika|baada ya|nina|onyesha|nionyeshe|futa|ondoa)\b/i.test(String(text || "")) ? "sw" : "en";
+}
+function pendingReminderTable(db) {
+  db.profile.pendingReminderRequests = db.profile.pendingReminderRequests && typeof db.profile.pendingReminderRequests === "object" ? db.profile.pendingReminderRequests : {};
+  return db.profile.pendingReminderRequests;
+}
+function reminderReply(intent, response, { status = "completed", section = "agent", extra = {} } = {}) {
+  return { intent, response, status, metadata: { conversationMode: true, redirectSection: section, ...extra } };
+}
+
+// Reminders made before the delivery store was used here, and still ahead of us, are moved into it once (keyed by their own id, so doing it again changes nothing) and then
+// only mirror it. Past ones, and any that could not be moved, stay in the legacy list as they were.
+async function adoptLegacyReminders(db, user, api, zone) {
+  let moved = 0;
+  for (const item of floorReminders.activeOf(db.profile.assistantReminders, user?.email)) {
+    if (item.notificationId || moved >= 25 || !(Date.parse(item.scheduledAt) > Date.now())) continue;
+    try {
+      const stored = await api.schedule({ task: item.task, scheduledAt: item.scheduledAt, whenLabel: item.readback || item.whenLabel, timeZone: item.timeZone || zone, legacyId: item.id });
+      item.notificationId = stored.reminder.id; item.movedAt = new Date().toISOString(); moved += 1;
+    } catch { /* it stays in the legacy list, listed as before */ }
+  }
+}
+// Everything the person has coming up, one list: the delivery store's reminders (with the legacy number they were given, if any) and the ones still only in the legacy list.
+async function upcomingReminders(db, user, api, zone) {
+  const email = user?.email;
+  if (api) await adoptLegacyReminders(db, user, api, zone);
+  const legacy = floorReminders.activeOf(db.profile.assistantReminders, email);
+  const unmoved = legacy.filter(item => !item.notificationId).map(item => ({ ...item, source: "legacy", original: item }));
+  if (!api) return { items: unmoved, complete: false };
+  let rows;
+  try { rows = await api.list(); } catch { return { items: unmoved, complete: false, api: null }; }
+  const mirrors = new Map(legacy.filter(item => item.notificationId).map(item => [item.notificationId, item]));
+  const delivery = rows.map(row => { const mirror = mirrors.get(row.id) || null; return { id: row.id, source: "delivery", reminderNumber: mirror?.reminderNumber || "", task: row.task, scheduledAt: row.scheduledAt, createdAt: row.createdAt || mirror?.createdAt || "",
+    status: "scheduled", createdBy: email, section: mirror?.section || "agent", whenLabel: row.whenLabel, timeZone: row.timeZone, mirror }; });
+  const items = [...delivery, ...unmoved].sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+  return { items, complete: true, api };
+}
+function cancelMirror(item) {
+  const target = item.source === "legacy" ? item.original : item.mirror;
+  if (target) { target.status = "canceled"; target.canceledAt = new Date().toISOString(); }
+}
+async function cancelReminderItem(api, item) {
+  if (item.source === "delivery") { if (!(await api.cancel(item.id))) return false; }
+  cancelMirror(item);
+  return true;
+}
+
+// The answer to a question just asked about a reminder ("At 6 in the morning or in the evening?", "Cancel all 5?"). Anything that is not an answer is dropped and handled as the new request it is.
+async function resolvePendingReminder(db, user, text, options = {}) {
+  const table = db.profile?.pendingReminderRequests;
+  const email = user?.email;
+  const pending = table && email ? table[email] : null;
+  if (!pending) return null;
+  if (!floorReminders.isFresh(pending)) { delete table[email]; return null; }
+  const lang = pending.lang === "sw" || reminderLanguageOf(text, options) === "sw" ? "sw" : "en";
+  const M = floorReminders.MESSAGES;
+  if (pending.kind === "cancel-all") {
+    if (floorReminders.YES.test(String(text).trim())) {
+      delete table[email];
+      const api = await deliveryStoreFor(user);
+      const { items } = await upcomingReminders(db, user, api, options.timeZone);
+      const wanted = new Set(pending.ids || []);
+      let count = 0;
+      for (const item of items) if (wanted.has(item.id)) { try { if (await cancelReminderItem(api, item)) count += 1; } catch { /* left as it was */ } }
+      let repeating = 0;
+      if (pending.repeating) { const turn = await repeatStoreTurn(user, "stop all my repeating reminders", options.timeZone); const done = /stopped (\d+)/.exec(turn.reply || ""); repeating = done ? Number(done[1]) : 0; }
+      db.profile.agentMemory.lastStatus = "assistant-reminders-canceled-all";
+      return reminderReply("assistant.reminders_canceled_all", M.canceledAll[lang](count + repeating), { extra: { canceledCount: count + repeating } });
+    }
+    delete table[email];
+    if (floorReminders.NO.test(String(text).trim())) return reminderReply("assistant.reminders_kept", M.keptAll[lang]);
+
     return null;
   }
-  if (/\b(list|show|what are|read|tell me)\b/.test(lower) && /\b(reminders|reminder|follow ups|follow-ups)\b/.test(lower)) {
-    // Found live (device/notification ownership audit): unfiltered, this read every
-    // signed-in user's reminders -- task text, contact name/phone, scheduled time --
-    // back to whichever caller asked "what are my reminders", not just their own.
-    const active = (db.profile.assistantReminders || []).filter(item => item.status !== "canceled" && item.createdBy === user?.email).slice(0, 5);
-    const response = active.length
-      ? `You have ${active.length} reminder${active.length === 1 ? "" : "s"}. ${active.map(item => `${item.reminderNumber}: ${item.task}, ${item.whenLabel}`).join(". ")}.`
-      : "You do not have active reminders yet. Say, Nexus, remind me to call Ron tomorrow, or remind me to order medical supplies Friday.";
-    return { intent: "assistant.reminders_listed", response, status: "completed", metadata: { conversationMode: true, redirectSection: "agent", reminders: active } };
+  const answer = floorReminders.interpretPendingAnswer(pending, text, { timeZone: options.timeZone, language: lang });
+  if (answer.status === "other") { delete table[email]; return null; }
+  if (answer.status === "ask") return reminderReply("assistant.reminder_time_needed", lang === "sw" ? answer.ask.sw : answer.ask.en, { status: "needs-input" });
+  delete table[email];
+  return createReminderFromTiming(db, user, pending.original, options, { task: pending.task, timing: answer.timing }, lang);
+}
+
+async function createReminderFromTiming(db, user, text, options, resolved, lang) {
+  const M = floorReminders.MESSAGES;
+  const sw = lang === "sw" || resolved.timing.language === "sw";
+  const spoken = sw ? resolved.timing.readbackSw : resolved.timing.readback;
+  const api = await deliveryStoreFor(user);
+  if (!api) return reminderReply("assistant.reminder_not_saved", M.notSaved[sw ? "sw" : "en"], { status: "needs-review" });
+  let stored;
+  try {
+    await adoptLegacyReminders(db, user, api, options.timeZone);
+    stored = await api.schedule({ task: resolved.task, scheduledAt: resolved.timing.scheduledAt, whenLabel: resolved.timing.readback, timeZone: resolved.timing.timeZone || options.timeZone, correlationId: String(options.correlationId || ""), language: sw ? "sw" : "en" });
+  } catch {
+    deliveryStoreDownUntil = Date.now() + 10000;
+    return reminderReply("assistant.reminder_not_saved", M.notSaved[sw ? "sw" : "en"], { status: "needs-review" });
   }
-  if (/\b(cancel|clear|delete|remove)\b/.test(lower) && /\b(reminder|reminders|follow up|follow-up)\b/.test(lower)) {
-    // Found live (device/notification ownership audit): unfiltered, this canceled
-    // the FIRST active reminder in the whole shared workspace array, regardless of
-    // who created it -- any signed-in user saying "cancel my reminder" could
-    // silently cancel a different real account's medication/appointment/shift
-    // reminder.
-    const reminder = (db.profile.assistantReminders || []).find(item => item.status !== "canceled" && item.createdBy === user?.email);
-    if (!reminder) return { intent: "assistant.no_reminder_to_cancel", response: "I do not see an active reminder to cancel.", status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent" } };
-    reminder.status = "canceled";
-    reminder.canceledAt = new Date().toISOString();
+  if (stored.duplicate) {
+    const mirror = floorReminders.activeOf(db.profile.assistantReminders, user?.email).find(item => item.notificationId === stored.reminder.id);
+    const shown = { reminderNumber: mirror?.reminderNumber || "", task: stored.reminder.task };
+    return reminderReply("assistant.reminder_duplicate", M.duplicate[sw ? "sw" : "en"](shown, sw ? describeReminderMoment(stored.reminder.scheduledAt, { timeZone: options.timeZone, language: "sw" }) : describeReminderMoment(stored.reminder.scheduledAt, { timeZone: options.timeZone })),
+      { section: mirror?.section || "agent", extra: { reminder: { ...stored.reminder, reminderNumber: shown.reminderNumber }, duplicate: true } });
+  }
+  const reminder = createAssistantReminder(db, user, text, options, { ...resolved, notificationId: stored.reminder.id });
+  const contactLine = !sw && reminder.contactName && !reminder.contactPhone
+    ? ` I do not have ${reminder.contactName}'s number yet, so give me the number if you want me to call later.`
+    : !sw && reminder.contactName && reminder.contactPhone
+      ? ` I also found ${reminder.contactName}'s saved phone number for the call workflow.`
+      : "";
+  return reminderReply("assistant.reminder_scheduled", `${M.set[sw ? "sw" : "en"](reminder.task, spoken)}${contactLine}`, { section: reminder.section, extra: { reminder, delivery: "push", suggestedReplies: ["list reminders", "what should I do next", "call contact"] } });
+}
+
+// "stop reminding me about my pills", "stop my reminders", "don't remind me to call Ron" -> { subject } (subject "" when none was named). Anything else -> null.
+function readStopRemindingRequest(lower = "") {
+  const t = String(lower || "").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim().replace(/^(?:ok(?:ay)?|please|nexus|kyro)[ ,]+/, "");
+  let m = /^(?:stop|quit) (?:reminding me|sending me reminders?|my reminders?|the reminders?)(?: (?:about|to|of|for|on))?(?: (.+))?$/.exec(t)
+    || /^(?:do not|don't|dont) (?:remind me|send me reminders?)(?: (?:about|to|of|for))?(?: (.+))?(?: any ?more| again)?$/.exec(t)
+    || /^no more reminders?(?: (?:about|for|to))?(?: (.+))?$/.exec(t);
+  if (!m) return null;
+  const subject = String(m[1] || "").replace(/\b(?:any ?more|again|please)\b/g, " ").replace(/^(?:my|the|a|an)\s+/, "").replace(/\s+/g, " ").trim();
+  return { subject };
+}
+// Pills, tablets, medicine, meds, drugs and the like are one subject for matching a reminder to what the person called it.
+const REMINDER_SUBJECT_SYNONYMS = [["pill", "pills", "tablet", "tablets", "medicine", "medicines", "medication", "medications", "meds", "drug", "drugs", "dose", "doses"]];
+function reminderSubjectTokens(value = "") {
+  const out = new Set();
+  for (const word of String(value || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)) {
+    if (!word || word.length < 3 || ["the", "and", "for", "about", "that", "this", "with", "any", "reminder", "reminders", "remind", "take", "taking", "your", "all"].includes(word)) continue;
+    const group = REMINDER_SUBJECT_SYNONYMS.find(set => set.includes(word));
+    out.add(group ? group[0] : word.replace(/s$/, ""));
+  }
+  return out;
+}
+function reminderMatchesSubject(reminder, subject) {
+  const wanted = reminderSubjectTokens(subject);
+  if (!wanted.size) return true;
+  const have = reminderSubjectTokens(`${reminder.task || ""} ${reminder.sourceCommand || ""}`);
+  return [...wanted].some(token => have.has(token));
+}
+// "actually make it 9pm", "change it to 9", "move it to 9:30 pm", "no, make that tomorrow at 7" -> the time words to read. Only a sentence that is nothing but that change counts.
+const REMINDER_TIME_CHANGE_WINDOW_MS = 30 * 60 * 1000;
+function readReminderTimeChange(text = "") {
+  const t = String(text || "").replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim().replace(/^(?:ok(?:ay)?|no|nope|sorry|wait|actually|please|nexus|kyro)[ ,]+/i, "").replace(/^(?:ok(?:ay)?|no|actually|please)[ ,]+/i, "");
+  const m = /^(?:(?:make|set|change|move|put|reschedule|push|shift) (?:it|that|the reminder|that reminder|my reminder|it back|it forward)(?: time)?|(?:make|let'?s say|say) it)(?: (?:to|for|at|by))?\s+(.+)$/i.exec(t);
+  if (!m) return "";
+  const tail = m[1].trim();
+  const clock = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i.exec(tail);
+  if (clock) return `at ${tail}`;
+  return /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)|\d{1,2}:\d{2}|noon|midnight|tomorrow|tonight|morning|afternoon|evening|monday|tuesday|wednesday|thursday|friday|saturday|sunday|in \d{1,3} (?:minutes?|mins?|hours?|days?))\b/i.test(tail)
+    && !/\b(remind|reminder)\b/i.test(tail) ? (/\bat\b/i.test(tail) || /^(?:tomorrow|tonight|in |monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(tail) ? tail : tail.replace(/(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i, "at $1")) : "";
+}
+
+async function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
+  ensureAssistantReminders(db.profile);
+  const M = floorReminders.MESSAGES;
+  const email = user?.email;
+  const lang = reminderLanguageOf(text, options);
+  const zone = options.timeZone;
+  const now = new Date();
+  const lines = (items, language) => items.map(item => floorReminders.reminderLine(item, { now, timeZone: zone, language }));
+  if (!hasReminderTimePhrase(text) && /\b(remind me|reminder|notify me)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) {
+    return null;
+  }
+  // A reminder that repeats ("every day at 8", "kila siku saa mbili asubuhi"): saved in the store the worker delivers from, or said plainly to be unavailable. Never a one-time reminder in disguise.
+  const repeatKind = floorReminders.isSetRequest(text) || /\b(?:repeating|recurring|daily|weekly)\s+reminders?\b|\bkikumbusho cha\b/i.test(text) ? classifyRepeatRequest(text) : null;
+  if (repeatKind) {
+    const turn = await repeatStoreTurn(user, text, zone);
+    if (turn.reachable && turn.reply) return reminderReply("assistant.repeating_reminder", turn.reply);
+    if (!turn.reachable && (repeatKind === "add" || repeatKind === "unsupported")) {
+      const said = await repeatTurnAnyLanguage({ text, store: unreachableRepeatStore, tenantId: "none", userId: "none", timeZone: zone });
+      return reminderReply("assistant.repeating_reminder_unavailable", said || M.repeatUnavailable[lang], { status: said ? "needs-input" : "needs-review" });
+    }
+  }
+  const isList = floorReminders.isListRequest(text);
+  const isCancelAll = !isList && floorReminders.isCancelAllRequest(text);
+  // Two more ways to ask, read here and acted on in the same delivery store as everything above: "stop reminding me about my pills" (cancel the one named, or ask which) and
+  // "actually make it 9pm" (move the reminder set a few minutes ago; with none, nothing is claimed). The second only counts when it is nothing but that time change.
+  const stopReminding = !isList && !isCancelAll ? readStopRemindingRequest(lower) : null;
+  const quickTime = !isList && !isCancelAll && !stopReminding ? readReminderTimeChange(text) : "";
+  const change = !isList && !isCancelAll && !stopReminding ? (floorReminders.readChangeRequest(text) || (quickTime ? { subject: "", when: quickTime, justSet: true } : null)) : null;
+  const cancel = !isList && !isCancelAll && !stopReminding && !change ? floorReminders.readCancelRequest(text) : null;
+  if (isList || isCancelAll || stopReminding || change || cancel) {
+    const api = await deliveryStoreFor(user);
+    const view = await upcomingReminders(db, user, api, zone);
+    const items = view.items;
+    // The delivery store cannot be reached and there is nothing in the older list: say so, instead of "you have no reminders".
+    const unreachable = () => reminderReply("assistant.reminders_unreachable", M.unreachable[lang], { status: "needs-review" });
+    if (isList) {
+      if (!items.length && !view.complete) return unreachable();
+      const active = items.slice(0, 8);
+      let response = active.length ? M.list[lang](active.length, lines(active, lang)) : M.noReminders[lang];
+      if (!view.complete) response = `${response} ${M.listIncomplete[lang]}`;
+      const turn = await repeatStoreTurn(user, lang === "sw" ? "onyesha vikumbusho vyangu vinavyojirudia" : "show my repeating reminders", zone);
+      if (turn.reachable && /^You have \d+ repeating|^Una vikumbusho/i.test(turn.reply || "")) response = active.length ? `${response} ${turn.reply}` : turn.reply;
+      return reminderReply("assistant.reminders_listed", response, { extra: { reminders: active } });
+    }
+    if (isCancelAll) {
+      let repeating = 0;
+      const turn = await repeatStoreTurn(user, "show my repeating reminders", zone);
+      const counted = turn.reachable ? /^You have (\d+) repeating/.exec(turn.reply || "") : null;
+      if (counted) repeating = Number(counted[1]);
+      if (!items.length && !repeating) return view.complete ? reminderReply("assistant.no_reminder_to_cancel", M.nothingToCancel[lang], { status: "needs-input" }) : unreachable();
+      pendingReminderTable(db)[email] = { kind: "cancel-all", ids: items.map(item => item.id), repeating: repeating > 0, lang, askedAt: now.toISOString() };
+      return reminderReply("assistant.reminders_cancel_all_confirm", M.cancelAllAsk[lang](items.length + repeating), { status: "needs-input", extra: { count: items.length + repeating } });
+    }
+    if (change?.justSet) {
+      // "make it 9pm" only changes a reminder this person set a few minutes ago.
+      const latest = items[0] || null;
+      const recent = latest && now.getTime() - Date.parse(latest.mirror?.updatedAt || latest.createdAt || 0) <= REMINDER_TIME_CHANGE_WINDOW_MS;
+      if (!recent) return null;
+    }
+    if (change) {
+      const found = floorReminders.findReminder(items, email, { subject: change.subject });
+      if (found.none) return !view.complete && !items.length ? unreachable() : reminderReply("assistant.no_reminder_to_change", found.subject ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
+      if (found.ambiguous) return reminderReply("assistant.reminder_change_ambiguous", M.whichOne[lang](found.ambiguous.length, lines(found.ambiguous, lang), "change"), { status: "needs-input" });
+      let timing = resolveReminderTime(change.when, { timeZone: zone, language: lang, now });
+      if (timing.status === "none") timing = resolveReminderTime(`at ${change.when}`, { timeZone: zone, language: lang, now });
+      if (timing.status !== "ok") return reminderReply("assistant.reminder_time_needed", lang === "sw" || timing.language === "sw" ? timing.ask.sw : timing.ask.en, { status: "needs-input" });
+      const item = found.match;
+      const sw = lang === "sw" || timing.language === "sw";
+      let reminderAfter;
+      if (item.source === "delivery") {
+        let changed;
+        try { changed = await api.change(item.id, { scheduledAt: timing.scheduledAt, whenLabel: timing.readback, timeZone: timing.timeZone }); } catch { changed = { ok: false }; }
+        if (!changed.ok) return reminderReply("assistant.reminder_change_failed", M.changeFailed[sw ? "sw" : "en"], { status: "needs-review" });
+        if (item.mirror) { item.mirror.notificationId = changed.reminder.id; item.mirror.scheduledAt = timing.scheduledAt; item.mirror.whenLabel = timing.whenLabel; item.mirror.readback = timing.readback; item.mirror.updatedAt = now.toISOString(); }
+        reminderAfter = { ...item, scheduledAt: timing.scheduledAt, id: changed.reminder.id };
+      } else {
+        const legacy = item.original;
+        legacy.scheduledAt = timing.scheduledAt; legacy.whenLabel = timing.whenLabel; legacy.readback = timing.readback; legacy.updatedAt = now.toISOString();
+        reminderAfter = legacy;
+      }
+      db.profile.agentMemory.lastStatus = "assistant-reminder-changed";
+      db.profile.agentMemory.lastSummary = `Changed ${item.reminderNumber || "a reminder"}: ${item.task} ${timing.readback}.`;
+      db.profile.agentMemory.updatedAt = now.toISOString();
+      if (change.justSet && !sw) return reminderReply("assistant.reminder_rescheduled", `Done. I moved your reminder ${/^about\s/i.test(item.task) ? "" : "to "}${item.task} to ${String(timing.readback).replace(/^at\s+/i, "")}.`, { section: item.section || "agent", extra: { reminder: reminderAfter } });
+      return reminderReply("assistant.reminder_changed", M.changed[sw ? "sw" : "en"](item, sw ? timing.readbackSw : timing.readback), { section: item.section || "agent", extra: { reminder: reminderAfter } });
+    }
+    // cancel one: found by its words or number, never guessed, and only among the person's own
+    let item;
+    if (stopReminding) {
+      // "stop reminding me about my pills": pills, tablets and medicine are one subject. One match is cancelled; none or several are listed and nothing is cancelled.
+      if (!items.length) return !view.complete ? unreachable() : reminderReply("assistant.no_reminder_to_cancel", "I do not see an active reminder to cancel. Nothing was changed.", { status: "needs-input" });
+      const mine = items.filter(entry => entry.createdBy === email);
+      const matches = stopReminding.subject ? mine.filter(entry => reminderMatchesSubject({ task: entry.task, sourceCommand: (entry.mirror || entry.original)?.sourceCommand }, stopReminding.subject)) : mine;
+      if (matches.length !== 1) {
+        const shown = (matches.length ? matches : mine).slice(0, 5);
+        const listed = lines(shown, lang).join(". ");
+        const example = shown[0].reminderNumber ? `cancel ${shown[0].reminderNumber}` : `cancel my reminder to ${shown[0].task}`;
+        return reminderReply("assistant.reminder_which", matches.length
+          ? `More than one reminder matches. ${listed}. Tell me which one to cancel, for example "${example}". Nothing was canceled.`
+          : `I could not find a reminder about ${stopReminding.subject}. Your reminders are: ${listed}. Tell me which one to cancel, for example "${example}". Nothing was canceled.`, { status: "needs-input", extra: { reminders: shown } });
+      }
+      item = matches[0];
+    } else {
+      const found = floorReminders.findReminder(items, email, cancel);
+      if (found.none) return !view.complete && !items.length ? unreachable() : reminderReply("assistant.no_reminder_to_cancel", cancel.subject || cancel.id ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
+      if (found.ambiguous || (found.count > 1 && !cancel.subject && !cancel.id)) {
+        const choices = found.ambiguous || items;
+        return reminderReply("assistant.reminder_cancel_ambiguous", M.whichOne[lang](choices.length, lines(choices, lang), "cancel"), { status: "needs-input" });
+      }
+      item = found.match;
+    }
+    let done = false;
+    try { done = await cancelReminderItem(api, item); } catch { done = false; }
+    if (!done) return reminderReply("assistant.reminder_cancel_failed", M.cancelFailed[lang], { status: "needs-review" });
     db.profile.agentMemory.lastStatus = "assistant-reminder-canceled";
-    db.profile.agentMemory.lastSummary = `Canceled ${reminder.reminderNumber}: ${reminder.task}.`;
-    db.profile.agentMemory.updatedAt = reminder.canceledAt;
-    logIntegration(db, { providerId: "openai", module: reminder.module || "Agent AI", action: "assistant.reminder_canceled", detail: `${reminder.reminderNumber} canceled.`, metadata: { reminderId: reminder.id }, dispatch: false });
-    return { intent: "assistant.reminder_canceled", response: `Canceled ${reminder.reminderNumber}: ${reminder.task}.`, status: "completed", metadata: { conversationMode: true, redirectSection: reminder.section || "agent", reminder } };
+    db.profile.agentMemory.lastSummary = `Canceled ${item.reminderNumber || "a reminder"}: ${item.task}.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, { providerId: "openai", module: "Agent AI", action: "assistant.reminder_canceled", detail: `${item.reminderNumber || item.id} canceled.`, metadata: { reminderId: item.id }, dispatch: false });
+    return reminderReply("assistant.reminder_canceled", M.canceled[lang](item), { section: item.section || "agent", extra: { reminder: item } });
   }
-  if (/\b(remind me|set a reminder|set reminder|notify me|remember to|follow up)\b/.test(lower)) {
-    const reminder = createAssistantReminder(db, user, text, options);
-    const contactLine = reminder.contactName && !reminder.contactPhone
-      ? ` I do not have ${reminder.contactName}'s number yet, so give me the number if you want me to call later.`
-      : reminder.contactName && reminder.contactPhone
-        ? ` I also found ${reminder.contactName}'s saved phone number for the call workflow.`
-        : "";
-    return {
-      intent: "assistant.reminder_scheduled",
-      response: `Done. I will remind you ${/^about\s/i.test(reminder.task) ? "" : "to "}${reminder.task} ${reminder.whenLabel}.${contactLine}`,
-      status: "completed",
-      metadata: { conversationMode: true, redirectSection: reminder.section, reminder, suggestedReplies: ["list reminders", "what should I do next", "call contact"] }
-    };
+  if (floorReminders.isSetRequest(text)) {
+    const task = extractAssistantReminderTask(text);
+    const timing = resolveReminderTime(text, { timeZone: zone, language: options.language === "sw" ? "sw" : undefined, now });
+    if (task === "follow up" && !/\bfollow[- ]?up\b/i.test(text)) return reminderReply("assistant.reminder_task_needed", M.needTask[lang], { status: "needs-input" });
+    if (timing.status !== "ok") {
+      // Never a guessed time: the question is asked, and the answer to it sets the reminder.
+      const sw = lang === "sw" || timing.language === "sw";
+      pendingReminderTable(db)[email] = { ...floorReminders.pendingFromAsk({ ask: timing.ask, task, original: text, correlationId: options.correlationId || "", now }), lang: sw ? "sw" : "en" };
+      return reminderReply("assistant.reminder_time_needed", sw ? timing.ask.sw : timing.ask.en, { status: "needs-input" });
+    }
+    if (db.profile.pendingReminderRequests) delete db.profile.pendingReminderRequests[email];
+    return createReminderFromTiming(db, user, text, { ...options, timeZone: zone }, { task, timing }, lang);
   }
   return null;
 }
@@ -31978,7 +32631,7 @@ function assistantActionMemoryCommandResponse(db, user, text, lower, options = {
     };
   }
   if (/call|phone|dial|ring/.test(`${top.title} ${top.command}`.toLowerCase()) && top.contactName) {
-    const contact = findPhoneContact(db, top.contactName);
+    const contact = findPhoneContact(db, top.contactName, user);
     if (contact) return stagePhoneContactCall(db, text, contact, `follow up: ${top.command || top.title}`);
     db.profile.agentMemory.pendingContactCall = {
       id: crypto.randomUUID(),
@@ -32028,24 +32681,31 @@ function formatUtilityDate(dateValue, timeZone = "") {
   }
 }
 
-function utilityTimeAnswer(options = {}) {
-  const timeZone = options.timeZone || "UTC";
-  const now = new Date();
-  let time = "";
-  let date = "";
-  try {
-    time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone }).format(now);
-    date = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone }).format(now);
-  } catch (error) {
-    time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(now);
-    date = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(now);
+// The time or the date, on the PERSON's clock (their device's zone, their saved zone, or their country's), never the server's UTC.
+// "What day is it today?" is a question about the date, not the time; asked in Kiswahili it is answered in Kiswahili.
+function utilityTimeAnswer(options = {}, question = "") {
+  const timeZone = isValidTimeZone(options.timeZone) ? options.timeZone : DEFAULT_REMINDER_TIME_ZONE;
+  const now = options.now instanceof Date ? options.now : new Date();
+  const dateOnly = /\b(what day is it|what day is today|what is today|what's today|what is the date|what's the date|today's date|what date is it|which day is it|siku gani leo|leo ni siku gani|leo ni tarehe|tarehe ngapi)\b/i.test(String(question || ""));
+  const zoneNote = options.timeZoneSource === "default" ? " I am using East Africa time; tell me if you are elsewhere." : "";
+  if (options.language === "sw") {
+    const dateSw = new Intl.DateTimeFormat("sw-KE", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone }).format(now);
+    return dateOnly ? `Leo ni ${dateSw}.` : `Sasa ni ${describeReminderMoment(now, { now, timeZone, language: "sw" }).replace(/^leo /, "")}.`;
   }
-  return `It is ${time} on ${date}.`;
+  const date = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone }).format(now);
+  if (dateOnly) return `Today is ${date}.${zoneNote}`;
+  const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone }).format(now);
+  return `It is ${time} on ${date.replace(/,\s*\d{4}$/, "")}.${zoneNote}`;
 }
 
-function utilityAppointmentAnswer(db, options = {}) {
-  const appointment = nextRecordByDate(db.profile.telehealthAppointments || [], ["scheduledAt", "startsAt", "createdAt"]);
-  const shift = nextRecordByDate(db.profile.shiftSchedule || [], ["startsAt", "createdAt"]);
+// The appointments and shifts a person is told about are the ones they made. The shared lists also hold the seeded demo schedule and everyone else's, which are not theirs.
+const ownRecordsOnly = (list, user) => {
+  const viewer = memoryViewerEmail(user);
+  return (Array.isArray(list) ? list : []).filter(item => Boolean(viewer) && ownerOfRecord(item).includes(viewer));
+};
+function utilityAppointmentAnswer(db, options = {}, user = null) {
+  const appointment = nextRecordByDate(ownRecordsOnly(db.profile.telehealthAppointments, user), ["scheduledAt", "startsAt", "createdAt"]);
+  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt"], { upcomingOnly: true });
   if (appointment) {
     const when = formatUtilityDate(appointment.scheduledAt || appointment.startsAt, options.timeZone)
       || appointment.scheduleWindow
@@ -32056,12 +32716,18 @@ function utilityAppointmentAnswer(db, options = {}) {
     const when = formatUtilityDate(shift.startsAt, options.timeZone) || "the next scheduled shift window";
     return `I do not see a telehealth appointment yet. Your next workforce schedule item is ${shift.role || "a shift"} at ${when}, status ${shift.status || "scheduled"}.`;
   }
-  return "I do not see an appointment time saved yet. I can open telehealth scheduling or workforce scheduling and help create one.";
+  return "I don't see any appointments for you. I can open telehealth scheduling or workforce scheduling and help create one.";
 }
 
-function utilityShipmentEtaAnswer(db) {
+function utilityShipmentEtaAnswer(db, text = "") {
   const { route } = activeContext(db);
-  const latestOrder = latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
+  // "where is my delivery order 1234" asks about order 1234. It used to answer with whichever order was newest (often a seeded demo lot) as if it were that one.
+  const askedNumber = /\border\s*(?:no\.?|number|num|#)?\s*#?([a-z0-9][a-z0-9-]{1,30})\b/i.exec(String(text || ""));
+  const askedOrder = askedNumber ? tradeOrderNamedInText(db, text) : null;
+  if (askedNumber && /\d/.test(askedNumber[1]) && !askedOrder) {
+    return `I couldn't find an order numbered ${askedNumber[1]} in your records, so I can't tell you where it is. Please check the number, or tell me the order number again. Nothing was changed.`;
+  }
+  const latestOrder = askedOrder || latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
   const checkpoints = route.checkpoints || [];
   const activeCheckpoint = latestOrder?.checkpoint || db.profile.activeCheckpoint || checkpoints[0] || "pickup";
   const index = Math.max(0, checkpoints.findIndex(checkpoint => checkpoint === activeCheckpoint));
@@ -32711,7 +33377,7 @@ function normalizeGenesisCommandResponse(result = {}, options = {}) {
 function updateNexusSessionContext(db, command = "", envelope = {}) {
   ensureAiProfile(db.profile);
   const context = {
-    lastFinalUserRequest: String(command || "").trim().slice(0, 500),
+    lastFinalUserRequest: secretNotSavedReply(command) ? "" : String(command || "").trim().slice(0, 500),
     lastSelectedIntent: envelope.intent || "unknown",
     lastCapability: envelope.capability || "general-assistant",
     lastCompleteAssistantResponse: envelope.response || "",
@@ -32976,8 +33642,8 @@ async function utilityCropTimingAnswer(db, text, options = {}) {
 }
 
 function utilityAppointmentReminderAnswer(db, user, options = {}) {
-  const appointment = nextRecordByDate(db.profile.telehealthAppointments || [], ["scheduledAt", "startsAt", "createdAt"]);
-  const shift = nextRecordByDate(db.profile.shiftSchedule || [], ["startsAt", "createdAt"]);
+  const appointment = nextRecordByDate(ownRecordsOnly(db.profile.telehealthAppointments, user), ["scheduledAt", "startsAt", "createdAt"]);
+  const shift = nextRecordByDate(ownRecordsOnly(db.profile.shiftSchedule, user), ["startsAt"], { upcomingOnly: true });
   const target = appointment
     ? `telehealth appointment ${appointment.appointmentNumber || ""}`.trim()
     : shift
@@ -33150,7 +33816,7 @@ function nexusPreProviderHardeningModel(db, user, text = "") {
   const providers = runtimeProviders(db);
   const connected = providers.filter(provider => provider.status === "connected");
   const providerReady = providers.filter(provider => provider.status !== "connected");
-  const memorySummary = longTermMemorySummary(db.profile);
+  const memorySummary = longTermMemorySummary(db.profile, user);
   const voiceProvider = process.env.VOICE_TTS_PROVIDER || process.env.VOICE_STT_PROVIDER || (process.env.OPENAI_API_KEY ? "openai-ready" : "browser/local");
   const ttsVoice = process.env.OPENAI_TTS_VOICE || "browser-default";
   const usage = {
@@ -33241,7 +33907,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   const preProviderModel = kind === "pre-provider-readiness" ? nexusPreProviderHardeningModel(db, user, text) : null;
   const weatherUtilityResult = kind === "weather" ? await utilityWeatherAnswer(db, text, { ...options, user }) : null;
   const response = kind === "time"
-    ? utilityTimeAnswer(options)
+    ? utilityTimeAnswer(options, text)
     : kind === "weather"
       ? weatherUtilityResult.response
       : kind === "music"
@@ -33259,16 +33925,16 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
                 : kind === "health-safety"
                   ? await utilityHealthSafetyAnswer(db, text, options)
       : kind === "shipment"
-        ? utilityShipmentEtaAnswer(db)
+        ? utilityShipmentEtaAnswer(db, text)
         : kind === "appointment"
-          ? utilityAppointmentAnswer(db, options)
+          ? utilityAppointmentAnswer(db, options, user)
             : kind === "next-step"
               ? utilityNextStepAnswer(db, user)
             : kind === "situation-agent"
               ? `Situation Agent is active. ${utilityNextStepAnswer(db, user)}`
               : kind === "pre-provider-readiness"
                 ? preProviderModel.response
-            : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
+            : `${utilityTimeAnswer(options, text)} ${utilityAppointmentAnswer(db, options, user)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
   const situationAgent = nexusSituationAgentModel(db, user, text, kind);
   const redirectSection = ["shipment", "route-delay"].includes(kind) ? "map"
     : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health"
@@ -33395,6 +34061,8 @@ function dailyAdvisorKind(lower) {
 function isDailyAdvisorQuestion(lower) {
   const value = String(lower || "");
   if (isPublicHealthRiskQuestion(value)) return false;
+  // A medicine question ("should I stop taking my ARVs") or a person in danger is not a heat/walking tip. Only a mild heat-and-walking question about someone who is unwell stays with the daily advisor.
+  if (looksLikeHealthReport(value) && !(dailyAdvisorKind(value) === "walking-heat" && !/\b(collaps|faint|passed out|unconscious|unresponsive|seizure|bleed|breath|chest)/.test(value))) return false;
   if (/\b(start to finish|end to end|sell|buyer|payment|order|create order|contact buyer|apply for|submit application|run mission)\b/.test(value)) return false;
   const utilityKind = utilityAssistantKind(value, value);
   const weatherSafety = utilityKind === "weather" && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(value);
@@ -33682,7 +34350,7 @@ async function moduleGreetingResponse(db, user, text, lower) {
   if (!isTradeAddressed) return null;
   if (isLanguageCommand(lower)) {
     const language = languageFromCommand(text);
-    if (!language || !changeUserLanguage(db, user, language)) {
+    if (!language) {
       return {
         intent: "conversation.language_change",
         response: "I can change language to English, French, Kiswahili, Arabic, or Spanish. Tell me which one you want.",
@@ -33690,19 +34358,8 @@ async function moduleGreetingResponse(db, user, text, lower) {
         metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade" }
       };
     }
-    const label = voiceLanguageLabel(language);
-    db.profile.agentMemory.activeModule = "AgriTrade";
-    db.profile.agentMemory.lastStatus = "language-changed";
-    db.profile.agentMemory.lastSummary = `AgriTrade language changed to ${label}.`;
-    db.profile.agentMemory.updatedAt = new Date().toISOString();
-    rememberAgentMemory(db.profile, `User wants AgriTrade phrases and responses in ${label}.`, { source: "language-command", category: "preference", confidence: 0.94 });
-    addActivity(db.profile, `Voice command changed platform language to ${label}.`);
-    return {
-      intent: "conversation.language_changed",
-      response: `Language changed to ${label}. AgriTrade phrases and responses will use ${label}.`,
-      status: "completed",
-      metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade", language }
-    };
+    // Same rule as a free-form request: nothing changes until the person says yes (the confirmed change is applied by the language-change pending action).
+    return stageAgentAction(db, text, phase4LanguageChangeAction(text));
   }
   if (/(tell me about|what do you do|explain|describe|about the platform|about agritrade|how do you help)/.test(lower)) {
     db.profile.agentMemory.activeModule = "AgriTrade";
@@ -33727,7 +34384,7 @@ async function moduleGreetingResponse(db, user, text, lower) {
   const extractedName = extractConversationalName(text);
   const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help|track|route|gps|location)\b/.test(lower);
   if (hasActionRequest && !/\b(my name is|call me)\b/.test(lower)) return null;
-  const name = extractedName || db.profile.userDisplayNames?.[user?.id] || user.name?.split(/\s+/)[0] || "there";
+  const name = extractedName || storedDisplayName(db, user) || user.name?.split(/\s+/)[0] || "there";
   if (extractedName && user?.id) {
     db.profile.userDisplayNames = db.profile.userDisplayNames || {};
     db.profile.userDisplayNames[user.id] = extractedName;
@@ -33784,7 +34441,45 @@ async function informationalBuyerConversationResponse(db, user, text = "", optio
   };
 }
 
-function phase4RiskyActionForCommand(command = "") {
+// Changing the language is a settings change, so every way of asking for it is staged and applied only after a "yes" (the same gate whether it is worded "change my language to French", "please speak French" or
+// "Hi AgriTrade, speak French").
+function phase4LanguageChangeAction(command = "") {
+  const language = languageFromCommand(command);
+  return {
+    confidence: 0.94,
+    constitutionPhase: "phase-4-confirmation-gate",
+    allowedConfirmations: ["yes", "confirm", "do it"],
+    phase4HighRisk: true,
+    kind: "language-change",
+    module: "Profile",
+    tool: "profile.language_change",
+    action: `change language${language ? ` to ${voiceLanguageLabel(language)}` : ""}`,
+    section: "profile",
+    language,
+    pendingActionType: "settings",
+    confirmationPrompt: `I can change your language${language ? ` to ${voiceLanguageLabel(language)}` : ""}. Please confirm before I change this setting. Do you want me to change it now?`
+  };
+}
+
+// A plain spoken switch such as "please speak French" / "reply in Spanish" (a named language, not a country).
+function isSpokenLanguageSwitchRequest(text = "") {
+  const lower = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /\b(speak|talk|respond|reply|answer|switch|change)\b\s*(?:to|in|into|over to)?\s*(?:me\s+in\s+)?(english|french|francais|spanish|espanol|arabic|swahili|kiswahili)\b/.test(lower);
+}
+
+// The trade order a person plainly named ("settle order AN-ORD-AGENT-023", "pay for order 1234"), or null when none was named or no such order exists. Never "the latest order".
+function tradeOrderNamedInText(db, text) {
+  const orders = db?.profile?.orders || [];
+  const source = String(text || "");
+  const id = /\b(AN-ORD-[A-Z0-9-]+)\b/i.exec(source);
+  if (id) return orders.find(order => String(order.orderNumber || "").toLowerCase() === id[1].toLowerCase()) || null;
+  const number = /\border\s*(?:no\.?|number|num|#)?\s*#?(\d{1,9})\b/i.exec(source);
+  if (!number) return null;
+  return orders.find(order => String(order.orderNumber || "") === number[1] || Number((/(\d+)$/.exec(String(order.orderNumber || "")) || [])[1]) === Number(number[1])) || null;
+}
+const TRADE_CURRENCY_BY_COUNTRY = { kenya: "KES", nigeria: "NGN", drc: "CDF" };
+
+function phase4RiskyActionForCommand(command = "", db = null) {
   const lower = normalizeSpeechForIntent(command);
   const base = {
     confidence: 0.94,
@@ -33821,17 +34516,25 @@ function phase4RiskyActionForCommand(command = "") {
     return gate({ module: "Healthcare", tool: "health.consent", action: "share personal information", section: "health", pendingActionType: "privacy", confirmationPrompt: "I can prepare the information share. Before I share personal information, please confirm clearly. Do you want me to share it now?" });
   }
   if (/\b(change|set)\b.*\blanguage\b.*\b(spanish|french|arabic|english|swahili|kiswahili)\b/.test(lower)) {
-    const language = languageFromCommand(command);
-    return gate({ kind: "language-change", module: "Profile", tool: "profile.language_change", action: `change language${language ? ` to ${voiceLanguageLabel(language)}` : ""}`, section: "profile", language, pendingActionType: "settings", confirmationPrompt: `I can change your language${language ? ` to ${voiceLanguageLabel(language)}` : ""}. Please confirm before I change this setting. Do you want me to change it now?` });
+    return phase4LanguageChangeAction(command);
   }
   if (/\b(schedule|book|set up)\b.*\b(appointment|visit|provider|doctor|telehealth)\b/.test(lower)) {
     return gate({ module: "Healthcare", tool: "health.followup", action: "schedule appointment", section: "health", pendingActionType: "appointment", confirmationPrompt: "I can prepare the appointment details. Before I schedule anything, please confirm. Do you want me to schedule the appointment now?" });
   }
-  if (/\b(make|send|submit|create)\b.*\b(payment|pay|checkout|wallet|mpesa|m-pesa)\b|\bmake payment\b/.test(lower)) {
-    return gate({ module: "AgriTrade", tool: "trade.wallet_payment", action: "make payment", section: "trade", pendingActionType: "payment", confirmationPrompt: "I can prepare the payment step. Before any payment action, please confirm. Do you want me to continue with payment now?" });
-  }
-  if (/\b(issue|create|generate)\b.*\b(certificate|credential)\b|\bissue certificate\b/.test(lower)) {
-    return gate({ module: "Learning", tool: "learning.certificate", action: "issue certificate", section: "learning", pendingActionType: "certificate", confirmationPrompt: "I can prepare the certificate. Before I issue it, please confirm. Do you want me to issue the certificate now?" });
+  // A payment is only ever staged for an order the person named, and the prompt says which order, how much and who gets it. "Send 5000 to John on mpesa", "make a payment", "pay" with no order
+  // used to stage a payment with no amount or recipient whose "yes" then settled the LAST order, whatever it was. Kyro cannot send mobile money (see floorGuard.moneyRequest); the only thing it can
+  // post is the settlement record of a delivered trade order, which credits the practice ledger and never moves real money.
+  if (/\b(settle|settlement|release|post|payout|pay out|pay)\b/.test(lower)) {
+    const named = tradeOrderNamedInText(db, command);
+    if (named) {
+      const currency = TRADE_CURRENCY_BY_COUNTRY[String(named.countryId || "").toLowerCase()] || "USD";
+      const amount = Number(named.total ?? named.amount ?? 0);
+      const seller = "the seller on that order";
+      return gate({
+        module: "AgriTrade", tool: "trade.wallet_payment", action: `post the settlement for ${named.orderNumber}`, section: "trade", pendingActionType: "payment", orderId: named.id,
+        confirmationPrompt: `I can post the settlement for order ${named.orderNumber}: ${currency} ${amount} to ${seller}. This only records the settlement on your practice wallet record, and it works only once the order is marked Delivered. No real money is sent. Do you want me to post it now?`
+      });
+    }
   }
   if (/\b(run|start|test)\b.*\b(provider test|provider tests|provider engine|provider engines|live service check|service check)\b/.test(lower)) {
     return gate({ module: "Integrations", tool: "integrations.test_all", action: "run provider test", section: "integrations", pendingActionType: "admin_provider_test", confirmationPrompt: "I can run the provider test. This may touch admin/provider checks, so please confirm. Do you want me to run the provider test now?" });
@@ -33842,8 +34545,124 @@ function phase4RiskyActionForCommand(command = "") {
   return null;
 }
 
+// What a person plainly asked, answered from what is stored (or honestly), before the loose keyword router can read the same words as a state-changing demo workflow on seeded data.
+// Questions, lists and statements never create an order, enrol anyone, issue a certificate, stage a payment or move a job application. See nexus/brain/floor-guard.js.
+function floorGuardReply(db, user, text, rawText, options = {}, stage = "early") {
+  const lang = floorGuard.languageOf(rawText || text, options.targetLanguage || user?.language);
+  const sw = lang === "sw";
+  const R = floorGuard.COURSE_REPLIES[lang];
+  const fill = floorGuard.fill;
+  // Whatever was waiting for a "yes" belonged to something the person has now moved on from; it must not be confirmed by the next bare "yes".
+  const reply = (intent, response, extra = {}) => (ownPendingAction(db, user) && (db.profile.agentPendingAction = null), { intent, response, status: "completed", metadata: { conversationMode: true, redirectSection: extra.redirectSection || "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, floorGuard: intent, responseLanguage: lang, ...extra } });
+  const join = items => items.join(", ");
+  const rolesText = () => join((db.roles || []).map(role => `${role.title}${role.country ? ` (${role.country})` : ""}`));
+  const certList = () => {
+    const certs = user?.certificates || [];
+    if (!certs.length) return sw ? "Huna vyeti bado. Maliza kozi na jaribio lake ili kupata cheti." : "You have no certificates yet. Finish a course and its quiz to earn one.";
+    const items = certs.map(item => `${item.certificateNumber} (${item.title})`);
+    return sw ? `Vyeti ulivyo navyo: ${join(items)}.` : `Your certificates: ${join(items)}.`;
+  };
+  const applicationsList = () => {
+    const apps = db.profile?.applications || [];
+    if (!apps.length) return R.applicationsNone;
+    const items = apps.map(item => `${item.roleTitle || item.roleId} (${item.status})`);
+    const stage = db.profile?.candidateStage ? (sw ? ` Hatua yako: ${db.profile.candidateStage}.` : ` Your stage: ${db.profile.candidateStage}.`) : "";
+    return sw ? `Maombi yako ya kazi: ${join(items)}.${stage}` : `Your job applications: ${join(items)}.${stage}`;
+  };
+
+  // A text or WhatsApp message to a number or a saved person is staged behind a yes by stageMessageIntent (the words and the number read back; "yes" sends it, or says plainly that it could not). Only a
+  // request that reader does not take (no number, no words) is declined here, and it is never turned into a call either way.
+  if (floorGuard.smsRequest(text) && !frontDoor.readMessageRequest(rawText || text)) return reply("communications.sms_declined", floorGuard.SMS_REPLIES[lang], { redirectSection: "agent", messageSent: false });
+
+  if (stage === "late") {
+    const lateWork = floorGuard.workRequest(text);
+    if (lateWork?.kind !== "jobs-question") return null;
+  }
+  // Money. Kyro cannot send mobile money or touch a bank; a balance it cannot see is not guessed; a sale or a receipt is a record, not a payment.
+  const money = floorGuard.moneyRequest(text);
+  if (money && !(money === "send" && tradeOrderNamedInText(db, text))) {
+    return reply(`money.${money}`, floorGuard.MONEY_REPLIES[lang][money], { redirectSection: "trade", realFundsCredited: false, moneyMoved: false });
+  }
+
+  // Certificates.
+  const cert = floorGuard.certificateRequest(text);
+  if (cert) {
+    if (cert.kind === "certificate-list") return reply("learning.certificates", certList(), { redirectSection: "learning" });
+    if (cert.kind === "certificate-lost") return reply("learning.certificate_copy", fill(R.certificateLost, { list: certList() }), { redirectSection: "learning" });
+    if (cert.kind === "jobs-question") return reply("workforce.jobs_question", (db.roles || []).length ? fill(R.jobsQuestion, { roles: rolesText() }) : R.noRoles, { redirectSection: "workforce" });
+    const status = learningCertificateStatus(db, user);
+    if (status.state === "have") return reply("learning.certificates", certList(), { redirectSection: "learning" });
+    if (status.state === "none") return reply("learning.certificate_not_ready", R.certificateNotYet, { redirectSection: "learning" });
+    if (status.state === "lessons") return reply("learning.certificate_not_ready", fill(R.certificateNeedLessons, { course: status.course.title, done: status.done, total: status.total }), { redirectSection: "learning" });
+    if (status.state === "quiz") return reply("learning.certificate_not_ready", fill(R.certificateNeedQuiz, { course: status.course.title }), { redirectSection: "learning" });
+    const issued = issueAgentCertificate(db, user);
+    return reply("learning.certificate", sw ? `Nimemaliza. ${issued}` : `Done. ${issued}`, { redirectSection: "learning", executionVerified: true });
+  }
+
+  // Learning questions and lists, answered read-only; "continue my course" / "enrol me" are the only wordings that change anything (see floorGuard.learningRequest).
+  const learning = floorGuard.learningRequest(text);
+  if (learning) {
+    if (learning.kind === "lesson-language") return reply("learning.lesson_language", R.lessonLanguage, { redirectSection: "learning" });
+    if (learning.kind === "complete-lesson") return reply("learning.complete_lesson_declined", R.completeLesson, { redirectSection: "learning" });
+    if (learning.kind === "quiz") return reply("learning.quiz_declined", R.quiz, { redirectSection: "learning" });
+    if (learning.kind === "courses-list") {
+      const titles = (db.courses || []).map(course => course.title);
+      if (!titles.length) return reply("learning.courses", R.noCourses, { redirectSection: "learning" });
+      const active = getEnrollment(user, user?.activeCourseId);
+      const activeCourse = active ? (db.courses || []).find(course => course.id === active.courseId) : null;
+      const line = sw
+        ? `Kozi ninazoziona: ${join(titles)}.${activeCourse ? ` Uko kwenye ${activeCourse.title} (${Number(active.progress || 0)}%).` : ""} Sema "endelea na kozi yangu" ili kuanza au kuendelea. Hakuna kilichobadilishwa.`
+        : `The courses I can see: ${join(titles)}.${activeCourse ? ` You are on ${activeCourse.title} (${Number(active.progress || 0)}%).` : ""} Say "continue my course" to start or carry on. Nothing was changed.`;
+      return reply("learning.courses", line, { redirectSection: "learning" });
+    }
+    if (learning.kind === "progress") {
+      ensureLearningProfile(user);
+      const rows = (user.enrollments || []).map(item => ({ item, course: (db.courses || []).find(course => course.id === item.courseId) })).filter(row => row.course);
+      if (!rows.length) return reply("learning.progress", R.noProgress, { redirectSection: "learning" });
+      const items = rows.map(({ item, course }) => `${course.title} ${Number(item.progress || 0)}%`);
+      const finished = (user.completedCourses || []).length;
+      const line = sw
+        ? `Maendeleo yako: ${join(items)}. Kozi ulizomaliza: ${finished}. Hakuna kilichobadilishwa.`
+        : `Your progress: ${join(items)}. Courses finished: ${finished}. Nothing was changed.`;
+      return reply("learning.progress", line, { redirectSection: "learning" });
+    }
+  }
+
+  // Work questions and lists.
+  const work = floorGuard.workRequest(text);
+  if (work) {
+    if (work.kind === "applications-list") return reply("workforce.applications", applicationsList(), { redirectSection: "workforce" });
+    if (work.kind === "application-withdraw") return reply("workforce.application_withdraw_declined", fill(R.withdraw, { list: applicationsList() }), { redirectSection: "workforce" });
+    // A question about which jobs exist is answered late (just before the keyword router), so the richer career answers earlier in runAgentCommand still get first go at it.
+    if (work.kind === "jobs-question" && stage === "late") return reply("workforce.jobs_question", (db.roles || []).length ? fill(R.jobsQuestion, { roles: rolesText() }) : R.noRoles, { redirectSection: "workforce" });
+    if (work.kind === "apply") {
+      const asked = floorGuard.askedRoleName(text);
+      if (!(db.roles || []).length) return reply("workforce.application_help", R.noRoles, { redirectSection: "workforce" });
+      if (!asked) return { ...reply("workforce.application_help", fill(R.applyWhich, { roles: rolesText() }), { redirectSection: "workforce" }), status: "needs-details" };
+      const found = floorGuard.matchRoles(db.roles, asked);
+      if (!found.length) return { ...reply("workforce.application_help", fill(R.applyNotFound, { asked, roles: rolesText() }), { redirectSection: "workforce" }), status: "needs-details" };
+      if (found.length > 1) return { ...reply("workforce.application_help", fill(R.applyWhich, { roles: join(found.map(role => role.title)) }), { redirectSection: "workforce" }), status: "needs-details" };
+      const role = found[0];
+      // The caller already confirmed (options.confirm, the same flag the older branches honour): record it for the named role now.
+      if (options.confirm === true) {
+        const result = submitBestWorkforceApplication(db, user, text, { roleId: role.id });
+        return { ...reply(result.status === "completed" ? "workforce.application_submitted" : "workforce.application_help", result.response, { redirectSection: "workforce", roleId: role.id, applicationId: result.application?.id || null }), status: result.status };
+      }
+      const staged = stageAgentAction(db, text, {
+        kind: "workforce-application", module: "Workforce", action: `apply for ${role.title}`, section: "workforce", pendingActionType: "application", roleId: role.id,
+        confidence: 0.94, constitutionPhase: "phase-4-confirmation-gate", allowedConfirmations: sw ? ["yes", "confirm", "do it", "ndiyo", "sawa"] : ["yes", "confirm", "do it"], phase4HighRisk: true,
+        confirmationPrompt: fill(R.applyPrompt, { role: role.title, country: role.country || "", practice: workforceEngineIsLive() ? R.practiceLive : R.practice })
+      });
+      return { ...staged, metadata: { ...(staged.metadata || {}), responseLanguage: lang } };
+    }
+  }
+  return null;
+}
+
 async function runAgentCommand(db, user, command, options = {}) {
   switchAgentContextTo(db, user);
+  // Whose clock: the device's zone when it sent one, else the person's saved zone, else their country's. Every time answer and reminder below reads this, never the server's UTC.
+  { const zoneDetail = resolveReminderTimeZoneDetail({ requested: options.timeZone, user }); options = { ...options, timeZone: zoneDetail.zone, timeZoneSource: zoneDetail.source }; }
   ensureAiProfile(db.profile);
   const rawCommand = String(command || "");
   const invokedAgriNexus = /\b(agrinexus|agri\s+nexus|nexus)\b/i.test(rawCommand);
@@ -33858,7 +34677,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const conversational = options.conversational === true;
   if (!text) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.greeting",
       response: `Yes ${name}, how can I assist you?`,
@@ -33870,16 +34689,20 @@ async function runAgentCommand(db, user, command, options = {}) {
   // and the older command route use, and the fallback when the planner cannot be reached, so it must not answer these differently.
   const guarded = contentGuardReply(text);
   if (guarded) {
+    // A scam warning leaves nothing staged: a bare "yes" right after it must not confirm whatever was waiting before.
+    if (/^scam-/.test(guarded.kind) && ownPendingAction(db, user)) db.profile.agentPendingAction = null;
     return {
       intent: `conversation.guard.${guarded.kind}`,
       response: guarded.reply,
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, contentGuard: guarded.kind }
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, contentGuard: guarded.kind, ...(guarded.language ? { responseLanguage: guarded.language } : {}) }
     };
   }
   // And the care and safety answers the planner gives first (see careSafetyReply above).
   const careSafe = await careSafetyReply(text, user);
   if (careSafe) {
+    // A safety answer ends whatever was waiting for a "yes": the next "yes" must not complete a course or a call that was staged for something else.
+    if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
     return {
       intent: `conversation.safety.${careSafe.kind}`,
       response: careSafe.reply,
@@ -33887,6 +34710,51 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, careSafety: careSafe.kind }
     };
   }
+  // The answer to a question about a reminder that was just asked ("At 6 in the morning or in the evening?", "Cancel all 5?") finishes that reminder; anything else is handled as a new request.
+  const pendingReminderAnswer = await resolvePendingReminder(db, user, text, options);
+  if (pendingReminderAnswer) return pendingReminderAnswer;
+  // "What is the emergency number in Kenya?" is a question with a plain answer, not a report of an emergency.
+  const emergencyNumber = emergencyNumberAnswer(text, user);
+  if (emergencyNumber) {
+    return {
+      intent: "conversation.emergency_number",
+      response: emergencyNumber,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true }
+    };
+  }
+  // "I am pregnant" / "I am diabetic" / "I am HIV positive" is something the person is telling Kyro about themselves, not their name. It is acknowledged and nothing is saved from it.
+  if (healthStatusStatement(lower)) {
+    return {
+      intent: "conversation.health_status_noted",
+      response: "Thank you for telling me. I have not saved this as your name or in your health records. What would you like help with: a health question, finding a clinic, or something else?",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, suggestedReplies: ["find a clinic", "I have a health question", "something else"] }
+    };
+  }
+  // "Should I stop taking my ARVs because I feel fine?" is a medicine decision. Kyro does not decide it (same stance as the missed-dose answer: ask the pharmacist or clinic), and it is not a heat tip or an interruption.
+  if (medicineStopQuestion(lower)) {
+    return {
+      intent: "conversation.medicine_stop_question",
+      response: "I can't decide that for you, and stopping a medicine on your own can be risky. Please speak to your clinic, doctor or pharmacist before you stop or change it. I have not changed anything.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true }
+    };
+  }
+  // A PIN, password, card or account number asked to be saved (English, Kiswahili, Sheng or Pidgin) is never saved as a note, memory, list item or reminder, on any path that reaches here.
+  const secretRefusal = secretNotSavedReply(text, options.language);
+  if (secretRefusal) {
+    return {
+      intent: "safety.secret_refused",
+      response: secretRefusal.response,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, noExecutionAuthorized: true, secretNotSaved: true, language: secretRefusal.language }
+    };
+  }
+  // Questions, lists and statements about money, certificates, courses, applications and jobs are answered from stored data (or honestly) here, so the loose keyword router below can never read them as
+  // a request to create an order, stage a payment, issue a certificate or enrol or move an application on the seeded demo data.
+  const floorAnswer = floorGuardReply(db, user, text, rawCommand, options);
+  if (floorAnswer) return floorAnswer;
   if (isLanguageCommand(lower)) {
     const language = languageFromCommand(text);
     if (!language) {
@@ -33897,7 +34765,7 @@ async function runAgentCommand(db, user, command, options = {}) {
         metadata: { conversationMode: true, redirectSection: "dashboard", languageChangeRequested: true, noExecutionAuthorized: true }
       };
     }
-    const gatedLanguageChange = phase4RiskyActionForCommand(text);
+    const gatedLanguageChange = phase4RiskyActionForCommand(text, db) || (isSpokenLanguageSwitchRequest(text) ? phase4LanguageChangeAction(text) : null);
     if (gatedLanguageChange) return stageAgentAction(db, text, gatedLanguageChange);
   }
   if (conversational && isGlobalVoiceStopIntent(text)) {
@@ -33918,7 +34786,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (stabilizationRepair) return stabilizationRepair;
   const onboardingPhrase = /^(i am|i'm)\s+new\b/i.test(text) || /\b(how do i|where do i start|show me how|help me use|start training)\b/i.test(text);
   const spokenName = onboardingPhrase ? "" : extractConversationalName(text);
-  const directNameIntro = /^(my name is|i am|i'm|this is|call me)\b/i.test(text)
+  const directNameIntro = /^(my name is|i am|i'm|this is|call me|naitwa|ninaitwa|jina langu ni)\b/i.test(text)
     || /^(hi|hello|hey|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri\s+nexus)?[,:\-]?\s*(my name is|i am|i'm|this is|call me)\b/i.test(text);
   if (conversational
     && /\b(visually impaired|blind|cant see|can't see|visual|screen reader|large print)\b/.test(lower)
@@ -34003,8 +34871,14 @@ async function runAgentCommand(db, user, command, options = {}) {
       const sessionStart = Date.parse(options.sessionStartedAt);
       if (!Number.isFinite(stagedAt) || !Number.isFinite(sessionStart) || stagedAt < sessionStart) return null;
     }
+    // The topic changed: a health report is not an answer about a course, a call or a payment that was staged earlier, and a later "yes" must not complete that other thing.
+    if (!isAffirmativeCommand(lower) && !isNegativeCommand(lower) && !isVagueConfirmationCommand(lower) && looksLikeHealthReport(text) && String(pending.module || "") !== "Healthcare") {
+      db.profile.agentPendingAction = null;
+      return null;
+    }
     return pending;
   })();
+
   if (topPendingAction?.phase4HighRisk && isVagueConfirmationCommand(lower)) {
     return {
       intent: "conversation.confirmation_required",
@@ -34067,8 +34941,12 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", confirmationRequired: false, executionDeferred: false }
     };
   }
-  const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
+  // Not only for the conversational channel: the voice tool gateway and other API callers send the same words, and an emergency answer cannot depend on which door they came through.
+  const urgentHealth = urgentHealthSafetyResponse(db, user, text);
   if (urgentHealth) return urgentHealth;
+  // (a message is only ever STAGED here, behind a yes, so unlike a call it is read whether or not the caller is in conversational mode: the voice tools are not)
+  const backendMessageIntent = stageMessageIntent(db, user, text, options);
+  if (backendMessageIntent) return backendMessageIntent;
   const backendCallIntent = conversational ? stageBackendCallIntent(db, user, text, options) : null;
   if (backendCallIntent) return backendCallIntent;
   const reminderContactCommand = /\b(remind|reminder|notify|notification)\b/.test(lower);
@@ -34092,7 +34970,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   // execute branches fixed in the same commit). Always computing it,
   // regardless of conversational, only ever adds a staged-confirmation
   // response -- it cannot turn a safe path unsafe.
-  const phase4RiskyAction = phase4RiskyActionForCommand(text);
+  const phase4RiskyAction = phase4RiskyActionForCommand(text, db);
   if (phase4RiskyAction) return stageAgentAction(db, text, phase4RiskyAction);
   if (conversational && shouldHandleActiveClarificationAnswer(db, text, lower)) {
     const clarified = continueClarification(db, user, text);
@@ -34116,7 +34994,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const prioritizedActionMemoryCommand = assistantActionMemoryCommandResponse(db, user, text, lower, options);
   if (prioritizedActionMemoryCommand) return prioritizedActionMemoryCommand;
-  const prioritizedReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
+  const prioritizedReminderCommand = await assistantReminderCommandResponse(db, user, text, lower, options);
   if (prioritizedReminderCommand) return prioritizedReminderCommand;
   if (conversational && /\b(how is|how are|what makes|why is|why are)\b.*\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b/.test(lower)) {
     return {
@@ -34237,7 +35115,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
@@ -34352,7 +35230,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     }
   }
   if (conversational && /^(good\s*morning|good\s*afternoon|good\s*evening|hello|hi|hey)\b(?:\s+(nexus|agrinexus|agri\s+nexus))?$/i.test(lower)) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.greeting",
       response: `Good morning ${name}. How can I assist you?`,
@@ -34361,7 +35239,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there|are you with me|you with me)\b/.test(lower)) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.hearing_check",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
@@ -34394,7 +35272,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home|main menu|main menu home|menu home)$/i.test(lower)
     || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
     || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower))) {
-    const name = db.profile.userDisplayNames?.[user?.id] || user?.name?.split(/\s+/)[0] || "there";
+    const name = storedDisplayName(db, user) || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.home",
       response: `Home is open, ${name}. What do you need next?`,
@@ -34446,7 +35324,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(baby|child|infant)\b.*\b(sick|hot|fever|weak|pain|vomit|cough|not breathing|cannot breathe|can't breathe|cant breathe)\b/.test(lower)) {
     return {
       intent: "conversation.health_urgent_child",
-      response: "Call emergency services now if available, such as 911 in the U.S. A baby who is not breathing needs immediate emergency help. I am not a doctor and AgriNexus cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.",
+      response: `${emergencyCallLead(user)} A baby who is not breathing needs immediate emergency help. I am not a doctor and AgriNexus cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.`,
       status: "urgent-guidance",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, frontierCommunication: { urgency: "high", nextQuestion: "After emergency help is called, where are you, and is the baby breathing normally?", confidence: 0.94 }, suggestedReplies: ["find emergency care", "call provider", "start intake"] }
     };
@@ -34640,11 +35518,11 @@ async function runAgentCommand(db, user, command, options = {}) {
     return {
       intent: "memory-updated",
       response: `I will remember this: ${db.profile.agentMemory.activeMission}.`,
-      metadata: { memory: db.profile.agentMemory }
+      metadata: { memory: agentMemoryForReply(db, user) }
     };
   }
   if (/\bwhat did i say\b.*\b(priority|goal|mission)\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b.*\b(priority|goal|mission)\b/.test(lower)) {
-    const remembered = db.profile.agentMemory.activeMission || longTermMemorySummary(db.profile).topMemories?.[0]?.text || "";
+    const remembered = ownActiveMission(db, user) || longTermMemorySummary(db.profile, user).topMemories?.[0]?.text || "";
     return {
       intent: "memory-recalled",
       response: remembered
@@ -34655,7 +35533,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
-    const summary = longTermMemorySummary(db.profile);
+    const summary = longTermMemorySummary(db.profile, user);
     const memories = summary.topMemories;
     const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
     const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
@@ -35030,7 +35908,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const earlyActionMemoryCommand = assistantActionMemoryCommandResponse(db, user, text, lower, options);
   if (earlyActionMemoryCommand) return earlyActionMemoryCommand;
-  const earlyReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
+  const earlyReminderCommand = await assistantReminderCommandResponse(db, user, text, lower, options);
   if (earlyReminderCommand) return earlyReminderCommand;
   if (/(trade|agritade|agritrade|crop|buyer|route|order|logistics|drone|farm)/.test(lower) && /(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
     return tradeOperationalEfficiencyReview(db, user, text);
@@ -35473,7 +36351,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const directActionMemoryCommand = assistantActionMemoryCommandResponse(db, user, text, lower, options);
   if (directActionMemoryCommand) return directActionMemoryCommand;
-  const directReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
+  const directReminderCommand = await assistantReminderCommandResponse(db, user, text, lower, options);
   if (directReminderCommand) return directReminderCommand;
   const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (directUtilityCommand) return directUtilityCommand;
@@ -35503,11 +36381,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   const phoneContactCommand = await phoneContactMemoryCommandResponse(db, user, text, lower, options);
   if (phoneContactCommand) return phoneContactCommand;
 
-  if (/(complete|finish|advance).*(my\s+)?lesson|next lesson/.test(lower)) {
-    const result = await executeAgentTool(db, user, { tool: "learning.complete_lesson" });
-    return { intent: "learning.complete_lesson", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
-  }
-
+  // (A bare "complete my lesson" / "next lesson" used to mark a lesson done that was never shown, and a bare "certificate" used to issue one. Both are answered in floorGuardReply now.)
   if (/(orchestrate|elevate|optimi[sz]e|review).*(platform|mission|everything|all modules|whole system|ai)/.test(lower) || /(what should we do next|highest value next step|best next step)/.test(lower)) {
     const result = await aiOrchestrationReview(db, user, { type: "copilot", note: text });
     return {
@@ -35515,27 +36389,6 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `I reviewed the whole platform. Best next move: ${result.orchestration.recommendation}. I saved the AI run, workflow intelligence, and provider evidence.`,
       status: "completed",
       metadata: { conversationMode: conversational, redirectSection: result.orchestration.topAction.section || "dashboard", orchestrationId: result.orchestration.id, topAction: result.orchestration.topAction }
-    };
-  }
-
-  if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
-    const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
-    return {
-      intent: "learning.certificate",
-      response: `I can help with your certificate. ${result} Which course did you finish?`,
-      status: "needs-details",
-      metadata: {
-        conversationMode: conversational,
-        redirectSection: "learning",
-        moduleSignal: { module: "Learning", section: "learning" },
-        frontierCommunication: {
-          urgency: "normal",
-          nextQuestion: "Which course did you finish?",
-          confidence: 0.94,
-          responseShape: "confirm certificate need, route to learning, ask one learner-friendly next question"
-        },
-        suggestedReplies: ["show my progress", "start next course", "read the lesson"]
-      }
     };
   }
 
@@ -35926,7 +36779,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
-    const summary = longTermMemorySummary(db.profile);
+    const summary = longTermMemorySummary(db.profile, user);
     const memories = summary.topMemories;
     const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
     const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
@@ -36237,7 +37090,11 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
-  const deepIntent = deepVoiceIntent(lower);
+  // A keyword in a sentence is not a request: the tools that write to the shared demo records run from here only when the person plainly asked for exactly that.
+  const jobsAnswer = floorGuardReply(db, user, text, rawCommand, options, "late");
+  if (jobsAnswer) return jobsAnswer;
+  const deepIntentCandidate = deepVoiceIntent(lower);
+  const deepIntent = deepIntentCandidate && floorGuard.toolMayRunFromLooseText(deepIntentCandidate.tool, text) ? deepIntentCandidate : null;
   if (deepIntent) {
     if (!wantsExecute) {
       return stageAgentAction(db, text, { module: deepIntent.module, tool: deepIntent.tool, action: deepIntent.action, section: deepIntent.section });
@@ -36303,12 +37160,12 @@ async function runAgentCommand(db, user, command, options = {}) {
     return {
       intent: "memory-updated",
       response: `I will remember this: ${db.profile.agentMemory.activeMission}.`,
-      metadata: { memory: db.profile.agentMemory }
+      metadata: { memory: agentMemoryForReply(db, user) }
     };
   }
 
   if (/\bwhat did i say\b.*\b(priority|goal|mission)\b|\bwhat (?:is|was) my (?:priority|goal|mission)\b|\bremind me what\b.*\b(priority|goal|mission)\b/.test(lower)) {
-    const remembered = db.profile.agentMemory.activeMission || longTermMemorySummary(db.profile).topMemories?.[0]?.text || "";
+    const remembered = ownActiveMission(db, user) || longTermMemorySummary(db.profile, user).topMemories?.[0]?.text || "";
     return {
       intent: "memory-recalled",
       response: remembered
@@ -36320,7 +37177,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
-    const summary = longTermMemorySummary(db.profile);
+    const summary = longTermMemorySummary(db.profile, user);
     const memories = summary.topMemories;
     const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
     const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
@@ -36410,7 +37267,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (lower.includes("execute") && lower.includes("plan")) {
-    const plan = db.profile.agentPlans[0];
+    const plan = visibleRecordsFor(db.profile.agentPlans, user)[0];
     if (!plan) return { intent: "execute-agent-plan", response: "Create an agent plan first.", status: "needs-plan" };
     const execution = await executeAgentPlanObject(db, user, plan, options.note || "Approved from voice command");
     return { intent: "execute-agent-plan", response: execution.summary, status: execution.status, metadata: { planId: plan.id, executionId: execution.id } };
@@ -36452,7 +37309,9 @@ async function runAgentCommand(db, user, command, options = {}) {
     { keys: ["map", "route", "risk"], tool: "map.route_risk", module: "Maps", action: "Assess route" },
     { keys: ["copilot", "ai", "question", "recommend"], tool: "ai.copilot", module: "AI", action: "Run copilot" }
   ];
-  const matched = toolByCommand.find(item => item.keys.some(key => lower.includes(key)));
+  // Short keywords such as "ai" and "order" appear inside ordinary sentences ("Friday", "text John that his order is ready", "how much water does tomato need"): the demo tools that write records
+  // (an order for the seeded coffee lot, a drone field task, a scan, an enrolment, a role match) run only when asked for plainly. Anything else falls through to the honest "could not do that".
+  const matched = toolByCommand.find(item => item.keys.some(key => lower.includes(key)) && floorGuard.toolMayRunFromLooseText(item.tool, text));
   if (matched) {
     if (!wantsExecute && (options.stageOnly || conversational)) {
       return stageAgentAction(db, text, { module: matched.module, tool: matched.tool, action: matched.action, section: sectionForAgentModule(matched.module) });
@@ -36472,7 +37331,11 @@ async function runAgentCommand(db, user, command, options = {}) {
 }
 
 async function runCompanionSafeAgentCommand(db, user, body = {}) {
-  const command = String(body.command || "").trim();
+  // The one front door (nexus/speech/normalise.js), for the typed route, the voice route and the phone line alike. The safety check below sees what was said as well as what
+  // was meant (see `saidCommand`), so cleaning never hides a danger phrase.
+  const spokenFront = normaliseSpoken(String(body.command || ""), { language: body.targetLanguage || body.language || user?.language, wakeBeforeQuestions: false });
+  const saidCommand = spokenFront.clean;
+  const command = spokenFront.text.trim();
   const inputMode = String(body.inputMode || "api").trim() || "api";
   const outputMode = String(body.outputMode || "").trim();
   const commandLanguage = canonicalVoiceLanguage(body.targetLanguage || body.language || user.language);
@@ -36493,7 +37356,18 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   // working behavior. Genuine psychological crisis / safeguarding concerns
   // have no such pre-existing coverage in this pipeline, so they still fire
   // here regardless of the conversational flag.
-  const mentalHealthSignal = command ? nexusMentalHealthBehavioralWellness.classifyState(command, {}) : null;
+  // A PIN, password or card number asked to be saved is refused before anything is recorded (not in the history, the voice log or the memories either).
+  const secretRefusal = secretNotSavedReply(command, commandLanguage);
+  if (secretRefusal) {
+    return {
+      result: { intent: "safety.secret_refused", response: secretRefusal.response, status: "completed", noExecutionAuthorized: true, secretNotSaved: true,
+        metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, secretNotSaved: true, language: secretRefusal.language } },
+      companionUnderstanding: null, companionRouteOutcome: null
+    };
+  }
+  const meantSignal = command ? nexusMentalHealthBehavioralWellness.classifyState(command, {}) : null;
+  const saidSignal = saidCommand && saidCommand !== command ? nexusMentalHealthBehavioralWellness.classifyState(saidCommand, {}) : null;
+  const mentalHealthSignal = meantSignal?.crisisOverride === true || !saidSignal ? meantSignal : (saidSignal.crisisOverride === true || saidSignal.state === "medical_emergency" ? saidSignal : meantSignal);
   const mentalHealthAlreadyHandledElsewhere =
     mentalHealthSignal?.state === "medical_emergency" && body.conversational === true;
   if (mentalHealthSignal?.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
@@ -36502,6 +37376,8 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
       screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(command)
     });
+    const swahiliReply = await swahiliCrisisReply(command, commandLanguage, user);
+    if (swahiliReply) { packet.userVisibleStatus = swahiliReply; packet.responseLanguage = "sw"; }
     // Matches this function's normal { result, companionUnderstanding,
     // companionRouteOutcome } return shape -- callers destructure `result`
     // unconditionally and some mutate result.metadata directly. Deliberately
@@ -36513,6 +37389,25 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
         capability: "mental-health-behavioral-wellness", mentalHealth: packet,
         noDiagnosis: true, noProviderContacted: true, noEmergencyDispatch: true, metadata: {} },
       companionUnderstanding: null, companionRouteOutcome: null
+    };
+  }
+  // Health readings said or typed ("my blood pressure is 150 over 95", "show my BP readings", "delete my last reading", "who can see my health information") and the medicine questions around them: Kyro
+  // reads a reading back and saves it only after a yes (see nexus/health/readings-conversation.js). Like the crisis answer above, it is not written into the general command history.
+  const healthTurn = command ? healthReadingsReply(db, user, command, { language: commandLanguage }) : null;
+  if (healthTurn) {
+    return {
+      result: {
+        intent: "health.readings",
+        response: healthTurn.response,
+        status: healthTurn.requiresConfirmation ? "needs-confirmation" : "completed",
+        metadata: {
+          conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, healthReadings: healthTurn.kind || true,
+          executionAttempted: Boolean(healthTurn.wrote || healthTurn.attempted), executionVerified: Boolean(healthTurn.wrote),
+          ...(healthTurn.requiresConfirmation ? { confirmationRequired: true, executionDeferred: true, pendingActionType: "health-reading", allowedConfirmations: ["yes", "no"] } : {})
+        }
+      },
+      companionUnderstanding: null,
+      companionRouteOutcome: null
     };
   }
   const companionUnderstanding = companionUnderstandingClassification(command, {
@@ -36542,7 +37437,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     accessibilityPreferences: db.profile.agentMemory?.accessibilityPreferences || {},
     // The name the person just said wins ("Hello Nexus, this is Ron"); an account called "Standard User" is not a name.
     // Falls back to this account's OWN previously-captured display name (never another account's), then the account name.
-    userName: spokenNameFromGreeting(command) || db.profile.userDisplayNames?.[user?.id] || personalFirstName(user)
+    userName: spokenNameFromGreeting(command) || storedDisplayName(db, user) || personalFirstName(user)
   });
   {
     const spokenGreetingName = spokenNameFromGreeting(command);
@@ -36598,10 +37493,79 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
       updatedAt: new Date().toISOString()
     };
   }
-  if (conversationalModeOrchestrator.signals.memory && /\b(do not remember|don't remember|forget)\b/i.test(command)) {
+  const explicitRememberFact = explicitRememberRequest(command);
+  if (conversationalModeOrchestrator.signals.memory && /\b(do not remember|don't remember|forget)\b/i.test(command) && !explicitRememberFact) {
     db.profile.agentMemory.memoryScope = "restricted-by-user";
-  } else if (conversationalModeOrchestrator.signals.memory && /\bremember that\b/i.test(command)) {
+  } else if (conversationalModeOrchestrator.signals.memory && /\bremember that\b/i.test(command) && !explicitRememberFact) {
     db.profile.agentMemory.memoryScope = "consent-requested";
+  }
+  // An explicit "remember ..." is answered by what really happened: saved (and read back), or plainly not saved. It used to get a generic "memory is under your control" paragraph that sounded like a save.
+  if (explicitRememberFact && !db.profile.agentMemory?.activeIntake) {
+    const outcome = saveExplicitRemember(db, user, explicitRememberFact);
+    const rememberResponse = outcome.saved
+      ? `Saved: ${outcome.fact}. Ask me what I remember to hear it back.`
+      : outcome.reason === "sensitive"
+        ? "I won't remember that kind of detail (passwords, card, bank or ID numbers), so no note was saved. Please keep it private and don't say it here."
+        : "I can't save that for you from here, nothing was saved. Sign in with your own account and I can keep it.";
+    let rememberResult = ensureSpeakableAgentResult({
+      intent: "conversation.mode_orchestrator.memory_preference",
+      response: rememberResponse,
+      status: outcome.saved ? "completed" : "needs-review",
+      metadata: {
+        redirectSection: "dashboard",
+        inputMode,
+        outputMode: outputMode || undefined,
+        language: commandLanguage,
+        targetLanguage: commandLanguage,
+        companionUnderstanding,
+        conversationalModeOrchestrator,
+        selectedConversationalModes: conversationalModeOrchestrator.selectedModeIds,
+        explicitRemember: { saved: outcome.saved, reason: outcome.reason || null, memoryId: outcome.memoryId || null, fact: outcome.saved ? outcome.fact : null },
+        noExecutionAuthorized: true,
+        providerHandoffAuthorized: false
+      }
+    }, "conversation.mode_orchestrator.memory_preference");
+    rememberResult = await translateAgentCommandResult(db, user, rememberResult, { targetLanguage: commandLanguage });
+    commandRecord(db, user, command, rememberResult);
+    if (outputMode === "voice") {
+      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${rememberResult.response}`, { response: rememberResult.response, inputMode, language: commandLanguage });
+    }
+    addWorkflowNote(db.profile, body.note, "Agent command note");
+    return {
+      result: rememberResult,
+      companionUnderstanding,
+      companionRouteOutcome: { route: "explicit-remember", saved: outcome.saved, noExecutionAuthorized: true, workflowOpened: false }
+    };
+  }
+  // Practice lessons, practice interviews, jobs and training, a child who works: answered plainly before anything else can guess (nexus/floor). It goes through the same layers as every
+  // other answer (the conversational orchestrator, the companion understanding, the action policy) so the response carries the same evidence.
+  const floorTurn = workLearningFloorTurn(db, user, command, commandLanguage);
+  if (floorTurn) {
+    const result = workLearningFloorResult(floorTurn, { inputMode, outputMode, companionUnderstanding, conversationalModeOrchestrator });
+    const agentAction = buildAgentActionMetadata({ userMessage: command, result, inputMode, outputMode: outputMode || undefined, language: floorTurn.language });
+    result.metadata = {
+      ...(result.metadata || {}),
+      agentAction,
+      policyDecision: agentAction.policyDecision || null,
+      nexusPlan: agentAction.nexusPlan || null,
+      plannerObservation: agentAction.plannerObservation || null
+    };
+    commandRecord(db, user, command, result);
+    if (outputMode === "voice") {
+      voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response, inputMode, language: floorTurn.language });
+    }
+    addWorkflowNote(db.profile, body.note, "Agent command note");
+    return {
+      result,
+      companionUnderstanding,
+      companionRouteOutcome: {
+        route: "work-learning-floor",
+        primaryModeId: conversationalModeOrchestrator.primaryMode.id,
+        blendedModeIds: conversationalModeOrchestrator.blendedModes.map(mode => mode.id),
+        noExecutionAuthorized: true,
+        workflowOpened: false
+      }
+    };
   }
   const stabilizationRepair = await genesisStabilizationConversationRepair(db, user, command, {
     ...body,
@@ -36649,7 +37613,8 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   // not be mistaken for a new conversational mode; only safety, privacy, interruption and repair keep priority.
   const intakeAnswerInProgress = Boolean(db.profile.agentMemory?.activeIntake)
     && !["emergency_safety", "privacy_sensitive", "interruption_turn_taking", "repair_correction"].includes(conversationalModeOrchestrator.primaryMode?.id);
-  if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response" && !intakeAnswerInProgress) {
+  // A care or safety sign ("my sugar is 2.1 and I am shaking and sweating and confused": "confused" read as a gentle chat) is never answered as small talk: it goes on to runAgentCommand, which gives the care answer first.
+  if (conversationalModeOrchestrator.responseStrategy === "direct_conversational_response" && !intakeAnswerInProgress && !careSafetyApplies(command)) {
     const directConversation = companionDirectConversationIntent(conversationalModeOrchestrator);
     let result = ensureSpeakableAgentResult({
       intent: directConversation.intent,
@@ -36736,6 +37701,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     modeContext: body.modeContext,
     note: body.note,
     timeZone: body.timeZone,
+    correlationId: body.correlationId || "",
     location: body.location || body.currentLocation || null,
     language: commandLanguage,
     targetLanguage: commandLanguage,
@@ -46634,7 +47600,7 @@ async function api(req, res, url) {
   const usersChanged = businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE ? ensureDefaultUsers(db) : false;
   const user = currentUser(req, db);
   // From here to the end of this request, saves stamp the owner on the records it creates (see profileOwnerStamping). Reads never change data, so skip them.
-  if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
+  if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, role: user.role, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
 
   // Many routes answer a caller who is not signed in and then save something (preparing a message, a profile, a request record), and each save rewrites the whole shared record. Give anonymous changes one
   // generous ceiling per address (120 a minute; AGRINEXUS_ANON_WRITE_RATE_LIMIT_PER_MINUTE) so nobody can use them to keep that write path busy. Signed-in people are never counted here, and the routes that
@@ -46796,14 +47762,22 @@ async function api(req, res, url) {
     return send(res, 200, nexusUserTestingRuntime.userTestingReadinessSnapshot(db, process.env));
   }
 
+  // The testing notes are free text written by signed-in testers and kept in one shared list, so reading them, adding to them and every other change under /api/nexus/user-testing/ needs a sign-in. A caller
+  // with no session used to read every tester's notes, to fill the shared store without limit (GET e2e-harness alone added 24 records and 26 audit lines per call), and to get a server error from the routes
+  // that expect a person (memory, execute, verify). The read-only status, roles, providers, security and readiness views stay open.
+  if (url.pathname.startsWith("/api/nexus/user-testing/") && !user
+    && (req.method !== "GET" || url.pathname === "/api/nexus/user-testing/memory" || url.pathname === "/api/nexus/user-testing/e2e-harness")) {
+    return send(res, 401, { error: "Sign in required" });
+  }
   if (url.pathname === "/api/nexus/user-testing/memory" && req.method === "GET") {
     return send(res, 200, {
       ok: true,
       records: nexusUserTestingRuntime.listMemoryRecords(db, {
         type: url.searchParams.get("type") || "",
-        includeArchived: url.searchParams.get("includeArchived") === "true"
+        includeArchived: url.searchParams.get("includeArchived") === "true",
+        viewer: user || { email: "", role: "" }
       }),
-      queryResults: url.searchParams.get("q") ? nexusUserTestingRuntime.searchMemoryRecords(db, url.searchParams.get("q")) : null,
+      queryResults: url.searchParams.get("q") ? nexusUserTestingRuntime.searchMemoryRecords(db, url.searchParams.get("q"), user || { email: "", role: "" }) : null,
       noSecretValues: true
     });
   }
@@ -46818,14 +47792,14 @@ async function api(req, res, url) {
   const userTestingUpdateMatch = url.pathname.match(/^\/api\/nexus\/user-testing\/memory\/([^/]+)\/update$/);
   if (userTestingUpdateMatch && req.method === "POST") {
     const body = await readBody(req);
-    const result = nexusUserTestingRuntime.updateMemoryRecord(db, userTestingUpdateMatch[1], body);
+    const result = nexusUserTestingRuntime.updateMemoryRecord(db, userTestingUpdateMatch[1], body, user || { email: "", role: "" });
     await writeDb(db);
     return send(res, result.ok ? 200 : 404, { ...result, noSecretValues: true });
   }
 
   const userTestingArchiveMatch = url.pathname.match(/^\/api\/nexus\/user-testing\/memory\/([^/]+)\/archive$/);
   if (userTestingArchiveMatch && req.method === "POST") {
-    const result = nexusUserTestingRuntime.archiveMemoryRecord(db, userTestingArchiveMatch[1]);
+    const result = nexusUserTestingRuntime.archiveMemoryRecord(db, userTestingArchiveMatch[1], user || { email: "", role: "" });
     await writeDb(db);
     return send(res, result.ok ? 200 : 404, { ...result, noSecretValues: true });
   }
@@ -47055,6 +48029,9 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/internet-services/search" && req.method === "POST") {
+    // This runs a real paid web search when a search key is set, so it needs a sign-in and the same AI/search budget as its siblings (/api/nexus/knowledge/query, /api/nexus/live-knowledge/query).
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     const query = cleanOpsText(body.query || body.question || body.command || "", 700);
     if (!query) return send(res, 400, { ok: false, error: "query_required" });
@@ -52204,6 +53181,8 @@ async function api(req, res, url) {
     "/api/voice/realtime/tool"
   ]);
   if (!user && url.pathname !== "/api/config" && !boundedGenesisVoiceGuestRoutes.has(url.pathname)) {
+    // A support ticket needs to know who is asking (it is recorded against their email), so a signed-out caller is told that in plain words rather than a generic line.
+    if (url.pathname === "/api/support/ticket" && req.method === "POST") return send(res, 401, { error: "Please sign in to open a support ticket." });
     return send(res, 401, { error: "Sign in required" });
   }
 
@@ -52275,7 +53254,7 @@ async function api(req, res, url) {
     };
     db.profile.onboardingRuns.unshift(run);
     db.profile.onboardingRuns = db.profile.onboardingRuns.slice(0, 20);
-    addUsageEvent(db.profile, { module: "Onboarding", action: "onboarding.started", detail: `${scenario} onboarding run started by ${user.email}.` });
+    addUsageEvent(db.profile, { module: "Onboarding", action: "onboarding.started", detail: `${scenario} onboarding run started by ${user.email}.`, user: user.email });
     logIntegration(db, {
       providerId: "auth-users",
       module: "Platform",
@@ -52289,6 +53268,8 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/support/ticket" && req.method === "POST") {
+    // Never accept an anonymous ticket (it reads user.email below).
+    if (!user) return send(res, 401, { error: "Please sign in to open a support ticket." });
     const body = await readBody(req);
     ensureOperationsProfile(db.profile);
     const ticket = {
@@ -52304,7 +53285,7 @@ async function api(req, res, url) {
     };
     db.profile.supportTickets.unshift(ticket);
     db.profile.supportTickets = db.profile.supportTickets.slice(0, 50);
-    addUsageEvent(db.profile, { module: ticket.module, action: "support.ticket_opened", detail: `${ticket.ticketNumber}: ${ticket.subject}` });
+    addUsageEvent(db.profile, { module: ticket.module, action: "support.ticket_opened", detail: `${ticket.ticketNumber} opened.`, user: ticket.requester });
     logIntegration(db, {
       providerId: "email-delivery",
       module: "Platform",
@@ -54635,20 +55616,20 @@ async function api(req, res, url) {
       // time, with no overlap check and no cap. Refusing a second shift
       // while one is already scheduled and hasn't started yet closes the
       // unbounded-replay path without blocking the normal one-at-a-time flow.
-      if ((db.profile.shiftSchedule || []).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
+      if (ownRecordsOnly(db.profile.shiftSchedule, user).some(item => item.status === "scheduled" && new Date(item.startsAt).getTime() > Date.now())) {
         return send(res, 409, { error: "A shift is already scheduled. Wait until it starts before scheduling another." });
       }
       // Found live (legacy server.js route sweep): same falsy-zero-override gap as the money-logic
       // audit already fixed on timesheet/payroll/evaluation just below -- an explicit rate:0 (an
       // unpaid/volunteer placement) was treated as missing and silently replaced with a fabricated $64,
       // then added unconditionally to the real db.profile.earnings ledger.
-      const requestedRate = Number(db.profile.applications[0]?.rate);
+      const requestedRate = Number(visibleRecordsFor(db.profile.applications, user)[0]?.rate);
       const shift = {
         id: crypto.randomUUID(),
-        role: db.profile.applications[0]?.roleTitle || "Field Operations Agent",
+        role: visibleRecordsFor(db.profile.applications, user)[0]?.roleTitle || "Field Operations Agent",
         startsAt: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
         status: "scheduled",
-        estimatedEarnings: db.profile.applications[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
+        estimatedEarnings: visibleRecordsFor(db.profile.applications, user)[0]?.rate !== undefined && Number.isFinite(requestedRate) && requestedRate >= 0 ? requestedRate : 64
       };
       db.profile.shiftSchedule.unshift(shift);
       db.profile.shiftSchedule = db.profile.shiftSchedule.slice(0, 100);
@@ -54702,7 +55683,7 @@ async function api(req, res, url) {
       const certificateText = readiness.missingCertificates.length ? ` and certificate(s): ${readiness.missingCertificates.join(", ")}` : "";
       return send(res, 409, { error: `${role.title} needs ${readiness.missingReadiness}% more readiness${certificateText}` });
     }
-    let application = db.profile.applications.find(item => item.roleId === role.id);
+    let application = visibleRecordsFor(db.profile.applications, user).find(item => item.roleId === role.id);
     if (!application) {
       application = {
         id: crypto.randomUUID(),
@@ -54752,7 +55733,7 @@ async function api(req, res, url) {
     if (!canUse(user, "workforce")) return send(res, 403, { error: "Role does not allow workforce workflows" });
     const body = await readBody(req);
     ensureWorkforceProfile(db.profile);
-    const role = db.profile.applications[0]?.roleTitle || (db.roles || [])[0]?.title || "Field Operations Agent";
+    const role = visibleRecordsFor(db.profile.applications, user)[0]?.roleTitle || (db.roles || [])[0]?.title || "Field Operations Agent";
     const now = new Date().toISOString();
     const type = body.type || "onboarding";
     const actions = {
@@ -57250,7 +58231,7 @@ async function api(req, res, url) {
     if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many AI agent requests. Please slow down." });
     const body = await readBody(req);
     ensureAiProfile(db.profile);
-    const plan = db.profile.agentPlans.find(item => item.id === body.planId) || db.profile.agentPlans[0];
+    const plan = visibleRecordsFor(db.profile.agentPlans, user).find(item => item.id === body.planId) || visibleRecordsFor(db.profile.agentPlans, user)[0];
     if (!plan) return send(res, 404, { error: "Agent plan not found" });
     const approved = body.approved !== false;
     if (!approved) return send(res, 409, { error: "Agent execution requires operator approval." });
@@ -57929,13 +58910,17 @@ async function api(req, res, url) {
     const openAiNativeToolNames = new Set(nexusOpenAiNativeToolSchemas().map(tool => tool.name));
     if (openAiNativeToolNames.has(toolName)) {
       const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
-      const result = await executeNexusOpenAiNativeTool(db, authContext.user, toolName, args, {
+      // The same correlationId and words sent again (a retry, a double tap) returns the first result and repeats nothing (server/frontDoor.js).
+      const idempotencyKey = frontDoor.idempotencyKey(authContext.user?.id || authContext.user?.email, body.correlationId,
+        [toolName, normaliseSpoken(String(args.query || args.command || body.command || "")).text.toLowerCase(), String(args.language || body.language || ""), args.confirmed === true]);
+      const fresh = await frontDoor.runOnce(idempotencyKey, () => executeNexusOpenAiNativeTool(db, authContext.user, toolName, args, {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
         language: args.language || body.language || authContext.user.language || "en",
         outputMode: "voice",
         timeZone: body.timeZone || args.timeZone
-      });
+      }));
+      const result = idempotencyKey ? structuredClone(fresh) : fresh;
       const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);
       return send(res, 200, { ...result, genesisAction }, {
@@ -58297,7 +59282,8 @@ async function api(req, res, url) {
 // session's user is the same one recordExportOwnership() recorded as the
 // export's creator at export time.
 async function serveExport(req, res, url) {
-  const requestedName = decodeURIComponent(url.pathname.slice("/exports/".length));
+  let requestedName;
+  try { requestedName = decodeURIComponent(url.pathname.slice("/exports/".length)); } catch { return send(res, 404, "Not found"); }
   if (!/^[0-9a-f-]+\.(json|txt|md|pdf|docx)$/i.test(requestedName)) return send(res, 404, "Not found");
   const db = await readDb();
   const user = currentUser(req, db);
@@ -58333,8 +59319,13 @@ function serveStatic(req, res, url) {
       res.end(data);
     });
   }
-  let filePath = url.pathname === "/" ? path.join(PUBLIC, "index.html") : path.join(PUBLIC, decodeURIComponent(url.pathname));
-  if (!filePath.startsWith(PUBLIC)) return send(res, 403, "Forbidden");
+  // A path that cannot be decoded ("%zz") or carries a NUL byte is not a file here: answered 404, not as a server error. The folder check includes the separator, so a sibling folder whose name merely
+  // starts with "public" (public-old, public_backup) can never be reached with "/../public-old/..".
+  let decodedPath;
+  try { decodedPath = decodeURIComponent(url.pathname); } catch { return send(res, 404, "Not found"); }
+  if (decodedPath.includes("\0")) return send(res, 404, "Not found");
+  let filePath = url.pathname === "/" ? path.join(PUBLIC, "index.html") : path.join(PUBLIC, decodedPath);
+  if (filePath !== PUBLIC && !filePath.startsWith(PUBLIC + path.sep)) return send(res, 403, "Forbidden");
   fs.readFile(filePath, (err, data) => {
     if (err) return send(res, 404, "Not found");
     const ext = path.extname(filePath);
@@ -58461,10 +59452,16 @@ function handleTwilioPhoneRealtimeStream(ws) {
   let closed = false;
   let capTimer = null;
   let goodbyeTimer = null;
+  let startSeen = false;
+  // A socket that never sends its signed "start" frame is closed: before that frame nothing has proved who is calling, so it must not be able to sit open for ever.
+  const startWaitMs = Math.min(Math.max(Number(process.env.PHONE_REALTIME_START_TIMEOUT_MS) || 15000, 1000), 60000);
+  const startTimer = setTimeout(() => { if (!startSeen) cleanup("no-start-frame"); }, startWaitMs);
+  startTimer.unref?.();
 
   const cleanup = async reason => {
     if (closed) return;
     closed = true;
+    clearTimeout(startTimer);
     if (capTimer) clearTimeout(capTimer);
     if (goodbyeTimer) clearTimeout(goodbyeTimer);
     try { transport?.close(); } catch {}
@@ -58484,10 +59481,20 @@ function handleTwilioPhoneRealtimeStream(ws) {
     }
   };
 
-  ws.on("message", async raw => {
+  // Found by a live probe: a frame that is valid JSON but not an object ("null", "5", "[]") made `frame.event` throw inside this async handler, an unhandled rejection that stopped the whole server for every
+  // caller, with no sign-in needed. Frames are now checked to be objects, and any other failure in the handler is logged instead of escaping.
+  ws.on("message", raw => {
+    handlePhoneStreamFrame(raw).catch(error => recordServerError({ source: "phone-realtime-frame", message: error.stack || error.message, context: { callSid } }));
+  });
+  const handlePhoneStreamFrame = async raw => {
     let frame;
     try { frame = JSON.parse(raw.toString()); } catch { return; }
+    if (!frame || typeof frame !== "object" || Array.isArray(frame)) return;
     if (frame.event === "start") {
+      // Only the first start frame counts; a second one on the same socket would open a second paid connection.
+      if (startSeen) return;
+      startSeen = true;
+      clearTimeout(startTimer);
       streamSid = frame.start?.streamSid || null;
       callSid = frame.start?.callSid || null;
       const params = frame.start?.customParameters || {};
@@ -58589,7 +59596,7 @@ function handleTwilioPhoneRealtimeStream(ws) {
     if (frame.event === "stop") {
       await cleanup("caller-hung-up");
     }
-  });
+  };
 
   ws.on("close", () => cleanup("websocket-closed"));
   ws.on("error", error => {
@@ -58598,7 +59605,8 @@ function handleTwilioPhoneRealtimeStream(ws) {
   });
 }
 
-const phoneRealtimeWss = new WebSocketServer({ noServer: true });
+// maxPayload: the library's default is 100 MiB per message, and the first message of a socket is parsed before anything proves who is calling. A Twilio media frame is a few hundred bytes; 256 KiB is far more than it needs.
+const phoneRealtimeWss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
 phoneRealtimeWss.on("connection", ws => handleTwilioPhoneRealtimeStream(ws));
 
 // The shape a new business starts from: the seed file that ships with the app (reference lists and an example profile whose data is stripped), never the live default record.
@@ -58646,6 +59654,8 @@ async function resolveRequestSpace(req, url) {
     // A business that does not exist, or has been closed, is not reached at all: a sign-in, a session, a cookie or a phone number for it lands in the default space, where it matches nothing.
     return info && !info.closedAt ? { space, info } : DEFAULT_ROUTE;
   } catch (error) {
+    // A body that is too large or a request that ended half way is answered as that (413 / 400) instead of carrying on to the sign-in with a body that was never read.
+    if (error?.userSafe && error.httpStatus >= 400 && error.httpStatus < 500) throw error;
     recordServerError({ source: "business-space-resolve", message: error.message });
     return DEFAULT_ROUTE;
   }
@@ -58661,7 +59671,8 @@ async function resolveRequestSpaceUnchecked(req, url) {
   }
   if (byEmail || byNumber) {
     let body = {};
-    try { body = parseBodyText(req, await bufferBodyText(req)); } catch { return businessSpaces.DEFAULT_SPACE; }
+    const bodyText = await bufferBodyText(req); // too large / cut off: the fault reaches the caller as a 413 / 400
+    try { body = parseBodyText(req, bodyText); } catch { return businessSpaces.DEFAULT_SPACE; }
     if (byEmail) return spaceDirectory.spaceForEmail(body.email);
     // A call: the business whose number is on OUR side of it. An incoming call dialled that number (To); for a call we placed, the status callbacks name it as the caller (From).
     // A number nobody has claimed is today's single global number, the default space.
@@ -58691,8 +59702,16 @@ function withSpaceChangeLock(space, work) {
 }
 const ADMIN_CHANGE_PATH = /^\/api\/(team|admin|platform)\//;
 
+// The request line and Host header come straight from the caller. A request line like "GET // HTTP/1.1" or a Host header with a space in it made new URL() throw outside any handler, which Node
+// treats as an unhandled rejection: the whole server stopped for everyone. Anything that cannot be read as a URL is now answered 400 and nothing else happens.
+function parseRequestUrl(req) {
+  try { return new URL(req.url, `http://${req.headers.host}`); } catch { /* try again without the Host header */ }
+  try { return new URL(req.url, "http://localhost"); } catch { return null; }
+}
+
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const url = parseRequestUrl(req);
+  if (!url) return send(res, 400, { error: "Bad request" });
   try {
     if (!rateLimit(req)) return send(res, 429, { error: "Too many requests" });
     const route = await resolveRequestSpace(req, url);
@@ -58729,8 +59748,8 @@ server.on("error", error => {
 // listener only routes the right path to that handler and rejects
 // everything else, including the feature being off.
 server.on("upgrade", (req, socket, head) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  if (url.pathname !== "/api/voice/phone/stream" || !phoneRealtimeStreamingEnabled(process.env)) {
+  const url = parseRequestUrl(req);
+  if (!url || url.pathname !== "/api/voice/phone/stream" || !phoneRealtimeStreamingEnabled(process.env)) {
     socket.destroy();
     return;
   }

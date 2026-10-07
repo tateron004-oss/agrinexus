@@ -12,7 +12,8 @@ const { spawn } = require("node:child_process");
 // user's order on by id. Now each person is shown the money and trade records they made, plus demo and older records that carry no personal owner mark; an Admin is shown all.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4993;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-money-private-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-money-private-uploads-"));

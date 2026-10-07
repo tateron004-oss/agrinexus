@@ -71,8 +71,12 @@ test("lists with a name of their own, and a bare 'make a list', still go to the 
   }
 });
 
-test("adding one item the old way, and reading, are unchanged", async () => {
+test("adding one item the old way, and reading, are unchanged; several things are several items", async () => {
   const { ask } = planner();
-  assert.match((await ask("Add milk and eggs to my shopping list")).response, /^Added milk and eggs to your shopping list/);
-  assert.match((await ask("What's on my shopping list?")).response, /milk and eggs/);
+  assert.match((await ask("Add milk to my shopping list")).response, /^Added milk to your shopping list/);
+  assert.match((await ask("What's on my shopping list?")).response, /milk/);
+  // "milk and eggs" used to be ONE item called "milk and eggs", which could not be ticked off one at a time
+  const many = await ask("Add bread and eggs to my shopping list");
+  assert.match(many.response, /bread and eggs/);
+  assert.match((await ask("What's on my shopping list?")).response, /1, milk; 2, bread; 3, eggs\./);
 });

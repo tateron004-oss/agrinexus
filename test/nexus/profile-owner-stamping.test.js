@@ -96,7 +96,8 @@ test("the server saves through the stamping, only for a signed-in person on a re
 });
 
 // ---- through the real server ----
-const port = 4856;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-profile-owner-stamping-db.json");
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));

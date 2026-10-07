@@ -49,6 +49,8 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
     },
     // Real implementation: the spoken health branch reads/writes only the speaker's own records (server/providers/healthRecordScope.js).
     scopeHealthDb: require("../../server/providers/healthRecordScope.js").scopeHealthDb,
+    // The health-readings conversation (read back, then save on a yes) sits in front of the old health branch; none of these tests is about a reading, so it has nothing to say here.
+    healthReadingsReply: () => null,
     nexusRealProviders: {
       twilio: twilio || {},
       email: email || {},
@@ -56,6 +58,8 @@ function loadExecuteTool({ twilio, email, calendar, authoritativeRuntimeUser, au
     },
     nexusOpenAiNativeProviderToolResult: (_db, _common, result) => result,
     nexusMentalHealthBehavioralWellness: require("../../public/nexus-mental-health-behavioral-wellness.js"),
+    // The Kiswahili crisis reply is covered end to end in swahili-honest-fallbacks.test.js; these English-wording tests keep the English packet.
+    swahiliCrisisReply: async () => null,
     authoritativeRuntimeUser: authoritativeRuntimeUser || (async () => null),
     authoritativeNexusRuntime: authoritativeNexusRuntime || {
       behaviorTurnRequest: async () => { throw new Error("behaviorTurnRequest should not be called in this test"); },
