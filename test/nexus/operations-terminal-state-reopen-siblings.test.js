@@ -15,7 +15,8 @@ const path = require("node:path");
 // supplying the terminal record's real id, or by omitting an id entirely
 // when it was the caller's only record.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4641;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-operations-terminal-state-reopen-siblings-db.json");

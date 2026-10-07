@@ -14,7 +14,8 @@ const path = require("node:path");
 // FIRST active reminder in the whole shared array regardless of who created it -- a
 // real cross-user MUTATION, not just a read leak.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4796;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-assistant-reminders-cross-user-isolation-db.json");

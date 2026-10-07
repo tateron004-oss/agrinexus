@@ -16,7 +16,8 @@ const path = require("node:path");
 // Paystack/Flutterwave key is configured, into a live third-party
 // payment-initialization API call.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4716;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-trade-payment-checkout-amount-validation-db.json");

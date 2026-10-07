@@ -18,7 +18,8 @@ const path = require("node:path");
 // of ever actually capturing vitals, running the safety review, or
 // generating the care plan.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4714;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-health-agent-country-reference-crash-db.json");

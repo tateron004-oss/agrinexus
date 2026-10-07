@@ -124,7 +124,8 @@ test("the backup and restore scripts: private file, locked restore, a business b
 });
 
 // ---------- the real server ----------
-const port = 15355;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spaces-ops-"));
 const defaultDb = path.join(dir, "db.json");

@@ -16,7 +16,8 @@ const path = require("node:path");
 // This test seeds one representative array from each of the six new
 // disclosure blocks to confirm all six fire.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4727;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-account-export-exhaustive-collections-gap-db.json");

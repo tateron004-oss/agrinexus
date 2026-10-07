@@ -95,7 +95,8 @@ test("the header has a hidden My team link, and the Admin screen has the card th
 });
 
 // ---------- the real server ----------
-const port = 15321;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-business-manager-test-db.json");
 let server;

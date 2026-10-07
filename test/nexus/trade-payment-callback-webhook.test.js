@@ -14,7 +14,8 @@ const path = require("node:path");
 // A real buyer completing a real payment had no way to ever have that reflected here. Per the user's
 // explicit choice, these routes ONLY mark the matching checkout/order as paid; they never move money.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4840;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-trade-payment-callback-webhook-db.json");

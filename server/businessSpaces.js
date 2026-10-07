@@ -51,6 +51,10 @@ const cleanName = value => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g,
 const safe = message => Object.assign(new Error(message), { userSafe: true });
 const TRANSIENT_FILE_ERRORS = new Set(["EPERM", "EBUSY", "EACCES", "EMFILE"]);
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+// How long to keep trying when the file is held for a moment (another read, a virus scan, the search indexer): up to 40 tries, waiting a little longer each time but never more than 0.2 s (about 7 s in all).
+// Ten short tries (under 1 s) were not enough on Windows while the platform list was being read at the same moment as a change; see test/nexus/business-spaces-adversarial.test.js.
+const TRANSIENT_RETRIES = 40;
+const transientWait = attempt => Math.min(15 * attempt, 200);
 
 // Both backends answer the same questions, all async:
 //   spaceForEmail(email) -> id | "default"        spaceForNumber(number) -> id | null        exists(id) -> boolean
@@ -64,7 +68,7 @@ function createFileDirectory(filePath) {
     for (let attempt = 1; ; attempt += 1) {
       try { return JSON.parse(await fs.promises.readFile(filePath, "utf8")); } catch (error) {
         if (error.code === "ENOENT") return { spaces: {}, emails: {}, numbers: {} };
-        if (TRANSIENT_FILE_ERRORS.has(error.code) && attempt < 10) { await pause(15 * attempt); continue; }
+        if (TRANSIENT_FILE_ERRORS.has(error.code) && attempt < TRANSIENT_RETRIES) { await pause(transientWait(attempt)); continue; }
         throw Object.assign(new Error("The business directory is not available right now. Nothing was changed."), { userSafe: true, httpStatus: 503, detail: error instanceof SyntaxError ? "directory file is damaged" : "directory file could not be read" });
       }
     }
@@ -80,8 +84,8 @@ function createFileDirectory(filePath) {
       await fs.promises.writeFile(temp, JSON.stringify(data, null, 2));
       for (let attempt = 1; ; attempt += 1) {
         try { await fs.promises.rename(temp, filePath); break; } catch (error) {
-          if (!TRANSIENT_FILE_ERRORS.has(error.code) || attempt >= 10) { await fs.promises.rm(temp, { force: true }).catch(() => {}); throw error; }
-          await pause(15 * attempt);
+          if (!TRANSIENT_FILE_ERRORS.has(error.code) || attempt >= TRANSIENT_RETRIES) { await fs.promises.rm(temp, { force: true }).catch(() => {}); throw error; }
+          await pause(transientWait(attempt));
         }
       }
       return result;

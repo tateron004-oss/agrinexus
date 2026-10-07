@@ -29,7 +29,8 @@ const path = require("node:path");
 // object is read back by a DIFFERENT account, which is what this test
 // actually exercises.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4608;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-user-display-name-per-account-isolation-db.json");

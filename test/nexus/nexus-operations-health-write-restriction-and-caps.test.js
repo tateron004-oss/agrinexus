@@ -15,7 +15,8 @@ const path = require("node:path");
 // arrays (chronicCareProfiles, archiveRecords, and others) had no `.slice(0, N)` cap at all, unlike
 // every sibling array in the same function, which grows them unbounded.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4799;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-nexus-operations-health-write-restriction-and-caps-db.json");

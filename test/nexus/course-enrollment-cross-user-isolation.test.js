@@ -19,7 +19,8 @@ const path = require("node:path");
 // client-visible profile.* shape so the existing frontend contract is
 // unaffected; only the underlying per-account isolation changed.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4822;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-course-enrollment-cross-user-isolation-db.json");

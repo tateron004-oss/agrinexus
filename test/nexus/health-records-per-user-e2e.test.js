@@ -10,7 +10,8 @@ const { spawn } = require("node:child_process");
 // intakes in one shared array, so each saw the other's, and account export/erase could not find a person's own records.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4743;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-health-records-per-user-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-health-scope-uploads-"));

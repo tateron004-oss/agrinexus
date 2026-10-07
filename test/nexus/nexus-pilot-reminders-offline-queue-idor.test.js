@@ -23,7 +23,8 @@ const path = require("node:path");
 // same nexusPilotRecordOwned-filtered array fixed here, verified by code
 // review rather than a duplicate end-to-end voice-command test.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4733;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-nexus-pilot-reminders-offline-queue-idor-db.json");

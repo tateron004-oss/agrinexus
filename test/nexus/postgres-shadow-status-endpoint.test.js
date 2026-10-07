@@ -11,7 +11,8 @@ const path = require("node:path");
 // of an entry in /api/admin/system/errors, never see the actual row. This endpoint reads each domain's
 // real Postgres table back directly.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4605;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-postgres-shadow-status-db.json");

@@ -11,7 +11,8 @@ const path = require("node:path");
 // freeform text into db.profile.nexusHealthEvidenceGovernanceQueue/nexusWorkforceGovernanceQueue
 // (a shared, capped-at-100 queue), silently evicting real signed-in users' queued feedback.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4824;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-unauthenticated-feedback-routes-db.json");

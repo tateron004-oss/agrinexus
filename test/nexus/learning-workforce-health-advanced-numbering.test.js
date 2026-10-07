@@ -20,7 +20,8 @@ const path = require("node:path");
 //    `amount || 1500` to every displayed price, so a genuinely free visit still showed "1500" on the
 //    receipt.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4798;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-learning-workforce-health-advanced-numbering-db.json");

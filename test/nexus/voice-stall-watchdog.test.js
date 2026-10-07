@@ -216,7 +216,8 @@ test("the page loads the watchdog before the app, and the offline shell has it",
 
 // ---- the server: a deadline on every spoken tool call, and the stall report ----
 const root = path.resolve(__dirname, "..", "..");
-const port = 4855;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-voice-stall-test-db.json");
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));

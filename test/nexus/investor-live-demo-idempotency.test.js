@@ -15,7 +15,8 @@ const path = require("node:path");
 // suppresses a genuine retry of the identical request within its dedupe window while still letting a
 // deliberately new demo run execute for real.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4797;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-investor-live-demo-idempotency-db.json");

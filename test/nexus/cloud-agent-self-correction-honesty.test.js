@@ -19,7 +19,8 @@ const path = require("node:path");
 // place. An operator reading the run summary would believe a real action
 // went through when it did not.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4715;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-cloud-agent-self-correction-honesty-db.json");

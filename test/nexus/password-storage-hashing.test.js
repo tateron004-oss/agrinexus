@@ -12,7 +12,8 @@ const path = require("node:path");
 // committed db.json still has one) is verified once and migrated to a real scrypt hash on next login,
 // that a brand-new sandbox account is stored hashed from the start, and that wrong credentials still fail.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4603;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-password-storage-hashing-db.json");

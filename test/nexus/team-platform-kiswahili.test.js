@@ -143,7 +143,8 @@ test("the server's own messages for these two pages are shown in Kiswahili too, 
 });
 
 // ---------- a real server: the pages learn the signed-in person's language ----------
-const port = 15621;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "page-text-"));
 const defaultDb = path.join(dir, "db.json");

@@ -18,7 +18,8 @@ const path = require("node:path");
 // already-completed case back to an active state -- reappearing in the
 // provider queue's "waiting" count.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4652;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-telehealth-encounter-terminal-reopen-db.json");

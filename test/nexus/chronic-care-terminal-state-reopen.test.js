@@ -15,7 +15,8 @@ const path = require("node:path");
 // auto-link had no check on the profile's own status before writing to or
 // linking against it.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4640;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-chronic-care-terminal-state-reopen-db.json");

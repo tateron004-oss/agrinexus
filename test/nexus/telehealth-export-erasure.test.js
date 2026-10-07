@@ -18,7 +18,8 @@ const path = require("node:path");
 // used by ownsEncounter() for read access control) makes a real per-user
 // scan and cascade possible.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4705;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-telehealth-export-erasure-db.json");

@@ -12,7 +12,8 @@ const { contentGuardReply } = require("../../nexus/brain/content-guard.js");
 // by a live check against a copy of the app. These guards now also run first on that older path.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4990;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const tempDbPath = path.join(root, "tmp-guard-paths-test-db.json");
 const tempUploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "nexus-guard-paths-uploads-"));

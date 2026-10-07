@@ -32,7 +32,8 @@ const path = require("node:path");
 // absent from export, with no disclosed gap (the worst combination: neither
 // erased nor disclosed).
 const root = path.resolve(__dirname, "..", "..");
-const port = 4830;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-nexus-operations-health-learning-caps-db.json");

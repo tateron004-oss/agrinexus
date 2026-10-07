@@ -13,7 +13,8 @@ const path = require("node:path");
 // byte-for-byte unchanged by all of it. It stays in the project and runs on every change: a new route that leaks across businesses fails here.
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 15353;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spaces-leak-"));
 const defaultDb = path.join(dir, "db.json");

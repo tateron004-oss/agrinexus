@@ -30,7 +30,8 @@ test("the record keeps the newest 1000, drops anything that is not a count or a 
   assert.deepEqual(platformAudit.list({}, {}), []);
 });
 
-const port = 15620;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "platform-audit-"));
 const defaultDb = path.join(dir, "db.json");

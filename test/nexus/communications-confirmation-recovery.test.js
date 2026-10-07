@@ -22,7 +22,8 @@ const path = require("node:path");
 // so this proves the actual recipient value flowing through the real
 // confirmation-required -> confirmed round trip, not a stand-in.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4607;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-communications-confirmation-recovery-db.json");

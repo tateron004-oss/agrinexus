@@ -14,7 +14,8 @@ const path = require("node:path");
 // nothing tagged who created what. This pins that two real, distinct
 // authenticated users are now each scoped to their own records/receipts.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4626;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-persistent-memory-cross-user-isolation-db.json");

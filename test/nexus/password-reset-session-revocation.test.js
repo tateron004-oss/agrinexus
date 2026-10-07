@@ -7,7 +7,8 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 
 const root = path.resolve(__dirname, "..", "..");
-const port = 4573;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-password-reset-revocation-db.json");

@@ -2384,8 +2384,8 @@ async function writeDb(db) {
         await fs.promises.rename(tempPath, targetPath);
         break;
       } catch (error) {
-        if (error.code !== "EPERM" || attempt >= 10) throw error;
-        await new Promise(resolve => setTimeout(resolve, 25 * attempt));
+        if ((error.code !== "EPERM" && error.code !== "EBUSY") || attempt >= 40) throw error;
+        await new Promise(resolve => setTimeout(resolve, Math.min(25 * attempt, 250)));
       }
     }
   } finally {

@@ -15,7 +15,8 @@ const path = require("node:path");
 // job-application status/summary, interview follow-up note, and hiring-pipeline status history all
 // survived an account-erasure request untouched.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4735;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-workforce-export-erasure-ownership-db.json");

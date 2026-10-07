@@ -21,7 +21,8 @@ const path = require("node:path");
 //    store is GLOBAL across every user of the app, so unbounded growth here
 //    degrades every write in the whole application over time.
 const root = path.resolve(__dirname, "..", "..");
-const port = 4734;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dbPath = path.join(root, "db.json");
 const tempDbPath = path.join(root, "tmp-workforce-toolkit-scoping-and-caps-db.json");

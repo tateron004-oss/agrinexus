@@ -29,7 +29,8 @@ test("the screens: owner-only cards are hidden from a business's own Admin, the 
 });
 
 // ---------- a real server: a database address is set but nothing answers there, so the engine cannot take erasure requests ----------
-const port = 15356;
+const { freePortSync } = require("../helpers/free-port.js");
+const port = freePortSync();
 const base = `http://localhost:${port}`;
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spaces-fixes-"));
 const defaultDb = path.join(dir, "db.json");
