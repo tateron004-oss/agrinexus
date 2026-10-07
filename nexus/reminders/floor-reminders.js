@@ -96,9 +96,23 @@ const MESSAGES = Object.freeze({
   },
   nothingToCancel: { en: "I do not see an active reminder to cancel.", sw: "Sioni kikumbusho chochote cha kufuta." },
   canceled: {
-    en: reminder => `Canceled ${reminder.reminderNumber}: ${reminder.task}.`,
-    sw: reminder => `Nimefuta kikumbusho ${reminder.reminderNumber}: ${reminder.task}.`
+    en: reminder => `Canceled${reminder.reminderNumber ? ` ${reminder.reminderNumber}` : ""}: ${reminder.task}.`,
+    sw: reminder => `Nimefuta kikumbusho${reminder.reminderNumber ? ` ${reminder.reminderNumber}` : ""}: ${reminder.task}.`
   },
+  notSaved: {
+    en: "I could not save that reminder just now, so it was NOT saved and nothing will be sent. Please try again in a moment.",
+    sw: "Sikuweza kuhifadhi kikumbusho hicho sasa hivi, kwa hiyo HAKIJAHIFADHIWA na hakuna kitakachotumwa. Tafadhali jaribu tena baadaye kidogo."
+  },
+  unreachable: {
+    en: "I cannot reach the reminders right now, so I can neither list nor change them. Nothing was changed. Please try again in a moment.",
+    sw: "Siwezi kufikia vikumbusho sasa hivi, kwa hiyo siwezi kuviorodhesha wala kuvibadilisha. Sijabadilisha chochote. Tafadhali jaribu tena baadaye kidogo."
+  },
+  listIncomplete: {
+    en: "I cannot reach the reminder service right now, so this list may be missing some.",
+    sw: "Siwezi kufikia huduma ya vikumbusho sasa hivi, kwa hiyo orodha hii inaweza kukosa vingine."
+  },
+  changeFailed: { en: "I could not change that reminder, so it stays as it was.", sw: "Sikuweza kubadilisha kikumbusho hicho, kwa hiyo kimebaki kama kilivyokuwa." },
+  cancelFailed: { en: "I could not cancel that reminder (it may have just been sent), so nothing was changed.", sw: "Sikuweza kufuta kikumbusho hicho (huenda kimetumwa tu), kwa hiyo sijabadilisha chochote." },
   whichOne: {
     en: (count, lines, verb) => `You have ${count} reminders: ${lines.map((line, index) => `${index + 1}, ${line}`).join("; ")}. Which one should I ${verb}? Say, for example, "${verb} my reminder to" and its words. Nothing was changed.`,
     sw: (count, lines, verb) => `Una vikumbusho ${count}: ${lines.map((line, index) => `${index + 1}, ${line}`).join("; ")}. Nikubadilishe kipi? Taja maneno yake. Sijabadilisha chochote.`
@@ -118,8 +132,8 @@ const MESSAGES = Object.freeze({
     sw: (reminder, readbackSw) => `Sawa. Nimebadilisha kikumbusho cha ${reminder.task}: sasa ni ${readbackSw}.`
   },
   duplicate: {
-    en: (reminder, readback) => `You already have that reminder (${reminder.reminderNumber}): ${reminder.task}, ${readback}. I did not add it again.`,
-    sw: (reminder, readbackSw) => `Tayari una kikumbusho hicho (${reminder.reminderNumber}): ${reminder.task}, ${readbackSw}. Sijakiongeza tena.`
+    en: (reminder, readback) => `You already have that reminder${reminder.reminderNumber ? ` (${reminder.reminderNumber})` : ""}: ${reminder.task}, ${readback}. I did not add it again.`,
+    sw: (reminder, readbackSw) => `Tayari una kikumbusho hicho${reminder.reminderNumber ? ` (${reminder.reminderNumber})` : ""}: ${reminder.task}, ${readbackSw}. Sijakiongeza tena.`
   },
   set: {
     en: (task, readback) => `Done. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${task} ${readback}.`,

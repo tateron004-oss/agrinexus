@@ -18,6 +18,8 @@ const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createNavigationService } = require("../navigation/service.js");
 const { repeatTurnAnyLanguage } = require("../reminders/repeat-turn.js");
 const { resolveReminderTimeZone } = require("../reminders/time-zone.js");
+const { createDeliveryReminders } = require("../reminders/delivery-store.js");
+const { createMemoryNotifications, createMemoryRepeatStore } = require("../reminders/memory-stores.js");
 
 function safeDatabaseIdentifier(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
@@ -815,13 +817,27 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   // The older command route and the phone line set, list and stop repeating reminders in the SAME store the planner uses (nexus_schedules, sent by the worker's own sweep), so a
   // reminder that repeats there is one that is really delivered. Returns the words to answer with, or null when this is not about repeating reminders; throws when the store cannot
   // be reached (the caller then says so plainly instead of claiming it was set). No AI model is needed.
-  async function repeatReminderTurnRequest({ text, user, timeZone }) {
+  // The two reminder stores the older route writes to. A test or local development server may opt in to in-memory stand-ins (NEXUS_TEST_REMINDER_STORE=memory, never in production);
+  // otherwise it is the real database, and when that cannot be reached this throws.
+  const memoryStores = env.NEXUS_TEST_REMINDER_STORE === "memory" && env.NODE_ENV !== "production" ? { notifications: createMemoryNotifications(), repeatReminderRecords: createMemoryRepeatStore() } : null;
+  async function reminderStores(need) {
+    if (memoryStores) return memoryStores;
     const active = await runtime(); await active.ready;
-    if (!active.repeatReminderRecords) throw Object.assign(new Error("The repeating reminder store is unavailable."), { code: "repeat_store_unavailable", status: 503 });
-    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
-    return repeatTurnAnyLanguage({ text, store: active.repeatReminderRecords, tenantId: context.tenantId, userId: context.userId, timeZone: validIanaZone(timeZone) ? timeZone : context.timeZone });
+    if (!active[need]) throw Object.assign(new Error("The reminder store is unavailable."), { code: "reminder_store_unavailable", status: 503 });
+    return active;
   }
-  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest });
+  async function repeatReminderTurnRequest({ text, user, timeZone }) {
+    const stores = await reminderStores("repeatReminderRecords");
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
+    return repeatTurnAnyLanguage({ text, store: stores.repeatReminderRecords, tenantId: context.tenantId, userId: context.userId, timeZone: validIanaZone(timeZone) ? timeZone : context.timeZone });
+  }
+  // One person's one-time reminders in the delivery store (see nexus/reminders/delivery-store.js): list, schedule (de-duplicated), change, cancel. Throws when the store cannot be reached.
+  async function deliveryRemindersFor({ user }) {
+    const stores = await reminderStores("notifications");
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
+    return createDeliveryReminders({ notifications: stores.notifications, tenantId: context.tenantId, userId: context.userId });
+  }
+  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest, deliveryRemindersFor });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {

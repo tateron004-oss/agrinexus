@@ -36,7 +36,7 @@ const minutesAway = (reminder, from) => Math.round((Date.parse(reminder.schedule
 test.before(async () => {
   fs.copyFileSync(path.join(root, "db.json"), path.join(dir, "db.json"));
   server = spawn(process.execPath, ["server.js"], { cwd: root, stdio: "ignore", windowsHide: true, env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: path.join(dir, "db.json"), AGRINEXUS_SPACES_PATH: path.join(dir, "spaces.json"),
-    OPENAI_API_KEY: "", DATABASE_URL: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000" } });
+    OPENAI_API_KEY: "", DATABASE_URL: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true", AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000", NEXUS_TEST_REMINDER_STORE: "memory" } });
   await waitFor(`${base}/api/healthz`);
   const login = await fetch(`${base}/api/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "user@agrinexus.org", password: "User2026!" }) });
   assert.equal(login.status, 200);
@@ -126,14 +126,21 @@ test("no time at all is asked about, never turned into 'tomorrow'", async () => 
   assert.equal((await stored()).map(item => item.task).join("|"), "stir the pot");
 });
 
-test("repeating reminders are never saved as one-offs: the repeat store is used, or it is said plainly that they are not available", async () => {
+test("repeating reminders are saved as repeating ones (never a one-off in disguise), with clean text and one rule per time", async () => {
   await reset();
-  for (const phrase of ["remind me every Monday to call the buyer", "remind me every day at 6am to study", "remind me to take metformin 500mg at 8am and 8pm every day", "nikumbushe kila siku saa mbili asubuhi kunywa dawa"]) {
-    const said = await speak(phrase, { language: /nikumbushe/.test(phrase) ? "sw" : "en" });
-    assert.doesNotMatch(said.response, /^(?:Done|Sawa)\b/i, `${phrase} -> ${said.response}`);
-    assert.match(said.response, /nothing was saved|Nothing was set|sijaweka chochote|Siwezi/i, `${phrase} -> ${said.response}`);
+  const replies = [];
+  for (const phrase of ["remind me every Monday at 9 to call the buyer", "remind me every day at 6am to study", "remind me to take metformin 500mg at 8am and 8pm every day", "nikumbushe kila siku saa mbili asubuhi kunywa dawa"]) {
+    replies.push((await speak(phrase, { language: /nikumbushe/.test(phrase) ? "sw" : "en" })).response);
   }
+  assert.match(replies[0], /^(?:Got it\. )?Okay\. I will remind you to call the buyer every Monday at 9:00 am\./);
+  assert.match(replies[1], /I will remind you to study every day at 6:00 am\./);
+  assert.match(replies[2], /I will remind you to take metformin 500mg every day at 8:00 am and 8:00 pm\./);
+  assert.match(replies[3], /Sawa\. Nitakukumbusha kunywa dawa kila siku saa mbili asubuhi\./);
   assert.deepEqual(await stored(), [], "no one-off reminder was made in disguise");
+  const listed = (await speak("show my repeating reminders")).response;
+  assert.match(listed, /You have 5 repeating reminders/);
+  for (const part of ["call the buyer, every Monday at 9:00 am", "study, every day at 6:00 am", "take metformin 500mg, every day at 8:00 am", "take metformin 500mg, every day at 8:00 pm", "kunywa dawa, every day at 8:00 am"]) assert.ok(listed.includes(part), `${part} in ${listed}`);
+  assert.match((await speak("cancel all my repeating reminders")).response, /stopped 5 repeating reminders/);
 });
 
 test("the same request sent again is one reminder: the same correlation id three times, and three identical requests", async () => {

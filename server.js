@@ -31729,6 +31729,7 @@ function createAssistantReminder(db, user, text, options = {}, resolved = null) 
     readback: timing.readback || "",
     timeZone: timing.timeZone || options.timeZone || "",
     correlationId: String(options.correlationId || ""),
+    notificationId: String(resolved?.notificationId || ""),
     module: moduleContext.module,
     section: moduleContext.section,
     status: "scheduled",
@@ -31766,7 +31767,10 @@ function createAssistantReminder(db, user, text, options = {}, resolved = null) 
 }
 
 // ---- reminders on the older command route and the phone line ----
-// Repeating reminders are kept in the store the worker really delivers from (reached through the runtime adapter); when that store cannot be reached, this says so plainly.
+// Two stores exist: the DELIVERY store (nexus_notifications for one-time reminders, nexus_schedules for repeating ones), which the worker sends as push when the time comes, and the
+// legacy list db.profile.assistantReminders, which nothing delivers. A reminder asked for here is saved in the delivery store; the legacy list only keeps a mirror of it (for the
+// morning briefing and the older screens, carrying notificationId) and the reminders made before this change. If the delivery store cannot be reached the reminder is NOT saved and
+// the person is told so; it never falls back to the legacy list.
 let repeatStoreDownUntil = 0;
 async function repeatStoreTurn(user, text, timeZone) {
   if (Date.now() < repeatStoreDownUntil) return { reachable: false };
@@ -31779,8 +31783,23 @@ async function repeatStoreTurn(user, text, timeZone) {
     ]);
     return { reachable: true, reply };
   } catch {
-    repeatStoreDownUntil = Date.now() + 30000;
+    repeatStoreDownUntil = Date.now() + 10000;
     return { reachable: false };
+  } finally { if (timer) clearTimeout(timer); }
+}
+let deliveryStoreDownUntil = 0;
+async function deliveryStoreFor(user) {
+  if (Date.now() < deliveryStoreDownUntil) return null;
+  let timer = null;
+  try {
+    const authUser = await authoritativeRuntimeUser(user);
+    return await Promise.race([
+      authoritativeNexusRuntime.deliveryRemindersFor({ user: authUser }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("reminder store timed out")), 4000); })
+    ]);
+  } catch {
+    deliveryStoreDownUntil = Date.now() + 10000;
+    return null;
   } finally { if (timer) clearTimeout(timer); }
 }
 function reminderLanguageOf(text, options = {}) {
@@ -31792,6 +31811,43 @@ function pendingReminderTable(db) {
 }
 function reminderReply(intent, response, { status = "completed", section = "agent", extra = {} } = {}) {
   return { intent, response, status, metadata: { conversationMode: true, redirectSection: section, ...extra } };
+}
+
+// Reminders made before the delivery store was used here, and still ahead of us, are moved into it once (keyed by their own id, so doing it again changes nothing) and then
+// only mirror it. Past ones, and any that could not be moved, stay in the legacy list as they were.
+async function adoptLegacyReminders(db, user, api, zone) {
+  let moved = 0;
+  for (const item of floorReminders.activeOf(db.profile.assistantReminders, user?.email)) {
+    if (item.notificationId || moved >= 25 || !(Date.parse(item.scheduledAt) > Date.now())) continue;
+    try {
+      const stored = await api.schedule({ task: item.task, scheduledAt: item.scheduledAt, whenLabel: item.readback || item.whenLabel, timeZone: item.timeZone || zone, legacyId: item.id });
+      item.notificationId = stored.reminder.id; item.movedAt = new Date().toISOString(); moved += 1;
+    } catch { /* it stays in the legacy list, listed as before */ }
+  }
+}
+// Everything the person has coming up, one list: the delivery store's reminders (with the legacy number they were given, if any) and the ones still only in the legacy list.
+async function upcomingReminders(db, user, api, zone) {
+  const email = user?.email;
+  if (api) await adoptLegacyReminders(db, user, api, zone);
+  const legacy = floorReminders.activeOf(db.profile.assistantReminders, email);
+  const unmoved = legacy.filter(item => !item.notificationId).map(item => ({ ...item, source: "legacy", original: item }));
+  if (!api) return { items: unmoved, complete: false };
+  let rows;
+  try { rows = await api.list(); } catch { return { items: unmoved, complete: false, api: null }; }
+  const mirrors = new Map(legacy.filter(item => item.notificationId).map(item => [item.notificationId, item]));
+  const delivery = rows.map(row => { const mirror = mirrors.get(row.id) || null; return { id: row.id, source: "delivery", reminderNumber: mirror?.reminderNumber || "", task: row.task, scheduledAt: row.scheduledAt, createdAt: row.createdAt || mirror?.createdAt || "",
+    status: "scheduled", createdBy: email, section: mirror?.section || "agent", whenLabel: row.whenLabel, timeZone: row.timeZone, mirror }; });
+  const items = [...delivery, ...unmoved].sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+  return { items, complete: true, api };
+}
+function cancelMirror(item) {
+  const target = item.source === "legacy" ? item.original : item.mirror;
+  if (target) { target.status = "canceled"; target.canceledAt = new Date().toISOString(); }
+}
+async function cancelReminderItem(api, item) {
+  if (item.source === "delivery") { if (!(await api.cancel(item.id))) return false; }
+  cancelMirror(item);
+  return true;
 }
 
 // The answer to a question just asked about a reminder ("At 6 in the morning or in the evening?", "Cancel all 5?"). Anything that is not an answer is dropped and handled as the new request it is.
@@ -31806,9 +31862,11 @@ async function resolvePendingReminder(db, user, text, options = {}) {
   if (pending.kind === "cancel-all") {
     if (floorReminders.YES.test(String(text).trim())) {
       delete table[email];
-      const ids = new Set(pending.ids || []);
+      const api = await deliveryStoreFor(user);
+      const { items } = await upcomingReminders(db, user, api, options.timeZone);
+      const wanted = new Set(pending.ids || []);
       let count = 0;
-      for (const item of db.profile.assistantReminders || []) if (ids.has(item.id) && item.status !== "canceled" && item.createdBy === email) { item.status = "canceled"; item.canceledAt = new Date().toISOString(); count += 1; }
+      for (const item of items) if (wanted.has(item.id)) { try { if (await cancelReminderItem(api, item)) count += 1; } catch { /* left as it was */ } }
       let repeating = 0;
       if (pending.repeating) { const turn = await repeatStoreTurn(user, "stop all my repeating reminders", options.timeZone); const done = /stopped (\d+)/.exec(turn.reply || ""); repeating = done ? Number(done[1]) : 0; }
       db.profile.agentMemory.lastStatus = "assistant-reminders-canceled-all";
@@ -31825,19 +31883,33 @@ async function resolvePendingReminder(db, user, text, options = {}) {
   return createReminderFromTiming(db, user, pending.original, options, { task: pending.task, timing: answer.timing }, lang);
 }
 
-function createReminderFromTiming(db, user, text, options, resolved, lang) {
+async function createReminderFromTiming(db, user, text, options, resolved, lang) {
   const M = floorReminders.MESSAGES;
   const sw = lang === "sw" || resolved.timing.language === "sw";
   const spoken = sw ? resolved.timing.readbackSw : resolved.timing.readback;
-  const duplicate = floorReminders.findDuplicate(db.profile.assistantReminders, user?.email, { task: resolved.task, scheduledAt: resolved.timing.scheduledAt, correlationId: options.correlationId });
-  if (duplicate) return reminderReply("assistant.reminder_duplicate", M.duplicate[sw ? "sw" : "en"](duplicate, sw ? resolved.timing.readbackSw : resolved.timing.readback), { section: duplicate.section, extra: { reminder: duplicate, duplicate: true } });
-  const reminder = createAssistantReminder(db, user, text, options, resolved);
+  const api = await deliveryStoreFor(user);
+  if (!api) return reminderReply("assistant.reminder_not_saved", M.notSaved[sw ? "sw" : "en"], { status: "needs-review" });
+  let stored;
+  try {
+    await adoptLegacyReminders(db, user, api, options.timeZone);
+    stored = await api.schedule({ task: resolved.task, scheduledAt: resolved.timing.scheduledAt, whenLabel: resolved.timing.readback, timeZone: resolved.timing.timeZone || options.timeZone, correlationId: String(options.correlationId || ""), language: sw ? "sw" : "en" });
+  } catch {
+    deliveryStoreDownUntil = Date.now() + 10000;
+    return reminderReply("assistant.reminder_not_saved", M.notSaved[sw ? "sw" : "en"], { status: "needs-review" });
+  }
+  if (stored.duplicate) {
+    const mirror = floorReminders.activeOf(db.profile.assistantReminders, user?.email).find(item => item.notificationId === stored.reminder.id);
+    const shown = { reminderNumber: mirror?.reminderNumber || "", task: stored.reminder.task };
+    return reminderReply("assistant.reminder_duplicate", M.duplicate[sw ? "sw" : "en"](shown, sw ? describeReminderMoment(stored.reminder.scheduledAt, { timeZone: options.timeZone, language: "sw" }) : describeReminderMoment(stored.reminder.scheduledAt, { timeZone: options.timeZone })),
+      { section: mirror?.section || "agent", extra: { reminder: { ...stored.reminder, reminderNumber: shown.reminderNumber }, duplicate: true } });
+  }
+  const reminder = createAssistantReminder(db, user, text, options, { ...resolved, notificationId: stored.reminder.id });
   const contactLine = !sw && reminder.contactName && !reminder.contactPhone
     ? ` I do not have ${reminder.contactName}'s number yet, so give me the number if you want me to call later.`
     : !sw && reminder.contactName && reminder.contactPhone
       ? ` I also found ${reminder.contactName}'s saved phone number for the call workflow.`
       : "";
-  return reminderReply("assistant.reminder_scheduled", `${M.set[sw ? "sw" : "en"](reminder.task, spoken)}${contactLine}`, { section: reminder.section, extra: { reminder, suggestedReplies: ["list reminders", "what should I do next", "call contact"] } });
+  return reminderReply("assistant.reminder_scheduled", `${M.set[sw ? "sw" : "en"](reminder.task, spoken)}${contactLine}`, { section: reminder.section, extra: { reminder, delivery: "push", suggestedReplies: ["list reminders", "what should I do next", "call contact"] } });
 }
 
 async function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
@@ -31847,7 +31919,6 @@ async function assistantReminderCommandResponse(db, user, text, lower, options =
   const lang = reminderLanguageOf(text, options);
   const zone = options.timeZone;
   const now = new Date();
-  const mine = () => floorReminders.activeOf(db.profile.assistantReminders, email);
   const lines = (items, language) => items.map(item => floorReminders.reminderLine(item, { now, timeZone: zone, language }));
   if (!hasReminderTimePhrase(text) && /\b(remind me|reminder|notify me)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) {
     return null;
@@ -31862,57 +31933,76 @@ async function assistantReminderCommandResponse(db, user, text, lower, options =
       return reminderReply("assistant.repeating_reminder_unavailable", said || M.repeatUnavailable[lang], { status: said ? "needs-input" : "needs-review" });
     }
   }
-  if (floorReminders.isListRequest(text)) {
-    const active = mine().slice(0, 8);
-    let response = active.length ? M.list[lang](active.length, lines(active, lang)) : M.noReminders[lang];
-    const turn = await repeatStoreTurn(user, lang === "sw" ? "onyesha vikumbusho vyangu vinavyojirudia" : "show my repeating reminders", zone);
-    if (turn.reachable && /^You have \d+ repeating|^Una vikumbusho/i.test(turn.reply || "")) response = active.length ? `${response} ${turn.reply}` : turn.reply;
-    return reminderReply("assistant.reminders_listed", response, { extra: { reminders: active } });
-  }
-  if (floorReminders.isCancelAllRequest(text)) {
-    const active = mine();
-    let repeating = 0;
-    const turn = await repeatStoreTurn(user, "show my repeating reminders", zone);
-    const counted = turn.reachable ? /^You have (\d+) repeating/.exec(turn.reply || "") : null;
-    if (counted) repeating = Number(counted[1]);
-    if (!active.length && !repeating) return reminderReply("assistant.no_reminder_to_cancel", M.nothingToCancel[lang], { status: "needs-input" });
-    pendingReminderTable(db)[email] = { kind: "cancel-all", ids: active.map(item => item.id), repeating: repeating > 0, lang, askedAt: now.toISOString() };
-    return reminderReply("assistant.reminders_cancel_all_confirm", M.cancelAllAsk[lang](active.length + repeating), { status: "needs-input", extra: { count: active.length + repeating } });
-  }
-  const change = floorReminders.readChangeRequest(text);
-  if (change) {
-    const found = floorReminders.findReminder(db.profile.assistantReminders, email, { subject: change.subject });
-    if (found.none) return reminderReply("assistant.no_reminder_to_change", found.subject ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
-    if (found.ambiguous) return reminderReply("assistant.reminder_change_ambiguous", M.whichOne[lang](found.ambiguous.length, lines(found.ambiguous, lang), "change"), { status: "needs-input" });
-    let timing = resolveReminderTime(change.when, { timeZone: zone, language: lang, now });
-    if (timing.status === "none") timing = resolveReminderTime(`at ${change.when}`, { timeZone: zone, language: lang, now });
-    if (timing.status !== "ok") return reminderReply("assistant.reminder_time_needed", lang === "sw" || timing.language === "sw" ? timing.ask.sw : timing.ask.en, { status: "needs-input" });
-    const reminder = found.match;
-    reminder.scheduledAt = timing.scheduledAt; reminder.whenLabel = timing.whenLabel; reminder.readback = timing.readback; reminder.updatedAt = now.toISOString();
-    db.profile.agentMemory.lastStatus = "assistant-reminder-changed";
-    db.profile.agentMemory.lastSummary = `Changed ${reminder.reminderNumber}: ${reminder.task} ${timing.readback}.`;
-    db.profile.agentMemory.updatedAt = reminder.updatedAt;
-    const sw = lang === "sw" || timing.language === "sw";
-    return reminderReply("assistant.reminder_changed", M.changed[sw ? "sw" : "en"](reminder, sw ? timing.readbackSw : timing.readback), { section: reminder.section, extra: { reminder } });
-  }
-  const cancel = floorReminders.readCancelRequest(text);
-  if (cancel) {
-    // Found live (device/notification ownership audit): only the caller's own reminders are ever looked at or canceled.
-    const found = floorReminders.findReminder(db.profile.assistantReminders, email, cancel);
-    if (found.none && !cancel.subject && !cancel.id) return reminderReply("assistant.no_reminder_to_cancel", M.nothingToCancel[lang], { status: "needs-input" });
-    if (found.none) return reminderReply("assistant.no_reminder_to_cancel", cancel.subject || cancel.id ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
+  const isList = floorReminders.isListRequest(text);
+  const isCancelAll = !isList && floorReminders.isCancelAllRequest(text);
+  const change = !isList && !isCancelAll ? floorReminders.readChangeRequest(text) : null;
+  const cancel = !isList && !isCancelAll && !change ? floorReminders.readCancelRequest(text) : null;
+  if (isList || isCancelAll || change || cancel) {
+    const api = await deliveryStoreFor(user);
+    const view = await upcomingReminders(db, user, api, zone);
+    const items = view.items;
+    // The delivery store cannot be reached and there is nothing in the older list: say so, instead of "you have no reminders".
+    const unreachable = () => reminderReply("assistant.reminders_unreachable", M.unreachable[lang], { status: "needs-review" });
+    if (isList) {
+      if (!items.length && !view.complete) return unreachable();
+      const active = items.slice(0, 8);
+      let response = active.length ? M.list[lang](active.length, lines(active, lang)) : M.noReminders[lang];
+      if (!view.complete) response = `${response} ${M.listIncomplete[lang]}`;
+      const turn = await repeatStoreTurn(user, lang === "sw" ? "onyesha vikumbusho vyangu vinavyojirudia" : "show my repeating reminders", zone);
+      if (turn.reachable && /^You have \d+ repeating|^Una vikumbusho/i.test(turn.reply || "")) response = active.length ? `${response} ${turn.reply}` : turn.reply;
+      return reminderReply("assistant.reminders_listed", response, { extra: { reminders: active } });
+    }
+    if (isCancelAll) {
+      let repeating = 0;
+      const turn = await repeatStoreTurn(user, "show my repeating reminders", zone);
+      const counted = turn.reachable ? /^You have (\d+) repeating/.exec(turn.reply || "") : null;
+      if (counted) repeating = Number(counted[1]);
+      if (!items.length && !repeating) return view.complete ? reminderReply("assistant.no_reminder_to_cancel", M.nothingToCancel[lang], { status: "needs-input" }) : unreachable();
+      pendingReminderTable(db)[email] = { kind: "cancel-all", ids: items.map(item => item.id), repeating: repeating > 0, lang, askedAt: now.toISOString() };
+      return reminderReply("assistant.reminders_cancel_all_confirm", M.cancelAllAsk[lang](items.length + repeating), { status: "needs-input", extra: { count: items.length + repeating } });
+    }
+    if (change) {
+      const found = floorReminders.findReminder(items, email, { subject: change.subject });
+      if (found.none) return !view.complete && !items.length ? unreachable() : reminderReply("assistant.no_reminder_to_change", found.subject ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
+      if (found.ambiguous) return reminderReply("assistant.reminder_change_ambiguous", M.whichOne[lang](found.ambiguous.length, lines(found.ambiguous, lang), "change"), { status: "needs-input" });
+      let timing = resolveReminderTime(change.when, { timeZone: zone, language: lang, now });
+      if (timing.status === "none") timing = resolveReminderTime(`at ${change.when}`, { timeZone: zone, language: lang, now });
+      if (timing.status !== "ok") return reminderReply("assistant.reminder_time_needed", lang === "sw" || timing.language === "sw" ? timing.ask.sw : timing.ask.en, { status: "needs-input" });
+      const item = found.match;
+      const sw = lang === "sw" || timing.language === "sw";
+      let reminderAfter;
+      if (item.source === "delivery") {
+        let changed;
+        try { changed = await api.change(item.id, { scheduledAt: timing.scheduledAt, whenLabel: timing.readback, timeZone: timing.timeZone }); } catch { changed = { ok: false }; }
+        if (!changed.ok) return reminderReply("assistant.reminder_change_failed", M.changeFailed[sw ? "sw" : "en"], { status: "needs-review" });
+        if (item.mirror) { item.mirror.notificationId = changed.reminder.id; item.mirror.scheduledAt = timing.scheduledAt; item.mirror.whenLabel = timing.whenLabel; item.mirror.readback = timing.readback; item.mirror.updatedAt = now.toISOString(); }
+        reminderAfter = { ...item, scheduledAt: timing.scheduledAt, id: changed.reminder.id };
+      } else {
+        const legacy = item.original;
+        legacy.scheduledAt = timing.scheduledAt; legacy.whenLabel = timing.whenLabel; legacy.readback = timing.readback; legacy.updatedAt = now.toISOString();
+        reminderAfter = legacy;
+      }
+      db.profile.agentMemory.lastStatus = "assistant-reminder-changed";
+      db.profile.agentMemory.lastSummary = `Changed ${item.reminderNumber || "a reminder"}: ${item.task} ${timing.readback}.`;
+      db.profile.agentMemory.updatedAt = now.toISOString();
+      return reminderReply("assistant.reminder_changed", M.changed[sw ? "sw" : "en"](item, sw ? timing.readbackSw : timing.readback), { section: item.section || "agent", extra: { reminder: reminderAfter } });
+    }
+    // cancel one: found by its words or number, never guessed, and only among the person's own
+    const found = floorReminders.findReminder(items, email, cancel);
+    if (found.none) return !view.complete && !items.length ? unreachable() : reminderReply("assistant.no_reminder_to_cancel", cancel.subject || cancel.id ? M.notFound[lang] : M.nothingToCancel[lang], { status: "needs-input" });
     if (found.ambiguous || (found.count > 1 && !cancel.subject && !cancel.id)) {
-      const choices = found.ambiguous || mine();
+      const choices = found.ambiguous || items;
       return reminderReply("assistant.reminder_cancel_ambiguous", M.whichOne[lang](choices.length, lines(choices, lang), "cancel"), { status: "needs-input" });
     }
-    const reminder = found.match;
-    reminder.status = "canceled";
-    reminder.canceledAt = new Date().toISOString();
+    const item = found.match;
+    let done = false;
+    try { done = await cancelReminderItem(api, item); } catch { done = false; }
+    if (!done) return reminderReply("assistant.reminder_cancel_failed", M.cancelFailed[lang], { status: "needs-review" });
     db.profile.agentMemory.lastStatus = "assistant-reminder-canceled";
-    db.profile.agentMemory.lastSummary = `Canceled ${reminder.reminderNumber}: ${reminder.task}.`;
-    db.profile.agentMemory.updatedAt = reminder.canceledAt;
-    logIntegration(db, { providerId: "openai", module: reminder.module || "Agent AI", action: "assistant.reminder_canceled", detail: `${reminder.reminderNumber} canceled.`, metadata: { reminderId: reminder.id }, dispatch: false });
-    return reminderReply("assistant.reminder_canceled", M.canceled[lang](reminder), { section: reminder.section || "agent", extra: { reminder } });
+    db.profile.agentMemory.lastSummary = `Canceled ${item.reminderNumber || "a reminder"}: ${item.task}.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, { providerId: "openai", module: "Agent AI", action: "assistant.reminder_canceled", detail: `${item.reminderNumber || item.id} canceled.`, metadata: { reminderId: item.id }, dispatch: false });
+    return reminderReply("assistant.reminder_canceled", M.canceled[lang](item), { section: item.section || "agent", extra: { reminder: item } });
   }
   if (floorReminders.isSetRequest(text)) {
     const task = extractAssistantReminderTask(text);
