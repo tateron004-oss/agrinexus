@@ -32,9 +32,15 @@ function periodOf(lower, today) {
 }
 function askedEnglish(lower) {
   const t = lower.replace(/[?!.]+$/g, "").replace(/\b(what|how)(?:'s|’s)\b/g, "$1 is").replace(/^(?:please|kyro|hey|ok|okay)[, ]+/, "");
-  return /^(?:give me|show me|tell me|let me see|send me|read me|read|show|get me|i want|i need|can i (?:see|get|have)|what is|what are|how is|how are|how was|how were)?\s*(?:me )?(?:my |our |the |a )?(?:(?:full|whole|simple|short|quick|business|shop|duka|stall|money|financial|farm)\s+)*(?:(?:monthly|weekly|daily|yearly|month|week)\s+)?(?:summary|report|overview|statement)(?:\s+(?:for|of|in)\s+(?:my |our |the )?(?:this month|last month|this week|last week|today|yesterday|this year|(?:business|shop|duka|money|books|accounts?)|[a-z]+(?: \d{4})?))?(?:\s+(?:for|of|in)\s+(?:this month|last month|this week|last week|today|yesterday|this year|[a-z]+(?: \d{4})?))?$/.test(t)
-    || /^how (?:did|have) (?:i|we) (?:do|done|go|gone|fare|fared) (?:this month|last month|this week|last week|today|yesterday|this year)?$/.test(t) || /^how is (?:my |our |the )?(?:business|shop|duka|stall) (?:doing )?(?:this month|this week|today)?$/.test(t)
-    || /^how (?:much )?(?:did|have) (?:i|we) (?:make|made|earn|earned) and (?:spend|spent)(?: (?:this month|last month|this week|last week|today|yesterday|this year))?$/.test(t);
+  const period = `(?:this month|last month|this week|last week|today|yesterday|this year|(?:for|in|of) ${MONTHS}(?: \\d{4})?)`;
+  const lead = "(?:(?:give me|show me|tell me|let me see|send me|read me|get me|show|read|i want|i need|can i (?:see|get|have)|what is|what are|how is|how was)\\s+)?(?:me\\s+)?";
+  const noun = "(?:(?:my|our|the|a)\\s+)?(?:(?:full|whole|simple|short|quick|business|shop|duka|stall|money|financial|farm|monthly|weekly|daily|yearly|month|week)\\s+)*(?:summary|report|overview|statement)";
+  const about = "(?:\\s+(?:of|for|on)\\s+(?:my |our |the )?(?:business|shop|duka|stall|money|books|accounts?|sales|month|week))?";
+  const when = `(?:\\s+${period})?`;
+  const whenFor = `(?:\\s+(?:for|of|in)\\s+(?:${period.slice(3, -1)}))?`;
+  return new RegExp(`^${lead}${noun}${about}${when}${whenFor}$`).test(t)
+    || /^how (?:did|have) (?:i|we) (?:do|done|go|gone|fare|fared)(?: (?:this month|last month|this week|last week|today|yesterday|this year))?$/.test(t) || /^how is (?:my |our |the )?(?:business|shop|duka|stall)(?: doing)?(?: (?:this month|this week|today))?$/.test(t)
+    || /^how much (?:did|have) (?:i|we) (?:make|made|earn|earned) and (?:spend|spent)(?: (?:this month|last month|this week|last week|today|yesterday|this year))?$/.test(t);
 }
 function askedSwahili(lower) {
   const t = lower.replace(/[?!.]+$/g, "");

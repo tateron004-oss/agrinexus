@@ -21,8 +21,9 @@ const { describeDay } = require("../personal/dates.js");
 const scopeOf = ctx => ({ tenantId: ctx.tenantId, userId: ctx.userId });
 const listMoney = ctx => ctx.store.list({ ...scopeOf(ctx), collection: "money" });
 const AMT = amounts.MONEY_TOKEN;
+const NAME_LAZY = "([A-Za-z][A-Za-z'.-]*(?: [A-Za-z][A-Za-z'.-]*){0,2}?)";
 const NAME = "([A-Za-z][A-Za-z'.-]*(?: [A-Za-z][A-Za-z'.-]*){0,2})";
-const NOT_PERSON = /^(?:i|we|you|he|she|they|it|who|someone|somebody|nobody|me|us|my|our|the|a|an|this|that|please|money|cash|some|it|rent|loan|chama|savings)$/i;
+const NOT_PERSON = /^(?:i|we|you|he|she|they|it|who|someone|somebody|nobody|me|us|my|our|the|a|an|this|that|please|money|cash|some|it|rent|loan|chama|savings|policy|policies|request|requests|process|status|rules|terms|form|forms|window|desk|department|fee|fees|amount|option|options|button|page|screen|feature|help|receipt|everyone|everybody|customers?|customer)$/i;
 const cleanName = raw => clean(raw).replace(/^(?:the|my|our)\s+/i, "").replace(/\s+(?:back|please|today|yesterday)$/i, "");
 // a lender may be the bank or the chama
 const NOT_LENDER = /^(?:i|we|you|he|she|they|it|who|someone|somebody|nobody|me|us|my|our|the|a|an|this|that|please|money|cash|some|rent|loan|savings)$/i;
@@ -52,19 +53,29 @@ async function recordLoan(ctx, { party, amount, currency, installment, language 
   return `Recorded: you borrowed ${here}${party ? ` from ${party}` : ""}. It is not income: it is money you owe, so it does not change your profit.${installment ? ` You plan to pay back ${shown(installment.amount, installment.currency || result.record.data.currency)} ${installment.every}.` : ""} When you repay, say "I repaid ${party || "the bank"} 2000" (or the amount).${all.length > 1 ? ` You now owe ${party} ${showTotals(sums(all, "owing"))} in all.` : ""}`;
 }
 
+// who the loan is from is asked in the language it was told in
+const askLender = async (ctx, extra) => {
+  await ctx.store.setSession({ ...scopeOf(ctx), session: { collection: "shop_loan_from", answers: {}, asking: "party", extra, expiresAt: new Date(Date.now() + 30 * 60000).toISOString() } });
+  return extra.language === "sw" ? 'Mkopo ni kutoka kwa nani? (Sema jina, kama "benki" au "Mama Njeri", au sema skip.)' : 'Who is the loan from? (Say the name, like "the bank" or "Mama Njeri", or say skip.)';
+};
+const takeAmount = hint => raw => { const bare = rereads.parseBareAmount(raw); if (bare && !bare.ambiguous) return { value: { amount: bare.amount, currency: bare.currency } }; const a = books.amountAnswer(raw); if (a.value && !a.value.quantity) return a; return clean(raw).split(" ").length >= 2 && /[A-Za-z]{3,}/.test(clean(raw).replace(/\b(?:shillings?|shilingi|ksh|kshs|kes|dollars?|naira|elfu|mia|laki|milioni|bob)\b/gi, "")) ? { drop: true } : { hint }; };
+const askAmountOf = async (ctx, collection, extra, en, sw) => {
+  await ctx.store.setSession({ ...scopeOf(ctx), session: { collection, answers: {}, asking: "money", extra, expiresAt: new Date(Date.now() + 30 * 60000).toISOString() } });
+  return extra.language === "sw" ? sw : en;
+};
 const templates = {
   shop_loan_from: { collection: "shop_loan_from", questions: [{ key: "party", ask: "Who is the loan from? (Say the name, like \"the bank\" or \"Mama Njeri\".)", type: "text", max: 40, optional: true,
-    parse: raw => { const text = clean(raw); return text && !/\d/.test(text) && text.split(" ").length <= 4 && /^[A-Za-z][A-Za-z'. -]*$/.test(text) ? { value: text } : { hint: 'Say just the name, like "the bank" or "Mama Njeri".' }; } }],
+    parse: raw => { const text = clean(raw); if (/\d/.test(text)) return { drop: true }; return text && text.split(" ").length <= 4 && /^[A-Za-z][A-Za-z'. -]*$/.test(text) ? { value: text } : { hint: 'Say just the name, like "the bank" or "Mama Njeri".' }; } }],
     async finish(ctx, answers, extra) { return recordLoan(ctx, { ...extra, party: answers.party ? books.personName(cleanName(answers.party)) : "" }); } },
-  shop_repay: { collection: "shop_repay", questions: [{ key: "money", ask: "How much did you repay?", type: "money", parse: raw => { const a = books.amountAnswer(raw); return a.value && !a.value.quantity ? a : { hint: 'Say the amount, like "2000".' }; } }],
+  shop_repay: { collection: "shop_repay", questions: [{ key: "money", ask: "How much did you repay?", type: "money", parse: takeAmount('Say the amount, like "2000".') }],
     async finish(ctx, answers, extra) { return (await repayLoan(ctx, extra.party, answers.money, extra.language)) || (extra.language === "sw" ? "Sioni mkopo kutoka kwa mtu huyo kwenye rekodi zako." : "I could not find that loan."); } },
-  shop_refund_amount: { collection: "shop_refund_amount", questions: [{ key: "money", ask: "How much did you refund?", type: "money", parse: raw => { const a = books.amountAnswer(raw); return a.value && !a.value.quantity ? a : { hint: 'Say the amount, like "300".' }; } }],
+  shop_refund_amount: { collection: "shop_refund_amount", questions: [{ key: "money", ask: "How much did you refund?", type: "money", parse: takeAmount('Say the amount, like "300".') }],
     async finish(ctx, answers, extra) { return refund(ctx, extra.party, answers.money, extra.saleId, extra.language); } }
 };
 
 // Paying back a loan: only loan records are touched, oldest first, and NOTHING is counted as a cost (the money was borrowed).
 async function repayLoan(ctx, creditor, said, language) {
-  const rows = (await listMoney(ctx)).filter(isLoan).filter(record => record.data.party && nameKey(record.data.party) === nameKey(creditor)).sort((a, b) => String(a.data.day).localeCompare(String(b.data.day)));
+  const rows = (await listMoney(ctx)).filter(isLoan).filter(record => record.data.party && nameKey(record.data.party) === nameKey(creditor)).sort((a, b) => String(a.data.day).localeCompare(String(b.data.day)) || String(a.createdAt).localeCompare(String(b.createdAt)));
   if (!rows.length) return null;
   const who = rows[0].data.party; const usable = said ? rows.filter(record => sameCurrency(said.currency, record.data.currency)) : rows;
   if (!usable.length) return language === "sw" ? `Unadaiwa ${showTotals(sums(rows, "owing"))} na ${who}, si kwa sarafu hiyo, kwa hivyo sijabadilisha chochote. Sema kiasi tena kwa sarafu ileile.` : `You owe ${who} ${showTotals(sums(rows, "owing"))}, not in that currency, so I have changed nothing. Say the amount again in the same money.`;
@@ -113,10 +124,11 @@ async function loans(ctx, t, lower) {
   if ((m = new RegExp(`^(?:(?:i|we)(?:'ve| have)?\\s+)?(?:(?:just|also|now|then)\\s+)*(?:borrowed|took (?:out )?(?:a )?loan(?: out)?|taken (?:out )?(?:a )?loan|got (?:a )?loan|received (?:a )?loan|was lent|got lent|have a loan|have borrowed)\\b(.*)$`, "i").exec(t))) borrow = m[1];
   else if ((m = new RegExp(`^${NAME} (?:lent|loaned) (?:me|us)\\s+(?:a loan of\\s+)?(${AMT})(.*)$`, "i").exec(t)) && validLender(m[1])) borrow = ` ${m[2]} from ${m[1]}${m[3]}`;
   else if ((m = new RegExp(`^(?:a |my |our )?loan (?:of )?(${AMT}) (?:from|at|with) (?:the |my |our )?${NAME}(.*)$`, "i").exec(t))) borrow = ` ${m[1]} from ${m[2]}${m[3]}`;
-  else if ((m = new RegExp(`^(?:a |my |our )?loan (?:from|at|with) (?:the |my |our )?${NAME}(?: is| was| of)? (${AMT})(.*)$`, "i").exec(t))) borrow = ` ${m[2]} from ${m[1]}${m[3]}`;
+  else if ((m = new RegExp(`^(?:a |my |our )?loan (?:from|at|with) (?:the |my |our )?${NAME_LAZY}(?: is| was| of)? (${AMT})(.*)$`, "i").exec(t))) borrow = ` ${m[2]} from ${m[1]}${m[3]}`;
   if (borrow !== null) {
+    borrow = borrow.replace(new RegExp("\\s+(?:by|via|in|on|through|using|with)\\s+(?:" + amounts.PAYMENT_WORDS + ")\\b", "i"), " ").trimEnd();
     const amountMatch = new RegExp(`(?:^|\\s)(?:of\\s+)?(${AMT})(?![\\d,.]*\\d)`, "i").exec(borrow);
-    if (!amountMatch) { const who = /\b(?:from|at|with)\s+(?:the |my |our )?([A-Za-z][A-Za-z'.-]*(?: [A-Za-z][A-Za-z'.-]*){0,2}?)(?=$|\s+(?:pay|to pay|and|for|monthly|at|,))/i.exec(borrow); return who && validLender(who[1]) ? startGuided(ctx, templates.shop_loan_amount, {}, { party: books.personName(cleanName(who[1])), language: "en" }) : null; }
+    if (!amountMatch) { const who = /\b(?:from|at|with)\s+(?:the |my |our )?([A-Za-z][A-Za-z'.-]*(?: [A-Za-z][A-Za-z'.-]*){0,2}?)(?=$|\s+(?:pay|to pay|and|for|monthly|at|,))/i.exec(borrow); return who && validLender(who[1]) ? askAmountOf(ctx, "shop_loan_amount", { party: books.personName(cleanName(who[1])), language: "en" }, "How much was the loan?", "") : null; }
     const token = asToken(amountMatch[1]); if (!token) return null;
     const unsure = await askIfUnsure(ctx, t, token, amountMatch[1]); if (unsure) return unsure;
     const who = new RegExp(`\\b(?:from|at|with|by)\\s+(?:the |my |our )?([A-Za-z][A-Za-z'.-]*(?: [A-Za-z][A-Za-z'.-]*){0,2}?)(?=$|\\s+(?:pay|to pay|and|for|monthly|at|,)|\\s+${AMT})`, "i").exec(borrow.replace(amountMatch[0], " "));
@@ -124,7 +136,7 @@ async function loans(ctx, t, lower) {
     const back = new RegExp(`(?:pay(?:ing)?|to pay|repay(?:ing)?)(?: it)? back (${AMT})\\s*(monthly|weekly|a month|every month|per month|each month|a week|every week|per week|each week)`, "i").exec(borrow);
     const backToken = back ? asToken(back[1]) : null;
     const installment = backToken && !backToken.unsure ? { amount: backToken.amount, currency: backToken.currency, every: /week/i.test(back[2]) ? "every week" : "every month" } : null;
-    if (!party) return startGuided(ctx, templates.shop_loan_from, {}, { amount: token.amount, currency: token.currency, installment, language: "en" });
+    if (!party) return askLender(ctx, { amount: token.amount, currency: token.currency, installment, language: "en" });
     return recordLoan(ctx, { party, amount: token.amount, currency: token.currency, installment, language: "en" });
   }
   if ((m = /^(?:nimekopa|tumekopa|nilikopa|tulikopa|nimechukua mkopo(?: wa)?|nimepata mkopo(?: wa)?|tumepata mkopo(?: wa)?|nimekopeshwa|tumekopeshwa|nilikopeshwa)\s+(.+)$/i.exec(t))) return swahiliLoan(ctx, t, m[1]);
@@ -144,7 +156,7 @@ async function loans(ctx, t, lower) {
     }
     if (named && !named.rest && /\bmkopo\b/i.test(t)) {
       const rows = (await listMoney(ctx)).filter(isLoan).filter(record => record.data.party && nameKey(record.data.party) === nameKey(named.name));
-      if (rows.length) return startGuided(ctx, templates.shop_repay, {}, { party: named.name, language: "sw" });
+      if (rows.length) return askAmountOf(ctx, "shop_repay", { party: named.name, language: "sw" }, "", "Ulilipa kiasi gani?");
     }
   }
   // ---- paying a loan back ----
@@ -154,7 +166,7 @@ async function loans(ctx, t, lower) {
     new RegExp(`^(?:loan )?repayment(?: of)? (${AMT}) (?:to|for|on) (?:the |my |our )?${NAME}$`, "i")];
   for (let k = 0; k < repay.length; k += 1) {
     if (!(m = repay[k].exec(t))) continue;
-    const [rawAmount, rawName] = k === 1 ? [m[2], m[1]] : [m[1], m[2]];
+    const [rawAmount, rawNameFull] = k === 1 || k === 2 ? [m[2], m[1]] : [m[1], m[2]]; const rawName = rawNameFull.replace(/\s+loan$/i, "");
     if (!validParty(rawName)) continue;
     const token = asToken(rawAmount); if (!token) return null;
     const unsure = await askIfUnsure(ctx, t, token, rawAmount); if (unsure) return unsure;
@@ -167,11 +179,11 @@ async function loans(ctx, t, lower) {
   if ((m = new RegExp(`^(?:(?:i|we)(?:'ve| have)?\\s+)?(?:(?:just|also|already)\\s+)*(?:repaid|paid back|paid off|cleared|settled)\\s+(?:the |my |our )?${NAME}(?:'s)?(?: loan)?(?: back)?$`, "i").exec(t)) && validParty(m[1])) {
     const who = cleanName(m[1]); const rows = (await listMoney(ctx)).filter(isLoan).filter(record => record.data.party && nameKey(record.data.party) === nameKey(who));
     if (!rows.length) return /\bloan\b/i.test(t) ? `I have no loan from ${books.personName(who)} recorded, so I have changed nothing.` : null;
-    return startGuided(ctx, templates.shop_repay, {}, { party: who, language: "en" });
+    return askAmountOf(ctx, "shop_repay", { party: who, language: "en" }, "How much did you repay?", "");
   }
   return null;
 }
-templates.shop_loan_amount = { collection: "shop_loan_amount", questions: [{ key: "money", ask: "How much was the loan?", type: "money", parse: raw => { const a = books.amountAnswer(raw); return a.value && !a.value.quantity ? a : { hint: 'Say the amount, like "20000".' }; } }],
+templates.shop_loan_amount = { collection: "shop_loan_amount", questions: [{ key: "money", ask: "How much was the loan?", type: "money", parse: takeAmount('Say the amount, like "20000".') }],
   async finish(ctx, answers, extra) { return recordLoan(ctx, { party: extra.party, amount: answers.money.amount, currency: answers.money.currency, language: extra.language }); } };
 
 // "nimekopa elfu tano kutoka kwa Mama Njeri", "nimechukua mkopo wa elfu ishirini benki", "nina mkopo wa elfu ishirini"
@@ -181,7 +193,7 @@ async function swahiliLoan(ctx, t, rest) {
   if (!who && /\b(?:benki|chama|sacco)\b/i.test(rest)) { who = books.personName(/\b(benki|chama|sacco)\b/i.exec(rest)[1]); body = rest.replace(/\b(?:benki|chama|sacco)\b/i, " "); }
   const said = parseMoneySw(body); if (!said || !(said.amount > 0)) return null;
   if (said.ambiguous) { const doubt = await swahili.askAbout(ctx, t, { ambiguous: { kind: "money", values: said.ambiguous } }); if (doubt) return doubt; }
-  if (!who) return startGuided(ctx, templates.shop_loan_from, {}, { amount: said.amount, currency: said.currency, installment: null, language: "sw" });
+  if (!who) return askLender(ctx, { amount: said.amount, currency: said.currency, installment: null, language: "sw" });
   return recordLoan(ctx, { party: who === "Benki" ? "Benki" : who, amount: said.amount, currency: said.currency, installment: null, language: "sw" });
 }
 
@@ -287,7 +299,7 @@ async function refund(ctx, partyRaw, said, saleId, language, onSaleAmount) {
   }
   // no amount said
   const paid = open.filter(entry => !entry.record.data.unpaid && entry.left > 0);
-  if (paid.length === 1) return startGuided(ctx, templates.shop_refund_amount, {}, { party, saleId: paid[0].record.memoryId, language });
+  if (paid.length === 1) return askAmountOf(ctx, "shop_refund_amount", { party, saleId: paid[0].record.memoryId, language }, `How much did you refund ${party}? The sale was ${describeSale(paid[0].record, ctx, language)}.`, `Ulimrudishia ${party} kiasi gani? Mauzo yalikuwa ${describeSale(paid[0].record, ctx, language)}.`);
   if (!paid.length) return sw ? `${party} hajalipa mauzo yake bado (anadaiwa), au tayari yamerejeshwa kikamilifu, kwa hivyo sijaandika chochote.` : `${party}'s sales are either unpaid (${party} owes you) or already fully refunded, so I have recorded nothing.`;
   return sw ? `${party} ana mauzo kadhaa: ${paid.slice(0, 4).map(entry => describeSale(entry.record, ctx, language)).join("; ")}. Sema kiasi na mauzo, kwa mfano "nimemrudishia ${party} 300 kwa mauzo ya ${paid[0].record.data.amount}".` : `${party} has more than one sale: ${paid.slice(0, 4).map(entry => describeSale(entry.record, ctx, language)).join("; ")}. Tell me the amount and which sale, for example "refund ${party} 300 from the ${paid[0].record.data.amount} sale".`;
 }
@@ -340,7 +352,7 @@ async function receiptText(ctx, sale, language) {
 }
 async function receipts(ctx, t) {
   let m; let language = "en"; let party = ""; let rawAmount = ""; let last = false;
-  const ask = "(?:please )?(?:give me|make|print|create|prepare|show me|get me|i need|i want|can i (?:get|have)|write)(?: me)?(?: a| an| the| my)?(?: printable)? receipt";
+  const ask = "(?:(?:please )?(?:give me|make|print|create|prepare|show me|get me|i need|i want|can i (?:get|have)|write)(?: me)?(?: a| an| the| my)?(?: printable)? |(?:a |the |my )?)receipt";
   if ((m = new RegExp(`^${ask} (?:for|to|from) (?:the )?${NAME}(?:'s)? (${AMT})(?: sale| purchase| order)?$`, "i").exec(t)) && validParty(m[1])) { party = m[1]; rawAmount = m[2]; }
   else if ((m = new RegExp(`^${ask} (?:for|of) (?:the |my |that |this )?(?:${AMT} )?(?:sale|purchase) (?:of |for )?(${AMT}) (?:to|for) ${NAME}$`, "i").exec(t)) && validParty(m[2])) { party = m[2]; rawAmount = m[1]; }
   else if (new RegExp(`^${ask} (?:for|of) (?:the |my |that |this )?(?:last|latest|previous|most recent)(?: one| sale| entry)?$|^${ask} (?:for|of) (?:that|this) (?:sale|one)$`, "i").test(t) || /^(?:receipt|a receipt) for (?:the |my )?(?:last|latest) sale$/i.test(t)) last = true;
