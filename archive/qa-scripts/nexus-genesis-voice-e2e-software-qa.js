@@ -98,17 +98,17 @@ const realtimeStart = section(app, "async function startOpenAiAgentsRealtimeVoic
 includes(realtimeStart, "nexusRealtimeConversationIdentity", "stable conversation identity");
 includes(realtimeStart, "conversationIdentity", "session stores conversation identity");
 includes(realtimeStart, "turnIndex: Number(options.turnIndex || 0)", "turn count is restored across recovery");
-includes(realtimeStart, "preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null", "preverified stream reaches SDK adapter");
+includes(realtimeStart, "preverifiedMicrophoneStream: kyroCloneMicrophoneForSdk(options.preverifiedMicrophoneStream || null)", "preverified stream (as a clone the SDK may stop) reaches SDK adapter");
 includes(realtimeStart, "normalizeRealtimeMicrophoneProof(controller)", "post-connect mic proof");
 includes(realtimeStart, "voiceRecognition.stop()", "legacy recognition stopped only after Realtime mic proof");
 includes(realtimeStart, "stopNexusAudioFallbackRecorder(\"openai-agents-realtime-verified\")", "fallback recorder stopped after Realtime ownership");
 includes(realtimeStart, "stopNexusVoicePermissionStream(\"openai-agents-realtime-verified\")", "non-owned stream cleanup after handoff");
 
 const recovery = section(app, "function scheduleRealtimeRecovery", "async function loadRealtimeVoiceStatus", "Realtime recovery");
-includes(recovery, "preservedPermanentStream", "recovery preserves permanent microphone stream");
-includes(recovery, "conversationIdentity: session.conversationIdentity || nexusRealtimeConversationIdentity", "recovery preserves conversation identity");
-includes(recovery, "turnIndex: Number(session.turnIndex || 0)", "recovery preserves turn index");
-includes(recovery, "preverifiedMicrophoneStream: preservedPermanentStream", "recovery reuses verified stream");
+includes(recovery, "kyroLiveMicrophoneForRestart", "recovery keeps the permanent microphone stream if live, otherwise opens a new one");
+includes(recovery, "conversationIdentity: session?.conversationIdentity || nexusRealtimeConversationIdentity", "recovery preserves conversation identity");
+includes(recovery, "turnIndex: Number(session?.turnIndex || 0)", "recovery preserves turn index");
+includes(recovery, "preverifiedMicrophoneStream: microphone", "recovery reuses verified stream");
 
 const stopSession = section(app, "function stopRealtimeVoiceSession", "let nexusOpenAiRealtimeAgentModulePromise", "Realtime stop");
 includes(stopSession, "explicitShutdown", "shutdown classifier");

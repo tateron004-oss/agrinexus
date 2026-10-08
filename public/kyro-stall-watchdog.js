@@ -89,5 +89,54 @@
     };
   }
 
-  return Object.freeze({ createStallWatchdog, DEFAULTS });
+  // ---- what the report says about the stall (types and numbers only: never speech, names or other personal content) ----
+
+  // A short memory of the last few realtime events (just their type names, with how long ago they happened), so a stall report shows what the session
+  // was doing when it went quiet. Repeated events of the same type are counted instead of listed again (audio events arrive many times a second).
+  function createEventRing({ cap = 10, now = () => Date.now() } = {}) {
+    const items = [];
+    const clean = type => String(type || "").toLowerCase().replace(/[^a-z0-9_.:-]/g, "").slice(0, 60);
+    return {
+      record(type) {
+        const name = clean(type);
+        if (!name) return;
+        const last = items[items.length - 1];
+        if (last && last.type === name) { last.count += 1; last.at = now(); return; }
+        items.push({ type: name, at: now(), count: 1 });
+        while (items.length > cap) items.shift();
+      },
+      snapshot() { const t = now(); return items.map(item => ({ type: item.type, ageMs: Math.max(0, t - item.at), count: item.count })); },
+      clear() { items.length = 0; }
+    };
+  }
+
+  const PHASES = Object.freeze(["waiting-for-tool", "waiting-for-response", "audio-suspended", "disconnected", "mic-lost", "offline", "backgrounded", "auto-response-stuck", "idle"]);
+
+  // Which of the known ways a voice session goes quiet this looks like. The most basic cause wins: a session that is not connected cannot be "waiting for a response".
+  function classifyPhase(state = {}) {
+    if (state.active === false) return "disconnected";
+    const dead = value => ["failed", "closed", "disconnected"].includes(String(value || "").toLowerCase());
+    if (dead(state.peerState) || dead(state.iceState) || dead(state.connectionState) || (state.dataChannelState && String(state.dataChannelState) !== "open")) return "disconnected";
+    if (String(state.micTrack || "").toLowerCase() === "ended") return "mic-lost";
+    if (state.online === false) return "offline";
+    if (String(state.audioContextState || "").toLowerCase() === "suspended") return "audio-suspended";
+    if (state.autoResponseOn === false && !state.intakeActive) return "auto-response-stuck";
+    if (state.toolRunning) return "waiting-for-tool";
+    if (state.tabVisible === "hidden") return "backgrounded";
+    if (state.waitingForResponse) return "waiting-for-response";
+    return "idle";
+  }
+
+  // How the session's age compares with the lifetime of the key it started with (expiresAt is seconds or milliseconds since 1970, or null).
+  // Negative keyRemainingMs means the key had already expired when the report was made. Only the numbers are reported, never the key.
+  function sessionTiming({ startedAt = 0, expiresAt = null, now = Date.now() } = {}) {
+    const started = Number(startedAt) || 0;
+    const ageMs = started ? Math.max(0, now - started) : 0;
+    let expiresMs = Number(expiresAt);
+    if (!Number.isFinite(expiresMs) || expiresMs <= 0) return { sessionAgeMs: ageMs, keyRemainingMs: 0, keyKnown: false };
+    if (expiresMs < 1e11) expiresMs *= 1000;
+    return { sessionAgeMs: ageMs, keyRemainingMs: Math.round(expiresMs - now), keyKnown: true };
+  }
+
+  return Object.freeze({ createStallWatchdog, createEventRing, classifyPhase, sessionTiming, PHASES, DEFAULTS });
 });
