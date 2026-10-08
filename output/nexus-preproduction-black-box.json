@@ -1,6 +1,0 @@
-{
-  "passed": false,
-  "releaseSha": "0123456789abcdef0123456789abcdef01234567",
-  "error": "health must report the exact candidate SHA\n+ actual - expected\n\n+ 'fedcba9876543210fedcba9876543210fedcba98'\n- '0123456789abcdef0123456789abcdef01234567'\n",
-  "checkedAt": "2026-10-08T00:36:13.355Z"
-}
