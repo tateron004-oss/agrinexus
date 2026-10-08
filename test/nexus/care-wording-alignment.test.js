@@ -20,6 +20,10 @@ test("pregnancy blood pressure: the wording says what the code does (either numb
   assert.equal(sign("I am pregnant and my blood pressure is 145 over 80"), "pregnancy_bp");
   assert.equal(sign("I am pregnant and my blood pressure is 130 over 95"), "pregnancy_bp");
   assert.equal(sign("I am pregnant and my blood pressure is 139 over 89"), null);
+  // found by the production user audit: "160 juu ya 110" (Kiswahili for "160 over 110") was staged as a reading to save instead of being answered as an emergency
+  assert.equal(sign("nina mimba na presha yangu ni 160 juu ya 110"), "pregnancy_bp_high");
+  assert.equal(sign("mimi ni mjamzito, presha yangu ni 145 juu ya 80"), "pregnancy_bp");
+  assert.equal(sign("nina mimba na presha yangu ni 139 juu ya 89"), null);
 });
 
 test("pregnancy blood pressure: the Kiswahili says how to keep the reading, like the English", () => {

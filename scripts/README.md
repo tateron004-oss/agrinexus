@@ -137,6 +137,7 @@ Repurpose checklist:
 | `production-complete-check.js` | `production:complete-check`, `production:10-check` | Production Critical | Production readiness and completeness check. | No |
 | `production-preflight.js` | `production:preflight` | Production Critical | Production deployment preflight gate. | No |
 | `production-smoke.js` | `production:smoke` | Production Critical | Hosted/production-style smoke test. | No |
+| `production-user-audit.js` | none | Production Critical | Owner-run user-journey audit of a live site with a dedicated test account (read-only by default); see `docs/PRODUCTION_USER_AUDIT.md`. | Review first |
 | `provider-engines-smoke.js` | `provider-engines:smoke` | Provider / Infrastructure | Tests app integration with local provider engines using a temp DB. | No |
 | `provider-engines.js` | `provider-engines` | Provider / Infrastructure | Local provider engine server for integration testing. | No |
 | `realtime-voice-provider-qa.js` | `voice:realtime-qa` | Provider / Infrastructure | Static QA for realtime voice provider configuration. | No |

@@ -157,7 +157,8 @@
     if (hasBaby && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain) || ANAPHOR.test(plain)) && any(CHILD_NOW, plain)) return { category: "baby" };
     if (hasChild && /\b(?:fell|ameanguka|fallen|baby fell off|fell off)\b/.test(plain) && /\b(?:head|kichwa|crying a lot|bleeding|damu)\b/.test(plain)) return { category: "injury" };
     // A raised blood pressure in pregnancy is not a number to log: 140/90 needs a health worker the same day, 160/110 now. A question about it ("is 150/95 safe in pregnancy?") is answered too.
-    const pressure = plain.match(/\b(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})\b/);
+    // "juu ya" is how Kiswahili says "over" ("presha yangu ni 160 juu ya 110"); without it the pressure was staged as a reading to save and the mother was not told to go now.
+    const pressure = plain.match(/\b(\d{2,3})\s*(?:over|juu ya|\/)\s*(\d{2,3})\b/);
     if (pregnant && pressure) {
       const top = Number(pressure[1]); const bottom = Number(pressure[2]);
       if (top > bottom && top >= 90 && top <= 300 && bottom >= 40 && bottom <= 200) {
