@@ -37,15 +37,36 @@ function createFakeWorld(options = {}) {
       { videoId: "blockedVid01", title: "Last Last (blocked embed)", channel: "Someone", embeddable: false, duration: "PT3M" },
       { videoId: "karaokeVid01", title: "Last Last karaoke", channel: "KaraokeCo", embeddable: true, duration: "PT3M" }
     ],
+    faults: {},
     oembedFail: new Set(["blockedVid01"]),
     deadStreams: new Set(["https://streams.example.test/dead.mp3"]),
     ...options
   };
+  if (Array.isArray(opts.deadStreams)) opts.deadStreams = new Set(opts.deadStreams);
+  if (Array.isArray(opts.oembedFail)) opts.oembedFail = new Set(opts.oembedFail);
+
+  // opts.faults: { "<host or host suffix>": "throw" | "hang" | "hang-ignore-signal" | "garbage" | "html" | "500" | "429" | "slow" }
+  async function applyFault(host, init) {
+    const entry = Object.entries(opts.faults || {}).find(([name]) => host === name || host.endsWith(name));
+    if (!entry) return null;
+    const mode = entry[1];
+    if (mode === "throw") throw Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } });
+    if (mode === "hang") return new Promise((resolve, reject) => init.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }))));
+    if (mode === "hang-ignore-signal") return new Promise(() => {});
+    if (mode === "slow") { await new Promise(resolve => setTimeout(resolve, 400)); return null; }
+    if (mode === "garbage") return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => { throw new SyntaxError("Unexpected token <"); }, body: { cancel: async () => {} } };
+    if (mode === "html") return { ok: true, status: 200, headers: { get: () => "text/html" }, json: async () => ({ unexpected: "shape", items: "nope", data: 5, results: null }), body: { cancel: async () => {} } };
+    if (mode === "500") return jsonResponse({ error: "boom" }, 500);
+    if (mode === "429") return jsonResponse({ error: "rate" }, 429);
+    return null;
+  }
 
   async function fetch(input, init = {}) {
     const url = String(input);
     const parsed = new URL(url);
     calls.push({ url, method: init.method || "GET", headers: init.headers || {} });
+    const faulted = await applyFault(parsed.host, init);
+    if (faulted) return faulted;
     const host = parsed.host;
     const p = parsed.searchParams;
 
@@ -120,7 +141,8 @@ function createFakeWorld(options = {}) {
       if (!opts.itunes) return jsonResponse({ results: [] });
       return jsonResponse({ results: [{ trackName: "Sir Duke", artistName: "Stevie Wonder", collectionName: "Songs in the Key of Life", previewUrl: "https://audio-ssl.example.test/sir-duke.m4a", trackViewUrl: "https://music.apple.com/x", artworkUrl100: "https://img.example.test/sd.jpg" }, { trackName: "Last Last", artistName: "Burna Boy", previewUrl: "https://audio-ssl.example.test/last-last.m4a" }] });
     }
-    if (host === "audio-ssl.example.test") return mediaResponse("audio/mp4");
+    // Apple really serves its preview files as audio/x-m4p (checked against itunes.apple.com).
+    if (host === "audio-ssl.example.test") return mediaResponse("audio/x-m4p");
 
     // Streams
     if (host === "streams.example.test" || host === "jamendo-cdn.example.test") {

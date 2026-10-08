@@ -48,6 +48,7 @@ function createMediaRuntime({ env = process.env, fetch, now, filePath } = {}) {
         note: "Health counters are for this server process since it last started. Nothing here is a listening history: no queries, users or titles are kept.",
         flagsRequired: "none -- the keyless providers (radio-browser, Audius, Internet Archive, Wikimedia Commons, Apple previews) need no NEXUS_* flag; YouTube needs only YOUTUBE_API_KEY.",
         youtube: { configured: youtube.isConfigured(ctx).configured, quota: state.quota() },
+        recentResolves: state.recentResolves(),
         providers: Object.values(PROVIDERS).map(provider => {
           const config = provider.isConfigured(ctx);
           const record = health[provider.id] || { ok: 0, failed: 0, lastOkAt: null, lastErrorAt: null, lastError: null, lastLatencyMs: null };

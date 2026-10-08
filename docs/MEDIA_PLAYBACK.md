@@ -121,7 +121,7 @@ with the process; Google's own quota answer then corrects it. To raise the limit
 ### Owner tools
 
 * `GET /api/admin/media/providers` (Admin who owns the platform): which providers are configured, how each has been doing since the server started, last error codes,
-  and YouTube quota used/remaining. `?probe=1` also pings the keyless directories. No secrets, queries, users or titles are ever in it.
+  and YouTube quota used/remaining. `recentResolves` lists the last 30 resolve attempts (kind, outcome, total time, and each provider's status, count, milliseconds and reason) so you can see why a request fell back; no query text or person is in it. `?probe=1` also pings the keyless directories. No secrets, queries, users or titles are ever in it.
 * `node scripts/check-media-providers-live.js` (read-only; `--json`, `--require-youtube`): resolves a Kenyan radio station, a Nigerian one, a song and a video topic
   against the REAL providers, prints PASS/FAIL per provider with latency and quota, and lists the optional settings still missing. It spends at most two YouTube
   searches and never prints a key. Run it on your machine or in a Render shell.
@@ -154,6 +154,16 @@ admin report has no queries. On the phone, `localStorage` holds only preferences
   session's speaking start/end events.
 * A bare "stop" (without "the music") is left to Kyro's existing stop/wake-word handling; say "stop the music" / "simamisha muziki".
 * HLS-only radio stations on browsers without native HLS (desktop Chrome/Firefox): skipped, not played.
+
+## Robustness (what keeps "nothing to play" from happening)
+
+* The Apple preview is searched at the same moment as the first provider and is always added last, so it is ready the moment it is needed.
+* Every provider has a hard time budget (7 s) and the whole chain stops starting new providers after 11 s; a provider that hangs, answers garbage, runs out of quota
+  or is misconfigured (for example a YouTube key whose API is not enabled) is recorded and skipped, never fatal. The route itself answers within 14 s whatever happens.
+* The phone tries at most three full-length candidates, then asks the resolver for the preview alone, then (if the new path cannot even be reached) uses the older
+  preview-first path. It says "I found X, but it would not start on this device" rather than "could not find anything" whenever a candidate was offered.
+* The phone never decides in advance that it cannot play an audio file: a browser's `canPlayType` answers "" for labels it does not know (Apple's previews are
+  labelled `audio/x-m4p`) although it plays the file. Only the real `playing` event with a moving clock counts. Only video files (webm/ogv) are skipped by `canPlayType`.
 
 ## Deploy gate
 

@@ -8,6 +8,7 @@ const itunes = require("./providers/itunes.js");
 const youtube = require("./providers/youtube.js");
 
 const MAX_QUERY = 200;
+const ROUTE_BUDGET_MS = 14000;
 
 function cleanBody(body = {}) {
   const query = normalizeText(body.query || body.command || "").slice(0, MAX_QUERY);
@@ -24,10 +25,18 @@ function cleanBody(body = {}) {
   };
 }
 
-async function handleResolve({ body, runtime }) {
+async function handleResolve({ body, runtime, budgetMs = ROUTE_BUDGET_MS }) {
   const request = cleanBody(body);
   if (!request.query && request.kind === "video") return { status: 400, body: { ok: false, error: "Tell me what to watch." } };
-  const result = await runtime.resolve(request);
+  const result = await Promise.race([
+    runtime.resolve(request),
+    new Promise(resolve => { const timer = setTimeout(() => resolve(null), budgetMs); timer.unref?.(); })
+  ]).catch(() => null);
+  if (!result) {
+    // Honest, fast and well-formed: the phone then uses its older preview path instead of waiting on a stuck provider.
+    return { status: 200, body: { ok: false, kind: request.kind, query: request.query, candidates: [], tried: [], youtube: { configured: youtube.isConfigured(runtime.ctx).configured, quota: null },
+      reason: "The music sources took too long to answer." } };
+  }
   return { status: 200, body: result };
 }
 

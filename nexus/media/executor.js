@@ -19,7 +19,7 @@ function defaultResolve(request) {
   return require("../../server/media/runtime.js").getMediaRuntime().resolve(request);
 }
 
-function createMediaPlayExecutor({ env = process.env, lookupPreview, lookupVideo, resolveMedia } = {}) {
+function createMediaPlayExecutor({ env = process.env, lookupPreview, lookupVideo, resolveMedia, resolverTimeoutMs = 15000 } = {}) {
   const legacyOnly = !resolveMedia && Boolean(lookupPreview || lookupVideo);
   const preview = lookupPreview || musicMediaSourceProvider.runItunesPreviewLookup;
   const video = lookupVideo || musicMediaSourceProvider.runYouTubeReadOnlyLookup;
@@ -36,7 +36,10 @@ function createMediaPlayExecutor({ env = process.env, lookupPreview, lookupVideo
     let resolverReason = "";
     if (!legacyOnly) {
       try {
-        const found = await resolve({ query, kind, country: input.country, language: input.language, handoff: input.handoff === true });
+        const found = await Promise.race([
+          resolve({ query, kind, country: input.country, language: input.language, handoff: input.handoff === true }),
+          new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error("resolver_timeout")), resolverTimeoutMs); timer.unref?.(); })
+        ]);
         if (found?.mode === "handoff" && found.handoff?.url) {
           return { ok: true, resolved: true, provider: "youtube", playbackClass: "handoff", requestedMedia: query, kind, mode: "handoff",
             handoffUrl: found.handoff.url, handoffKind: found.handoff.kind, videoId: found.handoff.videoId || undefined,

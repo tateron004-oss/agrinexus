@@ -24,6 +24,10 @@ const itunes = require("./providers/itunes.js");
 const { normalizeText, countryCode } = util;
 const MAX_CANDIDATES = 8;
 const PREVIEW_WAIT_MS = 6000;
+// One provider gets at most this long (its own timeouts are shorter; this is the hard cap if one misbehaves). After TOTAL_BUDGET_MS no further provider is
+// started: the Apple preview, which was searched from the first moment in parallel, is returned instead.
+const PROVIDER_BUDGET_MS = 7000;
+const TOTAL_BUDGET_MS = 11000;
 
 const PROVIDERS = Object.freeze({
   [radioBrowser.id]: radioBrowser, [audius.id]: audius, [youtube.id]: youtube, [jamendo.id]: jamendo,
@@ -76,7 +80,8 @@ async function runProvider(entry, request, ctx) {
     return { tried: finish({ status: "skipped", reason: `not configured (${config.requires.join(", ")} is not set)` }), candidates: [] };
   }
   try {
-    const result = await provider.search(ctx, request);
+    const result = await withTimeout(provider.search(ctx, request), Math.max(50, ctx.providerBudgetMs || PROVIDER_BUDGET_MS), TIMED_OUT);
+    if (result === TIMED_OUT) throw Object.assign(new Error("provider exceeded its time budget"), { code: "timeout" });
     const candidates = (result.candidates || []).filter(candidate => candidate && candidate.verified === true);
     ctx.state?.recordOk(provider.id, Date.now() - started);
     return { tried: finish({ status: candidates.length ? "ok" : "empty", count: candidates.length, reason: candidates.length ? "" : (result.note || "no match"),
@@ -90,6 +95,8 @@ async function runProvider(entry, request, ctx) {
     return { tried: finish({ status: code === "quota-exhausted" ? "quota" : "error", reason }), candidates: [] };
   }
 }
+
+const TIMED_OUT = Symbol("timed-out");
 
 function pickKind(requested, query) {
   const kind = ["music", "radio", "video"].includes(requested) ? requested : "music";
@@ -145,7 +152,12 @@ async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
     return finalize({ ok: true, mode: "handoff", handoff, candidates: handoffCandidates.slice(0, MAX_CANDIDATES) }, request, tried, ctx, youtubeConfig);
   }
 
+  const startedAt = Date.now();
   for (const entry of plan(kind, request, ctx)) {
+    if (Date.now() - startedAt > (ctx.totalBudgetMs || TOTAL_BUDGET_MS)) {
+      tried.push({ provider: entry.provider.id, name: entry.provider.name, status: "skipped", count: 0, ms: 0, reason: "overall time budget used up; the preview fallback is used" });
+      continue;
+    }
     if (skipProviders.has(entry.provider.id) || (only && !only.has(entry.provider.id))) {
       tried.push({ provider: entry.provider.id, name: entry.provider.name, status: "skipped", count: 0, ms: 0, reason: "excluded for this request" });
       continue;
@@ -157,6 +169,7 @@ async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
   }
   const stoppedAfter = tried.length;
   for (const entry of plan(kind, request, ctx).slice(stoppedAfter)) {
+    if (tried.some(item => item.provider === entry.provider.id)) continue;
     tried.push({ provider: entry.provider.id, name: entry.provider.name, status: "not-needed", count: 0, ms: 0, reason: "an earlier provider already had a playable match" });
   }
 
@@ -167,7 +180,7 @@ async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
     candidates = candidates.concat(fresh);
   }
 
-  return finalize({ ok: candidates.length > 0, candidates: candidates.slice(0, MAX_CANDIDATES) }, request, tried, ctx, youtubeConfig);
+  return finalize({ ok: candidates.length > 0, candidates: candidates.slice(0, MAX_CANDIDATES) }, request, tried, ctx, youtubeConfig, Date.now() - startedAt);
 }
 
 function honestReason(request, tried, youtubeConfig, quota) {
@@ -181,7 +194,7 @@ function honestReason(request, tried, youtubeConfig, quota) {
   return parts.join(" ");
 }
 
-function finalize(partial, request, tried, ctx, youtubeConfig) {
+function finalize(partial, request, tried, ctx, youtubeConfig, totalMs) {
   const quota = ctx.state?.quota ? ctx.state.quota() : null;
   const result = {
     ok: partial.ok === true,
@@ -196,7 +209,12 @@ function finalize(partial, request, tried, ctx, youtubeConfig) {
     ...(request.originalKind !== request.kind ? { note: "No song was named, so a popular radio station is offered." } : {})
   };
   if (!result.ok) result.reason = honestReason(request, tried, youtubeConfig, quota);
+  // For the admin report: what happened to this request, provider by provider. No query text, no person, no keys.
+  try {
+    ctx.state?.recordResolve?.({ kind: request.kind, ok: result.ok, candidates: result.candidates.length, totalMs: totalMs ?? null, mode: partial.mode || "play",
+      providers: tried.map(item => ({ provider: item.provider, status: item.status, count: item.count, ms: item.ms, reason: String(item.reason || "").slice(0, 100) })) });
+  } catch (_) { /* reporting must never break playback */ }
   return result;
 }
 
-module.exports = Object.freeze({ resolveMedia, cleanQuery, PROVIDERS, plan, MAX_CANDIDATES });
+module.exports = Object.freeze({ resolveMedia, cleanQuery, PROVIDERS, plan, MAX_CANDIDATES, PROVIDER_BUDGET_MS, TOTAL_BUDGET_MS });
