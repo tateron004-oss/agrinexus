@@ -13,6 +13,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 const { MemoryRepository } = require("../memory/repository.js");
 const { evaluateObservabilityAlerts } = require("../observability/alert-evaluator.js");
 const { executeProductionCase } = require("../path2/production-case.js");
+const { createAcceptanceCleanup } = require("../acceptance/data-hygiene.js");
 const { classifyRuntimeError } = require("../runtime/error-taxonomy.js");
 const { createWorkspaceOutcome } = require("../contracts/workspace-outcome.js");
 const { createNavigationService } = require("../navigation/service.js");
@@ -156,6 +157,28 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       } catch (error) { const failure = classifyRuntimeError(error); send(res, failure.status || 503,
         { ok: false, releaseSha: env.RENDER_GIT_COMMIT || env.GIT_SHA || "development", code: failure.code, category: failure.category,
           stage: String(error.stage || "behavior-execution").replace(/[^a-z0-9-]/gi, "-").slice(0, 64), error: String(error.message || failure.message).slice(0, 300) }); }
+      return true;
+    }
+    // Removes the acceptance run's own leftovers (see nexus/acceptance/data-hygiene.js and docs/ACCEPTANCE_DATA_HYGIENE.md): the
+    // acceptance principal's test lists, documents, reminders and health/operation records from earlier runs, so the per-account
+    // limits that protect real users are never consumed by the test harness. Token-gated and release-bound like every probe; the
+    // principal comes from acceptancePrincipal(), never from the request; the body can only choose a dry run and (bounded) retention.
+    if (url.pathname === "/api/nexus/runtime/production-acceptance/cleanup" && req.method === "POST") {
+      if (!acceptanceAuthorized(req, env.NEXUS_ACCEPTANCE_TOKEN)) { send(res, 401, { error: "A valid production acceptance token is required.", code: "acceptance_authentication_required" }); return true; }
+      const releaseSha = env.RENDER_GIT_COMMIT || env.GIT_SHA || "development";
+      try {
+        const active = await runtime(); await active.ready; const body = await readJson(req);
+        if (body.releaseSha !== releaseSha) { send(res, 409, { error: "Cleanup SHA does not match the active release.", code: "evidence_sha_mismatch" }); return true; }
+        const result = await createAcceptanceCleanup({ db: active.db, logger }).cleanup({ principal: await acceptancePrincipal(active),
+          dryRun: body.dryRun === true, olderThanMinutes: body.olderThanMinutes, retainPerType: body.retainPerType });
+        send(res, 200, { ...result, releaseSha });
+      } catch (error) {
+        const code = String(error.code || "acceptance_cleanup_failed").replace(/[^a-z0-9_]/gi, "").slice(0, 64) || "acceptance_cleanup_failed";
+        logger.error?.("authoritative.acceptance.cleanup_failed", { code });
+        // Never the raw database error text (it can name tables, columns or values): a stable code and a fixed sentence.
+        send(res, error.status === 403 ? 403 : 503, { ok: false, releaseSha, code, error: code === "acceptance_cleanup_refused"
+          ? "Cleanup is only available to the production acceptance principal." : "Acceptance data cleanup failed; no probe result was changed." });
+      }
       return true;
     }
     const continuationName = url.pathname.startsWith("/api/nexus/runtime/production-acceptance/probes/")
