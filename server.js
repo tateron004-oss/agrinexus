@@ -74,6 +74,7 @@ const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
+const { replyLanguage } = require("./nexus/i18n/reply-language.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -83,10 +84,12 @@ const { withoutNegatedSymptoms } = require("./public/kyro-care-phrases.js");
 const workLearningFloor = require("./nexus/floor/index.js");
 // The same safety answers the planner gives before anything else (danger signs in pregnancy or for a baby, someone in danger or being hurt, self-harm, scams, medicine doses for a baby or in pregnancy), for the
 // older paths: the phone line, the older command route, and the fallback when the planner cannot be reached. Those cannot alert a circle, so the answer says what to do and whom to call, and never offers to alert anyone.
-async function careSafetyReply(text, user) {
+// `requested` is the language the request asked for; it and then the account language are only the default when the words do not settle it (nexus/i18n/reply-language.js). Found against the real runtime:
+// English words with language "en" in a Kiswahili account were answered in Kiswahili because this passed only the account language.
+async function careSafetyReply(text, user, requested = "") {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en"), country: user?.country });
+  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(requested || user?.language || "en"), country: user?.country });
   return reply ? { kind: found.kind, reply } : null;
 }
 // The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already
@@ -94,7 +97,7 @@ async function careSafetyReply(text, user) {
 async function swahiliCrisisReply(text, language, user) {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  if (found.language !== "sw" && !/^sw\b/i.test(String(language || ""))) return null;
+  if (replyLanguage(text, { detected: found.language, requested: language }) !== "sw") return null;
   const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: "sw" });
   return reply ? String(reply).trim() : null;
 }
@@ -22038,7 +22041,8 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
 function secretNotSavedReply(text, language = "en") {
   const asked = kyroCrisisPhrases.secretLanguage(text);
   if (!asked) return null;
-  const spoken = asked === "sw" || /^sw/i.test(String(language || "")) ? "sw" : "en";
+  // The words win over the account/request language (nexus/i18n/reply-language.js): English words in a Kiswahili account get the English refusal.
+  const spoken = replyLanguage(text, { detected: asked === "sw" ? "sw" : "en", requested: language });
   return { language: spoken, response: nexusText(spoken, "safety.secretRefused") };
 }
 
@@ -35119,7 +35123,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   // And the care and safety answers the planner gives first (see careSafetyReply above).
-  const careSafe = await careSafetyReply(text, user);
+  const careSafe = await careSafetyReply(text, user, options.language);
   if (careSafe) {
     // A safety answer ends whatever was waiting for a "yes": the next "yes" must not complete a course or a call that was staged for something else.
     if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
