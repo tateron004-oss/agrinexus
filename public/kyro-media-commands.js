@@ -155,7 +155,7 @@
     // --- English: video
     if ((match = /^(?:watch|view)\s+(.+)$/i.exec(text))) {
       const rest = strip(match[1]);
-      if (!/^(?:out|over|for|me\b|the clock|my back|your step)/i.test(rest)) {
+      if (!/^(?:out|over|for|the clock|my back|your step)\b/i.test(rest)) {
         return playResult("video", strip(rest.replace(VIDEO_LEAD, "")) || rest, handoff, "en");
       }
     }

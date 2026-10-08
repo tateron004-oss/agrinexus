@@ -536,7 +536,7 @@
       return true;
     }
     function stopAll(options = {}) {
-      const lang = current ? current.lang : sessionLang;
+      const lang = options.lang || (current ? current.lang : sessionLang);
       const wasActive = isActive() || state === "ended" || state === "failed";
       generation += 1;
       stopCurrentEngine();
@@ -559,7 +559,7 @@
 
     async function nextTrack(options = {}) {
       if (!lastRequest) return false;
-      const lang = current ? current.lang : sessionLang;
+      const lang = options.lang || (current ? current.lang : sessionLang);
       const query = lastRequest.query;
       const kind = lastRequest.kind;
       const skipIds = [...tried];
@@ -570,9 +570,9 @@
       tried = skipIds;
       return false;
     }
-    async function previousTrack() {
-      if (history.length < 2) { announce(t("previousNone", {}, sessionLang), {}); return false; }
-      const lang = current ? current.lang : sessionLang;
+    async function previousTrack(options = {}) {
+      const lang = options.lang || (current ? current.lang : sessionLang);
+      if (history.length < 2) { announce(t("previousNone", {}, lang), {}); return false; }
       history.pop();
       const previous = history.pop();
       const token = ++generation;
@@ -597,9 +597,9 @@
       switch (action) {
         case "pause": { const ok = pauseNow(); announce(ok ? t("paused", {}, lang) : t("nothingPlaying", {}, lang), {}); return { handled: true, ok }; }
         case "resume": { const ok = resumeNow(); announce(ok ? t("resumed", {}, lang) : t("nothingPlaying", {}, lang), {}); return { handled: true, ok }; }
-        case "stop": return { handled: true, ok: stopAll({ announce: true }) };
-        case "next": nextTrack(); return { handled: true, ok: true, async: true };
-        case "previous": previousTrack(); return { handled: true, ok: true, async: true };
+        case "stop": return { handled: true, ok: stopAll({ announce: true, lang }) };
+        case "next": nextTrack({ lang }); return { handled: true, ok: true, async: true };
+        case "previous": previousTrack({ lang }); return { handled: true, ok: true, async: true };
         case "volume-up": case "volume-down": {
           const level = setVolumeStep(action === "volume-up" ? VOLUME_STEP : -VOLUME_STEP);
           announce(t("volume", { pct: Math.round(level * 100) }, lang), {});

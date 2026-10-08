@@ -16861,3 +16861,4 @@ body.user-mode[data-nexus-genesis-mode="home"].nexus-orb-hover {
 .kyro-mp-audioonly { margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem; }
 .kyro-mp-attr { margin-top: 0.3rem; font-size: 0.72rem; color: #8fb3c2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 420px) { .kyro-mp-btn { min-width: 2.25rem; min-height: 2.25rem; } .kyro-mp-controls .kyro-mp-btn[data-kyro-mp="stop"] { display: none; } }
+.kyro-mp[data-state="queued"] .kyro-mp-controls .kyro-mp-btn:not(.kyro-mp-close) { display: none; }

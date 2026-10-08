@@ -57838,6 +57838,10 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   if (handleNexusVoiceTroubleshootingCommand(text, options)) return true;
   // The GPS: "where am I", "save this place as home", "take me to ...", "stop navigation" (see kyro-navigation.js). The phone's location is read only when asked.
   if (typeof handleKyroNavigationCommand === "function" && await handleKyroNavigationCommand(text, options)) return true;
+  // Music, radio and video, typed or spoken, English or Kiswahili ("play ...", "weka redio ...", "watch ...", and pause/next/volume while something plays):
+  // handled on the phone by the real player (public/kyro-media-player.js) before the sentence is sent anywhere. Controls only act when a player is open
+  // or the sentence names music ("pause the music"), so a bare "pause" with nothing playing still reaches the rest of Kyro.
+  if (await kyroMediaCommand(text, options)) return true;
   if (handleNexusVisualProviderQuestionReportCommand(text, options)) return true;
   if (/\b(show the source|who published|source current|when was this verified|source blocked|conflicting guidelines|conflicting sources|professional version|clinician version)\b/i.test(text)
       && handleNexusEnterpriseHealthEvidenceTrustCommand(text, options)) return true;
