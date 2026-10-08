@@ -7,6 +7,8 @@
 // The Swahili clock counts from sunrise: "saa moja" is 7 o'clock, "saa tatu" is 9, "saa sita" is 12, "saa saba" is 1, "saa kumi na mbili" is 6. The part of the day
 // (asubuhi morning, mchana midday/afternoon, jioni evening, usiku night, alfajiri dawn) says which half. A time with no part of the day is asked about, never guessed.
 // The Swahili wording of every reply should be checked by a fluent speaker.
+const { findSwahiliDate, isRealDay, describeDaySw, WEEKDAY_WORDS: SW_WEEKDAY_WORDS, BARE_TAREHE_SOURCE, END_OF_MONTH_SOURCE } = require("./sw-dates.js");
+const { extractDay } = require("../personal/dates.js");
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim();
 
 const HOURS = { moja: 1, mbili: 2, tatu: 3, nne: 4, tano: 5, sita: 6, saba: 7, nane: 8, tisa: 9, kumi: 10, "kumi na moja": 11, "kumi na mbili": 12 };
@@ -34,14 +36,34 @@ function hourFor(swahiliHour, period) {
 const english = (hour24, minute) => `${hour24 % 12 || 12}:${String(minute).padStart(2, "0")} ${hour24 >= 12 ? "pm" : "am"}`;
 
 // A day word in the text -> { en, sw, rest } (rest = the text without it), or null.
+// Dates are read too ("tarehe 15 Oktoba", "15 Oktoba", "Desemba 25", "tarehe 15", "mwisho wa mwezi", "Jumatatu ijayo"): { en, sw, rest, dated: true }. A date that is no day ("tarehe 31 Februari")
+// comes back as { invalid: "<the words said>" }, and a week or a month with no day ("wiki ijayo", "mwezi ujao") as { needDay: true }: both are asked about, never guessed.
 function readDay(body) {
-  let day = null; let daySw = ""; let d;
+  const weekdayBefore = "(?:\\b(?:" + SW_WEEKDAY_WORDS + ")[,\\s]+)?";
+  const date = findSwahiliDate(body);
+  if (date) {
+    if (!isRealDay(date)) return { invalid: date.original, en: "", sw: "", rest: body };
+    const span = new RegExp(weekdayBefore + date.original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").exec(body);
+    const at = span || { index: date.index, 0: date.original };
+    return { en: `on ${date.english}`, sw: date.original, rest: clean(`${body.slice(0, at.index)} ${body.slice(at.index + at[0].length)}`), dated: true };
+  }
+  let d;
+  if ((d = new RegExp(BARE_TAREHE_SOURCE, "i").exec(body))) {
+    const n = Number(d[1]);
+    if (!(n >= 1 && n <= 31)) return { invalid: d[0].trim(), en: "", sw: "", rest: body };
+    return { en: `on the ${n}${n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" })[n % 10] || "th"}`, sw: d[0].trim(), rest: clean(`${body.slice(0, d.index)} ${body.slice(d.index + d[0].length)}`), dated: true };
+  }
+  if ((d = new RegExp(END_OF_MONTH_SOURCE, "i").exec(body))) return { en: "on the last day of the month", sw: d[0].trim(), rest: clean(`${body.slice(0, d.index)} ${body.slice(d.index + d[0].length)}`), dated: true };
+  let day = null; let daySw = "";
   if ((d = /\bkeshokutwa\b/i.exec(body))) { day = "the day after tomorrow"; daySw = "keshokutwa"; }
   else if ((d = /\bkesho\b/i.exec(body))) { day = "tomorrow"; daySw = "kesho"; }
   else if ((d = /(?:^|\s)leo\b/i.exec(body))) { day = "today"; daySw = "leo"; d = { index: d.index + (/^\s/.test(d[0]) ? 1 : 0), 0: "leo" }; }
-  else if ((d = new RegExp(`\\b(${WEEKDAY_WORDS})\\b`, "i").exec(body))) { day = `on ${WEEKDAYS_SW[d[1].toLowerCase()]}`; daySw = d[1].toLowerCase(); }
-  return d ? { en: day, sw: daySw, rest: clean(`${body.slice(0, d.index)} ${body.slice(d.index + d[0].length)}`) } : { en: "", sw: "", rest: body };
+  else if ((d = new RegExp(`\\b(${WEEKDAY_WORDS})\\b(\\s+(?:ya\\s+)?(?:wiki\\s+)?ijayo\\b)?`, "i").exec(body))) { day = `on ${WEEKDAYS_SW[d[1].toLowerCase()]}`; daySw = clean(d[0]).toLowerCase(); }
+  else if ((d = /\bwiki\s+ijayo\b|\bmwezi\s+ujao\b/i.exec(body))) return { needDay: true, en: "", sw: "", rest: clean(`${body.slice(0, d.index)} ${body.slice(d.index + d[0].length)}`) };
+  return d ? { en: day, sw: daySw, rest: clean(`${body.slice(0, d.index)} ${body.slice(d.index + d[0].length)}`), ...(/ijayo/i.test(d[0]) ? { dated: true } : {}) } : { en: "", sw: "", rest: body };
 }
+const badDateSw = words => `Siwezi kutumia "${words}": si siku halisi, au imepita. Unamaanisha siku gani? Bado sijaweka chochote.`;
+const NEED_WHICH_DAY_SW = 'Siku gani, na saa ngapi? Kwa mfano "jumatatu saa tatu asubuhi". Bado sijaweka chochote.';
 // The Swahili clock in the text -> null (none) | { needTime: true } | { en, sw, rest }
 function readClock(body) {
   const c = CLOCK.exec(body);
@@ -75,6 +97,8 @@ function parseSwahiliReminder(text) {
   // a repeating one ("kila siku") is read by parseSwahiliRepeating
   if (/\bkila\b/i.test(m[1])) return null;
   const day = readDay(m[1]);
+  if (day.invalid) return { needTime: true, ask: badDateSw(day.invalid) };
+  if (day.needDay) return { needTime: true, ask: NEED_WHICH_DAY_SW };
   const clock = readClock(day.rest);
   if (!clock) return day.en ? { needTime: true } : null;
   if (clock.needTime) return { needTime: true };
@@ -119,19 +143,25 @@ function parseSwahiliList(text) {
 
 // ---- calendar events ----
 // "Ongeza mkutano kwenye kalenda kesho saa nne asubuhi", "weka kwenye kalenda ziara ya daktari jumatatu"
-function parseSwahiliCalendar(text) {
+// `today` (the person's own calendar day, YYYY-MM-DD) lets a date that was said as a date be read back as the day it is ("Alhamisi, tarehe 15 Oktoba"), with the year when it is not this year.
+function parseSwahiliCalendar(text, { today = "" } = {}) {
   const t = clean(text).replace(/[.!?]+$/g, "");
   const m = /^(?:tafadhali\s+)?(?:ongeza|weka|andika)\s+(?:(.+?)\s+)?(?:kwenye|katika|kwa)\s+kalenda(?:\s+yangu)?(?:\s+(.+))?$/i.exec(t);
   if (!m || !(m[1] || m[2])) return null;
   const day = readDay(clean(`${m[1] || ""} ${m[2] || ""}`));
+  if (day.invalid) return { badDate: day.invalid, ask: badDateSw(day.invalid) };
   const clock = readClock(day.rest);
   if (clock?.needTime) return { needTime: true };
   const title = tidyTask(clock ? clock.rest : day.rest);
   if (!title) return { needTitle: true };
   if (!day.en) return { needDay: true, title };
-  const english = `add ${title} to my calendar ${day.en}${clock ? ` at ${clock.en}` : ""}`;
+  // The calendar reads "tarehe 15" and "mwisho wa mwezi" as they are said; the English forms of those are for reminders.
+  const english = `add ${title} to my calendar ${/^on the /.test(day.en) ? day.sw : day.en}${clock ? ` at ${clock.en}` : ""}`;
   const whenSw = `${day.sw}${clock ? ` ${clock.sw}` : ""}`.trim();
-  return { english, title, whenSw, replySw: `Nimeongeza kwenye kalenda yako: ${title} ${whenSw}. Nitaitaja kwenye muhtasari wako wa asubuhi siku hiyo.` };
+  // A day said as a date is read back as the day it is, in the person's own calendar (and it says the year when the date has rolled round to next year).
+  const resolved = day.dated && today ? (extractDay(day.sw, today) || extractDay(day.en, today))?.day : "";
+  const dayWords = resolved ? ` (${describeDaySw(resolved, today)})` : "";
+  return { english, title, whenSw, ...(resolved ? { day: resolved } : {}), replySw: `Nimeongeza kwenye kalenda yako: ${title} ${whenSw}${dayWords}. Nitaitaja kwenye muhtasari wako wa asubuhi siku hiyo.` };
 }
 
 const NEED_TIME_SW = "Saa ngapi? Kwa mfano \"kesho saa tatu asubuhi\" au \"leo saa kumi jioni\" (saa tatu asubuhi ni saa tisa ya kawaida).";
@@ -143,5 +173,5 @@ const NEED_EVENT_TITLE_SW = "Tukio linaitwaje? Kwa mfano \"ongeza ziara ya dakta
 const setReplySw = ({ task, whenSw }) => `Sawa. Nitakukumbusha ${task} ${whenSw}.`;
 const stoppedReplySw = task => `Sawa. Nimeacha kikumbusho cha ${task}.`;
 
-module.exports = Object.freeze({ parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW,
+module.exports = Object.freeze({ badDateSw, NEED_WHICH_DAY_SW, parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW,
   NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, setReplySw, stoppedReplySw, clock12 });

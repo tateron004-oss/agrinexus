@@ -21,6 +21,7 @@ const { resolveReminderTimeZone } = require("../reminders/time-zone.js");
 const { createDeliveryReminders } = require("../reminders/delivery-store.js");
 const { createMemoryNotifications, createMemoryRepeatStore } = require("../reminders/memory-stores.js");
 const { createMemoryContactStore } = require("../memory/memory-contact-store.js");
+const { createMemoryRecords } = require("../health/memory-records.js");
 
 function safeDatabaseIdentifier(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
@@ -864,7 +865,18 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
       async save({ name, phone }) { return memory.saveContact({ ...scope, name, phone }); }
     });
   }
-  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest, deliveryRemindersFor, contactBookFor });
+  // The record store the planner saves health readings to (health.record, health.chronic-reading), for the older routes that show, delete and correct a person's readings: they look at it as
+  // well as at db.profile (see health/store-readings.js). Resolves { records, tenantId, userId, timeZone } for this person only; throws when the store cannot be reached. A test or local
+  // development server may opt in to an in-memory stand-in (NEXUS_TEST_READINGS_STORE=memory, never in production).
+  const memoryReadings = env.NEXUS_TEST_READINGS_STORE === "memory" && env.NODE_ENV !== "production" ? createMemoryRecords() : null;
+  async function healthReadingsStoreFor({ user }) {
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
+    if (memoryReadings) return { records: memoryReadings, tenantId: context.tenantId, userId: context.userId, timeZone: context.timeZone };
+    const active = await runtime(); await active.ready;
+    if (!active.records) throw Object.assign(new Error("The health record store is unavailable."), { code: "health_record_store_unavailable", status: 503 });
+    return { records: active.records, tenantId: context.tenantId, userId: context.userId, timeZone: context.timeZone };
+  }
+  return Object.freeze({ handle, status, businessRequest, healthReadingsStoreFor, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest, deliveryRemindersFor, contactBookFor, memoryHealthReadingRecords: memoryReadings });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {

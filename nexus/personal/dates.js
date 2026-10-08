@@ -3,6 +3,7 @@
 // Reading days and times out of everyday words ("tomorrow at 2pm", "on 25 September", "next friday"), in the person's own calendar.
 // Days are plain YYYY-MM-DD strings and times "HH:MM" (24-hour) in their local time, so nothing here depends on the server's zone.
 const { scanTime } = require("../reminders/time-grammar.js");
+const SW_DATES = require("../reminders/sw-dates.js");
 const MONTH_NAMES = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 const MONTH_PATTERN = "(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)";
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -51,19 +52,42 @@ function withinYear(month, date, today) {
   return makeDay(year + 1, month, date);
 }
 
+// "tarehe 15" with no month: the next time that day of the month comes round (this month if it has not passed). A month with no such day (the 31st of a 30-day month) is skipped.
+function nextDayOfMonth(date, today) {
+  if (!(date >= 1 && date <= 31)) return null;
+  const year = Number(today.slice(0, 4)); const month = Number(today.slice(5, 7)) - 1;
+  for (let step = 0; step < 14; step += 1) {
+    const found = makeDay(year + Math.floor((month + step) / 12), (month + step) % 12, date);
+    if (found && found >= today) return found;
+  }
+  return null;
+}
+function lastDayOfMonth(today) { return toDay(new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0, 12))); }
+const SW_DAY_FIRST = SW_DATES.DAY_FIRST_SOURCE;
+const SW_MONTH_FIRST = SW_DATES.MONTH_FIRST_SOURCE;
+const SW_BARE_TAREHE = SW_DATES.BARE_TAREHE_SOURCE;
+const SW_END_OF_MONTH = SW_DATES.END_OF_MONTH_SOURCE;
+const swMonthIndex = SW_DATES.monthIndex;
+
 const DAY_FORMS = [
   { pattern: /\b(\d{4})-(\d{2})-(\d{2})\b/i, read: m => makeDay(Number(m[1]), Number(m[2]) - 1, Number(m[3])) },
   { pattern: new RegExp(`\\b(?:on\\s+)?(?:the\\s+)?(\\d{1,2})(?:st|nd|rd|th)?(?:\\s+of)?\\s+${MONTH_PATTERN}\\b(?:,?\\s+(\\d{4}))?`, "i"),
     read: (m, today) => m[3] ? makeDay(Number(m[3]), monthIndex(m[2]), Number(m[1])) : withinYear(monthIndex(m[2]), Number(m[1]), today) },
   { pattern: new RegExp(`\\b(?:on\\s+)?${MONTH_PATTERN}\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(\\d{4}))?`, "i"),
     read: (m, today) => m[3] ? makeDay(Number(m[3]), monthIndex(m[1]), Number(m[2])) : withinYear(monthIndex(m[1]), Number(m[2]), today) },
+  // Kiswahili dates: "tarehe 15 Oktoba", "15 Oktoba 2027", "Desemba 25", "tarehe 15" (that day of the month), "mwisho wa mwezi" (the last day of this month). The same rules as the English forms:
+  // no year is the next time it comes round, and a day that does not exist (31 Februari) is no day at all.
+  { pattern: new RegExp(SW_DAY_FIRST, "i"), read: (m, today) => { const month = swMonthIndex(m[2]); return m[3] ? makeDay(Number(m[3]), month, Number(m[1])) : withinYear(month, Number(m[1]), today); } },
+  { pattern: new RegExp(SW_MONTH_FIRST, "i"), read: (m, today) => { const month = swMonthIndex(m[1]); return m[3] ? makeDay(Number(m[3]), month, Number(m[2])) : withinYear(month, Number(m[2]), today); } },
+  { pattern: new RegExp(SW_BARE_TAREHE, "i"), read: (m, today) => nextDayOfMonth(Number(m[1]), today) },
+  { pattern: new RegExp(SW_END_OF_MONTH, "i"), read: (m, today) => lastDayOfMonth(today) },
   { pattern: /\bday after tomorrow\b/i, read: (m, today) => addDays(today, 2) },
   { pattern: /\byesterday\b/i, read: (m, today) => addDays(today, -1) },
   { pattern: /\btomorrow\b/i, read: (m, today) => addDays(today, 1) },
   // Kiswahili: "keshokutwa" (the day after tomorrow) and "kesho" (tomorrow), and the days of the week. "Leo" and "jana" are left out on purpose: they are also common names.
   { pattern: /\bkeshokutwa\b/i, read: (m, today) => addDays(today, 2) },
   { pattern: /\bkesho\b/i, read: (m, today) => addDays(today, 1) },
-  { pattern: /\b(jumatatu|jumanne|jumatano|alhamisi|ijumaa|jumamosi|jumapili)\b/i,
+  { pattern: /\b(jumatatu|jumanne|jumatano|alhamisi|ijumaa|jumamosi|jumapili)\b(?:\s+(?:ya\s+)?(?:wiki\s+)?ijayo\b)?/i,
     read: (m, today) => { const index = { jumapili: 0, jumatatu: 1, jumanne: 2, jumatano: 3, alhamisi: 4, ijumaa: 5, jumamosi: 6 }[m[1].toLowerCase()]; const ahead = (index - weekdayOf(today) + 7) % 7; return addDays(today, ahead === 0 ? 7 : ahead); } },
   { pattern: /\b(?:today|tonight)\b/i, read: (m, today) => today },
   { pattern: /\bin (\d{1,2}) (day|days|week|weeks|month|months)\b/i, read: (m, today) => /^month/i.test(m[2]) ? addMonths(today, Number(m[1])) : addDays(today, Number(m[1]) * (/^week/i.test(m[2]) ? 7 : 1)) },
@@ -188,4 +212,4 @@ function extractPeriod(text, today) {
   return null;
 }
 
-module.exports = Object.freeze({ extractDay, extractTime, tidyTitle, extractRange, extractPeriod, describeDay, addDays, addMonths, weekdayOf, makeDay });
+module.exports = Object.freeze({ extractDay, extractTime, tidyTitle, extractRange, extractPeriod, describeDay, addDays, addMonths, weekdayOf, makeDay, nextDayOfMonth, lastDayOfMonth });

@@ -13,6 +13,7 @@
 const { scanTime, swahiliClockWords, SW_PERIODS, pad2 } = require("./time-grammar.js");
 const { extractDay } = require("../personal/dates.js");
 const { DEFAULT_TIME_ZONE } = require("./time-zone.js");
+const { normaliseSwahiliDates, findSwahiliDate } = require("./sw-dates.js");
 
 function validTimeZone(zone) {
   try { new Intl.DateTimeFormat("en", { timeZone: zone }); return zone; } catch { return DEFAULT_TIME_ZONE; }
@@ -56,10 +57,12 @@ const DEFAULT_DAY_CLOCK = Object.freeze({ hour: 9, minute: 0 });
 const PERIOD_HOUR = Object.freeze({ morning: 8, noon: 12, midday: 12, afternoon: 15, evening: 18, night: 21 });
 const MONTH_WORDS = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
 // "15 October", "15th of October", "October 15", "2026-10-15".
+const END_OF_MONTH = /\b(?:on\s+|by\s+|at\s+)?(?:the\s+)?(?:end|last\s+day)\s+of\s+(?:the\s+|this\s+)?month\b/i;
 const DATE_PHRASE = new RegExp(`\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+(?:${MONTH_WORDS})\\b|\\b(?:${MONTH_WORDS})\\s+\\d{1,2}(?:st|nd|rd|th)?\\b`, "i");
 
 // Plain misspellings of the words a time is made of ("tomorow at 6"), so they are read as the time they mean and not dropped in favour of a guess. ("o'clock" is written "oclock" so it is one word.)
-const fixTimeSpelling = text => String(text || "").replace(/[’‘]/g, "'").replace(/\b(?:tomorow|tommorow|tommorrow|tomorro|tomorrw|tmrw|2morrow|2moro|tomoro)\b/gi, "tomorrow").replace(/\bo'?clock\b/gi, "oclock")
+// Kiswahili dates ("tarehe 15 Oktoba", "Desemba 25", "mwisho wa mwezi") are turned into the English date phrases first (see sw-dates.js), so they follow exactly the rules the English ones do.
+const fixTimeSpelling = text => normaliseSwahiliDates(String(text || "")).replace(/[’‘]/g, "'").replace(/\b(?:tomorow|tommorow|tommorrow|tomorro|tomorrw|tmrw|2morrow|2moro|tomoro)\b/gi, "tomorrow").replace(/\bo'?clock\b/gi, "oclock")
   .replace(/\bafter\s+(?=(?:\d|an?\s|half\b|one\b|two\b|three\b|four\b|five\b|six\b|seven\b|eight\b|nine\b|ten\b))/gi, "in ").replace(/\bin\s+in\b/gi, "in")
   // a stutter, as speech-to-text writes it ("remind remind me in 20 20 minutes to take take my medicine")
   .replace(/\b([a-z0-9']{2,})(?:\s+\1\b)+/gi, "$1");
@@ -94,10 +97,10 @@ function describeMoment(instant, { now = new Date(), timeZone = DEFAULT_TIME_ZON
   const at = localParts(new Date(instant), zone); const today = localParts(now, zone);
   const diff = dayDiff(at, today);
   if (language === "sw") {
-    const when = diff === 0 ? "leo" : diff === 1 ? "kesho" : diff === 2 ? "keshokutwa" : `${DAYS_SW[at.weekdayIndex]}, tarehe ${at.day} ${MONTHS_SW[at.month - 1]}`;
+    const when = diff === 0 ? "leo" : diff === 1 ? "kesho" : diff === 2 ? "keshokutwa" : `${DAYS_SW[at.weekdayIndex]}, tarehe ${at.day} ${MONTHS_SW[at.month - 1]}${at.year !== today.year ? ` ${at.year}` : ""}`;
     return `${when} ${swahiliClockWords(at.hour, at.minute)}`;
   }
-  const when = diff === 0 ? "today" : diff === 1 ? "tomorrow" : `on ${DAYS_EN[at.weekdayIndex]}, ${at.day} ${MONTHS_EN[at.month - 1]}`;
+  const when = diff === 0 ? "today" : diff === 1 ? "tomorrow" : `on ${DAYS_EN[at.weekdayIndex]}, ${at.day} ${MONTHS_EN[at.month - 1]}${at.year !== today.year ? ` ${at.year}` : ""}`;
   return `at ${clockEn(at.hour, at.minute)} ${when}`;
 }
 
@@ -129,7 +132,7 @@ function parseTimeInner(text = "", options = {}) {
   const grammar = scanTime(src, { bareDurations: isReminderFragment(src) });
   const spans = grammar.spans;
   const lower = swahiliToEnglish(blank(src, spans).toLowerCase());
-  const language = options.language === "sw" || grammar.swahili || (options.language !== "en" && /\b(?:kesho|leo|keshokutwa|jumatatu|jumanne|jumatano|alhamisi|ijumaa|jumamosi|jumapili|nikumbushe|saa)\b/i.test(src)) ? "sw" : "en";
+  const language = options.language === "sw" || grammar.swahili || (options.language !== "en" && (/\b(?:kesho|leo|keshokutwa|jumatatu|jumanne|jumatano|alhamisi|ijumaa|jumamosi|jumapili|nikumbushe|saa)\b/i.test(src) || Boolean(findSwahiliDate(text)) || /\b(?:tarehe|ijayo|ujao)\b|\bmwisho wa mwezi\b/i.test(String(text || "")))) ? "sw" : "en";
   const addMs = ms => new Date(nowInstant.getTime() + ms);
   const momentOptions = { now: nowInstant, timeZone: zone };
 
@@ -223,6 +226,16 @@ function parseTimeInner(text = "", options = {}) {
     }
   }
 
+  // "the end of the month" ("mwisho wa mwezi"): the last day of this month, or of the next one when that day's time has already gone by.
+  if (END_OF_MONTH.test(lower)) {
+    const used = dayClock();
+    for (let step = 0; step < 3; step += 1) {
+      const monthIndex = now.month - 1 + step; const year = now.year + Math.floor(monthIndex / 12); const month = (monthIndex % 12) + 1;
+      const scheduled = zonedTimeToUtc(year, month, new Date(Date.UTC(year, month, 0)).getUTCDate(), used.hour, used.minute, 0, zone);
+      if (scheduled.getTime() > nowInstant.getTime()) return answer(scheduled, `on the last day of the month${clockLabel(used)}`, { defaultedTime: usedDefaultClock() });
+    }
+  }
+
   const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   // Picking the weekday that appears EARLIEST IN THE TEXT (not earliest in the Sun-Sat array) matches what a person said first: "friday, not sunday".
   const weekdayPositions = dayNames.map(day => lower.indexOf(day)).map((position, index) => ({ index, position }));
@@ -269,6 +282,8 @@ function parseTimeInner(text = "", options = {}) {
     if (tomorrowNote) { const next = addLocalDays(now, 1); scheduled = zonedTimeToUtc(next.year, next.month, next.day, PERIOD_HOUR[inPart[1]], 0, 0, zone); }
     return finish(scheduled, `in the ${inPart[1]}${tomorrowNote ? " tomorrow" : ""}`, { defaultedTime: true });
   }
+  // "next week at 9am" / "wiki ijayo saa tatu asubuhi": a week or a month is not a day, so the day is asked for; the clock alone must not be taken as the next time that hour comes round.
+  if (parsedClock && /\b(?:next week|next month)\b/.test(lower)) return ask({ kind: "need-day", en: 'Which day, and what time? For example, "next Monday at 9 am". Nothing was set yet.', sw: 'Siku gani, na saa ngapi? Kwa mfano "jumatatu saa tatu asubuhi". Bado sijaweka chochote.' }, tomorrowGuess());
   if (parsedClock) {
     // A clock time and nothing else ("at 6pm", "at noon", "at 5"): the next time it comes round. A bare hour such as "at 5" is the next 5 o'clock, am or pm,
     // whichever is sooner (said at 3:30pm it is 5pm today; said at 6pm it is 5am tomorrow) -- but that is only the guess handed back with an "ask": the person is asked.
@@ -295,10 +310,17 @@ function parseTimeInner(text = "", options = {}) {
 // words said back instead of quietly becoming "tomorrow".
 function resolveReminderTime(text = "", options = {}) {
   const result = parseTimeInner(text, options);
-  if (result.status !== "ok") return result;
   const said = fixTimeSpelling(text).toLowerCase().match(DATE_PHRASE);
+  // A date that was said but cannot be used: a day that does not exist (31 February), or one that has passed. It is named in the person's own words, never quietly turned into another day.
+  const badDate = () => {
+    const own = findSwahiliDate(text);
+    return { kind: "bad-date", en: `I could not use "${said[0]}": it is not a real day, or it has passed. Which day do you mean? Nothing was set yet.`,
+      sw: `Siwezi kutumia "${own ? own.original : said[0]}": si siku halisi, au imepita. Unamaanisha siku gani? Bado sijaweka chochote.` };
+  };
+  if (result.status === "none" && said && result.ask?.kind === "none") return { ...result, status: "ask", ask: badDate() };
+  if (result.status !== "ok") return result;
   if (said && !/^(?:on |in )/.test(result.whenLabel)) {
-    return { ...result, status: "ask", ask: { kind: "bad-date", en: `I could not use "${said[0]}": it is not a real day, or it has passed. Which day do you mean? Nothing was set yet.`, sw: `Siwezi kutumia "${said[0]}": si siku halisi, au imepita. Unamaanisha siku gani? Bado sijaweka chochote.` }, whenLabel: `${result.whenLabel} (I could not use "${said[0]}": it is not a real day, or it has passed)` };
+    return { ...result, status: "ask", ask: badDate(), whenLabel: `${result.whenLabel} (I could not use "${said[0]}": it is not a real day, or it has passed)` };
   }
   return result;
 }
@@ -320,6 +342,7 @@ const TIME_WORDS = [
   `(?:the\\s+)?day\\s+after\\s+tomorrow(?:\\s+${PART_OF_DAY})?`, `(?:tomorrow|today)\\s+${PART_OF_DAY}`, "tomorrow", "today", "tonight", "later today", `this\\s+${PART_OF_DAY}`,
   `(?:(?:on|next|this)\\s+)?(?:${WEEKDAYS})(?:\\s+${PART_OF_DAY})?`,
   `(?:in|during)\\s+the\\s+${PART_OF_DAY}`,
+  `(?:on\\s+|by\\s+|at\\s+)?(?:the\\s+)?(?:end|last\\s+day)\\s+of\\s+(?:the\\s+|this\\s+)?month`,
   `(?:on\\s+)?\\d{4}-\\d{2}-\\d{2}`,
   `(?:on\\s+)?(?:the\\s+)?\\d{1,2}(?:st|nd|rd|th)?(?:\\s+of)?\\s+(?:${MONTH_WORDS})(?:,?\\s+\\d{4})?`,
   `(?:on\\s+)?(?:${MONTH_WORDS})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`,
