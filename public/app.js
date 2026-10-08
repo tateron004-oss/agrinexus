@@ -9694,8 +9694,9 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes(AGRINEXUS_BUILD_VERSION));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes(AGRINEXUS_BUILD_VERSION));
+  // index.html names its script and stylesheet by content hash (/app.js?v=<hash>), so a page that loaded them this way is running the files the server sent with it.
+  const currentScript = [...document.scripts].some(script => /\/app\.js\?v=[0-9a-f]{12}$/.test(String(script.src || "")));
+  const currentStyle = [...document.styleSheets].some(sheet => /\/styles\.css\?v=[0-9a-f]{12}$/.test(String(sheet.href || "")));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -50069,7 +50070,7 @@ let nexusOpenAiRealtimeAgentModulePromise = null;
 
 function loadNexusOpenAiRealtimeAgentModule() {
   if (!nexusOpenAiRealtimeAgentModulePromise) {
-    nexusOpenAiRealtimeAgentModulePromise = import(`/vendor/nexus-openai-realtime-agent.bundle.mjs?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}&module=nexus-esm-mime-1`);
+    nexusOpenAiRealtimeAgentModulePromise = import(`/vendor/nexus-openai-realtime-agent.bundle.mjs?module=nexus-esm-mime-1`);
   }
   return nexusOpenAiRealtimeAgentModulePromise;
 }
@@ -56723,7 +56724,7 @@ function loadNexusAuthoritativeOutcomeRenderer() {
   if (!nexusAuthoritativeOutcomeRendererPromise) {
     nexusAuthoritativeOutcomeRendererPromise = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = `/nexus-authoritative-outcome-renderer.js?v=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`;
+      script.src = `/nexus-authoritative-outcome-renderer.js`;
       script.async = true;
       script.dataset.nexusAuthoritativeOutcomeRenderer = "true";
       script.addEventListener("load", () => window.NexusAuthoritativeOutcomeRenderer

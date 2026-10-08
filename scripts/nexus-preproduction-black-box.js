@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
 const { waitForStableIdentity, identityPatienceFor } = require("./nexus-stable-identity.js");
+const { assertServedIdentity, releaseShaFromPage } = require("./lib/release-identity-proof.js");
 
 const base = String(process.env.NEXUS_CANDIDATE_URL || "http://127.0.0.1:4173").replace(/\/$/, "");
 const expectedSha = String(process.env.RENDER_GIT_COMMIT || "");
@@ -15,6 +16,13 @@ async function json(pathname, init) {
   const response = await fetch(`${base}${pathname}`, init);
   const body = await response.json().catch(() => ({}));
   assert.equal(response.ok, true, `${pathname} returned ${response.status}: ${JSON.stringify(body)}`);
+  return body;
+}
+
+async function bytes(pathname) {
+  const response = await fetch(`${base}${pathname}`);
+  const body = Buffer.from(await response.arrayBuffer());
+  assert.equal(response.ok, true, `${pathname} returned ${response.status}`);
   return body;
 }
 
@@ -39,11 +47,18 @@ async function verifyIdentityOnce() {
     assert.equal(identity.pwaCache, `agrinexus-pwa-${expectedSha}`, `${label} cache must derive from the candidate SHA`);
   }
   assert.equal(runtime.releaseSha, expectedSha, "runtime must report the exact candidate SHA");
-  for (const pathname of ["/", "/app.js", "/sw.js"]) {
-    const asset = await text(pathname);
-    assert.match(asset, new RegExp(expectedSha), `${pathname} must contain the exact candidate SHA`);
+  // The release SHA is carried by the page (meta tag) and the service worker; /app.js is the build that reads it from the page and embeds none.
+  // See scripts/lib/release-identity-proof.js for the full proof (page SHA, worker SHA, app reader, page/app pairing).
+  const served = { "/": await text("/"), "/sw.js": await text("/sw.js") };
+  const appBytes = await bytes("/app.js");
+  for (const pathname of ["/", "/sw.js"]) {
+    assert.match(served[pathname], new RegExp(expectedSha), `${pathname} must contain the exact candidate SHA`);
+  }
+  for (const [pathname, asset] of [["/", served["/"]], ["/app.js", appBytes.toString("utf8")], ["/sw.js", served["/sw.js"]]]) {
     assert.doesNotMatch(asset, /__NEXUS_RELEASE_SHA__|nexus-behavior-502|agrinexus-pwa-v447/, `${pathname} must not expose a placeholder or legacy identity`);
   }
+  assert.equal(releaseShaFromPage(served["/"]), health.releaseSha, "the page's release SHA must equal the health endpoint's release SHA");
+  assertServedIdentity({ expectedSha, index: served["/"], app: appBytes, sw: served["/sw.js"] });
   return { health };
 }
 
