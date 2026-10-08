@@ -43,6 +43,7 @@ const NEXUS_REALTIME_TOOL_DEFINITIONS = [
   ["nexus_marketplace_logistics", "Marketplace, buyer/seller, vendor research, logistics, and shipment planning without payment or purchase execution."],
   ["nexus_communications", "SMS, WhatsApp, email, phone, and Telegram preparation with confirmation-gated execution."],
   ["nexus_workflow", "Structured workflow support only when the user clearly asks for it."],
+  ["nexus_everyday_records", "Saves and reads the person's everyday records from their complete words: notes, shopping lists and to-dos, money records (sales, costs, debts, stock), farm log entries (milk, eggs, rain, planting, spraying), contacts, reminders, facts about themselves, and undo. Use it when no other tool is a closer fit. Not for small talk."],
   ["nexus_provider_readiness", "Provider readiness, missing environment variable names, connector status, and blocked states without secrets."]
 ];
 
