@@ -499,13 +499,13 @@ async function handle(ctx) {
   // costs: rent, electricity, labour, stock, a farm hand, a worker paid by the day
   const cost = await readCost(ctx, body);
   if (cost) {
-    if (cost.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(cost.unsure.candidate)} when you said "${cost.unsure.says}"?`, { type: "books-run", pieces: [{ text: cost.canonical, payment: "" }], day });
+    if (cost.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(cost.unsure.candidate)} when you said "${cost.unsure.says}"?`, { type: "books-run", pieces: [{ text: cost.canonical, payment: "" }], day, candidate: cost.unsure.candidate });
     const reply = await runMoney(ctx, cost.canonical, withDay);
     if (reply) return reply;
   }
   const earning = readEarning(body);
   if (earning) {
-    if (earning.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(earning.unsure.candidate)} when you said "${earning.unsure.says}"?`, { type: "books-run", pieces: [{ text: earning.canonical, payment: "" }], day });
+    if (earning.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(earning.unsure.candidate)} when you said "${earning.unsure.says}"?`, { type: "books-run", pieces: [{ text: earning.canonical, payment: "" }], day, candidate: earning.unsure.candidate });
     const reply = await runMoney(ctx, earning.canonical, withDay);
     if (reply) return reply;
   }
@@ -515,7 +515,7 @@ async function handle(ctx) {
   if (!trade) return null;
   const pieces = trade.pieces;
   const unsure = pieces.find(piece => piece.unsure);
-  if (unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(unsure.unsure.candidate)} when you said "${unsure.unsure.says}"?`, { type: "books-run", pieces: pieces.map(piece => ({ text: piece.canonical, payment: piece.payment || "" })), day });
+  if (unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(unsure.unsure.candidate)} when you said "${unsure.unsure.says}"?`, { type: "books-run", pieces: pieces.map(piece => ({ text: piece.canonical, payment: piece.payment || "" })), day, candidate: unsure.unsure.candidate });
   const needsAsk = pieces.find(piece => piece.ask);
   if (needsAsk) return pieces.length > 1 ? null : askBack(ctx, needsAsk, day);
   const replies = []; const fresh = !(await ctx.hasFarmData());

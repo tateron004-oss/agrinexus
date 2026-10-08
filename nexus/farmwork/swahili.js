@@ -159,7 +159,7 @@ async function askAbout(ctx, text, deal) {
   const values = deal.ambiguous.kind === "quantity" ? [...span.values].reverse() : span.values;
   if (!/^\d/.test(span.text)) { const sorted = [...values].sort((a, b) => a - b); return SW.chooseAmount({ a: fmtNumber(sorted[0]), b: fmtNumber(sorted[1]) }); }
   const again = clean(text.slice(0, span.start) + numbers.digitString(values[0]) + text.slice(span.end));
-  await ctx.store.setSession({ tenantId: ctx.tenantId, userId: ctx.userId, session: { collection: "_confirm", answers: {}, asking: "confirm", action: { type: "sw-amount", text: again, language: "sw" }, expiresAt: new Date(Date.now() + 10 * 60000).toISOString() } });
+  await ctx.store.setSession({ tenantId: ctx.tenantId, userId: ctx.userId, session: { collection: "_confirm", answers: {}, asking: "confirm", action: { type: "sw-amount", text: again, from: numbers.digitString(values[0]), language: "sw" }, expiresAt: new Date(Date.now() + 10 * 60000).toISOString() } });
   return SW.askAmount({ shown: fmtNumber(values[0]) });
 }
 
