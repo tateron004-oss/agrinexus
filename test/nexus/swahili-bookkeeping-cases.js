@@ -73,7 +73,7 @@ const CASES = [
   ["nimenunua mbegu kwa elfu mbili", { rows: [exp(2000, { category: "seed" })] }],
   ["nimenunua mbolea gunia mbili kwa elfu nane", { rows: [exp(8000, { category: "fertiliser", qty: 2, unit: "sack" })], reply: /sasa una gunia 2 za mbolea/ }],
   ["nimenunua mzigo kwa elfu nane kutoka kwa Mama Fatuma", { seed: true, rows: [exp(8000, { party: "Mama Fatuma", item: "mzigo" })], reply: /kutoka kwa Mama Fatuma kwa 8,000/ }],
-  ["nimenunua unga mifuko kumi kila mmoja 150", { seed: true, rows: [exp(1500, { item: "unga", qty: 10, unit: "bag" })], reply: /mfuko 10 za unga kwa 1,500/ }],
+  ["nimenunua unga mifuko kumi kila mmoja 150", { seed: true, rows: [exp(1500, { item: "flour", qty: 10, unit: "bag" })], reply: /mfuko 10 za unga kwa 1,500/ }],
   ["nimenunua stock ya elfu kumi", { seed: true, rows: [exp(10000, { item: "stock" })] }],
   ["nilinunua mbolea elfu tatu jana", { rows: [exp(3000, { day: YESTERDAY })], reply: /\(jana\)/ }],
   ["nimeuziwa mbolea na Juma elfu mbili", { rows: [exp(2000, { party: "Juma", category: "fertiliser" })], reply: /umenunua mbolea kutoka kwa Juma kwa 2,000/ }],
@@ -224,8 +224,9 @@ const CASES = [
 
   // ---------- things that are not for the toolkit stay untouched ----------
   ["Habari yako", { ...none, replies: [null] }],
-  ["nimeuza gari langu kwa 100000", { ...none, replies: [null] }],
-  ["nimenunua simu kwa 20000", { ...none, replies: [null] }],
+  // a personal sale from a person with no records is kept, as in English, with a way to take it back out
+  ["nimeuza gari langu kwa 100000", { rows: [inc(100000, { item: "gari langu" })], reply: /futa rekodi ya mwisho/ }],
+  ["nimenunua simu kwa 20000", { rows: [exp(20000, { item: "phone" })], reply: /umenunua simu kwa 20,000/ }],
   ["Faida ya elimu ni nini", { ...none, replies: [null] }],
   ["Nina swali", { ...none, replies: [null] }],
   ["Mama amelipa ada ya shule", { ...none, replies: [null] }],

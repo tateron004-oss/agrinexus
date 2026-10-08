@@ -79,7 +79,10 @@ test("Swahili and English share one set of records", async () => {
 
 test("Swahili farm talk that is not for the toolkit is left alone, and so is everything in English", async () => {
   const empty = person();
-  for (const line of ["Nimenunua simu kwa 20000", "Nimeuza gari langu kwa 100000", "Habari yako", "Nimetumia simu yangu", "Nimeuza", "nina njaa", "Nina mbolea kiasi gani"]) assert.equal(await empty.farm(line), null, line);
+  for (const line of ["Habari yako", "Nimetumia simu yangu", "Nimeuza", "nina njaa", "Nina mbolea kiasi gani"]) assert.equal(await empty.farm(line), null, line);
+  // A shop's goods (and a sale of something personal) are kept for anyone, as in English; the person is told how to take a personal one back out.
+  assert.match(await empty.farm("Nimenunua simu kwa 20000"), /^Nimerekodi: umenunua simu kwa 20,000/);
+  assert.match(await person().farm("Nimeuza gari langu kwa 100000"), /futa rekodi ya mwisho/);
   const farmer = person(); await farmer.farm("Nimenunua mbegu kilo 10 kwa shilingi 5000");
   for (const line of ["Nimetumia muda mwingi", "Nina wasiwasi", "Faida ya elimu ni nini", "Hali ya hewa ikoje leo?", "Nina swali", "Onyesha video ya muziki"]) assert.equal(await farmer.farm(line), null, line);
   // English is exactly as before

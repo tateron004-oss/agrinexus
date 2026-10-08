@@ -287,7 +287,8 @@ async function handleIncome(ctx, t) {
     if (settled) return LS.paidMe({ who: settled.name, paid: moneyShown(settled.paid, settled.currency), left: settled.left, over: overText(deal.money.amount, settled.over, settled.currency) });
   }
   const what = clean(deal.item.replace(/^(?:kwa|kutoka)\s+/i, "")).slice(0, 60);
-  const result = await recordMoney(run, { type: "income", category: incomeCategorySw(what), amount: deal.money.amount, currency: deal.money.currency, party: deal.party, item: englishItem(what), note: what || "money received" });
+  // money with no item and no person named ("nimepata elfu mbili") is kept only for someone who already keeps records: it may be anything
+  const result = await recordMoney(!deal.party && !what ? { ...run, anyGoods: false } : run, { type: "income", category: incomeCategorySw(what), amount: deal.money.amount, currency: deal.money.currency, party: deal.party, item: englishItem(what), note: what || "money received" });
   if (result.refused) return /five thousand/.test(result.refused) ? SW.full : SW.amountWrong;
   return LS.income({ amount: moneyShown(deal.money.amount, result.record.data.currency), what: deal.party ? `${deal.party}${what ? `, ${what}` : ""}` : what, income: totalsText(sum(monthOf(ctx, result.all), "income")), when: day === ctx.today ? "" : ` (${describeDaySw(day, ctx.today)})` });
 }
@@ -461,7 +462,7 @@ async function handleFarmLog(ctx, t) {
 void LOG_SHOWN;
 
 async function handle(ctx) {
-  try { return await handleLedger(ctx); } catch (error) { if (error === NOT_FARM) return null; throw error; }
+  try { return await handleLedger({ ...ctx, anyGoods: true }); } catch (error) { if (error === NOT_FARM) return null; throw error; }
 }
 
 async function handleLedger(ctx) {

@@ -2,7 +2,7 @@
 
 const { clean, titleCase, round } = require("./parse.js");
 const { recordMoney, sum, profitOf, NOT_FARM } = require("./money.js");
-const { addStock, findItems } = require("./inventory.js");
+const { addStock, findItems, categoryOf } = require("./inventory.js");
 const { addDays } = require("../personal/dates.js");
 const { parseQuantitySw, unitLabelSw, parseMoneySw, moneyShown, CURRENCY_WORDS, englishItem, incomeCategorySw, expenseCategorySw, periodSw, describeDaySw, swahiliItem, categorySw, UNIT_WORD, NUMBER } = require("../i18n/swahili-words.js");
 const numbers = require("../i18n/swahili-numbers.js");
@@ -46,9 +46,13 @@ const SW = {
   // credit
   soldCredit: ({ qty, item, buyer, amount, stock, income, when }) => `Nimerekodi: umeuza ${qty ? `${qty} za ` : ""}${item}${buyer ? ` kwa ${buyer}` : ""} kwa ${amount} kwa mkopo${when}.${stock} Sijahesabu kama mapato bado. ${buyer ? `${buyer} akilipa, sema "${buyer} amelipa".` : "Wakati mwingine sema umemuuzia nani, ili nikumbuke."} Mapato ya mwezi huu: ${income}.`,
   boughtCredit: ({ qty, item, seller, amount, category, stock, spent, when }) => `Nimerekodi: umenunua ${qty ? `${qty} za ` : ""}${item}${seller ? ` kutoka kwa ${seller}` : ""} kwa ${amount} (${categorySw(category)}) kwa mkopo${when}.${stock} Ni gharama sasa, na nitakumbuka unadaiwa ${amount}${seller ? ` na ${seller}` : ""}.${seller ? ` Ukilipa, sema "nimemlipa ${seller}".` : ""} Matumizi ya mwezi huu: ${spent}.`,
+  notBusiness: ' Kama hiyo si ya biashara yako, sema "futa rekodi ya mwisho" nami nitaiondoa.',
+  stockOtherUnit: ({ name, unit }) => ` Unaweka ${name} kwa ${unit}, kwa hivyo sijabadilisha ghala lako. Sema kwa kipimo kilekile ili nilipunguze.`,
   whenShown: ({ when }) => ` (${when})`
 };
 
+// something said to be the speaker's own ("simu yangu") from a person with no records: kept, but they are told how to take it back out
+const PERSONAL_SW = /\b(?:yangu|wangu|langu|zangu|yetu|wetu|letu|zetu|gari|nyumba|kiwanja)\b/i;
 const stripUnit = rest => rest.replace(new RegExp(`\\b(?:${UNIT_WORD})\\s+${NUMBER}\\b|(?<![\\d.,])${NUMBER}\\s*(?:${UNIT_WORD})\\b`, "i"), " ");
 
 // ---- reading a deal: what, how much of it, for how much, with whom, and whether it is on credit ----
@@ -166,14 +170,16 @@ const refusedText = refused => (/five thousand/.test(refused || "") ? SW.full : 
 async function sellRecord(ctx, deal, { day = ctx.today } = {}) {
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
   const run = day === ctx.today ? ctx : { ...ctx, entryDay: day };
-  const item = englishItem(deal.item);
+  const item = englishItem(deal.item); const fresh = !(await ctx.hasFarmData());
   const result = await recordMoney(run, { type: "income", category: incomeCategorySw(deal.item), amount: deal.money.amount, currency: deal.money.currency, party: deal.party, item, qty: deal.quantity?.value ?? deal.count ?? null, unit: deal.quantity?.unit || "", note: `sold ${item}`, ...(deal.credit ? { unpaid: true } : {}) });
   if (result.refused) return refusedText(result.refused);
   let stock = "";
   if (deal.quantity) {
     // Same bug as money.js's English "sold" stock deduction, same fix, duplicated by hand in Swahili.
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const list = await ctx.store.list({ ...scope, collection: "stock" }); const found = findItems(list, item).filter(entry => entry.data.unit === deal.quantity.unit);
+      // Only goods of the same kind come out of stock (selling mahindi must not take kilos out of the maize SEED), and only when one stock record matches.
+      const list = await ctx.store.list({ ...scope, collection: "stock" }); const same = findItems(list, item).filter(entry => entry.data.category === "other" || entry.data.category === categoryOf(item)); const found = same.filter(entry => entry.data.unit === deal.quantity.unit);
+      if (same.length === 1 && !found.length) { stock = SW.stockOtherUnit({ name: swahiliItem(same[0].data.name), unit: unitLabelSw(1, same[0].data.unit).split(" ")[0] }); break; }
       if (found.length !== 1) break;
       const left = round(Math.max(0, found[0].data.qty - deal.quantity.value), 3);
       const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });
@@ -183,13 +189,14 @@ async function sellRecord(ctx, deal, { day = ctx.today } = {}) {
     }
   }
   const args = { qty: deal.quantity ? unitLabelSw(deal.quantity.value, deal.quantity.unit) : "", item: deal.count ? `${deal.item} ${deal.count}` : deal.item, buyer: deal.party, amount: moneyShown(deal.money.amount, result.record.data.currency), stock, income: totalsText(sum(monthOf(ctx, result.all), "income")), when: whenOf(ctx, day) };
-  return deal.credit ? SW.soldCredit(args) : SW.sold(args);
+  const reply = deal.credit ? SW.soldCredit(args) : SW.sold(args);
+  return fresh && PERSONAL_SW.test(deal.item) ? `${reply}${SW.notBusiness}` : reply;
 }
 
 // A purchase; bought on credit, the cost counts now and what is still owed to the seller is kept until it is paid (as the English tool keeps it).
 async function buyRecord(ctx, deal, { day = ctx.today } = {}) {
   const run = day === ctx.today ? ctx : { ...ctx, entryDay: day };
-  const category = expenseCategorySw(deal.item); const item = englishItem(deal.item);
+  const category = expenseCategorySw(deal.item); const item = englishItem(deal.item); const fresh = !(await ctx.hasFarmData());
   const result = await recordMoney(run, { type: "expense", category, amount: deal.money.amount, currency: deal.money.currency, party: deal.party, item, qty: deal.quantity?.value ?? deal.count ?? null, unit: deal.quantity?.unit || "", note: `bought ${item}`, ...(deal.credit ? { unpaid: true, owing: deal.money.amount } : {}) });
   if (result.refused) return refusedText(result.refused);
   let stock = "";
@@ -198,7 +205,8 @@ async function buyRecord(ctx, deal, { day = ctx.today } = {}) {
     if (added) stock = SW.stockIn({ qty: unitLabelSw(added.data.qty, added.data.unit), name: swahiliItem(added.data.name) });
   }
   const args = { qty: deal.quantity ? unitLabelSw(deal.quantity.value, deal.quantity.unit) : "", item: deal.count ? `${deal.item} ${deal.count}` : deal.item, seller: deal.party, amount: moneyShown(deal.money.amount, result.record.data.currency), category, stock, spent: totalsText(sum(monthOf(ctx, result.all), "expense")), when: whenOf(ctx, day) };
-  return deal.credit ? SW.boughtCredit(args) : SW.bought(args);
+  const reply = deal.credit ? SW.boughtCredit(args) : SW.bought(args);
+  return fresh && category === "other" && PERSONAL_SW.test(deal.item) ? `${reply}${SW.notBusiness}` : reply;
 }
 
 
@@ -222,7 +230,7 @@ async function totalsAnswer(ctx, metric, periodWord = "", what = "") {
 }
 
 async function handle(ctx) {
-  try { return await handleSwahili(ctx); } catch (error) { if (error === NOT_FARM) return null; throw error; }
+  try { return await handleSwahili({ ...ctx, anyGoods: true }); } catch (error) { if (error === NOT_FARM) return null; throw error; }
 }
 
 async function handleSwahili(ctx) {
