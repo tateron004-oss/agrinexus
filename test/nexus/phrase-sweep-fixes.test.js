@@ -258,6 +258,19 @@ test("'9 am' answering 'At 9 in the morning or in the evening?' finishes the rem
   assert.match(planner, /const hourCompleted = completeAmbiguousHour\(command\?\.text, conversationHistory\);\n\s+if \(hourCompleted\) command = \{ \.\.\.command, text: hourCompleted \};/);
 });
 
+test("a number said as 'plus 254 712 345 678' (the way Kyro reads one back) is the number, so the contact is saved", () => {
+  const { normaliseSpoken, spokenPlusToSign } = require("../../nexus/speech/normalise.js");
+  const { extractContactStatement } = require("../../nexus/memory/contacts.js");
+  const said = normaliseSpoken("Save Otieno's number as plus 254 712 345 678").text;
+  assert.equal(said, "Save Otieno's number as +254 712 345 678");
+  assert.deepEqual({ ...extractContactStatement(said) }, { name: "Otieno", phone: "+254712345678" });
+  assert.equal(spokenPlusToSign("Call plus254712345678"), "Call +254712345678");
+  // arithmetic and lists are left alone
+  assert.equal(spokenPlusToSign("5 plus 200 300"), "5 plus 200 300");
+  assert.equal(spokenPlusToSign("I owe 2 plus 254 shillings"), "I owe 2 plus 254 shillings");
+  assert.equal(spokenPlusToSign("add milk plus eggs to my list"), "add milk plus eggs to my list");
+});
+
 test("a provider that is switched off is described in plain words, never with an environment variable name", () => {
   assert.equal(spoken.isInternalSwitchedOffMessage("twilio sms.send is disabled. Enable NEXUS_SMS_ENABLED=true for controlled testing."), true);
   assert.equal(spoken.isInternalSwitchedOffMessage("generic email.send is disabled. Enable NEXUS_EMAIL_ENABLED=true for controlled testing."), true);
