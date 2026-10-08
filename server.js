@@ -21417,7 +21417,7 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
     ...common,
     status,
     // phrase sweep: a provider's own "requires explicit confirmed: true before controlled testing" sentence is not for a person; they are told what is waiting and asked for a yes.
-    response: responseOverride || (body.status === "confirmation_required" && spokenRequests.isInternalConfirmationMessage(body.message) ? spokenRequests.plainConfirmationSentence(common.command) : body.message) || common.command,
+    response: responseOverride || (body.status === "confirmation_required" && spokenRequests.isInternalConfirmationMessage(body.message) ? spokenRequests.plainConfirmationSentence(common.command) : spokenRequests.isInternalSwitchedOffMessage(body.message) ? spokenRequests.plainSwitchedOffSentence(body) : body.message) || common.command,
     provider: body.provider || "",
     providerAction: body.action || "",
     providerAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
@@ -23462,7 +23462,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // Blood sugar: a number (decimals allowed: "7.2") and, when said, its unit -- mg/dL or mmol/L (see server/providers/bloodGlucose.js).
     const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?![.,]\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
-    const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
+    const temperatureMatch = !bp && !glucose && !oxygenMatch && !spokenRequests.isPatientNote(command) && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
     // Confirmed: unlike every other vital above, weight kept the old
     // \D{0,10}? "any 0-10 characters" window instead of VITAL_VALUE_CONNECTOR
     // -- "I weigh, say, 200 kg of feed for my cattle every morning." and "My
@@ -23864,7 +23864,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       intakeRecord = ensureVoiceHealthIntake(db, user, { needSummary: args.summary || args.reason || command, force: true });
       response = `I started your telehealth intake, case ${intakeRecord.patientRef}. Status: ${intakeRecord.queueStatus}. Tell me the reason for the visit, when it began, and any symptoms, and I will add them to the case for provider review.`;
     } else {
-      response = chronicConditionEducationResponse(command)
+      response = chronicConditionEducationResponse(command);
+      // Nothing in this tool understood the sentence. Found by the phrase sweep: a health worker's "Visit Mary: ...", a medicine taken or missed, a check-in or a circle sentence sent here got "I opened Health and Chronic Care"
+      // although the planner saves them. Only here, after every health branch above declined, is the planner asked (the health tool keeps its own route otherwise, see orb-catchall-tool.test.js).
+      if (!response && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
+        const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
+        const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+        if (planned) return { ...common, capability: "nexus_health_preparation", status: "completed", intent: "planner-deterministic-answer", response: planned.response, executionAttempted: true, executionVerified: planned.verified === true };
+      }
+      response = response
         || "I opened Health and Chronic Care. I can help with health literacy, test readings, intake preparation, mobile clinic search, pharmacist questions, community health worker and transportation resources, RPM/RTM records, and provider-ready summaries without diagnosing or prescribing.";
     }
     const status = intakeRecord ? "health-intake-created" : readingSaved ? "health-reading-saved" : "health-preparation-ready";

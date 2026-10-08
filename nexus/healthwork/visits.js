@@ -59,7 +59,7 @@ async function handle(ctx) {
   // ---- record a visit ----
   let visit = null;
   // Only "visit note ...", "add a visit ..." and the like complain about an unknown name; a bare "Visit Nairobi: ..." is left to normal planning.
-  if ((m = /^(?:please )?(visit|visit note|add (?:a )?visit(?: note)?|record (?:a )?visit|new visit|log (?:a )?visit)\s*(?:for|to|on)?\s*(?:patient )?(.+?)\s*(?:(today|yesterday)\s*)?[:,-]\s*(.+)$/i.exec(t))) visit = { who: m[2], when: m[3], body: m[4], explicit: m[1].toLowerCase() !== "visit" };
+  if ((m = /^(?:please )?((?:antenatal |anc |postnatal |pnc |home |clinic )?visit|visit note|add (?:a )?visit(?: note)?|record (?:a )?visit|new visit|log (?:a )?visit)\s*(?:for|to|on)?\s*(?:patient )?(.+?)\s*(?:(today|yesterday)\s*)?[:,-]\s*(.+)$/i.exec(t))) visit = { who: m[2], when: m[3], body: m[4], explicit: m[1].toLowerCase() !== "visit" };
   else if ((m = /^(?:i )?(?:saw|visited|examined|attended|treated|reviewed|checked) (?:patient )?(.+?)\s*(?:(today|yesterday|this morning)\s*)?[:,-]\s*(.+)$/i.exec(t))) visit = { who: m[1], when: m[2], body: m[3], explicit: false };
   if (visit) {
     const found = await resolvePatient(ctx, visit.who, { quiet: !visit.explicit });

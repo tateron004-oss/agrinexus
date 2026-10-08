@@ -42,16 +42,16 @@ async function settle(u, r) {
   return { http: r.status, reply: String(text || (r.json ? "" : r.text.slice(0, 200))), state: j.state || j.code || "" };
 }
 const orbStamps = new Map();
-const orbOnce = (u, text, lang, tool) => call("POST", "/api/voice/realtime/tool", { name: tool, correlationId: `ph-${Date.now()}-${counter++}`, arguments: { command: text, language: lang }, language: lang, timeZone: TZ }, u.cookie);
+const orbOnce = (u, text, lang, tool, extra = {}) => call("POST", "/api/voice/realtime/tool", { name: tool, correlationId: `ph-${Date.now()}-${counter++}`, arguments: { command: text, language: lang, ...extra }, language: lang, timeZone: TZ }, u.cookie);
 const ROUTE = {
-  async orb(u, text, lang, tool) {
+  async orb(u, text, lang, tool, extra) {
     // the tool door allows 90 calls a minute per person (server.js); stay under it, and wait out a refusal instead of judging it as an answer
     const stamps = (orbStamps.get(u.email) || []).filter(t => Date.now() - t < 60000); orbStamps.set(u.email, stamps);
     while (stamps.length >= 70) { await sleep(1500); while (stamps.length && Date.now() - stamps[0] >= 60000) stamps.shift(); }
     stamps.push(Date.now());
     let r;
     for (let attempt = 0; attempt < 4; attempt += 1) {
-      r = await orbOnce(u, text, lang, tool);
+      r = await orbOnce(u, text, lang, tool, extra);
       if (r.status !== 429) break;
       await sleep(31000);
     }
@@ -204,7 +204,7 @@ async function runPhrase(phrase, route, u, labelSuffix = "") {
   const log0 = logSize(); const before = await snapshot(u);
   const say = async (text, cleanup = false) => {
     let r;
-    try { r = await ROUTE[route](u, text, item.lang, item.tool); } catch (error) { r = { http: 0, reply: `[no answer] ${error.message}`, state: "" }; }
+    try { r = await ROUTE[route](u, text, item.lang, item.tool, item.args); } catch (error) { r = { http: 0, reply: `[no answer] ${error.message}`, state: "" }; }
     run.steps.push({ say: text, reply: r.reply.replace(/\s+/g, " ").trim(), http: r.http, state: r.state, ...(cleanup ? { cleanup: true } : {}) });
     return r;
   };

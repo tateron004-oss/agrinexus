@@ -63,12 +63,12 @@ P(G3, "ct-save-phone", "Save Otieno's number as plus 254 712 345 678", { save: /
 P(G3, "ct-save-email", "Save Amina's email as amina@example.com", { save: /mem:contacts/, reply: /amina@example\.com/ });
 P(G3, "ct-save-local", "Save John's number as 0712 345 678", { save: /mem:contacts/, reply: /254 ?712 ?345 ?678/ });
 S(G3, "ct-save-sw", "Hifadhi namba ya Otieno kama +254712345678", { save: /mem:contacts/, reply: /254 ?712/ });
-P(G3, "ct-text", "Text John I am late", { tool: "nexus_communications", ask: true, steps: ["no"], reply: /John/ });
-P(G3, "ct-text-yes", "Text John I am late", { tool: "nexus_communications", ask: true, steps: ["yes"], note: "yes with no SMS provider: must not claim it was sent", notreply: /\b(i(?:'ve| have)? sent|has been sent|was sent to John|text sent|message sent)\b/i });
-P(G3, "ct-call", "Call Mama", { tool: "nexus_communications", none: true, reply: /Mama/ });
-S(G3, "ct-call-sw", "Mpigie Mama", { tool: "nexus_communications", none: true, reply: /Mama/ });
-P(G3, "ct-connect", "Connect me to plus 254 712 345 678", { tool: "nexus_communications", ask: true, steps: ["no"] });
-P(G3, "ct-connect-listen", "Connect me to +254712345678 and listen", { tool: "nexus_communications", ask: true, steps: ["no"] });
+P(G3, "ct-text", "Text John I am late", { args: { channel: "sms" }, tool: "nexus_communications", ask: true, steps: ["no"], reply: /John/ });
+P(G3, "ct-text-yes", "Text John I am late", { args: { channel: "sms" }, tool: "nexus_communications", ask: true, steps: ["yes"], note: "yes with no SMS provider: must not claim it was sent", notreply: /\b(i(?:'ve| have)? sent|has been sent|was sent to John|text sent|message sent)\b/i });
+P(G3, "ct-call", "Call Mama", { args: { channel: "call" }, tool: "nexus_communications", none: true, reply: /Mama/ });
+S(G3, "ct-call-sw", "Mpigie Mama", { args: { channel: "call" }, tool: "nexus_communications", none: true, reply: /Mama/ });
+P(G3, "ct-connect", "Connect me to plus 254 712 345 678", { args: { channel: "call" }, tool: "nexus_communications", ask: true, steps: ["no"] });
+P(G3, "ct-connect-listen", "Connect me to +254712345678 and listen", { args: { channel: "call", mode: "connect_and_listen" }, tool: "nexus_communications", ask: true, steps: ["no"] });
 
 // ---------------------------------------------------------------- 4 Reminders, brief and weather
 const G4 = "Reminders, brief and weather";

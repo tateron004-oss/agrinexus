@@ -185,3 +185,38 @@ test("the Kiswahili music preference 'kuanzia sasa' (from now on) keeps its last
   assert.equal(media.parse("Ongeza sauti sasa").control, "volume-up");
   assert.equal(media.parse("Play music in YouTube from now on").type, "preference");
 });
+
+test("'Antenatal visit Mary: ...' (the phrase the pregnancy reply itself suggests) records a visit", async () => {
+  const { healthWorkTurn } = require("../../nexus/healthwork/index.js");
+  const { fakeFarmStore, fakeMemory } = require("./farmwork-fake.js");
+  const store = fakeFarmStore(); const memory = fakeMemory();
+  const say = text => healthWorkTurn({ text, store, tenantId: "t1", userId: "u1", now: new Date("2026-09-20T05:00:00Z"), timeZone: "Africa/Nairobi", memory, nameOf: async () => "Amina Wanjiru" });
+  await say("Register a patient called Mary Akinyi, 34, female, Kibera"); await say("skip");
+  assert.match(await say("Mary is pregnant, due 12 March"), /Recorded: Mary Akinyi/);
+  assert.match(await say("Antenatal visit Mary: blood pressure fine, baby moving"), /Recorded visit 1 for Mary Akinyi/);
+  assert.match(await say("Postnatal visit Mary: feeding well"), /Recorded visit 2 for Mary Akinyi/);
+  // a name that is not a patient is still not taken for a visit unless the words are explicit, as before
+  assert.equal(await say("Visit Nairobi: nice city"), null);
+});
+
+test("a patient note sent to the health tool is not read as the speaker's own temperature, and the planner is asked only when no health branch understood the sentence", () => {
+  assert.equal(spoken.isPatientNote("Visit Mary: temperature 38.5, cough"), true);
+  assert.equal(spoken.isPatientNote("Antenatal visit Mary: temperature 38"), true);
+  assert.equal(spoken.isPatientNote("Ziara ya Mary: homa, kikohozi"), true);
+  assert.equal(spoken.isPatientNote("my temperature is 38.5"), false);
+  assert.match(source, /!spokenRequests\.isPatientNote\(command\) && command\.match\(/);
+  assert.match(source, /response = chronicConditionEducationResponse\(command\);\n[\s\S]{0,900}if \(!response && effectiveMentalHealthSignal\.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function"/);
+});
+
+test("a provider that is switched off is described in plain words, never with an environment variable name", () => {
+  assert.equal(spoken.isInternalSwitchedOffMessage("twilio sms.send is disabled. Enable NEXUS_SMS_ENABLED=true for controlled testing."), true);
+  assert.equal(spoken.isInternalSwitchedOffMessage("generic email.send is disabled. Enable NEXUS_EMAIL_ENABLED=true for controlled testing."), true);
+  assert.equal(spoken.isInternalSwitchedOffMessage("Listing created."), false);
+  assert.equal(spoken.isInternalSwitchedOffMessage("Sent."), false);
+  const { nexusOpenAiNativeProviderToolResult } = load(["nexusOpenAiNativeProviderToolResult"], { spokenRequests: spoken, nexusOpenAiNativeToolReceipt: () => ({}) });
+  const off = nexusOpenAiNativeProviderToolResult({}, { toolName: "nexus_communications", command: "Text John I am late" }, { body: { ok: false, provider: "twilio", action: "sms.send", status: "disabled", disabled: true, message: "twilio sms.send is disabled. Enable NEXUS_SMS_ENABLED=true for controlled testing." } });
+  assert.equal(off.response, "Sending texts is not switched on for this account yet, so nothing was sent or changed.");
+  assert.ok(!/NEXUS_|twilio|sms\.send/.test(off.response));
+  assert.equal(off.executionAttempted, false);
+  assert.equal(spoken.plainSwitchedOffSentence({ provider: "x", action: "call.start" }), "Phone calls are not switched on for this account yet, so nothing was sent or changed.");
+});

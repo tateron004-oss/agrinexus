@@ -76,4 +76,20 @@ function isWellnessLogRequest(text) {
   return spoken.length > 0 && spoken.length <= 200 && WELLNESS_LOG.some(pattern => pattern.test(spoken));
 }
 
-module.exports = Object.freeze({ isHeavyBleeding, isWellnessLogRequest, swahiliWeatherLocation, isBodyTemperatureReport, bloodMeansDanger, wantsListingCreate, plainConfirmationSentence, isInternalConfirmationMessage });
+// Found by the sweep: "Visit Mary: temperature 38.5, cough" sent to the health tool was taken for the person's OWN temperature reading ("I noted the temperature reading 38.5, but saving it to your monitoring record is
+// unavailable"). A note about a patient (visit, follow-up, registering a patient) is a health worker's record, never the speaker's own reading.
+function isPatientNote(text) {
+  return /^\s*(?:please\s+)?(?:(?:antenatal |anc |postnatal |pnc |home |clinic )?visit(?: note)?|ziara ya|register (?:a )?patient|follow[- ]?up|add (?:a )?visit|record (?:a )?visit)\b/i.test(clean(text));
+}
+
+// Found by the sweep: "Text John I am late" through the communications tool answered "twilio sms.send is disabled. Enable NEXUS_SMS_ENABLED=true for controlled testing." (and the same for a call, naming sms). A person is not told
+// environment variable names; they are told it is not switched on and that nothing happened.
+const SWITCHED_OFF = /\b(?:is disabled|is not configured|not configured\b.*\bbefore live testing|Enable NEXUS_[A-Z_]+)/i;
+function isInternalSwitchedOffMessage(message) { return /NEXUS_[A-Z0-9_]{3,}|before live testing/.test(String(message || "")) && SWITCHED_OFF.test(String(message || "")); }
+function plainSwitchedOffSentence(body = {}) {
+  const text = `${body.provider || ""} ${body.action || ""}`;
+  const what = /sms|text|twilio/i.test(text) ? "Sending texts is" : /call|voice|phone/i.test(text) ? "Phone calls are" : /email|mail/i.test(text) ? "Sending email is" : "That is";
+  return `${what} not switched on for this account yet, so nothing was sent or changed.`;
+}
+
+module.exports = Object.freeze({ isPatientNote, isInternalSwitchedOffMessage, plainSwitchedOffSentence, isHeavyBleeding, isWellnessLogRequest, swahiliWeatherLocation, isBodyTemperatureReport, bloodMeansDanger, wantsListingCreate, plainConfirmationSentence, isInternalConfirmationMessage });
