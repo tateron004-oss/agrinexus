@@ -54,10 +54,7 @@ async function searchYouTubeVideos(query, env = process.env) {
   searchUrl.searchParams.set("key", apiKey);
   const searchResponse = await fetchWithTimeout(searchUrl, { headers: { accept: "application/json" } }, 9000);
   const searchPayload = await searchResponse.json().catch(() => ({}));
-  if (!searchResponse.ok) {
-    if (searchResponse.status === 403 && /quota/i.test(JSON.stringify(searchPayload.error || {}))) quotaState.markYoutubeExhausted();
-    throw new Error(searchPayload.error?.message || `youtube-search-http-${searchResponse.status}`);
-  }
+  if (!searchResponse.ok) throw new Error(searchPayload.error?.message || `youtube-search-http-${searchResponse.status}`);
   const candidates = (searchPayload.items || [])
     .map(item => ({
       videoId: item.id?.videoId || "",

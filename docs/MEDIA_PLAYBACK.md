@@ -103,7 +103,7 @@ Nothing is required for music and radio. No `NEXUS_*` flag is needed for any of 
 | `JAMENDO_CLIENT_ID` | more Creative Commons music (free tier is non-commercial) | optional |
 | `NEXUS_YOUTUBE_DAILY_QUOTA` (default 10000) | the daily unit budget the guard enforces | optional |
 | `NEXUS_YOUTUBE_QUOTA_RESERVE` (default 300) | units kept back for other uses of the same key | optional |
-| `AGRINEXUS_MEDIA_STATE_PATH` | where the quota counter is saved (default: next to the database file, else the system temp folder) | optional |
+| `AGRINEXUS_MEDIA_STATE_PATH` | where the quota counter is saved (default: in `AGRINEXUS_DATA_DIR`, or next to `AGRINEXUS_DB_PATH`; otherwise memory only) | optional |
 | `NEXUS_MEDIA_ALLOW_HTTP_STREAMS=true` | allow plain-http radio streams (only useful on a local http page) | optional, dev only |
 
 The older flags `NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED`, `NEXUS_MUSIC_MEDIA_PROVIDER_ENABLED` and `NEXUS_MUSIC_MEDIA_PUBLIC_PROVIDER_ENABLED` only affect the old

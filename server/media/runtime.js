@@ -2,7 +2,6 @@
 
 // The process-wide media runtime: one quota counter, one cache and one health record shared by every route and tool that resolves media.
 
-const os = require("node:os");
 const path = require("node:path");
 const util = require("./util.js");
 const { createMediaState } = require("./state.js");
@@ -13,8 +12,10 @@ const youtube = require("./providers/youtube.js");
 
 function stateFilePath(env) {
   if (env.AGRINEXUS_MEDIA_STATE_PATH) return env.AGRINEXUS_MEDIA_STATE_PATH;
-  const dir = env.AGRINEXUS_DATA_DIR || (env.AGRINEXUS_DB_PATH ? path.dirname(env.AGRINEXUS_DB_PATH) : os.tmpdir());
-  return path.join(dir, "kyro-media-state.json");
+  // Only saved where the operator has given the app a data folder (Render: AGRINEXUS_DATA_DIR); otherwise the counter lives in memory, which keeps tests
+  // and local runs from sharing a quota file. Google's own quotaExceeded answer corrects a counter that restarted.
+  const dir = env.AGRINEXUS_DATA_DIR || (env.AGRINEXUS_DB_PATH ? path.dirname(env.AGRINEXUS_DB_PATH) : "");
+  return dir ? path.join(dir, "kyro-media-state.json") : "";
 }
 
 function createMediaRuntime({ env = process.env, fetch, now, filePath } = {}) {
