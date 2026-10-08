@@ -285,7 +285,7 @@ class OpenEndedPlanner {
       // records" -- and skipping only this one toolkit, rather than refusing the whole turn, still lets a
       // restricted caller use the farm toolkit or ordinary conversation normally.
       if (restriction && context?.isRestrictedFrom?.(restriction)) continue;
-      const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf });
+      const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf, country: context?.country || "" });
       const goal = String(command.text || "").trim();
       const catalog = work?.report ? await this.catalog() : null;
       if (work?.report && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) return Object.freeze({ goal, application: "documents", riskTier: "low", clarification: null, planningAttempts: 0,

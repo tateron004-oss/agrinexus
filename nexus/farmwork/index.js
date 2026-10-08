@@ -3,6 +3,7 @@
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { continueGuided, expired, YES, NO } = require("./guided.js");
 const { clean } = require("./parse.js");
+const { currencyForCountry } = require("./currency.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const fields = require("./fields.js");
 const tasks = require("./tasks.js");
@@ -49,13 +50,13 @@ function track(store) {
   } });
 }
 
-async function farmWorkTurn({ text, store, tenantId, userId, now = new Date(), timeZone, roles = [], memory = null, notifications = null, nameOf = null }) {
+async function farmWorkTurn({ text, store, tenantId, userId, now = new Date(), timeZone, roles = [], memory = null, notifications = null, nameOf = null, country = "" }) {
   if (!store?.getSession || !text) return null;
   const wrapped = track(store);
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   let entries = null; let hasFarm = null;
   // What was SAID: "Yes." / "Skip." lose their full stop and "forty kilos" becomes "40 kilos" (nexus/i18n/spoken-input.js).
-  const ctx = { text: normalizeSpokenText(clean(text)), store: wrapped, tenantId, userId, now, zone, today: localDay(now, zone), roles, memory, notifications, nameOf,
+  const ctx = { text: normalizeSpokenText(clean(text)), store: wrapped, tenantId, userId, now, zone, today: localDay(now, zone), roles, memory, notifications, nameOf, defaultCurrency: currencyForCountry(country),
     hasFarmData: async () => { if (hasFarm === null) { try { hasFarm = (await store.listAll({ tenantId, userId, limit: 1 })).length > 0; } catch { hasFarm = false; } } return hasFarm; },
     farmEntries: async () => { if (entries === null) { try { entries = memory?.listFarmEntries ? (await memory.listFarmEntries({ tenantId, userId })).map(row => row.content) : []; } catch { entries = []; } } return entries; },
     personal: memory?.addPersonalItem ? { add: content => memory.addPersonalItem({ tenantId, userId, content }), list: async () => (await memory.listPersonalItems({ tenantId, userId })).map(row => row.content) } : null };

@@ -36,13 +36,14 @@ const isSpecific = currency => Boolean(currency) && currency !== "shillings";
 // Only the shilling currencies can be what a bare "shillings" means (never dollars): so "9000 shillings" next to "KSh 5000" is the same money, but next to "$20" it is not.
 const SHILLING_KINDS = new Set(["KSh", "TSh", "UGX"]);
 const specificCurrency = (records, among = null) => { const used = new Set(records.map(record => record.data.currency).filter(currency => isSpecific(currency) && (!among || among.has(currency)))); return used.size === 1 ? [...used][0] : ""; };
-const defaultCurrency = records => specificCurrency(records);
+// (a dollar, euro or pound used once is a foreign sale, not the money the person normally keeps their books in)
+const defaultCurrency = records => { const one = specificCurrency(records); return /^[$€£]$/.test(one) ? "" : one; };
 // The bucket a record is totalled in: its own currency, or (when it names none, or only "shillings") the one the others use.
+// An amount stored with no currency stays in its own (unlabelled) total: a later "$20" must never relabel what was said before it. (New amounts are labelled when they are saved, see recordMoney.)
 const currencyKey = (records, currency) => {
   if (isSpecific(currency)) return currency;
   if (currency === "shillings") return specificCurrency(records, SHILLING_KINDS) || "shillings";
-  const hasGeneric = records.some(record => record.data.currency === "shillings");
-  return (hasGeneric ? specificCurrency(records, SHILLING_KINDS) : specificCurrency(records)) || (hasGeneric ? "shillings" : "");
+  return "";
 };
 
 // Not everything someone buys or sells is farm business. A sale or purchase that matches no farm word is only recorded for a person who already
@@ -58,7 +59,9 @@ async function recordMoney(ctx, entry) {
   if (all.length >= 5000) return { refused: "Your money records are full (five thousand entries). Ask me for a summary, then remove some." };
   // A mis-heard or mistyped extra digit would otherwise sit in every total for good. Nothing is saved; the person is asked to say it again.
   if (!(entry.amount > 0) || entry.amount > MAX_AMOUNT) return { refused: `${formatMoney(entry.amount, entry.currency)} looks wrong, so I have not recorded it. I only record amounts up to ${formatMoney(MAX_AMOUNT, entry.currency)}. Please say it again with the right amount.` };
-  const currency = isSpecific(entry.currency) ? entry.currency : entry.currency === "shillings" ? specificCurrency(all, SHILLING_KINDS) || "shillings" : defaultCurrency(all) || "";
+  // The currency is labelled ONCE, when the amount is saved: as said, else the person's own money from their profile country, else the one (non-dollar) currency they have always used. Nothing stored is ever relabelled.
+  const home = ctx.defaultCurrency || "";
+  const currency = isSpecific(entry.currency) ? entry.currency : entry.currency === "shillings" ? (SHILLING_KINDS.has(home) ? home : "") || specificCurrency(all, SHILLING_KINDS) || "shillings" : home || defaultCurrency(all) || "";
   const record = await ctx.store.add({ ...scope, collection: "money", data: { ...entry, currency, day: entry.day || ctx.entryDay || ctx.today, ...(ctx.payment && !entry.payment ? { payment: ctx.payment } : {}) } });
   return { record, all: [record, ...all] };
 }
