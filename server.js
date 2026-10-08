@@ -78,6 +78,8 @@ const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
 const { withoutNegatedSymptoms } = require("./public/kyro-care-phrases.js");
+// Small pure readings of spoken requests that the phrase sweep (scripts/dev/real-runtime/phrases.mjs) found missing or too wide.
+const spokenRequests = require("./nexus/voice/spoken-requests.js");
 // The honest work-and-learning answers (nexus/floor): short practice lessons in reading and maths, practice interviews, what Kyro really knows about jobs and training, and a child who
 // works or wants to. Where a person got to in a practice lesson is kept on their own record (user.floorPractice).
 const workLearningFloor = require("./nexus/floor/index.js");
@@ -88,6 +90,16 @@ async function careSafetyReply(text, user) {
   if (!found) return null;
   const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en"), country: user?.country });
   return reply ? { kind: found.kind, reply } : null;
+}
+// Found by the phrase sweep: the voice model sends health and farm talk to the health and agriculture tools, which never asked the danger-sign readers the other doors ask, so "My child is fitting" and "She has heavy bleeding"
+// got "I opened Health and Chronic Care". The agriculture tool only gets the companion reader (it keeps the animal rule: a sick cow is never given a person's first aid).
+async function toolUrgentSafetyAnswer(db, user, toolName, text) {
+  if (toolName !== "nexus_health_preparation" && toolName !== "nexus_agriculture") return null;
+  const care = await careSafetyReply(text, user).catch(() => null);
+  if (care) return { intent: `conversation.safety.${care.kind}`, response: care.reply };
+  if (toolName !== "nexus_health_preparation") return null;
+  const urgent = urgentHealthSafetyResponse(db, user, text);
+  return urgent ? { intent: urgent.intent, response: urgent.response } : null;
 }
 // The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already
 // exists for the companion (nexus/i18n/sw.js safety.*), never new wording. null when it does not apply or the shared reader has no Kiswahili case for the words (the English packet is then kept).
@@ -7303,11 +7315,13 @@ function suggestedRepliesForResult(result = {}, behavior = {}) {
   return ["do the next step", "what should I do next", "open voice help"];
 }
 
-function humanizeAgentResult(db, user, result = {}, command = "") {
+function humanizeAgentResult(db, user, result = {}, command = "", options = {}) {
   if (command) updateConversationUserModel(db.profile, command, user);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
-  const suppressNudge = Boolean(result.metadata?.suppressBehaviorNudge);
+  // Found by the phrase sweep: a Kiswahili answer got an English "Got it." in front and an English hint ("You can ask me to contact the buyer, check the field ...") behind it. Both are English-only chrome.
+  const swahili = /^sw/i.test(String(options.language || result.metadata?.responseLanguage || result.metadata?.language || ""));
+  const suppressNudge = Boolean(result.metadata?.suppressBehaviorNudge) || swahili;
   const alreadyNatural = /^(AgriNexus|Nexus|For|A sick|Good morning|Good afternoon|Good evening|Hello|Yes|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|Full map|The full intelligent model)/i.test(original);
   const prefix = alreadyNatural || suppressNudge ? "" : "Got it. ";
   const followUp = suppressNudge ? "" : adaptiveBehaviorNudge(behavior, result);
@@ -21401,7 +21415,8 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
   return {
     ...common,
     status,
-    response: responseOverride || body.message || common.command,
+    // phrase sweep: a provider's own "requires explicit confirmed: true before controlled testing" sentence is not for a person; they are told what is waiting and asked for a yes.
+    response: responseOverride || (body.status === "confirmation_required" && spokenRequests.isInternalConfirmationMessage(body.message) ? spokenRequests.plainConfirmationSentence(common.command) : body.message) || common.command,
     provider: body.provider || "",
     providerAction: body.action || "",
     providerAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
@@ -22240,6 +22255,20 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         executionAttempted: true, executionVerified: planned.verified === true };
     }
   }
+  // Danger signs reach the health and agriculture tools too (phrase sweep; typeof guards: several tests evaluate this function's source alone).
+  if (typeof toolUrgentSafetyAnswer === "function" && (toolName === "nexus_health_preparation" || toolName === "nexus_agriculture")) {
+    const urgent = await toolUrgentSafetyAnswer(db, user, toolName, rawCallerText || command);
+    if (urgent) return { ...common, capability: "health-safety", status: "completed", intent: urgent.intent, response: urgent.response, providerAttempted: false, providerSucceeded: false, executionAttempted: false, executionVerified: false };
+  }
+  // Fitness and wellbeing sentences ("I ran 5 km in 30 minutes", "My goal is 4 workouts a week", "Undo my last workout") are the wellness log's, which the planner owns; the health tool did not know them (phrase sweep).
+  if (toolName === "nexus_health_preparation" && typeof spokenRequests !== "undefined" && spokenRequests.isWellnessLogRequest(command) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
+    const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+    if (planned) {
+      return { ...common, capability: "wellness-log", status: "completed", intent: "planner-deterministic-answer", response: planned.response,
+        executionAttempted: true, executionVerified: planned.verified === true };
+    }
+  }
   if (toolName === "nexus_translation") {
     const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
     const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", arabic: "ar", portuguese: "pt" };
@@ -22265,7 +22294,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_weather") {
     const locationMatch = command.match(/\b(?:in|for|near|at)\s+([^?.,]+(?:,\s*[^?.,]+)?)/i);
-    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query;
+    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query || spokenRequests.swahiliWeatherLocation(command); // found by the phrase sweep: "Hali ya hewa Kisumu ikoje?" had no place
     // A vague question like "Will it rain tomorrow?" or "What is the weather
     // like?" has no real location in it, but previously fell through to
     // using the ENTIRE command sentence as the geocoder query -- confirmed
@@ -23902,7 +23931,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // confirm creating a brand new listing titled after their own status
     // question, instead of answering it.
     const wantsListingStatus = /\b(do|did|does|have|has)\s+you\s+(sell|sold|list(?:ed)?|post(?:ed)?|publish(?:ed)?|creat(?:e|ed))\b/i.test(command);
-    if (!wantsBrowseListings && !wantsListingStatus && /\b(create|post|publish|list|sell)\b/i.test(command)) {
+    if (!wantsBrowseListings && !wantsListingStatus && spokenRequests.wantsListingCreate(command)) { // phrase sweep: the Kiswahili "Weka tangazo: ninauza ..." was read as browsing
       // Found live (marketplace/real-estate audit): this create path called
       // the legacy nexusRealProviders.marketplace.createListing, which has
       // no content-safety check at all -- unlike marketplaceBridge's own
@@ -29441,7 +29470,7 @@ function urgentHealthSafetyResponse(db, user, text = "") {
   const lower = normalizeSpeechForIntent(withoutNegatedSymptoms(text));
   const vulnerablePerson = /\b(baby|child|kid|infant|mother|father|grandma|grandmother|elder|person|patient|my child|my baby)\b/.test(lower);
   const babyOrChildHealth = /\b(baby|child|kid|infant|my child|my baby)\b/.test(lower) && /\b(sick|hot|fever|weak|pain|vomit|cough|hurt|help|no english|no doctor)\b/.test(lower);
-  const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|blood|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower);
+  const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower) || spokenRequests.bloodMeansDanger(lower); // phrase sweep: "blood pressure fine, baby moving" is a reading, not bleeding
   const healthNeed = /\b(sick|hurt|pain|injury|doctor|clinic|medicine|health|help|fever|hot)\b/.test(lower);
   // Someone who collapsed, fainted or cannot be woken is an emergency whoever it is ("an elderly man collapsed in the heat").
   const collapsed = /\b(collapsed|collapse|fainted|passed out|unresponsive|not responding|cannot be woken|cant be woken|(?:will not|wont|cannot|cant) stop (?:the )?bleeding|bleeding (?:a lot|badly|heavily|too much)|bleeding (?:will not|wont|does not|doesnt) stop)\b/.test(lower);
@@ -32410,6 +32439,8 @@ function utilityAssistantKind(text, lower) {
   if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) {
     // "An elderly man collapsed in the heat" is a person in danger, not a weather question: the word heat must not send it to the forecast lookup.
     if (looksLikeHealthReport(raw) && !/\b(weather|forecast|temperature|temp|rain)\b/.test(raw)) return "";
+    // Found by the phrase sweep: "Visit Mary: temperature 38.5, cough" (a body temperature) was answered with "Which city or country should I check for weather?".
+    if (spokenRequests.isBodyTemperatureReport(raw)) return "";
     return "weather";
   }
   if (spotifyMusicControlIntent(text) || musicAssistantIntent(text)) return "music";
@@ -33244,7 +33275,8 @@ function extractWeatherLocationText(text = "") {
         .trim();
     }
   }
-  return "";
+  // Found by the phrase sweep: "Hali ya hewa Kisumu ikoje?" names a place, but only the English lead-ins were looked for.
+  return spokenRequests.swahiliWeatherLocation(compact);
 }
 
 function locationTextFromAuthorizedContext(location = null) {
@@ -38075,7 +38107,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     inputMode,
     sessionStartedAt: body.sessionStartedAt || null
   });
-  let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, ensureSpeakableAgentResult(rawResult), command), command);
+  let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, ensureSpeakableAgentResult(rawResult), command, { language: commandLanguage }), command);
   result = await translateAgentCommandResult(db, user, result, { targetLanguage: commandLanguage });
   result = ensureSpeakableAgentResult(result);
   const preliminaryRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);

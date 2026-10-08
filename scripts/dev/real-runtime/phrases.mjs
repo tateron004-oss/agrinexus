@@ -149,6 +149,8 @@ function judge(item, run) {
   const re = (rx, text) => new RegExp(rx.source, rx.flags.replace("g", "")).test(text);
   if (empty) return { verdict: "WRONG", reasons: ["empty reply"] };
   if (/provider_blocked|"error"|TypeError|\[object|NaN\b|undefined/.test(replyAll)) return { verdict: "WRONG", reasons: ["reply shows an internal error or placeholder"] };
+  // saying the same thing twice ("Add a cow called Bella" in English, then in Kiswahili) is answered "you already have ..." and stores nothing more: that is the right answer
+  if (item.dup && re(item.dup, replyAll) && !(item.lang === "sw" && looksEnglish(last.reply))) return { verdict: "PASS", reasons: [] };
   if (item.lang === "sw" && looksEnglish(last.reply)) reasons.push("reply is in English for a Kiswahili phrase");
   if (item.notreply && re(item.notreply, replyAll)) reasons.push(`reply must not match ${item.notreply}`);
   const claimsDone = /\b(saved|added|noted|recorded|done|deleted|removed|cleared|set|scheduled|logged|registered|created|nimeweka|nimehifadhi|nimerekodi|nimeongeza|nimefuta)\b/i.test(last.reply) && !/\b(not|n't|nothing|couldn't|cannot|can't|unable|haven't|no )\b/i.test(last.reply);

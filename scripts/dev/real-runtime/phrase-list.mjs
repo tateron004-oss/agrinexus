@@ -137,8 +137,8 @@ P(G6, "fa-field", "Add a field called North Plot", { wizard: true, save: /mem:fa
 P(G6, "fa-calendar", "Make a crop calendar for North Plot", { tool: "nexus_agriculture", reply: /./ });
 P(G6, "fa-cow", "Add a cow called Bella", { wizard: true, save: /mem:farm_records:(animals?|livestock)/, reply: /Bella/ });
 P(G6, "fa-calf", "Add a calf", { wizard: true, save: /mem:farm_records:(animals?|livestock)/, reply: /calf/i });
-S(G6, "fa-field-sw", "Ongeza shamba linaloitwa Kaskazini, ekari 2, mahindi", { wizard: true, save: /mem:farm_records:fields?/, reply: /Kaskazini/i });
-S(G6, "fa-cow-sw", "Ongeza ng'ombe anayeitwa Bella, jike", { wizard: true, save: /mem:farm_records:(animals?|livestock)/, reply: /Bella/ });
+S(G6, "fa-field-sw", "Ongeza shamba linaloitwa Kaskazini, ekari 2, mahindi", { wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:fields?/, reply: /Kaskazini/i });
+S(G6, "fa-cow-sw", "Ongeza ng'ombe anayeitwa Bella, jike", { wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:(animals?|livestock)/, reply: /Bella/ });
 P(G6, "pg-pest", "Log pest: armyworm in the maize", { save: /mem:farm_(records|log)/, reply: /armyworm/i });
 P(G6, "pg-update", "Update problem 2: sprayed neem", { change: /./ });
 P(G6, "pg-guides", "List farm guides", { none: true, reply: /./ });
@@ -151,14 +151,14 @@ P(G6, "wb-assign", "Assign Juma weeding North Plot by Friday", { change: /./, re
 P(G6, "wb-buyer", "Add a buyer Amina", { wizard: true, save: /mem:farm_records:buyers?/, reply: /Amina/ });
 P(G6, "wb-post", "Post for sale: 500 kg maize at 40 per kg", { tool: "nexus_marketplace_logistics", change: /./ });
 P(G6, "wb-remove", "Remove listing 3", { tool: "nexus_marketplace_logistics", none: false });
-S(G6, "wb-worker-sw", "Ongeza mfanyakazi Juma", { wizard: true, save: /mem:farm_records:workers?/, reply: /Juma/ });
+S(G6, "wb-worker-sw", "Ongeza mfanyakazi Juma", { wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:workers?/, reply: /Juma/ });
 S(G6, "wb-post-sw", "Weka tangazo: ninauza kilo 500 za mahindi kwa shilingi 40 kwa kilo", { tool: "nexus_marketplace_logistics", change: /./ });
 P(G6, "co-setup", "Set up our cooperative called Umoja Farmers", { wizard: true, save: /mem:|legacy:|rec:/, reply: /Umoja/ });
 P(G6, "co-member", "Add cooperative member Amina", { wizard: true, save: /mem:|legacy:|rec:/, reply: /Amina/ });
 P(G6, "co-dues", "Amina paid dues 500", { save: /mem:|legacy:|rec:/, reply: /500/ });
 P(G6, "co-who", "Who hasn't paid dues?", { none: true, reply: /./ });
 P(G6, "co-book", "Book the tractor for Amina on Friday", { save: /mem:|legacy:|rec:/, reply: /tractor/i });
-S(G6, "co-member-sw", "Ongeza mwanachama Amina", { wizard: true, save: /mem:|legacy:|rec:/, reply: /Amina/ });
+S(G6, "co-member-sw", "Ongeza mwanachama Amina", { wizard: true, dup: /Tayari|already/i, save: /mem:|legacy:|rec:/, reply: /Amina/ });
 S(G6, "co-who-sw", "Nani hajalipa ada?", { none: true, reply: /./ });
 
 // ---------------------------------------------------------------- 7 Health and safety
