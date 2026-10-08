@@ -63401,9 +63401,9 @@ function bindStatic() {
     closeUserCaptionPanel();
     goSection("dashboard", { instant: true });
   };
-  $$("[data-accessibility]").forEach(button => {
-    button.onclick = () => toggleAccessibilityPref(button.dataset.accessibility);
-  });
+  // No per-button onclick here: the delegated document click handler (search "closest(\"[data-accessibility]\")") already toggles the
+  // preference. Both ran on every click, which switched the option on and straight back off, so the Accessibility panel's four
+  // buttons (Large text, High contrast, Reduce motion, Screen reader mode) never did anything outside the standard-user page.
 
   $$(".language-option").forEach(button => {
     button.onclick = () => mutate("/api/user/language", { language: button.dataset.language }, platformText().languageToast);
