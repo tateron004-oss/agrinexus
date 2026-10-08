@@ -45,7 +45,7 @@ test("the Kiswahili weather phrase names its place", () => {
   assert.equal(spoken.swahiliWeatherLocation("hali ya hewa leo"), "");
   assert.equal(spoken.swahiliWeatherLocation("nimeuza mahindi"), "");
   // wired into both weather readers
-  assert.match(source, /locationMatch\?\.\[1\] \|\| args\.query \|\| spokenRequests\.swahiliWeatherLocation\(command\)/);
+  assert.match(source, /args\.query \|\| \(typeof spokenRequests !== "undefined" \? spokenRequests\.swahiliWeatherLocation\(command\) : ""\)/);
   assert.match(source, /return spokenRequests\.swahiliWeatherLocation\(compact\);/);
 });
 
@@ -113,7 +113,7 @@ test("the Kiswahili way to post a listing is a listing, and browsing questions s
   assert.equal(spoken.wantsListingCreate("What is for sale on AgriTrade?"), false);
   assert.equal(spoken.wantsListingCreate("Did you sell my tomatoes yet?"), false);
   assert.equal(spoken.wantsListingCreate("show me what is available"), false);
-  assert.match(source, /spokenRequests\.wantsListingCreate\(command\)\) \{/);
+  assert.match(source, /spokenRequests\.wantsListingCreate\(command\) :/);
 });
 
 test("a provider's internal 'requires explicit confirmed: true' sentence is never what the person hears", () => {
@@ -210,7 +210,7 @@ test("a patient note sent to the health tool is not read as the speaker's own te
   assert.equal(spoken.isPatientNote("Antenatal visit Mary: temperature 38"), true);
   assert.equal(spoken.isPatientNote("Ziara ya Mary: homa, kikohozi"), true);
   assert.equal(spoken.isPatientNote("my temperature is 38.5"), false);
-  assert.match(source, /!spokenRequests\.isPatientNote\(command\) && command\.match\(/);
+  assert.match(source, /spokenRequests\.isPatientNote\(command\)\) && command\.match\(/);
   assert.match(source, /response = chronicConditionEducationResponse\(command\);\n[\s\S]{0,900}if \(!response && effectiveMentalHealthSignal\.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function"/);
 });
 

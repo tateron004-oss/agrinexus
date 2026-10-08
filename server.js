@@ -21425,7 +21425,7 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
     ...common,
     status,
     // phrase sweep: a provider's own "requires explicit confirmed: true before controlled testing" sentence is not for a person; they are told what is waiting and asked for a yes.
-    response: responseOverride || (body.status === "confirmation_required" && spokenRequests.isInternalConfirmationMessage(body.message) ? spokenRequests.plainConfirmationSentence(common.command) : spokenRequests.isInternalSwitchedOffMessage(body.message) ? spokenRequests.plainSwitchedOffSentence(body) : body.message) || common.command,
+    response: responseOverride || (typeof spokenRequests !== "undefined" && body.status === "confirmation_required" && spokenRequests.isInternalConfirmationMessage(body.message) ? spokenRequests.plainConfirmationSentence(common.command) : typeof spokenRequests !== "undefined" && spokenRequests.isInternalSwitchedOffMessage(body.message) ? spokenRequests.plainSwitchedOffSentence(body) : body.message) || common.command, // (typeof guards: several tests evaluate this function's source alone)
     provider: body.provider || "",
     providerAction: body.action || "",
     providerAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
@@ -22303,7 +22303,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_weather") {
     const locationMatch = command.match(/\b(?:in|for|near|at)\s+([^?.,]+(?:,\s*[^?.,]+)?)/i);
-    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query || spokenRequests.swahiliWeatherLocation(command); // found by the phrase sweep: "Hali ya hewa Kisumu ikoje?" had no place
+    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query || (typeof spokenRequests !== "undefined" ? spokenRequests.swahiliWeatherLocation(command) : ""); // found by the phrase sweep: "Hali ya hewa Kisumu ikoje?" had no place
     // A vague question like "Will it rain tomorrow?" or "What is the weather
     // like?" has no real location in it, but previously fell through to
     // using the ENTIRE command sentence as the geocoder query -- confirmed
@@ -23470,7 +23470,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // Blood sugar: a number (decimals allowed: "7.2") and, when said, its unit -- mg/dL or mmol/L (see server/providers/bloodGlucose.js).
     const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?![.,]\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
-    const temperatureMatch = !bp && !glucose && !oxygenMatch && !spokenRequests.isPatientNote(command) && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
+    const temperatureMatch = !bp && !glucose && !oxygenMatch && !(typeof spokenRequests !== "undefined" && spokenRequests.isPatientNote(command)) && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
     // Confirmed: unlike every other vital above, weight kept the old
     // \D{0,10}? "any 0-10 characters" window instead of VITAL_VALUE_CONNECTOR
     // -- "I weigh, say, 200 kg of feed for my cattle every morning." and "My
@@ -23948,7 +23948,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // confirm creating a brand new listing titled after their own status
     // question, instead of answering it.
     const wantsListingStatus = /\b(do|did|does|have|has)\s+you\s+(sell|sold|list(?:ed)?|post(?:ed)?|publish(?:ed)?|creat(?:e|ed))\b/i.test(command);
-    if (!wantsBrowseListings && !wantsListingStatus && spokenRequests.wantsListingCreate(command)) { // phrase sweep: the Kiswahili "Weka tangazo: ninauza ..." was read as browsing
+    if (!wantsBrowseListings && !wantsListingStatus && (typeof spokenRequests !== "undefined" ? spokenRequests.wantsListingCreate(command) : /\b(create|post|publish|list|sell)\b/i.test(command))) { // phrase sweep: the Kiswahili "Weka tangazo: ninauza ..." was read as browsing
       // Found live (marketplace/real-estate audit): this create path called
       // the legacy nexusRealProviders.marketplace.createListing, which has
       // no content-safety check at all -- unlike marketplaceBridge's own
