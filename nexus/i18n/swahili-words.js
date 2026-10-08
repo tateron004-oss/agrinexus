@@ -13,9 +13,9 @@ const NO_SW = /^(?:hapana|la|la hasha|siyo|sio|sitaki|acha|usifanye|si sasa|hapa
 
 // ---- units: Swahili puts the unit first ("kilo 200", "gunia 3") or after ("200 kg"); stored as the English toolkit stores them ----
 const UNITS = [[/^(?:kilo|kg|kgs)$/, "kg", 1], [/^(?:tani)$/, "kg", 1000], [/^(?:gramu)$/, "kg", 0.001], [/^(?:lita|l)$/, "L", 1], [/^(?:gunia|magunia)$/, "sack", 1], [/^(?:mfuko|mifuko)$/, "bag", 1],
-  [/^(?:debe|madebe)$/, "tin", 1], [/^(?:kreti|makreti)$/, "crate", 1], [/^(?:mkungu|mikungu|fungu|mafungu)$/, "bunch", 1], [/^(?:kipande|vipande)$/, "piece", 1], [/^(?:pakiti|paketi)$/, "packet", 1],
+  [/^(?:debe|madebe)$/, "tin", 1], [/^(?:kreti|makreti|krate|makrate)$/, "crate", 1], [/^(?:mkungu|mikungu|fungu|mafungu)$/, "bunch", 1], [/^(?:kipande|vipande)$/, "piece", 1], [/^(?:pakiti|paketi)$/, "packet", 1],
   [/^(?:chupa)$/, "bottle", 1], [/^(?:ndoo)$/, "bucket", 1], [/^(?:trei)$/, "tray", 1], [/^(?:ekari)$/, "acre", 1], [/^(?:hekta)$/, "ha", 1], [/^(?:dozi)$/, "dose", 1]];
-const UNIT_WORD = "kilo|kg|kgs|tani|gramu|lita|l|gunia|magunia|mfuko|mifuko|debe|madebe|kreti|makreti|mkungu|mikungu|fungu|mafungu|kipande|vipande|pakiti|paketi|chupa|ndoo|trei|ekari|hekta|dozi";
+const UNIT_WORD = "kilo|kg|kgs|tani|gramu|lita|l|gunia|magunia|mfuko|mifuko|debe|madebe|kreti|makreti|krate|makrate|mkungu|mikungu|fungu|mafungu|kipande|vipande|pakiti|paketi|chupa|ndoo|trei|ekari|hekta|dozi";
 const NUMBER = "\\d[\\d,]*(?:[.]\\d+)?";
 const unitOf = word => UNITS.find(([pattern]) => pattern.test(String(word).toLowerCase()));
 
@@ -78,7 +78,10 @@ const CROPS = [[/^(?:mahindi|mahindi mabichi)$/, "maize"], [/^(?:maharage|mahara
   [/^(?:nyanya)$/, "tomatoes"], [/^(?:viazi|viazi vikuu)$/, "potatoes"], [/^(?:viazi vitamu)$/, "sweet potatoes"], [/^kabichi$/, "cabbage"], [/^sukuma(?: wiki)?$/, "kale"], [/^(?:vitunguu|kitunguu)$/, "onions"], [/^(?:ndizi)$/, "bananas"], [/^kahawa$/, "coffee"],
   [/^chai$/, "tea"], [/^(?:karanga)$/, "groundnuts"], [/^(?:mboga|mboga mboga)$/, "vegetables"], [/^(?:matunda|tunda)$/, "fruit"], [/^(?:mazao)$/, "crops"], [/^(?:maziwa)$/, "milk"], [/^(?:mayai|yai)$/, "eggs"],
   [/^(?:ng'ombe|ngombe)$/, "cow"], [/^(?:mbuzi)$/, "goat"], [/^(?:kondoo)$/, "sheep"], [/^(?:nguruwe)$/, "pigs"], [/^(?:kuku)$/, "chickens"], [/^(?:sungura)$/, "rabbits"], [/^(?:mifugo)$/, "livestock"],
-  [/^(?:mbegu)$/, "seed"], [/^(?:mbolea)$/, "fertiliser"], [/^(?:dawa ya kunyunyizia|dawa ya wadudu|viuatilifu|dawa za kunyunyizia)$/, "pesticide"], [/^(?:chakula cha mifugo|lishe ya mifugo|lishe)$/, "feed"], [/^(?:chumvi ya madini)$/, "mineral"]];
+  [/^(?:mbegu)$/, "seed"], [/^(?:mbolea)$/, "fertiliser"], [/^(?:dawa ya kunyunyizia|dawa ya wadudu|viuatilifu|dawa za kunyunyizia)$/, "pesticide"], [/^(?:chakula cha mifugo|lishe ya mifugo|lishe)$/, "feed"], [/^(?:chumvi ya madini)$/, "mineral"],
+  // a shop's goods (the words a duka keeps): the English names, so one record means one thing in either language
+  [/^sukari$/, "sugar"], [/^unga$/, "flour"], [/^unga wa mahindi$/, "maize flour"], [/^unga wa ngano$/, "wheat flour"], [/^sabuni$/, "soap"], [/^(?:mkate|mikate)$/, "bread"], [/^chumvi$/, "salt"], [/^nyama$/, "meat"], [/^mandazi$/, "mandazi"], [/^soda$/, "soda"],
+  [/^(?:vocha|vocha za simu|airtime)$/, "airtime"], [/^mkaa$/, "charcoal"], [/^saruji$/, "cement"], [/^simu$/, "phone"], [/^mafuta ya kupikia$/, "cooking oil"]];
 function englishItem(word) {
   const w = clean(word).toLowerCase().replace(/[.,;]+$/, "");
   const hit = CROPS.find(([pattern]) => pattern.test(w));
@@ -86,17 +89,20 @@ function englishItem(word) {
 }
 // The other way: what the English tools keep, said in Swahili (a name that is not in the list is shown as it was kept).
 const SW_NAMES = { maize: "mahindi", beans: "maharage", cassava: "mihogo", rice: "mchele", wheat: "ngano", sorghum: "mtama", millet: "ulezi", tomatoes: "nyanya", potatoes: "viazi", "sweet potatoes": "viazi vitamu", cabbage: "kabichi", kale: "sukuma wiki", onions: "vitunguu", bananas: "ndizi", coffee: "kahawa", tea: "chai", groundnuts: "karanga", vegetables: "mboga", fruit: "matunda", crops: "mazao",
-  milk: "maziwa", eggs: "mayai", cow: "ng'ombe", goat: "mbuzi", sheep: "kondoo", pigs: "nguruwe", chickens: "kuku", rabbits: "sungura", livestock: "mifugo", seed: "mbegu", fertiliser: "mbolea", pesticide: "dawa ya kunyunyizia", feed: "chakula cha mifugo", mineral: "chumvi ya madini" };
+  milk: "maziwa", eggs: "mayai", cow: "ng'ombe", goat: "mbuzi", sheep: "kondoo", pigs: "nguruwe", chickens: "kuku", rabbits: "sungura", livestock: "mifugo", seed: "mbegu", fertiliser: "mbolea", pesticide: "dawa ya kunyunyizia", feed: "chakula cha mifugo", mineral: "chumvi ya madini",
+  sugar: "sukari", flour: "unga", "maize flour": "unga wa mahindi", "wheat flour": "unga wa ngano", soap: "sabuni", bread: "mkate", salt: "chumvi", meat: "nyama", charcoal: "mkaa", cement: "saruji", phone: "simu", airtime: "vocha", "cooking oil": "mafuta ya kupikia" };
 const swahiliItem = name => { const key = clean(name).toLowerCase(); return SW_NAMES[key] || key; };
-const CATEGORY_SW = { seed: "mbegu", fertiliser: "mbolea", chemicals: "dawa", feed: "chakula cha mifugo", labour: "vibarua", transport: "usafiri", veterinary: "huduma ya mifugo", equipment: "vifaa", water: "maji", rent: "kodi", other: "nyingine", household: "nyumbani", crops: "mazao", livestock: "mifugo", milk: "maziwa", eggs: "mayai" };
+const CATEGORY_SW = { seed: "mbegu", fertiliser: "mbolea", chemicals: "dawa", feed: "chakula cha mifugo", labour: "vibarua", transport: "usafiri", veterinary: "huduma ya mifugo", equipment: "vifaa", water: "maji", rent: "kodi", stock: "bidhaa", utilities: "huduma", interest: "riba", refund: "marejesho", loan: "mkopo", other: "nyingine", household: "nyumbani", crops: "mazao", livestock: "mifugo", milk: "maziwa", eggs: "mayai" };
 const categorySw = category => CATEGORY_SW[category] || category;
 // Category of what was sold or bought, using the English tools' category names.
 const SW_INCOME = [["milk", /\bmaziwa\b/i], ["eggs", /\b(?:mayai|yai)\b/i], ["livestock", /\b(?:ng'?ombe|mbuzi|kondoo|nguruwe|kuku|sungura|mifugo|ndama|fahali|mnyama|wanyama)\b/i],
   ["crops", /\b(?:mahindi|maharag(?:e|we)|mihogo|muhogo|mchele|mpunga|ngano|mtama|ulezi|nyanya|viazi|kabichi|sukuma|vitunguu|kitunguu|ndizi|kahawa|chai|karanga|mboga|matunda|mazao|mavuno|nafaka)\b/i]];
 const incomeCategorySw = text => (SW_INCOME.find(([, pattern]) => pattern.test(text)) || ["other"])[0];
-const SW_EXPENSE = [["seed", /\b(?:mbegu|miche)\b/i], ["fertiliser", /\b(?:mbolea|samadi|chokaa)\b/i], ["chemicals", /\b(?:viuatilifu|dawa ya (?:kunyunyizia|wadudu|magugu|kuua)|dawa za (?:kunyunyizia|wadudu)|kemikali)\b/i], ["feed", /\b(?:chakula cha mifugo|lishe|majani makavu|pumba|malisho)\b/i],
+const SW_EXPENSE = [["stock", /\bmafuta ya kupikia\b/i], ["seed", /\b(?:mbegu|miche)\b/i], ["fertiliser", /\b(?:mbolea|samadi|chokaa)\b/i], ["chemicals", /\b(?:viuatilifu|dawa ya (?:kunyunyizia|wadudu|magugu|kuua)|dawa za (?:kunyunyizia|wadudu)|kemikali)\b/i], ["feed", /\b(?:chakula cha mifugo|lishe|majani makavu|pumba|malisho)\b/i],
   ["labour", /\b(?:vibarua|kibarua|mshahara|mishahara|wafanyakazi|mfanyakazi|kupalilia|kulima|kuvuna|ujira)\b/i], ["transport", /\b(?:usafiri|nauli|mafuta|dizeli|petroli|lori|gari|pikipiki|boda|matatu|kusafirisha)\b/i], ["veterinary", /\b(?:mifugo|daktari wa mifugo|chanjo|dawa ya (?:mifugo|ng'ombe|kuku|mbuzi)|kuogesha|dawa)\b/i],
-  ["equipment", /\b(?:zana|jembe|panga|pampu|trekta|mashine|kifaa|vifaa|ukarabati)\b/i], ["water", /\b(?:maji|umwagiliaji|kisima|mabomba)\b/i], ["rent", /\b(?:kodi|ada ya shamba|kukodi)\b/i]];
+  ["equipment", /\b(?:zana|jembe|panga|pampu|trekta|mashine|kifaa|vifaa|ukarabati)\b/i], ["water", /\b(?:maji|umwagiliaji|kisima|mabomba)\b/i], ["rent", /\b(?:kodi|ada ya shamba|kukodi)\b/i],
+  // a shop's own costs come last, so a farm word still wins: "mzigo" is what a shopkeeper buys to sell again, "umeme" is electricity
+  ["stock", /\b(?:mzigo|mizigo|bidhaa|stock|stoku)\b/i], ["utilities", /\b(?:umeme|stima|intaneti|wifi|leseni|kibali)\b/i]];
 const expenseCategorySw = text => (SW_EXPENSE.find(([, pattern]) => pattern.test(text)) || ["other"])[0];
 // Does this look like farm business at all? (A purchase of "simu" or "gari" alone is not recorded for a person with no farm data.)
 
