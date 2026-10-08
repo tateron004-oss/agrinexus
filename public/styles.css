@@ -1355,7 +1355,8 @@ a:focus-visible,
   color: white;
 }
 .login-hero h1 { font-size: 4rem; margin: 18px 0 12px; }
-.login-hero p { max-width: 760px; font-size: 1.15rem; line-height: 1.6; }
+/* The global `p { color: var(--muted) }` rule (further down) used to win here, which painted slate-grey text on the blue-green hero: nearly unreadable. */
+.login-hero p { max-width: 760px; font-size: 1.15rem; line-height: 1.6; color: rgba(255, 255, 255, .94); }
 .brand-mark {
   width: 64px;
   height: 64px;
@@ -1431,6 +1432,8 @@ a:focus-visible,
 .brand, .top-actions, .action-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .brand span { display: block; color: var(--muted); font-size: .9rem; margin-top: 2px; }
 .top-settings-toggle { display: none; }
+/* "Close menu" only means something inside the phone-width settings menu; on a desktop it sat in the Admin/Investor top bar doing nothing. */
+.top-settings-close { display: none; }
 .shell { display: grid; grid-template-columns: 1fr; min-height: calc(100vh - 63px); }
 .sidebar {
   display: flex;
@@ -1662,6 +1665,9 @@ a:focus-visible,
   display: grid;
   gap: 12px;
   margin: 0 0 16px;
+  /* The orb's decorative rings reach past the card. In User mode a later rule hides the overflow; in Admin/Investor mode they made the
+     Dashboard scroll sideways on a phone (page 427px wide). clip does not create a scroll container. */
+  overflow-x: clip;
 }
 .user-workspace-hero,
 .user-outcome-panel,
@@ -9060,7 +9066,8 @@ body.user-mode #workflowClose {
 }
 .integration-status span { display: block; font-size: 2rem; font-weight: 900; }
 .integration-status small { color: rgba(255,255,255,.78); font-weight: 800; }
-.provider-card { min-height: 260px; display: flex; flex-direction: column; }
+/* Setup hints name settings like JOB_SEARCH_API_KEY/JOB_SEARCH_WEBHOOK_URL: one 41-letter word with no break point made the Integrations page 459px wide on a phone. */
+.provider-card { min-height: 260px; display: flex; flex-direction: column; overflow-wrap: anywhere; }
 .provider-card button { margin-top: auto; }
 .provider-connected { border-color: #9bd2bd; }
 .provider-ready { border-color: #d8c993; }
@@ -9202,7 +9209,9 @@ article {
 .row { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
 .row span { color: var(--muted); }
 .activity { max-height: 260px; overflow: auto; display: grid; gap: 8px; }
-.activity div { color: var(--muted); border-bottom: 1px dashed var(--line); padding-bottom: 8px; }
+/* overflow-wrap:anywhere (it also lowers min-content): a long event id such as "sauti.openai_agents_realtime_session_failed" made the whole
+   page 452px wide on a 375px phone. */
+.activity div { color: var(--muted); border-bottom: 1px dashed var(--line); padding-bottom: 8px; overflow-wrap: anywhere; min-width: 0; }
 .map-command {
   min-height: 190px;
   border: 1px solid #bed8d2;
@@ -9395,6 +9404,7 @@ body.reduced-motion *::after {
   }
   .top-actions button,
   .top-actions select { padding: 7px 9px; font-size: .88rem; }
+  .top-actions.open .top-settings-close { display: block; }
   .content {
     padding: 10px 10px 190px;
   }
@@ -11966,7 +11976,8 @@ body.user-mode .nexus-suggested-action {
 body.user-mode .nexus-workflow-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  /* Above the command-centre hero and composer (z-index 125, same stacking context), or their text is drawn on top of the open window. */
+  z-index: 130;
   display: grid;
   align-items: start;
   justify-items: center;
@@ -12008,7 +12019,8 @@ body.user-mode .nexus-function-window-dock {
   position: fixed;
   right: clamp(14px, 3vw, 34px);
   bottom: clamp(142px, 18vh, 176px);
-  z-index: 124;
+  /* Above the command-centre hero (125): at 124 the hero covered this dock and its Restore button could not be clicked. */
+  z-index: 126;
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto auto;
   align-items: center;
@@ -15885,6 +15897,14 @@ body.user-mode .nexus-true-experience-root {
   margin: 0 !important;
   padding: 0 !important;
   display: block !important;
+}
+
+/* Only the orb-only home is a fixed full-screen layer, where 100vw is right. Every other mode (the mission workspace, the focused
+   function window) sits inside the padded workspace, and 100vw there made the card wider than its parent: on a 375px phone the right
+   edge of the card and its buttons were clipped by the workspace's overflow:hidden. */
+body.user-mode .nexus-true-experience-root:not([data-nexus-true-experience-mode="home"]) {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 body.user-mode .nexus-true-experience-root .nexus-command-main {

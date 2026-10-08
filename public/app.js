@@ -7187,6 +7187,11 @@ const workspaceCopy = {
     title: "Admin",
     description: "Review subscribers, system readiness, evidence, and operator controls."
   },
+  // Case Review used to be missing here, so the header kept saying "Dashboard" while the Case Review page was open.
+  cases: {
+    title: "Case Review",
+    description: "Review prepared local records. Local review only, no live provider action."
+  },
   profile: {
     title: "Profile",
     description: "Manage user settings, accessibility preferences, language, and saved progress."
@@ -30948,8 +30953,20 @@ function inferNexusPresenceStateFromMessage(message = "", options = {}) {
   return NEXUS_PRESENCE_STATES.SPEAKING;
 }
 
+// The audio-only conversation screen (renderNexusAudioCompanionExperience) draws the last reply and "Last heard" once, when it is rendered.
+// The typed answer arrives after that render, so without this the screen kept saying the previous line (found in a real browser: the
+// answer was only in hidden screen-reader regions).
+function updateNexusAudioCompanionDom() {
+  const status = document.querySelector("[data-nexus-audio-companion-status] > span");
+  const reply = nexusPresenceState.lastResponse;
+  if (status && reply) status.textContent = translateText(reply);
+  const caption = document.querySelector("[data-nexus-audio-companion-caption] > span");
+  if (caption && nexusPresenceState.lastUserInput) caption.textContent = translateText(`Last heard: ${nexusPresenceState.lastUserInput}`);
+}
+
 function updateNexusPresenceDom() {
   if (typeof document === "undefined") return;
+  updateNexusAudioCompanionDom();
   const layer = document.querySelector("[data-nexus-presence-layer]");
   if (!layer) return;
   const state = nexusPresenceState.state || NEXUS_PRESENCE_STATES.IDLE;
@@ -32464,7 +32481,7 @@ function nexusTrueExperienceMode() {
 
 function isNexusTrueExperienceReturnHomeCommand(command = "") {
   const normalized = String(command || "").toLowerCase().replace(/[.!?]+$/g, "").trim();
-  return /^(home|go home|return home|back home|take me home|nexus home|open nexus home|main screen)$/.test(normalized);
+  return /^(home|go home|return home|back home|take me home|open home|nexus home|open nexus home|main screen)$/.test(normalized);
 }
 
 function nexusCoreStateClass(state = "idle") {
@@ -38769,7 +38786,7 @@ function userModulePreviewHtml(sectionId) {
         ${userRealMapHtml(latestOrder ? "Your shipment map" : "Crop market map")}
         <div class="user-preview-summary">
           <strong>${translateText(latestOrder ? "Shipment status" : "Ready to sell")}</strong>
-          <span>${translateText(latestOrder ? `${latestOrder.product || product?.name || "Crop"} is at ${latestOrder.checkpoint || data.profile.activeCheckpoint}.` : `Start with ${product?.name || "your crop"}, then choose buyer, order, route, or farm scan.`)}</span>
+          <span>${translateText(latestOrder ? `${latestOrder.product || latestOrder.productName || product?.name || "Crop"} is at ${latestOrder.checkpoint || data.profile.activeCheckpoint}.` : `Start with ${product?.name || "your crop"}, then choose buyer, order, route, or farm scan.`)}</span>
           ${userPreviewActionsHtml([
             { label: latestOrder ? "Track Route" : "Create Order", command: latestOrder ? "track my route" : "create a crop order" },
             { label: "Contact Buyer", command: "contact my buyer" },
@@ -40444,7 +40461,7 @@ function render() {
     : "<div>Create an order to start the logistics timeline.</div>";
 
   $("#orderBook").innerHTML = data.profile.orders.length
-    ? data.profile.orders.slice().reverse().map(order => `<div><strong>${escapeHtml(order.orderNumber || order.id)}</strong><span>${escapeHtml(order.product)} - ${escapeHtml(order.stage)} - ${money(order.total || 0)}</span></div>`).join("")
+    ? data.profile.orders.slice().reverse().map(order => `<div><strong>${escapeHtml(order.orderNumber || order.id)}</strong><span>${escapeHtml(order.product || order.productName || "Crop")} - ${escapeHtml(order.stage)} - ${money(order.total || 0)}</span></div>`).join("")
     : "<div>No trade orders yet.</div>";
   const latestThread = (data.profile.tradeMessageThreads || [])[0];
   $("#buyerSellerPanel").innerHTML = [
@@ -40559,7 +40576,7 @@ function render() {
       title: "Market Operations Queue",
       summary: "The trade module shows order creation, payment, logistics, and buyer-market activity together.",
       items: [
-        taskItem("Latest order", latestOrder ? `${latestOrder.orderNumber} for ${latestOrder.product}` : "No order created yet", latestOrder ? "live" : "pending", latestOrder?.stage || "Create", { workflow: "trade", action: latestOrder ? "advance" : "order", productId: firstProduct()?.id }),
+        taskItem("Latest order", latestOrder ? `${latestOrder.orderNumber} for ${latestOrder.product || latestOrder.productName || "your crop"}` : "No order created yet", latestOrder ? "live" : "pending", latestOrder?.stage || "Create", { workflow: "trade", action: latestOrder ? "advance" : "order", productId: firstProduct()?.id }),
         taskItem("Route stage", latestOrder ? `${latestOrder.stage} at ${latestOrder.checkpoint}` : data.profile.routeStage, latestOrder ? "ready" : "pending", "Logistics", { workflow: "trade", action: "advance" }),
         taskItem("Wallet balance", `${money(data.profile.wallet || 0)} across ${data.profile.walletTransactions.length} transaction(s)`, data.profile.walletTransactions.length ? "ready" : "pending", "Wallet", { workflow: "trade", action: "wallet" }),
         taskItem("Buyer market", `${data.products.length} product lots available`, "live", "Market", { workflow: "trade", action: "order", productId: firstProduct()?.id }),
@@ -53430,7 +53447,7 @@ function closeTopSettingsMenu() {
   $("#topSettingsToggle")?.setAttribute("aria-expanded", "false");
 }
 
-function openAskNexus() {
+function openAskNexus(options = {}) {
   closeTopSettingsMenu();
   const globalInput = $("#globalCommandInput");
   const globalBar = $("#globalAssistantBar");
@@ -53452,6 +53469,8 @@ function openAskNexus() {
   setTimeout(() => {
     (globalInput || dockInput)?.focus();
   }, VOICE_UI_FOCUS_DELAY_MS);
+  // A typed answer is about to be shown: do not log a fake "Ask AgriNexus is open" assistant turn in front of every one.
+  if (options.quiet === true) return;
   setVoiceResponse("Ask AgriNexus is open. Type a request or use the Mic button.", false, { allowVoiceFirst: false });
   announce("Ask AgriNexus opened");
 }
@@ -57960,7 +57979,7 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     && String(result.taskId || "").startsWith("tsk_") && result.outcome?.pendingStepId
     ? { taskId: result.taskId, stepId: result.outcome.pendingStepId }
     : null;
-  openAskNexus();
+  openAskNexus({ quiet: true });
   enableHeyAgriNexusMode();
   renderUserWorkspace?.();
   setVoiceResponse(message, true, {
@@ -58014,6 +58033,13 @@ async function submitNexusPendingBehaviorConfirmation(approved, text, options = 
     return await processNexusAuthoritativeBehaviorResult(result, text, options);
   } catch (error) {
     nexusPendingBehaviorConfirmation = null;
+    // Found in a real browser: a guest who said "yes" to "I can save this to your own health records" got a 403 from the server
+    // ("This account type cannot write real health records") and the page said nothing at all. Say what the server said.
+    const reason = String(error?.message || "").trim();
+    if (reason) {
+      setVoiceResponse(reason, true, { allowHandoff: false, command: text, source: "nexus-authoritative-behavior-spine", turnToken: options.turnToken });
+      return true;
+    }
     return false;
   }
 }
@@ -63375,9 +63401,9 @@ function bindStatic() {
     closeUserCaptionPanel();
     goSection("dashboard", { instant: true });
   };
-  $$("[data-accessibility]").forEach(button => {
-    button.onclick = () => toggleAccessibilityPref(button.dataset.accessibility);
-  });
+  // No per-button onclick here: the delegated document click handler (search "closest(\"[data-accessibility]\")") already toggles the
+  // preference. Both ran on every click, which switched the option on and straight back off, so the Accessibility panel's four
+  // buttons (Large text, High contrast, Reduce motion, Screen reader mode) never did anything outside the standard-user page.
 
   $$(".language-option").forEach(button => {
     button.onclick = () => mutate("/api/user/language", { language: button.dataset.language }, platformText().languageToast);
@@ -63882,6 +63908,16 @@ function installNexusStandardUserAuthorityFirewall() {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
+    // Found in a real browser: this firewall sent "home" / "Open Home." (the Home button's own command) to the server, which does not
+    // understand it, so a standard user could not leave the mission screen by the Home button or by typing "home". Going home is
+    // the screen's own action, not a request for the server.
+    if (isNexusTrueExperienceReturnHomeCommand(command)) {
+      setCommandInputs("");
+      const typed = document.querySelector("#nexusCommandCenterInput");
+      if (typed) typed.value = "";
+      void Promise.resolve(handleNexusOsMissionLifecycleAction("return-home")).catch(() => {});
+      return;
+    }
     setCommandInputs(command);
     void handleNexusUnifiedBrainRuntimeCommand(command, {
       source: event.type === "keydown" ? "typed-command-keyboard" : "typed-command-submit"

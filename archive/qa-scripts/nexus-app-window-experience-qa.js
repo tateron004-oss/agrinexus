@@ -103,7 +103,7 @@ function excludes(source, token, label) {
   ".nexus-landing-single-checkbox",
   "body.user-mode .nexus-function-window-dock",
   "bottom: clamp(142px, 18vh, 176px)",
-  "z-index: 124"
+  "z-index: 126"
 ].forEach(token => includes(css, token, `app window css ${token}`));
 
 [
