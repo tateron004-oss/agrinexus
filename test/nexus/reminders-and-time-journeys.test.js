@@ -57,16 +57,18 @@ test("every way of saying 'in 20 minutes' is stored 20 minutes from now, on both
   for (const [batch, language] of [[rows, "en"], [rowsSw, "sw"]]) {
     await reset();
     const startedAt = Date.now();
-    for (const [index, [phrase]] of batch.entries()) {
-      const said = index % 2 === 0 ? await speak(phrase, { language }) : await type(phrase, { language });
-      assert.doesNotMatch(said.response, /\btomorrow\b|\bkesho\b/i, `${phrase} -> ${said.response}`);
-    }
+    const said = [];
+    for (const [index, [phrase]] of batch.entries()) said.push(index % 2 === 0 ? await speak(phrase, { language }) : await type(phrase, { language }));
     const list = await stored();
     assert.equal(list.length, batch.length, `${language}: one reminder for each request`);
-    for (const [phrase, minutes] of batch) {
+    for (const [index, [phrase, minutes]] of batch.entries()) {
       const task = phrase.match(/(?:pill|dawa) ([A-F])$/i)[1].toUpperCase();
       const reminder = list.find(item => new RegExp(`\\b${task}$`).test(item.task));
       assert.ok(reminder, phrase);
+      // "Tomorrow" is only wrong while the reminder is still today in the person's zone (Lagos here). Within two hours of local midnight, "in 2 hours" really is tomorrow and the reply is right to say so
+      // (this test used to fail every night from 21:00 to 23:00 UTC, whatever the code did).
+      const sameLocalDay = local(reminder.scheduledAt, "Africa/Lagos").slice(0, 10) === local(new Date(startedAt), "Africa/Lagos").slice(0, 10);
+      if (sameLocalDay) assert.doesNotMatch(said[index].response, /\btomorrow\b|\bkesho\b/i, `${phrase} -> ${said[index].response}`);
       assert.ok(Math.abs(minutesAway(reminder, startedAt) - minutes) <= 2, `${phrase}: stored ${minutesAway(reminder, startedAt)} minutes away`);
       assert.doesNotMatch(reminder.task, /remind|nikumbush|\bin\b|baada|dakika/i, `clean task text: ${reminder.task}`);
     }
