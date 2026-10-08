@@ -60,6 +60,18 @@ const APP_RELEASE_STAMPS = [
   ['const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-__NEXUS_RELEASE_SHA__";', "const AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${AGRINEXUS_BUILD_VERSION}`;"]
 ];
 
+// The exact transform applied to a text file on its way out: the optional release-line swap (stamps), then the release id filled in for every placeholder
+// left. Exported so that anything that must know the SERVED bytes of a file (the release certification controller hashes /app.js) computes them with this
+// same function rather than a copy of it. A file without the placeholder or a stamp is passed through byte for byte.
+function servedTextBytes(data, { stamps, placeholder, fillRelease }) {
+  if (stamps) {
+    let text = data.toString("utf8");
+    for (const [from, to] of stamps) text = text.replace(from, () => to);
+    data = Buffer.from(text);
+  }
+  return data.includes(placeholder) ? Buffer.from(fillRelease(data.toString("utf8"))) : data;
+}
+
 // placeholder: the text in the served files that stands for the release id. fillRelease(text): returns text with every placeholder replaced by the release id
 // (server.js owns both the placeholder and the id, so the replacement is written there).
 function createStaticDelivery({ publicDir, placeholder, fillRelease, mime, send, extraFiles = {}, stableStamps = {} }) {
@@ -70,14 +82,7 @@ function createStaticDelivery({ publicDir, placeholder, fillRelease, mime, send,
 
   function substitute(filePath, data) {
     if (!TEXT_EXTENSIONS.has(path.extname(filePath).toLowerCase())) return data;
-    const stamps = stableStamps[path.relative(root, filePath).split(path.sep).join("/")];
-    if (stamps) {
-      let text = data.toString("utf8");
-      for (const [from, to] of stamps) text = text.replace(from, () => to);
-      data = Buffer.from(text);
-    }
-    // Same result as before this module existed (decode as UTF-8, replace, re-encode), but a file without the placeholder is passed through byte for byte.
-    return data.includes(placeholder) ? Buffer.from(fillRelease(data.toString("utf8"))) : data;
+    return servedTextBytes(data, { stamps: stableStamps[path.relative(root, filePath).split(path.sep).join("/")], placeholder, fillRelease });
   }
 
   // Hash of the bytes that would be sent, cached per file until its modification time or size changes (a deploy replaces every file).
@@ -206,4 +211,4 @@ function createStaticDelivery({ publicDir, placeholder, fillRelease, mime, send,
   return { serve, describe, fingerprintIndex };
 }
 
-module.exports = { createStaticDelivery, APP_RELEASE_STAMPS, etagMatches, weakTag, LOCAL_ASSET_ATTRIBUTE, FINGERPRINT_LENGTH };
+module.exports = { createStaticDelivery, servedTextBytes, TEXT_EXTENSIONS, APP_RELEASE_STAMPS, etagMatches, weakTag, LOCAL_ASSET_ATTRIBUTE, FINGERPRINT_LENGTH };

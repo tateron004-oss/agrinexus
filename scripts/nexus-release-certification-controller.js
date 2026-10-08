@@ -3,15 +3,35 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+// rebuild/ was archived (nothing in the live app loads it); the identity contract it defines is still what this controller speaks.
 const {
-  CERTIFICATION_CONTRACT_VERSION,
-  sha256File
-} = require("../rebuild/nexus-core/certification-identity");
+  CERTIFICATION_CONTRACT_VERSION
+} = require("../archive/rebuild/nexus-core/certification-identity");
+const { servedTextBytes, TEXT_EXTENSIONS, APP_RELEASE_STAMPS } = require("../server/static-delivery");
 
 const { requireCanonicalProductionUrl, productionUrlFromEnv } = require("./nexus-canonical-production-target");
 
 const outputDir = path.resolve("output/nexus-release-certification");
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const RELEASE_PLACEHOLDER = "__NEXUS_RELEASE_SHA__";
+
+// The hash a deployed bundle must have: the sha-256 of the bytes the server SERVES for this file, not of the repository file. The server fills in the
+// release id and, for public/app.js, swaps the two release lines for the code that reads the id from the page (server/static-delivery.js). This uses the
+// server's own transform function, so the expected hash proves the exact served build: one changed byte in the file, or a different release id where
+// one is still written into the file, is a different hash.
+function expectedServedBundleSha256(bundlePath, expectedSha) {
+  const raw = fs.readFileSync(bundlePath);
+  const extension = path.extname(bundlePath).toLowerCase();
+  const served = TEXT_EXTENSIONS.has(extension)
+    ? servedTextBytes(raw, {
+      stamps: path.basename(bundlePath) === "app.js" ? APP_RELEASE_STAMPS : undefined,
+      placeholder: RELEASE_PLACEHOLDER,
+      fillRelease: text => text.replaceAll(RELEASE_PLACEHOLDER, normalizeSha(expectedSha))
+    })
+    : raw;
+  return crypto.createHash("sha256").update(served).digest("hex");
+}
 
 function normalizeSha(value) {
   return String(value || "").trim().toLowerCase();
@@ -69,7 +89,7 @@ async function verifyDeployment({
   baseUrl = requireCanonicalProductionUrl(baseUrl, "certification target");
   if (!/^[a-f0-9]{40}$/.test(normalizeSha(expectedSha))) throw new Error("INVALID_EXPECTED_RELEASE_SHA: exact 40-character Git SHA required");
   fs.mkdirSync(outputDir, { recursive: true });
-  const expectedBundle = sha256File(bundlePath);
+  const expectedBundle = expectedServedBundleSha256(bundlePath, expectedSha);
   const startedAt = new Date().toISOString();
   const deadline = Date.now() + timeoutMs;
   const attempts = [];
@@ -137,4 +157,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { compareIdentity, fetchIdentity, sameCommit, verifyDeployment };
+module.exports = { compareIdentity, expectedServedBundleSha256, fetchIdentity, sameCommit, verifyDeployment };
