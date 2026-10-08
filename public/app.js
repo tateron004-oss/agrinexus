@@ -57196,7 +57196,13 @@ function kyroMediaControlInstruction(control, language) {
     request: (path, options) => request(path, options),
     say: message => setVoiceResponse(message, true),
     getLanguage: () => languageCode(),
-    getCountry: () => { try { return activeCountry()?.name || ""; } catch (_) { return ""; } },
+    getCountry: () => {
+      let fallback = "";
+      try { fallback = activeCountry()?.name || ""; } catch (_) { /* not loaded yet */ }
+      let timeZone = "";
+      try { timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (_) { /* old browser */ }
+      return window.KyroMediaPlayer.detectCountry({ storage: safeStorage(), timeZone, languages: navigator.languages || [navigator.language], fallback });
+    },
     storage: safeStorage(),
     createMedia: tag => probe(tag),
     canPlayType: (tag, mime) => { try { return probe(tag).canPlayType(mime); } catch (_) { return "maybe"; } },

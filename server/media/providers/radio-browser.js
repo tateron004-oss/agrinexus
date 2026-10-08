@@ -6,7 +6,7 @@
 // Etiquette (https://docs.radio-browser.info): discover servers from all.api.radio-browser.info, send a descriptive User-Agent, and count a
 // "click" only for a station that really started playing (server/media/routes.js -> reportPlayed()).
 
-const { fetchJson, normalizeText, fold, relevance, shuffled, countryCode, ProviderError, httpsOnly } = require("../util.js");
+const { fetchJson, collectVerified, normalizeText, fold, relevance, shuffled, countryCode, ProviderError, httpsOnly } = require("../util.js");
 const { buildCandidate } = require("../candidate.js");
 const { preflightStream } = require("../preflight.js");
 
@@ -74,9 +74,10 @@ function rank(station, nameQuery) {
   const popularity = Math.log10(1 + Number(station.clickcount || 0)) * 8 + Math.log10(1 + Number(station.votes || 0)) * 3;
   const match = nameQuery ? relevance(nameQuery, `${station.name} ${station.tags || ""}`) * 100 : 0;
   const hlsPenalty = Number(station.hls) === 1 ? 15 : 0;
+  const httpsBonus = /^https:/i.test(String(station.url_resolved || station.url || "")) ? 20 : 0;
   const bitrate = Number(station.bitrate || 0);
   const bitratePenalty = bitrate > 192 ? 6 : bitrate > 0 && bitrate < 32 ? 8 : 0;
-  return match + popularity - hlsPenalty - bitratePenalty;
+  return match + popularity + httpsBonus - hlsPenalty - bitratePenalty;
 }
 
 async function search(ctx, request) {
@@ -86,19 +87,20 @@ async function search(ctx, request) {
   const nameQuery = stationNameFrom(request.query);
   const folded = fold(request.query);
   const genre = GENRES.find(item => folded === item || folded.split(" ").includes(item));
-  const base = { hidebroken: "true", order: "clickcount", reverse: "true", limit: 40, is_https: "true" };
+  const base = { hidebroken: "true", order: "clickcount", reverse: "true", limit: 40 };
+  const httpsBase = { ...base, is_https: "true" };
   const plans = [];
   if (nameQuery) {
-    if (cc) plans.push({ ...base, name: nameQuery, countrycode: cc, limit: 25 });
-    plans.push({ ...base, name: nameQuery, limit: 25 });
+    if (cc) { plans.push({ ...httpsBase, name: nameQuery, countrycode: cc, limit: 25 }); plans.push({ ...base, name: nameQuery, countrycode: cc, limit: 25 }); }
+    plans.push({ ...httpsBase, name: nameQuery, limit: 25 });
     if (genre) {
-      if (cc) plans.push({ ...base, tag: genre, tagExact: "true", countrycode: cc });
-      plans.push({ ...base, tag: genre, tagExact: "true" });
+      if (cc) plans.push({ ...httpsBase, tag: genre, tagExact: "true", countrycode: cc });
+      plans.push({ ...httpsBase, tag: genre, tagExact: "true" });
     }
   } else {
-    if (cc) plans.push({ ...base, countrycode: cc });
-    plans.push({ ...base, language: request.language === "sw" ? "swahili" : "english" });
-    plans.push({ ...base });
+    if (cc) { plans.push({ ...httpsBase, countrycode: cc }); plans.push({ ...base, countrycode: cc }); }
+    plans.push({ ...httpsBase, language: request.language === "sw" ? "swahili" : "english" });
+    plans.push({ ...httpsBase });
   }
 
   const exclude = new Set(request.excludeIds || []);
@@ -107,33 +109,37 @@ async function search(ctx, request) {
     attempted += 1;
     let stations;
     try { stations = await queryStations(ctx, servers, plan); } catch (error) { if (attempted === plans.length) throw error; continue; }
-    const seen = new Set();
     const ranked = stations
       .filter(station => station && station.stationuuid && Number(station.lastcheckok) !== 0)
       .filter(station => !exclude.has(`${ID}:${station.stationuuid}`) && !exclude.has(station.stationuuid))
       .filter(station => (nameQuery ? relevance(nameQuery, `${station.name} ${station.tags || ""}`) > 0 || plan.tag : true))
       .map(station => ({ station, score: rank(station, plan.tag ? "" : nameQuery) }))
       .sort((a, b) => b.score - a.score);
-    const candidates = [];
-    for (const { station, score } of ranked.slice(0, 10)) {
-      if (candidates.length >= 5) break;
-      const key = fold(station.name);
+    // Check the best stations at the same time (a dead stream costs its timeout once, not once per station), keep them in rank order.
+    const seen = new Set();
+    const contenders = [];
+    for (const entry of ranked) {
+      const key = fold(entry.station.name);
       if (seen.has(key)) continue;
       seen.add(key);
-      for (const url of streamUrlFor(station, allowHttp)) {
-        const check = await preflightStream(ctx, url, { timeoutMs: 4500 });
-        if (!check.ok) continue;
-        candidates.push(buildCandidate({
-          provider: ID, providerName: NAME, nativeId: station.stationuuid, playbackClass: "audio", delivery: "stream", url,
-          title: normalizeText(station.name) || "Radio station", artist: [station.country, station.tags?.split(",").slice(0, 2).join(", ")].filter(Boolean).join(" · "),
-          live: true, isPreview: false, attribution: `${normalizeText(station.name)} · public stream via radio-browser.info`,
-          license: "Public radio stream (listen live)", verified: true, hls: check.hls, mimeType: check.contentType,
-          sourceUrl: normalizeText(station.homepage) || undefined, artworkUrl: httpsOnly(station.favicon) ? station.favicon : undefined,
-          country: station.countrycode, score
-        }));
-        break;
-      }
+      contenders.push(entry);
+      if (contenders.length >= 12) break;
     }
+    const checked = await collectVerified(contenders.map(({ station, score }) => async () => {
+      for (const url of streamUrlFor(station, allowHttp)) {
+        const check = await preflightStream(ctx, url, { timeoutMs: 3000 });
+        if (check.ok) return { station, score, url, check };
+      }
+      return null;
+    }), { want: 4, graceMs: 800 });
+    const candidates = checked.slice(0, 5).map(({ station, score, url, check }) => buildCandidate({
+      provider: ID, providerName: NAME, nativeId: station.stationuuid, playbackClass: "audio", delivery: "stream", url,
+      title: normalizeText(station.name) || "Radio station", artist: [station.country, station.tags?.split(",").slice(0, 2).join(", ")].filter(Boolean).join(" · "),
+      live: true, isPreview: false, attribution: `${normalizeText(station.name)} · public stream via radio-browser.info`,
+      license: "Public radio stream (listen live)", verified: true, hls: check.hls, mimeType: check.contentType,
+      sourceUrl: normalizeText(station.homepage) || undefined, artworkUrl: httpsOnly(station.favicon) ? station.favicon : undefined,
+      country: station.countrycode, score
+    }));
     if (candidates.length) return { candidates, note: plan.tag ? `matched radio stations tagged ${plan.tag}` : plan.name ? "matched station name" : "popular stations" };
   }
   return { candidates: [], note: "no working station found" };

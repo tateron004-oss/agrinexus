@@ -285,3 +285,24 @@ test("YouTube provider helpers: ISO durations, region blocking and the key varia
   assert.equal(youtubeProvider.apiKey({ NEXUS_MUSIC_MEDIA_PROVIDER_API_KEY: " k " }), "k");
   assert.equal(youtubeProvider.isConfigured({ env: {} }).configured, false);
 });
+
+test("collectVerified returns passes in ranked order without waiting for a slow dead stream", async () => {
+  const { collectVerified } = require("../../server/media/util.js");
+  const started = Date.now();
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const out = await collectVerified([
+    async () => { await sleep(1500); return null; },
+    async () => { await sleep(20); return "second"; },
+    async () => { await sleep(60); return "third"; }
+  ], { want: 3, graceMs: 100 });
+  assert.equal(JSON.stringify(out), JSON.stringify(["second", "third"]));
+  assert.ok(Date.now() - started < 900, "did not wait for the 1.5 second dead one");
+});
+
+test("Audius: a mashup that merely contains the song's words is not offered as the song", async () => {
+  const world = createFakeWorld({ audius: [{ id: "mash", title: "TLC No Scrubs x Burna Boy Last Last", user: { name: "DJ Mash" }, duration: 200, is_streamable: true, play_count: 99999 },
+    { id: "real", title: "Burna Boy - Last Last (Remix)", user: { name: "Fan" }, duration: 200, is_streamable: true, play_count: 5 }] });
+  const ctx = createContext({ env: {}, fetch: world.fetch, state: createMediaState({ filePath: "", env: {} }), cache: createTtlCache() });
+  const result = await resolveMedia({ query: "Burna Boy Last Last", kind: "music", includePreview: false }, ctx);
+  assert.equal(JSON.stringify(result.candidates.map(candidate => candidate.id)), JSON.stringify(["audius:real"]));
+});

@@ -3,7 +3,7 @@
 // Audius (https://audius.co): artist-uploaded full-length tracks through its free public API (no key; an app name is required by its terms).
 // The phone plays the stream URL directly from Audius' own servers; nothing is downloaded or relayed by Kyro.
 
-const { fetchJson, normalizeText, fold, relevance, shuffled, ProviderError, httpsOnly, APP_NAME } = require("../util.js");
+const { fetchJson, collectVerified, normalizeText, fold, relevance, precision, shuffled, ProviderError, httpsOnly, APP_NAME } = require("../util.js");
 const { buildCandidate } = require("../candidate.js");
 const { preflightStream } = require("../preflight.js");
 
@@ -64,26 +64,26 @@ async function search(ctx, request) {
     const text = `${track.title} ${track.user?.name || ""} ${track.user?.handle || ""}`;
     const score = relevance(request.query, text);
     // A song request needs most of its words to match; a loose match would play the wrong music.
-    if (score < 0.6) continue;
+    if (score < 0.6 || precision(request.query, track.title) < 0.7) continue;
     ranked.push({ track, score: score * 100 + Math.log10(1 + Number(track.play_count || 0)) * 4 });
   }
   ranked.sort((a, b) => b.score - a.score);
-  const candidates = [];
-  for (const { track, score } of ranked.slice(0, 6)) {
-    if (candidates.length >= 4) break;
+  const checked = await collectVerified(ranked.slice(0, 5).map(({ track, score }) => async () => {
     const streamUrl = `${host.replace(/\/$/, "")}/v1/tracks/${encodeURIComponent(track.id)}/stream?app_name=${encodeURIComponent(APP_NAME)}`;
     const check = await preflightStream(ctx, streamUrl, { timeoutMs: 5000 });
-    if (!check.ok) continue;
+    return check.ok ? { track, score, streamUrl, check } : null;
+  }), { want: 3, graceMs: 600 });
+  const candidates = checked.slice(0, 4).map(({ track, score, streamUrl, check }) => {
     const artwork = track.artwork?.["480x480"] || track.artwork?.["150x150"] || "";
-    candidates.push(buildCandidate({
+    return buildCandidate({
       provider: ID, providerName: NAME, nativeId: track.id, playbackClass: "audio", delivery: "stream", url: streamUrl,
       title: normalizeText(track.title), artist: normalizeText(track.user?.name || track.user?.handle || ""),
       durationSec: Number(track.duration), live: false, isPreview: false,
       attribution: `${normalizeText(track.title)} by ${normalizeText(track.user?.name || "an Audius artist")} on Audius`,
       license: "Streamed from Audius under the artist's upload terms", verified: true, mimeType: check.contentType,
       sourceUrl: track.permalink ? `https://audius.co${track.permalink}` : undefined, artworkUrl: httpsOnly(artwork) ? artwork : undefined, score
-    }));
-  }
+    });
+  });
   return { candidates, note: skippedExplicit ? `skipped ${skippedExplicit} explicit track(s)` : candidates.length ? "matched tracks" : "no close match" };
 }
 

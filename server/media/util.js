@@ -49,6 +49,15 @@ function relevance(request, candidateText) {
   return hits / tokens.length;
 }
 
+// 0..1: how much of the candidate's own title is explained by the request. A mashup called "TLC x Burna Boy Last Last - remix" has low
+// precision for the request "Burna Boy Last Last", so a loose match is not played as if it were the song asked for.
+function precision(request, candidateTitle) {
+  const wanted = new Set(significantTokens(request));
+  const own = significantTokens(String(candidateTitle || "").replace(/\([^)]*\)|\[[^\]]*\]/g, " "));
+  if (!own.length) return 0;
+  return own.filter(token => wanted.has(token)).length / own.length;
+}
+
 function resolveFetch(env, override) {
   if (typeof override === "function") return override;
   if (env && typeof env.NEXUS_MUSIC_MEDIA_FETCH_IMPL === "function") return env.NEXUS_MUSIC_MEDIA_FETCH_IMPL;
@@ -103,6 +112,32 @@ async function fetchJson(ctx, url, { headers = {}, timeoutMs, method = "GET" } =
   }
 }
 
+// Runs the checks at the same time and returns the ones that passed, in the original (ranked) order, as soon as there are `want` of them or
+// `graceMs` after the first pass: a dead stream costs its timeout once, in the background, instead of holding everybody up.
+async function collectVerified(tasks, { want = 3, graceMs = 700 } = {}) {
+  const results = new Array(tasks.length).fill(null);
+  let passed = 0;
+  let pending = tasks.length;
+  return new Promise(resolve => {
+    let timer = null;
+    let done = false;
+    const finish = () => { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(results.filter(Boolean)); };
+    if (!tasks.length) return finish();
+    tasks.forEach((task, index) => {
+      Promise.resolve().then(task).catch(() => null).then(value => {
+        pending -= 1;
+        if (value) {
+          results[index] = value;
+          passed += 1;
+          if (passed >= want) return finish();
+          if (passed === 1 && !timer) timer = setTimeout(finish, graceMs);
+        }
+        if (pending === 0) finish();
+      });
+    });
+  });
+}
+
 function shuffled(list, random = Math.random) {
   const copy = [...list];
   for (let index = copy.length - 1; index > 0; index -= 1) {
@@ -118,7 +153,7 @@ function httpsOnly(url) {
 
 // Country name or ISO code -> ISO 3166 alpha-2. Kyro is used mostly in East and West Africa.
 const COUNTRY_CODES = Object.freeze({
-  kenya: "KE", nigeria: "NG", tanzania: "TZ", uganda: "UG", ghana: "GH", rwanda: "RW", ethiopia: "ET", "south africa": "ZA", zambia: "ZM",
+  kenya: "KE", drc: "CD", nigeria: "NG", tanzania: "TZ", uganda: "UG", ghana: "GH", rwanda: "RW", ethiopia: "ET", "south africa": "ZA", zambia: "ZM",
   zimbabwe: "ZW", malawi: "MW", mozambique: "MZ", senegal: "SN", "cote d ivoire": "CI", "ivory coast": "CI", cameroon: "CM",
   "dr congo": "CD", "democratic republic of the congo": "CD", congo: "CD", burundi: "BI", somalia: "SO", "south sudan": "SS", sudan: "SD",
   egypt: "EG", morocco: "MA", "united states": "US", usa: "US", "united kingdom": "GB", uk: "GB", india: "IN", france: "FR", germany: "DE"
@@ -132,6 +167,6 @@ function countryCode(value) {
 }
 
 module.exports = Object.freeze({
-  APP_NAME, USER_AGENT, hasText, normalizeText, clip, fold, significantTokens, relevance, resolveFetch, createContext, ProviderError,
-  fetchJson, shuffled, httpsOnly, countryCode, COUNTRY_CODES
+  APP_NAME, USER_AGENT, hasText, normalizeText, clip, fold, significantTokens, relevance, precision, resolveFetch, createContext, ProviderError,
+  fetchJson, collectVerified, shuffled, httpsOnly, countryCode, COUNTRY_CODES
 });

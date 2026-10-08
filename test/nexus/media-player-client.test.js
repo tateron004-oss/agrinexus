@@ -420,3 +420,27 @@ test("all wording exists in both languages and every Kiswahili string is non-emp
   assert.deepEqual(Object.keys(en).sort(), Object.keys(sw).sort());
   for (const [key, value] of Object.entries(sw)) assert.ok(value && value.length > 1, key);
 });
+
+test("the country for radio comes from the person's phone: their own choice, then time zone, then language region", () => {
+  const { detectCountry } = Player;
+  assert.equal(detectCountry({ storage: { getItem: () => "Uganda" }, timeZone: "Africa/Nairobi" }), "Uganda");
+  assert.equal(detectCountry({ storage: { getItem: () => null }, timeZone: "Africa/Nairobi" }), "Kenya");
+  assert.equal(detectCountry({ timeZone: "Europe/Paris", languages: ["en-NG", "en"] }), "NG");
+  assert.equal(detectCountry({ timeZone: "Asia/Tokyo", languages: ["en"], fallback: "Kenya" }), "Kenya");
+  assert.equal(detectCountry({ storage: { getItem: () => { throw new Error("blocked"); } }, timeZone: "Africa/Lagos" }), "Nigeria");
+});
+
+test("'Playing' is said as soon as the audio really plays, not three seconds later; the evidence still arrives after three", async () => {
+  const world = makeWorld({ responses: [okResponse(track())] });
+  const pending = world.controller.play("Last Last", { kind: "music" });
+  await until(() => world.elements.length === 1, "element");
+  const element = world.elements[0];
+  element.paused = false; element.readyState = 4; element.currentTime = 1; element.dispatch("playing");
+  await until(() => world.spoken.length === 1, "early announcement");
+  assert.equal(world.spoken[0], "Playing Last Last by Nairobi Beats on Audius.");
+  assert.equal(world.controller.getState().state, "playing");
+  element.currentTime = 4;
+  const result = await pending;
+  assert.ok(result.telemetry.advancedSeconds >= 3);
+  assert.equal(world.spoken.length, 1, "announced exactly once");
+});

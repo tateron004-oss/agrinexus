@@ -71,6 +71,26 @@
   const EVIDENCE_SCHEMA = "nexus.media-playback-evidence.v1";
   const VOLUME_STEP = 0.15;
 
+  const TIME_ZONE_COUNTRY = {
+    "Africa/Nairobi": "Kenya", "Africa/Lagos": "Nigeria", "Africa/Dar_es_Salaam": "Tanzania", "Africa/Kampala": "Uganda", "Africa/Accra": "Ghana",
+    "Africa/Kigali": "Rwanda", "Africa/Addis_Ababa": "Ethiopia", "Africa/Johannesburg": "South Africa", "Africa/Lusaka": "Zambia", "Africa/Harare": "Zimbabwe",
+    "Africa/Blantyre": "Malawi", "Africa/Maputo": "Mozambique", "Africa/Dakar": "Senegal", "Africa/Abidjan": "Cote d Ivoire", "Africa/Douala": "Cameroon",
+    "Africa/Kinshasa": "DR Congo", "Africa/Lubumbashi": "DR Congo", "Africa/Bujumbura": "Burundi", "Africa/Mogadishu": "Somalia", "Africa/Juba": "South Sudan",
+    "Africa/Khartoum": "Sudan", "Africa/Cairo": "Egypt", "Africa/Casablanca": "Morocco"
+  };
+  // Which country's radio to offer: the person's own choice on this device, else their phone's time zone, else the region of their language
+  // (en-KE), else whatever the app was last pointed at. Never sent anywhere except as the "country" of a resolve request.
+  function detectCountry(env) {
+    const e = env || {};
+    try { const chosen = e.storage && e.storage.getItem("kyro.media.country"); if (chosen) return String(chosen); } catch (_) { /* private mode */ }
+    if (e.timeZone && TIME_ZONE_COUNTRY[e.timeZone]) return TIME_ZONE_COUNTRY[e.timeZone];
+    for (const language of e.languages || []) {
+      const region = /^[a-z]{2,3}-([A-Z]{2})$/.exec(String(language || ""));
+      if (region) return region[1];
+    }
+    return e.fallback || "";
+  }
+
   function createKyroMediaPlayer(deps) {
     const now = deps.now || (() => Date.now());
     const sleep = deps.sleep || (ms => new Promise(resolve => setTimeout(resolve, ms)));
@@ -194,7 +214,7 @@
     }
 
     // Plays one candidate in an <audio>/<video>. Resolves { ok, blocked, reason, telemetry }.
-    function startElementEngine(candidate, token, timeoutMs, minAdvance) {
+    function startElementEngine(candidate, token, timeoutMs, minAdvance, onStartedHook) {
       const wantVideo = candidate.playbackClass === "video";
       const element = deps.createMedia(wantVideo ? "video" : "audio");
       const engine = {
@@ -222,7 +242,7 @@
           const advanced = Number(element.currentTime || 0) - initialTime;
           if (playingSeen && element.paused === false && Number(element.readyState) >= 2 && advanced >= 0.5 && !started) {
             started = true;
-            onStarted();
+            if (onStartedHook) onStartedHook();
           }
           if (started && advanced >= minAdvance && element.paused === false) {
             cleanupTimer();
@@ -363,6 +383,7 @@
       let attempts = 0;
       const attemptLog = [];
       let spokeTrying = false;
+      let earlyAnnounced = 0;
       let lastResolve = null;
       for (let round = 0; round < 3; round += 1) {
         let resolved;
@@ -393,12 +414,21 @@
           current = { candidate, engine: null, query, kind, lang, remembered, queryNamed: Boolean(query) && !remembered };
           const result = candidate.delivery === "youtube"
             ? await startYoutubeEngine(candidate, token, Number(options.verificationTimeoutMs || 14000))
-            : await startElementEngine(candidate, token, Number(options.verificationTimeoutMs || 15000), Number.isFinite(options.minAdvanceSeconds) ? options.minAdvanceSeconds : 3);
+            : await startElementEngine(candidate, token, Number(options.verificationTimeoutMs || 15000), Number.isFinite(options.minAdvanceSeconds) ? options.minAdvanceSeconds : 3, () => {
+              // The audio is really playing (the `playing` event fired and the clock moved): say so now, not 3 seconds later.
+              if (token !== generation || !current || current.candidate !== candidate) return;
+              earlyAnnounced = token;
+              history.push(candidate);
+              setState("playing");
+              setSessionPlaybackState("playing");
+              wireMediaSession(candidate);
+              if (options.announce !== false) announceStarted(); else status(playingMessage(candidate, lang, remembered));
+            });
           if (token !== generation) { if (result.engine) try { result.engine.stop(); } catch (_) { /* ignore */ } return { ok: false, cancelled: true }; }
           current = { candidate, engine: result.engine || null, query, kind, lang, remembered, queryNamed: Boolean(query) && !remembered };
           if (result.ok) {
             lastEvidence = result.telemetry;
-            return finishStarted(candidate, result, lang, options, remembered, attemptLog);
+            return finishStarted(candidate, result, lang, options, remembered, attemptLog, earlyAnnounced === token);
           }
           if (result.blocked) {
             history.push(candidate);
@@ -440,18 +470,16 @@
       announce(current.kind === "radio" && !current.queryNamed ? `${message} ${t("orSong", {}, current.lang)}` : message, {});
     }
 
-    function finishStarted(candidate, result, lang, options, remembered, attemptLog) {
-      history.push(candidate);
+    function finishStarted(candidate, result, lang, options, remembered, attemptLog, alreadyAnnounced) {
+      if (!alreadyAnnounced) history.push(candidate);
       current = { candidate, engine: result.engine, query: lastRequest.query, kind: lastRequest.kind, lang, remembered, queryNamed: Boolean(lastRequest.query) && !remembered };
-      setState("playing");
-      setSessionPlaybackState("playing");
-      wireMediaSession(candidate);
+      if (!alreadyAnnounced) { setState("playing"); setSessionPlaybackState("playing"); wireMediaSession(candidate); }
       try { writePref("last", JSON.stringify({ query: lastRequest.query, kind: lastRequest.kind, title: candidate.title })); } catch (_) { /* ignore */ }
       if (candidate.provider === "radio-browser" && deps.request) {
         const id = String(candidate.id).replace(/^radio-browser:/, "");
         Promise.resolve(deps.request("/api/media/played", { method: "POST", body: { provider: "radio-browser", id } })).catch(() => {});
       }
-      if (options.announce !== false) announceStarted(); else status(playingMessage(candidate, lang, remembered));
+      if (!alreadyAnnounced) { if (options.announce !== false) announceStarted(); else status(playingMessage(candidate, lang, remembered)); }
       return {
         ok: true, engine: "kyro-media-player", provider: candidate.provider, providerName: candidate.providerName, playbackClass: candidate.isPreview ? "preview" : candidate.playbackClass,
         delivery: candidate.delivery, title: candidate.title, artist: candidate.artist, live: candidate.live === true, isPreview: candidate.isPreview === true,
@@ -476,7 +504,6 @@
       return { ok: true, handoff: true, queued: true, opened, provider: "youtube", providerName: "YouTube", playbackClass: "handoff", url: handoff.url, title, kind: handoff.kind, playbackVerified: false, message };
     }
 
-    function onStarted() { /* the element reached real progress; the final result is produced by the evidence check */ }
 
     async function onStreamFailure(reason) {
       if (!current || !isActive()) return;
@@ -752,5 +779,5 @@
     return { render, stage, element: bar, hide() { bar.hidden = true; document.body.classList.remove("kyro-mp-open"); stage.textContent = ""; } };
   }
 
-  return Object.freeze({ createKyroMediaPlayer, createBarUi, STRINGS, say, EVIDENCE_SCHEMA });
+  return Object.freeze({ createKyroMediaPlayer, createBarUi, detectCountry, STRINGS, say, EVIDENCE_SCHEMA });
 });
