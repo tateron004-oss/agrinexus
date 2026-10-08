@@ -5,7 +5,7 @@ const { extractPeriod, describeDay, addDays, weekdayOf } = require("../personal/
 const MONTH_LABELS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const { nameKey } = require("./fields.js");
 const { findAnimal } = require("./livestock.js");
-const { addStock, categoryOf, keyOf, findItems } = require("./inventory.js");
+const { addStock, categoryOf, keyOf, findItems, lowNote } = require("./inventory.js");
 
 // The farm's money: what was spent, what was earned, and the profit, by month, season, field or kind of cost. Amounts are exactly what the
 // farmer says; Kyro adds nothing and estimates nothing. A sale takes the goods out of stock when they are in stock, and a purchase of
@@ -331,12 +331,15 @@ async function handleMoney(ctx) {
       // against the latest qty rather than asking the user to redo the whole sale.
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const stock = await ctx.store.list({ ...scope, collection: "stock" }); // Only harvested goods (or goods of the same kind as what was sold) come out of stock: selling maize must not take kilos out of the maize SEED.
-        const found = findItems(stock, item).filter(entry => entry.data.unit === quantity.unit && (entry.data.category === "other" || entry.data.category === categoryOf(item)));
+        const same = findItems(stock, item).filter(entry => entry.data.category === "other" || entry.data.category === categoryOf(item));
+        const found = same.filter(entry => entry.data.unit === quantity.unit);
+        // one stock record for this item, but kept in another unit (sold in sacks, kept in bags): not guessed at, and said, so the count does not drift silently
+        if (same.length === 1 && !found.length) { stockNote = ` You keep ${same[0].data.name} in ${same[0].data.unit}s, so I did not change your stock. Say it in the same unit to take it out.`; break; }
         if (found.length !== 1) break;
         const left = round(Math.max(0, found[0].data.qty - quantity.value), 3);
         const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });
         if (!applied) continue;
-        stockNote = ` I took ${unitLabel(Math.min(quantity.value, found[0].data.qty), quantity.unit)} out of your stock${quantity.value > found[0].data.qty ? " (you had less recorded than you sold, so it is now zero)" : `; ${unitLabel(left, quantity.unit)} left`}.`;
+        stockNote = ` I took ${unitLabel(Math.min(quantity.value, found[0].data.qty), quantity.unit)} out of your stock${quantity.value > found[0].data.qty ? " (you had less recorded than you sold, so it is now zero)" : `; ${unitLabel(left, quantity.unit)} left`}.${lowNote({ data: { ...found[0].data, qty: left } })}`;
         break;
       }
     }

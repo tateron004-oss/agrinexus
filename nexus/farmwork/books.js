@@ -3,6 +3,7 @@
 const { clean, parseMoney, parseQuantity, formatMoney, titleCase, round, plural, whenOf, UNIT_WORDS } = require("./parse.js");
 const { startGuided, askConfirm } = require("./guided.js");
 const { nameKey } = require("./fields.js");
+const { findItems } = require("./inventory.js");
 const money = require("./money.js");
 const amounts = require("./books-amounts.js");
 const { describeDay } = require("../personal/dates.js");
@@ -536,7 +537,9 @@ async function askBack(ctx, need, day) {
   if (need.ask === "price") {
     // "I bought a phone" from someone who keeps no books is chat, not bookkeeping; known farm and trade words, or an account that already keeps money records, are asked about.
     const category = need.verb === "sold" ? money.incomeCategory(need.item) : money.expenseCategory(need.item);
-    if (category === "other" && !farmer && !hasMoney) return null;
+    // ...and so are goods the person keeps in stock records (a shopkeeper counting flour)
+    const kept = category === "other" && !farmer && !hasMoney ? findItems(await ctx.store.list({ ...scopeOf(ctx), collection: "stock" }), need.item).length > 0 : false;
+    if (category === "other" && !farmer && !hasMoney && !kept) return null;
     return startGuided(ctx, need.verb === "sold" ? templates.books_price : templates.books_cost, {}, { verb: need.verb, phrase: need.phrase, item: need.item, payment: need.payment || "", credit: need.credit || "", day });
   }
   if (need.ask === "unit") return startGuided(ctx, templates.books_unit, {}, { verb: need.verb, phrase: need.phrase, price: need.price, payment: need.payment || "", credit: need.credit || "", day });

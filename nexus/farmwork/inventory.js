@@ -157,4 +157,4 @@ function stockDigest(records, today) {
     expiring: items.filter(item => item.data.expiry && item.data.expiry <= addDays(today, 30)) };
 }
 
-module.exports = Object.freeze({ handle, addStock, stockDigest, findItems, categoryOf, keyOf, totals });
+module.exports = Object.freeze({ handle, addStock, stockDigest, findItems, categoryOf, keyOf, totals, lowNote });

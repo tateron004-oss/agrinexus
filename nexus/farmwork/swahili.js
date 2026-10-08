@@ -14,7 +14,7 @@ const numbers = require("../i18n/swahili-numbers.js");
 const SW = {
   full: "Rekodi zako za pesa zimejaa (maingizo elfu tano). Niombe muhtasari, kisha ondoa baadhi.",
   sold: ({ qty, item, buyer, amount, stock, income, when = "" }) => `Nimerekodi: umeuza ${qty ? `${qty} za ` : ""}${item}${buyer ? ` kwa ${buyer}` : ""} kwa ${amount}${when}.${stock} Mapato ya mwezi huu: ${income}.`,
-  stockOut: ({ taken, left, less }) => ` Nimetoa ${taken} kwenye ghala lako${less ? " (ulikuwa na kidogo kuliko ulichouza, kwa hivyo sasa ni sifuri)" : `; zimebaki ${left}`}.`,
+  stockOut: ({ taken, left, less, low = "" }) => ` Nimetoa ${taken} kwenye ghala lako${less ? " (ulikuwa na kidogo kuliko ulichouza, kwa hivyo sasa ni sifuri)" : `; zimebaki ${left}`}.${low}`,
   spent: ({ amount, what, category, spent, when = "", note = "" }) => `Nimerekodi: umetumia ${amount} kwa ${what}${categorySw(category) === what ? "" : ` (${categorySw(category)})`}${when}.${note} Matumizi ya mwezi huu: ${spent}.`,
   bought: ({ qty, item, seller, amount, category, stock, spent, when = "" }) => `Nimerekodi: umenunua ${qty ? `${qty} za ` : ""}${item}${seller ? ` kutoka kwa ${seller}` : ""} kwa ${amount} (${categorySw(category)})${when}.${stock} Matumizi ya mwezi huu: ${spent}.`,
   amountWrong: "Kiasi hicho kinaonekana si sahihi, kwa hivyo sijaandika chochote. Ninaandika hadi 100,000,000 tu. Sema tena kiasi sahihi.",
@@ -184,7 +184,7 @@ async function sellRecord(ctx, deal, { day = ctx.today } = {}) {
       const left = round(Math.max(0, found[0].data.qty - deal.quantity.value), 3);
       const applied = await ctx.store.update({ ...scope, record: { ...found[0], data: { ...found[0].data, qty: left } }, casField: "qty", casValue: found[0].data.qty });
       if (!applied) continue;
-      stock = SW.stockOut({ taken: unitLabelSw(Math.min(deal.quantity.value, found[0].data.qty), deal.quantity.unit), left: unitLabelSw(left, deal.quantity.unit), less: deal.quantity.value > found[0].data.qty });
+      stock = SW.stockOut({ taken: unitLabelSw(Math.min(deal.quantity.value, found[0].data.qty), deal.quantity.unit), left: unitLabelSw(left, deal.quantity.unit), less: deal.quantity.value > found[0].data.qty, low: found[0].data.low !== undefined && found[0].data.low !== null && left <= found[0].data.low ? ` Angalia: kiasi hicho kiko chini ya kiwango chako cha chini cha ${unitLabelSw(found[0].data.low, found[0].data.unit)}.` : "" });
       break;
     }
   }
