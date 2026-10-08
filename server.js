@@ -74,6 +74,7 @@ const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
+const { replyLanguage } = require("./nexus/i18n/reply-language.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -83,10 +84,12 @@ const { withoutNegatedSymptoms } = require("./public/kyro-care-phrases.js");
 const workLearningFloor = require("./nexus/floor/index.js");
 // The same safety answers the planner gives before anything else (danger signs in pregnancy or for a baby, someone in danger or being hurt, self-harm, scams, medicine doses for a baby or in pregnancy), for the
 // older paths: the phone line, the older command route, and the fallback when the planner cannot be reached. Those cannot alert a circle, so the answer says what to do and whom to call, and never offers to alert anyone.
-async function careSafetyReply(text, user) {
+// `requested` is the language the request asked for; it and then the account language are only the default when the words do not settle it (nexus/i18n/reply-language.js). Found against the real runtime:
+// English words with language "en" in a Kiswahili account were answered in Kiswahili because this passed only the account language.
+async function careSafetyReply(text, user, requested = "") {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en"), country: user?.country });
+  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(requested || user?.language || "en"), country: user?.country });
   return reply ? { kind: found.kind, reply } : null;
 }
 // The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already
@@ -94,7 +97,7 @@ async function careSafetyReply(text, user) {
 async function swahiliCrisisReply(text, language, user) {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  if (found.language !== "sw" && !/^sw\b/i.test(String(language || ""))) return null;
+  if (replyLanguage(text, { detected: found.language, requested: language }) !== "sw") return null;
   const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: "sw" });
   return reply ? String(reply).trim() : null;
 }
@@ -22038,7 +22041,8 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
 function secretNotSavedReply(text, language = "en") {
   const asked = kyroCrisisPhrases.secretLanguage(text);
   if (!asked) return null;
-  const spoken = asked === "sw" || /^sw/i.test(String(language || "")) ? "sw" : "en";
+  // The words win over the account/request language (nexus/i18n/reply-language.js): English words in a Kiswahili account get the English refusal.
+  const spoken = replyLanguage(text, { detected: asked === "sw" ? "sw" : "en", requested: language });
   return { language: spoken, response: nexusText(spoken, "safety.secretRefused") };
 }
 
@@ -22193,7 +22197,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         providerAttempted: false, providerSucceeded: false, executionAttempted: false, executionVerified: false };
     }
   }
-  if (toolName === "nexus_general_conversation" && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
+  if (toolName === "nexus_general_conversation" && context.deterministicOnly !== true && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
     const musicResult = await musicProviderCommandResponse(db, user, command, args);
     const music = musicResult?.metadata?.music || {};
     return {
@@ -22239,6 +22243,19 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: planned.response,
         executionAttempted: true, executionVerified: planned.verified === true };
     }
+  }
+  // Only the no-model doors above were wanted (the AI provider is down, see answerWithoutModelWhileModelIsDown): nothing below this line is answered without a model.
+  if (context.deterministicOnly === true) {
+    // Reminders are a no-model door of the older pipeline (the planner only plans them through the model): the answer to a reminder question just asked, then "remind me ..." / list / change / cancel.
+    if (effectiveMentalHealthSignal.state !== "medical_emergency") {
+      const reminderOptions = { language: canonicalVoiceLanguage(language), timeZone: resolveReminderTimeZoneDetail({ requested: context.timeZone, user }).zone, correlationId: context.correlationId };
+      const reminderTurn = (await resolvePendingReminder(db, user, command, reminderOptions)) || (await assistantReminderCommandResponse(db, user, command, command.toLowerCase(), reminderOptions));
+      if (reminderTurn?.response) {
+        return { ...common, capability: "reminders", status: reminderTurn.status === "needs-input" ? "needs-input" : "completed", intent: reminderTurn.intent, response: reminderTurn.response, noModelAnswer: true,
+          executionAttempted: true, executionVerified: reminderTurn.intent === "assistant.reminder_scheduled" };
+      }
+    }
+    return { ...common, ok: false, status: "needs-model", response: "", medicalEmergency: effectiveMentalHealthSignal.state === "medical_emergency" };
   }
   if (toolName === "nexus_translation") {
     const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
@@ -24265,12 +24282,14 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     tool_choice: "auto",
     max_output_tokens: Number(process.env.NEXUS_OPENAI_NATIVE_MAX_OUTPUT_TOKENS || 900)
   };
+  const toolResults = [];
+  let toolsStarted = false;
   try {
     const first = await callOpenAiNativeResponses(firstPayload, process.env);
     const calls = extractOpenAiFunctionCalls(first).slice(0, 3);
-    const toolResults = [];
     let finalPayload = first;
     if (calls.length) {
+      toolsStarted = true;
       for (const call of calls) {
         const result = await executeNexusOpenAiNativeTool(db, user, call.name, {
           ...call.arguments,
@@ -24293,7 +24312,13 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
         ],
         max_output_tokens: Number(process.env.NEXUS_OPENAI_NATIVE_MAX_OUTPUT_TOKENS || 900)
       };
-      finalPayload = await callOpenAiNativeResponses(secondPayload, process.env);
+      // Found against the real runtime: if the model's closing wording call failed AFTER the tools had already run (a reminder saved, a note written), the whole turn answered "provider_blocked ... did not
+      // fabricate", as if nothing had happened. The tools' own answer is true, so say that (the line below already falls back to it when the model gives no text).
+      try { finalPayload = await callOpenAiNativeResponses(secondPayload, process.env); }
+      catch (closingError) {
+        logIntegration(db, { providerId: "openai", module: "AI", action: "openai_native.closing_call_error", status: "error", detail: closingError.category || "provider-error", metadata: { errorType: closingError.category || "provider-error", httpStatus: closingError.httpStatus || null, toolsAlreadyRan: calls.map(call => call.name), noSecretValuesReturned: true }, dispatch: false });
+        finalPayload = { id: first.id, output: [] };
+      }
     }
     const finalText = sanitizeNexusSpokenResponseText(extractResponseText(finalPayload) || toolResults[0]?.result?.response || "Nexus completed the OpenAI-native reasoning turn and returned the available tool result.");
     const citations = toolResults.flatMap(item => item.result?.citations || item.result?.sources || []).slice(0, 8);
@@ -24402,6 +24427,8 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
           active: true,
           provider: "openai",
           model: status.model,
+          // Read by answerFromOlderPipelineWhileModelIsDown: only a turn that failed before any tool ran may be handed to the no-model doors.
+          failedBeforeAnyTool: !toolsStarted,
           requestAttempted: true,
           errorType: error.category || "provider-error",
           httpStatus: error.httpStatus || null,
@@ -24413,6 +24440,46 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
       }
     }, "openai_native.provider_blocked");
   }
+}
+
+// Found against the real runtime (docs/REAL_RUNTIME_VERIFICATION.md): while the AI provider answered with an error, the older command route (and the phone line) said "provider_blocked" for EVERYTHING,
+// including the lists, notes, money records, farm log, contacts, reminders, health readings and safety answers that need no model, so an outage stopped "add milk to my shopping list". When the provider
+// failed before any tool ran, the request now goes through the catch-all conversation tool's own no-model doors only (crisis and secret checks, health readings, the planner's no-model answers: the exact
+// code that runs when the model picks that tool, context.deterministicOnly makes it stop before the model-dependent tail). Only a request none of those can answer keeps the honest provider_blocked answer.
+// The checks that run before the model (content guard, care safety) are unchanged.
+async function answerWithoutModelWhileModelIsDown(db, user, nativeResult, body = {}) {
+  if (!nativeResult || nativeResult.intent !== "openai_native.provider_blocked" || nativeResult.metadata?.openAiNativeAgent?.failedBeforeAnyTool !== true) return null;
+  const command = sanitizePilotText(body.command || body.text || "", 900);
+  const language = body.targetLanguage || body.language || user.language || "en";
+  let tool;
+  try {
+    tool = await executeNexusOpenAiNativeTool(db, user, "nexus_general_conversation", { command, language }, {
+      correlationId: body.correlationId, command, language, outputMode: body.outputMode || "", timeZone: body.timeZone, inputMode: body.inputMode || "api", deterministicOnly: true
+    });
+  } catch { return null; }
+  // A medical emergency is never left to "the provider is down": the older pipeline's own emergency answer (the one the working-model path reaches too) goes out.
+  if (tool?.medicalEmergency === true) {
+    try {
+      const older = await runCompanionSafeAgentCommand(db, user, body);
+      if (older?.result && String(older.result.response || "").trim()) return ensureSpeakableAgentResult({ ...older.result, metadata: { ...(older.result.metadata || {}), redirectSection: "agent", openAiNativeAgent: { active: true, provider: "openai", modelUnavailable: true, answeredWithoutModel: true, requestAttempted: true, noSecretValuesReturned: true } } }, "openai_native.conversation");
+    } catch { /* keep the honest provider answer below */ }
+    return null;
+  }
+  if (!tool || tool.status === "needs-model" || (tool.status === "needs-input" && tool.noModelAnswer !== true) || !String(tool.response || "").trim()) return null;
+  const requiresConfirmation = tool.requiresConfirmation === true || tool.status === "confirmation_required" || tool.status === "confirmation-required";
+  const blocked = nativeResult.metadata?.openAiNativeAgent || {};
+  return ensureSpeakableAgentResult({
+    intent: "openai_native.nexus_general_conversation",
+    response: sanitizeNexusSpokenResponseText(tool.response),
+    status: requiresConfirmation ? "needs-confirmation" : "completed",
+    metadata: {
+      redirectSection: "agent",
+      openAiNativeAgent: { active: true, provider: "openai", model: blocked.model, modelUnavailable: true, answeredWithoutModel: true, errorType: blocked.errorType, httpStatus: blocked.httpStatus,
+        toolsCalled: ["nexus_general_conversation"], toolResultStatuses: [tool.status || "unknown"], requestAttempted: true, noSecretValuesReturned: true },
+      noExecutionAuthorized: true, providerHandoffAuthorized: false, fakeCitationsAllowed: false,
+      confirmationRequired: requiresConfirmation, executionDeferred: requiresConfirmation
+    }
+  }, "openai_native.conversation");
 }
 
 function deepVoiceIntent(lower) {
@@ -35056,7 +35123,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   // And the care and safety answers the planner gives first (see careSafetyReply above).
-  const careSafe = await careSafetyReply(text, user);
+  const careSafe = await careSafetyReply(text, user, options.language);
   if (careSafe) {
     // A safety answer ends whatever was waiting for a "yes": the next "yes" must not complete a course or a call that was staged for something else.
     if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
@@ -53060,7 +53127,7 @@ async function api(req, res, url) {
     const phoneLanguage = canonicalVoiceLanguage(session.language || phoneUser.language || "en");
     let result;
     try {
-      const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, {
+      const phoneCommandBody = {
         command,
         confirm: false,
         conversational: true,
@@ -53070,18 +53137,11 @@ async function api(req, res, url) {
         targetLanguage: phoneLanguage,
         sessionStartedAt: session.createdAt,
         note: "Phone call voice assistant command"
-      });
-      result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, {
-        command,
-        confirm: false,
-        conversational: true,
-        inputMode: "phone",
-        outputMode: "voice",
-        language: phoneLanguage,
-        targetLanguage: phoneLanguage,
-        sessionStartedAt: session.createdAt,
-        note: "Phone call voice assistant command"
-      })).result;
+      };
+      let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, phoneCommandBody);
+      // While the AI provider is down, requests that need no model are still answered (see answerWithoutModelWhileModelIsDown).
+      openAiNativeResult = await answerWithoutModelWhileModelIsDown(db, phoneUser, openAiNativeResult, phoneCommandBody) || openAiNativeResult;
+      result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, phoneCommandBody)).result;
     } catch (error) {
       // Confirmed by the same audit: an exception anywhere in either
       // dispatcher used to bubble to the global handler, which replies with
@@ -58586,11 +58646,12 @@ async function api(req, res, url) {
       route: "/api/agent/command",
       sourceFunction: "api.agent.command"
     });
-    const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, user, {
+    let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, user, {
       ...body,
       correlationId,
       inputMode: body.inputMode || "api"
     });
+    openAiNativeResult = await answerWithoutModelWhileModelIsDown(db, user, openAiNativeResult, { ...body, correlationId, inputMode: body.inputMode || "api" }) || openAiNativeResult;
     if (openAiNativeResult) {
       openAiNativeResult.metadata = {
         ...(openAiNativeResult.metadata || {}),

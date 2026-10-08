@@ -4,6 +4,7 @@
 //   RR_PORT      port of the app (default 15731); the database is on RR_PG_PORT (default RR_PORT - 10000), a SQL endpoint on RR_PORT + 1000 and a one-request-at-a-time front door on RR_PORT + 2000
 //   RR_COMMIT    a 40-character commit to stamp as the release (RENDER_GIT_COMMIT), as the deploy workflow does
 //   RR_STUB_OTHER=reply   make the stand-in model answer legacy (non-planner) AI calls with text instead of failing them
+//   (create the file <RR_OUT>/model-outage to make every model call fail like a provider outage; delete it to bring the model back -- no restart needed. STUB_MODEL_FAIL=1 does the same from the start.)
 //   RR_NO_PROVIDER_CATALOG=1 / RR_NO_CUTOVER=1   leave out the canonical tool catalog / the "workspace is authoritative" rows
 //   RR_ENV       a JSON object of extra environment for the server
 import { PGlite } from "@electric-sql/pglite";
@@ -49,7 +50,7 @@ const env = {
   AGRINEXUS_STATE_STORE: "postgres", AGRINEXUS_DB_PATH: path.join(work, "db.json"), AGRINEXUS_SPACES_PATH: path.join(work, "spaces.json"),
   SESSION_SECRET: "local-real-runtime-session-secret-0123456789", OPENAI_API_KEY: "local-stand-in-key", NEXUS_DISABLE_LOCAL_ENV_FILES: "true",
   NEXUS_FILE_STORAGE_DIR: path.join(work, "uploads"), AGRINEXUS_TRUST_PROXY: "true", AGRINEXUS_AI_AGENT_RATE_LIMIT_PER_WINDOW: "100000", AGRINEXUS_RATE_LIMIT_PER_WINDOW: "100000",
-  NEXUS_ACCEPTANCE_TOKEN: "candidate-only-token", STUB_LOG: path.join(OUT, "stub.log"), STUB_OTHER: process.env.RR_STUB_OTHER || "",
+  NEXUS_ACCEPTANCE_TOKEN: "candidate-only-token", STUB_LOG: path.join(OUT, "stub.log"), STUB_OTHER: process.env.RR_STUB_OTHER || "", STUB_FAIL_FILE: path.join(OUT, "model-outage"),
   NODE_OPTIONS: `${preload("stub-openai.cjs")} ${preload("pg-serialize.cjs")}`,
   ...(process.env.RR_ENV ? JSON.parse(process.env.RR_ENV) : {})
 };
