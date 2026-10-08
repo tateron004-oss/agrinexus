@@ -356,6 +356,12 @@ function normaliseSpoken(text, { language = "en", wakeBeforeQuestions = true } =
   try { return normaliseOnce(text, language); } finally { ACTIVE = before; }
 }
 
+// Said aloud, "+254 712 345 678" is "plus 254 712 345 678" (it is also how Kyro reads a number back, see memory/contacts.js spokenPhone), and no reader below understood it: "Save Otieno's number as plus 254 712 345 678"
+// was never saved (found by the phrase sweep, scripts/dev/real-runtime/phrases.mjs). A spoken "plus" straight before a country code and more digits is the + sign; "5 plus 200" and "milk plus eggs" are untouched.
+function spokenPlusToSign(text) {
+  return String(text || "").replace(/(?<!\d\s*)\bplus\s*(?=\d{2,3}[\s-]?\d)/gi, "+");
+}
+
 function normaliseOnce(text, language) {
   const original = String(text ?? "");
   const stripped = [];
@@ -373,10 +379,10 @@ function normaliseOnce(text, language) {
     const sep = message.delimiter === ":" ? ": " : ` ${message.delimiter} `;
     t = `${head}${sep}${message.body.replace(/[.!\s]+$/, "") || message.body}`;
   } else t = runPipeline(clean, stripped);
-  t = cleanText(t);
+  t = cleanText(spokenPlusToSign(t));
   // a result that would be empty or lose every word falls back to the cleaned text
   if (!/[\p{L}\p{N}]/u.test(t)) t = clean;
   return { text: t, clean, original, stripped: [...new Set(stripped)], changed: t !== clean, danger, language };
 }
 
-module.exports = Object.freeze({ normaliseSpoken, cleanText, toAsciiDigits, hasDanger, looksLikeRequest, MAX_PLANNER_INPUT });
+module.exports = Object.freeze({ spokenPlusToSign, normaliseSpoken, cleanText, toAsciiDigits, hasDanger, looksLikeRequest, MAX_PLANNER_INPUT });

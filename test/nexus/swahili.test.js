@@ -103,11 +103,13 @@ async function world({ members = ["u-amina", "u-joseph"], optIn = false } = {}) 
   return w;
 }
 
-test("a Swahili emergency is answered in Swahili whatever the app's language, and an English one in a Swahili app is answered in Swahili too", async () => {
+// Changed after the real-runtime check (nexus/i18n/reply-language.js): this used to pin "an English emergency in a Swahili app is answered in Swahili". The owner's rule is the other way round: the words typed
+// win, the app's language only decides when the words do not.
+test("a Swahili emergency is answered in Swahili whatever the app's language, and an English one in a Swahili app is answered in English", async () => {
   const w = await world(); const swahili = await w.handle("Nahitaji msaada sasa hivi", "en");
   assert.equal(swahili.response, "Nimetuma tahadhari kwa Amina Wanjiru, Joseph Otieno. Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi. Niko hapa nawe.");
   assert.equal(swahili.emergency.language, "sw");
-  const fresh = await world(); const english = await fresh.handle("I need help now", "sw"); assert.match(english.response, /^Nimetuma tahadhari kwa Amina Wanjiru, Joseph Otieno\./); assert.equal(english.emergency.language, "sw");
+  const fresh = await world(); const english = await fresh.handle("I need help now", "sw"); assert.match(english.response, /^I've alerted /); assert.equal(english.emergency.language, "en");
   const plain = await world(); assert.match((await plain.handle("I need help now", "en")).response, /^I've alerted /); assert.equal((await plain.handle("hello", "sw")), null);
   assert.equal((await (await world({ members: [] })).say("dharura")).startsWith("Bado sina mtu yeyote kwenye mzunguko wako"), true);
 });

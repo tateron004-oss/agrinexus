@@ -110,6 +110,7 @@
     /\b(?:wheez\w*|not eating|refus\w* (?:to )?eat|very thin|swollen feet|rash all over)\b/
   ];
   // "my baby has a cold and a blocked nose", "my child has a fever for 3 days": the first is not a danger sign, the second is a same-day clinic visit.
+  const MEDIA_REQUEST = /^(?:(?:hey |ok |okay )?(?:kyro|nexus)[, ]+)?(?:please |tafadhali )?(?:play|cheza|sikiliza|listen to|watch|open youtube and play|fungua youtube na cheza)\b/;
   const NOT_A_SIGN = /\b(?:teething|just a cold|blocked nose|runny nose|a cold and|sleeps? (?:too much|a lot|all day)|crying (?:a lot|all the time)|cries a lot|is it normal|how (?:do|can|should)|what (?:is|are|should)|when (?:should|do|can)|can i|should i)\b/;
 
   // ---- pregnancy and birth ----
@@ -148,6 +149,8 @@
   function careSign(text) {
     const plain = normalize(text);
     if (!plain || plain.length > 500) return null;
+    // Found by the phrase sweep: "Play Burna Boy Last Last" (the artist Burna Boy) was answered with first aid for a burn, because "burna" starts like "burn" and "boy" reads as a child. A request to play something is never a sign.
+    if (MEDIA_REQUEST.test(plain)) return null;
     // The same sentence without the symptoms said NOT to be there ("no fever", "hana homa"): the danger signs below are looked for in this, never in a symptom that is absent.
     const signs = withoutNegatedSymptoms(plain);
     const pregnant = PREGNANT.test(plain) && !/\b(?:not|no longer|never|am not|isn'?t|am n'?t) (?:\w+ )?pregnant\b/.test(plain);

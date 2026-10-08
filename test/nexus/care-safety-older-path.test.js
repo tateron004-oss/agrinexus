@@ -74,6 +74,6 @@ test("a business's phone line gets them too (the care answer does not depend on 
   const source = fs.readFileSync(path.join(root, "server.js"), "utf8");
   // Both older entry points hand a care message to the same fixed answer: the AI model path steps aside, and the plain path answers.
   assert.match(source, /if \(contentGuardReply\(command\) \|\| careSafetyApplies\(command\)\) return null;/);
-  assert.match(source, /const careSafe = await careSafetyReply\(text, user\);/);
+  assert.match(source, /const careSafe = await careSafetyReply\(text, user, options\.language\);/);
   assert.match(source, /tenantId: businessSpaces\.tenantIdFor\(businessSpaces\.currentSpace\(\)\)/);
 });

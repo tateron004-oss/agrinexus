@@ -190,7 +190,7 @@ class BehaviorSpine {
     }
     if (execution.state === "awaiting_render") {
       const result = envelope({ command, plan, task, execution, state: "render_required", completed: false,
-        response: reminderSetResponse(plan, context) || "Nexus completed the governed execution and is rendering the verified result.",
+        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || "Nexus completed the governed execution and is rendering the verified result.",
         outcome: { verified: true, renderVerified: false, reason: "renderer_acknowledgement_required" } });
       await this.workspaceStates.stage({ tenantId: context.tenantId, ownerId: context.userId,
         taskId: task.taskId, outcome: result.render });
@@ -251,6 +251,26 @@ function reminderSetResponse(plan, context) {
   } catch { return ""; }
 }
 
+// After a yes to saving a health reading the person was told only "Nexus completed the governed execution and is rendering the verified result" (found walking the real page).
+// Say what was saved, in plain words, from the step's own numbers. No guidance, no diagnosis: the clinician-reviewed wording stays where it is. English only for now;
+// a Kiswahili sentence needs a fluent speaker, so a Kiswahili turn keeps the older line.
+function healthSavedResponse(plan, context) {
+  try {
+    const step = (plan?.steps || []).find(item => item?.toolId === "health.record" || item?.toolId === "health.chronic-reading");
+    if (!step) return "";
+    const input = step.input || {};
+    if (input.language === "sw" || context?.locale === "sw" || context?.language === "sw") return "";
+    const num = key => (Number.isFinite(Number(input[key])) && input[key] !== null && input[key] !== "" ? Number(input[key]) : null);
+    const systolic = num("systolic"); const diastolic = num("diastolic");
+    if (systolic !== null && diastolic !== null) return `Saved your blood pressure reading: ${systolic} over ${diastolic}.`;
+    if (num("glucose") !== null) return `Saved your blood sugar reading: ${num("glucose")}.`;
+    if (num("oxygenSaturation") !== null) return `Saved your oxygen reading: ${num("oxygenSaturation")} percent.`;
+    if (num("pulse") !== null) return `Saved your pulse reading: ${num("pulse")}.`;
+    if (num("temperature") !== null) return `Saved your temperature reading: ${num("temperature")}.`;
+    return "Saved your health reading.";
+  } catch { return ""; }
+}
+
 function completedResponse(task) {
   const explicit = task?.outcome?.summary || task?.outcome?.message;
   return explicit || `Completed and verified: ${task.goal}`;
@@ -276,4 +296,4 @@ function envelope({ command, plan, execution = null, task = null, state, complet
     receipts: execution?.receipts || [], render });
 }
 
-module.exports = Object.freeze({ BehaviorSpine });
+module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse });

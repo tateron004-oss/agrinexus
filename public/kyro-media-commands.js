@@ -26,7 +26,8 @@
     value = value.replace(/^(?:can|could|would|will) you\s+(?:please\s+)?/i, "");
     value = value.replace(/^(?:i want you to|i would like you to|i'd like you to|i need you to|naomba|tafadhali)\s+/i, "");
     value = value.replace(/[.!?¡¿]+$/g, "").trim();
-    value = value.replace(/[\s,]+(?:please|tafadhali|for me|now|sasa|thanks|asante)$/i, "").trim();
+    // (found by the phrase sweep: "kuanzia sasa" = "from now on" lost its "sasa", so the Kiswahili music preference was read as a request to play a song called "kwenye YouTube kuanzia")
+    value = value.replace(/[\s,]+(?:please|tafadhali|for me|now|(?<!kuanzia )sasa|thanks|asante)$/i, "").trim();
     return value;
   }
 

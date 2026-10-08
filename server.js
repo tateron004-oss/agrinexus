@@ -74,27 +74,48 @@ const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
+const { replyLanguage } = require("./nexus/i18n/reply-language.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
 const { withoutNegatedSymptoms } = require("./public/kyro-care-phrases.js");
+// Small pure readings of spoken requests that the phrase sweep (scripts/dev/real-runtime/phrases.mjs) found missing or too wide.
+const spokenRequests = require("./nexus/voice/spoken-requests.js");
 // The honest work-and-learning answers (nexus/floor): short practice lessons in reading and maths, practice interviews, what Kyro really knows about jobs and training, and a child who
 // works or wants to. Where a person got to in a practice lesson is kept on their own record (user.floorPractice).
 const workLearningFloor = require("./nexus/floor/index.js");
 // The same safety answers the planner gives before anything else (danger signs in pregnancy or for a baby, someone in danger or being hurt, self-harm, scams, medicine doses for a baby or in pregnancy), for the
 // older paths: the phone line, the older command route, and the fallback when the planner cannot be reached. Those cannot alert a circle, so the answer says what to do and whom to call, and never offers to alert anyone.
-async function careSafetyReply(text, user) {
+// `requested` is the language the request asked for; it and then the account language are only the default when the words do not settle it (nexus/i18n/reply-language.js). Found against the real runtime:
+// English words with language "en" in a Kiswahili account were answered in Kiswahili because this passed only the account language.
+async function careSafetyReply(text, user, requested = "") {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(user?.language || "en"), country: user?.country });
+  const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: String(requested || user?.language || "en"), country: user?.country });
   return reply ? { kind: found.kind, reply } : null;
+}
+// Found by the phrase sweep: the voice model sends health and farm talk to the health and agriculture tools, which never asked the danger-sign readers the other doors ask, so "My child is fitting" and "She has heavy bleeding"
+// got "I opened Health and Chronic Care". The agriculture tool only gets the companion reader (it keeps the animal rule: a sick cow is never given a person's first aid).
+async function toolUrgentSafetyAnswer(db, user, toolName, text) {
+  if (toolName !== "nexus_health_preparation" && toolName !== "nexus_agriculture") return null;
+  const care = await careSafetyReply(text, user).catch(() => null);
+  if (care) return { intent: `conversation.safety.${care.kind}`, response: care.reply };
+  if (toolName !== "nexus_health_preparation") return null;
+  const urgent = urgentHealthSafetyResponse(db, user, text);
+  return urgent ? { intent: urgent.intent, response: urgent.response } : null;
+}
+// The urgent words that need no tool provider and no database write (the companion reader, then the health-urgent reader on a scratch profile), or null.
+async function urgentWordsWithoutProvider(text, authUser) {
+  const care = await careSafetyReply(text, authUser).catch(() => null);
+  if (care) return care.reply;
+  try { return urgentHealthSafetyResponse({ profile: { agentMemory: {} } }, authUser, text)?.response || null; } catch { return null; }
 }
 // The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already
 // exists for the companion (nexus/i18n/sw.js safety.*), never new wording. null when it does not apply or the shared reader has no Kiswahili case for the words (the English packet is then kept).
 async function swahiliCrisisReply(text, language, user) {
   const found = readCompanionSafety(text);
   if (!found) return null;
-  if (found.language !== "sw" && !/^sw\b/i.test(String(language || ""))) return null;
+  if (replyLanguage(text, { detected: found.language, requested: language }) !== "sw") return null;
   const reply = await companionSafetyTurn({ text, circle: null, push: null, tenantId: businessSpaces.tenantIdFor(businessSpaces.currentSpace()), userId: String(user?.id || ""), userName: String(user?.name || "").split(/\s+/)[0] || "", locale: "sw" });
   return reply ? String(reply).trim() : null;
 }
@@ -322,7 +343,9 @@ const authoritativeNexusRuntime = createServerRuntimeAdapter({
   // Investor/Provider Reviewer denylist inside nexus/business at all. Passed in here (rather than
   // duplicated inside nexus/, which has no notion of legacy roles) so the checkout route below can refuse
   // a real Stripe checkout session the same way every other real-money route in this file already does.
-  isRestrictedFrom: userIsRestrictedFrom
+  isRestrictedFrom: userIsRestrictedFrom,
+  // Found by the phrase sweep: a danger sign ("I have chest pain") whose tool provider cannot be reached must still be answered in words. Same sentences as the older route; null when the words are not urgent.
+  urgentFallback: async (text, authUser) => urgentWordsWithoutProvider(text, authUser)
 });
 
 function deterministicAuthoritativeUserId(legacyUserId = "") {
@@ -7303,11 +7326,13 @@ function suggestedRepliesForResult(result = {}, behavior = {}) {
   return ["do the next step", "what should I do next", "open voice help"];
 }
 
-function humanizeAgentResult(db, user, result = {}, command = "") {
+function humanizeAgentResult(db, user, result = {}, command = "", options = {}) {
   if (command) updateConversationUserModel(db.profile, command, user);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
-  const suppressNudge = Boolean(result.metadata?.suppressBehaviorNudge);
+  // Found by the phrase sweep: a Kiswahili answer got an English "Got it." in front and an English hint ("You can ask me to contact the buyer, check the field ...") behind it. Both are English-only chrome.
+  const swahili = /^sw/i.test(String(options.language || result.metadata?.responseLanguage || result.metadata?.language || ""));
+  const suppressNudge = Boolean(result.metadata?.suppressBehaviorNudge) || swahili;
   const alreadyNatural = /^(AgriNexus|Nexus|For|A sick|Good morning|Good afternoon|Good evening|Hello|Yes|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|Full map|The full intelligent model)/i.test(original);
   const prefix = alreadyNatural || suppressNudge ? "" : "Got it. ";
   const followUp = suppressNudge ? "" : adaptiveBehaviorNudge(behavior, result);
@@ -18668,6 +18693,9 @@ async function executeAgentTool(db, user, step) {
       id: crypto.randomUUID(),
       orderNumber: `AN-ORD-AGENT-${String((db.profile.orders || []).length + 1).padStart(3, "0")}`,
       productId: product.id,
+      // Every other order path stores the crop as "product" and readers (the Agritrade page, shipment tracking, the voice answer
+      // "<order> for <product>") use that name: without it they printed "undefined".
+      product: product.name,
       productName: product.name,
       countryId: country.id,
       routeId: route.id,
@@ -21166,7 +21194,8 @@ function nexusOpenAiNativeStatus(env = process.env) {
 
 function nexusOpenAiNativeToolChoiceHint(command = "") {
   const lower = String(command || "").toLowerCase();
-  if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
+  // (a body temperature in a visit note, "temperature 38.5, cough", is not a weather question: phrase sweep)
+  if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower) && !spokenRequests.isBodyTemperatureReport(command)) return "nexus_weather";
   if (/\b(translate|translation|change language|speak in|say .* in (?:swahili|french|spanish|arabic|portuguese))\b/.test(lower)) return "nexus_translation";
   if (/\b(deep research|research brief|multi-source|compare sources|evidence review|literature|institutional evidence)\b/.test(lower)) return "nexus_deep_research";
   // "export ... memory/records" excluded: a natural "Export my memory as a
@@ -21401,7 +21430,8 @@ function nexusOpenAiNativeProviderToolResult(db, common = {}, providerResult = {
   return {
     ...common,
     status,
-    response: responseOverride || body.message || common.command,
+    // phrase sweep: a provider's own "requires explicit confirmed: true before controlled testing" sentence is not for a person; they are told what is waiting and asked for a yes.
+    response: responseOverride || (typeof spokenRequests !== "undefined" && body.status === "confirmation_required" && spokenRequests.isInternalConfirmationMessage(body.message) ? spokenRequests.plainConfirmationSentence(common.command) : typeof spokenRequests !== "undefined" && spokenRequests.isInternalSwitchedOffMessage(body.message) ? spokenRequests.plainSwitchedOffSentence(body) : body.message) || common.command, // (typeof guards: several tests evaluate this function's source alone)
     provider: body.provider || "",
     providerAction: body.action || "",
     providerAttempted: !["disabled", "missing_config", "confirmation_required", "blocked"].includes(String(status)),
@@ -22038,7 +22068,8 @@ function nexusOpenAiNativeMemoryTool(db, user, common = {}, args = {}) {
 function secretNotSavedReply(text, language = "en") {
   const asked = kyroCrisisPhrases.secretLanguage(text);
   if (!asked) return null;
-  const spoken = asked === "sw" || /^sw/i.test(String(language || "")) ? "sw" : "en";
+  // The words win over the account/request language (nexus/i18n/reply-language.js): English words in a Kiswahili account get the English refusal.
+  const spoken = replyLanguage(text, { detected: asked === "sw" ? "sw" : "en", requested: language });
   return { language: spoken, response: nexusText(spoken, "safety.secretRefused") };
 }
 
@@ -22193,7 +22224,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         providerAttempted: false, providerSucceeded: false, executionAttempted: false, executionVerified: false };
     }
   }
-  if (toolName === "nexus_general_conversation" && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
+  if (toolName === "nexus_general_conversation" && context.deterministicOnly !== true && (spotifyMusicControlIntent(command) || musicAssistantIntent(command))) {
     const musicResult = await musicProviderCommandResponse(db, user, command, args);
     const music = musicResult?.metadata?.music || {};
     return {
@@ -22240,6 +22271,33 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         executionAttempted: true, executionVerified: planned.verified === true };
     }
   }
+  // Danger signs reach the health and agriculture tools too (phrase sweep; typeof guards: several tests evaluate this function's source alone).
+  if (typeof toolUrgentSafetyAnswer === "function" && (toolName === "nexus_health_preparation" || toolName === "nexus_agriculture")) {
+    const urgent = await toolUrgentSafetyAnswer(db, user, toolName, rawCallerText || command);
+    if (urgent) return { ...common, capability: "health-safety", status: "completed", intent: urgent.intent, response: urgent.response, providerAttempted: false, providerSucceeded: false, executionAttempted: false, executionVerified: false };
+  }
+  // Fitness and wellbeing sentences ("I ran 5 km in 30 minutes", "My goal is 4 workouts a week", "Undo my last workout") are the wellness log's, which the planner owns; the health tool did not know them (phrase sweep).
+  if (toolName === "nexus_health_preparation" && typeof spokenRequests !== "undefined" && spokenRequests.isWellnessLogRequest(command) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
+    const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+    if (planned) {
+      return { ...common, capability: "wellness-log", status: "completed", intent: "planner-deterministic-answer", response: planned.response,
+        executionAttempted: true, executionVerified: planned.verified === true };
+    }
+  }
+  // Only the no-model doors above were wanted (the AI provider is down, see answerWithoutModelWhileModelIsDown): nothing below this line is answered without a model.
+  if (context.deterministicOnly === true) {
+    // Reminders are a no-model door of the older pipeline (the planner only plans them through the model): the answer to a reminder question just asked, then "remind me ..." / list / change / cancel.
+    if (effectiveMentalHealthSignal.state !== "medical_emergency") {
+      const reminderOptions = { language: canonicalVoiceLanguage(language), timeZone: resolveReminderTimeZoneDetail({ requested: context.timeZone, user }).zone, correlationId: context.correlationId };
+      const reminderTurn = (await resolvePendingReminder(db, user, command, reminderOptions)) || (await assistantReminderCommandResponse(db, user, command, command.toLowerCase(), reminderOptions));
+      if (reminderTurn?.response) {
+        return { ...common, capability: "reminders", status: reminderTurn.status === "needs-input" ? "needs-input" : "completed", intent: reminderTurn.intent, response: reminderTurn.response, noModelAnswer: true,
+          executionAttempted: true, executionVerified: reminderTurn.intent === "assistant.reminder_scheduled" };
+      }
+    }
+    return { ...common, ok: false, status: "needs-model", response: "", medicalEmergency: effectiveMentalHealthSignal.state === "medical_emergency" };
+  }
   if (toolName === "nexus_translation") {
     const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
     const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", arabic: "ar", portuguese: "pt" };
@@ -22265,7 +22323,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_weather") {
     const locationMatch = command.match(/\b(?:in|for|near|at)\s+([^?.,]+(?:,\s*[^?.,]+)?)/i);
-    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query;
+    const explicitLocation = args.location || args.city || locationMatch?.[1] || args.query || (typeof spokenRequests !== "undefined" ? spokenRequests.swahiliWeatherLocation(command) : ""); // found by the phrase sweep: "Hali ya hewa Kisumu ikoje?" had no place
     // A vague question like "Will it rain tomorrow?" or "What is the weather
     // like?" has no real location in it, but previously fell through to
     // using the ENTIRE command sentence as the geocoder query -- confirmed
@@ -23432,7 +23490,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // Blood sugar: a number (decimals allowed: "7.2") and, when said, its unit -- mg/dL or mmol/L (see server/providers/bloodGlucose.js).
     const glucose = !bp && command.match(new RegExp(`\\b(?:blood\\s*sugar|glucose)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{1,4}(?:\\.\\d{1,2})?)(?![\\d.]*\\d)(?![.,]\\d)(?!\\s*(?:times|x|days?|hours?|weeks?|months?|years?|kg|bags?|%|percent)\\b)\\s*(mmol(?:\\s*(?:\\/|per)\\s*l(?:it(?:er|re)s?)?)?|mg\\s*(?:\\/|per)\\s*dl|milligrams?(?:\\s*per\\s*deci?l(?:it(?:er|re))?)?)?`, "i"));
     const oxygenMatch = !bp && !glucose && command.match(new RegExp(`\\b(?:oxygen|o2|spo2|pulse\\s*ox)\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3})\\b`, "i"));
-    const temperatureMatch = !bp && !glucose && !oxygenMatch && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
+    const temperatureMatch = !bp && !glucose && !oxygenMatch && !(typeof spokenRequests !== "undefined" && spokenRequests.isPatientNote(command)) && command.match(new RegExp(`\\btemp(?:erature)?\\b\\s*${VITAL_VALUE_CONNECTOR}(\\d{2,3}(?:\\.\\d)?)\\s*°?\\s*(?:f|c|fahrenheit|celsius)?\\b`, "i"));
     // Confirmed: unlike every other vital above, weight kept the old
     // \D{0,10}? "any 0-10 characters" window instead of VITAL_VALUE_CONNECTOR
     // -- "I weigh, say, 200 kg of feed for my cattle every morning." and "My
@@ -23834,7 +23892,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       intakeRecord = ensureVoiceHealthIntake(db, user, { needSummary: args.summary || args.reason || command, force: true });
       response = `I started your telehealth intake, case ${intakeRecord.patientRef}. Status: ${intakeRecord.queueStatus}. Tell me the reason for the visit, when it began, and any symptoms, and I will add them to the case for provider review.`;
     } else {
-      response = chronicConditionEducationResponse(command)
+      response = chronicConditionEducationResponse(command);
+      // Nothing in this tool understood the sentence. Found by the phrase sweep: a health worker's "Visit Mary: ...", a medicine taken or missed, a check-in or a circle sentence sent here got "I opened Health and Chronic Care"
+      // although the planner saves them. Only here, after every health branch above declined, is the planner asked (the health tool keeps its own route otherwise, see orb-catchall-tool.test.js).
+      if (!response && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
+        const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
+        const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+        if (planned) return { ...common, capability: "nexus_health_preparation", status: "completed", intent: "planner-deterministic-answer", response: planned.response, executionAttempted: true, executionVerified: planned.verified === true };
+      }
+      response = response
         || "I opened Health and Chronic Care. I can help with health literacy, test readings, intake preparation, mobile clinic search, pharmacist questions, community health worker and transportation resources, RPM/RTM records, and provider-ready summaries without diagnosing or prescribing.";
     }
     const status = intakeRecord ? "health-intake-created" : readingSaved ? "health-reading-saved" : "health-preparation-ready";
@@ -23902,7 +23968,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // confirm creating a brand new listing titled after their own status
     // question, instead of answering it.
     const wantsListingStatus = /\b(do|did|does|have|has)\s+you\s+(sell|sold|list(?:ed)?|post(?:ed)?|publish(?:ed)?|creat(?:e|ed))\b/i.test(command);
-    if (!wantsBrowseListings && !wantsListingStatus && /\b(create|post|publish|list|sell)\b/i.test(command)) {
+    if (!wantsBrowseListings && !wantsListingStatus && (typeof spokenRequests !== "undefined" ? spokenRequests.wantsListingCreate(command) : /\b(create|post|publish|list|sell)\b/i.test(command))) { // phrase sweep: the Kiswahili "Weka tangazo: ninauza ..." was read as browsing
       // Found live (marketplace/real-estate audit): this create path called
       // the legacy nexusRealProviders.marketplace.createListing, which has
       // no content-safety check at all -- unlike marketplaceBridge's own
@@ -24265,12 +24331,14 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
     tool_choice: "auto",
     max_output_tokens: Number(process.env.NEXUS_OPENAI_NATIVE_MAX_OUTPUT_TOKENS || 900)
   };
+  const toolResults = [];
+  let toolsStarted = false;
   try {
     const first = await callOpenAiNativeResponses(firstPayload, process.env);
     const calls = extractOpenAiFunctionCalls(first).slice(0, 3);
-    const toolResults = [];
     let finalPayload = first;
     if (calls.length) {
+      toolsStarted = true;
       for (const call of calls) {
         const result = await executeNexusOpenAiNativeTool(db, user, call.name, {
           ...call.arguments,
@@ -24293,7 +24361,13 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
         ],
         max_output_tokens: Number(process.env.NEXUS_OPENAI_NATIVE_MAX_OUTPUT_TOKENS || 900)
       };
-      finalPayload = await callOpenAiNativeResponses(secondPayload, process.env);
+      // Found against the real runtime: if the model's closing wording call failed AFTER the tools had already run (a reminder saved, a note written), the whole turn answered "provider_blocked ... did not
+      // fabricate", as if nothing had happened. The tools' own answer is true, so say that (the line below already falls back to it when the model gives no text).
+      try { finalPayload = await callOpenAiNativeResponses(secondPayload, process.env); }
+      catch (closingError) {
+        logIntegration(db, { providerId: "openai", module: "AI", action: "openai_native.closing_call_error", status: "error", detail: closingError.category || "provider-error", metadata: { errorType: closingError.category || "provider-error", httpStatus: closingError.httpStatus || null, toolsAlreadyRan: calls.map(call => call.name), noSecretValuesReturned: true }, dispatch: false });
+        finalPayload = { id: first.id, output: [] };
+      }
     }
     const finalText = sanitizeNexusSpokenResponseText(extractResponseText(finalPayload) || toolResults[0]?.result?.response || "Nexus completed the OpenAI-native reasoning turn and returned the available tool result.");
     const citations = toolResults.flatMap(item => item.result?.citations || item.result?.sources || []).slice(0, 8);
@@ -24402,6 +24476,8 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
           active: true,
           provider: "openai",
           model: status.model,
+          // Read by answerFromOlderPipelineWhileModelIsDown: only a turn that failed before any tool ran may be handed to the no-model doors.
+          failedBeforeAnyTool: !toolsStarted,
           requestAttempted: true,
           errorType: error.category || "provider-error",
           httpStatus: error.httpStatus || null,
@@ -24413,6 +24489,46 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
       }
     }, "openai_native.provider_blocked");
   }
+}
+
+// Found against the real runtime (docs/REAL_RUNTIME_VERIFICATION.md): while the AI provider answered with an error, the older command route (and the phone line) said "provider_blocked" for EVERYTHING,
+// including the lists, notes, money records, farm log, contacts, reminders, health readings and safety answers that need no model, so an outage stopped "add milk to my shopping list". When the provider
+// failed before any tool ran, the request now goes through the catch-all conversation tool's own no-model doors only (crisis and secret checks, health readings, the planner's no-model answers: the exact
+// code that runs when the model picks that tool, context.deterministicOnly makes it stop before the model-dependent tail). Only a request none of those can answer keeps the honest provider_blocked answer.
+// The checks that run before the model (content guard, care safety) are unchanged.
+async function answerWithoutModelWhileModelIsDown(db, user, nativeResult, body = {}) {
+  if (!nativeResult || nativeResult.intent !== "openai_native.provider_blocked" || nativeResult.metadata?.openAiNativeAgent?.failedBeforeAnyTool !== true) return null;
+  const command = sanitizePilotText(body.command || body.text || "", 900);
+  const language = body.targetLanguage || body.language || user.language || "en";
+  let tool;
+  try {
+    tool = await executeNexusOpenAiNativeTool(db, user, "nexus_general_conversation", { command, language }, {
+      correlationId: body.correlationId, command, language, outputMode: body.outputMode || "", timeZone: body.timeZone, inputMode: body.inputMode || "api", deterministicOnly: true
+    });
+  } catch { return null; }
+  // A medical emergency is never left to "the provider is down": the older pipeline's own emergency answer (the one the working-model path reaches too) goes out.
+  if (tool?.medicalEmergency === true) {
+    try {
+      const older = await runCompanionSafeAgentCommand(db, user, body);
+      if (older?.result && String(older.result.response || "").trim()) return ensureSpeakableAgentResult({ ...older.result, metadata: { ...(older.result.metadata || {}), redirectSection: "agent", openAiNativeAgent: { active: true, provider: "openai", modelUnavailable: true, answeredWithoutModel: true, requestAttempted: true, noSecretValuesReturned: true } } }, "openai_native.conversation");
+    } catch { /* keep the honest provider answer below */ }
+    return null;
+  }
+  if (!tool || tool.status === "needs-model" || (tool.status === "needs-input" && tool.noModelAnswer !== true) || !String(tool.response || "").trim()) return null;
+  const requiresConfirmation = tool.requiresConfirmation === true || tool.status === "confirmation_required" || tool.status === "confirmation-required";
+  const blocked = nativeResult.metadata?.openAiNativeAgent || {};
+  return ensureSpeakableAgentResult({
+    intent: "openai_native.nexus_general_conversation",
+    response: sanitizeNexusSpokenResponseText(tool.response),
+    status: requiresConfirmation ? "needs-confirmation" : "completed",
+    metadata: {
+      redirectSection: "agent",
+      openAiNativeAgent: { active: true, provider: "openai", model: blocked.model, modelUnavailable: true, answeredWithoutModel: true, errorType: blocked.errorType, httpStatus: blocked.httpStatus,
+        toolsCalled: ["nexus_general_conversation"], toolResultStatuses: [tool.status || "unknown"], requestAttempted: true, noSecretValuesReturned: true },
+      noExecutionAuthorized: true, providerHandoffAuthorized: false, fakeCitationsAllowed: false,
+      confirmationRequired: requiresConfirmation, executionDeferred: requiresConfirmation
+    }
+  }, "openai_native.conversation");
 }
 
 function deepVoiceIntent(lower) {
@@ -29441,10 +29557,12 @@ function urgentHealthSafetyResponse(db, user, text = "") {
   const lower = normalizeSpeechForIntent(withoutNegatedSymptoms(text));
   const vulnerablePerson = /\b(baby|child|kid|infant|mother|father|grandma|grandmother|elder|person|patient|my child|my baby)\b/.test(lower);
   const babyOrChildHealth = /\b(baby|child|kid|infant|my child|my baby)\b/.test(lower) && /\b(sick|hot|fever|weak|pain|vomit|cough|hurt|help|no english|no doctor)\b/.test(lower);
-  const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|blood|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower);
+  const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower) || spokenRequests.bloodMeansDanger(lower); // phrase sweep: "blood pressure fine, baby moving" is a reading, not bleeding
   const healthNeed = /\b(sick|hurt|pain|injury|doctor|clinic|medicine|health|help|fever|hot)\b/.test(lower);
   // Someone who collapsed, fainted or cannot be woken is an emergency whoever it is ("an elderly man collapsed in the heat").
-  const collapsed = /\b(collapsed|collapse|fainted|passed out|unresponsive|not responding|cannot be woken|cant be woken|(?:will not|wont|cannot|cant) stop (?:the )?bleeding|bleeding (?:a lot|badly|heavily|too much)|bleeding (?:will not|wont|does not|doesnt) stop)\b/.test(lower);
+  const collapsed = /\b(collapsed|collapse|fainted|passed out|unresponsive|not responding|cannot be woken|cant be woken|(?:will not|wont|cannot|cant) stop (?:the )?bleeding|bleeding (?:a lot|badly|heavily|too much)|bleeding (?:will not|wont|does not|doesnt) stop)\b/.test(lower)
+    // "She has heavy bleeding" (a danger sign on the capabilities list) matched none of the above (phrase sweep); an animal is not given a person's emergency script
+    || (spokenRequests.isHeavyBleeding(lower) && !/\b(cow|cows|goat|goats|sheep|dog|cat|hen|hens|chicken|chickens|calf|pig|donkey|animal|ng ombe|mbuzi|kondoo)\b/.test(lower));
   if (!(babyOrChildHealth || collapsed || (dangerSign && (vulnerablePerson || healthNeed)))) return null;
   if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
   db.profile.agentMemory.activeModule = "Healthcare";
@@ -32410,6 +32528,8 @@ function utilityAssistantKind(text, lower) {
   if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) {
     // "An elderly man collapsed in the heat" is a person in danger, not a weather question: the word heat must not send it to the forecast lookup.
     if (looksLikeHealthReport(raw) && !/\b(weather|forecast|temperature|temp|rain)\b/.test(raw)) return "";
+    // Found by the phrase sweep: "Visit Mary: temperature 38.5, cough" (a body temperature) was answered with "Which city or country should I check for weather?".
+    if (spokenRequests.isBodyTemperatureReport(raw)) return "";
     return "weather";
   }
   if (spotifyMusicControlIntent(text) || musicAssistantIntent(text)) return "music";
@@ -33244,7 +33364,8 @@ function extractWeatherLocationText(text = "") {
         .trim();
     }
   }
-  return "";
+  // Found by the phrase sweep: "Hali ya hewa Kisumu ikoje?" names a place, but only the English lead-ins were looked for.
+  return spokenRequests.swahiliWeatherLocation(compact);
 }
 
 function locationTextFromAuthorizedContext(location = null) {
@@ -35056,7 +35177,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   // And the care and safety answers the planner gives first (see careSafetyReply above).
-  const careSafe = await careSafetyReply(text, user);
+  const careSafe = await careSafetyReply(text, user, options.language);
   if (careSafe) {
     // A safety answer ends whatever was waiting for a "yes": the next "yes" must not complete a course or a call that was staged for something else.
     if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
@@ -38075,7 +38196,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     inputMode,
     sessionStartedAt: body.sessionStartedAt || null
   });
-  let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, ensureSpeakableAgentResult(rawResult), command), command);
+  let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, ensureSpeakableAgentResult(rawResult), command, { language: commandLanguage }), command);
   result = await translateAgentCommandResult(db, user, result, { targetLanguage: commandLanguage });
   result = ensureSpeakableAgentResult(result);
   const preliminaryRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
@@ -53060,7 +53181,7 @@ async function api(req, res, url) {
     const phoneLanguage = canonicalVoiceLanguage(session.language || phoneUser.language || "en");
     let result;
     try {
-      const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, {
+      const phoneCommandBody = {
         command,
         confirm: false,
         conversational: true,
@@ -53070,18 +53191,11 @@ async function api(req, res, url) {
         targetLanguage: phoneLanguage,
         sessionStartedAt: session.createdAt,
         note: "Phone call voice assistant command"
-      });
-      result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, {
-        command,
-        confirm: false,
-        conversational: true,
-        inputMode: "phone",
-        outputMode: "voice",
-        language: phoneLanguage,
-        targetLanguage: phoneLanguage,
-        sessionStartedAt: session.createdAt,
-        note: "Phone call voice assistant command"
-      })).result;
+      };
+      let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, phoneCommandBody);
+      // While the AI provider is down, requests that need no model are still answered (see answerWithoutModelWhileModelIsDown).
+      openAiNativeResult = await answerWithoutModelWhileModelIsDown(db, phoneUser, openAiNativeResult, phoneCommandBody) || openAiNativeResult;
+      result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, phoneCommandBody)).result;
     } catch (error) {
       // Confirmed by the same audit: an exception anywhere in either
       // dispatcher used to bubble to the global handler, which replies with
@@ -58586,11 +58700,12 @@ async function api(req, res, url) {
       route: "/api/agent/command",
       sourceFunction: "api.agent.command"
     });
-    const openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, user, {
+    let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, user, {
       ...body,
       correlationId,
       inputMode: body.inputMode || "api"
     });
+    openAiNativeResult = await answerWithoutModelWhileModelIsDown(db, user, openAiNativeResult, { ...body, correlationId, inputMode: body.inputMode || "api" }) || openAiNativeResult;
     if (openAiNativeResult) {
       openAiNativeResult.metadata = {
         ...(openAiNativeResult.metadata || {}),

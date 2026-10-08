@@ -5,6 +5,7 @@
 //  - the planner's tool-less answer call: "STUBMODEL-REPLY"
 //  - the older route's AI agent call (the request carries `tools`): a stand-in model that calls the tool the server itself suggested (toolHint) with the person's words, then answers with exactly
 //    that tool's own "response" text
+//  - STUB_MODEL_FAIL=1 (or the file named by STUB_FAIL_FILE existing) makes EVERY OpenAI call fail like a provider outage (HTTP 503), to show what still works with no model at all
 //  - every OTHER call (translation and so on) fails like an unreachable provider, unless STUB_OTHER=reply
 // Any request to a host other than OpenAI or this machine is logged as kind "network" (and sent on), so a run can prove that nothing reached, say, a messaging provider.
 const fs = require("node:fs");
@@ -21,6 +22,11 @@ globalThis.fetch = async function (input, init) {
     return realFetch.apply(this, arguments);
   }
   let body = {}; try { body = JSON.parse(init?.body || "{}"); } catch { /* not JSON */ }
+  // Simulated provider outage: STUB_MODEL_FAIL=1, or the file named by STUB_FAIL_FILE existing (so a run can switch the outage on and off without a restart). Harness only.
+  if (process.env.STUB_MODEL_FAIL === "1" || (process.env.STUB_FAIL_FILE && fs.existsSync(process.env.STUB_FAIL_FILE))) {
+    if (log) fs.appendFileSync(log, `${JSON.stringify({ t: new Date().toISOString(), url, kind: "outage" })}\n`);
+    return json({ error: { message: "stand-in model: simulated provider outage", code: "stand_in_outage" } }, 503);
+  }
   const instructions = String(body.instructions || "");
   const structured = Boolean(body.text?.format?.schema) && body.text.format.name === "nexus_task_plan";
   const respond = !structured && /^You are Kyro, the assistant inside AgriNexus/.test(instructions);

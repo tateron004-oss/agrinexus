@@ -1,6 +1,7 @@
 "use strict";
 
 const { t, both, languageOf } = require("../i18n/index.js");
+const { replyLanguage } = require("../i18n/reply-language.js");
 // What people say when they may hurt themselves or someone else, or are being hurt: ONE list shared with the typed-chat, phone and voice readers (public/kyro-crisis-phrases.js).
 const crisisPhrases = require("../../public/kyro-crisis-phrases.js");
 // Danger signs in pregnancy, birth, a baby or a child, the hard things after a birth, and a partner or someone else hurting a woman or child (public/kyro-care-phrases.js).
@@ -273,7 +274,7 @@ const readSafe = text => safeLanguage(text) !== null;
 async function safeTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), outcome = null, locale = "en" }) {
   const spoken = safeLanguage(text);
   if (!spoken || !circle?.latestAlert) return null;
-  const language = spoken === "sw" ? "sw" : languageOf(locale);
+  const language = replyLanguage(text, { detected: spoken, requested: locale });
   const alert = await circle.latestAlert({ tenantId, userId, now }).catch(() => null);
   if (!alert || alert.ended) return null;
   await circle.updateAlert({ tenantId, userId, memoryId: alert.memoryId, change: content => ({ ...content, ended: true, endedAt: now.toISOString() }) }).catch(() => false);
@@ -300,7 +301,8 @@ function emergencyNumberForCountry(country = "") {
 async function safetyTurn({ text, circle, push, tenantId, userId, userName, now = new Date(), recordAlert = null, outcome = null, locale = "en", country = "" }) {
   const found = readSafetyDetailed(text);
   if (!found) return null;
-  const kind = found.kind; const language = found.language === "sw" ? "sw" : languageOf(locale);
+  // Found against the real runtime: English words in a Kiswahili account were answered in Kiswahili because "found.language is not sw" fell back to the account language. The words win (nexus/i18n/reply-language.js).
+  const kind = found.kind; const language = replyLanguage(text, { detected: found.language, requested: locale });
   // When the person's country is known and the platform has its number, the reply names it (never the U.S. number); otherwise it says "your local emergency number".
   const known = emergencyNumberForCountry(country);
   const number = known ? t(language, "safety.numberIn", { numbers: known.numbers, country: known.country }) : t(language, "safety.number");
