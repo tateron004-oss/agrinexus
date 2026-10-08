@@ -118,7 +118,7 @@ test("Kiswahili: a sale takes goods out of stock, only from one matching record,
   ]);
   assert.deepEqual(failures, []);
   const quiet = person();
-  for (const text of ["nina njaa", "nina deni", "nina swali", "nina ekari 3 za mahindi", "nina mkopo wa elfu ishirini bado", "nina kazi nyingi"]) assert.equal(await quiet.say(text), null, text);
+  for (const text of ["nina njaa", "nina deni", "nina swali", "nina ekari 3 za mahindi", "nina mkopo mkubwa", "nina kazi nyingi"]) assert.equal(await quiet.say(text), null, text);
   assert.equal(quiet.stock().length, 0);
   const dot = person();
   assert.match(await dot.say("nina kilo 2.500 za sukari"), /Sina uhakika na "kilo 2.500 za sukari"/);

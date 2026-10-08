@@ -139,7 +139,7 @@ async function handle(ctx) {
 // ---- what is owed, and changing or deleting an entry ----
 const NOT_A_NAME = /^(?:i|we|you|he|she|they|it|who|someone|somebody|nobody|everyone|the|my|our|your|this|that|please)$/i;
 const bareAmount = text => { const m = /^\s*(\d[\d,]*(?:\.\d+)?)\s*$/.exec(text); return m ? { amount: round(Number(m[1].replace(/,/g, ""))), currency: "" } : null; };
-const describeRecord = record => `${record.data.type === "income" ? "income" : "spending"} of ${formatMoney(record.data.amount, record.data.currency)} (${record.data.note || record.data.item || record.data.category})`;
+const describeRecord = record => `${record.data.type === "income" ? "income" : record.data.type === "saving" ? (record.data.kind === "payout" ? "chama payout" : "chama contribution") : record.data.loan ? "loan" : "spending"} of ${formatMoney(record.data.amount, record.data.currency)} (${record.data.note || record.data.item || record.data.category})`;
 
 async function ledgerFixes(ctx, t, lower) {
   const scope = { tenantId: ctx.tenantId, userId: ctx.userId };
@@ -447,7 +447,7 @@ async function handleMoney(ctx) {
     const rows = (await recordsOf()).filter(record => inPeriod(record, period));
     if (!rows.length) return `I have no money recorded for ${period.label.replace(/^in /, "")}. Say "spent 5000 on fertilizer" or "sold 200 kg of maize for 9000".`;
     const profit = profitOf(rows);
-    return `${period.label[0].toUpperCase()}${period.label.slice(1)}: income ${showTotals(sum(rows, "income"))}, spending ${showTotals(sum(rows, "expense"))}, so ${Object.values(profit).every(value => value >= 0) ? "a profit of" : "a loss of"} ${Object.entries(profit).map(([currency, value]) => formatMoney(Math.abs(value), currency)).join(" and ")}.`;
+    return `${period.label[0].toUpperCase()}${period.label.slice(1)}: income ${showTotals(sum(rows, "income"))}, spending ${showTotals(sum(rows, "expense"))}, so ${Object.values(profit).every(value => value >= 0) ? "a profit of" : "a loss of"} ${Object.entries(profit).map(([currency, value]) => formatMoney(Math.abs(value), currency)).join(" and ") || "0"}.`;
   }
   if (/^(?:show|what(?:'s| is)) (?:my )?profit by (?:field|plot)(?: (?:this|last) (?:year|season|month))?$/.test(lower)) {
     const period = periodOf(lower, ctx.today, "this year");

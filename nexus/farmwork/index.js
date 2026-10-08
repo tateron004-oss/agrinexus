@@ -19,6 +19,8 @@ const board = require("./board.js");
 const library = require("./library.js");
 const reports = require("./reports.js");
 const shopStock = require("./shop-stock.js");
+const shopCredit = require("./shop-credit.js");
+const shopSummary = require("./shop-summary.js");
 const swahili = require("./swahili.js");
 const swahiliLedger = require("./swahili-ledger.js");
 const swahiliLand = require("./swahili-land.js");
@@ -32,7 +34,7 @@ const undo = require("./books-undo.js");
 // A tool answers only when the words are plainly for it (returns null otherwise), so everything else carries on to normal planning.
 // A tool may answer with a string (a conversational reply) or { plan } (a governed step, such as a printable report).
 // books.js is the English bookkeeping front door ("sold maize 4500", "John owes me 800", "what did I earn today"): it turns what people really say into the careful phrasing the tools below read.
-const MODULES = [shopStock, swahiliLedger, swahili, swahiliLand, swahiliPeople, swahiliBusiness, undo, books, herd, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
+const MODULES = [shopCredit, shopStock, shopSummary, swahiliLedger, swahili, swahiliLand, swahiliPeople, swahiliBusiness, undo, books, herd, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
 const { YES_SW, NO_SW } = require("../i18n/swahili-words.js");
 const TEMPLATES = Object.assign({}, ...MODULES.map(mod => mod.templates || {}));
 const CONFIRMS = Object.assign({

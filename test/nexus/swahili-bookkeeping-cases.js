@@ -88,8 +88,9 @@ const CASES = [
   ["nimetumia 300 kwa nauli ya kuleta mzigo", { rows: [exp(300, { category: "transport" })] }],
   ["nimelipa kodi elfu tatu", { rows: [exp(3000, { category: "rent" })] }],
   ["nimelipa ada ya shule elfu kumi", { rows: [exp(10000, { category: "household" })], reply: /hazihesabiwi kwenye faida ya shamba/ }],
-  ["nimechangia chama shilingi mia tano", { rows: [exp(500, { category: "household", currency: "shillings" })], reply: /nyumbani/ }],
-  ["nimelipa mchango wa chama elfu mbili", { rows: [exp(2000, { category: "household" })] }],
+  // a chama contribution is savings (see shop-credit.js): kept as a saving, never a cost, so it never lowers the profit
+  ["nimechangia chama shilingi mia tano", { rows: [{ type: "saving", category: "chama", kind: "contribution", amount: 500, currency: "shillings" }], reply: /mchango wa chama wa shilingi 500.*si gharama/ }],
+  ["nimelipa mchango wa chama elfu mbili", { rows: [{ type: "saving", category: "chama", amount: 2000 }] }],
   ["nimelipa kibarua 500", { rows: [exp(500, { category: "labour" })], reply: /umemlipa kibarua 500/ }],
   ["kibarua elfu moja", { rows: [exp(1000, { category: "labour" })] }],
   ["nimemlipa kibarua elfu mbili", { rows: [exp(2000, { category: "labour" })] }],

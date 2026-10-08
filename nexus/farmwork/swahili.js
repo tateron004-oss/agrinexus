@@ -28,7 +28,7 @@ const SW = {
   profitNone: ({ period }) => `Sina pesa yoyote iliyorekodiwa ${period}. Sema "nimetumia 5000 kwa mbolea" au "nimeuza kilo 200 za mahindi kwa 9000".`,
   profit: ({ period, income, spent, gain, amount }) => `${period[0].toUpperCase()}${period.slice(1)}: mapato ${income}, matumizi ${spent}, kwa hivyo ${gain ? "faida ya" : "hasara ya"} ${amount}.`,
   latest: ({ lines }) => `Za hivi karibuni: ${lines}.`, latestNone: "Bado huna rekodi za pesa.",
-  undoNone: "Hakuna cha kufuta.", undone: ({ what, amount, income }) => `Nimeondoa: ${income ? "mapato" : "matumizi"} ya ${amount} (${what}). Mabadiliko ya ghala hayajarudishwa; niambie ukitaka yasahihishwe.`,
+  undoNone: "Hakuna cha kufuta.", undone: ({ what, amount, income, kind }) => `Nimeondoa: ${kind === "saving" ? "akiba" : kind === "loan" ? "mkopo" : income ? "mapato" : "matumizi"} ya ${amount} (${what}). Mabadiliko ya ghala hayajarudishwa; niambie ukitaka yasahihishwe.`,
   stockUsed: ({ taken, name, left }) => `Nimerekodi: umetumia ${taken} za ${name}; zimebaki ${left}.`,
   stockUsedNone: ({ name }) => `Sioni ${name} kwenye ghala lako. Sema "ongeza ${name} kwenye ghala" kwanza.`,
   stockUsedTooMuch: ({ have, name, diff }) => `Una ${have} tu za ${name}, kwa hivyo sijabadilisha chochote. Kama hesabu si sahihi, niambie "ongeza ${diff} za ${name} kwenye ghala" kwanza.`,
@@ -317,7 +317,7 @@ async function handleSwahili(ctx) {
     const last = rows.find(record => /matumizi|manunuzi/.test(lower) ? record.data.type === "expense" : /mauzo|mapato/.test(lower) ? record.data.type === "income" : true);
     if (!last) return SW.undoNone;
     await ctx.store.remove({ ...scope, memoryId: last.memoryId });
-    return SW.undone({ what: describeRecord(last), amount: moneyShown(last.data.amount, last.data.currency), income: last.data.type === "income" });
+    return SW.undone({ what: describeRecord(last), amount: moneyShown(last.data.amount, last.data.currency), income: last.data.type === "income", kind: last.data.type === "saving" ? "saving" : last.data.loan ? "loan" : "" });
   }
 
   // ---- stock: "Ongeza mbolea gunia 2 kwenye ghala", "Nimetumia mbolea gunia 1", "Nina mbolea kiasi gani", "Ghala langu" ----

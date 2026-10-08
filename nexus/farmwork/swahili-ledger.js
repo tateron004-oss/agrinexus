@@ -390,7 +390,7 @@ async function handleUndoCorrect(ctx, t) {
     const last = rows.find(record => /matumizi|manunuzi/.test(kindWord) ? record.data.type === "expense" : /mauzo|mapato/.test(kindWord) ? record.data.type === "income" : true);
     if (!last) return SW.undoNone;
     await ctx.store.remove({ ...scope, memoryId: last.memoryId });
-    return SW.undone({ what: describeRecord(last), amount: moneyShown(last.data.amount, last.data.currency), income: last.data.type === "income" });
+    return SW.undone({ what: describeRecord(last), amount: moneyShown(last.data.amount, last.data.currency), income: last.data.type === "income", kind: last.data.type === "saving" ? "saving" : last.data.loan ? "loan" : "" });
   }
   // a correction of the last amount
   let said = null;
