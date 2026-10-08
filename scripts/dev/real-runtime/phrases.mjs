@@ -38,9 +38,20 @@ async function settle(u, r) {
   const text = (j.state === "render_required" ? j.render?.response || j.response : j.response) || j.clarification || j.message || "";
   return { http: r.status, reply: String(text || (r.json ? "" : r.text.slice(0, 200))), state: j.state || "" };
 }
+const orbStamps = new Map();
+const orbOnce = (u, text, lang, tool) => call("POST", "/api/voice/realtime/tool", { name: tool, correlationId: `ph-${Date.now()}-${counter++}`, arguments: { command: text, language: lang }, language: lang, timeZone: TZ }, u.cookie);
 const ROUTE = {
   async orb(u, text, lang, tool) {
-    const r = await call("POST", "/api/voice/realtime/tool", { name: tool, correlationId: `ph-${Date.now()}-${counter++}`, arguments: { command: text, language: lang }, language: lang, timeZone: TZ }, u.cookie);
+    // the tool door allows 90 calls a minute per person (server.js); stay under it, and wait out a refusal instead of judging it as an answer
+    const stamps = (orbStamps.get(u.email) || []).filter(t => Date.now() - t < 60000); orbStamps.set(u.email, stamps);
+    while (stamps.length >= 70) { await sleep(1500); while (stamps.length && Date.now() - stamps[0] >= 60000) stamps.shift(); }
+    stamps.push(Date.now());
+    let r;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      r = await orbOnce(u, text, lang, tool);
+      if (r.status !== 429) break;
+      await sleep(31000);
+    }
     return { http: r.status, reply: String(r.json?.response || r.json?.error || (r.json ? "" : r.text.slice(0, 200))), state: r.json?.status || "" };
   },
   async typed(u, text, lang) {
@@ -82,12 +93,20 @@ async function snapshot(u) {
   await q("select 'doc:'||document_type||':'||state k, count(*)::int n from nexus_documents where tenant_id=$1 and owner_id=$2 group by 1", T);
   await q("select 'artifact:'||kind k, count(*)::int n from nexus_artifacts where tenant_id=$1 and owner_id=$2 group by 1", T);
   await q("select 'consent:'||scope||':'||state k, count(*)::int n from nexus_consents where tenant_id=$1 and subject_id::text=$2::text group by 1", T);
+  // a row changed in place (for example "stock of flour is low" edits the stock row): same id, different content
+  out.rows = new Map();
+  const r = async (label, text) => { try { for (const row of await sql(text, T)) out.rows.set(`${label}:${row.id}`, { h: row.h, k: `${label}:${row.k || ""}` }); } catch { /* none */ } };
+  await r("mem", "select memory_id id, md5(content::text||coalesce(deleted_at::text,'')) h, purpose||':'||coalesce(content->>'collection', content->>'kind', content->>'list','') k from nexus_memory_items where tenant_id=$1 and principal_id=$2");
+  await r("notif", "select notification_id id, md5(content::text||state||coalesce(scheduled_at::text,'')) h, '' k from nexus_notifications where tenant_id=$1 and user_id=$2");
+  await r("sched", "select schedule_id id, md5(payload::text||state||coalesce(next_run_at::text,'')) h, job_type k from nexus_schedules where tenant_id=$1 and owner_id=$2");
+  await r("rec", "select record_id id, md5(data::text||state||version::text) h, workspace_id||'/'||record_type k from nexus_records where tenant_id=$1 and owner_id=$2");
   try { out.legacy = collectArrays((await sql("select state from agrinexus_app_state where id='default'"))[0].state, "", new Map()); } catch { /* none */ }
   return out;
 }
 function delta(before, after) {
   const d = {};
   for (const k of new Set([...Object.keys(before.db), ...Object.keys(after.db)])) { const n = (after.db[k] || 0) - (before.db[k] || 0); if (n) d[k] = n; }
+  for (const [id, row] of after.rows || []) { const was = before.rows?.get(id); if (was && was.h !== row.h) d[`upd:${row.k}`] = (d[`upd:${row.k}`] || 0) + 1; }
   for (const [p, set] of after.legacy) {
     if (p.endsWith("[]")) continue;
     const had = before.legacy.get(p) || new Set(); const gained = [...set].filter(x => !had.has(x));
@@ -185,8 +204,9 @@ async function runPhrase(item, route, u, labelSuffix = "") {
   if (item.ask || item.steps.length) run.deltaAfterFirst = delta(before, await snapshot(u));
   let lastReply = r0.reply;
   for (const step of item.steps) { const r = await say(step); lastReply = r.reply; }
-  // left waiting for an answer: say no so the next phrase starts clean
-  if (ASK.test(lastReply) && /yes/i.test(lastReply) && !(item.steps.length && /^(no|hapana)/i.test(item.steps[item.steps.length - 1]))) await say(item.lang === "sw" ? "hapana" : "no", true);
+  // left waiting for an answer: say no (or never mind, for a question) so the next phrase starts clean
+  if (/\?\s*$/.test(lastReply) && !ASK.test(lastReply)) await say(item.lang === "sw" ? "usijali" : "never mind", true);
+  else if (ASK.test(lastReply) && /yes/i.test(lastReply) && !(item.steps.length && /^(no|hapana)/i.test(item.steps[item.steps.length - 1]))) await say(item.lang === "sw" ? "hapana" : "no", true);
   run.delta = delta(before, await snapshot(u));
   run.pgerr = logSince(log0);
   Object.assign(run, judge(item, run));

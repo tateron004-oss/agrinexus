@@ -99,7 +99,7 @@ P(G5, "mo-bought", "Bought stock 12000", { save: /mem:farm_records:money:live/, 
 P(G5, "mo-spent", "Spent 5000 on fertilizer", { save: /mem:farm_records:money:live/, reply: /5,?000/ });
 P(G5, "mo-grand", "Sold eggs for two grand", { save: /mem:farm_records:money:live/, reply: /2,?000/ });
 P(G5, "mo-2k", "Sold beans 2k", { save: /mem:farm_records:money:live/, reply: /2,?000/ });
-P(G5, "mo-unclear", "Sold some maize", { none: true, steps: ["3000"], note: "unclear amount: asks, then just the number", saveAfterSteps: /mem:farm_records:money:live/ });
+P(G5, "mo-unclear", "Sold some maize", { steps: ["3000"], note: "unclear amount: asks, then just the number", reply: /3,?000/, save: /mem:farm_records:money:live/ });
 S(G5, "mo-sold-sw", "Nimeuza mahindi elfu nne", { save: /mem:farm_records:money:live/, reply: /4,?000/ });
 S(G5, "mo-spent-sw", "Nimetumia 5000 kwa mbolea", { save: /mem:farm_records:money:live/, reply: /5,?000/ });
 S(G5, "mo-sugar-sw", "Nimeuza sukari kilo mbili 400", { save: /mem:farm_records:money:live/, reply: /400/ });
@@ -108,6 +108,7 @@ P(G5, "cr-paid", "John paid 500", { change: /mem:farm_records:money/, reply: /50
 P(G5, "cr-who", "Who owes me?", { none: true, reply: /John/ });
 S(G5, "cr-sold-sw", "Nimeuza unga 600", { setup: true });
 S(G5, "cr-credit-sw", "Kwa mkopo", { change: /mem:farm_records:money/, note: "follow-up: the sale just made was on credit" });
+S(G5, "cr-credit-sw-2", "Nimeuza unga 700 kwa mkopo kwa Mary", { save: /mem:farm_records:money:live/, reply: /Mary/ });
 P(G5, "st-have", "I have 20 bags of flour", { save: /mem:farm_records:stock:live/, reply: /flour/i });
 P(G5, "st-low-q", "What is running low?", { none: true });
 P(G5, "st-low", "Stock of flour is low", { change: /mem:farm_records:stock|legacy:/ });
