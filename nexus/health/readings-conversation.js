@@ -7,7 +7,8 @@
 // What this does NOT do: it never decides what a number means. The limits and the guidance wording stay in server/providers/bloodPressure.js and bloodGlucose.js, and the
 // replies after a save are those same texts, unchanged. Anything impossible or unclear is asked about, never saved, and a reply never says "saved" unless the store holds it.
 //
-// Used by the voice tools (nexus_general_conversation, nexus_health_preparation) and by the older command route, all through healthReadingsTurn() below.
+// Used by the voice tools (nexus_general_conversation, nexus_health_preparation) and by the older command route, all through healthReadingsTurn() below. Readings the AI planner saved live in the
+// Postgres record store instead of db.profile; health/store-readings.js lays them over this conversation for one turn so they are shown, deleted and corrected by this same code.
 // The Kiswahili here is a first draft and must be checked by a fluent speaker; the wording of anything new about medicines or sharing must be checked by a clinician.
 
 const crypto = require("node:crypto");
@@ -402,6 +403,19 @@ function countsText(entries, lang) {
 
 // ---------------------------------------------------------------- the turn
 
+// The language a sentence is in: Kiswahili when it has Kiswahili words, or when the caller says Kiswahili and the sentence has none of the English ones.
+function sentenceLanguage(text, requested) {
+  const hasEnglish = /\b(?:my|the|is|was|blood|sugar|pressure|delete|show|please|what|who|share|reading|readings|yes|no)\b/i.test(text);
+  return isSwahili(text) ? "sw" : (requested === "sw" && !hasEnglish ? "sw" : "en");
+}
+
+// What Kyro is waiting for from this person right now, if anything: { kind, lang } or null. For callers that must know whether a yes or a no answers a readings question.
+function peekPending(db, user, now = new Date()) {
+  if (!db || !user) return null;
+  const { pending } = readState(scopeHealthDb(db, ownerOf(user)), now instanceof Date ? now : new Date());
+  return pending ? { kind: pending.kind, lang: pending.lang || "en" } : null;
+}
+
 /**
  * One turn of the health-readings conversation.
  * @param {object} options { db, user, text, language, confirmedByCaller, canWrite, now }
@@ -420,13 +434,12 @@ function healthReadingsTurn(options = {}) {
   }
   const healthDb = scopeHealthDb(db, ownerOf(user));
   const state = readState(healthDb, now);
-  const hasEnglish = /\b(?:my|the|is|was|blood|sugar|pressure|delete|show|please|what|who|share|reading|readings|yes|no)\b/i.test(text);
   // The language of the answer: the one the question was asked in when this is a yes or a no; otherwise the one the sentence is in.
   const isAnswer = Boolean(state.pending) && (isYes(text) || isNo(text) || isDeleteConfirmed(text));
-  const lang = isAnswer ? (state.pending.lang || "en") : isSwahili(text) ? "sw" : (options.language === "sw" && !hasEnglish ? "sw" : "en");
+  const lang = isAnswer ? (state.pending.lang || "en") : sentenceLanguage(text, options.language);
   const S = say(lang);
   const canWrite = options.canWrite !== false;
-  const out = (response, extra = {}) => ({ response, status: "completed", saved: false, wrote: false, requiresConfirmation: false, ...extra });
+  const out = (response, extra = {}) => ({ response, status: "completed", saved: false, wrote: false, requiresConfirmation: false, lang, ...extra });
   const typeOfPending = pending => pending?.payload?.reading?.vital || pending?.payload?.target?.type || pending?.payload?.type || null;
 
   // ---- an answer to the question Kyro just asked
@@ -603,4 +616,4 @@ function changeOne(healthDb, target, reading) {
   return String(after.value) === String(reading.value);
 }
 
-module.exports = Object.freeze({ healthReadingsTurn, entriesOf, STORE_KEY, PENDING_MS, CONTEXT_MS, check, readBack, dateText });
+module.exports = Object.freeze({ healthReadingsTurn, entriesOf, peekPending, sentenceLanguage, ownerOf, STORE_KEY, CHRONIC, RPM, PENDING_MS, CONTEXT_MS, check, readBack, dateText });

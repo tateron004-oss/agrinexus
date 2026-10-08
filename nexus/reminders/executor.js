@@ -19,7 +19,7 @@ function createReminderScheduleExecutor({ notifications }) {
     } else {
       // A time that is unclear (a bare "at 6"), contradicts itself, or is missing is never turned into a guess: nothing is scheduled, and the question to ask is the error.
       const timing = resolveReminderTime(rawText, { timeZone: context.timeZone });
-      if (timing.status !== "ok") throw Object.assign(new Error(timing.ask?.en || "I need to know when to remind you. Nothing was set."), { code: "reminder_time_unclear", status: 422 });
+      if (timing.status !== "ok") throw Object.assign(new Error((input?.language === "sw" || timing.language === "sw" ? timing.ask?.sw : timing.ask?.en) || timing.ask?.en || "I need to know when to remind you. Nothing was set."), { code: "reminder_time_unclear", status: 422 });
       scheduledAt = timing.scheduledAt;
       resolvedTime = timing.readback;
     }

@@ -106,13 +106,33 @@ function looksLikeHealthReport(text) {
   const lower = String(text || "").toLowerCase();
   return HEALTH_REPORT_WORDS.test(lower) || careSafetyApplies(text);
 }
-const { healthReadingsTurn } = require("./nexus/health/readings-conversation.js");
+const { mergedHealthReadingsTurn } = require("./nexus/health/store-readings.js");
 // Health readings said or typed (blood pressure, blood sugar, weight, pulse, temperature, oxygen), and what people ask about them (show, delete, correct, who can see, share with a nurse), plus the
 // medicine questions around them. Kyro reads a reading back and saves it only after a yes. Care and safety wording and the content guards still come first, so nothing here answers those.
 // Returns null when the sentence is not about health readings.
-function healthReadingsReply(db, user, text, options = {}) {
+// Readings the AI planner saved live in the Postgres record store, not in db.profile; they are shown, deleted and corrected together with the others (see nexus/health/store-readings.js). No store at all
+// (no database) -> null, and everything is exactly as it was. A store that is configured but cannot be reached -> the turn says plainly that readings could not be read and nothing was changed.
+let healthReadingsStoreDownUntil = 0;
+async function healthReadingsStoreFor(user) {
+  if (!user || user.guest === true) return null;
+  const memory = process.env.NEXUS_TEST_READINGS_STORE === "memory" && process.env.NODE_ENV !== "production";
+  if (!memory && !process.env.DATABASE_URL) return null;
+  if (Date.now() < healthReadingsStoreDownUntil) throw new Error("health readings store is unreachable");
+  let timer = null;
+  try {
+    const authUser = await authoritativeRuntimeUser(user);
+    return await Promise.race([
+      authoritativeNexusRuntime.healthReadingsStoreFor({ user: authUser }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("health readings store timed out")), 4000); })
+    ]);
+  } catch (error) {
+    healthReadingsStoreDownUntil = Date.now() + 10000;
+    throw error;
+  } finally { if (timer) clearTimeout(timer); }
+}
+async function healthReadingsReply(db, user, text, options = {}) {
   if (!text || contentGuardReply(text) || careSafetyApplies(text)) return null;
-  const turn = healthReadingsTurn({ db, user, text, language: options.language, confirmedByCaller: options.confirmedByCaller === true, canWrite: !userIsRestrictedFrom(user, "health-record-write") });
+  const turn = await mergedHealthReadingsTurn({ db, user, text, language: options.language, confirmedByCaller: options.confirmedByCaller === true, canWrite: !userIsRestrictedFrom(user, "health-record-write"), storeFor: healthReadingsStoreFor });
   // While Kyro waits for a yes or a no about a reading, an older question that was left open must not also be answered by that yes.
   if (turn?.requiresConfirmation && ownPendingAction(db, user)) db.profile.agentPendingAction = null;
   return turn;
@@ -21998,7 +22018,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // Health readings said in plain words ("my blood pressure is 150 over 95", "sukari yangu 7.5", "delete my last reading", "show my BP readings", "who can see my health information"). Kyro reads the reading
   // back and asks before saving; a yes saves it. The voice model's own confirmation flag (confirmation: true) means the person already said yes, so that one is saved straight away, as before.
   if (toolName === "nexus_general_conversation" || toolName === "nexus_health_preparation") {
-    const healthTurn = healthReadingsReply(db, user, command, { language, confirmedByCaller: toolName === "nexus_health_preparation" && (args.confirmed === true || args.confirmation === true) });
+    const healthTurn = await healthReadingsReply(db, user, command, { language, confirmedByCaller: toolName === "nexus_health_preparation" && (args.confirmed === true || args.confirmation === true) });
     if (healthTurn) {
       const status = healthTurn.requiresConfirmation ? "confirmation-required" : healthTurn.saved ? "health-reading-saved" : healthTurn.wrote ? "health-records-changed" : "health-preparation-ready";
       const receipt = nexusOpenAiNativeToolReceipt(db, toolName, command, status,
@@ -37449,7 +37469,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   }
   // Health readings said or typed ("my blood pressure is 150 over 95", "show my BP readings", "delete my last reading", "who can see my health information") and the medicine questions around them: Kyro
   // reads a reading back and saves it only after a yes (see nexus/health/readings-conversation.js). Like the crisis answer above, it is not written into the general command history.
-  const healthTurn = command ? healthReadingsReply(db, user, command, { language: commandLanguage }) : null;
+  const healthTurn = command ? await healthReadingsReply(db, user, command, { language: commandLanguage }) : null;
   if (healthTurn) {
     return {
       result: {

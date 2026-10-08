@@ -2,6 +2,7 @@
 
 const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("./time-phrase.js");
 const { scanTime, SW_PERIODS } = require("./time-grammar.js");
+const { normaliseSwahiliDates } = require("./sw-dates.js");
 
 // What the older command route and the phone line understand about reminders: reading the request (set, list, change, cancel one, cancel all), finding the reminder meant,
 // answering a "what time?" question, and not saving the same reminder twice. Pure functions over plain reminder records, so they are tested without a server.
@@ -166,7 +167,7 @@ const isFresh = (pending, now = Date.now()) => Boolean(pending) && now - Date.pa
 
 // What was asked and why: { kind, task, original, ... } -> kept until the person answers (or ten minutes pass).
 function pendingFromAsk({ ask, task, original, correlationId = "", now = new Date() }) {
-  return { kind: ask.kind, task, original: clean(original), clockSpan: ask.clockSpan || null, hour12: ask.hour12 || null, minute: ask.minute || 0, swahili: Boolean(ask.swahili), amount: ask.amount ?? null, askedAt: now.toISOString(), correlationId };
+  return { kind: ask.kind, task, original: clean(normaliseSwahiliDates(original)), clockSpan: ask.clockSpan || null, hour12: ask.hour12 || null, minute: ask.minute || 0, swahili: Boolean(ask.swahili), amount: ask.amount ?? null, askedAt: now.toISOString(), correlationId };
 }
 
 // -> { status: "ok", timing, task } | { status: "ask", ask } | { status: "other" } (not an answer: carry on with it as a new request)
