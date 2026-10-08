@@ -8,13 +8,18 @@ const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
+// The YouTube search route now lives in server/media/ (routes + the YouTube provider); server.js only calls it.
+const mediaRoutes = fs.readFileSync(path.join(root, "server", "media", "routes.js"), "utf8");
+const youtubeProvider = fs.readFileSync(path.join(root, "server", "media", "providers", "youtube.js"), "utf8");
 
 assert.doesNotThrow(() => new Script(app, { filename: "public/app.js" }),
   "The complete protected browser bundle must parse before release");
 
-assert.match(server, /nexusMusicMediaSourceProvider\.getMusicMediaSourceResultAsync/, "YouTube search must use the server-side provider so the API key never enters the browser");
+assert.match(server, /mediaRoutes\.handleLegacyYoutubeSearch/, "YouTube search must use the server-side provider so the API key never enters the browser");
+assert.match(youtubeProvider, /key\.?[\s\S]*googleapis|searchParams\.set\("key"/, "The YouTube API key is only ever used server-side");
 assert.match(server, /\/api\/music\/youtube\/search/, "YouTube music search endpoint must exist");
-assert.match(server, /source\.sourceUrl.*match/, "Only a returned YouTube video ID may be embedded");
+assert.match(mediaRoutes, /candidate\.videoId/, "Only a returned YouTube video ID may be embedded");
+assert.match(youtubeProvider, /\[A-Za-z0-9_-\]\{6,\}/, "A YouTube video ID is validated before it is offered");
 const browserPlaybackBlock = app.slice(app.indexOf("const nexusYouTubePlayback"), app.indexOf("function clearNexusLocalMusicTimers"));
 assert.doesNotMatch(browserPlaybackBlock, /YOUTUBE_API_KEY/, "YouTube playback code must not receive the server-side API key");
 assert.match(app, /host: "https:\/\/www\.youtube\.com"/, "Use the verified API-owned YouTube host");
@@ -25,8 +30,8 @@ assert.match(app, /youtubePlayerCommand\("pauseVideo"\)/, "Pause voice control m
 assert.match(app, /youtubePlayerCommand\("playVideo"\)/, "Resume voice control must reach YouTube");
 assert.match(app, /playNexusYouTubeMusic\(`\$\{nexusYouTubePlayback\.query/, "Next voice control must request another selection");
 assert.match(app, /youtubePlayerCommand\("stopVideo"\)/, "Stop voice control must reach YouTube");
-assert.match(server, /excludeVideoIds/, "The server adapter must accept bounded rejected YouTube candidate IDs");
-assert.match(server, /playbackVerified: false/, "Search metadata must not claim verified playback");
+assert.match(mediaRoutes, /excludeVideoIds/, "The server adapter must accept bounded rejected YouTube candidate IDs");
+assert.match(mediaRoutes, /playbackVerified: false/, "Search metadata must not claim verified playback");
 assert.match(app, /rejectedVideoIds\.add\(String\(response\.videoId\)\)/, "A failed iframe candidate must be excluded before retry");
 assert.match(app, /creativeCommonsOnly/, "Playback recovery must include a rights-aware candidate lane");
 assert.match(app, /attemptSummary/, "Exhausted playback must retain per-candidate diagnostic evidence");
