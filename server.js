@@ -20546,6 +20546,8 @@ function openAiRealtimeInstructions(user, language = "en") {
     // at all -- only the typed/native prompt did -- so a spoken "create a
     // checklist called X" had nothing steering the model toward the real,
     // persisted lists tool over nexus_document_export/nexus_automation_reminder.
+    // Found by running the real server: the browser voice session is only given ten tools, and none of them saves a note, a list, a sale, a debt, a farm log entry or a contact. Without this sentence the model picked the nearest ten (a marketplace lookup, a weather lookup) and nothing was saved. The phone line and the typed route have the full tool set, so the rule is conditional.
+    "Your tool list in this session may be shorter than the tools named below. When you are told to call a tool you do not have (nexus_lists, nexus_automation_reminder, nexus_business_assistant, nexus_document_export, nexus_memory and similar), or the person tells you something to save or asks to read it back -- a note, a shopping list or to-do, a sale, a cost, a debt or stock, a farm log entry (milk, eggs, rain, planting, spraying), a contact, a reminder, a fact about themselves, an undo -- call nexus_everyday_records with their complete words, and say what it returns. Never say something was saved unless the tool says so.",
     "When the user asks to create, save, read, or update a checklist or to-do list (e.g. 'create a checklist called X with items A, B, C'), you must call nexus_lists. This is a real, persisted list, not a reminder or a document — never route a checklist request to nexus_automation_reminder or nexus_document_export.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
     "When the user wants to personally talk to someone via a call Kyro places for them -- \"connect me to X\", \"patch me through to X\", \"let me talk to X\", \"get me on the phone with X\" -- you must call nexus_communications with channel: \"call\". This rings the user's own phone first, then bridges in the target; Kyro does not participate in that conversation. This is different from a plain \"call X and tell them...\" request, where Kyro itself delivers the message. If the user also asks Kyro to listen, take notes, or remember the call (\"connect me to X and listen\", \"call X and take notes\"), pass mode: \"connect_and_listen\" -- Kyro will transcribe that call (with a real spoken consent disclosure to the other party, which is legally required and never skipped) so a follow-up request can use what was actually discussed. If recentCallContext is present in this turn and the user's request plainly follows up on that recent call (asking to call/message someone else about it, or referencing what was discussed), use those real details instead of asking the user to repeat them.",
@@ -21064,6 +21066,7 @@ function nexusOpenAiNativeToolSchemas() {
     tool("nexus_memory", "Inspect, create, correct, export, delete, or revoke authorized Nexus memory records through the existing persistent-memory controls.", "privacy-memory"),
     tool("nexus_automation_reminder", "Create, inspect, cancel, or prepare one-time reminders and notifications through existing Nexus reminder/automation routes. External notifications remain provider-gated. Repeating reminders are supported: every day, every weekday, named days of the week, every other day or every N days, every other week or every N weeks on a named day, a day of the month, every N hours within a window, and several times a day ('remind me every morning at 8 to check the pump', 'every other Monday at 9', 'on the 15th of every month', 'every 2 hours', 'show my repeating reminders', 'stop my repeating reminder to ...'): pass the person's own sentence through unchanged. Yearly, every few months and vague repeats are not supported and are refused plainly.", "confirmation-gated-automation"),
     tool("nexus_lists", "Create, read, or update a checklist or to-do list through Nexus's real, persisted lists capability. Use the title argument for the list's name and content for its items (one per line or comma-separated).", "local-record-write"),
+    tool("nexus_everyday_records", "Save or read the person's everyday records from their complete words: notes, shopping lists and to-dos, money records (sales, costs, debts, stock), farm log entries, contacts, reminders, facts about themselves, and undo. The orb's voice session uses this one tool for all of them; it answers exactly as the catch-all conversation tool does.", "local-record-write"),
     tool("nexus_email", "Prepare or send email only through configured authorized email providers. Drafting can occur locally; sending requires credentials, consent, confirmation, and receipts. Cannot read or check an inbox.", "high-risk-confirmation-required"),
     tool("nexus_calendar", "Search, schedule, change, or cancel calendar events only through configured authorized calendar providers. Local preparation is allowed; real calendar writes require confirmation and provider receipts.", "high-risk-confirmation-required"),
     tool("nexus_browser_computer_action", "Use browser or computer actions only through an authorized connector when no direct API exists. Never performs hidden external execution.", "high-risk-confirmation-required"),
@@ -21104,6 +21107,7 @@ function nexusOpenAiNativeStatus(env = process.env) {
     const providerEnabled = enabledByTool[name];
     const localOnly = [
       "nexus_general_conversation",
+      "nexus_everyday_records",
       "nexus_data_code_analysis",
       "nexus_memory",
       "nexus_automation_reminder",
@@ -22038,7 +22042,11 @@ function secretNotSavedReply(text, language = "en") {
   return { language: spoken, response: nexusText(spoken, "safety.secretRefused") };
 }
 
+// The tools whose spoken requests go to the planner's no-model answers first (notes, lists, money books, the farm log, contacts, reminders, remembered facts). The catch-all is the one the orb is told to use; the farm and workflow tools are the nearest ones a model reaches for when it has no better tool for "my cow gave 18 litres" or "sold 3 sacks of maize 4500", and the planner answers null for anything it cannot do itself, so they carry on as before.
+const PLANNER_BRIDGE_VOICE_TOOLS = new Set(["nexus_general_conversation", "nexus_agriculture", "nexus_workflow"]);
 async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, context = {}, realUserEmail = user?.email) {
+  // The orb's everyday-records tool is the catch-all conversation tool under a name the browser can expose (a QA rule keeps "general conversation" itself out of the browser's function tools).
+  if (toolName === "nexus_everyday_records") toolName = "nexus_general_conversation";
   // args.command is the tool-calling model's own required "command" argument
   // ("The user's plain-language Nexus request") -- confirmed live in
   // production, repeatedly, that the model paraphrases/summarizes here
@@ -22224,7 +22232,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // runtime: this tool went straight to the older pipeline, which answers those requests with "I couldn't do that one just now" and saves nothing. Health readings are left to their own route
   // above, a medical emergency to its own answer below, and anything the planner cannot answer itself (or any failure, or more than the bridge's few seconds) carries on as before.
   // (typeof guards: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names.)
-  if (toolName === "nexus_general_conversation" && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
+  if ((typeof PLANNER_BRIDGE_VOICE_TOOLS !== "undefined" ? PLANNER_BRIDGE_VOICE_TOOLS.has(toolName) : toolName === "nexus_general_conversation") && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
     const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
     const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
     if (planned) {

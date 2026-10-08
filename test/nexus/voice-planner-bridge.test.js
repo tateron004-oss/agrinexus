@@ -205,7 +205,7 @@ test("server.js: the catch-all conversation tool (the voice tool the production 
   const start = source.indexOf("async function executeNexusOpenAiNativeTool");
   const body = source.slice(start, source.indexOf("function nexusGenesisWorkspaceAction", start));
   const at = needle => { const index = body.indexOf(needle); assert.ok(index > 0, needle); return index; };
-  assert.match(body, /toolName === "nexus_general_conversation" && effectiveMentalHealthSignal\.state !== "medical_emergency"[^{]*\{\s*const plannerUser = await authoritativeRuntimeUser\(user\)/);
+  assert.match(body, /: toolName === "nexus_general_conversation"\) && effectiveMentalHealthSignal\.state !== "medical_emergency"[^{]*\{\s*const plannerUser = await authoritativeRuntimeUser\(user\)/);
   assert.match(body, /deterministicVoiceAnswer\(\{ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language \}\)/);
   assert.ok(at("buildSupportPacket") < at("deterministicVoiceAnswer("), "a crisis is answered before the bridge");
   assert.ok(at("healthReadingsReply(db, user, command") < at("deterministicVoiceAnswer("), "health readings keep their own route");
