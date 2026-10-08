@@ -1073,7 +1073,16 @@ async function run(env = process.env) {
           const youtubeVerified = receipt.audible === true &&
             receipt.evidence?.mediaProvider === "youtube" &&
             Number(playback.playerState) === 1;
-          if (!previewVerified && !youtubeVerified) {
+          // Full-length playback from the real providers (public radio, Audius, Jamendo, Internet Archive): the same strict evidence as the
+          // preview -- a real <audio> element that is playing, not muted, with audible volume and a clock that advanced at least 3 seconds.
+          const fullLengthVerified = receipt.audible === true &&
+            ["radio-browser", "audius", "jamendo", "internet-archive"].includes(receipt.evidence?.mediaProvider) &&
+            ["audio", "video"].includes(receipt.evidence?.playbackClass) &&
+            playback.schema === "nexus.media-playback-evidence.v1" &&
+            playback.playResolved === true && playback.paused === false &&
+            playback.muted === false && Number(playback.volume) > 0 &&
+            Number(playback.readyState) >= 2 && Number(playback.advancedSeconds) >= 3;
+          if (!previewVerified && !youtubeVerified && !fullLengthVerified) {
             throw new Error(`Music did not return genuine provider-owned playback evidence: ${JSON.stringify(receipt?.evidence || {})}`);
           }
         }

@@ -10792,6 +10792,8 @@ function handleLocalMusicControlCommand(command = "") {
 
 async function runMusicAssistantCommand(command = "", options = {}) {
   const turnToken = options.turnToken || null;
+  // Handled before the generic music handling below: the real player first (English and Kiswahili; see docs/MEDIA_PLAYBACK.md).
+  if (await kyroMediaCommand(command, options)) return true;
   const control = localMusicControlIntent(command);
   const localPlaybackActive = Boolean(
     nexusLocalMusicPlayback.context
@@ -39250,6 +39252,8 @@ function openExplicitHealthVideoPreviewCommand(command = "") {
 async function runExplicitTypedGlobalControlPreflight(command = "", options = {}) {
   const explicitCommand = String(command || "").trim();
   if (!explicitCommand) return false;
+  // Real music/radio/video playback (public/kyro-media-player.js): "play ...", "weka redio ...", "watch ...", and pause/next/volume while something plays.
+  if (await kyroMediaCommand(explicitCommand)) { pendingAgentClarification = null; pendingNexusSpokenCommand = null; return true; }
   if (localMusicControlIntent(explicitCommand)) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
@@ -54747,7 +54751,13 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   // plays audio for a voice request instead of silently opening (or
   // failing to open) a decorative panel.
   if (workspace === "media") {
-    playNexusProviderNeutralMusic(payload.query || command).catch(error => {
+    if (payload.action === "control" && payload.control) {
+      kyroMediaControlInstruction(payload.control, payload.language);
+      document.body.dataset.genesisWorkspace = "media";
+      document.body.dataset.genesisWorkspaceRequestId = action.requestId || "";
+      return true;
+    }
+    playNexusProviderNeutralMusic(payload.query || command, { kind: payload.kind, handoff: payload.handoff === true, language: payload.language }).catch(error => {
       nexusGenesisVoiceDebugLog("genesis-media-playback-failed", {
         query: payload.query || command, error: String(error?.message || error).slice(0, 300)
       });
@@ -55543,7 +55553,7 @@ function nexusConversationFirstIntent(command = "") {
       response: "I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking."
     };
   }
-  if (localMusicControlIntent(command)) {
+  if (localMusicControlIntent(command) || kyroMediaCommandSeen(command)) {
     return {
       type: "tool",
       tool: "music-control"
@@ -57137,8 +57147,93 @@ async function verifyNexusProviderAudioPlayback(audio, timeoutMs = 15000) {
     readyState: Number(audio.readyState), currentTime: Number(audio.currentTime || 0) };
 }
 
+// ---- Kyro media player (public/kyro-media-player.js + public/kyro-media-commands.js; see docs/MEDIA_PLAYBACK.md) ------------------------------------
+// Real music, radio and video: the player (loaded before this file) is wired to this page here and nowhere else. YouTube is only ever played by the
+// official IFrame lifecycle above (nexusYouTubePlayback, "Playback is not verified until genuine player state 1"), reused through this adapter.
+const kyroYoutubeAdapter = {
+  async start(candidate, timeoutMs, host) {
+    showNexusYouTubePlayer({ title: candidate.title, query: candidate.query || candidate.title, videoId: candidate.videoId });
+    const section = document.querySelector("[data-nexus-youtube-player]");
+    if (section) { section.classList.add("kyro-mp-embedded"); if (host) host.appendChild(section); }
+    const verified = await verifyNexusYouTubePlaybackStarted(nexusYouTubePlayback.iframe, timeoutMs);
+    if (verified) return { ok: true, telemetry: nexusYouTubePlayback.telemetry };
+    return { ok: false, reason: `youtube-${nexusYouTubePlayback.errorCode || nexusYouTubePlayback.lifecycle || "not-started"}` };
+  },
+  command(func, args) { return youtubePlayerCommand(func, args || []); },
+  close() { closeNexusYouTubePlayback(); },
+  watch(callback) { try { nexusYouTubePlayback.player?.addEventListener?.("onStateChange", event => callback(event.data)); } catch (_) { /* the lifecycle poll in the player still works */ } }
+};
+
+function kyroMediaCommandSeen(command) {
+  try { return Boolean(window.KyroMediaCommands?.isMediaCommand(command, { playerActive: Boolean(window.KyroMediaPlayerController?.isActive?.()) })); } catch (_) { return false; }
+}
+
+// Resolves true when the sentence was a music/radio/video command and the player took it (so nothing else handles it).
+async function kyroMediaCommand(command, options = {}) {
+  const player = window.KyroMediaPlayerController;
+  if (!player) return false;
+  try { return await player.handleCommand(command, { lang: languageCode() }); } catch (error) {
+    nexusGenesisVoiceDebugLog("kyro-media-command-failed", { error: String(error?.message || error).slice(0, 200) });
+    return false;
+  }
+}
+
+// A media.control instruction from the server tool path or the realtime workspace action.
+function kyroMediaControlInstruction(control, language) {
+  const player = window.KyroMediaPlayerController;
+  if (!player) return false;
+  const result = player.control(String(control || ""), { lang: language || languageCode() });
+  if (result && result.handled === false && result.message) setVoiceResponse(result.message, true);
+  return true;
+}
+
+(function initKyroMediaPlayer() {
+  if (!window.KyroMediaPlayer || !window.KyroMediaCommands) return;
+  const safeStorage = () => { try { return window.localStorage; } catch (_) { return null; } };
+  const probe = tag => document.createElement(tag);
+  const controller = window.KyroMediaPlayer.createKyroMediaPlayer({
+    document,
+    request: (path, options) => request(path, options),
+    say: message => setVoiceResponse(message, true),
+    getLanguage: () => languageCode(),
+    getCountry: () => { try { return activeCountry()?.name || ""; } catch (_) { return ""; } },
+    storage: safeStorage(),
+    createMedia: tag => probe(tag),
+    canPlayType: (tag, mime) => { try { return probe(tag).canPlayType(mime); } catch (_) { return "maybe"; } },
+    nativeHls: (() => { try { return probe("audio").canPlayType("application/vnd.apple.mpegurl") !== ""; } catch (_) { return false; } })(),
+    youtube: kyroYoutubeAdapter,
+    mediaSession: navigator.mediaSession || null,
+    MediaMetadata: window.MediaMetadata || null,
+    connection: navigator.connection || null,
+    isMobile: () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || ""),
+    userActivationActive: () => navigator.userActivation?.isActive === true,
+    openUrl: url => { const opened = window.open(url, "_blank"); if (opened) { try { opened.opener = null; } catch (_) { /* cross-origin */ } } return Boolean(opened); },
+    createUi: ({ onAction }) => window.KyroMediaPlayer.createBarUi(document, { onAction })
+  });
+  window.KyroMediaPlayerController = controller;
+  // Optional ducking while the browser's own speech is talking (per device: localStorage kyro.media.duck = "1"). Kyro's realtime voice audio cannot be
+  // detected from here without touching the realtime session code, so that part is a documented follow-up.
+  try {
+    if (safeStorage()?.getItem("kyro.media.duck") === "1" && "speechSynthesis" in window) {
+      window.setInterval(() => { if (window.speechSynthesis.speaking) controller.duck(); else controller.unduck(); }, 400);
+    }
+  } catch (_) { /* optional */ }
+})();
+
 async function playNexusProviderNeutralMusic(query, options = {}) {
   const normalizedQuery = String(query || "music").trim() || "music";
+  // Full-length playback through public/kyro-media-player.js (public radio, Audius, YouTube, Internet Archive, then the 30-second preview last).
+  // The older preview-first path below is kept only for when the new resolver cannot be reached at all.
+  if (window.KyroMediaPlayerController) {
+    const played = await window.KyroMediaPlayerController.play(normalizedQuery, {
+      kind: options.kind, handoff: options.handoff === true, lang: options.language, announce: options.announce,
+      verificationTimeoutMs: options.verificationTimeoutMs
+    });
+    if (played?.ok) return played;
+    if (!played?.resolverUnavailable) {
+      throw new Error(played?.message || `All authoritative music providers failed without verified audible progress for ${normalizedQuery}.`);
+    }
+  }
   const attempts = [];
   let candidate = await request("/api/music/providers/playback", {
     method: "POST",
@@ -57216,23 +57311,36 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
     opened = true;
     document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
+  } else if (presentation.kind === "media-player" && (data.action === "control" || data.instruction?.type === "media.control")) {
+    // media.control: the server returned an instruction; the phone's player carries it out (and says so if nothing is playing).
+    kyroMediaControlInstruction(data.control || data.instruction?.control, data.language);
+    opened = true;
+    document.body.dataset.genesisWorkspace = outcome.workspace;
+    document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   } else if (presentation.kind === "media-player") {
     const requestedMedia = String(data.requestedMedia || data.resolvedMedia || outcome.originalText || "").trim();
     if (!requestedMedia) return { rendered: false, visible: false, audible: false };
     const playback = await playNexusProviderNeutralMusic(requestedMedia, {
-      verificationTimeoutMs: 15000
+      verificationTimeoutMs: 15000, kind: data.kind, handoff: data.handoff === true, language: data.language
     });
-    opened = Boolean(
-      (playback?.provider === "apple-itunes-preview" && nexusProviderAudioPlayback.element) ||
-      (playback?.provider === "youtube" && nexusYouTubePlayback.iframe)
-    );
-    audible = opened && playback?.playbackVerified === true && (
-      playback?.provider === "apple-itunes-preview"
-        ? Number(playback?.telemetry?.advancedSeconds || 0) >= 3
-        : playback?.telemetry?.playerState === 1
-    );
-    if (!audible) {
-      throw new Error("Music playback returned without genuine provider-owned audible progress.");
+    const viaKyroPlayer = playback?.engine === "kyro-media-player";
+    if (viaKyroPlayer && playback.handoff === true) {
+      // A hand-off to YouTube is "queued", never "playing": visible, not audible.
+      opened = Boolean(document.querySelector("[data-kyro-media-player]:not([hidden])"));
+      audible = false;
+    } else {
+      opened = viaKyroPlayer ? Boolean(document.querySelector("[data-kyro-media-player]:not([hidden])")) : Boolean(
+        (playback?.provider === "apple-itunes-preview" && nexusProviderAudioPlayback.element) ||
+        (playback?.provider === "youtube" && nexusYouTubePlayback.iframe)
+      );
+      audible = opened && playback?.playbackVerified === true && (
+        playback?.telemetry?.schema === "nexus.media-playback-evidence.v1"
+          ? Number(playback?.telemetry?.advancedSeconds || 0) >= 3
+          : playback?.telemetry?.playerState === 1
+      );
+      if (!audible) {
+        throw new Error("Music playback returned without genuine provider-owned audible progress.");
+      }
     }
     document.body.dataset.nexusMediaProvider = String(playback.provider || "");
     document.body.dataset.nexusMediaPlaybackClass = String(playback.playbackClass || "");
@@ -57265,8 +57373,10 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
   if (context.signal?.aborted) return { rendered: false, visible: false };
   const surface = presentation.kind === "map"
     ? document.querySelector("#userMapCanvas.leaflet-container, #map:not(.hidden) #userMapCanvas")
+    : presentation.kind === "media-player" && (data.action === "control" || data.instruction?.type === "media.control")
+      ? renderNexusAuthoritativeData(outcome)
     : presentation.kind === "media-player"
-      ? document.querySelector('[data-nexus-provider-audio="true"], [data-nexus-youtube-player="true"] iframe')
+      ? document.querySelector('[data-nexus-provider-audio="true"], [data-nexus-youtube-player="true"] iframe, [data-kyro-media-player]:not([hidden])')
     : presentation.kind === "document"
       ? renderNexusAuthoritativeDocument(outcome)
       : outcome.data?.resume === true && nexusDocumentLifecycleComplete(outcome.data)
@@ -57298,7 +57408,7 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
       mediaProvider: outcome.workspace === "media" ? (document.body.dataset.nexusMediaProvider || undefined) : undefined,
       playbackClass: outcome.workspace === "media" ? (document.body.dataset.nexusMediaPlaybackClass || undefined) : undefined,
       playbackEvidence: outcome.workspace === "media"
-        ? (nexusProviderAudioPlayback.telemetry || nexusYouTubePlayback.telemetry || undefined)
+        ? (window.KyroMediaPlayerController?.getLastEvidence?.() || nexusProviderAudioPlayback.telemetry || nexusYouTubePlayback.telemetry || undefined)
         : undefined,
       loadedImages: outcome.workspace === "images"
         ? Number(surface?.dataset?.loadedImages || 0)
