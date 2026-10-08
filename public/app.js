@@ -30948,8 +30948,20 @@ function inferNexusPresenceStateFromMessage(message = "", options = {}) {
   return NEXUS_PRESENCE_STATES.SPEAKING;
 }
 
+// The audio-only conversation screen (renderNexusAudioCompanionExperience) draws the last reply and "Last heard" once, when it is rendered.
+// The typed answer arrives after that render, so without this the screen kept saying the previous line (found in a real browser: the
+// answer was only in hidden screen-reader regions).
+function updateNexusAudioCompanionDom() {
+  const status = document.querySelector("[data-nexus-audio-companion-status] > span");
+  const reply = nexusPresenceState.lastResponse;
+  if (status && reply) status.textContent = translateText(reply);
+  const caption = document.querySelector("[data-nexus-audio-companion-caption] > span");
+  if (caption && nexusPresenceState.lastUserInput) caption.textContent = translateText(`Last heard: ${nexusPresenceState.lastUserInput}`);
+}
+
 function updateNexusPresenceDom() {
   if (typeof document === "undefined") return;
+  updateNexusAudioCompanionDom();
   const layer = document.querySelector("[data-nexus-presence-layer]");
   if (!layer) return;
   const state = nexusPresenceState.state || NEXUS_PRESENCE_STATES.IDLE;
@@ -53430,7 +53442,7 @@ function closeTopSettingsMenu() {
   $("#topSettingsToggle")?.setAttribute("aria-expanded", "false");
 }
 
-function openAskNexus() {
+function openAskNexus(options = {}) {
   closeTopSettingsMenu();
   const globalInput = $("#globalCommandInput");
   const globalBar = $("#globalAssistantBar");
@@ -53452,6 +53464,8 @@ function openAskNexus() {
   setTimeout(() => {
     (globalInput || dockInput)?.focus();
   }, VOICE_UI_FOCUS_DELAY_MS);
+  // A typed answer is about to be shown: do not log a fake "Ask AgriNexus is open" assistant turn in front of every one.
+  if (options.quiet === true) return;
   setVoiceResponse("Ask AgriNexus is open. Type a request or use the Mic button.", false, { allowVoiceFirst: false });
   announce("Ask AgriNexus opened");
 }
@@ -57960,7 +57974,7 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     && String(result.taskId || "").startsWith("tsk_") && result.outcome?.pendingStepId
     ? { taskId: result.taskId, stepId: result.outcome.pendingStepId }
     : null;
-  openAskNexus();
+  openAskNexus({ quiet: true });
   enableHeyAgriNexusMode();
   renderUserWorkspace?.();
   setVoiceResponse(message, true, {
@@ -58014,6 +58028,13 @@ async function submitNexusPendingBehaviorConfirmation(approved, text, options = 
     return await processNexusAuthoritativeBehaviorResult(result, text, options);
   } catch (error) {
     nexusPendingBehaviorConfirmation = null;
+    // Found in a real browser: a guest who said "yes" to "I can save this to your own health records" got a 403 from the server
+    // ("This account type cannot write real health records") and the page said nothing at all. Say what the server said.
+    const reason = String(error?.message || "").trim();
+    if (reason) {
+      setVoiceResponse(reason, true, { allowHandoff: false, command: text, source: "nexus-authoritative-behavior-spine", turnToken: options.turnToken });
+      return true;
+    }
     return false;
   }
 }
