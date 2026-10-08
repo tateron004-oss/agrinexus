@@ -46,9 +46,15 @@ function createListsCreateExecutor({ records }) {
   };
 }
 
+// A create the executor itself refused (today only the per-account cap) is still rejected -- nothing was written -- but the
+// verification now carries the executor's own reason and limit, so the failure says "list_cap_reached max=200" instead of an
+// anonymous "verifier rejected the outcome". Only the executor's short identifier and a number are passed on.
 function verifyListsCreateOutcome({ result }) {
   const verified = result?.persisted === true && typeof result?.listId === "string" && result.listId.length > 0;
-  return { verified, method: "real_record_write", reason: verified ? null : "list_create_incomplete" };
+  if (verified) return { verified, method: "real_record_write", reason: null };
+  const refusal = result?.persisted === false && typeof result?.reason === "string" && /^[a-z][a-z0-9_]{0,63}$/.test(result.reason) ? result.reason : null;
+  const limit = refusal && result?.maxLists !== undefined && Number.isFinite(Number(result.maxLists)) ? Number(result.maxLists) : null;
+  return { verified: false, method: "real_record_write", reason: refusal || "list_create_incomplete", ...(limit !== null ? { limit } : {}) };
 }
 
 function createListsReadExecutor({ records }) {
