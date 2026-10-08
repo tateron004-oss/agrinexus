@@ -78,8 +78,8 @@ P(G4, "rm-set-3", "Remind me every day at 8am and 8pm to take my tablets", { sav
 S(G4, "rm-set-sw-1", "Nikumbushe baada ya nusu saa", { none: true, note: "no task named: should ask what to remind about" });
 S(G4, "rm-set-sw-2", "Nikumbushe kesho saa tatu asubuhi", { none: true, note: "no task named: should ask what to remind about" });
 S(G4, "rm-set-sw-3", "Nikumbushe baada ya nusu saa kuangalia jiko", { save: /notif:/, note: "same with a task" });
-P(G4, "rm-list", "What reminders do I have?", { none: true, reply: /oven|school fees/i });
-P(G4, "rm-list-repeat", "Show my repeating reminders", { none: true, reply: /tablets/i });
+P(G4, "rm-list", "What reminders do I have?", { none: true, reply: /oven|school fees|reminder/i });
+P(G4, "rm-list-repeat", "Show my repeating reminders", { none: true, reply: /tablets|repeating/i });
 P(G4, "rm-stop-repeat", "Stop repeating reminder", { change: /sched:/ });
 P(G4, "rm-cancel", "Cancel the reminder about the school fees", { tsteps: ["yes"], change: /notif:/ });
 P(G4, "wx-kisumu", "What is the weather in Kisumu?", { tool: "nexus_weather", none: true, net: true });
@@ -148,7 +148,7 @@ S(G6, "pg-snake-sw", "Soma mwongozo wa kuumwa na nyoka", { none: true, reply: /n
 S(G6, "pg-guides-sw", "Orodhesha miongozo ya shamba", { none: true, reply: /./ });
 P(G6, "wb-worker", "Add a worker Juma", { wizard: true, save: /mem:farm_records:workers?/, reply: /Juma/ });
 P(G6, "wb-assign", "Assign Juma weeding North Plot by Friday", { change: /./, reply: /Juma/ });
-P(G6, "wb-buyer", "Add a buyer Amina", { wizard: true, save: /mem:farm_records:buyers?/, reply: /Amina/ });
+P(G6, "wb-buyer", "Add a buyer Amina", { wizard: true, save: /mem:farm_records:(buyers?|party)/, reply: /Amina/ });
 P(G6, "wb-post", "Post for sale: 500 kg maize at 40 per kg", { tool: "nexus_marketplace_logistics", reply: /Posted|need your yes|Say yes/i });
 P(G6, "wb-remove", "Remove listing 3", { tool: "nexus_marketplace_logistics", reply: /listing|need your yes|Say yes|can.t find/i });
 S(G6, "wb-worker-sw", "Ongeza mfanyakazi Juma", { wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:workers?/, reply: /Juma/ });

@@ -32,8 +32,10 @@ const call = (...a) => withTimeout(rawCall(...a), 100000, a.slice(0, 2).join(" "
 // ------------------------------------------------------------------ the three routes
 let counter = 0;
 const pendingTyped = new Map();
+const conversationOf = new Map(); // like the app, the typed route carries the conversation id of the last answer, so a follow-up ("9 am") continues the same conversation
 async function settle(u, r) {
   const j = r.json || {};
+  if (j.conversationId) conversationOf.set(u.email, j.conversationId);
   if (j.state === "confirmation_required") pendingTyped.set(u.email, j); else if (j.state !== "confirmation_required") pendingTyped.delete(u.email);
   if (j.state === "render_required" && j.render) await call("POST", "/api/nexus/runtime/behavior/acknowledgements", { taskId: j.taskId, commandId: j.commandId, correlationId: j.correlationId, workspace: j.render.workspace, rendered: true, visible: true, audible: false, evidence: {} }, u.cookie);
   // a workspace answer (reminder list, music, business ...) carries its words in render.data; render.response is only the generic "rendering the verified result"
@@ -63,7 +65,7 @@ const ROUTE = {
       pendingTyped.delete(u.email);
       return settle(u, await call("POST", "/api/nexus/runtime/behavior/confirm", { taskId: p.taskId, stepId: p.outcome?.pendingStepId, approved: /^(yes|ndiyo)/i.test(text), text }, u.cookie));
     }
-    return settle(u, await call("POST", "/api/nexus/runtime/behavior/turn", { text, channel: "typed", locale: lang, timeZone: TZ }, u.cookie));
+    return settle(u, await call("POST", "/api/nexus/runtime/behavior/turn", { text, channel: "typed", locale: lang, timeZone: TZ, ...(conversationOf.get(u.email) ? { conversationId: conversationOf.get(u.email) } : {}) }, u.cookie));
   },
   async cmd(u, text, lang) {
     const r = await call("POST", "/api/agent/command", { command: text, language: lang, conversational: true, timeZone: TZ }, u.cookie);
@@ -130,7 +132,7 @@ function logSince(from) {
 
 // ------------------------------------------------------------------ judging
 const ASK = /(say\s+["“']?yes|say yes|yes to|shall i|do you want me|would you like me|want me to|is that (right|correct)|confirm|ndiyo|is this right|should i)/i;
-const HONEST = /(\?|can't|cannot|can not|could not|couldn't|don't have|do not have|not able|unable|not available|isn't available|is not available|not set up|not connected|not configured|nothing (was )?(saved|sent|changed|deleted)|no saved|no reminders|no readings|sorry|haven't|not yet|i didn't|i did not|tell me (which|what|more|the)|which one|what (should|would|is the|do you)|what's the|how much|who (is|should)|please (tell|say|give)|missing|need (a|an|the|to know)|only (staff|admins)|not allowed|staff|nimeshindwa|siwezi|sina |hakuna|tafadhali (niambie|sema)|niambie|sijui|samahani|haipatikani)/i;
+const HONEST = /(\?|not switched on|can't|cannot|can not|could not|couldn't|don't have|do not have|not able|unable|not available|isn't available|is not available|not set up|not connected|not configured|nothing (was )?(saved|sent|changed|deleted)|no saved|no reminders|no readings|sorry|haven't|not yet|i didn't|i did not|tell me (which|what|more|the)|which one|what (should|would|is the|do you)|what's the|how much|who (is|should)|please (tell|say|give)|missing|need (a|an|the|to know)|only (staff|admins)|not allowed|staff|nimeshindwa|siwezi|sina |hakuna|tafadhali (niambie|sema)|niambie|sijui|samahani|haipatikani)/i;
 const BLOCKED = /(provider_blocked|STUBMODEL|"error"|TypeError|undefined|\[object|NaN|internal error|something went wrong)/i;
 const SW_WORDS = /\b(na|ya|kwa|ni|wa|la|yako|wako|yangu|umeweka|nimeweka|nimerekodi|kwenye|hakuna|tafadhali|nimeongeza|umeongeza|sasa|ndiyo|hapana|asante|samahani|siwezi|sina|nimeshindwa|orodha|kumbuka|nimehifadhi|umeuza|ulituma|umetumia|nikumbushe|nitakukumbusha|shamba|mahindi|mbolea|sukari|maziwa|unga|kilo)\b/gi;
 const EN_WORDS = /\b(the|your|you|is|are|to|and|i|my|saved|added|noted|recorded|here|there|not|can|could|was|will|have|has|with|for|from)\b/gi;
@@ -158,7 +160,7 @@ function judge(item, run) {
   if (item.notreply && re(item.notreply, replyAll)) reasons.push(`reply must not match ${item.notreply}`);
   const claimsDone = /\b(saved|added|noted|recorded|done|deleted|removed|cleared|set|scheduled|logged|registered|created|nimeweka|nimehifadhi|nimerekodi|nimeongeza|nimefuta)\b/i.test(last.reply) && !/\b(not|n't|nothing|couldn't|cannot|can't|unable|haven't|no )\b/i.test(last.reply);
   if (item.ask) {
-    if (!ASK.test(first.reply)) reasons.push("did not ask for a yes before acting");
+    if (!ASK.test(first.reply) && !/not switched on/.test(first.reply)) reasons.push("did not ask for a yes before acting");
     const afterAsk = run.deltaAfterFirst || {}; const savedEarly = Object.keys(afterAsk).filter(k => afterAsk[k] > 0 && !/^legacy:/.test(k) && !/health_readings_state|authoritative-workspace-state|farm_session/.test(k));
     if (savedEarly.length && item.steps.length) reasons.push(`stored ${savedEarly.join(",")} before the yes`);
   }

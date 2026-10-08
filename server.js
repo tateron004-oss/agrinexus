@@ -101,6 +101,12 @@ async function toolUrgentSafetyAnswer(db, user, toolName, text) {
   const urgent = urgentHealthSafetyResponse(db, user, text);
   return urgent ? { intent: urgent.intent, response: urgent.response } : null;
 }
+// The urgent words that need no tool provider and no database write (the companion reader, then the health-urgent reader on a scratch profile), or null.
+async function urgentWordsWithoutProvider(text, authUser) {
+  const care = await careSafetyReply(text, authUser).catch(() => null);
+  if (care) return care.reply;
+  try { return urgentHealthSafetyResponse({ profile: { agentMemory: {} } }, authUser, text)?.response || null; } catch { return null; }
+}
 // The crisis packet (public/nexus-mental-health-behavioral-wellness.js) is English only. When the person spoke Kiswahili (or the request is in Kiswahili) the reply they get is the Kiswahili one that already
 // exists for the companion (nexus/i18n/sw.js safety.*), never new wording. null when it does not apply or the shared reader has no Kiswahili case for the words (the English packet is then kept).
 async function swahiliCrisisReply(text, language, user) {
@@ -334,7 +340,9 @@ const authoritativeNexusRuntime = createServerRuntimeAdapter({
   // Investor/Provider Reviewer denylist inside nexus/business at all. Passed in here (rather than
   // duplicated inside nexus/, which has no notion of legacy roles) so the checkout route below can refuse
   // a real Stripe checkout session the same way every other real-money route in this file already does.
-  isRestrictedFrom: userIsRestrictedFrom
+  isRestrictedFrom: userIsRestrictedFrom,
+  // Found by the phrase sweep: a danger sign ("I have chest pain") whose tool provider cannot be reached must still be answered in words. Same sentences as the older route; null when the words are not urgent.
+  urgentFallback: async (text, authUser) => urgentWordsWithoutProvider(text, authUser)
 });
 
 function deterministicAuthoritativeUserId(legacyUserId = "") {

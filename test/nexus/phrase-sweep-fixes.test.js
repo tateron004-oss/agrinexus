@@ -84,6 +84,12 @@ test("'She has heavy bleeding' gets the urgent answer from the older route and t
   const urgent = urgentHealthSafetyResponse(db, { country: "Kenya" }, "She has heavy bleeding");
   assert.ok(urgent && /999 or 112/.test(urgent.response));
   assert.equal(urgentHealthSafetyResponse(db, { country: "Kenya" }, "my cow has heavy bleeding"), null);
+  // the provider-free fallback of the typed route uses these same readers: the capabilities list's danger signs are all caught without a provider
+  assert.match(urgentHealthSafetyResponse(db, { country: "Kenya" }, "I have chest pain").response, /999 or 112/);
+  const { urgentWordsWithoutProvider } = load(["urgentWordsWithoutProvider"], { careSafetyReply: async text => /fitting/.test(text) ? { reply: "A child with these signs needs a health worker now." } : null, urgentHealthSafetyResponse: (d, u, text) => urgentHealthSafetyResponse({ profile: { agentMemory: {} } }, u, text) });
+  return Promise.all([urgentWordsWithoutProvider("My child is fitting", {}), urgentWordsWithoutProvider("She has heavy bleeding", { country: "Kenya" }), urgentWordsWithoutProvider("what is the maize price", {})]).then(([fit, bleed, none]) => {
+    assert.match(fit, /health worker now/); assert.match(bleed, /999 or 112/); assert.equal(none, null);
+  });
 });
 
 test("the tool hint the model is given does not call a body temperature in a visit note a weather question", () => {
@@ -206,6 +212,50 @@ test("a patient note sent to the health tool is not read as the speaker's own te
   assert.equal(spoken.isPatientNote("my temperature is 38.5"), false);
   assert.match(source, /!spokenRequests\.isPatientNote\(command\) && command\.match\(/);
   assert.match(source, /response = chronicConditionEducationResponse\(command\);\n[\s\S]{0,900}if \(!response && effectiveMentalHealthSignal\.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function"/);
+});
+
+test("a danger sign whose tool provider is down is still answered in words (typed route), and anything else keeps its error", async () => {
+  const { createServerRuntimeAdapter } = require("../../nexus/compat/server-runtime-adapter.js");
+  const providerDown = () => { const error = new Error("Provider request could not be completed."); error.code = "provider_request_failed"; error.status = 503; throw error; };
+  const make = (text, urgentFallback) => createServerRuntimeAdapter({
+    resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", role: "Standard User", permissions: ["tasks:execute"] }),
+    readJson: async () => ({ text, channel: "typed" }),
+    createRuntimeFn: () => ({ ready: Promise.resolve(), engine: { tasks: {} }, behavior: { turn: async () => providerDown() } }),
+    urgentFallback
+  });
+  const send = capture => (_res, status, body) => { capture.status = status; capture.body = body; };
+  const urgent = {};
+  await make("I have chest pain", async text => /chest pain/.test(text) ? "Call emergency services now if available (999 or 112 in Kenya)." : null).handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/behavior/turn"), send(urgent));
+  assert.equal(urgent.status, 200);
+  assert.equal(urgent.body.state, "completed");
+  assert.match(urgent.body.response, /999 or 112/);
+  assert.equal(urgent.body.outcome.verified, false, "an answer given without the provider is not claimed as a verified outcome");
+  // a sentence that is not urgent keeps the 503 exactly as before
+  const plain = {};
+  await make("what is the maize price", async () => null).handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/behavior/turn"), send(plain));
+  assert.equal(plain.status, 503);
+  // and with no fallback wired, nothing changes
+  const none = {};
+  await make("I have chest pain", null).handle({ method: "POST", headers: {} }, {}, new URL("http://local/api/nexus/runtime/behavior/turn"), send(none));
+  assert.equal(none.status, 503);
+  assert.match(source, /urgentFallback: async \(text, authUser\) => urgentWordsWithoutProvider\(text, authUser\)/);
+});
+
+test("'9 am' answering 'At 9 in the morning or in the evening?' finishes the reminder it answers (typed and spoken routes keep no other state)", () => {
+  const { completeAmbiguousHour } = require("../../nexus/reminders/pending-hour.js");
+  const asked = 'At 9 in the morning or in the evening? Say, for example, "9 in the evening" or "9 am". Nothing was set yet.';
+  const history = [{ role: "user", content: "Remind me tomorrow at 9 to pay the school fees" }, { role: "assistant", content: asked }];
+  assert.equal(completeAmbiguousHour("9 am", history), "Remind me tomorrow at 9 am to pay the school fees");
+  assert.equal(completeAmbiguousHour("9 in the evening", history), "Remind me tomorrow at 9 pm to pay the school fees");
+  assert.equal(completeAmbiguousHour("at 9 pm", history), "Remind me tomorrow at 9 pm to pay the school fees");
+  assert.equal(completeAmbiguousHour("9:30 am", [{ role: "user", content: "remind me at 9:30 to call" }, { role: "assistant", content: "At 9:30 in the morning or in the evening? Nothing was set yet." }]), "remind me at 9:30 am to call");
+  // not that answer: a different hour, no question just asked, an ordinary sentence
+  assert.equal(completeAmbiguousHour("5 pm", history), null);
+  assert.equal(completeAmbiguousHour("9 am", [{ role: "user", content: "hello" }, { role: "assistant", content: "Hello, how can I help?" }]), null);
+  assert.equal(completeAmbiguousHour("what is the weather", history), null);
+  assert.equal(completeAmbiguousHour("9 am", []), null);
+  const planner = fs.readFileSync(path.join(__dirname, "../../nexus/brain/planner.js"), "utf8");
+  assert.match(planner, /const hourCompleted = completeAmbiguousHour\(command\?\.text, conversationHistory\);\n\s+if \(hourCompleted\) command = \{ \.\.\.command, text: hourCompleted \};/);
 });
 
 test("a provider that is switched off is described in plain words, never with an environment variable name", () => {
