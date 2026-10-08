@@ -13,9 +13,9 @@ const NO_SW = /^(?:hapana|la|la hasha|siyo|sio|sitaki|acha|usifanye|si sasa|hapa
 
 // ---- units: Swahili puts the unit first ("kilo 200", "gunia 3") or after ("200 kg"); stored as the English toolkit stores them ----
 const UNITS = [[/^(?:kilo|kg|kgs)$/, "kg", 1], [/^(?:tani)$/, "kg", 1000], [/^(?:gramu)$/, "kg", 0.001], [/^(?:lita|l)$/, "L", 1], [/^(?:gunia|magunia)$/, "sack", 1], [/^(?:mfuko|mifuko)$/, "bag", 1],
-  [/^(?:debe|madebe)$/, "tin", 1], [/^(?:kreti|makreti)$/, "crate", 1], [/^(?:mkungu|mikungu|fungu|mafungu)$/, "bunch", 1], [/^(?:kipande|vipande)$/, "piece", 1], [/^(?:pakiti|paketi)$/, "packet", 1],
+  [/^(?:debe|madebe)$/, "tin", 1], [/^(?:kreti|makreti|krate|makrate)$/, "crate", 1], [/^(?:mkungu|mikungu|fungu|mafungu)$/, "bunch", 1], [/^(?:kipande|vipande)$/, "piece", 1], [/^(?:pakiti|paketi)$/, "packet", 1],
   [/^(?:chupa)$/, "bottle", 1], [/^(?:ndoo)$/, "bucket", 1], [/^(?:trei)$/, "tray", 1], [/^(?:ekari)$/, "acre", 1], [/^(?:hekta)$/, "ha", 1], [/^(?:dozi)$/, "dose", 1]];
-const UNIT_WORD = "kilo|kg|kgs|tani|gramu|lita|l|gunia|magunia|mfuko|mifuko|debe|madebe|kreti|makreti|mkungu|mikungu|fungu|mafungu|kipande|vipande|pakiti|paketi|chupa|ndoo|trei|ekari|hekta|dozi";
+const UNIT_WORD = "kilo|kg|kgs|tani|gramu|lita|l|gunia|magunia|mfuko|mifuko|debe|madebe|kreti|makreti|krate|makrate|mkungu|mikungu|fungu|mafungu|kipande|vipande|pakiti|paketi|chupa|ndoo|trei|ekari|hekta|dozi";
 const NUMBER = "\\d[\\d,]*(?:[.]\\d+)?";
 const unitOf = word => UNITS.find(([pattern]) => pattern.test(String(word).toLowerCase()));
 
@@ -98,7 +98,7 @@ const categorySw = category => CATEGORY_SW[category] || category;
 const SW_INCOME = [["milk", /\bmaziwa\b/i], ["eggs", /\b(?:mayai|yai)\b/i], ["livestock", /\b(?:ng'?ombe|mbuzi|kondoo|nguruwe|kuku|sungura|mifugo|ndama|fahali|mnyama|wanyama)\b/i],
   ["crops", /\b(?:mahindi|maharag(?:e|we)|mihogo|muhogo|mchele|mpunga|ngano|mtama|ulezi|nyanya|viazi|kabichi|sukuma|vitunguu|kitunguu|ndizi|kahawa|chai|karanga|mboga|matunda|mazao|mavuno|nafaka)\b/i]];
 const incomeCategorySw = text => (SW_INCOME.find(([, pattern]) => pattern.test(text)) || ["other"])[0];
-const SW_EXPENSE = [["seed", /\b(?:mbegu|miche)\b/i], ["fertiliser", /\b(?:mbolea|samadi|chokaa)\b/i], ["chemicals", /\b(?:viuatilifu|dawa ya (?:kunyunyizia|wadudu|magugu|kuua)|dawa za (?:kunyunyizia|wadudu)|kemikali)\b/i], ["feed", /\b(?:chakula cha mifugo|lishe|majani makavu|pumba|malisho)\b/i],
+const SW_EXPENSE = [["stock", /\bmafuta ya kupikia\b/i], ["seed", /\b(?:mbegu|miche)\b/i], ["fertiliser", /\b(?:mbolea|samadi|chokaa)\b/i], ["chemicals", /\b(?:viuatilifu|dawa ya (?:kunyunyizia|wadudu|magugu|kuua)|dawa za (?:kunyunyizia|wadudu)|kemikali)\b/i], ["feed", /\b(?:chakula cha mifugo|lishe|majani makavu|pumba|malisho)\b/i],
   ["labour", /\b(?:vibarua|kibarua|mshahara|mishahara|wafanyakazi|mfanyakazi|kupalilia|kulima|kuvuna|ujira)\b/i], ["transport", /\b(?:usafiri|nauli|mafuta|dizeli|petroli|lori|gari|pikipiki|boda|matatu|kusafirisha)\b/i], ["veterinary", /\b(?:mifugo|daktari wa mifugo|chanjo|dawa ya (?:mifugo|ng'ombe|kuku|mbuzi)|kuogesha|dawa)\b/i],
   ["equipment", /\b(?:zana|jembe|panga|pampu|trekta|mashine|kifaa|vifaa|ukarabati)\b/i], ["water", /\b(?:maji|umwagiliaji|kisima|mabomba)\b/i], ["rent", /\b(?:kodi|ada ya shamba|kukodi)\b/i],
   // a shop's own costs come last, so a farm word still wins: "mzigo" is what a shopkeeper buys to sell again, "umeme" is electricity

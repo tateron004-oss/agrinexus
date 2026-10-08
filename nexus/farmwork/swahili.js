@@ -6,6 +6,7 @@ const { addStock, findItems, categoryOf } = require("./inventory.js");
 const { addDays } = require("../personal/dates.js");
 const { parseQuantitySw, unitLabelSw, parseMoneySw, moneyShown, CURRENCY_WORDS, englishItem, incomeCategorySw, expenseCategorySw, periodSw, describeDaySw, swahiliItem, categorySw, UNIT_WORD, NUMBER } = require("../i18n/swahili-words.js");
 const numbers = require("../i18n/swahili-numbers.js");
+const rereads = require("./rereads.js");
 
 // The farm's money and stock, in Swahili. The same records the English tools keep (the same collections, the same shapes), so a farmer can say a sale in
 // Swahili and read the summary in English, or the other way round. Every phrase here starts with a Swahili first-person verb ("nimeuza", "nimenunua",
@@ -42,6 +43,7 @@ const SW = {
   chooseAmount: ({ a, b }) => `Sijui kama ni ${a} au ${b}, kwa hivyo sijaandika chochote. Sema kiasi tena kwa namba, kwa mfano "${a.replace(/,/g, "")}".`,
   numberUnclear: ({ said }) => `Sijaelewa kiasi "${said}", kwa hivyo sijaandika chochote. Sema tena kwa namba, kwa mfano "4500".`,
   noAmount: "Sijasikia kiasi. Sema tena na kiasi, kwa mfano \"nimeuza mahindi kwa 4500\".",
+  askAmountNow: "Au sema kiasi tu sasa (kwa mfano 4500) nami nitakamilisha.",
   tooManyNumbers: "Nimesikia namba nyingi na sijui ipi ni bei. Sema tena, kwa mfano \"nimeuza mahindi gunia 3 kwa 4500\".",
   // credit
   soldCredit: ({ qty, item, buyer, amount, stock, income, when }) => `Nimerekodi: umeuza ${qty ? `${qty} za ` : ""}${item}${buyer ? ` kwa ${buyer}` : ""} kwa ${amount} kwa mkopo${when}.${stock} Sijahesabu kama mapato bado. ${buyer ? `${buyer} akilipa, sema "${buyer} amelipa".` : "Wakati mwingine sema umemuuzia nani, ili nikumbuke."} Mapato ya mwezi huu: ${income}.`,
@@ -163,6 +165,11 @@ async function askAbout(ctx, text, deal) {
   return SW.askAmount({ shown: fmtNumber(values[0]) });
 }
 
+// "nimeuza sukari kilo 2" (no amount): asked, and the sentence is kept; the answer ("400", "elfu moja") completes it. Nothing is recorded until an amount is said.
+async function askAmount(ctx, text) {
+  await ctx.store.setSession({ tenantId: ctx.tenantId, userId: ctx.userId, session: { collection: "sw_price", answers: {}, asking: "money", extra: { text }, expiresAt: new Date(Date.now() + 30 * 60000).toISOString() } });
+  return `${SW.noAmount} ${SW.askAmountNow}`;
+}
 const whenOf = (ctx, day) => (day && day !== ctx.today ? SW.whenShown({ when: describeDaySw(day, ctx.today) }) : "");
 const refusedText = refused => (/five thousand/.test(refused || "") ? SW.full : SW.amountWrong);
 
@@ -246,7 +253,7 @@ async function handleSwahili(ctx) {
     const deal = readDeal(body, "kwa");
     const doubt = await askAbout(ctx, t, deal); if (doubt) return doubt;
     if (!deal.item || deal.item.length > 50) return null;
-    if (!deal.money) return SW.noAmount;
+    if (!deal.money) return askAmount(ctx, t);
     if (deal.unclear) return SW.tooManyNumbers;
     if (!(deal.money.amount > 0)) return null;
     return await sellRecord(ctx, deal, { day });
@@ -276,7 +283,7 @@ async function handleSwahili(ctx) {
     const deal = readDeal(body, /^(?:nimeuziwa|tumeuziwa|niliuziwa)/i.test(t) ? "na" : "kutoka kwa", { sale: false });
     const doubt = await askAbout(ctx, t, deal); if (doubt) return doubt;
     if (!deal.item || deal.item.length > 60) return null;
-    if (!deal.money) return SW.noAmount;
+    if (!deal.money) return askAmount(ctx, t);
     if (deal.unclear) return SW.tooManyNumbers;
     if (!(deal.money.amount > 0)) return null;
     return await buyRecord(ctx, deal, { day });
@@ -359,4 +366,13 @@ async function handleSwahili(ctx) {
   return null;
 }
 
-module.exports = Object.freeze({ handle, SW, readDeal, readName, takeDay, sellRecord, buyRecord, askAbout, totalsAnswer, monthOf, totalsText, describeRecord, HONORIFIC, HOUSEHOLD_SW, FARM_WORDS_SW, SPOKEN_CURRENCY, CREDIT_SALE, CREDIT_BUY });
+const templates = {
+  sw_price: { collection: "sw_price", questions: [{ key: "money", ask: "Kiasi gani?", type: "money",
+    parse: raw => { const bare = rereads.parseBareAmount(raw); if (bare && !bare.ambiguous) return { value: { amount: bare.amount, currency: bare.currency } }; if (bare) return { hint: `Sijui kama ni ${fmtNumber(bare.ambiguous[0])} au ${fmtNumber(bare.ambiguous[1])}. Sema kiasi kwa namba wazi, kwa mfano "${bare.ambiguous[0]}".` }; return clean(raw).split(" ").length >= 2 ? { drop: true } : { hint: 'Sema kiasi, kwa mfano 4500 au elfu nne mia tano.' }; } }],
+    async finish(ctx, answers, extra) {
+      const said = answers.money; const label = said.currency ? (said.currency === "shillings" ? "shilingi " : said.currency === "$" ? "$" : `${said.currency} `) : "";
+      return (await handle({ ...ctx, text: `${extra.text} kwa ${label}${said.amount}` })) || SW.noAmount;
+    } }
+};
+
+module.exports = Object.freeze({ templates, handle, SW, readDeal, readName, takeDay, sellRecord, buyRecord, askAbout, totalsAnswer, monthOf, totalsText, describeRecord, HONORIFIC, HOUSEHOLD_SW, FARM_WORDS_SW, SPOKEN_CURRENCY, CREDIT_SALE, CREDIT_BUY });
