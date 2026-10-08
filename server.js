@@ -22219,6 +22219,19 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         executionAttempted: Boolean(healthTurn.wrote || healthTurn.attempted), executionVerified: Boolean(healthTurn.wrote) };
     }
   }
+  // The catch-all conversation tool (the one a request with no better tool, the browser's own fallback and the production audit use) asks the planner first for the answers it can give and save
+  // itself, with no AI model (notes, lists, the farm log, money books, contacts, remembered facts...), exactly as the umbrella router does in dispatchNexusRealtimeTool. Found against the real
+  // runtime: this tool went straight to the older pipeline, which answers those requests with "I couldn't do that one just now" and saves nothing. Health readings are left to their own route
+  // above, a medical emergency to its own answer below, and anything the planner cannot answer itself (or any failure, or more than the bridge's few seconds) carries on as before.
+  // (typeof guards: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names.)
+  if (toolName === "nexus_general_conversation" && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
+    const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+    if (planned) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: planned.response,
+        executionAttempted: true, executionVerified: planned.verified === true };
+    }
+  }
   if (toolName === "nexus_translation") {
     const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
     const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", arabic: "ar", portuguese: "pt" };
@@ -24209,6 +24222,10 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
   if (!status.enabled || !status.configured) return null;
   const command = sanitizePilotText(body.command || body.text || "", 900);
   if (!command) return null;
+  // A different person talking starts with a clean "what we are in the middle of" context, exactly as runAgentCommand does for the same request when this route steps aside
+  // (switchAgentContextTo). Without it the new speaker was recorded as the last one to speak while the previous person's mission and last sentence stayed in the shared
+  // profile, and showed up in the new speaker's own /api/state.
+  switchAgentContextTo(db, user);
   // Betting tips, hacking, "double your money" offers and investment advice (what to buy, sell or trade, price calls, exchanges, promised returns) are never sent to the AI model: they fall through to
   // runAgentCommand, which answers them with the fixed guard reply (see nexus/brain/content-guard.js). The phone line and the older command route come through here.
   if (contentGuardReply(command) || careSafetyApplies(command)) return null;

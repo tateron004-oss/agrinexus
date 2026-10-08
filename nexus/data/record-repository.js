@@ -311,7 +311,7 @@ class RecordRepository {
   }
 
   async remove({ tenantId, recordId, actorId }) {
-    const result=await this.db.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance=jsonb_build_object('deletedBy',$3),deleted_at=now(),updated_at=now()
+    const result=await this.db.query(`update nexus_records set state='deleted',data='{}'::jsonb,provenance=jsonb_build_object('deletedBy',$3::text),deleted_at=now(),updated_at=now()
       where tenant_id=$1 and record_id=$2 and deleted_at is null returning record_id`,[tenantId,recordId,actorId]);
     return Boolean((result.rows||result)[0]);
   }

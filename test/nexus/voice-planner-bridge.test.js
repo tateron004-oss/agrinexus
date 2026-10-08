@@ -89,6 +89,48 @@ test("planner (deterministicOnly): anything it cannot answer itself is DEFERRED,
   assert.equal(modelCalls.length > 0, true);
 });
 
+test("planner (deterministicOnly): \"delete my last reading\" and other health-readings requests are left to the readings route, never taken by the farm log (found against the real runtime: it deleted the last farm log entry)", async () => {
+  const { ask, modelCalls } = planner();
+  assert.match((await ask("it rained 12 mm today", true)).response, /^Logged 12 mm of rain/);
+  for (const text of ["delete my last reading", "remove my last reading", "show my blood pressure readings", "show my readings", "delete all my health records", "that was wrong, it was 133/78"]) {
+    const plan = await ask(text, true);
+    assert.equal(plan.deferred, true, `${text} => ${JSON.stringify(plan).slice(0, 300)}`);
+    assert.equal(plan.response, undefined, text);
+  }
+  assert.match((await ask("show my farm log", true)).response, /12 mm of rain/, "the farm log entry must still be there");
+  // The farm log's own undo (no health word) and the generic "that was wrong" feedback still belong to the planner on the spoken path.
+  assert.match((await ask("delete my last entry", true)).response, /^Removed your last entry: 12 mm of rain/);
+  assert.notEqual((await ask("that was wrong", true)).deferred, true, "generic feedback about Kyro's last answer is still answered by the planner");
+  assert.equal(modelCalls.length, 0);
+});
+
+test("planner (deterministicOnly): a fact the person states is saved WITHOUT a conversation link (the spoken path has not created the conversation row yet; the database refuses a link to a row that does not exist)", async () => {
+  const saved = [];
+  const memory = { saveProfileFact: async args => { saved.push(args); return { replaced: [] }; }, forgetProfile: async () => [], profile: async () => [] };
+  const p = new OpenEndedPlanner({ memory, tools: { list: async () => [] }, applications: { list: () => [] }, model: { plan: async () => { throw new Error("no model"); } } });
+  const command = { text: "I grow maize", tenantId: "t1", actorId: "u1", conversationId: "cnv_not_created_yet", channel: "voice", locale: "en" };
+  const spoken = await p.profileTurn(command, { deterministicOnly: true });
+  assert.match(spoken.response, /maize/);
+  const typed = await p.profileTurn(command, {});
+  assert.match(typed.response, /maize/);
+  assert.equal(saved[0].conversationId, null, "spoken: no link to a conversation that does not exist yet");
+  assert.equal(saved[1].conversationId, "cnv_not_created_yet", "typed: the conversation exists, the link is kept");
+});
+
+test("planner (typed route): the emergency number is answered the same way as on the other routes, with no AI model (found by running the audit's safety phrases on the typed route)", async () => {
+  const { ask, modelCalls } = planner();
+  for (const [text, expected] of [["What is the emergency number in Kenya?", /Kenya.*(?:999.*112|112.*999)/], ["namba ya dharura Kenya ni ipi?", /Kenya.*(?:999.*112|112.*999)/]]) {
+    for (const spoken of [false, true]) {
+      const plan = await ask(text, spoken);
+      assert.match(plan.response, expected, `${text} (${spoken ? "spoken" : "typed"})`);
+      assert.doesNotMatch(plan.response, /\b911\b/);
+    }
+  }
+  assert.equal(modelCalls.length, 0, "the number is never left to the model");
+  // Unrelated sentences are untouched.
+  assert.equal((await ask("save my emergency contact number as 0712345678", false)).response?.includes("999") || false, false);
+});
+
 // ---- AgentService / BehaviorSpine ----
 function agent(plan) {
   const log = { ensure: 0, append: [], audit: [], created: 0 };
@@ -156,4 +198,16 @@ test("server.js asks the bridge first, skips it for a crisis phrase, and still f
   assert.match(body, /deterministicVoiceAnswer\(\{ runtime: authoritativeNexusRuntime/);
   assert.ok(body.indexOf("deterministicVoiceAnswer(") < body.indexOf("runCompanionSafeAgentCommand(db, user"), "bridge must run before the legacy pipeline");
   assert.match(body, /crisisOverride === true \|\| crisisSignal\?\.state === "medical_emergency"/);
+});
+
+test("server.js: the catch-all conversation tool (the voice tool the production audit uses) asks the bridge too, after crisis and health readings, before the older pipeline", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  const start = source.indexOf("async function executeNexusOpenAiNativeTool");
+  const body = source.slice(start, source.indexOf("function nexusGenesisWorkspaceAction", start));
+  const at = needle => { const index = body.indexOf(needle); assert.ok(index > 0, needle); return index; };
+  assert.match(body, /toolName === "nexus_general_conversation" && effectiveMentalHealthSignal\.state !== "medical_emergency"[^{]*\{\s*const plannerUser = await authoritativeRuntimeUser\(user\)/);
+  assert.match(body, /deterministicVoiceAnswer\(\{ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language \}\)/);
+  assert.ok(at("buildSupportPacket") < at("deterministicVoiceAnswer("), "a crisis is answered before the bridge");
+  assert.ok(at("healthReadingsReply(db, user, command") < at("deterministicVoiceAnswer("), "health readings keep their own route");
+  assert.ok(at("deterministicVoiceAnswer(") < at("const routed = await runCompanionSafeAgentCommand"), "the bridge runs before the older pipeline");
 });

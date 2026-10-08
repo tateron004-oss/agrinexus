@@ -1,0 +1,13 @@
+{
+  "name": "kyro-real-runtime-verification",
+  "private": true,
+  "description": "Developer tooling only: runs the real server against an in-memory PostgreSQL (PGlite). Install here with `npm install`, then `node run.mjs`. Not part of the product, not installed by the root package.",
+  "scripts": {
+    "verify": "node run.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
+    "@electric-sql/pglite-socket": "0.2.11"
+  }
+}

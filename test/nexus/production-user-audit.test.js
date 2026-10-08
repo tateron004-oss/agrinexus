@@ -49,6 +49,18 @@ async function call(base, method, route, body, cookie = "") {
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 // The rules the tool keeps before it sends a single request
 // ---------------------------------------------------------------------------------------------------------------------------------------------
+// Found by running the audit against the real planner and database: Kyro now labels the currency once, in front of the amount ("You earned KSh 4,500 today", "Owed to you: John KSh 800"),
+// and the audit read only the bare "You earned 4,500" and "John 800" of the first version, so a correct sale and a correct debt were reported as a FAIL.
+test("the audit reads amounts with or without the currency label in front", () => {
+  for (const [text, amount] of [["You earned 4,500 today (1 entry).", 4500], ["You earned KSh 4,500 today (1 entry).", 4500], ["You earned ₦9,000 today (3 entries).", 9000], ["You earned USh 12,000 today (2 entries).", 12000], ["You earned Rs. 700 today.", 700]]) {
+    assert.equal(audit.parseIncome(text), amount, text);
+  }
+  assert.equal(audit.parseIncome("I have no income recorded today yet."), 0);
+  assert.equal(audit.parseIncome("something else"), null);
+  for (const text of ["Owed to you: John 800.", "Owed to you: John KSh 800. Say \"John paid\" when one of them pays.", "Owed to you: Mary 50; John ₦800."]) assert.ok(audit.OWES_JOHN_800.test(text), text);
+  for (const text of ["Owed to you: John 8000.", "Owed to you: John KSh 1800.", "Nobody owes you anything."]) assert.ok(!audit.OWES_JOHN_800.test(text), text);
+});
+
 test("a live address needs --base AND --i-understand-this-is-production; local addresses do not", () => {
   const ok = (args, env = {}) => audit.validateOptions(audit.parseArgs(args), env);
   assert.throws(() => ok([]), /--base <url> is required/);
