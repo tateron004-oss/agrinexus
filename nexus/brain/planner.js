@@ -8,6 +8,7 @@ const { accepted: acceptedAlertOffer } = require("../companion/offer.js");
 const { farmLogTurn } = require("../farm/log.js");
 const { farmWorkTurn } = require("../farmwork/index.js");
 const { healthWorkTurn } = require("../healthwork/index.js");
+const { storeReadingsTurn } = require("../health/store-readings.js");
 const { wellnessTurn } = require("../wellness/log.js");
 const { communityTurn } = require("../community/desk.js");
 const { feedbackTurn } = require("../quality/feedback.js");
@@ -16,7 +17,7 @@ const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNot
 const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
-const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
+const { validTimeZone, DEFAULT_TIME_ZONE, localDay } = require("../brief/compose.js");
 const { personalTurn } = require("../personal/items.js");
 const { hasReminderTimePhrase, resolveReminderTime, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { repeatReminderTurn } = require("../reminders/repeat-service.js");
@@ -29,9 +30,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, maxRepairAttempts });
   }
 
   // "Send me a weekly summary on Sunday at 6pm" / "stop my weekly summary" / "do I have a weekly summary?": opt-in, like the morning brief.
@@ -272,6 +273,14 @@ class OpenEndedPlanner {
     // Requests for sexual or explicit material, betting tips, and tricks to hack, fake or scam are answered plainly with what Kyro can do instead, before any tool or AI model sees them (see content-guard.js).
     const guarded = safetyTexts.map(contentGuardReply).find(Boolean);
     if (guarded) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: guarded.reply, sourceRequired: false });
+    // "Show my blood pressure readings", "delete my last reading", "that was wrong, it was 133/78", "delete all my health records", "who can see my health information": readings saved through the planner live in the
+    // record store, so they are shown, deleted and corrected here, by the same conversation the older routes use for the readings kept there (see health/store-readings.js). It asks before every change and says plainly
+    // when the store cannot be read. The spoken path (deterministicOnly) leaves this to its own route, which sees both kinds of reading together.
+    if (this.healthReadings?.records && context?.deterministicOnly !== true) {
+      const readings = await storeReadingsTurn({ records: this.healthReadings.records, tenantId: command.tenantId, userId: command.actorId, text: command.text, language: command.locale,
+        canWrite: !context?.isRestrictedFrom?.("health-record-write"), timeZone: context?.timeZone }).catch(() => null);
+      if (readings?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: readings.response, sourceRequired: false, planningAttempts: 0 });
+    }
     // The health worker's record-keeping (patients, visits, immunisations, pregnancies, follow-ups, clinic stock, referral letters, monthly reports:
     // see healthwork/) comes before the farm toolkit; each answers only words plainly for it, and an open guided question is answered first.
     for (const [toolkit, turn, stepId, restriction] of [[this.healthWork, healthWorkTurn, "health-report", "health-record-write"], [this.farmWork, farmWorkTurn, "farm-report", null]]) {
@@ -286,7 +295,7 @@ class OpenEndedPlanner {
       // records" -- and skipping only this one toolkit, rather than refusing the whole turn, still lets a
       // restricted caller use the farm toolkit or ordinary conversation normally.
       if (restriction && context?.isRestrictedFrom?.(restriction)) continue;
-      const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf });
+      const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf, country: context?.country || "" });
       const goal = String(command.text || "").trim();
       const catalog = work?.report ? await this.catalog() : null;
       if (work?.report && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) return Object.freeze({ goal, application: "documents", riskTier: "low", clarification: null, planningAttempts: 0,
@@ -327,14 +336,18 @@ class OpenEndedPlanner {
     if (named) command = { ...command, text: named.text };
     // To-do and shopping lists, notes and calendar events the person asks Kyro to keep (see personal/items.js).
     // "Ongeza mkutano kwenye kalenda kesho saa nne asubuhi": a calendar event asked for in Kiswahili, read into the English form and answered in Kiswahili.
-    const swahiliCalendar = parseSwahiliCalendar(command.text);
+    const swahiliCalendar = parseSwahiliCalendar(command.text, { today: localDay(new Date(), validTimeZone(context?.timeZone || DEFAULT_TIME_ZONE)) });
     if (swahiliCalendar) {
       const say = response => Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, planningAttempts: 0 });
+      if (swahiliCalendar.badDate) return say(swahiliCalendar.ask);
       if (swahiliCalendar.needTime) return say(NEED_TIME_SW);
       if (swahiliCalendar.needTitle) return say(NEED_EVENT_TITLE_SW);
       if (swahiliCalendar.needDay) return say(NEED_EVENT_DAY_SW);
       const added = await personalTurn({ text: swahiliCalendar.english, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone });
-      if (added) return say(/^Added to your calendar/.test(added) ? swahiliCalendar.replySw : added);
+      // The few answers the calendar gives in English that a Kiswahili speaker must not be left with in English.
+      if (added) return say(/^Added to your calendar/.test(added) ? swahiliCalendar.replySw
+        : /has already passed/.test(added) ? `Siku hiyo (${swahiliCalendar.whenSw}) imepita tayari. Niambie siku iliyo mbele, kwa mfano "kesho" au "tarehe 25 Oktoba". Bado sijaweka chochote.`
+        : /is already on your calendar/.test(added) ? `${swahiliCalendar.title} ${swahiliCalendar.whenSw} tayari iko kwenye kalenda yako.` : added);
     }
     const personal = await personalTurn({ text: command.text, memory: this.memory, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, history: conversationHistory });
     if (personal) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: personal, sourceRequired: false, planningAttempts: 0 });

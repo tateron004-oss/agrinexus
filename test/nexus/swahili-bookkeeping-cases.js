@@ -73,7 +73,7 @@ const CASES = [
   ["nimenunua mbegu kwa elfu mbili", { rows: [exp(2000, { category: "seed" })] }],
   ["nimenunua mbolea gunia mbili kwa elfu nane", { rows: [exp(8000, { category: "fertiliser", qty: 2, unit: "sack" })], reply: /sasa una gunia 2 za mbolea/ }],
   ["nimenunua mzigo kwa elfu nane kutoka kwa Mama Fatuma", { seed: true, rows: [exp(8000, { party: "Mama Fatuma", item: "mzigo" })], reply: /kutoka kwa Mama Fatuma kwa 8,000/ }],
-  ["nimenunua unga mifuko kumi kila mmoja 150", { seed: true, rows: [exp(1500, { item: "unga", qty: 10, unit: "bag" })], reply: /mfuko 10 za unga kwa 1,500/ }],
+  ["nimenunua unga mifuko kumi kila mmoja 150", { seed: true, rows: [exp(1500, { item: "flour", qty: 10, unit: "bag" })], reply: /mfuko 10 za unga kwa 1,500/ }],
   ["nimenunua stock ya elfu kumi", { seed: true, rows: [exp(10000, { item: "stock" })] }],
   ["nilinunua mbolea elfu tatu jana", { rows: [exp(3000, { day: YESTERDAY })], reply: /\(jana\)/ }],
   ["nimeuziwa mbolea na Juma elfu mbili", { rows: [exp(2000, { party: "Juma", category: "fertiliser" })], reply: /umenunua mbolea kutoka kwa Juma kwa 2,000/ }],
@@ -88,8 +88,9 @@ const CASES = [
   ["nimetumia 300 kwa nauli ya kuleta mzigo", { rows: [exp(300, { category: "transport" })] }],
   ["nimelipa kodi elfu tatu", { rows: [exp(3000, { category: "rent" })] }],
   ["nimelipa ada ya shule elfu kumi", { rows: [exp(10000, { category: "household" })], reply: /hazihesabiwi kwenye faida ya shamba/ }],
-  ["nimechangia chama shilingi mia tano", { rows: [exp(500, { category: "household", currency: "shillings" })], reply: /nyumbani/ }],
-  ["nimelipa mchango wa chama elfu mbili", { rows: [exp(2000, { category: "household" })] }],
+  // a chama contribution is savings (see shop-credit.js): kept as a saving, never a cost, so it never lowers the profit
+  ["nimechangia chama shilingi mia tano", { rows: [{ type: "saving", category: "chama", kind: "contribution", amount: 500, currency: "shillings" }], reply: /mchango wa chama wa shilingi 500.*si gharama/ }],
+  ["nimelipa mchango wa chama elfu mbili", { rows: [{ type: "saving", category: "chama", amount: 2000 }] }],
   ["nimelipa kibarua 500", { rows: [exp(500, { category: "labour" })], reply: /umemlipa kibarua 500/ }],
   ["kibarua elfu moja", { rows: [exp(1000, { category: "labour" })] }],
   ["nimemlipa kibarua elfu mbili", { rows: [exp(2000, { category: "labour" })] }],
@@ -224,8 +225,9 @@ const CASES = [
 
   // ---------- things that are not for the toolkit stay untouched ----------
   ["Habari yako", { ...none, replies: [null] }],
-  ["nimeuza gari langu kwa 100000", { ...none, replies: [null] }],
-  ["nimenunua simu kwa 20000", { ...none, replies: [null] }],
+  // a personal sale from a person with no records is kept, as in English, with a way to take it back out
+  ["nimeuza gari langu kwa 100000", { rows: [inc(100000, { item: "gari langu" })], reply: /futa rekodi ya mwisho/ }],
+  ["nimenunua simu kwa 20000", { rows: [exp(20000, { item: "phone" })], reply: /umenunua simu kwa 20,000/ }],
   ["Faida ya elimu ni nini", { ...none, replies: [null] }],
   ["Nina swali", { ...none, replies: [null] }],
   ["Mama amelipa ada ya shule", { ...none, replies: [null] }],

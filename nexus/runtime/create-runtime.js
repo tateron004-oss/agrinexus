@@ -205,7 +205,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: wellnessRecords, repeatReminders: repeatReminderRecords,
     community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) },
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
-    healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) } }) : null;
+    healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) },
+    healthReadings: { records } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);

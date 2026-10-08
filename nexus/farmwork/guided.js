@@ -80,6 +80,10 @@ async function continueGuided(ctx, session, template) {
     answers[q.key] = null;
   } else {
     const parsed = (q.parse || PARSERS[q.type])(text, q, ctx); // a template may bring its own parser (the health worker's ages)
+    // a question may say the words are a whole new request, not an answer (`drop`): the question is let go at once
+    if (parsed.drop) return dropped();
+    // a question may say the words are a whole new request, not an answer (`drop`): the question is let go at once
+    if (parsed.drop) return dropped();
     if (parsed.hint) {
       const misses = (session.misses || 0) + 1;
       if (misses >= 2 || (q.type !== "longtext" && text.split(/\s+/).length >= 4)) return dropped();

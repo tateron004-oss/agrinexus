@@ -3,6 +3,7 @@
 const { clean, parseMoney, parseQuantity, formatMoney, titleCase, round, plural, whenOf, UNIT_WORDS } = require("./parse.js");
 const { startGuided, askConfirm } = require("./guided.js");
 const { nameKey } = require("./fields.js");
+const { findItems } = require("./inventory.js");
 const money = require("./money.js");
 const amounts = require("./books-amounts.js");
 const { describeDay } = require("../personal/dates.js");
@@ -499,13 +500,13 @@ async function handle(ctx) {
   // costs: rent, electricity, labour, stock, a farm hand, a worker paid by the day
   const cost = await readCost(ctx, body);
   if (cost) {
-    if (cost.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(cost.unsure.candidate)} when you said "${cost.unsure.says}"?`, { type: "books-run", pieces: [{ text: cost.canonical, payment: "" }], day });
+    if (cost.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(cost.unsure.candidate)} when you said "${cost.unsure.says}"?`, { type: "books-run", pieces: [{ text: cost.canonical, payment: "" }], day, candidate: cost.unsure.candidate });
     const reply = await runMoney(ctx, cost.canonical, withDay);
     if (reply) return reply;
   }
   const earning = readEarning(body);
   if (earning) {
-    if (earning.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(earning.unsure.candidate)} when you said "${earning.unsure.says}"?`, { type: "books-run", pieces: [{ text: earning.canonical, payment: "" }], day });
+    if (earning.unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(earning.unsure.candidate)} when you said "${earning.unsure.says}"?`, { type: "books-run", pieces: [{ text: earning.canonical, payment: "" }], day, candidate: earning.unsure.candidate });
     const reply = await runMoney(ctx, earning.canonical, withDay);
     if (reply) return reply;
   }
@@ -515,7 +516,7 @@ async function handle(ctx) {
   if (!trade) return null;
   const pieces = trade.pieces;
   const unsure = pieces.find(piece => piece.unsure);
-  if (unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(unsure.unsure.candidate)} when you said "${unsure.unsure.says}"?`, { type: "books-run", pieces: pieces.map(piece => ({ text: piece.canonical, payment: piece.payment || "" })), day });
+  if (unsure) return askConfirm(ctx, `Did you mean ${amounts.sayAmount(unsure.unsure.candidate)} when you said "${unsure.unsure.says}"?`, { type: "books-run", pieces: pieces.map(piece => ({ text: piece.canonical, payment: piece.payment || "" })), day, candidate: unsure.unsure.candidate });
   const needsAsk = pieces.find(piece => piece.ask);
   if (needsAsk) return pieces.length > 1 ? null : askBack(ctx, needsAsk, day);
   const replies = []; const fresh = !(await ctx.hasFarmData());
@@ -536,7 +537,9 @@ async function askBack(ctx, need, day) {
   if (need.ask === "price") {
     // "I bought a phone" from someone who keeps no books is chat, not bookkeeping; known farm and trade words, or an account that already keeps money records, are asked about.
     const category = need.verb === "sold" ? money.incomeCategory(need.item) : money.expenseCategory(need.item);
-    if (category === "other" && !farmer && !hasMoney) return null;
+    // ...and so are goods the person keeps in stock records (a shopkeeper counting flour)
+    const kept = category === "other" && !farmer && !hasMoney ? findItems(await ctx.store.list({ ...scopeOf(ctx), collection: "stock" }), need.item).length > 0 : false;
+    if (category === "other" && !farmer && !hasMoney && !kept) return null;
     return startGuided(ctx, need.verb === "sold" ? templates.books_price : templates.books_cost, {}, { verb: need.verb, phrase: need.phrase, item: need.item, payment: need.payment || "", credit: need.credit || "", day });
   }
   if (need.ask === "unit") return startGuided(ctx, templates.books_unit, {}, { verb: need.verb, phrase: need.phrase, price: need.price, payment: need.payment || "", credit: need.credit || "", day });

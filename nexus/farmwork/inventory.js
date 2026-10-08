@@ -13,7 +13,7 @@ const CATEGORIES = [["seed", /\b(?:seeds?|seedlings?|cuttings?|vines)\b/i], ["fe
 const categoryOf = name => (CATEGORIES.find(([, pattern]) => pattern.test(name)) || ["other"])[0];
 const stem = word => word.replace(/ies$/, "y").replace(/(?:es|s)$/, "");
 const keyOf = name => clean(name).toLowerCase().replace(/\b(?:of|my|the|some|more)\b/g, "").split(" ").filter(Boolean).map(stem).join(" ");
-const NOT_STOCK = /^(?:animals?|livestock|cattle|cows?|bulls?|goats?|sheep|pigs?|chickens?|hens?|poultry|rabbits?|ducks?|donkeys?|fields?|plots?|acres?|hectares?|workers?|employees?|staff|customers?|buyers?|members?|tasks?|money|cash|loans?|debts?|children|kids)$/i;
+const NOT_STOCK = /^(?:animals?|livestock|cattle|cows?|bulls?|goats?|sheep|pigs?|chickens?|hens?|poultry|rabbits?|ducks?|donkeys?|fields?|plots?|acres?|hectares?|workers?|employees?|staff|customers?|buyers?|members?|tasks?|money|cash|loans?|debts?|children|kids|time|days?|hours?|minutes?|weeks?|months?|years?|messages?|meetings?|questions?|ideas?|energy)$/i;
 const QTY = `(\\d[\\d,]*(?:\\.\\d+)?\\s*(?:${UNIT_WORDS}))`;
 const STORE = "(?:inventory|stock|store|storeroom|store room|barn|shed|granary)";
 const tidyName = raw => clean(raw).toLowerCase().replace(/^(?:of|more|some|the|my)\s+/, "").replace(/[.,;]+$/g, "");
@@ -157,4 +157,4 @@ function stockDigest(records, today) {
     expiring: items.filter(item => item.data.expiry && item.data.expiry <= addDays(today, 30)) };
 }
 
-module.exports = Object.freeze({ handle, addStock, stockDigest, findItems, categoryOf, keyOf, totals });
+module.exports = Object.freeze({ handle, addStock, stockDigest, findItems, categoryOf, keyOf, totals, lowNote });

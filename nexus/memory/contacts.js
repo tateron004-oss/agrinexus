@@ -155,8 +155,8 @@ function describeContact(contact) {
 function spokenPhone(phone) {
   const m = /^\+(254|255|256|250|234|233|27|1|44)(\d{6,12})$/.exec(String(phone || ""));
   if (!m) return String(phone || "");
-  // Nigeria 803 123 4567 (3-3-4); the others in threes
-  const rest = m[1] === "234" && m[2].length === 10 ? `${m[2].slice(0, 3)} ${m[2].slice(3, 6)} ${m[2].slice(6)}` : m[2].match(/.{1,3}/g).join(" ");
+  // Nigeria 803 123 4567 and the United States / Canada 555 123 4567 (3-3-4); the others in threes
+  const rest = (m[1] === "234" || m[1] === "1") && m[2].length === 10 ? `${m[2].slice(0, 3)} ${m[2].slice(3, 6)} ${m[2].slice(6)}` : m[2].match(/.{1,3}/g).join(" ");
   return `+${m[1]} ${rest}`;
 }
 
