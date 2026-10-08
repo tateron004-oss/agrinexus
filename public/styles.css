@@ -1355,7 +1355,8 @@ a:focus-visible,
   color: white;
 }
 .login-hero h1 { font-size: 4rem; margin: 18px 0 12px; }
-.login-hero p { max-width: 760px; font-size: 1.15rem; line-height: 1.6; }
+/* The global `p { color: var(--muted) }` rule (further down) used to win here, which painted slate-grey text on the blue-green hero: nearly unreadable. */
+.login-hero p { max-width: 760px; font-size: 1.15rem; line-height: 1.6; color: rgba(255, 255, 255, .94); }
 .brand-mark {
   width: 64px;
   height: 64px;
@@ -15885,6 +15886,14 @@ body.user-mode .nexus-true-experience-root {
   margin: 0 !important;
   padding: 0 !important;
   display: block !important;
+}
+
+/* Only the orb-only home is a fixed full-screen layer, where 100vw is right. Every other mode (the mission workspace, the focused
+   function window) sits inside the padded workspace, and 100vw there made the card wider than its parent: on a 375px phone the right
+   edge of the card and its buttons were clipped by the workspace's overflow:hidden. */
+body.user-mode .nexus-true-experience-root:not([data-nexus-true-experience-mode="home"]) {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 body.user-mode .nexus-true-experience-root .nexus-command-main {
