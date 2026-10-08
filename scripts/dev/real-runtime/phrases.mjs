@@ -231,6 +231,7 @@ for (const route of ROUTES) {
     if (route === "orb" && item.noorb) { results.push({ id: item.id, group: item.g, lang: item.lang, text: item.t, route, verdict: "NOORB", reasons: ["the browser registers no tool for this"], steps: [], delta: {} }); continue; }
     const run = await runPhrase(item, route, users[route].a);
     results.push(run);
+    if (route === "orb" && item.alt) for (const tool of item.alt) results.push(await runPhrase({ ...item, tool }, route, users[route].a, `:via-${tool.replace(/^nexus_/, "")}`)); // the model may pick a nearer tool than the everyday one
     if (item.staff) results.push(await runPhrase(item, route, users[route].staff, ":staff"));
   }
   fs.writeFileSync(path.join(OUT, `phrases-partial-${route}.json`), JSON.stringify(results.filter(x => x.route === route), null, 1));

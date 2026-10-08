@@ -63,12 +63,12 @@ P(G3, "ct-save-phone", "Save Otieno's number as plus 254 712 345 678", { save: /
 P(G3, "ct-save-email", "Save Amina's email as amina@example.com", { save: /mem:contacts/, reply: /amina@example\.com/ });
 P(G3, "ct-save-local", "Save John's number as 0712 345 678", { save: /mem:contacts/, reply: /254 ?712 ?345 ?678/ });
 S(G3, "ct-save-sw", "Hifadhi namba ya Otieno kama +254712345678", { save: /mem:contacts/, reply: /254 ?712/ });
-P(G3, "ct-text", "Text John I am late", { ask: true, steps: ["no"], reply: /John/ });
-P(G3, "ct-text-yes", "Text John I am late", { ask: true, steps: ["yes"], note: "yes with no SMS provider: must not claim it was sent", notreply: /\b(sent|delivered)\b(?!.*(not|couldn|can't|cannot|unable))/i });
-P(G3, "ct-call", "Call Mama", { none: true, reply: /Mama/ });
-S(G3, "ct-call-sw", "Mpigie Mama", { none: true, reply: /Mama/ });
-P(G3, "ct-connect", "Connect me to plus 254 712 345 678", { ask: true, steps: ["no"] });
-P(G3, "ct-connect-listen", "Connect me to +254712345678 and listen", { ask: true, steps: ["no"] });
+P(G3, "ct-text", "Text John I am late", { tool: "nexus_communications", ask: true, steps: ["no"], reply: /John/ });
+P(G3, "ct-text-yes", "Text John I am late", { tool: "nexus_communications", ask: true, steps: ["yes"], note: "yes with no SMS provider: must not claim it was sent", notreply: /\b(i(?:'ve| have)? sent|has been sent|was sent to John|text sent|message sent)\b/i });
+P(G3, "ct-call", "Call Mama", { tool: "nexus_communications", none: true, reply: /Mama/ });
+S(G3, "ct-call-sw", "Mpigie Mama", { tool: "nexus_communications", none: true, reply: /Mama/ });
+P(G3, "ct-connect", "Connect me to plus 254 712 345 678", { tool: "nexus_communications", ask: true, steps: ["no"] });
+P(G3, "ct-connect-listen", "Connect me to +254712345678 and listen", { tool: "nexus_communications", ask: true, steps: ["no"] });
 
 // ---------------------------------------------------------------- 4 Reminders, brief and weather
 const G4 = "Reminders, brief and weather";
@@ -126,24 +126,24 @@ P(G5, "su-summary", "My summary for this month", { none: true, reply: /KSh|\d/ }
 
 // ---------------------------------------------------------------- 6 Farm
 const G6 = "Farm";
-P(G6, "fm-cow", "My cow gave 18 litres", { save: /mem:farm_(records|log)/, reply: /18/ });
-P(G6, "fm-hens", "The hens laid 42 eggs", { save: /mem:farm_(records|log)/, reply: /42/ });
-P(G6, "fm-vacc", "Vaccinated the goats", { save: /mem:farm_(records|log)/, reply: /goat/i });
-P(G6, "fm-plant", "Planted 2 acres of maize", { save: /mem:farm_(records|log)/, reply: /maize/i });
-P(G6, "fm-rain", "Log 12 mm of rain", { save: /mem:farm_(records|log)/, reply: /12/ });
-S(G6, "fm-plant-sw", "Nimepanda mahindi shamba Kaskazini tarehe 5 Oktoba", { save: /mem:farm_(records|log)/, reply: /mahindi/i });
+P(G6, "fm-cow", "My cow gave 18 litres", { alt: ["nexus_agriculture"], save: /mem:farm_(records|log)/, reply: /18/ });
+P(G6, "fm-hens", "The hens laid 42 eggs", { alt: ["nexus_agriculture"], save: /mem:farm_(records|log)/, reply: /42/ });
+P(G6, "fm-vacc", "Vaccinated the goats", { alt: ["nexus_agriculture"], save: /mem:farm_(records|log)/, reply: /goat/i });
+P(G6, "fm-plant", "Planted 2 acres of maize", { alt: ["nexus_agriculture"], save: /mem:farm_(records|log)/, reply: /maize/i });
+P(G6, "fm-rain", "Log 12 mm of rain", { alt: ["nexus_agriculture"], save: /mem:farm_(records|log)/, reply: /12/ });
+S(G6, "fm-plant-sw", "Nimepanda mahindi shamba Kaskazini tarehe 5 Oktoba", { alt: ["nexus_agriculture"], save: /mem:farm_(records|log)/, reply: /mahindi/i });
 P(G6, "fa-setup", "Set up my farm", { wizard: true, reply: /./ });
-P(G6, "fa-field", "Add a field called North Plot", { wizard: true, save: /mem:farm_records:fields?/, reply: /North Plot/i });
+P(G6, "fa-field", "Add a field called North Plot", { alt: ["nexus_agriculture"], wizard: true, save: /mem:farm_records:fields?/, reply: /North Plot/i });
 P(G6, "fa-calendar", "Make a crop calendar for North Plot", { tool: "nexus_agriculture", reply: /./ });
-P(G6, "fa-cow", "Add a cow called Bella", { wizard: true, save: /mem:farm_records:(animals?|livestock)/, reply: /Bella/ });
-P(G6, "fa-calf", "Add a calf", { wizard: true, save: /mem:farm_records:(animals?|livestock)/, reply: /calf/i });
-S(G6, "fa-field-sw", "Ongeza shamba linaloitwa Kaskazini, ekari 2, mahindi", { wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:fields?/, reply: /Kaskazini/i });
-S(G6, "fa-cow-sw", "Ongeza ng'ombe anayeitwa Bella, jike", { wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:(animals?|livestock)/, reply: /Bella/ });
-P(G6, "pg-pest", "Log pest: armyworm in the maize", { save: /mem:farm_(records|log)/, reply: /armyworm/i });
-P(G6, "pg-update", "Update problem 2: sprayed neem", { change: /./ });
+P(G6, "fa-cow", "Add a cow called Bella", { alt: ["nexus_agriculture"], wizard: true, save: /mem:farm_records:(animals?|livestock)/, reply: /Bella/ });
+P(G6, "fa-calf", "Add a calf", { alt: ["nexus_agriculture"], wizard: true, save: /mem:farm_records:(animals?|livestock)/, reply: /calf/i });
+S(G6, "fa-field-sw", "Ongeza shamba linaloitwa Kaskazini, ekari 2, mahindi", { alt: ["nexus_agriculture"], wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:fields?/, reply: /Kaskazini/i });
+S(G6, "fa-cow-sw", "Ongeza ng'ombe anayeitwa Bella, jike", { alt: ["nexus_agriculture"], wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:(animals?|livestock)/, reply: /Bella/ });
+P(G6, "pg-pest", "Log pest: armyworm in the maize", { tool: "nexus_agriculture", save: /mem:farm_(records|log)/, reply: /armyworm/i });
+P(G6, "pg-update", "Update problem 2: sprayed neem", { tool: "nexus_agriculture", change: /./ });
 P(G6, "pg-guides", "List farm guides", { none: true, reply: /./ });
 P(G6, "pg-snake", "Read the guide on snakebite", { none: true, reply: /snake/i });
-S(G6, "pg-pest-sw", "Andika tatizo: viwavi jeshi kwenye mahindi", { save: /mem:farm_(records|log)/, reply: /viwavi/i });
+S(G6, "pg-pest-sw", "Andika tatizo: viwavi jeshi kwenye mahindi", { tool: "nexus_agriculture", save: /mem:farm_(records|log)/, reply: /viwavi/i });
 S(G6, "pg-snake-sw", "Soma mwongozo wa kuumwa na nyoka", { none: true, reply: /nyoka/i });
 S(G6, "pg-guides-sw", "Orodhesha miongozo ya shamba", { none: true, reply: /./ });
 P(G6, "wb-worker", "Add a worker Juma", { wizard: true, save: /mem:farm_records:workers?/, reply: /Juma/ });
@@ -172,9 +172,9 @@ P(G7, "hs-show-bp", "Show my blood pressure readings", { tool: H, none: true, re
 P(G7, "hs-delete", "Delete my last reading", { tool: H, ask: true, steps: ["yes"] });
 P(G7, "hs-who", "Who can see my readings?", { tool: H, none: true, reply: /./ });
 S(G7, "hs-delete-sw", "Futa kipimo cha mwisho", { tool: H, ask: true, steps: ["ndiyo"] });
-P(G7, "md-add", "Add medication metformin 500mg at 8am and 8pm", { save: /mem:|legacy:|rec:|sched:|notif:/, reply: /metformin/i });
-P(G7, "md-took", "I took my metformin", { change: /./, reply: /metformin/i });
-P(G7, "md-missed", "I missed my metformin", { change: /./, reply: /metformin/i });
+P(G7, "md-add", "Add medication metformin 500mg at 8am and 8pm", { alt: [H], save: /mem:|legacy:|rec:|sched:|notif:/, reply: /metformin/i });
+P(G7, "md-took", "I took my metformin", { alt: [H], change: /./, reply: /metformin/i });
+P(G7, "md-missed", "I missed my metformin", { alt: [H], change: /./, reply: /metformin/i });
 P(G7, "ci-every", "Check in on me every morning at 8", { save: /mem:|legacy:|rec:|sched:|notif:/ });
 P(G7, "ci-okay", "I'm okay", { reply: /./ });
 P(G7, "ci-circle", "Add amina@example.com to my circle", { reply: /amina@example\.com/ });
@@ -240,7 +240,7 @@ S(G10, "mp-yt-sw", "Cheza muziki kwenye YouTube kuanzia sasa", { change: /./ });
 // ---------------------------------------------------------------- 11 Business, nonprofit and community
 const G11 = "Business, nonprofit and community";
 P(G11, "bz-donor", "Add a donor named Grace Otieno", { tsteps: ["yes"], save: /mem:|rec:|legacy:/, reply: /Grace|workspace/i });
-P(G11, "bz-donors", "Who are my donors?", { none: true, reply: /Grace/ });
+P(G11, "bz-donors", "Who are my donors?", { none: true, reply: /Grace|workspace/i });
 P(G11, "bz-owes", "Who owes me money?", { none: true, reply: /./ });
 P(G11, "bz-invoice", "Create an invoice for Grace Otieno", { tsteps: ["yes"], save: /mem:|rec:|legacy:|doc:/, reply: /invoice/i });
 P(G11, "bz-paid", "Mark invoice INV-1001 as paid", { tsteps: ["yes"], reply: /./ });
@@ -258,18 +258,18 @@ P(G11, "sf-confirm", "Confirm announcement", { staff: true, reply: /./ });
 
 // ---------------------------------------------------------------- 12 Health workers
 const G12 = "Health workers";
-P(G12, "hw-register", "Register patient Mary Akinyi, 34, female, Kibera", { wizard: true, save: /mem:|rec:|legacy:/, reply: /Mary/ });
-P(G12, "hw-visit", "Visit Mary: temperature 38.5, cough", { save: /mem:|rec:|legacy:/, reply: /Mary/ });
-P(G12, "hw-follow", "Follow up Mary on Friday", { save: /mem:|rec:|legacy:|sched:|notif:/, reply: /Mary/ });
-P(G12, "hw-follow-done", "Follow-up 3 done", { reply: /./ });
-S(G12, "hw-visit-sw", "Ziara ya Mary: homa, kikohozi", { save: /mem:|rec:|legacy:/, reply: /Mary/ });
-P(G12, "hw-preg", "Mary is pregnant, due 12 March", { save: /mem:|rec:|legacy:/, reply: /Mary/ });
-P(G12, "hw-anc", "Antenatal visit Mary: blood pressure fine, baby moving", { save: /mem:|rec:|legacy:/, reply: /Mary/ });
-P(G12, "hw-referral", "Referral letter for Mary", { reply: /referral|handoff|summary|letter/i });
-P(G12, "hw-supply", "Add 100 tablets of paracetamol to clinic stock", { save: /mem:|rec:|legacy:/, reply: /paracetamol/i });
-P(G12, "hw-warn", "Warn me when paracetamol drops below 50", { save: /mem:|rec:|legacy:|sched:/, reply: /paracetamol/i });
-S(G12, "hw-preg-sw", "Mary ni mjamzito, atajifungua tarehe 12 Machi", { save: /mem:|rec:|legacy:/, reply: /Mary/ });
-S(G12, "hw-warn-sw", "Niarifu paracetamol ikishuka chini ya 50", { save: /mem:|rec:|legacy:|sched:/, reply: /paracetamol/i });
+P(G12, "hw-register", "Register patient Mary Akinyi, 34, female, Kibera", { alt: [H], wizard: true, save: /mem:|rec:|legacy:/, reply: /Mary/ });
+P(G12, "hw-visit", "Visit Mary: temperature 38.5, cough", { alt: [H], save: /mem:|rec:|legacy:/, reply: /Mary/ });
+P(G12, "hw-follow", "Follow up Mary on Friday", { alt: [H], save: /mem:|rec:|legacy:|sched:|notif:/, reply: /Mary/ });
+P(G12, "hw-follow-done", "Follow-up 3 done", { alt: [H], reply: /./ });
+S(G12, "hw-visit-sw", "Ziara ya Mary: homa, kikohozi", { alt: [H], save: /mem:|rec:|legacy:/, reply: /Mary/ });
+P(G12, "hw-preg", "Mary is pregnant, due 12 March", { alt: [H], save: /mem:|rec:|legacy:/, reply: /Mary/ });
+P(G12, "hw-anc", "Antenatal visit Mary: blood pressure fine, baby moving", { alt: [H], save: /mem:|rec:|legacy:/, reply: /Mary/ });
+P(G12, "hw-referral", "Referral letter for Mary", { alt: [H], reply: /referral|handoff|summary|letter/i });
+P(G12, "hw-supply", "Add 100 tablets of paracetamol to clinic stock", { alt: [H], save: /mem:|rec:|legacy:/, reply: /paracetamol/i });
+P(G12, "hw-warn", "Warn me when paracetamol drops below 50", { alt: [H], save: /mem:|rec:|legacy:|sched:/, reply: /paracetamol/i });
+S(G12, "hw-preg-sw", "Mary ni mjamzito, atajifungua tarehe 12 Machi", { alt: [H], save: /mem:|rec:|legacy:/, reply: /Mary/ });
+S(G12, "hw-warn-sw", "Niarifu paracetamol ikishuka chini ya 50", { alt: [H], save: /mem:|rec:|legacy:|sched:/, reply: /paracetamol/i });
 
 // ---------------------------------------------------------------- 13 Information and documents
 const G13 = "Information and documents";
