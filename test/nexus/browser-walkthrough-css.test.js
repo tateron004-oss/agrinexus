@@ -17,6 +17,13 @@ test("the sign-in hero paragraph sets its own light colour (the global p rule us
   assert.match(rule(".login-hero p"), /color:\s*rgba\(255,\s*255,\s*255/);
 });
 
+test("the function-window backdrop sits above the command-centre hero (z-index 125) so the two are not drawn on top of each other", () => {
+  const hero = css.match(/body\.user-mode \.nexus-command-center-hero,[^{]*\{[^}]*z-index:\s*(\d+)/);
+  const backdrop = rule("body.user-mode .nexus-workflow-modal-backdrop").match(/z-index:\s*(\d+)/);
+  assert.ok(hero && backdrop);
+  assert.ok(Number(backdrop[1]) > Number(hero[1]), "the window backdrop must out-rank the hero");
+});
+
 test("only the orb-only home is 100vw wide; the mission/conversation card fits its padded parent", () => {
   const block = rule('body.user-mode .nexus-true-experience-root:not([data-nexus-true-experience-mode="home"])');
   assert.match(block, /width:\s*100%\s*!important/);

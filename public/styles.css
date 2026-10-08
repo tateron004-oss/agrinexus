@@ -11967,7 +11967,8 @@ body.user-mode .nexus-suggested-action {
 body.user-mode .nexus-workflow-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  /* Above the command-centre hero and composer (z-index 125, same stacking context), or their text is drawn on top of the open window. */
+  z-index: 130;
   display: grid;
   align-items: start;
   justify-items: center;
