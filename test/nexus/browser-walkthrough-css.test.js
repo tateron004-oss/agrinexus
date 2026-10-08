@@ -30,6 +30,11 @@ test("the minimized-window dock (with its Restore button) sits above the hero so
   assert.ok(dock > hero);
 });
 
+test("the 'Close menu' button is hidden by default and only shown inside the open phone-width settings menu", () => {
+  assert.match(rule(".top-settings-close"), /display:\s*none/);
+  assert.match(css, /\.top-actions\.open \.top-settings-close \{ display: block; \}/);
+});
+
 test("only the orb-only home is 100vw wide; the mission/conversation card fits its padded parent", () => {
   const block = rule('body.user-mode .nexus-true-experience-root:not([data-nexus-true-experience-mode="home"])');
   assert.match(block, /width:\s*100%\s*!important/);

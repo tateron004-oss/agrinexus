@@ -1432,6 +1432,8 @@ a:focus-visible,
 .brand, .top-actions, .action-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .brand span { display: block; color: var(--muted); font-size: .9rem; margin-top: 2px; }
 .top-settings-toggle { display: none; }
+/* "Close menu" only means something inside the phone-width settings menu; on a desktop it sat in the Admin/Investor top bar doing nothing. */
+.top-settings-close { display: none; }
 .shell { display: grid; grid-template-columns: 1fr; min-height: calc(100vh - 63px); }
 .sidebar {
   display: flex;
@@ -9396,6 +9398,7 @@ body.reduced-motion *::after {
   }
   .top-actions button,
   .top-actions select { padding: 7px 9px; font-size: .88rem; }
+  .top-actions.open .top-settings-close { display: block; }
   .content {
     padding: 10px 10px 190px;
   }
