@@ -444,3 +444,33 @@ test("'Playing' is said as soon as the audio really plays, not three seconds lat
   assert.ok(result.telemetry.advancedSeconds >= 3);
   assert.equal(world.spoken.length, 1, "announced exactly once");
 });
+
+test("the per-device 'play music in' setting: YouTube hands off named songs but never radio; Kyro (the default) plays in the app and hands off only when asked", async () => {
+  const handoffResponse = { ok: true, mode: "handoff", handoff: { kind: "search", url: "https://www.youtube.com/results?search_query=Last%20Last", title: "Last Last" }, candidates: [], tried: [], youtube: { configured: false } };
+  const world = makeWorld({ responses: [handoffResponse, okResponse(station())] });
+  assert.equal(world.controller.getState().playIn, "kyro");
+  assert.equal(await world.controller.handleCommand("play music in youtube from now on"), true);
+  assert.equal(world.store["kyro.media.playIn"], "youtube");
+  assert.equal(world.spoken[0], "Music will open in YouTube.");
+  const queued = await world.controller.play("Last Last", { kind: "music" });
+  assert.equal(queued.handoff, true);
+  assert.equal(world.requests[0].body.handoff, true);
+  const radio = world.controller.play("", { kind: "radio" });
+  await until(() => world.elements.length === 1, "radio element");
+  assert.equal(world.requests[1].body.handoff, false, "radio is always played in the app: instant, free, no ads");
+  world.elements[0].startPlayingFor(4);
+  assert.equal((await radio).ok, true);
+  assert.equal(await world.controller.handleCommand("cheza muziki kwenye kyro kila mara"), true);
+  assert.equal(world.store["kyro.media.playIn"], "kyro");
+  assert.equal(world.spoken[world.spoken.length - 1], "Muziki utachezwa ndani ya Kyro.");
+});
+
+test("when nothing can be played the person is also told how to ask for YouTube instead", async () => {
+  const world = makeWorld({ responses: [emptyResponse(false)] });
+  const result = await world.controller.play("Sauti Sol", { kind: "music" });
+  assert.equal(result.ok, false);
+  assert.match(result.message, /You can also say: play Sauti Sol on YouTube\.$/);
+  const swahili = makeWorld({ responses: [emptyResponse(true)], language: "sw" });
+  const sw = await swahili.controller.play("Sauti Sol", { kind: "music", lang: "sw" });
+  assert.match(sw.message, /Unaweza pia kusema: cheza Sauti Sol kwenye YouTube\.$/);
+});

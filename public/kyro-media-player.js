@@ -24,6 +24,8 @@
       playingPreview: "Playing a 30-second preview of {title} by {artist}. The full song is not available from my free sources.",
       orSong: "Or tell me a song.", lastChoice: "Playing your last choice, {title}.",
       tapToPlay: "Tap play to start.", trying: "That stream is not available, trying another.", streamStopped: "The stream stopped. Trying another.",
+      tryYoutube: "You can also say: play {q} on YouTube.",
+      playInLabel: "Play music in", playInKyro2: "Kyro", playInYoutube2: "YouTube",
       noneFound: "I could not find anything to play for {q}.", noYoutube: "YouTube is not set up on this server.",
       resolverDown: "I could not reach the music service right now. Please try again.",
       paused: "Paused.", resumed: "Playing again.", stopped: "Stopped.", nothingPlaying: "Nothing is playing right now.",
@@ -46,6 +48,8 @@
       playingPreview: "Ninacheza sehemu ya sekunde 30 ya {title} ya {artist}. Wimbo mzima haupatikani kwenye vyanzo vyangu vya bure.",
       orSong: "Au niambie wimbo.", lastChoice: "Ninacheza chaguo lako la mwisho, {title}.",
       tapToPlay: "Gusa cheza ili kuanza.", trying: "Hiyo haipatikani, ninajaribu nyingine.", streamStopped: "Mtiririko umesimama. Ninajaribu nyingine.",
+      tryYoutube: "Unaweza pia kusema: cheza {q} kwenye YouTube.",
+      playInLabel: "Cheza muziki kwenye", playInKyro2: "Kyro", playInYoutube2: "YouTube",
       noneFound: "Sikuweza kupata kitu cha kucheza kwa {q}.", noYoutube: "YouTube haijawekwa kwenye seva hii.",
       resolverDown: "Siwezi kufikia huduma ya muziki sasa hivi. Tafadhali jaribu tena.",
       paused: "Imesitishwa.", resumed: "Inaendelea kucheza.", stopped: "Imesimamishwa.", nothingPlaying: "Hakuna kinachochezwa sasa hivi.",
@@ -121,7 +125,7 @@
       try { if (storage) { if (value == null) storage.removeItem(`kyro.media.${key}`); else storage.setItem(`kyro.media.${key}`, String(value)); } } catch (_) { /* private mode */ }
     }
     function audioOnly() { return readPref("audioOnly", "0") === "1"; }
-    function playIn() { const value = readPref("playIn", "auto"); return value === "kyro" || value === "youtube" ? value : "auto"; }
+    function playIn() { return readPref("playIn", "kyro") === "youtube" ? "youtube" : "kyro"; }
     function lastChoice() {
       try { const raw = readPref("last", ""); const value = raw ? JSON.parse(raw) : null; return value && value.query ? value : null; } catch (_) { return null; }
     }
@@ -177,6 +181,7 @@
       if (action === "previous") return previousTrack();
       if (action === "volume-up" || action === "volume-down") return setVolumeStep(action === "volume-up" ? VOLUME_STEP : -VOLUME_STEP);
       if (action === "audio-only") { writePref("audioOnly", audioOnly() ? "0" : "1"); emit(); return undefined; }
+      if (typeof action === "string" && action.startsWith("play-in:")) { writePref("playIn", action.slice(8) === "youtube" ? "youtube" : "kyro"); emit(); return undefined; }
       return undefined;
     }
 
@@ -448,6 +453,7 @@
       if (token !== generation) return { ok: false, cancelled: true };
       const parts = [t("noneFound", { q: query || (kind === "radio" ? "radio" : "that") }, lang)];
       if (lastResolve && lastResolve.youtube && lastResolve.youtube.configured === false && kind !== "radio") parts.push(t("noYoutube", {}, lang));
+      if (query && kind !== "radio" && !wantsHandoff) parts.push(t("tryYoutube", { q: query }, lang));
       const message = parts.join(" ");
       setState("failed", { status: message });
       announce(message, {});
@@ -738,9 +744,18 @@
     audioBox.addEventListener("change", () => onAction("audio-only"));
     const audioText = mk("span");
     audioLabel.append(audioBox, audioText);
+    const playInLabel = mk("label", "kyro-mp-playin");
+    const playInText = mk("span");
+    const playInSelect = mk("select");
+    playInSelect.dataset.kyroMp = "play-in";
+    const optionKyro = mk("option"); optionKyro.value = "kyro";
+    const optionYoutube = mk("option"); optionYoutube.value = "youtube";
+    playInSelect.append(optionKyro, optionYoutube);
+    playInSelect.addEventListener("change", () => onAction(`play-in:${playInSelect.value}`));
+    playInLabel.append(playInText, playInSelect);
     const attribution = mk("div", "kyro-mp-attr");
     extra.append(vdown, vlabel, vup, audioLabel);
-    bar.append(row, statusLine, stage, bigPlay, open, extra, attribution);
+    bar.append(row, statusLine, stage, bigPlay, open, extra, playInLabel, attribution);
     document.body.appendChild(bar);
 
     function render(snapshot, lang) {
@@ -767,13 +782,17 @@
       vlabel.textContent = snapshot.muted ? "0%" : `${Math.round(snapshot.volume * 100)}%`;
       audioText.textContent = s("audioOnly");
       audioBox.checked = snapshot.audioOnly === true;
+      playInText.textContent = s("playInLabel");
+      optionKyro.textContent = s("playInKyro2"); optionYoutube.textContent = s("playInYoutube2");
+      playInSelect.value = snapshot.playIn === "youtube" ? "youtube" : "kyro";
+      playInLabel.hidden = snapshot.state === "queued" || snapshot.state === "failed";
       bigPlay.hidden = snapshot.state !== "blocked";
       bigPlay.textContent = s("play");
       const queued = snapshot.state === "queued" && snapshot.handoff;
       open.hidden = !queued;
       if (queued) { open.href = snapshot.handoff.url; open.textContent = s("openYoutube"); }
       stage.hidden = snapshot.state === "queued";
-      extra.hidden = snapshot.state === "queued";
+      extra.hidden = snapshot.state === "queued" || snapshot.state === "failed";
       attribution.textContent = snapshot.attribution ? `${s("source")}: ${snapshot.attribution}${snapshot.license ? ` · ${s("license")}: ${snapshot.license}` : ""}` : "";
     }
     return { render, stage, element: bar, hide() { bar.hidden = true; document.body.classList.remove("kyro-mp-open"); stage.textContent = ""; } };
