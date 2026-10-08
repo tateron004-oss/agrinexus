@@ -66,6 +66,8 @@ function storedDisplayName(db, user) {
 }
 const { conversationFollowUpFlags } = require("./server/nexus-conversation-followup-flags.js");
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
+const mediaRoutes = require("./server/media/routes.js");
+const mediaRuntime = require("./server/media/runtime.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
 const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-adapter.js");
@@ -51710,113 +51712,41 @@ async function api(req, res, url) {
     return send(res, 200, { musicPlayback: result, state: publicState(db, user) });
   }
 
+  // Real music and video playback: see server/media/ and docs/MEDIA_PLAYBACK.md. Providers are tried in order (public radio, Audius, YouTube with a
+  // daily quota guard, Jamendo, Internet Archive, Apple 30-second preview last); the phone plays directly from the provider, nothing is relayed.
+  if (url.pathname === "/api/media/resolve" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many requests. Please slow down." });
+    const outcome = await mediaRoutes.handleResolve({ body: await readBody(req), runtime: mediaRuntime.getMediaRuntime() });
+    return send(res, outcome.status, outcome.body);
+  }
+
+  // A station the person really listened to: counts one "click" at radio-browser.info (their etiquette). Stores nothing about the person.
+  if (url.pathname === "/api/media/played" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many requests. Please slow down." });
+    const outcome = await mediaRoutes.handlePlayed({ body: await readBody(req), runtime: mediaRuntime.getMediaRuntime() });
+    return send(res, outcome.status, outcome.body);
+  }
+
+  if (url.pathname === "/api/admin/media/providers" && req.method === "GET") {
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing media provider status" });
+    const outcome = url.searchParams.get("probe") === "1"
+      ? await mediaRoutes.handleAdminProbe({ runtime: mediaRuntime.getMediaRuntime() })
+      : mediaRoutes.handleAdminProviders({ runtime: mediaRuntime.getMediaRuntime() });
+    return send(res, outcome.status, outcome.body);
+  }
+
   if (url.pathname === "/api/music/providers/playback" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
-    const body = await readBody(req);
-    const query = String(body.query || body.command || "").trim();
-    if (!query) return send(res, 400, { ok: false, error: "Music search query is required" });
-
-    const attempts = [];
-    const excludedProviders = new Set(Array.isArray(body.excludeProviders)
-      ? body.excludeProviders.map(value => String(value || "").trim()).filter(Boolean)
-      : []);
-    const preview = excludedProviders.has("apple-itunes-preview")
-      ? { ok: false, provider: "apple-itunes-preview", status: "provider-excluded", error: "provider-excluded" }
-      : await nexusMusicMediaSourceProvider.runItunesPreviewLookup({
-      mediaRequest: query,
-      country: body.country || "US"
-    }, process.env);
-    attempts.push({
-      provider: "apple-itunes-preview",
-      status: preview.status || (preview.ok ? "candidate-ready" : "source-error"),
-      error: preview.error || null,
-      preflightVerified: preview.preflightVerified === true
-    });
-    if (preview.ok === true && preview.preflightVerified === true && /^https:\/\//i.test(String(preview.audioUrl || ""))) {
-      return send(res, 200, { ...preview, attempts, fallbackAvailable: true });
-    }
-
-    const excludeVideoIds = Array.isArray(body.excludeVideoIds)
-      ? [...new Set(body.excludeVideoIds.map(value => String(value || "").trim())
-        .filter(value => /^[A-Za-z0-9_-]{6,}$/.test(value)))].slice(0, 20)
-      : [];
-    const source = await nexusMusicMediaSourceProvider.runYouTubeReadOnlyLookup({
-      mediaRequest: query,
-      excludeVideoIds
-    }, process.env);
-    const match = String(source.sourceUrl || "").match(/[?&]v=([A-Za-z0-9_-]{6,})/);
-    attempts.push({
-      provider: "youtube",
-      status: source.sourceStatus || "source-unavailable",
-      error: match ? null : source.resultSummary || "No eligible YouTube candidate"
-    });
-    if (match && source.sourceStatus === "source-result-available") {
-      const title = String(source.resultSummary || "")
-        .replace(/^YouTube video found:\s*/i, "")
-        .replace(/\s+—\s+.*$/, "")
-        .trim() || query;
-      return send(res, 200, {
-        ok: true,
-        provider: "youtube",
-        providerName: "YouTube",
-        playbackClass: "video",
-        status: "candidate-ready",
-        query,
-        videoId: match[1],
-        title,
-        playbackVerified: false,
-        attempts
-      });
-    }
-
-    return send(res, 503, {
-      ok: false,
-      status: "all-providers-unavailable",
-      error: "No provider returned a preflight-qualified playback candidate.",
-      attempts
-    });
+    const outcome = await mediaRoutes.handleLegacyPlayback({ body: await readBody(req), runtime: mediaRuntime.getMediaRuntime() });
+    return send(res, outcome.status, outcome.body);
   }
 
   if (url.pathname === "/api/music/youtube/search" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
-    const body = await readBody(req);
-    const query = String(body.query || body.command || "").trim();
-    if (!query) return send(res, 400, { ok: false, error: "Music search query is required" });
-    const excludeVideoIds = Array.isArray(body.excludeVideoIds)
-      ? [...new Set(body.excludeVideoIds
-        .map(value => String(value || "").trim())
-        .filter(value => /^[A-Za-z0-9_-]{6,}$/.test(value)))]
-        .slice(0, 20)
-      : [];
-    const source = await nexusMusicMediaSourceProvider.getMusicMediaSourceResultAsync({
-      mediaRequest: query,
-      excludeVideoIds,
-      creativeCommonsOnly: body.creativeCommonsOnly === true
-    }, process.env);
-    const match = String(source.sourceUrl || "").match(/[?&]v=([A-Za-z0-9_-]{6,})/);
-    if (!match || source.sourceStatus !== "source-result-available") {
-      return send(res, 503, {
-        ok: false,
-        provider: "youtube",
-        status: source.sourceStatus || "source-unavailable",
-        error: source.resultSummary || "YouTube did not return a playable result"
-      });
-    }
-    const title = String(source.resultSummary || "")
-      .replace(/^YouTube video found:\s*/i, "")
-      .replace(/\s+—\s+.*$/, "")
-      .trim() || query;
-    return send(res, 200, {
-      ok: true,
-      provider: "youtube",
-      status: "candidate-ready",
-      query,
-      videoId: match[1],
-      excludedCandidateCount: excludeVideoIds.length,
-      licenseFilter: body.creativeCommonsOnly === true ? "creativeCommon" : "any",
-      playbackVerified: false,
-      title
-    });
+    const outcome = await mediaRoutes.handleLegacyYoutubeSearch({ body: await readBody(req), runtime: mediaRuntime.getMediaRuntime() });
+    return send(res, outcome.status, outcome.body);
   }
 
   if (url.pathname === "/api/native/voice-runtime" && req.method === "GET") {

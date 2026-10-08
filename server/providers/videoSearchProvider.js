@@ -39,6 +39,10 @@ function publicHeaders() {
 async function searchYouTubeVideos(query, env = process.env) {
   const apiKey = String(env.YOUTUBE_API_KEY || env.NEXUS_MEDIA_PROVIDER_API_KEY || "").trim();
   if (!apiKey) return null;
+  // The same key also serves music playback (server/media/): share one daily quota counter so neither feature starves the other.
+  const quotaState = require("../media/runtime.js").getMediaRuntime().state;
+  if (!quotaState.canSpendYoutube(100)) throw new Error("youtube-daily-quota-reserved");
+  quotaState.spendYoutube(100);
   const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
   searchUrl.searchParams.set("part", "snippet");
   searchUrl.searchParams.set("type", "video");
@@ -50,7 +54,10 @@ async function searchYouTubeVideos(query, env = process.env) {
   searchUrl.searchParams.set("key", apiKey);
   const searchResponse = await fetchWithTimeout(searchUrl, { headers: { accept: "application/json" } }, 9000);
   const searchPayload = await searchResponse.json().catch(() => ({}));
-  if (!searchResponse.ok) throw new Error(searchPayload.error?.message || `youtube-search-http-${searchResponse.status}`);
+  if (!searchResponse.ok) {
+    if (searchResponse.status === 403 && /quota/i.test(JSON.stringify(searchPayload.error || {}))) quotaState.markYoutubeExhausted();
+    throw new Error(searchPayload.error?.message || `youtube-search-http-${searchResponse.status}`);
+  }
   const candidates = (searchPayload.items || [])
     .map(item => ({
       videoId: item.id?.videoId || "",
