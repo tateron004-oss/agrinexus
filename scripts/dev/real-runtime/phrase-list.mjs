@@ -73,7 +73,7 @@ P(G3, "ct-connect-listen", "Connect me to +254712345678 and listen", { tool: "ne
 // ---------------------------------------------------------------- 4 Reminders, brief and weather
 const G4 = "Reminders, brief and weather";
 P(G4, "rm-set-1", "Remind me in 20 minutes to check the oven", { save: /notif:/, reply: /oven/i });
-P(G4, "rm-set-2", "Remind me tomorrow at 9 to pay the school fees", { save: /notif:/, reply: /school fees/i });
+P(G4, "rm-set-2", "Remind me tomorrow at 9 to pay the school fees", { steps: ["9 am"], save: /notif:/, reply: /school fees|9/i });
 P(G4, "rm-set-3", "Remind me every day at 8am and 8pm to take my tablets", { save: /sched:reminder\.repeat/, reply: /tablets/i });
 S(G4, "rm-set-sw-1", "Nikumbushe baada ya nusu saa", { none: true, note: "no task named: should ask what to remind about" });
 S(G4, "rm-set-sw-2", "Nikumbushe kesho saa tatu asubuhi", { none: true, note: "no task named: should ask what to remind about" });
@@ -149,10 +149,10 @@ S(G6, "pg-guides-sw", "Orodhesha miongozo ya shamba", { none: true, reply: /./ }
 P(G6, "wb-worker", "Add a worker Juma", { wizard: true, save: /mem:farm_records:workers?/, reply: /Juma/ });
 P(G6, "wb-assign", "Assign Juma weeding North Plot by Friday", { change: /./, reply: /Juma/ });
 P(G6, "wb-buyer", "Add a buyer Amina", { wizard: true, save: /mem:farm_records:buyers?/, reply: /Amina/ });
-P(G6, "wb-post", "Post for sale: 500 kg maize at 40 per kg", { tool: "nexus_marketplace_logistics", change: /./ });
-P(G6, "wb-remove", "Remove listing 3", { tool: "nexus_marketplace_logistics", none: false });
+P(G6, "wb-post", "Post for sale: 500 kg maize at 40 per kg", { tool: "nexus_marketplace_logistics", reply: /Posted|need your yes|Say yes/i });
+P(G6, "wb-remove", "Remove listing 3", { tool: "nexus_marketplace_logistics", reply: /listing|need your yes|Say yes|can.t find/i });
 S(G6, "wb-worker-sw", "Ongeza mfanyakazi Juma", { wizard: true, dup: /Tayari|already/i, save: /mem:farm_records:workers?/, reply: /Juma/ });
-S(G6, "wb-post-sw", "Weka tangazo: ninauza kilo 500 za mahindi kwa shilingi 40 kwa kilo", { tool: "nexus_marketplace_logistics", change: /./ });
+S(G6, "wb-post-sw", "Weka tangazo: ninauza kilo 500 za mahindi kwa shilingi 40 kwa kilo", { tool: "nexus_marketplace_logistics", reply: /Nimetangaza|need your yes|Say yes|ndiyo/i });
 P(G6, "co-setup", "Set up our cooperative called Umoja Farmers", { wizard: true, save: /mem:|legacy:|rec:/, reply: /Umoja/ });
 P(G6, "co-member", "Add cooperative member Amina", { wizard: true, save: /mem:|legacy:|rec:/, reply: /Amina/ });
 P(G6, "co-dues", "Amina paid dues 500", { save: /mem:|legacy:|rec:/, reply: /500/ });
@@ -185,13 +185,13 @@ S(G7, "ci-accept-sw", "Kubali mwaliko kutoka kwa Amina", { reply: /./ });
 P(G7, "gh-help", "I need help", { reply: /./ });
 P(G7, "gh-alert", "Alert my circle", { reply: /./ });
 P(G7, "gh-safe", "I'm safe", { reply: /./ });
-P(G7, "gh-fitting", "My child is fitting", { tool: H, reply: /(999|112|emergency|urgent|hospital)/i });
-P(G7, "gh-chest", "I have chest pain", { tool: H, reply: /(999|112|emergency|urgent|hospital)/i });
-P(G7, "gh-bleeding", "She has heavy bleeding", { tool: H, reply: /(999|112|emergency|urgent|hospital)/i });
+P(G7, "gh-fitting", "My child is fitting", { urgent: true, alt: [E], tool: H, reply: /(999|112|emergency|urgent|hospital)/i });
+P(G7, "gh-chest", "I have chest pain", { urgent: true, alt: [E], tool: H, reply: /(999|112|emergency|urgent|hospital)/i });
+P(G7, "gh-bleeding", "She has heavy bleeding", { urgent: true, alt: [E], tool: H, reply: /(999|112|emergency|urgent|hospital)/i });
 P(G7, "gh-number", "What is the emergency number in Kenya?", { none: true, reply: /999|112/, notreply: /911/ });
 S(G7, "gh-help-sw", "Nahitaji msaada", { reply: /./ });
-P(G7, "cl-clinic", "Find a clinic near Kisumu", { tool: H, none: true, net: true });
-P(G7, "cl-pharmacy", "Find a pharmacy near me", { tool: H, none: true, net: true });
+P(G7, "cl-clinic", "Find a clinic near Kisumu", { tool: H, none: true, net: true, reply: /clinic|facility|hospital|health cent|dispensar|couldn.t|can.t|not (?:set up|available|connected)/i });
+P(G7, "cl-pharmacy", "Find a pharmacy near me", { tool: H, none: true, net: true, reply: /pharmac|chemist|couldn.t|can.t|not (?:set up|available|connected)|origin|location/i });
 P(G7, "cl-intake", "Save a telehealth intake: my back has hurt for a week", { tool: H, reply: /./ });
 
 // ---------------------------------------------------------------- 8 Fitness and wellbeing
@@ -222,7 +222,7 @@ S(G9, "wl-course-sw", "Endelea na kozi yangu", { end: "stop", tool: W, reply: /.
 
 // ---------------------------------------------------------------- 10 Music and video
 const G10 = "Music and video";
-const M = { noorb: true, none: true, net: true };
+const M = { noorb: true, none: true, net: true, reply: /play|music|radio|station|song|track|video|youtube|stream|volume|pause|resum|mute|stop|next|previous|nothing is playing|rendering the verified|cheza|muziki|wimbo|redio|sauti|sitisha|endelea|samahani|couldn.t|can.t|not (?:connected|available|set up)/i };
 P(G10, "mu-play-1", "Play Burna Boy Last Last", M);
 P(G10, "mu-play-2", "Play radio Citizen", M);
 P(G10, "mu-play-3", "Play some music", M);

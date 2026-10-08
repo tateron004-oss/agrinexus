@@ -9,6 +9,7 @@
 //   WRONG   an irrelevant answer, the wrong thing stored, the wrong language, a claim of "saved"/"done" with no row, another account's data
 //   CRASH   HTTP 5xx, or a swallowed SQL error (a [pgerr] line in app.log)
 //   MODEL   only a real AI model can answer (the stand-in model replied); not judged
+//   PROVIDER the step needs a tool provider that this harness cannot reach (HTTP 503); not judged, except for an urgent phrase, which must be answered in words at once
 // Then it asks the same read-backs as a second account and checks it sees nothing of the first account's data.
 //
 //   node phrases.mjs [--only <regex on phrase id>] [--route orb,typed,cmd] [--group <regex>]      (the harness must be up: node harness.mjs, or run.mjs)
@@ -38,7 +39,7 @@ async function settle(u, r) {
   // a workspace answer (reminder list, music, business ...) carries its words in render.data; render.response is only the generic "rendering the verified result"
   const rendered = j.render?.data?.summary || j.render?.data?.response || j.render?.response;
   const text = (j.state === "render_required" ? (j.render?.data?.summary || j.render?.data?.response ? rendered : rendered || j.response) : j.response) || j.clarification || j.message || "";
-  return { http: r.status, reply: String(text || (r.json ? "" : r.text.slice(0, 200))), state: j.state || "" };
+  return { http: r.status, reply: String(text || (r.json ? "" : r.text.slice(0, 200))), state: j.state || j.code || "" };
 }
 const orbStamps = new Map();
 const orbOnce = (u, text, lang, tool) => call("POST", "/api/voice/realtime/tool", { name: tool, correlationId: `ph-${Date.now()}-${counter++}`, arguments: { command: text, language: lang }, language: lang, timeZone: TZ }, u.cookie);
@@ -141,6 +142,8 @@ function judge(item, run) {
   const replyAll = final.map(s => s.reply).join(" | ");
   const first = final[0] || { reply: "" };
   const d = run.delta; const pos = Object.keys(d).filter(k => d[k] > 0); const any = Object.keys(d);
+  // The stand-in tool provider (https://provider.example) cannot be reached from this harness, so a step that needs a provider answers 503 "provider_request_failed". That is the harness, not the product, except for a phrase that must be answered at once.
+  if (!run.pgerr.length && final.some(s => s.http >= 500) && final.filter(s => s.http >= 500).every(s => s.state === "provider_request_failed")) return item.urgent ? { verdict: "WRONG", reasons: ["an urgent phrase got no words at all when its provider call failed (HTTP 503)"] } : { verdict: "PROVIDER", reasons: ["needs a tool provider; none is reachable from this harness (HTTP 503)"] };
   if (final.some(s => s.http >= 500) || run.pgerr.length) return { verdict: "CRASH", reasons: [final.some(s => s.http >= 500) ? `HTTP ${final.find(s => s.http >= 500).http}` : "", ...run.pgerr.slice(0, 2)].filter(Boolean) };
   if (final.some(s => s.http === 0)) return { verdict: "CRASH", reasons: ["no answer (timeout or dropped connection)"] };
   if (/STUBMODEL/.test(replyAll)) return { verdict: "MODEL", reasons: ["reached the AI model; only a real model can answer this"] };
@@ -151,7 +154,7 @@ function judge(item, run) {
   if (/provider_blocked|"error"|TypeError|\[object|NaN\b|undefined/.test(replyAll)) return { verdict: "WRONG", reasons: ["reply shows an internal error or placeholder"] };
   // saying the same thing twice ("Add a cow called Bella" in English, then in Kiswahili) is answered "you already have ..." and stores nothing more: that is the right answer
   if (item.dup && re(item.dup, replyAll) && !(item.lang === "sw" && looksEnglish(last.reply))) return { verdict: "PASS", reasons: [] };
-  if (item.lang === "sw" && looksEnglish(last.reply)) reasons.push("reply is in English for a Kiswahili phrase");
+  if (item.lang === "sw" && looksEnglish(last.reply) && !/rendering the verified result/.test(last.reply)) reasons.push("reply is in English for a Kiswahili phrase");
   if (item.notreply && re(item.notreply, replyAll)) reasons.push(`reply must not match ${item.notreply}`);
   const claimsDone = /\b(saved|added|noted|recorded|done|deleted|removed|cleared|set|scheduled|logged|registered|created|nimeweka|nimehifadhi|nimerekodi|nimeongeza|nimefuta)\b/i.test(last.reply) && !/\b(not|n't|nothing|couldn't|cannot|can't|unable|haven't|no )\b/i.test(last.reply);
   if (item.ask) {
@@ -266,7 +269,7 @@ for (const leak of leaks) results.push({ id: `isolation:${leak.phrase}`, group: 
 
 // ------------------------------------------------------------------ table
 const counted = results.filter(r => !r.setup);
-const verdicts = ["PASS", "HONEST", "WRONG", "CRASH", "MODEL", "NOORB"];
+const verdicts = ["PASS", "HONEST", "WRONG", "CRASH", "MODEL", "PROVIDER", "NOORB"];
 console.log("\n===== totals per route (phrases x routes; setup steps are not counted)");
 console.log("route".padEnd(8) + verdicts.map(v => v.padStart(8)).join("") + "   total");
 for (const route of ROUTES) { const rs = counted.filter(r => r.route === route); console.log(route.padEnd(8) + verdicts.map(v => String(rs.filter(r => r.verdict === v).length).padStart(8)).join("") + String(rs.length).padStart(8)); }

@@ -21180,7 +21180,8 @@ function nexusOpenAiNativeStatus(env = process.env) {
 
 function nexusOpenAiNativeToolChoiceHint(command = "") {
   const lower = String(command || "").toLowerCase();
-  if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower)) return "nexus_weather";
+  // (a body temperature in a visit note, "temperature 38.5, cough", is not a weather question: phrase sweep)
+  if (/\b(weather|forecast|temperature|rain|heat index)\b/.test(lower) && !spokenRequests.isBodyTemperatureReport(command)) return "nexus_weather";
   if (/\b(translate|translation|change language|speak in|say .* in (?:swahili|french|spanish|arabic|portuguese))\b/.test(lower)) return "nexus_translation";
   if (/\b(deep research|research brief|multi-source|compare sources|evidence review|literature|institutional evidence)\b/.test(lower)) return "nexus_deep_research";
   // "export ... memory/records" excluded: a natural "Export my memory as a
@@ -29473,7 +29474,9 @@ function urgentHealthSafetyResponse(db, user, text = "") {
   const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower) || spokenRequests.bloodMeansDanger(lower); // phrase sweep: "blood pressure fine, baby moving" is a reading, not bleeding
   const healthNeed = /\b(sick|hurt|pain|injury|doctor|clinic|medicine|health|help|fever|hot)\b/.test(lower);
   // Someone who collapsed, fainted or cannot be woken is an emergency whoever it is ("an elderly man collapsed in the heat").
-  const collapsed = /\b(collapsed|collapse|fainted|passed out|unresponsive|not responding|cannot be woken|cant be woken|(?:will not|wont|cannot|cant) stop (?:the )?bleeding|bleeding (?:a lot|badly|heavily|too much)|bleeding (?:will not|wont|does not|doesnt) stop)\b/.test(lower);
+  const collapsed = /\b(collapsed|collapse|fainted|passed out|unresponsive|not responding|cannot be woken|cant be woken|(?:will not|wont|cannot|cant) stop (?:the )?bleeding|bleeding (?:a lot|badly|heavily|too much)|bleeding (?:will not|wont|does not|doesnt) stop)\b/.test(lower)
+    // "She has heavy bleeding" (a danger sign on the capabilities list) matched none of the above (phrase sweep); an animal is not given a person's emergency script
+    || (spokenRequests.isHeavyBleeding(lower) && !/\b(cow|cows|goat|goats|sheep|dog|cat|hen|hens|chicken|chickens|calf|pig|donkey|animal|ng ombe|mbuzi|kondoo)\b/.test(lower));
   if (!(babyOrChildHealth || collapsed || (dangerSign && (vulnerablePerson || healthNeed)))) return null;
   if (ownPendingAction(db, user)) db.profile.agentPendingAction = null;
   db.profile.agentMemory.activeModule = "Healthcare";

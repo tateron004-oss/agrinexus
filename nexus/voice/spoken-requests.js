@@ -53,6 +53,12 @@ function plainConfirmationSentence(command) {
 }
 function isInternalConfirmationMessage(message) { return INTERNAL_CONFIRMATION.test(String(message || "")); }
 
+// Found by the sweep: "She has heavy bleeding" (a danger sign the capabilities list promises an urgent reply for) got "I opened Health and Chronic Care" from the health tool and nothing from the older route.
+function isHeavyBleeding(text) {
+  const spoken = clean(text).toLowerCase();
+  return /\b(?:heavy|severe|serious|massive|profuse) bleeding\b|\bbleeding (?:heavily|profusely)\b|\b(?:losing|lost) (?:a lot of|so much|too much) blood\b/.test(spoken);
+}
+
 // Found by the sweep: the voice instructions send "I ran 5 km in 30 minutes", "I slept 7 hours", "My goal is 4 workouts a week" and "Undo my last workout" to the health tool, which only knew "log a 30 minute run";
 // it answered "I opened Health and Chronic Care" and logged nothing, while the typed route logs all of them in the wellness log. These are the sentences the wellness log understands, so the health tool can hand them to it.
 // (A reading of weight, blood pressure or sugar is not here: those have their own read-back-and-yes route.)
@@ -70,4 +76,4 @@ function isWellnessLogRequest(text) {
   return spoken.length > 0 && spoken.length <= 200 && WELLNESS_LOG.some(pattern => pattern.test(spoken));
 }
 
-module.exports = Object.freeze({ isWellnessLogRequest, swahiliWeatherLocation, isBodyTemperatureReport, bloodMeansDanger, wantsListingCreate, plainConfirmationSentence, isInternalConfirmationMessage });
+module.exports = Object.freeze({ isHeavyBleeding, isWellnessLogRequest, swahiliWeatherLocation, isBodyTemperatureReport, bloodMeansDanger, wantsListingCreate, plainConfirmationSentence, isInternalConfirmationMessage });

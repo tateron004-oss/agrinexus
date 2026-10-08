@@ -39,7 +39,9 @@ try {
     step("journeys with stored-state checks", "verify.mjs"),
     step("safety phrases on three routes", "safety.mjs"),
     step("production user audit (layers A, B, C)", "audit.mjs"),
-    step("acceptance probes and black-box identity", "probes.mjs", [commit])
+    step("acceptance probes and black-box identity", "probes.mjs", [commit]),
+    // the phrase sweep (every phrase of the capabilities list's "What you can say", three routes) takes about half an hour: only with RR_PHRASES=1
+    ...(process.env.RR_PHRASES === "1" ? [step("phrase sweep (section 14 of the capabilities list)", "phrases.mjs")] : [])
   ];
   const log = fs.existsSync(path.join(OUT, "app.log")) ? fs.readFileSync(path.join(OUT, "app.log"), "utf8") : "";
   const sqlErrors = [...new Set(log.split("\n").filter(line => line.startsWith("[pgerr]") && !line.includes("nexus_acceptance_fault")))];

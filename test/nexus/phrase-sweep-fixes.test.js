@@ -73,6 +73,26 @@ test("'blood pressure fine, baby moving' is a reading, not bleeding; real bleedi
   assert.ok(urgent && /999 or 112/.test(urgent.response));
 });
 
+test("'She has heavy bleeding' gets the urgent answer from the older route and the tools; a cow with heavy bleeding does not get a person's script", () => {
+  assert.equal(spoken.isHeavyBleeding("She has heavy bleeding"), true);
+  assert.equal(spoken.isHeavyBleeding("he is losing a lot of blood"), true);
+  assert.equal(spoken.isHeavyBleeding("a little bleeding from a scratch"), false);
+  const { urgentHealthSafetyResponse } = load(["normalizeSpeechForIntent", "emergencyCallLead", "emergencyNumberFor", "urgentHealthSafetyResponse"], {
+    withoutNegatedSymptoms: care.withoutNegatedSymptoms, spokenRequests: spoken, ownPendingAction: () => null, rememberAgentMemory: () => {}
+  });
+  const db = { profile: { agentMemory: {} } };
+  const urgent = urgentHealthSafetyResponse(db, { country: "Kenya" }, "She has heavy bleeding");
+  assert.ok(urgent && /999 or 112/.test(urgent.response));
+  assert.equal(urgentHealthSafetyResponse(db, { country: "Kenya" }, "my cow has heavy bleeding"), null);
+});
+
+test("the tool hint the model is given does not call a body temperature in a visit note a weather question", () => {
+  const { nexusOpenAiNativeToolChoiceHint } = load(["nexusOpenAiNativeToolChoiceHint"], { spokenRequests: spoken });
+  assert.notEqual(nexusOpenAiNativeToolChoiceHint("Visit Mary: temperature 38.5, cough"), "nexus_weather");
+  assert.equal(nexusOpenAiNativeToolChoiceHint("What is the weather in Kisumu?"), "nexus_weather");
+  assert.equal(nexusOpenAiNativeToolChoiceHint("What is the temperature in Kisumu?"), "nexus_weather");
+});
+
 test("asking to play an artist whose name starts like 'burn' is not first aid for a burn", () => {
   assert.equal(care.careSign("Play Burna Boy Last Last"), null);
   assert.equal(care.careSign("Hey Kyro, please play Burna Boy"), null);
