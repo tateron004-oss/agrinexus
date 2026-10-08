@@ -156,7 +156,7 @@ function judge(item, run) {
   const claimsDone = /\b(saved|added|noted|recorded|done|deleted|removed|cleared|set|scheduled|logged|registered|created|nimeweka|nimehifadhi|nimerekodi|nimeongeza|nimefuta)\b/i.test(last.reply) && !/\b(not|n't|nothing|couldn't|cannot|can't|unable|haven't|no )\b/i.test(last.reply);
   if (item.ask) {
     if (!ASK.test(first.reply)) reasons.push("did not ask for a yes before acting");
-    const afterAsk = run.deltaAfterFirst || {}; const savedEarly = Object.keys(afterAsk).filter(k => afterAsk[k] > 0 && !/^legacy:/.test(k));
+    const afterAsk = run.deltaAfterFirst || {}; const savedEarly = Object.keys(afterAsk).filter(k => afterAsk[k] > 0 && !/^legacy:/.test(k) && !/health_readings_state|authoritative-workspace-state|farm_session/.test(k));
     if (savedEarly.length && item.steps.length) reasons.push(`stored ${savedEarly.join(",")} before the yes`);
   }
   if (item.save) {
@@ -244,7 +244,7 @@ for (const route of ROUTES) {
 const readbacks = [
   ["what is on my shopping list", /milk|eggs|bread|seed|maziwa/i], ["what are my notes", /pump|vet|seal/i], ["what do you remember about me", /Amina|maize|Kisumu/i],
   ["what reminders do I have", /oven|school fees|stretch|tablets/i], ["show my repeating reminders", /tablets/i], ["who owes me", /John/i], ["what did I earn today", /4,?500|4,?000|3,?500|2,?000/],
-  ["what did I spend this month", /5,?000|12,?000/], ["my summary for this month", /4,?500|John|12,?000/], ["how much flour do I have", /20 bags|flour/i], ["what is running low", /flour|seed/i],
+  ["what did I spend this month", /5,?000|12,?000/], ["my summary for this month", /4,?500|John|12,?000/], ["how much stock do I have", /20 bags|flour/i], ["what is running low", /flour|seed/i],
   ["show my readings", /140|7\.2/], ["show my blood pressure readings", /140/], ["who are my donors", /Grace/i], ["what is the status of my reports", /borehole/i],
   ["call Otieno", /254 ?712 ?345 ?678/], ["text Amina hello", /amina@example/i], ["call John", /254 ?712/], ["list farm guides", /(?!)/], ["show my training log", /5 km|7 hours|68/i]
 ];

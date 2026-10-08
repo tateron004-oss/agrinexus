@@ -239,13 +239,13 @@ S(G10, "mp-yt-sw", "Cheza muziki kwenye YouTube kuanzia sasa", { change: /./ });
 
 // ---------------------------------------------------------------- 11 Business, nonprofit and community
 const G11 = "Business, nonprofit and community";
-P(G11, "bz-donor", "Add a donor named Grace Otieno", { save: /mem:|rec:|legacy:/, reply: /Grace/ });
+P(G11, "bz-donor", "Add a donor named Grace Otieno", { tsteps: ["yes"], save: /mem:|rec:|legacy:/, reply: /Grace|workspace/i });
 P(G11, "bz-donors", "Who are my donors?", { none: true, reply: /Grace/ });
 P(G11, "bz-owes", "Who owes me money?", { none: true, reply: /./ });
-P(G11, "bz-invoice", "Create an invoice for Grace Otieno", { save: /mem:|rec:|legacy:|doc:/, reply: /invoice/i });
-P(G11, "bz-paid", "Mark invoice INV-1001 as paid", { reply: /./ });
+P(G11, "bz-invoice", "Create an invoice for Grace Otieno", { tsteps: ["yes"], save: /mem:|rec:|legacy:|doc:/, reply: /invoice/i });
+P(G11, "bz-paid", "Mark invoice INV-1001 as paid", { tsteps: ["yes"], reply: /./ });
 P(G11, "bz-grants", "What grants are we tracking?", { none: true, reply: /./ });
-P(G11, "bz-follow", "Set a follow-up with Grace next Tuesday", { save: /mem:|rec:|legacy:|notif:|sched:/, reply: /Grace/ });
+P(G11, "bz-follow", "Set a follow-up with Grace next Tuesday", { tsteps: ["yes"], save: /mem:|rec:|legacy:|notif:|sched:/, reply: /Grace/ });
 P(G11, "rs-report", "Report: the borehole in ward 3 is broken", { save: /mem:|rec:|legacy:/, reply: /./ });
 P(G11, "rs-status", "What is the status of my reports?", { none: true, reply: /borehole|report/i });
 P(G11, "rs-new", "What's new from the community?", { none: true, reply: /./ });

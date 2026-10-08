@@ -155,3 +155,13 @@ test("danger signs said to the health or farm tool get the safety answer, and a 
   assert.equal(await toolUrgentSafetyAnswer({}, {}, "nexus_weather", "My child is fitting"), null);
   assert.match(source, /const urgent = await toolUrgentSafetyAnswer\(db, user, toolName, rawCallerText \|\| command\);/);
 });
+
+test("the Kiswahili music preference 'kuanzia sasa' (from now on) keeps its last word, so it sets the preference and does not try to play a song", () => {
+  const media = require("../../public/kyro-media-commands.js");
+  assert.deepEqual({ ...media.parse("Cheza muziki kwenye YouTube kuanzia sasa") }, { type: "preference", key: "playIn", value: "youtube", lang: "sw" });
+  assert.deepEqual({ ...media.parse("Cheza muziki kwenye Kyro daima") }, { type: "preference", key: "playIn", value: "kyro", lang: "sw" });
+  // a trailing 'sasa' (now) elsewhere is still politeness and still dropped
+  assert.equal(media.parse("Cheza Sauti Sol Melanin sasa").query, "Sauti Sol Melanin");
+  assert.equal(media.parse("Ongeza sauti sasa").control, "volume-up");
+  assert.equal(media.parse("Play music in YouTube from now on").type, "preference");
+});
