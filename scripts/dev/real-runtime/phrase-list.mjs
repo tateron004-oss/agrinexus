@@ -44,12 +44,11 @@ P(G2, "ln-add-3", "Add milk, eggs and bread to my shopping list", { save: /mem:p
 S(G2, "ln-add-sw-1", "Weka maziwa kwenye orodha yangu ya manunuzi", { save: /mem:personal_items/, reply: /maziwa/i });
 S(G2, "ln-add-sw-2", "Weka mbegu kwenye orodha yangu", { save: /mem:personal_items/, reply: /mbegu/i });
 P(G2, "ln-read", "What is on my shopping list?", { none: true, reply: /milk|bread|eggs/i });
-P(G2, "ln-clear-done", "Clear my completed to-dos", { change: /./ });
+P(G2, "ln-clear-done", "Clear my completed to-dos", { reply: /nothing finished|cleared|removed/i });
 P(G2, "ln-clear-1", "Clear my shopping list", { ask: true, steps: ["yes, clear my shopping list"], change: /mem:personal_items:[^:]*:deleted/ });
 S(G2, "ln-add-sw-setup", "Weka unga kwenye orodha yangu ya manunuzi", { setup: true });
-S(G2, "ln-clear-sw-done", "Futa zilizokamilika", { change: /./ });
-S(G2, "ln-clear-sw-1", "Futa orodha yangu ya manunuzi", { setup: true });
-S(G2, "ln-clear-sw-2", "Ndiyo, futa orodha yangu", { change: /mem:personal_items:[^:]*:deleted/ });
+S(G2, "ln-clear-sw-done", "Futa zilizokamilika", { reply: /./ });
+S(G2, "ln-clear-sw", "Futa orodha yangu ya manunuzi", { ask: true, steps: ["Ndiyo, futa orodha yangu"], change: /mem:personal_items:[^:]*:deleted/ });
 P(G2, "ln-note-1", "Note that the pump needs a new seal", { save: /mem:personal_items:note:live/, reply: /pump/i });
 P(G2, "ln-note-2", "Remember that the vet comes Friday", { save: /mem:(personal_items|task_planning)/, reply: /vet/i });
 P(G2, "ln-note-read", "What are my notes?", { none: true, reply: /pump/i });

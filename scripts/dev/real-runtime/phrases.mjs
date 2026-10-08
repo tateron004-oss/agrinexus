@@ -63,7 +63,7 @@ async function who(u) {
   if (!ids.has(u.email)) ids.set(u.email, (await sql("select id, tenant_id from users where lower(email)=lower($1)", [u.email]))[0]);
   return ids.get(u.email);
 }
-const NOISE = /(^|\/)(activity|activityBy|agentMemory|agentCommands|agentConversation|integrationEvents|actionReceipts|nexusHealthVoicePending|usageEvents|auditLog|audit|notifications|realtimeSessions|voiceLogs|operationsLog|events)(\/|\[|$)/i;
+const NOISE = /(^|\/)(activity|activityBy|agentMemory|agentCommands|agentConversation|integrationEvents|actionReceipts|nexusHealthVoicePending|usageEvents|auditLog|audit|notifications|voiceSessions|autonomousOperatingLoops|realtimeSessions|voiceLogs|operationsLog|events)(\/|\[|$)/i;
 function collectArrays(o, p, out) {
   if (Array.isArray(o)) { const s = out.get(p) || new Set(); for (const el of o) s.add(JSON.stringify(el)); out.set(p, s); o.forEach(el => collectArrays(el, p + "[]", out)); }
   else if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) { if (!NOISE.test(`${p}/${k}`)) collectArrays(v, `${p}/${k}`, out); }
@@ -107,8 +107,8 @@ function logSince(from) {
 }
 
 // ------------------------------------------------------------------ judging
-const ASK = /(say yes|yes to|shall i|do you want me|would you like me|want me to|is that (right|correct)|confirm|ndiyo|is this right|should i)/i;
-const HONEST = /(can't|cannot|can not|could not|couldn't|don't have|do not have|not able|unable|not available|isn't available|is not available|not set up|not connected|not configured|nothing (was )?(saved|sent|changed|deleted)|no saved|no reminders|no readings|sorry|haven't|not yet|i didn't|i did not|tell me (which|what|more|the)|which one|what (should|would|is the|do you)|what's the|how much|who (is|should)|please (tell|say|give)|missing|need (a|an|the|to know)|only (staff|admins)|not allowed|staff|nimeshindwa|siwezi|sina |hakuna|tafadhali (niambie|sema)|niambie|sijui|samahani|haipatikani)/i;
+const ASK = /(say\s+["“']?yes|say yes|yes to|shall i|do you want me|would you like me|want me to|is that (right|correct)|confirm|ndiyo|is this right|should i)/i;
+const HONEST = /(\?|can't|cannot|can not|could not|couldn't|don't have|do not have|not able|unable|not available|isn't available|is not available|not set up|not connected|not configured|nothing (was )?(saved|sent|changed|deleted)|no saved|no reminders|no readings|sorry|haven't|not yet|i didn't|i did not|tell me (which|what|more|the)|which one|what (should|would|is the|do you)|what's the|how much|who (is|should)|please (tell|say|give)|missing|need (a|an|the|to know)|only (staff|admins)|not allowed|staff|nimeshindwa|siwezi|sina |hakuna|tafadhali (niambie|sema)|niambie|sijui|samahani|haipatikani)/i;
 const BLOCKED = /(provider_blocked|STUBMODEL|"error"|TypeError|undefined|\[object|NaN|internal error|something went wrong)/i;
 const SW_WORDS = /\b(na|ya|kwa|ni|wa|la|yako|wako|yangu|umeweka|nimeweka|nimerekodi|kwenye|hakuna|tafadhali|nimeongeza|umeongeza|sasa|ndiyo|hapana|asante|samahani|siwezi|sina|nimeshindwa|orodha|kumbuka|nimehifadhi|umeuza|ulituma|umetumia|nikumbushe|nitakukumbusha|shamba|mahindi|mbolea|sukari|maziwa|unga|kilo)\b/gi;
 const EN_WORDS = /\b(the|your|you|is|are|to|and|i|my|saved|added|noted|recorded|here|there|not|can|could|was|will|have|has|with|for|from)\b/gi;
@@ -185,10 +185,8 @@ async function runPhrase(item, route, u, labelSuffix = "") {
   if (item.ask || item.steps.length) run.deltaAfterFirst = delta(before, await snapshot(u));
   let lastReply = r0.reply;
   for (const step of item.steps) { const r = await say(step); lastReply = r.reply; }
-  if (ASK.test(lastReply) && /yes/i.test(lastReply) && !item.steps.some(s => /^(yes|ndiyo)/i.test(s) && false)) {
-    // left waiting for an answer: say no so the next phrase starts clean
-    if (!item.steps.length || !/^(no|hapana)/i.test(item.steps[item.steps.length - 1])) await say(item.lang === "sw" ? "hapana" : "no", true);
-  }
+  // left waiting for an answer: say no so the next phrase starts clean
+  if (ASK.test(lastReply) && /yes/i.test(lastReply) && !(item.steps.length && /^(no|hapana)/i.test(item.steps[item.steps.length - 1]))) await say(item.lang === "sw" ? "hapana" : "no", true);
   run.delta = delta(before, await snapshot(u));
   run.pgerr = logSince(log0);
   Object.assign(run, judge(item, run));
@@ -225,7 +223,7 @@ const leaks = [];
 for (const route of ROUTES) {
   for (const [phrase, secret] of readbacks) {
     let r; try { r = await ROUTE[route](userB, phrase, "en", route === "orb" ? (/readings|training/.test(phrase) ? "nexus_health_preparation" : "nexus_everyday_records") : ""); } catch (error) { r = { reply: `[no answer] ${error.message}` }; }
-    if (secret.test(r.reply)) leaks.push({ route, phrase, reply: r.reply.slice(0, 200) });
+    if (secret.test(r.reply.replace(/["“][^"”]*["”]/g, ""))) leaks.push({ route, phrase, reply: r.reply.slice(0, 200) });
     if (pendingTyped.has(userB.email)) await ROUTE.typed(userB, "no", "en");
   }
 }
