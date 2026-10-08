@@ -77,6 +77,7 @@ test("an anonymous genesis-voice guest (no login at all) cannot place a real out
     body: JSON.stringify({ arguments: { command: "yes" } })
   });
   const body = await confirmRes.json();
-  assert.match(body.response, /restricted-account-no-real-call/, "must be refused for the restriction, not silently placed as a real call");
+  // (said in plain words now, not as an internal status code: the call is refused for the restriction and nothing was done)
+  assert.match(body.response, /cannot place real calls.*Nothing was done/i, "must be refused for the restriction, not silently placed as a real call");
   assert.doesNotMatch(body.response, /Calling now/i);
 });

@@ -51,8 +51,9 @@ test("a request to text somebody stays a message: the words and the number are s
       assert.doesNotMatch(reply, /call/i, `${label}: ${text} must not offer a call -> ${reply}`);
       const yes = await ask("yes");
       assert.doesNotMatch(yes.reply, /call (?:is|has) |placed|Twilio call/i, `${label}: 'yes' must not place a call -> ${yes.reply}`);
-      assert.match(yes.reply, /nothing was sent|Sent your/i, `${label}: ${yes.reply}`);
-      assert.match(yes.reply, /hello|Sent your/, `${label}: the message words are not lost -> ${yes.reply}`);
+      // (a Kiswahili request is now answered in Kiswahili: "hakuna kilichotumwa" = nothing was sent, "Nimetuma" = I sent)
+      assert.match(yes.reply, /nothing was sent|Sent your|hakuna kilichotumwa|Nimetuma/i, `${label}: ${yes.reply}`);
+      assert.match(yes.reply, /hello|Sent your|Nimetuma/, `${label}: the message words are not lost -> ${yes.reply}`);
     }
   }
 });

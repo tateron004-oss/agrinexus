@@ -20,13 +20,14 @@ const { repeatTurnAnyLanguage } = require("../reminders/repeat-turn.js");
 const { resolveReminderTimeZone } = require("../reminders/time-zone.js");
 const { createDeliveryReminders } = require("../reminders/delivery-store.js");
 const { createMemoryNotifications, createMemoryRepeatStore } = require("../reminders/memory-stores.js");
+const { createMemoryContactStore } = require("../memory/memory-contact-store.js");
 
 function safeDatabaseIdentifier(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 128);
 }
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
-  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth, isRestrictedFrom = () => false } = {}) {
+  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth, isRestrictedFrom = () => false, memoryContactStore = null } = {}) {
   let runtimePromise = null;
   // The GPS's place search, reverse lookup and routing (see navigation/service.js). Position is never logged or stored.
   const navigation = createNavigationService({ env });
@@ -822,7 +823,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   // be reached (the caller then says so plainly instead of claiming it was set). No AI model is needed.
   // The two reminder stores the older route writes to. A test or local development server may opt in to in-memory stand-ins (NEXUS_TEST_REMINDER_STORE=memory, never in production);
   // otherwise it is the real database, and when that cannot be reached this throws.
-  const memoryStores = env.NEXUS_TEST_REMINDER_STORE === "memory" && env.NODE_ENV !== "production" ? { notifications: createMemoryNotifications(), repeatReminderRecords: createMemoryRepeatStore() } : null;
+  const memoryStores = env.NEXUS_TEST_REMINDER_STORE === "memory" && env.NODE_ENV !== "production" ? { notifications: createMemoryNotifications(), repeatReminderRecords: createMemoryRepeatStore(), contacts: memoryContactStore || createMemoryContactStore() } : null;
   async function reminderStores(need) {
     if (memoryStores) return memoryStores;
     const active = await runtime(); await active.ready;
@@ -840,7 +841,30 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     const context = requestContext({ headers: {} }, user, isRestrictedFrom);
     return createDeliveryReminders({ notifications: stores.notifications, tenantId: context.tenantId, userId: context.userId });
   }
-  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest, deliveryRemindersFor });
+  // The person's own saved contacts (the planner's store: "Save John's number as +254..."), for the older command route and the phone line, so a name saved on either path is found on both.
+  // Only ever this person's own rows (tenant and user come from the signed-in account). list() is newest first; save() puts the number where the planner reads it. Throws when the store cannot be reached.
+  const seededPlannerContacts = new Set();
+  async function contactBookFor({ user }) {
+    let memory = memoryStores ? memoryStores.contacts : null;
+    if (!memory) { const active = await runtime(); await active.ready; memory = active.memory; }
+    const context = requestContext({ headers: {} }, user, isRestrictedFrom);
+    const scope = { tenantId: context.tenantId, userId: context.userId };
+    // Test servers only (the in-memory stand-in is on): NEXUS_TEST_PLANNER_CONTACTS='{"person@example.com":[{"name":"Grace","phone":"+254712345678"}]}' puts those contacts in that
+    // person's planner store the first time it is read, as if they had said "save Grace's number" to the planner. Never read when a real database is used.
+    const email = String(user?.email || "").trim().toLowerCase();
+    if (memoryStores && email && env.NEXUS_TEST_PLANNER_CONTACTS && !seededPlannerContacts.has(email)) {
+      seededPlannerContacts.add(email);
+      let seed = {}; try { seed = JSON.parse(env.NEXUS_TEST_PLANNER_CONTACTS) || {}; } catch { /* not seeded */ }
+      for (const item of Array.isArray(seed[email]) ? seed[email] : []) await memory.saveContact({ ...scope, name: String(item.name), phone: String(item.phone || "") });
+    }
+    return Object.freeze({
+      async list() {
+        return (await memory.listContacts(scope)).map(row => ({ id: row.memory_id || "", name: row.content.name, phone: row.content.phone || "", email: row.content.email || "", savedAt: row.created_at ? new Date(row.created_at).toISOString() : "" }));
+      },
+      async save({ name, phone }) { return memory.saveContact({ ...scope, name, phone }); }
+    });
+  }
+  return Object.freeze({ handle, status, businessRequest, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest, deliveryRemindersFor, contactBookFor });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {
