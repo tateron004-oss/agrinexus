@@ -156,7 +156,7 @@ async function handleEnglish(ctx, t, lower) {
     const subject = itemName(m[1].replace(new RegExp(`^(?:${UNIT_WORDS})\\b(?:\\s+of)?\\s+(?=\\S)`, "i"), "")); if (!plausibleItem(subject)) continue;
     const items = await stock(); const found = findItems(items, subject);
     if (found.length) return EN.have(found, subject);
-    if (items.length && !NOT_GOODS.test(subject)) return EN.notInStock(subject);
+    if (items.length && !NOT_GOODS.test(subject) && await knownGoods(ctx, subject, items)) return EN.notInStock(subject);
     if (!items.length && !FARM_INPUT.test(subject) && await knownGoods(ctx, subject, items)) return EN.none(subject);
     return null;
   }

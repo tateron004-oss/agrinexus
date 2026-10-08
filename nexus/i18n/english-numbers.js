@@ -20,7 +20,7 @@ const MEASURE_AFTER = /^\s*(?:kgs?|kilos?|kilograms?|grams?|tonnes?|tons?|litres
 const MONEY_TALK = /^(?:(?:i|we)(?:'ve| have)?\s+)?(?:(?:just|also|already|now|then|please)\s+)*(?:sold|bought|purchased|paid|spent|received|earned|got|made|gave|borrowed|repaid|refunded|refund|lent|chama|stock|loan|supplier)\b|\b(?:owes? (?:me|us)|owe)\b/i;
 
 // Words that make a sentence about money at all (so "four thousand five" in a story about steps is left alone).
-const MONEY_CONTEXT = /\b(?:sold|bought|purchased|paid|pay|spent|spend|received|earned|got|made|gave|for|at|price|cost|costs|worth|owes?|owing|borrowed|lent|loan|repaid|refunded?|chama|contribution|balance|income|sales?|stock|credit)\b/i;
+const MONEY_CONTEXT = /\b(?:sold|bought|purchased|paid|spent|received|earned|price|cost|costs|worth|owes?|owing|borrowed|lent|loan|repaid|refunded?|chama|contribution|income|profit|sales?)\b/i;
 
 const wordsToNumber = words => { const digits = convertNumberWords(words); const n = Number(String(digits).replace(/,/g, "")); return Number.isFinite(n) && /^\d/.test(String(digits)) ? n : NaN; };
 const spaced = value => Number(value).toLocaleString("en", { maximumFractionDigits: 2 });

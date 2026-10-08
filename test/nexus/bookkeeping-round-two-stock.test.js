@@ -78,7 +78,10 @@ test("English: a sale takes goods out of stock only when ONE stock record matche
 
 test("English: things that are not stock are left alone", async () => {
   const quiet = person();
-  for (const text of ["I have a headache", "I have 3 acres of maize", "I have 20 bags of flour to sell", "I have a question", "I have 2 cows", "we have 5 workers", "I have 3 kg of weight to lose", "the stock market is down", "I have to go now"]) assert.equal(await quiet.say(text), null, text);
+  for (const text of ["I have a headache", "I have 3 acres of maize", "I have 20 bags of flour to sell", "I have a question", "I have 2 cows", "we have 5 workers", "I have 3 kg of weight to lose", "the stock market is down", "I have to go now", "do I have a meeting today", "how much time do I have", "do I have any messages", "how many days do I have left"]) assert.equal(await quiet.say(text), null, text);
+  // ...even for someone who keeps stock
+  const keeper = person(); await keeper.say("I have 20 bags of flour");
+  for (const text of ["do I have a meeting today", "how much time do I have", "do I have any messages", "my battery is low", "the stock market is down"]) assert.equal(await keeper.say(text), null, text);
   assert.equal(quiet.stock().length, 0);
   // a number that could be read two ways is asked about, not guessed
   const dot = person();
