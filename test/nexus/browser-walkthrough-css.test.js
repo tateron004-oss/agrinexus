@@ -35,6 +35,15 @@ test("the 'Close menu' button is hidden by default and only shown inside the ope
   assert.match(css, /\.top-actions\.open \.top-settings-close \{ display: block; \}/);
 });
 
+test("long unbreakable ids and setting names wrap, so they cannot widen the page on a phone", () => {
+  assert.match(rule(".activity div"), /overflow-wrap:\s*anywhere/);
+  assert.match(rule(".provider-card"), /overflow-wrap:\s*anywhere/);
+});
+
+test("the orb's decorative rings cannot widen the Admin/Investor dashboard on a phone", () => {
+  assert.match(rule(".user-workspace"), /overflow-x:\s*clip/);
+});
+
 test("only the orb-only home is 100vw wide; the mission/conversation card fits its padded parent", () => {
   const block = rule('body.user-mode .nexus-true-experience-root:not([data-nexus-true-experience-mode="home"])');
   assert.match(block, /width:\s*100%\s*!important/);

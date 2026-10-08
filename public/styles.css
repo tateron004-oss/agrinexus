@@ -1665,6 +1665,9 @@ a:focus-visible,
   display: grid;
   gap: 12px;
   margin: 0 0 16px;
+  /* The orb's decorative rings reach past the card. In User mode a later rule hides the overflow; in Admin/Investor mode they made the
+     Dashboard scroll sideways on a phone (page 427px wide). clip does not create a scroll container. */
+  overflow-x: clip;
 }
 .user-workspace-hero,
 .user-outcome-panel,
@@ -9063,7 +9066,8 @@ body.user-mode #workflowClose {
 }
 .integration-status span { display: block; font-size: 2rem; font-weight: 900; }
 .integration-status small { color: rgba(255,255,255,.78); font-weight: 800; }
-.provider-card { min-height: 260px; display: flex; flex-direction: column; }
+/* Setup hints name settings like JOB_SEARCH_API_KEY/JOB_SEARCH_WEBHOOK_URL: one 41-letter word with no break point made the Integrations page 459px wide on a phone. */
+.provider-card { min-height: 260px; display: flex; flex-direction: column; overflow-wrap: anywhere; }
 .provider-card button { margin-top: auto; }
 .provider-connected { border-color: #9bd2bd; }
 .provider-ready { border-color: #d8c993; }
@@ -9205,7 +9209,9 @@ article {
 .row { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
 .row span { color: var(--muted); }
 .activity { max-height: 260px; overflow: auto; display: grid; gap: 8px; }
-.activity div { color: var(--muted); border-bottom: 1px dashed var(--line); padding-bottom: 8px; }
+/* overflow-wrap:anywhere (it also lowers min-content): a long event id such as "sauti.openai_agents_realtime_session_failed" made the whole
+   page 452px wide on a 375px phone. */
+.activity div { color: var(--muted); border-bottom: 1px dashed var(--line); padding-bottom: 8px; overflow-wrap: anywhere; min-width: 0; }
 .map-command {
   min-height: 190px;
   border: 1px solid #bed8d2;
