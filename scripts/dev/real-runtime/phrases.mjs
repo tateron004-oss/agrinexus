@@ -40,7 +40,7 @@ async function settle(u, r) {
   if (j.state === "render_required" && j.render) await call("POST", "/api/nexus/runtime/behavior/acknowledgements", { taskId: j.taskId, commandId: j.commandId, correlationId: j.correlationId, workspace: j.render.workspace, rendered: true, visible: true, audible: false, evidence: {} }, u.cookie);
   // a workspace answer (reminder list, music, business ...) carries its words in render.data; render.response is only the generic "rendering the verified result"
   const rendered = j.render?.data?.summary || j.render?.data?.response || j.render?.response;
-  const text = (j.state === "render_required" ? (j.render?.data?.summary || j.render?.data?.response ? rendered : rendered || j.response) : j.response) || j.clarification || j.message || "";
+  const text = (j.state === "render_required" ? (j.render?.data?.summary || j.render?.data?.response ? rendered : rendered || j.response) : j.response) || j.clarification || j.message || j.error || ""; // (a refused step, like the business 422, says its words in "error")
   return { http: r.status, reply: String(text || (r.json ? "" : r.text.slice(0, 200))), state: j.state || j.code || "" };
 }
 const orbStamps = new Map();
