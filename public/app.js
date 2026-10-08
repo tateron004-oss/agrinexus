@@ -49586,6 +49586,7 @@ function updateRealtimeControllerState(state, eventType, extra = {}) {
   if (!NEXUS_REALTIME_CONTROLLER_STATES.includes(state)) return;
   if (realtimeVoiceSession) realtimeVoiceSession.controllerState = state;
   try { kyroStallWatchdogObserve(state, eventType, extra); } catch { /* watching must never break the session */ }
+  try { kyroNoteRealtimeEvent(eventType); } catch { /* noting must never break the session */ }
   const snapshot = realtimeControllerSnapshot({
     eventType,
     state,
@@ -49674,17 +49675,8 @@ function scheduleRealtimeRecovery(reason = "connection-state") {
       session.reconnectAttempted = false;
       return;
     }
-    const preservedPermanentStream = nexusPermanentMicrophoneStream && session.stream === nexusPermanentMicrophoneStream
-      ? nexusPermanentMicrophoneStream
-      : null;
     stopRealtimeVoiceSession("Realtime voice connection recovered by restarting the failed session.");
-    startRealtimeVoiceSession({
-      source: "bounded-realtime-recovery",
-      preverifiedMicrophoneStream: preservedPermanentStream,
-      conversationIdentity: session.conversationIdentity || nexusRealtimeConversationIdentity,
-      turnIndex: Number(session.turnIndex || 0),
-      recovery: true
-    });
+    void kyroRestartVoiceWithLiveMicrophone(session, { source: "bounded-realtime-recovery" });
   }, 1200);
 }
 
@@ -49727,35 +49719,188 @@ function restartRealtimeVoiceAfterStall(reason) {
   const session = realtimeVoiceSession;
   if (!session?.active || realtimeVoiceStarting) return;
   try { toast("I lost you for a moment. Reconnecting..."); } catch { /* the restart still happens */ }
-  const preservedPermanentStream = nexusPermanentMicrophoneStream && session.stream === nexusPermanentMicrophoneStream ? nexusPermanentMicrophoneStream : null;
   stopRealtimeVoiceSession(`Realtime voice restarted after a stall: ${reason}`);
-  startRealtimeVoiceSession({
-    source: "stall-watchdog-restart",
-    preverifiedMicrophoneStream: preservedPermanentStream,
-    conversationIdentity: session.conversationIdentity || nexusRealtimeConversationIdentity,
-    turnIndex: Number(session.turnIndex || 0),
-    recovery: true
-  });
+  void kyroRestartVoiceWithLiveMicrophone(session, { source: "stall-watchdog-restart" });
 }
 
-// What the server log needs to find the cause: where the session was when it went quiet. No speech, names or other personal data.
+// ---- voice resilience (BEGIN) ----------------------------------------------------------------------------------------------------------------
+// Everything between this line and the matching END line is exercised by test/nexus/voice-stall-mitigations.test.js with fakes for the browser.
+
+// The Realtime SDK stops the microphone track it was given every time a session closes (OpenAIRealtimeWebRTC.close() stops every sender's track). The microphone
+// stream is owned by the page and kept between sessions, so a restart used to be handed a stream that had just been stopped, failed with "Pre-acquired Nexus microphone
+// stream is not live", and left the orb dead. The SDK is now given a clone of the track (the original stays live for the next session), and a restart checks that the
+// microphone is really live first: it opens a new one if it can, and says so plainly if it cannot.
+function kyroMicrophoneIsLive(stream) {
+  const tracks = typeof stream?.getAudioTracks === "function" ? stream.getAudioTracks() : [];
+  return tracks.some(track => track && track.readyState === "live" && track.enabled !== false);
+}
+
+function kyroCloneMicrophoneForSdk(stream) {
+  try { if (stream && typeof stream.clone === "function" && kyroMicrophoneIsLive(stream)) return stream.clone(); } catch { /* the stream itself is used */ }
+  return stream;
+}
+
+// A live microphone stream for a restarted session, or null. Reuses the kept one when it is live; otherwise asks the browser for a new one (allowed without another
+// tap when the person has already allowed the microphone for this site; if the browser refuses, the caller tells the person to tap the orb).
+async function kyroLiveMicrophoneForRestart(session) {
+  const kept = nexusPermanentMicrophoneStream && session?.stream === nexusPermanentMicrophoneStream ? nexusPermanentMicrophoneStream : null;
+  if (kept && kyroMicrophoneIsLive(kept)) return kept;
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return null;
+  let stream = null;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return null; }
+  if (!kyroMicrophoneIsLive(stream)) {
+    try { stream?.getTracks?.().forEach(track => track.stop()); } catch { /* nothing to release */ }
+    return null;
+  }
+  if (kept) { try { kept.getTracks().forEach(track => track.stop()); } catch { /* already stopped */ } }
+  nexusPermanentMicrophoneStream = stream;
+  nexusVoicePermissionStream = stream;
+  return stream;
+}
+
+function kyroVoiceNeedsTap(source, kind) {
+  try { toast("Voice stopped. Tap the orb to start again."); } catch { /* the status line below still says it */ }
+  try { setNexusPermanentMicrophoneState("ready", "Voice stopped and could not restart by itself. Tap the orb to reconnect Nexus voice."); } catch { /* optional */ }
+  try { reportKyroVoiceStall(kind || "restart-failed", { lastActivity: String(source || "") }); } catch { /* optional */ }
+}
+
+// Starts a replacement for a session that was just stopped (by the stall watchdog, a lost connection, or coming back from the background).
+async function kyroRestartVoiceWithLiveMicrophone(session, { source = "voice-restart" } = {}) {
+  let microphone = null;
+  try { microphone = await kyroLiveMicrophoneForRestart(session); } catch { microphone = null; }
+  if (realtimeVoiceSession || realtimeVoiceStarting) return false; // the person (or another recovery) has already started one
+  if (!microphone) { kyroVoiceNeedsTap(source, "mic-lost"); return false; }
+  let started = false;
+  try {
+    started = await startRealtimeVoiceSession({
+      source,
+      preverifiedMicrophoneStream: microphone,
+      conversationIdentity: session?.conversationIdentity || nexusRealtimeConversationIdentity,
+      turnIndex: Number(session?.turnIndex || 0),
+      recovery: true
+    });
+  } catch { started = false; }
+  if (!started && !realtimeVoiceSession) kyroVoiceNeedsTap(source, "restart-failed");
+  return Boolean(started);
+}
+
+// A request that gives up instead of hanging: on a weak mobile connection a fetch can wait for minutes, and a spoken request must always get an answer.
+// The Realtime SDK itself gives a tool 15 seconds (nexus-openai-realtime-agent.js); this lets go a little before that, with a plain line the model can say.
+const KYRO_VOICE_TOOL_FETCH_TIMEOUT_MS = 13500;
+async function kyroFetchWithTimeout(url, init = {}, timeoutMs = KYRO_VOICE_TOOL_FETCH_TIMEOUT_MS) {
+  if (typeof AbortController !== "function") return fetch(url, init);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try { return await fetch(url, { ...init, signal: controller.signal }); } finally { clearTimeout(timer); }
+}
+
+// What the model is told when the tool gateway cannot give a real result. Always a short, true sentence it can say, never silence and never "done".
+function kyroToolFailureResult(kind, { status = 0, body = null, correlationId = "" } = {}) {
+  const lines = {
+    "timed-out": "That is taking longer than I expected, and I cannot tell whether it finished. Give it a moment, and check before you ask again.",
+    offline: "I cannot reach the server right now. Please check the connection and try again.",
+    "rate-limited": "I am getting too many requests right now. Please wait a minute and ask me again.",
+    "needs-sign-in": "You need to sign in again before I can do that.",
+    forbidden: "This account is not allowed to do that.",
+    failed: "Something went wrong on my side, so I could not do that. Please try again in a moment."
+  };
+  const resolved = kind === "http"
+    ? (status === 429 ? "rate-limited" : status === 401 ? "needs-sign-in" : status === 403 ? "forbidden" : "failed")
+    : kind;
+  const spoken = body && typeof body.response === "string" && body.response.trim() ? body.response.trim() : (lines[resolved] || lines.failed);
+  return {
+    ...(body && typeof body === "object" ? body : {}),
+    ok: false, status: resolved, response: spoken, correlationId: correlationId || body?.correlationId || "",
+    capability: body?.capability || "conversation", providerAttempted: false, providerSucceeded: false, executionAttempted: false, executionVerified: false,
+    blockedReason: body?.blockedReason || body?.category || resolved, httpStatus: status || undefined
+  };
+}
+
+// The last few realtime events (type names only) so a stall report shows what the session was doing when it went quiet.
+let kyroRealtimeEventRing = null;
+function kyroNoteRealtimeEvent(type) {
+  try {
+    if (!kyroRealtimeEventRing && typeof window !== "undefined" && window.KyroStallWatchdog?.createEventRing) kyroRealtimeEventRing = window.KyroStallWatchdog.createEventRing({ cap: 10 });
+    kyroRealtimeEventRing?.record(type);
+  } catch { /* noting an event must never break the session */ }
+}
+
+function kyroTransportParts(session) {
+  const state = session?.sdkSession?.transport?.connectionState || {};
+  return { peerConnection: session?.peerConnection || state.peerConnection || null, dataChannel: session?.dataChannel || state.dataChannel || null };
+}
+
+// Is the live session actually connected? (Used when the person comes back to the page: phones suspend a page's connections while it is in the background.)
+function kyroRealtimeHealth(session) {
+  if (!session?.active) return { healthy: false, why: "no-session" };
+  const { peerConnection, dataChannel } = kyroTransportParts(session);
+  const bad = value => ["failed", "closed", "disconnected"].includes(String(value || "").toLowerCase());
+  if (bad(peerConnection?.connectionState) || bad(peerConnection?.iceConnectionState)) return { healthy: false, why: "peer-connection-down" };
+  if (dataChannel && dataChannel.readyState !== "open") return { healthy: false, why: "data-channel-not-open" };
+  const track = session.microphoneTrack;
+  if (track && track.readyState === "ended") return { healthy: false, why: "microphone-ended" };
+  return { healthy: true, why: "" };
+}
+
+let kyroTabHiddenAt = 0;
+function kyroOnVisibilityChange() {
+  const hidden = typeof document !== "undefined" && document.hidden === true;
+  if (hidden) { kyroTabHiddenAt = Date.now(); kyroNoteRealtimeEvent("tab-hidden"); return; }
+  const hiddenForMs = kyroTabHiddenAt ? Date.now() - kyroTabHiddenAt : 0;
+  kyroTabHiddenAt = 0;
+  const session = realtimeVoiceSession;
+  if (!session?.active) return;
+  session.lastHiddenForMs = hiddenForMs;
+  kyroNoteRealtimeEvent("tab-visible");
+  const health = kyroRealtimeHealth(session);
+  if (health.healthy) return;
+  reportKyroVoiceStall(health.why === "microphone-ended" ? "mic-lost" : "disconnected", { lastActivity: `returned-after-${Math.round(hiddenForMs / 1000)}s:${health.why}` });
+  restartRealtimeVoiceAfterStall(`returned-from-background:${health.why}`);
+}
+if (typeof document !== "undefined" && typeof document.addEventListener === "function") document.addEventListener("visibilitychange", kyroOnVisibilityChange, { passive: true });
+
+// The body of a stall report: where the session was when it went quiet, in numbers and type names only (no speech, names, keys or other personal data).
+function kyroStallReportBody(kind, detail = {}) {
+  const session = realtimeVoiceSession || {};
+  const { peerConnection, dataChannel } = kyroTransportParts(session);
+  const watchdog = typeof window !== "undefined" ? window.KyroStallWatchdog : null;
+  const now = Date.now();
+  const timing = watchdog?.sessionTiming ? watchdog.sessionTiming({ startedAt: session.startedAt, expiresAt: session.keyExpiresAt, now }) : {};
+  const intakeActive = Boolean(kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused");
+  const micTrack = session.microphoneTrack?.readyState || session.microphoneProof?.trackState || "";
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  const tabVisible = typeof document === "undefined" ? "" : (document.visibilityState || "");
+  const phase = watchdog?.classifyPhase ? watchdog.classifyPhase({
+    active: kind === "disconnected" ? false : session.active !== false,
+    peerState: peerConnection?.connectionState || "", iceState: peerConnection?.iceConnectionState || "", connectionState: String(session.connectionState || ""),
+    dataChannelState: dataChannel?.readyState || "", micTrack, online, tabVisible, intakeActive,
+    autoResponseOn: session.autoResponseOn === false ? false : true,
+    toolRunning: Boolean(detail.toolRunning), waitingForResponse: Boolean(detail.waitingForResponse)
+  }) : "";
+  return {
+    kind, phase, build: typeof AGRINEXUS_BUILD_VERSION === "string" ? AGRINEXUS_BUILD_VERSION : "", sessionId: session.sessionId || "", turnIndex: Number(session.turnIndex || 0),
+    controllerState: session.controllerState || "", lastModelEvent: session.lastModelEvent || "", lastToolEvent: session.lastToolEvent || "",
+    inboundAudioState: session.inboundAudioState || "", responseInProgress: Boolean(session.responseInProgress),
+    connectionState: String(session.connectionState || ""), peerState: peerConnection?.connectionState || "", iceState: peerConnection?.iceConnectionState || "",
+    dataChannelState: dataChannel?.readyState || "",
+    micTrack, micMuted: Boolean(session.microphoneTrack?.muted),
+    online, tabVisible, intakeActive: Boolean(kyroActiveVoiceIntake), autoResponseOn: session.autoResponseOn === false ? false : true,
+    sessionAgeMs: Number(timing.sessionAgeMs || 0), keyRemainingMs: Number(timing.keyRemainingMs || 0), keyKnown: timing.keyKnown === true,
+    hiddenForMs: Number(session.lastHiddenForMs || 0),
+    lastEvents: kyroRealtimeEventRing ? kyroRealtimeEventRing.snapshot() : [],
+    waitedMs: Number(detail.waitedMs || 0), nudges: Number(detail.nudges || 0), restarts: Number(detail.restarts || 0),
+    toolName: String(detail.toolName || ""), toolRunningMs: Number(detail.toolRunningMs || 0), sinceLastActivityMs: Number(detail.sinceLastActivityMs || 0),
+    lastActivity: String(detail.lastActivity || ""), userAgent: String(typeof navigator === "undefined" ? "" : navigator.userAgent || "").slice(0, 160)
+  };
+}
+
 function reportKyroVoiceStall(kind, detail = {}) {
   try {
-    const session = realtimeVoiceSession || {};
-    const body = JSON.stringify({
-      kind, build: AGRINEXUS_BUILD_VERSION, sessionId: session.sessionId || "", turnIndex: Number(session.turnIndex || 0),
-      controllerState: session.controllerState || "", lastModelEvent: session.lastModelEvent || "", lastToolEvent: session.lastToolEvent || "",
-      inboundAudioState: session.inboundAudioState || "", responseInProgress: Boolean(session.responseInProgress),
-      connectionState: String(session.connectionState || ""), peerState: session.peerConnection?.connectionState || "",
-      micTrack: session.microphoneTrack?.readyState || session.microphoneProof?.trackState || "", micMuted: Boolean(session.microphoneTrack?.muted),
-      online: navigator.onLine !== false, tabVisible: document.visibilityState || "", intakeActive: Boolean(kyroActiveVoiceIntake),
-      waitedMs: Number(detail.waitedMs || 0), nudges: Number(detail.nudges || 0), restarts: Number(detail.restarts || 0),
-      toolName: String(detail.toolName || ""), toolRunningMs: Number(detail.toolRunningMs || 0), sinceLastActivityMs: Number(detail.sinceLastActivityMs || 0),
-      lastActivity: String(detail.lastActivity || ""), userAgent: String(navigator.userAgent || "").slice(0, 160)
-    });
+    const body = JSON.stringify(kyroStallReportBody(kind, detail));
     fetch("/api/voice/realtime/stall-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
   } catch { /* a report must never break the voice session */ }
 }
+// ---- voice resilience (END) ------------------------------------------------------------------------------------------------------------------
 
 // Load the voice status shortly after the page opens (it is public and small), so tapping the orb does not wait for it.
 window.setTimeout(() => { try { loadRealtimeVoiceStatus().catch(() => {}); } catch { /* the first tap loads it instead */ } }, 2500);
@@ -50108,29 +50253,39 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     correlationId,
     commandLength: command.length
   });
-  const response = await fetch("/api/voice/realtime/tool", {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      name: toolName || "nexus_general_conversation",
-      correlationId,
-      arguments: {
-        ...args,
-        command,
+  let response;
+  try {
+    response = await kyroFetchWithTimeout("/api/voice/realtime/tool", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        name: toolName || "nexus_general_conversation",
+        correlationId,
+        arguments: {
+          ...args,
+          command,
+          language: args.language || languageCode()
+        },
         language: args.language || languageCode()
-      },
-      language: args.language || languageCode()
-    })
-  });
-  const result = await response.json().catch(() => ({
+      })
+    });
+  } catch (error) {
+    // The request hung or the connection dropped: the model still gets a true, speakable result instead of the call ending in silence.
+    const timedOut = error?.name === "AbortError";
+    nexusGenesisVoiceDebugLog("openai-agents-tool-http-failed", { toolName, correlationId, timedOut });
+    return kyroToolFailureResult(timedOut ? "timed-out" : "offline", { correlationId });
+  }
+  let result = await response.json().catch(() => ({
     ok: false,
     status: "failed-truthfully",
     response: "I could not parse the Nexus tool result.",
     blockedReason: "client-parse-failed",
     category: "tool-response-parse"
   }));
+  // A refusal from the gateway (too many requests, signed out, an error) used to reach the model as if the tool had succeeded ("Nexus completed the tool request").
+  if (!response.ok) result = kyroToolFailureResult("http", { status: response.status, body: result, correlationId });
   const transcriptAction = genesisWorkspaceActionFromFinalTranscript(command);
   const transcriptWorkspaceVerified = transcriptAction
     ? await executeGenesisWorkspaceFromFinalTranscript(command)
@@ -50248,6 +50403,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     scheduleRealtimeRecovery("openai-agents-microphone-track-ended");
   }
   if (eventName === "transport_event") {
+    if (eventType && typeof kyroNoteRealtimeEvent === "function") kyroNoteRealtimeEvent(eventType);
     if (realtimeVoiceSession) {
       realtimeVoiceSession.lastModelEvent = eventType || realtimeVoiceSession.lastModelEvent || "";
       if (/audio|response|conversation|session|input_audio/i.test(eventType)) {
@@ -50271,6 +50427,8 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
         : "output-audio-buffer-cleared");
     }
     if (eventType === "input_audio_buffer.speech_started") {
+      // The automatic reply being off with no interview running is never intended: put it right before this turn ends (see kyroEnsureAutoResponse).
+      try { if (typeof kyroEnsureAutoResponse === "function") kyroEnsureAutoResponse("speech-started"); } catch { /* never block the turn */ }
       const turnId = nextRealtimeTurnId();
       markNexusUserSpeech("Realtime voice detected speech.", "openai-agents-realtime");
       updateRealtimeControllerState("user-speaking", Number(realtimeVoiceSession?.turnIndex || 0) >= 2 ? "second-user-speech-detected" : "user-speech-started", { turnId });
@@ -50465,14 +50623,74 @@ function kyroIntakeText(key, language, params) {
 // talking over the intake's own next question. Restoring re-applies whatever turn-detection config
 // this session actually started with, rather than resetting to the SDK's own defaults (which would
 // silently drop language/noise-reduction/eagerness settings this session negotiated at connect time).
-function setKyroRealtimeAutoResponse(enabled) {
+//
+// Turning it off is the dangerous direction: if it is never turned back on, the model hears every turn and answers none of them (a silent orb). So the state is
+// remembered on the session (autoResponseOn), a restore that could not be sent is retried, a stuck "off" with no interview running is put right the moment the
+// person speaks again (kyroEnsureAutoResponse), and an interview that is abandoned, finished, or hung is released by a timer (kyroArmIntakeSafetyNet).
+function setKyroRealtimeAutoResponse(enabled, options = {}) {
   const base = kyroRealtimeBaseTurnDetection || { type: "server_vad", create_response: true };
-  sendKyroRealtimeEvent({
+  const sent = sendKyroRealtimeEvent({
     type: "session.update",
     session: { type: "realtime", audio: { input: { turn_detection: enabled
       ? { ...base, create_response: true }
       : { ...base, create_response: false, eagerness: base.eagerness || "low" } } } }
   });
+  const session = realtimeVoiceSession;
+  if (session && sent) { session.autoResponseOn = Boolean(enabled); session.autoResponseChangedAt = Date.now(); }
+  if (enabled && !sent && !options.noRetry) kyroRetryAutoResponseRestore(1);
+  return sent;
+}
+
+// A restore the connection could not carry (the data channel was briefly not open) is tried again a few times, 1s, 2s, 4s, 8s apart.
+function kyroRetryAutoResponseRestore(attempt) {
+  const session = realtimeVoiceSession;
+  if (!session || attempt > 4 || typeof setTimeout !== "function") return;
+  setTimeout(() => {
+    if (realtimeVoiceSession !== session || session.autoResponseOn !== false) return;
+    if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return;
+    if (!setKyroRealtimeAutoResponse(true, { noRetry: true })) kyroRetryAutoResponseRestore(attempt + 1);
+  }, Math.min(8000, 1000 * 2 ** (attempt - 1)));
+}
+
+// After a restore, the turn the person just finished was heard while the model was told not to answer. Watch it like any other turn: if no reply starts, the
+// stall watchdog asks the model to answer what it heard (and restarts the session if that gets nothing).
+function kyroAnswerHeardTurn(reason) {
+  try { if (typeof kyroStallWatchdogInstance === "function") kyroStallWatchdogInstance()?.userTurnCommitted(`auto-response-restored:${String(reason || "").slice(0, 40)}`); } catch { /* optional */ }
+}
+
+// "Off" with no interview running is never intended. Called when the person starts speaking: puts it right, and reports that it had to.
+function kyroEnsureAutoResponse(reason) {
+  const session = realtimeVoiceSession;
+  if (!session || session.autoResponseOn !== false) return false;
+  if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return false;
+  const sent = setKyroRealtimeAutoResponse(true);
+  try { if (typeof nexusGenesisVoiceDebugLog === "function") nexusGenesisVoiceDebugLog("kyro-auto-response-restored", { reason: String(reason || ""), sent }); } catch { /* optional */ }
+  try { if (typeof reportKyroVoiceStall === "function") reportKyroVoiceStall("auto-response-stuck", { lastActivity: String(reason || "").slice(0, 60) }); } catch { /* optional */ }
+  return sent;
+}
+
+// An interview releases the automatic reply when it finishes or is cancelled. This is the backstop for every other way it can end: an interview that finished or was
+// cancelled but whose cleanup failed, one abandoned for its whole idle time (the person walked away), or one whose last step (saving) never answered.
+let kyroIntakeSafetyTimer = null;
+const KYRO_INTAKE_SAFETY_POLL_MS = 30000;
+function kyroArmIntakeSafetyNet() {
+  if (typeof setTimeout !== "function") return;
+  if (kyroIntakeSafetyTimer && typeof clearTimeout === "function") clearTimeout(kyroIntakeSafetyTimer);
+  kyroIntakeSafetyTimer = null;
+  if (!kyroActiveVoiceIntake) return;
+  kyroIntakeSafetyTimer = setTimeout(() => {
+    kyroIntakeSafetyTimer = null;
+    const active = kyroActiveVoiceIntake;
+    if (!active) return;
+    const phase = active.engine.phase;
+    const finished = phase === "cancelled" || phase === "done";
+    const abandoned = phase !== "paused" && active.engine.isExpired(Date.now());
+    if (!finished && !abandoned) { kyroArmIntakeSafetyNet(); return; }
+    kyroActiveVoiceIntake = null;
+    try { renderKyroVoiceIntakePanel(null); } catch { /* the panel may already be gone */ }
+    setKyroRealtimeAutoResponse(true);
+    try { if (typeof nexusGenesisVoiceDebugLog === "function") nexusGenesisVoiceDebugLog("kyro-voice-intake-released-by-safety-net", { phase, abandoned }); } catch { /* optional */ }
+  }, KYRO_INTAKE_SAFETY_POLL_MS);
 }
 
 // Tells the model to say the given line verbatim, used for every spoken step of a Kyro voice
@@ -50711,17 +50929,23 @@ document.addEventListener("click", event => {
 
 async function applyKyroIntakeDecision(decision) {
   if (!decision) return;
-  renderKyroVoiceIntakePanel(decision.action === "done" || decision.action === "cancelled" ? null : decision.snapshot);
-  if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language });
+  kyroArmIntakeSafetyNet();
   if (decision.action === "cancelled") {
+    // Release the automatic reply FIRST: nothing the screen or the speech does after this can leave the model muted.
     const active = kyroActiveVoiceIntake;
     kyroActiveVoiceIntake = null;
-    setKyroRealtimeAutoResponse(true);
-    injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`);
-    speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language });
-    active?.onCancel?.();
+    try { setKyroRealtimeAutoResponse(true); } catch { /* the safety net and the next utterance put it right */ }
+    // Each cleanup step stands alone: one failing must not skip the others.
+    const step = work => { try { work(); } catch (error) { nexusGenesisVoiceDebugLog("kyro-voice-intake-cancel-cleanup-error", { message: error?.message || "unknown" }); } };
+    step(() => renderKyroVoiceIntakePanel(null));
+    step(() => { if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
+    step(() => injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`));
+    step(() => speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language }));
+    step(() => active?.onCancel?.());
     return;
   }
+  renderKyroVoiceIntakePanel(decision.action === "done" ? null : decision.snapshot);
+  if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language });
   if (decision.action === "submit") {
     const active = kyroActiveVoiceIntake;
     if (!active) return;
@@ -50729,11 +50953,17 @@ async function applyKyroIntakeDecision(decision) {
       const result = await active.onComplete(decision.values, { language: decision.language });
       if (result?.ok) {
         const doneDecision = active.engine.markDone(result.say);
-        renderKyroVoiceIntakePanel(null);
-        speakKyroIntakeLine(doneDecision.say, { language: decision.language });
-        injectKyroRealtimeContext(result.contextNote || doneDecision.say);
-        kyroActiveVoiceIntake = null;
-        setKyroRealtimeAutoResponse(true);
+        // Finished: whatever the screen or the speech does next, the automatic reply is released (a failure here is not a failed save, so it is not retried).
+        try {
+          renderKyroVoiceIntakePanel(null);
+          speakKyroIntakeLine(doneDecision.say, { language: decision.language });
+          injectKyroRealtimeContext(result.contextNote || doneDecision.say);
+        } catch (error) {
+          nexusGenesisVoiceDebugLog("kyro-voice-intake-done-cleanup-error", { message: error?.message || "unknown" });
+        } finally {
+          kyroActiveVoiceIntake = null;
+          setKyroRealtimeAutoResponse(true);
+        }
       } else {
         const retryDecision = active.engine.submitFailed({ fieldKey: result?.fieldKey, message: result?.say });
         applyKyroIntakeDecision(retryDecision);
@@ -50756,6 +50986,7 @@ function startKyroVoiceIntake(definition, options = {}) {
   const engine = KyroVoiceIntake.create(definition, { seedUtterance: options.seedUtterance, language: languageCode() });
   kyroActiveVoiceIntake = { engine, definition, onComplete: options.onComplete, onCancel: options.onCancel, source: options.source || "voice" };
   if (realtimeVoiceActive()) setKyroRealtimeAutoResponse(false);
+  kyroArmIntakeSafetyNet();
   nexusGenesisVoiceDebugLog("kyro-voice-intake-started", { formId: definition.id, source: options.source || "voice" });
   applyKyroIntakeDecision(engine.start());
 }
@@ -50775,6 +51006,8 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     kyroActiveVoiceIntake = null;
     setKyroRealtimeAutoResponse(true);
     renderKyroVoiceIntakePanel(null);
+    // This very turn was heard while the model was told not to answer, so it would never have been answered: have it watched like any other turn.
+    kyroAnswerHeardTurn("intake-expired");
   }
   if (!kyroActiveVoiceIntake) {
     if (window.KyroIntakeForms?.isResumeBuildRequest?.(trimmed)) {
@@ -50822,6 +51055,8 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       speakKyroIntakeLine(decision.say, { language: decision.language });
       return true;
     }
+    // A wake-word switch was heard while the model was told not to answer: watch it like any other turn, so it is answered if nothing else answers it.
+    kyroAnswerHeardTurn("intake-switched-away");
     return false;
   }
   applyKyroIntakeDecision(decision);
@@ -50834,7 +51069,9 @@ async function submitKyroResumeIntake(values, context = {}) {
   const language = context.language || languageCode();
   const request = window.KyroIntakeForms?.resume?.toRequest?.(values) || {};
   try {
-    const response = await fetch("/api/nexus/runtime/behavior/intake", {
+    // Gives up after 30 seconds (the catch below says "could not reach the server, your answers are kept"): a save that hangs must not hold the interview, and the
+    // automatic reply it turned off, for ever.
+    const response = await kyroFetchWithTimeout("/api/nexus/runtime/behavior/intake", {
       method: "POST",
       credentials: "same-origin",
       cache: "no-store",
@@ -50847,7 +51084,7 @@ async function submitKyroResumeIntake(values, context = {}) {
         conversationId: typeof nexusAuthoritativeConversationId === "function" ? nexusAuthoritativeConversationId() : undefined,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       })
-    });
+    }, 30000);
     const result = await response.json().catch(() => ({}));
     if (response.status === 401) {
       return { ok: false, say: kyroIntakeText("signIn", language) };
@@ -51067,6 +51304,7 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
     activeResponseId: "",
     cancelInProgress: false,
     reconnectAttempted: false,
+    autoResponseOn: true,
     model: status.model,
     voice: status.voice,
     runtimeVersion: status.runtimeVersion || NEXUS_GENESIS_REALTIME_RUNTIME_VERSION,
@@ -51111,7 +51349,8 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       voice: sessionPayload.voice || status.voice || "marin",
       instructions: `${sessionPayload.clientConfig?.instructions || ""} For every explicit Nexus request to open, show, start, find, search, play, plan, reset, record, create, remind, or help with an application or workspace, you must call the closest Nexus tool and pass the user's full request verbatim in the command field. Use nexus_workflow as the navigation bridge for music or media, reminders, offline queue, documents or forms, provider cards, and the pilot evidence dashboard when no narrower tool exists. Do not answer an explicit workspace request without first calling a Nexus tool.`,
       clientConfig: sessionPayload.clientConfig || {},
-      preverifiedMicrophoneStream: options.preverifiedMicrophoneStream || null,
+      // A clone: the SDK stops the track it is given when the session closes, and the page's own microphone must outlive the session (see kyroCloneMicrophoneForSdk).
+      preverifiedMicrophoneStream: kyroCloneMicrophoneForSdk(options.preverifiedMicrophoneStream || null),
       language: () => languageCode(),
       lastUserCommand: () => nexusOsVoiceRuntimeState.lastFinal || "",
       callNexusTool: callNexusOpenAiRealtimeTool,
@@ -51171,7 +51410,10 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
         ...(Number.isFinite(negotiatedTurnDetection.silenceDurationMs) ? { silence_duration_ms: negotiatedTurnDetection.silenceDurationMs } : {})
       };
     }
-    realtimeVoiceSession.stream = controller.mediaStream;
+    // The page's own stream (not the SDK's clone of it), so the "is this the permanent microphone?" checks when the session stops still match.
+    realtimeVoiceSession.stream = options.preverifiedMicrophoneStream || controller.mediaStream;
+    realtimeVoiceSession.sdkMediaStream = controller.mediaStream;
+    realtimeVoiceSession.keyExpiresAt = sessionPayload.expiresAt || null;
     realtimeVoiceSession.microphoneTrack = controller.microphoneTrack || micProof.track;
     realtimeVoiceSession.microphoneProof = {
       streamActive: micProof.streamActive,
@@ -51274,7 +51516,8 @@ async function startRealtimeVoiceSession(options = {}) {
     const statusPayload = await loadRealtimeVoiceStatus({ force: options.recovery === true });
     const status = statusPayload?.realtimeVoice || {};
     if (status.runtime === "disabled") throw new Error(status.note || "Nexus voice is disabled.");
-    if (status.runtime !== "realtime") return false;
+    // (Leaving `realtimeVoiceStarting` set here made every later start return "already starting" until the page was reloaded.)
+    if (status.runtime !== "realtime") { realtimeVoiceStarting = false; return false; }
     if (!status.ready) throw new Error(status.note || "OpenAI Realtime voice is not configured.");
     if (status.transport === "agents-sdk-webrtc" || status.endpoint === "/api/voice/realtime/session") {
       return await startOpenAiAgentsRealtimeVoiceSession(status, options);

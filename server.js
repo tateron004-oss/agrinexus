@@ -179,6 +179,7 @@ const senderOverride = require("./server/providers/senderOverride.js");
 // and texting-vs-calling: see nexus/speech/normalise.js and server/frontDoor.js.
 const { normaliseSpoken } = require("./nexus/speech/normalise.js");
 const frontDoor = require("./server/frontDoor.js");
+const voiceStallReports = require("./server/voice-stall-reports.js");
 const { cleanContactName, localPhoneToE164 } = require("./nexus/memory/contacts.js");
 // What the current request sends as. In the default space this is process.env itself; inside a business it is a copy carrying that business's own numbers and settings (and none of the platform's).
 // The Twilio and email providers apply the same swap themselves (server/providers/senderOverride.js), so a call that was handed process.env still sends as the right business.
@@ -20617,12 +20618,17 @@ function nexusRealtimeRuntimeStatus(env = process.env) {
 }
 
 // How long a spoken request may take before Kyro answers with a plain "that is taking longer" instead of staying silent.
-const NEXUS_REALTIME_TOOL_DEADLINE_MS = Number(process.env.NEXUS_REALTIME_TOOL_DEADLINE_MS || 15000);
-function nexusRealtimeToolTimeoutResult(body = {}) {
+// The browser's Realtime SDK gives every tool 15 seconds and the page gives up on the request at 13.5 (public/app.js), so the server's own deadline is a little under
+// that: the model is handed this plain line, instead of a generic "tool failed" error from the SDK's own timer.
+const NEXUS_REALTIME_TOOL_DEADLINE_MS = Number(process.env.NEXUS_REALTIME_TOOL_DEADLINE_MS || 13000);
+function nexusRealtimeToolTimeoutResult(body = {}, { native = false } = {}) {
   const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
   return {
     ok: false, status: "timed-out", capability: "realtime-tool-deadline", executionAttempted: false, executionVerified: false,
-    response: "That is taking longer than I expected. Please ask me again in a moment.",
+    // A tool that was already running is not stopped, so a saving request may still finish: say that honestly, and do not invite a blind repeat.
+    response: native
+      ? "That is taking longer than I expected, and I cannot tell yet whether it finished. Give it a moment, and check before you ask again."
+      : "That is taking longer than I expected. Please ask me again in a moment.",
     correlationId: body.correlationId || "", command: String(args.command || body.command || "").slice(0, 200)
   };
 }
@@ -58933,25 +58939,33 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const authContext = resolveGenesisVoiceAuthContext(req, db, user, { language: "en", issueGuest: false });
     if (!authContext.authenticated) return send(res, 401, { ok: false, error: "Sign in required" });
-    const text = (value, max = 80) => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, max);
-    const number = value => (Number.isFinite(Number(value)) ? Math.max(0, Math.min(Number(value), 3_600_000)) : 0);
-    const report = {
-      kind: ["no-response", "tool-stuck"].includes(body.kind) ? body.kind : "unknown", build: text(body.build, 40), sessionId: text(body.sessionId), turnIndex: number(body.turnIndex),
-      controllerState: text(body.controllerState), lastModelEvent: text(body.lastModelEvent), lastToolEvent: text(body.lastToolEvent), inboundAudioState: text(body.inboundAudioState),
-      responseInProgress: body.responseInProgress === true, connectionState: text(body.connectionState), peerState: text(body.peerState), micTrack: text(body.micTrack),
-      micMuted: body.micMuted === true, online: body.online !== false, tabVisible: text(body.tabVisible, 20), intakeActive: body.intakeActive === true,
-      waitedMs: number(body.waitedMs), nudges: number(body.nudges), restarts: number(body.restarts), toolName: text(body.toolName), toolRunningMs: number(body.toolRunningMs),
-      sinceLastActivityMs: number(body.sinceLastActivityMs), lastActivity: text(body.lastActivity), userAgent: text(body.userAgent, 160)
-    };
+    // Only a fixed set of short, known fields is kept (server/voice-stall-reports.js): numbers, states and event type names, never speech or personal data.
+    const report = voiceStallReports.sanitiseStallReport(body);
     console.warn("[voice-stall]", JSON.stringify(report));
-    logIntegration(db, { providerId: "openai", module: "AI Voice", action: "voice.stall_reported", status: "warning", detail: `Voice session stalled (${report.kind}); the app restarted it.`, metadata: report, dispatch: false });
+    logIntegration(db, { providerId: "openai", module: "AI Voice", action: "voice.stall_reported", status: "warning", detail: `Voice session stalled (${report.kind}, ${report.phase}).`, metadata: { kind: report.kind, phase: report.phase, waitedMs: report.waitedMs, toolName: report.toolName }, dispatch: false });
+    // Kept (newest first, 300 at most) so the owner can read the real cause from /api/admin/voice/stall-summary without digging through logs.
+    db.profile.voiceStallReports = voiceStallReports.storeStallReport(db.profile.voiceStallReports, report);
     await writeDb(db);
     return send(res, 200, { ok: true }, { "cache-control": "no-store" });
   }
 
+  // Read-only: the stall reports above, counted by phase / kind / tool / last event, with a plain-language reading of the most common one. Owner only.
+  if (url.pathname === "/api/admin/voice/stall-summary" && req.method === "GET") {
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing voice stall reports" });
+    const hours = Number(url.searchParams.get("hours") || 0);
+    const cutoff = Number.isFinite(hours) && hours > 0 ? Date.now() - hours * 3_600_000 : 0;
+    const stored = (db.profile.voiceStallReports || []).filter(item => !cutoff || Date.parse(item.receivedAt || "") >= cutoff);
+    return send(res, 200, { ...voiceStallReports.summariseStallReports(stored, { limit: Number(url.searchParams.get("limit") || 10) }), cap: voiceStallReports.STORE_CAP, windowHours: cutoff ? hours : null,
+      note: "Counts of what browsers reported when a voice session went quiet. Types, states and numbers only: no speech, names or keys. Kept on the server (newest 300); the same reports are also in the server log as [voice-stall]." }, { "cache-control": "no-store" });
+  }
+
   if (url.pathname === "/api/voice/realtime/tool" && req.method === "POST") {
     // A signed-in account is limited per person (at that address, with a wider ceiling for the address); everyone else keeps the per-address budget. A clinic's staff all use voice tools from one address.
-    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-tool", 90, 60_000, 10) : rateLimit(req, 90, 60_000))) return send(res, 429, { error: "Too many Nexus Realtime tool requests", category: "rate-limited" });
+    // The refusal carries a plain sentence the voice can say (never "done" and never silence), and how long to wait.
+    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-tool", 90, 60_000, 10) : rateLimit(req, 90, 60_000))) return send(res, 429, {
+      ok: false, status: "rate-limited", error: "Too many Nexus Realtime tool requests", category: "rate-limited", executionAttempted: false, executionVerified: false,
+      response: "I am getting too many requests right now. Please wait a minute and ask me again."
+    }, { "retry-after": "30", "cache-control": "no-store" });
     if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
     const body = await readBody(req);
     const authContext = resolveGenesisVoiceAuthContext(req, db, user, {
@@ -58989,13 +59003,30 @@ async function api(req, res, url) {
       // The same correlationId and words sent again (a retry, a double tap) returns the first result and repeats nothing (server/frontDoor.js).
       const idempotencyKey = frontDoor.idempotencyKey(authContext.user?.id || authContext.user?.email, body.correlationId,
         [toolName, normaliseSpoken(String(args.query || args.command || body.command || "")).text.toLowerCase(), String(args.language || body.language || ""), args.confirmed === true]);
-      const fresh = await frontDoor.runOnce(idempotencyKey, () => executeNexusOpenAiNativeTool(db, authContext.user, toolName, args, {
+      // A spoken request must always get an answer (these are the tools the browser's voice session really calls). If the work has not finished by the deadline the
+      // model is handed a plain, honest line. The work is not cancelled: when it does finish its result is saved as usual, so an action is never silently lost.
+      const nativeStartedAtMs = Date.now();
+      let nativeDeadlineTimer = null;
+      const nativeWork = frontDoor.runOnce(idempotencyKey, () => executeNexusOpenAiNativeTool(db, authContext.user, toolName, args, {
         correlationId: body.correlationId,
         command: args.command || body.command || "",
         language: args.language || body.language || authContext.user.language || "en",
         outputMode: "voice",
         timeZone: body.timeZone || args.timeZone
-      }));
+      })).then(value => ({ value }), error => ({ error }));
+      const nativeFirst = await Promise.race([
+        nativeWork,
+        new Promise(resolve => { nativeDeadlineTimer = setTimeout(() => resolve({ timedOut: true }), NEXUS_REALTIME_TOOL_DEADLINE_MS); })
+      ]);
+      clearTimeout(nativeDeadlineTimer);
+      const nativeElapsedMs = Date.now() - nativeStartedAtMs;
+      if (nativeFirst.timedOut || nativeElapsedMs > 3000) console.warn("[voice-slow-tool]", JSON.stringify({ tool: toolName, ms: nativeElapsedMs, timedOut: Boolean(nativeFirst.timedOut), correlationId: String(body.correlationId || "").slice(0, 60) }));
+      if (nativeFirst.timedOut) {
+        nativeWork.then(done => (done.error ? null : writeDb(db))).catch(() => {});
+        return send(res, 200, { ...nexusRealtimeToolTimeoutResult(body, { native: true }), toolName }, { "cache-control": "no-store, no-cache, must-revalidate, private" });
+      }
+      if (nativeFirst.error) throw nativeFirst.error;
+      const fresh = nativeFirst.value;
       const result = idempotencyKey ? structuredClone(fresh) : fresh;
       const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
       await writeDb(db);

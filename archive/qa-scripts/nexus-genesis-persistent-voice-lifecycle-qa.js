@@ -82,7 +82,11 @@ includes(agent, "options.stopMicrophone === true", "agent only stops microphone 
 includes(agent, "!preverifiedMicrophoneStream", "agent preserves preverified stream by default");
 includes(app, "const explicitShutdown =", "app classifies explicit shutdown only");
 includes(app, "permanentStreamActive", "app detects permanent stream during cleanup");
-includes(app, "preverifiedMicrophoneStream: preservedPermanentStream", "recovery reuses preserved microphone stream");
+// Recovery hands the next session the page's own microphone stream (checked live first, re-opened if the browser ended it); the SDK is given a clone of it,
+// because the SDK stops whatever track it is given when a session closes (see docs/VOICE_STALL_ANALYSIS.md).
+includes(app, "preverifiedMicrophoneStream: microphone", "recovery reuses the preserved, live-checked microphone stream");
+includes(app, "kyroRestartVoiceWithLiveMicrophone(session, { source: \"bounded-realtime-recovery\" })", "bounded recovery restarts through the live-microphone helper");
+includes(app, "preverifiedMicrophoneStream: kyroCloneMicrophoneForSdk(", "the SDK is given a clone of the permanent microphone");
 notIncludes(
   app.slice(app.indexOf("function markRealtimeResponseCompleted"), app.indexOf("function scheduleRealtimeRecovery")),
   "stopRealtimeVoiceSession(",
