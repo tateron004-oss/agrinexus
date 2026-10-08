@@ -31,7 +31,14 @@ const PROVIDERS = Object.freeze({
 });
 
 // "play", "please", "cheza" and similar are the command, not the thing to search for.
+const GENERIC_REQUESTS = new Set(["music", "songs", "song", "a song", "some music", "something", "radio", "redio", "muziki", "wimbo", "nyimbo", "a radio station", "radio station"]);
+
 function cleanQuery(value) {
+  const cleaned = cleanQueryText(value);
+  return GENERIC_REQUESTS.has(cleaned.toLowerCase()) ? "" : cleaned;
+}
+
+function cleanQueryText(value) {
   return normalizeText(String(value || "")
     .replace(/^\s*(?:(?:hey\s+)?(?:kyro|nexus)[,:]?\s+)?(?:please|tafadhali)?\s*/i, "")
     .replace(/^(?:play|cheza|weka|put on|listen to|sikiliza|watch|angalia)\s+/i, "")

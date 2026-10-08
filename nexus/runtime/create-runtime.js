@@ -46,6 +46,7 @@ const { createReminderScheduleExecutor, verifyReminderScheduleOutcome } = requir
 const { createRemindersListExecutor, verifyRemindersListOutcome, createRemindersCancelExecutor, verifyRemindersCancelOutcome } = require("../reminders/manage-executor.js");
 const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
 const { createMediaPlayExecutor, verifyMediaPlayOutcome } = require("../media/executor.js");
+const { createMediaControlExecutor, verifyMediaControlOutcome } = require("../media/control-executor.js");
 const { createVideoSearchExecutor, verifyVideoSearchOutcome } = require("../media/video-search-executor.js");
 const { createLogisticsTrackExecutor, verifyLogisticsTrackOutcome } = require("../logistics/executor.js");
 const { createDocumentsCreateExecutor, verifyDocumentsCreateOutcome } = require("../documents/executor.js");
@@ -139,6 +140,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "lists.update": { create: () => createListsUpdateExecutor({ records }), verify: verifyListsUpdateOutcome, method: "real_record_write" },
     "maps.view": { create: () => createMapsViewExecutor({ env }), verify: verifyMapsViewOutcome, method: "real_route_computation" },
     "media.play": { create: () => createMediaPlayExecutor({ env }), verify: verifyMediaPlayOutcome, method: "real_music_provider_lookup" },
+    "media.control": { create: () => createMediaControlExecutor(), verify: verifyMediaControlOutcome, method: "client_player_instruction" },
     "videos.search": { create: () => createVideoSearchExecutor({ env }), verify: verifyVideoSearchOutcome, method: "real_video_search" },
     "logistics.track": { create: () => createLogisticsTrackExecutor({ env }), verify: verifyLogisticsTrackOutcome, method: "real_route_computation" },
     "health.record": { create: () => createHealthRecordExecutor({ records }), verify: verifyHealthRecordOutcome, method: "real_record_write" },

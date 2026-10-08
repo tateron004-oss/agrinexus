@@ -13,6 +13,7 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "resume.create", domain: "resume", description: "Create a governed production resume" }),
   Object.freeze({ toolId: "maps.view", domain: "maps", description: "Render a governed production map" }),
   Object.freeze({ toolId: "media.play", domain: "media", description: "Play governed production media" }),
+  Object.freeze({ toolId: "media.control", domain: "media", description: "Pause, resume, stop, skip or change the volume of the music or video that is playing (an instruction the phone's player carries out)" }),
   Object.freeze({ toolId: "health.record", domain: "health", description: "Record a user-confirmed health observation",
     riskTier: "regulated", confirmationRequired: true, consentScope: "health:record:write", dataClassification: "health" }),
   Object.freeze({ toolId: "health.emergency-guidance", domain: "health", description: "Display immediate emergency guidance without claiming diagnosis or dispatch",

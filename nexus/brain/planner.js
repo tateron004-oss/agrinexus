@@ -24,6 +24,7 @@ const { assessBloodPressure, invalidReadingReply } = require("../../server/provi
 const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
 const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js");
 const { contentGuardReply } = require("./content-guard.js");
+const KyroMediaCommands = require("../../public/kyro-media-commands.js");
 const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
@@ -423,6 +424,8 @@ class OpenEndedPlanner {
     if (completeMarketplaceSearch) return Object.freeze({ ...completeMarketplaceSearch, planningAttempts: 1 });
     const completeLogisticsTrack = completeLogisticsTrackPlan(command.text, catalog);
     if (completeLogisticsTrack) return Object.freeze({ ...completeLogisticsTrack, planningAttempts: 1 });
+    const completeMediaExtended = completeMediaExtendedPlan(command.text, catalog);
+    if (completeMediaExtended) return Object.freeze({ ...completeMediaExtended, planningAttempts: 1 });
     const completeImageSearch = completeImageSearchPlan(command.text, catalog);
     if (completeImageSearch) return Object.freeze({ ...completeImageSearch, planningAttempts: 1 });
     const completeVideoSearch = completeVideoSearchPlan(command.text, catalog);
@@ -1064,7 +1067,33 @@ function completeMediaPlaybackPlan(text, catalog) {
       !catalog.applications.some(app => app.applicationId === "music-media")) return null;
   return { goal, application: "music-media", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "play-media", title: "Play requested media", toolId: "media.play",
-      input: { action: "play", requestedMedia, resolvedMedia: requestedMedia, playbackState: "playing" },
+      input: { action: "play", requestedMedia, resolvedMedia: requestedMedia, kind: "music", playbackState: "playing" },
+      dependsOn: [], fallbackToolIds: [] }] };
+}
+
+// The rest of the music/video vocabulary (public/kyro-media-commands.js is the one place that understands it, shared with the phone):
+// "play radio ...", "watch ...", "cheza ...", "weka redio ...", "angalia video ya ...", "open YouTube and play ...", and the controls
+// ("pause the music", "stop the music", "next song", "volume up", "sitisha muziki", "ongeza sauti"). A plain English "play <song>" and the
+// plural "show me videos of ..." gallery are left to the matchers that already own them. A bare "pause"/"next" is not claimed here: only the
+// phone knows whether anything is playing (it handles those itself while a player is open), so the server acts on controls that name music.
+function completeMediaExtendedPlan(text, catalog) {
+  const goal = String(text || "").trim().replace(/\s+and\s+confirm\b.*$/i, "");
+  const parsed = KyroMediaCommands.parse(goal);
+  if (!parsed || !catalog.applications.some(app => app.applicationId === "music-media")) return null;
+  if (parsed.type === "control") {
+    if (!parsed.explicit || !catalog.tools.some(tool => tool.toolId === "media.control")) return null;
+    return { goal, application: "music-media", riskTier: "low", clarification: null,
+      steps: [{ clientStepId: "control-media", title: "Control the music or video that is playing", toolId: "media.control",
+        input: { action: "control", control: parsed.control, language: parsed.lang }, dependsOn: [], fallbackToolIds: [] }] };
+  }
+  if (parsed.type !== "play" || !catalog.tools.some(tool => tool.toolId === "media.play")) return null;
+  if (parsed.kind === "music" && !parsed.handoff && parsed.lang === "en" && parsed.query) return null;
+  const requestedMedia = parsed.query || (parsed.kind === "radio" ? "radio" : parsed.kind === "music" ? "music" : "");
+  if (!requestedMedia) return null;
+  return { goal, application: "music-media", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "play-media", title: parsed.handoff ? "Queue on YouTube" : "Play requested media", toolId: "media.play",
+      input: { action: "play", requestedMedia, resolvedMedia: requestedMedia, kind: parsed.kind, handoff: parsed.handoff === true,
+        language: parsed.lang, allowEmpty: !parsed.query, playbackState: parsed.handoff ? "queued" : "playing" },
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
@@ -1592,5 +1621,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
+  completeMobileClinicPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
