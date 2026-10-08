@@ -5,6 +5,8 @@
 // The fixed rules only catch plain requests; the AI prompts carry the same rule (nexus/brain/crisis-rule.js) for everything else. Wording should be reviewed by a youth organisation.
 const { investmentGuardReply } = require("./investment-guard.js");
 const { scamGuardReply } = require("./scam-guard.js");
+// The same guards for someone who asks in Kiswahili: the same kinds, recognised in Kiswahili, answered in Kiswahili (content-guard-sw.js). The English wording and recognition below are unchanged.
+const swahili = require("./content-guard-sw.js");
 const clean = value => String(value ?? "").replace(/[’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
 
 // ---- explicit material ----
@@ -30,8 +32,15 @@ const REPLIES = Object.freeze({
   scheme: "Be careful: anything that says it will double your money, or asks you to send money first to get more back, is almost always a scam, and the money you send is not returned. Never send money to get money, and never share your PIN or password. If someone is pressing you, stop replying and tell someone you trust. If you want to earn, I can help you with a small business plan, a skill to learn, or jobs to look for."
 });
 
-// -> { kind, reply } or null
+// -> { kind, reply } (a Kiswahili reply also carries language: "sw") or null
 function contentGuardReply(text) {
+  const found = englishContentGuardReply(text);
+  // A request in Kiswahili that the English wording also recognises ("sportpesa tips za leo") is answered in Kiswahili; one only the Kiswahili wording recognises ("je, ninunue bitcoin?") is found here.
+  if (found) return !found.language && swahili.isSwahili(text) ? swahili.inSwahili(found) : found;
+  return swahili.swahiliGuardReply(text);
+}
+
+function englishContentGuardReply(text) {
   const t = clean(text);
   if (!t || t.length > 400) return null;
   if (EXPLICIT_TERM.test(t) && EXPLICIT_REQUEST.test(t) && !EXPLICIT_QUESTION_ABOUT.test(t)) return { kind: "explicit", reply: REPLIES.explicit };

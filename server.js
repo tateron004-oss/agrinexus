@@ -73,6 +73,8 @@ const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridg
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
+// A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
+const { withoutNegatedSymptoms } = require("./public/kyro-care-phrases.js");
 // The honest work-and-learning answers (nexus/floor): short practice lessons in reading and maths, practice interviews, what Kyro really knows about jobs and training, and a child who
 // works or wants to. Where a person got to in a practice lesson is kept on their own record (user.floorPractice).
 const workLearningFloor = require("./nexus/floor/index.js");
@@ -2993,10 +2995,61 @@ const SHARED_BY_DESIGN_KEYS = new Set(["marketplaceListings", "fieldZones", "fac
 const STRICTLY_OWN_VIEW_KEYS = new Set(["shiftSchedule"]);
 // Lists that are seeded with shared entries (the directory of clinics and desks) but that a person can add their own to: the seeded ones have no owner mark and stay shown; theirs (createdBy) are only theirs.
 // These are not stamped by the save, so the seeded entries are never taken as one person's.
-const VIEW_ONLY_KEYS = ["platformIntelligence.localDirectory"];
+// "networkIntelligence.queries" holds what each person asked the provider-network search (it carries createdBy): another person's questions are not shown.
+const VIEW_ONLY_KEYS = ["platformIntelligence.localDirectory", "networkIntelligence.queries"];
 const personalViewKeys = () => [...new Set([...MONEY_VIEW_KEYS, ...VIEW_ONLY_KEYS, ...profileStampKeys().filter(key => !HEALTH_PROFILE_ARRAY_KEYS.has(key) && !SHARED_BY_DESIGN_KEYS.has(key))])];
 const ownerOfRecord = item => [...PROFILE_OWNER_FIELDS, "_ledgerOwner"].map(field => String(item?.[field] || "").trim().toLowerCase()).filter(value => value.includes("@"));
 const recordOwnedByAnotherPerson = (item, viewerEmail) => Boolean(item && typeof item === "object") && ownerOfRecord(item).some(value => value !== viewerEmail);
+// A last net for what a person is sent (/api/state): in any field that says WHO did something (by, createdBy, user, ...), another account's address or name is shown as "another user". The lists above
+// already leave other people's records out; this catches the ones that are shared by design or that nobody thought of yet (a computed model that quotes the latest record of anybody). An Admin sees
+// everything, and the person's own address and name are never masked. Fields that are not actor fields (a contact's address the person typed, a circle member) are left exactly as they are.
+const ACTOR_FIELD_NAMES = new Set(["by", "createdBy", "updatedBy", "requestedBy", "user", "userEmail", "actor", "actorEmail", "author", "owner", "ownerEmail", "requester", "reviewer", "reviewedBy", "approvedBy", "performedBy",
+  "submittedBy", "enteredBy", "recordedBy", "modifiedBy", "lastUpdatedBy", "assignedBy", "initiatedBy", "startedBy", "triggeredBy", "completedBy", "closedBy", "openedBy", "signedBy", "verifiedBy", "invitedBy", "addedBy", "updatedByEmail", "createdByEmail"]);
+const STATE_KEYS_NOT_MASKED = new Set(["user", "loginProfiles", "permissions"]);
+function maskOtherPeopleInState(state, user, db) {
+  if (!state || typeof state !== "object" || user?.role === "Admin") return state;
+  const viewerEmail = String(user?.email || "").trim().toLowerCase();
+  const viewerName = String(user?.name || "").trim().toLowerCase();
+  const others = new Set();
+  for (const account of Array.isArray(db?.users) ? db.users : []) {
+    const email = String(account?.email || "").trim().toLowerCase();
+    const name = String(account?.name || "").trim().toLowerCase();
+    if (email && email !== viewerEmail) others.add(email);
+    if (name && name.length >= 3 && name !== viewerName && (!email || email !== viewerEmail)) others.add(name);
+  }
+  if (!others.size) return state;
+  // Copy on write: only the parts that change are copied, so the stored records are never touched.
+  const mask = node => {
+    if (Array.isArray(node)) {
+      let out = null;
+      for (let index = 0; index < node.length; index += 1) { const item = node[index]; if (item && typeof item === "object") { const next = mask(item); if (next !== item) { out = out || node.slice(); out[index] = next; } } }
+      return out || node;
+    }
+    let out = null;
+    for (const key of Object.keys(node)) {
+      const value = node[key];
+      let next = value;
+      if (typeof value === "string") { if (ACTOR_FIELD_NAMES.has(key) && others.has(value.trim().toLowerCase())) next = "another user"; }
+      else if (value && typeof value === "object") next = mask(value);
+      if (next !== value) { out = out || { ...node }; out[key] = next; }
+    }
+    return out || node;
+  };
+  let result = state;
+  for (const key of Object.keys(state)) {
+    if (STATE_KEYS_NOT_MASKED.has(key) || !state[key] || typeof state[key] !== "object") continue;
+    const next = mask(state[key]);
+    if (next !== state[key]) { result = result === state ? { ...state } : result; result[key] = next; }
+  }
+  return result;
+}
+// Does a line of an operator's feed name a person other than the viewer? Any e-mail address in it counts (the address is who the line is about, wherever it is written).
+const EMAIL_IN_TEXT = /[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g;
+const eventNamesAnotherPerson = (event, viewerEmail) => {
+  if (!event || typeof event !== "object") return false;
+  let text = ""; try { text = JSON.stringify(event); } catch { return false; }
+  return (text.match(EMAIL_IN_TEXT) || []).some(address => address.toLowerCase() !== viewerEmail);
+};
 function moneyRecordsForViewer(profile, user) {
   if (!profile || user?.role === "Admin") return profile;
   if (!user) user = { email: "" }; // not signed in: shown only what carries no personal owner mark (this used to return the whole profile, other people's records included)
@@ -3023,10 +3076,16 @@ function moneyRecordsForViewer(profile, user) {
       ...(predictive ? { predictiveContext: { ...predictive, activeRecords: (predictive.activeRecords || []).filter(record => !record?.ownerId || record.ownerId === user.id), receipts: [], signals: [] } } : {})
     };
   }
-  // The usage feed (an operator's view of what was done) names who did each thing; other people's lines are not shown. Lines with no person named are kept.
-  if (Array.isArray(profile.usageEvents) && profile.usageEvents.some(event => String(event?.user || "").includes("@") && String(event.user).trim().toLowerCase() !== viewer)) {
+  // The usage feed (an operator's view of what was done) names who did each thing; other people's lines are not shown. Lines with no person named are kept. A line that names another person anywhere
+  // (an Admin's "test login created" line carries the new person's address in its text, not in "user") is left out too.
+  if (Array.isArray(profile.usageEvents) && profile.usageEvents.some(event => eventNamesAnotherPerson(event, viewer))) {
     copy = copy || { ...profile };
-    copy.usageEvents = profile.usageEvents.filter(event => !(String(event?.user || "").includes("@") && String(event.user).trim().toLowerCase() !== viewer));
+    copy.usageEvents = profile.usageEvents.filter(event => !eventNamesAnotherPerson(event, viewer));
+  }
+  // The display names the assistant keeps are one map for everybody (account id -> the name they asked to be called): a person is shown their own.
+  if (profile.userDisplayNames && typeof profile.userDisplayNames === "object" && Object.keys(profile.userDisplayNames).some(id => id !== String(user.id || ""))) {
+    copy = copy || { ...profile };
+    copy.userDisplayNames = user.id && profile.userDisplayNames[user.id] ? { [user.id]: profile.userDisplayNames[user.id] } : {};
   }
   if (Array.isArray(profile.activity) && Array.isArray(profile.activityBy) && profile.activityBy.some(by => String(by || "").includes("@") && String(by).toLowerCase() !== viewer)) {
     copy = copy || { ...profile };
@@ -3059,7 +3118,10 @@ function privateHistoryForViewer(profile, user) {
   if (Array.isArray(profile.agentCommands)) view.agentCommands = profile.agentCommands.filter(mine);
   if (Array.isArray(profile.agentConversation)) view.agentConversation = profile.agentConversation.filter(mine);
   if (Array.isArray(profile.integrationEvents)) {
-    view.integrationEvents = profile.integrationEvents.map(event => (email && String(event?.by || "").toLowerCase() === email ? event : { ...event, detail: "Activity by someone else.", metadata: {} }));
+    // What another PERSON did is not listed at all (the line carries their address); events with no person named (the platform's own) are kept, with their detail hidden as before.
+    view.integrationEvents = profile.integrationEvents
+      .filter(event => { const by = String(event?.by || "").trim().toLowerCase(); return !by.includes("@") || (Boolean(email) && by === email); })
+      .map(event => (email && String(event?.by || "").toLowerCase() === email ? event : { ...event, detail: "Activity by someone else.", metadata: {} }));
   }
   if (profile.agentPendingAction && typeof profile.agentPendingAction === "object") view.agentPendingAction = email && String(profile.agentPendingAction.by || "").toLowerCase() === email ? profile.agentPendingAction : null;
   const memory = profile.agentMemory;
@@ -6230,7 +6292,9 @@ function profileForUserByRole(profile, user) {
   return projected;
 }
 
-function publicState(db, user) {
+// What /api/state sends. Other people's addresses and names are masked in the fields that say who did something (see maskOtherPeopleInState).
+function publicState(db, user) { return maskOtherPeopleInState(publicStateUnmasked(db, user), user, db); }
+function publicStateUnmasked(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
   ensurePlatformIntelligenceProfile(db.profile);
@@ -16074,7 +16138,8 @@ function networkIntelligenceModel(db, user, providers = runtimeProviders(db)) {
     registry: network.serviceRegistry,
     liveServices,
     totalServices: registry.length,
-    latestQuery: (network.queries || [])[0] || null,
+    // The latest question THIS person asked (not whatever anybody asked last); an Admin sees the latest of all.
+    latestQuery: (network.queries || []).find(item => user?.role === "Admin" || !recordOwnedByAnotherPerson(item, String(user?.email || "").trim().toLowerCase())) || null,
     latestRoute: (network.providerRoutes || [])[0] || null,
     liveGaps: network.liveGaps,
     countryCoverage: network.countryMatches,
@@ -29099,22 +29164,11 @@ function medicineStopQuestion(lower = "") {
   const value = String(lower || "");
   return /\b(should|can|could|may|is it ok(?:ay)?(?: to)?|is it safe(?: to)?|do i need to|must i)\s+(?:i\s+)?(stop|quit|skip|reduce|change|double|take less|take more|leave)\b.*\b(taking|using|my|the)\b.*\b(pills?|tablets?|medicines?|medications?|meds|arvs?|art|insulin|drugs?|treatment|doses?|antibiotics?|inhaler)\b/.test(value);
 }
-function emergencyNumberAnswer(text, user) {
-  const lower = normalizeSpeechForIntent(text);
-  const asksNumber = /\b(emergency|ambulance|police|fire brigade)\b.*\b(number|numbers|phone|hotline|line|contact)\b/.test(lower) || /\b(number|numbers|hotline)\b.*\b(for|to call|in an?)\b.*\b(emergency|ambulance|police)\b/.test(lower) || /\bwhat (?:do i|should i) (?:call|dial)\b.*\b(emergency|ambulance)\b/.test(lower);
-  if (!asksNumber || !/\b(what|which|give|tell|do you know|know|how|number|dial)\b/.test(lower)) return null;
-  const named = /\bkenya\b/.test(lower) ? "Kenya" : /\bnigeria\b/.test(lower) ? "Nigeria" : "";
-  // "...in Chile": a country named in the question that the platform has no number for is not answered with the asker's own country's number.
-  const askedAbout = (/\b(?:in|for|of)\s+([a-z]{3,}(?: [a-z]{3,})?)$/.exec(lower) || [])[1] || "";
-  const otherCountry = askedAbout && !named && !/^(?:an|the|my|case|emergency|emergencies|here|area|village|town|this|our|your|health|medical|ambulance|police|fire|kenya|nigeria|english|swahili|use|need|fact|real)\b/.test(askedAbout);
-  const known = emergencyNumberFor(named || (otherCountry ? "" : user?.country));
-  return known
-    ? `In ${known.country}, the emergency number is ${known.numbers}. I have not called anyone, and I cannot dispatch help for you.`
-    : "I do not have the emergency number for your country, so I will not guess. Call your local emergency number, or ask someone near you to call. Tell me the country you are in and I will tell you the number if I have it.";
-}
+const { emergencyNumberAnswer } = require("./nexus/companion/emergency-number.js");
 
 function urgentHealthSafetyResponse(db, user, text = "") {
-  const lower = normalizeSpeechForIntent(text);
+  // "my baby has no fever": a symptom said NOT to be there is not read as the symptom ("not breathing", "not waking" and every other missing function still count).
+  const lower = normalizeSpeechForIntent(withoutNegatedSymptoms(text));
   const vulnerablePerson = /\b(baby|child|kid|infant|mother|father|grandma|grandmother|elder|person|patient|my child|my baby)\b/.test(lower);
   const babyOrChildHealth = /\b(baby|child|kid|infant|my child|my baby)\b/.test(lower) && /\b(sick|hot|fever|weak|pain|vomit|cough|hurt|help|no english|no doctor)\b/.test(lower);
   const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|blood|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower);
@@ -35323,7 +35377,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["my crop is bad", "find a buyer", "track my shipment"] }
     };
   }
-  if (conversational && /\b(baby|child|infant)\b.*\b(sick|hot|fever|weak|pain|vomit|cough|not breathing|cannot breathe|can't breathe|cant breathe)\b/.test(lower)) {
+  if (conversational && /\b(baby|child|infant)\b.*\b(sick|hot|fever|weak|pain|vomit|cough|not breathing|cannot breathe|can't breathe|cant breathe)\b/.test(withoutNegatedSymptoms(lower))) {
     return {
       intent: "conversation.health_urgent_child",
       response: `${emergencyCallLead(user)} A baby who is not breathing needs immediate emergency help. I am not a doctor and AgriNexus cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.`,

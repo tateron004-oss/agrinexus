@@ -53,7 +53,20 @@
   // "I burnt the beans": cooking, not a burn on a person (unless a hand, a child or skin is named too).
   const COOKING_BURN = /\bburn(?:t|ed) (?:the |my |our )?(?:beans|ugali|chapati|chapatis|meat|porridge|sukuma|vegetables|toast|bread|githeri|cabbage|potatoes|tea|supper|dinner|lunch|breakfast|pot|sauce|stew|onions?|eggs?|fish|chicken|pan|food|maize|rice)\b/;
   const BODY_PART = /\b(?:hand|hands|arm|arms|leg|legs|foot|feet|skin|finger|fingers|face|child|baby|son|daughter|toddler|mkono|mguu|mtoto)\b/;
-  const NO_FEVER = /\b(?:no|without(?: a)?|not(?: a)?|hakuna|bila|hana) (?:fever|temperature|homa)\b/g;
+  // ---- a symptom that is said NOT to be there ----
+  // "my baby has no fever", "mtoto hana homa", "she is not vomiting": the absence of a fever, a cough, vomiting, diarrhoea, a rash, bleeding or pain is GOOD news and must not be read as the symptom.
+  // ONLY these symptoms: when something that should be there is missing ("not feeding", "not breathing", "not waking", "no urine", "not drinking", "no movement", "haamki", "hapumui", "hanyonyi") that IS the
+  // danger, and none of those words are removed by anything below. Anything not recognised here is left as it was, so an unusual wording still alarms. Reviewed list: the PR "Needs clinician check".
+  const SYMPTOM_EN = "(?:fever(?:s|ish)?|(?:a |any |high )?temperature|hot body|cough(?:s|ing|ed)?|vomit(?:s|ing|ed)?|throwing up|threw up|diarrhoea|loose stools?|rash(?:es)?|bleed(?:ing)?|blood in (?:the |his |her )?(?:stool|poo|urine)|pains?)";
+  const SYMPTOM_SW = "(?:homa|kikohozi|kutapika|kuhara|kuharisha|vipele|upele|maumivu|kutokwa(?: na)? damu)";
+  // a word that may sit between the "no" and the symptom without changing what is meant ("no high fever", "does not have a fever", "has not been coughing"); anything else keeps the symptom
+  const FILLER = "(?:(?:a|an|any|the|in|have|has|had|got|having|been|even|really|much|high|visible|obvious|heavy|severe|bad|real|very|signs? of|sign of|any kind of|more than a) )*";
+  // "no fever or vomiting" negates both; "no fever and vomiting" or "no fever, vomiting" is left alone (it may mean the second one is there).
+  const LIST_EN = `(?:(?:, ?${FILLER}${SYMPTOM_EN})*,? ?(?:or|nor) ${FILLER}${SYMPTOM_EN})?`;
+  const NEGATED_EN = new RegExp(`\\b(?:no|without|zero|never had|never has|never (?:a|any)|(?:does ?n[o']?t|do ?n[o']?t|did ?n[o']?t|has ?n[o']?t|have ?n[o']?t|had ?n[o']?t|is ?n[o']?t|isn'?t|ain'?t|was ?n[o']?t|wasn'?t|are ?n[o']?t|aren'?t|not|not even|never)|(?:has|have|had|got|with|having) no|there (?:is|was|are) no) ${FILLER}${SYMPTOM_EN}${LIST_EN}(?![a-z])`, "g");
+  const NEGATED_SW = new RegExp(`\\b(?:hana|hakuna|haina|hawana|bila|pasipo|sina|hatuna|hakuna dalili za|hana dalili za) ${"(?:(?:ya|na|dalili za) )?"}${SYMPTOM_SW}(?: (?:wala|au|na) ${SYMPTOM_SW})*(?![a-z])|\\bhakuna damu(?![a-z])|\\b(?:hatapiki|hatapishi|hakohoi|haharishi|hahari|hatokwi damu|hatoki damu|hajatapika|hajaharisha|hajakohoa|hajatokwa na damu)(?![a-z])`, "g");
+  // The same sentence with every negated reassuring symptom taken out (replaced by a space). Used only to look for danger signs; "plain" itself is kept for the words around them.
+  const withoutNegatedSymptoms = text => String(text ?? "").toLowerCase().replace(/[’]/g, "'").replace(NEGATED_EN, " ").replace(NEGATED_SW, " ").replace(/\s+/g, " ").trim();
   const SNAKE_BITE = /\b(?:bit|bitten|bite|bites|sting|stung|amemuuma|ameuma|amenigonga|amemgonga|kuuma|kung'ata|ameng'ata)\b/;
 
   // Found by the user-journey sweep: these were missed for a baby or a child. Shaking all over or eyes rolled back (a fit); fast breathing with the chest pulling in; cannot be woken, limp or not answering.
@@ -63,7 +76,7 @@
 
   // ---- baby (a few weeks to a year) and small child danger signs ----
   const BABY_NOW = [
-    /\b(?:not (?:feeding|breastfeeding|sucking|taking (?:the )?breast)|won'?t (?:feed|suck|breastfeed)|refus\w* (?:to )?(?:feed|breast)|hanyonyi|hanyonyi)\b/,
+    /\b(?:not (?:feeding|breastfeeding|sucking|taking (?:the )?breast)|no longer (?:feeding|breastfeeding|sucking|taking (?:the )?breast)|stopped (?:feeding|breastfeeding|sucking)|won'?t (?:feed|suck|breastfeed)|refus\w* (?:to )?(?:feed|breast)|hanyonyi|hanyonyi)\b/,
     /\b(?:very sleepy|too sleepy|cannot (?:be )?wake|can'?t (?:be )?wake|will not wake|won'?t wake|floppy|limp|weak and sleepy|mtoto amelala sana|hawezi kuamka)\b/,
     /\b(?:fever|hot body|very hot|high temperature|temperature (?:of )?(?:3[89]|4\d)|mwili moto|homa)\b/,
     /\b(?:cold (?:and )?(?:not moving|and weak|body)|not crying|did not cry|no cry|hasn'?t cried|hailii)\b/,
@@ -72,6 +85,8 @@
     /\b(?:cord|kitovu)\b[^.!?]{0,40}\b(?:red|pus|smell\w*|bleed\w*|infect\w*|usaha|damu|inanuka)\b|\b(?:red|pus|smell\w*|bleed\w*|usaha)\b[^.!?]{0,20}\b(?:cord|kitovu)\b/,
     /\b(?:green vomit|vomiting green|bile|vomit\w* everything|cannot keep (?:anything|milk) down|belly (?:is )?(?:very )?(?:big|hard|swollen)|stomach (?:is )?(?:very )?(?:big|hard|swollen))\b/,
     /\b(?:not passed urine|no urine|hasn'?t (?:passed|had) (?:any )?urine|sunken (?:eyes|fontanelle|soft spot)|fontanelle (?:is )?sunken|hajakojoa)\b/,
+    // The same missing function said another way ("is not passing urine", "no wet nappies") and no movement at all: found while testing the negation handling (a missing function is the danger, never the reassuring kind).
+    /\b(?:(?:not|isn'?t|is not|stopped|stops|won'?t|hasn'?t|has not) (?:passing|pass|making|wetting) (?:any |a )?(?:urine|water|nappy|diaper|nappies|diapers)|(?:not|isn'?t|is not|stopped|stops) urinating|no wet (?:nappies|nappy|diapers?)|no movement|no pee|hasn'?t peed)\b/,
     /\b(?:stiff neck|bulging fontanelle|pus in the eyes?|pus (?:from|in) (?:the )?eyes?)\b/,
     /\b(?:fits?|convuls\w*|seizures?|kifafa|degedege|shaking all over)\b/,
     SIGN_FIT_SHAKING, SIGN_FAST_BREATHING, SIGN_CANNOT_WAKE,
@@ -133,6 +148,8 @@
   function careSign(text) {
     const plain = normalize(text);
     if (!plain || plain.length > 500) return null;
+    // The same sentence without the symptoms said NOT to be there ("no fever", "hana homa"): the danger signs below are looked for in this, never in a symptom that is absent.
+    const signs = withoutNegatedSymptoms(plain);
     const pregnant = PREGNANT.test(plain) && !/\b(?:not|no longer|never|am not|isn'?t|am n'?t) (?:\w+ )?pregnant\b/.test(plain);
     const hasBaby = BABY.test(plain);
     const hasChild = CHILD_WORDS.test(plain);
@@ -148,13 +165,15 @@
     if (SNAKE.test(plain) && SNAKE_BITE.test(plain) && !/\b(?:saw|see|killed|how to|what to do about|cow|goat|dog|sheep|chicken|cat|calf|ng'ombe|mbuzi|mbwa|kuku)\b/.test(plain)) return { category: "snake" };
     if (BURN.test(plain) && (hasChild || /\b(?:i|my)\b/.test(plain)) && /\b(?:burn\w*|scald\w*|ameungua|touched the fire|hot (?:water|oil))\b/.test(plain) && !NOT_A_SIGN.test(plain) && !/\b(?:sunburn|burn(?:ing)? (?:the )?(?:rubbish|waste|charcoal|maize|field|bush)|burnt (?:the )?(?:food|maize|rice))\b/.test(plain) && !(COOKING_BURN.test(plain) && !BODY_PART.test(plain))) return { category: "burn" };
     if (any(LABOUR, plain) && !notNow && !/\bnext week\b/.test(plain)) return { category: "labour" };
-    if (BLEED.test(plain) && BIRTH_DONE.test(plain)) return { category: "postpartum" };
-    if (/\b(?:miscarriage|lost (?:the|my) (?:pregnancy|baby)|mimba imeharibika|nimeharibu mimba)\b/.test(plain) && BLEED.test(plain)) return { category: "pregnancy" };
+    if (BLEED.test(signs) && BIRTH_DONE.test(plain)) return { category: "postpartum" };
+    if (/\b(?:miscarriage|lost (?:the|my) (?:pregnancy|baby)|mimba imeharibika|nimeharibu mimba)\b/.test(plain) && BLEED.test(signs)) return { category: "pregnancy" };
     // a baby only a few weeks old, or any baby: danger signs
-    if (hasBaby && !NOT_A_SIGN.test(plain) && !pregnant && (MINE.test(plain) || /\bmtoto\b/.test(plain) || ANAPHOR.test(plain)) && any(BABY_NOW, plain) && !/\b(?:my baby (?:was|is) (?:born|due)|born (?:small|early))\b/.test(plain)) return { category: "baby" };
+    if (hasBaby && !NOT_A_SIGN.test(plain) && !pregnant && (MINE.test(plain) || /\bmtoto\b/.test(plain) || ANAPHOR.test(plain)) && any(BABY_NOW, signs) && !/\b(?:my baby (?:was|is) (?:born|due)|born (?:small|early))\b/.test(plain)) return { category: "baby" };
     if (/\b(?:born|was born|nimejifungua|nimezaa)\b/.test(plain) && hasBaby && /\b(?:not crying|is not crying|does not cry|small|1\.\d ?kg|very small|7 months|early|cold)\b/.test(plain)) return { category: "baby" };
-    if (hasChild && !hasBaby && !NOT_A_SIGN.test(plain) && any(CHILD_NOW, plain)) return { category: "child" };
-    if (hasBaby && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain) || ANAPHOR.test(plain)) && any(CHILD_NOW, plain)) return { category: "baby" };
+    // A stiff neck next to a fever that is said NOT to be there is still a stiff neck in a child: kept alarming as before (the one place a negated fever used to count by accident).
+    const childNow = any(CHILD_NOW, signs) || (/\bstiff neck\b/.test(plain) && /\b(?:fever|homa)\b/.test(plain));
+    if (hasChild && !hasBaby && !NOT_A_SIGN.test(plain) && childNow) return { category: "child" };
+    if (hasBaby && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain) || ANAPHOR.test(plain)) && childNow) return { category: "baby" };
     if (hasChild && /\b(?:fell|ameanguka|fallen|baby fell off|fell off)\b/.test(plain) && /\b(?:head|kichwa|crying a lot|bleeding|damu)\b/.test(plain)) return { category: "injury" };
     // A raised blood pressure in pregnancy is not a number to log: 140/90 needs a health worker the same day, 160/110 now. A question about it ("is 150/95 safe in pregnancy?") is answered too.
     // "juu ya" is how Kiswahili says "over" ("presha yangu ni 160 juu ya 110"); without it the pressure was staged as a reading to save and the mother was not told to go now.
@@ -166,9 +185,9 @@
         if (top >= 140 || bottom >= 90) return { category: "pregnancy_bp" };
       }
     }
-    if (pregnant && !NOT_A_SIGN.test(plain) && !notNow && any(PREG_SIGNS, plain)) return { category: "pregnancy" };
+    if (pregnant && !NOT_A_SIGN.test(plain) && !notNow && any(PREG_SIGNS, signs)) return { category: "pregnancy" };
     if (!notNow && !NOT_A_SIGN.test(plain) && any([PREG_SIGNS[7], PREG_SIGNS[8], FETAL_MOVEMENT_SW], plain)) return { category: "pregnancy" };
-    if (hasChild && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain)) && any(CHILD_TODAY, plain.replace(NO_FEVER, " "))) return { category: hasBaby ? "baby_today" : "child_today" };
+    if (hasChild && !NOT_A_SIGN.test(plain) && (MINE.test(plain) || /\bmtoto\b/.test(plain)) && any(CHILD_TODAY, signs)) return { category: hasBaby ? "baby_today" : "child_today" };
     return null;
   }
 
@@ -276,5 +295,5 @@
   const selfHarmMore = text => test(SELF_HARM_MORE, text);
   const notViolence = text => NOT_VIOLENCE.test(normalize(text));
 
-  return Object.freeze({ normalize, careSign, friendCrisis, postnatal, babyAtRisk, grief, abuseMore, abuseOther, selfHarmMore, adultContext, notViolence, medicineQuestion });
+  return Object.freeze({ normalize, careSign, friendCrisis, postnatal, babyAtRisk, grief, abuseMore, abuseOther, selfHarmMore, adultContext, notViolence, medicineQuestion, withoutNegatedSymptoms });
 });

@@ -5,6 +5,9 @@ module.exports = Object.freeze({
   // ---- emergencies and crisis (companion/safety.js) ----
   "safety.number": "If you might be in danger, please call your local emergency number now.",
   "safety.numberIn": "If you might be in danger, please call the emergency number now: {numbers} in {country}.",
+  // The answer to "what is the emergency number in Kenya?" (server.js emergencyNumberAnswer): the number for the country asked about, never one made up.
+  "safety.numberAnswer": "In {country}, the emergency number is {numbers}. I have not called anyone, and I cannot dispatch help for you.",
+  "safety.numberUnknown": "I do not have the emergency number for your country, so I will not guess. Call your local emergency number, or ask someone near you to call. Tell me the country you are in and I will tell you the number if I have it.",
   "safety.noCircle": "I don't have anyone in your circle yet, so I couldn't alert anyone. {number} Once you're safe, we can add people you trust: \"add name@example.com to my circle\".",
   "safety.alertFailed": "I tried to alert your circle but couldn't reach anyone just now. {number}",
   "safety.alerted": "I've alerted {names}.{extra} {number} I'm here with you.",
