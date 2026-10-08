@@ -24,7 +24,12 @@ function downloadUrl(identifier, fileName) {
   return `https://archive.org/download/${encodeURIComponent(identifier)}/${String(fileName).split("/").map(encodeURIComponent).join("/")}`;
 }
 
-function pickFile(files, formats) {
+function pickFile(files, formats, { smallest = false } = {}) {
+  if (smallest) {
+    // Moving images: the smallest playable derivative across the mp4 formats (kinder to a slow phone connection); Ogg only when nothing else exists.
+    const mp4 = (files || []).filter(file => formats.includes(file?.format) && file.format !== "Ogg Video" && file.name && Number(file.size || 0) > 100000);
+    if (mp4.length) return mp4.sort((a, b) => Number(a.size) - Number(b.size))[0];
+  }
   for (const format of formats) {
     const matches = (files || []).filter(file => file?.format === format && file.name && Number(file.size || 1) > 0);
     if (matches.length) {
@@ -71,7 +76,7 @@ async function search(ctx, request) {
     if (candidates.length >= 3) break;
     let meta;
     try { meta = await fetchJson(ctx, `${METADATA_URL}${encodeURIComponent(doc.identifier)}`, { timeoutMs: 6000 }); } catch (_) { continue; }
-    const file = pickFile(meta?.files, wantVideo ? VIDEO_FORMATS : AUDIO_FORMATS);
+    const file = pickFile(meta?.files, wantVideo ? VIDEO_FORMATS : AUDIO_FORMATS, { smallest: wantVideo });
     if (!file) continue;
     const url = downloadUrl(doc.identifier, file.name);
     const check = await preflightStream(ctx, url, { wantVideo, timeoutMs: 6000 });
