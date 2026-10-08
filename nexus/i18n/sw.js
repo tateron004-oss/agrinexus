@@ -13,6 +13,9 @@ module.exports = Object.freeze({
   // ---- emergencies and crisis ----
   "safety.number": "Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura ya nchi yako sasa hivi.",
   "safety.numberIn": "Ikiwa unaweza kuwa hatarini, tafadhali piga simu kwa namba ya dharura sasa hivi: {numbers} nchini {country}.",
+  // The answer to "namba ya dharura Kenya ni ipi?": the number for the country asked about, never one made up. New Kiswahili wording: needs a fluent speaker.
+  "safety.numberAnswer": "Nchini {country}, namba ya dharura ni {numbers}. Sijampigia mtu simu, na siwezi kutuma msaada kwa ajili yako.",
+  "safety.numberUnknown": "Sina namba ya dharura ya nchi yako, kwa hiyo sitakisia. Piga namba ya dharura ya eneo lako, au mwombe mtu aliye karibu akupigie. Niambie nchi uliyo nayo nami nitakuambia namba ikiwa ninayo.",
   "safety.noCircle": "Bado sina mtu yeyote kwenye mzunguko wako, kwa hivyo sikuweza kutuma tahadhari kwa mtu. {number} Ukiwa salama, tunaweza kuongeza watu unaowaamini: \"ongeza jina@mfano.com kwenye mzunguko wangu\".",
   "safety.alertFailed": "Nilijaribu kutuma tahadhari kwa mzunguko wako lakini sikuweza kumfikia mtu yeyote sasa hivi. {number}",
   "safety.alerted": "Nimetuma tahadhari kwa {names}.{extra} {number} Niko hapa nawe.",
