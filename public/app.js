@@ -38786,7 +38786,7 @@ function userModulePreviewHtml(sectionId) {
         ${userRealMapHtml(latestOrder ? "Your shipment map" : "Crop market map")}
         <div class="user-preview-summary">
           <strong>${translateText(latestOrder ? "Shipment status" : "Ready to sell")}</strong>
-          <span>${translateText(latestOrder ? `${latestOrder.product || product?.name || "Crop"} is at ${latestOrder.checkpoint || data.profile.activeCheckpoint}.` : `Start with ${product?.name || "your crop"}, then choose buyer, order, route, or farm scan.`)}</span>
+          <span>${translateText(latestOrder ? `${latestOrder.product || latestOrder.productName || product?.name || "Crop"} is at ${latestOrder.checkpoint || data.profile.activeCheckpoint}.` : `Start with ${product?.name || "your crop"}, then choose buyer, order, route, or farm scan.`)}</span>
           ${userPreviewActionsHtml([
             { label: latestOrder ? "Track Route" : "Create Order", command: latestOrder ? "track my route" : "create a crop order" },
             { label: "Contact Buyer", command: "contact my buyer" },
@@ -40461,7 +40461,7 @@ function render() {
     : "<div>Create an order to start the logistics timeline.</div>";
 
   $("#orderBook").innerHTML = data.profile.orders.length
-    ? data.profile.orders.slice().reverse().map(order => `<div><strong>${escapeHtml(order.orderNumber || order.id)}</strong><span>${escapeHtml(order.product)} - ${escapeHtml(order.stage)} - ${money(order.total || 0)}</span></div>`).join("")
+    ? data.profile.orders.slice().reverse().map(order => `<div><strong>${escapeHtml(order.orderNumber || order.id)}</strong><span>${escapeHtml(order.product || order.productName || "Crop")} - ${escapeHtml(order.stage)} - ${money(order.total || 0)}</span></div>`).join("")
     : "<div>No trade orders yet.</div>";
   const latestThread = (data.profile.tradeMessageThreads || [])[0];
   $("#buyerSellerPanel").innerHTML = [
@@ -40576,7 +40576,7 @@ function render() {
       title: "Market Operations Queue",
       summary: "The trade module shows order creation, payment, logistics, and buyer-market activity together.",
       items: [
-        taskItem("Latest order", latestOrder ? `${latestOrder.orderNumber} for ${latestOrder.product}` : "No order created yet", latestOrder ? "live" : "pending", latestOrder?.stage || "Create", { workflow: "trade", action: latestOrder ? "advance" : "order", productId: firstProduct()?.id }),
+        taskItem("Latest order", latestOrder ? `${latestOrder.orderNumber} for ${latestOrder.product || latestOrder.productName || "your crop"}` : "No order created yet", latestOrder ? "live" : "pending", latestOrder?.stage || "Create", { workflow: "trade", action: latestOrder ? "advance" : "order", productId: firstProduct()?.id }),
         taskItem("Route stage", latestOrder ? `${latestOrder.stage} at ${latestOrder.checkpoint}` : data.profile.routeStage, latestOrder ? "ready" : "pending", "Logistics", { workflow: "trade", action: "advance" }),
         taskItem("Wallet balance", `${money(data.profile.wallet || 0)} across ${data.profile.walletTransactions.length} transaction(s)`, data.profile.walletTransactions.length ? "ready" : "pending", "Wallet", { workflow: "trade", action: "wallet" }),
         taskItem("Buyer market", `${data.products.length} product lots available`, "live", "Market", { workflow: "trade", action: "order", productId: firstProduct()?.id }),

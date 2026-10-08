@@ -18668,6 +18668,9 @@ async function executeAgentTool(db, user, step) {
       id: crypto.randomUUID(),
       orderNumber: `AN-ORD-AGENT-${String((db.profile.orders || []).length + 1).padStart(3, "0")}`,
       productId: product.id,
+      // Every other order path stores the crop as "product" and readers (the Agritrade page, shipment tracking, the voice answer
+      // "<order> for <product>") use that name: without it they printed "undefined".
+      product: product.name,
       productName: product.name,
       countryId: country.id,
       routeId: route.id,
