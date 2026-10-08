@@ -50,3 +50,15 @@ test("a refused confirmation tells the person what the server said instead of st
   assert.match(catchBlock, /setVoiceResponse\(reason/);
   assert.match(catchBlock, /return true;/);
 });
+
+test("the Home button's own command and a typed 'home' go home instead of being sent to the server", () => {
+  const fn = slice("function isNexusTrueExperienceReturnHomeCommand(", "function nexusCoreStateClass(");
+  const sandbox = {};
+  vm.createContext(sandbox);
+  vm.runInContext(fn, sandbox);
+  for (const phrase of ["Open Home.", "home", "Go home", "Return home", "open nexus home"]) assert.equal(sandbox.isNexusTrueExperienceReturnHomeCommand(phrase), true, phrase);
+  assert.equal(sandbox.isNexusTrueExperienceReturnHomeCommand("open home loans"), false);
+  const firewall = slice("function installNexusStandardUserAuthorityFirewall()", "async function boot()");
+  assert.ok(firewall.indexOf("isNexusTrueExperienceReturnHomeCommand(command)") > 0);
+  assert.ok(firewall.indexOf('handleNexusOsMissionLifecycleAction("return-home")') < firewall.indexOf("handleNexusUnifiedBrainRuntimeCommand(command"));
+});

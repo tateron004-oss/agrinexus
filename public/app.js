@@ -32476,7 +32476,7 @@ function nexusTrueExperienceMode() {
 
 function isNexusTrueExperienceReturnHomeCommand(command = "") {
   const normalized = String(command || "").toLowerCase().replace(/[.!?]+$/g, "").trim();
-  return /^(home|go home|return home|back home|take me home|nexus home|open nexus home|main screen)$/.test(normalized);
+  return /^(home|go home|return home|back home|take me home|open home|nexus home|open nexus home|main screen)$/.test(normalized);
 }
 
 function nexusCoreStateClass(state = "idle") {
@@ -63903,6 +63903,16 @@ function installNexusStandardUserAuthorityFirewall() {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
+    // Found in a real browser: this firewall sent "home" / "Open Home." (the Home button's own command) to the server, which does not
+    // understand it, so a standard user could not leave the mission screen by the Home button or by typing "home". Going home is
+    // the screen's own action, not a request for the server.
+    if (isNexusTrueExperienceReturnHomeCommand(command)) {
+      setCommandInputs("");
+      const typed = document.querySelector("#nexusCommandCenterInput");
+      if (typed) typed.value = "";
+      void Promise.resolve(handleNexusOsMissionLifecycleAction("return-home")).catch(() => {});
+      return;
+    }
     setCommandInputs(command);
     void handleNexusUnifiedBrainRuntimeCommand(command, {
       source: event.type === "keydown" ? "typed-command-keyboard" : "typed-command-submit"
