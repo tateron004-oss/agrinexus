@@ -24,6 +24,12 @@ test("the function-window backdrop sits above the command-centre hero (z-index 1
   assert.ok(Number(backdrop[1]) > Number(hero[1]), "the window backdrop must out-rank the hero");
 });
 
+test("the minimized-window dock (with its Restore button) sits above the hero so it can be clicked", () => {
+  const hero = Number(css.match(/body\.user-mode \.nexus-command-center-hero,[^{]*\{[^}]*z-index:\s*(\d+)/)[1]);
+  const dock = Number(rule("body.user-mode .nexus-function-window-dock").match(/z-index:\s*(\d+)/)[1]);
+  assert.ok(dock > hero);
+});
+
 test("only the orb-only home is 100vw wide; the mission/conversation card fits its padded parent", () => {
   const block = rule('body.user-mode .nexus-true-experience-root:not([data-nexus-true-experience-mode="home"])');
   assert.match(block, /width:\s*100%\s*!important/);

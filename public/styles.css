@@ -12010,7 +12010,8 @@ body.user-mode .nexus-function-window-dock {
   position: fixed;
   right: clamp(14px, 3vw, 34px);
   bottom: clamp(142px, 18vh, 176px);
-  z-index: 124;
+  /* Above the command-centre hero (125): at 124 the hero covered this dock and its Restore button could not be clicked. */
+  z-index: 126;
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto auto;
   align-items: center;
