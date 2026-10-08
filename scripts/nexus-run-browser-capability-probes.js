@@ -4,6 +4,7 @@
 const fs = require("node:fs");
 const { CONTRACTS } = require("../nexus/apps/capability-completion-contracts.js");
 const { FAULTS } = require("../nexus/acceptance/fault-register.js");
+const { runAcceptanceCleanup } = require("./lib/nexus-acceptance-cleanup.js");
 const liveKnowledgeLifecycleByPage = new WeakMap();
 
 const SCENARIOS = Object.freeze({
@@ -862,6 +863,14 @@ async function run(env = process.env) {
   const token = required(env.NEXUS_ACCEPTANCE_TOKEN, "NEXUS_ACCEPTANCE_TOKEN");
   const probeFile = required(env.NEXUS_PROBE_FILE, "NEXUS_PROBE_FILE");
   const document = JSON.parse(fs.readFileSync(probeFile, "utf8"));
+  // Before any new test data exists: clear the acceptance principal's own leftovers from earlier runs, so the per-account limits
+  // that protect real users (e.g. 200 lists) are not consumed by this pipeline. Never alters a probe: every scenario below still
+  // creates a fresh record and verifies it through the authoritative verifier. A cleanup failure is reported as such (log line,
+  // warning annotation, the probe evidence file) and only fails the step when NEXUS_ACCEPTANCE_CLEANUP_REQUIRED=true.
+  const acceptanceCleanup = await runAcceptanceCleanup({ base, token, releaseSha, env });
+  if (acceptanceCleanup.ok !== true && String(env.NEXUS_ACCEPTANCE_CLEANUP_REQUIRED || "").toLowerCase() === "true") {
+    throw new Error(`Acceptance data cleanup failed (status=${acceptanceCleanup.status} code=${acceptanceCleanup.code}) and NEXUS_ACCEPTANCE_CLEANUP_REQUIRED=true.`);
+  }
   const browser = await chromium.launch({ channel: "chrome", headless: true,
     ignoreDefaultArgs: ["--enable-automation"],
     args: ["--autoplay-policy=no-user-gesture-required", "--disable-blink-features=AutomationControlled"] });
@@ -1147,20 +1156,22 @@ async function run(env = process.env) {
       throw new Error("Voice and typed input did not preserve equivalent authoritative intent.");
     }
     const faultProbes = [];
-    Object.assign(document, { workspaceProbes, capabilityProbes, faultProbes, scenarioFailures, typedIngressWarnings,
+    Object.assign(document, { workspaceProbes, capabilityProbes, faultProbes, scenarioFailures, typedIngressWarnings, acceptanceCleanup,
       faultProofStatus: { closed: false, releaseSha, required: FAULTS.length, proven: 0,
         missing: [...FAULTS], reason: "Typed fault verifiers have not executed; capability success receipts cannot prove fault closure." },
       browserProbe: { releaseSha, capabilities: capabilityProbes.length, workspaces: workspaceProbes.length,
         visibleIngress, visibleAuthenticatedLogin: true, sequential: true, voiceTypedEquivalent: true, observedAt: new Date().toISOString() } });
     fs.writeFileSync(probeFile, JSON.stringify(document, null, 2));
     console.log(JSON.stringify({ ok: scenarioFailures.length === 0, releaseSha, capabilities: capabilityProbes.length,
-      workspaces: workspaceProbes.length, faults: faultProbes.length, faultProofClosed: false, scenarioFailures, typedIngressWarnings }, null, 2));
+      workspaces: workspaceProbes.length, faults: faultProbes.length, faultProofClosed: false, scenarioFailures, typedIngressWarnings,
+      acceptanceCleanup }, null, 2));
     // Every scenario that could succeed already ran and cut over above,
     // independent of this check -- this only decides whether the overall
     // step (and therefore the release gate) still reports failure for a
     // capability that genuinely could not complete.
     if (scenarioFailures.length) {
-      throw new Error(`${scenarioFailures.length} capability scenario(s) failed: ${scenarioFailures.map(item => `${item.application} (${item.error})`).join("; ")}`);
+      throw new Error(`${scenarioFailures.length} capability scenario(s) failed: ${scenarioFailures.map(item => `${item.application} (${item.error})`).join("; ")}` +
+        (acceptanceCleanup.ok === true ? "" : ` [acceptance data cleanup ALSO failed before the probes: status=${acceptanceCleanup.status} code=${acceptanceCleanup.code}]`));
     }
     return document;
   } finally { await browser.close(); }

@@ -62,10 +62,31 @@ async function verifyIdentityOnce() {
   return { health };
 }
 
+// The acceptance-data cleanup (nexus/acceptance/data-hygiene.js) runs against production on every deploy, but its SQL had never run against a
+// real PostgreSQL schema before the first production deploy. The candidate job has a real pgvector database and the candidate-only acceptance
+// token, so here the cleanup is called in DRY-RUN mode: it reads (and prepares every write statement with an empty id list, which can match
+// no row), so any SQL/schema mistake fails this job instead of a production deploy. Only a loopback candidate with a token is exercised; a
+// deployed origin (no token in this step) is skipped. A candidate database with no acceptance identity at all is reported, not failed.
+async function verifyAcceptanceCleanupStatements() {
+  const token = process.env.NEXUS_ACCEPTANCE_TOKEN;
+  const host = new URL(base).hostname;
+  if (!token || !["127.0.0.1", "localhost", "::1", "[::1]"].includes(host)) return { checked: false, reason: "not_a_local_candidate_with_acceptance_token" };
+  const response = await fetch(`${base}/api/nexus/runtime/production-acceptance/cleanup`, { method: "POST",
+    headers: { authorization: `Bearer ${token}`, accept: "application/json", "content-type": "application/json" },
+    body: JSON.stringify({ releaseSha: expectedSha, dryRun: true }) });
+  const body = await response.json().catch(() => ({}));
+  if (response.status === 503 && body.code === "acceptance_identity_unavailable") return { checked: false, reason: "candidate_has_no_acceptance_identity" };
+  assert.equal(response.status, 200, `acceptance cleanup dry run returned ${response.status}: ${JSON.stringify(body).slice(0, 300)}`);
+  assert.equal(body.ok, true); assert.equal(body.dryRun, true);
+  assert.equal(body.total, 0, "a freshly migrated candidate has no acceptance test data to clean");
+  return { checked: true, targets: Object.keys(body.counts || {}).length };
+}
+
 async function run() {
   assert.match(expectedSha, /^[0-9a-f]{40}$/, "candidate must be bound to a full commit SHA");
   // A deployed origin may briefly answer from the previous instance while it switches over; require three clean consecutive passes.
   const { health } = await waitForStableIdentity({ attempt: verifyIdentityOnce, ...identityPatienceFor(base) });
+  const acceptanceCleanupStatements = await verifyAcceptanceCleanupStatements();
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
@@ -101,6 +122,7 @@ async function run() {
     candidateUrl: base,
     health: { ok: health.ok, database: health.checks?.database, releaseSha: health.releaseSha },
     behavior,
+    acceptanceCleanupStatements,
     consoleErrors,
     checkedAt: new Date().toISOString()
   };
