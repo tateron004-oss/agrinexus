@@ -41,7 +41,7 @@ test("long unbreakable ids and setting names wrap, so they cannot widen the page
 });
 
 test("the orb's decorative rings cannot widen the Admin/Investor dashboard on a phone", () => {
-  assert.match(rule(".user-workspace"), /overflow-x:\s*clip/);
+  assert.match(css, /\n\.user-workspace \{[^}]*overflow-x:\s*clip/);
 });
 
 test("only the orb-only home is 100vw wide; the mission/conversation card fits its padded parent", () => {
