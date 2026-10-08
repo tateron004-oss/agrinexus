@@ -33,7 +33,7 @@ class CapabilityExecutionAuthority {
       idempotencyKey: input.idempotencyKey, adapter: { toolId, version: adapter.version, implementation: adapter.implementation }
     });
     if (verification?.verified !== true) {
-      const error = coded("outcome_unverified", `The authoritative verifier rejected the ${toolId} outcome.`, 502);
+      const error = coded("outcome_unverified", `The authoritative verifier rejected the ${toolId} outcome${rejectionDetail(verification)}.`, 502);
       error.details = { toolId, verification: verification || null };
       await this.emit("verification.failed", { ...scope, toolId, verification });
       throw error;
@@ -50,6 +50,18 @@ class CapabilityExecutionAuthority {
   async emit(eventType, payload) {
     if (typeof this.observe === "function") await this.observe({ eventType, ...payload, occurredAt: new Date().toISOString() });
   }
+}
+
+// Production 2026-10: a probe was rejected with only "The authoritative verifier rejected the lists.create outcome" -- the verifier
+// had a reason (and the executor knew the exact cause, a per-account cap), but neither reached the pipeline log, so the cause had
+// to be guessed. The verifier's own short machine reason is now part of the message. It is copied only when it is a plain
+// identifier (letters, digits, underscore, dot, dash), so free text, personal data or secrets can never ride along; the optional
+// numeric limit is copied only when it is a finite number.
+function rejectionDetail(verification) {
+  const reason = typeof verification?.reason === "string" && /^[a-z][a-z0-9_.-]{0,63}$/i.test(verification.reason) ? verification.reason : "";
+  if (!reason) return "";
+  const limit = Number(verification?.limit);
+  return ` (reason=${reason}${verification?.limit !== undefined && verification?.limit !== null && Number.isFinite(limit) ? ` max=${limit}` : ""})`;
 }
 
 function coded(code, message, status = 503) { const error = new Error(message); error.code = code; error.status = status; return error; }
