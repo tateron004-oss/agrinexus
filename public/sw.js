@@ -27,7 +27,9 @@ const APP_SHELL = [
   `/kyro-emergency.js?v=kyro-emergency-1`,
   `/kyro-voice-intake.js?v=kyro-voice-intake-1`,
   `/kyro-intake-forms.js?v=kyro-intake-forms-1`,
-  `/kyro-stall-watchdog.js?v=kyro-stall-watchdog-2`
+  `/kyro-stall-watchdog.js?v=kyro-stall-watchdog-2`,
+  `/kyro-media-commands.js?v=kyro-media-commands-1`,
+  `/kyro-media-player.js?v=kyro-media-player-1`
 ];
 
 // Local scripts, stylesheets and the manifest named by the page, exactly as the page names them (the server writes /file.js?v=<content hash>).

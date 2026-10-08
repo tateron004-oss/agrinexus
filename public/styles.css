@@ -16813,3 +16813,56 @@ body.advanced-mode[data-nexus-genesis-mode="home"].nexus-orb-hover ,
 body.user-mode[data-nexus-genesis-mode="home"].nexus-orb-hover {
   cursor: pointer;
 }
+
+/* Kyro media player bar (public/kyro-media-player.js): music, radio and video that keep playing while the person moves around the app. */
+.kyro-mp {
+  position: fixed;
+  z-index: 10050;
+  left: max(0.5rem, env(safe-area-inset-left));
+  right: max(0.5rem, env(safe-area-inset-right));
+  bottom: calc(max(0.5rem, env(safe-area-inset-bottom)) + 4.75rem);
+  margin: 0 auto;
+  max-width: 40rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(118, 225, 255, 0.35);
+  border-radius: 1rem;
+  background: rgba(8, 22, 34, 0.97);
+  box-shadow: 0 1rem 2.4rem rgba(0, 0, 0, 0.45);
+  color: #f7fbff;
+  font-size: 0.95rem;
+}
+.kyro-mp[hidden] { display: none; }
+.kyro-mp-row { display: flex; align-items: center; gap: 0.5rem; }
+.kyro-mp-meta { flex: 1 1 auto; min-width: 0; display: grid; gap: 0.1rem; }
+.kyro-mp-title, .kyro-mp-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kyro-mp-sub { color: #9bdff1; font-size: 0.8rem; }
+.kyro-mp-badge { flex: none; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; background: #d62d4e; color: #fff; }
+.kyro-mp-badge[hidden] { display: none; }
+.kyro-mp-badge[data-kind="preview"] { background: #b7791f; }
+.kyro-mp-controls { flex: none; display: flex; align-items: center; gap: 0.15rem; }
+.kyro-mp-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 2.5rem; min-height: 2.5rem; padding: 0; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: inherit; cursor: pointer; }
+.kyro-mp-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); }
+.kyro-mp-btn:disabled { opacity: 0.35; cursor: default; }
+.kyro-mp-btn:focus-visible, .kyro-mp-bigplay:focus-visible, .kyro-mp-open:focus-visible { outline: 3px solid rgba(250, 204, 21, 0.92); outline-offset: 2px; }
+.kyro-mp-main { background: #1b8f68; }
+.kyro-mp-main:hover:not(:disabled) { background: #22a87c; }
+.kyro-mp-status { margin-top: 0.3rem; min-height: 1.1em; font-size: 0.85rem; color: #d9eef7; }
+.kyro-mp-stage { margin-top: 0.4rem; }
+.kyro-mp-stage audio { display: block; width: 100%; height: 2.25rem; }
+.kyro-mp-stage video { display: block; width: 100%; max-height: 13rem; border-radius: 0.6rem; background: #000; }
+.kyro-mp-stage .nexus-youtube-player.kyro-mp-embedded { position: static; width: 100%; padding: 0; border: 0; box-shadow: none; background: transparent; }
+.kyro-mp-embedded .nexus-youtube-player-head, .kyro-mp-embedded .nexus-youtube-controls { display: none; }
+.kyro-mp-embedded .nexus-youtube-frame-wrap { margin: 0; }
+.kyro-mp-bigplay, .kyro-mp-open { display: block; width: 100%; margin-top: 0.5rem; padding: 0.85rem 1rem; border: 0; border-radius: 0.8rem; background: #1b8f68; color: #fff; font-size: 1.1rem; font-weight: 800; text-align: center; text-decoration: none; cursor: pointer; box-sizing: border-box; }
+.kyro-mp-bigplay[hidden], .kyro-mp-open[hidden] { display: none; }
+.kyro-mp-extra { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.4rem; font-size: 0.8rem; color: #9bdff1; }
+.kyro-mp-extra[hidden], .kyro-mp-stage[hidden] { display: none; }
+.kyro-mp-small { min-width: 2rem; min-height: 2rem; }
+.kyro-mp-audioonly { margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem; }
+.kyro-mp-attr { margin-top: 0.3rem; font-size: 0.72rem; color: #8fb3c2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 420px) { .kyro-mp-btn { min-width: 2.25rem; min-height: 2.25rem; } .kyro-mp-controls .kyro-mp-btn[data-kyro-mp="stop"] { display: none; } }
+.kyro-mp[data-state="queued"] .kyro-mp-controls .kyro-mp-btn:not(.kyro-mp-close) { display: none; }
+.kyro-mp[data-state="failed"] .kyro-mp-controls .kyro-mp-btn:not(.kyro-mp-close), .kyro-mp[data-state="failed"] .kyro-mp-stage { display: none; }
+.kyro-mp-playin { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; font-size: 0.8rem; color: #9bdff1; }
+.kyro-mp-playin[hidden] { display: none; }
+.kyro-mp-playin select { padding: 0.2rem 0.4rem; border-radius: 0.5rem; border: 1px solid rgba(118, 225, 255, 0.35); background: #0b1b29; color: #f7fbff; font-size: 0.8rem; }

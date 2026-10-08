@@ -12,7 +12,7 @@ const DEFINITIONS = [
   ["marketplace", "AgriTrade Marketplace", ["marketplace.search"], ["low", "medium", "high"]],
   ["logistics", "Delivery and Shipment Estimates", ["logistics.track"], ["low"]],
   ["maps", "Maps and Field Visit", ["maps.view"], ["low", "medium"]],
-  ["music-media", "Music and Media", ["media.play"], ["low"]],
+  ["music-media", "Music and Media", ["media.play", "media.control"], ["low"]],
   ["documents", "Documents and Guided Entry", ["documents.create", "documents.read"], ["low", "medium", "regulated"]],
   ["lists", "Lists and Checklists", ["lists.create", "lists.read", "lists.update"], ["low"]],
   ["reminders", "Reminders and Calendar", ["reminders.schedule", "reminders.list", "reminders.cancel"], ["low", "medium"]],

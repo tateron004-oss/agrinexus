@@ -62,7 +62,7 @@ test("worker and provider configuration use their canonical processes", async ()
 
 test("release controller defines signed production tool coverage for every workspace", () => {
   const tools = canonicalToolProviders("shared-secret");
-  assert.equal(tools.length, 30);
+  assert.equal(tools.length, 31); // 30 + media.control (pause/resume/stop/next/volume instruction for the phone's player)
   assert.ok(tools.every(tool => tool.receiptSecret === "shared-secret" && tool.endpoint.startsWith("https://agrinexus-provider-engines.onrender.com/nexus/tools/")));
   const manifests = require("../../nexus/apps/default-manifests.js").defaultApplicationManifests();
   const toolIds = new Set(tools.map(tool => tool.toolId));

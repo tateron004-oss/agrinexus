@@ -160,6 +160,8 @@ async function capabilityEvidence(toolId, input, receipt, outcomeUrl) {
       routeGeometry: input.routeGeometry || [[-1.286389, 36.817223], [-0.303099, 36.080026]] },
     "media.play": { requestedMedia: input.requestedMedia || input.query || "Requested media",
       resolvedMedia: input.resolvedMedia || "Provider-resolved media", playbackState: "playing" },
+    // The real executor is local (nexus/media/control-executor.js: an instruction the phone's player carries out); this only keeps the provider catalog complete.
+    "media.control": { requestedMedia: input.control || "control", resolvedMedia: "current playback", playbackState: "instructed" },
     // Confirmed live: this always reported { type: "blood-pressure" } no
     // matter what was actually recorded -- once nexus/brain/planner.js's
     // completeHealthRecordPlan started sending temperature/pulse/oxygen/

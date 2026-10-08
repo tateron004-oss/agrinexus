@@ -39,6 +39,10 @@ function publicHeaders() {
 async function searchYouTubeVideos(query, env = process.env) {
   const apiKey = String(env.YOUTUBE_API_KEY || env.NEXUS_MEDIA_PROVIDER_API_KEY || "").trim();
   if (!apiKey) return null;
+  // The same key also serves music playback (server/media/): share one daily quota counter so neither feature starves the other.
+  const quotaState = require("../media/runtime.js").getMediaRuntime().state;
+  if (!quotaState.canSpendYoutube(100)) throw new Error("youtube-daily-quota-reserved");
+  quotaState.spendYoutube(100);
   const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
   searchUrl.searchParams.set("part", "snippet");
   searchUrl.searchParams.set("type", "video");
