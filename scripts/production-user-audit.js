@@ -748,8 +748,10 @@ async function runCleanups(ctx) {
   }
 }
 
+// Kyro labels the currency once, in front of the amount ("You earned KSh 4,500 today", "Owed to you: John KSh 800"), so an amount may carry a short currency label before the digits.
+const OWES_JOHN_800 = /John\s+(?:[^\d\s]{1,4}\s*)?800\b/;
 const parseIncome = text => {
-  const match = /You earned ([\d,]+)/i.exec(text);
+  const match = /You earned (?:[^\d\s]{1,4}\s*)?([\d,]+)/i.exec(text);
   if (match) return Number(match[1].replace(/,/g, ""));
   if (/no income recorded|not recorded any income|hakuna mapato/i.test(text)) return 0;
   return null;
@@ -993,7 +995,7 @@ async function bookkeepingJourney(ctx, a, unavailable) {
     base = await earned();
     const first = await ask(ctx, a, "voice", "sold 3 sacks of maize 4500");
     if (UNHANDLED.test(first.text) && !/Recorded/i.test(first.text)) return unavailable("bookkeeping", first.text);
-    if (/^s*Recorded/i.test(first.text)) recorded += 1;
+    if (/^\s*Recorded/i.test(first.text)) recorded += 1;
     addCleanup(ctx, "bookkeeping entries (undo)", async () => {
       let removed = 0; const named = [];
       while (recorded > 0 && removed < 6) { const done = await ask(ctx, a, "voice", "undo"); removed += 1; recorded -= 1; named.push(snippet(done.text, 50)); }
@@ -1002,7 +1004,7 @@ async function bookkeepingJourney(ctx, a, unavailable) {
     });
     const afterFirst = await earned();
     if (afterFirst !== base + 4500) return fail(`income today is ${afterFirst}, expected ${base + 4500} || ${snippet(first.text, 120)}`, "the sale was acknowledged but not stored correctly");
-    if (!/^s*Recorded/i.test(first.text)) recorded += 1;
+    if (!/^\s*Recorded/i.test(first.text)) recorded += 1;
     const second = await ask(ctx, a, "voice", "nimeuza mahindi elfu nne", { language: "sw" });
     const afterSecond = await earned();
     if (afterSecond !== afterFirst) recorded += 1; // something was saved (right amount or not): it is undone at the end either way
@@ -1011,24 +1013,24 @@ async function bookkeepingJourney(ctx, a, unavailable) {
   });
   await runCheck(report, { id: "C41", layer: L, area: "Bookkeeping", severity: "critical", title: "'John owes me 800' / 'who owes me', then 'undo' removes the right entry" }, async () => {
     const owedBefore = (await ask(ctx, a, "voice", "who owes me")).text;
-    if (/John 800/.test(owedBefore)) return skip("the audit account already has a debt from John; clear it first");
+    if (OWES_JOHN_800.test(owedBefore)) return skip("the audit account already has a debt from John; clear it first");
     const before = await earned();
     const said = await ask(ctx, a, "voice", "John owes me 800");
     if (UNHANDLED.test(said.text) && !/Recorded/i.test(said.text)) return unavailable("bookkeeping", said.text);
     let created = true;
     addCleanup(ctx, "John's debt (undo)", async () => {
       if (!created) return { ok: true, detail: "already removed" };
-      if (!/John 800/.test((await ask(ctx, a, "voice", "who owes me")).text)) return { ok: true, detail: "no longer listed" };
+      if (!OWES_JOHN_800.test((await ask(ctx, a, "voice", "who owes me")).text)) return { ok: true, detail: "no longer listed" };
       await ask(ctx, a, "voice", "undo");
-      return /John 800/.test((await ask(ctx, a, "voice", "who owes me")).text) ? { ok: false, detail: "John's debt is still listed" } : { ok: true, detail: "undone" };
+      return OWES_JOHN_800.test((await ask(ctx, a, "voice", "who owes me")).text) ? { ok: false, detail: "John's debt is still listed" } : { ok: true, detail: "undone" };
     });
     const owed = (await ask(ctx, a, "voice", "who owes me")).text;
-    if (!/John 800/.test(owed)) return fail(`recorded, but "who owes me" does not list John 800 || ${snippet(owed, 120)}`);
+    if (!OWES_JOHN_800.test(owed)) return fail(`recorded, but "who owes me" does not list John 800 || ${snippet(owed, 120)}`);
     const incomeAfterDebt = await earned();
     if (incomeAfterDebt !== before) return fail(`a debt was counted as income (${before} -> ${incomeAfterDebt})`, "money would be overstated");
     const undone = await ask(ctx, a, "voice", "undo");
     const owedAfter = (await ask(ctx, a, "voice", "who owes me")).text;
-    created = /John 800/.test(owedAfter);
+    created = OWES_JOHN_800.test(owedAfter);
     if (created) return fail(`undo did not remove John's debt || ${snippet(undone.text, 120)}`);
     const incomeAfterUndo = await earned();
     if (incomeAfterUndo !== before) return fail(`undo removed a different entry: income today ${before} -> ${incomeAfterUndo} || ${snippet(undone.text, 120)}`, "data loss");
@@ -1239,7 +1241,7 @@ async function main(argv = process.argv.slice(2), env = process.env) {
   return report.counts().byStatus.FAIL > 0 ? 1 : 0;
 }
 
-module.exports = { parseArgs, validateOptions, isLocalHostname, runAudit, reportData, renderMarkdown, makeScrubber, fingerprint, diffFingerprints, isSafeProbe, judgeSafety, SAFETY, DEMO_EMAILS, main, VERSION };
+module.exports = { parseIncome, OWES_JOHN_800, parseArgs, validateOptions, isLocalHostname, runAudit, reportData, renderMarkdown, makeScrubber, fingerprint, diffFingerprints, isSafeProbe, judgeSafety, SAFETY, DEMO_EMAILS, main, VERSION };
 
 // The exit code is set rather than process.exit() called: on Windows, exiting while sockets are still closing can crash the process (0xC0000409) and lose the code and the output.
 if (require.main === module) {

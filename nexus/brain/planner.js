@@ -8,7 +8,7 @@ const { accepted: acceptedAlertOffer } = require("../companion/offer.js");
 const { farmLogTurn } = require("../farm/log.js");
 const { farmWorkTurn } = require("../farmwork/index.js");
 const { healthWorkTurn } = require("../healthwork/index.js");
-const { storeReadingsTurn } = require("../health/store-readings.js");
+const { storeReadingsTurn, manageIntent: healthReadingsIntent } = require("../health/store-readings.js");
 const { wellnessTurn } = require("../wellness/log.js");
 const { communityTurn } = require("../community/desk.js");
 const { feedbackTurn } = require("../quality/feedback.js");
@@ -26,6 +26,7 @@ const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = requ
 const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js");
 const { contentGuardReply } = require("./content-guard.js");
 const KyroMediaCommands = require("../../public/kyro-media-commands.js");
+const { emergencyNumberAnswer } = require("../companion/emergency-number.js");
 const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
@@ -136,7 +137,7 @@ class OpenEndedPlanner {
 
   // A plain statement about the person ("I grow maize in Kisumu") is saved and announced; "forget that" takes it back. Returns a
   // conversational answer plan, or null when the text is neither (or memory is unavailable), so normal planning carries on.
-  async profileTurn(command) {
+  async profileTurn(command, context = null) {
     const memory = this.memory;
     if (!memory?.saveProfileFact || !memory?.forgetProfile) return null;
     const scope = { tenantId: command.tenantId, userId: command.actorId };
@@ -149,7 +150,9 @@ class OpenEndedPlanner {
       if (!stated.length) return null;
       const replaced = []; const saved = [];
       for (const { kind, value } of stated) {
-        const result = await memory.saveProfileFact({ ...scope, kind, value, sourceText: command.spokenText || command.text, conversationId: command.conversationId || null });
+        const result = await memory.saveProfileFact({ ...scope, kind, value, sourceText: command.spokenText || command.text,
+          // The spoken path (deterministicOnly) writes no conversation row until it has an answer, and a memory row that names a conversation that does not exist yet is refused by the database (a foreign key).
+          conversationId: context?.deterministicOnly === true ? null : (command.conversationId || null) });
         saved.push({ kind, value }); replaced.push(...(result?.replaced || []));
       }
       return answer(savedNotice(saved, replaced));
@@ -273,9 +276,18 @@ class OpenEndedPlanner {
     // Requests for sexual or explicit material, betting tips, and tricks to hack, fake or scam are answered plainly with what Kyro can do instead, before any tool or AI model sees them (see content-guard.js).
     const guarded = safetyTexts.map(contentGuardReply).find(Boolean);
     if (guarded) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: guarded.reply, sourceRequired: false });
+    // "What is the emergency number in Kenya?" / "namba ya dharura Kenya ni ipi?": a question with one right answer (Kenya 999 or 112, never the U.S. number), given the same way on every route. The older
+    // command route and the spoken tool route already did; the typed route left it to the AI model, which was the only route where the number depended on the model getting it right.
+    const emergencyNumber = safetyTexts.map(said => emergencyNumberAnswer(said, { country: context?.country })).find(Boolean);
+    if (emergencyNumber) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: emergencyNumber, sourceRequired: false, planningAttempts: 0 });
     // "Show my blood pressure readings", "delete my last reading", "that was wrong, it was 133/78", "delete all my health records", "who can see my health information": readings saved through the planner live in the
     // record store, so they are shown, deleted and corrected here, by the same conversation the older routes use for the readings kept there (see health/store-readings.js). It asks before every change and says plainly
     // when the store cannot be read. The spoken path (deterministicOnly) leaves this to its own route, which sees both kinds of reading together.
+    // Found against the real runtime: on the spoken path, "delete my last reading" reached the farm log's own "delete my last entry" and removed the person's last farm log entry instead of
+    // their blood pressure reading (which stayed). The spoken path leaves every health-readings request to its own route, so it is deferred here before any toolkit can claim it.
+    if (context?.deterministicOnly === true && isSpokenHealthReadingsRequest(command.text)) {
+      return Object.freeze({ deferred: true, goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0 });
+    }
     if (this.healthReadings?.records && context?.deterministicOnly !== true) {
       const readings = await storeReadingsTurn({ records: this.healthReadings.records, tenantId: command.tenantId, userId: command.actorId, text: command.text, language: command.locale,
         canWrite: !context?.isRestrictedFrom?.("health-record-write"), timeZone: context?.timeZone }).catch(() => null);
@@ -327,7 +339,7 @@ class OpenEndedPlanner {
     // "Forget everything", "delete all my data": not done by voice, and said plainly. It used to be answered "I don't have that saved, so there is nothing to forget", or reach the AI model.
     const bulk = extractForgetRequest(command.text) ? null : bulkForgetReply(command.text);
     if (bulk) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: bulk, sourceRequired: false, planningAttempts: 0 });
-    const profile = await this.profileTurn(command);
+    const profile = await this.profileTurn(command, context);
     if (profile) return Object.freeze({ ...profile, planningAttempts: 0 });
     const contactsAnswer = await this.contactsTurn(command);
     if (contactsAnswer) return Object.freeze({ ...contactsAnswer, planningAttempts: 0 });
@@ -792,6 +804,14 @@ function canonicalizeExplicitApplication(candidate, text, catalog) {
 // sentence (which also lacks the required "my" prefix or record/log verb)
 // still cannot fabricate a reading here either.
 const VITAL_VALUE_CONNECTOR = "(?:(?:today|right now|currently|now|this morning|is|was|of|as|to|reads|reading|at|=|:)\\s*)*";
+
+// A spoken request about the person's saved health readings ("delete my last reading", "show my blood pressure readings", "delete all my health records", "that was wrong, it was 133/78"). Not the generic
+// "that was wrong" (that is feedback about Kyro's last answer) and not a bare "delete my last entry" (no health word: the farm log's own undo).
+function isSpokenHealthReadingsRequest(text) {
+  const intent = healthReadingsIntent(text);
+  if (!intent || intent.intent === "wrong") return false;
+  return !intent.weak || /\b(?:readings?|records?|vitals?|vipimo|kipimo)\b/i.test(String(text || ""));
+}
 
 function completeHealthRecordPlan(text, catalog) {
   const goal = String(text || "").trim();
