@@ -26,6 +26,7 @@
       tapToPlay: "Tap play to start.", trying: "That stream is not available, trying another.", streamStopped: "The stream stopped. Trying another.",
       tryYoutube: "You can also say: play {q} on YouTube.",
       playInLabel: "Play music in", playInKyro2: "Kyro", playInYoutube2: "YouTube",
+      foundButFailed: "I found {title}, but it would not start on this device. Please try again.",
       noneFound: "I could not find anything to play for {q}.", noYoutube: "YouTube is not set up on this server.",
       resolverDown: "I could not reach the music service right now. Please try again.",
       paused: "Paused.", resumed: "Playing again.", stopped: "Stopped.", nothingPlaying: "Nothing is playing right now.",
@@ -50,6 +51,7 @@
       tapToPlay: "Gusa cheza ili kuanza.", trying: "Hiyo haipatikani, ninajaribu nyingine.", streamStopped: "Mtiririko umesimama. Ninajaribu nyingine.",
       tryYoutube: "Unaweza pia kusema: cheza {q} kwenye YouTube.",
       playInLabel: "Cheza muziki kwenye", playInKyro2: "Kyro", playInYoutube2: "YouTube",
+      foundButFailed: "Nimepata {title}, lakini haikuanza kwenye simu hii. Tafadhali jaribu tena.",
       noneFound: "Sikuweza kupata kitu cha kucheza kwa {q}.", noYoutube: "YouTube haijawekwa kwenye seva hii.",
       resolverDown: "Siwezi kufikia huduma ya muziki sasa hivi. Tafadhali jaribu tena.",
       paused: "Imesitishwa.", resumed: "Inaendelea kucheza.", stopped: "Imesimamishwa.", nothingPlaying: "Hakuna kinachochezwa sasa hivi.",
@@ -73,6 +75,7 @@
   }
 
   const EVIDENCE_SCHEMA = "nexus.media-playback-evidence.v1";
+  const MAX_FULL_ATTEMPTS = 3;
   const VOLUME_STEP = 0.15;
 
   const TIME_ZONE_COUNTRY = {
@@ -341,9 +344,8 @@
       if (candidate.delivery === "youtube") return Boolean(deps.youtube) && Boolean(candidate.videoId);
       if (!/^https:\/\//i.test(String(candidate.url || "")) && !(deps.allowHttp && /^http:\/\//i.test(String(candidate.url || "")))) return false;
       if (candidate.hls && !deps.nativeHls) return false;
-      if (candidate.mimeType && deps.canPlayType) {
-        const verdict = deps.canPlayType(candidate.playbackClass === "video" ? "video" : "audio", candidate.mimeType);
-        if (verdict === "") return false;
+      if (candidate.playbackClass === "video" && candidate.mimeType && deps.canPlayType) {
+        if (deps.canPlayType("video", candidate.mimeType) === "") return false;
       }
       return true;
     }
@@ -386,16 +388,26 @@
       }
 
       let attempts = 0;
+      let fullAttempts = 0;
+      let sawCandidate = null;
+      let previewRoundDone = false;
       const attemptLog = [];
       let spokeTrying = false;
       let earlyAnnounced = 0;
       let lastResolve = null;
-      for (let round = 0; round < 3; round += 1) {
+      // Up to three rounds of the normal chain, then one last round that asks only for the Apple 30-second preview (the one source that is verified on the
+      // server and plays everywhere): as long as that lookup works, the person is never told nothing was found.
+      for (let round = 0; round < 4; round += 1) {
+        const previewRound = round === 3 || fullAttempts >= MAX_FULL_ATTEMPTS;
+        if (previewRound && (previewRoundDone || kind !== "music" || !query || wantsHandoff)) break;
+        if (previewRound) previewRoundDone = true;
         let resolved;
         try {
           resolved = await deps.request("/api/media/resolve", {
             method: "POST",
-            body: { query, kind, country: deps.getCountry ? deps.getCountry() : "", language: lang, audioOnly: audioOnly(), excludeIds: tried.slice(0, 60), handoff: wantsHandoff }
+            body: { query, kind, country: deps.getCountry ? deps.getCountry() : "", language: lang, audioOnly: audioOnly(), excludeIds: tried.slice(0, 60), handoff: wantsHandoff,
+              ...(previewRound ? { onlyProviders: ["apple-itunes-preview"] } : {}) },
+            ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(22000) } : {})
           });
         } catch (error) {
           if (token !== generation) return { ok: false, cancelled: true };
@@ -409,17 +421,21 @@
         if (wantsHandoff && resolved && resolved.handoff) return queueHandoff(resolved.handoff, lang, options, token);
 
         const candidates = ((resolved && resolved.candidates) || []).filter(candidate => !tried.includes(candidate.id));
-        if (!candidates.length) break;
+        if (!candidates.length) { if (previewRound) break; round = 2; continue; }
         for (const candidate of candidates) {
           if (token !== generation) return { ok: false, cancelled: true };
+          if (!sawCandidate) sawCandidate = candidate;
           if (!playable(candidate)) { tried.push(candidate.id); attemptLog.push({ id: candidate.id, provider: candidate.provider, result: "unsupported-on-this-device" }); continue; }
+          // After a few full-length candidates have failed, skip the rest of them and go to the preview rather than keep the person waiting.
+          if (!candidate.isPreview && fullAttempts >= MAX_FULL_ATTEMPTS) continue;
+          if (!candidate.isPreview) fullAttempts += 1;
           attempts += 1;
           tried.push(candidate.id);
           setState("loading", { status: `${candidate.title}${candidate.artist ? ` - ${candidate.artist}` : ""}` });
           current = { candidate, engine: null, query, kind, lang, remembered, queryNamed: Boolean(query) && !remembered };
           const result = candidate.delivery === "youtube"
-            ? await startYoutubeEngine(candidate, token, Number(options.verificationTimeoutMs || 14000))
-            : await startElementEngine(candidate, token, Number(options.verificationTimeoutMs || 15000), Number.isFinite(options.minAdvanceSeconds) ? options.minAdvanceSeconds : 3, () => {
+            ? await startYoutubeEngine(candidate, token, Math.min(Number(options.verificationTimeoutMs || 10000), 10000))
+            : await startElementEngine(candidate, token, candidate.isPreview ? Number(options.verificationTimeoutMs || 15000) : Math.min(Number(options.verificationTimeoutMs || 12000), 12000), Number.isFinite(options.minAdvanceSeconds) ? options.minAdvanceSeconds : 3, () => {
               // The audio is really playing (the `playing` event fired and the clock moved): say so now, not 3 seconds later.
               if (token !== generation || !current || current.candidate !== candidate) return;
               earlyAnnounced = token;
@@ -451,13 +467,16 @@
       }
 
       if (token !== generation) return { ok: false, cancelled: true };
-      const parts = [t("noneFound", { q: query || (kind === "radio" ? "radio" : "that") }, lang)];
-      if (lastResolve && lastResolve.youtube && lastResolve.youtube.configured === false && kind !== "radio") parts.push(t("noYoutube", {}, lang));
+      // A candidate WAS offered but would not start here: say that, never "could not find anything".
+      const parts = sawCandidate
+        ? [t("foundButFailed", { title: sawCandidate.title }, lang)]
+        : [t("noneFound", { q: query || (kind === "radio" ? "radio" : "that") }, lang)];
+      if (!sawCandidate && lastResolve && lastResolve.youtube && lastResolve.youtube.configured === false && kind !== "radio") parts.push(t("noYoutube", {}, lang));
       if (query && kind !== "radio" && !wantsHandoff) parts.push(t("tryYoutube", { q: query }, lang));
       const message = parts.join(" ");
       setState("failed", { status: message });
       announce(message, {});
-      return { ok: false, exhausted: true, message, attempts: attemptLog, tried: lastResolve ? lastResolve.tried : [], reason: lastResolve ? lastResolve.reason : "" };
+      return { ok: false, exhausted: true, candidatesOffered: Boolean(sawCandidate), message, attempts: attemptLog, tried: lastResolve ? lastResolve.tried : [], reason: lastResolve ? lastResolve.reason : "" };
     }
 
     function playingMessage(candidate, lang, remembered) {
@@ -767,7 +786,7 @@
       bar.setAttribute("aria-label", s("region"));
       document.body.classList.toggle("kyro-mp-open", visible);
       title.textContent = snapshot.title || (snapshot.state === "resolving" ? "..." : "");
-      sub.textContent = [snapshot.artist, snapshot.provider].filter(Boolean).join(" · ");
+      sub.textContent = [snapshot.artist, snapshot.provider].filter(Boolean).join(" Â· ");
       badge.hidden = !(snapshot.live || snapshot.isPreview);
       badge.textContent = snapshot.live ? s("live") : s("preview");
       badge.dataset.kind = snapshot.live ? "live" : "preview";
@@ -793,7 +812,7 @@
       if (queued) { open.href = snapshot.handoff.url; open.textContent = s("openYoutube"); }
       stage.hidden = snapshot.state === "queued";
       extra.hidden = snapshot.state === "queued" || snapshot.state === "failed";
-      attribution.textContent = snapshot.attribution ? `${s("source")}: ${snapshot.attribution}${snapshot.license ? ` · ${s("license")}: ${snapshot.license}` : ""}` : "";
+      attribution.textContent = snapshot.attribution ? `${s("source")}: ${snapshot.attribution}${snapshot.license ? ` Â· ${s("license")}: ${snapshot.license}` : ""}` : "";
     }
     return { render, stage, element: bar, hide() { bar.hidden = true; document.body.classList.remove("kyro-mp-open"); stage.textContent = ""; } };
   }

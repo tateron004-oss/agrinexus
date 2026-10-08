@@ -28,6 +28,7 @@ function createMediaState({ filePath = "", now = () => Date.now(), env = process
   const reserve = Math.max(0, Number(env.NEXUS_YOUTUBE_QUOTA_RESERVE ?? 300) || 0);
   let youtube = { day: pacificDay(now()), used: 0, exhausted: false };
   const providers = {};
+  const recent = [];
   let writeTimer = null;
 
   if (filePath) {
@@ -99,6 +100,14 @@ function createMediaState({ filePath = "", now = () => Date.now(), env = process
     },
     health() {
       return JSON.parse(JSON.stringify(providers));
+    },
+    // The last few resolve attempts (kind, outcome, per-provider status and timing). Memory only; no query text and nothing about the person.
+    recordResolve(entry) {
+      recent.unshift({ at: new Date(now()).toISOString(), ...entry });
+      if (recent.length > 30) recent.length = 30;
+    },
+    recentResolves() {
+      return JSON.parse(JSON.stringify(recent));
     },
     flush() {
       if (writeTimer) { clearTimeout(writeTimer); writeTimer = null; }

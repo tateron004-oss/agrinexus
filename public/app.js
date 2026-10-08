@@ -57479,9 +57479,12 @@ async function playNexusProviderNeutralMusic(query, options = {}) {
       verificationTimeoutMs: options.verificationTimeoutMs
     });
     if (played?.ok) return played;
-    if (!played?.resolverUnavailable) {
-      throw new Error(played?.message || `All authoritative music providers failed without verified audible progress for ${normalizedQuery}.`);
+    // Autoplay blocked or superseded by a newer request: that is the person's situation, not a failed lookup; do not start a second player.
+    if (played?.blocked || played?.cancelled) {
+      throw new Error(played?.message || `Music playback for ${normalizedQuery} did not start.`);
     }
+    // Anything else (the resolver unreachable or slow, or every new-chain candidate failing here): fall back to the older preview-first path below,
+    // which the production acceptance probe has verified for months, before ever reporting failure.
   }
   const attempts = [];
   let candidate = await request("/api/music/providers/playback", {

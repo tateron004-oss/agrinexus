@@ -74,7 +74,10 @@ function createContext(overrides = {}) {
     cache: overrides.cache || null,
     userAgent: overrides.userAgent || USER_AGENT,
     timeoutMs: Number(overrides.timeoutMs || 6000),
-    random: overrides.random || Math.random
+    random: overrides.random || Math.random,
+    // Test hooks for the resolver's time budgets (production uses the defaults in resolver.js).
+    providerBudgetMs: overrides.providerBudgetMs || 0,
+    totalBudgetMs: overrides.totalBudgetMs || 0
   };
 }
 

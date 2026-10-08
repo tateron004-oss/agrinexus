@@ -45,7 +45,7 @@ async function until(predicate, label, limit = 3000) {
 const station = (over = {}) => ({ id: "radio-browser:aaa", provider: "radio-browser", providerName: "radio-browser.info (public radio)", playbackClass: "audio", delivery: "stream", url: "https://s.example.test/a.mp3", title: "Citizen Radio", artist: "Kenya", durationSec: null, live: true, isPreview: false, attribution: "Citizen Radio via radio-browser.info", license: "Public radio stream", verified: true, ...over });
 const track = (over = {}) => ({ id: "audius:1", provider: "audius", providerName: "Audius", playbackClass: "audio", delivery: "stream", url: "https://a.example.test/1/stream", title: "Last Last", artist: "Nairobi Beats", durationSec: 215, live: false, isPreview: false, attribution: "Last Last on Audius", license: "Artist upload", verified: true, ...over });
 
-function makeWorld({ responses = [], language = "en", nativeHls = false, activation = false, youtube = null, storage = {} } = {}) {
+function makeWorld({ responses = [], language = "en", nativeHls = false, activation = false, youtube = null, storage = {}, canPlayType = null } = {}) {
   const world = { spoken: [], requests: [], elements: [], opened: [], store: { ...storage }, ui: [], mediaSession: { handlers: {} }, played: [] };
   const queue = [...responses];
   const controller = Player.createKyroMediaPlayer({
@@ -62,6 +62,7 @@ function makeWorld({ responses = [], language = "en", nativeHls = false, activat
     storage: { getItem: key => (key in world.store ? world.store[key] : null), setItem: (key, value) => { world.store[key] = value; }, removeItem: key => { delete world.store[key]; } },
     createMedia: tag => { const el = new FakeElement(tag); world.elements.push(el); return el; },
     nativeHls,
+    canPlayType,
     youtube,
     userActivationActive: () => activation,
     openUrl: url => { world.opened.push(url); return true; },
@@ -165,10 +166,16 @@ test("when every candidate fails the person is told plainly, including that YouT
   const result = await pending;
   assert.equal(result.ok, false);
   assert.equal(result.exhausted, true);
-  assert.match(result.message, /I could not find anything to play for Jambo\./);
-  assert.match(result.message, /YouTube is not set up on this server\./);
+  assert.equal(result.candidatesOffered, true);
+  assert.match(result.message, /^I found Citizen Radio, but it would not start on this device\./, "a candidate was offered, so never 'could not find anything'");
+  assert.doesNotMatch(result.message, /could not find anything/);
   assert.equal(JSON.stringify(world.requests[1].body.excludeIds), JSON.stringify(["radio-browser:one"]));
   assert.equal(world.controller.getState().state, "failed");
+  const nothing = makeWorld({ responses: [emptyResponse(false)] });
+  const none = await nothing.controller.play("Jambo", { kind: "music" });
+  assert.match(none.message, /I could not find anything to play for Jambo\./);
+  assert.match(none.message, /YouTube is not set up on this server\./);
+  assert.equal(none.candidatesOffered, false);
 });
 
 test("the music service being unreachable is reported as such and flagged so the caller can fall back to the older path", async () => {
@@ -473,4 +480,82 @@ test("when nothing can be played the person is also told how to ask for YouTube 
   const swahili = makeWorld({ responses: [emptyResponse(true)], language: "sw" });
   const sw = await swahili.controller.play("Sauti Sol", { kind: "music", lang: "sw" });
   assert.match(sw.message, /Unaweza pia kusema: cheza Sauti Sol kwenye YouTube\.$/);
+});
+
+// Regression: production browser probe on release bc3298f2 ended with "I could not find anything to play". Apple serves its preview as audio/x-m4p, the
+// browser answers canPlayType("audio/x-m4p") with "" although it plays the file, and the player used to discard the preview on that answer.
+const preview = (over = {}) => track({ id: "apple-itunes-preview:1", provider: "apple-itunes-preview", providerName: "Apple iTunes Search API", isPreview: true, durationSec: 30, title: "Sir Duke", artist: "Stevie Wonder", mimeType: "audio/x-m4p", ...over });
+const strictBrowser = (tag, mime) => (tag === "audio" && mime === "audio/x-m4p" ? "" : "maybe");
+
+test("a browser that answers canPlayType with an empty string for Apple's label still plays the preview (the production-probe regression)", async () => {
+  const world = makeWorld({ responses: [okResponse(preview())], canPlayType: strictBrowser });
+  const pending = world.controller.play("Stevie Wonder Sir Duke", { kind: "music" });
+  await until(() => world.elements.length === 1, "the preview element");
+  world.elements[0].startPlayingFor(4);
+  const result = await pending;
+  assert.equal(result.ok, true);
+  assert.equal(result.provider, "apple-itunes-preview");
+  assert.equal(result.playbackClass, "preview");
+  assert.equal(result.telemetry.schema, "nexus.media-playback-evidence.v1");
+  assert.ok(result.telemetry.advancedSeconds >= 3);
+  assert.match(world.spoken[0], /^Playing a 30-second preview of Sir Duke by Stevie Wonder\./);
+});
+
+test("video files the browser cannot play are still skipped by canPlayType, audio never is", async () => {
+  const video = track({ id: "wikimedia-commons:1", provider: "wikimedia-commons", playbackClass: "video", mimeType: "video/webm", title: "Maize" });
+  const world = makeWorld({ responses: [okResponse(video, preview({ mimeType: "audio/mpeg" }))], canPlayType: (tag, mime) => (mime === "video/webm" ? "" : "maybe") });
+  const pending = world.controller.play("maize", { kind: "music" });
+  await until(() => world.elements.length === 1, "an element");
+  assert.equal(world.elements[0].tagName, "audio", "the webm video was skipped, the audio was tried");
+  world.elements[0].startPlayingFor(4);
+  assert.equal((await pending).provider, "apple-itunes-preview");
+});
+
+test("when full-length candidates keep failing the player stops after three and asks for the preview alone, which plays", async () => {
+  const bad = index => track({ id: "audius:bad" + index, url: "https://a.example.test/bad" + index, title: "Bad " + index });
+  const world = makeWorld({ responses: [okResponse(bad(1), bad(2), bad(3), bad(4)), okResponse(preview())] });
+  const pending = world.controller.play("Stevie Wonder Sir Duke", { kind: "music" });
+  for (let index = 1; index <= 3; index += 1) {
+    await until(() => world.elements.length === index, "element " + index);
+    world.elements[index - 1].fail(4);
+  }
+  await until(() => world.elements.length === 4, "the preview element");
+  assert.equal(world.elements[3].src.includes("bad4"), false, "the 4th full-length candidate was skipped");
+  const bodies = world.requests.filter(request => request.url === "/api/media/resolve").map(request => request.body);
+  assert.equal(JSON.stringify(bodies[bodies.length - 1].onlyProviders), JSON.stringify(["apple-itunes-preview"]));
+  world.elements[3].startPlayingFor(4);
+  const result = await pending;
+  assert.equal(result.provider, "apple-itunes-preview");
+  assert.equal(result.ok, true);
+});
+
+test("the chain finding nothing new still ends with a preview-only request before giving up", async () => {
+  const world = makeWorld({ responses: [emptyResponse(true), okResponse(preview())] });
+  const pending = world.controller.play("Stevie Wonder Sir Duke", { kind: "music" });
+  await until(() => world.elements.length === 1, "the preview element");
+  world.elements[0].startPlayingFor(4);
+  assert.equal((await pending).provider, "apple-itunes-preview");
+  const bodies = world.requests.map(request => request.body);
+  assert.equal(JSON.stringify(bodies[1].onlyProviders), JSON.stringify(["apple-itunes-preview"]));
+});
+
+test("a request for radio or video never falls back to a song preview", async () => {
+  const world = makeWorld({ responses: [emptyResponse(false)] });
+  const result = await world.controller.play("Citizen", { kind: "radio" });
+  assert.equal(result.ok, false);
+  assert.equal(world.requests.length, 1);
+});
+
+test("when a candidate was offered but would not start, the message says so (never 'could not find anything'), in both languages", async () => {
+  const run = async language => {
+    const world = makeWorld({ responses: [okResponse(track({ id: "audius:x", title: "Last Last" })), emptyResponse(false)], language });
+    const pending = world.controller.play("Last Last", { kind: "music", lang: language });
+    await until(() => world.elements.length === 1, "element");
+    world.elements[0].fail(4);
+    return pending;
+  };
+  const en = await run("en");
+  assert.match(en.message, /^I found Last Last, but it would not start on this device\./);
+  const sw = await run("sw");
+  assert.match(sw.message, /^Nimepata Last Last, lakini haikuanza kwenye simu hii\./);
 });
