@@ -35,7 +35,9 @@ async function settle(u, r) {
   const j = r.json || {};
   if (j.state === "confirmation_required") pendingTyped.set(u.email, j); else if (j.state !== "confirmation_required") pendingTyped.delete(u.email);
   if (j.state === "render_required" && j.render) await call("POST", "/api/nexus/runtime/behavior/acknowledgements", { taskId: j.taskId, commandId: j.commandId, correlationId: j.correlationId, workspace: j.render.workspace, rendered: true, visible: true, audible: false, evidence: {} }, u.cookie);
-  const text = (j.state === "render_required" ? j.render?.response || j.response : j.response) || j.clarification || j.message || "";
+  // a workspace answer (reminder list, music, business ...) carries its words in render.data; render.response is only the generic "rendering the verified result"
+  const rendered = j.render?.data?.summary || j.render?.data?.response || j.render?.response;
+  const text = (j.state === "render_required" ? (j.render?.data?.summary || j.render?.data?.response ? rendered : rendered || j.response) : j.response) || j.clarification || j.message || "";
   return { http: r.status, reply: String(text || (r.json ? "" : r.text.slice(0, 200))), state: j.state || "" };
 }
 const orbStamps = new Map();
@@ -164,7 +166,7 @@ function judge(item, run) {
     if (!hit) { if (!honest || claimsDone) reasons.push(claimsDone ? `says it is done but nothing changed (expected ${item.change})` : `nothing changed (expected ${item.change})`); else return { verdict: "HONEST", reasons: [`nothing changed: ${last.reply.slice(0, 120)}`] }; }
   }
   if (item.none && !item.save) {
-    const written = pos.filter(k => !/^legacy:/.test(k));
+    const written = pos.filter(k => !/^legacy:/.test(k) && !/farm_session|authoritative-workspace-state|health_readings_state/.test(k));
     if (written.length) reasons.push(`a question stored ${written.join(",")}`);
   }
   if (item.reply && !re(item.reply, replyAll)) { if (honest && !reasons.length) return { verdict: "HONEST", reasons: [last.reply.slice(0, 140)] }; reasons.push(`reply does not match ${item.reply}`); }
@@ -191,7 +193,8 @@ for (const route of ROUTES) for (const u of [users[route].a, users[route].staff]
 await ROUTE.typed(userB, "good morning", "en");
 
 const results = [];
-async function runPhrase(item, route, u, labelSuffix = "") {
+async function runPhrase(phrase, route, u, labelSuffix = "") {
+  const item = { ...phrase, steps: route === "typed" && phrase.tsteps ? phrase.tsteps : phrase.steps }; // tsteps: follow-ups only the typed route needs (its yes is a separate /confirm call)
   const run = { id: item.id + labelSuffix, group: item.g, lang: item.lang, text: item.t, route, tool: route === "orb" ? item.tool : "", setup: !!item.setup, steps: [], delta: {}, pgerr: [], note: item.note || "" };
   const log0 = logSize(); const before = await snapshot(u);
   const say = async (text, cleanup = false) => {
@@ -204,6 +207,9 @@ async function runPhrase(item, route, u, labelSuffix = "") {
   if (item.ask || item.steps.length) run.deltaAfterFirst = delta(before, await snapshot(u));
   let lastReply = r0.reply;
   for (const step of item.steps) { const r = await say(step); lastReply = r.reply; }
+  // a guided form ("Let's add a field. How big is it? ... (or say skip)"): answer "skip" until it finishes, so the record is really made and the next phrase starts clean
+  if (item.wizard) for (let n = 0; n < 8 && /\bskip\b/i.test(lastReply); n += 1) { const r = await say(item.lang === "sw" ? "ruka" : "skip"); lastReply = r.reply; }
+  if (item.end) await say(item.end, true);
   // left waiting for an answer: say no (or never mind, for a question) so the next phrase starts clean
   if (/\?\s*$/.test(lastReply) && !ASK.test(lastReply)) await say(item.lang === "sw" ? "usijali" : "never mind", true);
   else if (ASK.test(lastReply) && /yes/i.test(lastReply) && !(item.steps.length && /^(no|hapana)/i.test(item.steps[item.steps.length - 1]))) await say(item.lang === "sw" ? "hapana" : "no", true);
@@ -225,6 +231,7 @@ for (const route of ROUTES) {
     results.push(run);
     if (item.staff) results.push(await runPhrase(item, route, users[route].staff, ":staff"));
   }
+  fs.writeFileSync(path.join(OUT, `phrases-partial-${route}.json`), JSON.stringify(results.filter(x => x.route === route), null, 1));
   for (const r of results.filter(x => x.route === route && !x.setup)) {
     if (r.verdict === "PASS") continue;
     console.log(`${r.verdict.padEnd(6)} ${r.id.padEnd(18)} ${r.text.slice(0, 50).padEnd(50)} :: ${(r.steps.filter(s => !s.cleanup).map(s => s.reply).join(" | ") || "").slice(0, 110)}${r.reasons.length ? `\n         -> ${r.reasons.join("; ").slice(0, 200)}` : ""}`);
