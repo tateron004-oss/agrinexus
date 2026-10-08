@@ -41,7 +41,7 @@ function excludes(source, token, label) {
 [
   "body.user-mode .nexus-workflow-modal-backdrop",
   "position: fixed",
-  "z-index: 80",
+  "z-index: 130",
   "backdrop-filter: blur(18px)",
   "max-height: calc(100vh",
   "overscroll-behavior: contain",
