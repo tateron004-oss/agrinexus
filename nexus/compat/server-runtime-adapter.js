@@ -29,7 +29,7 @@ function safeDatabaseIdentifier(value) {
 }
 
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
-  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth, isRestrictedFrom = () => false, memoryContactStore = null } = {}) {
+  createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth, isRestrictedFrom = () => false, memoryContactStore = null, urgentFallback = null } = {}) {
   let runtimePromise = null;
   // The GPS's place search, reverse lookup and routing (see navigation/service.js). Position is never logged or stored.
   const navigation = createNavigationService({ env });
@@ -575,9 +575,20 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         if (!active.behavior) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
         // The device's own time zone, when the app sends one and it is a real IANA zone, so "7am" means 7am where the person is.
         const turnContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
-        const result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
-          conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
-          locale: request.locale, text: body.text }, context: turnContext });
+        let result;
+        try {
+          result = await active.behavior.turn({ input: { correlationId: request.context.requestId,
+            conversationId: body.conversationId, taskId: body.taskId, channel: request.channel,
+            locale: request.locale, text: body.text }, context: turnContext });
+        } catch (error) {
+          // Found by the phrase sweep: "I have chest pain" is answered by a tool provider; when that call fails the person got an HTTP 503 and no words at all. The urgent answers that need no provider (the same sentences the
+          // older route gives) are said instead; anything that is not urgent keeps its error exactly as before.
+          const providerDown = error?.code === "provider_request_failed" || Number(error?.status) === 503;
+          const words = providerDown && typeof urgentFallback === "function" ? await Promise.resolve(urgentFallback(body.text, user)).catch(() => null) : null;
+          if (!words) throw error;
+          result = { schema: "nexus.behavior-turn.v1", authoritative: true, legacyFallbackUsed: false, correlationId: request.context.requestId, conversationId: body.conversationId || null, taskId: null, application: "conversation", state: "completed", completed: true,
+            response: String(words), outcome: { verified: false, reason: "urgent_answer_without_provider", modelAnswered: false }, plan: { goal: String(body.text || ""), application: "conversation", riskTier: "critical", clarification: null, steps: [], response: String(words) }, receipts: [], render: null };
+        }
         send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/intake" && req.method === "POST") {
         // The completion step for a voice-driven guided intake (public/kyro-voice-intake.js +

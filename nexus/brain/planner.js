@@ -21,6 +21,7 @@ const { validTimeZone, DEFAULT_TIME_ZONE, localDay } = require("../brief/compose
 const { personalTurn } = require("../personal/items.js");
 const { hasReminderTimePhrase, resolveReminderTime, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { repeatReminderTurn } = require("../reminders/repeat-service.js");
+const { completeAmbiguousHour } = require("../reminders/pending-hour.js");
 const { assessBloodPressure, invalidReadingReply } = require("../../server/providers/bloodPressure.js");
 const { resolveGlucose, toMgdl, invalidGlucoseReply, ambiguousUnitReply } = require("../../server/providers/bloodGlucose.js");
 const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js");
@@ -259,6 +260,9 @@ class OpenEndedPlanner {
     const spoken = normaliseSpoken(command?.text, { language: command?.locale });
     const saidText = spoken.clean;
     if (command && spoken.text && spoken.text !== String(command.text || "")) command = { ...command, text: spoken.text, spokenText: saidText };
+    // "9 am" answering "At 9 in the morning or in the evening?": joined to the reminder it answers (nexus/reminders/pending-hour.js), so the typed and spoken routes can finish what they asked.
+    const hourCompleted = completeAmbiguousHour(command?.text, conversationHistory);
+    if (hourCompleted) command = { ...command, text: hourCompleted };
     const safetyTexts = [...new Set([saidText, command?.text].filter(Boolean))];
     // Emergencies and crisis first, before anything else: then a person's check-ins and trusted circle (see companion/). Nothing else may
     // answer "I need help now" or "I want to die" before this does.

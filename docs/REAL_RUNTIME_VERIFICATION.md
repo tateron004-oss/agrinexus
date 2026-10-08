@@ -136,6 +136,74 @@ No difference between PGlite and PostgreSQL explains any of the seven fixes: eac
 3. **Native `nexus_automation_reminder` asks for confirmation, the catch-all and typed planner create at once: NOT CHANGED, it is deliberate.** Reproduced (`node reminder-paths.mjs`): the native tool answers `confirmation-required` and stores nothing; the catch-all tool and the typed planner say "Done / Okay. I will remind you ..." and store a push reminder; cancel asks first on every path. The evidence that the gate is on purpose: `test/nexus/voice-reminders-and-greeting.test.js` ("the tool creates a push reminder only after confirmation ... the confirmation gate for unconfirmed creation is unchanged"), `archive/qa-scripts/nexus-openai-native-tool-parity-qa.js` (asserts `confirmation-required`, then `local-reminder-created` with a receipt after `confirmed: true`), and the tool is classified `confirmation-gated-automation` in its definition. `reminders.schedule` itself is not `confirmationRequired` in `nexus/tools/canonical-provider-definitions.js`. **Owner decision:** keep the gate (a spoken sentence may be misheard, and the model asks "shall I set it?") or make a clear self-reminder (a task and a time) create at once on the native tool too, as the other two paths do. If the second, it is a small change in `nexusOpenAiNativeCreateLocalReminder`/the reminder branch plus updating that one test and the archived script; cancel stays gated. The unconfirmed answer ("... in Nexus memory ... No notification ... has been scheduled") also does not mention that a confirmed reminder is a real push, which may confuse.
 4. **Language mix-up: FIXED (follow-up change).** Reproduced on the real server: a Kiswahili account typing "my baby has a fever and is not feeding", "I am pregnant my blood pressure is 160 over 110", "my child is fitting and his eyes rolled back", "I have chest pain and I am sweating" or "my child drank pesticide" with `language: "en"` to `/api/agent/command` got the Kiswahili care answer ("Mtoto mwenye dalili hizi anahitaji mhudumu wa afya ..."). Cause: `careSafetyReply` handed the safety reader only the account language, and the reader (`nexus/companion/safety.js`) treated "no Kiswahili word found" as "use that language"; the same shortcut was in `swahiliCrisisReply` and `secretNotSavedReply`. New single rule, `nexus/i18n/reply-language.js`: the words typed win; the request's language, then the account language, only decide when the words do not. Applied to the older command route, the voice tool and the typed planner route (all three now agree, with or without a `language` field, in both directions; `node language-mix.mjs` shows 0 safety mismatches). Kiswahili wording is untouched. An older test pinned the opposite (`test/nexus/swahili.test.js`: "an English one in a Swahili app is answered in Swahili too"); it was changed to the new rule, which is a decision the owner should confirm. Tests: `test/nexus/reply-language-words-win.test.js`. Still open, not safety: the plain "I couldn't do that one just now" reply to a Kiswahili sentence the system cannot handle ("Nimeungua maharage") comes out in English on the voice tool and command route even for a Kiswahili account with `language: "sw"`.
 
+## The phrase sweep (`phrases.mjs`): every phrase of "What you can say"
+
+The orb bookkeeping gap (the browser voice session registered ten tools and none saved anything everyday) was found only by calling the real tools. `phrases.mjs` does that for **every phrase of section 14 of the capabilities list**, English and Kiswahili (the list is in `phrase-list.mjs`: 233 phrases, each with what a correct answer looks like), on the three routes a person can reach it by:
+
+| Route | Call |
+|---|---|
+| orb | `POST /api/voice/realtime/tool` with the tool the voice instructions send that kind of sentence to (`nexus_everyday_records` for everyday saving; `nexus_weather`, `nexus_health_preparation`, `nexus_workforce_learning`, `nexus_communications`, `nexus_agriculture`, `nexus_marketplace_logistics`, `nexus_live_knowledge`, `nexus_maps_route`). Where a model could reasonably pick a nearer tool (health worker and farm phrases), the phrase is also sent through that tool (`:via-...`). Music and playback controls have no orb tool at all (the browser registers ten), so they are listed as NOORB, not judged. |
+| typed | `POST /api/nexus/runtime/behavior/turn` (carrying the conversation id like the app does), with `/confirm` and `/acknowledgements` for a yes |
+| cmd | `POST /api/agent/command` with `conversational: true` |
+
+Three dedicated test accounts per route (a Standard User, an Admin test account for the staff-only phrases, and one shared second account that only reads back). For each phrase and route it records the reply, what changed in the database (`nexus_memory_items` by purpose and collection, in-place edits too, `nexus_notifications`, `nexus_schedules`, `nexus_records`, `nexus_documents`, the legacy state document) and any swallowed SQL error in `app.log`, then judges it: **PASS** (right answer, stored correctly), **HONEST** (a clear "I can't / nothing saved", or a question for the missing detail), **WRONG** (irrelevant answer, wrong thing stored, wrong language, "done" with no row), **CRASH** (HTTP 5xx or a swallowed SQL error). Two more labels keep the table honest: **MODEL** (only a real AI model can answer; the stand-in model replied) and **PROVIDER** (needs a tool provider that cannot be reached from this harness). Multi-step phrases get their yes (or "skip" for the guided forms) as a follow-up. Finally the second account asks 20 read-backs on each route and must see nothing of the first account's data.
+
+```
+cd scripts/dev/real-runtime
+npm install
+node harness.mjs &          # or any RR_PORT / RR_OUT of your own
+node phrases.mjs            # about 45 minutes; --route orb,typed,cmd  --only <regex on phrase id>  --group <regex>
+# or: RR_PHRASES=1 node run.mjs
+```
+
+It prints the table, the not-PASS lines and writes `phrases-result.json` (plus `phrases-partial-<route>.json` after each route) to `RR_OUT`. The orb limit of 90 tool calls a minute per person is respected (the script waits), the exit code is 1 if anything is WRONG or CRASH.
+
+### What the first run found, and what was fixed
+
+First run on `54697f9e` (main at the time), the last run on the commit that carries the fixes below (orb 264 results with 20 NOORB, typed 235, cmd 235):
+
+| | before | after |
+|---|---|---|
+| orb PASS / HONEST / WRONG / CRASH | 157 / 40 / 19 / 0 | 187 / 53 / 4 / 0 |
+| typed PASS / HONEST / MODEL / WRONG / CRASH | 141 / 15 / 54 / 19 / 7 | 163 / 11 / 54 / 4 / 1 (+2 PROVIDER) |
+| cmd PASS / HONEST / WRONG / CRASH | 134 / 65 / 37 / 0 | 153 / 70 / 12 / 0 |
+
+(The plus-254 contact fix and the typed "9 am" fix were added after that last full run and were checked by a targeted re-run: "Save Otieno's number as plus 254 712 345 678" now saves on all three routes.) (The "before" columns were judged with an earlier, cruder version of the judge, so some of the change is the judge learning; every row below was checked by hand.) No swallowed SQL error appeared in any run, and the second account saw none of the first account's data on any route.
+
+Found and fixed (tests in `test/nexus/phrase-sweep-fixes.test.js`):
+
+| Phrase | Route | What the person got | Cause | Fix |
+|---|---|---|---|---|
+| any Kiswahili phrase answered by the older route ("Nikumbushe baada ya nusu saa kuangalia jiko") | orb, cmd | "Got it." in front and "You can ask me to contact the buyer, check the field ..." behind a Kiswahili answer | `humanizeAgentResult` adds both, in English, to every reply | skipped for Kiswahili |
+| "Hali ya hewa Kisumu ikoje?" | orb weather tool | "Which location's weather would you like?" in English | only English lead-ins ("in", "for") were looked for | Kiswahili place read |
+| "Play Burna Boy Last Last" | typed | first aid for a burn | "burna" starts like "burn", "boy" reads as a child | a request to play is never a sign |
+| "Visit Mary: temperature 38.5, cough" | cmd, orb health tool | "Which city or country should I check for weather?" / recorded as the speaker's own reading | the word temperature alone | a body temperature and a patient note are not weather or a reading (also in the tool hint the model is given) |
+| "Antenatal visit Mary: blood pressure fine, baby moving" | orb, cmd | the emergency script | "blood" next to "baby" | "blood pressure/sugar/test" are not bleeding |
+| the same phrase, which the pregnancy reply itself suggests | typed, orb | not recognised | the visit reader knew only "visit" | antenatal, postnatal, home and clinic visit |
+| "She has heavy bleeding" | orb health tool, cmd | "I opened Health and Chronic Care" / "couldn't do that" | not in the older urgent reader | added (never for an animal) |
+| "My child is fitting", "She has heavy bleeding" | orb health and farm tools | "I opened Health and Chronic Care" | those tools never asked the danger-sign readers | they do now |
+| "I have chest pain", "She has heavy bleeding" | typed | HTTP 503, no words | the answer is a tool-provider call and the provider was down | the urgent words that need no provider are said instead |
+| "I ran 5 km in 30 minutes", "I slept 7 hours", "I drank 2 litres of water", "My goal is 4 workouts a week", "Undo my last workout" | orb (health tool, where the voice instructions send them) | "I opened Health and Chronic Care", nothing logged | the typed route logs all of them in the wellness log; the health tool knew only "log a 30 minute run" | handed to the planner |
+| "I took my metformin", "Referral letter ...", other health-worker phrases | orb health tool | the same generic sentence | nothing in the tool understood them | the planner is asked before that generic sentence |
+| "Post for sale: 500 kg maize at 40 per kg" | orb marketplace tool | "nexus-marketplace-bridge marketplace.listing requires explicit confirmed: true before controlled testing can run" | the provider's own sentence was passed on | "Say yes to do it, or no to cancel" |
+| "Weka tangazo: ninauza kilo 500 za mahindi ..." | orb marketplace tool | eight sample listings | only English verbs create a listing | Kiswahili verbs |
+| "Text John I am late", "Call Mama" with texting switched off | orb communications tool | "twilio sms.send is disabled. Enable NEXUS_SMS_ENABLED=true for controlled testing." | the provider's own sentence | "Sending texts is not switched on for this account yet, so nothing was sent or changed." |
+| "Cheza muziki kwenye YouTube kuanzia sasa" | typed | HTTP 502 | "sasa" (from "kuanzia sasa") was cut as politeness, so the preference was read as a song title | kept |
+| "Remind me tomorrow at 9 to pay the school fees", then "9 am" | typed | the answer never finished the reminder | no state for the question | the answer is joined to the reminder it answers |
+| "Save Otieno's number as plus 254 712 345 678", "Connect me to plus 254 ..." | orb | asked for the name again | "plus 254" (how Kyro itself reads a number back) was understood by no reader | "plus" before a country code is the + sign |
+
+Found and not fixed:
+
+- **Kiswahili sentences that need a fluent speaker**: the planner's "Saved Otieno: +254712345678 ..." (all routes), "I heard: match me to a role ..." (orb, cmd), "I can save this to your own health records ..." (typed), the new "not switched on" sentence is English only, the typed workspace placeholder "Nexus completed the governed execution and is rendering the verified result." (shown for every workspace answer; the real words are in `render.data`).
+- **A bare "Yes", "No", "Cancel", "Acha", "Ndiyo" with nothing waiting** is answered "Got it. I couldn't do that one just now, and nothing was saved. Try saying it another way, or name a module and action, like 'AgriTrade prepare buyer update'" (orb, cmd): honest, but a better sentence ("nothing is waiting for a yes") needs wording in both languages.
+- **The older command route and music**: "Resume" answers "Let us take one manageable step ...", "Endelea" answers "Done. Prepared gap review for Field Operations Agent." (a false "done"), "Watch drip irrigation on YouTube" opens Agriculture Help, "Play music in YouTube from now on" answers "Live Knowledge is not configured yet". The typed route plays and controls music through the media tool; the older route and the phone line have no media controls at all. Product decision.
+- **"Find a clinic near Kisumu" / "Find a pharmacy near me"** (orb health tool, cmd): "I opened Health and Chronic Care ..." and a pharmacy list from Stockton and Sacramento (a starter catalogue, not Kenyan places). Data decision.
+- **Typed "Add a donor ..." / "Create an invoice ..." for an account with no business workspace** asks "I prepared the request and need your confirmation before the next governed action." and only after the yes says there is no workspace (HTTP 422). The workspace question should come first.
+- **Typed "What reminders do I have?"** speaks only "You have 2 reminders."; the list is in the workspace card (`render.data.reminders`), not in the words.
+- **Older route (`cmd`) results that depend on the model**: with the stand-in model the older route repeats the tool the server suggests, so "Text John", "Call Mama", "Save Amina's email", "Report: the borehole ..." show what the suggested tool says, not what a real model would choose. Not judged further. The older route's reminder confirmation ("I can prepare that reminder locally, but I need your explicit confirmation") is the known inconsistency already open.
+- **"Play radio Citizen"** (typed) resolves to "The People's Radio - A Star Citizen Community Radio Station" from the live radio directory (the sweep reached the internet for this, read-only). A curated list of Kenyan stations would fix it; not done.
+- **Not checked here**: anything that needs a real model (54 typed MODEL results: open-ended planning, weather phrasing, jobs, lessons, health-worker questions the planner does not answer by itself), a run with a real Twilio account, which tool a live Realtime model really picks for each sentence, and the audio.
+
 ## Still only verifiable on staging with real services
 
 Real OpenAI behaviour (open-ended planning, tool choice in the Realtime session, answer quality, latency and error handling); the worker claiming `nexus_notifications` and `nexus_schedules` rows and a real push arriving on a real device with VAPID keys; real Twilio send and call (every journey above stops at "Say yes"; the confirmed path was never exercised); S3 object storage and the two N/A probes; Chromium parts of the black box; PostgreSQL concurrency, RLS and failover; TLS, compression and the security-header WARNs; the Realtime voice session itself.
