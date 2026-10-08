@@ -7187,6 +7187,11 @@ const workspaceCopy = {
     title: "Admin",
     description: "Review subscribers, system readiness, evidence, and operator controls."
   },
+  // Case Review used to be missing here, so the header kept saying "Dashboard" while the Case Review page was open.
+  cases: {
+    title: "Case Review",
+    description: "Review prepared local records. Local review only, no live provider action."
+  },
   profile: {
     title: "Profile",
     description: "Manage user settings, accessibility preferences, language, and saved progress."
