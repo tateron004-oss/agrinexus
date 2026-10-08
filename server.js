@@ -3210,7 +3210,7 @@ const ownPendingAction = (db, user) => {
 const ACTIVE_AGENT_CONTEXT_KEYS = ["lastReasoning", "activeVoiceMission", "activeGuidedMission", "activeOutcomeLoop", "lastConversationalModeOrchestrator", "lastAutonomousBrainAppliedTo", "genesisConversation",
   "nexusSessionContext", "activeIntake", "activeClarification", "activeSimpleTurn", "activeJarvisSession", "lastReasoningLanguageProduction",
   // a call waiting for a number, and the contact choices it offered: another person's reply must not complete it
-  "pendingContactCall"];
+  "pendingContactCall", "pendingContactChoice"];
 function switchAgentContextTo(db, user) {
   const memory = db?.profile?.agentMemory;
   const email = String(user?.email || "").trim().toLowerCase();
@@ -10130,7 +10130,52 @@ function ensurePhoneContactBook(db) {
   ensureAiProfile(db.profile);
   db.profile.phoneContacts = db.profile.phoneContacts || [];
   db.profile.agentMemory.pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
+  db.profile.agentMemory.pendingContactChoice = db.profile.agentMemory.pendingContactChoice || null;
   return db.profile.phoneContacts;
+}
+
+// ---- the person's own saved contacts in the planner's store ----
+// "Save John's number as +254..." said to the planner (the full assistant) lands in the memory store (nexus/memory/contacts.js), while the older command route and the phone line kept their
+// own phone book (db.profile.phoneContacts). So a name saved on one side was "unknown" on the other: "text John" asked for his number again. A name is now looked up in BOTH, and a number saved
+// on the older route is written to both. Only ever the signed-in person's own rows; a guest has none. When the memory store cannot be reached the older phone book alone is used, as before.
+let personalContactBookDownUntil = 0;
+async function personalContactBook(user) {
+  if (!user || user.guest === true || Date.now() < personalContactBookDownUntil) return null;
+  let timer = null;
+  try {
+    const authUser = await authoritativeRuntimeUser(user);
+    return await Promise.race([
+      authoritativeNexusRuntime.contactBookFor({ user: authUser }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("contact store timed out")), 4000); })
+    ]);
+  } catch {
+    personalContactBookDownUntil = Date.now() + 10000;
+    return null;
+  } finally { if (timer) clearTimeout(timer); }
+}
+// [{ id, name, phone, savedAt }] newest first; only contacts that have a usable phone number
+async function personalContactsFor(user) {
+  const book = await personalContactBook(user);
+  if (!book) return [];
+  try {
+    return (await book.list()).map(item => ({ id: item.id, name: item.name, phone: normalizePhoneNumber(item.phone), savedAt: item.savedAt || "" })).filter(item => item.name && item.phone);
+  } catch { return []; }
+}
+async function savePersonalContact(user, { name, phone }) {
+  const book = await personalContactBook(user);
+  if (!book) return false;
+  try { const saved = await book.save({ name, phone }); return Boolean(saved && !saved.full); } catch { return false; }
+}
+// The words a staged text or call is said in: Kiswahili when the caller's language is Kiswahili or the request itself is plainly Kiswahili.
+function commsLanguage(command = "", options = {}) {
+  if (canonicalVoiceLanguage(options.targetLanguage || options.language || "") === "sw") return "sw";
+  return /\b(mpigie|piga\s+simu|tuma\s+ujumbe|mtumie|nitumie|mwambie|niambie|hifadhi\s+namba|weka\s+namba|namba\s+ya|nambari\s+ya)\b/i.test(String(command || "")) ? "sw" : "en";
+}
+// A call asked for outright by number ("call +254712345678", "mpigie 0712345678") is a new request: it is not the number an earlier "call John" was waiting for.
+const isFreshNumberCall = text => /^\s*(?:(?:please|kyro|nexus|tafadhali)[, ]+)*(?:call|phone|dial|ring|mpigie|piga\s+simu)\s+(?:on\s+|at\s+|to\s+|kwa\s+)?[+\d(]/i.test(String(text || ""));
+// "1. John, +254 733 123 456 2. John Otieno, +254 722 000 111": the choices of a name that fits more than one saved person, each with its number read back.
+function contactChoiceList(items = []) {
+  return items.map((item, index) => `${index + 1}. ${item.displayName}, ${frontDoor.spokenPhone(item.e164Phone || item.phone || "")}`).join(" ");
 }
 
 function contactDisplayName(value = "") {
@@ -10261,13 +10306,33 @@ function phoneContactsForViewer(db, user) {
   const viewer = memoryViewerEmail(user);
   return ensurePhoneContactBook(db).filter(item => !recordOwnedByAnotherPerson(item, viewer));
 }
-function findPhoneContact(db, name = "", user = null) {
-  const contacts = phoneContactsForViewer(db, user);
+// The older phone book and the planner's contacts as one list (`personal` is personalContactsFor(user), read by the caller), the same person saved in both counted once. When the same name is
+// in both with two different numbers, the one saved last is the person's latest word on it and is the one kept.
+function savedContactsForViewer(db, user, personal = []) {
+  const book = phoneContactsForViewer(db, user).map(item => ({ ...item, savedAt: item.updatedAt || item.createdAt || "", origin: "phoneContacts" }));
+  const planner = (personal || []).map(item => ({ id: item.id, name: item.name, lookup: contactLookupKey(item.name), phone: item.phone, relationship: "saved contact", savedAt: item.savedAt || "", origin: "personalContacts" })).filter(item => item.lookup);
+  // (a name that is in the older phone book twice is left as it is: that is for the caller to ask about)
+  let kept = book.slice();
+  for (const item of planner) {
+    const same = kept.filter(other => other.lookup === item.lookup && other.origin === "phoneContacts");
+    if (!same.length) { kept.push(item); continue; }
+    if (same.some(other => normalizePhoneNumber(other.phone) === item.phone)) continue;
+    // two different numbers under one name, one in each place: the one saved last wins
+    if (same.every(other => String(item.savedAt) > String(other.savedAt))) kept = [...kept.filter(other => !same.includes(other)), item];
+  }
+  return kept;
+}
+// One saved person for a spoken name, or the several who fit it: an exact name first, then a whole-word partial match ("Amina" against "Amina Wanjiru" and "Amina Otieno").
+function findPhoneContacts(db, name = "", user = null, personal = []) {
+  const contacts = savedContactsForViewer(db, user, personal);
   const lookup = contactLookupKey(name);
-  if (!lookup) return null;
-  return contacts.find(item => item.lookup === lookup)
-    || contacts.find(item => contactLookupMatches(item.lookup, lookup))
-    || null;
+  if (!lookup) return [];
+  const exact = contacts.filter(item => item.lookup === lookup);
+  if (exact.length) return exact;
+  return contacts.filter(item => contactLookupMatches(item.lookup, lookup));
+}
+function findPhoneContact(db, name = "", user = null, personal = []) {
+  return findPhoneContacts(db, name, user, personal)[0] || null;
 }
 
 const CALL_PROVIDER_REGISTRY = Object.freeze({
@@ -10513,7 +10578,8 @@ function callableContactRecord(record = {}, source = "platform") {
     phone,
     relationship: record.relationship || record.type || source,
     source,
-    handle: record.telegramHandle || record.telegram || ""
+    handle: record.telegramHandle || record.telegram || "",
+    savedAt: record.updatedAt || record.savedAt || record.createdAt || ""
   };
 }
 
@@ -10522,14 +10588,16 @@ function callableContactRecord(record = {}, source = "platform") {
 //  - the shared directory of clinics, courses and desks (what was added by another person is not included);
 //  - the CRM leads, for an Admin only;
 //  - their own health intake and job application records, never anyone else's. A patient's or an applicant's number is not a contact for anybody else.
-function callableSourcesForViewer(db, user) {
+//  - their own contacts saved with the planner (`personal`, read by the caller from the memory store: personalContactsFor(user)), which is the same person's phone book kept in a second place.
+function callableSourcesForViewer(db, user, personal = []) {
   const viewer = memoryViewerEmail(user);
   if (!viewer) return [];
   const admin = user?.role === "Admin" || (!user && profileOwnerStamping.getStore()?.role === "Admin");
   const ownedBy = item => ownerOfRecord(item).includes(viewer);
   const profile = db.profile;
   return [
-    ...phoneContactsForViewer(db, user).map(item => callableContactRecord(item, "phoneContacts")),
+    // the older phone book and the planner's contacts as one list: the same person saved in both is one, and a name saved twice with two numbers is the latest one
+    ...savedContactsForViewer(db, user, personal).map(item => callableContactRecord(item, item.origin || "phoneContacts")),
     ...(profile.buyerContacts || []).filter(item => admin || !recordOwnedByAnotherPerson(item, viewer)).map(item => callableContactRecord(item, "buyerContacts")),
     ...(profile.healthIntakes || []).filter(ownedBy).map(item => callableContactRecord(item, "healthIntakes")),
     ...(profile.applications || []).filter(ownedBy).map(item => callableContactRecord(item, "workforceApplications")),
@@ -10538,13 +10606,15 @@ function callableSourcesForViewer(db, user) {
   ];
 }
 
-function callContactCandidates(db, target = {}, user = null) {
+function callContactCandidates(db, target = {}, user = null, personal = []) {
   ensurePhoneContactBook(db);
-  const records = callableSourcesForViewer(db, user).filter(item => item.name || item.phone || item.handle);
+  const records = callableSourcesForViewer(db, user, personal).filter(item => item.name || item.phone || item.handle);
   const lookup = contactLookupKey(target.displayName || target.rawName || "");
   if (!lookup) return [];
-  return records
-    .filter(item => contactLookupMatches(item.lookup, lookup) || normalizeSpeechForIntent(item.relationship).includes(lookup))
+  const matched = records.filter(item => contactLookupMatches(item.lookup, lookup) || normalizeSpeechForIntent(item.relationship).includes(lookup));
+  // the name said in full is that person ("Sam" is Sam, not also Sam Otieno); only a partial name that fits several people is asked about
+  const exact = matched.filter(item => item.lookup === lookup);
+  return (exact.length ? exact : matched)
     .map(item => ({
       id: item.id,
       displayName: item.name || target.displayName,
@@ -10556,11 +10626,11 @@ function callContactCandidates(db, target = {}, user = null) {
     }));
 }
 
-function callIntentResolution(db, parsed = {}, user = null) {
+function callIntentResolution(db, parsed = {}, user = null, personal = []) {
   const target = parsed.target || null;
   if (!target) return { status: "missing-target", matches: [] };
   if (target.type === "number" && target.e164Phone) return { status: "resolved", matches: [{ ...target, source: "direct-input" }] };
-  const matches = callContactCandidates(db, target, user);
+  const matches = callContactCandidates(db, target, user, personal);
   if (target.type === "role") {
     const callable = matches.find(item => item.e164Phone || item.handle);
     if (!callable && !["provider", "buyer"].includes(target.displayName)) return { status: "missing-number", matches };
@@ -10586,38 +10656,119 @@ function callIntentResolution(db, parsed = {}, user = null) {
   return { status: "missing-number", matches: [] };
 }
 
+// What a staged text or call accepts as its "yes" (the English list is what the confirmation gate has always shown), and the Kiswahili "yes" it also accepts whatever language it was staged in.
+// Nothing vaguer is enough to send a message or place a call ("ok" and "sawa" are not).
+const COMMS_ALLOWED_CONFIRMATIONS = ["yes", "confirm", "do it", "send it"];
+const COMMS_KISWAHILI_CONFIRMATIONS = ["ndiyo", "ndio", "naam", "thibitisha", "fanya hivyo"];
+
+// A name that fits more than one saved person is asked about, with each number read back; the answer ("the second one", "John Otieno") picks one. Kept with the staging account only, for a few minutes.
+const CONTACT_CHOICE_MAX_AGE_MS = 5 * 60 * 1000;
+function offerContactChoice(db, user, choice) {
+  ensurePhoneContactBook(db);
+  db.profile.agentMemory.pendingContactChoice = { ...choice, by: memoryViewerEmail(user), createdAt: new Date().toISOString() };
+}
+function ownPendingContactChoice(db, user) {
+  const pending = db?.profile?.agentMemory?.pendingContactChoice;
+  if (!pending || typeof pending !== "object") return null;
+  const age = Date.now() - Date.parse(pending.createdAt || "");
+  if (!Number.isFinite(age) || age > CONTACT_CHOICE_MAX_AGE_MS) { db.profile.agentMemory.pendingContactChoice = null; return null; }
+  const viewer = memoryViewerEmail(user);
+  return !pending.by || pending.by === viewer ? pending : null;
+}
+// "1", "2", "the first one", "second", "wa pili", "namba 2", or the full name of one of the options. null when the words are not an answer to the question.
+function contactChoiceAnswer(pending, text = "") {
+  const options = pending?.options || [];
+  const said = normalizeSpeechForIntent(text).replace(/\b(the|one|number|namba|nambari|wa|ya|ni|kwanza|please)\b/g, match => (match === "kwanza" ? "first" : " ")).replace(/\s+/g, " ").trim();
+  const words = { first: 1, "1": 1, "1st": 1, second: 2, "2": 2, "2nd": 2, pili: 2, third: 3, "3": 3, "3rd": 3, tatu: 3, fourth: 4, "4": 4, "4th": 4, nne: 4, fifth: 5, "5": 5, "5th": 5, tano: 5 };
+  const index = words[said];
+  if (index && options[index - 1]) return options[index - 1];
+  const byName = options.filter(item => contactLookupKey(item.displayName) === contactLookupKey(text));
+  return byName.length === 1 ? byName[0] : null;
+}
+
 // "Text +254712345678 saying hello", "sms 0712345678 I am coming", "WhatsApp Mama the meeting is at 3", "tuma ujumbe kwa +254... niko njiani", "tell mama I am coming": a MESSAGE.
 // The recipient and the exact words are shown back and the person must say yes; "yes" sends the message (or says honestly that it cannot). It is never turned into a call, and
 // a local number (0712..., 0803...) is converted to +254.../+234... and said back in full. Email and role requests ("text the buyer") stay with the older workflows.
+// `options.personalContacts` is the person's contacts from the planner's store (read by the caller).
 function stageMessageIntent(db, user, command = "", options = {}) {
   const request = frontDoor.readMessageRequest(command);
   if (!request || request.channel === "email") return null;
   ensurePhoneContactBook(db);
-  const sw = request.swahili || callIntentLanguage(options) === "sw";
-  const channelLabel = request.channel === "whatsapp" ? "WhatsApp message" : "text";
-  const ask = (intent, response, metadata = {}) => ({ intent, response, status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent", ...metadata } });
+  db.profile.agentMemory.pendingContactChoice = null;
+  const language = request.swahili ? "sw" : commsLanguage(command, options);
+  const sw = language === "sw";
+  const channel = request.channel === "whatsapp" ? "whatsapp" : "sms";
+  const say = (key, params = {}) => nexusText(language, key, params);
+  const ask = (intent, response, metadata = {}) => ({ intent, response, status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent", language, ...(sw ? { suppressBehaviorNudge: true } : {}), ...metadata } });
   let phone = request.phone || ""; let name = ""; let message = request.message || "";
-  if (request.invalid) return ask("message.number_invalid", sw ? "Sijaelewa namba hiyo. Nipe namba kamili, kwa mfano +254712345678 au 0712 345 678." : "I could not make out that number. Give me the whole number, like +254712345678 or 0712 345 678.");
+  if (request.invalid) return ask("message.number_invalid", say("comms.text.numberInvalid"));
   if (!phone) {
     const lookup = candidate => {
-      const found = callContactCandidates(db, { displayName: candidate, rawName: candidate }).filter(item => item.e164Phone);
+      const found = callContactCandidates(db, { displayName: candidate, rawName: candidate }, user, options.personalContacts).filter(item => item.e164Phone);
       const seen = new Set(found.map(item => item.e164Phone));
       return seen.size ? found : [];
     };
     const matched = frontDoor.matchRecipient(request, lookup);
     if (!matched) {
       const first = cleanContactName(request.words[0] || "");
-      return ask("message.number_needed", sw
-        ? `Sina namba ya ${first || "mtu huyo"}. Nipe namba yake yenye msimbo wa nchi, kwa mfano "tuma ujumbe kwa +254712345678 niko njiani", au sema "hifadhi namba ya ${first || "Juma"} kama +254712345678" kwanza.`
-        : `I don't have a number for ${first || "that person"}. Give me their number with the country code, like "text +254712345678 saying I am on my way", or say "save ${first || "Juma"}'s number as +254712345678" first.`);
+      return ask("message.number_needed", say("comms.text.numberNeeded", { name: first || say("comms.text.thatPerson"), example: first || "Juma" }));
     }
-    const phones = [...new Set(matched.found.map(item => item.e164Phone))];
-    if (phones.length > 1) return ask("message.multiple_matches", sw ? `Kuna zaidi ya mmoja anayeitwa ${matched.candidate}. Ni yupi? ${matched.found.map((item, index) => `${index + 1}. ${item.displayName}`).join(" ")}` : `I found more than one ${matched.candidate}. Which one? ${matched.found.map((item, index) => `${index + 1}. ${item.displayName}`).join(" ")}`);
-    phone = phones[0]; name = matched.found[0].displayName || matched.candidate; message = matched.message;
+    const distinct = [...new Map(matched.found.map(item => [item.e164Phone, item])).values()];
+    if (distinct.length > 1) {
+      offerContactChoice(db, user, { kind: "message", channel, message: matched.message, language, command, options: distinct.map(item => ({ displayName: item.displayName, e164Phone: item.e164Phone, source: item.source })) });
+      return ask("message.multiple_matches", say("comms.text.multiple", { name: matched.candidate, options: contactChoiceList(distinct) }), { choices: distinct.map(item => ({ displayName: item.displayName })) });
+    }
+    phone = distinct[0].e164Phone; name = distinct[0].displayName || matched.candidate; message = matched.message;
   }
-  if (!message) return ask("message.text_needed", sw ? `Ujumbe unasema nini? Sema kwa mfano "tuma ujumbe kwa ${name || frontDoor.spokenPhone(phone)} niko njiani".` : `What should the ${channelLabel} say? For example: "text ${name || frontDoor.spokenPhone(phone)} saying I am on my way".`);
-  if (message.length > 500) return ask("message.too_long", sw ? "Ujumbe ni mrefu sana. Ufupishe kidogo." : "That message is too long to send. Please make it shorter.");
+  return stageMessageTo(db, user, command, { channel, phone, name, message, language, assumedCountry: request.assumedCountry || null });
+}
+
+// For the model-driven communications tool: "call John" / "text Mama I am late" with no number in the arguments. null when the words name nobody saved; { ambiguous, name } when the name fits
+// more than one person (each with a number); { recipient, name, message? } for exactly one. Only the person's own contacts are ever looked in (`personal` is personalContactsFor(user)).
+function namedRecipientForTool(db, user, command, channel, personal = []) {
+  const distinctWithNumbers = found => [...new Map(found.filter(item => item.e164Phone).map(item => [item.e164Phone, item])).values()];
+  if (channel === "call") {
+    const target = extractCallIntentTarget(command);
+    if (!target || target.type !== "person") return null;
+    const found = distinctWithNumbers(callContactCandidates(db, target, user, personal));
+    if (found.length > 1) return { ambiguous: found, name: target.displayName };
+    return found.length ? { recipient: found[0].e164Phone, name: found[0].displayName } : null;
+  }
+  const request = frontDoor.readMessageRequest(command);
+  if (!request || request.phone || !request.words) return null;
+  const matched = frontDoor.matchRecipient(request, candidate => callContactCandidates(db, { displayName: candidate, rawName: candidate }, user, personal).filter(item => item.e164Phone));
+  if (!matched) return null;
+  const found = distinctWithNumbers(matched.found);
+  if (found.length > 1) return { ambiguous: found, name: matched.candidate };
+  return { recipient: found[0].e164Phone, name: found[0].displayName || matched.candidate, message: matched.message };
+}
+
+// The answer to "which one?" (see offerContactChoice): "the second one" or the full name stages the text or call to that person, behind its own yes; "no" drops the question.
+function answerContactChoice(db, user, text, lower) {
+  const pending = ownPendingContactChoice(db, user);
+  if (!pending) return null;
+  const language = pending.language === "sw" ? "sw" : "en";
+  const quiet = language === "sw" ? { suppressBehaviorNudge: true } : {};
+  if (isNegativeCommand(lower)) {
+    db.profile.agentMemory.pendingContactChoice = null; db.profile.agentMemory.pendingContactCall = null;
+    return { intent: "conversation.canceled", response: nexusText(language, "comms.cancelled"), status: "completed", metadata: { conversationMode: true, language, ...quiet } };
+  }
+  const chosen = contactChoiceAnswer(pending, text);
+  if (!chosen) return null;
+  db.profile.agentMemory.pendingContactChoice = null; db.profile.agentMemory.pendingContactCall = null;
+  if (pending.kind === "message") return stageMessageTo(db, user, pending.command, { channel: pending.channel, phone: chosen.e164Phone, name: chosen.displayName, message: pending.message, language });
+  return stageResolvedCall(db, pending.command, { target: pending.target || {}, resolved: chosen, provider: pending.provider || "twilio", language });
+}
+
+// The text or WhatsApp message to a known number, shown back (the words and the number in full) and staged behind a yes. Nothing is sent here.
+function stageMessageTo(db, user, command, { channel = "sms", phone, name = "", message = "", language = "en", assumedCountry = null } = {}) {
+  const sw = language === "sw";
+  const say = (key, params = {}) => nexusText(language, key, params);
+  const ask = (intent, response) => ({ intent, response, status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent", language, ...(sw ? { suppressBehaviorNudge: true } : {}) } });
+  if (!message) return ask("message.text_needed", say(`comms.text.textNeeded.${channel}`, { to: name || frontDoor.spokenPhone(phone) }));
+  if (message.length > 500) return ask("message.too_long", say("comms.text.tooLong"));
   const label = name ? `${name} (${frontDoor.spokenPhone(phone)})` : frontDoor.spokenPhone(phone);
+  const channelLabel = channel === "whatsapp" ? "WhatsApp message" : "text";
   const staged = stageAgentAction(db, command, {
     kind: "message",
     module: "AI",
@@ -10628,96 +10779,24 @@ function stageMessageIntent(db, user, command = "", options = {}) {
     planner: "backend-message-intent",
     confidence: 0.92,
     rationale: "Nexus parsed a text or WhatsApp request and staged it behind explicit confirmation before sending anything.",
-    channel: request.channel,
+    channel,
     to: phone,
     recipientPhone: phone,
     contactName: name,
     message,
     phase4HighRisk: true,
-    allowedConfirmations: ["yes", "confirm", "do it", "send it"],
+    allowedConfirmations: COMMS_ALLOWED_CONFIRMATIONS,
     userFacingPlan: `Say yes to send, or no to cancel.`,
-    confirmationPrompt: sw
-      ? `Nitume "${message}" kwa ${label}? Sema ndiyo ili kutuma, au hapana kughairi.`
-      : `Send "${message}" to ${label} as a ${channelLabel}? Say yes to send it, or no to cancel.`,
-    language: sw ? "sw" : "en"
+    confirmationPrompt: say(`comms.text.confirm.${channel}`, { message, label }),
+    language
   });
-  return { ...staged, intent: "message.intent_staged", metadata: { ...(staged.metadata || {}), channel: request.channel, assumedCountry: request.assumedCountry || null } };
+  return { ...staged, intent: "message.intent_staged", metadata: { ...(staged.metadata || {}), channel, assumedCountry, language, ...(sw ? { suppressBehaviorNudge: true } : {}) } };
 }
 
-function stageBackendCallIntent(db, user, command = "", options = {}) {
-  // a request to text or message somebody is not a request to call them
-  if (frontDoor.readMessageRequest(command)) return null;
-  ensurePhoneContactBook(db);
-  const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
-  const phone = extractPhoneNumberFromText(command);
-  const saveContactSignal = (/\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command)))
-    // "Hifadhi namba ya Juma +254..." (save Juma's number) is saving a contact, not asking for a call.
-    || (/\b(hifadhi|weka|andika|ongeza|kumbuka)\b/.test(normalizeSpeechForIntent(command)) && /\b(namba|nambari|simu|mawasiliano)\b/.test(normalizeSpeechForIntent(command)));
-  const reminderSignal = /\b(remind|reminder|notify|notification)\b/.test(normalizeSpeechForIntent(command));
-  if ((pendingContactCall && phone) || saveContactSignal || reminderSignal) return null;
-  if (!isCallIntentCommand(command)) return null;
-  const provider = callIntentProvider(command);
-  const language = callIntentLanguage(options);
-  const target = extractCallIntentTarget(command);
-  const targetLookup = contactLookupKey(target?.displayName || target?.rawName || "");
-  const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).filter(item => !recordOwnedByAnotherPerson(item, memoryViewerEmail(user))).some(item => {
-    const reminderLookup = contactLookupKey(`${item.contactName || ""} ${item.task || ""}`);
-    return contactLookupMatches(reminderLookup, targetLookup);
-  });
-  if (reminderContactMatch) return null;
-  const resolution = callIntentResolution(db, { target, provider }, user);
-  if (resolution.status === "missing-target") {
-    const providerMetadata = callProviderPublicMetadata(provider);
-    db.profile.agentMemory.lastStatus = "call-target-needed";
-    db.profile.agentMemory.lastSummary = "Nexus needs a person, organization, or phone number before it can stage a call.";
-    db.profile.agentMemory.updatedAt = new Date().toISOString();
-    return {
-      intent: "call.target_needed",
-      response: "Who should I call? Tell me the person, organization, or full phone number with country code.",
-      status: "needs-input",
-      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, language }
-    };
-  }
-  if (resolution.status === "multiple-matches") {
-    const providerMetadata = callProviderPublicMetadata(provider);
-    db.profile.agentMemory.pendingContactCall = {
-      id: crypto.randomUUID(),
-      name: target.displayName,
-      provider,
-      purpose: `call ${target.displayName}`,
-      sourceCommand: command,
-      matches: resolution.matches.map(item => ({ id: item.id, displayName: item.displayName, source: item.source, relationship: item.relationship })),
-      createdAt: new Date().toISOString()
-    };
-    return {
-      intent: "call.multiple_matches",
-      response: `I found more than one match for ${target.displayName}. Which one should I call? ${resolution.matches.map((item, index) => `${index + 1}. ${item.displayName} from ${item.source}`).join(" ")}`,
-      status: "needs-choice",
-      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, target, resolution }
-    };
-  }
-  if (resolution.status === "missing-number") {
-    const providerMetadata = callProviderPublicMetadata(provider);
-    db.profile.agentMemory.pendingContactCall = {
-      id: crypto.randomUUID(),
-      name: target.displayName,
-      relationship: target.relationship || inferContactRelationship(command),
-      provider,
-      purpose: `call ${target.displayName}`,
-      sourceCommand: command,
-      createdAt: new Date().toISOString()
-    };
-    db.profile.agentMemory.lastStatus = "call-number-needed";
-    db.profile.agentMemory.lastSummary = `Nexus needs ${target.displayName}'s phone number before staging the call.`;
-    db.profile.agentMemory.updatedAt = new Date().toISOString();
-    return {
-      intent: "call.number_needed",
-      response: `I can help call ${target.displayName}, but I do not have a phone number yet. Please give the number with country code, for example +254 or +1.`,
-      status: "needs-input",
-      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, target, resolution, suggestedReplies: [`${target.displayName} is +15555550100`, "cancel"] }
-    };
-  }
-  const resolved = resolution.matches[0];
+// The call to a known contact or number, shown back (who and the number in full) and staged behind a yes. Nothing is dialled here; "yes" places it only through the real call path.
+function stageResolvedCall(db, command, { target = {}, resolved = {}, provider = "twilio", language = "en", purpose = "" } = {}) {
+  const sw = language === "sw";
+  const say = (key, params = {}) => nexusText(language, key, params);
   const resolvedTarget = {
     type: target.type || "person",
     rawName: target.rawName || target.displayName || "",
@@ -10733,9 +10812,17 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   const handoff = callProviderHandoff(provider, resolvedTarget);
   const providerMetadata = callProviderPublicMetadata(provider);
   const section = callIntentSection(resolvedTarget, command);
-  const targetLabel = resolvedTarget.displayName || resolvedTarget.redactedPhone || "this contact";
+  const spoken = resolvedTarget.e164Phone ? frontDoor.spokenPhone(resolvedTarget.e164Phone) : "";
+  // a number said by itself is read back in full; a saved person is named and their number is read back too
+  const numberOnly = resolvedTarget.type === "number" || !resolved.displayName && !target.displayName;
+  const targetLabel = numberOnly && spoken ? spoken : (resolvedTarget.displayName || resolvedTarget.redactedPhone || "this contact");
   const providerLabel = callProviderLabel(provider, { style: "stage" });
   const nonTwilio = provider !== "twilio";
+  const confirmationPrompt = nonTwilio
+    ? say("comms.call.confirm.handoff", { provider: providerLabel, name: targetLabel })
+    : numberOnly && spoken ? say("comms.call.confirm.number", { phone: spoken })
+      : spoken ? say("comms.call.confirm.named", { name: targetLabel, phone: spoken })
+        : say("comms.call.confirm.noNumber", { name: targetLabel });
   const staged = stageAgentAction(db, command, {
     kind: "call",
     module: "AI",
@@ -10758,13 +10845,11 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
     contactName: targetLabel,
     recipientPhone: resolvedTarget.e164Phone,
     to: resolvedTarget.e164Phone,
-    purpose: `call ${targetLabel}`,
+    purpose: purpose || `call ${targetLabel}`,
     language,
     phase4HighRisk: true,
-    allowedConfirmations: ["yes", "confirm", "do it"],
-    confirmationPrompt: nonTwilio
-      ? `I can prepare a ${providerLabel} call handoff for ${targetLabel}, but I will not launch it without confirmation. Do you want me to continue?`
-      : `I found ${targetLabel}${resolvedTarget.redactedPhone ? ` at ${resolvedTarget.redactedPhone}` : ""}. Before I call anyone, please confirm. Do you want me to call ${targetLabel} now?`
+    allowedConfirmations: COMMS_ALLOWED_CONFIRMATIONS.filter(item => item !== "send it"),
+    confirmationPrompt
   });
   return {
     ...staged,
@@ -10775,11 +10860,103 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
       provider,
       requestedProvider: provider,
       providerMetadata,
+      language,
+      ...(sw ? { suppressBehaviorNudge: true } : {}),
       target: { ...resolvedTarget, phone: resolvedTarget.redactedPhone, e164Phone: resolvedTarget.redactedPhone },
       resolution: { status: "resolved" },
       handoff
     }
   };
+}
+
+// "Call John" / "call +254712345678" / "mpigie Mama". `options.personalContacts` is the person's contacts from the planner's store (read by the caller). `options.requireCallVerb`
+// (the voice tool and other non-conversational callers) means a number alone is not taken for a call: the request must say call, phone, dial, ring (or the Kiswahili / French / Spanish / Portuguese / Arabic equivalents).
+function stageBackendCallIntent(db, user, command = "", options = {}) {
+  // a request to text or message somebody is not a request to call them
+  if (frontDoor.readMessageRequest(command)) return null;
+  ensurePhoneContactBook(db);
+  if (isFreshNumberCall(command)) db.profile.agentMemory.pendingContactCall = null;
+  const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
+  const phone = extractPhoneNumberFromText(command);
+  const saveContactSignal = (/\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command)))
+    // "Hifadhi namba ya Juma +254..." (save Juma's number) is saving a contact, not asking for a call.
+    || (/\b(hifadhi|weka|andika|ongeza|kumbuka)\b/.test(normalizeSpeechForIntent(command)) && /\b(namba|nambari|simu|mawasiliano)\b/.test(normalizeSpeechForIntent(command)));
+  const reminderSignal = /\b(remind|reminder|notify|notification)\b/.test(normalizeSpeechForIntent(command));
+  if ((pendingContactCall && phone) || saveContactSignal || reminderSignal) return null;
+  if (!isCallIntentCommand(command)) return null;
+  if (options.requireCallVerb && !/\b(call|phone|dial|ring|mpigie|piga\s+simu|llama|appelle|ligar|ligue)\b|(?:اتصل|إتصل)/iu.test(normalizeSpeechForIntent(command) + " " + String(command || ""))) return null;
+  db.profile.agentMemory.pendingContactChoice = null;
+  const provider = callIntentProvider(command);
+  const language = commsLanguage(command, options);
+  const sw = language === "sw";
+  const say = (key, params = {}) => nexusText(language, key, params);
+  const target = extractCallIntentTarget(command);
+  const targetLookup = contactLookupKey(target?.displayName || target?.rawName || "");
+  const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).filter(item => !recordOwnedByAnotherPerson(item, memoryViewerEmail(user))).some(item => {
+    const reminderLookup = contactLookupKey(`${item.contactName || ""} ${item.task || ""}`);
+    return contactLookupMatches(reminderLookup, targetLookup);
+  });
+  if (reminderContactMatch) return null;
+  const resolution = callIntentResolution(db, { target, provider }, user, options.personalContacts);
+  // The voice tool and other non-conversational callers stage a call to a number or to a saved person (that is the whole point of this being read for them), but a role with no number ("call the doctor") or
+  // a name nobody saved are left to the older handlers that already ask the right question for them.
+  if (options.requireCallVerb && (target?.type === "role" || resolution.status === "missing-number" || resolution.status === "missing-target")) return null;
+  const quiet = sw ? { suppressBehaviorNudge: true } : {};
+  if (resolution.status === "missing-target") {
+    const providerMetadata = callProviderPublicMetadata(provider);
+    db.profile.agentMemory.lastStatus = "call-target-needed";
+    db.profile.agentMemory.lastSummary = "Nexus needs a person, organization, or phone number before it can stage a call.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "call.target_needed",
+      response: say("comms.call.targetNeeded"),
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, language, ...quiet }
+    };
+  }
+  if (resolution.status === "multiple-matches") {
+    const providerMetadata = callProviderPublicMetadata(provider);
+    const withNumbers = resolution.matches.filter(item => item.e164Phone);
+    // the choice is answered by "the second one" or the full name; each option has its number read back
+    if (withNumbers.length <= 1) db.profile.agentMemory.pendingContactCall = {
+      id: crypto.randomUUID(),
+      name: target.displayName,
+      provider,
+      purpose: `call ${target.displayName}`,
+      sourceCommand: command,
+      matches: resolution.matches.map(item => ({ id: item.id, displayName: item.displayName, source: item.source, relationship: item.relationship })),
+      createdAt: new Date().toISOString()
+    };
+    if (withNumbers.length > 1) offerContactChoice(db, user, { kind: "call", provider, language, command, target, options: withNumbers.map(item => ({ id: item.id, displayName: item.displayName, e164Phone: item.e164Phone, source: item.source, relationship: item.relationship, handle: item.handle || "" })) });
+    return {
+      intent: "call.multiple_matches",
+      response: say("comms.call.multiple", { name: target.displayName, options: withNumbers.length > 1 ? contactChoiceList(withNumbers) : resolution.matches.map((item, index) => `${index + 1}. ${item.displayName}`).join(" ") }),
+      status: "needs-choice",
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, target, resolution: { status: resolution.status, matches: resolution.matches.map(item => ({ id: item.id, displayName: item.displayName, source: item.source, relationship: item.relationship })) }, language, ...quiet }
+    };
+  }
+  if (resolution.status === "missing-number") {
+    const providerMetadata = callProviderPublicMetadata(provider);
+    db.profile.agentMemory.pendingContactCall = {
+      id: crypto.randomUUID(),
+      name: target.displayName,
+      relationship: target.relationship || inferContactRelationship(command),
+      provider,
+      purpose: `call ${target.displayName}`,
+      sourceCommand: command,
+      createdAt: new Date().toISOString()
+    };
+    db.profile.agentMemory.lastStatus = "call-number-needed";
+    db.profile.agentMemory.lastSummary = `Nexus needs ${target.displayName}'s phone number before staging the call.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "call.number_needed",
+      response: say("comms.call.numberNeeded", { name: target.displayName }),
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, target, resolution, language, ...quiet, suggestedReplies: [`${target.displayName} is +15555550100`, "cancel"] }
+    };
+  }
+  return stageResolvedCall(db, command, { target, resolved: resolution.matches[0], provider, language });
 }
 
 function outboundCallRecipientForPurpose(purpose = "", body = {}) {
@@ -10838,7 +11015,8 @@ function twilioFromForProvider(providerId) {
 // scan -- any authenticated, non-restricted user could trigger a real Twilio SMS/WhatsApp/call to a
 // client-supplied recipient with a single unconfirmed request, carrying arbitrary free text (including
 // health, payment, or credential content) straight through with no filter at all.
-const SENSITIVE_COMMUNICATION_PATTERN = /\b(patient|diagnos\w*|prescri\w*|medical record|payment|card|bank|password|secret|token|private key|emergency dispatch)\b/i;
+// (the Kiswahili words too: a text about "mgonjwa" or "malipo" is no more fit to send from here than one about a patient or a payment)
+const SENSITIVE_COMMUNICATION_PATTERN = /\b(patient|diagnos\w*|prescri\w*|medical record|payment|card|bank|password|secret|token|private key|emergency dispatch|mgonjwa|wagonjwa|utambuzi|rekodi za (?:afya|matibabu)|malipo|kadi|benki|nywila|neno la siri|siri)\b/i;
 
 async function sendTwilioMessage({ providerId, channel, to, text }) {
   const required = [
@@ -22674,6 +22852,31 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     let recipient = contact.to || ownerTestRecipient;
     let channel = sanitizePilotText(args.channel || args.type || (/whatsapp/i.test(command) ? "whatsapp" : /\b(call|phone|dial)\b/i.test(command) ? "call" : /\b(email|mail)\b/i.test(command) ? "email" : "sms"), 40).toLowerCase();
     let targetNameArg = sanitizePilotText(args.targetName || args.name || "", 160);
+    // A number said the way people say it at home (0712 345 678, 0803 123 4567) is turned into +254... / +234... before anything is shown back or dialled; a number that is not one of those is left as it was.
+    // (typeof guards: this function is also evaluated on its own by some tests)
+    if (recipient && channel !== "email" && !/@/.test(recipient) && typeof localPhoneToE164 === "function" && !/^\s*\+/.test(recipient)) {
+      const local = localPhoneToE164(recipient);
+      if (local) { recipient = local.phone; contact.to = local.phone; }
+    }
+    // "Call John" / "text Mama ..." with no number in the arguments: the name is looked up among the person's OWN saved contacts (the older phone book and the planner's, newest wins). A name that fits more than
+    // one person is asked about with each number read back; a name that fits nobody is left to the provider's own answer, as before.
+    if (!recipient && channel !== "email" && !args.confirmed && typeof namedRecipientForTool === "function") {
+      const named = namedRecipientForTool(db, user, command, channel, await personalContactsFor(user));
+      if (named?.ambiguous) {
+        return { ...common, capability: "communications", status: "needs-input", requiresConfirmation: true, executionAttempted: false, providerAttempted: false,
+          response: nexusText(commsLanguage(command, { language }), "comms.text.multiple", { name: named.name, options: contactChoiceList(named.ambiguous) }) };
+      }
+      if (named?.recipient) {
+        recipient = named.recipient; contact.to = named.recipient;
+        if (!targetNameArg) targetNameArg = named.name || "";
+        if (named.message && (!contact.message || contact.message === command)) contact.message = named.message;
+      }
+    }
+    // "call 0712345678": a number in the words themselves, with no "to" in front of it
+    if (!recipient && channel !== "email" && typeof extractPhoneNumberFromText === "function") {
+      const said = extractPhoneNumberFromText(command);
+      if (said) { recipient = said; contact.to = said; }
+    }
     // This turn's own text/args carry no recipient at all -- most often a
     // bare confirmation phrase ("I confirm", "yes, go ahead") with nothing
     // left for nexusOpenAiNativeExtractContactArgs to find. Recover the
@@ -22776,7 +22979,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // credentials, provider error). Either way it is resolved and must not
     // be silently reused by a later, unrelated bare confirmation.
     if (args.confirmed) clearPendingCommunicationsRequest(db);
-    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "communications" }, providerResult);
+    // Before anything is sent or dialled the number is read back, so a wrong digit is heard (the provider's own words say that a yes is needed).
+    const needsYes = !args.confirmed && providerResult?.body?.status === "confirmation_required" && channel !== "email" && recipient;
+    const readBack = needsYes && typeof frontDoor !== "undefined" ? ` Number to confirm: ${frontDoor.spokenPhone(recipient)}${targetNameArg ? ` (${targetNameArg})` : ""}.` : "";
+    return nexusOpenAiNativeProviderToolResult(db, { ...common, capability: "communications" }, providerResult, readBack ? { responseOverride: `${providerResult.body.message || "Confirmation is needed before this goes ahead."}${readBack}` } : {});
   }
   if (toolName === "nexus_calendar") {
     const calendarCommon = { ...common, capability: "calendar" };
@@ -27598,7 +27804,17 @@ function learnFromAgentCommand(db, user, command, result) {
 }
 
 function isAffirmativeCommand(lower) {
-  return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it|ndiyo|ndio|naam|sawa|sawa kabisa|endelea|fanya hivyo)$/i.test(String(lower || "").trim());
+  return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it|ndiyo|ndio|naam|sawa|sawa kabisa|endelea|fanya hivyo|thibitisha)$/i.test(String(lower || "").trim());
+}
+
+// The answer to a staged text or call is in the language it was asked in: a Kiswahili speaker who said "ndiyo" does not get an English "Say yes, confirm, or do it" back, nor an English "Canceled".
+const stagedCommsIsSwahili = pending => pending?.language === "sw" && (pending.kind === "message" || pending.kind === "call");
+function confirmationReaskText(pending) {
+  const prompt = pending.confirmationPrompt || `Please confirm before I ${String(pending.action || "continue").toLowerCase()}.`;
+  return stagedCommsIsSwahili(pending) ? nexusText("sw", "comms.reask", { prompt }) : `${prompt} Say yes, confirm, or do it to continue, or no to cancel.`;
+}
+function stagedCommsCancelledReply(pending) {
+  return stagedCommsIsSwahili(pending) ? nexusText("sw", "comms.cancelled") : null;
 }
 
 function isExplicitConfirmationCommand(lower) {
@@ -29935,24 +30151,14 @@ function explicitWorkspaceOpenResponse(db, user, text = "", lower = "") {
   return null;
 }
 
-function stagePhoneContactCall(db, command, contact, purpose = "") {
+function stagePhoneContactCall(db, command, contact, purpose = "", language = "en") {
   const cleanPurpose = purpose || `call ${contact.name}`;
-  const section = /(doctor|nurse|clinic|health|medicine|pharmacy|medical)/i.test(contact.relationship || cleanPurpose) ? "health"
-    : /(buyer|seller|trade|crop|supplier|vendor)/i.test(contact.relationship || cleanPurpose) ? "trade"
-    : /(job|workforce|recruiter|employer)/i.test(contact.relationship || cleanPurpose) ? "workforce"
-    : "agent";
-  const staged = stageAgentAction(db, command, {
-    module: "AI",
-    tool: "communications.outbound_call",
-    action: `Call ${contact.name}`,
-    section,
-    planner: "phone-contact-memory",
-    confidence: 0.93,
-    rationale: "Nexus found a saved contact and is waiting for confirmation before placing a live phone call.",
-    userFacingPlan: `Say yes to call ${contact.name}, or no to cancel.`,
-    contactName: contact.name,
-    recipientPhone: contact.phone,
-    to: contact.phone,
+  const sw = language === "sw";
+  const staged = stageResolvedCall(db, command, {
+    target: { type: "person", rawName: contact.name, displayName: contact.name, relationship: contact.relationship },
+    resolved: { id: contact.id, displayName: contact.name, e164Phone: contact.phone, source: "phoneContacts", relationship: contact.relationship },
+    provider: "twilio",
+    language,
     purpose: cleanPurpose
   });
   db.profile.agentMemory.lastStatus = "phone-contact-call-ready";
@@ -29960,13 +30166,15 @@ function stagePhoneContactCall(db, command, contact, purpose = "") {
   return {
     ...staged,
     intent: "phone.contact_call_ready",
-    response: `I found ${contact.name}. Say yes and I will call ${contact.name}. Say no to cancel.`,
+    response: nexusText(language, "comms.contact.callReady", { name: contact.name, phone: frontDoor.spokenPhone(contact.phone) }),
     metadata: {
       ...(staged.metadata || {}),
       contactId: contact.id,
       contactName: contact.name,
       recipientPhone: contact.phone,
-      relationship: contact.relationship
+      relationship: contact.relationship,
+      language,
+      ...(sw ? { suppressBehaviorNudge: true } : {})
     }
   };
 }
@@ -29976,12 +30184,19 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
   // "text +254... saying hello" is a message, never a contact called "Text" and never a call (see stageMessageIntent)
   if (frontDoor.readMessageRequest(text)) return null;
   ensurePhoneContactBook(db);
+  const language = commsLanguage(text, options);
+  const sw = language === "sw";
+  const say = (key, params = {}) => nexusText(language, key, params);
+  const quiet = sw ? { suppressBehaviorNudge: true } : {};
+  if (isFreshNumberCall(text)) db.profile.agentMemory.pendingContactCall = null;
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(text);
   const callName = extractContactNameFromCall(text);
   const saveContactSignal = (/\b(remember|save|store|add)\b/.test(lower) && /\b(number|phone|contact|call)\b/.test(lower))
     || (/\b(hifadhi|weka|andika|ongeza|kumbuka)\b/.test(lower) && /\b(namba|nambari|simu|mawasiliano)\b/.test(lower));
   const numberMentioned = /\d(?:[\d\s().-]{6,}\d)/.test(String(text || ""));
+  // the planner's contacts are read only when a name is being looked up
+  const personalContacts = async () => options.personalContacts || await personalContactsFor(user);
 
   if (numberMentioned && !phone) {
     const name = pendingContactCall?.name || callName || "that contact";
@@ -29989,9 +30204,9 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
     db.profile.agentMemory.lastSummary = `I need the full country code before I can save ${name}.`;
     return {
       intent: "phone.contact_country_code_needed",
-      response: `I need the full phone number with country code before I save it. For Kenya use +254, for Nigeria use +234, for Ghana use +233, and for the United States use +1.`,
+      response: say("comms.contact.countryCode"),
       status: "needs-input",
-      metadata: { conversationMode: true, redirectSection: "agent", pendingContactCall }
+      metadata: { conversationMode: true, redirectSection: "agent", pendingContactCall, language, ...quiet }
     };
   }
 
@@ -30000,9 +30215,9 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
     if (!name) {
       return {
         intent: "phone.contact_name_needed",
-        response: "I have the phone number. What name should I save it under?",
+        response: say("comms.contact.nameNeeded"),
         status: "needs-input",
-        metadata: { conversationMode: true, redirectSection: "agent", phone }
+        metadata: { conversationMode: true, redirectSection: "agent", phone, language, ...quiet }
       };
     }
     const contact = upsertPhoneContact(db, user, {
@@ -30011,41 +30226,61 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
       relationship: pendingContactCall?.relationship || inferContactRelationship(text),
       source: pendingContactCall ? "pending-call-number-capture" : "voice-contact-save"
     });
+    // Saved where the planner reads it too (the same person's contacts, one place more), so "text John" and "call John" work whichever way John was saved. Best effort: the older phone book has him either way.
+    await savePersonalContact(user, { name: contact.name, phone: contact.phone });
     db.profile.agentMemory.pendingContactCall = null;
-    if (pendingContactCall || /\b(call|phone|dial|ring)\b/i.test(text)) {
-      const staged = stagePhoneContactCall(db, text, contact, pendingContactCall?.purpose || `call ${contact.name}`);
+    if ((pendingContactCall && !saveContactSignal) || (saveContactSignal ? /\b(call|dial|ring|mpigie)\b/i : /\b(call|phone|dial|ring|mpigie)\b/i).test(text)) {
+      const staged = stagePhoneContactCall(db, text, contact, pendingContactCall?.purpose || `call ${contact.name}`, language);
       return {
         ...staged,
         intent: "phone.contact_saved_call_ready",
-        response: `I saved ${contact.name} as ${frontDoor.spokenPhone(contact.phone)}. Say yes and I will call ${contact.name}. Say no to save the number without calling now.`
+        response: say("comms.contact.savedCallReady", { name: contact.name, phone: frontDoor.spokenPhone(contact.phone) })
       };
     }
     db.profile.agentMemory.lastStatus = "phone-contact-saved";
     db.profile.agentMemory.lastSummary = `Saved ${contact.name} for future calls.`;
     return {
       intent: "phone.contact_saved",
-      response: `Saved ${contact.name} as ${frontDoor.spokenPhone(contact.phone)}. If that number is not right, say it again. You can say, "Nexus, call ${contact.name}" any time.`,
+      response: say("comms.contact.saved", { name: contact.name, phone: frontDoor.spokenPhone(contact.phone) }),
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "agent", contact }
+      metadata: { conversationMode: true, redirectSection: "agent", contact, language, ...quiet }
     };
   }
 
   if (/\b(what number|which number|show number|do you have.*number)\b/.test(lower)) {
     const name = contactDisplayName(lower.replace(/\b(what number|which number|show number|do you have|for|is|saved|number|phone)\b/g, " "));
-    const contact = findPhoneContact(db, name, user);
-    if (contact) {
+    const found = findPhoneContacts(db, name, user, await personalContacts());
+    if (found.length === 1) {
+      const contact = found[0];
       return {
         intent: "phone.contact_lookup",
-        response: `${contact.name} is saved as ${contact.phone}.`,
+        response: say("comms.contact.lookup", { name: contact.name, phone: contact.phone }),
         status: "completed",
-        metadata: { conversationMode: true, redirectSection: "agent", contact }
+        metadata: { conversationMode: true, redirectSection: "agent", contact, language, ...quiet }
+      };
+    }
+    if (found.length > 1) {
+      return {
+        intent: "phone.contact_lookup",
+        response: say("comms.text.multiple", { name, options: contactChoiceList(found.map(item => ({ displayName: item.name, e164Phone: item.phone }))) }),
+        status: "needs-choice",
+        metadata: { conversationMode: true, redirectSection: "agent", language, ...quiet }
       };
     }
   }
 
-  if (/\b(call|phone|dial|ring)\b/.test(lower) && callName) {
-    const contact = findPhoneContact(db, callName, user);
-    if (contact) return stagePhoneContactCall(db, text, contact, `call ${contact.name}`);
+  if (/\b(call|phone|dial|ring|mpigie)\b/.test(lower) && callName) {
+    const found = findPhoneContacts(db, callName, user, await personalContacts());
+    if (found.length === 1) return stagePhoneContactCall(db, text, found[0], `call ${found[0].name}`, language);
+    if (found.length > 1) {
+      offerContactChoice(db, user, { kind: "call", provider: "twilio", language, command: text, target: { type: "person", displayName: callName, rawName: callName }, options: found.map(item => ({ id: item.id, displayName: item.name, e164Phone: item.phone, source: item.origin || "phoneContacts", relationship: item.relationship })) });
+      return {
+        intent: "call.multiple_matches",
+        response: say("comms.call.multiple", { name: callName, options: contactChoiceList(found.map(item => ({ displayName: item.name, e164Phone: item.phone }))) }),
+        status: "needs-choice",
+        metadata: { conversationMode: true, redirectSection: "agent", language, ...quiet }
+      };
+    }
     const pending = {
       id: crypto.randomUUID(),
       name: callName,
@@ -30059,9 +30294,9 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
     db.profile.agentMemory.lastSummary = `I need ${callName}'s phone number before I can call.`;
     return {
       intent: "phone.contact_number_needed",
-      response: `I can call ${callName}, but I do not have ${callName}'s phone number yet. Please give me the number with country code, and I will remember it.`,
+      response: say("comms.contact.numberNeeded", { name: callName }),
       status: "needs-input",
-      metadata: { conversationMode: true, redirectSection: "agent", pendingContactCall: pending, suggestedReplies: [`${callName} is +254700000000`, "cancel"] }
+      metadata: { conversationMode: true, redirectSection: "agent", pendingContactCall: pending, language, ...quiet, suggestedReplies: [`${callName} is +254700000000`, "cancel"] }
     };
   }
 
@@ -30074,31 +30309,41 @@ async function executePendingAgentAction(db, user, pending) {
   if (pending.kind === "message") {
     // A confirmed TEXT or WhatsApp message. It is sent as a message (never turned into a call) and only if sending is really available; otherwise the person is told plainly it was not sent.
     const channelLabel = pending.channel === "whatsapp" ? "WhatsApp message" : "text";
+    const channelKey = pending.channel === "whatsapp" ? "whatsapp" : "sms";
     const label = pending.contactName || frontDoor.spokenPhone(pending.to);
-    const say = (intent, response, status, extra = {}) => ({ intent, response, status, metadata: { conversationMode: true, redirectSection: "agent", channel: pending.channel, executionConfirmed: true, messageSent: false, ...extra } });
-    if (userIsRestrictedFrom(user, "communications-send")) return say("message.not_sent", `This account type cannot send real messages, so I did not send your ${channelLabel} to ${label}. Nothing was sent.`, "blocked");
-    if (SENSITIVE_COMMUNICATION_PATTERN.test(pending.message)) return say("message.not_sent", `I did not send it: messages about health records, payments or passwords are not sent from here. Nothing was sent to ${label}.`, "blocked");
+    const language = pending.language === "sw" ? "sw" : "en";
+    const words = (key, params = {}) => nexusText(language, key, { label, message: pending.message, ...params });
+    const say = (intent, response, status, extra = {}) => ({ intent, response, status, metadata: { conversationMode: true, redirectSection: "agent", channel: pending.channel, executionConfirmed: true, messageSent: false, language, ...(language === "sw" ? { suppressBehaviorNudge: true } : {}), ...extra } });
+    if (userIsRestrictedFrom(user, "communications-send")) return say("message.not_sent", words(`comms.text.restricted.${channelKey}`), "blocked");
+    if (SENSITIVE_COMMUNICATION_PATTERN.test(pending.message)) return say("message.not_sent", words("comms.text.sensitive"), "blocked");
     const delivery = await sendTwilioMessage({ providerId: pending.channel === "whatsapp" ? "whatsapp-delivery" : "sms-delivery", channel: pending.channel === "whatsapp" ? "WhatsApp" : "SMS", to: pending.to, text: pending.message });
     logIntegration(db, { providerId: pending.channel === "whatsapp" ? "whatsapp-delivery" : "sms-delivery", module: "AI", action: "message.sent_by_voice", status: delivery.ok ? "success" : "needs-setup", detail: delivery.ok ? `${channelLabel} sent to ${label}.` : `${channelLabel} to ${label} not sent: ${delivery.status || delivery.error || "not available"}.`, metadata: { channel: pending.channel, delivery: { ok: Boolean(delivery.ok), status: delivery.status || null } }, dispatch: false });
-    if (delivery.ok) return say("message.sent", `Sent your ${channelLabel} to ${label}.`, "completed", { messageSent: true });
-    return say("message.not_sent", `I could not send your ${channelLabel} to ${label}: sending messages is not set up for this account yet, so nothing was sent. Your words were: "${pending.message}".`, "needs-setup", { deliveryStatus: delivery.status || null });
+    if (delivery.ok) return say("message.sent", words(`comms.text.sent.${channelKey}`), "completed", { messageSent: true });
+    return say("message.not_sent", words(`comms.text.notSent.${channelKey}`), "needs-setup", { deliveryStatus: delivery.status || null });
   }
   if (pending.kind === "call" && pending.provider === "twilio") {
     const target = pending.target || {};
     const handoff = pending.handoff || callProviderHandoff("twilio", target);
     const providerMetadata = pending.providerMetadata || callProviderPublicMetadata("twilio");
-    const targetLabel = target.displayName || pending.contactName || "the contact";
+    // a number said by itself is named by the number in full; a saved person by name
+    const targetLabel = (target.type === "number" ? pending.contactName : target.displayName) || pending.contactName || "the contact";
+    const language = pending.language === "sw" ? "sw" : "en";
     const call = await createOutboundCallWorkflow(db, user, {
       purpose: pending.purpose || `call ${targetLabel}`,
       to: pending.to || pending.recipientPhone,
       recipientPhone: pending.recipientPhone || pending.to,
       contactName: pending.contactName || targetLabel
     });
+    // Said plainly: either the call was started, or nothing was done and why (never "confirmed" for a call that did not happen, and never the names of server settings).
+    const callStatus = String(call.delivery?.status || call.status || "");
+    const callWords = call.delivery?.ok ? "comms.call.placed"
+      : callStatus === "restricted-account-no-real-call" ? "comms.call.restricted"
+        : callStatus === "blocked-sensitive-content" ? "comms.call.sensitive"
+          : call.delivery?.attempted ? "comms.call.failed"
+            : "comms.call.notSetUp";
     return {
       intent: "phone.outbound_call_requested",
-      response: call.delivery?.ok
-        ? `Twilio call confirmed for ${targetLabel}. Nexus started the configured outbound call.`
-        : `Twilio call confirmed for ${targetLabel}, but live dialing needs setup: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`,
+      response: nexusText(language, callWords, { name: targetLabel }),
       status: call.delivery?.ok ? "completed" : call.status || "needs-twilio-call-config",
       metadata: {
         conversationMode: true,
@@ -30111,6 +30356,8 @@ async function executePendingAgentAction(db, user, pending) {
         handoff,
         executionConfirmed: true,
         liveCallPlaced: Boolean(call.delivery?.ok),
+        language,
+        ...(language === "sw" ? { suppressBehaviorNudge: true } : {}),
         callStatus: call.status,
         callId: call.id,
         callNumber: call.callNumber,
@@ -34964,10 +35211,11 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (topPendingAction?.phase4HighRisk && isVagueConfirmationCommand(lower)) {
     return {
       intent: "conversation.confirmation_required",
-      response: `${topPendingAction.confirmationPrompt || `Please confirm before I ${String(topPendingAction.action || "continue").toLowerCase()}.`} Say yes, confirm, or do it to continue, or no to cancel.`,
+      response: confirmationReaskText(topPendingAction),
       status: "needs-confirmation",
       metadata: {
         conversationMode: true,
+        ...(stagedCommsIsSwahili(topPendingAction) ? { suppressBehaviorNudge: true, language: "sw" } : {}),
         redirectSection: topPendingAction.section || "dashboard",
         confirmationRequired: true,
         executionDeferred: true,
@@ -34980,14 +35228,15 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (topPendingAction?.phase4HighRisk && isAffirmativeCommand(lower)) {
-    const allowed = (topPendingAction.allowedConfirmations || ["yes", "confirm", "do it"]).map(item => normalizeSpeechForIntent(item));
+    const allowed = [...(topPendingAction.allowedConfirmations || ["yes", "confirm", "do it"]), ...(topPendingAction.kind === "message" || topPendingAction.kind === "call" ? COMMS_KISWAHILI_CONFIRMATIONS : [])].map(item => normalizeSpeechForIntent(item));
     if (!allowed.includes(normalizeSpeechForIntent(lower))) {
       return {
         intent: "conversation.confirmation_required",
-        response: `${topPendingAction.confirmationPrompt || `Please confirm before I ${String(topPendingAction.action || "continue").toLowerCase()}.`} Say yes, confirm, or do it to continue, or no to cancel.`,
+        response: confirmationReaskText(topPendingAction),
         status: "needs-confirmation",
         metadata: {
           conversationMode: true,
+          ...(stagedCommsIsSwahili(topPendingAction) ? { suppressBehaviorNudge: true, language: "sw" } : {}),
           redirectSection: topPendingAction.section || "dashboard",
           confirmationRequired: true,
           executionDeferred: true,
@@ -35009,7 +35258,8 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.lastStatus = "canceled";
     db.profile.agentMemory.lastSummary = "Pending action canceled.";
     db.profile.agentMemory.updatedAt = new Date().toISOString();
-    return { intent: "conversation.canceled", response: "Canceled. Tell me what you want to do next.", status: "completed", metadata: { conversationMode: true } };
+    const cancelledWords = stagedCommsCancelledReply(topPendingAction);
+    return { intent: "conversation.canceled", response: cancelledWords || "Canceled. Tell me what you want to do next.", status: "completed", metadata: { conversationMode: true, ...(cancelledWords ? { suppressBehaviorNudge: true, language: "sw" } : {}) } };
   }
   if (!topPendingAction && conversational && isAffirmativeCommand(lower)
     && !db.profile.agentMemory.activeSimpleTurn
@@ -35027,12 +35277,19 @@ async function runAgentCommand(db, user, command, options = {}) {
   const urgentHealth = urgentHealthSafetyResponse(db, user, text);
   if (urgentHealth) return urgentHealth;
   // (a message is only ever STAGED here, behind a yes, so unlike a call it is read whether or not the caller is in conversational mode: the voice tools are not)
-  const backendMessageIntent = stageMessageIntent(db, user, text, options);
+  // A name that fits more than one saved person was asked about ("which one?"): the answer picks one, and the text or call is then staged behind its own yes.
+  const contactChoice = answerContactChoice(db, user, text, lower);
+  if (contactChoice) return contactChoice;
+  // The person's contacts saved with the planner are read only when a name has to be looked up (not when a number was said), and only theirs.
+  const mayNeedSavedContacts = !extractPhoneNumberFromText(text) && Boolean(frontDoor.readMessageRequest(text) || isCallIntentCommand(text) || /\b(?:what|which)\s+number\b|\bnamba\b|\bnambari\b/i.test(text));
+  const stagingOptions = { ...options, personalContacts: mayNeedSavedContacts ? await personalContactsFor(user) : [] };
+  const backendMessageIntent = stageMessageIntent(db, user, text, stagingOptions);
   if (backendMessageIntent) return backendMessageIntent;
-  const backendCallIntent = conversational ? stageBackendCallIntent(db, user, text, options) : null;
+  // (a call is only ever STAGED here, behind a yes, so like a message it is read whether or not the caller is in conversational mode: the voice tools are not. Without conversational mode a number alone is not taken for a call; the request must say call.)
+  const backendCallIntent = stageBackendCallIntent(db, user, text, { ...stagingOptions, requireCallVerb: !conversational });
   if (backendCallIntent) return backendCallIntent;
   const reminderContactCommand = /\b(remind|reminder|notify|notification)\b/.test(lower);
-  const prioritizedPhoneContactCommand = reminderContactCommand ? null : await phoneContactMemoryCommandResponse(db, user, text, lower, options);
+  const prioritizedPhoneContactCommand = reminderContactCommand ? null : await phoneContactMemoryCommandResponse(db, user, text, lower, stagingOptions);
   if (prioritizedPhoneContactCommand) return prioritizedPhoneContactCommand;
   if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
     return missionBrainCommandResponse(db, user, text, options);
@@ -36658,7 +36915,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (pendingAction?.phase4HighRisk && isVagueConfirmationCommand(lower)) {
     return {
       intent: "conversation.confirmation_required",
-      response: `${pendingAction.confirmationPrompt || `Please confirm before I ${String(pendingAction.action || "continue").toLowerCase()}.`} Say yes, confirm, or do it to continue, or no to cancel.`,
+      response: confirmationReaskText(pendingAction),
       status: "needs-confirmation",
       metadata: {
         conversationMode: true,
@@ -36695,9 +36952,9 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return {
       intent: "conversation.canceled",
-      response: "Canceled. I did not run that workflow. Tell me what you want to do next.",
+      response: stagedCommsCancelledReply(pendingAction) || "Canceled. I did not run that workflow. Tell me what you want to do next.",
       status: "canceled",
-      metadata: { conversationMode: true }
+      metadata: { conversationMode: true, ...(stagedCommsCancelledReply(pendingAction) ? { suppressBehaviorNudge: true, language: "sw" } : {}) }
     };
   }
 

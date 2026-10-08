@@ -1,11 +1,15 @@
 "use strict";
 
-const en = require("./en.js");
-const sw = require("./sw.js");
+const enBase = require("./en.js");
+const swBase = require("./sw.js");
+const comms = require("./comms.js");
 
 // Kyro's own words, in the languages people speak. English is the source of truth and the fallback: a message that has no translation yet is said in
 // English, never left blank. Each language is one flat file of `key: "text with {placeholders}"`, so a translator reads the two files side by side.
 // Swahili is first (see sw.js: the wording of the safety messages must be reviewed by a fluent speaker before it is relied on).
+// comms.js adds the texting, calling and contacts replies (see its header): the same flat keys, merged here.
+const en = Object.freeze({ ...enBase, ...comms.en });
+const sw = Object.freeze({ ...swBase, ...comms.sw });
 const CATALOGS = Object.freeze({ en, sw });
 const SUPPORTED = Object.freeze(Object.keys(CATALOGS));
 

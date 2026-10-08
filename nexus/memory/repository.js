@@ -159,7 +159,8 @@ class MemoryRepository {
   }
 
   async listContacts({ tenantId, userId, limit = 200 }) {
-    const result = await this.db.query(`select memory_id,content from nexus_memory_items
+    // (created_at comes back too, so a caller that reads more than one place for a name can tell which was saved last)
+    const result = await this.db.query(`select memory_id,content,created_at from nexus_memory_items
       where tenant_id=$1 and principal_id=$2 and memory_class='domain' and purpose='contacts' and deleted_at is null
       order by created_at desc, memory_id desc limit $3`, [tenantId, userId, Math.min(Math.max(Number(limit) || 200, 1), 500)]);
     return (result.rows || result).filter(row => row.content && row.content.kind === "contact" && row.content.name);
