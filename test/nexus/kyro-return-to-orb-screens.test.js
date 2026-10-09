@@ -70,9 +70,29 @@ test("music keeps playing for 'close the card' and the quiet-spell return, and s
   assert.match(bodyOf("async function callNexusOpenAiRealtimeTool("), /kyroReturnToOrb\(\{ reason: window\.KyroDismissCommands\.parse\(command\)\.kind/);
 });
 
+test("the music card holds the YouTube player, so closing the card or the quiet-spell return parks it out of sight instead of ending the song", () => {
+  const screens = bodyOf("function kyroTearDownScreens(");
+  assert.match(screens, /if \(!stopMedia && el\.querySelector\("\[data-nexus-live-music-frame\]"\)\) kyroParkLiveMusicCard\(el\);\s*else el\.remove\(\);/);
+  const park = bodyOf("function kyroParkLiveMusicCard(");
+  assert.match(park, /dataset\.kyroParked = "true"/);
+  assert.match(park, /left:-9999px/);
+  assert.ok(!/display\s*:\s*none/.test(park), "display:none can stop a mobile player; park it off-screen instead");
+  assert.match(app, /KYRO_SHOWING_SCREEN_SELECTOR = KYRO_BODY_SCREEN_SELECTOR\.split\(", "\)\.map\(selector => `\$\{selector\}:not\(\[data-kyro-parked\]\)`\)/);
+  assert.match(bodyOf("function kyroScreenOpen("), /document\.querySelector\(KYRO_SHOWING_SCREEN_SELECTOR\)/, "a parked card is not 'a card on screen'");
+});
+
+test("asking for the music to stop, pause or resume reaches the parked card's player too, by every route", () => {
+  const control = bodyOf("function kyroLiveMusicCardControl(");
+  assert.match(control, /if \(control === "stop"\) \{ shell\?\.remove\(\); return; \}/);
+  assert.match(control, /pauseVideo/);
+  assert.match(control, /playVideo/);
+  assert.match(bodyOf("async function kyroMediaCommand("), /parsed\?\.type === "control"\) kyroLiveMusicCardControl\(parsed\.control\)/);
+  assert.match(bodyOf("function kyroMediaControlInstruction("), /kyroLiveMusicCardControl\(String\(control \|\| ""\)\)/);
+});
+
 test("the quiet-spell return does not mistake a card covering the orb for 'already on the orb'", () => {
   const snapshot = bodyOf("function kyroAutoReturnSnapshot(");
   assert.match(snapshot, /onOrb: Boolean\(document\.querySelector\("\[data-nexus-genesis-orb-only-home\]"\)\) && !kyroScreenOpen\(\)/);
   const open = bodyOf("function kyroScreenOpen(");
-  for (const piece of ["KYRO_BODY_SCREEN_SELECTOR", "nexusVisualProviderQuestionReportState", "workflow-open", "user-map-full-open", "jarvisPanel", "currentSectionId() !== \"dashboard\""]) assert.ok(open.includes(piece), `kyroScreenOpen must look at ${piece}`);
+  for (const piece of ["KYRO_SHOWING_SCREEN_SELECTOR", "nexusVisualProviderQuestionReportState", "workflow-open", "user-map-full-open", "jarvisPanel", "currentSectionId() !== \"dashboard\""]) assert.ok(open.includes(piece), `kyroScreenOpen must look at ${piece}`);
 });

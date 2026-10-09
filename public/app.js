@@ -27852,9 +27852,25 @@ function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
 // pilot dashboard, provider card), the rich-data overlay, the provider question report, the classic workflow modal, the Ask panel and caption panel, and any section other than the home screen
 // (the full map is one). The home screen's own "orb only" marker is present even while one of these covers it, so "is the orb showing" has to look at all of them.
 const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay";
+// The live music card holds the YouTube player itself: taking it off the page ends the song. So "close the card" and the quiet-spell return only park it out of sight (it keeps playing);
+// it is removed when the person asks for the music to stop ("stop the music", "go back to the orb", "I'm done") or when another card replaces it.
+const KYRO_SHOWING_SCREEN_SELECTOR = KYRO_BODY_SCREEN_SELECTOR.split(", ").map(selector => `${selector}:not([data-kyro-parked])`).join(", ");
+function kyroParkLiveMusicCard(shell) {
+  shell.dataset.kyroParked = "true";
+  shell.setAttribute("aria-hidden", "true");
+  shell.style.cssText = "position:fixed;left:-9999px;top:0;width:320px;height:240px;overflow:hidden;opacity:0;pointer-events:none;";
+}
+function kyroLiveMusicCardControl(control) {
+  const frame = document.querySelector("[data-nexus-live-music-frame]");
+  if (!frame) return;
+  const shell = frame.closest("[data-nexus-visual-shell]");
+  if (control === "stop") { shell?.remove(); return; }
+  const func = control === "pause" ? "pauseVideo" : control === "resume" || control === "play" ? "playVideo" : "";
+  if (func) { try { frame.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "https://www.youtube-nocookie.com"); } catch { /* the card's own buttons still work */ } }
+}
 function kyroScreenOpen() {
   try {
-    if (document.querySelector(KYRO_BODY_SCREEN_SELECTOR)) return true;
+    if (document.querySelector(KYRO_SHOWING_SCREEN_SELECTOR)) return true;
     if (nexusVisualProviderQuestionReportState) return true;
     if (document.body.classList.contains("workflow-open") || document.body.classList.contains("user-map-full-open")) return true;
     for (const id of ["jarvisPanel", "globalAssistantBar", "userCaptionPanel"]) { const el = document.getElementById(id); if (el && !el.classList.contains("hidden") && el.offsetParent !== null) return true; }
@@ -27866,7 +27882,10 @@ function kyroScreenOpen() {
 function kyroTearDownScreens(options = {}) {
   const stopMedia = options.stopMedia === true;
   const attempt = fn => { try { fn(); } catch { /* one stuck screen must not keep the others up */ } };
-  attempt(() => document.querySelectorAll(KYRO_BODY_SCREEN_SELECTOR).forEach(el => el.remove()));
+  attempt(() => document.querySelectorAll(KYRO_BODY_SCREEN_SELECTOR).forEach(el => {
+    if (!stopMedia && el.querySelector("[data-nexus-live-music-frame]")) kyroParkLiveMusicCard(el);
+    else el.remove();
+  }));
   attempt(() => { if (nexusVisualProviderQuestionReportState) closeNexusVisualProviderQuestionReport(); });
   attempt(() => { if (document.body.classList.contains("workflow-open")) closeWorkflowModal(); });
   attempt(() => { for (const id of ["jarvisPanel", "globalAssistantBar"]) document.getElementById(id)?.classList.add("hidden"); document.getElementById("jarvisToggle")?.setAttribute("aria-expanded", "false"); });
@@ -57548,6 +57567,7 @@ function kyroMediaCommandSeen(command) {
 async function kyroMediaCommand(command, options = {}) {
   const player = window.KyroMediaPlayerController;
   if (!player) return false;
+  try { const parsed = window.KyroMediaCommands?.parse?.(command); if (parsed?.type === "control") kyroLiveMusicCardControl(parsed.control); } catch (_) { /* the player's own handling below still runs */ }
   try { return await player.handleCommand(command, { lang: languageCode() }); } catch (error) {
     nexusGenesisVoiceDebugLog("kyro-media-command-failed", { error: String(error?.message || error).slice(0, 200) });
     return false;
@@ -57558,6 +57578,7 @@ async function kyroMediaCommand(command, options = {}) {
 function kyroMediaControlInstruction(control, language) {
   const player = window.KyroMediaPlayerController;
   if (!player) return false;
+  try { kyroLiveMusicCardControl(String(control || "")); } catch (_) { /* the player's own handling below still runs */ }
   const result = player.control(String(control || ""), { lang: language || languageCode() });
   if (result && result.handled === false && result.message) setVoiceResponse(result.message, true);
   return true;
