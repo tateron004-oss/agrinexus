@@ -23,6 +23,17 @@ test("going back to the orb, and being finished, are understood", () => {
   }
 });
 
+test("'I'm done working, close' and its kin: a finished sentence, with or without a closing request, goes back to the orb", () => {
+  for (const text of ["Kyro, I am done working, close", "Kyro, im done working, close", "I am done working. Close.", "I am done working", "done working", "Kyro I am done for the day", "I'm finished working, close everything",
+    "I am done, close", "that is all, close it", "I'm done for today, go back to the orb", "Kyro, close and go back to the orb", "close everything and go home"]) {
+    const parsed = D.parse(text);
+    assert.ok(parsed && (parsed.kind === "done" || parsed.kind === "home"), `"${text}" must go back to the orb, got ${JSON.stringify(parsed)}`);
+  }
+  for (const text of ["I am done working with the maize harvest today", "I am done, close my account", "I am done working on my resume, close the report", "clear my shopping list and go home"]) {
+    assert.equal(D.parse(text), null, `"${text}" names something specific and must not be taken as a dismissal`);
+  }
+});
+
 test("Kiswahili: closing the screen, going back and being finished", () => {
   assert.deepEqual(D.parse("funga kadi ya hali ya hewa"), { kind: "close", lang: "sw" });
   assert.deepEqual(D.parse("ficha hii"), { kind: "close", lang: "sw" });
