@@ -31,8 +31,10 @@ function status(env = process.env) {
     categories: Array.from(new Set(CATALOG.flatMap(item => item.services.concat(item.category)))) });
 }
 
-function catalogCards(text, plan) {
-  return CATALOG.filter(item => inExpectedCountry(item, plan) && (!text || [item.name, item.category, item.city, item.region, ...item.services].join(" ").toLowerCase().includes(text))).map(item => ({
+// keyword: what kind of clinic (matched on name, category, services); place: the town searched (matched on the town)
+function catalogCards(keyword, place, plan) {
+  return CATALOG.filter(item => inExpectedCountry(item, plan) && (!place || String(item.city).toLowerCase().includes(place))
+    && (!keyword || [item.name, item.category, item.city, item.region, ...item.services].join(" ").toLowerCase().includes(keyword))).map(item => ({
     ...item,
     source: "Nexus local mobile clinic starter catalog",
     realTimeAvailabilityClaimed: false,
@@ -45,7 +47,7 @@ function catalogCards(text, plan) {
 // loud), else the person is asked which town. See pharmacyBridgeProvider.js's search() and nearbySearch.js for the identical reasoning. The small catalog is only a fallback when the
 // live lookup fails, and only for the country asked about.
 async function search(query = {}, env = process.env) {
-  const text = safeText([query.q, query.query, query.location, query.city, query.state, query.serviceType, query.keyword, query.dateText].filter(Boolean).join(" "), 300).toLowerCase();
+  const text = safeText([query.q, query.query, query.serviceType, query.keyword, query.dateText].filter(Boolean).join(" "), 300).toLowerCase();
   return searchNearby({
     query: { ...query, location: safeText(query.location || query.city || "", 200) }, env, kind: "clinic", text,
     osmFilters: ['"amenity"="clinic"', '"healthcare"="clinic"', '"amenity"="doctors"'], fallbackTerm: "clinic", osmEnabled: envEnabled("NEXUS_MOBILE_CLINIC_OSM_SEARCH_ENABLED", env, true),

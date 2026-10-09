@@ -31,7 +31,7 @@ async function searchNearby({ query = {}, env = process.env, kind, osmFilters, f
   }
   // With no place named the catalog is matched on the town that was searched, not on the words of the request.
   const townText = String(plan.locationText || "").split(",")[0].trim().toLowerCase();
-  const cards = plan.mode === "device" ? [] : catalogCards(plan.mode === "named" ? text : townText, plan);
+  const cards = plan.mode === "device" ? [] : catalogCards(text, townText, plan);
   if (!mismatch && plan.mode === "named" && plan.account) {
     const other = cards.find(card => card.country && card.country.toLowerCase() !== plan.account.name.toLowerCase());
     if (other) mismatch = plan.words.mismatch(other.country, plan.account.name);

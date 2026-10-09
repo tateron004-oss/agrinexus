@@ -39,8 +39,10 @@ function status(env = process.env) {
     safeQuestionPrompts: SAFE_QUESTION_PROMPTS, prescriptionExecution: false });
 }
 
-function catalogCards(text, plan) {
-  return CATALOG.filter(item => inExpectedCountry(item, plan) && (!text || [item.name, item.category, item.city, ...item.services].join(" ").toLowerCase().includes(text))).map(item => ({
+// keyword: what kind of pharmacy (matched on name, category, services); place: the town searched (matched on the town)
+function catalogCards(keyword, place, plan) {
+  return CATALOG.filter(item => inExpectedCountry(item, plan) && (!place || String(item.city).toLowerCase().includes(place))
+    && (!keyword || [item.name, item.category, item.city, ...item.services].join(" ").toLowerCase().includes(keyword))).map(item => ({
     ...item,
     source: "Nexus local pharmacy starter catalog",
     inventoryClaimed: false,
@@ -54,7 +56,7 @@ function catalogCards(text, plan) {
 // "near me" with no place used to list the starter catalog (Stockton and Sacramento, California). The small catalog is only a fallback when the live lookup fails, and only for the
 // country asked about. A failure must never look like "no pharmacies exist".
 async function search(query = {}, env = process.env) {
-  const text = safeText([query.q, query.query, query.location, query.city, query.serviceType, query.keyword].filter(Boolean).join(" "), 300).toLowerCase();
+  const text = safeText([query.q, query.query, query.serviceType, query.keyword].filter(Boolean).join(" "), 300).toLowerCase();
   return searchNearby({
     query: { ...query, location: safeText(query.location || query.city || "", 200) }, env, kind: "pharmacy", text,
     osmFilters: ['"amenity"="pharmacy"'], fallbackTerm: "pharmacy", osmEnabled: envEnabled("NEXUS_PHARMACY_OSM_SEARCH_ENABLED", env, true),
