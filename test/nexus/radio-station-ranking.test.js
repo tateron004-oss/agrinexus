@@ -98,6 +98,22 @@ test("a stream that does not answer as audio is never offered, however well it m
   assert.deepEqual(result.candidates.map(candidate => candidate.title), ["Citizen Gospel"]);
 });
 
+// Found against the live directory: Kenya's Capital FM answered its stream check after the grace period, so quicker, lower-ranked stations in Italy were returned and played instead.
+test("a slow but best-ranked station is waited for (up to a limit) when asked to; the default still never waits", async () => {
+  const { collectVerified } = require("../../server/media/util.js");
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const tasks = () => [async () => { await sleep(250); return "best"; }, async () => { await sleep(10); return "quick"; }, async () => { await sleep(20); return "quicker"; }];
+  assert.deepEqual(await collectVerified(tasks(), { want: 3, graceMs: 40 }), ["quick", "quicker"], "default: the slow best one is passed over, as before");
+  assert.deepEqual(await collectVerified(tasks(), { want: 3, graceMs: 40, holdForBetterMs: 1000 }), ["best", "quick", "quicker"]);
+  // a best-ranked one that never answers is not waited for beyond the limit
+  const started = Date.now();
+  const stuck = await collectVerified([async () => { await sleep(1200); return "never"; }, async () => "quick"], { want: 2, graceMs: 20, holdForBetterMs: 100 });
+  assert.deepEqual(stuck, ["quick"]);
+  assert.ok(Date.now() - started < 1000, "did not wait for the one that never answers");
+  // a best-ranked one that fails quickly does not hold anyone up
+  assert.deepEqual(await collectVerified([async () => null, async () => "quick"], { want: 2, graceMs: 20, holdForBetterMs: 1000 }), ["quick"]);
+});
+
 test("unchanged: 'play radio' with no name starts a local station, and 'play Capital FM' / 'weka redio Citizen' resolve through radio-browser first", async () => {
   const local = await play(STATIONS, { query: "", kind: "radio", country: "Kenya" });
   assert.equal(local.ok, true);

@@ -185,6 +185,21 @@ test("the tool executors hand the search the account's country (from the request
   } finally { mobileClinicBridgeProvider.search = originalClinic; }
 });
 
+test("the typed route says what was found (names, where it looked, the notes, the question) instead of 'Nexus completed the governed execution'", () => {
+  const { placesFoundResponse } = require("../../nexus/runtime/behavior-spine.js");
+  const plan = tool => ({ steps: [{ toolId: tool }] });
+  const task = output => ({ steps: [{ output }] });
+  const found = placesFoundResponse(plan("pharmacy.find"), task({ cards: [{ name: "Example Pharmacy" }, { name: "Second Chemist" }], searchedNear: "Nairobi, Kenya", locationNote: "I don't know exactly where you are, so I looked near Nairobi, Kenya; tell me your town for better results." }), {});
+  assert.match(found, /^I found 2 pharmacies near Nairobi, Kenya: Example Pharmacy; Second Chemist\./);
+  assert.match(found, /directory lookup only/);
+  assert.match(found, /tell me your town for better results/);
+  assert.match(placesFoundResponse(plan("clinic.find"), task({ cards: [{ name: "Example Clinic" }], searchedNear: "Kisumu" }), {}), /^I found 1 clinic near Kisumu: Example Clinic\./);
+  assert.equal(placesFoundResponse(plan("clinic.find"), task({ needsLocation: true, question: "Which town should I look in?" }), {}), "Which town should I look in?");
+  assert.match(placesFoundResponse(plan("clinic.find"), task({ cards: [], searchedNear: "Kisumu", countryNote: "Note: these places are in Kenya, not Nigeria." }), {}), /^I did not find a clinic near Kisumu just now\. Note: these places are in Kenya/);
+  assert.match(placesFoundResponse(plan("pharmacy.find"), task({ cards: [{ name: "Duka A" }] }), { locale: "sw" }), /^Nimepata maduka 1/);
+  assert.equal(placesFoundResponse({ steps: [{ toolId: "reminders.schedule" }] }, task({}), {}), "", "other tools are not touched");
+});
+
 // ---- the older routes (orb tool door), on a real server with the OpenStreetMap lookup turned off, so the internet is never touched ----
 const root = path.resolve(__dirname, "..", "..");
 const port = freePortSync();

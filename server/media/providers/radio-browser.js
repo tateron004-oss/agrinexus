@@ -178,7 +178,7 @@ async function search(ctx, request) {
         if (check.ok) return { station, score, url, check };
       }
       return null;
-    }), { want: 4, graceMs: 800 });
+    }), { want: 4, graceMs: 800, holdForBetterMs: 3500 });
     const candidates = checked.slice(0, 5).map(({ station, score, url, check }) => buildCandidate({
       provider: ID, providerName: NAME, nativeId: station.stationuuid, playbackClass: "audio", delivery: "stream", url,
       title: normalizeText(station.name) || "Radio station", artist: [station.country, station.tags?.split(",").slice(0, 2).join(", ")].filter(Boolean).join(" · "),

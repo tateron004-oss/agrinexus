@@ -190,7 +190,7 @@ class BehaviorSpine {
     }
     if (execution.state === "awaiting_render") {
       const result = envelope({ command, plan, task, execution, state: "render_required", completed: false,
-        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || "Nexus completed the governed execution and is rendering the verified result.",
+        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || "Nexus completed the governed execution and is rendering the verified result.",
         outcome: { verified: true, renderVerified: false, reason: "renderer_acknowledgement_required" } });
       await this.workspaceStates.stage({ tenantId: context.tenantId, ownerId: context.userId,
         taskId: task.taskId, outcome: result.render });
@@ -271,6 +271,27 @@ function healthSavedResponse(plan, context) {
   } catch { return ""; }
 }
 
+// After "Find a pharmacy near me" / "Find a clinic near Kisumu" the person was told only "Nexus completed the governed execution..." (phrase sweep). Say what was found: the first few names, where it
+// looked, the notes the search added (a guessed place, a different country), or the question when no town is known. A directory lookup only, never a booking.
+function placesFoundResponse(plan, task, context) {
+  try {
+    const step = (plan?.steps || []).find(item => item?.toolId === "pharmacy.find" || item?.toolId === "clinic.find");
+    if (!step) return "";
+    const out = Object.assign({}, ...(task?.steps || []).map(item => (item?.output && typeof item.output === "object" ? item.output : {})));
+    if (out.needsLocation && out.question) return String(out.question);
+    const sw = context?.locale === "sw" || context?.language === "sw";
+    const pharmacy = step.toolId === "pharmacy.find";
+    const cards = Array.isArray(out.cards) ? out.cards : [];
+    const notes = [out.locationNote, out.countryNote].filter(Boolean).join(" ");
+    const near = out.searchedNear ? ` ${sw ? "karibu na" : "near"} ${out.searchedNear}` : "";
+    if (!cards.length) return [sw ? `Sikupata ${pharmacy ? "duka la dawa" : "kliniki"}${near || " karibu"} sasa hivi.` : `I did not find a ${pharmacy ? "pharmacy" : "clinic"}${near || " nearby"} just now.`, notes].filter(Boolean).join(" ");
+    const names = cards.slice(0, 5).map(card => card.name).filter(Boolean).join("; ");
+    const head = sw ? `Nimepata ${pharmacy ? "maduka" : "kliniki"} ${cards.length}${near}: ${names}.` : `I found ${cards.length} ${pharmacy ? "pharmac" + (cards.length === 1 ? "y" : "ies") : "clinic" + (cards.length === 1 ? "" : "s")}${near}: ${names}.`;
+    const kind = sw ? "Hii ni orodha ya mahali tu; hakuna kilichowekwa wala mtu aliyewasiliana naye." : "This is a directory lookup only; nothing was booked or contacted.";
+    return [head, kind, notes].filter(Boolean).join(" ");
+  } catch { return ""; }
+}
+
 function completedResponse(task) {
   const explicit = task?.outcome?.summary || task?.outcome?.message;
   return explicit || `Completed and verified: ${task.goal}`;
@@ -296,4 +317,4 @@ function envelope({ command, plan, execution = null, task = null, state, complet
     receipts: execution?.receipts || [], render });
 }
 
-module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse });
+module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse });
