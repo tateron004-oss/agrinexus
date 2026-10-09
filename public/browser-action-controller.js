@@ -21,6 +21,11 @@
     return currentAccountKey ? `${providerCardStoragePrefix}:${currentAccountKey}` : providerCardStoragePrefix;
   }
   function text(value) { return String(value ?? "").trim(); }
+  // Found by using the product: "close the weather card" mentions the weather, so this module opened a NEW weather card ("Please name a city or country") on top of the one the person
+  // wanted gone. A request to close, go back to the orb or say "I'm done" (public/kyro-dismiss-commands.js, loaded after this file, so looked up when needed) never opens anything here.
+  function dismissalRequest(command = "") {
+    try { return Boolean(global.KyroDismissCommands?.parse?.(command)); } catch { return false; }
+  }
   function html(value) {
     return text(value).replace(/[&<>"']/g, character => ({
       "&": "&amp;",
@@ -841,6 +846,7 @@
   if (typeof document !== "undefined") {
     document.addEventListener("click", event => {
       const command = commandFromTypedSurface(event);
+      if (dismissalRequest(command)) return;
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command" }), 0);
       if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command" }), 0);
@@ -851,6 +857,7 @@
       if (event.key !== "Enter" || event.shiftKey) return;
       const input = event.target?.closest?.("#nexusCommandCenterInput");
       const command = text(input?.value);
+      if (dismissalRequest(command)) return;
       if (providerQuestionRequest(command)) setTimeout(() => openRuralProviderCard(command, { source: "typed-command-enter" }), 0);
       if (pilotEvidenceRequest(command)) setTimeout(() => openPilotEvidenceDashboard({ source: "typed-command-enter" }), 0);
       if (weatherRequest(command)) setTimeout(() => void openLiveWeatherCard(command, { source: "typed-command-enter" }), 0);
@@ -877,6 +884,7 @@
     const sessionId = text(input.sessionId || "unknown-session");
     const transcriptId = text(input.transcriptId || (sessionId + ":" + transcript));
     if (!transcript || role !== "user" || input.isFinal !== true) return { handled: false };
+    if (dismissalRequest(transcript)) return { handled: false };
     const now = Date.now();
     for (const [key, at] of seen) if (now - at > replayWindowMs) seen.delete(key);
     if (seen.has(sessionId + ":" + transcriptId)) return { handled: false, duplicate: true };

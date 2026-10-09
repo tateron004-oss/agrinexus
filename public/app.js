@@ -27848,11 +27848,49 @@ function closeNexusFunctionWindow(options = {}) {
 let kyroLastActivityAt = Date.now();
 let kyroAutoReturnTimer = null;
 function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
+// Everything that can sit on top of the orb apart from the function window: the full-screen cards the browser action controller puts straight on the page body (weather, map, music,
+// pilot dashboard, provider card), the rich-data overlay, the provider question report, the classic workflow modal, the Ask panel and caption panel, and any section other than the home screen
+// (the full map is one). The home screen's own "orb only" marker is present even while one of these covers it, so "is the orb showing" has to look at all of them.
+const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay";
+function kyroScreenOpen() {
+  try {
+    if (document.querySelector(KYRO_BODY_SCREEN_SELECTOR)) return true;
+    if (nexusVisualProviderQuestionReportState) return true;
+    if (document.body.classList.contains("workflow-open") || document.body.classList.contains("user-map-full-open")) return true;
+    for (const id of ["jarvisPanel", "globalAssistantBar", "userCaptionPanel"]) { const el = document.getElementById(id); if (el && !el.classList.contains("hidden") && el.offsetParent !== null) return true; }
+    if (typeof currentSectionId === "function" && currentSectionId() !== "dashboard") return true;
+  } catch { /* if it cannot be told, say nothing is open */ }
+  return false;
+}
+// "close the weather card" and the quiet-spell return take the screens down but leave any music playing; "back to the orb" / "I'm done" also stop the music, a call's navigation and any video.
+function kyroTearDownScreens(options = {}) {
+  const stopMedia = options.stopMedia === true;
+  const attempt = fn => { try { fn(); } catch { /* one stuck screen must not keep the others up */ } };
+  attempt(() => document.querySelectorAll(KYRO_BODY_SCREEN_SELECTOR).forEach(el => el.remove()));
+  attempt(() => { if (nexusVisualProviderQuestionReportState) closeNexusVisualProviderQuestionReport(); });
+  attempt(() => { if (document.body.classList.contains("workflow-open")) closeWorkflowModal(); });
+  attempt(() => { for (const id of ["jarvisPanel", "globalAssistantBar"]) document.getElementById(id)?.classList.add("hidden"); document.getElementById("jarvisToggle")?.setAttribute("aria-expanded", "false"); });
+  attempt(() => closeUserCaptionPanel());
+  attempt(() => {
+    document.body.classList.remove("user-map-full-open");
+    if (typeof currentSectionId === "function" && currentSectionId() !== "dashboard") goSection("dashboard", { instant: true, scroll: false, openDefaultAction: false, keepAssistant: false });
+  });
+  if (stopMedia) {
+    attempt(() => window.KyroMediaPlayerController?.stop?.({ announce: false }));
+    attempt(() => closeNexusYouTubePlayback());
+    attempt(() => closeNexusProviderAudioPlayback());
+    attempt(() => kyroNavigator?.stop?.());
+  }
+}
 async function kyroReturnToOrb(options = {}) {
   kyroNoteActivity();
   try {
     if (nexusConversationWorkflowTransitionState) { nexusConversationWorkflowTransitionState.activeWorkflow = null; nexusConversationWorkflowTransitionState.lastProposal = null; }
   } catch { /* the workflow bookkeeping is optional */ }
+  // an explicit "I'm done" / "back to the orb" also drops anything still waiting for an answer; "close the card" and the quiet-spell return leave the music alone
+  const explicitEnd = options.reason === "home" || options.reason === "done";
+  if (options.reason !== "idle") { pendingAgentClarification = null; pendingNexusSpokenCommand = null; nexusPendingBehaviorConfirmation = null; }
+  kyroTearDownScreens({ stopMedia: explicitEnd });
   closeNexusFunctionWindow({ command: "What can Nexus do?" });
   nexusPresenceState = { ...nexusPresenceState, state: NEXUS_PRESENCE_STATES.IDLE, status: "Ask Nexus what you need.", lastUserInput: "", lastResponse: "", nextQuestion: "", activeMission: "", updatedAt: new Date().toISOString() };
   await handleNexusOsMissionLifecycleAction("return-home");
@@ -27870,7 +27908,7 @@ function kyroAutoReturnSnapshot() {
   const inField = Boolean(active && /^(?:INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && !/^(?:button|submit|checkbox|radio)$/i.test(active.type || ""));
   return {
     userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
-    onOrb: Boolean(document.querySelector("[data-nexus-genesis-orb-only-home]")),
+    onOrb: Boolean(document.querySelector("[data-nexus-genesis-orb-only-home]")) && !kyroScreenOpen(),
     lastActivityAt: kyroLastActivityAt,
     assistantSpeaking: Boolean(nexusVoiceSession?.assistantSpeaking),
     userSpeaking: Boolean(nexusVoiceSession?.userSpeaking),
@@ -50337,7 +50375,7 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
       executionVerified: false, blockedReason: null };
   }
   if (window.KyroDismissCommands?.parse?.(command)) {
-    await kyroReturnToOrb({ reason: "tool-call", source: "openai-realtime-tool" });
+    await kyroReturnToOrb({ reason: window.KyroDismissCommands.parse(command).kind, source: "openai-realtime-tool" });
     return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
   }
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
