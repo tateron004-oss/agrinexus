@@ -23593,7 +23593,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // Scoped to an explicit find/search/near-me phrasing so a plain safety
     // question ("what should I know about drug interactions") still gets
     // the question draft, not a location search with no location.
-    const nearbyRequest = parseNearbyPlacesRequest(command);
+    const nearbyRequest = typeof parseNearbyPlacesRequest === "function" ? parseNearbyPlacesRequest(command) : null;
     const wantsPharmacyLocationSearch = nearbyRequest?.kind === "pharmacy" || (wantsPharmacy
       && /\b(find|search for|look up|locate|show me|near me|nearby|closest)\b/i.test(command));
     // Found by the phrase sweep: "Find a clinic near Kisumu" (any clinic, hospital or health centre, not only a mobile clinic) got the generic "I opened Health and Chronic Care".
