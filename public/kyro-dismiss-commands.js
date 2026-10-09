@@ -27,7 +27,7 @@
       value = value.replace(/^(?:(?:please|kindly|tafadhali|okay|ok|alright|yes|and|so|well|now|just|then)[\s,]+)+/i, "")
         .replace(/^(?:(?:can|could|would|will) you\s+(?:please\s+)?|i (?:want|would like|need|'d like) you to\s+|i (?:want|need) to\s+|go ahead and\s+|let's\s+|lets\s+)/i, "");
     }
-    value = value.replace(/[.!?¡¿]+$/g, "").trim();
+    value = value.replace(/[.!?¡¿]+$/g, "").replace(/[.!?]+\s+/g, ", ").trim();
     // ("for now" is part of "done for now", so a bare trailing "now" is only dropped when it is not "for now")
     for (let i = 0; i < 3; i += 1) value = value.replace(/[\s,]+(?:please|thanks|thank you|for me|tafadhali|asante|sasa|kyro)$/i, "").replace(/(?<!\bfor)[\s,]+now$/i, "").trim();
     return value.replace(/\bpop[- ]?up\b/g, "popup").replace(/\bto-?dos\b/g, "todos");
@@ -63,12 +63,18 @@
     new RegExp(`^(?:go|head|return|come|take me|bring me|get me|send me|switch)(?: back)?(?: to)?(?: the)? ${HOME_WORDS}$`),
     /^(?:show|give|leave) (?:me )?(?:just )?(?:the )?orb(?: only| alone)?$/,
     /^(?:just|only) the orb$/,
-    /^(?:clear|close|reset)(?: out)?(?: the| my)? screen(?: and (?:go )?(?:back|home))?$/
+    /^(?:clear|close|reset)(?: out)?(?: the| my)? screen(?: and (?:go )?(?:back|home))?$/,
+    // "close and go back to the orb", "close everything and go home"
+    new RegExp(`^(?:close|clear|hide|dismiss)(?: out)?(?: it| this| that| everything| all)?,? (?:and|then) (?:(?:go|get|come|head|take me|bring me|return) )?(?:back )?(?:to )?(?:the )?${HOME_WORDS}$`)
   ];
+  // "I'm done working, close": a finished sentence followed by a request to close or go back
+  const TRAILING_CLOSER = /^(.*?)[\s,]+(?:and )?(?:close(?: out| down)?(?: it| this| that| everything| all| up)?|go back(?: to the orb)?|go home|take me (?:back|home))$/;
 
   // ---- English: I am finished -------------------------------------------------------------------------------------------------------------------------------------------------
   const DONE = [
-    /^(?:i(?: am|'m)|we(?: are|'re)) (?:all )?(?:done|finished)(?: for now| here| now| with (?:this|that|it|the \w+(?: \w+)?))?$/,
+    /^(?:i(?: am|'m|m)|we(?: are|'re)) (?:all )?(?:done|finished)(?: for now| here| now| with (?:this|that|it|the \w+(?: \w+)?))?$/,
+    /^(?:i(?: am|'m|m)|we(?: are|'re)) (?:all )?(?:done|finished)(?: working| for (?:now|today|the day|the night|the evening|the week))(?: for now| here)?$/,
+    /^(?:done|finished) (?:working|for (?:today|the day|the night|the evening|the week))$/,
     /^(?:that(?:'s| is)|this is) (?:all|it|enough)(?: for now| for today)?$/,
     /^(?:that will be|that'll be) all(?: for now)?$/,
     /^all (?:done|finished)(?: here| now)?$/,
@@ -103,6 +109,7 @@
     if ((m = NOUN_CLOSE.exec(value)) && isScreenPhrase(m[1].trim())) return { kind: "close", lang: "en" };
     if (HOME.some(re => re.test(value))) return { kind: "home", lang: "en" };
     if (DONE.some(re => re.test(value))) return { kind: "done", lang: "en" };
+    if ((m = TRAILING_CLOSER.exec(value)) && DONE.some(re => re.test(m[1].trim()))) return { kind: "done", lang: "en" };
     return null;
   }
 
