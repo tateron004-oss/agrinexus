@@ -12,10 +12,21 @@ const standaloneAcceptance = fs.readFileSync(".github/workflows/nexus-21-objecti
 
 test("production promotion is gated by production-equivalent qualification", () => {
   assert.match(canonical, /qualify-release-candidate:/);
-  assert.match(canonical, /image: pgvector\/pgvector:pg17/);
+  assert.match(canonical, /image: ghcr\.io\/tateron004-oss\/agrinexus-pgvector:pg17/);
   assert.match(canonical, /npm run foundation:migrate/);
   assert.match(canonical, /node scripts\/nexus-preproduction-black-box\.js/);
   assert.match(canonical, /deploy-exact-release:[\s\S]*needs: qualify-release-candidate/);
+});
+
+test("the proof pulls its database image from this repository's own registry with the built-in token, and a workflow keeps that copy filled", () => {
+  assert.match(canonical, /permissions:\s+contents: read\s+packages: read\s+services:/);
+  assert.match(canonical, /credentials:\s+username: \$\{\{ github\.actor \}\}\s+password: \$\{\{ secrets\.GITHUB_TOKEN \}\}/);
+  assert.doesNotMatch(canonical, /image: pgvector\/pgvector/, "the proof must not depend on Docker Hub's anonymous pull limit");
+  const mirror = fs.readFileSync(".github/workflows/mirror-pgvector-image.yml", "utf8");
+  assert.match(mirror, /packages: write/);
+  assert.match(mirror, /workflow_dispatch:/);
+  assert.match(mirror, /agrinexus-pgvector:pg17/);
+  assert.match(fs.readFileSync(".github/mirror/pgvector.Dockerfile", "utf8"), /^FROM pgvector\/pgvector:pg17$/m);
 });
 
 test("canonical promotion uses Render API control without a dashboard bridge or deploy hook", () => {

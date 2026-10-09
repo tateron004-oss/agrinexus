@@ -33,9 +33,17 @@ jobs:
     name: Prove release candidate before production
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # packages: read lets the built-in token pull the database image from this repository's own GitHub registry (copied there by mirror-pgvector-image.yml)
+    permissions:
+      contents: read
+      packages: read
     services:
       postgres:
-        image: pgvector/pgvector:pg17
+        # Was pgvector/pgvector:pg17 from Docker Hub, whose anonymous pull limit kept failing this proof before any of our code ran.
+        image: ghcr.io/tateron004-oss/agrinexus-pgvector:pg17
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_DB: nexus_candidate
           POSTGRES_USER: nexus
