@@ -74,8 +74,7 @@ test("going back to the orb takes down the window, the conversation workflow and
 
 test("it also goes back by itself after a quiet spell, but never while someone is speaking, typing or answering a question, and only in User mode", () => {
   const body = bodyOf("function kyroAutoReturnSnapshot(");
-  for (const field of ["assistantSpeaking", "userSpeaking", "focusInField", "pendingConfirmation", "intakeActive", "onOrb", "userMode"]) assert.ok(body.includes(field), `the snapshot must report ${field}`);
-  assert.match(body, /data-nexus-genesis-orb-only-home/);
+  for (const field of ["assistantSpeaking", "userSpeaking", "focusInField", "pendingConfirmation", "intakeActive", "answerShowing", "workOpen", "userMode"]) assert.ok(body.includes(field), `the snapshot must report ${field}`);
   assert.match(app, /setInterval\(kyroAutoReturnTick, 3000\)/);
   assert.match(bodyOf("function setVoiceResponse("), /kyroNoteActivity\(\)/, "an answer arriving counts as activity");
   for (const event of ["pointerdown", "keydown", "touchstart", "input", "wheel"]) assert.ok(app.includes(`"${event}"`) && /for \(const name of \["pointerdown"/.test(app));

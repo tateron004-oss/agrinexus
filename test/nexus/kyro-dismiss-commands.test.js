@@ -44,8 +44,8 @@ test("a person's own records, other commands and ordinary requests are never mis
   assert.equal(D.parse("close " + "the weather card ".repeat(20)), null, "a long rambling sentence is never a dismissal");
 });
 
-test("going back to the orb by itself: only when nothing has happened for a while, and never mid-conversation", () => {
-  const quiet = { userMode: true, onOrb: false, lastActivityAt: 1000 };
+test("going back to the orb by itself: only a finished answer, only after a quiet spell, never mid-conversation and never over work the person is in", () => {
+  const quiet = { userMode: true, answerShowing: true, workOpen: false, lastActivityAt: 1000 };
   const later = 1000 + D.AUTO_RETURN_MS + 1;
   assert.equal(D.shouldAutoReturn(quiet, later).go, true, "30 seconds of quiet with an answer on the screen goes back to the orb");
   assert.equal(D.shouldAutoReturn(quiet, 1000 + D.AUTO_RETURN_MS - 5000).go, false, "not before the time is up");
@@ -55,7 +55,10 @@ test("going back to the orb by itself: only when nothing has happened for a whil
     assert.equal(decision.go, false, `${JSON.stringify(busy)} must hold it off`);
     assert.equal(decision.retryMs, D.AUTO_RETURN_RETRY_MS);
   }
-  assert.equal(D.shouldAutoReturn({ ...quiet, onOrb: true }, later).go, false, "already on the orb: nothing to do");
+  assert.equal(D.shouldAutoReturn({ ...quiet, answerShowing: false }, later).go, false, "no answer on the screen: nothing to clear");
+  const work = D.shouldAutoReturn({ ...quiet, workOpen: true }, later);
+  assert.equal(work.go, false, "a map, a function window, a form or navigation is work: never closed by itself");
+  assert.equal(work.retryMs, D.AUTO_RETURN_RETRY_MS);
   assert.equal(D.shouldAutoReturn({ ...quiet, userMode: false }, later).go, false, "admin and investor screens are never closed by itself");
   assert.equal(D.shouldAutoReturn(null, later).go, false);
 });
