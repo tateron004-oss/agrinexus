@@ -25,7 +25,7 @@ function createMediaPlayExecutor({ env = process.env, lookupPreview, lookupVideo
   const video = lookupVideo || musicMediaSourceProvider.runYouTubeReadOnlyLookup;
   const resolve = resolveMedia || defaultResolve;
 
-  return async function execute({ input = {} }) {
+  return async function execute({ input = {}, context = null }) {
     const query = String(input.requestedMedia || input.resolvedMedia || input.query || "").trim();
     const kind = ["music", "radio", "video"].includes(input.kind) ? input.kind : "music";
     // "Play music" with nothing named is allowed: a local radio station is started.
@@ -37,7 +37,8 @@ function createMediaPlayExecutor({ env = process.env, lookupPreview, lookupVideo
     if (!legacyOnly) {
       try {
         const found = await Promise.race([
-          resolve({ query, kind, country: input.country, language: input.language, handoff: input.handoff === true }),
+          // (the person's account country is the default: found by the phrase sweep, "Play radio Citizen" had no country and chose a gaming station abroad)
+          resolve({ query, kind, country: input.country || context?.country || "", language: input.language, handoff: input.handoff === true }),
           new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error("resolver_timeout")), resolverTimeoutMs); timer.unref?.(); })
         ]);
         if (found?.mode === "handoff" && found.handoff?.url) {

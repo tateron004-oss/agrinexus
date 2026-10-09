@@ -117,25 +117,44 @@ async function fetchJson(ctx, url, { headers = {}, timeoutMs, method = "GET" } =
 
 // Runs the checks at the same time and returns the ones that passed, in the original (ranked) order, as soon as there are `want` of them or
 // `graceMs` after the first pass: a dead stream costs its timeout once, in the background, instead of holding everybody up.
-async function collectVerified(tasks, { want = 3, graceMs = 700 } = {}) {
+// holdForBetterMs (default 0 = never wait): when the best-ranked checks are still running at that point, wait for them -- up to this long from the start -- so a slow but good first
+// choice (found by the phrase sweep: Kenya's Capital FM answered after the grace period and a station in Italy was played instead) is not passed over for a quicker, lower-ranked one.
+async function collectVerified(tasks, { want = 3, graceMs = 700, holdForBetterMs = 0 } = {}) {
   const results = new Array(tasks.length).fill(null);
+  const settled = new Array(tasks.length).fill(false);
   let passed = 0;
   let pending = tasks.length;
+  const startedAt = Date.now();
   return new Promise(resolve => {
     let timer = null;
+    let holdTimer = null;
     let done = false;
-    const finish = () => { if (done) return; done = true; if (timer) clearTimeout(timer); resolve(results.filter(Boolean)); };
+    let ready = false;
+    const finish = () => { if (done) return; done = true; if (timer) clearTimeout(timer); if (holdTimer) clearTimeout(holdTimer); resolve(results.filter(Boolean)); };
+    const betterStillRunning = () => { const first = results.findIndex(Boolean); return first > 0 && settled.slice(0, first).some(flag => !flag); };
+    const finishIfReady = () => {
+      if (done) return;
+      ready = true;
+      const waited = Date.now() - startedAt;
+      if (holdForBetterMs > 0 && waited < holdForBetterMs && betterStillRunning()) {
+        if (!holdTimer) holdTimer = setTimeout(finish, holdForBetterMs - waited);
+        return;
+      }
+      finish();
+    };
     if (!tasks.length) return finish();
     tasks.forEach((task, index) => {
       Promise.resolve().then(task).catch(() => null).then(value => {
         pending -= 1;
+        settled[index] = true;
         if (value) {
           results[index] = value;
           passed += 1;
-          if (passed >= want) return finish();
-          if (passed === 1 && !timer) timer = setTimeout(finish, graceMs);
+          if (passed >= want) return finishIfReady();
+          if (passed === 1 && !timer) timer = setTimeout(finishIfReady, graceMs);
         }
-        if (pending === 0) finish();
+        if (pending === 0) return finish();
+        if (ready) finishIfReady();
       });
     });
   });

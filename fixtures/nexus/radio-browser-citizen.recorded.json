@@ -1,0 +1,65 @@
+{
+ "_note": "Recorded from the public radio-browser.info directory on 2026-10-08 with one read-only request per query (name=Citizen across all countries; the top Kenyan stations). Trimmed to the fields the resolver reads; stream addresses are replaced with example.test ones so no test touches the internet. At that time the directory had NO station called Citizen in Kenya.",
+ "stations": [
+  {
+   "stationuuid": "4ea91a6e-3b76-437e-8e5f-8e2d73d5ab39",
+   "name": "The People's Radio - A Star Citizen Community Radio Station",
+   "url_resolved": "https://streams.example.test/citizen-0.mp3",
+   "homepage": "https://thepeoplesradio.space/",
+   "tags": "",
+   "country": "The United Kingdom Of Great Britain And Northern Ireland",
+   "countrycode": "GB",
+   "codec": "MP3",
+   "bitrate": 320,
+   "hls": 0,
+   "lastcheckok": 1,
+   "clickcount": 3,
+   "votes": 24
+  },
+  {
+   "stationuuid": "ada9b1ca-4332-4663-afa1-0d7785f81462",
+   "name": "95alive Citizen Soldier 24/7",
+   "url_resolved": "https://streams.example.test/citizen-1.mp3",
+   "homepage": "http://95alive.net/",
+   "tags": "misc,rock,variety",
+   "country": "The United States Of America",
+   "countrycode": "US",
+   "codec": "MP3",
+   "bitrate": 192,
+   "hls": 0,
+   "lastcheckok": 0,
+   "clickcount": 0,
+   "votes": 6
+  },
+  {
+   "stationuuid": "4e5fa144-b715-4afa-b64c-068c6802527f",
+   "name": "Citizen ",
+   "url_resolved": "https://streams.example.test/citizen-2.mp3",
+   "homepage": "https://citizenradio.gr/",
+   "tags": "lounge,pop",
+   "country": "Greece",
+   "countrycode": "GR",
+   "codec": "MP3",
+   "bitrate": 320,
+   "hls": 0,
+   "lastcheckok": 1,
+   "clickcount": 0,
+   "votes": 449
+  },
+  {
+   "stationuuid": "4ec5158e-5204-4fad-a329-da356b4b0a05",
+   "name": "98.4 Capital FM",
+   "url_resolved": "https://streams.example.test/capital-ke-0.mp3",
+   "homepage": "https://www.capitalfm.co.ke/fresh/",
+   "tags": "hits,local news,news,pop,rock,urban",
+   "country": "Kenya",
+   "countrycode": "KE",
+   "codec": "MP3",
+   "bitrate": 128,
+   "hls": 0,
+   "lastcheckok": 1,
+   "clickcount": 5,
+   "votes": 28
+  }
+ ]
+}
