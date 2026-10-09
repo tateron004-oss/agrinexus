@@ -28,6 +28,7 @@ const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js
 const { contentGuardReply } = require("./content-guard.js");
 const KyroMediaCommands = require("../../public/kyro-media-commands.js");
 const { emergencyNumberAnswer } = require("../companion/emergency-number.js");
+const { parseNearbyPlacesRequest } = require("../../server/providers/placesLocation.js");
 const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
@@ -466,6 +467,8 @@ class OpenEndedPlanner {
     if (completeLiveKnowledge) return Object.freeze({ ...personalizedSearch(completeLiveKnowledge, known.byKind), planningAttempts: 1 });
     const completeMobileClinic = completeMobileClinicPlan(command.text, catalog);
     if (completeMobileClinic) return Object.freeze({ ...completeMobileClinic, planningAttempts: 1 });
+    const completeNearbyPlaces = completeNearbyPlacesPlan(command.text, catalog);
+    if (completeNearbyPlaces) return Object.freeze({ ...completeNearbyPlaces, planningAttempts: 1 });
     const completeMediaPlayback = completeMediaPlaybackPlan(command.text, catalog);
     if (completeMediaPlayback) return Object.freeze({ ...completeMediaPlayback, planningAttempts: 1 });
     const resume = resumePlan(command.text, catalog, known.byKind);
@@ -1096,6 +1099,20 @@ function completeMobileClinicPlan(text, catalog) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// "Find a pharmacy near me", "Find a clinic near Kisumu", "Where is the nearest hospital?", "Tafuta duka la dawa karibu na Kisumu". Found by the phrase sweep: on the typed route these went to
+// the AI model (no place was ever searched). The place named is passed on; "near me" passes none and the search then uses the person's saved town or their country (and says so) or asks which town.
+function completeNearbyPlacesPlan(text, catalog) {
+  const goal = String(text || "").trim();
+  const request = parseNearbyPlacesRequest(goal);
+  if (!request) return null;
+  const { kind, place, nearest } = request;
+  const toolId = kind === "pharmacy" ? "pharmacy.find" : "clinic.find"; const application = kind === "pharmacy" ? "pharmacy" : "mobile-clinic";
+  if (!catalog.tools.some(tool => tool.toolId === toolId) || !catalog.applications.some(app => app.applicationId === application)) return null;
+  return { goal, application, riskTier: "low", clarification: null,
+    steps: [{ clientStepId: `find-${kind}`, title: kind === "pharmacy" ? "Find pharmacies nearby" : "Find clinics nearby", toolId,
+      input: { ...(kind === "pharmacy" ? { query: goal } : {}), ...(place ? { location: place } : {}), selectClosest: nearest }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeMediaPlaybackPlan(text, catalog) {
   const goal = String(text || "").trim();
   const requestedMedia = goal.replace(/^\s*(?:nexus[,:]?\s*)?play\s+/i, "").replace(/\s+and\s+confirm\b.*$/i, "").trim();
@@ -1658,5 +1675,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
+  completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });

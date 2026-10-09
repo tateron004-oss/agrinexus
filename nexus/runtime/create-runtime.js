@@ -150,8 +150,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "health.chronic-intake": { create: () => createChronicDiseaseIntakeExecutor({ records }), verify: verifyChronicDiseaseIntakeOutcome, method: "real_record_write" },
     "health.chronic-reading": { create: () => createChronicDiseaseReadingExecutor({ records }), verify: verifyChronicDiseaseReadingOutcome, method: "real_record_write" },
     "health.chronic-summary": { create: () => createChronicDiseaseSummaryExecutor({ records }), verify: verifyChronicDiseaseSummaryOutcome, method: "real_record_lookup" },
-    "pharmacy.find": { create: () => createPharmacyFindExecutor({ env }), verify: verifyPharmacyFindOutcome, method: "real_osm_place_search_with_local_fallback" },
-    "clinic.find": { create: () => createClinicFindExecutor({ env }), verify: verifyClinicFindOutcome, method: "real_osm_place_search_with_local_fallback" },
+    "pharmacy.find": { create: () => createPharmacyFindExecutor({ env, memory }), verify: verifyPharmacyFindOutcome, method: "real_osm_place_search_with_local_fallback" },
+    "clinic.find": { create: () => createClinicFindExecutor({ env, memory }), verify: verifyClinicFindOutcome, method: "real_osm_place_search_with_local_fallback" },
     // Confirmed live: a real user's typed "add a donor"/"log an expense"/etc.
     // never reached nexus/business/* at all (see canonical-provider-
     // definitions.js's note on business.manage/business.query) -- both tools

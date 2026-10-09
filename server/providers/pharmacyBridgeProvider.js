@@ -12,7 +12,7 @@ const {
   createReminder,
   queueOffline
 } = require("./medicalBridgeUtils");
-const osmPlacesProvider = require("./osmPlacesProvider");
+const { searchNearby, inExpectedCountry } = require("./nearbySearch");
 
 const PROVIDER = "nexus-pharmacy-bridge";
 const FLAG = "NEXUS_PHARMACY_BRIDGE_ENABLED";
@@ -20,9 +20,9 @@ const INTAKES = "nexusPharmacyIntakes";
 const SAVED = "nexusSavedPharmacies";
 
 const CATALOG = [
-  { id: "ph-community", name: "Community Pharmacy Resource", category: "community pharmacy", city: "Stockton", services: ["medication counseling", "vaccination pharmacy", "medication safety education"] },
-  { id: "ph-chronic", name: "Chronic Care Pharmacy Questions Desk", category: "chronic care support", city: "Sacramento", services: ["diabetes medication question preparation", "hypertension medication question preparation", "obesity/cardiometabolic medication question preparation"] },
-  { id: "ph-rural", name: "Rural Medication Access Resource", category: "rural medication access", city: "Nakuru", services: ["low-cost medication resource", "delivery-capable pharmacy informational only"] }
+  { id: "ph-community", name: "Community Pharmacy Resource", category: "community pharmacy", city: "Stockton", country: "United States", services: ["medication counseling", "vaccination pharmacy", "medication safety education"] },
+  { id: "ph-chronic", name: "Chronic Care Pharmacy Questions Desk", category: "chronic care support", city: "Sacramento", country: "United States", services: ["diabetes medication question preparation", "hypertension medication question preparation", "obesity/cardiometabolic medication question preparation"] },
+  { id: "ph-rural", name: "Rural Medication Access Resource", category: "rural medication access", city: "Nakuru", country: "Kenya", services: ["low-cost medication resource", "delivery-capable pharmacy informational only"] }
 ];
 
 const SAFE_QUESTION_PROMPTS = [
@@ -39,46 +39,33 @@ function status(env = process.env) {
     safeQuestionPrompts: SAFE_QUESTION_PROMPTS, prescriptionExecution: false });
 }
 
-function localCatalogSearch(text) {
-  const cards = CATALOG.filter(item => !text || [item.name, item.category, item.city, ...item.services].join(" ").toLowerCase().includes(text)).map(item => ({
+function catalogCards(text, plan) {
+  return CATALOG.filter(item => inExpectedCountry(item, plan) && (!text || [item.name, item.category, item.city, ...item.services].join(" ").toLowerCase().includes(text))).map(item => ({
     ...item,
     source: "Nexus local pharmacy starter catalog",
     inventoryClaimed: false,
     refillEnabled: false,
     paymentEnabled: false
   }));
-  return response(PROVIDER, "pharmacy.search", "completed", `Loaded ${cards.length} local pharmacy option(s).`, { cards });
 }
 
-// Real when a location is given (OpenStreetMap Overpass, keyless, same
-// zero-config-real pattern as nexus/maps/executor.js) -- falls back to the
-// small local catalog only when no location was given, or when the live
-// lookup genuinely fails (network/geocoding error). A failure must never
-// look like "no pharmacies exist"; the local catalog is a real, if
-// limited, fallback, not a fabricated one.
+// Real (OpenStreetMap Overpass, keyless, same zero-config-real pattern as nexus/maps/executor.js). Where to look is worked out by nearbySearch.js: the place named; else, for
+// "near me", the town the person told Kyro, else the capital of their account's country (and the answer says so); else the person is asked which town. Found by the phrase sweep:
+// "near me" with no place used to list the starter catalog (Stockton and Sacramento, California). The small catalog is only a fallback when the live lookup fails, and only for the
+// country asked about. A failure must never look like "no pharmacies exist".
 async function search(query = {}, env = process.env) {
   const text = safeText([query.q, query.query, query.location, query.city, query.serviceType, query.keyword].filter(Boolean).join(" "), 300).toLowerCase();
-  // Only location/city is treated as a real place to geocode -- q/query are
-  // free-text keyword search terms (e.g. "chronic care"), not place names,
-  // and geocoding them would produce nonsensical live-search behavior.
-  const locationText = safeText(query.location || query.city || "", 200);
-  if (locationText && envEnabled("NEXUS_PHARMACY_OSM_SEARCH_ENABLED", env, true)) {
-    try {
-      const { origin, places } = await osmPlacesProvider.findNearbyPlaces({ locationText, osmFilters: ['"amenity"="pharmacy"'], limit: 8, env, fallbackTerm: "pharmacy" });
-      if (places.length) {
-        return response(PROVIDER, "pharmacy.search", "completed", `Found ${places.length} real pharmacy location(s) near ${origin.label} via OpenStreetMap.`, {
-          cards: places.map((place, index) => ({
-            id: `osm-pharmacy-${index}`, name: place.name, category: "pharmacy", city: origin.label,
-            address: place.address, distanceMeters: place.distanceMeters, phone: place.phone, openingHours: place.openingHours,
-            source: "OpenStreetMap (live)", inventoryClaimed: false, refillEnabled: false, paymentEnabled: false
-          }))
-        });
-      }
-    } catch {
-      // Fall through to the local catalog.
-    }
-  }
-  return localCatalogSearch(text);
+  return searchNearby({
+    query: { ...query, location: safeText(query.location || query.city || "", 200) }, env, kind: "pharmacy", text,
+    osmFilters: ['"amenity"="pharmacy"'], fallbackTerm: "pharmacy", osmEnabled: envEnabled("NEXUS_PHARMACY_OSM_SEARCH_ENABLED", env, true),
+    makeCard: (place, index, origin) => ({
+      id: `osm-pharmacy-${index}`, name: place.name, category: "pharmacy", city: origin.label,
+      address: place.address, distanceMeters: place.distanceMeters, phone: place.phone, openingHours: place.openingHours,
+      source: "OpenStreetMap (live)", inventoryClaimed: false, refillEnabled: false, paymentEnabled: false
+    }),
+    catalogCards,
+    respond: (message, data) => response(PROVIDER, "pharmacy.search", "completed", message, data)
+  });
 }
 
 function intake(body = {}, db, env = process.env) {

@@ -1,5 +1,5 @@
 const { clean, safeJson } = require("./providerUtils");
-const { geocodeLocation, mapsFetch } = require("./googleMapsProvider");
+const { mapsFetch } = require("./googleMapsProvider");
 
 // Real, keyless place lookup for pharmacies and clinics, matching the same
 // zero-config-real pattern nexus/maps/executor.js and the weather provider
@@ -88,12 +88,39 @@ async function nominatimPlaces({ origin, term, limit, radiusMeters, fetcher }) {
   }).filter(Boolean).sort((a, b) => a.distanceMeters - b.distanceMeters).slice(0, limit);
 }
 
+// Geocodes a named place with Nominatim (the same keyless source as before), also returning the country it is in. countryCode (an ISO code such as "ke") prefers that
+// country first -- "near Kisumu" for a person in Kenya -- and only then looks anywhere, so a place that exists only elsewhere is still found (and the caller says which country).
+async function geocodePlace(locationText, fetcher, countryCode = "") {
+  const lookup = async code => {
+    const url = new URL(NOMINATIM_SEARCH_URL);
+    url.searchParams.set("q", locationText);
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("addressdetails", "1");
+    if (code) url.searchParams.set("countrycodes", code);
+    const response = await fetcher(url, { method: "GET", headers: { accept: "application/json", "user-agent": USER_AGENT }, signal: AbortSignal.timeout(9000) });
+    const payload = await safeJson(response);
+    if (!response.ok) throw new Error(payload?.error?.message || payload?.message || response.statusText || `http-${response.status}`);
+    const match = Array.isArray(payload) ? payload[0] : null;
+    return match && match.lat && match.lon ? match : null;
+  };
+  let match = null;
+  if (countryCode) { try { match = await lookup(countryCode); } catch { /* look anywhere */ } }
+  if (!match) match = await lookup("");
+  if (!match) throw new Error(`location-not-found:${locationText}`);
+  return { label: clean(match.display_name || locationText), lat: Number(match.lat), lon: Number(match.lon),
+    country: clean(match.address?.country || ""), countryCode: String(match.address?.country_code || "").toLowerCase() };
+}
+
 // osmFilters: an array of Overpass tag-match strings, e.g. ['"amenity"="pharmacy"'].
 // fallbackTerm (optional): a plain word such as "pharmacy" for the Nominatim fallback above.
-async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000, limit = 8, fetchImpl, env = process.env, fallbackTerm = "" }) {
+// countryCode (optional): prefer a named place in this country. coords (optional, { lat, lon }): the device's own position, handed over by the browser with permission; no lookup needed.
+async function findNearbyPlaces({ locationText, osmFilters, radiusMeters = 8000, limit = 8, fetchImpl, env = process.env, fallbackTerm = "", countryCode = "", coords = null }) {
   const fetcher = fetchImpl || mapsFetch(env);
   if (typeof fetcher !== "function") throw new Error("no-fetch-available");
-  const origin = await geocodeLocation(locationText, fetcher);
+  const origin = coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lon)
+    ? { label: "your device location", lat: coords.lat, lon: coords.lon, country: "", countryCode: "" }
+    : await geocodePlace(locationText, fetcher, countryCode);
   if (!fallbackTerm) return overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher });
   let result = { origin, places: [] };
   try { result = await overpassPlaces({ origin, osmFilters, radiusMeters, limit, fetcher }); } catch { /* fall through to Nominatim */ }
