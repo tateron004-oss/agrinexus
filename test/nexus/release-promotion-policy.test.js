@@ -18,6 +18,10 @@ test("production promotion is gated by production-equivalent qualification", () 
   assert.match(canonical, /deploy-exact-release:[\s\S]*needs: qualify-release-candidate/);
 });
 
+test("the proof's database image is pulled with a Docker Hub login from repository secrets, never a literal credential", () => {
+  assert.match(canonical, /image: pgvector\/pgvector:pg17\s+(?:#[^\n]*\n\s+)*credentials:\s+username: \$\{\{ secrets\.DOCKERHUB_USERNAME \}\}\s+password: \$\{\{ secrets\.DOCKERHUB_TOKEN \}\}/);
+});
+
 test("canonical promotion uses Render API control without a dashboard bridge or deploy hook", () => {
   assert.match(canonical, /RENDER_API_KEY/);
   assert.match(canonical, /node scripts\/nexus-render-release-controller\.js/);

@@ -36,6 +36,12 @@ jobs:
     services:
       postgres:
         image: pgvector/pgvector:pg17
+        # Docker Hub refuses anonymous pulls from GitHub's shared machines once its free limit is reached ("toomanyrequests"),
+        # which failed this proof before any of our code ran. A free Docker Hub account's access token (repository secrets
+        # DOCKERHUB_USERNAME and DOCKERHUB_TOKEN) raises that limit. Set both secrets BEFORE merging, so this pull request's own proof run shows the login works.
+        credentials:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
         env:
           POSTGRES_DB: nexus_candidate
           POSTGRES_USER: nexus
