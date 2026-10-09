@@ -2940,6 +2940,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (handleNexusGenesisPredictiveWorkforceCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusEnterpriseHealthEvidenceTrustCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "standard-user-safe-typed-command" })) return true;
+  if (handleKyroDismissCommand(command, { source: "standard-user-safe-typed-command" })) return true;
   // Found live (dispatch-wiring audit): this dispatcher (the global command
   // box, and via runGlobalCommand/caption-panel Send) had no path to voice
   // troubleshooting at all, direct or indirect -- its own fallback chain
@@ -27839,6 +27840,58 @@ function closeNexusFunctionWindow(options = {}) {
   return true;
 }
 
+// ---- Back to the orb ---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Found by using the product: "close the weather card" opened a Live Knowledge Research window instead (any sentence mentioning the weather did), "close it" and "go back to the orb"
+// were understood by nothing, and a finished answer stayed on the screen ("Kisumu, Kenya today: 31C..." and "Last heard: ..." sat under the orb). Now a request to close or go back
+// (public/kyro-dismiss-commands.js, checked right after the safety check and before anything else reads the sentence) and, after a quiet spell, Kyro itself, take everything down and
+// leave only the orb. closeNexusFunctionWindow alone left the last answer on the home screen; the "return-home" the Return home button uses clears it.
+let kyroLastActivityAt = Date.now();
+let kyroAutoReturnTimer = null;
+function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
+async function kyroReturnToOrb(options = {}) {
+  kyroNoteActivity();
+  try {
+    if (nexusConversationWorkflowTransitionState) { nexusConversationWorkflowTransitionState.activeWorkflow = null; nexusConversationWorkflowTransitionState.lastProposal = null; }
+  } catch { /* the workflow bookkeeping is optional */ }
+  closeNexusFunctionWindow({ command: "What can Nexus do?" });
+  nexusPresenceState = { ...nexusPresenceState, state: NEXUS_PRESENCE_STATES.IDLE, status: "Ask Nexus what you need.", lastUserInput: "", lastResponse: "", nextQuestion: "", activeMission: "", updatedAt: new Date().toISOString() };
+  await handleNexusOsMissionLifecycleAction("return-home");
+  try { nexusGenesisVoiceDebugLog("kyro-return-to-orb", { reason: options.reason || "", source: options.source || "" }); } catch { /* logging only */ }
+  return true;
+}
+function handleKyroDismissCommand(command = "", options = {}) {
+  const dismissal = window.KyroDismissCommands?.parse?.(command);
+  if (!dismissal) return false;
+  void kyroReturnToOrb({ reason: dismissal.kind, source: options.source || "" });
+  return true;
+}
+function kyroAutoReturnSnapshot() {
+  const active = document.activeElement;
+  const inField = Boolean(active && /^(?:INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && !/^(?:button|submit|checkbox|radio)$/i.test(active.type || ""));
+  return {
+    userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
+    onOrb: Boolean(document.querySelector("[data-nexus-genesis-orb-only-home]")),
+    lastActivityAt: kyroLastActivityAt,
+    assistantSpeaking: Boolean(nexusVoiceSession?.assistantSpeaking),
+    userSpeaking: Boolean(nexusVoiceSession?.userSpeaking),
+    focusInField: inField,
+    pendingConfirmation: Boolean(nexusPendingBehaviorConfirmation || pendingAgentClarification),
+    intakeActive: Boolean(kyroActiveVoiceIntake)
+  };
+}
+function kyroAutoReturnTick() {
+  try {
+    const decision = window.KyroDismissCommands?.shouldAutoReturn?.(kyroAutoReturnSnapshot(), Date.now());
+    if (decision?.go) void kyroReturnToOrb({ reason: "idle", source: "auto-return" });
+  } catch { /* never let the watcher break the page */ }
+}
+function startKyroAutoReturn() {
+  if (kyroAutoReturnTimer || typeof document === "undefined") return;
+  for (const name of ["pointerdown", "keydown", "touchstart", "input", "wheel"]) document.addEventListener(name, kyroNoteActivity, { capture: true, passive: true });
+  kyroAutoReturnTimer = setInterval(kyroAutoReturnTick, 3000);
+}
+startKyroAutoReturn();
+
 function minimizeNexusFunctionWindow() {
   if (!nexusActiveWorkflowState?.id) return false;
   nexusMinimizedFunctionWindowState = { ...nexusActiveWorkflowState };
@@ -30002,6 +30055,15 @@ function routeNexusCommandCenterCommunicationSubmit(event, submit, source = "typ
     setCommandInputs("");
     return true;
   }
+  // "close the weather card", "go back to the orb", "I'm done": take the screen down instead of treating it as a question (see handleKyroDismissCommand).
+  if (handleKyroDismissCommand(command, { source })) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
   if (handleNexusVoiceTroubleshootingCommand(command, { source })) {
     event?.preventDefault?.();
     event?.stopPropagation?.();
@@ -31926,6 +31988,11 @@ async function handleNexusPresenceCommandSendSubmit(event) {
     return true;
   }
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source })) {
+    if (input) input.value = "";
+    setCommandInputs("");
+    return true;
+  }
+  if (handleKyroDismissCommand(command, { source })) {
     if (input) input.value = "";
     setCommandInputs("");
     return true;
@@ -46527,6 +46594,7 @@ function authoritativeNexusFinalAnswer(...candidates) {
 }
 
 function setVoiceResponse(message, speak = false, options = {}) {
+  kyroNoteActivity();
   if (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken)) return;
   const realtimeOwnsAudibleResponse = Boolean(
     typeof realtimeVoiceActive === "function"
@@ -50268,6 +50336,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     return { ok: true, status: "completed", response: "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
       executionVerified: false, blockedReason: null };
   }
+  if (window.KyroDismissCommands?.parse?.(command)) {
+    await kyroReturnToOrb({ reason: "tool-call", source: "openai-realtime-tool" });
+    return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
+  }
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
     toolName,
@@ -51138,6 +51210,8 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const command = String(transcript || "").trim();
   const lower = command.toLowerCase();
   if (!command) return null;
+  // "close the weather card" mentions the weather, but it asks for nothing to be opened.
+  if (window.KyroDismissCommands?.parse?.(command)) return null;
   const explicitOpen = /\b(open|show|display|start|begin|launch|find|search|play|plan|reset|record|create|take me to|remind me|help (?:me )?(?:with|find|sell|record|enter|create))\b/.test(lower);
   const routeRequest = /\b(route|directions?|navigate|navigation)\b/.test(lower) || (explicitOpen && /\bmaps?\b/.test(lower));
   const workforceRequest = explicitOpen && (
@@ -51243,6 +51317,8 @@ async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
   // patterns). Checking here, before any workspace action executes, is the
   // only point in this pathway that can reliably see the real words at all.
   if (handleNexusMentalHealthBehavioralWellnessCommand(command, { source: "openai-realtime-final-transcript" })) return true;
+  // A spoken "close the weather card" / "go back to the orb" takes the screen down; it must never open a workspace (the model answers with a short "Okay").
+  if (handleKyroDismissCommand(command, { source: "openai-realtime-final-transcript" })) return true;
   const normalized = command.toLowerCase().replace(/\s+/g, " ");
   const now = Date.now();
   if (lastGenesisTranscriptWorkspaceExecution.command === normalized && now - lastGenesisTranscriptWorkspaceExecution.at < 5000) return false;
@@ -58101,6 +58177,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // Local support and visit preparation cannot authorize or execute provider actions.
   // These explicit requests remain available even when the durable runtime is unavailable.
   if (handleNexusMentalHealthBehavioralWellnessCommand(text, { ...options, source: "unified-brain-mental-health-priority" })) return true;
+  if (handleKyroDismissCommand(text, { source: options.source || "unified-brain-dismiss" })) return true;
   // Found live (dispatch-wiring audit): this function is the ONLY thing
   // handleVoiceCommand -- the real entry point for actual spoken voice --
   // delegates to, and it never checked voice-troubleshooting at all. "Can
