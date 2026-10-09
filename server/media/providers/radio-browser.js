@@ -6,7 +6,7 @@
 // Etiquette (https://docs.radio-browser.info): discover servers from all.api.radio-browser.info, send a descriptive User-Agent, and count a
 // "click" only for a station that really started playing (server/media/routes.js -> reportPlayed()).
 
-const { fetchJson, collectVerified, normalizeText, fold, relevance, shuffled, countryCode, ProviderError, httpsOnly } = require("../util.js");
+const { fetchJson, collectVerified, normalizeText, fold, relevance, significantTokens, shuffled, countryCode, ProviderError, httpsOnly } = require("../util.js");
 const { buildCandidate } = require("../candidate.js");
 const { preflightStream } = require("../preflight.js");
 
@@ -58,6 +58,15 @@ async function queryStations(ctx, servers, params) {
   throw lastError || new ProviderError("no-server", "no radio-browser server answered");
 }
 
+// Several searches at once; their stations are merged (each station once). Fails only when every one of them failed.
+async function queryMany(ctx, servers, parts) {
+  const settled = await Promise.allSettled(parts.map(part => queryStations(ctx, servers, part)));
+  const lists = settled.filter(item => item.status === "fulfilled").map(item => item.value);
+  if (!lists.length) throw settled.find(item => item.status === "rejected")?.reason || new ProviderError("no-server", "no radio-browser server answered");
+  const seen = new Set();
+  return lists.flat().filter(station => station && station.stationuuid && !seen.has(station.stationuuid) && seen.add(station.stationuuid));
+}
+
 function streamUrlFor(station, allowHttp) {
   const raw = normalizeText(station.url_resolved || station.url);
   if (!raw) return [];
@@ -70,14 +79,46 @@ function streamUrlFor(station, allowHttp) {
   return [];
 }
 
-function rank(station, nameQuery) {
+// Found by the phrase sweep: "Play radio Citizen" resolved to "The People's Radio - A Star Citizen Community Radio Station" (a gaming station in the UK) because the listener's country was not
+// known and a name that merely CONTAINS the word counted as much as a station called that. Now: a station whose NAME is the request (exact, then starting with it, then containing it as words)
+// outranks one that only mentions it or only carries it as a tag; the listener's own country outranks other countries (Kenya and Nigeria are the default for these users); stations about
+// gaming / games / esports / soundtracks are dropped unless that is what was asked for; of several stations with the same name the most clicked and voted one in the preferred country wins.
+const GAMING = /\b(?:gaming|games?|gamers?|esports?|soundtracks?|video ?games?|star citizen|minecraft|fortnite|twitch)\b/;
+const DEFAULT_COUNTRIES = Object.freeze(["KE", "NG"]);
+const OWN_COUNTRY_BONUS = 80;
+const DEFAULT_COUNTRY_BONUS = 40;
+
+function isGamingStation(station) {
+  return GAMING.test(fold(`${station.name || ""} ${String(station.tags || "").replace(/,/g, " ")}`));
+}
+// The words of a station's (or a request's) name that identify it: no "radio"/"FM"/country words, no frequency such as 98.4.
+function nameWords(value) {
+  return significantTokens(normalizeText(String(value || "").replace(/\b\d{2,3}[.,]\d\b/g, " ").replace(GENERIC_WORDS, " ")));
+}
+// 100 = the station's name is the request, 60 = it starts with the request, 30 = it contains the request as whole words in a row, 10 = it has all the words, 0 = anything else
+function nameTier(nameQuery, stationName) {
+  const wanted = nameWords(nameQuery); const own = nameWords(stationName);
+  if (!wanted.length || !own.length) return 0;
+  const a = wanted.join(" "); const b = own.join(" ");
+  if (a === b) return 100;
+  if (b.startsWith(`${a} `)) return 60;
+  if (` ${b} `.includes(` ${a} `)) return 30;
+  return wanted.every(word => own.includes(word)) ? 10 : 0;
+}
+
+function rank(station, nameQuery, preferred = {}) {
   const popularity = Math.log10(1 + Number(station.clickcount || 0)) * 8 + Math.log10(1 + Number(station.votes || 0)) * 3;
-  const match = nameQuery ? relevance(nameQuery, `${station.name} ${station.tags || ""}`) * 100 : 0;
+  const nameRelevance = nameQuery ? relevance(nameQuery, station.name) : 0;
+  const tagRelevance = nameQuery ? relevance(nameQuery, station.tags || "") : 0;
+  // a name match is worth far more than a tag match
+  const match = nameQuery ? nameRelevance * 50 + (nameRelevance === 0 ? tagRelevance * 10 : 0) + nameTier(nameQuery, station.name) : 0;
+  const code = String(station.countrycode || "").toUpperCase();
+  const country = preferred.code ? (code === preferred.code ? OWN_COUNTRY_BONUS : 0) : (DEFAULT_COUNTRIES.includes(code) ? DEFAULT_COUNTRY_BONUS : 0);
   const hlsPenalty = Number(station.hls) === 1 ? 15 : 0;
   const httpsBonus = /^https:/i.test(String(station.url_resolved || station.url || "")) ? 20 : 0;
   const bitrate = Number(station.bitrate || 0);
   const bitratePenalty = bitrate > 192 ? 6 : bitrate > 0 && bitrate < 32 ? 8 : 0;
-  return match + popularity + httpsBonus - hlsPenalty - bitratePenalty;
+  return match + country + popularity + httpsBonus - hlsPenalty - bitratePenalty;
 }
 
 async function search(ctx, request) {
@@ -91,8 +132,12 @@ async function search(ctx, request) {
   const httpsBase = { ...base, is_https: "true" };
   const plans = [];
   if (nameQuery) {
-    if (cc) { plans.push({ ...httpsBase, name: nameQuery, countrycode: cc, limit: 25 }); plans.push({ ...base, name: nameQuery, countrycode: cc, limit: 25 }); }
-    plans.push({ ...httpsBase, name: nameQuery, limit: 25 });
+    // One combined look: the listener's country AND everywhere, ranked together, so a station that is exactly what was asked for is not hidden behind a country-only partial match
+    // (and the other way round: the own country still wins ties, see rank()).
+    const parts = [];
+    if (cc) { parts.push({ ...httpsBase, name: nameQuery, countrycode: cc, limit: 25 }); parts.push({ ...base, name: nameQuery, countrycode: cc, limit: 25 }); }
+    parts.push({ ...httpsBase, name: nameQuery, limit: 25 });
+    plans.push({ name: nameQuery, parts });
     if (genre) {
       if (cc) plans.push({ ...httpsBase, tag: genre, tagExact: "true", countrycode: cc });
       plans.push({ ...httpsBase, tag: genre, tagExact: "true" });
@@ -104,16 +149,18 @@ async function search(ctx, request) {
   }
 
   const exclude = new Set(request.excludeIds || []);
+  const wantsGaming = GAMING.test(folded);
   let attempted = 0;
   for (const plan of plans) {
     attempted += 1;
     let stations;
-    try { stations = await queryStations(ctx, servers, plan); } catch (error) { if (attempted === plans.length) throw error; continue; }
+    try { stations = plan.parts ? await queryMany(ctx, servers, plan.parts) : await queryStations(ctx, servers, plan); } catch (error) { if (attempted === plans.length) throw error; continue; }
     const ranked = stations
       .filter(station => station && station.stationuuid && Number(station.lastcheckok) !== 0)
       .filter(station => !exclude.has(`${ID}:${station.stationuuid}`) && !exclude.has(station.stationuuid))
       .filter(station => (nameQuery ? relevance(nameQuery, `${station.name} ${station.tags || ""}`) > 0 || plan.tag : true))
-      .map(station => ({ station, score: rank(station, plan.tag ? "" : nameQuery) }))
+      .filter(station => wantsGaming || !isGamingStation(station))
+      .map(station => ({ station, score: rank(station, plan.tag ? "" : nameQuery, { code: cc }) }))
       .sort((a, b) => b.score - a.score);
     // Check the best stations at the same time (a dead stream costs its timeout once, not once per station), keep them in rank order.
     const seen = new Set();

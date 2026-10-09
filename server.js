@@ -52195,7 +52195,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/media/resolve" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many requests. Please slow down." });
-    const outcome = await mediaRoutes.handleResolve({ body: await readBody(req), runtime: mediaRuntime.getMediaRuntime() });
+    // (a device that sends no country gets the one on the person's account, so radio is theirs and not whichever station is most clicked in the world)
+    const resolveBody = await readBody(req);
+    if (resolveBody && typeof resolveBody === "object" && !String(resolveBody.country || "").trim() && user.country) resolveBody.country = user.country;
+    const outcome = await mediaRoutes.handleResolve({ body: resolveBody, runtime: mediaRuntime.getMediaRuntime() });
     return send(res, outcome.status, outcome.body);
   }
 
