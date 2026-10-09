@@ -32,9 +32,19 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, maxRepairAttempts });
+  }
+
+  // The no-workspace answer for a business/nonprofit request, or null when the person has a workspace (or this cannot be told: then the request goes on as before and the executor's own check still applies).
+  async noBusinessWorkspaceAnswer(text, context) {
+    if (!this.businessWorkspaces?.count || context?.deterministicOnly === true) return null;
+    const intent = businessVoiceDispatch.classify(text);
+    if (!businessVoiceDispatch.needsWorkspace(intent)) return null;
+    let count = null;
+    try { count = await this.businessWorkspaces.count(context); } catch { return null; }
+    return count === 0 ? businessVoiceDispatch.noWorkspaceReply(intent) : null;
   }
 
   // "Send me a weekly summary on Sunday at 6pm" / "stop my weekly summary" / "do I have a weekly summary?": opt-in, like the morning brief.
@@ -500,7 +510,12 @@ class OpenEndedPlanner {
     // enough that an unrelated generic document request still falls through
     // to completeDocumentPlan below, unaffected.
     const completeBusiness = completeBusinessPlan(command.text, catalog);
-    if (completeBusiness) return Object.freeze({ ...completeBusiness, planningAttempts: 1 });
+    if (completeBusiness) {
+      // Found by the phrase sweep: a person with no business workspace was asked "Should I go ahead?" and only after the yes told there is none. Say it first, with no model and before any confirmation.
+      const noWorkspace = await this.noBusinessWorkspaceAnswer(command.text, context);
+      if (noWorkspace) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: noWorkspace, sourceRequired: false, planningAttempts: 0 });
+      return Object.freeze({ ...completeBusiness, planningAttempts: 1 });
+    }
     // Ahead of completeDocumentPlan for the same reason completeBusinessPlan is:
     // "save this conversation as a document" contains "save"+"document" and would
     // otherwise match completeDocumentPlan's generic gate, which just echoes the raw

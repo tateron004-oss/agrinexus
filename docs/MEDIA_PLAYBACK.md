@@ -50,6 +50,11 @@ phone: tries candidate 1 in a real <audio>/<video> (or YouTube's official IFrame
 * `media.control` (pause, resume, stop, next, previous, volume, mute) is a server tool that returns an INSTRUCTION; the phone's player carries it out. Its outcome
   is "instructed", never "paused": only the phone can see whether anything was playing, and it says "Nothing is playing right now." when not.
 
+* On the older command route (`POST /api/agent/command` and the phone line) there is no player. A control that names music or volume ("pause the music", "volume up", "mute", "sitisha muziki") returns the same
+  `media.control` instruction (in `commandResult.metadata.mediaControl` and the usual `genesisAction`) plus a short line that says it was passed on, not done ("I can't see from here whether anything is playing");
+  a bare "resume"/"endelea" asks what to resume, and a bare "pause"/"next" says nothing is playing from here. The server never claims success and never invents a player
+  (`nexus/media/command-route-controls.js`). The Kiswahili lines are draft wording that a fluent speaker should review.
+
 ## Provider chain
 
 Providers are tried in order and the search stops at the first one with a playable, preflight-verified match, so YouTube's scarce quota is only spent when the
