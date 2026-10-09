@@ -1483,6 +1483,17 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   return { status: "completed", localOnly: true, response, businessRecord: created?.body || null, summary: response };
 }
 
+// Found by the phrase sweep: on the typed route "add a donor named Grace Otieno", "create an invoice for Grace Otieno" and "mark invoice INV-1001 as paid" from an account with no business workspace first asked "Should I go
+// ahead?" and only after the yes said there is no workspace. The planner now asks this BEFORE staging any confirmation (no model, one read of the person's own workspaces). Every business request needs a
+// workspace except starting one and listing them (which already says there are none).
+function needsWorkspace(intent) { return Boolean(intent) && intent !== "createWorkspace" && intent !== "list"; }
+// (the phrase must be one classify() reads as "createWorkspace", which needs the word business or nonprofit: a bare "start a workspace called X" is not)
+const START_HINT = 'say "start a business workspace called" and its name (or "nonprofit workspace" if it is a nonprofit)';
+function noWorkspaceReply(intent) {
+  if (isReadIntent(intent)) return `You have no business or nonprofit workspace yet. To begin, ${START_HINT}.`;
+  return `You have no business or nonprofit workspace yet, so there is nowhere to put that. Shall I start one first? To do that, ${START_HINT}; then ask me again.`;
+}
+
 // What the person is asked before a confirmed action is saved: exactly the amount, currency and item that will be logged.
 // Null for every other business action, which keeps the generic confirmation wording.
 function confirmationPrompt(command = "") {
@@ -1493,7 +1504,7 @@ function confirmationPrompt(command = "") {
 }
 
 module.exports = Object.freeze({
-  sanitizeText, classify, isReadIntent, precheck, run, confirmationPrompt,
+  sanitizeText, classify, isReadIntent, needsWorkspace, noWorkspaceReply, precheck, run, confirmationPrompt,
   extractBusinessName, resolveBusinessClient, extractLeadArgs, extractTransactionArgs,
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
   extractTaskArgs, extractTaskStatusArgs, resolveTask, extractAppointmentArgs, resolveAppointmentIndex,
