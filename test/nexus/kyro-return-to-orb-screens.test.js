@@ -77,8 +77,7 @@ test("the music card holds the YouTube player, so closing the card or the quiet-
   assert.match(park, /dataset\.kyroParked = "true"/);
   assert.match(park, /left:-9999px/);
   assert.ok(!/display\s*:\s*none/.test(park), "display:none can stop a mobile player; park it off-screen instead");
-  assert.match(app, /KYRO_SHOWING_SCREEN_SELECTOR = KYRO_BODY_SCREEN_SELECTOR\.split\(", "\)\.map\(selector => `\$\{selector\}:not\(\[data-kyro-parked\]\)`\)/);
-  assert.match(bodyOf("function kyroScreenOpen("), /document\.querySelector\(KYRO_SHOWING_SCREEN_SELECTOR\)/, "a parked card is not 'a card on screen'");
+  assert.match(bodyOf("function kyroWorkOpen("), /\[data-nexus-visual-shell\]:not\(\[data-kyro-parked\]\)/, "a parked music card is not work on the screen");
 });
 
 test("asking for the music to stop, pause or resume reaches the parked card's player too, by every route", () => {
@@ -90,9 +89,12 @@ test("asking for the music to stop, pause or resume reaches the parked card's pl
   assert.match(bodyOf("function kyroMediaControlInstruction("), /kyroLiveMusicCardControl\(String\(control \|\| ""\)\)/);
 });
 
-test("the quiet-spell return does not mistake a card covering the orb for 'already on the orb'", () => {
+test("the quiet-spell return clears finished answers only, and never work the person is in", () => {
   const snapshot = bodyOf("function kyroAutoReturnSnapshot(");
-  assert.match(snapshot, /onOrb: Boolean\(document\.querySelector\("\[data-nexus-genesis-orb-only-home\]"\)\) && !kyroScreenOpen\(\)/);
-  const open = bodyOf("function kyroScreenOpen(");
-  for (const piece of ["KYRO_SHOWING_SCREEN_SELECTOR", "nexusVisualProviderQuestionReportState", "workflow-open", "user-map-full-open", "jarvisPanel", "currentSectionId() !== \"dashboard\""]) assert.ok(open.includes(piece), `kyroScreenOpen must look at ${piece}`);
+  assert.match(snapshot, /answerShowing: kyroAnswerShowing\(\)/);
+  assert.match(snapshot, /workOpen: kyroWorkOpen\(\)/);
+  const answer = bodyOf("function kyroAnswerShowing(");
+  for (const piece of ["data-nexus-live-weather-shell", "nexusRichDataOverlay", "live-knowledge", "lastResponse"]) assert.ok(answer.includes(piece), `an answer is also: ${piece}`);
+  const work = bodyOf("function kyroWorkOpen(");
+  for (const piece of ["nexusActiveWorkflowState", "data-nexus-visual-shell", "data-nexus-pilot-evidence-shell", "data-nexus-rural-provider-card-shell", "data-kn=", "nexusVisualProviderQuestionReportState", "workflow-open", "user-map-full-open", "currentSectionId() !== \"dashboard\""]) assert.ok(work.includes(piece), `work includes: ${piece}`);
 });

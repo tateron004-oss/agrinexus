@@ -107,11 +107,13 @@
   }
 
   // ---- when to go back to the orb by itself -------------------------------------------------------------------------------------------------------------------------------------
-  // snapshot: { userMode, onOrb, lastActivityAt, assistantSpeaking, userSpeaking, focusInField, pendingConfirmation, intakeActive, mediaPrompt }
+  // snapshot: { userMode, answerShowing, workOpen, lastActivityAt, assistantSpeaking, userSpeaking, focusInField, pendingConfirmation, intakeActive }
   // "activity" is anything that means the person is still there: a touch, a key, speech, a new answer arriving.
+  // It only ever clears a FINISHED ANSWER (a weather card, a research answer, an answer left on the home screen). Work the person is in (a function window, the map, a form, navigation) is never closed by itself.
   function shouldAutoReturn(snapshot, now) {
     const s = snapshot || {};
-    if (!s.userMode || s.onOrb) return { go: false, retryMs: 0 };
+    if (!s.userMode || !s.answerShowing) return { go: false, retryMs: 0 };
+    if (s.workOpen) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     if (s.assistantSpeaking || s.userSpeaking || s.focusInField || s.pendingConfirmation || s.intakeActive) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     const quietFor = Number(now) - Number(s.lastActivityAt || 0);
     if (!(quietFor >= AUTO_RETURN_MS)) return { go: false, retryMs: Math.max(1000, AUTO_RETURN_MS - Math.max(0, quietFor)) };
