@@ -68,6 +68,7 @@ const { conversationFollowUpFlags } = require("./server/nexus-conversation-follo
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const mediaRoutes = require("./server/media/routes.js");
 const KyroMediaCommands = require("./public/kyro-media-commands.js");
+const { mediaControlWithoutPlayer } = require("./nexus/media/command-route-controls.js");
 const mediaRuntime = require("./server/media/runtime.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
@@ -75,6 +76,7 @@ const { createServerRuntimeAdapter } = require("./nexus/compat/server-runtime-ad
 const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridge.js");
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
 const { replyLanguage } = require("./nexus/i18n/reply-language.js");
+const { parseNearbyPlacesRequest, namedPlaceIn: namedPlaceInRequest } = require("./server/providers/placesLocation.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -10180,6 +10182,57 @@ async function personalContactBook(user) {
     personalContactBookDownUntil = Date.now() + 10000;
     return null;
   } finally { if (timer) clearTimeout(timer); }
+}
+// ---- "find a pharmacy / clinic near me" on the older routes: where to look ----
+// The town the person once told Kyro, from the planner's own store (the same one the typed route reads). "" for a guest, when none is saved, or when the store cannot be reached.
+let savedTownDownUntil = 0;
+async function personalSavedTown(user) {
+  if (!user || user.guest === true || Date.now() < savedTownDownUntil) return "";
+  let timer = null;
+  try {
+    const authUser = await authoritativeRuntimeUser(user);
+    if (!authUser) return "";
+    return await Promise.race([
+      authoritativeNexusRuntime.savedTownFor({ user: authUser }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("saved town lookup timed out")), 3000); })
+    ]);
+  } catch {
+    savedTownDownUntil = Date.now() + 10000;
+    return "";
+  } finally { if (timer) clearTimeout(timer); }
+}
+// What the pharmacy / clinic finders are given: the place named in the sentence, else (for "near me") the saved town; the account's country goes with it. No device location is used here.
+async function nearbyPlaceQuery(command, user, language) {
+  const location = namedPlaceInRequest(command);
+  return { location, country: user?.country || "", savedTown: location ? "" : await personalSavedTown(user), language: language || "en" };
+}
+// The notes a search adds to its answer ("I looked near Nairobi, Kenya; tell me your town", "these places are in Kenya, not Nigeria"), and the reply when nothing was found (or no town is known: it asks).
+function nearbyPlaceNotes(searchResult) {
+  const data = searchResult?.body?.data || {};
+  return [data.locationNote, data.countryNote].filter(Boolean).join(" ");
+}
+// The whole spoken/typed answer of a pharmacy / clinic search on the older routes: the places found (an unlisted address is not read out), what the search is (a directory lookup, never a
+// booking), and the notes (where it looked when it had to guess, a different country); when no town is known, the question; when nothing was found, that.
+function nearbyPlacesReply({ kind, cards, searchResult, language }) {
+  const data = searchResult?.body?.data || {};
+  const sw = String(language || "").toLowerCase().startsWith("sw");
+  if (!cards.length) {
+    if (data.needsLocation && data.question) return data.question;
+    const near = data.searchedNear ? ` ${sw ? "karibu na" : "near"} ${data.searchedNear}` : "";
+    const none = sw ? `Sikupata ${kind === "pharmacy" ? "duka la dawa" : "kliniki"}${near || " karibu"}. Niambie mji au eneo nitaangalia tena.`
+      : `I did not find a matching ${kind}${near || " nearby"}. Tell me a city or region and I will check again.`;
+    return [none, nearbyPlaceNotes(searchResult)].filter(Boolean).join(" ");
+  }
+  const where = card => (/^Address not listed/i.test(card.address || "") ? "" : card.address) || String(card.city || "").split(",")[0].trim() || [card.city, card.region].filter(Boolean).join(", ");
+  const list = cards.map(card => `${card.name}${where(card) ? (sw ? ", " : " in ") + where(card) : ""}${card.services?.length ? ` (${card.services.join(", ")})` : ""}`).join("; ");
+  const live = cards.every(card => card.source === "OpenStreetMap (live)");
+  const label = kind === "pharmacy" ? "pharmacy" : kind;
+  const head = sw ? `Nimepata ${kind === "pharmacy" ? "maduka" : "kliniki"} ${cards.length}: ${list}.` : `I found ${cards.length} ${label} option(s): ${list}.`;
+  const nature = kind === "pharmacy"
+    ? (sw ? "Hii ni orodha ya mahali tu; sikuomba dawa tena, sikuhamisha wala kuwasiliana na yeyote." : "This is a directory lookup only; I did not request a refill, transfer, or contact anyone.")
+    : live ? (sw ? "Hii ni orodha ya mahali kutoka OpenStreetMap, si miadi; hakuna kilichopangwa wala mtu aliyewasiliana naye." : "This is a live OpenStreetMap directory lookup, not a booking; nothing has been scheduled or contacted.")
+      : (sw ? "Hizi ni orodha za mwanzo za hapa, si miadi; hakuna kilichopangwa wala mtu aliyewasiliana naye." : "These are local starter listings, not a live booking; nothing has been scheduled or contacted.");
+  return [head, nature, nearbyPlaceNotes(searchResult)].filter(Boolean).join(" ");
 }
 // [{ id, name, phone, savedAt }] newest first; only contacts that have a usable phone number
 async function personalContactsFor(user) {
@@ -21218,6 +21271,8 @@ function nexusOpenAiNativeToolChoiceHint(command = "") {
   if (/\b(calendar|schedule|reschedule|cancel appointment|meeting|event)\b/.test(lower)) return "nexus_calendar";
   if (/\b(browser|website|computer|click|fill out|download|web page)\b/.test(lower)) return "nexus_browser_computer_action";
   if (/\b(export|report|document|presentation|table|pdf)\b/.test(lower)) return "nexus_document_export";
+  // Found by the phrase sweep: "Find a pharmacy near me" went to the maps tool ("Origin and destination text are required") because "near me" matched the line below first.
+  if (typeof parseNearbyPlacesRequest === "function" && parseNearbyPlacesRequest(command)) return "nexus_health_preparation";
   if (/\b(map|route|directions|travel time|field visit|logistics|delivery|nearby|near me)\b/.test(lower)) return "nexus_maps_route";
   // Confirmed: this bucket used to sit right after translation, ahead of
   // calendar/email/reminder/export -- "Can you check my calendar for
@@ -23539,8 +23594,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // Scoped to an explicit find/search/near-me phrasing so a plain safety
     // question ("what should I know about drug interactions") still gets
     // the question draft, not a location search with no location.
-    const wantsPharmacyLocationSearch = wantsPharmacy
-      && /\b(find|search for|look up|locate|show me|near me|nearby|closest)\b/i.test(command);
+    const nearbyRequest = typeof parseNearbyPlacesRequest === "function" ? parseNearbyPlacesRequest(command) : null;
+    const wantsPharmacyLocationSearch = nearbyRequest?.kind === "pharmacy" || (wantsPharmacy
+      && /\b(find|search for|look up|locate|show me|near me|nearby|closest)\b/i.test(command));
+    // Found by the phrase sweep: "Find a clinic near Kisumu" (any clinic, hospital or health centre, not only a mobile clinic) got the generic "I opened Health and Chronic Care".
+    const wantsClinicLocationSearch = nearbyRequest?.kind === "clinic";
     // chronicDiseaseBridge.readings()/trendSummary() genuinely read back real
     // saved BP/glucose history, but nothing in natural language ever called
     // them -- "what's my blood pressure trend?" fell through to the generic
@@ -23762,36 +23820,27 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       response = ok
         ? `I saved ${saveResult.body.data.provider.name || "that provider"} to your local provider list. No health details or secrets were stored.`
         : "I need a provider's name to save. Tell me which provider from the search results to keep.";
-    } else if (wantsMobileClinic) {
+    } else if (wantsMobileClinic || wantsClinicLocationSearch) {
       // A trailing period ("Find a mobile clinic in Nairobi.") made this
       // fail to match at all -- confirmed live, that silently turned into
       // an EMPTY search query, which returns every catalog entry regardless
       // of the requested location (dumping US and Kenya listings together)
       // instead of respecting what was actually asked, or honestly finding
       // nothing for a city not in the local catalog.
-      const locationMatch = command.match(/\bin\s+([a-z\s]+?)[.,!?]*$/i);
-      const searchResult = await nexusRealProviders.mobileClinicBridge.search({ location: locationMatch?.[1]?.trim() || "" });
+      // (the place now comes from placesLocation.namedPlaceIn: "near Kisumu" and "karibu na Kisumu" as well as "in Kisumu"; with none named, the saved town or the account's country is used and said)
+      const searchResult = await nexusRealProviders.mobileClinicBridge.search(await nearbyPlaceQuery(command, user, language));
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { mobileClinics: cards };
       // A real live OSM result has an address but no region/services (the
       // opposite shape of a catalog entry) -- the old unconditional template
       // rendered "St. Mary's Clinic in Nairobi,  ()" for real results and
       // mislabeled them "starter listings" even when they were genuinely live.
-      response = cards.length
-        ? `I found ${cards.length} mobile clinic option(s): ${cards.map(c => {
-            const location = c.address || [c.city, c.region].filter(Boolean).join(", ");
-            const services = c.services?.length ? ` (${c.services.join(", ")})` : "";
-            return `${c.name} in ${location}${services}`;
-          }).join("; ")}. ${cards.every(c => c.source === "OpenStreetMap (live)") ? "This is a live OpenStreetMap directory lookup, not a booking; nothing has been scheduled or contacted." : "These are local starter listings, not a live booking; nothing has been scheduled or contacted."}`
-        : "I did not find a matching mobile clinic in the local catalog. Tell me a city or region and I will check again.";
+      response = nearbyPlacesReply({ kind: wantsMobileClinic ? "mobile clinic" : "clinic", cards, searchResult, language });
     } else if (wantsPharmacyLocationSearch) {
-      const locationMatch = command.match(/\bin\s+([a-z\s]+?)[.,!?]*$/i);
-      const searchResult = await nexusRealProviders.pharmacyBridge.search({ location: locationMatch?.[1]?.trim() || "" });
+      const searchResult = await nexusRealProviders.pharmacyBridge.search(await nearbyPlaceQuery(command, user, language));
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { pharmacyLocations: cards };
-      response = cards.length
-        ? `I found ${cards.length} pharmacy option(s): ${cards.map(c => `${c.name} in ${c.address || c.city}`).join("; ")}. This is a directory lookup only; I did not request a refill, transfer, or contact anyone.`
-        : "I did not find a matching pharmacy nearby. Tell me a city or region and I will check again.";
+      response = nearbyPlacesReply({ kind: "pharmacy", cards, searchResult, language });
     } else if (wantsPharmacy) {
       const draftResult = nexusRealProviders.pharmacyBridge.questionDraft({ questionTopic: args.summary || command });
       const questions = draftResult?.body?.data?.draft?.questions || [];
@@ -24489,6 +24538,31 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
       }
     }, "openai_native.provider_blocked");
   }
+}
+
+// Found by the phrase sweep: "Pause", "Resume", "Next song", "Volume up", "Mute", "Stop the music" and the Kiswahili forms had no handling on the older command route (this one and the phone line).
+// "Resume"/"Endelea" were answered with made-up work ("Done. Prepared gap review ..."). A control that names music/volume now returns the media.control instruction the typed route returns plus an honest line;
+// a bare one asks what to resume / says nothing is playing from here (nexus/media/command-route-controls.js). A person with Spotify connected keeps the older pause/resume through Spotify.
+async function answerMediaControlWithoutPlayer(db, user, body = {}) {
+  const command = sanitizePilotText(body.command || body.text || "", 900);
+  if (!command || KyroMediaCommands.parse(command)?.type !== "control") return null;
+  switchAgentContextTo(db, user);
+  const language = body.targetLanguage || body.language || user.language || "en";
+  // A practice lesson or interview in progress, or a question waiting for a yes, owns a bare "next"/"endelea"/"pause".
+  const inConversation = Boolean(user.floorPractice?.lesson || user.floorPractice?.interview || ownPendingAction(db, user));
+  const answer = mediaControlWithoutPlayer(command, { language, inConversation });
+  if (!answer) return null;
+  if (answer.instruction && spotifyMusicControlIntent(command)) {
+    const token = await spotifyAccessTokenForUser(db, user).catch(() => null);
+    if (token?.accessToken) return null;
+  }
+  const metadata = { redirectSection: "media", noExecutionAuthorized: true, providerHandoffAuthorized: false, fakeCitationsAllowed: false, confirmationRequired: false, executionDeferred: false, language: answer.lang };
+  if (answer.instruction) {
+    metadata.mediaControl = { ...answer.instruction, playbackState: "instructed", executedBy: "client-player" };
+    metadata.genesisAction = { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "agent-command", workspace: "media", operation: "playback",
+      payload: { query: "", action: "control", control: answer.control, language: answer.lang }, toolResults: [] };
+  }
+  return ensureSpeakableAgentResult({ intent: "media.control", response: answer.response, status: answer.status, metadata }, "media.control");
 }
 
 // Found against the real runtime (docs/REAL_RUNTIME_VERIFICATION.md): while the AI provider answered with an error, the older command route (and the phone line) said "provider_blocked" for EVERYTHING,
@@ -52147,7 +52221,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/media/resolve" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     if (!aiAgentRateLimit(req, user)) return send(res, 429, { error: "Too many requests. Please slow down." });
-    const outcome = await mediaRoutes.handleResolve({ body: await readBody(req), runtime: mediaRuntime.getMediaRuntime() });
+    // (a device that sends no country gets the one on the person's account, so radio is theirs and not whichever station is most clicked in the world)
+    const resolveBody = await readBody(req);
+    if (resolveBody && typeof resolveBody === "object" && !String(resolveBody.country || "").trim() && user.country) resolveBody.country = user.country;
+    const outcome = await mediaRoutes.handleResolve({ body: resolveBody, runtime: mediaRuntime.getMediaRuntime() });
     return send(res, outcome.status, outcome.body);
   }
 
@@ -53192,7 +53269,7 @@ async function api(req, res, url) {
         sessionStartedAt: session.createdAt,
         note: "Phone call voice assistant command"
       };
-      let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, phoneCommandBody);
+      let openAiNativeResult = await answerMediaControlWithoutPlayer(db, phoneUser, phoneCommandBody) || await runNexusOpenAiNativeAgentCommand(db, phoneUser, phoneCommandBody);
       // While the AI provider is down, requests that need no model are still answered (see answerWithoutModelWhileModelIsDown).
       openAiNativeResult = await answerWithoutModelWhileModelIsDown(db, phoneUser, openAiNativeResult, phoneCommandBody) || openAiNativeResult;
       result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, phoneCommandBody)).result;
@@ -58700,7 +58777,7 @@ async function api(req, res, url) {
       route: "/api/agent/command",
       sourceFunction: "api.agent.command"
     });
-    let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, user, {
+    let openAiNativeResult = await answerMediaControlWithoutPlayer(db, user, { ...body, correlationId, inputMode: body.inputMode || "api" }) || await runNexusOpenAiNativeAgentCommand(db, user, {
       ...body,
       correlationId,
       inputMode: body.inputMode || "api"

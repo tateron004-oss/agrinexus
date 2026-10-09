@@ -82,9 +82,11 @@ test("pharmacy search falls back honestly to zero results when the live lookup f
   assert.equal(result.body.data.cards.length, 0);
 });
 
-test("pharmacy search falls back to the local catalog when no location is given at all", async () => {
+// Found by the phrase sweep: with no place at all this used to list the starter catalog (Stockton and Sacramento, California). It now asks which town (see nearby-places-location.test.js).
+test("pharmacy search with no location, no saved town and no country asks which town instead of listing places from the catalog", async () => {
   const result = await pharmacyBridgeProvider.search({ q: "chronic care" }, {});
-  assert.equal(result.body.data.cards[0].source, "Nexus local pharmacy starter catalog");
+  assert.deepEqual(result.body.data.cards, []);
+  assert.equal(result.body.data.needsLocation, true);
 });
 
 test("pharmacy search stays local-only when explicitly disabled via env, even with a location given", async () => {

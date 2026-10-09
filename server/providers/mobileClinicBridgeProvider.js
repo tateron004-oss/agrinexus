@@ -12,7 +12,7 @@ const {
   createReminder,
   queueOffline
 } = require("./medicalBridgeUtils");
-const osmPlacesProvider = require("./osmPlacesProvider");
+const { searchNearby, inExpectedCountry } = require("./nearbySearch");
 
 const PROVIDER = "nexus-mobile-clinic-bridge";
 const FLAG = "NEXUS_MOBILE_CLINIC_BRIDGE_ENABLED";
@@ -20,10 +20,10 @@ const INTAKES = "nexusMobileClinicIntakes";
 const SAVED = "nexusSavedMobileClinics";
 
 const CATALOG = [
-  { id: "mc-primary-rural", name: "Rural Primary Care Mobile Clinic", category: "general primary care", city: "Stockton", region: "California", services: ["primary care", "rural health", "agriculture worker health outreach"] },
-  { id: "mc-vaccine", name: "Community Vaccination Outreach", category: "vaccination clinic", city: "Sacramento", region: "California", services: ["vaccination", "community health fair"] },
-  { id: "mc-chronic", name: "Chronic Care Screening Day", category: "chronic care screening", city: "Kisumu", region: "Kenya", services: ["hypertension screening", "diabetes screening", "obesity/cardiometabolic screening"] },
-  { id: "mc-rural-africa", name: "Rural Health Outreach Site", category: "rural health outreach", city: "Nakuru", region: "Kenya", services: ["mobile clinic", "telehealth support site", "community health worker support"] }
+  { id: "mc-primary-rural", name: "Rural Primary Care Mobile Clinic", category: "general primary care", city: "Stockton", region: "California", country: "United States", services: ["primary care", "rural health", "agriculture worker health outreach"] },
+  { id: "mc-vaccine", name: "Community Vaccination Outreach", category: "vaccination clinic", city: "Sacramento", region: "California", country: "United States", services: ["vaccination", "community health fair"] },
+  { id: "mc-chronic", name: "Chronic Care Screening Day", category: "chronic care screening", city: "Kisumu", region: "Kenya", country: "Kenya", services: ["hypertension screening", "diabetes screening", "obesity/cardiometabolic screening"] },
+  { id: "mc-rural-africa", name: "Rural Health Outreach Site", category: "rural health outreach", city: "Nakuru", region: "Kenya", country: "Kenya", services: ["mobile clinic", "telehealth support site", "community health worker support"] }
 ];
 
 function status(env = process.env) {
@@ -31,45 +31,34 @@ function status(env = process.env) {
     categories: Array.from(new Set(CATALOG.flatMap(item => item.services.concat(item.category)))) });
 }
 
-function localCatalogSearch(text) {
-  const cards = CATALOG.filter(item => !text || [item.name, item.category, item.city, item.region, ...item.services].join(" ").toLowerCase().includes(text)).map(item => ({
+// keyword: what kind of clinic (matched on name, category, services); place: the town searched (matched on the town)
+function catalogCards(keyword, place, plan) {
+  return CATALOG.filter(item => inExpectedCountry(item, plan) && (!place || String(item.city).toLowerCase().includes(place))
+    && (!keyword || [item.name, item.category, item.city, item.region, ...item.services].join(" ").toLowerCase().includes(keyword))).map(item => ({
     ...item,
     source: "Nexus local mobile clinic starter catalog",
     realTimeAvailabilityClaimed: false,
     appointmentBooked: false,
     emergencyTriage: false
   }));
-  return response(PROVIDER, "mobile_clinics.search", "completed", `Loaded ${cards.length} local mobile clinic option(s).`, { cards });
 }
 
-// Real when a location is given (OpenStreetMap Overpass, keyless) -- falls
-// back to the small local catalog only when no location was given, or the
-// live lookup genuinely fails. See pharmacyBridgeProvider.js's search() for
-// the identical reasoning.
+// Real when a place can be worked out (OpenStreetMap Overpass, keyless): the place named, else for "near me" the person's saved town or their account country's capital (said out
+// loud), else the person is asked which town. See pharmacyBridgeProvider.js's search() and nearbySearch.js for the identical reasoning. The small catalog is only a fallback when the
+// live lookup fails, and only for the country asked about.
 async function search(query = {}, env = process.env) {
-  const text = safeText([query.q, query.query, query.location, query.city, query.state, query.serviceType, query.keyword, query.dateText].filter(Boolean).join(" "), 300).toLowerCase();
-  // Only location/city is treated as a real place to geocode -- see
-  // pharmacyBridgeProvider.js's search() for the identical reasoning.
-  const locationText = safeText(query.location || query.city || "", 200);
-  if (locationText && envEnabled("NEXUS_MOBILE_CLINIC_OSM_SEARCH_ENABLED", env, true)) {
-    try {
-      const { origin, places } = await osmPlacesProvider.findNearbyPlaces({
-        locationText, osmFilters: ['"amenity"="clinic"', '"healthcare"="clinic"', '"amenity"="doctors"'], limit: 8, env, fallbackTerm: "clinic"
-      });
-      if (places.length) {
-        return response(PROVIDER, "mobile_clinics.search", "completed", `Found ${places.length} real clinic location(s) near ${origin.label} via OpenStreetMap.`, {
-          cards: places.map((place, index) => ({
-            id: `osm-clinic-${index}`, name: place.name, category: "clinic", city: origin.label, region: "",
-            services: [], address: place.address, distanceMeters: place.distanceMeters, phone: place.phone, openingHours: place.openingHours,
-            source: "OpenStreetMap (live)", realTimeAvailabilityClaimed: false, appointmentBooked: false, emergencyTriage: false
-          }))
-        });
-      }
-    } catch {
-      // Fall through to the local catalog.
-    }
-  }
-  return localCatalogSearch(text);
+  const text = safeText([query.q, query.query, query.serviceType, query.keyword, query.dateText].filter(Boolean).join(" "), 300).toLowerCase();
+  return searchNearby({
+    query: { ...query, location: safeText(query.location || query.city || "", 200) }, env, kind: "clinic", text,
+    osmFilters: ['"amenity"="clinic"', '"healthcare"="clinic"', '"amenity"="doctors"'], fallbackTerm: "clinic", osmEnabled: envEnabled("NEXUS_MOBILE_CLINIC_OSM_SEARCH_ENABLED", env, true),
+    makeCard: (place, index, origin) => ({
+      id: `osm-clinic-${index}`, name: place.name, category: "clinic", city: origin.label, region: "",
+      services: [], address: place.address, distanceMeters: place.distanceMeters, phone: place.phone, openingHours: place.openingHours,
+      source: "OpenStreetMap (live)", realTimeAvailabilityClaimed: false, appointmentBooked: false, emergencyTriage: false
+    }),
+    catalogCards,
+    respond: (message, data) => response(PROVIDER, "mobile_clinics.search", "completed", message, data)
+  });
 }
 
 function intake(body = {}, db, env = process.env) {

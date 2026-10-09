@@ -55,7 +55,9 @@ test.before(async () => {
   fs.copyFileSync(dbPath, tempDbPath);
   server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true" },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDbPath, OPENAI_API_KEY: "", NEXUS_DISABLE_LOCAL_ENV_FILES: "true",
+      // (a facility search with no place now asks which town instead of listing the starter catalog, so the test names a town and keeps the live OpenStreetMap lookup off: no internet)
+      NEXUS_MOBILE_CLINIC_OSM_SEARCH_ENABLED: "false" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -148,7 +150,7 @@ test("an Investor account reads a redacted version of a separate real PHI store 
 });
 
 test("mobile-clinics/search (a public facility directory, not patient data) is unaffected by the redaction fix", async () => {
-  const asInvestor = await get("/api/nexus/tools/mobile-clinics/search", investorCookie);
+  const asInvestor = await get("/api/nexus/tools/mobile-clinics/search?location=Kisumu", investorCookie);
   assert.equal(asInvestor.status, 200, JSON.stringify(asInvestor.body));
   assert.ok(Array.isArray(asInvestor.body.data.cards) && asInvestor.body.data.cards.length > 0, "a facility-directory search must return its real cards, not be redacted away");
   assert.ok(asInvestor.body.data.cards.every(card => card.redacted === undefined), "facility-directory cards must never be marked redacted -- they are not patient records");

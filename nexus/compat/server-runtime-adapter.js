@@ -910,7 +910,16 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
     if (!active.records) throw Object.assign(new Error("The health record store is unavailable."), { code: "health_record_store_unavailable", status: 503 });
     return { records: active.records, tenantId: context.tenantId, userId: context.userId, timeZone: context.timeZone };
   }
-  return Object.freeze({ handle, status, businessRequest, healthReadingsStoreFor, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest, deliveryRemindersFor, contactBookFor, memoryHealthReadingRecords: memoryReadings });
+  // The town the person once told Kyro ("I live in Kisumu"), for the older routes' "find a pharmacy near me": "" when none is saved or the store cannot be reached. Only this person's own facts.
+  async function savedTownFor({ user }) {
+    try {
+      const context = requestContext({ headers: {} }, user, isRestrictedFrom);
+      const active = await runtime(); await active.ready;
+      const rows = active.memory?.profile ? await active.memory.profile({ tenantId: context.tenantId, userId: context.userId }) : [];
+      return String(rows.map(row => row.content).find(fact => fact && fact.kind === "location" && typeof fact.value === "string" && fact.value)?.value || "");
+    } catch { return ""; }
+  }
+  return Object.freeze({ handle, status, businessRequest, healthReadingsStoreFor, savedTownFor, behaviorTurnRequest, behaviorAcknowledgeRequest, behaviorConfirmRequest, requestDeletionRequest, repeatReminderTurnRequest, deliveryRemindersFor, contactBookFor, memoryHealthReadingRecords: memoryReadings });
 }
 
 async function runObjectiveProbe(probe, { active, env, releaseSha }) {

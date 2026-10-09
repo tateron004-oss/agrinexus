@@ -58,9 +58,20 @@ function createBusinessExecutor({ repository, access, consents, env }) {
   };
 }
 
+// How many business/nonprofit workspaces the person has, read through the same REST handler (and the same access check) the business tools use. Lets the planner say "no workspace yet" before it asks for a yes.
+// Resolves to null when the count cannot be told, so a caller never mistakes "unknown" for "none".
+function createBusinessWorkspaceCounter({ repository, access, consents, env }) {
+  let api = null;
+  return async function count(context) {
+    api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
+    const listed = await api.handle({ method: "GET", pathname: "/api/nexus/runtime/business/clients", context });
+    return Array.isArray(listed?.body?.clients) ? listed.body.clients.length : null;
+  };
+}
+
 function verifyBusinessOutcome({ result }) {
   const verified = result?.verified === true && typeof result?.response === "string" && result.response.length > 0;
   return { verified, method: "real_business_workspace_write", reason: verified ? null : "business_outcome_incomplete" };
 }
 
-module.exports = Object.freeze({ createBusinessExecutor, verifyBusinessOutcome });
+module.exports = Object.freeze({ createBusinessExecutor, createBusinessWorkspaceCounter, verifyBusinessOutcome });

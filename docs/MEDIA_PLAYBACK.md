@@ -50,6 +50,11 @@ phone: tries candidate 1 in a real <audio>/<video> (or YouTube's official IFrame
 * `media.control` (pause, resume, stop, next, previous, volume, mute) is a server tool that returns an INSTRUCTION; the phone's player carries it out. Its outcome
   is "instructed", never "paused": only the phone can see whether anything was playing, and it says "Nothing is playing right now." when not.
 
+* On the older command route (`POST /api/agent/command` and the phone line) there is no player. A control that names music or volume ("pause the music", "volume up", "mute", "sitisha muziki") returns the same
+  `media.control` instruction (in `commandResult.metadata.mediaControl` and the usual `genesisAction`) plus a short line that says it was passed on, not done ("I can't see from here whether anything is playing");
+  a bare "resume"/"endelea" asks what to resume, and a bare "pause"/"next" says nothing is playing from here. The server never claims success and never invents a player
+  (`nexus/media/command-route-controls.js`). The Kiswahili lines are draft wording that a fluent speaker should review.
+
 ## Provider chain
 
 Providers are tried in order and the search stops at the first one with a playable, preflight-verified match, so YouTube's scarce quota is only spent when the
@@ -61,6 +66,7 @@ free sources cannot help (or when the phone asks again after a candidate failed)
 | radio | radio-browser.info (a popular local station when no name is given; prefers the person's country) |
 | video | YouTube (key) -> Internet Archive moving images (public-domain film collections and Creative Commons) -> Wikimedia Commons |
 
+* **Station ranking** (radio-browser): a station whose name IS the request (ignoring "radio", "FM", a country word or a frequency such as 98.4) ranks above one that starts with it, then one that contains it as words, then one that only has it as a tag; the person's own country (their account's, else the device's; Kenya and Nigeria when neither is known) outranks other countries; stations about gaming, games, esports or soundtracks are dropped unless that was asked for; of several stations with the same name the most clicked and voted one in the preferred country is used. The account's country is sent with the request when the device sends none. A station that is not in the public directory cannot be found: on 2026-10-08 it had no Citizen Radio for Kenya, so "play radio Citizen" plays the exact-name station "Citizen" (Greece) rather than a game's radio.
 * **radio-browser.info** (no key): servers are discovered from `https://all.api.radio-browser.info/json/servers`, a descriptive `User-Agent` is sent, the
   stream (`url_resolved`) is preflight-checked, https is preferred (an http-only station is only used if its https form works, because an https page cannot play
   http audio), HLS-only stations are skipped on browsers that cannot play HLS. After a station really plays, the phone calls `POST /api/media/played`, which counts

@@ -60,7 +60,7 @@ const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../he
 const { createChronicDiseaseIntakeExecutor, verifyChronicDiseaseIntakeOutcome, createChronicDiseaseReadingExecutor,
   verifyChronicDiseaseReadingOutcome, createChronicDiseaseSummaryExecutor, verifyChronicDiseaseSummaryOutcome } = require("../health/chronic-executor.js");
 const { createPharmacyFindExecutor, verifyPharmacyFindOutcome, createClinicFindExecutor, verifyClinicFindOutcome } = require("../health/places-executor.js");
-const { createBusinessExecutor, verifyBusinessOutcome } = require("../business/authoritative-executor.js");
+const { createBusinessExecutor, createBusinessWorkspaceCounter, verifyBusinessOutcome } = require("../business/authoritative-executor.js");
 const { BusinessRepository } = require("../business/repository.js");
 const { createBriefService } = require("../brief/service.js");
 const { BriefSettingsRepository } = require("../brief/settings.js");
@@ -150,8 +150,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     "health.chronic-intake": { create: () => createChronicDiseaseIntakeExecutor({ records }), verify: verifyChronicDiseaseIntakeOutcome, method: "real_record_write" },
     "health.chronic-reading": { create: () => createChronicDiseaseReadingExecutor({ records }), verify: verifyChronicDiseaseReadingOutcome, method: "real_record_write" },
     "health.chronic-summary": { create: () => createChronicDiseaseSummaryExecutor({ records }), verify: verifyChronicDiseaseSummaryOutcome, method: "real_record_lookup" },
-    "pharmacy.find": { create: () => createPharmacyFindExecutor({ env }), verify: verifyPharmacyFindOutcome, method: "real_osm_place_search_with_local_fallback" },
-    "clinic.find": { create: () => createClinicFindExecutor({ env }), verify: verifyClinicFindOutcome, method: "real_osm_place_search_with_local_fallback" },
+    "pharmacy.find": { create: () => createPharmacyFindExecutor({ env, memory }), verify: verifyPharmacyFindOutcome, method: "real_osm_place_search_with_local_fallback" },
+    "clinic.find": { create: () => createClinicFindExecutor({ env, memory }), verify: verifyClinicFindOutcome, method: "real_osm_place_search_with_local_fallback" },
     // Confirmed live: a real user's typed "add a donor"/"log an expense"/etc.
     // never reached nexus/business/* at all (see canonical-provider-
     // definitions.js's note on business.manage/business.query) -- both tools
@@ -206,7 +206,9 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) },
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) },
-    healthReadings: { records } }) : null;
+    healthReadings: { records },
+    // How many business/nonprofit workspaces the person has, read the way the business tools read them (same access check); lets the planner say "no workspace yet" before it asks for a yes.
+    businessWorkspaces: { count: createBusinessWorkspaceCounter({ repository: businessRecords, access, consents, env }) } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
   const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
   const ready = providers.register(tools);
