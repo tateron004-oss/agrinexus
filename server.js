@@ -68,6 +68,7 @@ const { conversationFollowUpFlags } = require("./server/nexus-conversation-follo
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const mediaRoutes = require("./server/media/routes.js");
 const KyroMediaCommands = require("./public/kyro-media-commands.js");
+const { mediaControlWithoutPlayer } = require("./nexus/media/command-route-controls.js");
 const mediaRuntime = require("./server/media/runtime.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
 const cloudinaryProvider = require("./server/cloudinary-provider.js");
@@ -24489,6 +24490,29 @@ async function runNexusOpenAiNativeAgentCommand(db, user, body = {}, baseContext
       }
     }, "openai_native.provider_blocked");
   }
+}
+
+// Found by the phrase sweep: "Pause", "Resume", "Next song", "Volume up", "Mute", "Stop the music" and the Kiswahili forms had no handling on the older command route (this one and the phone line).
+// "Resume"/"Endelea" were answered with made-up work ("Done. Prepared gap review ..."). A control that names music/volume now returns the media.control instruction the typed route returns plus an honest line;
+// a bare one asks what to resume / says nothing is playing from here (nexus/media/command-route-controls.js). A person with Spotify connected keeps the older pause/resume through Spotify.
+async function answerMediaControlWithoutPlayer(db, user, body = {}) {
+  const command = sanitizePilotText(body.command || body.text || "", 900);
+  if (!command || KyroMediaCommands.parse(command)?.type !== "control") return null;
+  switchAgentContextTo(db, user);
+  const language = body.targetLanguage || body.language || user.language || "en";
+  const answer = mediaControlWithoutPlayer(command, { language });
+  if (!answer) return null;
+  if (answer.instruction && spotifyMusicControlIntent(command)) {
+    const token = await spotifyAccessTokenForUser(db, user).catch(() => null);
+    if (token?.accessToken) return null;
+  }
+  const metadata = { redirectSection: "media", noExecutionAuthorized: true, providerHandoffAuthorized: false, fakeCitationsAllowed: false, confirmationRequired: false, executionDeferred: false, language: answer.lang };
+  if (answer.instruction) {
+    metadata.mediaControl = { ...answer.instruction, playbackState: "instructed", executedBy: "client-player" };
+    metadata.genesisAction = { type: "genesis.workspace.open", version: 1, requestId: crypto.randomUUID(), source: "agent-command", workspace: "media", operation: "playback",
+      payload: { query: "", action: "control", control: answer.control, language: answer.lang }, toolResults: [] };
+  }
+  return ensureSpeakableAgentResult({ intent: "media.control", response: answer.response, status: answer.status, metadata }, "media.control");
 }
 
 // Found against the real runtime (docs/REAL_RUNTIME_VERIFICATION.md): while the AI provider answered with an error, the older command route (and the phone line) said "provider_blocked" for EVERYTHING,
@@ -53192,7 +53216,7 @@ async function api(req, res, url) {
         sessionStartedAt: session.createdAt,
         note: "Phone call voice assistant command"
       };
-      let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, phoneUser, phoneCommandBody);
+      let openAiNativeResult = await answerMediaControlWithoutPlayer(db, phoneUser, phoneCommandBody) || await runNexusOpenAiNativeAgentCommand(db, phoneUser, phoneCommandBody);
       // While the AI provider is down, requests that need no model are still answered (see answerWithoutModelWhileModelIsDown).
       openAiNativeResult = await answerWithoutModelWhileModelIsDown(db, phoneUser, openAiNativeResult, phoneCommandBody) || openAiNativeResult;
       result = openAiNativeResult || (await runCompanionSafeAgentCommand(db, phoneUser, phoneCommandBody)).result;
@@ -58700,7 +58724,7 @@ async function api(req, res, url) {
       route: "/api/agent/command",
       sourceFunction: "api.agent.command"
     });
-    let openAiNativeResult = await runNexusOpenAiNativeAgentCommand(db, user, {
+    let openAiNativeResult = await answerMediaControlWithoutPlayer(db, user, { ...body, correlationId, inputMode: body.inputMode || "api" }) || await runNexusOpenAiNativeAgentCommand(db, user, {
       ...body,
       correlationId,
       inputMode: body.inputMode || "api"
