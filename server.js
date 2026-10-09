@@ -10210,10 +10210,28 @@ function nearbyPlaceNotes(searchResult) {
   const data = searchResult?.body?.data || {};
   return [data.locationNote, data.countryNote].filter(Boolean).join(" ");
 }
-function nearbyPlaceEmptyReply(searchResult, fallbackReply) {
+// The whole spoken/typed answer of a pharmacy / clinic search on the older routes: the places found (an unlisted address is not read out), what the search is (a directory lookup, never a
+// booking), and the notes (where it looked when it had to guess, a different country); when no town is known, the question; when nothing was found, that.
+function nearbyPlacesReply({ kind, cards, searchResult, language }) {
   const data = searchResult?.body?.data || {};
-  if (data.needsLocation && data.question) return data.question;
-  return [data.searchedNear ? fallbackReply.replace(/ nearby\./, ` near ${data.searchedNear}.`) : fallbackReply, nearbyPlaceNotes(searchResult)].filter(Boolean).join(" ");
+  const sw = String(language || "").toLowerCase().startsWith("sw");
+  if (!cards.length) {
+    if (data.needsLocation && data.question) return data.question;
+    const near = data.searchedNear ? ` ${sw ? "karibu na" : "near"} ${data.searchedNear}` : "";
+    const none = sw ? `Sikupata ${kind === "pharmacy" ? "duka la dawa" : "kliniki"}${near || " karibu"}. Niambie mji au eneo nitaangalia tena.`
+      : `I did not find a matching ${kind}${near || " nearby"}. Tell me a city or region and I will check again.`;
+    return [none, nearbyPlaceNotes(searchResult)].filter(Boolean).join(" ");
+  }
+  const where = card => (/^Address not listed/i.test(card.address || "") ? "" : card.address) || String(card.city || "").split(",")[0].trim() || [card.city, card.region].filter(Boolean).join(", ");
+  const list = cards.map(card => `${card.name}${where(card) ? (sw ? ", " : " in ") + where(card) : ""}${card.services?.length ? ` (${card.services.join(", ")})` : ""}`).join("; ");
+  const live = cards.every(card => card.source === "OpenStreetMap (live)");
+  const label = kind === "pharmacy" ? "pharmacy" : kind;
+  const head = sw ? `Nimepata ${kind === "pharmacy" ? "maduka" : "kliniki"} ${cards.length}: ${list}.` : `I found ${cards.length} ${label} option(s): ${list}.`;
+  const nature = kind === "pharmacy"
+    ? (sw ? "Hii ni orodha ya mahali tu; sikuomba dawa tena, sikuhamisha wala kuwasiliana na yeyote." : "This is a directory lookup only; I did not request a refill, transfer, or contact anyone.")
+    : live ? (sw ? "Hii ni orodha ya mahali kutoka OpenStreetMap, si miadi; hakuna kilichopangwa wala mtu aliyewasiliana naye." : "This is a live OpenStreetMap directory lookup, not a booking; nothing has been scheduled or contacted.")
+      : (sw ? "Hizi ni orodha za mwanzo za hapa, si miadi; hakuna kilichopangwa wala mtu aliyewasiliana naye." : "These are local starter listings, not a live booking; nothing has been scheduled or contacted.");
+  return [head, nature, nearbyPlaceNotes(searchResult)].filter(Boolean).join(" ");
 }
 // [{ id, name, phone, savedAt }] newest first; only contacts that have a usable phone number
 async function personalContactsFor(user) {
@@ -23816,20 +23834,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // opposite shape of a catalog entry) -- the old unconditional template
       // rendered "St. Mary's Clinic in Nairobi,  ()" for real results and
       // mislabeled them "starter listings" even when they were genuinely live.
-      response = cards.length
-        ? `I found ${cards.length} ${wantsMobileClinic ? "mobile clinic" : "clinic"} option(s): ${cards.map(c => {
-            const location = c.address || [c.city, c.region].filter(Boolean).join(", ");
-            const services = c.services?.length ? ` (${c.services.join(", ")})` : "";
-            return `${c.name} in ${location}${services}`;
-          }).join("; ")}. ${cards.every(c => c.source === "OpenStreetMap (live)") ? "This is a live OpenStreetMap directory lookup, not a booking; nothing has been scheduled or contacted." : "These are local starter listings, not a live booking; nothing has been scheduled or contacted."} ${nearbyPlaceNotes(searchResult)}`.trim()
-        : nearbyPlaceEmptyReply(searchResult, "I did not find a matching clinic nearby. Tell me a city or region and I will check again.");
+      response = nearbyPlacesReply({ kind: wantsMobileClinic ? "mobile clinic" : "clinic", cards, searchResult, language });
     } else if (wantsPharmacyLocationSearch) {
       const searchResult = await nexusRealProviders.pharmacyBridge.search(await nearbyPlaceQuery(command, user, language));
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { pharmacyLocations: cards };
-      response = cards.length
-        ? `I found ${cards.length} pharmacy option(s): ${cards.map(c => `${c.name} in ${c.address || c.city}`).join("; ")}. This is a directory lookup only; I did not request a refill, transfer, or contact anyone. ${nearbyPlaceNotes(searchResult)}`.trim()
-        : nearbyPlaceEmptyReply(searchResult, "I did not find a matching pharmacy nearby. Tell me a city or region and I will check again.");
+      response = nearbyPlacesReply({ kind: "pharmacy", cards, searchResult, language });
     } else if (wantsPharmacy) {
       const draftResult = nexusRealProviders.pharmacyBridge.questionDraft({ questionTopic: args.summary || command });
       const questions = draftResult?.body?.data?.draft?.questions || [];
