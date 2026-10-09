@@ -68,6 +68,7 @@ const { conversationFollowUpFlags } = require("./server/nexus-conversation-follo
 const nexusMusicMediaSourceProvider = require("./server/nexus-music-media-source-provider.js");
 const mediaRoutes = require("./server/media/routes.js");
 const KyroMediaCommands = require("./public/kyro-media-commands.js");
+const KyroDismissCommands = require("./public/kyro-dismiss-commands.js");
 const { mediaControlWithoutPlayer } = require("./nexus/media/command-route-controls.js");
 const mediaRuntime = require("./server/media/runtime.js");
 const googleCloudTranslationProvider = require("./server/google-cloud-translation-provider.js");
@@ -20628,6 +20629,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     // checklist called X" had nothing steering the model toward the real,
     // persisted lists tool over nexus_document_export/nexus_automation_reminder.
     // Found by running the real server: the browser voice session is only given ten tools, and none of them saves a note, a list, a sale, a debt, a farm log entry or a contact. Without this sentence the model picked the nearest ten (a marketplace lookup, a weather lookup) and nothing was saved. The phone line and the typed route have the full tool set, so the rule is conditional.
+    "When the user asks to close, hide or dismiss what is on the screen (\"close the weather card\"), to go back to the orb, or says they are done or that is all, do not call any tool and do not ask a question: say \"Okay.\" and nothing more. The screen goes back to the orb by itself.",
     "Your tool list in this session may be shorter than the tools named below. When you are told to call a tool you do not have (nexus_lists, nexus_automation_reminder, nexus_business_assistant, nexus_document_export, nexus_memory and similar), or the person tells you something to save or asks to read it back -- a note, a shopping list or to-do, a sale, a cost, a debt or stock, a farm log entry (milk, eggs, rain, planting, spraying), a contact, a reminder, a fact about themselves, an undo -- call nexus_everyday_records with their complete words, and say what it returns. Never say something was saved unless the tool says so.",
     "When the user asks to create, save, read, or update a checklist or to-do list (e.g. 'create a checklist called X with items A, B, C'), you must call nexus_lists. This is a real, persisted list, not a reminder or a document — never route a checklist request to nexus_automation_reminder or nexus_document_export.",
     "When the user asks to draft, prepare, or send a message, text, WhatsApp, email, or call, you must call nexus_communications.",
@@ -22242,6 +22244,15 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   const secretRefusal = typeof secretNotSavedReply === "function" ? (secretNotSavedReply(rawCallerText, language) || secretNotSavedReply(command, language)) : null;
   if (secretRefusal) {
     return { ...common, command: "", capability: "nexus_memory", status: "completed", intent: "safety.secret_refused", response: secretRefusal.response, language: secretRefusal.language, secretNotSaved: true };
+  }
+  // "Close the weather card", "go back to the orb", "I'm done": the screen goes back to the orb (the page does that), and no tool runs. Found by using the product: this sentence mentions the
+  // weather, so the weather tool answered it with "Which location's weather would you like?". (typeof guard: some tests evaluate this function's source alone.)
+  if (typeof KyroDismissCommands !== "undefined") {
+    const dismissal = KyroDismissCommands.parse(rawCallerText || command);
+    if (dismissal) {
+      return { ...common, capability: "screen", status: "completed", intent: "screen.return_to_orb", response: dismissal.lang === "sw" || language === "sw" ? "Sawa." : "Okay.",
+        clientAction: { type: "return-to-orb" }, executionAttempted: false, executionVerified: false };
+    }
   }
   // A restricted account (today, only self-service guest sessions --
   // user.restrictions is set at /api/auth/guest-session with zero identity

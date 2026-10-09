@@ -21,6 +21,7 @@ function loadExecuteGenesisWorkspaceFromFinalTranscript({ mentalHealthHandled })
       calls.mentalHealth.push({ command, options });
       return mentalHealthHandled;
     },
+    handleKyroDismissCommand: () => false, // "close the weather card" / "back to the orb" (kyro-return-to-orb-wiring.test.js); an ordinary transcript is not one
     genesisWorkspaceActionFromFinalTranscript: () => { calls.genesisAction += 1; return { requestId: "req1", workspace: "agriculture" }; },
     rememberAuthoritativeGenesisTranscriptRoute: () => {},
     runAuthoritativeGenesisWorkspaceBridge: async () => { calls.bridge += 1; return { verified: true }; },
