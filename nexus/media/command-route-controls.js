@@ -55,7 +55,7 @@ function isSwahiliLanguage(value) {
 
 // Returns null when the sentence is not a media control for this route to answer, otherwise
 // { control, explicit, lang, response, status, instruction | null }.
-function mediaControlWithoutPlayer(text, { language = "en" } = {}) {
+function mediaControlWithoutPlayer(text, { language = "en", inConversation = false } = {}) {
   const raw = String(text || "");
   const parsed = KyroMediaCommands.parse(raw);
   if (!parsed || parsed.type !== "control") return null;
@@ -66,9 +66,9 @@ function mediaControlWithoutPlayer(text, { language = "en" } = {}) {
     return { control: parsed.control, explicit: true, lang, status: "completed", response: lines.passed[parsed.control],
       instruction: { type: "media.control", control: parsed.control } };
   }
-  // A bare word: only the clearly-player ones.
+  // A bare word: only the clearly-player ones, and never while a practice lesson or a pending question is open (found by the full suite: "next" and "endelea" are how a lesson is carried on).
   const bare = KyroMediaCommands.clean(raw).toLowerCase();
-  if (!CLEAR_WHEN_BARE.test(bare)) return null;
+  if (inConversation || !CLEAR_WHEN_BARE.test(bare)) return null;
   if (parsed.control === "resume") return { control: parsed.control, explicit: false, lang, status: "awaiting-information", response: lines.resumeWhat, instruction: null };
   return { control: parsed.control, explicit: false, lang, status: "completed", response: lines.nothing(VERB[parsed.control] || "do"), instruction: null };
 }

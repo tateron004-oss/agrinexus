@@ -24500,7 +24500,9 @@ async function answerMediaControlWithoutPlayer(db, user, body = {}) {
   if (!command || KyroMediaCommands.parse(command)?.type !== "control") return null;
   switchAgentContextTo(db, user);
   const language = body.targetLanguage || body.language || user.language || "en";
-  const answer = mediaControlWithoutPlayer(command, { language });
+  // A practice lesson or interview in progress, or a question waiting for a yes, owns a bare "next"/"endelea"/"pause".
+  const inConversation = Boolean(user.floorPractice?.lesson || user.floorPractice?.interview || ownPendingAction(db, user));
+  const answer = mediaControlWithoutPlayer(command, { language, inConversation });
   if (!answer) return null;
   if (answer.instruction && spotifyMusicControlIntent(command)) {
     const token = await spotifyAccessTokenForUser(db, user).catch(() => null);

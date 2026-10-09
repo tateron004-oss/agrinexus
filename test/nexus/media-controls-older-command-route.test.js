@@ -57,6 +57,12 @@ test("a bare 'resume' asks what to resume; a bare 'pause' or 'next' says nothing
   }
 });
 
+test("a bare word is left to an open lesson or pending question, but a control that names music is still passed on", () => {
+  for (const text of ["next", "Endelea", "pause", "Resume"]) assert.equal(mediaControlWithoutPlayer(text, { language: "en", inConversation: true }), null, text);
+  assert.equal(mediaControlWithoutPlayer("next song", { language: "en", inConversation: true }).instruction.control, "next");
+  assert.equal(mediaControlWithoutPlayer("Mute", { language: "en", inConversation: true }).instruction.control, "mute");
+});
+
 test("the person's profile language is used for an English-looking control, and sentences that are not controls are left alone", () => {
   assert.equal(mediaControlWithoutPlayer("Pause the music", { language: "sw" }).lang, "sw");
   // play paths stay with their own handlers, and ordinary words that merely sound like controls are not taken
