@@ -817,10 +817,12 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
   // tool dispatcher) reach the real, authoritative task engine for a
   // capability (e.g. lists) that only exists in this runtime, instead of
   // duplicating its logic.
-  async function behaviorTurnRequest({ text, channel = "api", locale = "en", user, conversationId, taskId, deterministicOnly = false }) {
+  async function behaviorTurnRequest({ text, channel = "api", locale = "en", user, conversationId, taskId, deterministicOnly = false, timeZone }) {
     const active = await runtime(); await active.ready;
     if (!active.behavior) throw Object.assign(new Error("The authoritative behavior spine is unavailable; no legacy write fallback was used."), { code: "behavior_spine_unavailable", status: 503 });
-    const baseContext = requestContext({ headers: {} }, user, isRestrictedFrom);
+    const requestBase = requestContext({ headers: {} }, user, isRestrictedFrom);
+    // the zone the device sends wins over the one saved on the profile, as on the typed route (POST .../behavior/turn)
+    const baseContext = validIanaZone(timeZone) ? Object.freeze({ ...requestBase, timeZone }) : requestBase;
     // The planner reads this to stop before the AI model / tool steps; see nexus/compat/voice-planner-bridge.js.
     const context = deterministicOnly === true ? Object.freeze({ ...baseContext, deterministicOnly: true }) : baseContext;
     return active.behavior.turn({ input: { correlationId: context.requestId, conversationId, taskId, channel, locale, text }, context });

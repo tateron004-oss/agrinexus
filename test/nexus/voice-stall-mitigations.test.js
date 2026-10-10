@@ -413,7 +413,8 @@ test("the tool call from the voice session: a 429 reaches the model as a refusal
     const sandbox = base.sandbox;
     Object.assign(sandbox, {
       kyroVoiceIntakeOwnsTurn: () => false, nexusGenesisVoiceDebugLog() {}, languageCode: () => "en",
-      genesisWorkspaceActionFromFinalTranscript: () => null, executeGenesisWorkspaceFromFinalTranscript: async () => false, runAuthoritativeGenesisWorkspaceBridge: async () => {}
+      genesisWorkspaceActionFromFinalTranscript: () => null, executeGenesisWorkspaceFromFinalTranscript: async () => false, runAuthoritativeGenesisWorkspaceBridge: async () => {},
+      kyroDeviceTimeZone: () => "America/Chicago"
     });
     sandbox.fetch = fetchImpl;
     vm.runInContext(`${appSource.slice(start, end)}\nthis.callTool = callNexusOpenAiRealtimeTool;`, sandbox);
@@ -427,9 +428,12 @@ test("the tool call from the voice session: a 429 reaches the model as a refusal
   assert.equal(dropped.status, "offline");
   const aborted = await call(async () => { throw Object.assign(new Error("aborted"), { name: "AbortError" }); });
   assert.equal(aborted.status, "timed-out");
-  const fine = await call(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, status: "completed", response: "It is sunny." }) }));
+  let sentBody = null;
+  const fine = await call(async (url, init) => { sentBody = JSON.parse(init.body); return { ok: true, status: 200, json: async () => ({ ok: true, status: "completed", response: "It is sunny." }) }; });
   assert.equal(fine.response, "It is sunny.");
   assert.equal(fine.ok, true);
+  // the device's time zone goes with every tool call (the US guides and "tomorrow at 5" depend on it), in the arguments and at the top of the body
+  assert.equal(sentBody.arguments.timeZone, "America/Chicago"); assert.equal(sentBody.timeZone, "America/Chicago");
 });
 
 test("a stall report says the phase, the last events, whether the automatic reply was off, and the session's age against its key, and carries no speech", () => {

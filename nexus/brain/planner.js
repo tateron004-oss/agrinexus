@@ -439,7 +439,8 @@ class OpenEndedPlanner {
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
     // It applies to people in the United States only (their time zone, or a question that names a US programme), never to a farmer in Kenya asking about a loan.
     // A question in the technology and AI vocabulary ("use AI to grow my business", "protect my business email") belongs to the technology guide even when it also names growth or marketing, so it is looked up first and wins.
-    const techTopic = !ownWorkspace && usPerson ? technologyTopic(command.text) : null;
+    // (not held back by the workspace words in a sentence like "what if my customer data was leaked": "customer" there is the person's customers' data, not a request to their own records. Found by the prompt battery.)
+    const techTopic = usPerson ? technologyTopic(command.text) : null;
     // Choosing AI tools for a job (a business plan, funding, marketing, customer service, operations) and how to choose one: for any owner in any country (see knowledge/ai-tools-for-business.js). A specific technology topic
     // (AI safety, scams, fake reviews, advertising claims, cybersecurity) still goes to the technology guide; the general "getting started with AI" answer gives way to this one.
     const aiToolsTopicId = !ownWorkspace && (!techTopic || techTopic === "ai-getting-started") ? aiToolsTopic(command.text) : null;
@@ -470,6 +471,13 @@ class OpenEndedPlanner {
     // nexus/compat/voice-planner-bridge.js) stops here. Everything above is deterministic; everything below may call the model
     // or build tool steps, which that caller leaves to its own pipeline.
     if (context?.deterministicOnly === true) {
+      // A starter document asked for by voice ("Draft a business plan"): saving a document needs the screen's document card, which the voice route does not have, so the person is told how, instead of
+      // hearing "I couldn't do that one" (see knowledge/consulting-templates.js). Nothing is saved.
+      const spokenTemplate = templateRequest(command.text);
+      if (spokenTemplate) {
+        return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0, sourceRequired: false,
+          response: `I can make a blank ${consultingTemplate(spokenTemplate.kind).title.toLowerCase()} for you to fill in, but I can only save a document from the keyboard. Type "${String(command.text || "").trim().replace(/[.!?]+$/, "")}" in the box on the screen and I will save it and show a Download button. Nothing was saved yet.` });
+      }
       return Object.freeze({ deferred: true, goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0 });
     }
     // Jokes and riddles are not web searches ("Tell me a joke" returned a stitched-together search snippet).
