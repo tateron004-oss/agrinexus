@@ -57743,10 +57743,8 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
     recordMapTrace("dispatcher-after-map-launcher", { dispatcherResult: opened, launcherResult: opened });
     document.body.dataset.genesisWorkspace = "map";
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
-  } else if (presentation.kind === "image-gallery") {
-    opened = true;
-    document.body.dataset.genesisWorkspace = outcome.workspace;
-    document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
+  // (an image gallery is opened like every other result, by the generic branch below. It used to have a branch of its own that only said "opened" and never opened the workspace it is drawn in, so on the orb home
+  // the gallery had nowhere visible to go: "Find a picture of a maize armyworm" found five pictures on the server and the page reported "not visibly verified" and showed nothing. Found testing production.)
   } else if (presentation.kind === "media-player" && (data.action === "control" || data.instruction?.type === "media.control")) {
     // media.control: the server returned an instruction; the phone's player carries it out (and says so if nothing is playing).
     kyroMediaControlInstruction(data.control || data.instruction?.control, data.language);
@@ -58149,13 +58147,21 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   renderUserWorkspace?.();
   // Found on production: a saved document (and its Download button) was drawn and then wiped by the redraw of the window just above, so the person was told it was saved and could not get it.
   // The card is drawn again after the redraw; both card functions replace an earlier card, so this is safe to repeat.
+  // The same redraw wiped every other result drawn into that window too: a web search answer and its sources, the pictures from "find a picture of ...", the videos from "show me videos about ...", a checklist, a
+  // reminders view. The page acknowledged them as visible (they were, for an instant) and the person was left with the window and none of the answer. Each is drawn again here by the function that drew it
+  // (all of them replace an earlier copy). A map and the music player are not drawn into this window and are left alone. Found testing production.
   try {
     const drawn = result.render;
     if (drawn && result.state === "render_required") {
-      if (drawn.presentation?.kind === "document") renderNexusAuthoritativeDocument(drawn);
+      const kind = drawn.presentation?.kind;
+      if (kind === "document") renderNexusAuthoritativeDocument(drawn);
       else if (drawn.data?.resume === true && nexusDocumentLifecycleComplete(drawn.data)) renderNexusAuthoritativeResume(drawn);
+      else if (kind === "image-gallery") await renderNexusAuthoritativeImages(drawn);
+      else if (kind === "video-gallery") await renderNexusAuthoritativeVideos(drawn);
+      else if (kind === "checklist") await renderNexusAuthoritativeChecklist(drawn);
+      else if (kind && kind !== "map" && kind !== "media-player") renderNexusAuthoritativeData(drawn);
     }
-  } catch { /* the saved document is still in the person's documents; only the card is missing */ }
+  } catch { /* the result is still held by the server and its receipt; only the drawing is missing */ }
   setVoiceResponse(message, true, {
     allowHandoff: false,
     command: text,
