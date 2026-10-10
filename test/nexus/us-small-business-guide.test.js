@@ -68,7 +68,7 @@ test("through the planner, for a person in the United States: the checked guide 
   const plan = await ask(planner(async () => { throw new Error("the guide must answer without the model"); }), "How do I get certified as a minority-owned business?", { timeZone: "America/New_York" });
   assert.equal(plan.application, "conversation"); assert.deepEqual(plan.steps, []);
   assert.equal(plan.knowledge, "us-small-business:certification"); assert.equal(plan.guardrail, "professional-advice");
-  assert.match(plan.response, /There are several different certifications/); assert.match(plan.response, /\(checked 10 October 2026\)/);
+  assert.match(plan.response, /There are several different certifications/); assert.match(plan.response, /\(checked 9 October 2026\)/);
   assert.ok(plan.sources.some(source => /sba\.gov\/certifications/.test(source.url)));
 });
 

@@ -9,7 +9,7 @@
 // usSmallBusinessTopic(text) -> a topic id, or null. Only a QUESTION or a request for help is taken; a record ("log a tax payment of $300"), a draft ("draft a grant proposal") or other talk is not.
 // usSmallBusinessAnswer(id) -> { text, sources: [{ name, url }], topic } or null.
 
-const CHECKED_ON = "10 October 2026";
+const CHECKED_ON = "9 October 2026";
 
 const SOURCES = Object.freeze({
   localAssistance: { name: "SBA Local Assistance", url: "https://www.sba.gov/local-assistance" },
