@@ -237,7 +237,9 @@ test("a United States owner's business question and a spoken request for a start
   const ask = (text, timeZone) => planner.plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en", channel: "voice" }, context: { deterministicOnly: true, ...(timeZone ? { timeZone } : {}) } });
   const us = await ask("How do I write a business plan?", "America/Chicago");
   assert.equal(us.knowledge, "us-small-business:business-plan");
-  assert.equal((await ask("How do I write a business plan?")).deferred, true, "with no zone and no US word, the old pipeline carries on");
+  const away = await ask("How do I write a business plan?"); // no zone and no US word: the universal answer, with the note that its sources are American
+  assert.equal(away.knowledge, "us-small-business:business-plan"); assert.match(away.response, /United States government sources/);
+  assert.equal((await ask("Is a nonprofit better than a for-profit?")).deferred, true, "a US-only topic with no zone and no US word still goes to the old pipeline");
   const doc = await ask("Draft a business plan for Sunrise Cafe", "America/Chicago");
   assert.deepEqual(doc.steps, []); assert.match(doc.response, /can only save a document from the keyboard/); assert.match(doc.response, /Type "Draft a business plan for Sunrise Cafe" in the box/); assert.match(doc.response, /Nothing was saved yet\./);
 });

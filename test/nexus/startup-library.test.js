@@ -95,7 +95,7 @@ test("a question in the technology and AI vocabulary goes to the technology guid
 });
 
 test("outside the United States the US library is not used, and an LLC question names a US programme only when the person does", async () => {
-  const plan = await ask(planner(async () => "Business structures differ by country; ask your local business registry."), "What type of business should I have? A company or a partnership or a cooperative?", "Africa/Nairobi").catch(error => ({ reachedPlanningModel: /must not reach the AI planning model/.test(error.message) }));
+  const plan = await ask(planner(async () => "Business structures differ by country; ask your local business registry."), "What type of business should I have? A company or a partnership or a cooperative?", "Africa/Accra").catch(error => ({ reachedPlanningModel: /must not reach the AI planning model/.test(error.message) }));
   assert.equal(plan.knowledge, undefined);
 });
 

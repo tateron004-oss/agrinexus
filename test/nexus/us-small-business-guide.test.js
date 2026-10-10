@@ -78,11 +78,11 @@ test("through the planner: a question that names a US programme gets the guide e
 });
 
 test("through the planner, for a person outside the United States: no US agency is named, and the general rules still apply", async () => {
-  const plan = await ask(planner(null), "How do I get a loan for my cow?", { timeZone: "Africa/Nairobi" });
+  const plan = await ask(planner(null), "How do I get a loan for my cow?", { timeZone: "Africa/Accra" });
   assert.equal(plan.knowledge, undefined);
   assert.doesNotMatch(plan.response, /sba\.gov|irs\.gov|SBDC|SCORE|MBDA/);
   assert.match(plan.response, /I am not a financial advisor or a lender/); assert.match(plan.response, /your country's small business support office/);
-  const tax = await ask(planner(async () => "Many traders pay a small tax."), "Do I need to pay tax on my maize sales?", { timeZone: "Africa/Nairobi" });
+  const tax = await ask(planner(async () => "Many traders pay a small tax."), "Do I need to pay tax on my maize sales?", { timeZone: "Africa/Accra" });
   assert.match(tax.response, /^Many traders pay a small tax\. I am not a tax advisor/); assert.match(tax.response, /your country's tax authority/); assert.doesNotMatch(tax.response, /irs\.gov/);
 });
 
