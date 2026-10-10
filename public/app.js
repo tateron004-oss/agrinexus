@@ -50407,6 +50407,10 @@ async function requestNexusOpenAiRealtimeSession(status = {}) {
   return payload;
 }
 
+function kyroDeviceTimeZone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; }
+}
+
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
@@ -50439,9 +50443,12 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
         arguments: {
           ...args,
           command,
-          language: args.language || languageCode()
+          language: args.language || languageCode(),
+          // The zone of this device, as the typed route sends it: it decides what "tomorrow at 5" means and that a United States owner's business questions get the US guides.
+          timeZone: args.timeZone || kyroDeviceTimeZone()
         },
-        language: args.language || languageCode()
+        language: args.language || languageCode(),
+        timeZone: args.timeZone || kyroDeviceTimeZone()
       })
     });
   } catch (error) {

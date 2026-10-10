@@ -470,6 +470,13 @@ class OpenEndedPlanner {
     // nexus/compat/voice-planner-bridge.js) stops here. Everything above is deterministic; everything below may call the model
     // or build tool steps, which that caller leaves to its own pipeline.
     if (context?.deterministicOnly === true) {
+      // A starter document asked for by voice ("Draft a business plan"): saving a document needs the screen's document card, which the voice route does not have, so the person is told how, instead of
+      // hearing "I couldn't do that one" (see knowledge/consulting-templates.js). Nothing is saved.
+      const spokenTemplate = templateRequest(command.text);
+      if (spokenTemplate) {
+        return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0, sourceRequired: false,
+          response: `I can make a blank ${consultingTemplate(spokenTemplate.kind).title.toLowerCase()} for you to fill in, but I can only save a document from the keyboard. Type "${String(command.text || "").trim().replace(/[.!?]+$/, "")}" in the box on the screen and I will save it and show a Download button. Nothing was saved yet.` });
+      }
       return Object.freeze({ deferred: true, goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0 });
     }
     // Jokes and riddles are not web searches ("Tell me a joke" returned a stitched-together search snippet).

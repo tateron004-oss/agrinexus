@@ -11,13 +11,15 @@
 
 const DEFAULT_TIMEOUT_MS = 5000;
 
-async function deterministicVoiceAnswer({ runtime, user, text, language = "en", timeoutMs = DEFAULT_TIMEOUT_MS }) {
+// `timeZone` is the zone of the device the person is speaking from (the orb sends it with every tool call), the same zone the typed route sends: it decides what "tomorrow at 5" means and, for a person in the United States,
+// that the US guides apply. Without it only the zone saved on the person's profile is known.
+async function deterministicVoiceAnswer({ runtime, user, text, language = "en", timeZone, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const command = String(text || "").trim();
   if (!runtime || typeof runtime.behaviorTurnRequest !== "function" || !user || !command) return null;
   let timer = null;
   try {
     const turn = await Promise.race([
-      runtime.behaviorTurnRequest({ text: command, channel: "voice", locale: language, user, deterministicOnly: true }),
+      runtime.behaviorTurnRequest({ text: command, channel: "voice", locale: language, user, deterministicOnly: true, ...(timeZone ? { timeZone } : {}) }),
       new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("voice planner bridge timed out")), timeoutMs); })
     ]);
     if (!turn || turn.deferred === true || turn.completed !== true || turn.state !== "completed") return null;

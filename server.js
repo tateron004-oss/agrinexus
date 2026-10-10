@@ -20986,7 +20986,7 @@ async function dispatchNexusRealtimeToolOnce(db, user, body = {}) {
   if (!(crisisSignal?.crisisOverride === true || crisisSignal?.state === "medical_emergency" || saidCrisisSignal?.crisisOverride === true || saidCrisisSignal?.state === "medical_emergency")) {
     const authoritativeVoiceUser = await authoritativeRuntimeUser(user).catch(() => null);
     const planned = authoritativeVoiceUser
-      ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: authoritativeVoiceUser, text: command, language: voiceLanguage })
+      ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: authoritativeVoiceUser, text: command, language: voiceLanguage, timeZone: body.timeZone || args.timeZone })
       : null;
     if (planned) {
       safeGenesisVoiceStageEvent(db, {
@@ -22332,7 +22332,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // (typeof guards: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names.)
   if ((typeof PLANNER_BRIDGE_VOICE_TOOLS !== "undefined" ? PLANNER_BRIDGE_VOICE_TOOLS.has(toolName) : toolName === "nexus_general_conversation") && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
     const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
-    const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+    const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language, timeZone: args?.timeZone }) : null;
     if (planned) {
       return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: planned.response,
         executionAttempted: true, executionVerified: planned.verified === true };
@@ -22346,7 +22346,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   // Fitness and wellbeing sentences ("I ran 5 km in 30 minutes", "My goal is 4 workouts a week", "Undo my last workout") are the wellness log's, which the planner owns; the health tool did not know them (phrase sweep).
   if (toolName === "nexus_health_preparation" && typeof spokenRequests !== "undefined" && spokenRequests.isWellnessLogRequest(command) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
     const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
-    const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+    const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language, timeZone: args?.timeZone }) : null;
     if (planned) {
       return { ...common, capability: "wellness-log", status: "completed", intent: "planner-deterministic-answer", response: planned.response,
         executionAttempted: true, executionVerified: planned.verified === true };
@@ -23959,7 +23959,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       // although the planner saves them. Only here, after every health branch above declined, is the planner asked (the health tool keeps its own route otherwise, see orb-catchall-tool.test.js).
       if (!response && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function" && typeof authoritativeNexusRuntime !== "undefined") {
         const plannerUser = await authoritativeRuntimeUser(user).catch(() => null);
-        const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language }) : null;
+        const planned = plannerUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language, timeZone: args?.timeZone }) : null;
         if (planned) return { ...common, capability: "nexus_health_preparation", status: "completed", intent: "planner-deterministic-answer", response: planned.response, executionAttempted: true, executionVerified: planned.verified === true };
       }
       response = response
