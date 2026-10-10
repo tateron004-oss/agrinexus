@@ -96,3 +96,10 @@ test("through the planner: a template request makes a document directly (no mode
   const defaulted = await ask(planner(), "Create a technology roadmap");
   assert.equal(defaulted.steps[0].input.format, "docx");
 });
+
+// Found by running every prompt through the real server: "What if my customer data was leaked?" answered "You have no business or nonprofit workspace yet", because "my customer" read as a request to the person's own
+// workspace. The technology guide is not held back by those words.
+test("through the planner: 'what if my customer data was leaked' is the data breach answer, not a workspace request", async () => {
+  const plan = await ask(planner(), "What if my customer data was leaked?", { timeZone: "America/Chicago" });
+  assert.equal(plan.knowledge, "small-business-technology:data-breach"); assert.match(plan.response, /IdentityTheft\.gov/);
+});
