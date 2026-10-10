@@ -50411,6 +50411,32 @@ function kyroDeviceTimeZone() {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; }
 }
 
+// A spoken request to SEE pictures or videos ("find a picture of a maize armyworm", "show me videos about drip irrigation"). The orb's tools have none for this, so the model answered with a canned line and nothing was shown
+// (found testing production). The same words typed work (the page's own typed path searches and draws the gallery on the screen), so a spoken request is sent down that path and the model is told truthfully whether the
+// pictures or videos are on the screen. "Watch ... on YouTube" and "play ..." are left to the music and video player, and anything about a person's own injury or a camera is left to the health flow.
+const KYRO_VISUAL_REQUEST = /^\s*(?:(?:nexus|kyro)[,:]?\s*)?(?:please\s+)?(?:(?:can|could|would)\s+you\s+)?(?:(?:show|find|search for|search|get|display|bring up|pull up)\s+(?:me\s+)?|let me see\s+|i (?:want|need|would like) to see\s+)(?:(?:some|a|an|the|any|more)\s+)?(?:[\w'-]+\s+){0,3}?(pictures?|photos?|photographs?|images?|videos?)\b/i;
+const KYRO_VISUAL_HEALTH = /\b(injur\w*|wound|rash|swelling|bleeding|my (?:skin|leg|arm|foot|hand|eye|baby|child)|provider|doctor|clinic|telehealth|screenshot|camera)\b/i;
+function kyroVisualRequestKind(text) {
+  const said = String(text || "");
+  const match = KYRO_VISUAL_REQUEST.exec(said);
+  if (!match || KYRO_VISUAL_HEALTH.test(said)) return null;
+  return /^video/i.test(match[1]) ? "videos" : "images";
+}
+
+async function kyroShowVisualRequest(command, kind) {
+  const selector = kind === "videos" ? "[data-nexus-authoritative-video] iframe, [data-nexus-authoritative-video] video" : "img[data-nexus-authoritative-image]";
+  const noun = kind === "videos" ? "video" : "picture";
+  try { await handleNexusUnifiedBrainRuntimeCommand(command, { source: "openai-realtime-tool" }); } catch { /* the check below says what is on the screen */ }
+  await new Promise(resolve => window.setTimeout(resolve, 400));
+  const shown = document.querySelectorAll(selector).length;
+  if (shown > 0) {
+    return { ok: true, status: "completed", executionVerified: true, blockedReason: null, clientAction: { type: "show-visual-results", kind },
+      response: `I have put ${shown} ${noun}${shown === 1 ? "" : "s"} on the screen for the person to look at. Tell them so in one short sentence. Do not read out any web addresses and do not describe what the ${noun}${shown === 1 ? " shows" : "s show"}, because you cannot see ${shown === 1 ? "it" : "them"}.` };
+  }
+  return { ok: false, status: "failed-truthfully", executionVerified: false, blockedReason: "visual-results-not-shown", category: "visual-results",
+    response: `I could not put ${noun}s on the screen just now. Tell the person plainly that nothing is showing, and that they can try again or type the request.` };
+}
+
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
@@ -50424,6 +50450,9 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     await kyroReturnToOrb({ reason: window.KyroDismissCommands.parse(command).kind, source: "openai-realtime-tool" });
     return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
   }
+  // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
+  const visualKind = kyroVisualRequestKind(command);
+  if (visualKind) return kyroShowVisualRequest(command, visualKind);
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
     toolName,
@@ -57288,6 +57317,21 @@ async function renderNexusAuthoritativeVideos(outcome = {}) {
   return surface;
 }
 
+// The line shown (and spoken, when the orb is not already speaking) with a picture or video result. The server's own line is a placeholder ("Nexus completed the governed execution and is rendering the verified result.").
+function nexusGalleryMessage(render = {}) {
+  const kind = render?.presentation?.kind;
+  const topic = String(render?.data?.query || "").trim();
+  if (kind === "image-gallery") {
+    const count = Array.isArray(render.data?.images) ? render.data.images.length : 0;
+    return count ? `Here ${count === 1 ? "is the picture" : `are ${count} pictures`} I found${topic ? ` of ${topic}` : ""}.` : "";
+  }
+  if (kind === "video-gallery") {
+    const count = Array.isArray(render.data?.videos) ? render.data.videos.length : 0;
+    return count ? `Here ${count === 1 ? "is the video" : `are ${count} videos`} I found${topic ? ` about ${topic}` : ""}.` : "";
+  }
+  return "";
+}
+
 // Found live: nexus/lists/executor.js genuinely creates/reads/updates a real,
 // persisted checklist (real record write, real item text) -- but its
 // "checklist" presentation kind was never registered in the outer adapter
@@ -58123,7 +58167,7 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
       throw error;
     }
     if (!renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
-    message = result.render.response || message;
+    message = nexusGalleryMessage(result.render) || result.render.response || message;
   }
   nexusAgenticBrainLastResult = {
     ok: result.completed === true,
