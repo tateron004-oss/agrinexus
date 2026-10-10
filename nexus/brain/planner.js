@@ -16,6 +16,8 @@ const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { professionalAdviceTopic, professionalAdviceReply, professionalAdviceGoal, withProfessionalAdviceNote } = require("../guardrails/professional-advice.js");
 const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext } = require("../knowledge/us-small-business.js");
+const { technologyTopic, technologyAnswer } = require("../knowledge/small-business-technology.js");
+const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
@@ -438,6 +440,12 @@ class OpenEndedPlanner {
       const guide = usSmallBusinessAnswer(usTopic, { question: command.text });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${usTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
+    // The checked technology and AI guide (using AI tools safely, AI scams, fake reviews, cybersecurity, phishing, email and domain protection, hiring a web host or designer, what Kyro can automate, getting online).
+    const techTopic = !ownWorkspace && usPerson ? technologyTopic(command.text) : null;
+    if (techTopic) {
+      const guide = technologyAnswer(techTopic);
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `small-business-technology:${techTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
     const adviceTopic = ownWorkspace ? null : professionalAdviceTopic(command.text);
     if (adviceTopic) {
       const say = response => Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, guardrail: "professional-advice", planningAttempts: 0 });
@@ -563,6 +571,14 @@ class OpenEndedPlanner {
     // never receives, so it must run first and own this phrasing outright.
     const completeSaveConversation = completeSaveConversationPlan(command.text, catalog, conversationHistory);
     if (completeSaveConversation) return Object.freeze({ ...completeSaveConversation, planningAttempts: 1 });
+    // "Draft a website brief for Grace's Bakery", "Create a technology roadmap", "Make an automation audit as a PDF": a fixed starter document with blanks to complete (see knowledge/consulting-templates.js).
+    // Not written by the AI and not claiming to know anything about the client, so it is made directly, with no model call.
+    const template = templateRequest(command.text);
+    if (template && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
+      const made = consultingTemplate(template.kind, { client: template.client });
+      return Object.freeze({ goal: String(command.text || "").trim(), application: "documents", riskTier: "low", clarification: null, planningAttempts: 1,
+        steps: [{ clientStepId: "consulting-template", title: `Create ${made.title}`, toolId: "documents.create", input: { title: made.title, content: made.content, format: template.format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
+    }
     // "Export it as a PDF" right after a document was saved: the same text again, in the file type asked for (found on production: nothing handled this sentence, so it went to the AI model).
     const exportFormat = exportLatestDocumentFormat(command.text);
     if (exportFormat && this.documents?.list && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {

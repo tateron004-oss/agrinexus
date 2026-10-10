@@ -124,7 +124,7 @@ function usSmallBusinessTopic(text) {
 // When is this United States guide the right one? A person's time zone is the best signal the page and the phone line give; the words of the question can also say so ("SBA", "IRS", "8(a)", "NMSDC", "SBDC",
 // "SAM.gov", "United States"). Without either, the question is left to the general guardrail, which names no country-specific agency.
 const US_TIME_ZONES = /^(?:America\/(?:New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Boise|Juneau|Sitka|Nome|Adak|Metlakatla|Yakutat|Menominee|North_Dakota\/.+|Indiana\/.+|Kentucky\/.+)|Pacific\/Honolulu|US\/.+)$/;
-const US_WORDS = /\b(?:sba|irs|mbda|nmsdc|sbdc|8a|hubzone|wosb|sdvosb|sam\.gov|cdfi|1099|1040|schedule c|united states|usa)\b|\b8\s?\(\s?a\s?\)|\bu\.s\./i;
+const US_WORDS = /\b(?:sba|irs|ftc|nist|cisa|mbda|nmsdc|sbdc|8a|hubzone|wosb|sdvosb|sam\.gov|cdfi|1099|1040|schedule c|united states|usa)\b|\b8\s?\(\s?a\s?\)|\bu\.s\./i;
 function isUsContext({ timeZone = "", text = "" } = {}) {
   return US_TIME_ZONES.test(String(timeZone || "")) || US_WORDS.test(String(text || ""));
 }
