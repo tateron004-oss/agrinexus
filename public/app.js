@@ -58153,7 +58153,10 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     allowHandoff: false,
     command: text,
     source: "nexus-authoritative-behavior-spine",
-    turnToken: options.turnToken
+    turnToken: options.turnToken,
+    // The checked guide (free help, certifications, loans, taxes...) and the "I am not a lawyer / tax advisor" answers carry their sources, the date they were checked and the warning, which the usual
+    // one-sentence cut for the user screen would remove: they are shown and spoken whole.
+    ...(result.plan?.guardrail || result.plan?.knowledge ? { longForm: true } : {})
   });
   // This gateway owns the request only when the authoritative spine
   // actually answered it. A failure below falls through to the working
