@@ -391,4 +391,4 @@ function readFinance(intent, context) {
   return read ? read(context) : null;
 }
 
-module.exports = Object.freeze({ classifyFinance, planFinanceWrite, readFinance, FINANCE_READ_INTENTS, FINANCE_WRITE_INTENTS, daysUntil, nextDue });
+module.exports = Object.freeze({ classifyFinance, planFinanceWrite, readFinance, FINANCE_READ_INTENTS, FINANCE_WRITE_INTENTS, daysUntil, nextDue, looseDay });

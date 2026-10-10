@@ -33,7 +33,7 @@
           // a string, but the backend's normalizeEditable rejects a field
           // whose type doesn't match its default (amount defaults to 0).
           field(div, label, String(row[key]), value => { const n = Number(value); row[key] = Number.isFinite(n) ? n : 0; }, false, "number");
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["start", "end"].includes(key) ? "datetime-local" : ["followUpDate", "date", "dueDate", "deadline", "expectedDate", "paidDate", "receivedDate", "asOf"].includes(key) ? "date" : "text");
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["start", "end"].includes(key) ? "datetime-local" : ["followUpDate", "date", "dueDate", "deadline", "expectedDate", "paidDate", "receivedDate", "asOf", "consentDate"].includes(key) ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -157,7 +157,7 @@
     renderDashboard();
     const business = byId("business-fields"); business.replaceChildren();
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
-    rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"]]);
+    rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"], ["skills", "Skills (volunteers)"], ["availability", "Availability (volunteers)"], ["consent", "Consent to keep their records (given or declined; blank if not asked)"], ["consentDate", "Consent recorded on"], ["source", "How they heard about us"]]);
     rows("listings", editable.listings, [["address", "Address"], ["price", "Price"], ["propertyType", "Property type"], ["beds", "Beds"], ["baths", "Baths"], ["status", "Status (active, pending, under-contract, sold)"], ["notes", "Notes"]]);
     rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"], ["fund", "Restricted to (the purpose a gift is held for; blank if unrestricted)"]]);
     const money = moneyByCurrency(editable.transactions);
@@ -179,6 +179,13 @@
     field(cash, "Currency (KES, USD, NGN...)", editable.cashBalance.currency, value => { editable.cashBalance.currency = value; });
     field(cash, "True on (the day)", editable.cashBalance.asOf, value => { editable.cashBalance.asOf = value; }, false, "date");
     rows("budgets", editable.budgets, [["category", "Category"], ["amount", "Monthly budget"], ["currency", "Currency (KES, USD, NGN...)"]]);
+    rows("volunteer-hours", editable.volunteerHours, [["volunteer", "Volunteer"], ["hours", "Hours"], ["date", "Date"], ["activity", "What they did"], ["program", "Program"]]);
+    const hoursTotal = editable.volunteerHours.reduce((sum, row) => sum + row.hours, 0);
+    byId("volunteer-summary").textContent = editable.volunteerHours.length ? `${Math.round(hoursTotal * 10) / 10} hours from ${new Set(editable.volunteerHours.map(row => row.volunteer)).size} volunteers` : "No volunteer hours yet.";
+    rows("services", editable.services, [["participant", "Participant (must have consent given)"], ["service", "Service"], ["date", "Date"], ["program", "Program"], ["hours", "Hours"], ["notes", "Notes"]]);
+    rows("outcomes", editable.outcomes, [["program", "Program"], ["measure", "What was measured"], ["value", "Number"], ["unit", "Unit"], ["date", "Date"], ["notes", "Notes"]]);
+    rows("program-goals", editable.programGoals, [["program", "Program"], ["goal", "Goal (what is counted)"], ["target", "Target number"], ["unit", "Unit"], ["deadline", "Deadline"]]);
+    byId("program-summary").textContent = editable.services.length || editable.outcomes.length ? `${new Set(editable.services.map(row => String(row.participant).toLowerCase())).size} people received ${editable.services.length} services; ${editable.outcomes.length} results recorded` : "No services or results yet.";
     byId("budgets-summary").textContent = editable.budgets.length ? `${editable.budgets.length} budget${editable.budgets.length === 1 ? "" : "s"} set. Ask Kyro: how are we doing against budget?` : "No budgets yet.";
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"], ["assignee", "Assigned to"], ["priority", "Priority (low, medium, high)"], ["dueDate", "Due date"]]);
@@ -224,9 +231,9 @@
   byId("create-client").addEventListener("submit", event => { event.preventDefault(); run(async () => { const form = new FormData(event.currentTarget); current = await api("/clients", "POST", { ...Object.fromEntries(form), consent: form.get("consent") === "on" }); await reload(); notice("Client workspace created with your AgriNexus identity."); }); });
   byId("reload").addEventListener("click", () => run(reload));
   byId("save").addEventListener("click", () => run(async () => { await save(); notice("Changes saved."); }));
-  byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }); render(); });
+  byId("add-lead").addEventListener("click", () => { current.data.editable.leads.push({ name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "" }); render(); });
   byId("add-listing").addEventListener("click", () => { current.data.editable.listings.push({ address: "", price: 0, propertyType: "", beds: 0, baths: 0, status: "active", notes: "" }); render(); });
-  byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, currency: "USD", description: "" }); render(); });
+  byId("add-transaction").addEventListener("click", () => { current.data.editable.transactions.push({ date: new Date().toISOString().slice(0, 10), type: "income", category: "", amount: 0, currency: "USD", description: "", fund: "" }); render(); });
   // Found live: "invoices.length + 1001" recycles a number once an invoice
   // is deleted (this row-remove button is a plain splice, with no cleanup
   // of that invoice's now-orphaned invoiceItems) -- the next invoice created
@@ -244,6 +251,10 @@
   }
   byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: nextInvoiceNumber(current.data.editable), clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
+  byId("add-volunteer-hours").addEventListener("click", () => { current.data.editable.volunteerHours.push({ volunteer: "", hours: 0, date: new Date().toISOString().slice(0, 10), activity: "", program: "" }); render(); });
+  byId("add-service").addEventListener("click", () => { current.data.editable.services.push({ participant: "", service: "", date: new Date().toISOString().slice(0, 10), program: "", hours: 0, notes: "" }); render(); });
+  byId("add-outcome").addEventListener("click", () => { current.data.editable.outcomes.push({ program: "", measure: "", value: 0, unit: "", date: new Date().toISOString().slice(0, 10), notes: "" }); render(); });
+  byId("add-goal").addEventListener("click", () => { current.data.editable.programGoals.push({ program: "", goal: "", target: 0, unit: "", deadline: "" }); render(); });
   byId("add-bill").addEventListener("click", () => { current.data.editable.bills.push({ payee: "", description: "", amount: 0, currency: "USD", dueDate: "", status: "unpaid", recurring: "", paidDate: "" }); render(); });
   byId("add-pledge").addEventListener("click", () => { current.data.editable.pledges.push({ donor: "", amount: 0, currency: "USD", expectedDate: "", purpose: "", restricted: false, status: "outstanding", receivedDate: "" }); render(); });
   byId("add-budget").addEventListener("click", () => { current.data.editable.budgets.push({ category: "", amount: 0, currency: "USD", period: "month" }); render(); });
