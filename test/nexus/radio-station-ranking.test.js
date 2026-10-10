@@ -1,4 +1,6 @@
 "use strict";
+// These tests pin how radio stations are ranked, which only matters when radio is a source. The default is YouTube only (media-youtube-only.test.js); "all" turns the rest back on.
+process.env.KYRO_MEDIA_SOURCES = "all";
 // Found by the phrase sweep: "Play radio Citizen" resolved to "The People's Radio - A Star Citizen Community Radio Station" (a gaming station in the UK), not Kenya's Citizen Radio: the
 // listener's country never reached the radio search and a name that merely contained the word ranked like a station called that. No test here touches the internet: the directory is
 // the fake world of test/helpers/media-fake-world.js, loaded with RECORDED records (fixtures/nexus/radio-browser-citizen.recorded.json) and a few stations made up for the cases the

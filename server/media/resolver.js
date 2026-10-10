@@ -10,6 +10,10 @@
 // Providers are tried in order and the search stops at the first one that has a playable match: later providers (and YouTube's scarce quota)
 // are used only when an earlier one cannot help, or when the phone asks again with excludeIds after a candidate failed to play.
 //
+// Sources: for now music, radio requests and videos come from YouTube ONLY (the owner's decision: "we are only using YouTube"). A request for a radio station is searched on YouTube
+// ("Capital FM live"), "play some music" with nothing named is a YouTube search for popular music, and the radio, Audius, Jamendo, Internet Archive and 30-second preview sources are off.
+// KYRO_MEDIA_SOURCES="all" (or a comma list such as "youtube,radio-browser") turns the others back on; the order above then applies.
+//
 // Nothing here downloads, extracts or relays media. Every candidate is a URL the phone's own player opens directly from the provider.
 
 const util = require("./util.js");
@@ -37,6 +41,12 @@ const PROVIDERS = Object.freeze({
 // "play", "please", "cheza" and similar are the command, not the thing to search for.
 const GENERIC_REQUESTS = new Set(["music", "songs", "song", "a song", "some music", "something", "radio", "redio", "muziki", "wimbo", "nyimbo", "a radio station", "radio station"]);
 
+function enabledSources(ctx) {
+  const raw = String((ctx && ctx.env && ctx.env.KYRO_MEDIA_SOURCES) ?? process.env.KYRO_MEDIA_SOURCES ?? "youtube").trim().toLowerCase();
+  if (!raw || raw === "all") return null;
+  return new Set(raw.split(/[s,]+/).filter(Boolean));
+}
+
 function cleanQuery(value) {
   const cleaned = cleanQueryText(value);
   return GENERIC_REQUESTS.has(cleaned.toLowerCase()) ? "" : cleaned;
@@ -50,6 +60,11 @@ function cleanQueryText(value) {
 }
 
 function plan(kind, request, ctx) {
+  const sources = enabledSources(ctx);
+  return planAll(kind, request, ctx).filter(entry => !sources || sources.has(entry.provider.id));
+}
+
+function planAll(kind, request, ctx) {
   const hasQuery = Boolean(request.query);
   if (kind === "radio") return [{ provider: radioBrowser }];
   if (kind === "video") return [{ provider: youtube }, { provider: internetArchive }, { provider: commons }];
@@ -111,12 +126,20 @@ function withTimeout(promise, ms, fallback) {
 }
 
 async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
-  const query = cleanQuery(rawRequest.query);
-  const kind = pickKind(rawRequest.kind, query);
+  let query = cleanQuery(rawRequest.query);
+  let kind = pickKind(rawRequest.kind, query);
+  let originalKind = ["music", "radio", "video"].includes(rawRequest.kind) ? rawRequest.kind : "music";
+  const sources = enabledSources(ctx);
+  if (kind === "radio" && sources && !sources.has(radioBrowser.id)) {
+    // Radio is off: a named station is searched on YouTube ("Capital FM live"), and "play some music" is a search for popular music there.
+    query = query ? `${query} live` : "popular music";
+    kind = "music";
+    originalKind = "music";
+  }
   const request = {
     query,
     kind,
-    originalKind: ["music", "radio", "video"].includes(rawRequest.kind) ? rawRequest.kind : "music",
+    originalKind,
     country: normalizeText(rawRequest.country),
     countryCode: countryCode(rawRequest.country),
     language: /^sw/i.test(String(rawRequest.language || "")) ? "sw" : "en",
@@ -126,7 +149,7 @@ async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
   };
   const only = Array.isArray(rawRequest.onlyProviders) && rawRequest.onlyProviders.length ? new Set(rawRequest.onlyProviders) : null;
   const skipProviders = new Set(Array.isArray(rawRequest.excludeProviders) ? rawRequest.excludeProviders : []);
-  const includePreview = rawRequest.includePreview !== false && kind === "music" && Boolean(query);
+  const includePreview = rawRequest.includePreview !== false && kind === "music" && Boolean(query) && (!sources || sources.has(itunes.id));
 
   const tried = [];
   let candidates = [];
