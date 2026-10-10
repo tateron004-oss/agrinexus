@@ -104,7 +104,14 @@ function normalizeEditable(info, input = {}) {
     // tracking. "amount" is the first numeric field in this workspace --
     // the Number.isFinite guard above exists specifically so a stray
     // NaN/Infinity here can never silently corrupt a summed total.
-    transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, currency: "USD", description: "" }, 200, new Set(["amount"])),
+    transactions: rows(input.transactions === undefined ? starter.transactions : input.transactions, { date: "", type: "income", category: "", amount: 0, currency: "USD", description: "", fund: "" }, 200, new Set(["amount"])),
+    // Phase 2 of the business-intelligence tools. "fund" on a transaction is the purpose a restricted gift is held for ("youth program"); blank means unrestricted.
+    // Bills are money to pay later (counted as an expense only when marked paid), pledges are promised gifts (income only when received), budgets are monthly limits per category, and cashBalance is the bank balance the person
+    // told us (asOf is the day it was true). All start empty, so a workspace saved before this existed reads back exactly as it was.
+    bills: rows(input.bills === undefined ? (starter.bills || []) : input.bills, { payee: "", description: "", amount: 0, currency: "USD", dueDate: "", status: "unpaid", recurring: "", paidDate: "" }, 200, new Set(["amount"])),
+    pledges: rows(input.pledges === undefined ? (starter.pledges || []) : input.pledges, { donor: "", amount: 0, currency: "USD", expectedDate: "", purpose: "", restricted: false, status: "outstanding", receivedDate: "" }, 200, new Set(["amount"])),
+    budgets: rows(input.budgets === undefined ? (starter.budgets || []) : input.budgets, { category: "", amount: 0, currency: "USD", period: "month" }, 100, new Set(["amount"])),
+    cashBalance: strings(input.cashBalance === undefined ? { amount: 0, currency: "USD", asOf: "" } : input.cashBalance, { amount: 0, currency: "USD", asOf: "" }, new Set(["amount"])),
     // Tool 3: invoices/receipts. An invoice header (client, dates, status)
     // is stored separately from its line items, joined by "invoiceNumber" --
     // the same flat-row validation this workspace already uses for every
@@ -220,9 +227,19 @@ class BusinessService {
   async owned(context, recordId) {
     return this.repository.getOwned({ tenantId: context.tenantId, ownerId: context.userId, recordId });
   }
+  // A workspace saved before a list or field existed (bills, pledges, budgets, a cash balance, the fund on a transaction) is read back with those empty, as if it had always had them, so the page and the voice reads never meet a
+  // missing list. This only fills in what is absent: nothing is written until the person's next save, and a record that cannot be read as a workspace is returned as it was.
+  withDefaults(record) {
+    try {
+      const info = record?.data?.info;
+      if (!info || !record.data.editable) return record;
+      return { ...record, data: { ...record.data, editable: normalizeEditable(info, record.data.editable) } };
+    } catch { return record; }
+  }
   async list(context) {
     await this.authorize(context);
-    return this.repository.list({ tenantId: context.tenantId, ownerId: context.userId, workspaceId: "operations", recordType: "business-client" });
+    const records = await this.repository.list({ tenantId: context.tenantId, ownerId: context.userId, workspaceId: "operations", recordType: "business-client" });
+    return Array.isArray(records) ? records.map(record => this.withDefaults(record)) : records;
   }
   async create(context, body) {
     await this.authorize(context, true); const input = cleanInput(body);
@@ -233,7 +250,7 @@ class BusinessService {
       data: { info, editable: normalizeEditable(info), files: {}, subscription: { state: "not_configured" } },
       provenance: { source: "nexusos-fa0614ce-adapted", generatedBy: "template", externalAction: false } });
   }
-  async get(context, recordId) { await this.authorize(context); return this.owned(context, recordId); }
+  async get(context, recordId) { await this.authorize(context); return this.withDefaults(await this.owned(context, recordId)); }
   async update(context, recordId, body) {
     await this.authorize(context, true); await this.consent(context);
     const record = await this.owned(context, recordId);

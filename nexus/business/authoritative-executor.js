@@ -2,6 +2,7 @@
 
 const { createBusinessApi } = require("./api.js");
 const voiceDispatch = require("./voice-dispatch.js");
+const financeVoice = require("./finance-voice.js");
 
 // Real executor for the authoritative runtime's business.manage/business.query
 // canonical tools (see nexus/runtime/create-runtime.js's LOCAL_EXECUTORS and
@@ -69,20 +70,69 @@ function createBusinessWorkspaceCounter({ repository, access, consents, env }) {
   };
 }
 
-// A read of the person's own business or nonprofit workspace, answered in one call with no plan, no tool step and no AI model: "how is my nonprofit doing this month", "which grants are due soon". The spoken path (see
-// planner.js, deterministicOnly) can only return a finished answer, so it asks for the read directly. Only READ intents are answered here; anything that would change the workspace returns null (it needs a yes first).
-// Resolves to the spoken answer, or null when this is not a read of the workspace.
-function createBusinessReader({ repository, access, consents, env }) {
+// The spoken path to the business or nonprofit workspace, with no plan, no tool step and no AI model: "how is my nonprofit doing this month", "which grants are due soon", and also the changes an owner makes most --
+// "add a bill from the landlord for 800 dollars due the 1st", "mark the electric bill paid". The spoken path (see planner.js, deterministicOnly) can only return a finished answer, so it asks for the whole turn directly.
+//
+// A READ is answered at once. A CHANGE is never made without a yes, exactly as typed: the first call says what it would do and keeps the request for two minutes; "yes" then makes the change and "no" drops it. When a
+// detail is missing ("When is it due?"), the next words are taken as the answer ("the 1st") and joined to the request. Anything that makes a document or needs the screen (a business plan PDF, an invoice PDF, a calendar sync)
+// is left to the screen-based path, as is anything that is not about the workspace at all. The pending request lives in this process's memory only: if the server restarts between the question and the yes, the yes is not
+// understood and nothing is changed.
+// Resolves to the spoken answer, or null when this is not for the workspace.
+const SPOKEN_WRITES = new Set(["addLead", "performIntake", "logTransaction", "createInvoice", "addInvoiceItem", "addGrant", "updateGrantStatus", "addTask", "updateTaskStatus", "addAppointment", "markInvoicePaid", "setFollowUp",
+  "createWorkspace", "addListing", "updateListingStatus", ...financeVoice.FINANCE_WRITE_INTENTS]);
+const PENDING_MS = 2 * 60 * 1000;
+const YES = /^(?:(?:ok|okay)[,.]?\s+)?(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|confirm|confirmed|correct|that is right|that's right|please do|yes please|sure thing)(?:[ ,.]+(?:please|go ahead|do it|thanks|thank you))?[ .!]*$/i;
+const NO = /^(?:no|nope|cancel|stop|never ?mind|don'?t|do not|forget it|not now|no thanks|no thank you)(?:[ ,.]+(?:thanks|please|cancel it|don'?t))?[ .!]*$/i;
+
+function createBusinessReader({ repository, access, consents, env, now = () => Date.now() }) {
   let api = null;
-  return async function read({ command, context }) {
-    const text = String(command || "");
-    const intent = voiceDispatch.classify(text);
-    if (!intent || !voiceDispatch.isReadIntent(intent)) return null;
+  const pending = new Map();
+  const keyOf = context => `${context?.tenantId || ""}:${context?.userId || ""}`;
+  const bridge = context => {
     api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
-    const businessRequest = ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body });
-    const result = await voiceDispatch.run({ command: text, args: {}, confirmed: false, businessRequest, timeZone: context?.timeZone });
-    if (!result || (result.status !== "completed" && result.status !== "needs-input")) return null;
-    return typeof result.response === "string" && result.response.trim() ? result.response : null;
+    return ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body });
+  };
+  const runCommand = (text, context, confirmed) => voiceDispatch.run({ command: text, args: {}, confirmed, businessRequest: bridge(context), timeZone: context?.timeZone });
+  const spoken = result => (typeof result?.response === "string" && result.response.trim() ? result.response : null);
+
+  async function handle(text, context) {
+    const intent = voiceDispatch.classify(text);
+    if (!intent) return null;
+    const read = voiceDispatch.isReadIntent(intent);
+    if (!read && !SPOKEN_WRITES.has(intent)) return null;
+    const result = await runCommand(text, context, false);
+    if (!result) return null;
+    if (result.status === "needs-confirmation") {
+      pending.set(keyOf(context), { command: text, stage: "confirm", at: now() });
+      return spoken(result);
+    }
+    if (result.status === "needs-input") {
+      // a missing detail on a change: the next words answer it (not when the whole problem is that there is no workspace)
+      if (!read && !(result.missingInformation || []).includes("businessName")) pending.set(keyOf(context), { command: text, stage: "clarify", at: now() });
+      return spoken(result);
+    }
+    return result.status === "completed" ? spoken(result) : null;
+  }
+
+  return async function reply({ command, context }) {
+    const text = String(command || "").replace(/\s+/g, " ").trim();
+    if (!text) return null;
+    const key = keyOf(context);
+    const waiting = pending.get(key);
+    if (waiting) {
+      pending.delete(key);
+      if (now() - waiting.at <= PENDING_MS) {
+        if (YES.test(text)) {
+          if (waiting.stage !== "confirm") return null;
+          const result = await runCommand(waiting.command, context, true);
+          return result?.status === "completed" || result?.status === "needs-input" ? spoken(result) : null;
+        }
+        if (NO.test(text)) return "Okay, I have not changed anything.";
+        // an answer to the question that was asked ("the 1st"): joined to the request, once
+        if (waiting.stage === "clarify" && !voiceDispatch.classify(text) && text.split(" ").length <= 12) return handle(`${waiting.command} ${text}`, context);
+      }
+    }
+    return handle(text, context);
   };
 }
 

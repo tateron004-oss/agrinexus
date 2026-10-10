@@ -33,7 +33,7 @@
           // a string, but the backend's normalizeEditable rejects a field
           // whose type doesn't match its default (amount defaults to 0).
           field(div, label, String(row[key]), value => { const n = Number(value); row[key] = Number.isFinite(n) ? n : 0; }, false, "number");
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["start", "end"].includes(key) ? "datetime-local" : ["followUpDate", "date", "dueDate", "deadline"].includes(key) ? "date" : "text");
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["start", "end"].includes(key) ? "datetime-local" : ["followUpDate", "date", "dueDate", "deadline", "expectedDate", "paidDate", "receivedDate", "asOf"].includes(key) ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -159,7 +159,7 @@
     for (const [key, label] of [["businessName", "Business name"], ["industry", "Industry"], ["location", "Location"], ["customer", "Who you serve"], ["problem", "Customer need"], ["objective", "Business goal"]]) field(business, label, info[key], value => { info[key] = value; });
     rows("leads", editable.leads, [["name", "Name"], ["contact", "Contact"], ["type", "Type (customer, donor, sponsor, volunteer)"], ["need", "Need"], ["stage", "Stage"], ["nextAction", "Next action"], ["followUpDate", "Follow-up date"]]);
     rows("listings", editable.listings, [["address", "Address"], ["price", "Price"], ["propertyType", "Property type"], ["beds", "Beds"], ["baths", "Baths"], ["status", "Status (active, pending, under-contract, sold)"], ["notes", "Notes"]]);
-    rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"]]);
+    rows("transactions", editable.transactions, [["date", "Date"], ["type", "Type (income or expense)"], ["category", "Category"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["description", "Description"], ["fund", "Restricted to (the purpose a gift is held for; blank if unrestricted)"]]);
     const money = moneyByCurrency(editable.transactions);
     byId("finance-summary").textContent = Object.keys(money).length ? Object.entries(money).map(([code, t]) => `${code}: Income ${t.income.toFixed(2)}  |  Expenses ${t.expenses.toFixed(2)}  |  Net ${(t.income - t.expenses).toFixed(2)}`).join("   ||   ") : "Income: 0.00  |  Expenses: 0.00  |  Net: 0.00";
     rows("invoices", editable.invoices, [["invoiceNumber", "Invoice #"], ["clientName", "Client"], ["date", "Date"], ["dueDate", "Due date"], ["notes", "Notes"], ["status", "Status"]]);
@@ -168,6 +168,18 @@
     renderAppointments();
     const soonest = editable.grants.filter(row => row.deadline).map(row => row.deadline).sort()[0];
     byId("grants-summary").textContent = soonest ? `Next deadline: ${soonest}` : "No deadlines set yet.";
+    rows("bills", editable.bills, [["payee", "Pay to"], ["description", "What it is for"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["dueDate", "Due date"], ["status", "Status (unpaid or paid)"], ["recurring", "Repeats (blank, weekly, monthly or yearly)"], ["paidDate", "Paid on"]]);
+    const unpaidBills = editable.bills.filter(bill => String(bill.status || "").toLowerCase() !== "paid");
+    byId("bills-summary").textContent = unpaidBills.length ? `${unpaidBills.length} unpaid: ${Object.entries(unpaidBills.reduce((totals, bill) => { totals[bill.currency] = (totals[bill.currency] || 0) + bill.amount; return totals; }, {})).map(([code, total]) => `${code} ${total.toFixed(2)}`).join(", ")}` : "No unpaid bills.";
+    rows("pledges", editable.pledges, [["donor", "Donor"], ["amount", "Amount"], ["currency", "Currency (KES, USD, NGN...)"], ["expectedDate", "Expected on"], ["purpose", "For"], ["restricted", "Restricted to that purpose"], ["status", "Status (outstanding, received or cancelled)"], ["receivedDate", "Received on"]]);
+    const openPledges = editable.pledges.filter(pledge => String(pledge.status || "").toLowerCase() === "outstanding");
+    byId("pledges-summary").textContent = openPledges.length ? `${openPledges.length} outstanding: ${Object.entries(openPledges.reduce((totals, pledge) => { totals[pledge.currency] = (totals[pledge.currency] || 0) + pledge.amount; return totals; }, {})).map(([code, total]) => `${code} ${total.toFixed(2)}`).join(", ")} promised, not counted as income`  : "No outstanding pledges.";
+    const cash = byId("cash-fields"); cash.replaceChildren();
+    field(cash, "Bank balance", String(editable.cashBalance.amount), value => { const n = Number(value); editable.cashBalance.amount = Number.isFinite(n) && n >= 0 ? n : 0; }, false, "number");
+    field(cash, "Currency (KES, USD, NGN...)", editable.cashBalance.currency, value => { editable.cashBalance.currency = value; });
+    field(cash, "True on (the day)", editable.cashBalance.asOf, value => { editable.cashBalance.asOf = value; }, false, "date");
+    rows("budgets", editable.budgets, [["category", "Category"], ["amount", "Monthly budget"], ["currency", "Currency (KES, USD, NGN...)"]]);
+    byId("budgets-summary").textContent = editable.budgets.length ? `${editable.budgets.length} budget${editable.budgets.length === 1 ? "" : "s"} set. Ask Kyro: how are we doing against budget?` : "No budgets yet.";
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"], ["assignee", "Assigned to"], ["priority", "Priority (low, medium, high)"], ["dueDate", "Due date"]]);
     const landing = byId("landing-fields"); landing.replaceChildren();
@@ -232,6 +244,9 @@
   }
   byId("add-invoice").addEventListener("click", () => { current.data.editable.invoices.push({ invoiceNumber: nextInvoiceNumber(current.data.editable), clientName: "", date: new Date().toISOString().slice(0, 10), dueDate: "", notes: "", status: "draft" }); render(); });
   byId("add-invoice-item").addEventListener("click", () => { current.data.editable.invoiceItems.push({ invoiceNumber: current.data.editable.invoices.at(-1)?.invoiceNumber || "", description: "", quantity: 1, unitPrice: 0 }); render(); });
+  byId("add-bill").addEventListener("click", () => { current.data.editable.bills.push({ payee: "", description: "", amount: 0, currency: "USD", dueDate: "", status: "unpaid", recurring: "", paidDate: "" }); render(); });
+  byId("add-pledge").addEventListener("click", () => { current.data.editable.pledges.push({ donor: "", amount: 0, currency: "USD", expectedDate: "", purpose: "", restricted: false, status: "outstanding", receivedDate: "" }); render(); });
+  byId("add-budget").addEventListener("click", () => { current.data.editable.budgets.push({ category: "", amount: 0, currency: "USD", period: "month" }); render(); });
   byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }); render(); });
   byId("add-appointment").addEventListener("click", () => { current.data.editable.appointments.push({ title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }); render(); });
   byId("generate-invoice-pdf").addEventListener("click", () => run(async () => {

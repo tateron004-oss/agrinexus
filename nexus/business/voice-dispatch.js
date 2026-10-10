@@ -4,6 +4,7 @@ const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose
 const { addDays, weekdayOf, extractDay } = require("../personal/dates.js");
 const insights = require("./insights.js");
 const crmVoice = require("./crm-voice.js");
+const financeVoice = require("./finance-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
 
@@ -216,6 +217,16 @@ const LEDGER_LIMIT = 200;
 // A sale "on credit" (or "will pay next week", "has not paid yet") is not money received. The ledger counts income when it arrives, so it is not logged until it is paid.
 const SALE_ON_CREDIT = /\b(?:on credit|on account|on loan|(?:will|to|promised to|promises to) pay(?: me)? (?:later|next|on|after|in|tomorrow|at the end)|pay(?:s|ing)? (?:me )?(?:later|next week|next month|tomorrow)|has not paid|hasn't paid|have not paid|haven't paid|yet to pay|not yet paid|owes? (?:me|us)|unpaid)\b/i;
 const CREDIT_NOTE = 'That sounds like a sale on credit: the money has not come in yet. The business ledger counts income when it is received, so I have not logged it. When it is paid, say for example "received 60000 shillings from Otieno for maize" and I will log it.';
+// A restricted gift names what it is held for ("a restricted donation of 500 for the youth program"); an expense is charged to a restricted fund by saying so ("spent 100 on seeds from the youth program fund"). Blank = unrestricted.
+function fundOf(text) {
+  if (/\brestricted\b/i.test(text)) {
+    // the purpose is the first "for the ..." / "to the ..." that is not an amount ("a restricted donation of 500 dollars for the youth program from Maria Chen")
+    const purpose = /\b(?:for|to)\s+(?:the\s+)?([a-z][a-z' -]{2,40}?)(?=\s+(?:from|on|today|yesterday|this|last|by|worth|of|restricted)\b|[,.]|$)/i.exec(text);
+    return (purpose ? purpose[1] : "restricted").trim().toLowerCase();
+  }
+  const fromFund = /\bfrom\s+(?:the\s+)?([a-z][a-z' -]{2,40}?)\s+fund\b/i.exec(text);
+  return fromFund ? fromFund[1].trim().toLowerCase() : "";
+}
 function extractTransactionArgs(command = "", args = {}) {
   const text = String(command || "");
   const withCurrency = amountWithCurrency(text);
@@ -260,7 +271,8 @@ function extractTransactionArgs(command = "", args = {}) {
   // "sold 5 bags of maize for 6000 shillings" -> maize; "spent 2000 shillings on seed" -> seed
   const soldItem = text.match(/\b(?:sold|sell|nimeuza)\s+(.+?)\s+(?:for|at|kwa)\b/i);
   const spentOn = text.match(/\b(?:on|for|kwa)\s+(?![\d$€₦]|shilingi\b)([^\n,.]{2,60})/i);
-  const category = (soldItem ? soldItem[1] : spentOn ? spentOn[1] : "").replace(/\s+(?:today|yesterday|this (?:week|month|year))\s*$/i, "").trim();
+  // (the fund an expense is paid from, and the name of the giver, are not part of the category: "seeds from the youth program fund" is the category "seeds")
+  const category = (soldItem ? soldItem[1] : spentOn ? spentOn[1] : "").replace(/\s+(?:today|yesterday|this (?:week|month|year))\s*$/i, "").replace(/\s+from\s+(?:the\s+)?[a-z][a-z' -]{2,40}\s+fund\b.*$/i, "").replace(/\s+from\s+[A-Z][\w .'-]*$/, "").trim();
   return {
     // Found live: a negative amount (reachable via direct tool-call
     // arguments) silently flipped the meaning of "type" -- an "expense"
@@ -275,7 +287,8 @@ function extractTransactionArgs(command = "", args = {}) {
     pledge,
     onCredit: !args.type && type === "income" && SALE_ON_CREDIT.test(text),
     category: sanitizeText(args.category || category, 160),
-    description: sanitizeText(args.description || text, 500)
+    description: sanitizeText(args.description || text, 500),
+    fund: sanitizeText(args.fund || fundOf(text), 80)
   };
 }
 
@@ -810,7 +823,7 @@ function computeBusinessDashboard(editable, period = {}) {
 // function (rather than a second, hand-maintained copy of these regexes).
 // (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
 const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS]);
 
 function classify(command = "") {
   // Questions about how the organisation is doing, money to cover expenses, who needs a follow-up, funding deadlines, people served and volunteer hours come before the general word-matching below, which
@@ -818,6 +831,9 @@ function classify(command = "") {
   const insight = insights.classifyInsight(command);
   if (insight === "howAreWeDoing") return "dashboard";
   if (insight) return insight;
+  // Bills, a bank balance, budgets, pledges, restricted funds and the margin and campaign calculators (finance-voice.js).
+  const finance = financeVoice.classifyFinance(command);
+  if (finance) return finance;
   // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
   // not a government ministry -- server.js's legacy weather/safety code uses
   // "ministry" the government way, in a completely different command shape,
@@ -1029,6 +1045,25 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
 
+  if (financeVoice.FINANCE_READ_INTENTS.includes(intent) || financeVoice.FINANCE_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const today = todayIn(new Date(), timeZone);
+    const ctx = { command, editable, workspace, today, formatMoney, amountOf: amountWithCurrency, normalize: normalizeSpokenText };
+    if (financeVoice.FINANCE_READ_INTENTS.includes(intent)) {
+      const response = financeVoice.readFinance(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = financeVoice.planFinanceWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
+
   if (INSIGHT_READS.includes(intent)) {
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
@@ -1184,7 +1219,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     // A workspace keeps 200 money entries. Found by the audit: the 201st was refused with a generic error nobody could act on.
     if ((resolved.client.data?.editable?.transactions || []).length >= LEDGER_LIMIT) return { status: "needs-input", response: `"${workspaceName}" already holds ${LEDGER_LIMIT} money entries, which is the most one workspace keeps, so I have not added this one. Ask me for a summary of what is there, then start a new workspace for the next period, or remove entries you no longer need.`, missingInformation: [] };
-    const categoryPhrase = transaction.category ? ` for ${transaction.category}` : "";
+    const categoryPhrase = `${transaction.category ? ` for ${transaction.category}` : ""}${transaction.fund ? `, ${transaction.type === "income" ? "restricted to" : "from the"} ${transaction.fund}${transaction.type === "income" ? "" : " fund"}` : ""}`;
     if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can log a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}". Should I go ahead?` };
     // A donation from someone already on the list is tied to them ("Donation from Maria Chen"), and every donation is categorised as one, so "show my donations" can find it.
     const isDonation = transaction.type === "income" && /\bdonat(?:ion|ed)\b/i.test(transaction.description);
@@ -1192,7 +1227,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const donorLead = donorSaid ? (resolved.client.data.editable.leads || []).find(row => String(row.name || "").trim().toLowerCase() === donorSaid[1].trim().toLowerCase()) : null;
     const editable = { ...resolved.client.data.editable, transactions: [...resolved.client.data.editable.transactions,
       { date: whenOf(command, todayIn(new Date(), timeZone))?.day || todayIn(new Date(), timeZone), type: transaction.type, category: transaction.category || (isDonation ? "donation" : ""), amount: transaction.amount, currency: transaction.currency,
-        description: donorLead ? `Donation from ${donorLead.name}` : transaction.description }] };
+        description: donorLead ? `Donation from ${donorLead.name}` : transaction.description, fund: transaction.fund || "" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
     const response = `Logged a ${formatMoney(transaction.currency, transaction.amount)} ${transaction.type}${categoryPhrase} in "${workspaceName}".${donorLead ? ` Recorded as a donation from ${donorLead.name}.` : ""}`;
@@ -1529,6 +1564,7 @@ function confirmationPrompt(command = "") {
 }
 
 module.exports = Object.freeze({
+  amountWithCurrency, asksAboutOwnRecords: command => insights.classifyInsight(command) !== null || financeVoice.classifyFinance(command) !== null,
   sanitizeText, classify, isReadIntent, needsWorkspace, noWorkspaceReply, precheck, run, confirmationPrompt,
   extractBusinessName, resolveBusinessClient, extractLeadArgs, extractTransactionArgs,
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
