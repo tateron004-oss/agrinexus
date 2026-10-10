@@ -9539,7 +9539,11 @@ async function request(path, options = {}) {
     body: options.body ? JSON.stringify(options.body) : undefined
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || "Request failed");
+  if (!res.ok) {
+    const failure = new Error(json.error || "Request failed");
+    failure.status = res.status; failure.code = json.code || "";
+    throw failure;
+  }
   data = json.user ? json : data;
   return json;
 }
@@ -15934,6 +15938,9 @@ function ruralCommunicationResponseTuning(message = "", options = {}) {
   const lowTechMode = experienceMode === "user" || options.speak || voiceFirstMode;
   if (!lowTechMode || options.allowLongResponse || options.longForm) return text;
   const command = options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "";
+  // Found on production: "Translate good morning to Kiswahili" mentions Kiswahili, so this made it a rural-Kenya conversation, put "Twende hatua moja." in front of the answer and the
+  // one-sentence limit then kept only that greeting. The answer to a translation is the translation, word for word: no greeting, no plain-language rewrites.
+  if (/\b(translate|translation|translated|tafsiri)\b/i.test(command)) return text;
   const africaStyle = ruralAfricaConversationStyle(command);
   const kenyaStyle = ruralKenyaCommunicationStyle(command);
   text = text
@@ -27927,6 +27934,8 @@ function kyroWorkOpen() {
     if (win?.id && win.functionId !== "live-knowledge" && win.workflow !== "live-knowledge") return true;
     if (document.querySelector("[data-nexus-visual-shell]:not([data-kyro-parked]), [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], [data-kn=\"stop\"]")) return true;
     if (nexusVisualProviderQuestionReportState) return true;
+    // a saved document or a finished résumé with its Download button is something to collect, not an answer to clear
+    if (document.querySelector("[data-nexus-document-lifecycle], [data-nexus-resume]")) return true;
     if (document.body.classList.contains("workflow-open") || document.body.classList.contains("user-map-full-open")) return true;
     if (typeof currentSectionId === "function" && currentSectionId() !== "dashboard") return true;
   } catch { /* if it cannot be told, treat nothing as work */ }
@@ -58128,6 +58137,15 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   openAskNexus({ quiet: true });
   enableHeyAgriNexusMode();
   renderUserWorkspace?.();
+  // Found on production: a saved document (and its Download button) was drawn and then wiped by the redraw of the window just above, so the person was told it was saved and could not get it.
+  // The card is drawn again after the redraw; both card functions replace an earlier card, so this is safe to repeat.
+  try {
+    const drawn = result.render;
+    if (drawn && result.state === "render_required") {
+      if (drawn.presentation?.kind === "document") renderNexusAuthoritativeDocument(drawn);
+      else if (drawn.data?.resume === true && nexusDocumentLifecycleComplete(drawn.data)) renderNexusAuthoritativeResume(drawn);
+    }
+  } catch { /* the saved document is still in the person's documents; only the card is missing */ }
   setVoiceResponse(message, true, {
     allowHandoff: false,
     command: text,
@@ -58299,6 +58317,16 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     if (typeof keepKyroOfflineNote === "function" && keepKyroOfflineNote(error, text)) {
       setVoiceResponse("There's no signal right now, so I saved that note on this phone. I'll add it to your records when you're back online, dated then.", true, { allowHandoff: false, command: text, source: "kyro-offline-note" });
       return true;
+    }
+    // Found on production: "Open the business workspace" got a 422 explaining what Kyro can do, and "Start a workspace" a 502, and the person saw NOTHING (the last answer simply stayed on the screen).
+    // A refusal or failure the server answered is now said: its own words for a request it could not understand (422/400/409), a plain sentence when the work itself failed (5xx).
+    const status = Number(error?.status) || 0;
+    if ([400, 409, 422, 500, 502, 503, 504].includes(status)) {
+      const reason = status >= 500 ? "I could not finish that, so nothing was saved or changed. Please try again, or say it a different way." : String(error.message || "").trim();
+      if (reason) {
+        setVoiceResponse(reason, true, { allowHandoff: false, command: text, source: "nexus-authoritative-behavior-spine", turnToken: options.turnToken });
+        return true;
+      }
     }
     return false;
   }

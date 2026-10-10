@@ -89,7 +89,7 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
           // fingerprint: an optional short label a caller can use to recognise "this exact thing was already saved" (see nexus/resume/executor.js).
           metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
         const version = await documents.addVersion({ documentId: document.document_id, tenantId: context.tenantId,
-          content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath, ...(bytes.length <= MAX_STORED_FILE_BYTES ? { contentBase64: bytes.toString("base64") } : {}) },
+          content: { exportId: data.exportId, filename: data.filename, downloadPath: data.downloadPath, sourceText: body.content, ...(bytes.length <= MAX_STORED_FILE_BYTES ? { contentBase64: bytes.toString("base64") } : {}) },
           objectKey: `local:${data.filename}`, checksum, createdBy: context.userId });
         // The "documents" capability's completion contract
         // (nexus/apps/capability-completion-contracts.js) requires

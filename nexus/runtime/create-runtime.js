@@ -207,6 +207,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthReadings: { records },
+    // The person's saved documents, so "Export it as a PDF" can find the latest one (see planner.js exportLatestDocumentPlan).
+    documents,
     // How many business/nonprofit workspaces the person has, read the way the business tools read them (same access check); lets the planner say "no workspace yet" before it asks for a yes.
     businessWorkspaces: { count: createBusinessWorkspaceCounter({ repository: businessRecords, access, consents, env }) } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;

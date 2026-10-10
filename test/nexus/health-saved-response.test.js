@@ -28,5 +28,5 @@ test("nothing is said for a plan that is not a health reading, or for a Kiswahil
 
 test("the behaviour spine uses it for the pending-render answer, after the reminder wording and before the generic line", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "..", "nexus", "runtime", "behavior-spine.js"), "utf8");
-  assert.ok(source.includes('response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || "Nexus completed the governed execution and is rendering the verified result."'));
+  assert.ok(source.includes('response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || documentSavedResponse(plan, task, context) || businessAnswerResponse(plan, task) || "Nexus completed the governed execution and is rendering the verified result."'));
 });

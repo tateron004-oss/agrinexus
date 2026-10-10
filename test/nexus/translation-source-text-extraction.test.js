@@ -32,6 +32,7 @@ let server;
 let cookie;
 let mockProviderEngines;
 let receivedText;
+let receivedPayload;
 
 test.before(async () => {
   // Echoes back exactly what our server sent as the text to translate, so
@@ -43,7 +44,7 @@ test.before(async () => {
       const payload = JSON.parse(raw || "{}");
       // The same webhook host also receives unrelated receipt/audit POSTs
       // (no "text" field) -- only capture the actual /translate request.
-      if (req.url === "/translate" && typeof payload.text === "string") receivedText = payload.text;
+      if (req.url === "/translate" && typeof payload.text === "string") { receivedText = payload.text; receivedPayload = payload; }
       res.setHeader("content-type", "application/json");
       res.end(JSON.stringify({ ok: true, translatedText: payload.text, provider: "local-translation" }));
     });
@@ -103,4 +104,13 @@ test("'into'/'to' lead-ins are unaffected by the 'in' fix", async () => {
 test("a real mid-sentence 'in' (not the target-language lead-in) is preserved in the translated text", async () => {
   await callTranslate("Translate: I am walking in the rain into French");
   assert.equal(receivedText, "I am walking in the rain");
+});
+
+// Found on production: Kenyans say "Kiswahili". "Translate good morning to Kiswahili" matched no language, so the target fell back to English and the "to Kiswahili" clause leaked into the text.
+test("'Translate good morning to Kiswahili.' translates 'good morning' into Swahili (sw), with the clause removed from the text", async () => {
+  receivedPayload = null;
+  await callTranslate("Translate good morning to Kiswahili.");
+  assert.equal(receivedText, "good morning");
+  const sent = JSON.stringify(receivedPayload);
+  assert.match(sent, /"(?:targetLanguage|target|to|target_language)":"sw"/i, sent);
 });

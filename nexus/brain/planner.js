@@ -33,9 +33,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, maxRepairAttempts });
   }
 
   // The no-workspace answer for a business/nonprofit request, or null when the person has a workspace (or this cannot be told: then the request goes on as before and the executor's own check still applies).
@@ -528,6 +528,12 @@ class OpenEndedPlanner {
     // never receives, so it must run first and own this phrasing outright.
     const completeSaveConversation = completeSaveConversationPlan(command.text, catalog, conversationHistory);
     if (completeSaveConversation) return Object.freeze({ ...completeSaveConversation, planningAttempts: 1 });
+    // "Export it as a PDF" right after a document was saved: the same text again, in the file type asked for (found on production: nothing handled this sentence, so it went to the AI model).
+    const exportFormat = exportLatestDocumentFormat(command.text);
+    if (exportFormat && this.documents?.list && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) {
+      const exported = await exportLatestDocumentPlan(this.documents, { text: command.text, format: exportFormat, tenantId: command.tenantId, ownerId: command.actorId });
+      if (exported) return Object.freeze({ ...exported, planningAttempts: 1 });
+    }
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
@@ -1264,6 +1270,28 @@ function completeSaveConversationPlan(text, catalog, conversationHistory = []) {
       dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// "Export it as a PDF." / "Convert that to Word." / "Save the document as a text file." Only a bare "it / that / this / the document" counts, so "export this chat as a PDF" (the conversation matcher above)
+// and "export my report as a PDF" (a different request) are not taken.
+const EXPORT_LATEST_DOCUMENT = /^\s*(?:please\s+|can you\s+|could you\s+)?(?:export|convert|save|download|turn|make|give me|send me)\s+(?:(?:it|that|this|the (?:last |latest )?document|my (?:last |latest )?document)\s+)?(?:as|to|into|in)\s+(?:an?\s+)?(pdf|word document|word|docx|markdown|md|text file|plain text|txt)\b[\s.!?]*$/i;
+function exportLatestDocumentFormat(text) {
+  const goal = String(text || "").trim();
+  if (SAVE_CONVERSATION_TARGET.test(goal)) return null;
+  const match = EXPORT_LATEST_DOCUMENT.exec(goal);
+  return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] || null : null;
+}
+async function exportLatestDocumentPlan(documents, { text, format, tenantId, ownerId }) {
+  const goal = String(text || "").trim();
+  const say = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+  let latest = null;
+  try { latest = (await documents.list({ tenantId, ownerId, limit: 1 }))[0] || null; } catch { return null; }
+  if (!latest) return say('You have no saved document yet. Say, for example, "Create a document called Maize Sales that says Sold 3 sacks of maize, and save it."');
+  const source = typeof documents.getSource === "function" ? await documents.getSource({ tenantId, ownerId, documentId: latest.document_id }).catch(() => null) : null;
+  if (!source?.sourceText) return say(`I cannot convert "${latest.title}" because it was saved before I kept its text. Create it again with "Create a document called ${latest.title} that says ...", and then I can export it.`);
+  return { goal, application: "documents", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "export-document", title: `Export "${latest.title}" as ${format}`, toolId: "documents.create",
+      input: { title: latest.title, content: source.sourceText, format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeDocumentPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(create|write|draft|make)\b/i.test(goal) || !/\b(document|plan|report|resume|résumé)\b/i.test(goal) ||
@@ -1690,5 +1718,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
+  completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, exportLatestDocumentFormat, exportLatestDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
