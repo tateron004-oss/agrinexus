@@ -217,3 +217,10 @@ test("a question about funding deadlines is about the person's own records, not 
   const general = await spoken(p, "What grants are available for minority-owned businesses?", "America/Chicago");
   assert.match(String(general.knowledge || ""), /us-small-business:grants/);
 });
+
+test("the orb is told to send these questions to the everyday-records tool, to say the answer whole and never to invent a figure", () => {
+  const server = require("node:fs").readFileSync(require("node:path").join(__dirname, "../../server.js"), "utf8");
+  assert.match(server, /asks about their own workspace -- how their business or nonprofit is doing \(this month\)/);
+  assert.match(server, /you must not estimate, add up or invent any figure, name or date/);
+  assert.equal(server.split("asks about their own workspace -- how their business or nonprofit is doing").length, 2, "said once");
+});
