@@ -46694,7 +46694,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
   const interruptToken = voiceInterruptToken;
   const rawResponseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
   let responseMessage = nexusHumanResponsePolicy(rawResponseMessage, { ...options, speak, command: options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "" });
-  responseMessage = repeatSafeVoiceResponse(responseMessage, { ...options, speak });
+  responseMessage = repeatSafeVoiceResponse(responseMessage, { ...options, speak, command: options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "" });
   const compactResponse = String(responseMessage || "").replace(/\s+/g, " ").trim();
   const now = Date.now();
   const duplicateSpeech = Boolean(speak && compactResponse && compactResponse === String(lastVoiceResponse || "").replace(/\s+/g, " ").trim() && now - lastVoiceResponseAt < 8000);
@@ -48544,7 +48544,10 @@ function conciseVoiceResponse(message = "", options = {}) {
 
 function repeatSafeVoiceResponse(message = "", options = {}) {
   const compact = conciseVoiceResponse(message, options);
-  const signature = voiceResponseSignature(compact);
+  // Found by testing the business prompts: every save that needs a yes answers with the same confirmation sentence, so two DIFFERENT requests
+  // inside 45 seconds ("Mark invoice INV-1001 as paid", then "Draft a grant proposal") counted as Kyro repeating itself and the second answer became "I hear you. I will stop repeating...".
+  // A reply is only a repeat when it answers the same request again.
+  const signature = `${voiceResponseSignature(compact)}|${voiceResponseSignature(options.command || "")}`;
   const now = Date.now();
   if (options.speak && signature && signature === lastVoiceResponseSignature && now - lastVoiceResponseAt < 45000) {
     lastVoiceResponseRepeatCount += 1;
