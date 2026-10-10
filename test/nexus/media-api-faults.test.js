@@ -1,4 +1,6 @@
 "use strict";
+// These tests pin the FULL source chain (radio, Audius, YouTube, Jamendo, Archive, preview). The default is YouTube only (media-youtube-only.test.js); "all" turns the rest back on.
+process.env.KYRO_MEDIA_SOURCES = "all";
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
