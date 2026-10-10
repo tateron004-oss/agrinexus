@@ -293,14 +293,19 @@ function isUsContext({ timeZone = "", text = "" } = {}) {
 
 const CLOSING = `This is general information, not legal, tax or financial advice, and rules change, so confirm on the official site. I cannot file or apply for anything for you.`;
 
-function usSmallBusinessAnswer(id, { question = "" } = {}) {
+// Topics whose content does not depend on being in the United States (the shape of a business plan, startup costs, a marketing plan, bookkeeping). A person outside the US is given these too, with a note.
+const UNIVERSAL_TOPICS = Object.freeze(["business-plan", "startup-costs", "marketing-visibility", "bookkeeping-accounting"]);
+const LOCAL_OFFICE = Object.freeze({ ke: " (in Kenya, the Micro and Small Enterprises Authority, MSEA)", ng: " (in Nigeria, SMEDAN)" });
+
+function usSmallBusinessAnswer(id, { question = "", us = true, country = null } = {}) {
   const topic = TOPICS[id];
   if (!topic) return null;
   const sources = topic.sources.map(key => SOURCES[key]);
   const zip = id === "local-help" ? /\b(\d{5})(?:-\d{4})?\b/.exec(String(question || ""))?.[1] : "";
   const lead = zip ? `For ZIP code ${zip}: ` : "";
-  const text = `${lead}${topic.text} Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}). ${CLOSING}`;
+  const outside = us ? "" : ` These are United States government sources: the programmes named (SBA, SBDC, SCORE) are American, and laws and rules differ in your country, so also ask your local small business support office${LOCAL_OFFICE[country] || ""}.`;
+  const text = `${lead}${topic.text} Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).${outside} ${CLOSING}`;
   return { topic: id, title: topic.title, text, sources };
 }
 
-module.exports = Object.freeze({ CHECKED_ON, TOPICS, SOURCES, usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext });
+module.exports = Object.freeze({ CHECKED_ON, TOPICS, SOURCES, UNIVERSAL_TOPICS, usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext });

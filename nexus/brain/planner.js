@@ -15,10 +15,13 @@ const { feedbackTurn } = require("../quality/feedback.js");
 const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { professionalAdviceTopic, professionalAdviceReply, professionalAdviceGoal, withProfessionalAdviceNote } = require("../guardrails/professional-advice.js");
-const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext } = require("../knowledge/us-small-business.js");
+const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext, UNIVERSAL_TOPICS } = require("../knowledge/us-small-business.js");
+const { africaTopic, africaAnswer, africaCountry, africaNamed } = require("../knowledge/africa-small-business.js");
 const { technologyTopic, technologyAnswer } = require("../knowledge/small-business-technology.js");
 const { aiToolsTopic, aiToolsAnswer } = require("../knowledge/ai-tools-for-business.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
+// how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
+const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
 const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
@@ -448,6 +451,20 @@ class OpenEndedPlanner {
       const guide = aiToolsAnswer(aiToolsTopicId, { us: usPerson });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `ai-tools-for-business:${aiToolsTopicId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
+    // The checked guide for owners in Kenya and Nigeria (registering a business, taxes, government support, government funding; see knowledge/africa-small-business.js), by the device's time zone, the profile's country or a
+    // question that names a Kenyan or Nigerian agency. And, for anyone else outside the United States, the four US topics that hold in any country (a business plan, startup costs, marketing, bookkeeping), with a note.
+    const placeZone = command.timeZone || context?.timeZone;
+    // (a question that itself names a US term, such as LLC, S corp or the SBA, gets the US answer even on a device in Nairobi, unless it also names a Kenyan or Nigerian agency)
+    const africaId = !ownWorkspace && !techTopic && (!isUsContext({ text: command.text }) || africaNamed(command.text)) ? africaTopic(command.text, { timeZone: placeZone, country: context?.country }) : null;
+    if (africaId) {
+      const guide = africaAnswer(africaId);
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `africa-small-business:${africaId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    const universalId = !ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(command.text) : null;
+    if (universalId && UNIVERSAL_TOPICS.includes(universalId)) {
+      const guide = usSmallBusinessAnswer(universalId, { question: command.text, us: false, country: africaCountry({ timeZone: placeZone, country: context?.country, text: command.text }) });
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${universalId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
     const usTopic = !ownWorkspace && usPerson && !techTopic ? usSmallBusinessTopic(command.text) : null;
     if (usTopic) {
       const guide = usSmallBusinessAnswer(usTopic, { question: command.text });
@@ -476,7 +493,7 @@ class OpenEndedPlanner {
       const spokenTemplate = templateRequest(command.text);
       if (spokenTemplate) {
         return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0, sourceRequired: false,
-          response: `I can make a blank ${consultingTemplate(spokenTemplate.kind).title.toLowerCase()} for you to fill in, but I can only save a document from the keyboard. Type "${String(command.text || "").trim().replace(/[.!?]+$/, "")}" in the box on the screen and I will save it and show a Download button. Nothing was saved yet.` });
+          response: `I can make a blank ${SPOKEN_TEMPLATE_NAMES[spokenTemplate.kind] || consultingTemplate(spokenTemplate.kind).title.toLowerCase()} for you to fill in, but I can only save a document from the keyboard. Type "${String(command.text || "").trim().replace(/[.!?]+$/, "")}" in the box on the screen and I will save it and show a Download button. Nothing was saved yet.` });
       }
       return Object.freeze({ deferred: true, goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0 });
     }
