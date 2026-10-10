@@ -13,7 +13,10 @@ const KINDS = Object.freeze({
   "website-brief": "Website brief",
   "app-brief": "App brief",
   "vendor-questions": "Questions for a web host, designer or developer",
-  "ai-use-policy": "AI use policy"
+  "ai-use-policy": "AI use policy",
+  "business-plan": "Business plan",
+  "growth-roadmap": "Growth roadmap",
+  "funding-checklist": "Funding readiness checklist"
 });
 
 const ALIASES = [
@@ -22,7 +25,10 @@ const ALIASES = [
   ["website-brief", /^(?:web ?site|website|web) (?:brief|plan|requirements)$/i],
   ["app-brief", /^(?:mobile |phone )?app (?:brief|plan|requirements)$/i],
   ["vendor-questions", /^(?:vendor|developer|designer|web host|hosting) questions$|^questions (?:for|to ask) (?:a |the |my )?(?:vendor|web designer|designer|developer|web host|host|web developer)s?$/i],
-  ["ai-use-policy", /^ai (?:use |usage )?(?:policy|rules|guidelines)$|^(?:an? )?(?:artificial intelligence) (?:use )?policy$/i]
+  ["ai-use-policy", /^ai (?:use |usage )?(?:policy|rules|guidelines)$|^(?:an? )?(?:artificial intelligence) (?:use )?policy$/i],
+  ["business-plan", /^(?:(?:lean|simple|start-?up|new|traditional) )?business plan(?: template| outline)?$|^lean (?:start-?up )?plan$|^start-?up plan$/i],
+  ["growth-roadmap", /^(?:business )?(?:growth|scaling|scale-?up|expansion) (?:road ?map|plan)$|^(?:road ?map|plan) for (?:growth|scaling|growing my business)$/i],
+  ["funding-checklist", /^(?:funding|investor|loan) (?:readiness )?(?:checklist|prep(?:aration)? list)$|^funding readiness (?:checklist|list)?$/i]
 ];
 const FORMAT_WORDS = Object.freeze({ pdf: "pdf", docx: "docx", word: "docx", "word document": "docx", markdown: "md", md: "md", "text file": "txt", txt: "txt" });
 
@@ -106,7 +112,35 @@ const BODIES = {
     "4. A person checks first", "Anything an AI tool produces is read and corrected by a person before it goes to a customer. Numbers, prices and any legal, tax or medical statement are checked.", "",
     "5. Being honest with customers", "If a chatbot or AI tool answers customers, we say so. We do not claim an AI feature does more than it does, and we keep the proof for any claim (FTC guidance on AI claims).", "",
     "6. Reviews", "We never use AI, or anyone else, to write fake reviews or testimonials (FTC Consumer Reviews and Testimonials Rule).", "",
-    "7. If something goes wrong", `Who we tell and how: ${BLANK}`, "", `Owner: ${BLANK}    Date: ${BLANK}    Review again on: ${BLANK}`, "", note)
+    "7. If something goes wrong", `Who we tell and how: ${BLANK}`, "", `Owner: ${BLANK}    Date: ${BLANK}    Review again on: ${BLANK}`, "", note),
+  "business-plan": client => lines(
+    `Business plan${client ? ` for ${client}` : ""}`, "",
+    "Two common types (SBA): a lean startup plan is high level, quick to write and typically one page; a traditional plan is detailed and comprehensive, and lenders and investors commonly ask for it. Fill in the one you need, or both. You do not have to follow the outline exactly.", "",
+    "LEAN STARTUP PLAN (one page)",
+    `Key partnerships: ${BLANK}`, `Key activities: ${BLANK}`, `Key resources: ${BLANK}`, `Value proposition (why customers choose you): ${BLANK}`, `Customer relationships: ${BLANK}`, `Customer segments (who they are): ${BLANK}`, `Channels (how you reach them): ${BLANK}`, `Cost structure: ${BLANK}`, `Revenue streams: ${BLANK}`, "",
+    "TRADITIONAL PLAN",
+    "1. Executive summary", `${BLANK}`, "2. Company description", `What the business is, its structure and its competitive advantages: ${BLANK}`, "3. Market analysis", `Industry outlook, target market, demand and market size, where customers are, how crowded the market is, who your competitors are and what they do well: ${BLANK}`,
+    "4. Organization and management", `Who runs it and who does what: ${BLANK}`, "5. Service or product line", `${BLANK}`, "6. Marketing and sales", `${BLANK}`, "7. Funding request (if you are asking for money)", `How much, for what, and for how long: ${BLANK}`,
+    "8. Financial projections", `Expense sheet and projections (the SBA suggests five years for a loan application): ${BLANK}`, "", note),
+  "growth-roadmap": client => lines(
+    `Growth roadmap${client ? ` for ${client}` : ""}`, "",
+    "The sections follow the SBA's guidance on business plans, market research and marketing plans. The quarter-by-quarter layout is plain working practice, not an SBA template.", "",
+    "1. Where the business is today", `What we sell, to whom, and what it earns: ${BLANK}`, `What is working: ${BLANK}`, `What is not: ${BLANK}`, "",
+    "2. Goals for the next 12 months", `1. ${BLANK}`, `2. ${BLANK}`, `3. ${BLANK}`, "",
+    "3. Customers and competitors (market research)", `Who our customers are and where they are: ${BLANK}`, `How big the market is and whether demand is growing: ${BLANK}`, `Who our competitors are, their strengths and weaknesses, and our competitive advantage: ${BLANK}`, "",
+    "4. Marketing plan", `Target market: ${BLANK}`, `Sales plan (how customers buy): ${BLANK}`, `Marketing and sales goals for the next year: ${BLANK}`, `Action plan (channels, pricing, promotions, after-sale support): ${BLANK}`, `Budget: ${BLANK}`, `How we will compare marketing cost with the revenue it brings: ${BLANK}`, "",
+    "5. Money", `What we need to grow (funding request): ${BLANK}`, `Where it could come from (savings, investors, crowdfunding, loans, grants): ${BLANK}`, `Financial projections: ${BLANK}`, "",
+    "6. Operations and people", `Hiring: ${BLANK}`, `Systems and technology: ${BLANK}`, `Licences, registrations and insurance to update: ${BLANK}`, "",
+    "7. Milestones by quarter", `Quarter 1: ${BLANK}`, `Quarter 2: ${BLANK}`, `Quarter 3: ${BLANK}`, `Quarter 4: ${BLANK}`, "",
+    "8. Risks and what we will do about them", `${BLANK}`, "", "9. Review", "The SBA says marketing plans should be reviewed at least once a year.", `Review dates: ${BLANK}`, "", note),
+  "funding-checklist": client => lines(
+    `Funding readiness checklist${client ? ` for ${client}` : ""}`, "",
+    "Based on the SBA's guidance on funding a business and the SEC's rules on raising money. It is a list of questions to answer before you ask anyone for money.", "",
+    "1. The basics", "[ ] The business structure is chosen (ask an attorney or tax professional)", "[ ] The business is registered, with its EIN", "[ ] A business bank account is open", "",
+    "2. The papers lenders and investors ask for", "[ ] A business plan (traditional or lean)", "[ ] An expense sheet", "[ ] Financial projections (the SBA suggests five years for a loan)", "",
+    "3. Which kind of money, and why", `Self-funding (savings, family, a 401(k): the risk is all yours): ${BLANK}`, `Investors (they take an ownership share and usually a say): ${BLANK}`, `Crowdfunding (perks, or equity through an SEC-registered platform): ${BLANK}`, `A bank or credit union loan: ${BLANK}`, `An SBA-guaranteed loan (use SBA Lender Match): ${BLANK}`, `Grants (Grants.gov; read each opportunity's eligibility): ${BLANK}`, "",
+    "4. If you will sell ownership to investors", "[ ] A securities attorney has told us whether the offer must be registered or qualifies for an exemption (the SEC names Regulation D, Regulation Crowdfunding and Regulation A)", "[ ] We checked that each investor is reputable and has startup experience", "",
+    "5. Help", "[ ] I have contacted an SBDC or SCORE counselor (free or low-cost) (search by ZIP code at sba.gov/local-assistance)", `Questions I want to ask them: ${BLANK}`, "", note)
 };
 
 function consultingTemplate(kind, { client = "" } = {}) {
