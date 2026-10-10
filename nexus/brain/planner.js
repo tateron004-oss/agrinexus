@@ -14,6 +14,8 @@ const { communityTurn } = require("../community/desk.js");
 const { feedbackTurn } = require("../quality/feedback.js");
 const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
+const { professionalAdviceTopic, professionalAdviceReply, professionalAdviceGoal, withProfessionalAdviceNote } = require("../guardrails/professional-advice.js");
+const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext } = require("../knowledge/us-small-business.js");
 const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
 const { parseWeatherQuestion, weatherAnswer, daysNeeded } = require("../brief/weather-answer.js");
@@ -180,14 +182,14 @@ class OpenEndedPlanner {
     const answer = response => ({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
     try {
       const statement = extractContactStatement(command.text);
-      if (statement?.invalid) return answer(`I need ${statement.name}'s number with the country code, like +254712345678, so I can dial or text it.`);
+      if (statement?.invalid) return answer(`I need ${statement.name}'s number with the country code, like +254712345678 or +14045550123, so I can dial or text it.`);
       if (statement) {
         // A number written the Kenyan way ("0712345678") is saved as +254..., and said so: the same digits could be Ugandan or Tanzanian.
         const { assumedKenya, assumedCountry, ...contact } = statement;
         const saved = await memory.saveContact({ ...scope, ...contact });
         if (saved.full) return answer(`You have too many saved contacts to add another. Say "forget" one first, or ask "who are my contacts?"`);
         // The number is said back so a wrong digit is heard; a number written the local way is turned into +country and that is said too.
-        const tookAs = assumedKenya ? "Kenyan" : assumedCountry === "Nigeria" ? "Nigerian" : "";
+        const tookAs = assumedKenya ? "Kenyan" : assumedCountry === "Nigeria" ? "Nigerian" : assumedCountry === "United States" ? "United States" : "";
         return answer(`${saved.updated ? "Updated" : "Saved"} ${statement.name}: ${describeContact(saved.contact)}.${tookAs ? ` I took it as a ${tookAs} number. For another country, say it with the country code, like "save ${statement.name}'s number as +256712345678".` : ""} Say "forget ${statement.name}" any time, or "who are my contacts?"`);
       }
       const request = extractContactRequest(command.text);
@@ -423,6 +425,28 @@ class OpenEndedPlanner {
     // taken from an unrelated web page. Nexus holds no such record, so it says so instead of guessing.
     const personalRecord = personalRecordQuestionPlan(command.text);
     if (personalRecord) return Object.freeze({ ...personalRecord, planningAttempts: 0 });
+    // A business owner's legal, tax, loan, grant, certification, licence, insurance or hiring QUESTION: general information only, said plainly (not a lawyer / tax or financial advisor), with the official place to
+    // check, the free counselling that exists, and that Kyro cannot file or apply for anything. Before any app or AI planning, so the AI never answers these as if it were a professional (see guardrails/professional-advice.js).
+    // (a question about the person's OWN workspace -- "what grants are we tracking", "who are my donors" -- belongs to the business workspace, never to this)
+    // (it is about the person's OWN workspace only when it says so: "what grants are WE tracking", "who are MY donors"; "what grants are available for Black-owned businesses" is a general question)
+    const ownWorkspace = Boolean(businessVoiceDispatch.classify(command.text)) && /\b(?:we|our|my|mine|i have|do i have)\b/i.test(command.text);
+    const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: command.text });
+    // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
+    // It applies to people in the United States only (their time zone, or a question that names a US programme), never to a farmer in Kenya asking about a loan.
+    const usTopic = !ownWorkspace && usPerson ? usSmallBusinessTopic(command.text) : null;
+    if (usTopic) {
+      const guide = usSmallBusinessAnswer(usTopic, { question: command.text });
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${usTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    const adviceTopic = ownWorkspace ? null : professionalAdviceTopic(command.text);
+    if (adviceTopic) {
+      const say = response => Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false, guardrail: "professional-advice", planningAttempts: 0 });
+      if (context?.deterministicOnly === true || typeof this.model.respond !== "function") return say(professionalAdviceReply(adviceTopic, { us: usPerson }));
+      const answer = await this.model.respond({ goal: professionalAdviceGoal(adviceTopic, command.text, { us: usPerson }), locale, tenantId: command.tenantId,
+        interactionProfile: createInteractionProfile({ locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
+        conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
+      return say(typeof answer === "string" && answer.trim() ? withProfessionalAdviceNote(adviceTopic, answer, { us: usPerson }) : professionalAdviceReply(adviceTopic, { us: usPerson }));
+    }
     // A caller that only wants the answers Kyro can give and SAVE without the AI model (the spoken path: see
     // nexus/compat/voice-planner-bridge.js) stops here. Everything above is deterministic; everything below may call the model
     // or build tool steps, which that caller leaves to its own pipeline.

@@ -28,7 +28,7 @@ const templates = {
     collection: "member", intro: "Let's add a member.",
     questions: [
       { key: "name", ask: "What is the member's name?", type: "text" },
-      { key: "phone", ask: "Their phone number with the country code, like +254712345678?", type: "phone", optional: true },
+      { key: "phone", ask: "Their phone number, with the country code like +254712345678 or +14045550123 (or just 404 555 0123 for a US number)?", type: "phone", optional: true },
       { key: "joined", ask: "When did they join? A day, or skip.", type: "date", pastPreferred: true, optional: true }
     ],
     async finish(ctx, answers) {
