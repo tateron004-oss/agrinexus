@@ -16,7 +16,7 @@ const templates = {
     questions: [
       { key: "name", ask: "What is their name?", type: "text" },
       { key: "role", ask: "Do they buy from you, sell to you, or both?", type: "choice", options: ROLES },
-      { key: "phone", ask: "Their phone number with the country code, like +254712345678?", type: "phone", optional: true },
+      { key: "phone", ask: "Their phone number, with the country code like +254712345678 or +14045550123 (or just 404 555 0123 for a US number)?", type: "phone", optional: true },
       { key: "products", ask: "What do they buy or sell? For example maize or fertiliser.", type: "text", max: 100, optional: true },
       { key: "area", ask: "Where are they? A town or market.", type: "text", optional: true }
     ],

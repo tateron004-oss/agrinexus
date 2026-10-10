@@ -54,13 +54,16 @@ const contactName = raw => cleanContactName(raw);
 // A phone number as it is written every day, turned into the +country form that can be dialled or texted:
 //   Kenya   0712345678, 0712 345 678, 0112345678, 254712345678, 712345678      -> +254712345678
 //   Nigeria 08012345678, 0803 123 4567, 0701 234 5678, 0901..., 2348012345678    -> +2348012345678
-// The two cannot be mistaken for each other (a Kenyan number has 9 digits after the 0, a Nigerian one 10), so this needs no guess about the country; the caller says the result back.
-// Fullwidth and Arabic-Indic digits are read as the ordinary digits. null when it is not a number of either country.
+//   United States / Canada   (404) 555-0123, 404-555-0123, 404 555 0123, 4045550123, 1-404-555-0123 -> +14045550123
+// The three cannot be mistaken for each other (a Kenyan number has 9 digits after the 0, a Nigerian one 10 after the 0, a US/Canadian one 10 digits that start 2-9 with no 0), so this needs no guess about the
+// country; the caller says the result back. Fullwidth and Arabic-Indic digits are read as the ordinary digits. null when it is not a number of any of these countries.
 function localPhoneToE164(value) {
   const digits = toAsciiDigits(value).replace(/[\s().-]/g, "");
   let m;
   if ((m = /^(?:0|254)?([17]\d{8})$/.exec(digits))) return { phone: `+254${m[1]}`, country: "Kenya" };
   if ((m = /^(?:0|234)((?:70|80|81|90|91)\d{8})$/.exec(digits))) return { phone: `+234${m[1]}`, country: "Nigeria" };
+  // North American numbers: area code and exchange never start with 0 or 1, so a 10-digit number written without a leading 0 is one (a leading 1 is the country code)
+  if ((m = /^1?([2-9]\d{2}[2-9]\d{6})$/.exec(digits))) return { phone: `+1${m[1]}`, country: "United States" };
   return null;
 }
 // kept for the callers that only know Kenya

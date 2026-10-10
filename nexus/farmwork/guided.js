@@ -3,6 +3,7 @@
 const { clean, parseQuantity, parseMoney, num, CANCEL_WORDS, looksLikeQuestion, formatMoney } = require("./parse.js");
 const { anyDay } = require("./parse.js");
 const { normalizeRecipient } = require("../communications/send-request.js");
+const { localPhoneToE164 } = require("../memory/contacts.js");
 
 // Guided conversations: for anything with several details (a field, an animal, a buyer...), Kyro asks one plain question at a time, so a
 // person never has to remember a special phrase. They can say "skip" for anything optional and "cancel" at any time. One guided conversation
@@ -30,7 +31,13 @@ const PARSERS = {
   date(raw, q, ctx) { const d = anyDay(raw, ctx.today); if (!d) return { hint: 'Give me a day, like "tomorrow", "12 October" or "2026-10-12".' }; // A day given without a year for something that already happened (a planting date) means the most recent one, not next year's.
     if (q.pastPreferred && d > ctx.today && !/\b\d{4}\b/.test(raw)) { const previous = `${Number(d.slice(0, 4)) - 1}${d.slice(4)}`; if (previous <= ctx.today) return { value: previous }; }
     if (q.past && d > ctx.today) return { hint: "That day is still ahead. Give me a day that has already happened." }; if (q.future && d < ctx.today) return { hint: "That day has already passed. Give me one that is still ahead." }; return { value: d }; },
-  phone(raw) { const p = normalizeRecipient("sms", clean(raw)); return p ? { value: p } : { hint: 'I need the number with the country code, like +254712345678, or say "skip".' }; },
+  // A number with its country code ("+14045550123"), or written the everyday way: Kenyan 0712 345 678, Nigerian 0803 123 4567, US/Canadian (404) 555-0123.
+  phone(raw) {
+    const said = clean(raw);
+    const local = localPhoneToE164(said);
+    const p = normalizeRecipient("sms", said) || (local ? normalizeRecipient("sms", local.phone) : null);
+    return p ? { value: p } : { hint: 'I need the number with the country code, like +254712345678 or +14045550123, or say "skip".' };
+  },
   choice(raw, q) {
     const t = clean(raw).toLowerCase();
     const hit = q.options.find(option => option.words.some(word => t === word || new RegExp(`\\b${word}\\b`).test(t)));

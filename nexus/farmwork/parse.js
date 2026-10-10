@@ -68,7 +68,9 @@ function parseMoney(text) {
   return null;
 }
 function formatMoney(amount, currency = "") {
-  const shown = Number(amount).toLocaleString("en", { maximumFractionDigits: 2 });
+  // Dollars, pounds and euros are written with their cents when there are any: "$230.50", not "$230.5"
+  const withCents = /^[$€£]$/.test(currency) && !Number.isInteger(Number(amount));
+  const shown = Number(amount).toLocaleString("en", { minimumFractionDigits: withCents ? 2 : 0, maximumFractionDigits: 2 });
   if (!currency) return shown;
   if (currency === "shillings") return `${shown} shillings`;
   return /^[$€£₦]$/.test(currency) ? `${currency}${shown}` : `${currency} ${shown}`;

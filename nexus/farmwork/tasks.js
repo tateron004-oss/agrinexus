@@ -12,7 +12,7 @@ const templates = {
     collection: "worker", intro: "Let's add a worker.",
     questions: [
       { key: "name", ask: "What is the worker's name?", type: "text" },
-      { key: "phone", ask: "Their phone number with the country code, like +254712345678?", type: "phone", optional: true },
+      { key: "phone", ask: "Their phone number, with the country code like +254712345678 or +14045550123 (or just 404 555 0123 for a US number)?", type: "phone", optional: true },
       { key: "role", ask: "What do they do on the farm? For example weeding, milking or driving.", type: "text", optional: true }
     ],
     async finish(ctx, answers) {
