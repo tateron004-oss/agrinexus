@@ -19,6 +19,7 @@ const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext, UNIVERSAL_TOPI
 const { africaTopic, africaAnswer, africaCountry, africaNamed } = require("../knowledge/africa-small-business.js");
 const { technologyTopic, technologyAnswer } = require("../knowledge/small-business-technology.js");
 const { aiToolsTopic, aiToolsAnswer } = require("../knowledge/ai-tools-for-business.js");
+const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
 const SPOKEN_TEMPLATE_NAMES = Object.freeze({ "ai-use-policy": "AI use policy", "vendor-questions": "list of questions for a web host, designer or developer", "app-brief": "app brief" });
@@ -437,37 +438,47 @@ class OpenEndedPlanner {
     // check, the free counselling that exists, and that Kyro cannot file or apply for anything. Before any app or AI planning, so the AI never answers these as if it were a professional (see guardrails/professional-advice.js).
     // (a question about the person's OWN workspace -- "what grants are we tracking", "who are my donors" -- belongs to the business workspace, never to this)
     // (it is about the person's OWN workspace only when it says so: "what grants are WE tracking", "who are MY donors"; "what grants are available for Black-owned businesses" is a general question)
-    const ownWorkspace = Boolean(businessVoiceDispatch.classify(command.text)) && /\b(?:we|our|my|mine|i have|do i have)\b/i.test(command.text);
-    const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: command.text });
+    // ("show me HOW TO register my business" asks how something is done; it is not "show me my records")
+    const ownWorkspace = Boolean(businessVoiceDispatch.classify(command.text)) && /\b(?:we|our|my|mine|i have|do i have)\b/i.test(command.text)
+      && !/^\s*(?:(?:hey|hi|hello|ok|okay)[,.!]?\s+)?(?:(?:kyro|nexus)[,.:!]?\s+)?(?:please\s+)?(?:show|tell|explain|teach|walk)\s+(?:me|us)\s+(?:through\s+)?how\b/i.test(command.text);
+    const askText = stripWakeWord(command.text);
+    const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: askText });
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
     // It applies to people in the United States only (their time zone, or a question that names a US programme), never to a farmer in Kenya asking about a loan.
     // A question in the technology and AI vocabulary ("use AI to grow my business", "protect my business email") belongs to the technology guide even when it also names growth or marketing, so it is looked up first and wins.
     // (not held back by the workspace words in a sentence like "what if my customer data was leaked": "customer" there is the person's customers' data, not a request to their own records. Found by the prompt battery.)
-    const techTopic = usPerson ? technologyTopic(command.text) : null;
+    const techTopic = usPerson ? technologyTopic(askText) : null;
     // Choosing AI tools for a job (a business plan, funding, marketing, customer service, operations) and how to choose one: for any owner in any country (see knowledge/ai-tools-for-business.js). A specific technology topic
     // (AI safety, scams, fake reviews, advertising claims, cybersecurity) still goes to the technology guide; the general "getting started with AI" answer gives way to this one.
-    const aiToolsTopicId = !ownWorkspace && (!techTopic || techTopic === "ai-getting-started") ? aiToolsTopic(command.text) : null;
+    const aiToolsTopicId = !ownWorkspace && (!techTopic || techTopic === "ai-getting-started") ? aiToolsTopic(askText) : null;
     if (aiToolsTopicId) {
       const guide = aiToolsAnswer(aiToolsTopicId, { us: usPerson });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `ai-tools-for-business:${aiToolsTopicId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // "How do I register an LLC in California?", "what does a nonprofit cost to start in Texas?", "I want to set up my business in Ohio": the state's own fees and steps (see knowledge/state-entities.js). It is a question about forming an
+    // entity, so a "my business" in it is not a request for the person's own workspace; a question that names a Kenyan or Nigerian agency, or has no state on a device outside the United States, is left to the guides below.
+    const stateIntent = !techTopic && !aiToolsTopicId && !africaNamed(askText) ? stateEntityIntent(askText) : null;
+    if (stateIntent && (stateIntent.state || usPerson)) {
+      const guide = stateEntityAnswer(stateIntent);
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `state-entities:${guide.topic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // The checked guide for owners in Kenya and Nigeria (registering a business, taxes, government support, government funding; see knowledge/africa-small-business.js), by the device's time zone, the profile's country or a
     // question that names a Kenyan or Nigerian agency. And, for anyone else outside the United States, the four US topics that hold in any country (a business plan, startup costs, marketing, bookkeeping), with a note.
     const placeZone = command.timeZone || context?.timeZone;
     // (a question that itself names a US term, such as LLC, S corp or the SBA, gets the US answer even on a device in Nairobi, unless it also names a Kenyan or Nigerian agency)
-    const africaId = !ownWorkspace && !techTopic && (!isUsContext({ text: command.text }) || africaNamed(command.text)) ? africaTopic(command.text, { timeZone: placeZone, country: context?.country }) : null;
+    const africaId = !ownWorkspace && !techTopic && (!isUsContext({ text: askText }) || africaNamed(askText)) ? africaTopic(askText, { timeZone: placeZone, country: context?.country }) : null;
     if (africaId) {
       const guide = africaAnswer(africaId);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `africa-small-business:${africaId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
-    const universalId = !ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(command.text) : null;
+    const universalId = !ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (universalId && UNIVERSAL_TOPICS.includes(universalId)) {
-      const guide = usSmallBusinessAnswer(universalId, { question: command.text, us: false, country: africaCountry({ timeZone: placeZone, country: context?.country, text: command.text }) });
+      const guide = usSmallBusinessAnswer(universalId, { question: askText, us: false, country: africaCountry({ timeZone: placeZone, country: context?.country, text: askText }) });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${universalId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
-    const usTopic = !ownWorkspace && usPerson && !techTopic ? usSmallBusinessTopic(command.text) : null;
+    const usTopic = !ownWorkspace && usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (usTopic) {
-      const guide = usSmallBusinessAnswer(usTopic, { question: command.text });
+      const guide = usSmallBusinessAnswer(usTopic, { question: askText });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${usTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // The checked technology and AI guide (using AI tools safely, AI scams, fake reviews, cybersecurity, phishing, email and domain protection, hiring a web host or designer, what Kyro can automate, getting online).

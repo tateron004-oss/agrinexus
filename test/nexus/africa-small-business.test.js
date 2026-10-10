@@ -78,7 +78,8 @@ test("through the planner: Kenya and Nigeria answers with no model call; a Kenya
   assert.equal(ke.knowledge, "africa-small-business:ke-register"); assert.deepEqual(ke.steps, []); assert.equal(ke.guardrail, "professional-advice"); assert.ok(ke.sources.every(source => /\.go\.ke\//.test(source.url)));
   assert.equal((await ask("What taxes does my business pay?", "Africa/Lagos")).knowledge, "africa-small-business:ng-tax");
   assert.equal((await ask("What is the Hustler Fund?", undefined, "Kenya")).knowledge, "africa-small-business:ke-funding");
-  assert.equal((await ask("How do I register my business?", "America/Chicago")).knowledge, "us-small-business:ein-registration");
+  // (since 10 October 2026 "register my business" on a US device gets the general steps and a question about which state, from the state guide; "what is an EIN" and "registered agent" questions still get the EIN guide)
+  assert.equal((await ask("How do I register my business?", "America/Chicago")).knowledge, "state-entities:state-entity:business:any");
   assert.equal((await ask("Where can I get free business help?", "America/Chicago")).knowledge, "us-small-business:free-help");
 });
 
