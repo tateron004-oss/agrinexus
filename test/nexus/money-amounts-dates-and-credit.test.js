@@ -148,5 +148,6 @@ test("business: a payment with no direction is asked, a pledge is not income, a 
   assert.match(refused.response, /already holds 200 money entries/);
   const pledge = await run({ command: "log a pledge of 5000 shillings income", confirmed: true, businessRequest: request(make([])) });
   assert.equal(pledge.status, "needs-input");
-  assert.match(pledge.response, /promise, not money received/);
+  // (since 10 October 2026 a pledge is recorded as a pledge, not income; with no giver named it asks who made it, and nothing is logged as income)
+  assert.match(pledge.response, /Who made the pledge/);
 });

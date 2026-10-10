@@ -142,33 +142,61 @@ function deadlinesDue({ command, editable, workspace, today, formatMoney }) {
   return `Funding deadlines in ${name}: ${sentences(parts)}.${tail}${contractNote}`;
 }
 
+// Will there be enough money for what is coming? Answered only from what the person has told us: the bank balance (moved by the income and expenses logged after the day it was true), the bills not yet paid, and, as a
+// separate note, invoices and pledges that may arrive. With no balance or no bills recorded it says exactly what is missing instead of guessing. It never counts an unpaid invoice or a pledge as cash in hand.
 function cashOutlook({ editable, workspace, today, formatMoney }) {
   const name = `"${workspace}"`;
+  const balance = editable.cashBalance || {};
+  const hasBalance = ISO_DAY.test(String(balance.asOf || ""));
+  const currency = hasBalance ? String(balance.currency || "USD").toUpperCase() : null;
+  const inMain = row => !currency || String(row.currency || "USD").toUpperCase() === currency;
+  const horizon = (() => { const d = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, +today.slice(8, 10) + 30)); return d.toISOString().slice(0, 10); })();
+
+  const unpaid = (editable.bills || []).filter(bill => lower(bill.status) !== "paid");
+  const dueSoon = unpaid.filter(bill => !isoOrNull(bill.dueDate) || bill.dueDate <= horizon);
+  const dueSoonMain = dueSoon.filter(inMain);
+  const dueTotal = dueSoonMain.reduce((sum, bill) => sum + (Number(bill.amount) || 0), 0);
+  const otherCurrencyBills = dueSoon.filter(bill => !inMain(bill));
+
+  const seen = [];
   const monthStart = `${today.slice(0, 7)}-01`;
   const thisMonth = moneyIn(editable.transactions, monthStart, today);
-  const currencies = Object.keys(thisMonth);
-  const lines = [];
-  for (const currency of currencies) {
-    const t = thisMonth[currency];
-    lines.push(`so far this month ${formatMoney(currency, t.income)} in and ${formatMoney(currency, t.expenses)} out`);
+  for (const code of Object.keys(thisMonth)) seen.push(`so far this month ${formatMoney(code, thisMonth[code].income)} in and ${formatMoney(code, thisMonth[code].expenses)} out`);
+
+  if (!hasBalance) {
+    const billsLine = unpaid.length ? ` I do know of ${plural(unpaid.length, "unpaid bill")} totalling ${Object.entries(unpaid.reduce((t, bill) => { const c = String(bill.currency || "USD").toUpperCase(); t[c] = (t[c] || 0) + (Number(bill.amount) || 0); return t; }, {})).map(([c, a]) => formatMoney(c, Math.round(a * 100) / 100)).join(" and ")}.` : " I also have no bills recorded.";
+    return `I cannot tell you whether you will have enough, because I do not have your bank balance, and I will not guess.${billsLine}${seen.length ? ` What I can see in ${name}: ${seen.join("; ")}.` : ""} Tell me the balance, for example "set our cash balance to 5000 dollars", and add your bills, for example "add a bill from the landlord for 800 dollars due the 1st", and I will work it out.`;
   }
-  // the last three full months of expenses, per currency, as an average -- a real figure from the records, labelled as such
-  const first = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 4, 1)).toISOString().slice(0, 10);
-  const lastEnd = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, 0)).toISOString().slice(0, 10);
-  const past = moneyIn(editable.transactions, first, lastEnd);
-  const averages = Object.entries(past).filter(([, t]) => t.expenses > 0).map(([currency, t]) => `${formatMoney(currency, Math.round((t.expenses / 3) * 100) / 100)} a month`);
-  const owed = {};
+
+  // the balance, moved by what was logged after the day it was true
+  let moved = 0;
+  for (const row of editable.transactions || []) {
+    if (!inMain(row) || !row.date || row.date <= balance.asOf) continue;
+    moved += (row.type === "expense" ? -1 : 1) * (Number(row.amount) || 0);
+  }
+  const estimate = Math.round((Number(balance.amount) + moved) * 100) / 100;
+  const base = `Your cash balance was ${formatMoney(currency, balance.amount)} ${balance.asOf === today ? "as of today" : `on ${describeDay(balance.asOf, today)}`}${moved ? `; with the income and expenses logged since, I estimate ${formatMoney(currency, estimate)} now` : ""}.`;
+  const owedInvoices = {};
   const items = editable.invoiceItems || [];
   for (const invoice of (editable.invoices || []).filter(row => lower(row.status) !== "paid")) {
-    for (const item of items.filter(row => row.invoiceNumber === invoice.invoiceNumber)) {
-      const currency = String(item.currency || "USD").toUpperCase();
-      owed[currency] = Math.round(((owed[currency] || 0) + Number(item.quantity) * Number(item.unitPrice)) * 100) / 100;
-    }
+    for (const item of items.filter(row => row.invoiceNumber === invoice.invoiceNumber && String(row.currency || "USD").toUpperCase() === currency)) owedInvoices[currency] = Math.round(((owedInvoices[currency] || 0) + Number(item.quantity) * Number(item.unitPrice)) * 100) / 100;
   }
-  const owedLine = Object.keys(owed).length ? `${Object.entries(owed).map(([currency, amount]) => formatMoney(currency, amount)).join(" and ")} in invoices is owed to you and not yet marked paid` : "";
-  const seen = [...lines, averages.length ? `your recorded expenses over the last three months averaged ${averages.join(" and ")}` : "", owedLine].filter(Boolean);
-  const seenText = seen.length ? `What I can see in ${name}: ${seen.join("; ")}.` : `${name} has no income or expenses recorded yet.`;
-  return `I cannot tell you whether you will have enough, because I do not have your bank balance or a list of bills and other payments coming due, and I will not guess. ${seenText} Bills due and a cash balance are not tracked yet; once they are, I will be able to answer this directly.`;
+  const pledged = (editable.pledges || []).filter(row => lower(row.status) === "outstanding" && inMain(row)).reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const maybe = [owedInvoices[currency] ? `${formatMoney(currency, owedInvoices[currency])} in unpaid invoices` : "", pledged ? `${formatMoney(currency, pledged)} in pledges` : ""].filter(Boolean);
+  const caveat = `I have not counted ${maybe.length ? `${maybe.join(" or ")}, which may arrive, nor ` : ""}any bill, payment or income that is not recorded.`;
+
+  if (!dueSoon.length) return `${base} I have no unpaid bills recorded for the next 30 days, so there is nothing for it to cover yet; add your bills, for example "add a bill from the landlord for 800 dollars due the 1st", and I will check. ${caveat}`;
+  const overdue = dueSoonMain.filter(bill => isoOrNull(bill.dueDate) && daysUntil(bill.dueDate, today) < 0).length;
+  const left = Math.round((estimate - dueTotal) * 100) / 100;
+  const billsText = `The ${plural(dueSoonMain.length, "unpaid bill")} due in the next 30 days${overdue ? ` (${overdue} already overdue)` : ""} ${dueSoonMain.length === 1 ? "comes" : "come"} to ${formatMoney(currency, dueTotal)}`;
+  const verdict = left >= 0 ? `Paying them would leave about ${formatMoney(currency, left)}.` : `That is ${formatMoney(currency, -left)} more than the estimated cash, so you would be short unless money comes in.`;
+  const other = otherCurrencyBills.length ? ` There are also ${plural(otherCurrencyBills.length, "bill")} in another currency that I have not added.` : "";
+  // how long the cash lasts at the recent pace of spending, from the last three full months of expenses in the same currency
+  const first = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 4, 1)).toISOString().slice(0, 10);
+  const lastEnd = new Date(Date.UTC(+today.slice(0, 4), +today.slice(5, 7) - 1, 0)).toISOString().slice(0, 10);
+  const spentBefore = (moneyIn(editable.transactions, first, lastEnd)[currency] || { expenses: 0 }).expenses / 3;
+  const runway = spentBefore > 0 && estimate > 0 ? ` At your recent spending of about ${formatMoney(currency, Math.round(spentBefore * 100) / 100)} a month, ${formatMoney(currency, estimate)} lasts about ${Math.max(0, Math.round((estimate / spentBefore) * 10) / 10)} months.` : "";
+  return `${base} ${billsText}. ${verdict}${other}${runway} ${caveat}`;
 }
 
 function programServed({ editable, workspace }) {

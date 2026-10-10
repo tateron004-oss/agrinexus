@@ -127,9 +127,9 @@ test("will we have enough money: nothing is promised that the records cannot sho
   const workspace = makeWorkspace(); await workspace.seed(SEED());
   const text = (await ask(workspace, "Will we have enough money to cover upcoming expenses?")).response;
   assert.match(text, /cannot tell you whether you will have enough/);
-  assert.match(text, /do not have your bank balance or a list of bills/);
+  assert.match(text, /do not have your bank balance/);
   assert.match(text, /so far this month \$500\.00 in and \$120\.00 out/);
-  assert.match(text, /not tracked yet/);
+  assert.match(text, /set our cash balance to 5000 dollars/, "and says how to give it the balance");
   assert.doesNotMatch(text, /you will have enough\.|yes, you|you can afford/i);
 });
 
@@ -156,16 +156,21 @@ test("with no workspace, an insight question says so and how to start, and inven
   }
 });
 
-test("the spoken reader answers reads and refuses everything that would change the workspace", async () => {
+test("the spoken reader answers reads at once, describes a change and waits for a yes, and leaves everything else alone", async () => {
   const workspace = makeWorkspace(); await workspace.seed(SEED());
   const read = createBusinessReader({ repository: workspace.repository, access: workspace.access, consents: workspace.consents, env: {} });
   assert.match(await read({ command: "Which grants are due soon?", context: workspace.context }), /Funding deadlines in "Hope Garden"/);
   assert.match(await read({ command: "How is my nonprofit doing this month?", context: workspace.context }), /this month/);
-  for (const text of ["Add a donor named Maria Chen", "Log a 50 dollar expense for seeds", "Mark invoice INV-1001 paid", "Set a follow-up with Sam Park next Tuesday", "What is the weather", "Tell me a joke"]) {
-    assert.equal(await read({ command: text, context: workspace.context }), null, text);
-  }
-  const leads = (await workspace.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients" })).body.clients[0].data.editable.leads.length;
-  assert.equal(leads, 5, "reading changed nothing");
+  for (const text of ["What is the weather", "Tell me a joke", "Create a business plan pdf", "Generate an invoice pdf for Grace Otieno"]) assert.equal(await read({ command: text, context: workspace.context }), null, text);
+  // a change is described and nothing is saved until the yes
+  const prompt = await read({ command: "Add a donor named Pat Lopez", context: workspace.context });
+  assert.match(prompt, /I can add Pat Lopez as a donor to "Hope Garden"\. Should I go ahead\?/);
+  const leadsOf = async () => (await workspace.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients" })).body.clients[0].data.editable.leads.length;
+  assert.equal(await leadsOf(), 5, "asking changed nothing");
+  assert.match(await read({ command: "yes", context: workspace.context }), /Added Pat Lopez as a donor/);
+  assert.equal(await leadsOf(), 6, "the yes made the change");
+  assert.equal(await read({ command: "yes", context: workspace.context }), null, "a second yes has nothing to confirm and goes on to the old pipeline");
+  assert.equal(await leadsOf(), 6, "and changed nothing");
 });
 
 function planner(businessWorkspaces) {
@@ -196,11 +201,18 @@ test("through the spoken planner path: the five questions are answered from the 
   }
 });
 
-test("the spoken path still leaves a change to the workspace (it needs a yes) and anything else to the old pipeline", async () => {
+test("the spoken path describes a change (it needs a yes), leaves documents and everything else to the old pipeline, and survives a reader that is missing or fails", async () => {
   const workspace = makeWorkspace(); await workspace.seed(SEED());
   const read = createBusinessReader({ repository: workspace.repository, access: workspace.access, consents: workspace.consents, env: {} });
   const p = planner({ count: async () => 1, read: ({ command }) => read({ command, context: workspace.context }) });
-  for (const text of ["Add a donor named Maria Chen", "Log a 50 dollar expense for seeds", "Set a follow-up with Sam Park next Tuesday"]) assert.equal((await spoken(p, text)).deferred, true, text);
+  // a change is described, never made without the yes
+  for (const text of ["Add a donor named Pat Lopez", "Log a 50 dollar expense for seeds", "Set a follow-up with Sam Park next Tuesday"]) {
+    const plan = await spoken(p, text);
+    assert.notEqual(plan.deferred, true, text);
+    assert.match(plan.response, /Should I go ahead\?/, text);
+  }
+  assert.equal((await spoken(p, "Generate an invoice PDF for Grace Otieno")).deferred, true, "a document needs the screen");
+  assert.equal((await spoken(p, "Tell me a joke")).deferred, true);
   const without = planner({ count: async () => 1 });
   assert.equal((await spoken(without, "How is my nonprofit doing this month?")).deferred, true, "no reader wired: deferred as before");
   const failing = planner({ count: async () => 1, read: async () => { throw new Error("database down"); } });

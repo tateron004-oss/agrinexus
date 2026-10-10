@@ -443,7 +443,7 @@ class OpenEndedPlanner {
     // (the insight questions -- "which grants have approaching deadlines", "which donors need follow-up", "will we have enough money", "how many people did the program serve" -- are about the person's own records even without "my" or "our")
     const ownWorkspace = (Boolean(businessVoiceDispatch.classify(command.text)) && /\b(?:we|our|my|mine|i have|do i have)\b/i.test(command.text)
       && !/^\s*(?:(?:hey|hi|hello|ok|okay)[,.!]?\s+)?(?:(?:kyro|nexus)[,.:!]?\s+)?(?:please\s+)?(?:show|tell|explain|teach|walk)\s+(?:me|us)\s+(?:through\s+)?how\b/i.test(command.text))
-      || businessInsights.classifyInsight(command.text) !== null;
+      || businessVoiceDispatch.asksAboutOwnRecords(command.text);
     const askText = stripWakeWord(command.text);
     const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: askText });
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
@@ -502,13 +502,12 @@ class OpenEndedPlanner {
     // nexus/compat/voice-planner-bridge.js) stops here. Everything above is deterministic; everything below may call the model
     // or build tool steps, which that caller leaves to its own pipeline.
     if (context?.deterministicOnly === true) {
-      // A READ of the person's own business or nonprofit workspace ("how is my nonprofit doing this month", "which grants are due soon", "who needs a follow-up") only reads and saves nothing, so the spoken path answers it
-      // from the records like the typed path does. Found on the live site: by voice every one of these got "I couldn't do that one" or an unrelated reminder answer, because this path stopped before the business planning below.
-      // (A change to the workspace needs a yes first, which the spoken path has no way to ask, so a write is still left to the typed path.)
-      const businessRead = businessVoiceDispatch.precheck(command.text, {});
-      if (businessRead.intent && businessRead.toolId === "business.query" && !businessRead.clarification && typeof this.businessWorkspaces?.read === "function") {
+      // The person's own business or nonprofit workspace by voice: a READ ("how is my nonprofit doing this month", "which grants are due soon") is answered from the saved records, and a CHANGE ("add a bill from the landlord for
+      // 800 dollars due the 1st") is described and made only after a spoken yes (see createBusinessReader). It also takes the yes, the no and the answer to a question it just asked. Found on the live site: by voice every business
+      // question got "I couldn't do that one" or an unrelated answer, because this path stopped before the business workspace. Anything it does not recognise comes back null and goes on to the old pipeline, as before.
+      if (typeof this.businessWorkspaces?.read === "function" && String(command.text || "").trim().length <= 400) {
         const answer = await this.businessWorkspaces.read({ command: command.text, context }).catch(() => null);
-        if (answer) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: answer, sourceRequired: false, knowledge: "business-workspace-read", planningAttempts: 1 });
+        if (answer) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: answer, sourceRequired: false, knowledge: "business-workspace", planningAttempts: 1 });
       }
       // A starter document asked for by voice ("Draft a business plan"): saving a document needs the screen's document card, which the voice route does not have, so the person is told how, instead of
       // hearing "I couldn't do that one" (see knowledge/consulting-templates.js). Nothing is saved.
