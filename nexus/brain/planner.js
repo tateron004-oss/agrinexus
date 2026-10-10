@@ -3,6 +3,7 @@
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
+const businessInsights = require("../business/insights.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { accepted: acceptedAlertOffer } = require("../companion/offer.js");
 const { farmLogTurn } = require("../farm/log.js");
@@ -437,7 +438,8 @@ class OpenEndedPlanner {
     // check, the free counselling that exists, and that Kyro cannot file or apply for anything. Before any app or AI planning, so the AI never answers these as if it were a professional (see guardrails/professional-advice.js).
     // (a question about the person's OWN workspace -- "what grants are we tracking", "who are my donors" -- belongs to the business workspace, never to this)
     // (it is about the person's OWN workspace only when it says so: "what grants are WE tracking", "who are MY donors"; "what grants are available for Black-owned businesses" is a general question)
-    const ownWorkspace = Boolean(businessVoiceDispatch.classify(command.text)) && /\b(?:we|our|my|mine|i have|do i have)\b/i.test(command.text);
+    // (the insight questions -- "which grants have approaching deadlines", "which donors need follow-up", "will we have enough money", "how many people did the program serve" -- are about the person's own records even without "my" or "our")
+    const ownWorkspace = (Boolean(businessVoiceDispatch.classify(command.text)) && /\b(?:we|our|my|mine|i have|do i have)\b/i.test(command.text)) || businessInsights.classifyInsight(command.text) !== null;
     const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: command.text });
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
     // It applies to people in the United States only (their time zone, or a question that names a US programme), never to a farmer in Kenya asking about a loan.
@@ -488,6 +490,14 @@ class OpenEndedPlanner {
     // nexus/compat/voice-planner-bridge.js) stops here. Everything above is deterministic; everything below may call the model
     // or build tool steps, which that caller leaves to its own pipeline.
     if (context?.deterministicOnly === true) {
+      // A READ of the person's own business or nonprofit workspace ("how is my nonprofit doing this month", "which grants are due soon", "who needs a follow-up") only reads and saves nothing, so the spoken path answers it
+      // from the records like the typed path does. Found on the live site: by voice every one of these got "I couldn't do that one" or an unrelated reminder answer, because this path stopped before the business planning below.
+      // (A change to the workspace needs a yes first, which the spoken path has no way to ask, so a write is still left to the typed path.)
+      const businessRead = businessVoiceDispatch.precheck(command.text, {});
+      if (businessRead.intent && businessRead.toolId === "business.query" && !businessRead.clarification && typeof this.businessWorkspaces?.read === "function") {
+        const answer = await this.businessWorkspaces.read({ command: command.text, context }).catch(() => null);
+        if (answer) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: answer, sourceRequired: false, knowledge: "business-workspace-read", planningAttempts: 1 });
+      }
       // A starter document asked for by voice ("Draft a business plan"): saving a document needs the screen's document card, which the voice route does not have, so the person is told how, instead of
       // hearing "I couldn't do that one" (see knowledge/consulting-templates.js). Nothing is saved.
       const spokenTemplate = templateRequest(command.text);

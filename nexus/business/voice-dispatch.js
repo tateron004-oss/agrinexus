@@ -2,6 +2,7 @@
 
 const { localDay, validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { addDays, weekdayOf, extractDay } = require("../personal/dates.js");
+const insights = require("./insights.js");
 const crmVoice = require("./crm-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
@@ -679,9 +680,10 @@ function resolveListingIndex(listings, command = "") {
 // exactly -- same field names, same filters, same reduces -- so a voice
 // summary of "how's my business doing" is always numerically identical to
 // what the workspace's own dashboard section shows.
-function computeBusinessDashboard(editable) {
+function computeBusinessDashboard(editable, period = {}) {
   // Shillings and dollars are never added together: the dashboard totals the currency used most, and names any others.
-  const byCurrency = financeTotals(editable.transactions);
+  // ("How is my nonprofit doing THIS MONTH": the money is for the period asked about; the counts and totals below are overall.)
+  const byCurrency = financeTotals(editable.transactions, { from: period.from || "", to: period.to || "" });
   const currencies = Object.keys(byCurrency).sort((a, b) => (byCurrency[b].incomeCount + byCurrency[b].expenseCount) - (byCurrency[a].incomeCount + byCurrency[a].expenseCount));
   const currency = currencies[0] || "USD";
   const income = byCurrency[currency]?.income || 0;
@@ -806,9 +808,16 @@ function computeBusinessDashboard(editable) {
 // load-bearing -- see each flag's inline note -- and must stay in sync with
 // server.js's legacy nexus_business_assistant handler, which uses this same
 // function (rather than a second, hand-maintained copy of these regexes).
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS]);
+// (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
+const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS]);
 
 function classify(command = "") {
+  // Questions about how the organisation is doing, money to cover expenses, who needs a follow-up, funding deadlines, people served and volunteer hours come before the general word-matching below, which
+  // would otherwise read "customers or donors" as a list request and "log 3 volunteer hours for Joy" as a new person called by that whole phrase.
+  const insight = insights.classifyInsight(command);
+  if (insight === "howAreWeDoing") return "dashboard";
+  if (insight) return insight;
   // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
   // not a government ministry -- server.js's legacy weather/safety code uses
   // "ministry" the government way, in a completely different command shape,
@@ -1020,6 +1029,14 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
 
+  if (INSIGHT_READS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const response = insights.readInsight(intent, { command, editable: resolved.client.data.editable, workspace, today: todayIn(new Date(), timeZone), formatMoney, leadTypeWanted: crmVoice.leadTypeWanted });
+    return { status: "completed", localOnly: true, response, summary: response };
+  }
+
   if (crmVoice.CRM_READ_INTENTS.includes(intent) || crmVoice.CRM_WRITE_INTENTS.includes(intent)) {
     const resolved = await resolveBusinessClient(businessRequest, command);
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
@@ -1044,7 +1061,8 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
       return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
     }
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
-    const dashboard = computeBusinessDashboard(resolved.client.data.editable);
+    const period = periodIn(command, new Date(), timeZone);
+    const dashboard = computeBusinessDashboard(resolved.client.data.editable, period);
     // Found live: listings have no currency field of their own and are
     // always created/shown as USD elsewhere (see the other formatMoney("USD",
     // listing.price) call sites in this file) -- but this line was labeling
@@ -1058,7 +1076,7 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     const buyerSellerPhrase = (dashboard.buyers || dashboard.sellers || dashboard.tenants || dashboard.landlords)
       ? ` ${dashboard.buyers} buyer${dashboard.buyers === 1 ? "" : "s"}, ${dashboard.sellers} seller${dashboard.sellers === 1 ? "" : "s"}${dashboard.tenants ? `, ${dashboard.tenants} tenant${dashboard.tenants === 1 ? "" : "s"}` : ""}${dashboard.landlords ? `, ${dashboard.landlords} landlord${dashboard.landlords === 1 ? "" : "s"}` : ""};`
       : "";
-    const response = `Here is the performance summary for "${workspaceName}": net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customer${dashboard.customers === 1 ? "" : "s"}, ${dashboard.donors} donor${dashboard.donors === 1 ? "" : "s"}, ${dashboard.sponsors} sponsor${dashboard.sponsors === 1 ? "" : "s"}, ${dashboard.volunteers} volunteer${dashboard.volunteers === 1 ? "" : "s"}${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} ${formatMoney(dashboard.invoiceCurrency, dashboard.invoiceTotal)} invoiced${dashboard.otherInvoiceCurrencies.length ? `, not counting invoices in ${dashboard.otherInvoiceCurrencies.join(", ")}` : ""} with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; ${formatMoney(dashboard.grantsRequestedCurrency, dashboard.grantsRequested)} in grants tracked${dashboard.otherGrantRequestedCurrencies.length ? `, not counting grants in ${dashboard.otherGrantRequestedCurrencies.join(", ")}` : ""}, ${formatMoney(dashboard.grantsAwardedCurrency, dashboard.grantsAwarded)} awarded${dashboard.otherGrantAwardedCurrencies.length ? `, not counting awarded grants in ${dashboard.otherGrantAwardedCurrencies.join(", ")}` : ""}; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.`;
+    const response = `Here is the performance summary for "${workspaceName}"${period.from ? ` ${period.label}` : ""}: net income ${formatMoney(dashboard.currency, dashboard.netIncome)} (income ${formatMoney(dashboard.currency, dashboard.income)}, expenses ${formatMoney(dashboard.currency, dashboard.expenses)}${dashboard.otherCurrencies.length ? `, not counting entries in ${dashboard.otherCurrencies.join(", ")}` : ""});${listingPhrase} ${dashboard.customers} customer${dashboard.customers === 1 ? "" : "s"}, ${dashboard.donors} donor${dashboard.donors === 1 ? "" : "s"}, ${dashboard.sponsors} sponsor${dashboard.sponsors === 1 ? "" : "s"}, ${dashboard.volunteers} volunteer${dashboard.volunteers === 1 ? "" : "s"}${dashboard.others ? `, ${dashboard.others} other contact${dashboard.others === 1 ? "" : "s"} (members, clients, and similar)` : ""};${buyerSellerPhrase} ${formatMoney(dashboard.invoiceCurrency, dashboard.invoiceTotal)} invoiced${dashboard.otherInvoiceCurrencies.length ? `, not counting invoices in ${dashboard.otherInvoiceCurrencies.join(", ")}` : ""} with ${dashboard.unpaidInvoices} invoice${dashboard.unpaidInvoices === 1 ? "" : "s"} not marked paid; ${formatMoney(dashboard.grantsRequestedCurrency, dashboard.grantsRequested)} in grants tracked${dashboard.otherGrantRequestedCurrencies.length ? `, not counting grants in ${dashboard.otherGrantRequestedCurrencies.join(", ")}` : ""}, ${formatMoney(dashboard.grantsAwardedCurrency, dashboard.grantsAwarded)} awarded${dashboard.otherGrantAwardedCurrencies.length ? `, not counting awarded grants in ${dashboard.otherGrantAwardedCurrencies.join(", ")}` : ""}; ${dashboard.openTasks} of ${dashboard.totalTasks} tasks not yet done; ${dashboard.upcomingAppointments} active appointment${dashboard.upcomingAppointments === 1 ? "" : "s"}.${period.from ? ` The income and expenses are for ${period.label}; the contacts, invoices, grants and tasks are totals so far.` : ""}`;
     return { status: "completed", localOnly: true, response, businessDashboard: dashboard, summary: response };
   }
 
