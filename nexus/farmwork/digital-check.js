@@ -31,7 +31,7 @@ const CHECKS = [
 
 const templates = {
   "digital-check": {
-    collection: "digital-check",
+    collection: "digital-check", longForm: true,
     intro: "Let's do a quick digital health check. Twelve short questions, and I will tell you what to do first. Say yes, no or not sure, and say cancel to stop.",
     questions: CHECKS.map(check => ({ key: check.key, ask: check.ask, type: "choice", optional: true, options: OPTIONS })),
     async finish(ctx, answers) {
@@ -58,4 +58,4 @@ async function handle(ctx) {
   return startGuided(ctx, templates["digital-check"], {});
 }
 
-module.exports = Object.freeze({ handle, templates, CHECKS, REQUEST });
+module.exports = Object.freeze({ handle, templates, CHECKS, REQUEST, longForm: true });

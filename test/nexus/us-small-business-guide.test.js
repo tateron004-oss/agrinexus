@@ -86,7 +86,7 @@ test("through the planner, for a person outside the United States: no US agency 
   assert.match(tax.response, /^Many traders pay a small tax\. I am not a tax advisor/); assert.match(tax.response, /your country's tax authority/); assert.doesNotMatch(tax.response, /irs\.gov/);
 });
 
-test("the page shows and speaks these answers whole, with their sources and date, instead of cutting them to one sentence", () => {
+test("the page shows and speaks these answers whole, with their sources and date, instead of cutting them to one sentence (and so do the guided checklists, lessons and health check, which mark their plan longForm)", () => {
   const app = fs.readFileSync(path.join(__dirname, "..", "..", "public", "app.js"), "utf8");
-  assert.match(app, /\.\.\.\(result\.plan\?\.guardrail \|\| result\.plan\?\.knowledge \? \{ longForm: true \} : \{\}\)/);
+  assert.match(app, /\.\.\.\(result\.plan\?\.guardrail \|\| result\.plan\?\.knowledge \|\| result\.plan\?\.longForm \? \{ longForm: true \} : \{\}\)/);
 });
