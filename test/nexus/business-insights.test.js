@@ -60,25 +60,24 @@ test("which sentences are the insight questions, and which are left to the exist
     howAreWeDoing: ["How is my nonprofit doing this month?", "How is my business doing this month?", "How are we doing this month?", "How's the business doing?", "How is our church doing", "how are we doing financially"],
     cashOutlook: ["Will we have enough money to cover upcoming expenses?", "Do we have enough cash for payroll?", "How long will our cash last?", "Can we afford to hire someone?", "what is our cash flow?"],
     followUpDue: ["Which customers or donors need follow-up?", "Who needs a follow up?", "Which donors are overdue for a follow-up?", "Who should I follow up with?", "What follow-ups are due this week?"],
-    deadlinesDue: ["Which grants or contracts have approaching deadlines?", "Which grants are due soon?", "What funding deadlines are coming up?", "Do we have any grants closing this month?", "Which applications are overdue?"],
-    programServed: ["How many people did our program serve, and what results did we measure?", "How many families did we help this year?", "What outcomes have we achieved?", "Give me the impact report"],
-    volunteerHours: ["Log 3 volunteer hours for Joy", "Record 2.5 hours of volunteer time for Joy", "How many volunteer hours do we have?", "add 4 volunteer hours for Sam"]
+    deadlinesDue: ["Which grants or contracts have approaching deadlines?", "Which grants are due soon?", "What funding deadlines are coming up?", "Do we have any grants closing this month?", "Which applications are overdue?"]
   };
   for (const [intent, texts] of Object.entries(yes)) for (const text of texts) assert.equal(insights.classifyInsight(text), intent, text);
-  const no = ["How are you doing today?", "how are we doing", "Add a donor named Maria Chen", "Set a follow-up with Sam Park next Tuesday", "Add a grant from Green Fund due December 1", "Create a cash flow forecast document", "I need enough money for a house", "What is the weather", "Show my customers", "Remind me to follow up with Grace tomorrow", "Draft a grant proposal", "What is the SBA?", ""];
+  const no = ["How are you doing today?", "how are we doing", "Add a donor named Maria Chen", "Set a follow-up with Sam Park next Tuesday", "Add a grant from Green Fund due December 1", "Create a cash flow forecast document", "I need enough money for a house", "What is the weather", "Show my customers", "Remind me to follow up with Grace tomorrow", "Draft a grant proposal", "What is the SBA?", "",
+    "Log 3 volunteer hours for Joy", "How many people did our program serve?", "Give me the impact report"]; // (people served, volunteer hours and the impact report are in programs-voice.js)
   for (const text of no) assert.equal(insights.classifyInsight(text), null, text);
 });
 
 test("the dispatcher sends insight questions to their own reads; neighbouring commands keep their old routes", () => {
   assert.equal(vd.classify("How is my nonprofit doing this month?"), "dashboard");
   assert.equal(vd.classify("Which customers or donors need follow-up?"), "followUpDue");
-  assert.equal(vd.classify("Log 3 volunteer hours for Joy"), "volunteerHours");
+  assert.equal(vd.classify("Log 3 volunteer hours for Joy"), "logVolunteerHours");
   assert.equal(vd.classify("Show my customers"), "listLeads");
   assert.equal(vd.classify("Add a volunteer named Joy"), "addLead");
   assert.equal(vd.classify("Set a follow-up with Sam Park next Tuesday"), "setFollowUp");
   assert.equal(vd.classify("Show my donations"), "donationSummary");
   assert.equal(vd.classify("Who owes me money?"), "listInvoices");
-  for (const intent of ["cashOutlook", "followUpDue", "deadlinesDue", "programServed", "volunteerHours", "dashboard"]) assert.equal(vd.isReadIntent(intent), true, `${intent} is a read: no yes is asked and nothing is saved`);
+  for (const intent of ["cashOutlook", "followUpDue", "deadlinesDue", "peopleServed", "volunteerSummary", "dashboard"]) assert.equal(vd.isReadIntent(intent), true, `${intent} is a read: no yes is asked and nothing is saved`);
   assert.equal(vd.precheck("Which grants are due soon?", {}).toolId, "business.query");
 });
 
@@ -133,19 +132,16 @@ test("will we have enough money: nothing is promised that the records cannot sho
   assert.doesNotMatch(text, /you will have enough\.|yes, you|you can afford/i);
 });
 
-test("people served and volunteer hours: the real counts, and a plain statement of what is not recorded yet", async () => {
+test("people served and volunteer hours now come from real records; with none recorded the answer says what to say to start, and estimates nothing", async () => {
   const workspace = makeWorkspace(); await workspace.seed(SEED());
   const served = (await ask(workspace, "How many people did our program serve, and what results did we measure?")).response;
-  assert.match(served, /1 person recorded through intake \(Tom Lee\)/);
+  assert.match(served, /no services or results recorded yet, though 1 person is on the participant list/);
   assert.match(served, /I will not estimate one/);
   const hours = await ask(workspace, "Log 3 volunteer hours for Joy");
-  assert.equal(hours.status, "completed");
-  assert.match(hours.response, /nothing was saved/);
-  assert.match(hours.response, /lists 1 volunteer as a contact/);
-  assert.doesNotMatch(hours.response, /add a volunteer named Joy/, "Joy is already on the list");
-  assert.match((await ask(workspace, "Log 2 volunteer hours for Sam Park")).response, /add a volunteer named Sam Park/);
-  const before = (await workspace.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients" })).body.clients[0].data.editable.leads.length;
-  assert.equal(before, 5, "nothing was added");
+  assert.equal(hours.status, "needs-confirmation");
+  assert.match(hours.response, /I can log 3 volunteer hours for Joy Wanjiru/);
+  const before = (await workspace.businessRequest({ method: "GET", pathname: "/api/nexus/runtime/business/clients" })).body.clients[0].data.editable;
+  assert.equal(before.leads.length, 5, "nothing was added"); assert.equal(before.volunteerHours.length, 0, "and nothing was saved before the yes");
 });
 
 test("with no workspace, an insight question says so and how to start, and invents nothing", async () => {
@@ -188,9 +184,9 @@ test("through the spoken planner path: the five questions are answered from the 
     ["Will we have enough money to cover upcoming expenses?", /cannot tell you whether you will have enough/],
     ["Which customers or donors need follow-up?", /Follow-ups for customers and donors/],
     ["Which grants or contracts have approaching deadlines?", /Funding deadlines in "Hope Garden"/],
-    ["How many people did our program serve, and what results did we measure?", /recorded through intake/],
+    ["How many people did our program serve, and what results did we measure?", /no services or results recorded yet/],
     ["Show my donations", /Donations in "Hope Garden"/],
-    ["Log 3 volunteer hours for Joy", /cannot log or total volunteer hours/]
+    ["Log 3 volunteer hours for Joy", /I can log 3 volunteer hours for Joy Wanjiru/]
   ];
   for (const [text, pattern] of expectations) {
     const plan = await spoken(p, text);

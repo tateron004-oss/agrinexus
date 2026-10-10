@@ -94,7 +94,13 @@ function normalizeEditable(info, input = {}) {
     // rather than a leads-only list; "followUpDate" is a real date field
     // (distinct from the free-text "nextAction") so a follow-up can be
     // reminded on, not just described.
-    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "" }),
+    leads: rows(input.leads === undefined ? starter.leads : input.leads, { name: "", contact: "", type: "customer", need: "", stage: "new", nextAction: "", followUpDate: "", skills: "", availability: "", source: "", consent: "", consentDate: "" }),
+    // Phase 3 of the business-intelligence tools (the people side). Volunteer hours, the services each participant received (recorded only once their consent is recorded), the results measured, and the program goals.
+    // Hours and services are the lists that grow fastest, so they hold 400 rows rather than 200. All start empty, so a workspace saved before this existed reads back exactly as it was.
+    volunteerHours: rows(input.volunteerHours === undefined ? (starter.volunteerHours || []) : input.volunteerHours, { volunteer: "", hours: 0, date: "", activity: "", program: "" }, 400, new Set(["hours"])),
+    services: rows(input.services === undefined ? (starter.services || []) : input.services, { participant: "", service: "", date: "", program: "", hours: 0, notes: "" }, 400, new Set(["hours"])),
+    outcomes: rows(input.outcomes === undefined ? (starter.outcomes || []) : input.outcomes, { program: "", measure: "", value: 0, unit: "", date: "", notes: "" }, 200, new Set(["value"])),
+    programGoals: rows(input.programGoals === undefined ? (starter.programGoals || []) : input.programGoals, { program: "", goal: "", target: 0, unit: "", deadline: "" }, 100, new Set(["target"])),
     socialPosts: rows(input.socialPosts === undefined ? starter.socialPosts : input.socialPosts, { platform: "", caption: "", status: "draft" }),
     // Tool 5: project/task management. Extended from a flat checklist
     // (title/status only) to carry a due date, an assignee, and a
