@@ -326,13 +326,15 @@ class OpenEndedPlanner {
       // records" -- and skipping only this one toolkit, rather than refusing the whole turn, still lets a
       // restricted caller use the farm toolkit or ordinary conversation normally.
       if (restriction && context?.isRestrictedFrom?.(restriction)) continue;
-      const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf, country: context?.country || "" });
+      // A toolkit that asks a long, step-by-step question (the digital health check, a checklist, a lesson) says so, and the page then shows and speaks it whole instead of cutting it to one sentence.
+      let longForm = false;
+      const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf, country: context?.country || "", onLongForm: () => { longForm = true; } });
       const goal = String(command.text || "").trim();
       const catalog = work?.report ? await this.catalog() : null;
       if (work?.report && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) return Object.freeze({ goal, application: "documents", riskTier: "low", clarification: null, planningAttempts: 0,
         steps: [{ clientStepId: stepId, title: work.report.title, toolId: "documents.create", input: { title: work.report.title, content: work.report.content, format: work.report.format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
       if (work?.report) return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: work.report.content, sourceRequired: false, planningAttempts: 0 });
-      if (typeof work === "string") return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: work, sourceRequired: false, planningAttempts: 0 });
+      if (typeof work === "string") return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: work, sourceRequired: false, planningAttempts: 0, ...(longForm ? { longForm: true } : {}) });
     }
     // "Remind me every morning at 8 to check the pump" / "show my repeating reminders" / "stop my daily reminder to ...": reminders that repeat (see reminders/repeat-service.js).
     // A reminder that happens once is not taken here; it carries on to reminders.schedule below.

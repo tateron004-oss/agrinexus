@@ -30,12 +30,13 @@ const books = require("./books.js");
 const herd = require("./herd.js");
 const undo = require("./books-undo.js");
 const digitalCheck = require("./digital-check.js");
+const walkthroughs = require("./walkthroughs.js");
 
 // The farm toolkit's front door. Order: an open guided conversation first (the person's words are its answers), then each tool in turn.
 // A tool answers only when the words are plainly for it (returns null otherwise), so everything else carries on to normal planning.
 // A tool may answer with a string (a conversational reply) or { plan } (a governed step, such as a printable report).
 // books.js is the English bookkeeping front door ("sold maize 4500", "John owes me 800", "what did I earn today"): it turns what people really say into the careful phrasing the tools below read.
-const MODULES = [digitalCheck, shopCredit, shopStock, shopSummary, swahiliLedger, swahili, swahiliLand, swahiliPeople, swahiliBusiness, undo, books, herd, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
+const MODULES = [digitalCheck, walkthroughs, shopCredit, shopStock, shopSummary, swahiliLedger, swahili, swahiliLand, swahiliPeople, swahiliBusiness, undo, books, herd, fields, tasks, inventory, livestock, journal, money, parties, budget, coop, board, library, reports];
 const { YES_SW, NO_SW } = require("../i18n/swahili-words.js");
 const TEMPLATES = Object.assign({}, ...MODULES.map(mod => mod.templates || {}));
 const CONFIRMS = Object.assign({
@@ -61,6 +62,8 @@ async function farmWorkTurn(args) {
   const { text, store, tenantId, userId, now = new Date(), timeZone, roles = [], memory = null, notifications = null, nameOf = null, country = "" } = args;
   if (!store?.getSession || !text) return null;
   const wrapped = track(store);
+  // A guided conversation made of long, step-by-step questions (digital-check.js, walkthroughs.js) marks itself `longForm`; the caller may ask to be told, so the page can show and speak the whole question.
+  const longForm = () => { try { args.onLongForm?.(); } catch { /* the answer is the same either way */ } };
   const zone = validTimeZone(timeZone || DEFAULT_TIME_ZONE);
   let entries = null; let hasFarm = null;
   // What was SAID: "Yes." / "Skip." lose their full stop and "forty kilos" becomes "40 kilos" (nexus/i18n/spoken-input.js).
@@ -89,11 +92,11 @@ async function farmWorkTurn(args) {
           // anything else is a new request: the question is dropped and the words are handled normally below
         } else if (TEMPLATES[session.collection]) {
           const answer = await continueGuided(ctx, session, TEMPLATES[session.collection]);
-          if (answer) return answer; // null: the person moved on to something else, so their words are handled normally below
+          if (answer) { if (TEMPLATES[session.collection].longForm) longForm(); return answer; } // null: the person moved on to something else, so their words are handled normally below
         } else await wrapped.clearSession({ tenantId, userId });
       } else { await wrapped.clearSession({ tenantId, userId }); }
     }
-    for (const mod of MODULES) { const answer = await mod.handle(ctx); if (answer) return answer; }
+    for (const mod of MODULES) { const answer = await mod.handle(ctx); if (answer) { if (mod.longForm) longForm(); return answer; } }
   } catch { return null; }
   return null;
 }
