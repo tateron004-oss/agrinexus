@@ -206,8 +206,38 @@ test("server.js: the catch-all conversation tool (the voice tool the production 
   const body = source.slice(start, source.indexOf("function nexusGenesisWorkspaceAction", start));
   const at = needle => { const index = body.indexOf(needle); assert.ok(index > 0, needle); return index; };
   assert.match(body, /: toolName === "nexus_general_conversation"\) && effectiveMentalHealthSignal\.state !== "medical_emergency"[^{]*\{\s*const plannerUser = await authoritativeRuntimeUser\(user\)/);
-  assert.match(body, /deterministicVoiceAnswer\(\{ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language \}\)/);
+  assert.match(body, /deterministicVoiceAnswer\(\{ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language, timeZone: args\?\.timeZone \}\)/);
   assert.ok(at("buildSupportPacket") < at("deterministicVoiceAnswer("), "a crisis is answered before the bridge");
   assert.ok(at("healthReadingsReply(db, user, command") < at("deterministicVoiceAnswer("), "health readings keep their own route");
   assert.ok(at("deterministicVoiceAnswer(") < at("const routed = await runCompanionSafeAgentCommand"), "the bridge runs before the older pipeline");
+});
+
+// Found testing the orb by voice: a United States owner asking "How do I write a business plan?" got "I couldn't do that one", because the voice route never told the planner where the person is (the typed route
+// sends the device's time zone, which is what makes the US guides apply). The orb now sends the zone with every tool call and the bridge passes it on.
+test("bridge: passes the device's time zone to the planner, and leaves it out when there is none", async () => {
+  const calls = [];
+  const runtime = { behaviorTurnRequest: async args => { calls.push(args); return turn(); } };
+  await deterministicVoiceAnswer({ runtime, user, text: "how do I write a business plan", timeZone: "America/Chicago" });
+  await deterministicVoiceAnswer({ runtime, user, text: "how do I write a business plan" });
+  assert.equal(calls[0].timeZone, "America/Chicago"); assert.equal("timeZone" in calls[1], false);
+});
+
+test("the orb sends its time zone with every voice tool call, and the server passes it to the bridge from every place it asks", () => {
+  const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+  const start = app.indexOf("async function callNexusOpenAiRealtimeTool");
+  const body = app.slice(start, app.indexOf("nexusGenesisVoiceDebugLog(\"openai-agents-tool-http-failed\"", start));
+  assert.match(body, /timeZone: args\.timeZone \|\| kyroDeviceTimeZone\(\)/); assert.equal((body.match(/kyroDeviceTimeZone\(\)/g) || []).length, 2, "in the arguments and at the top of the body");
+  const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  const asks = server.match(/deterministicVoiceAnswer\(\{/g) || []; const withZone = server.match(/deterministicVoiceAnswer\(\{[^}]*timeZone:/g) || [];
+  assert.ok(asks.length >= 4); assert.equal(withZone.length, asks.length, "every place a voice tool call reaches the bridge passes the zone");
+});
+
+test("a United States owner's business question and a spoken request for a starter document, asked by voice with the zone", async () => {
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("must not reach the AI planning model"); }, respond: async () => { throw new Error("no model"); } }, tools: { list: async () => [] }, applications: { list: () => [] } });
+  const ask = (text, timeZone) => planner.plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en", channel: "voice" }, context: { deterministicOnly: true, ...(timeZone ? { timeZone } : {}) } });
+  const us = await ask("How do I write a business plan?", "America/Chicago");
+  assert.equal(us.knowledge, "us-small-business:business-plan");
+  assert.equal((await ask("How do I write a business plan?")).deferred, true, "with no zone and no US word, the old pipeline carries on");
+  const doc = await ask("Draft a business plan for Sunrise Cafe", "America/Chicago");
+  assert.deepEqual(doc.steps, []); assert.match(doc.response, /can only save a document from the keyboard/); assert.match(doc.response, /Type "Draft a business plan for Sunrise Cafe" in the box/); assert.match(doc.response, /Nothing was saved yet\./);
 });
