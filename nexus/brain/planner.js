@@ -439,6 +439,17 @@ class OpenEndedPlanner {
           response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: 0 });
       }
     }
+    // "Translate good morning to Kiswahili": a plain answer, never an app (found on the live site: the AI planner sent it to the learning window and nothing was translated).
+    const translation = translationRequest(command.text);
+    if (translation && typeof this.model.respond === "function") {
+      const answer = await this.model.respond({ goal: `Translate this into ${translation.language} and reply with ONLY the translation, nothing else: ${translation.text}`, locale, tenantId: command.tenantId,
+        interactionProfile: createInteractionProfile({ locale, userPreferences: context.userPreferences || {}, channel: command.channel }),
+        conversationHistory: [], memories: [], capabilities: [] }).catch(() => null);
+      if (typeof answer === "string" && answer.trim()) {
+        return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [],
+          response: answer.trim(), sourceRequired: false, modelAnswered: true, planningAttempts: 0 });
+      }
+    }
     const searched = this.memory ? await this.memory.search({ tenantId: command.tenantId, userId: command.actorId,
       purpose: "task_planning", query: command.text, roles: context.roles || [], limit: 8 }) : [];
     const memories = [...known.memories, ...searched];
@@ -639,6 +650,19 @@ function ordinaryConversationPlan(text, context = {}) {
       response: "You're welcome.", sourceRequired: false };
   }
   return null;
+}
+
+// "Translate good morning to Kiswahili." / "translate where is the clinic into French" / "Translate this to Swahili: ...". Needs the words to translate AND a language; a bare "translate this" with
+// nothing to translate (or "translate my document") is left to the rest of the planner.
+const TRANSLATE_REQUEST = /^\s*(?:please\s+|can you\s+|could you\s+)?translate\s*:?\s+(.+?)\s+(?:into|to|in)\s+(English|Spanish|French|Swahili|Kiswahili|Arabic|Portuguese|German|Italian|Luganda|Hausa|Yoruba|Igbo|Amharic|Somali|Zulu)\s*[.!?]*\s*$/i;
+const TRANSLATE_SOURCE_NOT_TEXT = /^(?:this|that|it|the document|my document|the last document|the latest document|this document|this conversation|this chat)$/i;
+function translationRequest(text) {
+  const match = TRANSLATE_REQUEST.exec(String(text || "").trim());
+  if (!match) return null;
+  const words = match[1].trim().replace(/^["'“”]+|["'“”]+$/g, "");
+  if (!words || words.length > 600 || TRANSLATE_SOURCE_NOT_TEXT.test(words)) return null;
+  const language = /^kiswahili$/i.test(match[2]) ? "Swahili" : match[2];
+  return { text: words, language };
 }
 
 const LIGHT_CHAT = /^(?:please\s+)?(?:(?:tell|give|say)\s+me|can you tell me|do you know)\s+(?:a|an|another|one)\s+(?:(?:good|funny|short|clean)\s+)?(?:joke|riddle|proverb|pun|fun fact)\b/i;
@@ -1718,5 +1742,5 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
-  completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, exportLatestDocumentFormat, exportLatestDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
+  completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, translationRequest, exportLatestDocumentFormat, exportLatestDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
   completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
