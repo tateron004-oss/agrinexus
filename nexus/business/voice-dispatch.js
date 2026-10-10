@@ -817,8 +817,12 @@ function classify(command = "") {
   // "business" or "nonprofit".
   const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|church(?:es)?|congregation|parish|admin[- ]assistant|workspace)s?";
   const wantsBusinessDashboard = /\b(business|nonprofit|church|congregation|parish)\b/i.test(command) && /\b(dashboard|doing|performing|performance summary|financial summary)\b/i.test(command);
+  // "Open the business workspace" / "go to my nonprofit" (found on production: refused with "I could not tell what to do with that in your business records"): it is answered with the person's
+  // workspaces, the same as "show my business workspace". Only the business-type words count here, not the bare word "workspace" ("open the farm workspace" is the farm window).
+  const wantsOpenBusiness = /\b(?:open|go to)\s+(?:the|my)\s+(?:business(?:es)?|nonprofit|non-profit|ngo|church(?:es)?|congregation|parish)\b/i.test(command);
   const wantsList = (
-    (/\b(list|show)\b/i.test(command) && new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command))
+    wantsOpenBusiness
+    || (/\b(list|show)\b/i.test(command) && new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command))
     || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
@@ -898,7 +902,10 @@ function classify(command = "") {
   // workspace called <command>" plan. Require an explicit start/create verb
   // alongside the business/nonprofit/church word.
   // "Create a business plan for my bakery" asks for a plan, not for a workspace called by that whole sentence, so a plan, proposal or strategy word is not a workspace request.
-  const wantsCreateWorkspace = /\b(business|nonprofit|non-profit|ngo|church|congregation|parish)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command)
+  // "Start a workspace" / "set up my workspace" / "create a new workspace" (found on production: it reached the AI model, which planned a document and failed): the bare word counts only right after
+  // the verb and an article, so "start the farm workspace" is still the farm window.
+  const wantsBareWorkspace = /\b(?:start|create|set ?up|begin|make)\s+(?:me\s+)?(?:a|an|my|the)?\s*(?:new\s+)?workspace\b/i.test(command);
+  const wantsCreateWorkspace = ((/\b(business|nonprofit|non-profit|ngo|church|congregation|parish)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command)) || wantsBareWorkspace)
     && !/\b(?:plan|proposal|strategy|pitch|forecast|budget)\b/i.test(command);
 
   // Reading the workspace back ("who are my customers", "who owes me money") and the two small changes an owner makes most (mark an invoice paid, set a follow-up day).

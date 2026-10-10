@@ -96,5 +96,5 @@ test("the quiet-spell return clears finished answers only, and never work the pe
   const answer = bodyOf("function kyroAnswerShowing(");
   for (const piece of ["data-nexus-live-weather-shell", "nexusRichDataOverlay", "live-knowledge", "lastResponse"]) assert.ok(answer.includes(piece), `an answer is also: ${piece}`);
   const work = bodyOf("function kyroWorkOpen(");
-  for (const piece of ["nexusActiveWorkflowState", "data-nexus-visual-shell", "data-nexus-pilot-evidence-shell", "data-nexus-rural-provider-card-shell", "data-kn=", "nexusVisualProviderQuestionReportState", "workflow-open", "user-map-full-open", "currentSectionId() !== \"dashboard\""]) assert.ok(work.includes(piece), `work includes: ${piece}`);
+  for (const piece of ["nexusActiveWorkflowState", "data-nexus-document-lifecycle", "data-nexus-resume", "data-nexus-visual-shell", "data-nexus-pilot-evidence-shell", "data-nexus-rural-provider-card-shell", "data-kn=", "nexusVisualProviderQuestionReportState", "workflow-open", "user-map-full-open", "currentSectionId() !== \"dashboard\""]) assert.ok(work.includes(piece), `work includes: ${piece}`);
 });

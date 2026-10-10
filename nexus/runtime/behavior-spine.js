@@ -190,7 +190,7 @@ class BehaviorSpine {
     }
     if (execution.state === "awaiting_render") {
       const result = envelope({ command, plan, task, execution, state: "render_required", completed: false,
-        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || "Nexus completed the governed execution and is rendering the verified result.",
+        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || documentSavedResponse(plan, task, context) || businessAnswerResponse(plan, task) || "Nexus completed the governed execution and is rendering the verified result.",
         outcome: { verified: true, renderVerified: false, reason: "renderer_acknowledgement_required" } });
       await this.workspaceStates.stage({ tenantId: context.tenantId, ownerId: context.userId,
         taskId: task.taskId, outcome: result.render });
@@ -292,6 +292,37 @@ function placesFoundResponse(plan, task, context) {
   } catch { return ""; }
 }
 
+// Found on production: "Create a document titled TEST Kyro check ..." really saved the document, and the person was told only "Nexus completed the governed execution and is rendering the verified
+// result." Say what was saved: its name, what kind of file it is, and where to get it (the card carries the Download button).
+const DOCUMENT_KIND_LABELS = Object.freeze({ pdf: "PDF", docx: "Word", md: "Markdown", txt: "text", json: "JSON" });
+function documentSavedResponse(plan, task, context) {
+  try {
+    const step = (plan?.steps || []).find(item => item?.toolId === "documents.create");
+    if (!step) return "";
+    const out = Object.assign({}, ...(task?.steps || []).map(item => (item?.output && typeof item.output === "object" ? item.output : {})));
+    if (!out.documentId) return "";
+    const title = String(step.input?.title || out.title || "your document").replace(/\s+/g, " ").trim().slice(0, 80);
+    const extension = String(out.filename || "").split(".").pop().toLowerCase();
+    const kind = DOCUMENT_KIND_LABELS[extension] || DOCUMENT_KIND_LABELS[String(step.input?.format || "").toLowerCase()] || DOCUMENT_KIND_LABELS.txt;
+    const sw = context?.locale === "sw" || context?.language === "sw";
+    return sw
+      ? `Nimehifadhi "${title}" kama faili ya ${kind}; bonyeza Download kwenye kadi.`
+      : `Saved "${title}" as a ${kind} file; press Download on the card.`;
+  } catch { return ""; }
+}
+
+// "Open the business workspace" / "show my business workspace": the business tool already worded its answer ("You do not have a business or nonprofit workspace yet. Tell me its name and what it does,
+// and I can start one."), and the person was told only "Nexus completed the governed execution...". Say the tool's own answer.
+function businessAnswerResponse(plan, task) {
+  try {
+    const step = (plan?.steps || []).find(item => /^business\./.test(String(item?.toolId || "")));
+    if (!step) return "";
+    const out = Object.assign({}, ...(task?.steps || []).map(item => (item?.output && typeof item.output === "object" ? item.output : {})));
+    const answer = String(out.response || out.summary || "").replace(/\s+/g, " ").trim();
+    return answer ? answer.slice(0, 400) : "";
+  } catch { return ""; }
+}
+
 function completedResponse(task) {
   const explicit = task?.outcome?.summary || task?.outcome?.message;
   return explicit || `Completed and verified: ${task.goal}`;
@@ -317,4 +348,4 @@ function envelope({ command, plan, execution = null, task = null, state, complet
     receipts: execution?.receipts || [], render });
 }
 
-module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse });
+module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse, documentSavedResponse, businessAnswerResponse });

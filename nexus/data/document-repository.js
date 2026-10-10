@@ -57,6 +57,16 @@ class DocumentRepository {
     return (result.rows || result)[0]?.content_base64 || null;
   }
 
+  // The text a document was made from (kept with its latest version), so it can be exported again as another file type. null for an older document saved before the text was kept.
+  async getSource({ tenantId, ownerId, documentId }) {
+    const result = await this.db.query(`select d.title, v.content->>'sourceText' as source_text
+      from nexus_documents d
+      join lateral (select content from nexus_document_versions where document_id=d.document_id order by version desc limit 1) v on true
+      where d.tenant_id=$1 and d.owner_id=$2 and d.document_id=$3 and d.deleted_at is null`, [tenantId, ownerId, documentId]);
+    const row = (result.rows || result)[0];
+    return row ? { title: row.title, sourceText: row.source_text || "" } : null;
+  }
+
   // Archive, never delete: the document is hidden from get/list (they skip anything with deleted_at) but its row, versions and
   // stored file all stay. Tenant AND owner scoped like get(), so only the person who created it can archive it. Returns the
   // archived document's id and title, or null when there is no such active document for this owner.

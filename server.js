@@ -22365,15 +22365,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     return { ...common, ok: false, status: "needs-model", response: "", medicalEmergency: effectiveMentalHealthSignal.state === "medical_emergency" };
   }
   if (toolName === "nexus_translation") {
-    const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Arabic|Portuguese)\b/i);
-    const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", arabic: "ar", portuguese: "pt" };
+    // "Kiswahili" is how Kenyans say Swahili: "Translate good morning to Kiswahili" used to match no language at all and fall back to English.
+    const targetMatch = command.match(/\b(?:into|to|in)\s+(English|Spanish|French|Swahili|Kiswahili|Arabic|Portuguese)\b/i);
+    const languageMap = { english: "en", spanish: "es", french: "fr", swahili: "sw", kiswahili: "sw", arabic: "ar", portuguese: "pt" };
     const targetValue = args.targetLanguage || targetMatch?.[1] || args.language || "en";
     const targetLanguage = languageMap[String(targetValue).toLowerCase()] || String(targetValue).toLowerCase();
     // targetMatch above accepts "in" as a lead-in ("Translate this in
     // French") alongside "into"/"to" -- this cleanup must strip the same
     // trailing lead-in set, or the "in French" fragment leaks into the text
     // that actually gets sent to the translator.
-    const sourceText = sanitizePilotText(args.text || command.replace(/^\s*translate\s*:?\s*/i, "").replace(/\s+\b(?:into|to|in)\s+(?:English|Spanish|French|Swahili|Arabic|Portuguese)\s*[.!?]*$/i, ""), 1200);
+    const sourceText = sanitizePilotText(args.text || command.replace(/^\s*translate\s*:?\s*/i, "").replace(/\s+\b(?:into|to|in)\s+(?:English|Spanish|French|Swahili|Kiswahili|Arabic|Portuguese)\s*[.!?]*$/i, ""), 1200);
     const translation = await translateDynamicContent(db, user, { text: sourceText, targetLanguage, sourceLanguage: args.sourceLanguage || "en", context: "openai-native-translation" });
     return {
       ...common,
