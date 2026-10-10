@@ -69,9 +69,26 @@ function createBusinessWorkspaceCounter({ repository, access, consents, env }) {
   };
 }
 
+// A read of the person's own business or nonprofit workspace, answered in one call with no plan, no tool step and no AI model: "how is my nonprofit doing this month", "which grants are due soon". The spoken path (see
+// planner.js, deterministicOnly) can only return a finished answer, so it asks for the read directly. Only READ intents are answered here; anything that would change the workspace returns null (it needs a yes first).
+// Resolves to the spoken answer, or null when this is not a read of the workspace.
+function createBusinessReader({ repository, access, consents, env }) {
+  let api = null;
+  return async function read({ command, context }) {
+    const text = String(command || "");
+    const intent = voiceDispatch.classify(text);
+    if (!intent || !voiceDispatch.isReadIntent(intent)) return null;
+    api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
+    const businessRequest = ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body });
+    const result = await voiceDispatch.run({ command: text, args: {}, confirmed: false, businessRequest, timeZone: context?.timeZone });
+    if (!result || (result.status !== "completed" && result.status !== "needs-input")) return null;
+    return typeof result.response === "string" && result.response.trim() ? result.response : null;
+  };
+}
+
 function verifyBusinessOutcome({ result }) {
   const verified = result?.verified === true && typeof result?.response === "string" && result.response.length > 0;
   return { verified, method: "real_business_workspace_write", reason: verified ? null : "business_outcome_incomplete" };
 }
 
-module.exports = Object.freeze({ createBusinessExecutor, createBusinessWorkspaceCounter, verifyBusinessOutcome });
+module.exports = Object.freeze({ createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, verifyBusinessOutcome });
