@@ -414,7 +414,7 @@ test("the tool call from the voice session: a 429 reaches the model as a refusal
     Object.assign(sandbox, {
       kyroVoiceIntakeOwnsTurn: () => false, nexusGenesisVoiceDebugLog() {}, languageCode: () => "en",
       genesisWorkspaceActionFromFinalTranscript: () => null, executeGenesisWorkspaceFromFinalTranscript: async () => false, runAuthoritativeGenesisWorkspaceBridge: async () => {},
-      kyroDeviceTimeZone: () => "America/Chicago"
+      kyroDeviceTimeZone: () => "America/Chicago", kyroVisualRequestKind: () => null
     });
     sandbox.fetch = fetchImpl;
     vm.runInContext(`${appSource.slice(start, end)}\nthis.callTool = callNexusOpenAiRealtimeTool;`, sandbox);

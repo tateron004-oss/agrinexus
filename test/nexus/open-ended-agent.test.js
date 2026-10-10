@@ -355,11 +355,15 @@ test("a complete video-search request has an executable Videos plan, distinct fr
   const plan = completeVideoSearchPlan("Show me videos of maize harvesting.", catalog);
   assert.equal(plan.application, "videos");
   assert.equal(plan.steps[0].toolId, "videos.search");
-  // Same leading-preposition/trailing-punctuation shape completeImageSearchPlan's own extraction has
-  // (neither strips them) -- a real search provider handles a stray "of"/period fine, so this matches
-  // the established sibling behavior rather than diverging from it.
-  assert.equal(plan.steps[0].input.query, "of maize harvesting.");
-  assert.equal(completeVideoSearchPlan("Find videos about drip irrigation.", catalog).steps[0].input.query, "about drip irrigation.");
+  // The query is the topic alone (cleanVisualSearchQuery): this used to keep a stray leading "of"/"about" and the full stop, which turned "Find a picture of a maize armyworm" into the search "a of a maize armyworm".
+  assert.equal(plan.steps[0].input.query, "maize harvesting");
+  assert.equal(completeVideoSearchPlan("Find videos about drip irrigation.", catalog).steps[0].input.query, "drip irrigation");
+  assert.equal(completeImageSearchPlan("Find a picture of a maize armyworm", catalog).steps[0].input.query, "a maize armyworm");
+  assert.equal(completeImageSearchPlan("Show me pictures of drip irrigation.", catalog).steps[0].input.query, "drip irrigation");
+  assert.equal(completeImageSearchPlan("Show me maize armyworm pictures", catalog).steps[0].input.query, "maize armyworm");
+  assert.equal(completeImageSearchPlan("Search for some photos of the Rift Valley", catalog).steps[0].input.query, "the Rift Valley");
+  assert.equal(completeImageSearchPlan("Show me pictures", catalog).steps[0].input.query, "Show me pictures", "nothing left after cleaning: the whole request is the query");
+  assert.equal(completeVideoSearchPlan("Play a video of the harvest festival.", catalog).steps[0].input.query, "the harvest festival");
   // Must not be caught by the neighboring image-search fast path (different noun) or by media.play's
   // fast path (media.play's own matcher only requires the text to start with "play" -- "play a video of
   // the harvest" would otherwise be misread as a song title to look up on iTunes/YouTube).
