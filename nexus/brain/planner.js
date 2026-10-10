@@ -17,6 +17,7 @@ const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNot
 const { professionalAdviceTopic, professionalAdviceReply, professionalAdviceGoal, withProfessionalAdviceNote } = require("../guardrails/professional-advice.js");
 const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext } = require("../knowledge/us-small-business.js");
 const { technologyTopic, technologyAnswer } = require("../knowledge/small-business-technology.js");
+const { aiToolsTopic, aiToolsAnswer } = require("../knowledge/ai-tools-for-business.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 const { extractContactStatement, extractContactRequest, resolveContact, describeContact, contactName, cleanContactName, spokenPhone, localPhoneToE164 } = require("../memory/contacts.js");
 const { parseTimeOfDay, formatTimeOfDay } = require("../brief/schedule.js");
@@ -437,13 +438,21 @@ class OpenEndedPlanner {
     const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: command.text });
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
     // It applies to people in the United States only (their time zone, or a question that names a US programme), never to a farmer in Kenya asking about a loan.
-    const usTopic = !ownWorkspace && usPerson ? usSmallBusinessTopic(command.text) : null;
+    // A question in the technology and AI vocabulary ("use AI to grow my business", "protect my business email") belongs to the technology guide even when it also names growth or marketing, so it is looked up first and wins.
+    const techTopic = !ownWorkspace && usPerson ? technologyTopic(command.text) : null;
+    // Choosing AI tools for a job (a business plan, funding, marketing, customer service, operations) and how to choose one: for any owner in any country (see knowledge/ai-tools-for-business.js). A specific technology topic
+    // (AI safety, scams, fake reviews, advertising claims, cybersecurity) still goes to the technology guide; the general "getting started with AI" answer gives way to this one.
+    const aiToolsTopicId = !ownWorkspace && (!techTopic || techTopic === "ai-getting-started") ? aiToolsTopic(command.text) : null;
+    if (aiToolsTopicId) {
+      const guide = aiToolsAnswer(aiToolsTopicId, { us: usPerson });
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `ai-tools-for-business:${aiToolsTopicId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    const usTopic = !ownWorkspace && usPerson && !techTopic ? usSmallBusinessTopic(command.text) : null;
     if (usTopic) {
       const guide = usSmallBusinessAnswer(usTopic, { question: command.text });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${usTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // The checked technology and AI guide (using AI tools safely, AI scams, fake reviews, cybersecurity, phishing, email and domain protection, hiring a web host or designer, what Kyro can automate, getting online).
-    const techTopic = !ownWorkspace && usPerson ? technologyTopic(command.text) : null;
     if (techTopic) {
       const guide = technologyAnswer(techTopic);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `small-business-technology:${techTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });

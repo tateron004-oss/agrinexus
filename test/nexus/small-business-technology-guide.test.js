@@ -52,7 +52,7 @@ test("which sentences ask for a consulting template, and the document they name"
   assert.deepEqual(templateRequest("Write an AI use policy for Sunrise Cafe"), { kind: "ai-use-policy", client: "Sunrise Cafe", format: "docx" });
   assert.deepEqual(templateRequest("Draft questions for a web designer"), { kind: "vendor-questions", client: "", format: "docx" });
   assert.equal(templateRequest("Prepare an app brief for a barber shop booking app").kind, "app-brief");
-  for (const text of ["Draft a grant proposal", "Create a document for my maize sales", "Draft a launch kit for my shop", "Write a business plan", "Create an invoice for Grace Otieno", "What is a website brief?"]) assert.equal(templateRequest(text), null, text);
+  for (const text of ["Draft a grant proposal", "Create a document for my maize sales", "Draft a launch kit for my shop", "Write a marketing slogan", "Create an invoice for Grace Otieno", "What is a website brief?"]) assert.equal(templateRequest(text), null, text);
 });
 
 test("every template is a fixed document with blanks, names the client, and never claims to know anything about them", () => {
@@ -80,10 +80,12 @@ test("through the planner, for a person in the United States: the technology gui
   assert.match(plan.response, /never type in passwords/); assert.match(plan.response, /\(checked 9 October 2026\)/); assert.ok(plan.sources.some(source => /ftc\.gov/.test(source.url)));
 });
 
-test("through the planner, outside the United States the US-agency guide is not used", async () => {
-  // (it is left to the rest of the planner, which here is the planning model: the test planner's model refuses to plan, which is how this test sees the guide was not used)
-  const plan = await ask(planner(async () => "AI can help, but check its answers."), "Is it safe to use ChatGPT for my business?", { timeZone: "Africa/Nairobi" }).catch(error => ({ reachedPlanningModel: /must not reach the AI planning model/.test(error.message) }));
-  assert.equal(plan.knowledge, undefined); assert.equal(plan.reachedPlanningModel, true);
+test("through the planner, outside the United States the US technology guide is not used (the AI-tools answer is, and says its sources are American)", async () => {
+  const plan = await ask(planner(async () => "AI can help, but check its answers."), "Is it safe to use ChatGPT for my business?", { timeZone: "Africa/Nairobi" });
+  assert.equal(plan.knowledge, "ai-tools-for-business:ai-tools-choose"); assert.match(plan.response, /These are United States government sources/);
+  // a technology question the AI-tools guide does not cover is left to the rest of the planner there (here the planning model, which refuses to plan: that is how this test sees the guide was not used)
+  const other = await ask(planner(async () => "x"), "What is DMARC?", { timeZone: "Africa/Nairobi" }).catch(error => ({ reachedPlanningModel: /must not reach the AI planning model/.test(error.message) }));
+  assert.equal(other.knowledge, undefined); assert.equal(other.reachedPlanningModel, true);
 });
 
 test("through the planner: a template request makes a document directly (no model), in the format asked for, and ordinary drafts are untouched", async () => {

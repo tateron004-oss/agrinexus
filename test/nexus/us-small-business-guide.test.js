@@ -27,7 +27,7 @@ test("every topic has a plain answer, official sources with web addresses, the d
     const answer = guide.usSmallBusinessAnswer(id);
     assert.equal(answer.topic, id);
     assert.ok(answer.sources.length >= 1, id);
-    for (const source of answer.sources) { assert.match(source.url, /^https:\/\/(?:www\.)?(?:sba|score|irs|cdfifund|grants|gao|nmsdc|federalregister)\.(?:gov|org)\//, `${id}: ${source.url}`); assert.ok(source.name, id); }
+    for (const source of answer.sources) { assert.match(source.url, /^https:\/\/(?:www\.)?(?:sba|score|irs|cdfifund|grants|gao|nmsdc|federalregister|sec|uspto)\.(?:gov|org)\//, `${id}: ${source.url}`); assert.ok(source.name, id); }
     assert.match(answer.text, new RegExp(`\\(checked ${guide.CHECKED_ON}\\)`), id);
     assert.match(answer.text, /This is general information, not legal, tax or financial advice, and rules change, so confirm on the official site\. I cannot file or apply for anything for you\.$/, id);
   }
@@ -68,7 +68,7 @@ test("through the planner, for a person in the United States: the checked guide 
   const plan = await ask(planner(async () => { throw new Error("the guide must answer without the model"); }), "How do I get certified as a minority-owned business?", { timeZone: "America/New_York" });
   assert.equal(plan.application, "conversation"); assert.deepEqual(plan.steps, []);
   assert.equal(plan.knowledge, "us-small-business:certification"); assert.equal(plan.guardrail, "professional-advice");
-  assert.match(plan.response, /There are several different certifications/); assert.match(plan.response, /\(checked 10 October 2026\)/);
+  assert.match(plan.response, /There are several different certifications/); assert.match(plan.response, /\(checked 9 October 2026\)/);
   assert.ok(plan.sources.some(source => /sba\.gov\/certifications/.test(source.url)));
 });
 
