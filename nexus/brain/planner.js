@@ -1158,13 +1158,24 @@ function completeLogisticsTrackPlan(text, catalog) {
       input: { origin: match[1].trim(), destination: match[2].trim() }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// What to search for in "Find a picture of a maize armyworm" or "Show me videos about drip irrigation": the topic alone. The older cleaning took out only the verb and the noun, so the search provider was asked for
+// "a of a maize armyworm" and "about drip irrigation." (found testing production). The leading "a picture of", "some videos about", the noun anywhere else ("maize armyworm pictures") and the closing full stop are removed;
+// if nothing is left ("show me pictures") the whole request is the query, as before.
+function cleanVisualSearchQuery(goal, verbs, nouns) {
+  const query = String(goal || "")
+    .replace(new RegExp(`^\\s*(?:nexus[,:]?\\s*)?(?:please\\s+)?(?:${verbs})\\s+(?:for\\s+)?(?:me\\s+)?`, "i"), "")
+    .replace(new RegExp(`^(?:(?:a|an|the|some|any|more|a few)\\s+)?(?:(?:good|nice|clear|real|recent)\\s+)?(?:${nouns})\\s*(?:of|for|about|showing|on|with)?\\s*`, "i"), "")
+    .replace(new RegExp(`\\b(?:${nouns})\\b`, "ig"), "")
+    .replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
+  return query || String(goal || "").trim();
+}
+
 function completeImageSearchPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(show|find|search|display|open)\b/i.test(goal) || !/\b(images?|pictures?|photos?)\b/i.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "images.search") ||
       !catalog.applications.some(app => app.applicationId === "images")) return null;
-  const query = goal.replace(/^\s*(?:nexus[,:]?\s*)?(?:show|find|search|display|open)\s+(?:me\s+)?/i, "")
-    .replace(/\b(images?|pictures?|photos?)\b/ig, "").replace(/\s+/g, " ").trim() || goal;
+  const query = cleanVisualSearchQuery(goal, "show|find|search|display|open", "images?|pictures?|photos?");
   return { goal, application: "images", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "search-images", title: "Search governed images", toolId: "images.search",
       input: { query, requireSources: true }, dependsOn: [], fallbackToolIds: [] }] };
@@ -1179,8 +1190,7 @@ function completeVideoSearchPlan(text, catalog) {
   if (!/\b(show|find|search|watch|play|display|open)\b/i.test(goal) || !/\bvideos?\b/i.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "videos.search") ||
       !catalog.applications.some(app => app.applicationId === "videos")) return null;
-  const query = goal.replace(/^\s*(?:nexus[,:]?\s*)?(?:show|find|search|watch|play|display|open)\s+(?:me\s+)?/i, "")
-    .replace(/\bvideos?\b/ig, "").replace(/\s+/g, " ").trim() || goal;
+  const query = cleanVisualSearchQuery(goal, "show|find|search|watch|play|display|open", "videos?");
   return { goal, application: "videos", riskTier: "low", clarification: null,
     steps: [{ clientStepId: "search-videos", title: "Search governed videos", toolId: "videos.search",
       input: { query }, dependsOn: [], fallbackToolIds: [] }] };

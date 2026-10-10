@@ -61,7 +61,7 @@ test("after the user workspace is redrawn, every result drawn into it is drawn a
       openAskNexus() { calls.push("open-ask"); }, enableHeyAgriNexusMode() {}, renderUserWorkspace: () => { calls.push("redraw"); },
       nexusDocumentLifecycleComplete: () => false, renderNexusAuthoritativeResume: () => calls.push("resume"), renderNexusAuthoritativeDocument: () => calls.push("document"),
       renderNexusAuthoritativeImages: async () => calls.push("images"), renderNexusAuthoritativeVideos: async () => calls.push("videos"), renderNexusAuthoritativeChecklist: async () => calls.push("checklist"), renderNexusAuthoritativeData: () => calls.push("data"),
-      setVoiceResponse() { calls.push("say"); }, String, Boolean
+      setVoiceResponse() { calls.push("say"); }, nexusGalleryMessage: () => "", String, Boolean
     };
     vm.createContext(sandbox);
     vm.runInContext(`${source}\nthis.run = processNexusAuthoritativeBehaviorResult;`, sandbox);
@@ -75,7 +75,7 @@ test("after the user workspace is redrawn, every result drawn into it is drawn a
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, NEXUS_AUTHORITATIVE_TASK_KEY: "k", validateNexusPassivePresentation() {}, recordNexusMapCommandBoundRenderTrace() {},
     nexusAuthoritativeOutcomeRenderer: async () => ({ render: async () => ({ acknowledged: true }) }), nexusAgenticBrainLastResult: null, nexusPendingBehaviorConfirmation: null,
     openAskNexus() {}, enableHeyAgriNexusMode() {}, renderUserWorkspace() {}, nexusDocumentLifecycleComplete: () => false, renderNexusAuthoritativeImages: async () => { throw new Error("No authoritative image result loaded visibly."); },
-    setVoiceResponse() { sandbox.said = true; }, String, Boolean
+    setVoiceResponse() { sandbox.said = true; }, nexusGalleryMessage: () => "", String, Boolean
   };
   vm.createContext(sandbox);
   vm.runInContext(`${source}\nthis.run = processNexusAuthoritativeBehaviorResult;`, sandbox);
