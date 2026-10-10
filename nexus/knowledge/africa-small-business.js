@@ -77,8 +77,13 @@ function africaCountry({ timeZone = "", country = "", text = "" } = {}) {
   const said = String(text || ""); const zone = String(timeZone || ""); const place = String(country || "").toLowerCase();
   if (KENYA_WORDS.test(said) && !NIGERIA_WORDS.test(said)) return "ke";
   if (NIGERIA_WORDS.test(said) && !KENYA_WORDS.test(said)) return "ng";
-  if (KENYA_ZONES.test(zone) || place === "kenya" || place === "ke") return "ke";
-  if (NIGERIA_ZONES.test(zone) || place === "nigeria" || place === "ng") return "ng";
+  if (KENYA_ZONES.test(zone)) return "ke";
+  if (NIGERIA_ZONES.test(zone)) return "ng";
+  // the device is somewhere that is not Africa (a US time zone, for example): the profile's country is not used, because an owner who signed up with a default country but is using the app in the United States is not
+  // asking about Kenya. The profile's country counts only when the device sends no zone or one from elsewhere in Africa.
+  if (zone && !/^Africa\//.test(zone)) return null;
+  if (place === "kenya" || place === "ke") return "ke";
+  if (place === "nigeria" || place === "ng") return "ng";
   return null;
 }
 

@@ -97,3 +97,14 @@ test("a question that itself names a US term gets the US answer even on a device
   assert.equal((await ask("What is an EIN?", "Africa/Lagos")).knowledge, "us-small-business:ein-registration");
   assert.equal((await ask("What is the KRA turnover tax rate?", "Africa/Nairobi")).knowledge, "africa-small-business:ke-tax");
 });
+
+// Found by the prompt battery: the test account's profile says Kenya, so a device in Lagos was answered with Kenya's guide, and a device in Chicago got Kenya's answers to US questions. The device's time zone comes first.
+test("the device's time zone beats the profile's country", async () => {
+  assert.equal(africa.africaCountry({ timeZone: "Africa/Lagos", country: "Kenya" }), "ng");
+  assert.equal(africa.africaCountry({ timeZone: "Africa/Nairobi", country: "Nigeria" }), "ke");
+  assert.equal(africa.africaCountry({ timeZone: "America/Chicago", country: "Kenya" }), null);
+  assert.equal(africa.africaCountry({ timeZone: "Africa/Accra", country: "Kenya" }), "ke", "another African zone: the profile's country counts");
+  assert.equal(africa.africaCountry({ country: "Kenya" }), "ke");
+  assert.equal((await ask("Where can I get free business help?", "America/Chicago", "Kenya")).knowledge, "us-small-business:free-help");
+  assert.equal((await ask("Do I need a TIN?", "Africa/Lagos", "Kenya")).knowledge, "africa-small-business:ng-tax");
+});
