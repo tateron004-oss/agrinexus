@@ -35,6 +35,13 @@
       healthClinic: "Find a clinic", healthClinicSay: "Find a clinic near me", healthClinicWait: "Looking for clinics near you.",
       healthPharmacy: "Find a pharmacy", healthPharmacySay: "Find a pharmacy near me", healthPharmacyWait: "Looking for pharmacies near you.",
       healthNumber: "Emergency number", healthNumberSay: "What is the emergency number?",
+      farmTitle: "Farm",
+      farmLine: "I keep your farm records and give general crop guidance. I do not name a spray or a dose.",
+      farmSay: "To log something, just say it, for example: it rained 12 mm, or I harvested 50 kg of maize.",
+      farmProblem: "For a crop problem, tell me what you see.",
+      farmLog: "My farm log", farmLogSay: "Show my farm log",
+      farmRain: "Rain this month", farmRainSay: "How much rain did I get this month?",
+      farmMonth: "This month's money", farmMonthSay: "Give me my summary for this month",
       close: "Close"
     },
     sw: {
@@ -54,6 +61,11 @@
       healthReadings: "Vipimo vyangu", healthReadingsSay: "Onyesha vipimo vyangu vya shinikizo la damu",
       healthClinic: "Tafuta kliniki", healthClinicSay: "Tafuta kliniki karibu nami", healthClinicWait: "Natafuta kliniki karibu nawe.",
       healthNumber: "Namba ya dharura", healthNumberSay: "Nambari ya dharura ni ipi?",
+      farmTitle: "Shamba",
+      farmLine: "Ninatunza kumbukumbu za shamba lako na kutoa mwongozo wa jumla kuhusu mazao. Sitaji dawa wala kipimo.",
+      farmSay: "Kuandika kitu, kisema tu, kwa mfano: nimepata mvua milimita 12, au nimevuna kilo 50 za mahindi.",
+      farmProblem: "Kwa tatizo la zao, niambie unachokiona.",
+      farmMonth: "Pesa za mwezi huu", farmMonthSay: "muhtasari wa mwezi",
       close: "Funga"
     }
   };
@@ -102,12 +114,37 @@
   const HEALTH_SPECIFIC = /telehealth|tele-health|virtual|video visit|intake|doctor|nurse|appointment|\bvisit\b|blood[\s-]?pressure|hypertension|\bbp\b|sugar|glucose|diabetes|obesity|\brpm\b|\brtm\b|pulse|oxygen|\bweight\b|medicine|medication|pharmac|clinic|refill|symptom|\bpain\b|fever|emergency|chronic|dawa|kliniki|shinikizo|sukari|dharura|daktari/i;
   function healthIsGeneral(text) { return !HEALTH_SPECIFIC.test(String(text || "")); }
 
+  // Farm: the records Kyro really keeps (the farm log, the rain total, the month's money) and general crop guidance that never names a spray or a dose. Said things are logged by saying them, so they
+  // are lines, not buttons; the choices are the reads that answer without the AI model.
+  function farmSpec({ lang } = {}) {
+    const sw = lang === "sw";
+    const t = TEXT[sw ? "sw" : "en"];
+    const choices = sw
+      ? [{ id: "month", label: t.farmMonth, say: t.farmMonthSay, tool: "nexus_everyday_records" }]
+      : [{ id: "log", label: t.farmLog, say: t.farmLogSay, tool: "nexus_everyday_records" },
+         { id: "rain", label: t.farmRain, say: t.farmRainSay, tool: "nexus_everyday_records" },
+         { id: "month", label: t.farmMonth, say: t.farmMonthSay, tool: "nexus_everyday_records" }];
+    return { id: "agriculture", title: t.farmTitle, closeLabel: t.close, lines: [t.farmLine, t.farmSay, t.farmProblem], choices };
+  }
+
+  // A farm request that names something specific (a crop problem, a price, the weather, a thing to log, a sale, a drone) has its own flow and is not answered with the general card.
+  const FARM_SPECIFIC = /leaf|leaves|spot|yellow|wilt|blight|rot\b|mould|mold|pest|disease|insect|worm|caterpillar|aphid|locust|armyworm|drone|scan|price|market|sell|\bsold\b|\bsale\b|\bbuy|weather|forecast|\brain|storm|harvest|plant(ed|ing)?\b|sow|\blog\b|record|water|irrigat|soil|fertili[sz]|manure|tank|egg|milk|\bcow|goat|chicken|sheep|loan|budget|expense|income|\bpaid\b|\bowe|mvua|mavuno|mbolea|shamba la|ugonjwa|wadudu/i;
+  function farmIsGeneral(text) { return !FARM_SPECIFIC.test(String(text || "")); }
+
   // The card for a workspace that has one (null when it does not: the usual window opens).
   function specFor(workspace, options) {
     if (workspace === "workforce") return workSpec(options);
     if (workspace === "learning") return learnSpec(options);
     if (workspace === "health") return healthSpec(options);
+    if (workspace === "agriculture") return farmSpec(options);
     return null;
+  }
+
+  // Whether a request to open a workspace is general enough for its card (true for workspaces whose card is always right, false-able for health and farm, which have specific flows of their own).
+  function isGeneralFor(workspace, text) {
+    if (workspace === "health") return healthIsGeneral(text);
+    if (workspace === "agriculture") return farmIsGeneral(text);
+    return true;
   }
 
   const STYLE_ID = "kyro-answer-card-style";
@@ -158,5 +195,5 @@
     return cards.length > 0;
   }
 
-  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, specFor, show, remove, TEXT });
+  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, farmSpec, farmIsGeneral, isGeneralFor, specFor, show, remove, TEXT });
 });
