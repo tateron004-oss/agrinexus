@@ -27,7 +27,9 @@ function readDeskRequest(text) {
   let m;
   if ((m = /^(?:please )?(?:i (?:want|would like|need) to )?report(?: a| an)?(?: problem| issue)?\s*:\s*(.{5,300})$/i.exec(t))) return { action: "report", text: clean(m[1]) };
   if ((m = /^(?:please )?(?:i (?:want|would like|need) to )?report (?:a |an |that |the )?(.{5,300})$/i.exec(t)) && PROBLEM.test(m[1]) && !/^(?:on|about|for|to|generation)\b/i.test(m[1])) return { action: "report", text: clean(m[1]) };
-  if (/^(?:what(?:'s| is)|show|check|any (?:news|update) on) (?:the )?(?:status of )?my (?:reports?|issues?)$/.test(lower) || /^what is the status of my reports?$/.test(lower)) return { action: "my-reports" };
+  if (/^(?:what(?:'s| is)|show|check|any (?:news|update) on) (?:the )?(?:status of )?my (?:reports?|issues?)$/.test(lower) || /^what is the status of my reports?$/.test(lower)
+    // ("status of my reports", "any updates on my reports", "list my reports")
+    || /^(?:(?:tell me|give me|show me|check|any)\s+)?(?:the\s+)?(?:status|updates?)\s+(?:of|on)\s+my\s+(?:reports?|issues?)$/.test(lower) || /^(?:list|show me)\s+my\s+(?:reports?|issues?)$/.test(lower)) return { action: "my-reports" };
   if (/^(?:show|list|give me) (?:the )?open reports$/.test(lower)) return { action: "open-reports" };
   if (/^(?:show|give me) (?:the )?report summary$/.test(lower)) return { action: "summary" };
   if ((m = /^(close|resolve|reopen|mark) report #?(\d{1,6})(?: as)?(?: (in progress|resolved|closed|open))?\s*[:,-]?\s*(.*)$/i.exec(t))) {

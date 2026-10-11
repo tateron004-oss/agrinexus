@@ -130,7 +130,11 @@ async function handle(ctx) {
   }
   if ((m = /^(?:please )?(?:print|make|create|prepare|generate|give me|export|produce)(?: me)?(?: a| an| my| the| our)? (?:printable )?(.+?)(?: (?:as|in) (?:a )?(?:pdf|word|docx)(?: file)?)?$/i.exec(t)) && /\b(?:report|summary|record|list|register|statement|overview)\b/i.test(t) && /^(?:please )?(?:print|make|create|prepare|generate|give me|export|produce)/i.test(t)) {
     const what = m[1]; const kind = REPORTS.find(entry => entry.pattern.test(what));
-    if (!kind) return null;
+    if (!kind) {
+      // "Print my monthly report": which one? Only for a person who keeps farm records and only for the bare word "report".
+      if (/^(?:(?:monthly|weekly|quarterly|annual|yearly|this month'?s?|last month'?s?)\s+)?report$/i.test(clean(what)) && /\b(?:my|our)\b/i.test(t) && await ctx.hasFarmData()) return 'Which report? I can print your farm summary, expense report, income report, profit statement, harvest record, inventory list, livestock register, task list or cooperative statement. Say, for example, "print my expense report as a PDF".';
+      return null;
+    }
     // Only the farmer's own records: "make a summary of this article" or "a list of tasks for my trip" is not a farm report, and someone who keeps
     // no farm records is left to normal planning.
     if (!/\b(?:my|our|farm)\b/i.test(t) || /\b(?:of|about)\b/i.test(t) || (kind.id === "summary" && !/\bfarm\b/i.test(t)) || !(await ctx.hasFarmData())) return null;

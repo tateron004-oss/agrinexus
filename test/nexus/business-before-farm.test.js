@@ -141,3 +141,10 @@ test("a person with a workspace who asks how many of something is in inventory, 
   const none = planner({ count: async () => 0, read: async () => { throw new Error("must not be read"); } });
   assert.match((await ask(none, "How many bags of maize do I have in stock?", true)).response, /in your stock yet|on record/, "the farmer's stock question is unchanged");
 });
+
+// Found by the all-apps battery: "Baby Otieno received BCG, next dose in 6 weeks" was answered "You do not have a business or nonprofit workspace yet" because "X received ..." was read as a service to a participant.
+test("a clinic's vaccination or a farm delivery is never mistaken for a service to a participant, and real services still are", () => {
+  const dispatch = require("../../nexus/business/voice-dispatch.js");
+  for (const text of ["Baby Otieno received BCG, next dose in 6 weeks", "Amina received 20 bags of maize", "Mary received her measles vaccine", "John got 10 tablets of paracetamol"]) assert.equal(dispatch.classify(text), null, text);
+  for (const text of ["Maria Lopez received a food box", "Maria Lopez attended the workshop", "We served Maria Lopez a hot meal"]) assert.equal(dispatch.classify(text), "logService", text);
+});

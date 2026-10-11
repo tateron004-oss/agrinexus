@@ -344,6 +344,13 @@ class OpenEndedPlanner {
       let longForm = false;
       const work = await turn({ text: command.text, store: toolkit.store, tenantId: command.tenantId, userId: command.actorId, timeZone: context?.timeZone, roles: context?.roles || [], memory: this.memory, notifications: toolkit.notifications, nameOf: toolkit.nameOf, country: context?.country || "", onLongForm: () => { longForm = true; } });
       const goal = String(command.text || "").trim();
+      // Spoken (no tool steps possible): say the report itself, a screenful at a time, and say where the file can be made.
+      if (work?.report && context?.deterministicOnly === true) {
+        const lines = String(work.report.content || "").split("\n").filter(line => line.trim() && !/^[-=_ ]{6,}$/.test(line.trim()));
+        let spoken = ""; for (const line of lines) { if ((spoken + line).length > 700) break; spoken += `${line.trim()}. `; }
+        return Object.freeze({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false, planningAttempts: 0,
+          response: `${spoken.trim() || work.report.title} To get it as a file, type "${goal.replace(/[.!?]+$/, "")} as a PDF" on the main screen and I will save it to your documents.` });
+      }
       const catalog = work?.report ? await this.catalog() : null;
       if (work?.report && catalog.tools.some(tool => tool.toolId === "documents.create") && catalog.applications.some(app => app.applicationId === "documents")) return Object.freeze({ goal, application: "documents", riskTier: "low", clarification: null, planningAttempts: 0,
         steps: [{ clientStepId: stepId, title: work.report.title, toolId: "documents.create", input: { title: work.report.title, content: work.report.content, format: work.report.format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] });
@@ -522,6 +529,8 @@ class OpenEndedPlanner {
       }
       // A starter document asked for by voice ("Draft a business plan"): saving a document needs the screen's document card, which the voice route does not have, so the person is told how, instead of
       // hearing "I couldn't do that one" (see knowledge/consulting-templates.js). Nothing is saved.
+      const spokenDocuments = await documentsListPlan(this.documents, command);
+      if (spokenDocuments) return Object.freeze({ ...spokenDocuments, planningAttempts: 0 });
       const spokenTemplate = templateRequest(command.text);
       if (spokenTemplate) {
         return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0, sourceRequired: false,
@@ -653,6 +662,9 @@ class OpenEndedPlanner {
       const exported = await exportLatestDocumentPlan(this.documents, { text: command.text, format: exportFormat, tenantId: command.tenantId, ownerId: command.actorId });
       if (exported) return Object.freeze({ ...exported, planningAttempts: 1 });
     }
+    // "Show my documents", "what documents do I have": the titles of the person's own saved documents, newest first.
+    const documentsListed = await documentsListPlan(this.documents, command);
+    if (documentsListed) return Object.freeze({ ...documentsListed, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
@@ -1421,6 +1433,20 @@ function exportLatestDocumentFormat(text) {
   const match = EXPORT_LATEST_DOCUMENT.exec(goal);
   return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] || null : null;
 }
+const DOCUMENTS_LIST_REQUEST = /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:(?:show|list|read|open|see)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?my\s+(?:saved\s+)?(?:documents|docs|files)|what\s+(?:documents|docs|files)\s+do\s+i\s+have|(?:do\s+i\s+have\s+any|what\s+have\s+i\s+saved\s+in\s+my)\s+(?:saved\s+)?(?:documents|docs))\s*[.?!]*$/i;
+// "Show my documents", "what documents do I have": the titles of the person's own saved documents, newest first (null when it is not that request or the documents cannot be read).
+async function documentsListPlan(documents, command) {
+  const goal = String(command.text || "").trim();
+  if (!documents?.list || !DOCUMENTS_LIST_REQUEST.test(goal)) return null;
+  let rows = null;
+  try { rows = await documents.list({ tenantId: command.tenantId, ownerId: command.actorId, limit: 8 }); } catch { return null; }
+  if (!Array.isArray(rows)) return null;
+  const response = rows.length
+    ? `Your saved documents, newest first: ${rows.map((row, index) => `${index + 1}, ${row.title || "untitled"}`).join("; ")}. Say "export the latest document as a PDF" to get a file.`
+    : 'You have no saved documents yet. Say, for example, "Create a document called Maize Sales that says Sold 3 sacks of maize, and save it."';
+  return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false };
+}
+
 async function exportLatestDocumentPlan(documents, { text, format, tenantId, ownerId }) {
   const goal = String(text || "").trim();
   const say = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });

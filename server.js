@@ -10296,7 +10296,7 @@ function extractContactNameFromCall(text = "") {
   const match = source.match(/\b(?:call|phone|dial|ring)\s+(?:my\s+|the\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,48})/iu);
   if (!match) return "";
   const raw = match[1]
-    .replace(/\b(on|at|about|for|because|please|now|today|with|to|from)\b.*$/i, "")
+    .replace(/\b(on|at|about|for|because|please|now|today|with|to|from|and|then|saying|say|tell|ask)\b.*$/i, "")
     .trim();
   // only the real name: "Juma simu" -> Juma, "Mama's" -> Mama, "him instead" -> no name (ask who)
   const name = cleanContactName(raw, { maxWords: 4 }) ? contactDisplayName(cleanContactName(raw, { maxWords: 4 })) : (/^(?:him|her|it|them|instead|again|too)\b/i.test(raw) ? "" : contactDisplayName(raw));
@@ -31841,7 +31841,8 @@ function tradeLocationRouteResponse(db, user, text, options = {}) {
   const packet = {
     id: crypto.randomUUID(),
     packetNumber: `LOCATION-ROUTE-${String(nextRecordSequence(db, "locationRoutePackets")).padStart(3, "0")}`,
-    productName: order?.productName || order?.product || product?.name || "crop lot",
+    // (a shipment the person named; never a demo lot or another account's order from the shared data)
+    productName: "your shipment",
     buyerLocation: locations.destinationText,
     sellerLocation: locations.originText,
     origin,
@@ -34669,10 +34670,10 @@ async function dailyLifeAdvisorResponse(db, user, text, lower, options = {}) {
     nextStep = "Say 'Nexus, open telehealth' if you want care support, or 'Nexus, remind me to walk later' if you want a safer routine.";
     rememberAgentMemory(db.profile, `Daily support: user asked about walking safety at about ${temp}F in ${context.country}.`, { source: "daily-life-advisor", category: "safety", module: "Healthcare", confidence: 0.89 });
   } else if (kind === "farmer") {
-    const product = (db.products || []).find(item => item.countryId === activeContext(db).country.id) || (db.products || [])[0];
-    response = `I can help the farmer. For ${product?.name || "the selected crop"}, I can check crop risk, water timing, field scan need, harvest timing, buyer proof, and the safest route. What crop and what problem are you seeing?`;
+    // (never names a crop the person did not mention: this used to read a demo product out of the shared data, "Robusta Coffee Cooperative Lot", to every farmer)
+    response = "I can help the farmer. Tell me which crop and what problem you are seeing, and I can look at crop risk, water timing, field scan need, harvest timing, buyer proof, and the safest route.";
     nextStep = "Say 'Nexus, check my crop' or 'Nexus, when should I harvest.'";
-    rememberAgentMemory(db.profile, `Farmer daily advisor requested for ${product?.name || "crop"} using heat, route, crop, drone, and market context.`, { source: "daily-life-advisor", category: "pattern", module: "AgriTrade", confidence: 0.88 });
+    rememberAgentMemory(db.profile, "Farmer daily advisor requested using heat, route, crop, drone, and market context.", { source: "daily-life-advisor", category: "pattern", module: "AgriTrade", confidence: 0.88 });
   } else if (kind === "learner") {
     response = "Yes. A learner can ask a rough question like 'I do not understand this' or 'what does this mean?' Nexus should explain it in plain language, connect it to the active course, offer captions or audio, and then ask one small next question instead of overwhelming the learner.";
     nextStep = "Say 'Nexus, explain my lesson' or 'Nexus, help me study this' and I will turn it into a learning step.";
@@ -37713,7 +37714,8 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
-  if (lower.includes("briefing") || lower.includes("government") || lower.includes("ministry") || lower.includes("presentation") || lower.includes("report")) {
+  if (lower.includes("briefing") || lower.includes("government") || lower.includes("ministry") || lower.includes("presentation") || /\b(?:government|ministry|pilot|donor|investor)\s+reports?\b/.test(lower)) {
+    // (a plain "my monthly report" is the person's own report, not a government briefing built from demo data)
     const briefing = agentBriefing(db, user, text || "government presentation");
     const readiness = governmentReadinessModel(db, user, runtimeProviders(db), {
       persist: true,
