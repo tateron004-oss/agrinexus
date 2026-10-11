@@ -56,8 +56,17 @@
     if (!win || !doc || !doc.body || typeof win.MutationObserver !== "function") return { sync() { return false; }, stop() {} };
     let queued = false;
     function sync() {
-      const staged = isStaged(readSnapshot(doc));
-      if (doc.body.classList.contains(CLASS_NAME) !== staged) doc.body.classList.toggle(CLASS_NAME, staged);
+      const snapshot = readSnapshot(doc);
+      const staged = isStaged(snapshot);
+      const changed = doc.body.classList.contains(CLASS_NAME) !== staged;
+      if (changed) doc.body.classList.toggle(CLASS_NAME, staged);
+      // the map is drawn inside the "More options" fold: keep it open while the map is the task, so the map (not a menu) is what is on screen
+      if (staged && snapshot.mapOpen) {
+        const folds = doc.querySelectorAll("#map details.user-module-more");
+        for (let i = 0; i < folds.length; i += 1) if (!folds[i].open) folds[i].open = true;
+      }
+      // the map and the video change size when the rest of the page steps aside; tell them (maps redraw on a window resize)
+      if (changed && typeof win.dispatchEvent === "function" && typeof win.Event === "function") { try { win.dispatchEvent(new win.Event("resize")); } catch (_) { /* optional */ } }
       return staged;
     }
     function schedule() {

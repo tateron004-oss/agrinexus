@@ -80,3 +80,35 @@ test("the file is loaded before app.js, cached by the service worker, installed 
   assert.match(ended, /snapshot\?\.state !== "ended"/); assert.match(ended, /controller\.stop\(\{ announce: false \}\)/);
   assert.match(ended, /!kyroWorkOpen\(\) && !kyroActiveVoiceIntake\) void kyroReturnToOrb\(\{ reason: "idle"/, "only when nothing else is open and no form is waiting");
 });
+
+test("the map is the task: only the real map is drawn, its fold is opened, the menu and cards are not", () => {
+  const Stage2 = require("../../public/kyro-task-stage.js");
+  const folds = [{ open: false }]; const events = [];
+  const set = new Set(["user-map-full-open"]);
+  const doc = { body: { classList: { contains: name => set.has(name), toggle: (name, on) => { if (on) set.add(name); else set.delete(name); } } }, querySelectorAll: selector => (selector === "#map details.user-module-more" ? folds : []) };
+  class Obs { observe() {} disconnect() {} }
+  const page = { MutationObserver: Obs, requestAnimationFrame: fn => fn(), Event: class { constructor(type) { this.type = type; } }, dispatchEvent: event => events.push(event.type) };
+  Stage2.install(page, doc);
+  assert.equal(folds[0].open, true, "the map's fold is opened");
+  assert.deepEqual(events, ["resize"], "the map is told to redraw at its new size");
+  const rules = css.match(/body\.user-mode\.kyro-task-stage\.user-map-full-open #map \.user-simple-module > \.eyebrow[^{]*\{[^}]*\}/)[0];
+  for (const part of ["h2", ".user-service-buttons", ".user-module-status", ".user-module-more > summary", ".user-module-nav > :first-child", ".user-map-provider-readiness", ".user-route-planning-preview", ".user-real-map-head", ".user-tracker-strip", ".user-real-map-meta"]) assert.ok(rules.includes(part), part);
+  assert.doesNotMatch(rules, /\.user-module-more,|\.user-module-more \{|\.user-module-more\s*$/m, "the fold itself is not hidden: the map is inside it");
+  assert.match(css, /user-map-full-open #map \.user-real-map-card\s*\{\s*position:\s*fixed;\s*inset:\s*0;/, "the map fills the screen");
+  assert.match(css, /user-map-full-open #map \.user-module-nav\s*\{\s*position:\s*fixed;\s*top:\s*12px;\s*right:\s*12px;/, "one close mark, top right");
+});
+
+test("the resting screen: status lines and hints are announced to screen readers but not drawn, and the microphone speaks plainly as Kyro", () => {
+  const block = css.slice(css.indexOf("/* ===== A clean resting screen"));
+  for (const selector of [".nexus-true-orb-status[data-nexus-core-status-text]", ".nexus-audio-companion-status strong", ".nexus-primary-voice-hint", "[data-nexus-intent-route-status]", "#nexusPermanentMicrophoneStatus", ".nexus-command-context", ".nexus-premium-hero-title", ".nexus-premium-hero-subtitle", ".nexus-presence-runtime-badge", ".nexus-command-examples", ".nexus-mode-launcher", ".nexus-command-center-copy > p"]) assert.ok(block.includes(selector), selector);
+  // what stays: the reply area (a typed answer must still show), the composer and the Home / Language / History / Settings row
+  for (const kept of [".nexus-presence-layer", ".nexus-command-composer", ".nexus-true-secondary"]) assert.ok(!block.includes(kept), `${kept} is not hidden`);
+  assert.match(block, /clip:\s*rect\(0, 0, 0, 0\)/); assert.doesNotMatch(block, /display:\s*none/, "never display:none: screen readers must still read them");
+  const mic = app.slice(app.indexOf("function setNexusPermanentMicrophoneState"), app.indexOf("function verifyNexusPermanentMicrophoneStream"));
+  for (const text of ["Allow the microphone to talk to Kyro", "Kyro is listening", "Kyro can't hear you. Tap to reconnect", "Connecting…", "Tap to talk to Kyro"]) assert.ok(mic.includes(text), text);
+  assert.doesNotMatch(mic, /Nexus voice connection unavailable|view instructions/);
+  assert.doesNotMatch(app, /OpenAI Realtime voice did not start: \$\{message\}\. Nexus voice connection unavailable/, "the technical reason is logged, not shown to the person");
+  assert.match(app, /openai-realtime-startup-failed-reason/);
+  assert.match(html, /id="nexusPermanentMicrophoneBtn"[^>]*>\s*Tap to talk to Kyro\s*<\/button>/);
+  assert.doesNotMatch(app, /Nexus voice connection unavailable/, "no screen text says 'Nexus' for the voice connection any more");
+});

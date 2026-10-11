@@ -51715,9 +51715,11 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       legacyListenerPreserved: Boolean(voiceRecognition || nexusVoicePermissionStream)
     });
     const outputStatus = $("#globalVoiceOutputStatus");
-    const fallbackMessage = `OpenAI Realtime voice did not start: ${message}. Nexus voice connection unavailable — retry.`;
+    // One plain sentence for the person; the technical reason is already kept by updateRealtimeControllerState above and in the debug log.
+    const fallbackMessage = "Kyro could not start listening. Tap the microphone to try again.";
+    try { nexusGenesisVoiceDebugLog("openai-realtime-startup-failed-reason", { reason: message }); } catch { /* logging only */ }
     if (outputStatus) outputStatus.textContent = translateText(fallbackMessage);
-    setNexusPermanentMicrophoneState("unavailable", "Nexus voice connection unavailable — retry. The microphone and orb remain available.");
+    setNexusPermanentMicrophoneState("unavailable", "Kyro cannot hear you right now. Tap the microphone to reconnect.");
     updateNexusBehaviorLayer("fallback", fallbackMessage);
     refreshMicSupport();
     return false;
@@ -51752,7 +51754,7 @@ async function startRealtimeVoiceSession(options = {}) {
     const message = `Nexus Realtime voice is temporarily unavailable: ${error.message || "connection failed"}`;
     const outputStatus = $("#globalVoiceOutputStatus");
     if (outputStatus) outputStatus.textContent = translateText(message);
-    setNexusPermanentMicrophoneState("unavailable", "Nexus voice connection unavailable — retry. The microphone control remains visible.");
+    setNexusPermanentMicrophoneState("unavailable", "Kyro cannot hear you right now. Tap the microphone to reconnect.");
     updateNexusBehaviorLayer("fallback", message);
     nexusGenesisVoiceDebugLog("session-failed", {
       runtime: "realtime",
@@ -52362,7 +52364,7 @@ function nexusPermanentMicrophoneElements() {
   };
 }
 
-function setNexusPermanentMicrophoneState(state = "ready", message = "Microphone ready to enable.") {
+function setNexusPermanentMicrophoneState(state = "ready", message = "Tap the microphone to talk to Kyro.") {
   if (typeof document === "undefined") return;
   const { dock, button, status } = nexusPermanentMicrophoneElements();
   if (dock) {
@@ -52373,11 +52375,12 @@ function setNexusPermanentMicrophoneState(state = "ready", message = "Microphone
     button.hidden = false;
     button.disabled = false;
     button.dataset.nexusPermanentMicrophoneState = state;
-    if (state === "blocked") button.textContent = "Microphone blocked — view instructions";
-    else if (state === "connected") button.textContent = "Microphone connected";
-    else if (state === "unavailable") button.textContent = "Nexus voice connection unavailable — retry";
-    else if (state === "requesting") button.textContent = "Requesting microphone...";
-    else button.textContent = "Enable microphone";
+    // (the button is the one thing the person sees about the microphone: one plain line, always the name Kyro)
+    if (state === "blocked") button.textContent = "Allow the microphone to talk to Kyro";
+    else if (state === "connected") button.textContent = "Kyro is listening";
+    else if (state === "unavailable") button.textContent = "Kyro can't hear you. Tap to reconnect";
+    else if (state === "requesting") button.textContent = "Connecting…";
+    else button.textContent = "Tap to talk to Kyro";
   }
   if (status) {
     status.hidden = false;
@@ -52520,7 +52523,7 @@ function bindNexusPermanentMicrophoneControl() {
   button.hidden = false;
   button.disabled = false;
   button.addEventListener("click", handleNexusPermanentMicrophoneClick, true);
-  setNexusPermanentMicrophoneState("ready", "Microphone ready to enable.");
+  setNexusPermanentMicrophoneState("ready", "Tap the microphone to talk to Kyro.");
 }
 
 // On the audio-only home only the orb shows: the mic pill is visually hidden there (styles.css) and a
