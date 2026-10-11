@@ -30,6 +30,7 @@ const APP_SHELL = [
   `/kyro-stall-watchdog.js?v=kyro-stall-watchdog-2`,
   `/kyro-media-commands.js?v=kyro-media-commands-1`,
   `/kyro-dismiss-commands.js?v=kyro-dismiss-commands-1`,
+  `/kyro-task-stage.js?v=kyro-task-stage-1`,
   `/kyro-media-player.js?v=kyro-media-player-1`
 ];
 

@@ -16886,3 +16886,98 @@ body.user-mode[data-nexus-genesis-mode="home"].nexus-orb-hover {
 .kyro-mp-playin { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; font-size: 0.8rem; color: #9bdff1; }
 .kyro-mp-playin[hidden] { display: none; }
 .kyro-mp-playin select { padding: 0.2rem 0.4rem; border-radius: 0.5rem; border: 1px solid rgba(118, 225, 255, 0.35); background: #0b1b29; color: #f7fbff; font-size: 0.8rem; }
+
+/* ===== Kyro task stage (see public/kyro-task-stage.js) =====
+   While a task is open (a map, a video, pictures, a result, a form, a card) it is the only thing on the screen: no orb layer, no banner, no workflow
+   controls, no status lines. One small close mark stays. When the task is done the orb comes back (kyroReturnToOrb). The mic dock stays in the page,
+   visually hidden and still focusable, exactly as on the audio-only home, so voice and screen readers keep working. */
+body.user-mode.kyro-task-stage {
+  background: #080b10 !important;
+}
+body.user-mode.kyro-task-stage #appView > header.topbar,
+body.user-mode.kyro-task-stage #userCaptionPanel,
+body.user-mode.kyro-task-stage #globalAssistantBar,
+body.user-mode.kyro-task-stage #jarvisDock,
+body.user-mode.kyro-task-stage #userBackHomeBtn,
+body.user-mode.kyro-task-stage #userVoiceDock,
+body.user-mode.kyro-task-stage .nexus-function-window-dock {
+  display: none !important;
+}
+body.user-mode.kyro-task-stage #nexusPermanentMicrophoneDock:not(:focus-within) {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+/* everything behind the task (the orb, the hero, the composer, the mission panels) is hidden; only the function window is drawn */
+body.user-mode.kyro-task-stage .nexus-true-experience-root {
+  visibility: hidden;
+}
+body.user-mode.kyro-task-stage .nexus-workflow-modal-backdrop,
+body.user-mode.kyro-task-stage .nexus-workflow-modal-backdrop * {
+  visibility: visible;
+}
+body.user-mode.kyro-task-stage .nexus-workflow-modal-backdrop {
+  background: #080b10;
+  backdrop-filter: none;
+  padding: 0;
+  align-items: stretch;
+}
+body.user-mode.kyro-task-stage .nexus-active-workflow-modal {
+  width: 100%;
+  max-width: 980px;
+  max-height: none;
+  min-height: 100vh;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: clamp(16px, 4vw, 40px) !important;
+}
+/* inside the window: the title, the real content and one close mark. No controls for preparing, queueing or running test modes, no step lists, no history. */
+body.user-mode.kyro-task-stage .nexus-workflow-window-actions button:not([data-nexus-workflow-close]),
+body.user-mode.kyro-task-stage .nexus-workflow-header .eyebrow,
+body.user-mode.kyro-task-stage .nexus-workflow-purpose,
+body.user-mode.kyro-task-stage .nexus-app-window-command-row,
+body.user-mode.kyro-task-stage .nexus-app-window-switcher,
+body.user-mode.kyro-task-stage .nexus-workflow-launch-status,
+body.user-mode.kyro-task-stage .nexus-function-window-summary,
+body.user-mode.kyro-task-stage .nexus-workflow-lane-status,
+body.user-mode.kyro-task-stage .nexus-workflow-steps,
+body.user-mode.kyro-task-stage .nexus-workflow-actions,
+body.user-mode.kyro-task-stage .nexus-workflow-history,
+body.user-mode.kyro-task-stage .nexus-function-window-preview > strong,
+body.user-mode.kyro-task-stage .nexus-function-window-preview > p {
+  display: none !important;
+}
+body.user-mode.kyro-task-stage .nexus-workflow-window-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  left: auto;
+  width: auto;
+  display: flex;
+  justify-content: flex-end;
+  z-index: 2;
+}
+body.user-mode.kyro-task-stage .nexus-workflow-window-actions [data-nexus-workflow-close] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0;
+  line-height: 1;
+  background: rgba(255, 255, 255, .10);
+  border: 0;
+  color: #f1f5f9;
+}
+body.user-mode.kyro-task-stage .nexus-workflow-window-actions [data-nexus-workflow-close]::before {
+  content: "\00d7";
+  font-size: 1.7rem;
+}
