@@ -19,6 +19,16 @@ function normalizeText(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
+// The YouTube Data API returns titles with HTML entities in them ("&quot;", "&#39;", "&amp;"); they are plain text everywhere this is shown and spoken.
+const NAMED_ENTITIES = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " " };
+function decodeEntities(value) {
+  return normalizeText(String(value ?? "").replace(/&(?:#(\d{1,6})|#x([0-9a-f]{1,5})|(amp|quot|apos|lt|gt|nbsp));/gi, (whole, dec, hex, name) => {
+    if (name) return NAMED_ENTITIES[name.toLowerCase()];
+    const code = dec ? Number(dec) : parseInt(hex, 16);
+    return code > 0 && code < 0x110000 ? String.fromCodePoint(code) : whole;
+  }));
+}
+
 function clip(value, max = 200) {
   return normalizeText(value).slice(0, max);
 }
@@ -189,6 +199,6 @@ function countryCode(value) {
 }
 
 module.exports = Object.freeze({
-  APP_NAME, USER_AGENT, hasText, normalizeText, clip, fold, significantTokens, relevance, precision, resolveFetch, createContext, ProviderError,
+  APP_NAME, USER_AGENT, hasText, normalizeText, decodeEntities, clip, fold, significantTokens, relevance, precision, resolveFetch, createContext, ProviderError,
   fetchJson, collectVerified, shuffled, httpsOnly, countryCode, COUNTRY_CODES
 });

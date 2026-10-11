@@ -6,7 +6,7 @@
 // A search costs 100 of the default 10,000 daily units, so every search goes through the quota guard (server/media/state.js) and the
 // result is cached for a few hours: asking for the same song again costs nothing.
 
-const { fetchJson, normalizeText, fold, relevance, countryCode, ProviderError } = require("../util.js");
+const { fetchJson, normalizeText, decodeEntities, fold, relevance, countryCode, ProviderError } = require("../util.js");
 const { buildCandidate } = require("../candidate.js");
 const { checkYoutubeEmbeddable } = require("../preflight.js");
 const { SEARCH_COST, LIST_COST } = require("../state.js");
@@ -123,9 +123,9 @@ async function search(ctx, request) {
     const detail = detailById.get(item.id.videoId);
     return buildCandidate({
       provider: ID, providerName: NAME, nativeId: item.id.videoId, videoId: item.id.videoId, playbackClass: "video", delivery: "youtube",
-      title: normalizeText(item.snippet.title), artist: normalizeText(item.snippet.channelTitle),
+      title: decodeEntities(item.snippet.title), artist: decodeEntities(item.snippet.channelTitle),
       durationSec: parseIsoDuration(detail?.contentDetails?.duration), live: item.snippet.liveBroadcastContent === "live", isPreview: false,
-      attribution: `${normalizeText(item.snippet.title)} — ${normalizeText(item.snippet.channelTitle)} on YouTube (official player)`,
+      attribution: `${decodeEntities(item.snippet.title)} — ${decodeEntities(item.snippet.channelTitle)} on YouTube (official player)`,
       license: "YouTube standard licence; played in YouTube's own embedded player", verified: true,
       sourceUrl: `https://www.youtube.com/watch?v=${item.id.videoId}`,
       artworkUrl: item.snippet.thumbnails?.medium?.url, score
