@@ -109,3 +109,35 @@ test("the page's summaries say 1 volunteer, 1 hour, 1 person, 1 service and 1 re
   const none = summaries({ volunteerHours: [], services: [], outcomes: [] });
   assert.equal(none["volunteer-summary"], "No volunteer hours yet."); assert.equal(none["program-summary"], "No services or results yet.");
 });
+
+// Found by running the whole prompt battery on the live site on 10 October 2026.
+test("a gift said without a subject ('Received a 1000 dollar donation from Maria Chen for the youth program') is the workspace's to log, and a pledge or a bill is not", async () => {
+  const dispatch = require("../../nexus/business/voice-dispatch.js");
+  for (const text of ["Received a 1000 dollar donation from Maria Chen for the youth program", "Got a 500 dollar donation from Pat", "Received a $200 gift from Lee", "We received a donation of 5000 shillings from Amina"]) assert.equal(dispatch.classify(text), "logTransaction", text);
+  assert.equal(dispatch.classify("Sam Park pledged 2000 dollars"), "addPledge");
+  assert.notEqual(dispatch.classify("Received the electricity bill for $340"), "logTransaction");
+  assert.notEqual(dispatch.classify("Sold 200 kg of maize for 9000 shillings"), "logTransaction");
+  const workspace = makeWorkspace(); await workspace.create();
+  const p = planner({ count: async () => 1, read: workspace.read });
+  const prompt = await ask(p, "Received a 1000 dollar donation from Maria Chen for the youth program", true);
+  assert.match(prompt.response, /Should I go ahead\?/); assert.doesNotMatch(prompt.response, /^Recorded: income/);
+  assert.match((await ask(p, "yes", true)).response, /Logged a \$1,000\.00 income/);
+});
+
+test("'Maria Lopez gave consent for services' records Maria Lopez, not a person called Services", async () => {
+  const workspace = makeWorkspace(); await workspace.create();
+  const prompt = await workspace.read({ command: "Maria Lopez gave consent for services" });
+  assert.match(prompt, /record that Maria Lopez has given consent/); assert.doesNotMatch(prompt, /Services/);
+  assert.match(await workspace.read({ command: "Record consent from Pat Lee to keep their records" }), /record that Pat Lee has given consent/);
+});
+
+test("a person with a workspace who asks how many of something is in inventory, or what it is worth, is answered from the workspace register, not told there is no record", async () => {
+  const workspace = makeWorkspace(); await workspace.create();
+  await workspace.confirm("Add 20 jars of candles to inventory");
+  const p = planner({ count: async () => 1, read: workspace.read });
+  const how = await ask(p, "How many candles do we have in inventory?", true);
+  assert.match(how.response, /candles/i); assert.doesNotMatch(how.response, /on record/);
+  assert.doesNotMatch((await ask(p, "What is our inventory worth?", true)).response, /on record, so I can't say/);
+  const none = planner({ count: async () => 0, read: async () => { throw new Error("must not be read"); } });
+  assert.match((await ask(none, "How many bags of maize do I have in stock?", true)).response, /in your stock yet|on record/, "the farmer's stock question is unchanged");
+});
