@@ -17,7 +17,7 @@
   "use strict";
 
   const CLASS_NAME = "kyro-task-stage";
-  const SHELL_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay";
+  const SHELL_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-answer-card]";
 
   function isStaged(snapshot) {
     const s = snapshot || {};

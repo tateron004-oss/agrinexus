@@ -27858,7 +27858,7 @@ function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
 // Everything that can sit on top of the orb apart from the function window: the full-screen cards the browser action controller puts straight on the page body (weather, map, music,
 // pilot dashboard, provider card), the rich-data overlay, the provider question report, the classic workflow modal, the Ask panel and caption panel, and any section other than the home screen
 // (the full map is one). The home screen's own "orb only" marker is present even while one of these covers it, so only an explicit return (or this list) can say what to take down.
-const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay";
+const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-answer-card]";
 // The live music card holds the YouTube player itself: taking it off the page ends the song. So "close the card" and the quiet-spell return only park it out of sight (it keeps playing);
 // it is removed when the person asks for the music to stop ("stop the music", "go back to the orb", "I'm done") or when another card replaces it.
 function kyroParkLiveMusicCard(shell) {
@@ -27930,7 +27930,7 @@ function kyroFinishedResultShowing() {
 }
 function kyroAnswerShowing() {
   try {
-    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay")) return true;
+    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-answer-card]")) return true;
     if (kyroFinishedResultShowing()) return true;
     if (nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge")) return true;
     return Boolean(nexusPresenceState?.lastResponse);
@@ -51332,6 +51332,25 @@ function startKyroResumeIntake(options = {}) {
   startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
 }
 
+// Work, answer-first: asking for work shows one clean card (what Kyro can really do right now) instead of the long referral form (public/kyro-answer-card.js). Each choice can also be said.
+// Returns false (and the form opens as before) when the card file is not loaded.
+function kyroShowWorkCard() {
+  if (!window.KyroAnswerCard) return false;
+  let roles = [];
+  try { roles = Array.isArray(data?.roles) ? data.roles : []; } catch { roles = []; }
+  const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  const spec = window.KyroAnswerCard.workSpec({ roles, lang });
+  window.KyroAnswerCard.show(document, spec, {
+    onChoose: choice => {
+      window.KyroAnswerCard.remove(document);
+      if (choice.id === "cv") startKyroResumeIntake({ source: "work-card" });
+      else void handleVoiceCommandCore(choice.say, { source: "work-card" });
+    },
+    onClose: () => { void kyroReturnToOrb({ reason: "done", source: "answer-card" }); }
+  });
+  return true;
+}
+
 function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
   const command = String(transcript || "").trim();
   const lower = command.toLowerCase();
@@ -55233,6 +55252,13 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
     document.body.dataset.genesisWorkspaceRequestId = action.requestId || "";
     return true;
   }
+  // Work: the answer-first card (what Kyro can really do, in a few plain words) instead of the long referral form.
+  if (workspace === "workforce" && kyroShowWorkCard()) {
+    document.body.dataset.genesisWorkspace = "workforce";
+    document.body.dataset.genesisWorkspaceRequestId = String(action.requestId || "");
+    if (!options.suppressAcknowledgement) window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: true, populatedFields: [] } }));
+    return true;
+  }
   const opened = workspace === "map"
     ? openGenesisRealtimeMapWorkspace(result?.mapRoute && typeof result.mapRoute === "object" ? { ...payload, ...result.mapRoute } : payload, command)
     : openNexusCapability(capabilityId, {
@@ -55487,9 +55513,12 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
 
   let populatedFields = [];
   let visibleWorkspace = null;
+  // The Work answer card has no form fields: what was asked for is answered on the card itself, so it counts as the opened, verified surface.
+  const answerCardShown = () => workspace === "workforce" && Boolean(document.querySelector('[data-kyro-answer-card="work"]'));
   for (let attempt = 0; attempt < 30; attempt += 1) {
     visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
     populatedFields = expected.filter(([key, value]) => findPopulatedField(key, value)).map(([key]) => key);
+    if (answerCardShown()) { populatedFields = expected.map(([key]) => key); break; }
     if (visibleWorkspace && populatedFields.length === expected.length) break;
     await new Promise(resolve => setTimeout(resolve, 100));
   }
@@ -55507,7 +55536,7 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
 );
   const workspaceSurfaceVisible = workspace === "map"
     ? visibleMap
-    : Boolean(visibleWorkspace && visibleWorkspace.getClientRects().length && !visibleWorkspace.closest("[hidden]"));
+    : (answerCardShown() || Boolean(visibleWorkspace && visibleWorkspace.getClientRects().length && !visibleWorkspace.closest("[hidden]")));
   const visible = Boolean(document.body.dataset.genesisWorkspace === workspace && workspaceSurfaceVisible);
   const verified = visible && populatedFields.length === expected.length && microphoneActive && realtimeConnected;
   const ack = {
