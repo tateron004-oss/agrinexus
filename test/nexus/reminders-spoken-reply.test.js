@@ -36,7 +36,8 @@ test("the spoken reply repeats the task and the time, and never 'remind you to r
     ["remind me tomorrow morning to check the water tank", /^Done\. I will remind you to check the water tank at 8:00 am tomorrow\./],
     ["remind me in an hour to check the pump", /^Done\. I will remind you to check the pump in an hour, at \d{1,2}:\d{2} (?:am|pm) (?:today|tomorrow)\./],
     ["remind me on 15 October at 10am about the clinic", /^Done\. I will remind you about the clinic at 10:00 am on \w+, 15 October\./i],
-    ["remind me next Monday to call the vet", /^Done\. I will remind you to call the vet at 9:00 am on Monday, \d{1,2} \w+\./]
+    // (on a Sunday in the person's own time zone, Monday is tomorrow and is said that way; the test runs at any hour in any zone, so both are right)
+    ["remind me next Monday to call the vet", /^Done\. I will remind you to call the vet at 9:00 am (?:on Monday, \d{1,2} \w+|tomorrow)\./]
   ]) {
     const reply = await speak(command);
     assert.match(reply, expected, `${command} -> ${reply}`);

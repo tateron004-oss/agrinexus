@@ -5,6 +5,7 @@ const { addDays, weekdayOf, extractDay } = require("../personal/dates.js");
 const insights = require("./insights.js");
 const crmVoice = require("./crm-voice.js");
 const financeVoice = require("./finance-voice.js");
+const programsVoice = require("./programs-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
 
@@ -126,7 +127,7 @@ function extractLeadArgs(command = "", args = {}) {
   // existing bucket; computeBusinessDashboard below counts it too.
   // "buyer"/"seller"/"tenant"/"landlord" -- a real estate workspace's own
   // words for the person being tracked -- follow the same pattern.
-  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)s?\b/i);
+  const typeMatch = text.match(/\b(customer|donor|lead|sponsor|volunteer|client|participant|member|congregant|buyer|seller|tenant|landlord)s?\b/i);
   const contactMatch = text.match(EMAIL_IN_TEXT)
     || text.match(/\b(?:contact|phone|email|reach(?:able)? at)\s+["']?([^"'\n,.]{3,80})/i)
     || text.match(/([+()\d\s.-]{7,}|[^\s,]+@[^\s,]+)/);
@@ -823,7 +824,7 @@ function computeBusinessDashboard(editable, period = {}) {
 // function (rather than a second, hand-maintained copy of these regexes).
 // (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
 const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS]);
 
 function classify(command = "") {
   // Questions about how the organisation is doing, money to cover expenses, who needs a follow-up, funding deadlines, people served and volunteer hours come before the general word-matching below, which
@@ -834,6 +835,9 @@ function classify(command = "") {
   // Bills, a bank balance, budgets, pledges, restricted funds and the margin and campaign calculators (finance-voice.js).
   const finance = financeVoice.classifyFinance(command);
   if (finance) return finance;
+  // Volunteer hours and skills, participants' consent, services, results, goals and the impact report (programs-voice.js).
+  const programs = programsVoice.classifyPrograms(command);
+  if (programs) return programs;
   // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
   // not a government ministry -- server.js's legacy weather/safety code uses
   // "ministry" the government way, in a completely different command shape,
@@ -851,9 +855,11 @@ function classify(command = "") {
     || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
-  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|member|congregant|buyer|seller|tenant|landlord)s?\b/i.test(command) && !/\btask\b/i.test(command) && !/\b(?:appointment|showing|viewing|site visit|open house)\b/i.test(command)
+  const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|client|participant|member|congregant|buyer|seller|tenant|landlord)s?\b/i.test(command) && !/\btask\b/i.test(command) && !/\b(?:appointment|showing|viewing|site visit|open house)\b/i.test(command)
     // "Create a volunteer coordination plan" or "a donor stewardship plan" is a plan about people, not a new person to add.
-    && !/\b(?:plan|strategy|outline|handbook|programme|program)\b/i.test(command);
+    && !/\b(?:plan|strategy|outline|handbook|programme|program)\b/i.test(command)
+    // "Create a client intake form" / "an application checklist for participants" is a document, not a new person
+    && !/\b(?:intake form|forms?|checklist|agreement|contract|documents?)\b/i.test(command);
   // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
   const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
@@ -1044,6 +1050,25 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   if (typeof businessRequest !== "function") throw new Error("A businessRequest bridge function is required.");
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
+
+  if (programsVoice.PROGRAM_READ_INTENTS.includes(intent) || programsVoice.PROGRAM_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const today = todayIn(new Date(), timeZone);
+    const ctx = { command, editable, workspace, today, formatMoney, normalize: normalizeSpokenText };
+    if (programsVoice.PROGRAM_READ_INTENTS.includes(intent)) {
+      const response = programsVoice.readPrograms(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = programsVoice.planProgramWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
 
   if (financeVoice.FINANCE_READ_INTENTS.includes(intent) || financeVoice.FINANCE_WRITE_INTENTS.includes(intent)) {
     const resolved = await resolveBusinessClient(businessRequest, command);
@@ -1564,7 +1589,7 @@ function confirmationPrompt(command = "") {
 }
 
 module.exports = Object.freeze({
-  amountWithCurrency, asksAboutOwnRecords: command => insights.classifyInsight(command) !== null || financeVoice.classifyFinance(command) !== null,
+  amountWithCurrency, asksAboutOwnRecords: command => insights.classifyInsight(command) !== null || financeVoice.classifyFinance(command) !== null || programsVoice.classifyPrograms(command) !== null,
   sanitizeText, classify, isReadIntent, needsWorkspace, noWorkspaceReply, precheck, run, confirmationPrompt,
   extractBusinessName, resolveBusinessClient, extractLeadArgs, extractTransactionArgs,
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,

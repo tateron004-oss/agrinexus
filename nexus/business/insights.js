@@ -13,14 +13,10 @@ const WRITE_VERB = /\b(?:add|create|new|log|record|track|set|schedule|put|make|m
 const WORKSPACE_WORDS = "organi[sz]ation|nonprofit|non-profit|charity|ngo|business|church|ministry|congregation|company|team|program(?:me)?|project";
 
 // ---- which question -------------------------------------------------------------------------------------------------------------------------------------------------------------
-// -> "howAreWeDoing" | "cashOutlook" | "followUpDue" | "deadlinesDue" | "programServed" | "volunteerHours" | null
+// -> "howAreWeDoing" | "cashOutlook" | "followUpDue" | "deadlinesDue" | null   (people served and volunteer hours are in programs-voice.js)
 function classifyInsight(command = "") {
   const text = String(command || "").replace(/\s+/g, " ").trim();
   if (!text || text.length > 240) return null;
-
-  // "log 3 volunteer hours for Joy" is a request to record hours (nothing records them yet), never "add a person called 3 volunteer hours"
-  if (/\b\d+(?:\.\d+)?\s*(?:volunteer\s+)?hours?\b/i.test(text) && /\bvolunteer/i.test(text) && /\b(?:log|record|add|track|enter|put|give|credit)\b/i.test(text)) return "volunteerHours";
-  if (/\b(?:how many|how much|total|show|what(?:'s| is| are))\b/i.test(text) && /\bvolunteer hours?\b/i.test(text)) return "volunteerHours";
 
   if (WRITE_VERB.test(text)) return null;
 
@@ -47,11 +43,6 @@ function classifyInsight(command = "") {
   if (/\b(?:grants?|contracts?|rfps?|proposals?|applications?|funding|funders?|opportunit(?:y|ies)|awards?)\b/i.test(text)
     && /\b(?:deadlines?|due|closing|closes|expir\w+|approaching|coming up|upcoming|soon|overdue|late|this month|next month|this week)\b/i.test(text)
     && /\b(?:which|what|any|do (?:we|i) have|how many|show|list|tell me|are there)\b/i.test(text)) return "deadlinesDue";
-
-  // "How many people did our program serve, and what results did we measure?"
-  if (/\bhow many\b.{0,30}\b(?:people|participants|clients|families|children|kids|youth|students|households|individuals|members|beneficiaries|patients|neighbou?rs|residents|seniors|veterans|women|men)\b.{0,50}\b(?:serv\w+|reach\w*|help\w*|attend\w*|enrol\w*|support\w*|benefit\w*|assist\w*|touch\w*)/i.test(text)
-    || /\b(?:what|which)\b.{0,20}\b(?:results|outcomes|impact)\b.{0,30}\b(?:measure\w*|achiev\w*|report\w*|have we|did we)/i.test(text)
-    || /\b(?:impact|outcomes?|programme|program)\s+report\b/i.test(text) && /\b(?:what|show|give|tell|how)\b/i.test(text)) return "programServed";
 
   return null;
 }
@@ -199,24 +190,9 @@ function cashOutlook({ editable, workspace, today, formatMoney }) {
   return `${base} ${billsText}. ${verdict}${other}${runway} ${caveat}`;
 }
 
-function programServed({ editable, workspace }) {
-  const name = `"${workspace}"`;
-  const people = (editable.leads || []).filter(row => ["client", "participant", "member", "congregant", "beneficiary"].includes(lower(row.type)));
-  const intake = people.length ? `${name} has ${plural(people.length, "person")} recorded through intake (${sayNames(people.map(row => row.name))}).` : `${name} has no people recorded through intake yet.`;
-  return `${intake} I record who came for help and what they need, but I do not yet record the services each person received, referrals, program goals or the results you measured, so I cannot give you a served-and-outcomes total, and I will not estimate one. To start, say "start an intake for" and a name.`;
-}
-
-function volunteerHours({ command, editable, workspace }) {
-  const name = `"${workspace}"`;
-  const volunteers = (editable.leads || []).filter(row => lower(row.type) === "volunteer");
-  const who = /\bfor\s+([A-Z][\w'-]+(?:\s+[A-Z][\w'-]+)?)/.exec(String(command || ""))?.[1];
-  const known = who && volunteers.some(row => lower(row.name) === lower(who) || lower(row.name).startsWith(`${lower(who)} `));
-  return `I cannot log or total volunteer hours yet, so nothing was saved. ${name} lists ${plural(volunteers.length, "volunteer")} as ${volunteers.length === 1 ? "a contact" : "contacts"}, but I do not keep hours, skills, availability or assignments.${who && !known ? ` To keep ${who} on your list, say "add a volunteer named ${who}".` : ""}`;
-}
-
-const INSIGHT_INTENTS = Object.freeze(["howAreWeDoing", "cashOutlook", "followUpDue", "deadlinesDue", "programServed", "volunteerHours"]);
+const INSIGHT_INTENTS = Object.freeze(["howAreWeDoing", "cashOutlook", "followUpDue", "deadlinesDue"]);
 // "howAreWeDoing" is run by the dashboard; the rest are answered here
-const READ_FUNCTIONS = Object.freeze({ cashOutlook, followUpDue, deadlinesDue, programServed, volunteerHours });
+const READ_FUNCTIONS = Object.freeze({ cashOutlook, followUpDue, deadlinesDue });
 function readInsight(intent, context) {
   const read = READ_FUNCTIONS[intent];
   return read ? read(context) : null;
