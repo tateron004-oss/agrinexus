@@ -27921,9 +27921,17 @@ function handleKyroDismissCommand(command = "", options = {}) {
 // The quiet-spell return only clears FINISHED ANSWERS, never work the person is in: an answer is the weather card, the research answer window, the rich-data overlay, or an answer left
 // sitting on the home screen. Work is any function window, the map or another section, a visible map/music/resume card, a report, a pilot or provider card, the workflow modal, or
 // turn-by-turn navigation. While any work is open nothing is closed by itself ("close it", "go back to the orb" and "I'm done" still take everything down). Music is neither: it plays on.
+// Pictures, videos, a checklist or a search result drawn in the function window are FINISHED RESULTS, answers like the weather card: once they have been spoken and left alone they clear
+// (a saved document or a finished résumé is not: it has a Download button to collect).
+function kyroFinishedResultShowing() {
+  try {
+    return Boolean(document.querySelector("#nexus-workspace [data-nexus-authoritative-outcome]")) && !document.querySelector("[data-nexus-document-lifecycle], [data-nexus-resume]");
+  } catch { return false; }
+}
 function kyroAnswerShowing() {
   try {
     if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay")) return true;
+    if (kyroFinishedResultShowing()) return true;
     if (nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge")) return true;
     return Boolean(nexusPresenceState?.lastResponse);
   } catch { return false; }
@@ -27931,7 +27939,7 @@ function kyroAnswerShowing() {
 function kyroWorkOpen() {
   try {
     const win = nexusActiveWorkflowState;
-    if (win?.id && win.functionId !== "live-knowledge" && win.workflow !== "live-knowledge") return true;
+    if (win?.id && win.functionId !== "live-knowledge" && win.workflow !== "live-knowledge" && !kyroFinishedResultShowing()) return true;
     if (document.querySelector("[data-nexus-visual-shell]:not([data-kyro-parked]), [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], [data-kn=\"stop\"]")) return true;
     if (nexusVisualProviderQuestionReportState) return true;
     // a saved document or a finished résumé with its Download button is something to collect, not an answer to clear
@@ -27968,6 +27976,8 @@ function startKyroAutoReturn() {
   kyroAutoReturnTimer = setInterval(kyroAutoReturnTick, 3000);
 }
 startKyroAutoReturn();
+// The task stage: while a task is open it is the only thing on the screen (public/kyro-task-stage.js; the styles are in styles.css under body.kyro-task-stage).
+try { window.KyroTaskStage?.install(window, document); } catch { /* the page works without it */ }
 
 function minimizeNexusFunctionWindow() {
   if (!nexusActiveWorkflowState?.id) return false;
@@ -57688,6 +57698,19 @@ function kyroMediaControlInstruction(control, language) {
     createUi: ({ onAction }) => window.KyroMediaPlayer.createBarUi(document, { onAction })
   });
   window.KyroMediaPlayerController = controller;
+  // When a song or video has played to its end the player is put away, and if nothing else is open the screen returns to the orb (a short pause first, so the ending is not cut off).
+  let kyroMediaEndedTimer = null;
+  controller.subscribe(snapshot => {
+    clearTimeout(kyroMediaEndedTimer);
+    if (snapshot?.state !== "ended") return;
+    kyroMediaEndedTimer = setTimeout(() => {
+      try {
+        if (controller.getState().state !== "ended") return;
+        controller.stop({ announce: false });
+        if (!kyroWorkOpen() && !kyroActiveVoiceIntake) void kyroReturnToOrb({ reason: "idle", source: "media-ended" });
+      } catch { /* nothing to put away */ }
+    }, 2500);
+  });
   // Optional ducking while the browser's own speech is talking (per device: localStorage kyro.media.duck = "1"). Kyro's realtime voice audio cannot be
   // detected from here without touching the realtime session code, so that part is a documented follow-up.
   try {

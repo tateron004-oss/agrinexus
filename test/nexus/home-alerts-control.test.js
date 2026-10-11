@@ -153,5 +153,6 @@ test("the top banner is hidden on the audio-only home only", () => {
   const rules = css.match(/[^{}]*header\.topbar[^{}]*\{\s*display:\s*none;\s*\}/g) || [];
   assert.ok(rules.some(text => /body\.user-mode\[data-nexus-genesis-mode="home"\]\s+#appView\s*>\s*header\.topbar/.test(text)), "scoped to user-mode home");
   assert.ok(!rules.some(text => !/data-nexus-genesis-mode="home"/.test(text)), "no unscoped rule hides the topbar elsewhere");
+  assert.match(css, /body\.user-mode\.kyro-task-stage #appView > header\.topbar[^{}]*\{[^}]*display:\s*none/, "while a task is open (the task stage) the banner is hidden too: only the task is on screen");
   assert.match(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8"), /<header class="topbar"/, "the banner element itself is unchanged");
 });

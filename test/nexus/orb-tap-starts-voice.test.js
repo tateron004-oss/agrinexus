@@ -81,8 +81,11 @@ test("the mic dock is visually hidden on the audio-only home only, and stays rea
   assert.doesNotMatch(rule[0], /display:\s*none/, "display:none would remove it from keyboard and screen-reader users");
   assert.doesNotMatch(rule[0], /visibility:\s*hidden/);
   assert.match(rule[0], /:not\(:focus-within\)/, "it reappears when a keyboard user focuses it");
-  const unscoped = (css.match(/[^{}]*#nexusPermanentMicrophoneDock[^{}]*\{[^}]*(clip|display:\s*none)[^}]*\}/g) || []).filter(text => !/data-nexus-genesis-mode="home"/.test(text));
-  assert.deepEqual(unscoped, [], "no rule hides the dock outside the home");
+  const unscoped = (css.match(/[^{}]*#nexusPermanentMicrophoneDock[^{}]*\{[^}]*(clip|display:\s*none)[^}]*\}/g) || []).filter(text => !/data-nexus-genesis-mode="home"|kyro-task-stage/.test(text));
+  assert.deepEqual(unscoped, [], "no rule hides the dock outside the home or the task stage");
+  const stage = css.match(/body\.user-mode\.kyro-task-stage\s+#nexusPermanentMicrophoneDock:not\(:focus-within\)\s*\{[^}]*\}/);
+  assert.ok(stage, "while a task is open the dock is hidden the same way as on the home");
+  assert.match(stage[0], /clip:\s*rect\(0, 0, 0, 0\)/); assert.doesNotMatch(stage[0], /display:\s*none|visibility:\s*hidden/, "still reachable by keyboard and screen readers");
   assert.match(css, /body\.user-mode\[data-nexus-genesis-mode="home"\]\.nexus-orb-hover\s*\{\s*cursor:\s*pointer;/);
 });
 
