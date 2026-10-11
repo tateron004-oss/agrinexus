@@ -522,7 +522,8 @@ function healthReadingsTurn(options = {}) {
 
   // "show my readings" / "delete my last reading" with no word that says they are health readings: only ours when the person has some, or has just been talking about them
   // (a farmer's rainfall or soil readings are not ours to answer for).
-  if (intent && intent.weak && !context && !entriesOf(healthDb).length) return null;
+  // ("undo my last entry" names no reading, so it is the farm log's, not a blood pressure reading's, even for a person who has both)
+  if (intent && intent.weak && !context && (!entriesOf(healthDb).length || !/\b(?:readings?|records?|vitals?|vipimo|kipimo)\b/i.test(String(text || "")))) return null;
 
   // ---- show
   if (intent?.intent === "show") {
