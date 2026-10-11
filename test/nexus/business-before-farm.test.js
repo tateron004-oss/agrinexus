@@ -148,3 +148,13 @@ test("a clinic's vaccination or a farm delivery is never mistaken for a service 
   for (const text of ["Baby Otieno received BCG, next dose in 6 weeks", "Amina received 20 bags of maize", "Mary received her measles vaccine", "John got 10 tablets of paracetamol"]) assert.equal(dispatch.classify(text), null, text);
   for (const text of ["Maria Lopez received a food box", "Maria Lopez attended the workshop", "We served Maria Lopez a hot meal"]) assert.equal(dispatch.classify(text), "logService", text);
 });
+
+test("'Show me my listings' is answered from the workspace for a person who has one, and from the farm board otherwise", async () => {
+  const workspace = makeWorkspace(); await workspace.create();
+  await workspace.confirm("List 500 Elm Street for 4500000 shillings");
+  const p = planner({ count: async () => 1, read: workspace.read });
+  const listed = await ask(p, "Show me my listings", true);
+  assert.match(listed.response, /500 Elm Street/); assert.doesNotMatch(listed.response, /nothing on the board/i);
+  const none = planner({ count: async () => 0, read: async () => { throw new Error("must not be read"); } });
+  assert.match((await ask(none, "Show me my listings", true)).response, /nothing on the board|no listings/i);
+});

@@ -4,7 +4,7 @@ const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js")
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
 // the business requests the farm and shop books must not answer for a person who has a workspace (see the check before the toolkits in plan())
-const WORKSPACE_FIRST_INTENTS = new Set(["listInvoices", "listLeads", "addLead", "billsDue"]);
+const WORKSPACE_FIRST_INTENTS = new Set(["listInvoices", "listLeads", "addLead", "billsDue", "listListings"]);
 const businessInsights = require("../business/insights.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { accepted: acceptedAlertOffer } = require("../companion/offer.js");
@@ -531,6 +531,12 @@ class OpenEndedPlanner {
       // hearing "I couldn't do that one" (see knowledge/consulting-templates.js). Nothing is saved.
       const spokenDocuments = await documentsListPlan(this.documents, command);
       if (spokenDocuments) return Object.freeze({ ...spokenDocuments, planningAttempts: 0 });
+      // "Create a document called Farm Plan that says ... and save it": by voice there is no document card to save it from, so the person is told how (it used to become a nine-step plan waiting for approval).
+      const spokenDocumentWrite = completeDocumentPlan(command.text, await this.catalog());
+      if (spokenDocumentWrite) {
+        return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0, sourceRequired: false,
+          response: `I can make that document, but I can only save one from the keyboard. Type "${String(command.text || "").trim().replace(/[.!?]+$/, "")}" in the box on the main screen and I will save it to your documents.` });
+      }
       const spokenTemplate = templateRequest(command.text);
       if (spokenTemplate) {
         return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], planningAttempts: 0, sourceRequired: false,

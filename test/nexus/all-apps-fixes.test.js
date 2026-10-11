@@ -62,3 +62,9 @@ test("the platform no longer reads a demo crop, a demo lot or a government brief
   assert.match(server, /government\|ministry\|pilot\|donor\|investor\)\\s\+reports\?/, "a government or ministry report still is");
   assert.match(server, /\|and\|then\|saying\|say\|tell\|ask\)\\b\.\*\$\/i, ""\)/, "'call my brother and say hi' keeps only 'brother'");
 });
+
+test("spoken: 'create a document ... and save it' says how to save it from the keyboard instead of making a plan", async () => {
+  const answer = await ask(planner({ documents: { list: async () => [] } }), "Create a document called Farm Plan that says I will plant maize in March, and save it");
+  assert.deepEqual(answer.steps, []);
+  assert.match(answer.response, /I can only save one from the keyboard\. Type "Create a document called Farm Plan that says I will plant maize in March, and save it" in the box on the main screen/);
+});
