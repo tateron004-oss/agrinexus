@@ -441,7 +441,10 @@ class OpenEndedPlanner {
     if (alertsControl) return Object.freeze({ ...alertsControl, planningAttempts: 0 });
     // "How many bags of maize do I have in stock?" was sent to a web search and answered "You have 21 bags", a number
     // taken from an unrelated web page. Nexus holds no such record, so it says so instead of guessing.
-    const personalRecord = personalRecordQuestionPlan(command.text);
+    // (a person who has a workspace and says "inventory" is asking about its inventory register, which does hold records)
+    const workspaceInventory = typeof this.businessWorkspaces?.count === "function" && /^inventory/.test(businessVoiceDispatch.classify(command.text) || "")
+      && (await this.businessWorkspaces.count(context).catch(() => null)) > 0;
+    const personalRecord = workspaceInventory ? null : personalRecordQuestionPlan(command.text);
     if (personalRecord) return Object.freeze({ ...personalRecord, planningAttempts: 0 });
     // A business owner's legal, tax, loan, grant, certification, licence, insurance or hiring QUESTION: general information only, said plainly (not a lawyer / tax or financial advisor), with the official place to
     // check, the free counselling that exists, and that Kyro cannot file or apply for anything. Before any app or AI planning, so the AI never answers these as if it were a professional (see guardrails/professional-advice.js).

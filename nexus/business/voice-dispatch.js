@@ -866,7 +866,9 @@ function classify(command = "") {
     // "Create a client intake form" / "an application checklist for participants" is a document, not a new person
     && !/\b(?:intake form|forms?|checklist|agreement|contract|documents?)\b/i.test(command);
   // "I sold 5 bags of maize for 6000 shillings", "we spent KES 2,000 on seed": first person, a money verb and an amount written with its currency.
-  const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)) && amountWithCurrency(command) !== null;
+  const saysWhatHappened = (/\b(?:i|we)\s+(?:just\s+)?(?:sold|spent|paid|bought|earned|received)\b/i.test(command) || /\bnime(?:uza|tumia|nunua|lipa|pokea)\b/i.test(command)
+    // the subject is often left out when speaking: "Received a 1000 dollar donation from Maria Chen for the youth program", "Got a 500 dollar gift from Pat"
+    || (/\b(?:received|got)\b[^.?!]{0,40}\b(?:donation|gift|contribution)\b/i.test(command) && !/\b(?:pledg\w*|bill|invoice)\b/i.test(command))) && amountWithCurrency(command) !== null;
   const wantsLogTransaction = (/\b(?:log|record|add|track)\b/i.test(command) && /\b(expense|income|transaction|payment|donation|sale|revenue)\b/i.test(command)) || saysWhatHappened;
   // "How much did I spend on seed this month?", "Show me my income this week": a question about the money already logged.
   const wantsFinanceSummary = !wantsLogTransaction && !/\b(?:log|record|track|create|start|new)\b|\badd\b(?!\s+up)/i.test(command)

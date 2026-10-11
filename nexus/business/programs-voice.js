@@ -179,7 +179,9 @@ function planProgramWrite(intent, { command, editable, workspace, today, normali
 
   if (intent === "recordConsent") {
     const declined = /\b(?:declin\w+|refus\w+|withdr\w+|revok\w+|did not (?:give|consent)|does not (?:give|consent)|no consent)\b/i.test(text);
-    const who = clean((/\bconsent\s+(?:from|of|for)\s+([A-Za-z][\w'’-]*(?:\s+[A-Za-z][\w'’-]*){0,2}?)(?=\s+(?:to|for|on|today|yesterday)\b|[,.]|$)/i.exec(text)
+    // ("Maria Lopez gave consent for services": the words after "consent for" say what it covers, not who gave it)
+    const consentFor = /\bconsent\s+(?:from|of|for)\s+([A-Za-z][\w'’-]*(?:\s+[A-Za-z][\w'’-]*){0,2}?)(?=\s+(?:to|for|on|today|yesterday)\b|[,.]|$)/i.exec(text);
+    const who = clean(((consentFor && !/^(?:services?|records?|data|information|storage|keeping|sharing|participation|programs?|treatment|help|support)$/i.test(consentFor[1].trim()) ? consentFor : null)
       || /^(?:record|log|note|mark)\s+(?:that\s+)?([A-Za-z][\w'’-]*(?:\s+[A-Za-z][\w'’-]*){0,2}?)\s+(?:has\s+)?(?:gave|given|declined|refused|withdrew|revoked)/i.exec(text)
       || /^([A-Za-z][\w'’-]*(?:\s+[A-Za-z][\w'’-]*){0,2}?)\s+(?:has\s+|have\s+)?(?:gave|given|declined|refused|withdrew|revoked|did not|does not)/i.exec(text) || [])[1]);
     if (!who || /^(?:consent|the|a|an|my|our)$/i.test(who)) return { response: "Whose consent? Say, for example, \"record consent from Maria Lopez to keep her records\".", missingInformation: ["participant"] };
