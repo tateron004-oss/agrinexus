@@ -34,7 +34,8 @@ const PROGRAM_READ_INTENTS = Object.freeze(["peopleServed", "volunteerSummary", 
 
 // ---- which request -------------------------------------------------------------------------------------------------------------------------------------------------------------
 const QUESTION = /[?]|^(?:(?:hey|ok|okay|please)\s+)*(?:(?:kyro|nexus)[,.]?\s+)?(?:what|which|how|who|do|does|did|are|is|am|can|could|show|list|tell|give|any|check|read|generate|make|get)\b/i;
-const NOT_A_SERVICE = /\b(?:donat\w*|payments?|invoices?|pledg\w*|gifts?|grants?|bills?|money|dollars?|shillings?|\$|loan|salary|wages?)\b/i;
+// (also not a service to a participant: a clinic's vaccination or dose, a farm delivery with a quantity -- "Baby Otieno received BCG, next dose in 6 weeks" belongs to the health worker's own toolkit)
+const NOT_A_SERVICE = /\b(?:donat\w*|payments?|invoices?|pledg\w*|gifts?|grants?|bills?|money|dollars?|shillings?|\$|loan|salary|wages?|vaccin\w*|immuni[sz]\w*|bcg|polio|measles|doses?|tablets?|medicine|medication|injections?|prescri\w*|pregnan\w*|deworm\w*|stock|delivery|deliveries)\b|\d\s*(?:kg|g|bags?|sacks?|litres?|liters?|pieces|units?)\b/i;
 const NAME_AFTER_FOR = "([A-Za-z][\\w'’-]*(?:\\s+[A-Za-z][\\w'’-]*){0,2}?)";
 
 function classifyPrograms(command = "") {
