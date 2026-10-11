@@ -32399,14 +32399,29 @@ async function spotifyApi(pathname, options = {}, accessToken) {
     }
   });
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
+  // (Spotify answers some errors in plain text, for example "Active premium subscription required for the player endpoint", which is not JSON)
+  let payload = {};
+  if (text) { try { payload = JSON.parse(text); } catch { payload = { error: { message: String(text).trim().slice(0, 200) } }; } }
   if (!response.ok) {
-    const message = payload?.error?.message || payload?.error || response.statusText || "Spotify API failed";
+    const message = String(payload?.error?.message || payload?.error || response.statusText || "Spotify API failed");
     const error = new Error(message);
     error.statusCode = response.status;
+    if (/premium/i.test(message)) error.reason = "premium-required";
+    else if (/no active device|NO_ACTIVE_DEVICE/i.test(`${message} ${payload?.error?.reason || ""}`)) error.reason = "no-device";
     throw error;
   }
   return payload;
+}
+
+// What to tell the person when Spotify refuses, in plain words (and what Kyro does instead).
+function spotifyFailureSentence(error, { control = "" } = {}) {
+  if (error?.reason === "premium-required") return control
+    ? "Spotify only lets other apps control playback on Premium accounts, and this account is not Premium."
+    : "Spotify only lets other apps play music on Premium accounts, and this account is not Premium, so I will play it from YouTube instead.";
+  if (error?.reason === "no-device") return control
+    ? "Spotify has no active device. Open Spotify on your phone or computer and start a song, then ask again."
+    : "Spotify has no active device to play on. Open Spotify on your phone or computer and start a song, then ask again. For now I will play it from YouTube.";
+  return control ? "Spotify could not do that just now." : "Spotify could not play that just now, so I will play it from YouTube instead.";
 }
 
 async function executeSpotifyMusicPlayback(db, user, text, options = {}) {
@@ -32441,7 +32456,17 @@ async function executeSpotifyMusicPlayback(db, user, text, options = {}) {
       url: intent.url
     };
   }
-  const search = await spotifyApi(`/search?${new URLSearchParams({ q: intent.query, type: "track,playlist,artist", limit: "5" })}`, {}, token.accessToken);
+  // Spotify refusing (not Premium, no active device, any other error) is told plainly and the music is played from YouTube instead; it is never a server error.
+  const refused = error => {
+    request.status = error?.reason ? `spotify-${error.reason}` : "spotify-error";
+    request.error = String(error?.message || "").slice(0, 200);
+    request.fallbackUrl = intent.url;
+    db.profile.musicPlaybackRequests.unshift(request);
+    db.profile.musicPlaybackRequests = db.profile.musicPlaybackRequests.slice(0, 50);
+    return { ...request, ok: false, response: spotifyFailureSentence(error), url: intent.url };
+  };
+  let search;
+  try { search = await spotifyApi(`/search?${new URLSearchParams({ q: intent.query, type: "track,playlist,artist", limit: "5" })}`, {}, token.accessToken); } catch (error) { return refused(error); }
   const track = search.tracks?.items?.[0] || null;
   const playlist = search.playlists?.items?.find(item => item?.uri) || null;
   const artist = search.artists?.items?.[0] || null;
@@ -32460,7 +32485,7 @@ async function executeSpotifyMusicPlayback(db, user, text, options = {}) {
     return { ...request, ok: false, response: `I could not find a Spotify match for ${intent.query}. I prepared a search handoff instead.`, url: intent.url };
   }
   const playPath = options.deviceId ? `/me/player/play?${new URLSearchParams({ device_id: options.deviceId })}` : "/me/player/play";
-  await spotifyApi(playPath, { method: "PUT", body: JSON.stringify(playbackBody) }, token.accessToken);
+  try { await spotifyApi(playPath, { method: "PUT", body: JSON.stringify(playbackBody) }, token.accessToken); } catch (error) { return refused(error); }
   const selected = track || playlist || artist;
   request.status = "playback-started";
   request.spotifyUri = selected.uri;
@@ -32534,7 +32559,7 @@ async function executeSpotifyMusicControl(db, user, text) {
       status: error.statusCode === 404 ? "no-active-spotify-device" : "spotify-control-failed",
       response: error.statusCode === 404
         ? "Spotify is connected, but no active Spotify device is available."
-        : `Spotify could not ${action} playback: ${error.message}`
+        : spotifyFailureSentence(error, { control: action })
     };
   }
 }
