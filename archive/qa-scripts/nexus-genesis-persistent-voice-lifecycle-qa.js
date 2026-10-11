@@ -30,7 +30,7 @@ includes(server, "AGRINEXUS_PWA_CACHE_VERSION = `agrinexus-pwa-${NEXUS_EFFECTIVE
 includes(index, "__NEXUS_RELEASE_SHA__", "index behavior marker __NEXUS_RELEASE_SHA__");
 
 includes(index, 'id="nexusPermanentMicrophoneBtn"', "static microphone button");
-includes(index, "Enable microphone", "static microphone initial label");
+includes(index, "Tap to talk to Kyro", "static microphone initial label");
 assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=__NEXUS_RELEASE_SHA__"), "microphone button must appear before app.js");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "static microphone button must not be hidden or disabled");
 

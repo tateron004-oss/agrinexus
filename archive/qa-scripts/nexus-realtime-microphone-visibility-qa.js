@@ -49,7 +49,7 @@ const checks = [
     "Static HTML microphone exists before app JavaScript",
     index.includes('id="nexusPermanentMicrophoneDock"') &&
       index.includes('id="nexusPermanentMicrophoneBtn"') &&
-      index.includes("Enable microphone") &&
+      index.includes("Tap to talk to Kyro") &&
       index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf('/app.js?v=__NEXUS_RELEASE_SHA__') &&
       !/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index)
   ],
@@ -127,9 +127,9 @@ const checks = [
   ],
   [
     "Realtime/provider failure is truthful and does not remove mic/orb",
-    app.includes("OpenAI Realtime voice did not start:") &&
-      app.includes("Nexus voice connection unavailable — retry") &&
-      app.includes("The microphone and orb remain available.") &&
+    app.includes("openai-realtime-startup-failed-reason") &&
+      app.includes("Kyro could not start listening. Tap the microphone to try again.") &&
+      app.includes("Kyro cannot hear you right now. Tap the microphone to reconnect.") &&
       app.includes("OpenAI Realtime did not connect to a live microphone track.")
   ],
   [
