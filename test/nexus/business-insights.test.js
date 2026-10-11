@@ -116,8 +116,9 @@ test("funding deadlines: passed-and-open, this week, this month; closed ones lef
   assert.match(text, /Due in the next 7 days: City Arts \(Youth\) \$2,000\.00, applied/);
   assert.match(text, /Due in the next 30 days: Green Fund/);
   assert.doesNotMatch(text, /Won Fund/, "an awarded grant has no deadline to worry about");
-  assert.match(text, /no separate contract record/, "said plainly, because contracts were asked about");
-  assert.doesNotMatch((await ask(workspace, "Which grants are due soon?")).response, /contract record/, "not said when contracts were not asked about");
+  assert.match(text, /Contracts and bids are tracked here with the grants/, "said plainly, because contracts were asked about");
+  assert.match(text, /I do not check eligibility or certification requirements for you/);
+  assert.doesNotMatch((await ask(workspace, "Which grants are due soon?")).response, /Contracts and bids are tracked/, "not said when contracts were not asked about");
   const none = makeWorkspace(); await none.seed({});
   assert.match((await ask(none, "Which grants are due soon?")).response, /no grants or funding opportunities tracked yet/);
 });

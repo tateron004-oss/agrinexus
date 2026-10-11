@@ -170,3 +170,37 @@ test("situational-awareness.business-deadline-sweep re-throws an unrelated engin
   const handlers = createHandlers({ runtime });
   await assert.rejects(() => handlers["situational-awareness.business-deadline-sweep"]({ job: { payload: {} } }), /database unavailable/);
 });
+
+// Phase 2 and 3b records join the same sweep: a bill due, a paper (licence, insurance, certification) about to expire, a grant or contract report due, a pledge that did not arrive.
+test("listBusinessWorkspacesWithDatedDeadlines also finds bills due, papers expiring, reports due and late pledges, each behind the same strict year-month-day guard", async () => {
+  const db = fakeDb([{ rows: [] }]);
+  await new RecordRepository(db).listBusinessWorkspacesWithDatedDeadlines({ limit: 10 });
+  const sql = db.calls[0].sql;
+  assert.match(sql, /'bills'/); assert.match(sql, /'compliance'/); assert.match(sql, /'pledges'/); assert.match(sql, /reportDue/);
+  assert.match(sql, /b->>'dueDate' ~ '\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$' and \(b->>'dueDate'\)::date <= current_date \+ 7 and lower\(coalesce\(b->>'status',''\)\) != 'paid'/, "bills: the strict date guard, a week ahead, not paid");
+  assert.match(sql, /\(c->>'expires'\)::date between current_date - 30 and current_date \+ 30 and lower\(coalesce\(c->>'status',''\)\) not in \('expired','denied','planned'\)/);
+  assert.match(sql, /\(g->>'reportDue'\)::date between current_date - 30 and current_date \+ 14/);
+  assert.match(sql, /\(p->>'expectedDate'\)::date < current_date and lower\(coalesce\(p->>'status',''\)\) = 'outstanding'/);
+  assert.match(sql, /due_bills/); assert.match(sql, /expiring_papers/); assert.match(sql, /due_reports/); assert.match(sql, /late_pledges/);
+});
+
+test("situational-awareness.business-deadline-sweep names a bill, an expiring licence, a report and a late pledge in one reminder to the owner and contacts nobody", async () => {
+  const { runtime, created } = sweepFixture({
+    candidates: [{ tenant_id: "t1", owner_id: "u1", record_id: "rec_biz", business_name: "Hope Garden", overdue_tasks: [], approaching_grants: [], overdue_invoices: [],
+      due_bills: [{ payee: "landlord", amount: 800, currency: "USD", dueDate: "2026-10-12" }],
+      expiring_papers: [{ item: "food handler permit", kind: "license", expires: "2026-10-20" }],
+      due_reports: [{ label: "City Parks", reportDue: "2026-10-15" }],
+      late_pledges: [{ donor: "Sam Park", expectedDate: "2026-10-01" }] }]
+  });
+  const handlers = createHandlers({ runtime });
+  const result = await handlers["situational-awareness.business-deadline-sweep"]({ job: { payload: {} } });
+  assert.equal(result.created, 1);
+  const when = created.tasks[0].steps[0].input.when;
+  assert.match(when, /the bill from landlord \(800 USD\) \(due 2026-10-12\)/);
+  assert.match(when, /the food handler permit \(license\) expiring 2026-10-20/);
+  assert.match(when, /the report for "City Parks" \(due 2026-10-15\)/);
+  assert.match(when, /the pledge from Sam Park \(expected 2026-10-01\)/);
+  assert.equal(created.tasks[0].command.actorId, "u1");
+  assert.equal(created.tasks[0].steps.every(step => step.toolId === "reminders.schedule"), true, "a reminder to the owner only");
+  assert.deepEqual(Object.keys(created.nudgeRecords[0].data).sort(), ["approachingGrants", "dueBills", "dueReports", "expiringPapers", "latePledges", "overdueInvoices", "overdueTasks", "reason", "recordId"]);
+});

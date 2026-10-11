@@ -66,7 +66,7 @@ function classifyPrograms(command = "") {
   // services delivered to a person: "log a food box service for Maria Lopez", "Maria Lopez received a food box", "we served Maria Lopez a hot meal"
   if (!asks && !NOT_A_SERVICE.test(text)) {
     if (/\b(?:log|record|add)\b[^.?!]{0,12}\bservices?\b[^.?!]*\bfor\s+[A-Za-z]/i.test(text)) return "logService";
-    if (/^[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,2}\s+(?:received|attended|completed|got)\s+(?:a|an|the|one|some|our)?\s*\S/.test(text)) return "logService";
+    if (/^(?!(?:We|They|He|She|It|I|You|The|Our|My|This|That|There)\b)[A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,2}\s+(?:received|attended|completed|got)\s+(?:a|an|the|one|some|our)?\s*\S/.test(text)) return "logService";
     if (/^(?:[Ww]e|I)\s+(?:served|helped|gave)\s+[A-Z][\w'’-]+/.test(text)) return "logService";
   }
 

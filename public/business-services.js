@@ -33,7 +33,7 @@
           // a string, but the backend's normalizeEditable rejects a field
           // whose type doesn't match its default (amount defaults to 0).
           field(div, label, String(row[key]), value => { const n = Number(value); row[key] = Number.isFinite(n) ? n : 0; }, false, "number");
-        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["start", "end"].includes(key) ? "datetime-local" : ["followUpDate", "date", "dueDate", "deadline", "expectedDate", "paidDate", "receivedDate", "asOf", "consentDate"].includes(key) ? "date" : "text");
+        } else field(div, label, row[key], value => { row[key] = value; }, ["caption", "steps"].includes(key), ["start", "end"].includes(key) ? "datetime-local" : ["followUpDate", "date", "dueDate", "deadline", "expectedDate", "paidDate", "receivedDate", "asOf", "consentDate", "reportDue", "expires"].includes(key) ? "date" : "text");
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove row";
       remove.addEventListener("click", () => { values.splice(index, 1); rows(containerId, values, keys); }); div.append(remove); container.append(div);
@@ -164,7 +164,7 @@
     byId("finance-summary").textContent = Object.keys(money).length ? Object.entries(money).map(([code, t]) => `${code}: Income ${t.income.toFixed(2)}  |  Expenses ${t.expenses.toFixed(2)}  |  Net ${(t.income - t.expenses).toFixed(2)}`).join("   ||   ") : "Income: 0.00  |  Expenses: 0.00  |  Net: 0.00";
     rows("invoices", editable.invoices, [["invoiceNumber", "Invoice #"], ["clientName", "Client"], ["date", "Date"], ["dueDate", "Due date"], ["notes", "Notes"], ["status", "Status"]]);
     rows("invoice-items", editable.invoiceItems, [["invoiceNumber", "Invoice #"], ["description", "Description"], ["quantity", "Qty"], ["unitPrice", "Unit price"]]);
-    rows("grants", editable.grants, [["funderName", "Funder"], ["program", "Program / grant name"], ["amount", "Amount"], ["deadline", "Deadline"], ["status", "Status (researching, drafting, submitted, awarded, declined)"], ["notes", "Notes"]]);
+    rows("grants", editable.grants, [["funderName", "Funder"], ["program", "Program / grant name"], ["amount", "Amount"], ["deadline", "Deadline"], ["status", "Status (researching, drafting, submitted, awarded, declined)"], ["kind", "Kind (grant, contract or loan)"], ["eligibility", "Who is eligible"], ["requirements", "What the funder requires"], ["reportDue", "Next report due"], ["notes", "Notes"]]);
     renderAppointments();
     const soonest = editable.grants.filter(row => row.deadline).map(row => row.deadline).sort()[0];
     byId("grants-summary").textContent = soonest ? `Next deadline: ${soonest}` : "No deadlines set yet.";
@@ -186,6 +186,12 @@
     rows("outcomes", editable.outcomes, [["program", "Program"], ["measure", "What was measured"], ["value", "Number"], ["unit", "Unit"], ["date", "Date"], ["notes", "Notes"]]);
     rows("program-goals", editable.programGoals, [["program", "Program"], ["goal", "Goal (what is counted)"], ["target", "Target number"], ["unit", "Unit"], ["deadline", "Deadline"]]);
     byId("program-summary").textContent = editable.services.length || editable.outcomes.length ? `${new Set(editable.services.map(row => String(row.participant).toLowerCase())).size} people received ${editable.services.length} services; ${editable.outcomes.length} results recorded` : "No services or results yet.";
+    rows("compliance", editable.compliance, [["item", "Paper (what it is called)"], ["kind", "Kind (license, insurance, certification, policy, board, filing)"], ["issuer", "Issued by"], ["number", "Number"], ["expires", "Expires"], ["status", "Status (active, applied, pending, planned, expired, denied)"], ["notes", "Notes"]]);
+    const soonPapers = editable.compliance.filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.expires) && row.expires <= new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10) && !/^(expired|denied|planned)$/i.test(row.status));
+    byId("compliance-summary").textContent = editable.compliance.length ? `${editable.compliance.length} in the register; ${soonPapers.length ? `${soonPapers.length} expire${soonPapers.length === 1 ? "s" : ""} or lapsed within 60 days: ${soonPapers.map(row => `${row.item} (${row.expires})`).join(", ")}` : "none expire in the next 60 days"}` : "Nothing in the register yet.";
+    rows("inventory", editable.inventory, [["item", "Item"], ["kind", "Kind (product, supply, equipment, donated)"], ["quantity", "On hand"], ["unit", "Unit (jars, boxes...)"], ["reorderAt", "Reorder at"], ["value", "Value per unit"], ["currency", "Currency (KES, USD, NGN...)"], ["location", "Where it is kept"], ["wasted", "Wasted so far"], ["notes", "Notes"]]);
+    const lowItems = editable.inventory.filter(row => row.reorderAt > 0 && row.quantity <= row.reorderAt);
+    byId("inventory-summary").textContent = editable.inventory.length ? `${editable.inventory.length} item${editable.inventory.length === 1 ? "" : "s"}; ${lowItems.length ? `at or below the reorder level: ${lowItems.map(row => row.item).join(", ")}` : "none at or below the reorder level"}` : "No inventory yet.";
     byId("budgets-summary").textContent = editable.budgets.length ? `${editable.budgets.length} budget${editable.budgets.length === 1 ? "" : "s"} set. Ask Kyro: how are we doing against budget?` : "No budgets yet.";
     rows("posts", editable.socialPosts, [["platform", "Platform"], ["caption", "Draft caption"], ["status", "Draft status"]]);
     rows("tasks", editable.tasks, [["title", "Task"], ["status", "Status"], ["assignee", "Assigned to"], ["priority", "Priority (low, medium, high)"], ["dueDate", "Due date"]]);
@@ -255,10 +261,28 @@
   byId("add-service").addEventListener("click", () => { current.data.editable.services.push({ participant: "", service: "", date: new Date().toISOString().slice(0, 10), program: "", hours: 0, notes: "" }); render(); });
   byId("add-outcome").addEventListener("click", () => { current.data.editable.outcomes.push({ program: "", measure: "", value: 0, unit: "", date: new Date().toISOString().slice(0, 10), notes: "" }); render(); });
   byId("add-goal").addEventListener("click", () => { current.data.editable.programGoals.push({ program: "", goal: "", target: 0, unit: "", deadline: "" }); render(); });
+  byId("add-compliance").addEventListener("click", () => { current.data.editable.compliance.push({ item: "", kind: "license", issuer: "", number: "", expires: "", status: "active", notes: "" }); render(); });
+  byId("add-inventory").addEventListener("click", () => { current.data.editable.inventory.push({ item: "", kind: "product", quantity: 0, unit: "", reorderAt: 0, value: 0, currency: "USD", location: "", wasted: 0, notes: "" }); render(); });
+  // Importing a spreadsheet saved as CSV (business-csv.js): read here, checked row by row, added to the page's list; nothing is saved until the person presses Save.
+  const IMPORT_LIMITS = { contacts: 200, transactions: 200, inventory: 400 };
+  byId("import-template").addEventListener("click", () => { const kind = byId("import-kind").value; download(`kyro-${kind}-template.csv`, BusinessCsv.template(kind), "text/csv"); });
+  byId("import-run").addEventListener("click", () => run(async () => {
+    const result = byId("import-result"); const file = byId("import-file").files[0]; const kind = byId("import-kind").value;
+    if (!current) throw new Error("Open a workspace first.");
+    if (!file) throw new Error("Choose a CSV file first.");
+    if (file.size > BusinessCsv.MAX_CHARS) throw new Error("That file is too large. Split it into smaller files.");
+    const spec = BusinessCsv.KINDS[kind]; const list = current.data.editable[spec.list];
+    const imported = BusinessCsv.importRows(kind, await file.text(), list, { limit: IMPORT_LIMITS[kind], today: new Date().toISOString().slice(0, 10) });
+    if (JSON.stringify(current.data.editable).length + JSON.stringify(imported.rows).length > 140000) { result.textContent = "Nothing was imported: the workspace is close to the most it can hold. Remove rows you no longer need first."; return; }
+    list.push(...imported.rows);
+    const skipped = imported.skipped.slice(0, 8).map(item => `${item.line ? `line ${item.line}: ` : ""}${item.reason}`);
+    result.textContent = `${imported.rows.length} ${spec.label} added${imported.skipped.length ? `; ${imported.skipped.length} skipped (${skipped.join("; ")}${imported.skipped.length > 8 ? "; and more" : ""})` : ""}${imported.unknownColumns.length ? `. Columns I did not use: ${imported.unknownColumns.join(", ")}` : ""}. Press Save to keep them.`;
+    render(); byId("import-result").textContent = result.textContent;
+  }));
   byId("add-bill").addEventListener("click", () => { current.data.editable.bills.push({ payee: "", description: "", amount: 0, currency: "USD", dueDate: "", status: "unpaid", recurring: "", paidDate: "" }); render(); });
   byId("add-pledge").addEventListener("click", () => { current.data.editable.pledges.push({ donor: "", amount: 0, currency: "USD", expectedDate: "", purpose: "", restricted: false, status: "outstanding", receivedDate: "" }); render(); });
   byId("add-budget").addEventListener("click", () => { current.data.editable.budgets.push({ category: "", amount: 0, currency: "USD", period: "month" }); render(); });
-  byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, deadline: "", status: "researching", notes: "" }); render(); });
+  byId("add-grant").addEventListener("click", () => { current.data.editable.grants.push({ funderName: "", program: "", amount: 0, currency: "USD", deadline: "", status: "researching", notes: "", kind: "grant", eligibility: "", requirements: "", reportDue: "" }); render(); });
   byId("add-appointment").addEventListener("click", () => { current.data.editable.appointments.push({ title: "", start: "", end: "", notes: "", status: "scheduled", calendarEventId: "", calendarLink: "" }); render(); });
   byId("generate-invoice-pdf").addEventListener("click", () => run(async () => {
     const invoiceNumber = byId("invoice-pdf-number").value.trim();

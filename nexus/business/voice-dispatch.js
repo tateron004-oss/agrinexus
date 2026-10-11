@@ -6,6 +6,7 @@ const insights = require("./insights.js");
 const crmVoice = require("./crm-voice.js");
 const financeVoice = require("./finance-voice.js");
 const programsVoice = require("./programs-voice.js");
+const operationsVoice = require("./operations-voice.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const { whenOf, parseEachPrice, parseQuantity, parseCount } = require("../farmwork/parse.js");
 
@@ -430,6 +431,7 @@ function extractGrantArgs(command = "", args = {}, options = {}) {
     // already fixed for invoice-item unitPrice/quantity.
     amount: Number.isFinite(rawAmount) && rawAmount >= 0 ? rawAmount : 0,
     currency: String(args.currency || withCurrency?.currency || "USD").toUpperCase().slice(0, 3),
+    kind: /\b(?:contract|rfp|bid|tender)\b/i.test(text) ? "contract" : /\bloan\b/i.test(text) ? "loan" : "grant",
     deadline: isoDayOrText(sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40), options.today),
     deadlineText: sanitizeText(args.deadline || (deadlineMatch ? deadlineMatch[1].trim() : ""), 40)
   };
@@ -824,7 +826,7 @@ function computeBusinessDashboard(editable, period = {}) {
 // function (rather than a second, hand-maintained copy of these regexes).
 // (the insight reads -- cash outlook, follow-ups due, deadlines due, people served, volunteer hours -- are in insights.js; "how are we doing" is the dashboard)
 const INSIGHT_READS = insights.INSIGHT_INTENTS.filter(intent => intent !== "howAreWeDoing");
-const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS]);
+const READ_INTENTS = new Set(["dashboard", "list", "financeSummary", "donationSummary", "listListings", ...crmVoice.CRM_READ_INTENTS, ...INSIGHT_READS, ...financeVoice.FINANCE_READ_INTENTS, ...programsVoice.PROGRAM_READ_INTENTS, ...operationsVoice.OPERATIONS_READ_INTENTS]);
 
 function classify(command = "") {
   // Questions about how the organisation is doing, money to cover expenses, who needs a follow-up, funding deadlines, people served and volunteer hours come before the general word-matching below, which
@@ -838,6 +840,9 @@ function classify(command = "") {
   // Volunteer hours and skills, participants' consent, services, results, goals and the impact report (programs-voice.js).
   const programs = programsVoice.classifyPrograms(command);
   if (programs) return programs;
+  // The register of licences and other papers that expire, the inventory, where contacts came from, and what a contract or grant carries (operations-voice.js).
+  const operations = operationsVoice.classifyOperations(command);
+  if (operations) return operations;
   // "church"/"congregation"/"parish"/"ministry" (in the congregational sense,
   // not a government ministry -- server.js's legacy weather/safety code uses
   // "ministry" the government way, in a completely different command shape,
@@ -870,7 +875,9 @@ function classify(command = "") {
   const wantsAddInvoiceItem = /\binvoice\b/i.test(command) && /\b(?:line[- ]?item|item)s?\b/i.test(command) && /\b(?:add|include)\b/i.test(command);
   const wantsGenerateInvoicePdf = !wantsAddInvoiceItem && /\binvoice\b/i.test(command) && /\b(?:generate|print|export|make)\b/i.test(command) && /\b(pdf|receipt)\b/i.test(command);
   const wantsCreateInvoice = !wantsAddInvoiceItem && !wantsGenerateInvoicePdf && /\b(invoice|receipt)\b/i.test(command) && /\b(?:create|add|start|open|new)\b/i.test(command);
-  const wantsAddGrant = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(grant|funding)\b/i.test(command);
+  // ("add a contract with City Parks for 20000 dollars" tracks a contract as a funding opportunity; "create a service contract" is a document, so only add/track/log/record and a named counterparty count)
+  const wantsAddGrant = (/\b(?:add|create|new|log|track)\b/i.test(command) && /\b(grant|funding)\b/i.test(command))
+    || (/\b(?:add|track|log|record)\b/i.test(command) && /\b(?:contract|rfp|bid|tender)\b\s+(?:with|from|for|at)\b/i.test(command) && !/\b(?:agreement|template|form|document)\b/i.test(command));
   const wantsUpdateGrantStatus = /\b(?:mark|update|set|change)\b/i.test(command) && /\bgrant\b/i.test(command);
   const wantsAddTask = /\b(?:add|create|new)\b/i.test(command) && /\btask\b/i.test(command);
   const wantsUpdateTaskStatus = !wantsAddTask && /\b(?:mark|update|set|change|complete|finish)\b/i.test(command) && /\btask\b/i.test(command);
@@ -1050,6 +1057,25 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
   if (typeof businessRequest !== "function") throw new Error("A businessRequest bridge function is required.");
   const isConfirmed = confirmed !== undefined ? Boolean(confirmed) : (args.confirmed === true || args.confirmation === true);
   const intent = classify(command);
+
+  if (operationsVoice.OPERATIONS_READ_INTENTS.includes(intent) || operationsVoice.OPERATIONS_WRITE_INTENTS.includes(intent)) {
+    const resolved = await resolveBusinessClient(businessRequest, command);
+    if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one.", missingInformation: ["businessName"] };
+    const workspace = resolved.client.data?.info?.businessName || "your workspace";
+    const editable = resolved.client.data.editable;
+    const today = todayIn(new Date(), timeZone);
+    const ctx = { command, editable, workspace, today, formatMoney, normalize: normalizeSpokenText };
+    if (operationsVoice.OPERATIONS_READ_INTENTS.includes(intent)) {
+      const response = operationsVoice.readOperations(intent, ctx);
+      return { status: "completed", localOnly: true, response, summary: response };
+    }
+    const plan = operationsVoice.planOperationsWrite(intent, ctx);
+    if (plan.response) return plan.info ? { status: "completed", localOnly: true, response: plan.response, summary: plan.response } : { status: "needs-input", response: plan.response, missingInformation: plan.missingInformation || [] };
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: plan.prompt };
+    const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
+      body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable: plan.apply(editable) } });
+    return { status: "completed", localOnly: true, response: plan.done, businessRecord: updated?.body || null, summary: plan.done };
+  }
 
   if (programsVoice.PROGRAM_READ_INTENTS.includes(intent) || programsVoice.PROGRAM_WRITE_INTENTS.includes(intent)) {
     const resolved = await resolveBusinessClient(businessRequest, command);
@@ -1337,12 +1363,13 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before tracking a grant.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const grantLabel = grant.funderName || grant.program;
-    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add a${grant.amount ? ` ${formatMoney(grant.currency, grant.amount)}` : ""} grant or funding opportunity from "${grantLabel}" to "${workspaceName}". Should I go ahead?` };
+    const grantWord = grant.kind === "contract" ? "contract" : grant.kind === "loan" ? "loan" : "grant or funding opportunity";
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can add a${grant.amount ? ` ${formatMoney(grant.currency, grant.amount)}` : ""} ${grantWord} from "${grantLabel}" to "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, grants: [...resolved.client.data.editable.grants,
-      { funderName: grant.funderName, program: grant.program, amount: grant.amount, currency: grant.currency, deadline: grant.deadline, status: "researching", notes: "" }] };
+      { funderName: grant.funderName, program: grant.program, amount: grant.amount, currency: grant.currency, deadline: grant.deadline, status: "researching", notes: "", kind: grant.kind || "grant", eligibility: "", requirements: "", reportDue: "" }] };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
-    const response = `Added a grant or funding opportunity from "${grantLabel}" to "${workspaceName}".`;
+    const response = `Added a ${grantWord} from "${grantLabel}" to "${workspaceName}".`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 
@@ -1589,7 +1616,7 @@ function confirmationPrompt(command = "") {
 }
 
 module.exports = Object.freeze({
-  amountWithCurrency, asksAboutOwnRecords: command => insights.classifyInsight(command) !== null || financeVoice.classifyFinance(command) !== null || programsVoice.classifyPrograms(command) !== null,
+  amountWithCurrency, asksAboutOwnRecords: command => insights.classifyInsight(command) !== null || financeVoice.classifyFinance(command) !== null || programsVoice.classifyPrograms(command) !== null || operationsVoice.classifyOperations(command) !== null,
   sanitizeText, classify, isReadIntent, needsWorkspace, noWorkspaceReply, precheck, run, confirmationPrompt,
   extractBusinessName, resolveBusinessClient, extractLeadArgs, extractTransactionArgs,
   extractInvoiceArgs, extractInvoiceItemArgs, extractGrantArgs, extractGrantStatusArgs, resolveGrant,
