@@ -68,3 +68,20 @@ test("spoken: 'create a document ... and save it' says how to save it from the k
   assert.deepEqual(answer.steps, []);
   assert.match(answer.response, /I can only save one from the keyboard\. Type "Create a document called Farm Plan that says I will plant maize in March, and save it" in the box on the main screen/);
 });
+
+test("'undo my last entry' is the farm log's even for a person who also has blood pressure readings; 'delete my last reading' is still the readings'", () => {
+  const { healthReadingsTurn } = require("../../nexus/health/readings-conversation.js");
+  let clock = Date.parse("2026-10-07T08:00:00Z"); const db = { profile: {} }; const user = { id: "u1", email: "u1@example.org" };
+  const say = text => { clock += 4000; return healthReadingsTurn({ db, user, text, now: new Date(clock) }); };
+  say("my blood pressure is 150 over 95"); say("yes");
+  clock += 3 * 3600 * 1000; // a few hours later: nothing about readings is being talked about any more
+  for (const text of ["undo my last entry", "delete my last entry", "remove the last one"]) assert.equal(say(text), null, text);
+  assert.match(say("delete my last reading").response, /Shall I delete it/);
+});
+
+test("a drone request that has not been confirmed asks plainly, and a lone place name opens the map", () => {
+  const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  assert.match(server, /Should I save it\? Say yes to save it\./, "asks before saving a drone mission request");
+  assert.match(server, /requires explicit confirmed\/i\.test\(String\(missionResult/, "only the confirmation case is reworded");
+  assert.match(server, /where\\s\+is\|find\|map\\s\+of/, "'show me Nairobi' opens the map");
+});
