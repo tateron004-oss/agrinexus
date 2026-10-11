@@ -53,7 +53,7 @@ assert.equal(countMatches(index, /id="nexusPermanentMicrophoneBtn"/g), 1, "stati
 assert.equal(countMatches(index, /id="nexusPermanentMicrophoneDock"/g), 1, "static HTML must contain exactly one permanent microphone dock");
 assert(index.indexOf('id="nexusPermanentMicrophoneBtn"') < index.indexOf("/app.js?v=__NEXUS_RELEASE_SHA__"), "microphone button must exist before app.js executes");
 assert(!/id="nexusPermanentMicrophoneBtn"[^>]*(hidden|disabled)/i.test(index), "microphone button must not be hidden or disabled in HTML");
-includes(index, "Enable microphone", "initial microphone label");
+includes(index, "Tap to talk to Kyro", "initial microphone label");
 includes(index, 'aria-describedby="nexusPermanentMicrophoneStatus"', "accessible microphone status binding");
 includes(index, 'role="status"', "persistent microphone status region");
 

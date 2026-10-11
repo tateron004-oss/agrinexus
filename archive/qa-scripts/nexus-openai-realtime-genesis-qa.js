@@ -164,8 +164,8 @@ function staticAssertions() {
     "openai-agents-sdk-session-started",
     "openai-agents-live-microphone-track-verified",
     "openai-agents-realtime-verified",
-    "Nexus voice connection unavailable — retry",
-    "The microphone and orb remain available.",
+    "Kyro can't hear you. Tap to reconnect",
+    "Kyro cannot hear you right now. Tap the microphone to reconnect.",
     "RealtimeVoiceAdapter"
   ].forEach(token => assert(app.includes(token), `app should include ${token}`));
 

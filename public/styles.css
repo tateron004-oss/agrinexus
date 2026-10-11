@@ -16981,3 +16981,91 @@ body.user-mode.kyro-task-stage .nexus-workflow-window-actions [data-nexus-workfl
   content: "\00d7";
   font-size: 1.7rem;
 }
+
+/* ===== Task stage: the map =====
+   Asking for the map shows the map, full screen, and nothing else: no "Choose what you want Nexus to check", no readiness or route-planning cards, no tracker strip, no
+   Back button. One Close mark stays. (The map itself lives inside the "More options" fold, so that fold is kept open and only its label is hidden; see kyro-task-stage.js.) */
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-simple-module > .eyebrow,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-simple-module > h2,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-simple-module > p,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-simple-module > .user-service-buttons,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-simple-module > .user-module-status,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-module-more > summary,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-module-nav > :first-child,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-map-provider-readiness,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-route-planning-preview,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-real-map-head,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-tracker-strip,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-route-progress,
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-real-map-meta {
+  display: none !important;
+}
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-simple-module {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
+}
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-module-nav {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  left: auto;
+  width: auto;
+  margin: 0;
+  z-index: 2147482000;
+}
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-real-map-card {
+  position: fixed;
+  inset: 0;
+  z-index: 2147481000;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #080b10 !important;
+}
+body.user-mode.kyro-task-stage.user-map-full-open #map .user-real-map {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* ===== A clean resting screen =====
+   Status lines, hints and routing details are for people building and supporting Kyro, not for the person using it. They stay in the page (screen readers still read them) but are
+   not drawn. The microphone's own button is the one plain line about listening; its live status text is announced, not drawn twice. */
+body.user-mode .nexus-true-orb-status[data-nexus-core-status-text],
+body.user-mode .nexus-audio-companion-status strong,
+body.user-mode .nexus-audio-companion-status span,
+body.user-mode .nexus-command-center-copy > p,
+body.user-mode #nexusFirstImpressionDescription,
+body.user-mode .nexus-mode-launcher,
+body.user-mode .nexus-command-center-copy > .eyebrow,
+body.user-mode .nexus-command-center-copy > h3,
+body.user-mode .nexus-command-center-label,
+body.user-mode .nexus-premium-hero-title,
+body.user-mode .nexus-premium-hero-subtitle,
+body.user-mode .nexus-presence-runtime-badge,
+body.user-mode .nexus-command-examples,
+body.user-mode .nexus-primary-voice-hint,
+body.user-mode #nexusCommandTypedHint,
+body.user-mode .nexus-command-context,
+body.user-mode .nexus-browser-voice-fallback,
+body.user-mode [data-nexus-intent-route-status],
+#nexusPermanentMicrophoneStatus {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
