@@ -287,6 +287,13 @@ class RecordRepository {
     const OVERDUE_TASK = `t->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (t->>'dueDate')::date < current_date and lower(coalesce(t->>'status','')) not in ('done','complete')`;
     const APPROACHING_GRANT = `g->>'deadline' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'deadline')::date between current_date and current_date + 7 and lower(coalesce(g->>'status','')) not in ('awarded','declined')`;
     const OVERDUE_INVOICE = `i->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (i->>'dueDate')::date < current_date and lower(coalesce(i->>'status','')) != 'paid'`;
+    // Phase 2 and 3b records, with the same strict year-month-day guard. A bill unpaid and due within a week (or already late); a paper in the register (licence, insurance, certification...) expiring within 30 days, or lapsed
+    // within the last 30 days and not renewed (older than that is left alone, so an old lapsed paper is not nagged about for ever); a grant or contract report due within two weeks or up to 30 days late; a pledge expected
+    // earlier than today and still outstanding.
+    const DUE_BILL = `b->>'dueDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (b->>'dueDate')::date <= current_date + 7 and lower(coalesce(b->>'status','')) != 'paid'`;
+    const EXPIRING_PAPER = `c->>'expires' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (c->>'expires')::date between current_date - 30 and current_date + 30 and lower(coalesce(c->>'status','')) not in ('expired','denied','planned')`;
+    const DUE_REPORT = `g->>'reportDue' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (g->>'reportDue')::date between current_date - 30 and current_date + 14 and lower(coalesce(g->>'status','')) not in ('declined')`;
+    const LATE_PLEDGE = `p->>'expectedDate' ~ '^\\d{4}-\\d{2}-\\d{2}$' and (p->>'expectedDate')::date < current_date and lower(coalesce(p->>'status','')) = 'outstanding'`;
     const result = await this.db.query(`select tenant_id, owner_id, record_id,
         data->'info'->>'businessName' as business_name,
         (select jsonb_agg(jsonb_build_object('title', t->>'title', 'dueDate', t->>'dueDate'))
@@ -297,13 +304,29 @@ class RecordRepository {
           where ${APPROACHING_GRANT}) as approaching_grants,
         (select jsonb_agg(jsonb_build_object('invoiceNumber', i->>'invoiceNumber', 'clientName', i->>'clientName', 'dueDate', i->>'dueDate'))
           from jsonb_array_elements(coalesce(data->'editable'->'invoices','[]'::jsonb)) i
-          where ${OVERDUE_INVOICE}) as overdue_invoices
+          where ${OVERDUE_INVOICE}) as overdue_invoices,
+        (select jsonb_agg(jsonb_build_object('payee', b->>'payee', 'amount', b->'amount', 'currency', b->>'currency', 'dueDate', b->>'dueDate'))
+          from jsonb_array_elements(coalesce(data->'editable'->'bills','[]'::jsonb)) b
+          where ${DUE_BILL}) as due_bills,
+        (select jsonb_agg(jsonb_build_object('item', c->>'item', 'kind', c->>'kind', 'expires', c->>'expires'))
+          from jsonb_array_elements(coalesce(data->'editable'->'compliance','[]'::jsonb)) c
+          where ${EXPIRING_PAPER}) as expiring_papers,
+        (select jsonb_agg(jsonb_build_object('label', coalesce(g->>'funderName', g->>'program'), 'reportDue', g->>'reportDue'))
+          from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g
+          where ${DUE_REPORT}) as due_reports,
+        (select jsonb_agg(jsonb_build_object('donor', p->>'donor', 'expectedDate', p->>'expectedDate'))
+          from jsonb_array_elements(coalesce(data->'editable'->'pledges','[]'::jsonb)) p
+          where ${LATE_PLEDGE}) as late_pledges
       from nexus_records
       where record_type='business-client' and workspace_id='operations' and state='active' and deleted_at is null
         and (
           exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'tasks','[]'::jsonb)) t where ${OVERDUE_TASK})
           or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g where ${APPROACHING_GRANT})
           or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'invoices','[]'::jsonb)) i where ${OVERDUE_INVOICE})
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'bills','[]'::jsonb)) b where ${DUE_BILL})
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'compliance','[]'::jsonb)) c where ${EXPIRING_PAPER})
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'grants','[]'::jsonb)) g where ${DUE_REPORT})
+          or exists (select 1 from jsonb_array_elements(coalesce(data->'editable'->'pledges','[]'::jsonb)) p where ${LATE_PLEDGE})
         )
       order by updated_at
       limit $1`, [Math.min(Math.max(limit, 1), 200)]);

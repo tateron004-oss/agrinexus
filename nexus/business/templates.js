@@ -474,6 +474,8 @@ function defaultClientWorkspace(info) {
     leads: [],
     transactions: [],
     bills: [],
+    compliance: [],
+    inventory: [],
     volunteerHours: [],
     services: [],
     outcomes: [],

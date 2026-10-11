@@ -137,7 +137,12 @@ function normalizeEditable(info, input = {}) {
     // Found live (business/CRM audit): unlike transactions/invoiceItems/listings, grants had no currency
     // field at all -- a value could never persist even via the direct API, so every grant was silently
     // treated as USD regardless of what was actually said or stored.
-    grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, currency: "USD", deadline: "", status: "researching", notes: "" }, 200, new Set(["amount"])),
+    grants: rows(input.grants === undefined ? starter.grants : input.grants, { funderName: "", program: "", amount: 0, currency: "USD", deadline: "", status: "researching", notes: "", kind: "grant", eligibility: "", requirements: "", reportDue: "" }, 200, new Set(["amount"])),
+    // Phase 3b of the business-intelligence tools. A grant row can be a contract, a loan or a bid ("kind"), and carries what makes the organisation eligible, what the funder requires, and when the next report is due.
+    // The register holds the papers that expire (licences, insurance, certifications, policies, board records, filings); the inventory holds products, supplies, equipment and donated goods with a reorder level and a waste count.
+    // Both start empty, so a workspace saved before this existed reads back exactly as it was.
+    compliance: rows(input.compliance === undefined ? (starter.compliance || []) : input.compliance, { item: "", kind: "license", issuer: "", number: "", expires: "", status: "active", notes: "" }, 200),
+    inventory: rows(input.inventory === undefined ? (starter.inventory || []) : input.inventory, { item: "", kind: "product", quantity: 0, unit: "", reorderAt: 0, value: 0, currency: "USD", location: "", wasted: 0, notes: "" }, 400, new Set(["quantity", "reorderAt", "value", "wasted"])),
     // Tool 5 of the small-business/nonprofit suite: appointment scheduling.
     // A real Google Calendar integration already exists (server/providers/
     // calendarProvider.js, createEvent()) but was only reachable through

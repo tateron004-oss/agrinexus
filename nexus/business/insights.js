@@ -109,7 +109,7 @@ const CLOSED_FUNDING = new Set(["awarded", "declined", "rejected", "denied", "cl
 function deadlinesDue({ command, editable, workspace, today, formatMoney }) {
   const name = `"${workspace}"`;
   const grants = editable.grants || [];
-  const contractNote = /\bcontracts?\b|\brfps?\b/i.test(command) ? " I track contracts and bids the same way as grants, as funding opportunities with a deadline; there is no separate contract record, and I do not track eligibility, reporting duties or certification requirements yet." : "";
+  const contractNote = /\bcontracts?\b|\brfps?\b/i.test(command) ? " Contracts and bids are tracked here with the grants, as funding opportunities; say, for example, \"add a contract with City Parks for 20000 dollars due December 1\", and note what each requires with \"the City Parks contract requires quarterly reports, first due January 15\", then ask \"what reports are due\". I do not check eligibility or certification requirements for you." : "";
   if (!grants.length) return `${name} has no grants or funding opportunities tracked yet, so no deadlines.${contractNote} Say, for example, "add a grant from Green Fund for 5000 dollars due December 1".`;
   const open = grants.filter(grant => !CLOSED_FUNDING.has(lower(grant.status)));
   const dated = open.map(grant => ({ grant, day: isoOrNull(grant.deadline) })).filter(item => item.day).sort((a, b) => a.day.localeCompare(b.day));
@@ -117,7 +117,7 @@ function deadlinesDue({ command, editable, workspace, today, formatMoney }) {
   const describe = item => {
     const g = item.grant;
     const money = g.amount ? ` ${formatMoney(g.currency || "USD", g.amount)}` : "";
-    return `${g.funderName || g.program || "a grant"}${g.program && g.funderName ? ` (${g.program})` : ""}${money}, ${lower(g.status || "researching")}, ${describeDay(item.day, today)}`;
+    return `${g.funderName || g.program || "a grant"}${g.program && g.funderName ? ` (${g.program})` : ""}${g.kind && g.kind !== "grant" ? ` ${g.kind}` : ""}${money}, ${lower(g.status || "researching")}, ${describeDay(item.day, today)}`;
   };
   const overdue = dated.filter(item => daysUntil(item.day, today) < 0);
   const week = dated.filter(item => { const d = daysUntil(item.day, today); return d >= 0 && d <= 7; });
@@ -127,7 +127,7 @@ function deadlinesDue({ command, editable, workspace, today, formatMoney }) {
   if (overdue.length) parts.push(`${plural(overdue.length, "deadline")} already passed and still open: ${say(overdue.map(describe))}`);
   if (week.length) parts.push(`due in the next 7 days: ${say(week.map(describe))}`);
   if (month.length) parts.push(`due in the next 30 days: ${say(month.map(describe))}`);
-  if (!overdue.length && !week.length && !month.length) parts.push(`nothing is due in the next 30 days${later.length ? `; the next one is ${describe(later[0])}` : ""}`);
+  if (!overdue.length && !week.length && !month.length) parts.push(`nothing is due in the next 30 days${later.length ? `; ${later.length === 1 ? "the next one is" : "the next ones are"} ${say(later.slice(0, 3).map(describe))}` : ""}`);
   else if (later.length) parts.push(`${plural(later.length, "more")} later, the next ${describe(later[0])}`);
   const tail = noDate.length ? ` ${plural(noDate.length, "open opportunity")} ${noDate.length === 1 ? "has" : "have"} no deadline recorded: ${sayNames(noDate.map(grant => grant.funderName || grant.program || "a grant"), 4)}.` : "";
   return `Funding deadlines in ${name}: ${sentences(parts)}.${tail}${contractNote}`;

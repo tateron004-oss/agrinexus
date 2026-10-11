@@ -740,15 +740,24 @@ function createHandlers({ runtime, deliveryProviders = {}, logger = null, worker
         const overdueTasks = Array.isArray(candidate.overdue_tasks) ? candidate.overdue_tasks.filter(item => item?.title) : [];
         const approachingGrants = Array.isArray(candidate.approaching_grants) ? candidate.approaching_grants.filter(item => item?.label) : [];
         const overdueInvoices = Array.isArray(candidate.overdue_invoices) ? candidate.overdue_invoices.filter(item => item?.invoiceNumber) : [];
+        // Bills to pay, papers about to expire, grant or contract reports, and pledges that did not arrive (all dated records of the workspace; owner-directed reminders only, nobody else is contacted).
+        const dueBills = Array.isArray(candidate.due_bills) ? candidate.due_bills.filter(item => item?.payee) : [];
+        const expiringPapers = Array.isArray(candidate.expiring_papers) ? candidate.expiring_papers.filter(item => item?.item) : [];
+        const dueReports = Array.isArray(candidate.due_reports) ? candidate.due_reports.filter(item => item?.label) : [];
+        const latePledges = Array.isArray(candidate.late_pledges) ? candidate.late_pledges.filter(item => item?.donor) : [];
         const parts = [
           ...overdueTasks.map(item => `"${item.title}" (due ${item.dueDate})`),
           ...approachingGrants.map(item => `the "${item.label}" grant deadline (${item.deadline})`),
-          ...overdueInvoices.map(item => `unpaid invoice ${item.invoiceNumber}${item.clientName ? ` for ${item.clientName}` : ""} (due ${item.dueDate})`)
+          ...overdueInvoices.map(item => `unpaid invoice ${item.invoiceNumber}${item.clientName ? ` for ${item.clientName}` : ""} (due ${item.dueDate})`),
+          ...dueBills.map(item => `the bill from ${item.payee}${Number.isFinite(Number(item.amount)) ? ` (${Number(item.amount)} ${item.currency || ""})` : ""} (due ${item.dueDate})`),
+          ...expiringPapers.map(item => `the ${item.item} (${item.kind || "paper"}) expiring ${item.expires}`),
+          ...dueReports.map(item => `the report for "${item.label}" (due ${item.reportDue})`),
+          ...latePledges.map(item => `the pledge from ${item.donor} (expected ${item.expectedDate})`)
         ];
         const summary = parts.join(", ") || "an approaching deadline";
         const claim = await runtime.records.claimCooldown({ tenantId, ownerId, recordKey: candidate.record_id,
           workspaceId: SITUATIONAL_AWARENESS_WORKSPACE_ID, recordType: BUSINESS_DEADLINE_NUDGE_RECORD_TYPE, cooldownMs, classification: "standard",
-          data: { reason: "business_deadline_due", recordId: candidate.record_id, overdueTasks, approachingGrants, overdueInvoices },
+          data: { reason: "business_deadline_due", recordId: candidate.record_id, overdueTasks, approachingGrants, overdueInvoices, dueBills, expiringPapers, dueReports, latePledges },
           provenance: { source: "situational-awareness-business-deadline-sweep" } });
         if (!claim) continue;
         const command = createCommand({ channel: "worker", tenantId, actorId: ownerId,
