@@ -22461,11 +22461,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   }
   if (toolName === "nexus_maps_route") {
     const routeArgs = nexusOpenAiNativeExtractRouteArgs(command, args);
-    const mapOnlyRequest = !routeArgs.origin && !/\b(route|directions?|navigation|from\\s+.+\\s+to)\b/i.test(command) && /\b(open|show|display)\b.*\b(map|kenya)\b/i.test(command);
+    // ("show me Nairobi", "where is Kisumu": one place and no route opens the map, instead of "Origin and destination text are required")
+    const onePlace = !routeArgs.origin && /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:show(?:\s+me)?|where\s+is|find|map\s+of|open\s+the\s+map\s+of)\s+(?:the\s+)?([A-Za-z][A-Za-z'.-]*(?:\s+[A-Za-z][A-Za-z'.-]*){0,2})[.?!]*$/i.exec(String(command || "").trim());
+    const mapOnlyRequest = (!routeArgs.origin && !/\b(route|directions?|navigation|from\\s+.+\\s+to)\b/i.test(command) && /\b(open|show|display)\b.*\b(map|kenya)\b/i.test(command))
+      || Boolean(onePlace && !/\b(?:clinic|pharmacy|hospital|doctor|near|nearby|nearest|jobs?|price|prices|weather|news)\b/i.test(onePlace[1]));
     if (mapOnlyRequest) {
       return nexusOpenAiNativeBlockedToolResult(db, common, {
         status: "local-ready",
-        response: "The Nexus Maps workspace is ready. No route was calculated because no origin or destination was requested.",
+        response: onePlace
+          ? `The Nexus Maps workspace is ready. I have not calculated anything for ${onePlace[1].trim()}; say "route from ${onePlace[1].trim()} to" a second place and I will give the distance and travel time.`
+          : "The Nexus Maps workspace is ready. No route was calculated because no origin or destination was requested.",
         did: ["Prepared the existing Maps workspace for the requested map."],
         didNot: ["Nexus did not claim a route, travel time, geolocation, or external navigation."]
       });
@@ -23428,7 +23433,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         : "";
       const response = ok
         ? `I saved a drone mission request: ${request.missionType} for ${request.area}. This is intake only — no drone flight was launched, controlled, or dispatched. A qualified operator will need to review and schedule the real flight.${coveragePlanNote}`
-        : `I could not save that drone mission request. ${missionResult?.body?.message || ""}`;
+        : (args.confirmed !== true && args.confirmation !== true && /requires explicit confirmed/i.test(String(missionResult?.body?.message || "")))
+          // (asks plainly, instead of reading the bridge's internal "requires explicit confirmed: true" message to the person)
+          ? `I can send a drone mission request for ${args.area || areaMatch?.[1]?.trim() || "your field"}. It only saves a request for a qualified operator to review; no drone is flown. Should I save it? Say yes to save it.`
+          : `I could not save that drone mission request. ${missionResult?.body?.message || ""}`;
       const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, ok ? "drone-mission-requested" : "drone-mission-blocked",
         [ok ? `Saved drone mission intake request ${request.id}.` : "Attempted to save a drone mission intake request."],
         ["Nexus did not launch, control, or dispatch a drone flight."]);
