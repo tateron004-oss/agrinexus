@@ -21,6 +21,11 @@
       roles: roles => `Roles loaded on Kyro: ${roles.join(", ")}.`,
       cv: "Make my CV", interview: "Practise a job interview", letters: "Learn to read or count",
       cvSay: "Make my CV", interviewSay: "Give me a practice interview", lettersSay: "Teach me letters",
+      learnTitle: "Learn",
+      learnLine: "I teach short practice lessons by voice, one small step at a time. They are not certified courses, and nothing is enrolled or certified.",
+      learnLetters: "Learn the letters", learnLettersSay: "Teach me letters",
+      learnMaths: "Learn numbers and adding", learnMathsSay: "Teach me maths",
+      learnAi: "AI basics for small business", learnAiSay: "Start the AI basics course",
       close: "Close"
     },
     sw: {
@@ -29,6 +34,10 @@
       roles: roles => `Kazi zilizopakiwa kwenye Kyro: ${roles.join(", ")}.`,
       cv: "Tengeneza CV yangu", interview: "Fanya mazoezi ya mahojiano", letters: "Jifunze kusoma au kuhesabu",
       cvSay: "Nataka CV", interviewSay: "Nipe mazoezi ya mahojiano", lettersSay: "Nifundishe herufi",
+      learnTitle: "Jifunze",
+      learnLine: "Ninafundisha masomo mafupi ya mazoezi kwa sauti, hatua ndogo moja baada ya nyingine. Si kozi zenye cheti, na hakuna anayeandikishwa wala kupewa cheti.",
+      learnLetters: "Jifunze herufi", learnLettersSay: "Nifundishe herufi",
+      learnMaths: "Jifunze namba na kujumlisha", learnMathsSay: "Nifundishe hesabu",
       close: "Funga"
     }
   };
@@ -45,6 +54,25 @@
         { id: "letters", label: t.letters, say: t.lettersSay }
       ]
     };
+  }
+
+  // Learn: the short practice lessons Kyro really has (letters; counting, adding and taking away) and the AI basics course for a small business (English only for now).
+  function learnSpec({ lang } = {}) {
+    const sw = lang === "sw";
+    const t = TEXT[sw ? "sw" : "en"];
+    const choices = [
+      { id: "letters", label: t.learnLetters, say: t.learnLettersSay },
+      { id: "maths", label: t.learnMaths, say: t.learnMathsSay }
+    ];
+    if (!sw) choices.push({ id: "ai-basics", label: t.learnAi, say: t.learnAiSay });
+    return { id: "learning", title: t.learnTitle, closeLabel: t.close, lines: [t.learnLine], choices };
+  }
+
+  // The card for a workspace that has one (null when it does not: the usual window opens).
+  function specFor(workspace, options) {
+    if (workspace === "workforce") return workSpec(options);
+    if (workspace === "learning") return learnSpec(options);
+    return null;
   }
 
   const STYLE_ID = "kyro-answer-card-style";
@@ -95,5 +123,5 @@
     return cards.length > 0;
   }
 
-  return Object.freeze({ workSpec, show, remove, TEXT });
+  return Object.freeze({ workSpec, learnSpec, specFor, show, remove, TEXT });
 });

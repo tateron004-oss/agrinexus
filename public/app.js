@@ -12804,6 +12804,8 @@ function goSection(sectionId, options = {}) {
     });
     return false;
   }
+  // Work and Learning open as a clean answer card, by typing as by voice, not as the older section screens (the card is itself a task; see kyroShowAnswerCard).
+  if (experienceMode === "user" && (sectionId === "workforce" || sectionId === "learning") && kyroShowAnswerCard(sectionId)) return true;
   const target = $(`#${sectionId}`);
   if (!target || !target.classList.contains("section")) sectionId = "dashboard";
   if (experienceMode === "user" && sectionId !== "dashboard" && !simpleUserSections[sectionId]) {
@@ -51332,23 +51334,51 @@ function startKyroResumeIntake(options = {}) {
   startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
 }
 
-// Work, answer-first: asking for work shows one clean card (what Kyro can really do right now) instead of the long referral form (public/kyro-answer-card.js). Each choice can also be said.
-// Returns false (and the form opens as before) when the card file is not loaded.
-function kyroShowWorkCard() {
+// Answer-first: asking for work or for learning shows one clean card (what Kyro can really do right now) instead of a long form (public/kyro-answer-card.js). Each choice can also be said.
+// Returns false (and the usual window opens as before) when the workspace has no card or the card file is not loaded.
+function kyroShowAnswerCard(workspace) {
   if (!window.KyroAnswerCard) return false;
   let roles = [];
   try { roles = Array.isArray(data?.roles) ? data.roles : []; } catch { roles = []; }
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
-  const spec = window.KyroAnswerCard.workSpec({ roles, lang });
+  const spec = window.KyroAnswerCard.specFor(workspace, { roles, lang });
+  if (!spec) return false;
   window.KyroAnswerCard.show(document, spec, {
     onChoose: choice => {
       window.KyroAnswerCard.remove(document);
-      if (choice.id === "cv") startKyroResumeIntake({ source: "work-card" });
-      else void handleVoiceCommandCore(choice.say, { source: "work-card" });
+      if (choice.id === "cv") startKyroResumeIntake({ source: `${spec.id}-card` });
+      else void kyroRunCardChoice(choice.say, `${spec.id}-card`);
     },
     onClose: () => { void kyroReturnToOrb({ reason: "done", source: "answer-card" }); }
   });
   return true;
+}
+
+// A tapped choice is the same request as saying it: it goes to the route voice uses (where the lessons, the interview practice and the guided courses live; the typed route would hand them to the
+// AI model), and the reply is shown and spoken. It does not go through callNexusOpenAiRealtimeTool, which would open a screen again for a phrase like "teach me letters".
+async function kyroRunCardChoice(command, source) {
+  let said = "";
+  try {
+    const language = languageCode();
+    const timeZone = kyroDeviceTimeZone();
+    const response = await kyroFetchWithTimeout("/api/voice/realtime/tool", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        name: "nexus_everyday_records",
+        correlationId: `card-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        arguments: { command, language, timeZone },
+        language,
+        timeZone
+      })
+    });
+    const result = response.ok ? await response.json().catch(() => null) : null;
+    said = String(result?.response || "").trim();
+  } catch { said = ""; }
+  if (said) setVoiceResponse(said, true, { source, command });
+  else void handleVoiceCommandCore(command, { source });
 }
 
 function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
@@ -55252,9 +55282,9 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
     document.body.dataset.genesisWorkspaceRequestId = action.requestId || "";
     return true;
   }
-  // Work: the answer-first card (what Kyro can really do, in a few plain words) instead of the long referral form.
-  if (workspace === "workforce" && kyroShowWorkCard()) {
-    document.body.dataset.genesisWorkspace = "workforce";
+  // Work and Learning: the answer-first card (what Kyro can really do, in a few plain words) instead of the long form.
+  if (kyroShowAnswerCard(workspace)) {
+    document.body.dataset.genesisWorkspace = workspace;
     document.body.dataset.genesisWorkspaceRequestId = String(action.requestId || "");
     if (!options.suppressAcknowledgement) window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: true, populatedFields: [] } }));
     return true;
@@ -55513,8 +55543,8 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
 
   let populatedFields = [];
   let visibleWorkspace = null;
-  // The Work answer card has no form fields: what was asked for is answered on the card itself, so it counts as the opened, verified surface.
-  const answerCardShown = () => workspace === "workforce" && Boolean(document.querySelector('[data-kyro-answer-card="work"]'));
+  // An answer card (Work, Learning) has no form fields: what was asked for is answered on the card itself, so it counts as the opened, verified surface.
+  const answerCardShown = () => (workspace === "workforce" || workspace === "learning") && Boolean(document.querySelector(`[data-kyro-answer-card="${workspace === "workforce" ? "work" : "learning"}"]`));
   for (let attempt = 0; attempt < 30; attempt += 1) {
     visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
     populatedFields = expected.filter(([key, value]) => findPopulatedField(key, value)).map(([key]) => key);
