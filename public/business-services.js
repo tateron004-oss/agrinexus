@@ -181,11 +181,16 @@
     rows("budgets", editable.budgets, [["category", "Category"], ["amount", "Monthly budget"], ["currency", "Currency (KES, USD, NGN...)"]]);
     rows("volunteer-hours", editable.volunteerHours, [["volunteer", "Volunteer"], ["hours", "Hours"], ["date", "Date"], ["activity", "What they did"], ["program", "Program"]]);
     const hoursTotal = editable.volunteerHours.reduce((sum, row) => sum + row.hours, 0);
-    byId("volunteer-summary").textContent = editable.volunteerHours.length ? `${Math.round(hoursTotal * 10) / 10} hours from ${new Set(editable.volunteerHours.map(row => row.volunteer)).size} volunteers` : "No volunteer hours yet.";
+    const volunteerCount = new Set(editable.volunteerHours.map(row => row.volunteer)).size;
+    const hoursRounded = Math.round(hoursTotal * 10) / 10;
+    byId("volunteer-summary").textContent = editable.volunteerHours.length ? `${hoursRounded} ${hoursRounded === 1 ? "hour" : "hours"} from ${volunteerCount} ${volunteerCount === 1 ? "volunteer" : "volunteers"}` : "No volunteer hours yet.";
     rows("services", editable.services, [["participant", "Participant (must have consent given)"], ["service", "Service"], ["date", "Date"], ["program", "Program"], ["hours", "Hours"], ["notes", "Notes"]]);
     rows("outcomes", editable.outcomes, [["program", "Program"], ["measure", "What was measured"], ["value", "Number"], ["unit", "Unit"], ["date", "Date"], ["notes", "Notes"]]);
     rows("program-goals", editable.programGoals, [["program", "Program"], ["goal", "Goal (what is counted)"], ["target", "Target number"], ["unit", "Unit"], ["deadline", "Deadline"]]);
-    byId("program-summary").textContent = editable.services.length || editable.outcomes.length ? `${new Set(editable.services.map(row => String(row.participant).toLowerCase())).size} people received ${editable.services.length} services; ${editable.outcomes.length} results recorded` : "No services or results yet.";
+    const peopleServed = new Set(editable.services.map(row => String(row.participant).toLowerCase())).size;
+    byId("program-summary").textContent = editable.services.length || editable.outcomes.length
+      ? `${peopleServed} ${peopleServed === 1 ? "person" : "people"} received ${editable.services.length} ${editable.services.length === 1 ? "service" : "services"}; ${editable.outcomes.length} ${editable.outcomes.length === 1 ? "result" : "results"} recorded`
+      : "No services or results yet.";
     rows("compliance", editable.compliance, [["item", "Paper (what it is called)"], ["kind", "Kind (license, insurance, certification, policy, board, filing)"], ["issuer", "Issued by"], ["number", "Number"], ["expires", "Expires"], ["status", "Status (active, applied, pending, planned, expired, denied)"], ["notes", "Notes"]]);
     const soonPapers = editable.compliance.filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.expires) && row.expires <= new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10) && !/^(expired|denied|planned)$/i.test(row.status));
     byId("compliance-summary").textContent = editable.compliance.length ? `${editable.compliance.length} in the register; ${soonPapers.length ? `${soonPapers.length} expire${soonPapers.length === 1 ? "s" : ""} or lapsed within 60 days: ${soonPapers.map(row => `${row.item} (${row.expires})`).join(", ")}` : "none expire in the next 60 days"}` : "Nothing in the register yet.";

@@ -3,6 +3,8 @@
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
 const { createInteractionProfile } = require("../experience/interaction-profile.js");
 const businessVoiceDispatch = require("../business/voice-dispatch.js");
+// the business requests the farm and shop books must not answer for a person who has a workspace (see the check before the toolkits in plan())
+const WORKSPACE_FIRST_INTENTS = new Set(["listInvoices", "listLeads", "addLead", "billsDue"]);
 const businessInsights = require("../business/insights.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
 const { accepted: acceptedAlertOffer } = require("../companion/offer.js");
@@ -318,10 +320,16 @@ class OpenEndedPlanner {
         canWrite: !context?.isRestrictedFrom?.("health-record-write"), timeZone: context?.timeZone }).catch(() => null);
       if (readings?.response) return Object.freeze({ goal: String(command.text || "").trim(), application: "conversation", riskTier: "low", clarification: null, steps: [], response: readings.response, sourceRequired: false, planningAttempts: 0 });
     }
+    // A person who has a business or nonprofit workspace and says "who owes me money", "show my customers" or "add a customer named Grace" means THAT workspace's invoices and contacts. The farm and shop books answered first,
+    // because they match the same words ("Nobody owes you anything", "You have no customers yet. Say add a buyer", and a guided "add a contact" question that never reached the workspace). So for those words, and only for
+    // a person who has a workspace, the farm and shop books are skipped and the request goes on to the business path (spoken or typed). A person with none (the count is 0, or cannot be told) is unaffected.
+    const businessFirst = typeof this.businessWorkspaces?.count === "function" && WORKSPACE_FIRST_INTENTS.has(businessVoiceDispatch.classify(command.text))
+      && (await this.businessWorkspaces.count(context).catch(() => null)) > 0;
     // The health worker's record-keeping (patients, visits, immunisations, pregnancies, follow-ups, clinic stock, referral letters, monthly reports:
     // see healthwork/) comes before the farm toolkit; each answers only words plainly for it, and an open guided question is answered first.
     for (const [toolkit, turn, stepId, restriction] of [[this.healthWork, healthWorkTurn, "health-report", "health-record-write"], [this.farmWork, farmWorkTurn, "farm-report", null]]) {
       if (!toolkit?.store) continue;
+      if (businessFirst && toolkit === this.farmWork) continue;
       // Found live (healthwork audit): every other real PHI-write surface (the legacy video/injury
       // dispatcher, the cloud-agent tool executor, the direct REST health routes) is gated on
       // userIsRestrictedFrom(user, "health-record-write") -- but plain conversation, the most natural
