@@ -12157,6 +12157,7 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       checkpointIndex: 0,
       stage: "Shipping planned",
       stageIndex: 0,
+      createdBy: String(user?.email || "").trim().toLowerCase() || undefined, // whose order it is: other accounts are not shown it, nor told about it by voice
       trackingNumber: `AN-TRK-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
       buyerInterest: product?.buyerInterest || 70,
       // Found live (money-logic audit): this always assumed exactly 20
@@ -21250,6 +21251,25 @@ function nexusOpenAiNativeStatus(env = process.env) {
   };
 }
 
+// The tools the browser's voice session does not have, that the catch-all tool hands a request to (see executeNexusOpenAiNativeTool). Only the ones whose answer was checked: a checklist, saving or exporting as a
+// PDF or document, receipts, a translation, deep research, a calculation, the offline queue, the business assistant. (Reminders, memory, the calendar and email are answered by the planner and the older route.)
+const NEXUS_DELEGATED_TOOLS = new Set(["nexus_lists", "nexus_document_export", "nexus_receipts", "nexus_translation", "nexus_deep_research", "nexus_data_code_analysis", "nexus_business_assistant"]);
+function nexusDelegatedToolFor(command = "") {
+  const lower = String(command || "").toLowerCase();
+  // (reminders are not handed over: the planner and the older route set them at once, which asks for no second yes; only the offline queue is)
+  if (/\boffline\b/.test(lower) && /\b(queue|sync|save (?:it |this |that )?for later)\b/.test(lower)) return "nexus_automation_reminder";
+  // "Say good morning in Kiswahili" ("Kiswahili" is how Kenyans say Swahili; the hint only knows "swahili")
+  if (/\btranslate\b/.test(lower) || /\b(?:say|write|how do (?:i|you) say)\b.+\b(?:in|into|to)\s+(?:english|spanish|french|(?:ki)?swahili|arabic|portuguese)\b/.test(lower)) return "nexus_translation";
+  // "Make me a flyer for my bakery", "create an invoice", "write a newsletter": the business assistant makes these
+  if (/\b(?:flyer|newsletter|promotional email|invoice|service agreement|launch kit)\b/.test(lower) && /\b(?:create|make|write|draft|generate|prepare|print)\b/.test(lower)) return "nexus_business_assistant";
+  // "Is Spotify connected?" / "are text messages switched on": the readiness of a named service (the bare words "status" or "ready" are not enough: they are in many other questions)
+  if (/\b(connected|configured|set up|switched on|turned on|working|available)\b/.test(lower) && /\b(spotify|sms|text messages?|whatsapp|twilio|email|provider|integration|calling)\b/.test(lower)) return "nexus_provider_readiness";
+  let hint = nexusOpenAiNativeToolChoiceHint(command);
+  // "Export my notes as a PDF" / "save this as a document": the hint reads the word "pdf" as a file to analyse; saving or exporting is the export tool
+  if (hint === "nexus_file_document_analysis" && /\b(export|save|make|turn)\b/.test(lower) && /\b(pdf|document|word|spreadsheet|csv)\b/.test(lower) && !/\b(upload|attached|this file|my file)\b/.test(lower)) hint = "nexus_document_export";
+  return NEXUS_DELEGATED_TOOLS.has(hint) ? hint : "";
+}
+
 function nexusOpenAiNativeToolChoiceHint(command = "") {
   const lower = String(command || "").toLowerCase();
   // (a body temperature in a visit note, "temperature 38.5, cough", is not a weather question: phrase sweep)
@@ -22354,6 +22374,12 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       return { ...common, capability: "wellness-log", status: "completed", intent: "planner-deterministic-answer", response: planned.response,
         executionAttempted: true, executionVerified: planned.verified === true };
     }
+  }
+  // The browser's voice session is given eleven tools; the catch-all one is its door for everything else (lists, saving as a PDF, receipts, a translation, the offline queue, the business assistant...). A request the
+  // planner could not answer by itself is handed to the tool that really does it, here, instead of hoping the model picks a tool it does not have (it fell to "I couldn't do that one just now" otherwise).
+  if (toolName === "nexus_general_conversation" && context.deterministicOnly !== true && !context.delegated) {
+    const delegate = nexusDelegatedToolFor(command);
+    if (delegate) { toolName = delegate; common.toolName = delegate; }
   }
   // Only the no-model doors above were wanted (the AI provider is down, see answerWithoutModelWhileModelIsDown): nothing below this line is answered without a model.
   if (context.deterministicOnly === true) {
@@ -23992,8 +24018,14 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       ...extraData, ...(intakeRecord ? { intakeId: intakeRecord.id, patientRef: intakeRecord.patientRef } : {}) };
   }
   if (toolName === "nexus_marketplace_logistics") {
-    if (/\b(track|tracking|where is my|shipment|route status|delivery status|eta|route delay|route delays|delayed|traffic)\b/i.test(command)) {
-      const order = (db.profile.orders || [])[db.profile.orders.length - 1];
+    // "How long will delivery to Nakuru take?" used to fall through to the sample listings. Kyro cannot estimate a delivery time for a place it has no order or route for; it says so and offers what it can do.
+    const asksDeliveryTime = /\bhow long\b.*\b(deliver|delivery|shipping|ship|to arrive|to get there)\b|\bwhen (?:will|does|would)\b.*\b(arrive|deliver|delivered)\b/i.test(command);
+    if (asksDeliveryTime || /\b(track|tracking|where is my|shipment|route status|delivery status|eta|route delay|route delays|delayed|traffic)\b/i.test(command)) {
+      // The orders this person may see (their own and unmarked ones; an Admin any): the latest order of anybody used to be read out to whoever asked, another account's included.
+      const order = orderForUser(db, user);
+      if (!order && asksDeliveryTime) {
+        return { ...common, capability: "marketplace-trade", status: "no-estimate", response: "I can't estimate a delivery time without an order or a route to work from. Tell me where it is going from and to and I will show the route and the travel time on the map, or create a crop order and I can track its shipment.", receipt: null, evidenceReceipt: null, localOnly: true };
+      }
       if (!order) {
         return { ...common, capability: "marketplace-trade", status: "no-order", response: "I do not see an active crop order yet. Say create a crop order to start one, and then I can track its shipment.", receipt: null, evidenceReceipt: null, localOnly: true };
       }
