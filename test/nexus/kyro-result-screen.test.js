@@ -133,7 +133,7 @@ test("it is wired: voice answers draw the screen and open no form; the form from
   assert.doesNotMatch(run, /callNexusOpenAiRealtimeTool/, "that would open a screen again for 'teach me letters'");
   // typed: a plain answer or a list of places is drawn by the same screen, and what it draws is not drawn again as raw fields in the window
   const typed = app.slice(app.indexOf("async function processNexusAuthoritativeBehaviorResult"), app.indexOf("async function submitNexusPendingBehaviorConfirmation"));
-  assert.match(typed, /const answerOnScreen = kyroShowTypedResult\(result, text, message\);\s*try \{\s*const drawn = result\.render;\s*if \(drawn && result\.state === "render_required" && !answerOnScreen\) \{/);
+  assert.match(typed, /const answerOnScreen = kyroShowTypedResult\(result, text, message\);[^]*?if \(result\.render\?\.presentation\?\.kind === "reminder"\) message = kyroReminderListLine\(result\.render\.data\) \|\| message;\s*try \{\s*const drawn = result\.render;\s*if \(drawn && result\.state === "render_required" && !answerOnScreen\) \{/);
   const brain = app.slice(app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand"), app.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand"));
   assert.match(brain, /const typedTool = kyroTypedToolFor\(text\);\s*if \(typedTool && await kyroRunToolAnswer\(text, "typed-answer", typedTool\)\) return true;/);
   assert.ok(brain.indexOf("kyroShowHelpScreen(explicitOpenCard") < brain.indexOf("kyroTypedToolFor(text)") && brain.indexOf("kyroTypedToolFor(text)") < brain.indexOf("/api/nexus/runtime/behavior/turn"), "before the AI planner route");
@@ -149,7 +149,7 @@ test("it is wired: voice answers draw the screen and open no form; the form from
 });
 
 function typedApi(shown) {
-  const names = ["function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
+  const names = ["function kyroReminderListLine(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
   return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
@@ -177,6 +177,29 @@ test("typed: clinics and pharmacies from data, and a plain answer the server wor
   assert.equal(api.kyroShowTypedResult(places, "I need telehealth", "x".repeat(40)), false, "a form flow is not replaced");
   assert.equal(api.kyroShowTypedResult(plain, "open health", "x".repeat(40)), false, "'open health' has its own help screen");
   assert.equal(shown.length, 0);
+  // reminders: one just set, and the list of them
+  const reminderSet = { application: "reminders", state: "render_required", render: { presentation: { kind: "reminder" }, data: { reminder: "call Amina", persisted: true } } };
+  assert.equal(api.kyroShowTypedResult(reminderSet, "Remind me to call Amina tomorrow at 5pm", "Okay. I will remind you to call Amina at 5:00 pm tomorrow."), true);
+  assert.equal(shown[0].result.response, "Okay. I will remind you to call Amina at 5:00 pm tomorrow."); shown.length = 0;
+  const reminderList = { application: "reminders", state: "render_required", render: { presentation: { kind: "reminder" }, data: { summary: "You have 2 reminders.", reminders: ["call Amina (due Mon 12 Oct, 5:00 pm)", "pay the vet (due Tue 13 Oct)"] } } };
+  assert.equal(api.kyroShowTypedResult(reminderList, "Show my reminders", "Nexus completed the governed execution and is rendering the verified result."), true);
+  assert.equal(shown[0].result.response, "You have 2 reminders: call Amina (due Mon 12 Oct, 5:00 pm); pay the vet (due Tue 13 Oct).", "the list, not the status line"); shown.length = 0;
+  assert.equal(api.kyroShowTypedResult({ ...reminderList, render: { presentation: { kind: "reminder" }, data: { summary: "You have no reminders.", reminders: [] } } }, "Show my reminders", "x"), true);
+  assert.equal(shown[0].result.response, "You have no reminders.");
+});
+
+test("a note that mentions buying is an answer; a trade or telehealth form the server is opening is not", () => {
+  const pick = name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); };
+  const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
+  const drawn = [];
+  const fake = { KyroResultScreen: { buildModel: (result) => ({ kind: "text", headline: result.response, items: [], notes: [], awaiting: false }), show: (doc, model) => drawn.push(model) } };
+  const api = new Function("window", "document", "languageCode", "kyroNoteActivity", "kyroReturnToOrb", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${pick("function kyroResultScreenEligible(")}\n${pick("function kyroExplicitOpenCard(")}\n${pick("function kyroShowResultScreen(")}; return { kyroShowResultScreen };`)(fake, {}, () => "en", () => {}, async () => {});
+  const note = { ok: true, status: "completed", response: "Noted: buy seeds. Say \"what are my notes?\" any time." };
+  assert.equal(api.kyroShowResultScreen("nexus_everyday_records", "Take a note: buy seeds", note), true, "nothing is being opened for it");
+  assert.equal(api.kyroShowResultScreen("nexus_marketplace_logistics", "I want to sell 50 bags of maize", { ...note, genesisAction: { type: "genesis.workspace.open", workspace: "trade" } }), false, "the server is opening the trade form");
+  assert.equal(api.kyroShowResultScreen("nexus_health_preparation", "I need telehealth", { ...note, genesisAction: { type: "genesis.workspace.open", workspace: "health" } }), false);
+  assert.equal(api.kyroShowResultScreen("nexus_health_preparation", "open health", note), false, "'open health' is the help screen");
+  assert.equal(drawn.length, 1);
 });
 
 test("typed lessons go to the route that teaches them, not to the AI model", () => {
