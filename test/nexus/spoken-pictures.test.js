@@ -74,7 +74,7 @@ test("a picture or video result is captioned with what it is, not the server's p
   assert.equal(sandbox.say({ presentation: { kind: "video-gallery" }, data: { query: "drip irrigation", videos: [1, 2, 3, 4, 5, 6] } }), "Here are 6 videos I found about drip irrigation.");
   assert.equal(sandbox.say({ presentation: { kind: "image-gallery" }, data: { images: [] } }), "");
   assert.equal(sandbox.say({ presentation: { kind: "source-answer" }, data: {} }), "");
-  assert.match(appSource, /message = nexusGalleryMessage\(result\.render\) \|\| result\.render\.response \|\| message;/);
+  assert.match(appSource, /message = emptyAnswer \|\| nexusGalleryMessage\(result\.render\) \|\| result\.render\.response \|\| message;/);
 });
 
 test("the orb is told to call the everyday-records tool for a request to see pictures or videos, and to say only that they are on the screen", () => {

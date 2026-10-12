@@ -28,7 +28,7 @@ test("the behavior-spine command route says an explained refusal, and says plain
   const spoken = [];
   const sandbox = {
     keepKyroOfflineNote: () => false, text: "Open the business workspace.", options: { turnToken: "t" },
-    setVoiceResponse: (message, speak, opts) => spoken.push({ message, speak, opts })
+    kyroShowResultScreen: () => false, setVoiceResponse: (message, speak, opts) => spoken.push({ message, speak, opts })
   };
   vm.createContext(sandbox);
   const inner = body.slice(body.indexOf("{") + 1, body.lastIndexOf("  }\n}"));
