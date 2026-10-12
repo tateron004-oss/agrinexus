@@ -175,3 +175,37 @@ test("the farm card says what Kyro keeps and what it will not do, offers only re
   // what the card offers is what the server really answers (checked against the farm log's own readers)
   const farmLog = require("../../nexus/farm/log.js"); assert.ok(farmLog, "the farm log module exists");
 });
+
+test("typed 'open health' and 'open agriculture help' show the cards: the server flags the general ones and the page shows the card for the flag", () => {
+  const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
+  assert.match(server, /\["crop problem", "field evidence", "market support"\],[^{]*\{ answerCard: "agriculture" \}/, "every agriculture open is general");
+  const line = server.match(/const generalHealth = (\/.*?\/)\.test\(value\) && !(\/.*?\/)\.test\(value\);/);
+  assert.ok(line, "the health open decides whether it is general");
+  const has = new Function(`return ${line[1]}`)(); const not = new Function(`return ${line[2]}`)();
+  const general = value => has.test(value) && !not.test(value);
+  for (const text of ["open health", "open health help", "show health", "go to health"]) assert.equal(general(text), true, text);
+  for (const text of ["open telehealth", "open the clinic", "open provider review", "open chronic care", "open mobile clinic", "open health clinic"]) assert.equal(general(text), false, text);
+  assert.match(server, /generalHealth \? \{ answerCard: "health" \} : \{\}\);/);
+  const fn = app.slice(app.indexOf("function kyroOpenSectionOrCard(metadata = {})"), app.indexOf("function kyroShowAnswerCard(workspace, context = null)"));
+  assert.match(fn, /card === "health" \|\| card === "agriculture"/, "only the two cards the section screens cannot reach");
+  assert.match(fn, /kyroShowAnswerCard\(card, \{ payload: \{\} \}\)\) return true;/);
+  assert.match(fn, /return goSection\(metadata\?\.redirectSection\);/, "everything else opens as before");
+  assert.equal((app.match(/kyroOpenSectionOrCard\(/g) || []).length, 4, "the definition and the three places that open a section from a reply");
+  assert.doesNotMatch(app, /goSection\((?:result|latest)\??\.metadata\.redirectSection\)/, "no reply opens a section without the card check");
+});
+
+test("typing a plain 'open health / the farm / work / learning' shows the card at once; anything longer or more specific is left to the usual routes", () => {
+  const start = app.indexOf("function kyroExplicitOpenCard(text) {");
+  const source = app.slice(start, app.indexOf("\n}\n", start) + 3);
+  const explicit = new Function(`${source}; return kyroExplicitOpenCard;`)();
+  const expected = { "open health": "health", "Open Health.": "health", "open agriculture help": "agriculture", "open agriculture": "agriculture", "open the farm": "agriculture", "show my learning": "learning", "open lessons": "learning", "open workforce": "workforce", "start work": "workforce", "open jobs": "workforce", "Kyro, open health": "health", "please open my health": "health", "go to health": "health" };
+  for (const [text, card] of Object.entries(expected)) assert.equal(explicit(text), card, text);
+  for (const text of ["", "open", "open telehealth", "open health and record my blood pressure", "open the health clinic", "open farm records", "show my health readings", "open the map", "my health is bad", "find jobs near me", "start my CV", "learning to read"]) assert.equal(explicit(text), "", text);
+  // wired in the one function every typed entry point ends in: after the safety checks and "close / go back", before the AI planner route
+  const start2 = app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand(command = \"\", options = {}) {");
+  const brain = app.slice(start2, start2 + 6000);
+  assert.match(brain, /const explicitOpenCard = kyroExplicitOpenCard\(text\);\s*if \(explicitOpenCard && kyroShowAnswerCard\(explicitOpenCard, \{ payload: \{\} \}\)\) return true;/);
+  assert.ok(brain.indexOf("handleNexusMentalHealthBehavioralWellnessCommand(text") < brain.indexOf("kyroExplicitOpenCard(text)"), "the safety check still comes first");
+  assert.ok(brain.indexOf("handleKyroDismissCommand(text") < brain.indexOf("kyroExplicitOpenCard(text)"), "'close' and 'go back' still win");
+  assert.doesNotMatch(app, /const typedOpenCard/, "not duplicated in a single entry point");
+});

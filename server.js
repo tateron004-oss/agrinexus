@@ -30366,7 +30366,9 @@ function explicitWorkspaceOpenResponse(db, user, text = "", lower = "") {
       "needs-details",
       "trade",
       "I opened agriculture support. Tell me the crop, farm location, and what looks wrong, and I will guide the next safe step without claiming live field dispatch.",
-      ["crop problem", "field evidence", "market support"]
+      ["crop problem", "field evidence", "market support"],
+      // (the page shows the Farm card for this: one clean screen instead of the trade section; see kyro-answer-card.js)
+      { answerCard: "agriculture" }
     );
   }
   if (/\b(workforce|jobs?|career|work support)\b/.test(value)) {
@@ -30376,7 +30378,9 @@ function explicitWorkspaceOpenResponse(db, user, text = "", lower = "") {
     return response("conversation.learning_start", "needs-topic", "learning", "I opened learning support. Tell me the skill or lesson you want, and I will guide the next step with captions or simpler wording if needed.", ["start course", "read lesson", "training for jobs"]);
   }
   if (/\b(health|chronic|telehealth|provider|clinic|mobile clinic)\b/.test(value)) {
-    return response("conversation.health_intake", "needs-details", "health", "I opened health access support. This is not a diagnosis; I can help prepare intake, provider summaries, and safe next steps for review.", ["start intake", "find clinic", "provider summary"]);
+    // A plain "open health" gets the Health card; "open telehealth", "open the clinic", "open provider ..." and chronic care name their own flow and keep the health section.
+    const generalHealth = /\bhealth\b/.test(value) && !/\b(telehealth|chronic|provider|clinic|mobile clinic)\b/.test(value);
+    return response("conversation.health_intake", "needs-details", "health", "I opened health access support. This is not a diagnosis; I can help prepare intake, provider summaries, and safe next steps for review.", ["start intake", "find clinic", "provider summary"], generalHealth ? { answerCard: "health" } : {});
   }
   if (/\b(pharmacy|medicine|refill)\b/.test(value)) {
     return response("conversation.medicine_help", "needs-details", "health", "I opened pharmacy support. I cannot prescribe or approve refills, but I can help organize the question for a pharmacist or clinician.", ["medicine question", "prepare refill question", "find pharmacy support"]);
