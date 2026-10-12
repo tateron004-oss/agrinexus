@@ -149,10 +149,10 @@ test("it is wired: voice answers draw the screen and open no form; the form from
 });
 
 function typedApi(shown) {
-  const names = ["function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroExplicitOpenCard("];
+  const names = ["function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
-  return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
+  return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
 }
 
 test("typed: clinics and pharmacies from data, and a plain answer the server worked out itself, fill the screen; chat, questions, forms and 'open health' do not", () => {
@@ -183,6 +183,26 @@ test("typed lessons go to the route that teaches them, not to the AI model", () 
   const api = typedApi([]);
   for (const text of ["Teach me letters", "teach me maths", "Teach me the letters.", "Nifundishe herufi", "Nifundishe hesabu", "Start the AI basics course", "start ai basics", "Give me a practice interview", "practise a job interview", "please teach me counting"]) assert.equal(api.kyroTypedToolFor(text), "nexus_workforce_learning", text);
   for (const text of ["", "teach me to cook", "teach me letters and then call my sister", "what are letters", "open learning", "I want a job", "next", "stop"]) assert.equal(api.kyroTypedToolFor(text), "", text);
+});
+
+test("typed: while a lesson or practice interview is under way, 'next', 'again', 'stop' and a one- or two-word answer are for it; it ends when the person leaves it or the reply is not the lesson's", () => {
+  const api = typedApi([]);
+  for (const text of ["next", "Next.", "again", "stop", "A", "apple", "3", "four", "ndiyo", "kwa kuongeza", "don't know"]) assert.equal(api.kyroTypedLessonReply(text), "nexus_workforce_learning", text);
+  for (const text of ["", "what is the weather in Nairobi", "find a clinic near me", "what is for sale today"]) assert.equal(api.kyroTypedLessonReply(text), "", text);
+  assert.match(app, /let kyroTypedLessonOpen = false;/);
+  const run = app.slice(app.indexOf("async function kyroRunToolAnswer"), app.indexOf("function kyroTypedLessonReply"));
+  assert.match(run, /kyroTypedLessonOpen = \/\^conversation\\\.practice_\(\?:lesson\|interview\)\$\/\.test\(String\(result\?\.intent \|\| ""\)\);/, "open only while the reply is the lesson's or the interview's");
+  assert.match(run, /if \(options\.lessonOnly && !kyroTypedLessonOpen\) return false;\s*\/\/ the answer is the screen/, "a reply that was not for the lesson draws nothing and is left to the usual route");
+  const brain = app.slice(app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand"), app.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand"));
+  assert.match(brain, /const lessonTool = !typedTool && kyroTypedLessonOpen \? kyroTypedLessonReply\(text\) : "";\s*if \(lessonTool && await kyroRunToolAnswer\(text, "typed-answer", lessonTool, \{ lessonOnly: true \}\)\) return true;/);
+  const orb = app.slice(app.indexOf("async function kyroReturnToOrb"), app.indexOf("async function kyroReturnToOrb") + 400);
+  assert.match(orb, /options\.reason === "home" \|\| options\.reason === "done"\) kyroTypedLessonOpen = false;/, "'I'm done' ends it; closing a screen or a quiet spell does not");
+  // a lesson or interview that has just asked its question waits for the answer; one that has ended clears as usual
+  const lesson = Result.buildModel({ intent: "conversation.practice_lesson", response: "The letter A. A is for apple. Which letter does the word \"apple\" start with?" });
+  assert.equal(lesson.awaiting, true);
+  assert.equal(Result.buildModel({ intent: "conversation.practice_lesson", response: "Well done. That is the end of this lesson. Come back any time." }).awaiting, false);
+  assert.equal(Result.buildModel({ intent: "conversation.practice_interview", response: "Tell me about yourself and the work you have done." }).awaiting, false, "no question mark and no 'say next': not waiting");
+  assert.equal(Result.buildModel({ intent: "conversation.practice_interview", response: "Question two. Why do you want this job?" }).awaiting, true);
 });
 
 test("an answer clears ten seconds after Kyro has finished speaking and nobody has touched or said anything; a question waiting for a yes keeps it up", () => {

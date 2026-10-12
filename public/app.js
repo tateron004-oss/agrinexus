@@ -27901,6 +27901,8 @@ function kyroTearDownScreens(options = {}) {
 }
 async function kyroReturnToOrb(options = {}) {
   kyroNoteActivity();
+  // "I'm done" / "back to the orb" ends a typed lesson too (a quiet-spell return or closing a screen leaves it, so "next" still carries on)
+  if (options.reason === "home" || options.reason === "done") kyroTypedLessonOpen = false;
   try {
     if (nexusConversationWorkflowTransitionState) { nexusConversationWorkflowTransitionState.activeWorkflow = null; nexusConversationWorkflowTransitionState.lastProposal = null; }
   } catch { /* the workflow bookkeeping is optional */ }
@@ -51437,7 +51439,7 @@ function kyroTypedToolFor(text) {
 
 // Asks the voice route (where the lessons, the interview practice and the guided courses live) and shows and says the reply. It does not go through callNexusOpenAiRealtimeTool, which would open a screen
 // again for a phrase like "teach me letters". Returns true when it answered.
-async function kyroRunToolAnswer(command, source, tool) {
+async function kyroRunToolAnswer(command, source, tool, options = {}) {
   let said = "";
   try {
     const language = languageCode();
@@ -51457,12 +51459,23 @@ async function kyroRunToolAnswer(command, source, tool) {
     });
     const result = response.ok ? await response.json().catch(() => null) : null;
     said = String(result?.response || "").trim();
+    // a practice lesson or interview is under way when the reply says so: the short replies that follow ("next", "again", a letter) are for it
+    kyroTypedLessonOpen = /^conversation\.practice_(?:lesson|interview)$/.test(String(result?.intent || ""));
+    // a short reply that turned out not to be for the lesson is left to the usual route
+    if (options.lessonOnly && !kyroTypedLessonOpen) return false;
     // the answer is the screen, the same as when it is asked by voice
     if (said) kyroShowResultScreen(tool || "nexus_everyday_records", command, result);
   } catch { said = ""; }
   if (!said) return false;
   setVoiceResponse(said, true, { source, command });
   return true;
+}
+// True from a typed lesson or practice interview starting until the person leaves it (see kyroTypedLessonReply).
+let kyroTypedLessonOpen = false;
+// While a typed lesson or interview is under way, "next", "again", "stop" or a one- or two-word answer (a letter, a number) is for the lesson, as it is when said.
+function kyroTypedLessonReply(text) {
+  const t = String(text || "").trim().replace(/[.!?]+$/g, "");
+  return Boolean(t) && /^[\p{L}\p{N}'-]+(?:\s+[\p{L}\p{N}'-]+)?$/u.test(t) ? "nexus_workforce_learning" : "";
 }
 
 // A typed answer on the screen. The typed route answers in two shapes: a list of places drawn from data (clinics, pharmacies) -- which used to be dumped as raw fields -- and a plain answer the server worked
@@ -58531,6 +58544,9 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // "Teach me letters", "start the AI basics course", "give me a practice interview": the route that really teaches them, answered on the screen (the typed route would hand them to the AI model)
   const typedTool = kyroTypedToolFor(text);
   if (typedTool && await kyroRunToolAnswer(text, "typed-answer", typedTool)) return true;
+  // ...and the replies that follow it ("next", "again", "stop", "A")
+  const lessonTool = !typedTool && kyroTypedLessonOpen ? kyroTypedLessonReply(text) : "";
+  if (lessonTool && await kyroRunToolAnswer(text, "typed-answer", lessonTool, { lessonOnly: true })) return true;
   // Found live (dispatch-wiring audit): this function is the ONLY thing
   // handleVoiceCommand -- the real entry point for actual spoken voice --
   // delegates to, and it never checked voice-troubleshooting at all. "Can

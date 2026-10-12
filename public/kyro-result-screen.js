@@ -99,7 +99,9 @@
     if (Array.isArray(result.pharmacyLocations) && result.pharmacyLocations.length) return placesModel(result.pharmacyLocations, t(lang).pharmacies, lang, locationNote);
     const response = clean(result.response);
     if (response.length < 8) return null;
-    const awaiting = isAwaiting(result);
+    // (a lesson or a practice interview that has just asked its question is waiting for the answer, so it stays up like a yes/no question; one that has ended clears as usual)
+    const practice = /^conversation\.practice_(?:lesson|interview)$/.test(String(result.intent || "")) && (/\?\s*$/.test(response) || /say '?next/i.test(response));
+    const awaiting = isAwaiting(result) || practice;
     // "Your listings: a; b; c." or "I found 8 clinic option(s): a; b; c.": a heading and a list
     const list = /^([^:]{3,120}):\s+(.+;.+)$/.exec(response);
     if (list) {
