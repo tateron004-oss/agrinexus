@@ -6,8 +6,8 @@ const path = require("node:path");
 const Card = require("../../public/kyro-answer-card.js");
 const Stage = require("../../public/kyro-task-stage.js");
 
-// Work, answer-first: asking for work shows one clean card instead of the long referral form. These tests pin what the card says (honestly), that it can be drawn and removed, and that it is wired
-// as a task: the stage hides everything else, the return to the orb takes it down, the voice-open verification counts it as opened, and its choices start the real things.
+// "Open work / learning / health / the farm / trade": the cards are retired (nothing is tapped). A plain open shows ONE screen of text: what Kyro can really do (honestly) and the sentences to say. These tests
+// pin what it says, that it is wired as a task (the stage hides everything else, the return to the orb takes it down, the voice-open verification counts it as opened), and that no button is drawn.
 
 const root = path.join(__dirname, "../..");
 const app = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
@@ -33,62 +33,38 @@ test("in Kiswahili the card and its spoken choices are Kiswahili (the same words
   assert.deepEqual(spec.choices.map(choice => choice.say), ["Nataka CV", "Nipe mazoezi ya mahojiano", "Nifundishe herufi"]);
 });
 
-function fakeDom() {
-  const made = [];
-  const make = tag => {
-    const element = { tag, children: [], attrs: {}, listeners: {}, className: "", textContent: "", removed: false,
-      setAttribute(name, value) { this.attrs[name] = value; }, appendChild(child) { this.children.push(child); return child; },
-      addEventListener(type, fn) { this.listeners[type] = fn; }, remove() { this.removed = true; } };
-    made.push(element); return element;
-  };
-  const body = make("body"); const head = make("head");
-  const doc = { body, head, createElement: make, getElementById: id => made.find(e => e.id === id && !e.removed) || null,
-    querySelectorAll: selector => (selector === "[data-kyro-answer-card]" ? made.filter(e => e.attrs["data-kyro-answer-card"] !== undefined && !e.removed) : []) };
-  return { doc, made };
-}
-
-test("show draws one card with a heading, the lines, one button per choice and one close mark; showing again replaces it; remove takes it down", () => {
-  const { doc, made } = fakeDom(); const chosen = []; let closed = 0;
-  const spec = Card.workSpec({ roles: [], lang: "en" });
-  const card = Card.show(doc, spec, { onChoose: choice => chosen.push(choice.id), onClose: () => { closed += 1; } });
-  assert.equal(card.attrs["data-kyro-answer-card"], "work"); assert.equal(card.attrs.role, "dialog");
-  const buttons = card.children.flatMap(child => (child.className === "kyro-card-choices" ? child.children : [child])).filter(child => child.tag === "button");
-  assert.equal(buttons.length, 4, "three choices and the close mark");
-  buttons.find(button => button.attrs["data-kyro-card-choice"] === "interview").listeners.click();
-  buttons.find(button => button.className === "kyro-card-close").listeners.click();
-  assert.deepEqual(chosen, ["interview"]); assert.equal(closed, 1);
-  assert.ok(made.some(e => e.id === "kyro-answer-card-style"), "its style is added once");
-  Card.show(doc, spec, {});
-  assert.equal(made.filter(e => e.attrs["data-kyro-answer-card"] !== undefined && !e.removed).length, 1, "a second show replaces the first");
-  assert.equal(Card.remove(doc), true); assert.equal(Card.remove(doc), false);
-  assert.equal(Card.show(null, spec, {}), null);
+test("it is a task like the others: the stage and the return to the orb know about the result screen the help is drawn on", () => {
+  assert.ok(Stage.SHELL_SELECTOR.includes("[data-kyro-result]"), "the task stage shows only it");
+  assert.doesNotMatch(Stage.SHELL_SELECTOR, /data-kyro-answer-card/, "the card is retired");
+  assert.match(app, /const KYRO_BODY_SCREEN_SELECTOR = "[^"]*\[data-kyro-result\]/, "returning to the orb takes it down");
+  assert.doesNotMatch(app, /data-kyro-answer-card/, "no card is drawn or looked for any more");
+  assert.ok(app.includes('resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\\"help\\"])"))'), "the help screen keeps the usual thirty seconds, not the ten of an answer");
 });
 
-test("it is a task like the others: the stage and the return to the orb know about it", () => {
-  assert.ok(Stage.SHELL_SELECTOR.includes("[data-kyro-answer-card]"), "the task stage shows only it");
-  assert.match(app, /const KYRO_BODY_SCREEN_SELECTOR = "[^"]*\[data-kyro-answer-card\]/, "returning to the orb takes it down");
-  assert.match(app, /#nexusRichDataOverlay, \[data-kyro-answer-card\][^"]*"\)\) return true;/, "left alone it counts as a finished answer, so a quiet spell clears it");
-});
-
-test("voice opens it instead of the form, counts it as opened and verified, and its choices start the real things", () => {
-  assert.match(app, /if \(kyroShowAnswerCard\(workspace, \{ payload \}\)\) \{/, "the form is replaced for work, learning and a general health request");
-  const dispatch = app.slice(app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {"), app.indexOf("const opened = workspace ===", app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {")));
+test("voice opens the help screen instead of the form, counts it as opened and verified, and there is nothing to tap", () => {
+  const opens = "if (kyroShowHelpScreen(workspace, { payload })) {";
+  assert.ok(app.includes(opens), "the form is replaced for work, learning and a general health request");
+  const dispatch = app.slice(app.indexOf(opens), app.indexOf("const opened = workspace ===", app.indexOf(opens)));
   assert.match(dispatch, /opened: true, visible: true/);
   const verified = app.slice(app.indexOf("async function dispatchGenesisWorkspaceActionVerified"), app.indexOf("const sdkMicrophoneProof", app.indexOf("async function dispatchGenesisWorkspaceActionVerified")));
-  assert.match(verified, /const answerCardShown = \(\) => \["workforce", "learning", "health", "agriculture", "trade"\]\.includes\(workspace\)/);
-  assert.match(verified, /populatedFields = expected\.map\(\(\[key\]\) => key\); break;/, "no form fields are expected of a card");
+  assert.ok(verified.includes('const answerCardShown = () => ["workforce", "learning", "health", "agriculture", "trade"].includes(workspace)'));
+  assert.ok(verified.includes("data-kyro-result-id="), "found by the id the help screen carries");
+  assert.ok(verified.includes("populatedFields = expected.map(([key]) => key); break;"), "no form fields are expected of it");
   assert.match(app, /workspaceSurfaceVisible = workspace === "map"\s*\?\s*visibleMap\s*:\s*\(answerCardShown\(\)/);
-  const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
-  assert.match(fn, /if \(!window\.KyroAnswerCard\) return false;/, "without the file the form still opens");
-  assert.match(fn, /if \(!spec\) return false;/, "a workspace with no card opens as before");
-  assert.match(fn, /if \(choice\.id === "cv"\) startKyroResumeIntake\(/);
-  assert.match(fn, /else void kyroRunCardChoice\(choice\.say, `\$\{spec\.id\}-card`, choice\.tool, choice\.wait\);/);
-  assert.match(fn, /kyroReturnToOrb\(\{ reason: "done", source: "answer-card" \}\)/);
-  // a tapped choice is the same request as saying it: the route voice uses (the typed route hands lessons to the AI model), shown and spoken, with no second screen opened
-  const run = fn.slice(fn.indexOf("async function kyroRunCardChoice"));
-  assert.match(run, /kyroFetchWithTimeout\("\/api\/voice\/realtime\/tool"/); assert.match(run, /name: tool \|\| "nexus_everyday_records"/);
-  assert.match(run, /setVoiceResponse\(said, true, \{ source, command \}\)/);
-  assert.doesNotMatch(run, /callNexusOpenAiRealtimeTool/, "that would open a screen again for 'teach me letters'");
+  const fn = app.slice(app.indexOf("function kyroShowHelpScreen(workspace, context = null)"), app.indexOf("function kyroTypedToolFor("));
+  assert.ok(fn.includes("if (!window.KyroAnswerCard || !window.KyroResultScreen) return false;"), "without the files the form still opens");
+  assert.ok(fn.includes("if (!model) return false;"), "a workspace with no help opens as before");
+  assert.ok(fn.includes("window.KyroResultScreen.helpModel("));
+  assert.ok(fn.includes('kyroReturnToOrb({ reason: "done", source: "help-screen" })'));
+  assert.doesNotMatch(app, /kyroRunCardChoice|onChoose|kyro-card-choice/, "no choice is tapped");
+  // what is drawn: text, never a button but the close mark
+  const Result = require("../../public/kyro-result-screen.js");
+  const model = Result.helpModel(Card.healthSpec({ lang: "en" }), "en");
+  assert.equal(model.kind, "help"); assert.equal(model.id, "health"); assert.equal(model.lead, "You can say:");
+  assert.deepEqual(model.items.map(item => item.name), ["“Show my blood pressure readings”", "“Prepare a provider summary of my readings”", "“Find a clinic near me”", "“Find a pharmacy near me”", "“What is the emergency number?”"]);
+  assert.match(model.notes[0], /I do not diagnose or give treatment advice/);
+  assert.equal(Result.helpModel(Card.tradeSpec({ lang: "sw" }), "sw").lead, "", "no sentences to say, no lead");
+  assert.equal(Result.helpModel(null, "en"), null);
 });
 
 test("the learning card says what the practice lessons are and are not, and offers the real ones (the AI basics course in English only)", () => {
@@ -112,11 +88,11 @@ test("the file is loaded before app.js and cached by the service worker", () => 
   assert.ok(sw.includes("/kyro-answer-card.js"));
 });
 
-test("typing 'open workforce' or 'open learning' shows the card too: the section screens are routed to it in goSection", () => {
+test("typing 'open workforce' or 'open learning' shows the help screen too: the section screens are routed to it in goSection", () => {
   const goSection = app.slice(app.indexOf("function goSection(sectionId, options = {}) {"), app.indexOf("function goSection(sectionId, options = {}) {") + 2200);
-  assert.match(goSection, /experienceMode === "user" && \(sectionId === "workforce" \|\| sectionId === "learning"\) && kyroShowAnswerCard\(sectionId\)\) return true;/);
-  assert.ok(goSection.indexOf("kyroShowAnswerCard(sectionId)") < goSection.indexOf("const target = $(`#${sectionId}`);"), "before the older section screen is chosen");
-  assert.ok(goSection.indexOf("realtime-surface-navigation-blocked") < goSection.indexOf("kyroShowAnswerCard(sectionId)"), "after the voice surface lock, which still wins");
+  assert.match(goSection, /experienceMode === "user" && \(sectionId === "workforce" \|\| sectionId === "learning"\) && kyroShowHelpScreen\(sectionId\)\) return true;/);
+  assert.ok(goSection.indexOf("kyroShowHelpScreen(sectionId)") < goSection.indexOf("const target = $(`#${sectionId}`);"), "before the older section screen is chosen");
+  assert.ok(goSection.indexOf("realtime-surface-navigation-blocked") < goSection.indexOf("kyroShowHelpScreen(sectionId)"), "after the voice surface lock, which still wins");
 });
 
 test("the health card says what Kyro does and does not do, offers only things it really answers, and each choice names the route that holds the answer", () => {
@@ -141,24 +117,13 @@ test("the health card says what Kyro does and does not do, offers only things it
 test("only a general health request gets the card; one that names a reading, a visit, a clinic or a symptom keeps its own flow", () => {
   for (const general of ["", "Open health", "I want help with my health", "health", "afya"]) assert.equal(Card.healthIsGeneral(general), true, general);
   for (const specific of ["I need telehealth", "my blood pressure is 140 over 90", "start a video visit", "find a pharmacy", "I have a fever", "this is an emergency", "chronic care intake", "talk to a doctor", "shinikizo la damu", "tafuta kliniki"]) assert.equal(Card.healthIsGeneral(specific), false, specific);
-  const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("async function kyroRunCardChoice"));
+  const fn = app.slice(app.indexOf("function kyroShowHelpScreen(workspace, context = null)"), app.indexOf("function kyroTypedToolFor("));
   assert.match(fn, /if \(workspace === "health" \|\| workspace === "agriculture" \|\| workspace === "trade"\) \{\s*if \(!context\) return false;/, "the section screens carry no context, so health, the farm and trade are never shown for them");
   assert.match(fn, /typeof payload\.query === "string" \? payload\.query : Object\.values\(payload\)\.join\(" "\)/, "the person's own words (the query), not the derived values: a general trade request carries action: buy");
   assert.match(fn, /window\.KyroAnswerCard\.isGeneralFor\(workspace, said\)\) return false;/);
   assert.equal(Card.isGeneralFor("health", "I need telehealth"), false); assert.equal(Card.isGeneralFor("health", "open health"), true);
   assert.equal(Card.isGeneralFor("learning", "anything"), true, "the other cards are always right");
-  assert.match(app, /kyroShowAnswerCard\(workspace, \{ payload \}\)/, "judged by the payload (the person's own words), never by the reply text");
-});
-
-test("a slow lookup says it has started: the clinic and pharmacy choices carry a short spoken 'looking', and the tap speaks it before the search", () => {
-  const en = Card.healthSpec({ lang: "en" }); const sw = Card.healthSpec({ lang: "sw" });
-  assert.equal(en.choices.find(choice => choice.id === "clinic").wait, "Looking for clinics near you.");
-  assert.equal(en.choices.find(choice => choice.id === "pharmacy").wait, "Looking for pharmacies near you.");
-  assert.equal(sw.choices.find(choice => choice.id === "clinic").wait, "Natafuta kliniki karibu nawe.");
-  assert.equal(en.choices.find(choice => choice.id === "readings").wait, undefined, "a quick answer needs none");
-  const run = app.slice(app.indexOf("async function kyroRunCardChoice(command, source, tool, wait)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
-  assert.ok(run.indexOf("if (wait)") > 0 && run.indexOf("if (wait)") < run.indexOf("kyroFetchWithTimeout"), "said before the search starts");
-  assert.match(app, /else void kyroRunCardChoice\(choice\.say, `\$\{spec\.id\}-card`, choice\.tool, choice\.wait\);/);
+  assert.match(app, /kyroShowHelpScreen\(workspace, \{ payload \}\)/, "judged by the payload (the person's own words), never by the reply text");
 });
 
 test("the farm card says what Kyro keeps and what it will not do, offers only reads that answer without the AI model, and only a general request gets it", () => {
@@ -187,9 +152,9 @@ test("typed 'open health' and 'open agriculture help' show the cards: the server
   for (const text of ["open health", "open health help", "show health", "go to health"]) assert.equal(general(text), true, text);
   for (const text of ["open telehealth", "open the clinic", "open provider review", "open chronic care", "open mobile clinic", "open health clinic"]) assert.equal(general(text), false, text);
   assert.match(server, /generalHealth \? \{ answerCard: "health" \} : \{\}\);/);
-  const fn = app.slice(app.indexOf("function kyroOpenSectionOrCard(metadata = {})"), app.indexOf("function kyroShowAnswerCard(workspace, context = null)"));
+  const fn = app.slice(app.indexOf("function kyroOpenSectionOrCard(metadata = {})"), app.indexOf("function kyroShowHelpScreen(workspace, context = null)"));
   assert.match(fn, /card === "health" \|\| card === "agriculture"/, "only the two cards the section screens cannot reach");
-  assert.match(fn, /kyroShowAnswerCard\(card, \{ payload: \{\} \}\)\) return true;/);
+  assert.match(fn, /kyroShowHelpScreen\(card, \{ payload: \{\} \}\)\) return true;/);
   assert.match(fn, /return goSection\(metadata\?\.redirectSection\);/, "everything else opens as before");
   assert.equal((app.match(/kyroOpenSectionOrCard\(/g) || []).length, 4, "the definition and the three places that open a section from a reply");
   assert.doesNotMatch(app, /goSection\((?:result|latest)\??\.metadata\.redirectSection\)/, "no reply opens a section without the card check");
@@ -205,7 +170,7 @@ test("typing a plain 'open health / the farm / work / learning' shows the card a
   // wired in the one function every typed entry point ends in: after the safety checks and "close / go back", before the AI planner route
   const start2 = app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand(command = \"\", options = {}) {");
   const brain = app.slice(start2, start2 + 6000);
-  assert.match(brain, /const explicitOpenCard = kyroExplicitOpenCard\(text\);\s*if \(explicitOpenCard && kyroShowAnswerCard\(explicitOpenCard, \{ payload: \{\} \}\)\) return true;/);
+  assert.match(brain, /const explicitOpenCard = kyroExplicitOpenCard\(text\);\s*if \(explicitOpenCard && kyroShowHelpScreen\(explicitOpenCard, \{ payload: \{\} \}\)\) return true;/);
   assert.ok(brain.indexOf("handleNexusMentalHealthBehavioralWellnessCommand(text") < brain.indexOf("kyroExplicitOpenCard(text)"), "the safety check still comes first");
   assert.ok(brain.indexOf("handleKyroDismissCommand(text") < brain.indexOf("kyroExplicitOpenCard(text)"), "'close' and 'go back' still win");
   assert.doesNotMatch(app, /const typedOpenCard/, "not duplicated in a single entry point");

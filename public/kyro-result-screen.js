@@ -10,6 +10,7 @@
 //   places  a list of clinics or pharmacies from the answer's own data: name, address and distance, opening hours
 //   list    "I found 3 things: a; b; c" or "Your listings: a; b" drawn as a list under its heading
 //   text    one or two sentences: the first is the headline, the rest are the smaller notes
+//   help    "open health": what Kyro can do and the sentences to say, as plain text (helpModel); it is not an answer, so it stays a little longer
 //   awaiting  the answer ends with a question that needs a yes or a no ("Shall I save it?"): it stays on screen until answered
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -19,12 +20,12 @@
 
   const TEXT = {
     en: {
-      close: "Close", clinics: "Clinics near you", mobile: "Mobile clinics near you", pharmacies: "Pharmacies near you",
+      close: "Close", say: "You can say:", clinics: "Clinics near you", mobile: "Mobile clinics near you", pharmacies: "Pharmacies near you",
       sourceNote: source => `From ${source}. Opening hours may be out of date. This is not a medical referral.`,
       hours: hours => `Open ${hours}`
     },
     sw: {
-      close: "Funga", clinics: "Kliniki karibu nawe", mobile: "Kliniki zinazotembea karibu nawe", pharmacies: "Maduka ya dawa karibu nawe",
+      close: "Funga", say: "Unaweza kusema:", clinics: "Kliniki karibu nawe", mobile: "Kliniki zinazotembea karibu nawe", pharmacies: "Maduka ya dawa karibu nawe",
       sourceNote: source => `Kutoka ${source}. Saa za kufungua zinaweza kuwa zimepitwa na wakati. Huu si uhamisho wa kimatibabu.`,
       hours: hours => `Wazi ${hours}`
     }
@@ -45,7 +46,7 @@
     return /\b(?:shall i|should i|say yes|say or type "?yes|do you want me to|would you like me to)\b/i.test(clean(result && result.response));
   }
 
-  function placesModel(list, title, lang) {
+  function placesModel(list, title, lang, locationNote) {
     const items = list.filter(place => place && clean(place.name)).slice(0, 8).map(place => {
       // the lookup says "Address not listed in OpenStreetMap" when it has none: that is not an address to show
       const address = /not listed|not available|unknown/i.test(clean(place.address)) ? "" : clean(place.address);
@@ -55,7 +56,17 @@
     });
     if (!items.length) return null;
     const source = clean(list.find(place => place && place.source) && list.find(place => place && place.source).source);
-    return { kind: "places", title, headline: "", items, notes: source ? [t(lang).sourceNote(source)] : [], awaiting: false };
+    // (when the lookup could not tell where the person is, it says which town it looked near: that belongs on the screen with the list)
+    const notes = [clean(locationNote)].filter(Boolean).concat(source ? [t(lang).sourceNote(source)] : []);
+    return { kind: "places", title, headline: "", items, notes, awaiting: false };
+  }
+
+  // The "open health" / "open the farm" / "open work" screen: not a menu. What Kyro can do, in a few plain words, and the sentences to say (they are plain text; nothing here is tapped).
+  //   spec: { id, title, lines: [], choices: [{ say }] }  (from kyro-answer-card.js)
+  function helpModel(spec, lang) {
+    if (!spec) return null;
+    const items = (spec.choices || []).map(choice => clean(choice && choice.say)).filter(Boolean).map(say => ({ name: `“${say}”`, detail: "", extra: "" }));
+    return { kind: "help", id: clean(spec.id), title: clean(spec.title), headline: "", lead: items.length ? t(lang).say : "", items, notes: (spec.lines || []).map(clean).filter(Boolean), awaiting: false };
   }
 
   // "a (one; two) b; c" -> ["a (one; two) b", "c"]: a semicolon inside brackets belongs to its item
@@ -78,12 +89,14 @@
     if (!result || typeof result !== "object") return null;
     const lang = options.lang === "sw" ? "sw" : "en";
     const command = clean(options.command).toLowerCase();
+    // which town the lookup used when it could not tell where the person is: from the data when it has it, else the sentence the spoken answer carries
+    const locationNote = clean(result.locationNote) || (/I don.t know exactly where you are[^.]*\./.exec(clean(result.response)) || [""])[0];
     const places = Array.isArray(result.mobileClinics) && result.mobileClinics.length ? result.mobileClinics : null;
     if (places) {
       const mobile = /mobile/.test(command) || places.some(place => /mobile/i.test(clean(place && place.category)));
-      return placesModel(places, mobile ? t(lang).mobile : t(lang).clinics, lang);
+      return placesModel(places, mobile ? t(lang).mobile : t(lang).clinics, lang, locationNote);
     }
-    if (Array.isArray(result.pharmacyLocations) && result.pharmacyLocations.length) return placesModel(result.pharmacyLocations, t(lang).pharmacies, lang);
+    if (Array.isArray(result.pharmacyLocations) && result.pharmacyLocations.length) return placesModel(result.pharmacyLocations, t(lang).pharmacies, lang, locationNote);
     const response = clean(result.response);
     if (response.length < 8) return null;
     const awaiting = isAwaiting(result);
@@ -116,11 +129,15 @@
 [data-kyro-result] h2 { margin: 0; font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: #94a3b8; }
 [data-kyro-result] p.kyro-result-headline { color: #f1f5f9; margin: 0; font-size: clamp(1.7rem, 6.5vw, 2.8rem); line-height: 1.25; font-weight: 600; max-width: 22em; }
 [data-kyro-result] .kyro-result-note { margin: 0; max-width: 34em; font-size: clamp(1rem, 3.4vw, 1.2rem); line-height: 1.5; color: #cbd5e1; }
+[data-kyro-result] .kyro-result-lead { margin: 0; color: #94a3b8; font-size: clamp(.95rem, 3.2vw, 1.1rem); }
 [data-kyro-result] ol, [data-kyro-result] ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; max-width: 34em; }
 [data-kyro-result] li { padding: 14px 18px; border-radius: 16px; background: rgba(255,255,255,.07); }
 [data-kyro-result] .kyro-result-name { display: block; font-size: clamp(1.2rem, 4.4vw, 1.6rem); font-weight: 600; }
 [data-kyro-result] .kyro-result-detail { display: block; margin-top: 2px; font-size: clamp(.95rem, 3.2vw, 1.1rem); color: #cbd5e1; }
 [data-kyro-result] .kyro-result-extra { display: block; margin-top: 2px; font-size: clamp(.9rem, 3vw, 1rem); color: #94a3b8; }
+[data-kyro-result="help"] ul { gap: 6px; }
+[data-kyro-result="help"] li { padding: 0; background: none; }
+[data-kyro-result="help"] .kyro-result-name { font-weight: 500; font-size: clamp(1.1rem, 4vw, 1.35rem); color: #e2e8f0; }
 [data-kyro-result] .kyro-result-small { margin: 0; max-width: 34em; font-size: .9rem; color: #94a3b8; }
 [data-kyro-result] .kyro-result-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.10); color: #f1f5f9; font-size: 1.7rem; line-height: 1; cursor: pointer; }
 `;
@@ -148,7 +165,11 @@
     screen.setAttribute("aria-live", "polite");
     screen.setAttribute("aria-label", model.title || model.headline || "Answer");
     if (model.title) screen.appendChild(element(doc, "h2", "", model.title));
+    if (model.id) screen.setAttribute("data-kyro-result-id", model.id);
     if (model.headline) screen.appendChild(element(doc, "p", "kyro-result-headline", model.headline));
+    // "open health": what Kyro can do first, then what to say (the sentences are plain text, not buttons)
+    if (model.kind === "help") for (const note of model.notes || []) screen.appendChild(element(doc, "p", "kyro-result-note", note));
+    if (model.lead) screen.appendChild(element(doc, "p", "kyro-result-lead", model.lead));
     if (model.items.length) {
       const list = element(doc, model.kind === "places" ? "ol" : "ul", "");
       for (const item of model.items) {
@@ -160,7 +181,7 @@
       }
       screen.appendChild(list);
     }
-    for (const note of model.notes || []) screen.appendChild(element(doc, model.kind === "places" ? "p" : "p", model.kind === "places" ? "kyro-result-small" : "kyro-result-note", note));
+    if (model.kind !== "help") for (const note of model.notes || []) screen.appendChild(element(doc, "p", model.kind === "places" ? "kyro-result-small" : "kyro-result-note", note));
     const close = element(doc, "button", "kyro-result-close", "×");
     close.type = "button"; close.setAttribute("aria-label", t(lang).close);
     close.addEventListener("click", () => { if (handlers && typeof handlers.onClose === "function") handlers.onClose(); });
@@ -176,5 +197,5 @@
     return screens.length > 0;
   }
 
-  return Object.freeze({ buildModel, show, remove, isAwaiting, distanceText, TEXT });
+  return Object.freeze({ buildModel, helpModel, show, remove, isAwaiting, distanceText, TEXT });
 });

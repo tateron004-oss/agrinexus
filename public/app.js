@@ -12804,8 +12804,8 @@ function goSection(sectionId, options = {}) {
     });
     return false;
   }
-  // Work and Learning open as a clean answer card, by typing as by voice, not as the older section screens (the card is itself a task; see kyroShowAnswerCard).
-  if (experienceMode === "user" && (sectionId === "workforce" || sectionId === "learning") && kyroShowAnswerCard(sectionId)) return true;
+  // Work and Learning open as one clean help screen (what Kyro can do and what to say), by typing as by voice, not as the older section screens (the help screen is itself a task; see kyroShowHelpScreen).
+  if (experienceMode === "user" && (sectionId === "workforce" || sectionId === "learning") && kyroShowHelpScreen(sectionId)) return true;
   const target = $(`#${sectionId}`);
   if (!target || !target.classList.contains("section")) sectionId = "dashboard";
   if (experienceMode === "user" && sectionId !== "dashboard" && !simpleUserSections[sectionId]) {
@@ -27860,7 +27860,7 @@ function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
 // Everything that can sit on top of the orb apart from the function window: the full-screen cards the browser action controller puts straight on the page body (weather, map, music,
 // pilot dashboard, provider card), the rich-data overlay, the provider question report, the classic workflow modal, the Ask panel and caption panel, and any section other than the home screen
 // (the full map is one). The home screen's own "orb only" marker is present even while one of these covers it, so only an explicit return (or this list) can say what to take down.
-const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-answer-card], [data-kyro-result]";
+const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-result]";
 // The live music card holds the YouTube player itself: taking it off the page ends the song. So "close the card" and the quiet-spell return only park it out of sight (it keeps playing);
 // it is removed when the person asks for the music to stop ("stop the music", "go back to the orb", "I'm done") or when another card replaces it.
 function kyroParkLiveMusicCard(shell) {
@@ -27932,7 +27932,7 @@ function kyroFinishedResultShowing() {
 }
 function kyroAnswerShowing() {
   try {
-    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-answer-card], [data-kyro-result]")) return true;
+    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-result]")) return true;
     if (kyroFinishedResultShowing()) return true;
     if (nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge")) return true;
     return Boolean(nexusPresenceState?.lastResponse);
@@ -27962,7 +27962,8 @@ function kyroAutoReturnSnapshot() {
   return {
     userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
     answerShowing: kyroAnswerShowing(),
-    resultShowing: Boolean(document.querySelector("[data-kyro-result]")),
+    // (the "open health" help screen is not an answer to be read in ten seconds: it keeps the usual thirty)
+    resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\"help\"])")),
     workOpen: kyroWorkOpen(),
     lastActivityAt: Math.max(kyroLastActivityAt, kyroLastAssistantSpokeAt),
     assistantSpeaking,
@@ -51368,7 +51369,6 @@ function kyroShowResultScreen(toolName, command, result) {
     const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
     if (!model) return false;
-    window.KyroAnswerCard?.remove(document);
     window.KyroResultScreen.show(document, model, { onClose: () => { void kyroReturnToOrb({ reason: "done", source: "result-screen" }); } }, lang);
     kyroNoteActivity();
     return true;
@@ -51394,19 +51394,20 @@ function kyroExplicitOpenCard(text) {
   return m[1] ? "workforce" : m[2] ? "learning" : m[3] ? "health" : m[4] ? "agriculture" : "trade";
 }
 
-// A typed "open health" / "open agriculture help": the server answers "open this section" and flags a general request with metadata.answerCard, so the person gets the same card as by voice instead of the
+// A typed "open health" / "open agriculture help": the server answers "open this section" and flags a general request with metadata.answerCard, so the person gets the same help screen as by voice instead of the
 // section screen. Anything else (including "open telehealth" and every other section) is opened as before.
 function kyroOpenSectionOrCard(metadata = {}) {
   const card = String(metadata?.answerCard || "");
-  if (card && (card === "health" || card === "agriculture" || card === "trade") && (experienceMode === "user" || document.body.classList.contains("user-mode")) && kyroShowAnswerCard(card, { payload: {} })) return true;
+  if (card && (card === "health" || card === "agriculture" || card === "trade") && (experienceMode === "user" || document.body.classList.contains("user-mode")) && kyroShowHelpScreen(card, { payload: {} })) return true;
   return goSection(metadata?.redirectSection);
 }
 
-// Answer-first: asking for work, learning, health or the farm shows one clean card (what Kyro can really do right now) instead of a long form (public/kyro-answer-card.js). Each choice can also be said.
-// Returns false (and the usual window opens as before) when the workspace has no card or the card file is not loaded. A health or farm request that names something specific (a reading, a visit, a crop
-// problem, a price) is not general: it keeps its own flow. `context` is what was asked ({ command, payload }); the section screens (goSection) carry none, so those two are only ever shown for a general voice request.
-function kyroShowAnswerCard(workspace, context = null) {
-  if (!window.KyroAnswerCard) return false;
+// "Open health" / "open the farm" / "open work" / "open learning" / "open trade": ONE screen of plain text -- what Kyro can really do right now and the sentences to say for it (public/kyro-answer-card.js has the
+// words, public/kyro-result-screen.js draws them). There is nothing to tap: you say what you want and the answer fills the screen. Returns false (and the usual window opens as before) when the workspace has no
+// help or the files are not loaded. A health, farm or trade request that names something specific (a reading, a visit, a crop problem, a price) is not general: it keeps its own flow. `context` is what was asked
+// ({ command, payload }); the section screens (goSection) carry none, so those three are only ever shown for a general request.
+function kyroShowHelpScreen(workspace, context = null) {
+  if (!window.KyroAnswerCard || !window.KyroResultScreen) return false;
   if (workspace === "health" || workspace === "agriculture" || workspace === "trade") {
     if (!context) return false;
     // (the person's own words: the payload's `query`. Its other values are derived and can say "buy" for a general trade request.)
@@ -51417,24 +51418,27 @@ function kyroShowAnswerCard(workspace, context = null) {
   let roles = [];
   try { roles = Array.isArray(data?.roles) ? data.roles : []; } catch { roles = []; }
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
-  const spec = window.KyroAnswerCard.specFor(workspace, { roles, lang });
-  if (!spec) return false;
-  window.KyroAnswerCard.show(document, spec, {
-    onChoose: choice => {
-      window.KyroAnswerCard.remove(document);
-      if (choice.id === "cv") startKyroResumeIntake({ source: `${spec.id}-card` });
-      else void kyroRunCardChoice(choice.say, `${spec.id}-card`, choice.tool, choice.wait);
-    },
-    onClose: () => { void kyroReturnToOrb({ reason: "done", source: "answer-card" }); }
-  });
+  const model = window.KyroResultScreen.helpModel(window.KyroAnswerCard.specFor(workspace, { roles, lang }), lang);
+  if (!model) return false;
+  window.KyroResultScreen.show(document, model, { onClose: () => { void kyroReturnToOrb({ reason: "done", source: "help-screen" }); } }, lang);
+  kyroNoteActivity();
   return true;
 }
 
-// A tapped choice is the same request as saying it: it goes to the route voice uses (where the lessons, the interview practice and the guided courses live; the typed route would hand them to the
-// AI model), and the reply is shown and spoken. It does not go through callNexusOpenAiRealtimeTool, which would open a screen again for a phrase like "teach me letters".
-async function kyroRunCardChoice(command, source, tool, wait) {
+// A request the voice tool route answers for certain and the typed route would hand to the AI model (the practice lessons, the guided courses, the interview practice): typed, it goes to the route voice uses,
+// and the answer is shown on the screen and spoken, the same as when it is said. Returns the tool's name, or "".
+function kyroTypedToolFor(text) {
+  const t = String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
+  if (/^(?:please\s+)?(?:teach me|nifundishe)\s+(?:the\s+)?(?:letters|herufi|maths?|math|hesabu|numbers|counting|adding)$/.test(t)) return "nexus_workforce_learning";
+  if (/^(?:please\s+)?(?:start|begin)\s+(?:the\s+)?ai basics(?:\s+course)?$/.test(t)) return "nexus_workforce_learning";
+  if (/^(?:please\s+)?(?:give me|start|begin)\s+(?:a\s+)?(?:job\s+)?(?:practice interview|interview practice)$/.test(t) || /^practi[sc]e\s+(?:a\s+)?job interview$/.test(t)) return "nexus_workforce_learning";
+  return "";
+}
+
+// Asks the voice route (where the lessons, the interview practice and the guided courses live) and shows and says the reply. It does not go through callNexusOpenAiRealtimeTool, which would open a screen
+// again for a phrase like "teach me letters". Returns true when it answered.
+async function kyroRunToolAnswer(command, source, tool) {
   let said = "";
-  if (wait) { try { setVoiceResponse(wait, true, { source, command }); } catch { /* the lookup goes on without it */ } }
   try {
     const language = languageCode();
     const timeZone = kyroDeviceTimeZone();
@@ -51445,7 +51449,7 @@ async function kyroRunCardChoice(command, source, tool, wait) {
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         name: tool || "nexus_everyday_records",
-        correlationId: `card-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        correlationId: `typed-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
         arguments: { command, language, timeZone },
         language,
         timeZone
@@ -51456,8 +51460,30 @@ async function kyroRunCardChoice(command, source, tool, wait) {
     // the answer is the screen, the same as when it is asked by voice
     if (said) kyroShowResultScreen(tool || "nexus_everyday_records", command, result);
   } catch { said = ""; }
-  if (said) setVoiceResponse(said, true, { source, command });
-  else void handleVoiceCommandCore(command, { source });
+  if (!said) return false;
+  setVoiceResponse(said, true, { source, command });
+  return true;
+}
+
+// A typed answer on the screen. The typed route answers in two shapes: a list of places drawn from data (clinics, pharmacies) -- which used to be dumped as raw fields -- and a plain answer the server worked
+// out itself without the AI model (the saved readings, the farm log, the board, the emergency number). Both fill the screen, as a spoken answer does. An answer the AI model wrote (chat) is not put on
+// a screen, a question waiting for a yes or a no stays in the Ask window, and the map, music, video, documents, pictures and checklists are drawn as before. True when it drew one.
+function kyroShowTypedResult(result, text, message) {
+  try {
+    if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
+    if (KYRO_FORM_FLOW.test(String(text || "")) || kyroExplicitOpenCard(text)) return false;
+    const drawn = result.render;
+    let answer = null;
+    if (drawn && result.state === "render_required") {
+      const cards = Array.isArray(drawn.data?.cards) ? drawn.data.cards : Array.isArray(drawn.data?.data?.cards) ? drawn.data.data.cards : [];
+      if (drawn.presentation?.kind !== "location-list" || !cards.length) return false;
+      const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
+      answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
+    } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
+      answer = { response: message };
+    } else return false;
+    return kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
+  } catch { return false; }
 }
 
 function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
@@ -55365,7 +55391,7 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   }
   // Work, Learning and (for a general request) Health: the answer-first card (what Kyro can really do, in a few plain words) instead of the long form.
   // (judged by the person's own words in the payload, never by the reply text, which for a general health request names clinics and intake)
-  if (kyroShowAnswerCard(workspace, { payload })) {
+  if (kyroShowHelpScreen(workspace, { payload })) {
     document.body.dataset.genesisWorkspace = workspace;
     document.body.dataset.genesisWorkspaceRequestId = String(action.requestId || "");
     if (!options.suppressAcknowledgement) window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: true, populatedFields: [] } }));
@@ -55625,8 +55651,8 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
 
   let populatedFields = [];
   let visibleWorkspace = null;
-  // An answer card (Work, Learning) has no form fields: what was asked for is answered on the card itself, so it counts as the opened, verified surface.
-  const answerCardShown = () => ["workforce", "learning", "health", "agriculture", "trade"].includes(workspace) && Boolean(document.querySelector(`[data-kyro-answer-card="${workspace === "workforce" ? "work" : workspace}"]`));
+  // The help screen (work, learning, health, farm, trade) has no form fields: what was asked for is answered on the screen itself, so it counts as the opened, verified surface.
+  const answerCardShown = () => ["workforce", "learning", "health", "agriculture", "trade"].includes(workspace) && Boolean(document.querySelector(`[data-kyro-result-id="${workspace === "workforce" ? "work" : workspace}"]`));
   for (let attempt = 0; attempt < 30; attempt += 1) {
     visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
     populatedFields = expected.filter(([key, value]) => findPopulatedField(key, value)).map(([key]) => key);
@@ -58361,9 +58387,11 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   // The same redraw wiped every other result drawn into that window too: a web search answer and its sources, the pictures from "find a picture of ...", the videos from "show me videos about ...", a checklist, a
   // reminders view. The page acknowledged them as visible (they were, for an instant) and the person was left with the window and none of the answer. Each is drawn again here by the function that drew it
   // (all of them replace an earlier copy). A map and the music player are not drawn into this window and are left alone. Found testing production.
+  // Answer-first, typed as spoken: a list of clinics, or a plain answer, fills the screen instead of being dumped into the window as raw fields (see kyroShowTypedResult).
+  const answerOnScreen = kyroShowTypedResult(result, text, message);
   try {
     const drawn = result.render;
-    if (drawn && result.state === "render_required") {
+    if (drawn && result.state === "render_required" && !answerOnScreen) {
       const kind = drawn.presentation?.kind;
       if (kind === "document") renderNexusAuthoritativeDocument(drawn);
       else if (drawn.data?.resume === true && nexusDocumentLifecycleComplete(drawn.data)) renderNexusAuthoritativeResume(drawn);
@@ -58499,7 +58527,10 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // A plain "open health" / "open agriculture help" / "open workforce" / "open learning", typed or said, shows that card at once (the planner route would hand it to the AI model). Every typed entry point
   // ends here, so this is the one place for it (see kyroExplicitOpenCard).
   const explicitOpenCard = kyroExplicitOpenCard(text);
-  if (explicitOpenCard && kyroShowAnswerCard(explicitOpenCard, { payload: {} })) return true;
+  if (explicitOpenCard && kyroShowHelpScreen(explicitOpenCard, { payload: {} })) return true;
+  // "Teach me letters", "start the AI basics course", "give me a practice interview": the route that really teaches them, answered on the screen (the typed route would hand them to the AI model)
+  const typedTool = kyroTypedToolFor(text);
+  if (typedTool && await kyroRunToolAnswer(text, "typed-answer", typedTool)) return true;
   // Found live (dispatch-wiring audit): this function is the ONLY thing
   // handleVoiceCommand -- the real entry point for actual spoken voice --
   // delegates to, and it never checked voice-troubleshooting at all. "Can

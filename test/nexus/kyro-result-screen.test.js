@@ -36,6 +36,11 @@ test("clinics are drawn as a list with name, where and how far, opening hours or
   assert.equal(Result.buildModel({ mobileClinics: [{ name: "" }, null] }, {}), null, "nothing worth a screen");
   const noAddress = Result.buildModel({ mobileClinics: [{ name: "Health Post", address: "Address not listed in OpenStreetMap", city: "Lagos, Nigeria", distanceMeters: 313 }, { name: "Staff clinic", address: "Address not listed in OpenStreetMap", distanceMeters: 728 }] }, {});
   assert.equal(noAddress.items[0].detail, "Lagos, Nigeria · 313 m", "the lookup's 'not listed' placeholder is not shown as an address"); assert.equal(noAddress.items[1].detail, "728 m");
+  const near = Result.buildModel({ mobileClinics: clinics, locationNote: "I don't know exactly where you are, so I looked near Lagos; tell me your town for better results." }, {});
+  assert.equal(near.notes[0], "I don't know exactly where you are, so I looked near Lagos; tell me your town for better results.", "which town it looked near stays on the screen with the list"); assert.equal(near.notes.length, 2);
+  const spoken = Result.buildModel({ mobileClinics: clinics, response: "I found 3 clinic option(s): a in Lagos; b in Lagos; c in Lagos. This is a live OpenStreetMap directory lookup, not a booking. I don't know exactly where you are, so I looked near Lagos, Nigeria; tell me your town for better results." }, {});
+  assert.equal(spoken.notes[0], "I don't know exactly where you are, so I looked near Lagos, Nigeria; tell me your town for better results.", "the spoken answer's own sentence is used when the data has no note");
+  assert.equal(Result.buildModel({ mobileClinics: clinics, response: "I found 3 clinic options." }, {}).notes.length, 1, "no note when the lookup knew where the person is");
 });
 
 test("in Kiswahili the headings and the source note are Kiswahili", () => {
@@ -116,22 +121,68 @@ test("which answers get a screen: not failures, crisis replies, the map, music o
   for (const [workspace, text] of [["health", "I need telehealth"], ["health", "start my medical intake"], ["health", "open health"], ["trade", "I want to sell 50 bags of maize"], ["workforce", "make my CV"], ["workforce", "apply for the job"], ["map", "show me a route"], ["media", "play music"]]) assert.equal(api.kyroAnswerReplacesWorkspace(workspace, text), false, `${workspace}: ${text}`);
 });
 
-test("it is wired: voice answers draw the screen and open no form; the form from the spoken words is skipped; taps use it too; the stage, teardown and return know it", () => {
+test("it is wired: voice answers draw the screen and open no form; the form from the spoken words is skipped; typed answers use it too; the stage, teardown and return know it", () => {
   const call = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool"), app.indexOf("function handleOpenAiAgentsRealtimeEvent"));
   assert.match(call, /const answerOnScreen = kyroShowResultScreen\(toolName, command, result\);\s*const transcriptAction = answerOnScreen \? null : genesisWorkspaceActionFromFinalTranscript\(command\);/);
   assert.match(call, /\} else if \(!answerOnScreen\) \{\s*await runAuthoritativeGenesisWorkspaceBridge\(result/, "no workspace bridge for an answer that is on the screen");
   const exec = app.slice(app.indexOf("async function executeGenesisWorkspaceFromFinalTranscript"), app.indexOf("rememberAuthoritativeGenesisTranscriptRoute(action, command);"));
   assert.match(exec, /if \(kyroAnswerReplacesWorkspace\(action\.workspace, command\)\) return false;/);
-  const run = app.slice(app.indexOf("async function kyroRunCardChoice"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
+  const run = app.slice(app.indexOf("async function kyroRunToolAnswer"), app.indexOf("function kyroShowTypedResult"));
   assert.match(run, /kyroShowResultScreen\(tool \|\| "nexus_everyday_records", command, result\)/);
+  assert.match(run, /kyroFetchWithTimeout\("\/api\/voice\/realtime\/tool"/, "the route voice uses");
+  assert.doesNotMatch(run, /callNexusOpenAiRealtimeTool/, "that would open a screen again for 'teach me letters'");
+  // typed: a plain answer or a list of places is drawn by the same screen, and what it draws is not drawn again as raw fields in the window
+  const typed = app.slice(app.indexOf("async function processNexusAuthoritativeBehaviorResult"), app.indexOf("async function submitNexusPendingBehaviorConfirmation"));
+  assert.match(typed, /const answerOnScreen = kyroShowTypedResult\(result, text, message\);\s*try \{\s*const drawn = result\.render;\s*if \(drawn && result\.state === "render_required" && !answerOnScreen\) \{/);
+  const brain = app.slice(app.indexOf("async function handleNexusUnifiedBrainRuntimeCommand"), app.indexOf("async function handleNexusHealthcareCollaborationRuntimeCommand"));
+  assert.match(brain, /const typedTool = kyroTypedToolFor\(text\);\s*if \(typedTool && await kyroRunToolAnswer\(text, "typed-answer", typedTool\)\) return true;/);
+  assert.ok(brain.indexOf("kyroShowHelpScreen(explicitOpenCard") < brain.indexOf("kyroTypedToolFor(text)") && brain.indexOf("kyroTypedToolFor(text)") < brain.indexOf("/api/nexus/runtime/behavior/turn"), "before the AI planner route");
+  assert.ok(brain.indexOf("handleNexusMentalHealthBehavioralWellnessCommand(text") < brain.indexOf("kyroTypedToolFor(text)"), "the safety check still comes first");
   assert.ok(Stage.SHELL_SELECTOR.includes("[data-kyro-result]"), "the task stage shows only it");
   assert.match(app, /const KYRO_BODY_SCREEN_SELECTOR = "[^"]*\[data-kyro-result\]/, "returning to the orb takes it down");
-  assert.match(app, /#nexusRichDataOverlay, \[data-kyro-answer-card\], \[data-kyro-result\]"\)\) return true;/, "left alone it is a finished answer");
+  assert.match(app, /#nexusRichDataOverlay, \[data-kyro-result\]"\)\) return true;/, "left alone it is a finished answer");
   const tag = html.indexOf("/kyro-result-screen.js"); assert.ok(tag > 0 && tag < html.indexOf("/app.js")); assert.ok(sw.includes("/kyro-result-screen.js"));
   const snap = app.slice(app.indexOf("function kyroAutoReturnSnapshot()"), app.indexOf("function kyroAutoReturnTick()"));
-  assert.match(snap, /resultShowing: Boolean\(document\.querySelector\("\[data-kyro-result\]"\)\)/);
+  assert.ok(snap.includes('resultShowing: Boolean(document.querySelector("[data-kyro-result]:not([data-kyro-result=\\"help\\"])"))'), "the help screen is not an answer to clear in ten seconds");
   assert.match(snap, /lastActivityAt: Math\.max\(kyroLastActivityAt, kyroLastAssistantSpokeAt\)/, "counted from the last word Kyro spoke");
   assert.match(snap, /data-kyro-result-awaiting[\s\S]*< 90000/, "a waiting question keeps it up, but not for ever");
+});
+
+function typedApi(shown) {
+  const names = ["function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroExplicitOpenCard("];
+  const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
+  const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
+  return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
+}
+
+test("typed: clinics and pharmacies from data, and a plain answer the server worked out itself, fill the screen; chat, questions, forms and 'open health' do not", () => {
+  const shown = []; const api = typedApi(shown);
+  const cards = [{ name: "Anikantamo Health Post", category: "clinic", distanceMeters: 313, source: "OpenStreetMap (live)" }];
+  const places = { application: "mobile-clinic", state: "render_required", render: { presentation: { kind: "location-list" }, data: { cards, locationNote: "I looked near Lagos." } } };
+  assert.equal(api.kyroShowTypedResult(places, "Find a clinic near me", "I found 8 clinics near Lagos"), true);
+  assert.deepEqual(shown[0].result.mobileClinics, cards); assert.equal(shown[0].result.locationNote, "I looked near Lagos."); assert.equal(shown[0].tool, "typed");
+  shown.length = 0;
+  const pharmacies = { application: "pharmacy", state: "render_required", render: { presentation: { kind: "location-list" }, data: { data: { cards: [{ name: "Chemist" }] } } } };
+  assert.equal(api.kyroShowTypedResult(pharmacies, "Find a pharmacy near me", "I found 1 pharmacy"), true);
+  assert.equal(shown[0].result.pharmacyLocations.length, 1, "cards under data.data are found too");
+  shown.length = 0;
+  const plain = { application: "conversation", state: "completed", outcome: { modelAnswered: false } };
+  assert.equal(api.kyroShowTypedResult(plain, "Show my farm log", "Your farm log is empty. Say \"log 12 mm of rain\"."), true);
+  assert.equal(shown[0].result.response, "Your farm log is empty. Say \"log 12 mm of rain\".");
+  shown.length = 0;
+  assert.equal(api.kyroShowTypedResult({ ...plain, outcome: { modelAnswered: true } }, "How are you today", "I am well, thank you for asking me."), false, "an answer the AI model wrote is chat, not a screen");
+  assert.equal(api.kyroShowTypedResult(plain, "Thanks", "You are welcome."), false, "too short to be an answer");
+  assert.equal(api.kyroShowTypedResult({ ...plain, state: "confirmation_required" }, "My blood pressure is 128 over 82", "I heard 128 over 82. Shall I save it?"), false, "a question waits in the window");
+  assert.equal(api.kyroShowTypedResult({ application: "weather", state: "render_required", render: { presentation: { kind: "weather" }, data: {} } }, "Weather in Nairobi", "It is 24 degrees in Nairobi"), false, "other renders are drawn as before");
+  assert.equal(api.kyroShowTypedResult(places, "I need telehealth", "x".repeat(40)), false, "a form flow is not replaced");
+  assert.equal(api.kyroShowTypedResult(plain, "open health", "x".repeat(40)), false, "'open health' has its own help screen");
+  assert.equal(shown.length, 0);
+});
+
+test("typed lessons go to the route that teaches them, not to the AI model", () => {
+  const api = typedApi([]);
+  for (const text of ["Teach me letters", "teach me maths", "Teach me the letters.", "Nifundishe herufi", "Nifundishe hesabu", "Start the AI basics course", "start ai basics", "Give me a practice interview", "practise a job interview", "please teach me counting"]) assert.equal(api.kyroTypedToolFor(text), "nexus_workforce_learning", text);
+  for (const text of ["", "teach me to cook", "teach me letters and then call my sister", "what are letters", "open learning", "I want a job", "next", "stop"]) assert.equal(api.kyroTypedToolFor(text), "", text);
 });
 
 test("an answer clears ten seconds after Kyro has finished speaking and nobody has touched or said anything; a question waiting for a yes keeps it up", () => {
