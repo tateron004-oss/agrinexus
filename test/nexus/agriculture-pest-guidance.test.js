@@ -81,7 +81,18 @@ test("the existing yellow-lower-leaves guidance is unaffected by the new pest br
 
 test("a genuinely vague question still falls through honestly to the generic prompt for more detail", async () => {
   const result = await callAgriculture("Something seems off with my beans.");
-  assert.match(result.response, /I opened Agriculture Help/i);
+  assert.match(result.response, /tell me which part of the plant is affected/i, "it asks for the detail it needs, in plain words");
+  assert.doesNotMatch(result.response, /I opened Agriculture Help/i, "and does not announce a window");
+  assert.match(result.response, /can't name a spray or a dose/i);
+});
+
+test("spots, rot or wilting get general guidance that names no spray, and sends the person to the extension officer with a photo", async () => {
+  for (const text of ["My tomato leaves have yellow spots", "The leaves on my beans are wilting", "There is blight on my potatoes"]) {
+    const result = await callAgriculture(text);
+    assert.match(result.response, /can't say which from here/i, text);
+    assert.match(result.response, /clear photo and show it to your local agricultural extension officer before spraying anything/i, text);
+    assert.doesNotMatch(result.response, /I opened Agriculture Help|\bmg\b|\bml\b|per litre|mancozeb|copper|fungicide/i, text);
+  }
 });
 
 test("pest guidance never names a specific pesticide or gives a dosage, and always defers to a local specialist", async () => {
