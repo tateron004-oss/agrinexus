@@ -19,6 +19,31 @@ function swahiliWeatherLocation(text) {
   return place.slice(0, 80);
 }
 
+// What the health tool says when nothing in it understood the sentence. It used to announce a window ("I opened Health and Chronic Care. I can help with health literacy, test readings...") for "I have a fever
+// and a headache" and for "Can I take ibuprofen with my blood pressure medicine". Now: what Kyro cannot do (diagnose, say what is safe to take or mix, change a dose), who to ask, when to get emergency help,
+// and what it CAN do. The danger signs are the ones the rest of Kyro already treats as emergencies (nexus/brain/crisis-rule.js). THE WORDING NEEDS A CLINICIAN'S REVIEW before it is relied on.
+const MEDICINE_QUESTION = /\b(?:can i take|should i take|is it safe to (?:take|mix|combine|drink)|safe to (?:take|mix|combine)|mix(?:ing)? (?:it |them )?with|take (?:it |them )?(?:together )?with|how much (?:\w+ ){0,3}(?:should i |can i |do i )?(?:take|give)|what dose|dosage|double (?:the |my )?dose|missed (?:a |my )?dose|stop taking|skip (?:a |my |the )?(?:dose|tablet|pill)|ibuprofen|paracetamol|acetaminophen|aspirin|antibiotic|tablets?|pills?)\b/i;
+const SYMPTOM_REPORT = /\b(?:i (?:have|feel|am feeling|got)|my (?:\w+ ){0,2}(?:hurts?|aches?|is (?:sore|swollen|burning|itchy))|fever|headache|cough|coughing|sore throat|vomiting|diarrhoea|diarrhea|nausea|dizzy|dizziness|rash|pain|ache|sick|unwell|tired all the time)\b/i;
+const HEALTH_TEXT = {
+  en: {
+    medicine: "I can't tell you what is safe to take or mix, or change a dose. Please ask a pharmacist or your clinician. If you took too much or you feel unwell, call your local emergency number or go to a clinic now. I can find a pharmacy near you.",
+    symptom: "I'm sorry you feel unwell. I can't tell what is causing it. If it lasts more than a day or two, gets worse, or you are worried, please see a clinician. If you have trouble breathing, chest pain, confusion, a stiff neck, bleeding that will not stop, fainting, a drooping face or weakness on one side, get emergency help now. I can find a clinic near you or prepare a summary for your provider.",
+    general: "I can save your readings, find a clinic or a pharmacy near you, and prepare a summary for your provider. I don't diagnose or give treatment advice. What would you like?"
+  },
+  sw: {
+    medicine: "Siwezi kukuambia kama ni salama kuchanganya dawa au kubadilisha kipimo. Tafadhali muulize mfamasia au daktari wako. Ukitumia dawa nyingi kupita kiasi au ukijisikia vibaya, piga namba ya dharura au nenda kliniki sasa. Naweza kukutafutia duka la dawa karibu nawe.",
+    symptom: "Pole kwa kuumwa. Siwezi kujua kinachosababisha. Ikiendelea zaidi ya siku moja au mbili, ikizidi, au ukiwa na wasiwasi, tafadhali mwone daktari. Ukiwa na shida ya kupumua, maumivu ya kifua, kuchanganyikiwa, shingo ngumu, kutokwa damu kusikoisha, kuzimia, uso kulegea au udhaifu upande mmoja, tafuta msaada wa dharura sasa. Naweza kukutafutia kliniki karibu nawe.",
+    general: "Naweza kuhifadhi vipimo vyako, kutafuta kliniki au duka la dawa karibu nawe, na kukutayarishia muhtasari kwa mtoa huduma wako. Sichunguzi wala kutoa ushauri wa matibabu. Unataka nini?"
+  }
+};
+function plainHealthAnswer(command, language) {
+  const t = HEALTH_TEXT[String(language || "").toLowerCase().startsWith("sw") ? "sw" : "en"];
+  const spoken = clean(command);
+  if (MEDICINE_QUESTION.test(spoken)) return t.medicine;
+  if (SYMPTOM_REPORT.test(spoken)) return t.symptom;
+  return t.general;
+}
+
 // Found by the sweep: "Visit Mary: temperature 38.5, cough" (a health worker's note) was answered with "Which city or country should I check for weather?", because the word temperature alone means weather.
 // A number a person can have (35 to 42, one decimal) straight after the word is a body temperature unless the weather is named.
 function isBodyTemperatureReport(text) {
@@ -88,8 +113,8 @@ const SWITCHED_OFF = /\b(?:is disabled|is not configured|not configured\b.*\bbef
 function isInternalSwitchedOffMessage(message) { return /NEXUS_[A-Z0-9_]{3,}|before live testing/.test(String(message || "")) && SWITCHED_OFF.test(String(message || "")); }
 function plainSwitchedOffSentence(body = {}) {
   const text = `${body.provider || ""} ${body.action || ""}`;
-  const what = /sms|text|twilio/i.test(text) ? "Sending texts is" : /call|voice|phone/i.test(text) ? "Phone calls are" : /email|mail/i.test(text) ? "Sending email is" : "That is";
+  const what = /sms|text|twilio/i.test(text) ? "Sending texts is" : /call|voice|phone/i.test(text) ? "Phone calls are" : /email|mail/i.test(text) ? "Sending email is" : /calendar|event|schedule|appointment/i.test(text) ? "The calendar is" : "That feature is";
   return `${what} not switched on for this account yet, so nothing was sent or changed.`;
 }
 
-module.exports = Object.freeze({ isPatientNote, isInternalSwitchedOffMessage, plainSwitchedOffSentence, isHeavyBleeding, isWellnessLogRequest, swahiliWeatherLocation, isBodyTemperatureReport, bloodMeansDanger, wantsListingCreate, plainConfirmationSentence, isInternalConfirmationMessage });
+module.exports = Object.freeze({ isPatientNote, isInternalSwitchedOffMessage, plainSwitchedOffSentence, isHeavyBleeding, isWellnessLogRequest, swahiliWeatherLocation, isBodyTemperatureReport, bloodMeansDanger, wantsListingCreate, plainConfirmationSentence, isInternalConfirmationMessage, plainHealthAnswer });
