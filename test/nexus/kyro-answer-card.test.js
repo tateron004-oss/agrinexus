@@ -67,7 +67,7 @@ test("show draws one card with a heading, the lines, one button per choice and o
 test("it is a task like the others: the stage and the return to the orb know about it", () => {
   assert.ok(Stage.SHELL_SELECTOR.includes("[data-kyro-answer-card]"), "the task stage shows only it");
   assert.match(app, /const KYRO_BODY_SCREEN_SELECTOR = "[^"]*\[data-kyro-answer-card\]/, "returning to the orb takes it down");
-  assert.match(app, /#nexusRichDataOverlay, \[data-kyro-answer-card\]"\)\) return true;/, "left alone it counts as a finished answer, so a quiet spell clears it");
+  assert.match(app, /#nexusRichDataOverlay, \[data-kyro-answer-card\][^"]*"\)\) return true;/, "left alone it counts as a finished answer, so a quiet spell clears it");
 });
 
 test("voice opens it instead of the form, counts it as opened and verified, and its choices start the real things", () => {
