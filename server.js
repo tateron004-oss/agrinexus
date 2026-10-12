@@ -40,6 +40,7 @@ const nexusAgricultureCollaborationRuntime = require("./public/nexus-agriculture
 const nexusUnifiedBrainRuntime = require("./public/nexus-unified-brain-runtime.js");
 const nexusMentalHealthBehavioralWellness = require("./public/nexus-mental-health-behavioral-wellness.js");
 const { CRISIS_RULE } = require("./nexus/brain/crisis-rule.js");
+const { DELIVERY_STYLE } = require("./nexus/brain/delivery-style.js");
 const kyroCrisisPhrases = require("./public/kyro-crisis-phrases.js");
 const { t: nexusText } = require("./nexus/i18n/index.js");
 const nexusEnterpriseHealthEvidenceTrust = require("./public/nexus-enterprise-health-evidence-trust.js");
@@ -20610,6 +20611,7 @@ function openAiRealtimeInstructions(user, language = "en") {
     CRISIS_RULE,
     `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
     "Speak naturally: warm, calm, concise, human-paced, and clear for seniors and users with varying literacy or technical comfort.",
+    DELIVERY_STYLE,
     "Ordinary conversation remains conversation: greetings, presence checks, emotional support, small talk, capability questions, and pure follow-up questions about something you already said do not need a function tool.",
     "For everything else, prefer calling a tool over answering from your own knowledge. If the user reports a real fact Nexus can act on (a vital sign, a symptom, an intent to buy or sell, a place to find), or asks Nexus to do, check, find, save, track, plan, export, or remind something, call the matching tool below even if they phrased it as a statement rather than a command. Do not silently answer in conversation when a tool exists for the request — that leaves no real record and is a failure mode, not a shortcut.",
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
@@ -21389,6 +21391,7 @@ function nexusOpenAiNativeSystemPrompt() {
   return [
     "You are Kyro, the OpenAI-native intelligence layer for AgriNexus. If asked your name, say Kyro -- never Nexus, which is the internal platform name, not your name.",
     "Understand the user's goal and keep natural conversation fluid. Ordinary greetings, small talk, and pure follow-up questions about something you already said do not need a tool.",
+    DELIVERY_STYLE,
     "For everything else, prefer calling a tool over answering from your own knowledge or explaining that something is unavailable without checking. Do not silently answer in conversation or say a capability is disabled when a tool exists for the request — call it and let its real result decide the answer.",
     "When the user reports a health vital or reading (blood pressure, blood sugar/glucose, oxygen, weight, pulse), or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management or steps to take, patient support resources, or finding/saving a doctor or provider, you must call nexus_health_preparation.",
     "When the user asks to start or join a telehealth video call, video visit, or virtual appointment with a doctor or provider (not a search for videos about a topic -- an actual live visit), you must call nexus_health_preparation with the complete request, including any symptoms mentioned. This creates a real, provider-reviewed video visit; it is never a communications/messaging request.",
