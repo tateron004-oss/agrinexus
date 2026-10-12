@@ -476,10 +476,10 @@
       return "I'm really glad you told me. If you may hurt yourself or someone else, contact local emergency services now or go to the nearest safe emergency location. If you can, move away from anything you could use to hurt yourself and reach a trusted person immediately. I can stay with you in support mode, but I cannot declare you safe or dispatch help from here.";
     }
     if (classification.state === "abuse_or_safeguarding_concern") {
-      return "I'm sorry this is happening. If you are in immediate danger, contact local emergency services or a trusted local crisis/safeguarding resource now. Nexus can help organize what happened and prepare questions for a qualified professional, but it will not contact anyone without your review and approval.";
+      return "I'm sorry this is happening. If you are in immediate danger, contact local emergency services or a trusted local crisis/safeguarding resource now. Kyro can help organize what happened and prepare questions for a qualified professional, but it will not contact anyone without your review and approval.";
     }
     if (classification.state === "medical_emergency") {
-      return "This may need urgent medical help. Please contact local emergency services or go to the nearest emergency care location now. Nexus can provide support text, but it cannot dispatch or replace emergency care.";
+      return "This may need urgent medical help. Please contact local emergency services or go to the nearest emergency care location now. Kyro can provide support text, but it cannot dispatch or replace emergency care.";
     }
     if (classification.state === "elevated_concern" && classification.crisisOverride) {
       return "I'm really glad you told me that. Feeling like there's no point, or like giving up, is a serious sign worth taking seriously -- you don't have to carry it alone. If you're ever thinking about hurting yourself, please reach out to a crisis line or trusted person right away. I can stay with you in support mode and help you think through next steps, but I cannot replace a real person or professional.";

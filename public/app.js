@@ -27860,7 +27860,7 @@ function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
 // Everything that can sit on top of the orb apart from the function window: the full-screen cards the browser action controller puts straight on the page body (weather, map, music,
 // pilot dashboard, provider card), the rich-data overlay, the provider question report, the classic workflow modal, the Ask panel and caption panel, and any section other than the home screen
 // (the full map is one). The home screen's own "orb only" marker is present even while one of these covers it, so only an explicit return (or this list) can say what to take down.
-const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-result]";
+const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-result], [data-kyro-capture]";
 // The live music card holds the YouTube player itself: taking it off the page ends the song. So "close the card" and the quiet-spell return only park it out of sight (it keeps playing);
 // it is removed when the person asks for the music to stop ("stop the music", "go back to the orb", "I'm done") or when another card replaces it.
 function kyroParkLiveMusicCard(shell) {
@@ -27957,6 +27957,8 @@ function kyroAnswerShowing() {
 }
 function kyroWorkOpen() {
   try {
+    // the camera, while the person is showing something to it, is work in progress: nothing clears it by itself
+    if (document.querySelector("[data-kyro-capture]")) return true;
     const win = nexusActiveWorkflowState;
     // (an answer drawn over the top of a window has taken its place on the screen, so the window left behind does not hold the answer up)
     if (win?.id && win.functionId !== "live-knowledge" && win.workflow !== "live-knowledge" && !kyroFinishedResultShowing() && !document.querySelector("[data-kyro-result]")) return true;
@@ -50483,7 +50485,7 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
   // text) run alongside it. See routeKyroVoiceIntakeTranscript for the transcript-level guard.
   if (kyroVoiceIntakeOwnsTurn(command)) {
-    return { ok: true, status: "completed", response: "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
+    return { ok: true, status: "completed", response: kyroIntakeBusyLine(command),
       executionVerified: false, blockedReason: null };
   }
   if (window.KyroDismissCommands?.parse?.(command)) {
@@ -51191,7 +51193,8 @@ async function applyKyroIntakeDecision(decision) {
     step(() => renderKyroVoiceIntakePanel(null));
     step(() => { if (decision.say) speakKyroIntakeLine(decision.say, { step: decision.snapshot?.index, language: decision.language }); });
     step(() => injectKyroRealtimeContext(`The ${active?.definition?.title || "form"} was cancelled; nothing was saved.`));
-    step(() => speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language }));
+    // (an interview that stopped itself because it heard an emergency says what to do and nothing else: no "nothing was saved" after it)
+    step(() => { if (!decision.emergency) speakKyroIntakeLine(kyroIntakeText("cancelled", decision.language), { language: decision.language }); });
     step(() => active?.onCancel?.());
     return;
   }
@@ -51234,7 +51237,7 @@ function startKyroVoiceIntake(definition, options = {}) {
   if (realtimeVoiceActive()) {
     try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
   }
-  const engine = KyroVoiceIntake.create(definition, { seedUtterance: options.seedUtterance, language: languageCode() });
+  const engine = KyroVoiceIntake.create(definition, { seedUtterance: options.seedUtterance, language: languageCode(), initialValues: options.initialValues });
   kyroActiveVoiceIntake = { engine, definition, onComplete: options.onComplete, onCancel: options.onCancel, source: options.source || "voice" };
   if (realtimeVoiceActive()) setKyroRealtimeAutoResponse(false);
   kyroArmIntakeSafetyNet();
@@ -51244,7 +51247,7 @@ function startKyroVoiceIntake(definition, options = {}) {
 
 function kyroVoiceIntakeOwnsTurn(command) {
   if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return true;
-  return Boolean(window.KyroIntakeForms?.isResumeBuildRequest?.(command));
+  return Boolean(window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command));
 }
 
 // Returns true when the transcript was consumed by a Kyro voice intake (caller must skip its own
@@ -51263,6 +51266,18 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
   if (!kyroActiveVoiceIntake) {
     if (window.KyroIntakeForms?.isResumeBuildRequest?.(trimmed)) {
       startKyroResumeIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
+    // "Look at this", "what is wrong with this plant", "read this letter": the camera opens, the picture is taken and described
+    if (window.KyroCapture?.isLookRequest?.(trimmed) && startKyroCapture(trimmed, { source })) return true;
+    // "I want to sell 50 bags of maize": Kyro asks only for what is missing and posts it to the board after a yes
+    if (window.KyroIntakeForms?.isSaleRequest?.(trimmed)) {
+      startKyroSaleIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
+      return true;
+    }
+    // "I need telehealth": a few short questions for a provider (stops itself and says what to do if an answer describes an emergency)
+    if (window.KyroIntakeForms?.isTelehealthRequest?.(trimmed)) {
+      startKyroTelehealthIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
       return true;
     }
     return false;
@@ -51362,6 +51377,147 @@ async function submitKyroResumeIntake(values, context = {}) {
 function startKyroResumeIntake(options = {}) {
   if (!window.KyroIntakeForms?.resume) return;
   startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
+}
+
+// Selling by voice: what the first sentence said (the product, the amount, the price) is kept, only what is missing is asked, it is read back, and after a yes it is posted to the community board the same way
+// "post for sale: 50 bags of maize at 3000 per bag" posts it (the voice tool route, so the answer is the same and is shown on the screen). Nothing is bought, paid or delivered from here.
+function startKyroSaleIntake(options = {}) {
+  const forms = window.KyroIntakeForms;
+  if (!forms?.sale) return;
+  const initialValues = forms.parseSale?.(options.seedUtterance?.text || "") || {};
+  startKyroVoiceIntake(forms.sale, { ...options, initialValues, onComplete: submitKyroSaleIntake });
+}
+
+async function submitKyroSaleIntake(values, context = {}) {
+  const language = context.language || languageCode();
+  const command = window.KyroIntakeForms?.sale?.toCommand?.(values) || "";
+  if (!command) return { ok: false, say: kyroIntakeText("failedRetry", language) };
+  try {
+    const response = await kyroFetchWithTimeout("/api/voice/realtime/tool", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ name: "nexus_everyday_records", correlationId: `sale-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command, language, timeZone: kyroDeviceTimeZone() }, language, timeZone: kyroDeviceTimeZone() })
+    }, 30000);
+    if (response.status === 401) return { ok: false, say: kyroIntakeText("signIn", language) };
+    const result = await response.json().catch(() => ({}));
+    const said = String(result?.response || "").trim();
+    // "Posted. Listing 3: ...": it is on the board. Anything else (a missing price, a refusal) is said as it is and asked again.
+    if (response.ok && /^Posted\b/i.test(said)) {
+      kyroShowResultScreen("nexus_everyday_records", command, result);
+      return { ok: true, say: said, contextNote: `The sale was posted to the community board: ${command.replace(/^Post for sale:\s*/, "")}.` };
+    }
+    if (/price/i.test(said)) return { ok: false, fieldKey: "price", say: said };
+    return { ok: false, say: said || kyroIntakeText("failedRetry", language) };
+  } catch (error) {
+    nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-network-error", { message: error?.message || "unknown" });
+    return { ok: false, say: kyroIntakeText("offline", language) };
+  }
+}
+
+// Telehealth by voice: a few short questions, read back, and after a yes saved as an intake case for a provider to review (the health tool's own intake). The interview stops itself and says what to do if an answer
+// describes an emergency, and the server checks the reason for danger signs again. It does not diagnose, book a visit or call anyone.
+function startKyroTelehealthIntake(options = {}) {
+  const forms = window.KyroIntakeForms;
+  if (!forms?.telehealth) return;
+  startKyroVoiceIntake(forms.telehealth, { ...options, onComplete: submitKyroTelehealthIntake });
+}
+
+async function submitKyroTelehealthIntake(values, context = {}) {
+  const language = context.language || languageCode();
+  const summary = window.KyroIntakeForms?.telehealth?.toSummary?.(values) || "";
+  if (!summary) return { ok: false, say: kyroIntakeText("failedRetry", language) };
+  try {
+    const response = await kyroFetchWithTimeout("/api/voice/realtime/tool", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ name: "nexus_health_preparation", correlationId: `tele-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command: "Start my telehealth intake", summary, language, timeZone: kyroDeviceTimeZone() }, language, timeZone: kyroDeviceTimeZone() })
+    }, 30000);
+    if (response.status === 401) return { ok: false, say: kyroIntakeText("signIn", language) };
+    const result = await response.json().catch(() => ({}));
+    const said = String(result?.response || "").trim();
+    // the server heard danger signs in the reason: it says what to do and opens nothing, so the interview ends here (it is not asked again)
+    if (result?.status === "emergency-guidance") return { ok: true, say: said, contextNote: "The telehealth interview stopped: the answers described an emergency and the person was told to use emergency or urgent care. Nothing was saved." };
+    const ref = (said.match(/\bcase ([A-Z0-9-]+)/) || [])[1] || "";
+    if (response.ok && ref) {
+      const line = language === "sw"
+        ? `Nimehifadhi hii kama kesi ${ref} ili mtoa huduma aipitie. Si uchunguzi, na hakuna ziara iliyopangwa bado. Ikizidi, au ukijisikia si salama, piga namba ya dharura ya eneo lako.`
+        : `Done. I saved this as case ${ref} for a provider to review. This is not a diagnosis, and no visit is booked yet. If it gets worse, or you feel unsafe, call your local emergency number.`;
+      return { ok: true, say: line, contextNote: `A telehealth intake case ${ref} was saved for provider review. No visit was booked.` };
+    }
+    return { ok: false, say: said || kyroIntakeText("failedRetry", language) };
+  } catch (error) {
+    nexusGenesisVoiceDebugLog("kyro-voice-intake-submit-network-error", { message: error?.message || "unknown" });
+    return { ok: false, say: kyroIntakeText("offline", language) };
+  }
+}
+
+// What the model is told if it calls a tool for a sentence a voice interview already owns.
+function kyroIntakeBusyLine(command) {
+  const id = kyroActiveVoiceIntake?.definition?.id;
+  const forms = window.KyroIntakeForms;
+  if (!kyroActiveVoiceIntake && window.KyroCapture?.isLookRequest?.(command)) return "Kyro is opening the camera for the person to show it, and will describe it. Say nothing now.";
+  if (id === "sale" || (!kyroActiveVoiceIntake && forms?.isSaleRequest?.(command))) return "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.";
+  if (id === "telehealth" || (!kyroActiveVoiceIntake && forms?.isTelehealthRequest?.(command))) return "Kyro is already asking the person a few short questions for a telehealth request, one at a time. Say nothing now.";
+  return "Kyro is already asking the person their résumé questions one at a time. Say nothing now.";
+}
+
+// "Look at this" / "what is wrong with this plant" / "read this letter" / "take a photo": Kyro opens the camera, says to hold it up, counts down and takes the picture (public/kyro-capture.js); the picture is uploaded
+// and described by the real vision model (it describes what it sees and never diagnoses), and the answer fills the screen and is read out. With no camera, a refused permission or an old browser it says so and offers
+// to choose a photo or a PDF instead.
+function startKyroCapture(command, options = {}) {
+  const capture = window.KyroCapture;
+  if (!capture) return false;
+  const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  try { setVoiceResponse(lang === "sw" ? "Ishike mbele ya kamera. Nitapiga picha baada ya sekunde tatu." : "Hold it up to the camera. I will take the picture in three seconds.", true, { allowHandoff: false, command, source: "kyro-capture" }); } catch { /* the screen says it too */ }
+  capture.open(document, navigator, {
+    onPhoto: blob => { void kyroAskAboutPicture(blob, command, "photo.jpg"); },
+    // (it said "hold it up" before it knew: now it says it cannot, and offers a photo from the phone)
+    onUnavailable: () => { try { setVoiceResponse(window.KyroCapture.TEXT[lang].noCamera, true, { allowHandoff: false, command, source: "kyro-capture" }); } catch { /* the screen says it too */ } },
+    onFile: () => {
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = "image/png,image/jpeg,image/webp,application/pdf";
+      input.addEventListener("change", () => { const file = input.files && input.files[0]; if (file) void kyroAskAboutPicture(file, command, file.name); });
+      input.click();
+    }
+  }, { lang });
+  return true;
+}
+
+// What Kyro adds after describing a picture: it describes, it does not diagnose.
+function kyroPictureClosing(command) {
+  const spoken = String(command || "").toLowerCase();
+  if (/\b(?:wound|rash|skin|swelling|medicine|tablet|pill|bottle|baby|child|eye|burn)\b/.test(spoken)) return " I can't diagnose from a picture. Please show it to a clinician or a pharmacist.";
+  if (/\b(?:plant|leaf|leaves|crop|maize|tomato|fruit|insect|bug|pest|cow|goat|hen|chicken|animal|wrong)\b/.test(spoken)) return " I can't tell you the cause or name a spray from a picture. Please show it to your local agricultural extension officer.";
+  return "";
+}
+
+async function kyroAskAboutPicture(blob, command, filename) {
+  const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  const say = text => { try { setVoiceResponse(text, true, { allowHandoff: false, command, source: "kyro-capture" }); } catch { /* nothing else to do */ } };
+  try {
+    const form = new FormData();
+    form.append("file", blob, filename || "photo.jpg");
+    const upload = await kyroFetchWithTimeout("/api/nexus/upload", { method: "POST", credentials: "same-origin", body: form }, 40000);
+    const uploaded = await upload.json().catch(() => ({}));
+    if (!upload.ok || !uploaded.ok) { say(uploaded.error || (lang === "sw" ? "Sikuweza kupokea picha hiyo. Jaribu tena." : "I could not receive that picture. Please try again.")); return false; }
+    say(lang === "sw" ? "Naiangalia sasa." : "Looking at it now.");
+    const response = await kyroFetchWithTimeout("/api/voice/realtime/tool", {
+      method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ name: "nexus_file_document_analysis", correlationId: `look-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command, fileId: uploaded.fileId || uploaded.id || undefined, language: lang }, language: lang })
+    }, 60000);
+    const result = await response.json().catch(() => ({}));
+    const described = String(result?.response || "").trim();
+    if (!response.ok || !described) { say(lang === "sw" ? "Siwezi kuchambua picha hiyo sasa." : "I can't look at that picture right now."); return false; }
+    const answer = `${described}${kyroPictureClosing(command)}`;
+    kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: answer });
+    say(answer);
+    return true;
+  } catch (error) {
+    nexusGenesisVoiceDebugLog("kyro-capture-failed", { message: error?.message || "unknown" });
+    say(lang === "sw" ? "Siwezi kufikia seva sasa." : "I can't reach the server right now.");
+    return false;
+  }
 }
 
 // ---- Answer-first (the Jarvis way): the ANSWER is the screen ----
@@ -51543,8 +51699,9 @@ function genesisWorkspaceActionFromFinalTranscript(transcript = "") {
     || lower.includes("résumé")
   ) && !window.KyroIntakeForms?.isResumeBuildRequest?.(command);
   const marketplaceRequest = /\b(?:marketplace|agritrade|buyer|seller|sell|selling|list)\b/.test(lower)
-    && (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower));
-  const telehealthRequest = explicitOpen && /\b(telehealth|virtual care|video visit)\b/.test(lower);
+    && (explicitOpen || /\b(?:sell|selling|list)\b/.test(lower))
+    && !window.KyroIntakeForms?.isSaleRequest?.(command); // "I want to sell 50 bags of maize" is the short interview, not the Trade form
+  const telehealthRequest = explicitOpen && /\b(telehealth|virtual care|video visit)\b/.test(lower) && !window.KyroIntakeForms?.isTelehealthRequest?.(command); // the short interview, not the form
   const mobileClinicRequest = /\b(mobile clinic|community health outreach|rural clinic)\b/.test(lower)
     && (explicitOpen || /\b(support|access|help|outreach)\b/.test(lower));
   const pharmacyRequest = explicitOpen && !/\bremind\b/.test(lower) && /\b(pharmacy|medication|medicine|refill)\b/.test(lower);
@@ -58577,6 +58734,18 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // "Teach me letters", "start the AI basics course", "give me a practice interview": the route that really teaches them, answered on the screen (the typed route would hand them to the AI model)
   const typedTool = kyroTypedToolFor(text);
   if (typedTool && await kyroRunToolAnswer(text, "typed-answer", typedTool)) return true;
+  // "Look at this", typed: the camera opens too
+  if (!kyroActiveVoiceIntake && window.KyroCapture?.isLookRequest?.(text) && startKyroCapture(text, { source: options.source || "typed" })) return true;
+  // "I want to sell 50 bags of maize", typed: the same short interview as by voice
+  if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isSaleRequest?.(text)) {
+    startKyroSaleIntake({ seedUtterance: { id: "", text }, source: options.source || "typed" });
+    return true;
+  }
+  // "I need telehealth", typed: the same short interview as by voice
+  if (!kyroActiveVoiceIntake && window.KyroIntakeForms?.isTelehealthRequest?.(text)) {
+    startKyroTelehealthIntake({ seedUtterance: { id: "", text }, source: options.source || "typed" });
+    return true;
+  }
   // ...and the replies that follow it ("next", "again", "stop", "A")
   const lessonTool = !typedTool && kyroTypedLessonOpen ? kyroTypedLessonReply(text) : "";
   if (lessonTool && await kyroRunToolAnswer(text, "typed-answer", lessonTool, { lessonOnly: true })) return true;

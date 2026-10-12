@@ -333,12 +333,18 @@
     const questionOf = field => textOf(field, "question");
     const moreOf = field => (lang === "sw" && field.sw && field.sw.moreQuestion) || (field.repeatable && field.repeatable.moreQuestion) || MSG[lang].moreDefault;
     const readbackNow = () => (typeof definition.readback === "function" ? definition.readback(values, lang) : defaultReadback(fields, values, lang));
-    const confirmLine = prefix => `${prefix ? `${prefix} ` : ""}${readbackNow()} ${MSG[lang].confirmTail}`;
+    // (a form may say its own question after the read-back, in each language: "Shall I post it?" for a sale, instead of the résumé's "Shall I make it now?")
+    const confirmTailNow = () => { const own = definition.confirmTail; const text = own && typeof own === "object" ? own[lang] : own; return typeof text === "string" && text ? text : MSG[lang].confirmTail; };
+    const confirmLine = prefix => `${prefix ? `${prefix} ` : ""}${readbackNow()} ${confirmTailNow()}`;
 
     let phase = "asking";
     let index = 0;
     const values = {};
     const skipped = new Set();
+    // What the first sentence already said ("I want to sell 50 bags of maize" -> the product and the amount) is not asked again.
+    for (const [key, value] of Object.entries(options.initialValues || {})) {
+      if (value !== undefined && value !== "" && fields.some(field => field.key === key)) { values[key] = value; skipped.add(key); }
+    }
     const attempts = {};
     const history = [];
     const seenUtteranceIds = [];
@@ -655,6 +661,12 @@
       const spoken = detectLanguage(trimmed, { strict: true });
       if (spoken) lang = spoken;
 
+      // A form that can hear an emergency (the telehealth interview) stops itself and says what to do, before anything is recorded: nobody is asked the next question while describing danger signs.
+      if (typeof definition.interrupt === "function" && phase !== "confirming") {
+        const stop = definition.interrupt(trimmed, { lang });
+        if (stop && stop.say) { phase = "cancelled"; return decision("cancelled", stop.say, { emergency: true }); }
+      }
+
       // "switch" (wake-word new request) and "cancel" must be honored in every phase, including
       // while confirming or while collecting a repeatable field's extra answers -- otherwise a
       // user who says "stop"/"never mind" or issues a new wake-word command mid-confirmation or
@@ -696,6 +708,7 @@
       touch();
       index = nextUnskippedIndex(0);
       phase = "asking";
+      if (index >= fields.length) return finishCollecting();
       const field = currentField();
       const introText = textOf(definition, "intro");
       const intro = introText ? `${introText} ` : "";

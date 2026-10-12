@@ -164,6 +164,131 @@
     return RESUME_CONTINUE.test(value) || BARE_CONTINUE.test(value);
   }
 
+  // --- selling something --------------------------------------------------------------------------
+  // "I want to sell 50 bags of maize" used to open the Trade form, or ask the person to say yes to their own sentence. Now Kyro asks only for what is missing (what, how much, what price, where), reads it
+  // back, and posts it to the community board after a yes -- the same listing "post for sale: 50 bags of maize at 3000 per bag" makes. Nothing is bought, paid or delivered from here.
+  const SALE_INTENT = /\b(?:i (?:want|need|would like|plan|wish|have) to sell|i'?d like to sell|i'?m (?:going to |gonna |planning to )?sell(?:ing)?|i am (?:going to |planning to )?sell(?:ing)?|let me sell|help me sell|sell my|i have\b.{1,70}\bto sell|put\b.{1,70}\bfor sale|list\b.{1,70}\bfor sale|nataka kuuza|ninataka kuuza|nina\b.{1,60}\bya kuuza|nisaidie kuuza|ninauza)\b/i;
+  const SALE_NOT = /^\s*(?:how|what|where|when|why|which|who|can you explain|tips|is it|do i|should i)\b|\b(?:sold|selling price|who buys|who wants|price of|market price|cancel|remove|delete)\b|\bnimeuza\b/i;
+  const SALE_UNITS = { kilograms: "kg", kilogram: "kg", kilos: "kg", kilo: "kg", kgs: "kg", kg: "kg", bags: "bag", bag: "bag", sacks: "sack", sack: "sack", crates: "crate", crate: "crate", tons: "ton", tonnes: "ton", ton: "ton", tonne: "ton", litres: "litre", liters: "litre", litre: "litre", liter: "litre", bunches: "bunch", bunch: "bunch", pieces: "piece", piece: "piece" };
+  const SALE_QTY = /(?:^|\s)(\d[\d,.]*\s*(?:kilograms?|kilos?|kgs?|bags?|sacks?|crates?|tonnes?|tons?|litres?|liters?|bunch(?:es)?|pieces?|goats?|cows?|sheep|chickens?|hens?|eggs?|trays?|heads?|[a-z]{3,12})?)\s+(?:of\s+)?([a-z][a-z -]{1,40}?)(?=\s+(?:at|for|in|to|from)\b|[.,!?]|$)/i;
+  // What the first sentence already said: { product, quantity, price, location } (any may be missing). "I want to sell 50 bags of maize at 3000 per bag in Nakuru".
+  function parseSale(text) {
+    const spoken = clean(text).replace(/[’]/g, "'").replace(/[.!?]+$/, "");
+    const out = {};
+    const price = spoken.match(/\b(?:at|for|price(?: of)?|@|kwa)\s*(?:ksh|kes|ugx|tzs|ngn|usd|\$)?\s*(\d[\d,.]*(?:\s*(?:per\s*[a-z]+|each|\/\s*[a-z]+|a\s+[a-z]+|kwa\s+[a-z]+))?)/i);
+    if (price) out.price = clean(price[1]);
+    const place = spoken.match(/\b(?:in|from)\s+((?!\d)[A-Z][A-Za-z' -]{2,30})\s*$/);
+    if (place) out.location = clean(place[1]);
+    // the item is after "sell" ("I want to sell 50 bags of maize"), before "to sell" ("I have 200 kg of tomatoes to sell") or before "for sale" ("put my potatoes up for sale")
+    const before = spoken.match(/\bi have\s+(.+?)\s+to sell\b/i) || spoken.match(/\b(?:put|list)\s+(?:my\s+)?(.+?)\s+(?:up\s+)?for sale\b/i);
+    const after = spoken.replace(/^.*?\b(?:sell(?:ing)?|for sale|kuuza|ninauza)\b\s*(?:my|some|the|a|an)?\s*/i, "");
+    const tail = (before ? before[1] : after).replace(/\s+(?:at|for|in|from|kwa)\s+(?:ksh|kes|\$)?\s*\d.*$/i, "").replace(/\s+in\s+[A-Z][A-Za-z' -]+$/, "").replace(/^(?:my|some|the)\s+/i, "");
+    const qty = SALE_QTY.exec(` ${tail}`);
+    if (qty && /\d/.test(qty[1])) { out.quantity = clean(qty[1]); out.product = clean(qty[2]).replace(/^(?:of|my|the)\s+/i, ""); }
+    else if (tail && tail.length <= 40 && !/\b(?:to|for)\b/.test(tail)) out.product = clean(tail.replace(/^(?:my|some|the)\s+/i, ""));
+    for (const key of Object.keys(out)) if (!out[key]) delete out[key];
+    return out;
+  }
+  function isSaleRequest(text) {
+    const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
+    if (!value || value.split(/\s+/).length > 28) return false;
+    return SALE_INTENT.test(value) && !SALE_NOT.test(value);
+  }
+  function saleCommand(values) {
+    const product = clean(values.product); const quantity = clean(values.quantity); let price = clean(values.price); const location = clean(values.location);
+    const unitWord = (quantity.match(/^\d[\d,.]*\s*([a-z]+)/i) || [])[1] || "";
+    const unit = SALE_UNITS[unitWord.toLowerCase()] || (unitWord && !/^(?:of)$/i.test(unitWord) ? unitWord.toLowerCase().replace(/s$/, "") : "");
+    // "3000" with "50 bags" means 3000 per bag; a price that already says per/each/for the lot is left as said
+    if (/^\d[\d,.]*$/.test(price) && unit) price = `${price} per ${unit}`;
+    // "50 bags" + "maize" -> "50 bags of maize"; a bare count + "goats" -> "5 goats"
+    const what = quantity ? (/\bof\b/i.test(quantity) || /^\d[\d,.]*$/.test(quantity) ? `${quantity} ${product}` : `${quantity} of ${product}`) : product;
+    return `Post for sale: ${what}${price ? ` at ${price}` : ""}${location ? ` in ${location}` : ""}`;
+  }
+  function saleReadback(values, lang = "en") {
+    const what = clean(saleCommand(values).replace(/^Post for sale:\s*/, ""));
+    return lang === "sw"
+      ? `Nitaweka sokoni: ${what}. Kila mtu katika jamii yako ataiona, bila namba yako ya simu.`
+      : `I will post this for sale: ${what}. Everyone in your community can see it, never your phone number.`;
+  }
+  const SALE_FIELDS = [
+    { key: "product", label: "What", question: "What are you selling?", required: true, kind: "text", aliases: ["product", "what", "crop", "bidhaa", "zao"], sw: { label: "Bidhaa", question: "Unauza nini?" } },
+    { key: "quantity", label: "How much", question: "How much do you have? For example: 50 bags, or 200 kilograms.", required: true, kind: "text", aliases: ["quantity", "amount", "how much", "kiasi", "idadi"], sw: { label: "Kiasi", question: "Una kiasi gani? Kwa mfano: mifuko 50, au kilo 200." } },
+    { key: "price", label: "Price", question: "What price do you want? For example: 3000 per bag.", required: true, kind: "text", aliases: ["price", "bei"], sw: { label: "Bei", question: "Unataka bei gani? Kwa mfano: 3000 kwa mfuko." } },
+    { key: "location", label: "Where", question: "Where is it? Say a town, or say 'skip'.", required: false, kind: "place", aliases: ["location", "where", "town", "mji", "mahali"], sw: { label: "Mahali", question: "Iko wapi? Taja mji, au sema 'ruka'." } }
+  ];
+  const sale = Object.freeze({
+    id: "sale",
+    title: "Sell on the community board",
+    intro: "",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I post it? Say yes, or tell me which part to change.", sw: "Niiweke sasa? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop.",
+    sw: { title: "Uza kwenye ubao wa jamii", intro: "", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha." },
+    fields: SALE_FIELDS,
+    readback: saleReadback,
+    toCommand: saleCommand,
+    parseSale,
+    isSaleRequest
+  });
+
+  // --- a telehealth visit -------------------------------------------------------------------------
+  // "I need telehealth" used to open a long form. Now Kyro asks a few short questions (what the visit is for, when it started, other symptoms, a phone number), reads them back, and after a yes saves them as an
+  // intake case for a provider to review. It does not diagnose, book a visit or call anyone. If an answer describes an emergency the interview stops, says what to do and saves nothing; the server checks again.
+  // THE EMERGENCY WORDING AND THE DANGER-SIGN LIST NEED A CLINICIAN'S REVIEW before they are relied on.
+  const TELE_WORD = /\b(?:telehealth|tele-health|virtual (?:care|visit|appointment|consult\w*)|video (?:visit|consult\w*|appointment)|(?:doctor|nurse|clinician|provider) (?:online|by video|on video|remotely)|online (?:doctor|consult\w*|appointment)|daktari mtandaoni|telehealth intake)\b/i;
+  const TELE_INTENT = /\b(?:i need|i want|i'?d like|i would like|can i|could i|help me|start|begin|book|set up|arrange|open|get me|let me|nahitaji|ninahitaji|nataka|ninataka|anza)\b|^(?:telehealth|virtual care)\b/i;
+  const TELE_NOT = /^\s*(?:how|what|why|which|when|is|does|do|are|can you explain|tips)\b|\b(?:cost|price|how much|explain|means?)\b/i;
+  function isTelehealthRequest(text) {
+    const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
+    if (!value || value.split(/\s+/).length > 22) return false;
+    return TELE_WORD.test(value) && TELE_INTENT.test(value) && !TELE_NOT.test(value);
+  }
+  const DANGER_SIGNS = /\b(?:can'?t breathe|cannot breathe|struggling to breathe|trouble breathing|difficulty breathing|not breathing|stopped breathing|short of breath|chest pain|pain in (?:my )?chest|unconscious|passed out|fainted|collapsed|seizures?|convuls\w*|fitting|bleeding (?:heavily|a lot|badly)|heavy bleeding|won'?t stop bleeding|bleeding (?:that )?(?:will not|won'?t) stop|coughing (?:up )?blood|vomiting blood|stiff neck|face (?:is )?drooping|slurred speech|weakness on one side|weak on one side|sudden loss of (?:sight|vision)|poisoned|overdose|snake ?bite|siwezi kupumua|maumivu ya kifua|nimezimia|degedege|damu nyingi|kutokwa na damu nyingi)\b/i;
+  const TELE_EMERGENCY = {
+    en: "That sounds like it could be an emergency. Please call your local emergency number or go to the nearest clinic now. I have stopped the questions and nothing was saved.",
+    sw: "Hiyo inaweza kuwa dharura. Tafadhali piga namba ya dharura ya eneo lako au nenda kliniki iliyo karibu sasa. Nimesimamisha maswali na hakuna kilichohifadhiwa."
+  };
+  function teleInterrupt(text, context = {}) {
+    return DANGER_SIGNS.test(clean(text)) ? { say: TELE_EMERGENCY[context.lang === "sw" ? "sw" : "en"] } : null;
+  }
+  function teleSummary(values) {
+    const parts = [];
+    if (values.reason) parts.push(`Reason: ${clean(values.reason)}.`);
+    if (values.onset) parts.push(`Started: ${clean(values.onset)}.`);
+    if (values.symptoms) parts.push(`Other symptoms: ${clean(values.symptoms)}.`);
+    if (values.phone) parts.push(`Phone: ${clean(values.phone)}.`);
+    return parts.join(" ").slice(0, 780);
+  }
+  function teleReadback(values, lang = "en") {
+    const sw = lang === "sw";
+    const parts = [];
+    if (values.reason) parts.push(`${sw ? "Sababu" : "Visit for"}: ${clean(values.reason)}.`);
+    if (values.onset) parts.push(`${sw ? "Ilianza" : "Started"}: ${clean(values.onset)}.`);
+    if (values.symptoms) parts.push(`${sw ? "Dalili nyingine" : "Other symptoms"}: ${clean(values.symptoms)}.`);
+    if (values.phone) parts.push(`${sw ? "Simu" : "Phone"}: ${clean(values.phone)}.`);
+    return `${sw ? "Hivi ndivyo nilivyoandika." : "Here is what I have."} ${parts.join(" ")} ${sw ? "Mtoa huduma ataipitia. Si uchunguzi, na hakuna ziara iliyopangwa bado." : "A provider will review it. This is not a diagnosis, and no visit is booked yet."}`;
+  }
+  const TELE_FIELDS = [
+    { key: "reason", label: "Reason", question: "What is the visit for? Tell me in your own words.", required: true, kind: "text", aliases: ["reason", "visit", "sababu"], sw: { label: "Sababu", question: "Ziara hii ni ya nini? Niambie kwa maneno yako mwenyewe." } },
+    { key: "onset", label: "When it started", question: "When did it start? For example: two days ago. Or say 'skip'.", required: false, kind: "text", aliases: ["started", "when", "onset", "ilianza", "lini"], sw: { label: "Ilianza", question: "Ilianza lini? Kwa mfano: siku mbili zilizopita. Au sema 'ruka'." } },
+    { key: "symptoms", label: "Other symptoms", question: "Any other symptoms? Say them, or say 'skip'.", required: false, kind: "sentences", aliases: ["symptoms", "other", "dalili"], sw: { label: "Dalili nyingine", question: "Kuna dalili nyingine? Zitaje, au sema 'ruka'." } },
+    { key: "phone", label: "Phone", question: "What phone number can the provider call? Or say 'skip'.", required: false, kind: "phone", aliases: ["phone", "number", "simu", "namba"], sw: { label: "Simu", question: "Mtoa huduma apige simu kwa namba gani? Au sema 'ruka'." } }
+  ];
+  const telehealth = Object.freeze({
+    id: "telehealth",
+    title: "Telehealth request",
+    intro: "I will ask a few short questions for a provider. If this is an emergency, call your local emergency number now. You can say repeat, skip, go back, or stop at any time.",
+    confirmBeforeSubmit: true,
+    confirmTail: { en: "Shall I send it for review? Say yes, or tell me which part to change.", sw: "Niitume ipitiwe? Sema ndiyo, au niambie sehemu ya kubadilisha." },
+    pausedLine: "Okay, I will wait. Say continue when you are ready, or say cancel to stop.",
+    sw: { title: "Ombi la telehealth", intro: "Nitakuuliza maswali machache mafupi kwa mtoa huduma. Ikiwa ni dharura, piga namba ya dharura sasa. Unaweza kusema rudia, ruka, rudi, au acha wakati wowote.", pausedLine: "Sawa, nitasubiri. Sema endelea ukiwa tayari, au sema ghairi kuacha." },
+    fields: TELE_FIELDS,
+    readback: teleReadback,
+    interrupt: teleInterrupt,
+    toSummary: teleSummary,
+    isTelehealthRequest
+  });
+
   const resume = Object.freeze({
     id: "resume",
     title: "Your résumé",
@@ -183,5 +308,5 @@
     isContinueRequest: isResumeContinueRequest
   });
 
-  return Object.freeze({ resume, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
+  return Object.freeze({ resume, sale, telehealth, isTelehealthRequest, isSaleRequest, parseSale, isResumeBuildRequest, isResumeContinueRequest: isResumeContinueRequest, isResumeDownloadRequest });
 });

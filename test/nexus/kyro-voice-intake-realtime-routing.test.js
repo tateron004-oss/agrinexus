@@ -223,7 +223,7 @@ test("callNexusOpenAiRealtimeTool short-circuits with no network call when a Kyr
   assert.ok(start > 0 && end > start, "could not locate callNexusOpenAiRealtimeTool in app.js");
   let fetchCalls = 0;
   const sandbox = {
-    kyroVoiceIntakeOwnsTurn: () => true,
+    kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
     fetch: async () => { fetchCalls += 1; return { ok: true, json: async () => ({}) }; },
     nexusGenesisVoiceDebugLog: () => {}
   };
