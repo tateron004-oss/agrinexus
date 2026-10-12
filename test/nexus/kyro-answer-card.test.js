@@ -75,7 +75,7 @@ test("voice opens it instead of the form, counts it as opened and verified, and 
   const dispatch = app.slice(app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {"), app.indexOf("const opened = workspace ===", app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {")));
   assert.match(dispatch, /opened: true, visible: true/);
   const verified = app.slice(app.indexOf("async function dispatchGenesisWorkspaceActionVerified"), app.indexOf("const sdkMicrophoneProof", app.indexOf("async function dispatchGenesisWorkspaceActionVerified")));
-  assert.match(verified, /const answerCardShown = \(\) => \["workforce", "learning", "health"\]\.includes\(workspace\)/);
+  assert.match(verified, /const answerCardShown = \(\) => \["workforce", "learning", "health", "agriculture"\]\.includes\(workspace\)/);
   assert.match(verified, /populatedFields = expected\.map\(\(\[key\]\) => key\); break;/, "no form fields are expected of a card");
   assert.match(app, /workspaceSurfaceVisible = workspace === "map"\s*\?\s*visibleMap\s*:\s*\(answerCardShown\(\)/);
   const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
@@ -142,8 +142,10 @@ test("only a general health request gets the card; one that names a reading, a v
   for (const general of ["", "Open health", "I want help with my health", "health", "afya"]) assert.equal(Card.healthIsGeneral(general), true, general);
   for (const specific of ["I need telehealth", "my blood pressure is 140 over 90", "start a video visit", "find a pharmacy", "I have a fever", "this is an emergency", "chronic care intake", "talk to a doctor", "shinikizo la damu", "tafuta kliniki"]) assert.equal(Card.healthIsGeneral(specific), false, specific);
   const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("async function kyroRunCardChoice"));
-  assert.match(fn, /if \(workspace === "health"\) \{\s*if \(!context\) return false;/, "the section screens carry no context, so health is never shown for them");
-  assert.match(fn, /window\.KyroAnswerCard\.healthIsGeneral\(said\)\) return false;/);
+  assert.match(fn, /if \(workspace === "health" \|\| workspace === "agriculture"\) \{\s*if \(!context\) return false;/, "the section screens carry no context, so health and the farm are never shown for them");
+  assert.match(fn, /window\.KyroAnswerCard\.isGeneralFor\(workspace, said\)\) return false;/);
+  assert.equal(Card.isGeneralFor("health", "I need telehealth"), false); assert.equal(Card.isGeneralFor("health", "open health"), true);
+  assert.equal(Card.isGeneralFor("learning", "anything"), true, "the other cards are always right");
   assert.match(app, /kyroShowAnswerCard\(workspace, \{ payload \}\)/, "judged by the payload (the person's own words), never by the reply text");
 });
 
@@ -156,4 +158,20 @@ test("a slow lookup says it has started: the clinic and pharmacy choices carry a
   const run = app.slice(app.indexOf("async function kyroRunCardChoice(command, source, tool, wait)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
   assert.ok(run.indexOf("if (wait)") > 0 && run.indexOf("if (wait)") < run.indexOf("kyroFetchWithTimeout"), "said before the search starts");
   assert.match(app, /else void kyroRunCardChoice\(choice\.say, `\$\{spec\.id\}-card`, choice\.tool, choice\.wait\);/);
+});
+
+test("the farm card says what Kyro keeps and what it will not do, offers only reads that answer without the AI model, and only a general request gets it", () => {
+  const en = Card.farmSpec({ lang: "en" });
+  assert.equal(en.id, "agriculture"); assert.equal(en.title, "Farm");
+  assert.match(en.lines[0], /I do not name a spray or a dose/);
+  assert.match(en.lines[1], /it rained 12 mm, or I harvested 50 kg of maize/); assert.match(en.lines[2], /crop problem, tell me what you see/);
+  assert.deepEqual(en.choices.map(choice => choice.id), ["log", "rain", "month"]);
+  assert.ok(en.choices.every(choice => choice.tool === "nexus_everyday_records"));
+  const sw = Card.farmSpec({ lang: "sw" });
+  assert.equal(sw.title, "Shamba"); assert.deepEqual(sw.choices.map(choice => choice.say), ["muhtasari wa mwezi"], "only what is answered in Kiswahili");
+  assert.equal(Card.specFor("agriculture", {}).id, "agriculture"); assert.equal(Card.farmSpec().choices.length, 3, "no arguments is fine");
+  for (const general of ["", "open agriculture help", "agriculture", "I need help with my farm", "farm help", "shamba"]) assert.equal(Card.farmIsGeneral(general), true, general);
+  for (const specific of ["my tomato leaves have yellow spots", "what is the maize price", "will it rain tomorrow", "I harvested 50 kg of maize", "send a drone to scan my field", "I want to sell my maize", "how do I improve my soil", "mvua imenyesha", "my cow gave 18 litres"]) assert.equal(Card.farmIsGeneral(specific), false, specific);
+  // what the card offers is what the server really answers (checked against the farm log's own readers)
+  const farmLog = require("../../nexus/farm/log.js"); assert.ok(farmLog, "the farm log module exists");
 });

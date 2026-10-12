@@ -51334,15 +51334,15 @@ function startKyroResumeIntake(options = {}) {
   startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
 }
 
-// Answer-first: asking for work, learning or health shows one clean card (what Kyro can really do right now) instead of a long form (public/kyro-answer-card.js). Each choice can also be said.
-// Returns false (and the usual window opens as before) when the workspace has no card or the card file is not loaded. A health request that names something specific (a reading, a visit, a clinic)
-// is not general: it keeps its own flow. `context` is what was asked ({ command, payload }); the section screens (goSection) carry none, so Health is only ever shown for a general voice request.
+// Answer-first: asking for work, learning, health or the farm shows one clean card (what Kyro can really do right now) instead of a long form (public/kyro-answer-card.js). Each choice can also be said.
+// Returns false (and the usual window opens as before) when the workspace has no card or the card file is not loaded. A health or farm request that names something specific (a reading, a visit, a crop
+// problem, a price) is not general: it keeps its own flow. `context` is what was asked ({ command, payload }); the section screens (goSection) carry none, so those two are only ever shown for a general voice request.
 function kyroShowAnswerCard(workspace, context = null) {
   if (!window.KyroAnswerCard) return false;
-  if (workspace === "health") {
+  if (workspace === "health" || workspace === "agriculture") {
     if (!context) return false;
     const said = `${context.command || ""} ${Object.values(context.payload && typeof context.payload === "object" ? context.payload : {}).join(" ")}`;
-    if (!window.KyroAnswerCard.healthIsGeneral(said)) return false;
+    if (!window.KyroAnswerCard.isGeneralFor(workspace, said)) return false;
   }
   let roles = [];
   try { roles = Array.isArray(data?.roles) ? data.roles : []; } catch { roles = []; }
@@ -55552,7 +55552,7 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
   let populatedFields = [];
   let visibleWorkspace = null;
   // An answer card (Work, Learning) has no form fields: what was asked for is answered on the card itself, so it counts as the opened, verified surface.
-  const answerCardShown = () => ["workforce", "learning", "health"].includes(workspace) && Boolean(document.querySelector(`[data-kyro-answer-card="${workspace === "workforce" ? "work" : workspace}"]`));
+  const answerCardShown = () => ["workforce", "learning", "health", "agriculture"].includes(workspace) && Boolean(document.querySelector(`[data-kyro-answer-card="${workspace === "workforce" ? "work" : workspace}"]`));
   for (let attempt = 0; attempt < 30; attempt += 1) {
     visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
     populatedFields = expected.filter(([key, value]) => findPopulatedField(key, value)).map(([key]) => key);
