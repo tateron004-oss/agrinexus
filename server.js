@@ -30388,7 +30388,9 @@ function explicitWorkspaceOpenResponse(db, user, text = "", lower = "") {
   // A video/camera request ("open video so I can show the buyer my crops") has its own staged buyer-video action
   // further down the command pipeline; this generic marketplace fallback must not swallow it.
   if (/\b(marketplace|agritrade|trade|buyer|seller)\b/.test(value) && !/\b(video|camera|face[- ]to[- ]face)\b/.test(value)) {
-    return response("conversation.crop_sale_help", "needs-details", "trade", "I opened AgriTrade support for marketplace planning. Tell me the crop, quantity, location, or buyer context, and I will prepare the next safe step without a transaction.", ["sell crop", "buyer message", "route support"]);
+    // A plain "open marketplace / AgriTrade / trade" gets the Trade card; one that names a buyer, a seller, a sale, a price or an order keeps its own flow.
+    const generalTrade = /\b(marketplace|agritrade|trade)\b/.test(value) && !/\b(buyer|seller|sell|buy|price|order|ship|track|pay|payment)\b/.test(value);
+    return response("conversation.crop_sale_help", "needs-details", "trade", "I opened AgriTrade support for marketplace planning. Tell me the crop, quantity, location, or buyer context, and I will prepare the next safe step without a transaction.", ["sell crop", "buyer message", "route support"], generalTrade ? { answerCard: "trade" } : {});
   }
   if (/\b(map|maps|route|field visit|location)\b/.test(value)) {
     return response("conversation.map_open", "completed", "map", "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments. Share a starting point and destination if you want route planning; I will not use live location without permission.", ["plan route", "field visit", "clinic map"]);

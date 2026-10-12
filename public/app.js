@@ -51338,16 +51338,16 @@ function startKyroResumeIntake(options = {}) {
 // ("open health and record my blood pressure", "open telehealth") is left to the usual routes.
 function kyroExplicitOpenCard(text) {
   const t = String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
-  const m = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:open|show|start|launch|go to)\s+(?:the\s+|my\s+)?(?:(workforce|work|jobs?)|(learning|lessons?)|(health)|(agriculture|farm)(?:\s+(?:help|support))?)$/.exec(t);
+  const m = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:open|show|start|launch|go to)\s+(?:the\s+|my\s+)?(?:(workforce|work|jobs?)|(learning|lessons?)|(health)|(agriculture|farm)(?:\s+(?:help|support))?|(marketplace|agritrade|trade))$/.exec(t);
   if (!m) return "";
-  return m[1] ? "workforce" : m[2] ? "learning" : m[3] ? "health" : "agriculture";
+  return m[1] ? "workforce" : m[2] ? "learning" : m[3] ? "health" : m[4] ? "agriculture" : "trade";
 }
 
 // A typed "open health" / "open agriculture help": the server answers "open this section" and flags a general request with metadata.answerCard, so the person gets the same card as by voice instead of the
 // section screen. Anything else (including "open telehealth" and every other section) is opened as before.
 function kyroOpenSectionOrCard(metadata = {}) {
   const card = String(metadata?.answerCard || "");
-  if (card && (card === "health" || card === "agriculture") && (experienceMode === "user" || document.body.classList.contains("user-mode")) && kyroShowAnswerCard(card, { payload: {} })) return true;
+  if (card && (card === "health" || card === "agriculture" || card === "trade") && (experienceMode === "user" || document.body.classList.contains("user-mode")) && kyroShowAnswerCard(card, { payload: {} })) return true;
   return goSection(metadata?.redirectSection);
 }
 
@@ -51356,9 +51356,11 @@ function kyroOpenSectionOrCard(metadata = {}) {
 // problem, a price) is not general: it keeps its own flow. `context` is what was asked ({ command, payload }); the section screens (goSection) carry none, so those two are only ever shown for a general voice request.
 function kyroShowAnswerCard(workspace, context = null) {
   if (!window.KyroAnswerCard) return false;
-  if (workspace === "health" || workspace === "agriculture") {
+  if (workspace === "health" || workspace === "agriculture" || workspace === "trade") {
     if (!context) return false;
-    const said = `${context.command || ""} ${Object.values(context.payload && typeof context.payload === "object" ? context.payload : {}).join(" ")}`;
+    // (the person's own words: the payload's `query`. Its other values are derived and can say "buy" for a general trade request.)
+    const payload = context.payload && typeof context.payload === "object" ? context.payload : {};
+    const said = `${context.command || ""} ${typeof payload.query === "string" ? payload.query : Object.values(payload).join(" ")}`;
     if (!window.KyroAnswerCard.isGeneralFor(workspace, said)) return false;
   }
   let roles = [];
@@ -55569,7 +55571,7 @@ async function dispatchGenesisWorkspaceActionVerified(action = {}, result = {}) 
   let populatedFields = [];
   let visibleWorkspace = null;
   // An answer card (Work, Learning) has no form fields: what was asked for is answered on the card itself, so it counts as the opened, verified surface.
-  const answerCardShown = () => ["workforce", "learning", "health", "agriculture"].includes(workspace) && Boolean(document.querySelector(`[data-kyro-answer-card="${workspace === "workforce" ? "work" : workspace}"]`));
+  const answerCardShown = () => ["workforce", "learning", "health", "agriculture", "trade"].includes(workspace) && Boolean(document.querySelector(`[data-kyro-answer-card="${workspace === "workforce" ? "work" : workspace}"]`));
   for (let attempt = 0; attempt < 30; attempt += 1) {
     visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
     populatedFields = expected.filter(([key, value]) => findPopulatedField(key, value)).map(([key]) => key);
