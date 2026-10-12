@@ -24337,6 +24337,25 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
   };
 }
 
+// What Kyro says, whichever tool answered: never the internal platform name ("I did not find a matching active Nexus memory record", "Nexus checked provider readiness"), and never a provider's own
+// "requires explicit confirmed: true before controlled testing" sentence (the person is told what is waiting and asked for a yes). Only the spoken text changes.
+function voiceToolSpoken(result, command) {
+  if (!result || typeof result !== "object" || typeof result.response !== "string" || !result.response) return result;
+  let said = result.response;
+  // (only the provider's own opening sentence, "nexus-offline-expansion-bridge offline.bridge.queue requires explicit confirmed: true ... before controlled testing can run.", is replaced; whatever follows it, such as
+  // "Number to confirm: +254712345678.", is kept)
+  if (typeof spokenRequests !== "undefined") said = said.replace(/^[\w.-]+\s+[\w.-]+\s+requires explicit confirmed:\s*true[^.]*\.?/i, () => spokenRequests.plainConfirmationSentence(command));
+  said = said.replace(/\bNexus Genesis\b|\bNexus\b/g, "Kyro");
+  return said === result.response ? result : { ...result, response: said };
+}
+
+// The workspace a spoken request opens, decided from the person's words. Not when the planner has already answered and saved it (a note, a list, the farm log, a sale posted to the board...): that
+// answer is complete and is shown as the answer, so there is nothing to open. (Found: "take a note: buy seeds" opened the Trade form because the words include "buy".)
+function voiceToolGenesisAction(command, toolName, result) {
+  if (result && result.intent === "planner-deterministic-answer" && result.capability === "conversation") return null;
+  return nexusGenesisWorkspaceAction(command, [{ call: { name: toolName } }]);
+}
+
 function nexusGenesisWorkspaceAction(command = "", toolResults = []) {
   const text = String(command || "").trim(); const lower = text.toLowerCase();
   const toolNames = toolResults.map(item => String(item?.call?.name || ""));
@@ -59490,9 +59509,9 @@ async function api(req, res, url) {
       if (nativeFirst.error) throw nativeFirst.error;
       const fresh = nativeFirst.value;
       const result = idempotencyKey ? structuredClone(fresh) : fresh;
-      const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
+      const genesisAction = voiceToolGenesisAction(args.command || body.command || "", toolName, result);
       await writeDb(db);
-      return send(res, 200, { ...result, genesisAction }, {
+      return send(res, 200, { ...voiceToolSpoken(result, args.command || body.command || ""), genesisAction }, {
         "cache-control": "no-store, no-cache, must-revalidate, private"
       });
     }
@@ -59519,9 +59538,9 @@ async function api(req, res, url) {
     const toolElapsedMs = Date.now() - toolStartedAtMs;
     if (toolTimedOut || toolElapsedMs > 3000) console.warn("[voice-slow-tool]", JSON.stringify({ tool: toolName, ms: toolElapsedMs, timedOut: toolTimedOut, correlationId: String(body.correlationId || "").slice(0, 60) }));
     const args = body.arguments && typeof body.arguments === "object" ? body.arguments : body;
-    const genesisAction = nexusGenesisWorkspaceAction(args.command || body.command || "", [{ call: { name: toolName } }]);
+    const genesisAction = voiceToolGenesisAction(args.command || body.command || "", toolName, result);
     if (!toolTimedOut) await writeDb(db);
-    return send(res, 200, { ...result, genesisAction }, {
+    return send(res, 200, { ...voiceToolSpoken(result, args.command || body.command || ""), genesisAction }, {
       "cache-control": "no-store, no-cache, must-revalidate, private"
     });
   }
