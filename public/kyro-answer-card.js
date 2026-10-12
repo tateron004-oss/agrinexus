@@ -42,6 +42,13 @@
       farmLog: "My farm log", farmLogSay: "Show my farm log",
       farmRain: "Rain this month", farmRainSay: "How much rain did I get this month?",
       farmMonth: "This month's money", farmMonthSay: "Give me my summary for this month",
+      tradeTitle: "Trade",
+      tradeLine: "I keep a community board where you can post what you have for sale, and your buyers' orders. I do not take payments, buy anything or arrange delivery from here.",
+      tradeSell: "To sell something, say: post for sale: 500 kg of maize at 40 per kg.",
+      tradeOrder: "To note a buyer's order, say: add an order from Amina Traders for 200 kg of maize at 45 per kg.",
+      tradeBoard: "What is for sale", tradeBoardSay: "What is for sale?",
+      tradeListings: "My listings", tradeListingsSay: "Show my listings",
+      tradeOrders: "My orders", tradeOrdersSay: "Show my orders",
       close: "Close"
     },
     sw: {
@@ -66,6 +73,9 @@
       farmSay: "Kuandika kitu, kisema tu, kwa mfano: nimepata mvua milimita 12, au nimevuna kilo 50 za mahindi.",
       farmProblem: "Kwa tatizo la zao, niambie unachokiona.",
       farmMonth: "Pesa za mwezi huu", farmMonthSay: "muhtasari wa mwezi",
+      tradeTitle: "Biashara",
+      tradeLine: "Ninatunza ubao wa jamii ambapo unaweza kuweka unachouza, na maagizo ya wanunuzi wako. Sipokei malipo, sinunui chochote wala kupanga usafirishaji kutoka hapa.",
+      tradeEnglishOnly: "Ubao wa mauzo na maagizo hufanya kazi kwa Kiingereza kwa sasa.",
       close: "Funga"
     }
   };
@@ -131,19 +141,37 @@
   const FARM_SPECIFIC = /leaf|leaves|spot|yellow|wilt|blight|rot\b|mould|mold|pest|disease|insect|worm|caterpillar|aphid|locust|armyworm|drone|scan|price|market|sell|\bsold\b|\bsale\b|\bbuy|weather|forecast|\brain|storm|harvest|plant(ed|ing)?\b|sow|\blog\b|record|water|irrigat|soil|fertili[sz]|manure|tank|egg|milk|\bcow|goat|chicken|sheep|loan|budget|expense|income|\bpaid\b|\bowe|mvua|mavuno|mbolea|shamba la|ugonjwa|wadudu/i;
   function farmIsGeneral(text) { return !FARM_SPECIFIC.test(String(text || "")); }
 
+  // Trade: the community board and the buyer orders Kyro really keeps; no payments, purchases or delivery. The board and the orders answer in English today, so the Kiswahili card says so and has no choices.
+  function tradeSpec({ lang } = {}) {
+    const sw = lang === "sw";
+    const t = TEXT[sw ? "sw" : "en"];
+    if (sw) return { id: "trade", title: t.tradeTitle, closeLabel: t.close, lines: [t.tradeLine, t.tradeEnglishOnly], choices: [] };
+    return { id: "trade", title: t.tradeTitle, closeLabel: t.close, lines: [t.tradeLine, t.tradeSell, t.tradeOrder], choices: [
+      { id: "board", label: t.tradeBoard, say: t.tradeBoardSay, tool: "nexus_everyday_records" },
+      { id: "listings", label: t.tradeListings, say: t.tradeListingsSay, tool: "nexus_everyday_records" },
+      { id: "orders", label: t.tradeOrders, say: t.tradeOrdersSay, tool: "nexus_everyday_records" }
+    ] };
+  }
+
+  // A trade request that names something specific (selling or buying something, a price, a shipment, a payment, an order, a crop and an amount) is a real flow of its own and is not answered with the general card.
+  const TRADE_SPECIFIC = /sell|\bsold\b|\bbuy|purchase|price|\bship|deliver|track|route|invoice|\bpay|payment|wallet|escrow|checkout|\bpost\b|listing|\border|\bkg\b|\bbags?\b|\btons?\b|maize|coffee|cassava|rice|beans|wheat|tomato|kuuza|nunua|bei|mahindi/i;
+  function tradeIsGeneral(text) { return !TRADE_SPECIFIC.test(String(text || "")); }
+
   // The card for a workspace that has one (null when it does not: the usual window opens).
   function specFor(workspace, options) {
     if (workspace === "workforce") return workSpec(options);
     if (workspace === "learning") return learnSpec(options);
     if (workspace === "health") return healthSpec(options);
     if (workspace === "agriculture") return farmSpec(options);
+    if (workspace === "trade") return tradeSpec(options);
     return null;
   }
 
-  // Whether a request to open a workspace is general enough for its card (true for workspaces whose card is always right, false-able for health and farm, which have specific flows of their own).
+  // Whether a request to open a workspace is general enough for its card (true for workspaces whose card is always right, false-able for health, farm and trade, which have specific flows of their own).
   function isGeneralFor(workspace, text) {
     if (workspace === "health") return healthIsGeneral(text);
     if (workspace === "agriculture") return farmIsGeneral(text);
+    if (workspace === "trade") return tradeIsGeneral(text);
     return true;
   }
 
@@ -195,5 +223,5 @@
     return cards.length > 0;
   }
 
-  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, farmSpec, farmIsGeneral, isGeneralFor, specFor, show, remove, TEXT });
+  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, farmSpec, farmIsGeneral, tradeSpec, tradeIsGeneral, isGeneralFor, specFor, show, remove, TEXT });
 });
