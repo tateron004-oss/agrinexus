@@ -23962,6 +23962,17 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         encounterId: encounter?.id || null, videoUrl: video?.roomUrl || null,
         noDiagnosis: true, noPrescribing: true, noEmergencyDispatch: true };
     } else if (/\btelehealth|intake\b/i.test(command)) {
+      // The reason the person gave (the voice interview sends it as `summary`) is checked for danger signs first, the same as a video visit is: an emergency is told what to do, and no routine intake is opened for it.
+      const intakeSummary = sanitizePilotText(String(args.summary || args.reason || ""), 800);
+      const intakeGuidance = intakeSummary ? safeSymptomGuidance(intakeSummary, activeContext(db).country) : { redFlags: [] };
+      if (intakeGuidance.redFlags.length) {
+        const receipt = nexusOpenAiNativeToolReceipt(db, common.toolName, common.command, "emergency-guidance",
+          ["Checked the reported symptoms for danger signs before opening a telehealth intake."],
+          ["Nexus did not open an intake, diagnose, prescribe, or contact emergency services automatically."]);
+        return { ...common, capability: "nexus_health_preparation", status: "emergency-guidance",
+          response: `${intakeGuidance.plainLanguage} Please use local emergency or urgent care resources now instead of a routine telehealth intake.`,
+          receipt, evidenceReceipt: receipt, localOnly: true, noDiagnosis: true, noEmergencyDispatch: true };
+      }
       intakeRecord = ensureVoiceHealthIntake(db, user, { needSummary: args.summary || args.reason || command, force: true });
       response = `I started your telehealth intake, case ${intakeRecord.patientRef}. Status: ${intakeRecord.queueStatus}. Tell me the reason for the visit, when it began, and any symptoms, and I will add them to the case for provider review.`;
     } else {
