@@ -27916,7 +27916,22 @@ async function kyroReturnToOrb(options = {}) {
   try { nexusGenesisVoiceDebugLog("kyro-return-to-orb", { reason: options.reason || "", source: options.source || "" }); } catch { /* logging only */ }
   return true;
 }
+// "Make the text bigger", "turn on high contrast", "stop the animations", "screen reader mode on": the four display options were buttons only (public/kyro-accessibility-commands.js).
+// Said, typed or heard as a final transcript they are switched here, and Kyro says which is on.
+function handleKyroAccessibilityCommand(command = "") {
+  const request = window.KyroAccessibilityCommands?.parse?.(command);
+  if (!request || typeof accessibilityPrefs !== "object") return false;
+  const wanted = request.on === null ? !accessibilityPrefs[request.key] : request.on;
+  // (set here, not toggled: the page's own buttons keep the one toggle handler, and an option already as asked is left as it is)
+  accessibilityPrefs[request.key] = wanted;
+  try { localStorage.setItem("agrinexusAccessibility", JSON.stringify(accessibilityPrefs)); } catch { /* the setting still applies for this visit */ }
+  applyAccessibilityPrefs();
+  const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  try { setVoiceResponse(window.KyroAccessibilityCommands.reply(request.key, wanted, lang), true, { allowHandoff: false, command, source: "kyro-accessibility" }); } catch { /* the setting is changed either way */ }
+  return true;
+}
 function handleKyroDismissCommand(command = "", options = {}) {
+  if (handleKyroAccessibilityCommand(command)) return true;
   const dismissal = window.KyroDismissCommands?.parse?.(command);
   if (!dismissal) return false;
   void kyroReturnToOrb({ reason: dismissal.kind, source: options.source || "" });
