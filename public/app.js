@@ -51334,6 +51334,23 @@ function startKyroResumeIntake(options = {}) {
   startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
 }
 
+// The workspace a typed sentence plainly asks to open, or "": only the whole sentence "open health", "open the farm", "show my learning", "start work" ... counts, so anything longer or more specific
+// ("open health and record my blood pressure", "open telehealth") is left to the usual routes.
+function kyroExplicitOpenCard(text) {
+  const t = String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
+  const m = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:open|show|start|launch|go to)\s+(?:the\s+|my\s+)?(?:(workforce|work|jobs?)|(learning|lessons?)|(health)|(agriculture|farm)(?:\s+(?:help|support))?)$/.exec(t);
+  if (!m) return "";
+  return m[1] ? "workforce" : m[2] ? "learning" : m[3] ? "health" : "agriculture";
+}
+
+// A typed "open health" / "open agriculture help": the server answers "open this section" and flags a general request with metadata.answerCard, so the person gets the same card as by voice instead of the
+// section screen. Anything else (including "open telehealth" and every other section) is opened as before.
+function kyroOpenSectionOrCard(metadata = {}) {
+  const card = String(metadata?.answerCard || "");
+  if (card && (card === "health" || card === "agriculture") && (experienceMode === "user" || document.body.classList.contains("user-mode")) && kyroShowAnswerCard(card, { payload: {} })) return true;
+  return goSection(metadata?.redirectSection);
+}
+
 // Answer-first: asking for work, learning, health or the farm shows one clean card (what Kyro can really do right now) instead of a long form (public/kyro-answer-card.js). Each choice can also be said.
 // Returns false (and the usual window opens as before) when the workspace has no card or the card file is not loaded. A health or farm request that names something specific (a reading, a visit, a crop
 // problem, a price) is not general: it keeps its own flow. `context` is what was asked ({ command, payload }); the section screens (goSection) carry none, so those two are only ever shown for a general voice request.
@@ -58422,6 +58439,10 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // These explicit requests remain available even when the durable runtime is unavailable.
   if (handleNexusMentalHealthBehavioralWellnessCommand(text, { ...options, source: "unified-brain-mental-health-priority" })) return true;
   if (handleKyroDismissCommand(text, { source: options.source || "unified-brain-dismiss" })) return true;
+  // A plain "open health" / "open agriculture help" / "open workforce" / "open learning", typed or said, shows that card at once (the planner route would hand it to the AI model). Every typed entry point
+  // ends here, so this is the one place for it (see kyroExplicitOpenCard).
+  const explicitOpenCard = kyroExplicitOpenCard(text);
+  if (explicitOpenCard && kyroShowAnswerCard(explicitOpenCard, { payload: {} })) return true;
   // Found live (dispatch-wiring audit): this function is the ONLY thing
   // handleVoiceCommand -- the real entry point for actual spoken voice --
   // delegates to, and it never checked voice-troubleshooting at all. "Can
@@ -60329,7 +60350,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
       else paintNexusRichDataCard(null);
       return result;
     }
-    if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) goSection(result.metadata.redirectSection);
+    if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) kyroOpenSectionOrCard(result.metadata);
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
@@ -60464,7 +60485,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     paintNexusRichDataCard(result.metadata?.richData);
     if (result.metadata?.genesisAction && dispatchGenesisWorkspaceAction(result.metadata.genesisAction, result)) return result;
     if (openAgentResultWorkflow(result, command)) return result;
-    if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) goSection(result.metadata.redirectSection);
+    if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) kyroOpenSectionOrCard(result.metadata);
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
@@ -60688,7 +60709,7 @@ async function runSimpleAction(eventOrButton) {
     return;
   }
   const latest = (data.profile.agentCommands || [])[0];
-  if (latest?.metadata?.redirectSection && !latest?.metadata?.workflowDeferred) goSection(latest.metadata.redirectSection);
+  if (latest?.metadata?.redirectSection && !latest?.metadata?.workflowDeferred) kyroOpenSectionOrCard(latest.metadata);
   else goSection("dashboard");
   if (status) status.textContent = latest?.response || "Returned to the dashboard. Choose a workflow to continue.";
 }
