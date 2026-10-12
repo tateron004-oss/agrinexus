@@ -1,12 +1,10 @@
-// Kyro answer card: the answer-first screen for a task that used to open a long form. Asking for work shows ONE clean full-screen card -- what Kyro can really do right now, in a few
-// plain words, with big choices that can also be said -- instead of a form with a dozen fields and buttons. It is a task like any other: the task stage hides everything else, one close
-// mark returns to the orb, and a quiet spell clears it (see kyroReturnToOrb and kyro-task-stage.js).
+// Kyro help specs: what Kyro can really do for work, learning, health, the farm and trade, in a few plain words, and the sentences to say for each. A plain "open health" (or "open the farm", "open work"...)
+// shows this as ONE screen of text (public/kyro-result-screen.js, helpModel), not a menu: there is nothing to tap. The same sentences are what you can say or type to get the answer on the screen.
 //
-//   workSpec({ roles, lang }) -> { id, title, lines, choices: [{ id, label, say }] }      (pure; no DOM)
-//   show(doc, spec, { onChoose, onClose }) -> element                                      (adds section[data-kyro-answer-card]; replaces any card already shown)
-//   remove(doc) -> boolean
+//   workSpec / learnSpec / healthSpec / farmSpec / tradeSpec ({ roles, lang }) -> { id, title, lines, choices: [{ id, label, say, tool? }] }      (pure; no DOM)
+//   specFor(workspace, options), isGeneralFor(workspace, text)
 //
-// Honest by design: Kyro cannot search live job listings, so the card says so and offers what it can really do (make a CV, practise an interview, learn to read or count). The roles named
+// Honest by design: Kyro cannot search live job listings, so the work help says so and lists what it can really do (make a CV, practise an interview, learn to read or count). The roles named
 // are only the short list loaded on the platform, said as that, never as vacancies.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -32,8 +30,8 @@
       healthEmergency: "In an emergency, call your local emergency number now.",
       healthReadings: "My readings", healthReadingsSay: "Show my blood pressure readings",
       healthSummary: "Summary for my provider", healthSummarySay: "Prepare a provider summary of my readings",
-      healthClinic: "Find a clinic", healthClinicSay: "Find a clinic near me", healthClinicWait: "Looking for clinics near you.",
-      healthPharmacy: "Find a pharmacy", healthPharmacySay: "Find a pharmacy near me", healthPharmacyWait: "Looking for pharmacies near you.",
+      healthClinic: "Find a clinic", healthClinicSay: "Find a clinic near me",
+      healthPharmacy: "Find a pharmacy", healthPharmacySay: "Find a pharmacy near me",
       healthNumber: "Emergency number", healthNumberSay: "What is the emergency number?",
       farmTitle: "Farm",
       farmLine: "I keep your farm records and give general crop guidance. I do not name a spray or a dose.",
@@ -66,7 +64,7 @@
       healthSay: "Kuhifadhi kipimo, kitaje tu, kwa mfano: shinikizo langu la damu ni 120 juu ya 80.",
       healthEmergency: "Dharura ikitokea, piga namba ya dharura ya eneo lako sasa.",
       healthReadings: "Vipimo vyangu", healthReadingsSay: "Onyesha vipimo vyangu vya shinikizo la damu",
-      healthClinic: "Tafuta kliniki", healthClinicSay: "Tafuta kliniki karibu nami", healthClinicWait: "Natafuta kliniki karibu nawe.",
+      healthClinic: "Tafuta kliniki", healthClinicSay: "Tafuta kliniki karibu nami",
       healthNumber: "Namba ya dharura", healthNumberSay: "Nambari ya dharura ni ipi?",
       farmTitle: "Shamba",
       farmLine: "Ninatunza kumbukumbu za shamba lako na kutoa mwongozo wa jumla kuhusu mazao. Sitaji dawa wala kipimo.",
@@ -113,9 +111,8 @@
     const t = TEXT[sw ? "sw" : "en"];
     const choices = [{ id: "readings", label: t.healthReadings, say: t.healthReadingsSay, tool: "nexus_everyday_records" }];
     if (!sw) choices.push({ id: "summary", label: t.healthSummary, say: t.healthSummarySay, tool: "nexus_health_preparation" });
-    // (a clinic or pharmacy search is a live map lookup that takes several seconds: a short spoken "looking" says it has started)
-    choices.push({ id: "clinic", label: t.healthClinic, say: t.healthClinicSay, tool: "nexus_health_preparation", wait: t.healthClinicWait });
-    if (!sw) choices.push({ id: "pharmacy", label: t.healthPharmacy, say: t.healthPharmacySay, tool: "nexus_health_preparation", wait: t.healthPharmacyWait });
+    choices.push({ id: "clinic", label: t.healthClinic, say: t.healthClinicSay, tool: "nexus_health_preparation" });
+    if (!sw) choices.push({ id: "pharmacy", label: t.healthPharmacy, say: t.healthPharmacySay, tool: "nexus_health_preparation" });
     choices.push({ id: "emergency-number", label: t.healthNumber, say: t.healthNumberSay, tool: "nexus_everyday_records" });
     return { id: "health", title: t.healthTitle, closeLabel: t.close, lines: [t.healthLine, t.healthSay, t.healthEmergency], choices };
   }
@@ -175,53 +172,5 @@
     return true;
   }
 
-  const STYLE_ID = "kyro-answer-card-style";
-  const STYLE = `
-[data-kyro-answer-card] { position: fixed; inset: 0; z-index: 2147482500; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: clamp(20px, 6vw, 56px); box-sizing: border-box; overflow-y: auto; background: #080b10; color: #f1f5f9; font-family: inherit; }
-[data-kyro-answer-card] h2 { margin: 0; font-size: clamp(2rem, 7vw, 3rem); font-weight: 650; letter-spacing: -.01em; }
-[data-kyro-answer-card] p { margin: 0; max-width: 34em; font-size: clamp(1.05rem, 3.6vw, 1.3rem); line-height: 1.5; color: #cbd5e1; }
-[data-kyro-answer-card] .kyro-card-choices { display: grid; gap: 12px; max-width: 30em; margin-top: 8px; }
-[data-kyro-answer-card] .kyro-card-choice { min-height: 56px; padding: 14px 18px; border: 0; border-radius: 16px; background: rgba(255,255,255,.10); color: #f8fafc; font: inherit; font-size: 1.1rem; text-align: left; cursor: pointer; }
-[data-kyro-answer-card] .kyro-card-choice:hover, [data-kyro-answer-card] .kyro-card-choice:focus-visible { background: rgba(255,255,255,.18); outline: 2px solid rgba(125, 211, 252, .8); outline-offset: 2px; }
-[data-kyro-answer-card] .kyro-card-close { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.10); color: #f1f5f9; font-size: 1.7rem; line-height: 1; cursor: pointer; }
-`;
-
-  function show(doc, spec, handlers) {
-    if (!doc || !doc.body || !spec) return null;
-    remove(doc);
-    if (!doc.getElementById(STYLE_ID)) {
-      const style = doc.createElement("style");
-      style.id = STYLE_ID; style.textContent = STYLE;
-      (doc.head || doc.body).appendChild(style);
-    }
-    const card = doc.createElement("section");
-    card.setAttribute("data-kyro-answer-card", spec.id);
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-label", spec.title);
-    const heading = doc.createElement("h2"); heading.textContent = spec.title; card.appendChild(heading);
-    for (const line of spec.lines || []) { const p = doc.createElement("p"); p.textContent = line; card.appendChild(p); }
-    const choices = doc.createElement("div"); choices.className = "kyro-card-choices";
-    for (const choice of spec.choices || []) {
-      const button = doc.createElement("button");
-      button.type = "button"; button.className = "kyro-card-choice"; button.setAttribute("data-kyro-card-choice", choice.id); button.textContent = choice.label;
-      button.addEventListener("click", () => { if (handlers && typeof handlers.onChoose === "function") handlers.onChoose(choice); });
-      choices.appendChild(button);
-    }
-    card.appendChild(choices);
-    const close = doc.createElement("button");
-    close.type = "button"; close.className = "kyro-card-close"; close.setAttribute("aria-label", spec.closeLabel || "Close"); close.textContent = "×";
-    close.addEventListener("click", () => { if (handlers && typeof handlers.onClose === "function") handlers.onClose(); });
-    card.appendChild(close);
-    doc.body.appendChild(card);
-    return card;
-  }
-
-  function remove(doc) {
-    if (!doc || typeof doc.querySelectorAll !== "function") return false;
-    const cards = doc.querySelectorAll("[data-kyro-answer-card]");
-    for (let i = 0; i < cards.length; i += 1) cards[i].remove();
-    return cards.length > 0;
-  }
-
-  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, farmSpec, farmIsGeneral, tradeSpec, tradeIsGeneral, isGeneralFor, specFor, show, remove, TEXT });
+  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, farmSpec, farmIsGeneral, tradeSpec, tradeIsGeneral, isGeneralFor, specFor, TEXT });
 });
