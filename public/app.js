@@ -51366,8 +51366,9 @@ function kyroResultScreenEligible(toolName, result) {
 function kyroShowResultScreen(toolName, command, result) {
   try {
     if (!kyroResultScreenEligible(toolName, result)) return false;
-    // a plain "open health" is the card, and the telehealth intake, selling, a résumé and an application are real forms: none of those is an answer
-    if (KYRO_FORM_FLOW.test(String(command || "")) || kyroExplicitOpenCard(command)) return false;
+    // a plain "open health" is the help screen, and the telehealth intake, selling, a résumé and an application are real forms (when the server is opening one for it): none of those is an answer.
+    // A note that mentions buying seeds is not a form: it has nothing to open, so its answer is shown.
+    if ((KYRO_FORM_FLOW.test(String(command || "")) && result.genesisAction) || kyroExplicitOpenCard(command)) return false;
     const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
     if (!model) return false;
@@ -51478,18 +51479,30 @@ function kyroTypedLessonReply(text) {
   return Boolean(t) && /^[\p{L}\p{N}'-]+(?:\s+[\p{L}\p{N}'-]+)?$/u.test(t) ? "nexus_workforce_learning" : "";
 }
 
+// "You have 2 reminders: call Amina (due Mon 12 Oct, 5:00 pm); pay the vet (due Tue 13 Oct)." from a reminders list's data ("" when the data is not a list). The status line the server sends with the
+// list ("Nexus completed the governed execution...") is not something to read out or show.
+function kyroReminderListLine(data) {
+  const list = Array.isArray(data?.reminders) ? data.reminders.map(item => String(item || "").trim()).filter(Boolean) : null;
+  if (!list) return "";
+  const summary = String(data.summary || "").replace(/[.:]+$/, "");
+  return list.length ? `${summary || "Your reminders"}: ${list.join("; ")}.` : (summary ? `${summary}.` : "You have no reminders.");
+}
+
 // A typed answer on the screen. The typed route answers in two shapes: a list of places drawn from data (clinics, pharmacies) -- which used to be dumped as raw fields -- and a plain answer the server worked
 // out itself without the AI model (the saved readings, the farm log, the board, the emergency number). Both fill the screen, as a spoken answer does. An answer the AI model wrote (chat) is not put on
 // a screen, a question waiting for a yes or a no stays in the Ask window, and the map, music, video, documents, pictures and checklists are drawn as before. True when it drew one.
 function kyroShowTypedResult(result, text, message) {
   try {
     if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
-    if (KYRO_FORM_FLOW.test(String(text || "")) || kyroExplicitOpenCard(text)) return false;
+    if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
     let answer = null;
-    if (drawn && result.state === "render_required") {
+    if (drawn && result.state === "render_required" && drawn.presentation?.kind === "reminder") {
+      // a reminder just set ("Okay. I will remind you to call Amina at 5:00 pm tomorrow.") or the list of them
+      answer = { response: kyroReminderListLine(drawn.data) || message };
+    } else if (drawn && result.state === "render_required") {
       const cards = Array.isArray(drawn.data?.cards) ? drawn.data.cards : Array.isArray(drawn.data?.data?.cards) ? drawn.data.data.cards : [];
-      if (drawn.presentation?.kind !== "location-list" || !cards.length) return false;
+      if (drawn.presentation?.kind !== "location-list" || !cards.length || KYRO_FORM_FLOW.test(String(text || ""))) return false;
       const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
@@ -58402,6 +58415,8 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
   // (all of them replace an earlier copy). A map and the music player are not drawn into this window and are left alone. Found testing production.
   // Answer-first, typed as spoken: a list of clinics, or a plain answer, fills the screen instead of being dumped into the window as raw fields (see kyroShowTypedResult).
   const answerOnScreen = kyroShowTypedResult(result, text, message);
+  // (and the reminders list is read out as the list, not as the status line the server sends with it)
+  if (result.render?.presentation?.kind === "reminder") message = kyroReminderListLine(result.render.data) || message;
   try {
     const drawn = result.render;
     if (drawn && result.state === "render_required" && !answerOnScreen) {
