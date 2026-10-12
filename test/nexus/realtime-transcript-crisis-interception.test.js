@@ -23,6 +23,7 @@ function loadExecuteGenesisWorkspaceFromFinalTranscript({ mentalHealthHandled })
     },
     handleKyroDismissCommand: () => false, // "close the weather card" / "back to the orb" (kyro-return-to-orb-wiring.test.js); an ordinary transcript is not one
     genesisWorkspaceActionFromFinalTranscript: () => { calls.genesisAction += 1; return { requestId: "req1", workspace: "agriculture" }; },
+    kyroAnswerReplacesWorkspace: () => false, // the answer-on-screen rule (kyro-result-screen.test.js); "show a route" is not one it replaces
     rememberAuthoritativeGenesisTranscriptRoute: () => {},
     runAuthoritativeGenesisWorkspaceBridge: async () => { calls.bridge += 1; return { verified: true }; },
     nexusGenesisVoiceDebugLog: () => {}

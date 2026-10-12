@@ -17,6 +17,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
+  const RESULT_RETURN_MS = 10000; // an ANSWER put on the screen (a clinic list, a reading) clears this long after Kyro has finished speaking and nobody has touched or said anything
   const AUTO_RETURN_MS = 30000;   // how long a finished answer may stay on the screen with nobody touching or saying anything
   const AUTO_RETURN_RETRY_MS = 10000; // how long to wait again when it was a bad moment (someone is speaking or typing)
 
@@ -114,7 +115,7 @@
   }
 
   // ---- when to go back to the orb by itself -------------------------------------------------------------------------------------------------------------------------------------
-  // snapshot: { userMode, answerShowing, workOpen, lastActivityAt, assistantSpeaking, userSpeaking, focusInField, pendingConfirmation, intakeActive }
+  // snapshot: { userMode, answerShowing, resultShowing, workOpen, lastActivityAt, assistantSpeaking, userSpeaking, focusInField, pendingConfirmation, intakeActive }
   // "activity" is anything that means the person is still there: a touch, a key, speech, a new answer arriving.
   // It only ever clears a FINISHED ANSWER (a weather card, a research answer, an answer left on the home screen). Work the person is in (a function window, the map, a form, navigation) is never closed by itself.
   function shouldAutoReturn(snapshot, now) {
@@ -123,9 +124,10 @@
     if (s.workOpen) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     if (s.assistantSpeaking || s.userSpeaking || s.focusInField || s.pendingConfirmation || s.intakeActive) return { go: false, retryMs: AUTO_RETURN_RETRY_MS };
     const quietFor = Number(now) - Number(s.lastActivityAt || 0);
-    if (!(quietFor >= AUTO_RETURN_MS)) return { go: false, retryMs: Math.max(1000, AUTO_RETURN_MS - Math.max(0, quietFor)) };
+    const limit = s.resultShowing ? RESULT_RETURN_MS : AUTO_RETURN_MS;
+    if (!(quietFor >= limit)) return { go: false, retryMs: Math.max(1000, limit - Math.max(0, quietFor)) };
     return { go: true, retryMs: 0 };
   }
 
-  return Object.freeze({ parse, shouldAutoReturn, normalise, AUTO_RETURN_MS, AUTO_RETURN_RETRY_MS });
+  return Object.freeze({ parse, shouldAutoReturn, normalise, AUTO_RETURN_MS, RESULT_RETURN_MS, AUTO_RETURN_RETRY_MS });
 });

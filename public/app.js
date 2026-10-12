@@ -27860,7 +27860,7 @@ function kyroNoteActivity() { kyroLastActivityAt = Date.now(); }
 // Everything that can sit on top of the orb apart from the function window: the full-screen cards the browser action controller puts straight on the page body (weather, map, music,
 // pilot dashboard, provider card), the rich-data overlay, the provider question report, the classic workflow modal, the Ask panel and caption panel, and any section other than the home screen
 // (the full map is one). The home screen's own "orb only" marker is present even while one of these covers it, so only an explicit return (or this list) can say what to take down.
-const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-answer-card]";
+const KYRO_BODY_SCREEN_SELECTOR = "[data-nexus-live-weather-shell], [data-nexus-visual-shell], [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], #nexusRichDataOverlay, [data-kyro-answer-card], [data-kyro-result]";
 // The live music card holds the YouTube player itself: taking it off the page ends the song. So "close the card" and the quiet-spell return only park it out of sight (it keeps playing);
 // it is removed when the person asks for the music to stop ("stop the music", "go back to the orb", "I'm done") or when another card replaces it.
 function kyroParkLiveMusicCard(shell) {
@@ -27932,7 +27932,7 @@ function kyroFinishedResultShowing() {
 }
 function kyroAnswerShowing() {
   try {
-    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-answer-card]")) return true;
+    if (document.querySelector("[data-nexus-live-weather-shell]:not([data-kyro-parked]), #nexusRichDataOverlay, [data-kyro-answer-card], [data-kyro-result]")) return true;
     if (kyroFinishedResultShowing()) return true;
     if (nexusActiveWorkflowState?.id && (nexusActiveWorkflowState.functionId === "live-knowledge" || nexusActiveWorkflowState.workflow === "live-knowledge")) return true;
     return Boolean(nexusPresenceState?.lastResponse);
@@ -27941,7 +27941,8 @@ function kyroAnswerShowing() {
 function kyroWorkOpen() {
   try {
     const win = nexusActiveWorkflowState;
-    if (win?.id && win.functionId !== "live-knowledge" && win.workflow !== "live-knowledge" && !kyroFinishedResultShowing()) return true;
+    // (an answer drawn over the top of a window has taken its place on the screen, so the window left behind does not hold the answer up)
+    if (win?.id && win.functionId !== "live-knowledge" && win.workflow !== "live-knowledge" && !kyroFinishedResultShowing() && !document.querySelector("[data-kyro-result]")) return true;
     if (document.querySelector("[data-nexus-visual-shell]:not([data-kyro-parked]), [data-nexus-pilot-evidence-shell], [data-nexus-rural-provider-card-shell], [data-kn=\"stop\"]")) return true;
     if (nexusVisualProviderQuestionReportState) return true;
     // a saved document or a finished résumé with its Download button is something to collect, not an answer to clear
@@ -27951,18 +27952,27 @@ function kyroWorkOpen() {
   } catch { /* if it cannot be told, treat nothing as work */ }
   return false;
 }
+// When Kyro was last heard speaking (noted each time the quiet-spell watcher looks): an answer stays on the screen for a few seconds AFTER the last word, not from the moment it was drawn.
+let kyroLastAssistantSpokeAt = 0;
 function kyroAutoReturnSnapshot() {
   const active = document.activeElement;
   const inField = Boolean(active && /^(?:INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && !/^(?:button|submit|checkbox|radio)$/i.test(active.type || ""));
+  const assistantSpeaking = Boolean(nexusVoiceSession?.assistantSpeaking);
+  if (assistantSpeaking) kyroLastAssistantSpokeAt = Date.now();
   return {
     userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
     answerShowing: kyroAnswerShowing(),
+    resultShowing: Boolean(document.querySelector("[data-kyro-result]")),
     workOpen: kyroWorkOpen(),
-    lastActivityAt: kyroLastActivityAt,
-    assistantSpeaking: Boolean(nexusVoiceSession?.assistantSpeaking),
+    lastActivityAt: Math.max(kyroLastActivityAt, kyroLastAssistantSpokeAt),
+    assistantSpeaking,
     userSpeaking: Boolean(nexusVoiceSession?.userSpeaking),
     focusInField: inField,
-    pendingConfirmation: Boolean(nexusPendingBehaviorConfirmation || pendingAgentClarification),
+    // an answer that ends in a question ("Shall I save it?") stays up until the person answers
+    pendingConfirmation: Boolean(nexusPendingBehaviorConfirmation || pendingAgentClarification || (() => {
+      const waiting = document.querySelector("[data-kyro-result-awaiting]");
+      return Boolean(waiting) && Date.now() - Number(waiting.getAttribute("data-kyro-result-at") || 0) < 90000; // (not for ever: a question nobody answers clears after a minute and a half)
+    })()),
     intakeActive: Boolean(kyroActiveVoiceIntake)
   };
 }
@@ -50507,7 +50517,9 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   }));
   // A refusal from the gateway (too many requests, signed out, an error) used to reach the model as if the tool had succeeded ("Nexus completed the tool request").
   if (!response.ok) result = kyroToolFailureResult("http", { status: response.status, body: result, correlationId });
-  const transcriptAction = genesisWorkspaceActionFromFinalTranscript(command);
+  // Answer-first: the answer fills the screen (and no workspace or form is opened for it) while Kyro reads it out; the map, music, video and the real forms are handled as before.
+  const answerOnScreen = kyroShowResultScreen(toolName, command, result);
+  const transcriptAction = answerOnScreen ? null : genesisWorkspaceActionFromFinalTranscript(command);
   const transcriptWorkspaceVerified = transcriptAction
     ? await executeGenesisWorkspaceFromFinalTranscript(command)
     : false;
@@ -50519,7 +50531,7 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
       requestId: transcriptAction.requestId,
       source: "openai-agents-model-command"
     };
-  } else {
+  } else if (!answerOnScreen) {
     await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
   }
   if (result.genesisAcknowledgement?.verified === true) {
@@ -51334,6 +51346,45 @@ function startKyroResumeIntake(options = {}) {
   startKyroVoiceIntake(window.KyroIntakeForms.resume, { ...options, onComplete: submitKyroResumeIntake });
 }
 
+// ---- Answer-first (the Jarvis way): the ANSWER is the screen ----
+// You say "find a clinic near me" and the clinics fill the screen, big and clear, while Kyro reads them out; then it clears and the orb is back. No menu, no form, no tapping (public/kyro-result-screen.js).
+// Whether a tool's answer is one to put on the screen: not a failure, not a crisis reply, not something the page already draws its own way (the map, music and video, pictures).
+function kyroResultScreenEligible(toolName, result) {
+  if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
+  if (result.ok === false || result.clientAction) return false;
+  if (/fail|block|error|unavail|denied|timed/i.test(String(result.status || ""))) return false;
+  if (/maps_route|music|media/i.test(String(toolName || ""))) return false;
+  const workspace = String(result.genesisAction?.workspace || "");
+  if (workspace === "map" || workspace === "media") return false;
+  if (/mental|crisis|safety|music|media|not_handled|small_talk|companion/i.test(`${result.capability || ""} ${result.intent || ""}`)) return false;
+  return true;
+}
+// Draws the answer on the screen (replacing any card or earlier answer). True when it did.
+function kyroShowResultScreen(toolName, command, result) {
+  try {
+    if (!kyroResultScreenEligible(toolName, result)) return false;
+    // a plain "open health" is the card, and the telehealth intake, selling, a résumé and an application are real forms: none of those is an answer
+    if (KYRO_FORM_FLOW.test(String(command || "")) || kyroExplicitOpenCard(command)) return false;
+    const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+    const model = window.KyroResultScreen.buildModel(result, { command, lang });
+    if (!model) return false;
+    window.KyroAnswerCard?.remove(document);
+    window.KyroResultScreen.show(document, model, { onClose: () => { void kyroReturnToOrb({ reason: "done", source: "result-screen" }); } }, lang);
+    kyroNoteActivity();
+    return true;
+  } catch { return false; }
+}
+// The flows that really are forms (the telehealth intake, selling or buying, a résumé, an application) are not replaced by an answer; everything else a tool answers is.
+const KYRO_FORM_FLOW = /telehealth|tele-health|intake|video visit|appointment|\b(?:sell|selling|buy|buying)\b|resume|résumé|\bcv\b|\bapply\b|application/i;
+// The page used to open a workspace (a form) from the spoken words, before the tool had answered. For a request the tool answers (a clinic search, a readings list, a lesson, the board) that form is
+// not opened: the answer is the screen. A plain "open health" (a card), the map, music and video, and the real forms are left alone.
+function kyroAnswerReplacesWorkspace(workspace, text) {
+  if (!window.KyroResultScreen) return false;
+  if (!["health", "learning", "workforce", "agriculture", "trade"].includes(String(workspace || ""))) return false;
+  if (kyroExplicitOpenCard(text)) return false;
+  return !KYRO_FORM_FLOW.test(String(text || ""));
+}
+
 // The workspace a typed sentence plainly asks to open, or "": only the whole sentence "open health", "open the farm", "show my learning", "start work" ... counts, so anything longer or more specific
 // ("open health and record my blood pressure", "open telehealth") is left to the usual routes.
 function kyroExplicitOpenCard(text) {
@@ -51400,6 +51451,8 @@ async function kyroRunCardChoice(command, source, tool, wait) {
     });
     const result = response.ok ? await response.json().catch(() => null) : null;
     said = String(result?.response || "").trim();
+    // the answer is the screen, the same as when it is asked by voice
+    if (said) kyroShowResultScreen(tool || "nexus_everyday_records", command, result);
   } catch { said = ""; }
   if (said) setVoiceResponse(said, true, { source, command });
   else void handleVoiceCommandCore(command, { source });
@@ -51523,6 +51576,8 @@ async function executeGenesisWorkspaceFromFinalTranscript(transcript = "") {
   if (lastGenesisTranscriptWorkspaceExecution.command === normalized && now - lastGenesisTranscriptWorkspaceExecution.at < 5000) return false;
   const action = genesisWorkspaceActionFromFinalTranscript(command);
   if (!action) return false;
+  // Answer-first: no form is opened from these words; the tool's answer is drawn as the screen when it arrives (see kyroShowResultScreen).
+  if (kyroAnswerReplacesWorkspace(action.workspace, command)) return false;
   rememberAuthoritativeGenesisTranscriptRoute(action, command);
   nexusGenesisExperienceActivated = true;
   nexusTrueExperienceSessionStarted = true;

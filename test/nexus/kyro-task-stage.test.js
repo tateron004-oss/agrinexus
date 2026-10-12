@@ -75,7 +75,7 @@ test("the file is loaded before app.js, cached by the service worker, installed 
   assert.match(app, /window\.KyroTaskStage\?\.install\(window, document\)/);
   assert.match(app, /function kyroFinishedResultShowing\(\)/);
   assert.match(app, /if \(kyroFinishedResultShowing\(\)\) return true;/, "a finished result is an answer, so the quiet-spell return clears it");
-  assert.match(app, /!kyroFinishedResultShowing\(\)\) return true;/, "and is not work that holds the screen");
+  assert.match(app, /!kyroFinishedResultShowing\(\)[^\n]*\) return true;/, "and is not work that holds the screen");
   const ended = app.slice(app.indexOf("let kyroMediaEndedTimer"), app.indexOf("// Optional ducking"));
   assert.match(ended, /snapshot\?\.state !== "ended"/); assert.match(ended, /controller\.stop\(\{ announce: false \}\)/);
   assert.match(ended, /!kyroWorkOpen\(\) && !kyroActiveVoiceIntake\) void kyroReturnToOrb\(\{ reason: "idle"/, "only when nothing else is open and no form is waiting");
