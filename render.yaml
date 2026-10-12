@@ -285,12 +285,15 @@ services:
       # .env.example.
       - key: PHONE_LISTEN_AND_REMEMBER_ENABLED
         value: "true"
-      # Real file uploads (photos, PDFs). Ships off by default. The storage
-      # dir is pre-pointed at the mounted persistent disk (see the disk:
-      # block above) so it's ready the moment this is turned on. See
-      # .env.example.
+      # Real file uploads (photos, PDFs). Turned on 2026-10-12 so "look at this"
+      # (the camera, public/kyro-capture.js) and the Upload button work. Each file
+      # is capped (NEXUS_FILE_UPLOAD_MAX_MB, default 10), each person and business has
+      # its own storage allowance, uploads are rate limited, and they are removed
+      # when an account or business is erased. A picture is described by the
+      # OpenAI vision model (it never diagnoses). The storage dir is the mounted
+      # persistent disk (see the disk: block above). See .env.example.
       - key: NEXUS_FILE_UPLOAD_ENABLED
-        value: "false"
+        value: "true"
       - key: NEXUS_FILE_STORAGE_DIR
         value: /var/data/uploads
       - key: TRANSLATION_PROVIDER
