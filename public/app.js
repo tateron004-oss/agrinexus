@@ -51369,6 +51369,8 @@ function kyroShowResultScreen(toolName, command, result) {
     // a plain "open health" is the help screen, and the telehealth intake, selling, a résumé and an application are real forms (when the server is opening one for it): none of those is an answer.
     // A note that mentions buying seeds is not a form: it has nothing to open, so its answer is shown.
     if ((KYRO_FORM_FLOW.test(String(command || "")) && result.genesisAction) || kyroExplicitOpenCard(command)) return false;
+    // a greeting, a thank-you or a "yes" is spoken back, not drawn across the whole screen
+    if (KYRO_SMALL_TALK.test(String(command || "").trim())) return false;
     const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
     if (!model) return false;
@@ -51378,6 +51380,7 @@ function kyroShowResultScreen(toolName, command, result) {
   } catch { return false; }
 }
 // The flows that really are forms (the telehealth intake, selling or buying, a résumé, an application) are not replaced by an answer; everything else a tool answers is.
+const KYRO_SMALL_TALK = /^(?:(?:hey|hi|hello|good (?:morning|afternoon|evening|night)|thanks?|thank you|how are you|are you (?:there|listening)|can you hear me|bye|goodbye|jambo|habari|asante)(?:[\s,]+(?:kyro|there|today|again|so much|very much))*|ok(?:ay)?|yes|no)[.?!]*$/i;
 const KYRO_FORM_FLOW = /telehealth|tele-health|intake|video visit|appointment|\b(?:sell|selling|buy|buying)\b|resume|résumé|\bcv\b|\bapply\b|application/i;
 // The page used to open a workspace (a form) from the spoken words, before the tool had answered. For a request the tool answers (a clinic search, a readings list, a lesson, the board) that form is
 // not opened: the answer is the screen. A plain "open health" (a card), the map, music and video, and the real forms are left alone.

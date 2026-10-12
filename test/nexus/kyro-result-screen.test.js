@@ -193,13 +193,16 @@ test("a note that mentions buying is an answer; a trade or telehealth form the s
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
   const drawn = [];
   const fake = { KyroResultScreen: { buildModel: (result) => ({ kind: "text", headline: result.response, items: [], notes: [], awaiting: false }), show: (doc, model) => drawn.push(model) } };
-  const api = new Function("window", "document", "languageCode", "kyroNoteActivity", "kyroReturnToOrb", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${pick("function kyroResultScreenEligible(")}\n${pick("function kyroExplicitOpenCard(")}\n${pick("function kyroShowResultScreen(")}; return { kyroShowResultScreen };`)(fake, {}, () => "en", () => {}, async () => {});
+  const api = new Function("window", "document", "languageCode", "kyroNoteActivity", "kyroReturnToOrb", `const KYRO_FORM_FLOW = ${formFlow[1]}; const KYRO_SMALL_TALK = ${app.match(/const KYRO_SMALL_TALK = (\/.*\/i);/)[1]}; ${pick("function kyroResultScreenEligible(")}\n${pick("function kyroExplicitOpenCard(")}\n${pick("function kyroShowResultScreen(")}; return { kyroShowResultScreen };`)(fake, {}, () => "en", () => {}, async () => {});
   const note = { ok: true, status: "completed", response: "Noted: buy seeds. Say \"what are my notes?\" any time." };
   assert.equal(api.kyroShowResultScreen("nexus_everyday_records", "Take a note: buy seeds", note), true, "nothing is being opened for it");
   assert.equal(api.kyroShowResultScreen("nexus_marketplace_logistics", "I want to sell 50 bags of maize", { ...note, genesisAction: { type: "genesis.workspace.open", workspace: "trade" } }), false, "the server is opening the trade form");
   assert.equal(api.kyroShowResultScreen("nexus_health_preparation", "I need telehealth", { ...note, genesisAction: { type: "genesis.workspace.open", workspace: "health" } }), false);
   assert.equal(api.kyroShowResultScreen("nexus_health_preparation", "open health", note), false, "'open health' is the help screen");
-  assert.equal(drawn.length, 1);
+  // a greeting or a thank-you is spoken back, not drawn across the screen
+  for (const hello of ["Hello Kyro", "hi", "Good morning", "thanks", "Thank you Kyro", "how are you today", "are you there", "ok", "yes", "Asante", "can you hear me"]) assert.equal(api.kyroShowResultScreen("nexus_general_conversation", hello, { ok: true, status: "completed", response: "Hello, how can I help you today?" }), false, hello);
+  for (const real of ["What time is it", "Show my notes", "Hello, show my notes", "yes I want the clinic list near Kisumu please", "no rain logged this month?"]) assert.equal(api.kyroShowResultScreen("nexus_everyday_records", real, note), true, real);
+  assert.equal(drawn.length, 6, "the note and the five real requests");
 });
 
 test("typed lessons go to the route that teaches them, not to the AI model", () => {
