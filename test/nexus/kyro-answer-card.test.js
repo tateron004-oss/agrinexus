@@ -75,7 +75,7 @@ test("voice opens it instead of the form, counts it as opened and verified, and 
   const dispatch = app.slice(app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {"), app.indexOf("const opened = workspace ===", app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {")));
   assert.match(dispatch, /opened: true, visible: true/);
   const verified = app.slice(app.indexOf("async function dispatchGenesisWorkspaceActionVerified"), app.indexOf("const sdkMicrophoneProof", app.indexOf("async function dispatchGenesisWorkspaceActionVerified")));
-  assert.match(verified, /const answerCardShown = \(\) => \["workforce", "learning", "health", "agriculture"\]\.includes\(workspace\)/);
+  assert.match(verified, /const answerCardShown = \(\) => \["workforce", "learning", "health", "agriculture", "trade"\]\.includes\(workspace\)/);
   assert.match(verified, /populatedFields = expected\.map\(\(\[key\]\) => key\); break;/, "no form fields are expected of a card");
   assert.match(app, /workspaceSurfaceVisible = workspace === "map"\s*\?\s*visibleMap\s*:\s*\(answerCardShown\(\)/);
   const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
@@ -142,7 +142,8 @@ test("only a general health request gets the card; one that names a reading, a v
   for (const general of ["", "Open health", "I want help with my health", "health", "afya"]) assert.equal(Card.healthIsGeneral(general), true, general);
   for (const specific of ["I need telehealth", "my blood pressure is 140 over 90", "start a video visit", "find a pharmacy", "I have a fever", "this is an emergency", "chronic care intake", "talk to a doctor", "shinikizo la damu", "tafuta kliniki"]) assert.equal(Card.healthIsGeneral(specific), false, specific);
   const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("async function kyroRunCardChoice"));
-  assert.match(fn, /if \(workspace === "health" \|\| workspace === "agriculture"\) \{\s*if \(!context\) return false;/, "the section screens carry no context, so health and the farm are never shown for them");
+  assert.match(fn, /if \(workspace === "health" \|\| workspace === "agriculture" \|\| workspace === "trade"\) \{\s*if \(!context\) return false;/, "the section screens carry no context, so health, the farm and trade are never shown for them");
+  assert.match(fn, /typeof payload\.query === "string" \? payload\.query : Object\.values\(payload\)\.join\(" "\)/, "the person's own words (the query), not the derived values: a general trade request carries action: buy");
   assert.match(fn, /window\.KyroAnswerCard\.isGeneralFor\(workspace, said\)\) return false;/);
   assert.equal(Card.isGeneralFor("health", "I need telehealth"), false); assert.equal(Card.isGeneralFor("health", "open health"), true);
   assert.equal(Card.isGeneralFor("learning", "anything"), true, "the other cards are always right");
@@ -208,4 +209,38 @@ test("typing a plain 'open health / the farm / work / learning' shows the card a
   assert.ok(brain.indexOf("handleNexusMentalHealthBehavioralWellnessCommand(text") < brain.indexOf("kyroExplicitOpenCard(text)"), "the safety check still comes first");
   assert.ok(brain.indexOf("handleKyroDismissCommand(text") < brain.indexOf("kyroExplicitOpenCard(text)"), "'close' and 'go back' still win");
   assert.doesNotMatch(app, /const typedOpenCard/, "not duplicated in a single entry point");
+});
+
+test("the trade card says what Kyro keeps and does not do, offers only the board and orders it really answers, and only a general request gets it", () => {
+  const en = Card.tradeSpec({ lang: "en" });
+  assert.equal(en.id, "trade"); assert.equal(en.title, "Trade");
+  assert.match(en.lines[0], /community board/); assert.match(en.lines[0], /I do not take payments, buy anything or arrange delivery from here/);
+  assert.match(en.lines[1], /post for sale: 500 kg of maize at 40 per kg/); assert.match(en.lines[2], /add an order from Amina Traders for 200 kg of maize at 45 per kg/);
+  assert.deepEqual(en.choices.map(choice => choice.say), ["What is for sale?", "Show my listings", "Show my orders"]);
+  assert.ok(en.choices.every(choice => choice.tool === "nexus_everyday_records"));
+  const sw = Card.tradeSpec({ lang: "sw" });
+  assert.equal(sw.title, "Biashara"); assert.deepEqual(sw.choices, [], "nothing here is answered in Kiswahili yet, so no choices are offered");
+  assert.match(sw.lines[1], /kwa Kiingereza kwa sasa/, "and it says so");
+  assert.equal(Card.specFor("trade", {}).id, "trade"); assert.equal(Card.tradeSpec().choices.length, 3, "no arguments is fine");
+  for (const general of ["", "open marketplace", "open agritrade", "trade", "I want to look at the marketplace"]) assert.equal(Card.tradeIsGeneral(general), true, general);
+  for (const specific of ["I want to sell 50 bags of maize", "what is the maize price", "track my shipment", "pay the buyer", "post for sale maize", "find a buyer for coffee", "show my orders", "nataka kuuza mahindi"]) assert.equal(Card.tradeIsGeneral(specific), false, specific);
+  assert.equal(Card.isGeneralFor("trade", "sell my maize"), false); assert.equal(Card.isGeneralFor("trade", "open the marketplace"), true);
+  // what the card offers is what the board really answers
+  const board = require("../../nexus/farmwork/board.js"); assert.ok(board, "the board module exists");
+});
+
+test("typed 'open marketplace / agritrade / trade' shows the trade card; one that names a buyer, a sale or a price keeps its flow", () => {
+  const start = app.indexOf("function kyroExplicitOpenCard(text) {");
+  const explicit = new Function(`${app.slice(start, app.indexOf("\n}\n", start) + 3)}; return kyroExplicitOpenCard;`)();
+  for (const [text, card] of Object.entries({ "open marketplace": "trade", "open agritrade": "trade", "open trade": "trade", "show the marketplace": "trade", "Kyro, open the marketplace": "trade" })) assert.equal(explicit(text), card, text);
+  for (const text of ["open the market", "open marketplace and sell maize", "open buyer", "open the trade route", "trade my maize", "open marketplace prices"]) assert.equal(explicit(text), "", text);
+  const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
+  const line = server.match(/const generalTrade = (\/.*?\/)\.test\(value\) && !(\/.*?\/)\.test\(value\);/);
+  assert.ok(line, "the marketplace open decides whether it is general");
+  const has = new Function(`return ${line[1]}`)(); const not = new Function(`return ${line[2]}`)();
+  const general = value => has.test(value) && !not.test(value);
+  for (const text of ["open marketplace", "open agritrade", "show trade"]) assert.equal(general(text), true, text);
+  for (const text of ["open the buyer", "open marketplace and sell maize", "open trade price", "open agritrade to track shipment", "open seller"]) assert.equal(general(text), false, text);
+  assert.match(server, /generalTrade \? \{ answerCard: "trade" \} : \{\}\);/);
+  assert.match(app, /card === "health" \|\| card === "agriculture" \|\| card === "trade"/);
 });
