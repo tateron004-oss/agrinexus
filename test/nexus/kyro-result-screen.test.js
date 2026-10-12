@@ -149,10 +149,10 @@ test("it is wired: voice answers draw the screen and open no form; the form from
 });
 
 function typedApi(shown) {
-  const names = ["function kyroReminderListLine(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
+  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
-  return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
+  return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply, kyroEmptyRenderAnswer, kyroPlainRenderMessage };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
 }
 
 test("typed: clinics and pharmacies from data, and a plain answer the server worked out itself, fill the screen; chat, questions, forms and 'open health' do not", () => {
@@ -185,7 +185,33 @@ test("typed: clinics and pharmacies from data, and a plain answer the server wor
   assert.equal(api.kyroShowTypedResult(reminderList, "Show my reminders", "Nexus completed the governed execution and is rendering the verified result."), true);
   assert.equal(shown[0].result.response, "You have 2 reminders: call Amina (due Mon 12 Oct, 5:00 pm); pay the vet (due Tue 13 Oct).", "the list, not the status line"); shown.length = 0;
   assert.equal(api.kyroShowTypedResult({ ...reminderList, render: { presentation: { kind: "reminder" }, data: { summary: "You have no reminders.", reminders: [] } } }, "Show my reminders", "x"), true);
-  assert.equal(shown[0].result.response, "You have no reminders.");
+  assert.equal(shown[0].result.response, "You have no reminders."); shown.length = 0;
+  // found live: "show my checklists" and "show my last receipt" with nothing saved opened an old window and said nothing / read out the server's status line
+  const noLists = { application: "lists", state: "render_required", render: { presentation: { kind: "checklist" }, data: { query: "saved checklists", found: false, lists: [] } } };
+  const noDocs = { application: "documents", state: "render_required", render: { presentation: { kind: "document" }, data: { request: "Show my last receipt", found: false, documents: [] } } };
+  assert.match(api.kyroEmptyRenderAnswer(noLists), /^You have no checklists yet\. Say, for example: create a checklist called Market Day/);
+  assert.match(api.kyroEmptyRenderAnswer(noDocs), /^I don't have a saved document or receipt like that yet\./);
+  assert.equal(api.kyroShowTypedResult(noLists, "Show my checklists", "Nexus completed the governed execution and is rendering the verified result."), true);
+  assert.match(shown[0].result.response, /^You have no checklists yet\./); shown.length = 0;
+  assert.equal(api.kyroShowTypedResult(noDocs, "Show my last receipt", "Nexus completed the governed execution and is rendering the verified result."), true);
+  assert.match(shown[0].result.response, /^I don't have a saved document or receipt like that yet\./); shown.length = 0;
+  assert.equal(api.kyroEmptyRenderAnswer({ ...noLists, render: { presentation: { kind: "checklist" }, data: { found: true, lists: [{ title: "Market Day" }] } } }), "", "a list that exists is drawn as before");
+  assert.equal(api.kyroEmptyRenderAnswer({ ...noLists, state: "completed" }), "");
+});
+
+test("the typed route never reads out the server's status line or the internal name", () => {
+  const api = typedApi([]);
+  const status = "Nexus completed the governed execution and is rendering the verified result.";
+  assert.equal(api.kyroPlainRenderMessage({}, status), "Done. It is on your screen.");
+  assert.equal(api.kyroPlainRenderMessage({ render: { presentation: { kind: "document" }, data: { documents: [{ title: "Maize Sales" }, { title: "Receipt 4" }] } } }, status), "You have 2 saved documents: Maize Sales; Receipt 4.");
+  assert.equal(api.kyroPlainRenderMessage({ render: { presentation: { kind: "checklist" }, data: { lists: [{ title: "Market Day" }] } } }, status), "You have 1 checklist: Market Day.");
+  assert.equal(api.kyroPlainRenderMessage({}, "Nexus did not launch a drone. Nexus Genesis is ready."), "Kyro did not launch a drone. Kyro is ready.");
+  assert.equal(api.kyroPlainRenderMessage({}, "You have 2 reminders: a; b."), "You have 2 reminders: a; b.", "a real answer is left as it is");
+  const typed = app.slice(app.indexOf("async function processNexusAuthoritativeBehaviorResult"), app.indexOf("async function submitNexusPendingBehaviorConfirmation"));
+  assert.match(typed, /const emptyAnswer = kyroEmptyRenderAnswer\(result\);\s*try \{\s*renderReceipt = await renderer\.render\(result\.render\);/);
+  assert.match(typed, /if \(!emptyAnswer\) throw error;/); assert.match(typed, /if \(!emptyAnswer && !renderReceipt\?\.acknowledged\) throw new Error/);
+  assert.match(typed, /message = emptyAnswer \|\| nexusGalleryMessage\(result\.render\) \|\| result\.render\.response \|\| message;/);
+  assert.match(typed, /message = kyroPlainRenderMessage\(result, message\);\s*nexusAgenticBrainLastResult = \{/);
 });
 
 test("a note that mentions buying is an answer; a trade or telehealth form the server is opening is not", () => {

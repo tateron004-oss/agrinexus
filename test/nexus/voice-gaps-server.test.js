@@ -57,12 +57,13 @@ test("nothing Kyro says on the voice route uses the internal name", async () => 
 
 test("a delivery-time question is answered honestly, and a shipment lookup is read from the orders this person may see", async () => {
   const estimate = await said("How long will delivery to Nakuru take", { name: "nexus_marketplace_logistics" });
-  assert.match(estimate, /^I can't estimate a delivery time without an order or a route to work from\.|^AN-ORD-/, "either the honest answer, or the status of an order the person may see");
-  assert.doesNotMatch(estimate, /AgriTrade|sample listing/i);
+  assert.match(estimate, /^I can't estimate a delivery time without an order or a route to work from\./, "a person with no order of their own is not told about the old orders in the seed data");
+  assert.doesNotMatch(estimate, /AgriTrade|sample listing|AN-ORD-/i);
+  assert.match(await said("Track my shipment", { name: "nexus_marketplace_logistics" }), /^I do not see an active crop order yet\./);
   // an order marked as another account's is not read out; one marked as this person's is
   const state = (await post("/api/agent/command", { command: "hello", conversational: true }, "user")).json;
   assert.ok(state, "state is readable");
   const server_ = fs.readFileSync(path.join(root, "server.js"), "utf8");
-  assert.match(server_, /const order = orderForUser\(db, user\);\s*if \(!order && asksDeliveryTime\)/, "the lookup uses the visibility helper, not the latest order of anybody");
+  assert.match(server_, /const ownOrders = \(db\.profile\.orders \|\| \[\]\)\.filter\(item => user\?\.role === "Admin" \|\| \(ownEmail && ownerOfRecord\(item\)\.includes\(ownEmail\)\)\);\s*const order = ownOrders\[ownOrders\.length - 1\];/, "only orders marked as this person's (an Admin: any), not the latest order of anybody and not the unmarked old ones");
   assert.match(server_, /createdBy: String\(user\?\.email \|\| ""\)\.trim\(\)\.toLowerCase\(\) \|\| undefined,/, "a new order is marked with whose it is");
 });

@@ -51662,6 +51662,29 @@ function kyroReminderListLine(data) {
   return list.length ? `${summary || "Your reminders"}: ${list.join("; ")}.` : (summary ? `${summary}.` : "You have no reminders.");
 }
 
+// What to say when a list or a document lookup finds nothing: "" when it found something (or is another kind of result).
+function kyroEmptyRenderAnswer(result) {
+  const drawn = result?.render;
+  if (!drawn || result.state !== "render_required") return "";
+  const kind = drawn.presentation?.kind; const data = drawn.data || {};
+  if (kind === "checklist" && Array.isArray(data.lists) && !data.lists.length) return "You have no checklists yet. Say, for example: create a checklist called Market Day with items seeds, sacks and scale.";
+  if (kind === "document" && Array.isArray(data.documents) && !data.documents.length) return "I don't have a saved document or receipt like that yet. Say, for example: create a document called Maize Sales that says sold 3 sacks of maize.";
+  return "";
+}
+// The sentence the typed route reads out and shows: the server's own status line ("Nexus completed the governed execution and is rendering the verified result.") is not an answer, and the internal name is never said.
+function kyroPlainRenderMessage(result, message) {
+  let said = String(message || "");
+  if (/^Nexus completed the governed execution/i.test(said)) {
+    const data = result?.render?.data || {};
+    const kind = result?.render?.presentation?.kind;
+    const titles = (list, key) => list.map(item => String((item && (item[key] || item.title || item.name)) || "").trim()).filter(Boolean);
+    if (kind === "document" && Array.isArray(data.documents) && data.documents.length) said = `You have ${data.documents.length} saved document${data.documents.length === 1 ? "" : "s"}: ${titles(data.documents, "title").slice(0, 5).join("; ")}.`;
+    else if (kind === "checklist" && Array.isArray(data.lists) && data.lists.length) said = `You have ${data.lists.length} checklist${data.lists.length === 1 ? "" : "s"}: ${titles(data.lists, "title").slice(0, 5).join("; ")}.`;
+    else said = "Done. It is on your screen.";
+  }
+  return said.replace(/\bNexus Genesis\b|\bNexus\b/g, "Kyro");
+}
+
 // A typed answer on the screen. The typed route answers in two shapes: a list of places drawn from data (clinics, pharmacies) -- which used to be dumped as raw fields -- and a plain answer the server worked
 // out itself without the AI model (the saved readings, the farm log, the board, the emergency number). Both fill the screen, as a spoken answer does. An answer the AI model wrote (chat) is not put on
 // a screen, a question waiting for a yes or a no stays in the Ask window, and the map, music, video, documents, pictures and checklists are drawn as before. True when it drew one.
@@ -51671,7 +51694,10 @@ function kyroShowTypedResult(result, text, message) {
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
     let answer = null;
-    if (drawn && result.state === "render_required" && drawn.presentation?.kind === "reminder") {
+    const emptyAnswer = kyroEmptyRenderAnswer(result);
+    if (emptyAnswer) {
+      answer = { response: emptyAnswer };
+    } else if (drawn && result.state === "render_required" && drawn.presentation?.kind === "reminder") {
       // a reminder just set ("Okay. I will remind you to call Amina at 5:00 pm tomorrow.") or the list of them
       answer = { response: kyroReminderListLine(drawn.data) || message };
     } else if (drawn && result.state === "render_required") {
@@ -58551,6 +58577,8 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     validateNexusPassivePresentation(result.render);
     const renderer = await nexusAuthoritativeOutcomeRenderer();
     recordNexusMapCommandBoundRenderTrace("renderer-before", result.render, result.render.data || {});
+    // "Show my checklists" / "show my last receipt" with nothing saved: there is nothing to draw, so the renderer cannot acknowledge it. That is an answer ("you have none yet"), not a failure that opens an old window.
+    const emptyAnswer = kyroEmptyRenderAnswer(result);
     try {
       renderReceipt = await renderer.render(result.render);
       recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
@@ -58558,11 +58586,13 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     } catch (error) {
       recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
         { rendererError: String(error?.message || error).slice(0, 500) });
-      throw error;
+      if (!emptyAnswer) throw error;
     }
-    if (!renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
-    message = nexusGalleryMessage(result.render) || result.render.response || message;
+    if (!emptyAnswer && !renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
+    message = emptyAnswer || nexusGalleryMessage(result.render) || result.render.response || message;
   }
+  // (what is read out and shown never carries the internal name or the server's status line: see kyroPlainRenderMessage)
+  message = kyroPlainRenderMessage(result, message);
   nexusAgenticBrainLastResult = {
     ok: result.completed === true,
     status: result.state,
@@ -58807,6 +58837,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
     if ([400, 409, 422, 500, 502, 503, 504].includes(status)) {
       const reason = status >= 500 ? "I could not finish that, so nothing was saved or changed. Please try again, or say it a different way." : String(error.message || "").trim();
       if (reason) {
+        // What Kyro could not do is an answer too: a refusal it explains ("I could not tell what to do with that in your business records...") fills the screen as well as being said. A failure (5xx) is only said.
+        if (status < 500) kyroShowResultScreen("typed", text, { ok: true, status: "completed", response: reason });
         setVoiceResponse(reason, true, { allowHandoff: false, command: text, source: "nexus-authoritative-behavior-spine", turnToken: options.turnToken });
         return true;
       }

@@ -24039,8 +24039,11 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     // "How long will delivery to Nakuru take?" used to fall through to the sample listings. Kyro cannot estimate a delivery time for a place it has no order or route for; it says so and offers what it can do.
     const asksDeliveryTime = /\bhow long\b.*\b(deliver|delivery|shipping|ship|to arrive|to get there)\b|\bwhen (?:will|does|would)\b.*\b(arrive|deliver|delivered)\b/i.test(command);
     if (asksDeliveryTime || /\b(track|tracking|where is my|shipment|route status|delivery status|eta|route delay|route delays|delayed|traffic)\b/i.test(command)) {
-      // The orders this person may see (their own and unmarked ones; an Admin any): the latest order of anybody used to be read out to whoever asked, another account's included.
-      const order = orderForUser(db, user);
+      // Only the orders marked as this person's (an Admin may look at any). The latest order of anybody used to be read out to whoever asked; even "their own and unmarked ones" still told every account about the
+      // old unmarked orders (found on the live site: a new guest was told about AN-ORD-0021 for Premium Cassava Flour). A read-out costs nothing to be strict about; a new order is marked with its owner.
+      const ownEmail = String(user?.email || "").trim().toLowerCase();
+      const ownOrders = (db.profile.orders || []).filter(item => user?.role === "Admin" || (ownEmail && ownerOfRecord(item).includes(ownEmail)));
+      const order = ownOrders[ownOrders.length - 1];
       if (!order && asksDeliveryTime) {
         return { ...common, capability: "marketplace-trade", status: "no-estimate", response: "I can't estimate a delivery time without an order or a route to work from. Tell me where it is going from and to and I will show the route and the travel time on the map, or create a crop order and I can track its shipment.", receipt: null, evidenceReceipt: null, localOnly: true };
       }
