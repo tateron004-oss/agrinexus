@@ -26,6 +26,15 @@
       learnLetters: "Learn the letters", learnLettersSay: "Teach me letters",
       learnMaths: "Learn numbers and adding", learnMathsSay: "Teach me maths",
       learnAi: "AI basics for small business", learnAiSay: "Start the AI basics course",
+      healthTitle: "Health",
+      healthLine: "I record what you tell me and help you get ready for a visit. I do not diagnose or give treatment advice.",
+      healthSay: "To save a reading, just say it, for example: my blood pressure is 120 over 80.",
+      healthEmergency: "In an emergency, call your local emergency number now.",
+      healthReadings: "My readings", healthReadingsSay: "Show my blood pressure readings",
+      healthSummary: "Summary for my provider", healthSummarySay: "Prepare a provider summary of my readings",
+      healthClinic: "Find a clinic", healthClinicSay: "Find a clinic near me", healthClinicWait: "Looking for clinics near you.",
+      healthPharmacy: "Find a pharmacy", healthPharmacySay: "Find a pharmacy near me", healthPharmacyWait: "Looking for pharmacies near you.",
+      healthNumber: "Emergency number", healthNumberSay: "What is the emergency number?",
       close: "Close"
     },
     sw: {
@@ -38,6 +47,13 @@
       learnLine: "Ninafundisha masomo mafupi ya mazoezi kwa sauti, hatua ndogo moja baada ya nyingine. Si kozi zenye cheti, na hakuna anayeandikishwa wala kupewa cheti.",
       learnLetters: "Jifunze herufi", learnLettersSay: "Nifundishe herufi",
       learnMaths: "Jifunze namba na kujumlisha", learnMathsSay: "Nifundishe hesabu",
+      healthTitle: "Afya",
+      healthLine: "Ninarekodi unachoniambia na kukusaidia kujiandaa kwa ziara ya daktari. Sifanyi uchunguzi wala kutoa ushauri wa matibabu.",
+      healthSay: "Kuhifadhi kipimo, kitaje tu, kwa mfano: shinikizo langu la damu ni 120 juu ya 80.",
+      healthEmergency: "Dharura ikitokea, piga namba ya dharura ya eneo lako sasa.",
+      healthReadings: "Vipimo vyangu", healthReadingsSay: "Onyesha vipimo vyangu vya shinikizo la damu",
+      healthClinic: "Tafuta kliniki", healthClinicSay: "Tafuta kliniki karibu nami", healthClinicWait: "Natafuta kliniki karibu nawe.",
+      healthNumber: "Namba ya dharura", healthNumberSay: "Nambari ya dharura ni ipi?",
       close: "Funga"
     }
   };
@@ -68,10 +84,29 @@
     return { id: "learning", title: t.learnTitle, closeLabel: t.close, lines: [t.learnLine], choices };
   }
 
+  // Health: what Kyro really does (records readings after a yes, shows them, prepares a summary for a provider, finds a clinic or pharmacy, says the local emergency number) and what it does not
+  // (diagnose, advise on treatment). Each choice names the route that answers it: `tool` is the voice tool that holds the answer (readings and the emergency number are on the everyday route).
+  function healthSpec({ lang } = {}) {
+    const sw = lang === "sw";
+    const t = TEXT[sw ? "sw" : "en"];
+    const choices = [{ id: "readings", label: t.healthReadings, say: t.healthReadingsSay, tool: "nexus_everyday_records" }];
+    if (!sw) choices.push({ id: "summary", label: t.healthSummary, say: t.healthSummarySay, tool: "nexus_health_preparation" });
+    // (a clinic or pharmacy search is a live map lookup that takes several seconds: a short spoken "looking" says it has started)
+    choices.push({ id: "clinic", label: t.healthClinic, say: t.healthClinicSay, tool: "nexus_health_preparation", wait: t.healthClinicWait });
+    if (!sw) choices.push({ id: "pharmacy", label: t.healthPharmacy, say: t.healthPharmacySay, tool: "nexus_health_preparation", wait: t.healthPharmacyWait });
+    choices.push({ id: "emergency-number", label: t.healthNumber, say: t.healthNumberSay, tool: "nexus_everyday_records" });
+    return { id: "health", title: t.healthTitle, closeLabel: t.close, lines: [t.healthLine, t.healthSay, t.healthEmergency], choices };
+  }
+
+  // A health request that names something specific (a reading, a visit, a clinic, a symptom) has its own flow and is not answered with the general card.
+  const HEALTH_SPECIFIC = /telehealth|tele-health|virtual|video visit|intake|doctor|nurse|appointment|\bvisit\b|blood[\s-]?pressure|hypertension|\bbp\b|sugar|glucose|diabetes|obesity|\brpm\b|\brtm\b|pulse|oxygen|\bweight\b|medicine|medication|pharmac|clinic|refill|symptom|\bpain\b|fever|emergency|chronic|dawa|kliniki|shinikizo|sukari|dharura|daktari/i;
+  function healthIsGeneral(text) { return !HEALTH_SPECIFIC.test(String(text || "")); }
+
   // The card for a workspace that has one (null when it does not: the usual window opens).
   function specFor(workspace, options) {
     if (workspace === "workforce") return workSpec(options);
     if (workspace === "learning") return learnSpec(options);
+    if (workspace === "health") return healthSpec(options);
     return null;
   }
 
@@ -123,5 +158,5 @@
     return cards.length > 0;
   }
 
-  return Object.freeze({ workSpec, learnSpec, specFor, show, remove, TEXT });
+  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, specFor, show, remove, TEXT });
 });

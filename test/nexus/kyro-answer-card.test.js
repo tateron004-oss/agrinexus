@@ -71,22 +71,22 @@ test("it is a task like the others: the stage and the return to the orb know abo
 });
 
 test("voice opens it instead of the form, counts it as opened and verified, and its choices start the real things", () => {
-  assert.match(app, /if \(kyroShowAnswerCard\(workspace\)\) \{/, "the form is replaced for work and learning");
-  const dispatch = app.slice(app.indexOf("if (kyroShowAnswerCard(workspace)) {"), app.indexOf("const opened = workspace ===", app.indexOf("if (kyroShowAnswerCard(workspace)) {")));
+  assert.match(app, /if \(kyroShowAnswerCard\(workspace, \{ payload \}\)\) \{/, "the form is replaced for work, learning and a general health request");
+  const dispatch = app.slice(app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {"), app.indexOf("const opened = workspace ===", app.indexOf("if (kyroShowAnswerCard(workspace, { payload })) {")));
   assert.match(dispatch, /opened: true, visible: true/);
   const verified = app.slice(app.indexOf("async function dispatchGenesisWorkspaceActionVerified"), app.indexOf("const sdkMicrophoneProof", app.indexOf("async function dispatchGenesisWorkspaceActionVerified")));
-  assert.match(verified, /const answerCardShown = \(\) => \(workspace === "workforce" \|\| workspace === "learning"\)/);
+  assert.match(verified, /const answerCardShown = \(\) => \["workforce", "learning", "health"\]\.includes\(workspace\)/);
   assert.match(verified, /populatedFields = expected\.map\(\(\[key\]\) => key\); break;/, "no form fields are expected of a card");
   assert.match(app, /workspaceSurfaceVisible = workspace === "map"\s*\?\s*visibleMap\s*:\s*\(answerCardShown\(\)/);
-  const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
+  const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
   assert.match(fn, /if \(!window\.KyroAnswerCard\) return false;/, "without the file the form still opens");
   assert.match(fn, /if \(!spec\) return false;/, "a workspace with no card opens as before");
   assert.match(fn, /if \(choice\.id === "cv"\) startKyroResumeIntake\(/);
-  assert.match(fn, /else void kyroRunCardChoice\(choice\.say, `\$\{spec\.id\}-card`\);/);
+  assert.match(fn, /else void kyroRunCardChoice\(choice\.say, `\$\{spec\.id\}-card`, choice\.tool, choice\.wait\);/);
   assert.match(fn, /kyroReturnToOrb\(\{ reason: "done", source: "answer-card" \}\)/);
   // a tapped choice is the same request as saying it: the route voice uses (the typed route hands lessons to the AI model), shown and spoken, with no second screen opened
   const run = fn.slice(fn.indexOf("async function kyroRunCardChoice"));
-  assert.match(run, /kyroFetchWithTimeout\("\/api\/voice\/realtime\/tool"/); assert.match(run, /name: "nexus_everyday_records"/);
+  assert.match(run, /kyroFetchWithTimeout\("\/api\/voice\/realtime\/tool"/); assert.match(run, /name: tool \|\| "nexus_everyday_records"/);
   assert.match(run, /setVoiceResponse\(said, true, \{ source, command \}\)/);
   assert.doesNotMatch(run, /callNexusOpenAiRealtimeTool/, "that would open a screen again for 'teach me letters'");
 });
@@ -117,4 +117,43 @@ test("typing 'open workforce' or 'open learning' shows the card too: the section
   assert.match(goSection, /experienceMode === "user" && \(sectionId === "workforce" \|\| sectionId === "learning"\) && kyroShowAnswerCard\(sectionId\)\) return true;/);
   assert.ok(goSection.indexOf("kyroShowAnswerCard(sectionId)") < goSection.indexOf("const target = $(`#${sectionId}`);"), "before the older section screen is chosen");
   assert.ok(goSection.indexOf("realtime-surface-navigation-blocked") < goSection.indexOf("kyroShowAnswerCard(sectionId)"), "after the voice surface lock, which still wins");
+});
+
+test("the health card says what Kyro does and does not do, offers only things it really answers, and each choice names the route that holds the answer", () => {
+  const en = Card.healthSpec({ lang: "en" });
+  assert.equal(en.id, "health"); assert.equal(en.title, "Health");
+  assert.match(en.lines[0], /I do not diagnose or give treatment advice/);
+  assert.match(en.lines[1], /my blood pressure is 120 over 80/); assert.match(en.lines[2], /call your local emergency number now/);
+  assert.deepEqual(en.choices.map(choice => choice.id), ["readings", "summary", "clinic", "pharmacy", "emergency-number"]);
+  const byId = Object.fromEntries(en.choices.map(choice => [choice.id, choice]));
+  assert.equal(byId.readings.tool, "nexus_everyday_records"); assert.equal(byId["emergency-number"].tool, "nexus_everyday_records");
+  for (const id of ["summary", "clinic", "pharmacy"]) assert.equal(byId[id].tool, "nexus_health_preparation", id);
+  const sw = Card.healthSpec({ lang: "sw" });
+  assert.equal(sw.title, "Afya"); assert.deepEqual(sw.choices.map(choice => choice.id), ["readings", "clinic", "emergency-number"], "only what is answered in Kiswahili");
+  assert.equal(Card.healthSpec().choices.length, 5, "no arguments is fine"); assert.equal(Card.specFor("health", {}).id, "health");
+  // what the card offers is what Kyro really understands (the readings and the emergency number are answered without the AI model)
+  const { parseHealthIntent } = require("../../nexus/health/vitals-speech.js"); const { emergencyNumberAnswer } = require("../../nexus/companion/emergency-number.js");
+  assert.equal(parseHealthIntent(byId.readings.say).intent, "show"); assert.equal(parseHealthIntent(sw.choices[0].say).intent, "show");
+  assert.match(emergencyNumberAnswer(byId["emergency-number"].say, { country: "Kenya" }) || "", /999 or 112/);
+  assert.match(emergencyNumberAnswer(sw.choices.find(choice => choice.id === "emergency-number").say, { country: "Kenya" }) || "", /999 au 112/);
+});
+
+test("only a general health request gets the card; one that names a reading, a visit, a clinic or a symptom keeps its own flow", () => {
+  for (const general of ["", "Open health", "I want help with my health", "health", "afya"]) assert.equal(Card.healthIsGeneral(general), true, general);
+  for (const specific of ["I need telehealth", "my blood pressure is 140 over 90", "start a video visit", "find a pharmacy", "I have a fever", "this is an emergency", "chronic care intake", "talk to a doctor", "shinikizo la damu", "tafuta kliniki"]) assert.equal(Card.healthIsGeneral(specific), false, specific);
+  const fn = app.slice(app.indexOf("function kyroShowAnswerCard(workspace, context = null)"), app.indexOf("async function kyroRunCardChoice"));
+  assert.match(fn, /if \(workspace === "health"\) \{\s*if \(!context\) return false;/, "the section screens carry no context, so health is never shown for them");
+  assert.match(fn, /window\.KyroAnswerCard\.healthIsGeneral\(said\)\) return false;/);
+  assert.match(app, /kyroShowAnswerCard\(workspace, \{ payload \}\)/, "judged by the payload (the person's own words), never by the reply text");
+});
+
+test("a slow lookup says it has started: the clinic and pharmacy choices carry a short spoken 'looking', and the tap speaks it before the search", () => {
+  const en = Card.healthSpec({ lang: "en" }); const sw = Card.healthSpec({ lang: "sw" });
+  assert.equal(en.choices.find(choice => choice.id === "clinic").wait, "Looking for clinics near you.");
+  assert.equal(en.choices.find(choice => choice.id === "pharmacy").wait, "Looking for pharmacies near you.");
+  assert.equal(sw.choices.find(choice => choice.id === "clinic").wait, "Natafuta kliniki karibu nawe.");
+  assert.equal(en.choices.find(choice => choice.id === "readings").wait, undefined, "a quick answer needs none");
+  const run = app.slice(app.indexOf("async function kyroRunCardChoice(command, source, tool, wait)"), app.indexOf("function genesisWorkspaceActionFromFinalTranscript"));
+  assert.ok(run.indexOf("if (wait)") > 0 && run.indexOf("if (wait)") < run.indexOf("kyroFetchWithTimeout"), "said before the search starts");
+  assert.match(app, /else void kyroRunCardChoice\(choice\.say, `\$\{spec\.id\}-card`, choice\.tool, choice\.wait\);/);
 });
