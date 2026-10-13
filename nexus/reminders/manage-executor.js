@@ -77,22 +77,40 @@ function verifyRemindersListOutcome({ result }) {
 // given id or text. Zero matches, several matches, or no identifying text at
 // all return a normal (non-throwing) "not cancelled" result that names the
 // candidates, the same way a document lookup honestly reports "not found".
+// Which upcoming reminders does a cancel request name? The same matching for the preview (what the person is asked before saying yes) and for the cancel itself, so what is said is what is done.
+function findCancelMatches(rows, input = {}) {
+  const wantedId = String(input.reminderId || "").trim();
+  // Strip any time phrase the same way reminders.schedule did when it stored
+  // the text, so "cancel the reminder to call the vendor tomorrow at 3pm"
+  // matches the stored "call the vendor".
+  const rawSubject = String(input.reminder || input.subject || input.text || "");
+  // (extractAssistantReminderTask returns a default like "follow up" for
+  // empty input, so an absent subject must stay absent.)
+  const subject = rawSubject.trim() ? normalize(extractAssistantReminderTask(rawSubject)) : "";
+  let matches;
+  if (wantedId) matches = rows.filter(row => row.notification_id === wantedId);
+  else if (subject.length >= 3) matches = rows.filter(row => subjectMatches(normalize((row.content || {}).reminderText || (row.content || {}).body), subject));
+  else matches = [];
+  return { wantedId, subject, matches };
+}
+
+// What the person is asked before they say yes to cancelling: the one reminder it will cancel, by name and time. Null when it would not cancel exactly one (nothing named, none found, or several): the usual
+// wording is kept, and the cancel itself says which.
+function createRemindersCancelPreview({ notifications }) {
+  if (!notifications?.listReminders) throw new Error("A notification repository is required.");
+  return async function preview({ input = {}, context }) {
+    const rows = await notifications.listReminders({ tenantId: context.tenantId, userId: context.userId });
+    const { matches } = findCancelMatches(rows, input);
+    if (matches.length !== 1) return null;
+    return `I can cancel your reminder "${describe(matches[0], context.timeZone)}". Say yes to cancel it, or no to keep it.`;
+  };
+}
+
 function createRemindersCancelExecutor({ notifications }) {
   if (!notifications?.listReminders || !notifications?.cancelReminder) throw new Error("A notification repository is required.");
   return async function execute({ input = {}, context }) {
     const rows = await notifications.listReminders({ tenantId: context.tenantId, userId: context.userId });
-    const wantedId = String(input.reminderId || "").trim();
-    // Strip any time phrase the same way reminders.schedule did when it stored
-    // the text, so "cancel the reminder to call the vendor tomorrow at 3pm"
-    // matches the stored "call the vendor".
-    const rawSubject = String(input.reminder || input.subject || input.text || "");
-    // (extractAssistantReminderTask returns a default like "follow up" for
-    // empty input, so an absent subject must stay absent.)
-    const subject = rawSubject.trim() ? normalize(extractAssistantReminderTask(rawSubject)) : "";
-    let matches;
-    if (wantedId) matches = rows.filter(row => row.notification_id === wantedId);
-    else if (subject.length >= 3) matches = rows.filter(row => subjectMatches(normalize((row.content || {}).reminderText || (row.content || {}).body), subject));
-    else matches = [];
+    const { wantedId, subject, matches } = findCancelMatches(rows, input);
     const unresolved = reason => ({ cancelled: false, reason, matches: matches.length,
       // When several match, the candidates are those several, not every reminder the person has.
       candidates: (reason === "ambiguous" ? matches : rows).map(row => describe(row, context.timeZone)), candidateIds: (reason === "ambiguous" ? matches : rows).map(row => row.notification_id) });
@@ -116,4 +134,4 @@ function verifyRemindersCancelOutcome({ result }) {
 }
 
 module.exports = Object.freeze({ createRemindersListExecutor, verifyRemindersListOutcome,
-  createRemindersCancelExecutor, verifyRemindersCancelOutcome });
+  createRemindersCancelExecutor, createRemindersCancelPreview, verifyRemindersCancelOutcome });

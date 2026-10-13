@@ -26,7 +26,7 @@ test("nothing is claimed unless a document was really saved, and other plans are
 
 test("the sentence is part of the render-required answer, ahead of the generic line", () => {
   const source = fs.readFileSync(require.resolve("../../nexus/runtime/behavior-spine.js"), "utf8");
-  assert.match(source, /placesFoundResponse\(plan, task, context\) \|\| documentSavedResponse\(plan, task, context\) \|\| businessAnswerResponse\(plan, task\) \|\| "Nexus completed the governed execution and is rendering the verified result\."/);
+  assert.match(source, /placesFoundResponse\(plan, task, context\) \|\| documentSavedResponse\(plan, task, context\) \|\| businessAnswerResponse\(plan, task\) \|\| reminderCancelledResponse\(plan, task\) \|\| "Nexus completed the governed execution and is rendering the verified result\."/);
 });
 
 // "Open the business workspace" answered only with the generic line, although the business tool had worded its own answer.
