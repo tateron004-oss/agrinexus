@@ -62,3 +62,17 @@ test("after the yes, the answer says which reminder was cancelled, or why none w
   assert.equal(reminderCancelledResponse({ steps: [{ toolId: "reminders.list" }] }, task({ cancelled: true, reminder: "x" })), "", "other tools are not touched");
   assert.equal(reminderCancelledResponse(plan, task({})), "");
 });
+
+// Found on live after #1032: the question named the reminder, but after the yes the answer was still "Done. It is on your screen." The plan rebuilt from the stored task in confirm() names each step's tool tool_id (the database
+// name), and every "what was done" sentence looks for toolId.
+test("after a yes, the plan rebuilt from the stored task carries toolId, so the sentence that says what was done is found", async () => {
+  const stored = { taskId: "tsk_1", ownerId: "u", application: "reminders", goal: "cancel", riskTier: "low", conversationId: "cnv_1",
+    steps: [{ step_id: "s1", tool_id: "reminders.cancel", input: { reminder: "my Pap smear" }, output: { cancelled: true, reminder: "about my Pap smear (due Wed 14 Oct, 9:00 am)" } }] };
+  let seenPlan = null;
+  const spine = new BehaviorSpine({ agent: { command: async () => {} }, engine: { tools: { get: async id => ({ tool_id: id }) }, approve: async () => {}, executeTask: async () => ({ state: "awaiting_render", completed: false }), transition: async () => stored },
+    tasks: { get: async () => stored }, conversations: { append: async () => {} }, workspaceStates: { stage: async ({ outcome }) => { seenPlan = outcome; }, acknowledge: async () => {} } });
+  const result = await spine.confirm({ input: { taskId: "tsk_1", stepId: "s1", approved: true, text: "yes" }, context: { tenantId: "t", userId: "u", timeZone: "UTC" } });
+  assert.equal(result.response, 'Cancelled your reminder "about my Pap smear (due Wed 14 Oct, 9:00 am)".');
+  assert.ok(seenPlan !== undefined);
+  assert.equal(reminderCancelledResponse({ steps: [{ tool_id: "reminders.cancel" }] }, { steps: [{ output: { cancelled: true, reminder: "x (due y)" } }] }), 'Cancelled your reminder "x (due y)".');
+});

@@ -72,8 +72,9 @@ class BehaviorSpine {
     const command = createCommand({ text: input.text || (approved ? "Confirmed." : "Cancelled."),
       channel: input.channel || "api", correlationId: input.correlationId || crypto.randomUUID(),
       conversationId: priorTask.conversationId, taskId, tenantId: context.tenantId, actorId: context.userId });
+    // (the stored steps name their tool tool_id; the sentences that say what was done ("Saved ...", "Cancelled your reminder ...") look for toolId, as in a plan made just now, so both names are given)
     const plan = { application: priorTask.application, goal: priorTask.goal, riskTier: priorTask.riskTier,
-      clarification: null, steps: priorTask.steps || [] };
+      clarification: null, steps: (priorTask.steps || []).map(step => ({ ...step, toolId: step.toolId || step.tool_id })) };
     await this.engine.approve({ tenantId: context.tenantId, taskId, stepId, actorId: context.userId, approved: Boolean(approved) });
     const consent = approved ? await this.recordConfirmedConsent({ priorTask, stepId, command, context, text: input.text, channel: input.channel }) : null;
     if (consent?.limitReached) {
@@ -290,7 +291,8 @@ function healthSavedResponse(plan, context) {
 // After "cancel my reminder about ..." and a yes, the person was told only "Done. It is on your screen." Say which reminder was cancelled, or why nothing was (none found, several match, none named).
 function reminderCancelledResponse(plan, task) {
   try {
-    if (!(plan?.steps || []).some(item => item?.toolId === "reminders.cancel")) return "";
+    // (a plan made just now names its tool toolId; the plan rebuilt from the stored task after a "yes" names it tool_id)
+    if (!(plan?.steps || []).some(item => (item?.toolId || item?.tool_id) === "reminders.cancel")) return "";
     const out = Object.assign({}, ...(task?.steps || []).map(item => (item?.output && typeof item.output === "object" ? item.output : {})));
     if (out.cancelled === true && out.reminder) return `Cancelled your reminder "${String(out.reminder).trim()}".`;
     if (out.cancelled !== false) return "";
