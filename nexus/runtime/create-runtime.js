@@ -43,7 +43,7 @@ const { OutcomeVerifierRegistry } = require("../verification/verifier-registry.j
 const { CapabilityExecutionAuthority } = require("./capability-execution-authority.js");
 const { AuthorityCoverage } = require("./authority-coverage.js");
 const { createReminderScheduleExecutor, verifyReminderScheduleOutcome } = require("../reminders/executor.js");
-const { createRemindersListExecutor, verifyRemindersListOutcome, createRemindersCancelExecutor, verifyRemindersCancelOutcome } = require("../reminders/manage-executor.js");
+const { createRemindersListExecutor, verifyRemindersListOutcome, createRemindersCancelExecutor, createRemindersCancelPreview, verifyRemindersCancelOutcome } = require("../reminders/manage-executor.js");
 const { createCommunicationsSendExecutor, verifyCommunicationsSendOutcome } = require("../communications/executor.js");
 const { createMediaPlayExecutor, verifyMediaPlayOutcome } = require("../media/executor.js");
 const { createMediaControlExecutor, verifyMediaControlOutcome } = require("../media/control-executor.js");
@@ -212,7 +212,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     // How many business/nonprofit workspaces the person has, read the way the business tools read them (same access check); lets the planner say "no workspace yet" before it asks for a yes.
     businessWorkspaces: { count: createBusinessWorkspaceCounter({ repository: businessRecords, access, consents, env }), read: createBusinessReader({ repository: businessRecords, access, consents, env }) } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
-  const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates, businessPreview: createBusinessPreview({ repository: businessRecords, access, consents, env }) }) : null;
+  const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates, businessPreview: createBusinessPreview({ repository: businessRecords, access, consents, env }), reminderCancelPreview: createRemindersCancelPreview({ notifications }) }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, brief, repeatReminders, repeatReminderRecords, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, farmRecords, healthRecords, wellnessRecords, businessRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,

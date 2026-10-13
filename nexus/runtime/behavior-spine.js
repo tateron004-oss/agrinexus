@@ -16,11 +16,11 @@ const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps,
 const NOT_SENT_CODES = new Set(["communications_provider_unavailable", "communications_send_blocked"]);
 
 class BehaviorSpine {
-  constructor({ agent, engine, tasks, conversations, workspaceStates, businessPreview }) {
+  constructor({ agent, engine, tasks, conversations, workspaceStates, businessPreview, reminderCancelPreview }) {
     if (!agent?.command || !engine?.executeTask || !tasks?.get || !workspaceStates?.stage || !workspaceStates?.acknowledge) {
       throw new Error("The authoritative agent, task engine, and task repository are required.");
     }
-    Object.assign(this, { agent, engine, tasks, conversations, workspaceStates, businessPreview: typeof businessPreview === "function" ? businessPreview : null });
+    Object.assign(this, { agent, engine, tasks, conversations, workspaceStates, businessPreview: typeof businessPreview === "function" ? businessPreview : null, reminderCancelPreview: typeof reminderCancelPreview === "function" ? reminderCancelPreview : null });
   }
 
   async turn({ input, context }) {
@@ -121,7 +121,14 @@ class BehaviorSpine {
     const step = (task?.steps || []).find(item => item.step_id === pendingStepId);
     const tool = step?.tool_id && this.engine.tools?.get ? await this.engine.tools.get(step.tool_id).catch(() => null) : null;
     return informedConfirmationPrompt({ scope: tool?.consent_scope, step })
-      || (step?.tool_id === "business.manage" ? businessDispatch.confirmationPrompt(step.input?.command) || await this.businessPromptFor(step, context) : null) || generic;
+      || (step?.tool_id === "business.manage" ? businessDispatch.confirmationPrompt(step.input?.command) || await this.businessPromptFor(step, context) : null)
+      || (step?.tool_id === "reminders.cancel" ? await this.reminderCancelPromptFor(step, context) : null) || generic;
+  }
+
+  // The reminder that a cancel will remove, by name and time. Never blocks the prompt: any failure falls back to the generic wording.
+  async reminderCancelPromptFor(step, context) {
+    if (!this.reminderCancelPreview || !context) return null;
+    try { return await this.reminderCancelPreview({ input: step.input || {}, context }); } catch { return null; }
   }
 
   // The specific sentence for a business write (who is added, which invoice, what is created), the same one the spoken path gives. Never blocks the prompt: any failure falls back to the generic wording.
@@ -198,7 +205,7 @@ class BehaviorSpine {
     }
     if (execution.state === "awaiting_render") {
       const result = envelope({ command, plan, task, execution, state: "render_required", completed: false,
-        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || documentSavedResponse(plan, task, context) || businessAnswerResponse(plan, task) || "Nexus completed the governed execution and is rendering the verified result.",
+        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || documentSavedResponse(plan, task, context) || businessAnswerResponse(plan, task) || reminderCancelledResponse(plan, task) || "Nexus completed the governed execution and is rendering the verified result.",
         outcome: { verified: true, renderVerified: false, reason: "renderer_acknowledgement_required" } });
       await this.workspaceStates.stage({ tenantId: context.tenantId, ownerId: context.userId,
         taskId: task.taskId, outcome: result.render });
@@ -280,6 +287,22 @@ function healthSavedResponse(plan, context) {
   } catch { return ""; }
 }
 
+// After "cancel my reminder about ..." and a yes, the person was told only "Done. It is on your screen." Say which reminder was cancelled, or why nothing was (none found, several match, none named).
+function reminderCancelledResponse(plan, task) {
+  try {
+    if (!(plan?.steps || []).some(item => item?.toolId === "reminders.cancel")) return "";
+    const out = Object.assign({}, ...(task?.steps || []).map(item => (item?.output && typeof item.output === "object" ? item.output : {})));
+    if (out.cancelled === true && out.reminder) return `Cancelled your reminder "${String(out.reminder).trim()}".`;
+    if (out.cancelled !== false) return "";
+    const list = Array.isArray(out.candidates) ? out.candidates.filter(Boolean).slice(0, 5).join("; ") : "";
+    if (out.reason === "ambiguous") return `More than one reminder matches, so I cancelled none.${list ? ` They are: ${list}.` : ""} Say which one, for example by what it is about.`;
+    if (out.reason === "not_found") return `I could not find a reminder like that, so I cancelled nothing.${list ? ` Your reminders are: ${list}.` : " You have no upcoming reminders."}`;
+    if (out.reason === "which_reminder") return `Which reminder should I cancel?${list ? ` You have: ${list}.` : " You have no upcoming reminders."}`;
+    if (out.reason === "no_longer_upcoming") return "That reminder has already gone off or been cancelled, so nothing changed.";
+    return "";
+  } catch { return ""; }
+}
+
 // After "Find a pharmacy near me" / "Find a clinic near Kisumu" the person was told only "Nexus completed the governed execution..." (phrase sweep). Say what was found: the first few names, where it
 // looked, the notes the search added (a guessed place, a different country), or the question when no town is known. A directory lookup only, never a booking.
 function placesFoundResponse(plan, task, context) {
@@ -358,4 +381,4 @@ function envelope({ command, plan, execution = null, task = null, state, complet
     receipts: execution?.receipts || [], render });
 }
 
-module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse, documentSavedResponse, businessAnswerResponse, reminderSetResponse });
+module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse, documentSavedResponse, businessAnswerResponse, reminderSetResponse, reminderCancelledResponse });
