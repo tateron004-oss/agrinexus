@@ -138,9 +138,23 @@ function createBusinessReader({ repository, access, consents, env, now = () => D
   };
 }
 
+// What the person is asked before they say yes to a business write: the same sentence the spoken path gives ("I can add Amina as a customer to \"Green Acres\". Should I go ahead?"), made by running the request
+// WITHOUT confirming it. That path only reads until the person has said yes, so nothing is written here. Resolves to the sentence, or null when there is nothing specific to say.
+function createBusinessPreview({ repository, access, consents, env }) {
+  let api = null;
+  return async function preview({ command, context }) {
+    const text = String(command || "").replace(/\s+/g, " ").trim();
+    if (!text || !voiceDispatch.classify(text)) return null;
+    api ||= createBusinessApi({ access, consents, agent: null }, { env, repository });
+    const result = await voiceDispatch.run({ command: text, args: {}, confirmed: false, timeZone: context?.timeZone,
+      businessRequest: ({ method, pathname, body = {} }) => api.handle({ method, pathname, context, body }) });
+    return result?.status === "needs-confirmation" && typeof result.response === "string" && result.response.trim() ? result.response.trim() : null;
+  };
+}
+
 function verifyBusinessOutcome({ result }) {
   const verified = result?.verified === true && typeof result?.response === "string" && result.response.length > 0;
   return { verified, method: "real_business_workspace_write", reason: verified ? null : "business_outcome_incomplete" };
 }
 
-module.exports = Object.freeze({ createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, verifyBusinessOutcome });
+module.exports = Object.freeze({ createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, createBusinessPreview, verifyBusinessOutcome });
