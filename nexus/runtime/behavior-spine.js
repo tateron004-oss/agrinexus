@@ -7,6 +7,7 @@ const crypto = require("node:crypto");
 const businessDispatch = require("../business/voice-dispatch.js");
 const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { setReplySw } = require("../reminders/swahili-reminder.js");
+const { isWomensCareSearch, WOMENS_CARE_NOTE } = require("../knowledge/womens-health-topics.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
 // Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
@@ -294,7 +295,8 @@ function placesFoundResponse(plan, task, context) {
     const names = cards.slice(0, 5).map(card => card.name).filter(Boolean).join("; ");
     const head = sw ? `Nimepata ${pharmacy ? "maduka" : "kliniki"} ${cards.length}${near}: ${names}.` : `I found ${cards.length} ${pharmacy ? "pharmac" + (cards.length === 1 ? "y" : "ies") : "clinic" + (cards.length === 1 ? "" : "s")}${near}: ${names}.`;
     const kind = sw ? "Hii ni orodha ya mahali tu; hakuna kilichowekwa wala mtu aliyewasiliana naye." : "This is a directory lookup only; nothing was booked or contacted.";
-    return [head, kind, notes].filter(Boolean).join(" ");
+    const womensCare = !pharmacy && isWomensCareSearch(plan?.goal) ? WOMENS_CARE_NOTE[sw ? "sw" : "en"] : "";
+    return [head, kind, notes, womensCare].filter(Boolean).join(" ");
   } catch { return ""; }
 }
 
