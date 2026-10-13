@@ -1979,6 +1979,8 @@ function handleNexusMentalHealthBehavioralWellnessCommand(command = "", options 
   if (!runtime || !text || !runtime.shouldHandle?.(text)) return false;
   const packet = runtime.buildSupportPacket(text, {
     language: languageCode(),
+    // (the device's time zone says Kenya or Nigeria; a country named in the words still wins)
+    country: window.KyroCrisisLines?.countryFromTimeZone?.((() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ""; } })()) || "",
     source: options.source || "standard_user",
     locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(text),
     screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(text)

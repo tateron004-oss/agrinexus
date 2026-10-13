@@ -6,6 +6,11 @@
   const crisisPhrases = (typeof module !== "undefined" && module.exports && typeof require === "function") ? require("./kyro-crisis-phrases.js") : globalScope.KyroCrisisPhrases;
   const sharedCrisis = text => Boolean(crisisPhrases && (crisisPhrases.selfHarm(text) || crisisPhrases.harmOthers(text)));
   const sharedAbuse = text => Boolean(crisisPhrases && crisisPhrases.abuse(text));
+  // Everyday feelings ("I feel sad", "I'm stressed", "I feel lonely") get a reply that speaks to the feeling, and hopelessness ("I feel hopeless", "everything feels pointless") is a risk marker (public/kyro-feelings.js).
+  const feelings = (typeof module !== "undefined" && module.exports && typeof require === "function") ? require("./kyro-feelings.js") : globalScope.KyroFeelings;
+  const hopelessWords = text => Boolean(feelings && feelings.hopeless(text));
+  // Who to talk to in Kenya and Nigeria (charities confirmed on 13 October 2026; no government-run suicide line was found): public/kyro-crisis-lines.js.
+  const crisisLines = (typeof module !== "undefined" && module.exports && typeof require === "function") ? require("./kyro-crisis-lines.js") : globalScope.KyroCrisisLines;
   const MODEL_VERSION = "nexus-mental-health-state-machine.v1";
 
   const TRUSTED_EVIDENCE_COLLECTIONS = Object.freeze([
@@ -235,7 +240,7 @@
       || sharedCrisis(input) || sharedAbuse(input)
       || SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text))
       || MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text))
-      || HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text))
+      || HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text)) || hopelessWords(text)
       || MENTAL_HEALTH_PATTERNS.some(pattern => pattern.test(text));
   }
 
@@ -423,7 +428,7 @@
       };
     }
 
-    if (HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text))) {
+    if (HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text)) || hopelessWords(text)) {
       matchedSignals.push("hopelessness_or_passive_risk_language");
       return {
         capabilityId: CAPABILITY_ID,
@@ -471,7 +476,7 @@
     };
   }
 
-  function responseForState(classification = {}) {
+  function responseForState(classification = {}, input = "", language = "en") {
     if (classification.state === "immediate_danger") {
       return "I'm really glad you told me. If you may hurt yourself or someone else, contact local emergency services now or go to the nearest safe emergency location. If you can, move away from anything you could use to hurt yourself and reach a trusted person immediately. I can stay with you in support mode, but I cannot declare you safe or dispatch help from here.";
     }
@@ -505,6 +510,9 @@
     if (classification.state === "care_preparation") {
       return "I can prepare a provider-ready summary with what you are feeling, what changed, safety concerns, questions, and support needs. Nothing will be sent without your review and approval.";
     }
+    // a feeling the person named gets words about that feeling, not the list of what Kyro can do
+    const mood = feelings && classification.state === "emotional_support" ? feelings.read(input) : null;
+    if (mood) return feelings.reply(mood.feeling, language);
     return "I'm here with you. I can listen, help you name what is happening, suggest a simple coping step, or prepare questions for a qualified professional. I cannot diagnose, prescribe, or replace a clinician.";
   }
 
@@ -517,9 +525,10 @@
   // were never surfaced anywhere in the spoken response or the UI card --
   // even a correctly-classified crisis never produced a real phone number
   // for the user to see or hear.
-  function describeRealCrisisContacts(jurisdictionEscalation) {
+  function describeRealCrisisContacts(jurisdictionEscalation, language = "en") {
     const escalation = jurisdictionEscalation?.escalation;
     if (!escalation) return "";
+    if (crisisLines && (jurisdictionEscalation.jurisdictionId === "kenya" || jurisdictionEscalation.jurisdictionId === "nigeria")) return crisisLines.linesFor(jurisdictionEscalation.jurisdictionId, language);
     const realNumbers = (escalation.displayRules || []).filter(rule => /^\d+$/.test(rule));
     if (!realNumbers.length) return "";
     return ` You can also contact: ${escalation.resourceTypes.join(", ")} -- call or text ${realNumbers.join(" or call ")}.`;
@@ -550,7 +559,7 @@
       command: String(input || ""),
       generatedAt: now,
       classification,
-      userVisibleStatus: responseForState(classification) + describeRealCrisisContacts(jurisdictionEscalation),
+      userVisibleStatus: responseForState(classification, input, context.language) + describeRealCrisisContacts(jurisdictionEscalation, context.language),
       supportOptions: [
         "supportive_dialogue",
         "coping_tool",

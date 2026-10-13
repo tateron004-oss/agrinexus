@@ -8,6 +8,10 @@ const crisisPhrases = require("../../public/kyro-crisis-phrases.js");
 const care = require("../../public/kyro-care-phrases.js");
 // A sick animal is not a sick person: no first aid for people, and no veterinary advice either (nexus/farmwork/livestock-health.js).
 const livestock = require("../farmwork/livestock-health.js");
+// Everyday feelings ("I feel sad", "I'm so stressed", "I feel lonely") get a reply about that feeling; hopelessness ("I feel hopeless", "everything feels pointless") is a risk marker and gets the caring crisis reply (public/kyro-feelings.js).
+const feelings = require("../../public/kyro-feelings.js");
+// Who a person in Kenya or Nigeria can talk to (charities confirmed on 13 October 2026; no government-run suicide line was found): public/kyro-crisis-lines.js.
+const crisisLines = require("../../public/kyro-crisis-lines.js");
 const CARE_SWAHILI = /\b(?:mtoto|mimba|mjamzito|mume|nina|nimeanza|nimejifungua|nimezaa|ameanguka|anatapika|damu|uchungu|kifafa|degedege|homa|nyoka|sumu|ananipiga|amenipiga|ananichapa|hapumui|ameungua|nimebakwa|ataniua|naogopa|nimepoteza|nimeharibu|binti|mwanangu|nimechoka|sijisikii|sipendi|siwezi|nataka|amemeza|amekunywa|amelala|hanyonyi|ananibaka|alinibaka|amenifukuza|nitajiua|wangu|yangu|mke|ujauzito|kifua|kizunguzungu|jasho|nimekunywa|nimemeza|nimekula|nimepulizia|nilipulizia|amezimia|haamki|hazindukani|hajitambui|hajibu|amelegea|kisukari|sukari|kiharusi|bibi|babu|mzee|amebakwa|alibakwa|kumdhuru|ninahisi|natetemeka|anatetemeka|tumboni|upande|wiki|miezi|ng'ombe|mbuzi|kondoo|kuku|uso|mkono|mguu|pumzi|hasemi|hawezi|kuongea)\b/;
 const SWAHILI_WORDS = /\b(?:nimechoka|natamani|nataka|ninataka|napenda|ningependa|sina|nafikiria|ninafikiria|afadhali|heri|bora nife|maisha|bunduki|kisu|sumu|sitaki|najidhuru|ninajidhuru|nimejidhuru)\b/;
 
@@ -209,12 +213,18 @@ function readSafetyDetailed(text) {
   // A woman hurt by a partner is not the same as a child hurt by an adult: the wording differs (a clinic for injuries, pregnancy, who in the area helps).
   if (!care.notViolence(raw) && (crisisPhrases.abuse(raw) || care.abuseMore(raw))) return { kind: "abuse", adult: care.adultContext(raw), language: spokenLanguage };
   if (care.postnatal(raw)) return { kind: "postnatal", language: spokenLanguage };
+  // "I feel hopeless", "everything feels pointless", "nothing matters anymore": no literal crisis word, but a real marker of risk. The same caring reply, with the number and the offer, never a menu.
+  // (after the postnatal reader, which answers a mother who is hopeless after a birth with its own words)
+  if (feelings.hopeless(raw)) return { kind: "self_harm", language: SWAHILI_WORDS.test(lower) || CARE_SWAHILI.test(lower) ? "sw" : "en" };
   // A sign that needs a health worker now, or today: pregnancy, labour, bleeding after a birth, a baby, a child, poison, a burn, a snake bite.
   const sign = care.careSign(raw);
   if (sign) return { kind: "care", category: sign.category, language: spokenLanguage };
   // "How much paracetamol can I give my baby?", "is ibuprofen safe in pregnancy?": no dose from Kyro, and who to ask.
   if (care.medicineQuestion(raw)) return { kind: "care", category: "medicine", language: spokenLanguage };
   if (care.grief(raw)) return { kind: "grief", language: spokenLanguage };
+  // Sad, anxious, stressed, lonely, overwhelmed, depressed: a short warm reply about that feeling (after every sign that needs help now, before the practical readers below).
+  const mood = feelings.read(raw);
+  if (mood) return { kind: "low_mood", feeling: mood.feeling, language: spokenLanguage };
   // Someone asking for a PIN, a password or money by phone or message: said plainly, never to share it.
   if (crisisPhrases.scam(raw)) return { kind: "scam", language: "en" };
   // "remember that my mpesa pin is 4821": never saved as a note or a fact, and never read back.
@@ -340,6 +350,7 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
   if (kind === "abuse_other") return t(language, "safety.abuseOther");
   if (kind === "friend_crisis") return t(language, "safety.friendCrisis");
   if (kind === "grief") return t(language, "safety.grief");
+  if (kind === "low_mood") return feelings.reply(found.feeling, language);
   if (kind === "postnatal") return t(language, "safety.postnatal", { circle: circleOffer });
   if (kind === "baby_at_risk") return t(language, "safety.babyAtRisk", { circle: circleOffer });
   if (kind === "care") {
@@ -347,7 +358,11 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
     const today = ["baby_today", "child_today", "pregnancy_bp", "medicine"].includes(found.category);
     return t(language, `safety.care.${found.category}`, { go: today ? "" : t(language, "safety.care.go", { circle: circleOffer }) });
   }
-  return t(language, found.weapon ? "safety.selfHarmWeapon" : "safety.selfHarm", { circle: circleOffer });
+  // (the line to talk to a person comes before the offer to alert the circle, which stays the last sentence, as a question: see offer.js)
+  const lines = known ? crisisLines.linesFor(known.country, language) : "";
+  const reply = t(language, found.weapon ? "safety.selfHarmWeapon" : "safety.selfHarm", { circle: circleOffer });
+  if (!lines) return reply;
+  return circleOffer && reply.endsWith(circleOffer) ? `${reply.slice(0, reply.length - circleOffer.length).trimEnd()}${lines} ${circleOffer.trimStart()}` : `${reply}${lines}`;
 }
 
 module.exports = Object.freeze({ emergencyNumberForCountry, safetyTurn, safeTurn, readSafety, readSafetyDetailed, readSafe, safeLanguage, alertCircle });
