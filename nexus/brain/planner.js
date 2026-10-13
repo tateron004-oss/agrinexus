@@ -22,6 +22,8 @@ const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext, UNIVERSAL_TOPI
 const { africaTopic, africaAnswer, africaCountry, africaNamed } = require("../knowledge/africa-small-business.js");
 const { technologyTopic, technologyAnswer } = require("../knowledge/small-business-technology.js");
 const { aiToolsTopic, aiToolsAnswer } = require("../knowledge/ai-tools-for-business.js");
+const { womensHealthTopic } = require("../knowledge/womens-health-topics.js");
+const { womensHealthAnswer } = require("../knowledge/womens-health.js");
 const { stateEntityIntent, stateEntityAnswer, stripWakeWord } = require("../knowledge/state-entities.js");
 const { templateRequest, consultingTemplate } = require("../knowledge/consulting-templates.js");
 // how a starter document is named when it is spoken back (the title in lower case, except where that reads wrongly)
@@ -464,6 +466,13 @@ class OpenEndedPlanner {
       || businessVoiceDispatch.asksAboutOwnRecords(command.text);
     const askText = stripWakeWord(command.text);
     const usPerson = isUsContext({ timeZone: command.timeZone || context?.timeZone, text: askText });
+    // A woman's question about her own health (cervical screening, breast health, birth control, periods, menopause, prenatal and postnatal care, where to find care): a checked, sourced, plain answer (see knowledge/womens-health.js).
+    // Urgent, unsafe and medicine questions are never taken (womens-health-topics.js): the safety layer and the medicine rules answer those.
+    const womensTopic = ownWorkspace ? null : womensHealthTopic(askText);
+    const womensGuide = womensTopic ? womensHealthAnswer(womensTopic, { us: usPerson, country: africaCountry({ timeZone: command.timeZone || context?.timeZone, country: context?.country, text: askText }) }) : null;
+    if (womensGuide) {
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: womensGuide.text, sourceRequired: false, knowledge: `womens-health:${womensTopic}`, sources: womensGuide.sources, guardrail: "womens-health-information", planningAttempts: 0 });
+    }
     // The checked United States guide (free help, certifications, loans, grants, taxes, licences, selling to the government, finding local help) answers first, from official sources with the date they were checked.
     // It applies to people in the United States only (their time zone, or a question that names a US programme), never to a farmer in Kenya asking about a loan.
     // A question in the technology and AI vocabulary ("use AI to grow my business", "protect my business email") belongs to the technology guide even when it also names growth or marketing, so it is looked up first and wins.
