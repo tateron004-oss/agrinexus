@@ -55795,6 +55795,8 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
   const visibleWorkspace = document.querySelector('#nexus-workspace[data-nexus-workspace="true"]');
   const ack = { type: "genesis.workspace.acknowledged", requestId: action.requestId, workspace, opened: true, visible: Boolean(document.body.dataset.genesisWorkspace === workspace && visibleWorkspace), populatedFields: Object.keys(payload).filter(key => payload[key]), microphoneActive: Boolean(nexusPermanentMicrophoneStream?.getAudioTracks?.().some(track => track.readyState === "live" && track.enabled) || voiceRecognition || voiceFirstMode), realtimeConnected: Boolean(window.nexusRealtimeConnected || realtimeVoiceSession?.connectionState === "connected"), error: null };
   if (!options.suppressAcknowledgement) window.dispatchEvent(new CustomEvent("genesis.workspace.acknowledged", { detail: ack }));
+  // (the map is the whole screen and has no workspace panel, so it is open once openGenesisRealtimeMapWorkspace has set the full-screen map surface)
+  if (workspace === "map") return document.body.dataset.genesisMapSurface === "full-scale-leaflet" || ack.visible;
   return ack.visible;
 }
 
