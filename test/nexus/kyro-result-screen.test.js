@@ -124,7 +124,7 @@ test("which answers get a screen: not failures, crisis replies, the map, music o
 test("it is wired: voice answers draw the screen and open no form; the form from the spoken words is skipped; typed answers use it too; the stage, teardown and return know it", () => {
   const call = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool"), app.indexOf("function handleOpenAiAgentsRealtimeEvent"));
   assert.match(call, /const answerOnScreen = kyroShowResultScreen\(toolName, command, result\);\s*const transcriptAction = answerOnScreen \? null : genesisWorkspaceActionFromFinalTranscript\(command\);/);
-  assert.match(call, /\} else if \(!answerOnScreen\) \{\s*await runAuthoritativeGenesisWorkspaceBridge\(result/, "no workspace bridge for an answer that is on the screen");
+  assert.match(call, /\} else if \(!answerOnScreen && !\/restricted\|denied\|blocked\|forbidden\/i\.test\(String\(result\.status \|\| ""\)\)\) \{[^]*?await runAuthoritativeGenesisWorkspaceBridge\(result/, "no workspace bridge for an answer that is on the screen");
   const exec = app.slice(app.indexOf("async function executeGenesisWorkspaceFromFinalTranscript"), app.indexOf("rememberAuthoritativeGenesisTranscriptRoute(action, command);"));
   assert.match(exec, /if \(kyroAnswerReplacesWorkspace\(action\.workspace, command\)\) return false;/);
   const run = app.slice(app.indexOf("async function kyroRunToolAnswer"), app.indexOf("function kyroShowTypedResult"));
