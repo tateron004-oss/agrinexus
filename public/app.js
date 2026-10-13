@@ -50500,6 +50500,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     await kyroReturnToOrb({ reason: window.KyroDismissCommands.parse(command).kind, source: "openai-realtime-tool" });
     return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
   }
+  // "Pause the music", "next song", "louder": the player is on this page, so the page does it (the music tool would go and play a song called "pause").
+  if (window.KyroMediaCommands?.parse?.(command)?.type === "control" && await kyroMediaCommand(command)) {
+    return { ok: true, status: "completed", response: "Kyro's player did that and said so. Say nothing more.", executionVerified: false, blockedReason: null, clientAction: { type: "media-control" } };
+  }
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
   const visualKind = kyroVisualRequestKind(command);
   if (visualKind) return kyroShowVisualRequest(command, visualKind);

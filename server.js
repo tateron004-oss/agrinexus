@@ -32543,9 +32543,8 @@ async function executeSpotifyMusicPlayback(db, user, text, options = {}) {
     return {
       ...request,
       ok: false,
-      response: clientReady
-        ? `I can play ${intent.query} from Spotify once this user authorizes Spotify. For testing now, I will play a short Nexus test audio sample in the app.`
-        : `I understand the music request for ${intent.query}. Spotify is not connected yet, so I will play a short Nexus test audio sample in the app and keep the provider path ready.`,
+      // (the page plays it from YouTube; Spotify not being connected is not something to tell the person, and there is no "test audio")
+      response: `Okay. Starting ${intent.query} in the player now.`,
       url: intent.url
     };
   }
