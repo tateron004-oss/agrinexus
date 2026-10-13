@@ -50563,8 +50563,14 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
       requestId: transcriptAction.requestId,
       source: "openai-agents-model-command"
     };
-  } else if (!answerOnScreen) {
-    await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
+  } else if (!answerOnScreen && !/restricted|denied|blocked|forbidden/i.test(String(result.status || ""))) {
+    // (a refused action opens nothing; and a workspace that will not open must not replace what the server said: the model reads that, not an exception)
+    try {
+      await runAuthoritativeGenesisWorkspaceBridge(result, { correlationId });
+    } catch (error) {
+      nexusGenesisVoiceDebugLog("openai-agents-workspace-bridge-failed", { toolName, correlationId, error: String(error?.message || error).slice(0, 200) });
+      result.workspaceOpened = false; result.executionVerified = false;
+    }
   }
   if (result.genesisAcknowledgement?.verified === true) {
     const workspaceName = String(result.genesisAcknowledgement.workspace || result.genesisAction?.workspace || "Nexus");
