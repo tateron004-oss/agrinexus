@@ -604,9 +604,11 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/confirm" && req.method === "POST") {
         if (!active.behavior?.confirm) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }
+        // The device's own time zone, as for a turn, so what is said after the yes ("Cancelled your reminder ... due Wed 14 Oct, 9:00 am") is in the person's time and not in UTC.
+        const confirmContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
         const result = await active.behavior.confirm({ input: { correlationId: request.context.requestId,
           taskId: body.taskId, stepId: body.stepId, approved: body.approved === true,
-          channel: request.channel, text: body.text }, context });
+          channel: request.channel, text: body.text }, context: confirmContext });
         send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/conversation" && req.method === "GET") {
         const conversationId = String(request.query.conversationId || "").trim();

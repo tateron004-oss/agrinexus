@@ -58843,6 +58843,7 @@ async function submitNexusPendingBehaviorConfirmation(approved, text, options = 
         stepId: pending.stepId,
         approved,
         text,
+        timeZone: kyroDeviceTimeZone(),
         channel: options.source === "voice" || options.source === "voice_transcript" ? "voice" : "typed"
       }
     }, 90000);

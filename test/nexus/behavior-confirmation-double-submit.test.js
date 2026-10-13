@@ -35,6 +35,7 @@ function buildSandbox(requestImpl) {
     nexusAgenticCommandMissions: [],
     NEXUS_PRESENCE_STATES: { THINKING: "thinking" },
     setNexusPresenceState() {},
+    kyroDeviceTimeZone: () => "UTC",
     requestWithTimeout: (...args) => { requestCalls.push(args); return requestImpl(...args); },
     processNexusAuthoritativeBehaviorResult: async () => true
   };
