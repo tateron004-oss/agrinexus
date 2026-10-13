@@ -1,6 +1,7 @@
 "use strict";
 
 const { readRepeatRequest, DAY_NAMES } = require("./repeat-phrase.js");
+const { isPrivateReminder, pushBodyFor } = require("./private-reminder.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
 const { isDueNow, localClock, formatTimeOfDay, minutesOfDay } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
@@ -179,7 +180,7 @@ function createRepeatReminderService({ notifications, store, devices = null, log
             if (!pushable.get(person)) { result.skippedNoDevice += 1; continue; }
             // Marked handled only after the queue write really happened, so a failed write is tried again on the next sweep within the hour.
             await notifications.enqueue({ tenantId: rule.tenantId, userId: rule.userId, channel: "push", scheduledAt: at, idempotencyKey: key,
-              content: { title: "Nexus reminder", body: rule.task, kind: "repeating_reminder" } });
+              content: { title: isPrivateReminder(rule.task) ? "Kyro reminder" : "Nexus reminder", body: pushBodyFor(rule.task, rule.language), kind: "repeating_reminder", ...(isPrivateReminder(rule.task) ? { private: true } : {}) } });
             handled.add(key);
             logger?.info?.("reminder.repeat.queued", { scheduleId: rule.scheduleId, day, slot });
             result.sent += 1;

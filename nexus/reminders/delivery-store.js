@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const { reminderContent } = require("./private-reminder.js");
 
 // One person's one-time reminders in the store the worker really delivers from (nexus_notifications, sent as web push when their time comes), for the older command route and the
 // phone line. These used to be written to the shared legacy list (db.profile.assistantReminders), which nothing ever delivers: a reminder set by voice or in the command box
@@ -24,7 +25,7 @@ function createDeliveryReminders({ notifications, tenantId, userId }) {
   if (!notifications?.enqueue || !notifications?.listReminders || !notifications?.cancelReminder) throw new Error("A notification repository is required.");
   if (!tenantId || !userId) throw new Error("Tenant and user are required.");
   const list = async () => (await notifications.listReminders({ tenantId, userId, limit: 200 })).map(shape);
-  const contentOf = ({ task, whenLabel, timeZone, correlationId, legacyId, language }) => ({ title: "Nexus reminder", body: task, reminderText: task, whenLabel: whenLabel || "", timeZone: timeZone || "",
+  const contentOf = ({ task, whenLabel, timeZone, correlationId, legacyId, language }) => reminderContent(task, { whenLabel: whenLabel || "", timeZone: timeZone || "",
     ...(correlationId ? { correlationId } : {}), ...(legacyId ? { legacyReminderId: legacyId } : {}), ...(language ? { language } : {}), source: "older-route" });
 
   return Object.freeze({
