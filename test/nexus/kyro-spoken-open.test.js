@@ -17,17 +17,19 @@ function load() {
   const start = app.indexOf("// ---- Maps beyond Africa");
   const end = app.indexOf("// ---- Answer-first (the Jarvis way)");
   assert.ok(start > 0 && end > start);
-  const calls = { typed: [], screens: [], spoken: [], interrupted: 0 };
+  const calls = { typed: [], screens: [], spoken: [], interrupted: 0, maps: [] };
   const sandbox = {
     window: { KyroDismissCommands: { parse: text => (/^(?:close it|i'm done|go back to the orb)$/i.test(text) ? { kind: "done" } : null) } },
     languageCode: () => "en", realtimeVoiceActive: () => true, realtimeVoiceSession: { sdkController: { interrupt: () => { calls.interrupted += 1; } } },
     handleNexusUnifiedBrainRuntimeCommand: async (text, options) => { calls.typed.push({ text, options }); },
     kyroShowResultScreen: (tool, command, result) => { calls.screens.push(result.response); return true; },
-    setVoiceResponse: (text) => { calls.spoken.push(text); }
+    setVoiceResponse: (text) => { calls.spoken.push(text); },
+    africanMapCountryTarget: text => (/kenya/i.test(text) ? { id: "kenya", name: "Kenya", lat: 0, lng: 37.9 } : null),
+    dispatchGenesisWorkspaceAction: action => { calls.maps.push(action); return !sandbox.mapFails; }
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${app.slice(start, end)}\nthis.api = { kyroWorldMapTarget, kyroSpokenOpenOwns, kyroHandleSpokenOpen, pending: () => kyroPendingMedia };`, sandbox);
-  return { api: sandbox.api, calls };
+  vm.runInContext(`${app.slice(start, end)}\nthis.api = { kyroWorldMapTarget, kyroSpokenOpenOwns, kyroHandleSpokenOpen, kyroOpenMapRequest, pending: () => kyroPendingMedia };`, sandbox);
+  return { api: sandbox.api, calls, sandbox };
 }
 
 test("a map beyond Africa opens where it should, and the word 'us' is not a country unless it is a map of it", () => {
@@ -109,4 +111,26 @@ test("on the server, 'open US maps' and 'open Google Maps' open a map instead of
   const said = sandbox.run({ ok: true, response: "Got it. Local AI copilot recommends the next best action across learning, workforce, health, trade, and provider evidence for DRC." }, "open images").response;
   assert.equal(said, "I'm not sure what you'd like me to do. You can say things like: find a clinic near me, show my reminders, open health, show me pictures of a maize plant, or create a business plan.");
   assert.doesNotMatch(said, /DRC|copilot/i);
+});
+
+test("a typed 'open the map' opens the map on the page, with the country it names; what is about a route or somewhere nearby is left alone; said aloud, the map tool does it", () => {
+  for (const text of ["Open the map", "open maps", "Open US maps", "Show me a map of Kenya", "Kyro, open the map of India", "pull up the world map", "Open a map of the United Kingdom", "show the map."]) assert.equal(load().api.kyroOpenMapRequest(text), true, text);
+  for (const text of ["route from Nairobi to Mombasa", "show me the map to the clinic", "open the map near me", "find a pharmacy on the map", "how do I read a map", "show us the map of nothing from here", "what is a map", "directions to the market", ""]) assert.equal(load().api.kyroOpenMapRequest(text), false, text);
+  const { api, calls } = load();
+  assert.equal(api.kyroHandleSpokenOpen("Open US maps", { typed: true }), true);
+  assert.equal(calls.maps.length, 1); assert.equal(calls.maps[0].workspace, "map"); assert.equal(calls.maps[0].payload.query, "Open US maps");
+  assert.equal(calls.spoken.at(-1), "Here is the United States map.");
+  assert.equal(api.kyroHandleSpokenOpen("Open the map of Kenya", { typed: true }), true);
+  assert.equal(calls.spoken.at(-1), "Here is the Kenya map.");
+  assert.equal(api.kyroHandleSpokenOpen("Open the map", { typed: true }), true);
+  assert.equal(calls.spoken.at(-1), "Here is the map. You can zoom and drag it.");
+  assert.equal(api.kyroHandleSpokenOpen("Open the map", {}), false, "said aloud: the map tool opens it");
+  assert.equal(calls.maps.length, 3);
+});
+
+test("if the map will not open the typed sentence is left to the usual route, and the map is wired into the typed hook only", () => {
+  const { api, calls, sandbox } = load(); sandbox.mapFails = true;
+  assert.equal(api.kyroHandleSpokenOpen("Open the map", { typed: true }), false);
+  assert.equal(calls.spoken.length, 0);
+  assert.equal(api.kyroSpokenOpenOwns("Open the map"), false, "the model's own tool call for a map is not stopped");
 });

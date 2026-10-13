@@ -51604,6 +51604,14 @@ const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|nee
 const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|note|list)\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
 // (the answer is a subject, not another request: "find a clinic near me" or "what time is it" said next are requests of their own)
 const KYRO_NOT_A_SUBJECT = /^(?:open|find a|create|make|write|teach|play|remind|what|how|where|when|why|who|call|text|send|go|close|stop|help|hello|hi|hey|thanks|take|look|read|export|save|add|post|i need|i have|my)(?![a-z])/i;
+// "Open the map", "open US maps", "show me a map of Kenya", typed: the page opens the map (the typed route used to answer "I can't open live maps in this reply"). Only the whole sentence counts;
+// anything about a route, directions or somewhere nearby is left to the route and places tools.
+const KYRO_OPEN_MAP = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:the|a|my|an)\\s+)?(?:(?:full|big|world|street|live|interactive)\\s+)?(?:[a-z.]+\\s+){0,2}?maps?(?:\\s+(?:of|for|in)\\s+(?:the\\s+)?[a-z.' -]{2,40})?[.?!]*$`, "i");
+const KYRO_OPEN_MAP_NOT = /\b(?:route|routes|directions?|from|near|nearby|nearest|closest|clinics?|pharmacy|pharmacies|hospitals?|my location|traffic|distance|gps|navigate|navigation)\b/i;
+function kyroOpenMapRequest(text) {
+  const said = String(text || "").trim();
+  return KYRO_OPEN_MAP.test(said) && !KYRO_OPEN_MAP_NOT.test(said);
+}
 let kyroPendingMedia = null; // { kind: "images" | "videos", at } while Kyro has asked what to look for
 function kyroSpokenOpenOwns(text) {
   const said = String(text || "").trim();
@@ -51652,6 +51660,18 @@ function kyroHandleSpokenOpen(text, options = {}) {
   if (!options.typed && KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  // typed: the map opens on the page (said aloud, the map tool does it)
+  if (options.typed && kyroOpenMapRequest(said)) {
+    const country = africanMapCountryTarget(said) || kyroWorldMapTarget(said);
+    let opened = false;
+    try { opened = dispatchGenesisWorkspaceAction({ type: "genesis.workspace.open", workspace: "map", requestId: `typed-map-${Date.now().toString(36)}`, payload: { query: said, country: "" } }, {}, { suppressAcknowledgement: true }) === true; } catch { opened = false; }
+    if (!opened) return false;
+    const line = country
+      ? (lang === "sw" ? `Hii ni ramani ya ${country.name}.` : `Here is the ${country.name} map.`)
+      : (lang === "sw" ? "Hii ni ramani. Unaweza kuikuza na kuisogeza." : "Here is the map. You can zoom and drag it.");
+    try { setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the map is on the screen */ }
     return true;
   }
   return false;
