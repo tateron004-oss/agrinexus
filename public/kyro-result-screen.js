@@ -81,6 +81,11 @@
     return items.map(part => clean(part).replace(/[.]+$/, "")).filter(Boolean);
   }
 
+  // The things in a list are names and short phrases; a "piece" that is a whole clause is prose that happens to use semicolons.
+  function shortItems(items) {
+    return items.every(item => item.length <= 110);
+  }
+
   function sentences(text) {
     return clean(text).split(/(?<=[.!?])\s+(?=[A-Z"'(])/).map(part => part.trim()).filter(Boolean);
   }
@@ -106,7 +111,7 @@
     const list = /^([^:]{3,120}):\s+(.+;.+)$/.exec(response);
     if (list) {
       const items = splitItems(list[2]);
-      if (items.length >= 2) return { kind: "list", title: clean(list[1]), headline: "", items: items.slice(0, 12).map(name => ({ name, detail: "", extra: "" })), notes: [], awaiting };
+      if (items.length >= 2 && shortItems(items)) return { kind: "list", title: clean(list[1]), headline: "", items: items.slice(0, 12).map(name => ({ name, detail: "", extra: "" })), notes: [], awaiting };
     }
     const parts = sentences(response);
     // A practice lesson: the lesson itself is the screen ("The letter A. A is for apple. Which letter does ... start with?"), the instructions for it are the small print.
@@ -115,13 +120,15 @@
       return { kind: "text", title: lang === "sw" ? "Somo fupi" : "Practice lesson", headline: parts.slice(hintAt + 1).join(" "), items: [], notes: [parts[hintAt]], awaiting };
     }
     // "...no checkout. Maize seed lot in A; Compost in B; Tools in C.": the sentence that is a list of things becomes the list
-    const listAt = parts.findIndex(part => splitItems(part).length >= 3);
+    // (not the "Sources: a; b; c" line of a guide, and not a sentence whose pieces are whole clauses: those are prose with semicolons, not a list of things)
+    const listAt = parts.findIndex(part => !/^Sources?:/i.test(part) && splitItems(part).length >= 3 && shortItems(splitItems(part)));
     if (listAt >= 0) {
       const items = splitItems(parts[listAt]);
       const rest = parts.filter((part, i) => i !== listAt);
-      return { kind: "list", title: rest[0] || "", headline: "", items: items.slice(0, 12).map(name => ({ name, detail: "", extra: "" })), notes: rest.slice(1, 4), awaiting };
+      return { kind: "list", title: rest[0] || "", headline: "", items: items.slice(0, 12).map(name => ({ name, detail: "", extra: "" })), notes: rest.slice(1, 30), awaiting };
     }
-    return { kind: "text", title: "", headline: parts[0] || response, items: [], notes: parts.slice(1, 7), awaiting };
+    // (a long answer is shown whole: the screen scrolls, and a guide's last sentence can be the one that matters, such as a help line)
+    return { kind: "text", title: "", headline: parts[0] || response, items: [], notes: parts.slice(1, 30), awaiting };
   }
 
   const STYLE_ID = "kyro-result-screen-style";

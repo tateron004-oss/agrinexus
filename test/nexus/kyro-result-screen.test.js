@@ -266,3 +266,26 @@ test("an answer clears ten seconds after Kyro has finished speaking and nobody h
   assert.equal(Dismiss.shouldAutoReturn({ ...base, resultShowing: false, lastActivityAt: now - 31000 }, now).go, true);
   for (const blocker of [{ assistantSpeaking: true }, { userSpeaking: true }, { pendingConfirmation: true }, { focusInField: true }, { intakeActive: true }]) assert.equal(Dismiss.shouldAutoReturn({ ...base, ...blocker, lastActivityAt: now - 60000 }, now).go, false, JSON.stringify(blocker));
 });
+
+// Found on live: a long guide answer ("The CDC says: at ages 21 to 29, a Pap test; at 30 to 65, ...") was drawn as a list of fragments with most of its sentences hidden (a colon plus semicolons, the "Sources: a; b; c" line,
+// and only 6 notes). A long answer is shown whole, as prose; a real list of short things is still a list.
+test("a long prose answer is shown whole, and clauses with semicolons and a Sources line are not a list", () => {
+  const RS = require("../../public/kyro-result-screen.js");
+  const sentence = n => `Sentence number ${n} says something that takes a fair number of words to say, so that it is clearly a whole clause and not a short name.`;
+  const body = `Screening finds changes early. The CDC says: ${sentence(1)}; ${sentence(2)}; ${sentence(3)}. ${[4, 5, 6, 7, 8, 9, 10, 11].map(sentence).join(" ")} Sources: CDC: cervical cancer screening; CDC: HPV vaccine; USPSTF: cervical cancer screening (checked 13 October 2026). This is general information, not medical advice.`;
+  const model = RS.buildModel({ ok: true, status: "completed", response: body }, { command: "how often should i get a pap smear", lang: "en" });
+  assert.equal(model.kind, "text");
+  assert.equal(model.headline, "Screening finds changes early.");
+  const shown = [model.headline, ...model.notes].join(" ");
+  for (const n of [1, 2, 3, 4, 8, 11]) assert.ok(shown.includes(`Sentence number ${n} `), `sentence ${n} is on the screen`);
+  assert.ok(shown.includes("Sources: CDC: cervical cancer screening;") && shown.endsWith("This is general information, not medical advice."), "the sources and the last sentence are shown");
+});
+
+test("a list of short things is still a list, and its other sentences are not cut off", () => {
+  const RS = require("../../public/kyro-result-screen.js");
+  const colon = RS.buildModel({ ok: true, status: "completed", response: "I found 3 things: maize seed in A; compost in B; tools in C." }, { command: "list", lang: "en" });
+  assert.equal(colon.kind, "list"); assert.deepEqual(colon.items.map(item => item.name), ["maize seed in A", "compost in B", "tools in C"]);
+  const model = RS.buildModel({ ok: true, status: "completed", response: "Nothing was booked. Maize seed lot in A; Compost in B; Tools in C. One. Two. Three. Four. Five. Six. Seven." }, { command: "list", lang: "en" });
+  assert.equal(model.kind, "list"); assert.deepEqual(model.items.map(item => item.name), ["Maize seed lot in A", "Compost in B", "Tools in C"]);
+  assert.equal(model.notes.length, 7, "the other sentences are all there");
+});
