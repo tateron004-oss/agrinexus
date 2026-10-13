@@ -60,7 +60,7 @@ const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../he
 const { createChronicDiseaseIntakeExecutor, verifyChronicDiseaseIntakeOutcome, createChronicDiseaseReadingExecutor,
   verifyChronicDiseaseReadingOutcome, createChronicDiseaseSummaryExecutor, verifyChronicDiseaseSummaryOutcome } = require("../health/chronic-executor.js");
 const { createPharmacyFindExecutor, verifyPharmacyFindOutcome, createClinicFindExecutor, verifyClinicFindOutcome } = require("../health/places-executor.js");
-const { createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, verifyBusinessOutcome } = require("../business/authoritative-executor.js");
+const { createBusinessExecutor, createBusinessWorkspaceCounter, createBusinessReader, createBusinessPreview, verifyBusinessOutcome } = require("../business/authoritative-executor.js");
 const { BusinessRepository } = require("../business/repository.js");
 const { createBriefService } = require("../brief/service.js");
 const { BriefSettingsRepository } = require("../brief/settings.js");
@@ -212,7 +212,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     // How many business/nonprofit workspaces the person has, read the way the business tools read them (same access check); lets the planner say "no workspace yet" before it asks for a yes.
     businessWorkspaces: { count: createBusinessWorkspaceCounter({ repository: businessRecords, access, consents, env }), read: createBusinessReader({ repository: businessRecords, access, consents, env }) } }) : null;
   const agent = planner ? new AgentService({ planner, engine, tasks, conversations, audit, cutover }) : null;
-  const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates }) : null;
+  const behavior = agent ? new BehaviorSpine({ agent, engine, tasks, conversations, workspaceStates, businessPreview: createBusinessPreview({ repository: businessRecords, access, consents, env }) }) : null;
   const ready = providers.register(tools);
   return Object.freeze({ config, adapter, db, brief, repeatReminders, repeatReminderRecords, alerts, weekly, companion, conversations, tasks, executions, tools, consents,
     audit, memory, jobs, access, artifacts, sync, observability, models, outcomes, records, farmRecords, healthRecords, wellnessRecords, businessRecords, documents, workspaceStates, workspaceMigrations, autonomyControl, cutover, devices, deviceTokens, notifications, dataLifecycle, schedules, applications,

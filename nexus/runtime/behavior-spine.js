@@ -14,11 +14,11 @@ const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps,
 const NOT_SENT_CODES = new Set(["communications_provider_unavailable", "communications_send_blocked"]);
 
 class BehaviorSpine {
-  constructor({ agent, engine, tasks, conversations, workspaceStates }) {
+  constructor({ agent, engine, tasks, conversations, workspaceStates, businessPreview }) {
     if (!agent?.command || !engine?.executeTask || !tasks?.get || !workspaceStates?.stage || !workspaceStates?.acknowledge) {
       throw new Error("The authoritative agent, task engine, and task repository are required.");
     }
-    Object.assign(this, { agent, engine, tasks, conversations, workspaceStates });
+    Object.assign(this, { agent, engine, tasks, conversations, workspaceStates, businessPreview: typeof businessPreview === "function" ? businessPreview : null });
   }
 
   async turn({ input, context }) {
@@ -114,12 +114,18 @@ class BehaviorSpine {
 
   // What the person is asked before they say yes. A step that will write their health information says exactly what
   // is stored and that yes is consent; every other confirmation keeps the generic wording.
-  async confirmationPrompt({ task, pendingStepId }) {
+  async confirmationPrompt({ task, pendingStepId, context }) {
     const generic = "I prepared the request and need your confirmation before the next governed action.";
     const step = (task?.steps || []).find(item => item.step_id === pendingStepId);
     const tool = step?.tool_id && this.engine.tools?.get ? await this.engine.tools.get(step.tool_id).catch(() => null) : null;
     return informedConfirmationPrompt({ scope: tool?.consent_scope, step })
-      || (step?.tool_id === "business.manage" ? businessDispatch.confirmationPrompt(step.input?.command) : null) || generic;
+      || (step?.tool_id === "business.manage" ? businessDispatch.confirmationPrompt(step.input?.command) || await this.businessPromptFor(step, context) : null) || generic;
+  }
+
+  // The specific sentence for a business write (who is added, which invoice, what is created), the same one the spoken path gives. Never blocks the prompt: any failure falls back to the generic wording.
+  async businessPromptFor(step, context) {
+    if (!this.businessPreview || !context) return null;
+    try { return await this.businessPreview({ command: step.input?.command, context }); } catch { return null; }
   }
 
   // Saying yes to that prompt is the person's consent to that one write. Bound to this task and scope, and only when the
@@ -185,7 +191,7 @@ class BehaviorSpine {
   async resolveExecution({ command, plan, execution, task, context }) {
     if (execution.state === "awaiting_confirmation") {
       return envelope({ command, plan, task, execution, state: "confirmation_required", completed: false,
-        response: await this.confirmationPrompt({ task, pendingStepId: execution.pendingStepId }),
+        response: await this.confirmationPrompt({ task, pendingStepId: execution.pendingStepId, context }),
         outcome: { verified: false, reason: "confirmation_required", pendingStepId: execution.pendingStepId } });
     }
     if (execution.state === "awaiting_render") {
