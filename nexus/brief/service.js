@@ -8,6 +8,7 @@ const { isDueNow, localClock } = require("./schedule.js");
 const { isFact } = require("../memory/profile-facts.js");
 const { todayDigest, digestLine } = require("../personal/items.js");
 const { farmDigest } = require("../farm/log.js");
+const { briefTextFor } = require("../reminders/private-reminder.js");
 
 // What a person has told Kyro about themselves, by kind (name, location, ...). Never throws: with no memory nothing is known.
 async function factsByKind(memory, { tenantId, userId }) {
@@ -34,7 +35,8 @@ function createBriefService({ notifications, settings = null, memory = null, far
     ]);
     const today = localDay(now(), timeZone);
     const agenda = [digestLine(todayDigest(personalRows, today)), farmDigest(farmRows, today), farmWorkLine(workRows, today), healthWorkLine(healthRows, today)].filter(Boolean).join(" ");
-    const reminders = (rows || []).map(row => ({ text: row?.content?.reminderText || row?.content?.body || "", scheduledAt: row?.scheduled_at }));
+    // (a reminder about something private is "a private reminder" here: the brief is pushed to the lock screen and may be read out loud)
+    const reminders = (rows || []).map(row => ({ text: briefTextFor(row?.content?.reminderText || row?.content?.body || "", row?.content?.language), scheduledAt: row?.scheduled_at }));
     return composeBrief({ name: known.name, forecast, reminders, agenda, now: now(), timeZone });
   };
   // Briefs already handled (sent, or nothing to say) by this process today, so a brief with nothing to say is not recomputed every minute.

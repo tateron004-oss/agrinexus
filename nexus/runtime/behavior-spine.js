@@ -8,6 +8,7 @@ const businessDispatch = require("../business/voice-dispatch.js");
 const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { setReplySw } = require("../reminders/swahili-reminder.js");
 const { isWomensCareSearch, WOMENS_CARE_NOTE } = require("../knowledge/womens-health-topics.js");
+const { isPrivateReminder } = require("../reminders/private-reminder.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
 
 // Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
@@ -247,14 +248,15 @@ function reminderSetResponse(plan, context) {
       const timing = hasOffset ? null : resolveReminderTime(rawText, { timeZone: context?.timeZone, language: "sw" });
       const whenSw = hasOffset ? `baada ya dakika ${offset}, ${describeMoment(new Date(Date.now() + offset * 60000), { timeZone: context?.timeZone, language: "sw" })}`
         : timing.status === "ok" ? timing.readbackSw : String(input.whenSw || "").trim();
-      return whenSw ? setReplySw({ task: String(input.reminder).trim(), whenSw }) : "";
+      return whenSw ? `${setReplySw({ task: String(input.reminder).trim(), whenSw })}${isPrivateReminder(String(input.reminder)) ? " Arifa kwenye simu yako itasema tu kuwa una ukumbusho wa faragha." : ""}` : "";
     }
     // The time it was set for, read back in the person's own zone ("at 8:00 pm today"), so what is said is what was set.
     const when = hasOffset
       ? `in ${offset} minute${offset === 1 ? "" : "s"}, ${describeMoment(new Date(Date.now() + offset * 60000), { timeZone: context?.timeZone })}`
       : (() => { const timing = resolveReminderTime(rawText, { timeZone: context?.timeZone }); return timing.status === "ok" ? timing.readback : ""; })();
     if (!when) return "";
-    return `Okay. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${task} ${when}.`;
+    // (about something private, the notification on the phone says only that she has a private reminder; she is told, so it is no surprise)
+    return `Okay. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${task} ${when}.${isPrivateReminder(task) ? " The notification on your phone will say only that you have a private reminder." : ""}`;
   } catch { return ""; }
 }
 
@@ -356,4 +358,4 @@ function envelope({ command, plan, execution = null, task = null, state, complet
     receipts: execution?.receipts || [], render });
 }
 
-module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse, documentSavedResponse, businessAnswerResponse });
+module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse, documentSavedResponse, businessAnswerResponse, reminderSetResponse });

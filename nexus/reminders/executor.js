@@ -1,6 +1,7 @@
 "use strict";
 
 const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("./time-phrase.js");
+const { reminderContent } = require("./private-reminder.js");
 
 function createReminderScheduleExecutor({ notifications }) {
   if (!notifications?.enqueue) throw new Error("A notification repository is required.");
@@ -29,7 +30,7 @@ function createReminderScheduleExecutor({ notifications }) {
       userId: context.userId,
       taskId,
       channel: "push",
-      content: { title: "Nexus reminder", body: task, reminderText: task, whenLabel: resolvedTime },
+      content: reminderContent(task, { whenLabel: resolvedTime, ...(input?.language === "sw" ? { language: "sw" } : {}) }),
       scheduledAt: new Date(scheduledAt),
       idempotencyKey
     });
