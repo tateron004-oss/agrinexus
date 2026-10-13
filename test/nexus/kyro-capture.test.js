@@ -82,7 +82,7 @@ test("with no camera, a refused permission or an old browser it says so and offe
 test("it is wired: spoken and typed requests open it, the tool-call guard leaves the sentence to it, the picture is uploaded and described by the file-analysis tool, and it never diagnoses", () => {
   assert.match(app, /if \(window\.KyroCapture\?\.isLookRequest\?\.\(trimmed\) && startKyroCapture\(trimmed, \{ source \}\)\) return true;/);
   assert.match(app, /if \(!kyroActiveVoiceIntake && window\.KyroCapture\?\.isLookRequest\?\.\(text\) && startKyroCapture\(text, \{ source: options\.source \|\| "typed" \}\)\) return true;/);
-  assert.match(app, /window\.KyroCapture\?\.isLookRequest\?\.\(command\)\);/);
+  assert.match(app, /window\.KyroCapture\?\.isLookRequest\?\.\(command\) \|\| kyroSpokenOpenOwns\(command\)\);/);
   assert.match(app, /return "Kyro is opening the camera for the person to show it, and will describe it\. Say nothing now\."/);
   const ask = app.slice(app.indexOf("async function kyroAskAboutPicture"), app.indexOf("// ---- Answer-first (the Jarvis way)"));
   assert.match(ask, /kyroFetchWithTimeout\("\/api\/nexus\/upload"/); assert.match(ask, /name: "nexus_file_document_analysis"/); assert.match(ask, /fileId: uploaded\.fileId/);

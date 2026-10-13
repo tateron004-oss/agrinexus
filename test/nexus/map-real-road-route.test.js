@@ -29,7 +29,7 @@ function load() {
     escapeHtml: value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
     safeInvalidateLeafletMap: () => {},
     waitForStableUserMapCanvas: () => Promise.resolve(),
-    africanMapCountryTarget: () => null,
+    africanMapCountryTarget: () => null, kyroWorldMapTarget: () => null,
     openFullScaleUserMap: response => { calls.opened.push(response); return true; },
     openCountryMapFromVoice: () => true,
     genesisRealtimeMapTarget: () => null,

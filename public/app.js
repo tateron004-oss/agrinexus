@@ -42587,6 +42587,11 @@ function realShipmentRouteBounds(route, order) {
 }
 
 function fitMapToRouteOrRegion(targetMap, route, country, order, maxZoom = 5) {
+  // A country the person asked for by name that Kyro keeps no records for ("open US maps") is shown where it is: not fitted to the last shipment route, which put the map somewhere else (Europe).
+  if (country && country.world && Number.isFinite(Number(country.lat)) && Number.isFinite(Number(country.lng))) {
+    targetMap.setView([Number(country.lat), Number(country.lng)], Number(country.zoom) || 4);
+    return;
+  }
   const realBounds = realShipmentRouteBounds(route, order);
   if (realBounds) {
     targetMap.fitBounds(realBounds, { padding: [44, 44], maxZoom: 13 });
@@ -42751,11 +42756,14 @@ function renderUserRealMap() {
     includeCurrentMarker: true
   });
 
-  addOperationalCountryMarkers(userMap, userMapLayers.markers, country);
-  addNearbyFacilityMarkers(userMapLayers.facilities, country, "Support point");
-  addKenyaMedicalTransportLayer(userMap, userMapLayers.facilities, country);
+  // (a country Kyro keeps no records for gets the plain map: no pins for places it knows nothing about)
+  if (!country.world) {
+    addOperationalCountryMarkers(userMap, userMapLayers.markers, country);
+    addNearbyFacilityMarkers(userMapLayers.facilities, country, "Support point");
+    addKenyaMedicalTransportLayer(userMap, userMapLayers.facilities, country);
+  }
   fitMapToRouteOrRegion(userMap, route, country, latestOrder, 5);
-  if (realShipmentRouteBounds(route, latestOrder)) {
+  if (!country.world && realShipmentRouteBounds(route, latestOrder)) {
     $("#userMapCanvas")?.closest("details.user-module-more")?.setAttribute("open", "true");
   }
   setTimeout(() => safeInvalidateLeafletMap(userMap), 120);
@@ -51247,7 +51255,7 @@ function startKyroVoiceIntake(definition, options = {}) {
 
 function kyroVoiceIntakeOwnsTurn(command) {
   if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.phase !== "paused") return true;
-  return Boolean(window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command));
+  return Boolean(window.KyroIntakeForms?.isResumeBuildRequest?.(command) || window.KyroIntakeForms?.isSaleRequest?.(command) || window.KyroIntakeForms?.isTelehealthRequest?.(command) || window.KyroCapture?.isLookRequest?.(command) || kyroSpokenOpenOwns(command));
 }
 
 // Returns true when the transcript was consumed by a Kyro voice intake (caller must skip its own
@@ -51268,6 +51276,8 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       startKyroResumeIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
       return true;
     }
+    // "Open documents", "open images", "create a business plan": answered on the page
+    if (kyroHandleSpokenOpen(trimmed, {})) return true;
     // "Look at this", "what is wrong with this plant", "read this letter": the camera opens, the picture is taken and described
     if (window.KyroCapture?.isLookRequest?.(trimmed) && startKyroCapture(trimmed, { source })) return true;
     // "I want to sell 50 bags of maize": Kyro asks only for what is missing and posts it to the board after a yes
@@ -51456,6 +51466,7 @@ function kyroIntakeBusyLine(command) {
   const id = kyroActiveVoiceIntake?.definition?.id;
   const forms = window.KyroIntakeForms;
   if (!kyroActiveVoiceIntake && window.KyroCapture?.isLookRequest?.(command)) return "Kyro is opening the camera for the person to show it, and will describe it. Say nothing now.";
+  if (!kyroActiveVoiceIntake && kyroSpokenOpenOwns(command)) return "Kyro is showing that on the screen by itself (it lists the documents, asks what to look for, or makes the document). Say nothing now.";
   if (id === "sale" || (!kyroActiveVoiceIntake && forms?.isSaleRequest?.(command))) return "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.";
   if (id === "telehealth" || (!kyroActiveVoiceIntake && forms?.isTelehealthRequest?.(command))) return "Kyro is already asking the person a few short questions for a telehealth request, one at a time. Say nothing now.";
   return "Kyro is already asking the person their résumé questions one at a time. Say nothing now.";
@@ -51518,6 +51529,122 @@ async function kyroAskAboutPicture(blob, command, filename) {
     say(lang === "sw" ? "Siwezi kufikia seva sasa." : "I can't reach the server right now.");
     return false;
   }
+}
+
+// ---- Maps beyond Africa: "open US maps", "open a map of India" ----
+// The map only knew the African countries; any other place fell back to the default view (a person asking for the US was shown Europe). A short list of the countries people ask for, with where to centre and how far to zoom.
+const KYRO_WORLD_MAP_COUNTRIES = [
+  { id: "united-states", name: "United States", lat: 39.8, lng: -98.6, zoom: 4, aliases: ["united states of america", "united states", "usa", "u s a", "america", "the states"] },
+  { id: "canada", name: "Canada", lat: 56.1, lng: -106.3, zoom: 3, aliases: ["canada"] },
+  { id: "mexico", name: "Mexico", lat: 23.6, lng: -102.6, zoom: 5, aliases: ["mexico"] },
+  { id: "brazil", name: "Brazil", lat: -14.2, lng: -51.9, zoom: 4, aliases: ["brazil"] },
+  { id: "argentina", name: "Argentina", lat: -38.4, lng: -63.6, zoom: 4, aliases: ["argentina"] },
+  { id: "colombia", name: "Colombia", lat: 4.6, lng: -74.1, zoom: 5, aliases: ["colombia"] },
+  { id: "peru", name: "Peru", lat: -9.2, lng: -75.0, zoom: 5, aliases: ["peru"] },
+  { id: "chile", name: "Chile", lat: -35.7, lng: -71.5, zoom: 4, aliases: ["chile"] },
+  { id: "united-kingdom", name: "United Kingdom", lat: 54.0, lng: -2.0, zoom: 5, aliases: ["united kingdom", "uk", "u k", "great britain", "britain", "england"] },
+  { id: "ireland", name: "Ireland", lat: 53.4, lng: -8.0, zoom: 6, aliases: ["ireland"] },
+  { id: "france", name: "France", lat: 46.2, lng: 2.2, zoom: 5, aliases: ["france"] },
+  { id: "germany", name: "Germany", lat: 51.2, lng: 10.4, zoom: 5, aliases: ["germany"] },
+  { id: "spain", name: "Spain", lat: 40.5, lng: -3.7, zoom: 5, aliases: ["spain"] },
+  { id: "italy", name: "Italy", lat: 41.9, lng: 12.6, zoom: 5, aliases: ["italy"] },
+  { id: "portugal", name: "Portugal", lat: 39.4, lng: -8.2, zoom: 6, aliases: ["portugal"] },
+  { id: "netherlands", name: "Netherlands", lat: 52.1, lng: 5.3, zoom: 7, aliases: ["netherlands", "holland"] },
+  { id: "poland", name: "Poland", lat: 51.9, lng: 19.1, zoom: 5, aliases: ["poland"] },
+  { id: "ukraine", name: "Ukraine", lat: 48.4, lng: 31.2, zoom: 5, aliases: ["ukraine"] },
+  { id: "turkey", name: "Turkey", lat: 38.9, lng: 35.2, zoom: 5, aliases: ["turkey"] },
+  { id: "russia", name: "Russia", lat: 61.5, lng: 105.3, zoom: 3, aliases: ["russia"] },
+  { id: "saudi-arabia", name: "Saudi Arabia", lat: 23.9, lng: 45.1, zoom: 5, aliases: ["saudi arabia"] },
+  { id: "uae", name: "United Arab Emirates", lat: 23.4, lng: 53.8, zoom: 6, aliases: ["united arab emirates", "uae", "u a e", "dubai"] },
+  { id: "india", name: "India", lat: 20.6, lng: 78.9, zoom: 4, aliases: ["india"] },
+  { id: "pakistan", name: "Pakistan", lat: 30.4, lng: 69.3, zoom: 5, aliases: ["pakistan"] },
+  { id: "bangladesh", name: "Bangladesh", lat: 23.7, lng: 90.4, zoom: 6, aliases: ["bangladesh"] },
+  { id: "sri-lanka", name: "Sri Lanka", lat: 7.9, lng: 80.8, zoom: 7, aliases: ["sri lanka"] },
+  { id: "nepal", name: "Nepal", lat: 28.4, lng: 84.1, zoom: 6, aliases: ["nepal"] },
+  { id: "china", name: "China", lat: 35.9, lng: 104.2, zoom: 4, aliases: ["china"] },
+  { id: "japan", name: "Japan", lat: 36.2, lng: 138.3, zoom: 5, aliases: ["japan"] },
+  { id: "south-korea", name: "South Korea", lat: 35.9, lng: 127.8, zoom: 6, aliases: ["south korea", "korea"] },
+  { id: "philippines", name: "Philippines", lat: 12.9, lng: 121.8, zoom: 5, aliases: ["philippines"] },
+  { id: "indonesia", name: "Indonesia", lat: -0.8, lng: 113.9, zoom: 4, aliases: ["indonesia"] },
+  { id: "vietnam", name: "Vietnam", lat: 14.1, lng: 108.3, zoom: 5, aliases: ["vietnam"] },
+  { id: "thailand", name: "Thailand", lat: 15.9, lng: 101.0, zoom: 5, aliases: ["thailand"] },
+  { id: "malaysia", name: "Malaysia", lat: 4.2, lng: 102.0, zoom: 6, aliases: ["malaysia"] },
+  { id: "australia", name: "Australia", lat: -25.3, lng: 133.8, zoom: 4, aliases: ["australia"] },
+  { id: "new-zealand", name: "New Zealand", lat: -40.9, lng: 174.9, zoom: 5, aliases: ["new zealand"] }
+];
+// The country a spoken sentence names (not Africa: africanMapCountryTarget has those). "us" is a country only in "us map(s)", "map of the us" and "in the us": otherwise it is the word "us" ("show us the map").
+function kyroWorldMapTarget(command = "") {
+  const text = String(command || "").toLowerCase().replace(/[.,!?']/g, " ").replace(/\s+/g, " ").trim();
+  if (!text) return null;
+  const usOnly = /(?:^| )(?:the )?(?:us|u s) maps?(?: |$)|(?:^| )maps? (?:of|for) (?:the )?(?:us|u s)(?: |$)|(?: )in the (?:us|u s)(?: |$)/.test(text);
+  const found = KYRO_WORLD_MAP_COUNTRIES.find(country => country.aliases.some(alias => new RegExp(`(^|\\s)${alias.replace(/ /g, "\\s")}(\\s|$)`).test(text)));
+  if (found) return { ...found, world: true };
+  return usOnly ? { ...KYRO_WORLD_MAP_COUNTRIES[0], world: true } : null;
+}
+
+// ---- "open documents", "open images", "open videos", "create a business plan", said or typed ----
+// Said out loud these have no subject, or are a document to make: the voice tool used to answer them with a canned sentence about an "AI copilot" and "DRC", or "I can only save a document from the keyboard".
+// Now: "open documents" lists the saved ones; "open images / videos" asks what to look for and the next short answer is the subject; "create a business plan" is made by the same route as typing it (Download button
+// and all), because that route is where documents are made.
+const KYRO_OPEN_VERB = "(?:open|show|go to|pull up|bring up|start|launch|see|let me see|show me)";
+const KYRO_OPEN_LEAD = "^(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?(?:(?:can|could|would|will) you\\s+)?";
+const KYRO_OPEN_DOCS = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|all|some)\\s+)?(?:saved\\s+)?(?:documents?|docs?|files?|papers|business plans?|letters|reports)[.?!]*$`, "i");
+const KYRO_OPEN_MEDIA = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|some|any)\\s+)?(images?|pictures?|photos?|videos?|clips?)[.?!]*$`, "i");
+const KYRO_DOCUMENT_REQUEST = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i )?(?:want|need|would like|'d like) (?:you )?to\\s+)?(?:create|make|write|draft|prepare|generate|build|put together)\\s+(?:me\\s+)?(?:a|an|my|the|some)?\\s*(?:[a-z'-]+\\s+){0,3}?(?:document|letter|report|proposal|contract|agreement|roadmap|invoice|business plan|marketing plan|farm plan|financial plan|funding plan|action plan)\\b`, "i");
+const KYRO_DOCUMENT_NOT = /\b(?:resume|résumé|cv|checklist|to-?do|reminder|note|list)\b|\bas a pdf\b|^(?:how|what|why|should i|can i)\b/i;
+// (the answer is a subject, not another request: "find a clinic near me" or "what time is it" said next are requests of their own)
+const KYRO_NOT_A_SUBJECT = /^(?:open|find a|create|make|write|teach|play|remind|what|how|where|when|why|who|call|text|send|go|close|stop|help|hello|hi|hey|thanks|take|look|read|export|save|add|post|i need|i have|my)(?![a-z])/i;
+let kyroPendingMedia = null; // { kind: "images" | "videos", at } while Kyro has asked what to look for
+function kyroSpokenOpenOwns(text) {
+  const said = String(text || "").trim();
+  if (!said) return false;
+  return KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+}
+// The model may already have started to answer what was just said: it is cut off before the page answers.
+function kyroTakeOverTurn() {
+  try { if (realtimeVoiceActive()) realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
+}
+// True when the page answered the sentence itself. options.typed: it was typed, so a document request already goes the typed way and is left to the usual route.
+function kyroHandleSpokenOpen(text, options = {}) {
+  const said = String(text || "").trim();
+  if (!said) return false;
+  const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+  // the short answer to "what would you like to see?"
+  if (kyroPendingMedia) {
+    const pending = kyroPendingMedia; kyroPendingMedia = null;
+    const stillAsking = Date.now() - pending.at < 90000;
+    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && !KYRO_NOT_A_SUBJECT.test(said) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
+      const subject = said.replace(/^(?:show me|find|i want to see|i'd like to see|i would like to see|let me see|some|of|about|pictures of|videos about|images of)\s+/gi, "").replace(/[.?!]+$/, "").trim();
+      if (subject) {
+        kyroTakeOverTurn();
+        void handleNexusUnifiedBrainRuntimeCommand(pending.kind === "videos" ? `Show me videos about ${subject}` : `Show me pictures of ${subject}`, { source: "typed", kyroDirect: true });
+        return true;
+      }
+    }
+  }
+  if (KYRO_OPEN_DOCS.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand("Show my saved documents", { source: "typed", kyroDirect: true });
+    return true;
+  }
+  const media = KYRO_OPEN_MEDIA.exec(said);
+  if (media) {
+    kyroTakeOverTurn();
+    const kind = /^(?:video|clip)/i.test(media[1]) ? "videos" : "images";
+    kyroPendingMedia = { kind, at: Date.now() };
+    const ask = kind === "videos"
+      ? (lang === "sw" ? "Ungependa kutazama video za nini? Kwa mfano: nionyeshe video kuhusu umwagiliaji wa matone." : "What would you like to watch? For example: show me videos about drip irrigation.")
+      : (lang === "sw" ? "Ungependa kuona picha za nini? Kwa mfano: nionyeshe picha za mmea wa mahindi." : "What would you like to see pictures of? For example: show me pictures of a maize plant.");
+    kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask });
+    try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
+    return true;
+  }
+  if (!options.typed && KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  return false;
 }
 
 // ---- Answer-first (the Jarvis way): the ANSWER is the screen ----
@@ -54543,11 +54670,14 @@ function openCountryMapFromVoice(country, response = "", options = {}) {
   const opened = openFullScaleUserMap(spoken, { ...options, keepCountryOverride: true });
   setTimeout(() => {
     if (!userMap || !voiceMapCountryOverride) return;
-    userMap.setView([Number(voiceMapCountryOverride.lat), Number(voiceMapCountryOverride.lng)], 6);
+    userMap.setView([Number(voiceMapCountryOverride.lat), Number(voiceMapCountryOverride.lng)], Number(voiceMapCountryOverride.zoom) || 6);
     userMapLayers.markers?.clearLayers?.();
     userMapLayers.facilities?.clearLayers?.();
-    addOperationalCountryMarkers(userMap, userMapLayers.markers, voiceMapCountryOverride);
-    addNearbyFacilityMarkers(userMapLayers.facilities, voiceMapCountryOverride, "Support point");
+    // (a country beyond the ones Kyro keeps records for gets the plain map: no pins for places it knows nothing about)
+    if (!voiceMapCountryOverride.world) {
+      addOperationalCountryMarkers(userMap, userMapLayers.markers, voiceMapCountryOverride);
+      addNearbyFacilityMarkers(userMapLayers.facilities, voiceMapCountryOverride, "Support point");
+    }
     safeInvalidateLeafletMap(userMap);
   }, 220);
   return opened;
@@ -55721,7 +55851,7 @@ function genesisRoadRoute(payload = {}) {
 }
 
 function openGenesisRealtimeMapWorkspace(payload = {}, command = "") {
-  const country = africanMapCountryTarget(payload.country || command);
+  const country = africanMapCountryTarget(payload.country || command) || kyroWorldMapTarget(`${payload.country || ""} ${command}`);
   const hasRouteEndpoints = Boolean(String(payload.origin || "").trim() && String(payload.destination || "").trim());
   const road = hasRouteEndpoints ? genesisRoadRoute(payload) : null;
   const target = hasRouteEndpoints ? null : genesisRealtimeMapTarget(payload);
@@ -58764,6 +58894,8 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   // "Teach me letters", "start the AI basics course", "give me a practice interview": the route that really teaches them, answered on the screen (the typed route would hand them to the AI model)
   const typedTool = kyroTypedToolFor(text);
   if (typedTool && await kyroRunToolAnswer(text, "typed-answer", typedTool)) return true;
+  // "Open documents", "open images" (and the answer to what to look for), typed
+  if (!options.kyroDirect && !kyroActiveVoiceIntake && kyroHandleSpokenOpen(text, { typed: true })) return true;
   // "Look at this", typed: the camera opens too
   if (!kyroActiveVoiceIntake && window.KyroCapture?.isLookRequest?.(text) && startKyroCapture(text, { source: options.source || "typed" })) return true;
   // "I want to sell 50 bags of maize", typed: the same short interview as by voice
