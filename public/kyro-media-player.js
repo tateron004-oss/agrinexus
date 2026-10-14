@@ -369,7 +369,8 @@
 
       if (!query && kind === "music") {
         const last = lastChoice();
-        if (last && options.useLast !== false) { query = last.query; kind = last.kind || "music"; remembered = true; }
+        // (the last choice is the last song or station; a video watched last is not what "play some music" asks for)
+        if (last && options.useLast !== false && (last.kind || "music") !== "video") { query = last.query; kind = last.kind || "music"; remembered = true; }
         else kind = "radio";
       }
       lastRequest = { query, kind, lang };

@@ -149,7 +149,7 @@ test("it is wired: voice answers draw the screen and open no form; the form from
 });
 
 function typedApi(shown) {
-  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroReminderListLine(", "function kyroRenderedAnswerLine(", "function nexusGalleryMessage(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
+  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroReminderListLine(", "function kyroRenderedAnswerLine(", "function nexusGalleryMessage(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroAddConfirmButtons(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
   return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply, kyroEmptyRenderAnswer, kyroPlainRenderMessage };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
@@ -344,4 +344,33 @@ test("typed: a question Kyro needs answered is on the screen and stays up; a yes
   assert.equal(shown.at(-1).result.response, "Which town, county, or region in Kenya should I use?"); assert.equal(shown.at(-1).result.requiresConfirmation, true, "it stays up until it is answered");
   assert.equal(api.kyroShowTypedResult(question, "x", "Which?"), false, "too short to be a question");
   assert.equal(api.kyroShowTypedResult({ state: "confirmation_required", application: "business" }, "Add a client named Amina", "I can add Amina Otieno as a client. Should I go ahead?"), false, "a yes or a no waits in the window");
+});
+
+// Found on the live site: after "add a client named ..." the question "Should I go ahead?" was only spoken; nothing on the screen, and nothing to tap for a person who cannot type.
+test("typed: a question waiting for a yes or a no is on the screen with a Yes and a No to tap", () => {
+  const shown = []; const api = typedApi(shown);
+  const waiting = { state: "confirmation_required", taskId: "tsk_1", application: "business", outcome: { pendingStepId: "step_1" } };
+  assert.equal(api.kyroShowTypedResult(waiting, "Add a client named Amina Otieno", 'I can add Amina Otieno as a client to "Kyro Test Workspace". Should I go ahead?'), true);
+  assert.equal(shown.at(-1).result.requiresConfirmation, true, "it stays up until it is answered");
+  assert.equal(api.kyroShowTypedResult({ ...waiting, outcome: {} }, "x", "I can add Amina Otieno as a client. Should I go ahead?"), false, "nothing is pending to answer");
+  assert.equal(api.kyroShowTypedResult({ ...waiting, taskId: "" }, "x", "I can add Amina Otieno as a client. Should I go ahead?"), false);
+});
+
+test("the Yes and No buttons answer the pending confirmation the way saying it does, and put the screen away", () => {
+  const vm = require("node:vm");
+  const start = app.indexOf("function kyroAddConfirmButtons()"); const end = app.indexOf("\n}\n", start) + 3;
+  assert.ok(start > 0 && end > start);
+  const removed = []; const submitted = []; const buttons = [];
+  const element = () => { const node = { style: {}, attrs: {}, children: [], listeners: {}, setAttribute(k, v) { this.attrs[k] = v; }, append(...kids) { this.children.push(...kids); }, addEventListener(type, fn) { this.listeners[type] = fn; } }; return node; };
+  const screen = element();
+  const sandbox = { document: { querySelector: () => screen, createElement: () => { const node = element(); buttons.push(node); return node; }, querySelectorAll: () => ({ forEach: fn => { removed.push("screen"); } }) },
+    languageCode: () => "en", submitNexusPendingBehaviorConfirmation: (approved, text, options) => submitted.push([approved, text, options]) };
+  vm.createContext(sandbox);
+  vm.runInContext(`${app.slice(start, end)}\nthis.add = kyroAddConfirmButtons;`, sandbox);
+  sandbox.add();
+  const yes = buttons.find(node => node.attrs["data-kyro-confirm"] === "yes"); const no = buttons.find(node => node.attrs["data-kyro-confirm"] === "no");
+  assert.equal(yes.textContent, "Yes"); assert.equal(no.textContent, "No");
+  yes.listeners.click(); no.listeners.click();
+  assert.equal(JSON.stringify(submitted), JSON.stringify([[true, "yes", { source: "typed" }], [false, "no", { source: "typed" }]]));
+  assert.equal(removed.length, 2, "the screen is put away on each tap");
 });
