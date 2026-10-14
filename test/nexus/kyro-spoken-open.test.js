@@ -197,11 +197,19 @@ test("every application opens something: a card for those that have one, the rea
     assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text); assert.equal(calls.typed.at(-1).text, command, text); assert.deepEqual({ ...calls.typed.at(-1).options }, { source: "typed", kyroDirect: true });
   }
   // Weather needs a town and a shipment needs its two ends: the screen asks, and the short answer is taken (found sweeping: both opened nothing).
-  for (const [text, kind, answer, command] of [["Open the weather", "weather", "Kisumu", "What is the weather in Kisumu"], ["open the forecast", "weather", "in Lagos", "What is the weather in Lagos"], ["Open the weather", "weather", "what is the weather in Nakuru", "what is the weather in Nakuru"],
-    ["Open logistics", "shipment", "from Kisumu to Nairobi", "Where is my shipment from Kisumu to Nairobi"], ["show my shipments", "shipment", "Kisumu to Nairobi", "Where is my shipment from Kisumu to Nairobi"]]) {
+  for (const [text, kind, answer, command] of [["Open the weather", "weather", "Kisumu", "What is the weather in Kisumu"], ["open the forecast", "weather", "in Lagos", "What is the weather in Lagos"],     ["Open logistics", "shipment", "from Kisumu to Nairobi", "Where is my shipment from Kisumu to Nairobi"], ["show my shipments", "shipment", "Kisumu to Nairobi", "Where is my shipment from Kisumu to Nairobi"]]) {
     const { api, calls } = load();
     assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text); assert.equal(api.pending().kind, kind, text); assert.match(calls.screens.at(-1), /\?|For example/, text);
     assert.equal(api.kyroHandleSpokenOpen(answer, {}), true, answer); assert.equal(calls.typed.at(-1).text, command, answer); assert.equal(api.pending(), null);
+  }
+  // Found testing as the Standard User: after "Open logistics" asked its question, "Show me pictures of a hot air balloon" became "Where is my shipment from Show me pictures...". A request of its own is never the answer.
+  for (const [open, kind, unrelated] of [["Open logistics", "shipment", "Show me pictures of a hot air balloon"], ["Open logistics", "shipment", "Open documents please"], ["Open logistics", "shipment", "Kisumu"], ["Open the weather", "weather", "Show me videos about basketball"], ["Open the weather", "weather", "what is the weather in Nakuru"], ["Open the weather", "weather", "Play some music"]]) {
+    const { api, calls } = load();
+    assert.equal(api.kyroHandleSpokenOpen(open, {}), true); assert.equal(api.pending().kind, kind);
+    const before = calls.typed.length;
+    api.kyroHandleSpokenOpen(unrelated, {});
+    assert.ok(!calls.typed.slice(before).some(call => /Where is my shipment|What is the weather in/.test(call.text)), unrelated + " is not swallowed as the answer");
+    assert.equal(api.pending(), null, unrelated + ": no longer waiting");
   }
   const { api, calls } = load();
   assert.equal(api.kyroHandleSpokenOpen("Open live knowledge", {}), true);

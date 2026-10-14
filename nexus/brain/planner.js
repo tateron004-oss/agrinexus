@@ -682,6 +682,8 @@ class OpenEndedPlanner {
     if (documentsListed) return Object.freeze({ ...documentsListed, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
+    const listUpdate = listUpdatePlan(command.text, catalog);
+    if (listUpdate) return Object.freeze({ ...listUpdate, planningAttempts: 1 });
     const completeLists = completeListsPlan(command.text, catalog);
     if (completeLists) return Object.freeze({ ...completeLists, planningAttempts: 1 });
     const completeCommunication = completeCommunicationPlan(command.text, catalog);
@@ -1525,6 +1527,31 @@ function completeDocumentPlan(text, catalog) {
 // meaning voice and typed weren't guaranteed to plan identically for this
 // domain. A deterministic matcher makes lists channel-blind by construction,
 // the same way documents/maps/images already are.
+// What the checklist screen's own buttons say (the id is the list's own, so the right list is changed whatever the titles are): "Add to checklist rec_a1b2c3: milk", "Mark item 2 done on checklist rec_a1b2c3",
+// "Remove item 2 from checklist rec_a1b2c3". Items are counted from 1, as the screen shows them.
+const LIST_ID = "(rec_[a-z0-9_-]{4,60})";
+const LIST_ADD_ITEM = new RegExp(`^\\s*add to checklist ${LIST_ID}\\s*:\\s*(.+?)\\s*$`, "i");
+const LIST_TOGGLE_ITEM = new RegExp(`^\\s*mark item (\\d{1,3}) (?:done|not done|done or not done) on checklist ${LIST_ID}\\s*$`, "i");
+const LIST_REMOVE_ITEM = new RegExp(`^\\s*remove item (\\d{1,3}) from checklist ${LIST_ID}\\s*$`, "i");
+function listUpdatePlan(text, catalog) {
+  const goal = String(text || "").trim();
+  if (!goal || !catalog?.tools?.some(tool => tool.toolId === "lists.update") || !catalog.applications?.some(app => app.applicationId === "lists")) return null;
+  let input = null; let title = "";
+  let match = LIST_ADD_ITEM.exec(goal);
+  if (match) {
+    const items = match[2].split(/\s*[,;]\s*|\s+and\s+/i).map(item => item.trim()).filter(Boolean).slice(0, 20);
+    if (!items.length) return null;
+    input = { listId: match[1], addItems: items }; title = "Add to a checklist";
+  } else if ((match = LIST_TOGGLE_ITEM.exec(goal))) {
+    input = { listId: match[2], toggleIndexes: [Number(match[1]) - 1] }; title = "Tick or untick a checklist item";
+  } else if ((match = LIST_REMOVE_ITEM.exec(goal))) {
+    input = { listId: match[2], removeIndexes: [Number(match[1]) - 1] }; title = "Take an item off a checklist";
+  }
+  if (!input) return null;
+  return { goal, application: "lists", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "update-list", title, toolId: "lists.update", input, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeListsPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(list|checklist)\b/i.test(goal)) return null;
@@ -1926,4 +1953,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, translationRequest, exportLatestDocumentFormat, exportLatestDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
-  completeRemainingWorkspacePlan, withJobsPlace, documentsListPlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
+  completeRemainingWorkspacePlan, withJobsPlace, documentsListPlan, listUpdatePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });

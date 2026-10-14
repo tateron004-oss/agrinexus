@@ -27961,6 +27961,8 @@ function kyroWorkOpen() {
   try {
     // the camera, while the person is showing something to it, is work in progress: nothing clears it by itself
     if (document.querySelector("[data-kyro-capture]")) return true;
+    // a screen with something to write in, or pictures and videos to look at, is kept until the person closes it or asks for something else
+    if (document.querySelector("[data-kyro-keep]")) return true;
     const win = nexusActiveWorkflowState;
     // (an answer drawn over the top of a window has taken its place on the screen, so the window left behind does not hold the answer up)
     if (win?.id && win.functionId !== "live-knowledge" && win.workflow !== "live-knowledge" && !kyroFinishedResultShowing() && !document.querySelector("[data-kyro-result]")) return true;
@@ -51694,9 +51696,12 @@ function kyroSpokenOpenOwns(text) {
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
 // The full-screen map is left alone by a request about places, routes or maps, and closed by any other: it hid the gallery, document and list cards the next request drew behind it.
+// A sentence that begins like a request of its own ("show me pictures of ...", "play ...", "what is ..."), which is never the answer to "which town?" or "from where to where?"
+const KYRO_NEW_REQUEST = /^(?:show|open|find|play|search|watch|what|what's|who|how|where|when|why|tell|make|create|write|build|remind|call|send|add|start|take|route|give|list|go|close|stop|pause|set|save|note)\b/i;
 const KYRO_MAP_RELATED = /\b(?:maps?|route|routes|directions?|navigate|navigation|gps|pharmacy|pharmacies|clinics?|hospitals?|markets?|distance|traffic|road|roads|where\s+(?:is|are)|location|ramani|karibu)\b/i;
 function kyroDismissStaleWorkspace(command = "") {
   try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* the new request carries on */ }
+  try { document.querySelectorAll("[data-kyro-keep]").forEach(node => node.remove()); } catch { /* the new request carries on */ }
   try {
     const said = String(command || "").trim();
     if (said && document.body.classList.contains("user-map-full-open") && !KYRO_MAP_RELATED.test(said)) {
@@ -51730,7 +51735,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (kyroPendingMedia) {
     const pending = kyroPendingMedia; kyroPendingMedia = null;
     const stillAsking = Date.now() - pending.at < 90000;
-    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && (pending.kind === "list" || pending.kind === "lookup" || pending.kind === "weather" || pending.kind === "shipment" || !KYRO_NOT_A_SUBJECT.test(said)) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
+    // (weather and shipment questions take only a place or "from A to B": anything else is a new request, not swallowed as the answer)
+    const answersAsked = pending.kind === "weather" || pending.kind === "shipment"
+      ? !KYRO_NEW_REQUEST.test(said) && (pending.kind !== "shipment" || /\bto\b/i.test(said))
+      : (pending.kind === "list" || pending.kind === "lookup" || !KYRO_NOT_A_SUBJECT.test(said));
+    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && answersAsked && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
       if (pending.kind === "list") {
         const named = /\b(documents?|docs?|files?|reminders?|checklists?|to-?do|notes?)\b/i.exec(said);
         const listKind = named ? kyroListKindOf(named[1]) : "";
@@ -51895,6 +51904,198 @@ function kyroResultScreenEligible(toolName, result) {
   return true;
 }
 // Draws the answer on the screen (replacing any card or earlier answer). True when it did.
+// ---- Lists you can write in, and pictures and videos you can see ----
+// Found by the Standard User test: the lists, notes, reminders and documents were read-only screens ("none of the lists would allow for clicking to write"), and the pictures and videos were drawn into a window that
+// had no size on the screen ("the system says 6 videos but nothing shows"). Writing goes through the same governed commands a spoken request uses; a screen with something to write in is kept (no quiet-spell return).
+const KYRO_READ_COMMANDS = Object.freeze({ notes: "Show my notes", reminders: "Show my reminders", documents: "Show my saved documents", checklists: "Show my checklists" });
+// The list a sentence asks to see: "Show my notes", "open the calendar", "what are my reminders", "show my saved documents", "show my checklists" ("" for anything else, and for a sentence that writes).
+function kyroWritableListKind(text) {
+  const said = String(text || "").trim();
+  if (!said || /^(?:create|make|write|draft|add|note that|remind me|set|save|delete|cancel|erase|remove|mark)\b/i.test(said)) return "";
+  if (!/^(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:please\s+)?(?:show|list|read|open|see|view|what(?:'s| is| are)|do i have)\b/i.test(said)) return "";
+  if (/\bchecklists?\b|\bto-?do(?: list)?s?\b/i.test(said)) return "checklists";
+  if (/\bnotes?\b/i.test(said)) return "notes";
+  if (/\breminders?\b|\bcalendar\b|\bagenda\b/i.test(said)) return "reminders";
+  if (/\b(?:saved\s+)?(?:documents?|docs)\b/i.test(said)) return "documents";
+  return "";
+}
+// One governed turn with no spoken answer and no screen of its own: what a button on a list screen does.
+async function kyroSilentTurn(text) {
+  const result = await requestWithTimeout("/api/nexus/runtime/behavior/turn", {
+    method: "POST",
+    body: { text, channel: "typed", locale: languageCode(), conversationId: nexusAuthoritativeConversationId(), timeZone: kyroDeviceTimeZone() }
+  }, 60000);
+  if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true) throw new Error("Kyro did not understand that.");
+  return result;
+}
+const KYRO_COMPOSER_TEXT = Object.freeze({
+  en: { saving: "Saving...", saved: "Saved.", failed: "That did not save. Please try again.", missing: "Write something first.",
+    noteLabel: "Write a note", noteButton: "Save note", whatLabel: "What should I remind you about?", dayLabel: "Day", timeLabel: "Time", reminderButton: "Set reminder",
+    titleLabel: "Title", bodyLabel: "What it says", documentButton: "Save document", checklistName: "New checklist name", checklistItems: "Items, separated by commas", checklistButton: "Create checklist",
+    addItem: "Add an item", add: "Add", remove: "Remove", checklists: "Your checklists", today: "Today", tomorrow: "Tomorrow", close: "Close" },
+  sw: { saving: "Inahifadhi...", saved: "Imehifadhiwa.", failed: "Haikuhifadhiwa. Tafadhali jaribu tena.", missing: "Andika kitu kwanza.",
+    noteLabel: "Andika kumbuka", noteButton: "Hifadhi kumbuka", whatLabel: "Nikukumbushe nini?", dayLabel: "Siku", timeLabel: "Saa", reminderButton: "Weka ukumbusho",
+    titleLabel: "Kichwa", bodyLabel: "Inasema nini", documentButton: "Hifadhi waraka", checklistName: "Jina la orodha mpya", checklistItems: "Vitu, vitenganishwe kwa koma", checklistButton: "Tengeneza orodha",
+    addItem: "Ongeza kitu", add: "Ongeza", remove: "Ondoa", checklists: "Orodha zako", today: "Leo", tomorrow: "Kesho", close: "Funga" }
+});
+function kyroUiText() {
+  try { return KYRO_COMPOSER_TEXT[languageCode() === "sw" ? "sw" : "en"]; } catch { return KYRO_COMPOSER_TEXT.en; }
+}
+const KYRO_FIELD_STYLE = "width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid #475569;background:#0f172a;color:#f1f5f9;font:inherit;font-size:1.05rem";
+const KYRO_BUTTON_STYLE = "padding:12px 22px;border:0;border-radius:12px;background:#06a77d;color:#fff;font:inherit;font-size:1.05rem;font-weight:600;cursor:pointer";
+function kyroMake(tag, attrs, text) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) node.setAttribute(key, value);
+  if (text) node.textContent = text;
+  return node;
+}
+function kyroTwelveHour(time) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(time || ""));
+  if (!match) return "9:00 am";
+  const hour = Number(match[1]);
+  return (hour % 12 || 12) + ":" + match[2] + (hour >= 12 ? " pm" : " am");
+}
+// A form under a list screen: write a note, set a reminder, save a document, start a checklist.
+function kyroAddComposer(kind) {
+  try {
+    const screen = document.querySelector("[data-kyro-result]");
+    if (!screen || screen.querySelector("[data-kyro-composer]")) return false;
+    const t = kyroUiText();
+    screen.setAttribute("data-kyro-keep", "true");
+    const form = kyroMake("form", { "data-kyro-composer": kind, style: "display:flex;flex-direction:column;gap:10px;width:100%;max-width:34em;position:relative;z-index:1" });
+    const status = kyroMake("p", { "data-kyro-composer-status": "true", role: "status", style: "margin:0;color:#94a3b8;min-height:1.4em" });
+    const field = (tag, name, label, attrs) => { const node = kyroMake(tag, { name, "aria-label": label, placeholder: label, style: KYRO_FIELD_STYLE, ...(attrs || {}) }); form.append(node); return node; };
+    let command = () => "";
+    let submitLabel = "";
+    if (kind === "notes") {
+      const note = field("textarea", "note", t.noteLabel, { rows: "3" });
+      submitLabel = t.noteButton; command = () => (note.value.trim() ? "Note that " + note.value.trim() : "");
+    } else if (kind === "reminders") {
+      const what = field("input", "what", t.whatLabel, { type: "text" });
+      const row = kyroMake("div", { style: "display:flex;gap:10px" });
+      const day = kyroMake("select", { name: "day", "aria-label": t.dayLabel, style: KYRO_FIELD_STYLE });
+      const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const today = new Date().getDay();
+      day.append(kyroMake("option", { value: "today" }, t.today), kyroMake("option", { value: "tomorrow" }, t.tomorrow));
+      for (let ahead = 2; ahead <= 6; ahead += 1) day.append(kyroMake("option", { value: "on " + names[(today + ahead) % 7] }, names[(today + ahead) % 7]));
+      const time = kyroMake("input", { name: "time", type: "time", value: "09:00", "aria-label": t.timeLabel, style: KYRO_FIELD_STYLE });
+      row.append(day, time); form.append(row);
+      submitLabel = t.reminderButton; command = () => (what.value.trim() ? "Remind me to " + what.value.trim() + " " + day.value + " at " + kyroTwelveHour(time.value) : "");
+    } else if (kind === "documents") {
+      const title = field("input", "title", t.titleLabel, { type: "text" });
+      const body = field("textarea", "body", t.bodyLabel, { rows: "4" });
+      submitLabel = t.documentButton; command = () => (title.value.trim() && body.value.trim() ? "Create a document called " + title.value.trim() + " that says " + body.value.trim() : "");
+    } else if (kind === "checklists") {
+      const name = field("input", "name", t.checklistName, { type: "text" });
+      const items = field("input", "items", t.checklistItems, { type: "text" });
+      submitLabel = t.checklistButton; command = () => (name.value.trim() ? "Create a checklist called " + name.value.trim() + (items.value.trim() ? " with items " + items.value.trim() : "") : "");
+    } else return false;
+    const button = kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE + ";align-self:flex-start" }, submitLabel);
+    form.append(button, status);
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const said = command();
+      if (!said) { status.textContent = t.missing; return; }
+      button.disabled = true; status.textContent = t.saving;
+      try { await kyroSilentTurn(said); await kyroRefreshList(kind, t.saved); } catch { status.textContent = t.failed; button.disabled = false; }
+    });
+    screen.append(form);
+    return true;
+  } catch { return false; }
+}
+// The list again, as it is now, with its form and a line saying what was just done.
+async function kyroRefreshList(kind, savedLine) {
+  const result = await kyroSilentTurn(KYRO_READ_COMMANDS[kind]);
+  if (kind === "checklists") { kyroShowChecklistScreen(result?.render?.data?.lists || [], savedLine); return; }
+  const rendered = String(result?.render?.response || "");
+  const line = (kind === "reminders" ? kyroReminderListLine(result?.render?.data) : "") || (rendered && !/^Nexus completed the governed execution/i.test(rendered) ? rendered : "") || String(result?.response || "").trim();
+  if (!line) return;
+  if (kyroShowResultScreen("typed", KYRO_READ_COMMANDS[kind], { ok: true, status: "completed", response: line })) {
+    kyroAddComposer(kind);
+    const status = document.querySelector("[data-kyro-composer-status]");
+    if (status && savedLine) status.textContent = savedLine;
+  }
+}
+// Every checklist with its items to tick and take off, a box to add an item, and a form for a new checklist.
+function kyroShowChecklistScreen(lists, savedLine) {
+  try {
+    const t = kyroUiText();
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "checklists", "data-kyro-keep": "true", role: "dialog", "aria-label": t.checklists,
+      style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:16px;align-items:flex-start" });
+    const close = kyroMake("button", { type: "button", "aria-label": t.close, style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
+    close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "checklists-screen" }); });
+    screen.append(close, kyroMake("h2", { style: "margin:8px 0 0;font-size:1.4rem;color:#94a3b8;letter-spacing:.02em;text-transform:uppercase" }, t.checklists));
+    const status = kyroMake("p", { "data-kyro-composer-status": "true", role: "status", style: "margin:0;color:#94a3b8;min-height:1.4em" }, savedLine || "");
+    screen.append(status);
+    const act = async command => {
+      status.textContent = t.saving;
+      try { await kyroSilentTurn(command); await kyroRefreshList("checklists", t.saved); } catch { status.textContent = t.failed; }
+    };
+    for (const list of Array.isArray(lists) ? lists : []) {
+      if (!list || !list.listId) continue;
+      const card = kyroMake("div", { "data-kyro-checklist": list.listId, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07)" });
+      card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.3rem" }, String(list.title || "Checklist")));
+      const items = Array.isArray(list.items) ? list.items : [];
+      items.forEach((item, index) => {
+        const row = kyroMake("div", { style: "display:flex;gap:8px;align-items:center;margin-bottom:6px" });
+        const tick = kyroMake("button", { type: "button", "aria-pressed": String(Boolean(item && item.done)), style: "flex:1;text-align:left;padding:10px 12px;border:0;border-radius:10px;background:rgba(255,255,255,.08);color:#f1f5f9;font:inherit;font-size:1.05rem;cursor:pointer" },
+          (item && item.done ? "☑ " : "☐ ") + String((item && item.text) || ""));
+        if (item && item.done) tick.style.textDecoration = "line-through";
+        tick.addEventListener("click", () => { void act("Mark item " + (index + 1) + " done on checklist " + list.listId); });
+        const remove = kyroMake("button", { type: "button", "aria-label": t.remove + " " + String((item && item.text) || ""), style: "padding:10px 12px;border:0;border-radius:10px;background:#7f1d1d;color:#fff;cursor:pointer" }, "×");
+        remove.addEventListener("click", () => { void act("Remove item " + (index + 1) + " from checklist " + list.listId); });
+        row.append(tick, remove); card.append(row);
+      });
+      const add = kyroMake("form", { style: "display:flex;gap:8px;margin-top:8px" });
+      const box = kyroMake("input", { type: "text", name: "item", "aria-label": t.addItem, placeholder: t.addItem, style: KYRO_FIELD_STYLE });
+      add.append(box, kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE }, t.add));
+      add.addEventListener("submit", event => { event.preventDefault(); const said = box.value.trim(); if (!said) { status.textContent = t.missing; return; } void act("Add to checklist " + list.listId + ": " + said.replace(/\s+/g, " ")); });
+      card.append(add); screen.append(card);
+    }
+    document.body.append(screen);
+    kyroAddComposer("checklists");
+    try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    return true;
+  } catch { return false; }
+}
+// The pictures or videos a search found, on a screen of their own (the window they used to be drawn into could have no size on the screen).
+function kyroShowGalleryScreen(drawn) {
+  try {
+    const kind = drawn?.presentation?.kind;
+    const data = drawn?.data || {};
+    const items = kind === "image-gallery" ? (Array.isArray(data.images) ? data.images : []) : kind === "video-gallery" ? (Array.isArray(data.videos) ? data.videos : []) : [];
+    if (!items.length) return false;
+    const t = kyroUiText();
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "gallery", "data-kyro-keep": "true", role: "dialog", "aria-label": nexusGalleryMessage(drawn) || "Results",
+      style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:16px" });
+    const close = kyroMake("button", { type: "button", "aria-label": t.close, style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer;z-index:1" }, "×");
+    close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "gallery-screen" }); });
+    const grid = kyroMake("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:14px" });
+    for (const item of items.slice(0, 8)) {
+      const figure = kyroMake("figure", { style: "margin:0;min-width:0" });
+      if (kind === "image-gallery") {
+        figure.append(kyroMake("img", { src: String(item?.url || ""), alt: String(item?.title || data.query || "Picture"), loading: "lazy", style: "width:100%;height:auto;border-radius:12px;display:block;background:#0f172a" }));
+      } else if (item?.embedUrl) {
+        figure.append(kyroMake("iframe", { src: String(item.embedUrl), title: String(item.title || "Video"), loading: "lazy", allowfullscreen: "true", allow: "encrypted-media; picture-in-picture; fullscreen", style: "width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#0f172a" }));
+      } else {
+        const player = kyroMake("video", { controls: "true", preload: "none", style: "width:100%;border-radius:12px;background:#0f172a" });
+        if (item?.thumbnailUrl) player.setAttribute("poster", String(item.thumbnailUrl));
+        player.append(kyroMake("source", { src: String(item?.videoUrl || ""), type: String(item?.mimeType || "video/webm") }));
+        figure.append(player);
+      }
+      const caption = [item?.title, item?.channelTitle].filter(Boolean).join(" — ");
+      if (caption) figure.append(kyroMake("figcaption", { style: "margin-top:6px;font-size:.95rem;color:#cbd5e1;overflow-wrap:anywhere" }, caption));
+      grid.append(figure);
+    }
+    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:clamp(1.1rem,4vw,1.5rem);font-weight:600" }, nexusGalleryMessage(drawn) || ""), grid);
+    document.body.append(screen);
+    try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    return true;
+  } catch { return false; }
+}
+
 function kyroShowResultScreen(toolName, command, result) {
   try {
     if (!kyroResultScreenEligible(toolName, result)) return false;
@@ -52102,6 +52303,18 @@ function kyroShowTypedResult(result, text, message) {
       answer = { response: kyroReminderListLine(drawn.data) || message };
     } else if (drawn && result.state === "render_required") {
       const cards = Array.isArray(drawn.data?.cards) ? drawn.data.cards : Array.isArray(drawn.data?.data?.cards) ? drawn.data.data.cards : [];
+      const drawnKind = drawn.presentation?.kind;
+      // pictures and videos: a screen of their own; checklists: every list with its items to tick, take off and add to
+      if (drawnKind === "image-gallery" || drawnKind === "video-gallery") return kyroShowGalleryScreen(drawn);
+      if (drawnKind === "checklist") {
+        const body = drawn.data || {};
+        const single = body.list || (Array.isArray(body.items) ? { listId: body.listId, title: body.title, items: body.items } : null);
+        const lists = (Array.isArray(body.lists) ? body.lists : single ? [single] : []).filter(list => list && list.listId);
+        if (lists.length && kyroShowChecklistScreen(lists, "")) {
+          if (!Array.isArray(body.lists)) void kyroRefreshList("checklists", "").catch(() => {}); // a list just made or changed: all of them, as they are now
+          return true;
+        }
+      }
       const saidLine = kyroRenderedAnswerLine(drawn);
       if (saidLine) return kyroShowResultScreen("typed", text, { ok: true, status: "completed", response: saidLine }); // a checklist, a web search answer or a list of jobs is an answer, not a card of raw fields
       if (drawn.presentation?.kind !== "location-list" || !cards.length || KYRO_FORM_FLOW.test(String(text || ""))) return false;
@@ -52118,6 +52331,9 @@ function kyroShowTypedResult(result, text, message) {
     } else return false;
     const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
     if (shown && wantsButtons) kyroAddConfirmButtons();
+    // a list of notes, reminders, documents or checklists has a form under it to write in
+    const writable = shown ? kyroWritableListKind(text) : "";
+    if (writable) kyroAddComposer(writable);
     return shown;
   } catch { return false; }
 }

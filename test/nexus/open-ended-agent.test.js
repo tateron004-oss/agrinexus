@@ -562,3 +562,20 @@ test("'show my resumes' lists the saved résumés (titled 'Resume - <name>') and
   assert.match((await planFor(rows, "Show my documents")).response, /^Your saved documents, newest first: 1, Business plan/, "the documents list is as before");
   assert.equal(await planFor(rows, "Build my resume"), null);
 });
+
+// The checklist screen's own buttons: add an item, tick one, take one off. The list is named by its own id so the right one changes whatever the titles are.
+test("the checklist screen's buttons are deterministic updates of one list by its id", () => {
+  const { listUpdatePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: ["lists.create", "lists.read", "lists.update"].map(toolId => ({ toolId })) };
+  const add = listUpdatePlan("Add to checklist rec_046c6a74: milk, sugar and tea", catalog);
+  assert.equal(add.application, "lists"); assert.equal(add.steps[0].toolId, "lists.update");
+  assert.deepEqual({ ...add.steps[0].input, addItems: [...add.steps[0].input.addItems] }, { listId: "rec_046c6a74", addItems: ["milk", "sugar", "tea"] });
+  const tick = listUpdatePlan("Mark item 2 done on checklist rec_046c6a74", catalog);
+  assert.deepEqual({ ...tick.steps[0].input, toggleIndexes: [...tick.steps[0].input.toggleIndexes] }, { listId: "rec_046c6a74", toggleIndexes: [1] }, "items are counted from 1 on the screen");
+  const untick = listUpdatePlan("Mark item 1 not done on checklist rec_046c6a74", catalog);
+  assert.deepEqual([...untick.steps[0].input.toggleIndexes], [0]);
+  const remove = listUpdatePlan("Remove item 3 from checklist rec_046c6a74", catalog);
+  assert.deepEqual([...remove.steps[0].input.removeIndexes], [2]);
+  for (const text of ["Add milk to my Market Day list", "Add to checklist: milk", "Add to checklist rec_1: milk", "Mark item two done on checklist rec_046c6a74", "Remove item 3 from my list", "Add to checklist rec_046c6a74:   ", ""]) assert.equal(listUpdatePlan(text, catalog), null, text);
+  assert.equal(listUpdatePlan("Add to checklist rec_046c6a74: milk", { applications: catalog.applications, tools: [{ toolId: "lists.create" }] }), null, "no update tool, no plan");
+});
