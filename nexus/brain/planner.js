@@ -1675,7 +1675,7 @@ function completeRemainingWorkspacePlan(text, catalog) {
   }
   // "Open the offline queue", "Show my offline work", "What is my sync status": the server's own count of what it has applied from the person's devices (nexus/sync/status-executor.js).
   if (/^\s*(?:(?:nexus|kyro)[,:]?\s+)?(?:please\s+)?(?:open|show|check|see|view|what(?:'s| is) in|what(?:'s| is))\s+(?:me\s+)?(?:(?:the|my|our)\s+)?(?:offline\s+(?:queue|work|changes|sync(?:\s+status)?)|(?:sync|offline)\s+status|queued\s+(?:offline\s+)?(?:work|changes))[.?!\s]*$/i.test(goal))
-    return plan("offline-queue", "offline.status", "Check the offline sync status", { operation: "status", requireServerAcknowledgement: true });
+    return plan("offline-queue", "offline.sync", "Check the offline sync status", { operation: "status", requireServerAcknowledgement: true });
   if (/\b(queue|queued)\b/i.test(goal) && /\boffline\b/i.test(goal) && /\b(sync|synchronize|synchronise)\b/i.test(goal) &&
       /\b(acknowledg(?:e|ement)|server|receipt|confirm)\b/i.test(goal))
     return plan("offline-queue", "offline.sync", "Synchronize governed offline operation",

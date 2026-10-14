@@ -536,10 +536,10 @@ test("a job search that names no place is a search in the country on the person'
 // Found sweeping the applications: "Open the offline queue" was answered with nothing at all. It is the server's own count of what it has applied from the person's devices.
 test("'open the offline queue' is a read of the sync status, and 'queue ... offline ... sync' is still the sync of a new change", () => {
   const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
-  const catalog = { applications: defaultApplicationManifests(), tools: ["offline.sync", "offline.status"].map(toolId => ({ toolId })) };
+  const catalog = { applications: defaultApplicationManifests(), tools: ["offline.sync"].map(toolId => ({ toolId })) };
   for (const text of ["Open the offline queue", "Show my offline work", "Check the sync status", "Open offline status", "what is my offline queue", "Kyro, show the queued offline changes"]) {
     const plan = completeRemainingWorkspacePlan(text, catalog);
-    assert.equal(plan?.application, "offline-queue", text); assert.equal(plan.steps[0].toolId, "offline.status", text); assert.equal(plan.steps[0].input.operation, "status", text);
+    assert.equal(plan?.application, "offline-queue", text); assert.equal(plan.steps[0].toolId, "offline.sync", text); assert.equal(plan.steps[0].input.operation, "status", text);
   }
   const sync = completeRemainingWorkspacePlan("Queue a crop observation offline, synchronize it, and show the server acknowledgement.", catalog);
   assert.equal(sync.steps[0].input.operation, "sync");
