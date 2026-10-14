@@ -42,7 +42,7 @@ const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js
 const { contentGuardReply } = require("./content-guard.js");
 const KyroMediaCommands = require("../../public/kyro-media-commands.js");
 const { emergencyNumberAnswer } = require("../companion/emergency-number.js");
-const { parseNearbyPlacesRequest } = require("../../server/providers/placesLocation.js");
+const { parseNearbyPlacesRequest, countryEntry, placeMentionedIn } = require("../../server/providers/placesLocation.js");
 const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
@@ -691,7 +691,7 @@ class OpenEndedPlanner {
     const placeCall = callPlan(command.text, catalog);
     if (placeCall) return Object.freeze({ ...withContactName(placeCall, named?.contactName), planningAttempts: 1 });
     const completeRemainingWorkspace = completeRemainingWorkspacePlan(command.text, catalog);
-    if (completeRemainingWorkspace) return Object.freeze({ ...completeRemainingWorkspace, planningAttempts: 1 });
+    if (completeRemainingWorkspace) return Object.freeze({ ...withJobsPlace(completeRemainingWorkspace, command.text, context?.country), planningAttempts: 1 });
     const request = { schema: "nexus.planning-request.v1", goal: command.spokenText || command.text, locale: interactionProfile.locale,
       channel: command.channel, priorTask: summarizeTask(priorTask),
       interactionProfile, tenantId: command.tenantId,
@@ -1812,6 +1812,17 @@ function parseLooseMessageRequest(text) {
   }
   return null;
 }
+// "Find jobs near me" searched the web with no place at all and listed jobs in Las Vegas. A job search that names no place is a search in the country on the person's account.
+function withJobsPlace(plan, text, country) {
+  const place = countryEntry(country)?.name;
+  if (!place || !plan?.steps?.length || placeMentionedIn(text)) return plan;
+  return { ...plan, steps: plan.steps.map(step => {
+    if (step?.toolId !== "jobs.search" || !step.input?.query) return step;
+    const query = String(step.input.query).replace(/\b(?:near me|nearby|around here|close to me|in my area)\b/gi, "").replace(/\s+/g, " ").trim();
+    return { ...step, input: { ...step.input, query: `${query} in ${place}` } };
+  }) };
+}
+
 function withContactName(plan, name) {
   if (!name || !plan?.steps?.length) return plan;
   return { ...plan, steps: plan.steps.map(step => (step?.toolId === "communications.send" ? { ...step, input: { ...step.input, contactName: name } } : step)) };
@@ -1902,4 +1913,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, translationRequest, exportLatestDocumentFormat, exportLatestDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
-  completeRemainingWorkspacePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
+  completeRemainingWorkspacePlan, withJobsPlace, completeBusinessPlan, completeRemindersManagePlan, validatePlan });

@@ -515,3 +515,20 @@ test("the full planner never consults the AI model for a reminder with a relativ
   }
   assert.equal(modelCalls, 0);
 });
+
+// Found sweeping the applications: "Find jobs near me" searched the web with no place at all and listed jobs in Las Vegas and North Georgia for a Nigerian account.
+test("a job search that names no place is a search in the country on the person's account; one that names a place is left alone", () => {
+  const { completeRemainingWorkspacePlan, withJobsPlace } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: ["jobs.search"].map(toolId => ({ toolId })) };
+  const queryFor = (text, country) => withJobsPlace(completeRemainingWorkspacePlan(text, catalog), text, country).steps[0].input.query;
+  assert.equal(queryFor("Find jobs near me", "Nigeria"), "Find jobs in Nigeria");
+  assert.equal(queryFor("Search for jobs nearby", "Kenya"), "Search for jobs in Kenya");
+  assert.equal(queryFor("Find me a job in construction", "Kenya"), "Find me a job in construction in Kenya");
+  assert.equal(queryFor("Find agriculture jobs in Nairobi with sources and select one listing.", "Nigeria"), "Find agriculture jobs in Nairobi with sources and select one listing.", "a named place wins over the account's country");
+  assert.equal(queryFor("Find jobs in Kenya", "Nigeria"), "Find jobs in Kenya");
+  assert.equal(queryFor("Find jobs near me", ""), "Find jobs near me", "no country on the account, nothing to add");
+  assert.equal(queryFor("Find jobs near me", "Narnia"), "Find jobs near me", "a country that is not known is not added");
+  assert.equal(withJobsPlace(null, "x", "Kenya"), null);
+  const planner = require("node:fs").readFileSync(require("node:path").join(__dirname, "../../nexus/brain/planner.js"), "utf8");
+  assert.match(planner, /withJobsPlace\(completeRemainingWorkspace, command\.text, context\?\.country\)/, "the planner hands the account's country to the job search");
+});
