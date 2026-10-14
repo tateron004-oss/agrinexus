@@ -208,8 +208,12 @@ test("the typed route never reads out the server's status line or the internal n
   assert.equal(api.kyroPlainRenderMessage({}, "Nexus did not launch a drone. Nexus Genesis is ready."), "Kyro did not launch a drone. Kyro is ready.");
   assert.equal(api.kyroPlainRenderMessage({}, "You have 2 reminders: a; b."), "You have 2 reminders: a; b.", "a real answer is left as it is");
   const typed = app.slice(app.indexOf("async function processNexusAuthoritativeBehaviorResult"), app.indexOf("async function submitNexusPendingBehaviorConfirmation"));
-  assert.match(typed, /const emptyAnswer = kyroEmptyRenderAnswer\(result\);\s*try \{\s*renderReceipt = await renderer\.render\(result\.render\);/);
-  assert.match(typed, /if \(!emptyAnswer\) throw error;/); assert.match(typed, /if \(!emptyAnswer && !renderReceipt\?\.acknowledged\) throw new Error/);
+  assert.match(typed, /const emptyAnswer = kyroEmptyRenderAnswer\(result\);\s*let answeredWithoutCard = false;[^]*?try \{\s*renderReceipt = await renderer\.render\(result\.render\);/);
+  // the plain answer goes on the screen before the card is drawn and verified (which takes seconds), so the raw card is never what is looked at
+  assert.match(typed, /if \(!emptyAnswer && kyroRenderedAnswerLine\(result\.render\)\) \{ try \{ kyroShowTypedResult\(result, text, message\); \} catch[^]*?renderReceipt = await renderer\.render/);
+  // a result with a plain answer is shown and said even when the card cannot be verified as showing (found on the live site: business records drew a card and said nothing)
+  assert.match(typed, /if \(!emptyAnswer\) \{ if \(kyroRenderedAnswerLine\(result\.render\)\) answeredWithoutCard = true; else throw error; \}[^]*?if \(!emptyAnswer && !answeredWithoutCard && !renderReceipt\?\.acknowledged\) throw new Error/);
+  assert.match(typed, /else throw error; \}/); assert.match(typed, /if \(!emptyAnswer && !answeredWithoutCard && !renderReceipt\?\.acknowledged\) throw new Error/);
   assert.match(typed, /message = emptyAnswer \|\| nexusGalleryMessage\(result\.render\) \|\| result\.render\.response \|\| message;/);
   assert.match(typed, /message = kyroPlainRenderMessage\(result, message\);\s*nexusAgenticBrainLastResult = \{/);
 });

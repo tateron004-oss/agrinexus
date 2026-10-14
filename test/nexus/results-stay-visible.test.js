@@ -61,7 +61,7 @@ test("after the user workspace is redrawn, every result drawn into it is drawn a
       openAskNexus() { calls.push("open-ask"); }, enableHeyAgriNexusMode() {}, renderUserWorkspace: () => { calls.push("redraw"); },
       nexusDocumentLifecycleComplete: () => false, renderNexusAuthoritativeResume: () => calls.push("resume"), renderNexusAuthoritativeDocument: () => calls.push("document"),
       renderNexusAuthoritativeImages: async () => calls.push("images"), renderNexusAuthoritativeVideos: async () => calls.push("videos"), renderNexusAuthoritativeChecklist: async () => calls.push("checklist"), renderNexusAuthoritativeData: () => calls.push("data"),
-      kyroShowTypedResult: () => false, kyroReminderListLine: () => "", kyroEmptyRenderAnswer: () => "", kyroPlainRenderMessage: (r, m) => m, // (the answer-on-screen path, kyro-result-screen.test.js: when it draws one, nothing is drawn into the window again)
+      kyroRenderedAnswerLine: () => "", kyroShowTypedResult: () => false, kyroReminderListLine: () => "", kyroEmptyRenderAnswer: () => "", kyroPlainRenderMessage: (r, m) => m, // (the answer-on-screen path, kyro-result-screen.test.js: when it draws one, nothing is drawn into the window again)
       setVoiceResponse() { calls.push("say"); }, nexusGalleryMessage: () => "", String, Boolean
     };
     vm.createContext(sandbox);
@@ -76,10 +76,35 @@ test("after the user workspace is redrawn, every result drawn into it is drawn a
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, NEXUS_AUTHORITATIVE_TASK_KEY: "k", validateNexusPassivePresentation() {}, recordNexusMapCommandBoundRenderTrace() {},
     nexusAuthoritativeOutcomeRenderer: async () => ({ render: async () => ({ acknowledged: true }) }), nexusAgenticBrainLastResult: null, nexusPendingBehaviorConfirmation: null,
     openAskNexus() {}, enableHeyAgriNexusMode() {}, renderUserWorkspace() {}, nexusDocumentLifecycleComplete: () => false, renderNexusAuthoritativeImages: async () => { throw new Error("No authoritative image result loaded visibly."); },
-    kyroShowTypedResult: () => false, kyroReminderListLine: () => "", kyroEmptyRenderAnswer: () => "", kyroPlainRenderMessage: (r, m) => m, setVoiceResponse() { sandbox.said = true; }, nexusGalleryMessage: () => "", String, Boolean
+    kyroRenderedAnswerLine: () => "", kyroShowTypedResult: () => false, kyroReminderListLine: () => "", kyroEmptyRenderAnswer: () => "", kyroPlainRenderMessage: (r, m) => m, setVoiceResponse() { sandbox.said = true; }, nexusGalleryMessage: () => "", String, Boolean
   };
   vm.createContext(sandbox);
   vm.runInContext(`${source}\nthis.run = processNexusAuthoritativeBehaviorResult;`, sandbox);
   assert.equal(await sandbox.run({ state: "render_required", response: "ok", taskId: "tsk_1", render: { presentation: { kind: "image-gallery" }, data: {}, response: "ok" } }, "a request"), true);
   assert.equal(sandbox.said, true);
+});
+
+// Found sweeping the business side on the live site: the renderer threw "The business outcome was not visibly or audibly verified" for every read of the person's own records, so nothing was said and only a raw card was left.
+test("a result with a plain answer is shown and said even when the card cannot be verified as showing; one with no plain answer still fails", async () => {
+  const source = slice("async function processNexusAuthoritativeBehaviorResult(", "\nasync function submitNexusPendingBehaviorConfirmation(");
+  const run = async line => {
+    const calls = [];
+    const sandbox = {
+      localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, NEXUS_AUTHORITATIVE_TASK_KEY: "k", validateNexusPassivePresentation() {}, recordNexusMapCommandBoundRenderTrace() {},
+      nexusAuthoritativeOutcomeRenderer: async () => ({ render: async () => { throw new Error("The business outcome was not visibly or audibly verified."); } }), nexusAgenticBrainLastResult: null, nexusPendingBehaviorConfirmation: null,
+      openAskNexus() {}, enableHeyAgriNexusMode() {}, renderUserWorkspace() {}, nexusDocumentLifecycleComplete: () => false,
+      kyroRenderedAnswerLine: () => line, kyroShowTypedResult: () => { calls.push("screen"); return Boolean(line); }, kyroReminderListLine: () => "", kyroEmptyRenderAnswer: () => "", kyroPlainRenderMessage: (r, m) => m,
+      renderNexusAuthoritativeData: () => calls.push("card"), setVoiceResponse: text => calls.push("say:" + text), nexusGalleryMessage: () => "", document: { querySelector: () => null }, closeNexusFunctionWindow() {}, String, Boolean
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(`${source}\nthis.run = processNexusAuthoritativeBehaviorResult;`, sandbox);
+    const result = { state: "render_required", response: "ok", taskId: "tsk_1", application: "business", render: { presentation: { kind: "operation" }, data: {}, response: '"Kyro Test Workspace" has 2 clients: Grace Otieno and Services.' } };
+    const outcome = await sandbox.run(result, "Show my clients").then(value => ({ value }), error => ({ error: error.message }));
+    return { outcome, calls };
+  };
+  const answered = await run('"Kyro Test Workspace" has 2 clients: Grace Otieno and Services.');
+  assert.equal(answered.outcome.value, true); assert.ok(answered.calls.includes("screen")); assert.ok(answered.calls.includes('say:"Kyro Test Workspace" has 2 clients: Grace Otieno and Services.'));
+  assert.ok(!answered.calls.includes("card"), "no raw card when the answer is on the screen");
+  const unanswered = await run("");
+  assert.match(unanswered.outcome.error, /not visibly or audibly verified/, "no plain answer: the failure is raised as before");
 });

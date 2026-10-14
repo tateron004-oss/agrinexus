@@ -58987,6 +58987,9 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     recordNexusMapCommandBoundRenderTrace("renderer-before", result.render, result.render.data || {});
     // "Show my checklists" / "show my last receipt" with nothing saved: there is nothing to draw, so the renderer cannot acknowledge it. That is an answer ("you have none yet"), not a failure that opens an old window.
     const emptyAnswer = kyroEmptyRenderAnswer(result);
+    let answeredWithoutCard = false;
+    // A result that has a plain answer puts it on the screen first: the card the renderer draws and verifies takes seconds, and until then the person would be looking at the raw card (it is drawn again below, after the window redraw).
+    if (!emptyAnswer && kyroRenderedAnswerLine(result.render)) { try { kyroShowTypedResult(result, text, message); } catch { /* it is drawn again below */ } }
     try {
       renderReceipt = await renderer.render(result.render);
       recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
@@ -58994,9 +58997,11 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     } catch (error) {
       recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
         { rendererError: String(error?.message || error).slice(0, 500) });
-      if (!emptyAnswer) throw error;
+      // The business records card cannot be verified as showing ("The business outcome was not visibly or audibly verified"), so nothing was said or drawn. When the result has a plain answer ("Kyro Test Workspace has 2 clients: ..."),
+      // that answer is put on the screen and said, and is the visible outcome. Anything without an answer fails as before.
+      if (!emptyAnswer) { if (kyroRenderedAnswerLine(result.render)) answeredWithoutCard = true; else throw error; }
     }
-    if (!emptyAnswer && !renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
+    if (!emptyAnswer && !answeredWithoutCard && !renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
     message = emptyAnswer || nexusGalleryMessage(result.render) || result.render.response || message;
   }
   // (what is read out and shown never carries the internal name or the server's status line: see kyroPlainRenderMessage)
