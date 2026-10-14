@@ -79,6 +79,7 @@ const { deterministicVoiceAnswer } = require("./nexus/compat/voice-planner-bridg
 const { contentGuardReply } = require("./nexus/brain/content-guard.js");
 const { replyLanguage } = require("./nexus/i18n/reply-language.js");
 const { parseNearbyPlacesRequest, namedPlaceIn: namedPlaceInRequest } = require("./server/providers/placesLocation.js");
+const { womensHealthTopic } = require("./nexus/knowledge/womens-health-topics.js");
 const floorGuard = require("./nexus/brain/floor-guard.js");
 const { safetyTurn: companionSafetyTurn, readSafetyDetailed: readCompanionSafety } = require("./nexus/companion/safety.js");
 // A symptom said NOT to be there ("no fever", "hana homa") is good news, not a danger sign (public/kyro-care-phrases.js).
@@ -22282,6 +22283,18 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
         clientAction: { type: "return-to-orb" }, executionAttempted: false, executionVerified: false };
     }
   }
+  // A woman's question about her own health (cervical screening, birth control, periods, menopause, prenatal and postnatal care, where to find care) is answered from the checked guide (nexus/knowledge/womens-health.js) whichever
+  // tool the model picked: it is general information from official sources, it saves and sends nothing, so a guest or a restricted account hears it too. Found testing by voice: the model picked the health tool, a guest was refused with
+  // "Sign in with a full account", and no answer appeared; picked another tool, it got a menu or an unsourced answer. (An urgent, unsafe or medicine question is never taken by this: womens-health-topics.js leaves those alone.)
+  // (typeof guards: several tests evaluate this function's source alone, in a sandbox that has none of server.js's other names.)
+  if (typeof womensHealthTopic === "function" && womensHealthTopic(command) && effectiveMentalHealthSignal.state !== "medical_emergency" && typeof deterministicVoiceAnswer === "function") {
+    const guideUser = await authoritativeRuntimeUser(user).catch(() => null);
+    const guide = guideUser ? await deterministicVoiceAnswer({ runtime: authoritativeNexusRuntime, user: guideUser, text: command, language, timeZone: args?.timeZone }) : null;
+    if (guide) {
+      return { ...common, capability: "conversation", status: "completed", intent: "planner-deterministic-answer", response: guide.response,
+        executionAttempted: true, executionVerified: guide.verified === true };
+    }
+  }
   // A restricted account (today, only self-service guest sessions --
   // user.restrictions is set at /api/auth/guest-session with zero identity
   // verification beyond a free-text display name) must not reach a tool
@@ -22496,15 +22509,16 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     const routeArgs = nexusOpenAiNativeExtractRouteArgs(command, args);
     // ("show me Nairobi", "where is Kisumu": one place and no route opens the map, instead of "Origin and destination text are required")
     const onePlace = !routeArgs.origin && /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:show(?:\s+me)?|where\s+is|find|map\s+of|open\s+the\s+map\s+of)\s+(?:the\s+)?([A-Za-z][A-Za-z'.-]*(?:\s+[A-Za-z][A-Za-z'.-]*){0,2})[.?!]*$/i.exec(String(command || "").trim());
+    const placeNamed = onePlace && !/\bmaps?\b/i.test(onePlace[1]) ? onePlace : null;
     const mapOnlyRequest = (!routeArgs.origin && !/\b(route|directions?|navigation|from\\s+.+\\s+to)\b/i.test(command) && /\b(open|show|display|pull up|bring up|launch|start)\b.*\b(maps?|kenya)\b/i.test(command))
-      || Boolean(onePlace && !/\b(?:clinic|pharmacy|hospital|doctor|near|nearby|nearest|jobs?|price|prices|weather|news)\b/i.test(onePlace[1]));
+      || Boolean(placeNamed && !/\b(?:clinic|pharmacy|hospital|doctor|near|nearby|nearest|jobs?|price|prices|weather|news)\b/i.test(placeNamed[1]));
     if (mapOnlyRequest) {
       return nexusOpenAiNativeBlockedToolResult(db, common, {
         status: "local-ready",
         response: /\bgoogle maps?\b/i.test(command)
           ? "I can't open the Google Maps app from here, so I am opening the Kyro map instead. Tell me two places and I will show the route and the travel time."
-          : onePlace
-          ? `The Nexus Maps workspace is ready. I have not calculated anything for ${onePlace[1].trim()}; say "route from ${onePlace[1].trim()} to" a second place and I will give the distance and travel time.`
+          : placeNamed
+          ? `The Nexus Maps workspace is ready. I have not calculated anything for ${placeNamed[1].trim()}; say "route from ${placeNamed[1].trim()} to" a second place and I will give the distance and travel time.`
           : "The Nexus Maps workspace is ready. No route was calculated because no origin or destination was requested.",
         did: ["Prepared the existing Maps workspace for the requested map."],
         didNot: ["Nexus did not claim a route, travel time, geolocation, or external navigation."]
@@ -32419,6 +32433,8 @@ function musicAssistantIntent(text = "") {
   const query = String(text || "")
     .replace(/\bnexus\b/ig, "")
     .replace(/\b(can you|please|could you|would you|open|play|find|search|put on|listen to)\b/ig, " ")
+    // ("play music on Spotify": the service is not part of what is played, and is never said as if it were the one playing)
+    .replace(/\b(?:on|in|from|using|with|via)\s+(?:spotify|you\s?tube)\b/ig, " ")
     .replace(/\s+/g, " ")
     .trim() || "90s soul music playlist";
   return {

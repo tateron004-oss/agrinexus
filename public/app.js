@@ -50491,6 +50491,8 @@ async function kyroShowVisualRequest(command, kind) {
 
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
+  // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
+  kyroDismissStaleWorkspace();
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
   // text) run alongside it. See routeKyroVoiceIntakeTranscript for the transcript-level guard.
@@ -51254,6 +51256,8 @@ async function applyKyroIntakeDecision(decision) {
 // résumé-specific: `definition` is a plain public/kyro-intake-forms.js-style form definition.
 function startKyroVoiceIntake(definition, options = {}) {
   if (kyroActiveVoiceIntake) kyroActiveVoiceIntake.engine.cancel();
+  // (the AgriTrade card a "sell" opened must not stay open behind a telehealth interview)
+  kyroDismissStaleWorkspace();
   if (realtimeVoiceActive()) {
     try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch {}
   }
@@ -51614,11 +51618,32 @@ function kyroOpenMapRequest(text) {
   const said = String(text || "").trim();
   return KYRO_OPEN_MAP.test(said) && !KYRO_OPEN_MAP_NOT.test(said);
 }
-let kyroPendingMedia = null; // { kind: "images" | "videos", at } while Kyro has asked what to look for
+// "Open YouTube", "open Spotify", "play something on YouTube": found testing by voice, these were answered "I'm not sure what you'd like me to do". Kyro asks what to play and the next short answer is played.
+// (Spotify is not connected here, so it is said plainly and the music comes from YouTube.)
+const KYRO_OPEN_PLAYER = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|start|launch|go to|play|use)\\s+(?:the\\s+)?(you\\s?tube|spotify)(?:\\s+(?:app|music|player))?|play\\s+(?:something|some music|music|anything)\\s+(?:on|from|in|with)\\s+(you\\s?tube|spotify))[.?!]*$`, "i");
+// "Show me a list", "show me a list of my documents / reminders / checklists / notes": a list of what, or that list.
+const KYRO_LIST_BARE = new RegExp(`${KYRO_OPEN_LEAD}(?:show|give|open|see|get|pull up)(?:\\s+me)?\\s+(?:a|my|the|some)?\\s*lists?[.?!]*$`, "i");
+const KYRO_LIST_OF = new RegExp(`${KYRO_OPEN_LEAD}(?:show|give|open|see|get|pull up|list)(?:\\s+me)?\\s+(?:(?:a|my|the|all my|all)\\s+)?(?:list\\s+of\\s+)?(?:my\\s+)?(documents?|docs?|reminders?|checklists?|to-?do ?lists?|to-?dos?|notes?|files?)[.?!]*$`, "i");
+const KYRO_LIST_COMMANDS = Object.freeze({ documents: "Show my saved documents", reminders: "Show my reminders", checklists: "Show my checklists", notes: "Show my notes" });
+function kyroListKindOf(word) {
+  const w = String(word || "").toLowerCase();
+  if (/^(?:doc|file)/.test(w)) return "documents";
+  if (/^remind/.test(w)) return "reminders";
+  if (/^(?:checklist|to-?do)/.test(w)) return "checklists";
+  if (/^note/.test(w)) return "notes";
+  return "";
+}
+let kyroPendingMedia = null; // { kind: "images" | "videos" | "music" | "list", at } while Kyro has asked what to look for
 function kyroSpokenOpenOwns(text) {
   const said = String(text || "").trim();
   if (!said) return false;
-  return KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+}
+// A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
+// request closes it first; if the new request opens a workspace of its own, that opens after this.
+function kyroDismissStaleWorkspace() {
+  try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* the new request carries on */ }
+  try { delete document.body.dataset.genesisWorkspace; delete document.body.dataset.genesisWorkspaceRequestId; } catch { /* nothing to clear */ }
 }
 // The model may already have started to answer what was just said: it is cut off before the page answers.
 function kyroTakeOverTurn() {
@@ -51633,18 +51658,59 @@ function kyroHandleSpokenOpen(text, options = {}) {
   if (kyroPendingMedia) {
     const pending = kyroPendingMedia; kyroPendingMedia = null;
     const stillAsking = Date.now() - pending.at < 90000;
-    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && !KYRO_NOT_A_SUBJECT.test(said) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
-      const subject = said.replace(/^(?:show me|find|i want to see|i'd like to see|i would like to see|let me see|some|of|about|pictures of|videos about|images of)\s+/gi, "").replace(/[.?!]+$/, "").trim();
-      if (subject) {
-        kyroTakeOverTurn();
-        void handleNexusUnifiedBrainRuntimeCommand(pending.kind === "videos" ? `Show me videos about ${subject}` : `Show me pictures of ${subject}`, { source: "typed", kyroDirect: true });
-        return true;
+    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && (pending.kind === "list" || !KYRO_NOT_A_SUBJECT.test(said)) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
+      if (pending.kind === "list") {
+        const named = /\b(documents?|docs?|files?|reminders?|checklists?|to-?do|notes?)\b/i.exec(said);
+        const listKind = named ? kyroListKindOf(named[1]) : "";
+        if (listKind) {
+          kyroTakeOverTurn();
+          void handleNexusUnifiedBrainRuntimeCommand(KYRO_LIST_COMMANDS[listKind], { source: "typed", kyroDirect: true });
+          return true;
+        }
+      } else {
+        const subject = said.replace(/^(?:show me|find|i want to see|i'd like to see|i would like to see|let me see|i want to hear|i'd like to hear|let me hear|listen to|put on|some|of|about|pictures of|videos about|images of)\s+/gi, "").replace(/[.?!]+$/, "").trim();
+        if (subject) {
+          kyroTakeOverTurn();
+          void handleNexusUnifiedBrainRuntimeCommand(pending.kind === "videos" ? `Show me videos about ${subject}` : pending.kind === "music" ? `Play ${subject}` : `Show me pictures of ${subject}`, { source: "typed", kyroDirect: true });
+          return true;
+        }
       }
     }
   }
   if (KYRO_OPEN_DOCS.test(said)) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand("Show my saved documents", { source: "typed", kyroDirect: true });
+    return true;
+  }
+  const listOf = KYRO_LIST_OF.exec(said);
+  if (listOf && kyroListKindOf(listOf[1])) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand(KYRO_LIST_COMMANDS[kyroListKindOf(listOf[1])], { source: "typed", kyroDirect: true });
+    return true;
+  }
+  if (KYRO_LIST_BARE.test(said)) {
+    kyroTakeOverTurn();
+    kyroPendingMedia = { kind: "list", at: Date.now() };
+    const ask = lang === "sw" ? "Orodha ya nini? Unaweza kusema: vikumbusho vyangu, hati zangu, orodha zangu za kukagua, au maelezo yangu." : "A list of what? You can say: my reminders, my documents, my checklists or my notes.";
+    kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask });
+    try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
+    return true;
+  }
+  const player = KYRO_OPEN_PLAYER.exec(said);
+  if (player) {
+    kyroTakeOverTurn();
+    // "play something on YouTube": it just plays music; "open YouTube" / "open Spotify": it asks what to play
+    if (/\bplay\s+(?:something|some music|music|anything)\b/i.test(said)) {
+      void handleNexusUnifiedBrainRuntimeCommand("Play some music", { source: "typed", kyroDirect: true });
+      return true;
+    }
+    kyroPendingMedia = { kind: "music", at: Date.now() };
+    const spotify = /spotify/i.test(player[1] || player[2] || "");
+    const ask = spotify
+      ? (lang === "sw" ? "Spotify haijaunganishwa hapa, kwa hiyo nacheza muziki kutoka YouTube. Ungependa kusikiliza nini? Kwa mfano: cheza Sauti Sol." : "Spotify is not connected here, so I play music from YouTube. What would you like to hear? For example: play Sauti Sol, or play some Kenyan music.")
+      : (lang === "sw" ? "Ungependa kucheza nini? Kwa mfano: cheza Sauti Sol, au cheza muziki wa Kenya." : "What would you like to play? For example: play Sauti Sol, or play some Kenyan music.");
+    kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask });
+    try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
     return true;
   }
   const media = KYRO_OPEN_MEDIA.exec(said);
@@ -58911,6 +58977,8 @@ async function handleKyroNavigationCommand(text, options = {}) {
 async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {}) {
   const text = String(command || "").trim();
   if (!text) return false;
+  // a card left open by an earlier request does not stay in front of this one
+  kyroDismissStaleWorkspace();
   if (nexusPendingBehaviorConfirmation) {
     const decision = detectNexusPendingConfirmationReply(text);
     if (decision) return submitNexusPendingBehaviorConfirmation(decision === "approve", text, options);

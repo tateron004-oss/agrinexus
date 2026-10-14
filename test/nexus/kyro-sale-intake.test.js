@@ -77,3 +77,11 @@ test("it is wired: spoken and typed requests start it, the tool-call and workspa
   assert.match(submit, /if \(\/price\/i\.test\(said\)\) return \{ ok: false, fieldKey: "price", say: said \};/, "a missing price is asked again");
   assert.match(app, /if \(id === "sale" \|\| \(!kyroActiveVoiceIntake && forms\?\.isSaleRequest\?\.\(command\)\)\) return "Kyro is already asking the person about what they want to sell/);
 });
+
+// Found in the first round of testing by voice: "Sell 50 bags of maize" (said as an order, without "I want to") skipped the interview, opened an AgriTrade card and asked for a yes, and the card stayed open behind everything that followed.
+test("an order to sell is a request to sell: the interview starts for it, and for 'can you help me sell', 'post my maize for sale'", () => {
+  const Forms = require("../../public/kyro-intake-forms.js");
+  for (const text of ["Sell 50 bags of maize", "sell my maize", "Kyro, sell some tomatoes", "Please sell 20 kg of beans", "post my maize for sale", "can you help me sell my goats", "Could you sell my maize"]) assert.equal(Forms.isSaleRequest(text), true, text);
+  for (const text of ["What is the selling price of maize?", "sell price", "how do I sell maize", "Sell", "I sold 5 bags of maize", "cancel the sale", "tips to sell maize", "who buys maize", "Post for sale: 50 bags of maize at 3000 per bag"]) assert.equal(Forms.isSaleRequest(text), false, text);
+  assert.deepEqual({ ...Forms.parseSale("Sell 50 bags of maize") }, { quantity: "50 bags", product: "maize" });
+});

@@ -207,9 +207,13 @@ test("server.js: the catch-all conversation tool (the voice tool the production 
   const at = needle => { const index = body.indexOf(needle); assert.ok(index > 0, needle); return index; };
   assert.match(body, /: toolName === "nexus_general_conversation"\) && effectiveMentalHealthSignal\.state !== "medical_emergency"[^{]*\{\s*const plannerUser = await authoritativeRuntimeUser\(user\)/);
   assert.match(body, /deterministicVoiceAnswer\(\{ runtime: authoritativeNexusRuntime, user: plannerUser, text: command, language, timeZone: args\?\.timeZone \}\)/);
-  assert.ok(at("buildSupportPacket") < at("deterministicVoiceAnswer("), "a crisis is answered before the bridge");
-  assert.ok(at("healthReadingsReply(db, user, command") < at("deterministicVoiceAnswer("), "health readings keep their own route");
-  assert.ok(at("deterministicVoiceAnswer(") < at("const routed = await runCompanionSafeAgentCommand"), "the bridge runs before the older pipeline");
+  // (the bridge for the catch-all tool: the one after PLANNER_BRIDGE_VOICE_TOOLS. A woman's health question is also answered from the guide earlier, for every tool, before the account restriction.)
+  const bridgeAt = body.indexOf("deterministicVoiceAnswer(", at("PLANNER_BRIDGE_VOICE_TOOLS"));
+  assert.ok(bridgeAt > 0);
+  assert.ok(at("buildSupportPacket") < bridgeAt, "a crisis is answered before the bridge");
+  assert.ok(at("healthReadingsReply(db, user, command") < bridgeAt, "health readings keep their own route");
+  assert.ok(bridgeAt < at("const routed = await runCompanionSafeAgentCommand"), "the bridge runs before the older pipeline");
+  assert.ok(at("buildSupportPacket") < at("womensHealthTopic(command)"), "a crisis is answered before the women's health guide too");
 });
 
 // Found testing the orb by voice: a United States owner asking "How do I write a business plan?" got "I couldn't do that one", because the voice route never told the planner where the person is (the typed route
