@@ -51,3 +51,14 @@ test("the runtime uses it instead of the provider stand-in", () => {
   const runtime = fs.readFileSync(path.join(__dirname, "../../nexus/runtime/create-runtime.js"), "utf8");
   assert.match(runtime, /"offline\.sync": \{ create: \(\) => createOfflineSyncStatusExecutor\(\{ sync \}\), verify: verifyOfflineSyncStatusOutcome, method: "real_server_state" \}/);
 });
+
+// Found sweeping the applications: "Open the offline queue" was answered "I prepared the request and need your confirmation", because the status read went through offline.sync, which always asks. offline.status is the same read and asks for nothing; offline.sync still asks.
+test("reading the sync status needs no confirmation; synchronizing a change still does", () => {
+  const { CANONICAL_PROVIDER_TOOLS } = require("../../nexus/tools/canonical-provider-definitions.js");
+  const byId = Object.fromEntries([...CANONICAL_PROVIDER_TOOLS].map(tool => [tool.toolId, tool]));
+  assert.equal(byId["offline.status"]?.confirmationRequired, false);
+  assert.equal(byId["offline.sync"]?.confirmationRequired, true);
+  const runtime = fs.readFileSync(path.join(__dirname, "../../nexus/runtime/create-runtime.js"), "utf8");
+  assert.match(runtime, /"offline\.status": \{ create: \(\) => createOfflineSyncStatusExecutor\(\{ sync \}\), verify: verifyOfflineSyncStatusOutcome/);
+  assert.match(fs.readFileSync(path.join(__dirname, "../../nexus/apps/default-manifests.js"), "utf8"), /\["offline-queue", "Offline Queue", \["offline\.sync", "offline\.status"\]/);
+});

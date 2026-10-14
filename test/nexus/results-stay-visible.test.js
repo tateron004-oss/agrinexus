@@ -87,13 +87,13 @@ test("after the user workspace is redrawn, every result drawn into it is drawn a
 // Found sweeping the business side on the live site: the renderer threw "The business outcome was not visibly or audibly verified" for every read of the person's own records, so nothing was said and only a raw card was left.
 test("a result with a plain answer is shown and said even when the card cannot be verified as showing; one with no plain answer still fails", async () => {
   const source = slice("async function processNexusAuthoritativeBehaviorResult(", "\nasync function submitNexusPendingBehaviorConfirmation(");
-  const run = async line => {
+  const run = async (line, typedDrawsAnyway = false) => {
     const calls = [];
     const sandbox = {
       localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, NEXUS_AUTHORITATIVE_TASK_KEY: "k", validateNexusPassivePresentation() {}, recordNexusMapCommandBoundRenderTrace() {},
       nexusAuthoritativeOutcomeRenderer: async () => ({ render: async () => { throw new Error("The business outcome was not visibly or audibly verified."); } }), nexusAgenticBrainLastResult: null, nexusPendingBehaviorConfirmation: null,
       openAskNexus() {}, enableHeyAgriNexusMode() {}, renderUserWorkspace() {}, nexusDocumentLifecycleComplete: () => false,
-      kyroRenderedAnswerLine: () => line, kyroShowTypedResult: () => { calls.push("screen"); return Boolean(line); }, kyroReminderListLine: () => "", kyroEmptyRenderAnswer: () => "", kyroPlainRenderMessage: (r, m) => m,
+      kyroRenderedAnswerLine: () => line, kyroShowTypedResult: () => { calls.push("screen"); return Boolean(line) || typedDrawsAnyway; }, kyroReminderListLine: () => "", kyroEmptyRenderAnswer: () => "", kyroPlainRenderMessage: (r, m) => m,
       renderNexusAuthoritativeData: () => calls.push("card"), setVoiceResponse: text => calls.push("say:" + text), nexusGalleryMessage: () => "", document: { querySelector: () => null }, closeNexusFunctionWindow() {}, String, Boolean
     };
     vm.createContext(sandbox);
@@ -105,6 +105,9 @@ test("a result with a plain answer is shown and said even when the card cannot b
   const answered = await run('"Kyro Test Workspace" has 2 clients: Grace Otieno and Services.');
   assert.equal(answered.outcome.value, true); assert.ok(answered.calls.includes("screen")); assert.ok(answered.calls.includes('say:"Kyro Test Workspace" has 2 clients: Grace Otieno and Services.'));
   assert.ok(!answered.calls.includes("card"), "no raw card when the answer is on the screen");
+  // a list of places has no one-line answer, but the page can still draw it on the screen: that is the visible outcome too
+  const places = await run("", true);
+  assert.equal(places.outcome.value, true); assert.ok(places.calls.includes("screen")); assert.ok(!places.calls.includes("card"));
   const unanswered = await run("");
   assert.match(unanswered.outcome.error, /not visibly or audibly verified/, "no plain answer: the failure is raised as before");
 });

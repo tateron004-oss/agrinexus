@@ -52109,6 +52109,9 @@ function kyroShowTypedResult(result, text, message) {
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
       answer = { response: message };
+    } else if (result.state === "clarification_required" && String(message || "").trim().length >= 12) {
+      // a question Kyro needs answered ("Which town, county, or region in Kenya should I use?") is on the screen too, and stays up until it is answered
+      answer = { response: message, requiresConfirmation: true };
     } else return false;
     return kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
   } catch { return false; }
@@ -58997,9 +59000,9 @@ async function processNexusAuthoritativeBehaviorResult(result, text, options = {
     } catch (error) {
       recordNexusMapCommandBoundRenderTrace("renderer-after", result.render, result.render.data || {},
         { rendererError: String(error?.message || error).slice(0, 500) });
-      // The business records card cannot be verified as showing ("The business outcome was not visibly or audibly verified"), so nothing was said or drawn. When the result has a plain answer ("Kyro Test Workspace has 2 clients: ..."),
-      // that answer is put on the screen and said, and is the visible outcome. Anything without an answer fails as before.
-      if (!emptyAnswer) { if (kyroRenderedAnswerLine(result.render)) answeredWithoutCard = true; else throw error; }
+      // The card of the business records, or of a list of pharmacies, cannot be verified as showing ("The business outcome was not visibly or audibly verified"), so nothing was said or drawn. When the result has an answer that
+      // can be put on the screen ("Kyro Test Workspace has 2 clients: ...", the places found), that is drawn and said, and is the visible outcome. Anything without one fails as before.
+      if (!emptyAnswer) { if (kyroRenderedAnswerLine(result.render) || kyroShowTypedResult(result, text, message)) answeredWithoutCard = true; else throw error; }
     }
     if (!emptyAnswer && !answeredWithoutCard && !renderReceipt?.acknowledged) throw new Error("Nexus did not verify the authoritative visible or audible outcome.");
     message = emptyAnswer || nexusGalleryMessage(result.render) || result.render.response || message;

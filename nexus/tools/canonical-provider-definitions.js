@@ -42,6 +42,8 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   Object.freeze({ toolId: "reminders.list", domain: "reminders", description: "List the user's upcoming reminders" }),
   Object.freeze({ toolId: "reminders.cancel", domain: "reminders", description: "Cancel one upcoming reminder", confirmationRequired: true }),
   Object.freeze({ toolId: "offline.sync", domain: "offline", description: "Synchronize a governed offline operation", confirmationRequired: true }),
+  // Only reads the server's own count of what this person's devices have sent (the same executor as offline.sync): nothing is changed, so nothing is confirmed.
+  Object.freeze({ toolId: "offline.status", domain: "offline", description: "Read the server's view of what this person's devices have synced", confirmationRequired: false }),
   // Confirmed live: "Send a message to my doctor saying I'm not feeling
   // well." (a completely natural request, no "consent"/"receipt" language)
   // completed immediately with a fake-looking delivery receipt and no
