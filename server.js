@@ -2742,13 +2742,15 @@ function durableAuthSecret(env = process.env) {
   return String(env.SESSION_SECRET || "").trim();
 }
 
-function issueDurableAuthToken(userId, now = Date.now(), env = process.env, space = "") {
+// "extra" is claims signed into the token. A guest's token carries { guest: true, name, language }: everything needed to make that guest's record again if a concurrent write loses it (see currentUser).
+function issueDurableAuthToken(userId, now = Date.now(), env = process.env, space = "", extra = null) {
   const secret = durableAuthSecret(env);
   if (!secret || !userId) return "";
   const ttlMs = Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
   const payload = Buffer.from(JSON.stringify({
     userId: String(userId),
     ...(space && space !== "default" ? { space } : {}),
+    ...(extra && extra.guest === true ? { guest: true, name: String(extra.name || "").slice(0, 80), language: String(extra.language || "en").slice(0, 12) } : {}),
     issuedAt: now,
     expiresAt: now + ttlMs
   })).toString("base64url");
@@ -2914,6 +2916,10 @@ async function issueSession(sid, userId, space = "") {
   await persistSessionToPostgres(sid, userId, expiresAt, space);
 }
 
+// What a guest account may not do (kept in one place: the guest is made here and made again by currentUser below).
+const GUEST_RESTRICTIONS = Object.freeze(["health-record-write", "communications-send", "external-transaction", "account-provider-link"]);
+const GUEST_ID_PATTERN = /^guest_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 function currentUser(req, db) {
   const cookies = parseCookies(req);
   const sid = cookies.agrinexus_sid;
@@ -2923,7 +2929,21 @@ function currentUser(req, db) {
   const userId = sessionEntry && !sessionExpired ? sessionEntry.userId : null;
   const durableSession = userId ? null : verifyDurableAuthToken(cookies.agrinexus_auth);
   const resolvedUserId = userId || durableSession?.userId;
-  const resolvedUser = db.users.find(user => user.id === resolvedUserId) || null;
+  let resolvedUser = db.users.find(user => user.id === resolvedUserId) || null;
+  // Found testing with several people at once: guests made at the same moment overwrite each other's records (the shared record is read and written whole on every request), and the guest whose record was lost
+  // is then signed out of everything ("Sign in required") a minute into a test. A guest's record is made again when the session is still live on the server (so a logout still ends it) and the signed token, which
+  // carries who they are, is valid for that same guest. An erased guest is not made again: erasure leaves a "deleted" record behind, which is found above.
+  if (!resolvedUser && userId && GUEST_ID_PATTERN.test(String(userId))) {
+    const claims = verifyDurableAuthToken(cookies.agrinexus_auth);
+    if (claims && claims.guest === true && claims.userId === userId) {
+      const issued = new Date(Number(claims.issuedAt) || Date.now()).toISOString();
+      resolvedUser = {
+        id: userId, email: `${userId}@guest.agrinexus.invalid`, name: String(claims.name || "Guest"), role: "Standard User", language: String(claims.language || "en"),
+        guest: true, authType: "authoritative-guest", restrictions: [...GUEST_RESTRICTIONS], createdAt: issued, updatedAt: new Date().toISOString()
+      };
+      db.users.push(resolvedUser);
+    }
+  }
   // A durable "remember me" token is a bare signed claim with nothing server-side
   // to delete on logout, so a captured token would otherwise keep authenticating
   // for its full TTL even after the owner explicitly logs out. Honor a per-user
@@ -52668,7 +52688,7 @@ async function api(req, res, url) {
       language,
       guest: true,
       authType: "authoritative-guest",
-      restrictions: ["health-record-write", "communications-send", "external-transaction", "account-provider-link"],
+      restrictions: [...GUEST_RESTRICTIONS],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -52677,7 +52697,7 @@ async function api(req, res, url) {
     await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
     await issueSession(sid, guest.id, businessSpaces.currentSpace());
-    const durableToken = issueDurableAuthToken(guest.id, Date.now(), process.env, businessSpaces.currentSpace());
+    const durableToken = issueDurableAuthToken(guest.id, Date.now(), process.env, businessSpaces.currentSpace(), { guest: true, name: displayName, language });
     const cookies = [
       setCookieHeader("agrinexus_sid", sid, {
         maxAge: 43_200,
