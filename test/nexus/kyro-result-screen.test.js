@@ -425,7 +425,7 @@ function fakePage(app, names) {
   sandbox.kyroShowResultScreen = (tool, command, result) => { body.children = body.children.filter(c => c.attrs["data-kyro-result"] === undefined); const screen = make("section"); screen.attrs["data-kyro-result"] = "text"; screen.textContent = result.response; body.children.push(screen); sandbox.lastScreen = result; return true; };
   vm.createContext(sandbox);
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, name.startsWith("const ") ? app.indexOf(";\n", start) + 2 : app.indexOf("\n}\n", start) + 3); }).join("\n");
-  vm.runInContext(`${source}\nthis.api = { kyroAddComposer, kyroRefreshList, kyroShowChecklistScreen, kyroShowGalleryScreen };`, sandbox);
+  vm.runInContext(`${source}\nthis.api = Object.fromEntries(["kyroAddComposer", "kyroRefreshList", "kyroShowChecklistScreen", "kyroShowGalleryScreen"].map(name => [name, (() => { try { return eval(name); } catch { return undefined; } })()]));`, sandbox);
   return { sandbox, body, make, select, api: sandbox.api };
 }
 const WRITABLE_NAMES = ["const KYRO_READ_COMMANDS", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroTwelveHour(", "function kyroAddComposer(", "async function kyroRefreshList(", "function kyroShowChecklistScreen(", "function kyroShowGalleryScreen("];
@@ -499,4 +499,98 @@ test("pictures and videos get a screen of their own that is kept, with the pictu
 test("a kept screen is work: nothing puts it away by itself, and a new request does", () => {
   assert.match(app, /if \(document\.querySelector\("\[data-kyro-keep\]"\)\) return true;/);
   assert.match(app, /document\.querySelectorAll\("\[data-kyro-keep\]"\)\.forEach\(node => node\.remove\(\)\);/);
+});
+
+// Found by the Standard User test: a lesson, a marketplace search and a prepared field job each said "Done. It is on your screen." with nothing on the screen.
+test("typed: a lesson, marketplace listings and a field job written down for approval are drawn as an answer on the screen", () => {
+  const shown = []; const api = typedApi(shown);
+  const render = (application, kind, data) => ({ state: "render_required", application, render: { application, presentation: { kind }, response: "Nexus completed the governed execution and is rendering the verified result.", data } });
+  assert.equal(api.kyroShowTypedResult(render("learning", "learning-plan", { lesson: "Soil is the thin outer layer of the Earth's crust where plants grow.", sources: [{ title: "FAO", url: "https://fao.org" }] }), "Teach me a short lesson on soil", "x"), true);
+  assert.equal(shown.at(-1).result.response, "Soil is the thin outer layer of the Earth's crust where plants grow. Sources: FAO.");
+  assert.equal(api.kyroShowTypedResult(render("marketplace", "listing", { listings: ["Maize price 2026 - https://example.org/a", "Buy maize - https://example.org/b"] }), "Show marketplace listings for maize", "x"), true);
+  assert.equal(shown.at(-1).result.response, "I found 2 listings: Maize price 2026; Buy maize.");
+  assert.equal(api.kyroShowTypedResult(render("operations", "operation", { note: "The plan is saved and waits for approval. Nothing was dispatched.", approvalState: "pending_approval" }), "Prepare a field operation", "x"), true);
+  assert.equal(shown.at(-1).result.response, "The plan is saved and waits for approval. Nothing was dispatched. Status: pending approval.");
+  assert.equal(api.kyroShowTypedResult(render("learning", "learning-plan", { lesson: "Too short" }), "Teach me", "x"), false, "a lesson with no text is not an answer");
+});
+
+// Found by the Standard User test: "open operations / messages / learning / ..." showed information and nothing to use. Each application is a screen with fields and buttons that send the same governed request a sentence would.
+const APP_NAMES = ["const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "const KYRO_CURRENCIES", "const KYRO_APP_SCREENS", "function kyroRunAppCommand(", "function kyroShowAppScreen(", "function kyroShowDocumentScreen("];
+function appPage() {
+  const page = fakePage(app, APP_NAMES);
+  const sent = []; const specials = [];
+  Object.assign(page.sandbox, {
+    handleNexusUnifiedBrainRuntimeCommand: async (text, options) => { sent.push([text, JSON.stringify(options)]); return true; },
+    startKyroTelehealthIntake: () => specials.push("telehealth"), startKyroSaleIntake: () => specials.push("sale"), routeKyroVoiceIntakeTranscript: arg => specials.push("resume:" + arg.transcript),
+    downloadNexusAuthoritativeDocument: (id, status) => specials.push("download:" + id), setTimeout });
+  require("node:vm").runInContext("this.shown = kyroShowAppScreen; this.showDoc = kyroShowDocumentScreen;", page.sandbox);
+  return { ...page, sent, specials, show: page.sandbox.shown, showDoc: page.sandbox.showDoc };
+}
+const fieldsOf = card => Object.fromEntries(card.find(node => node.tag === "input" || node.tag === "textarea" || node.tag === "select").map(node => [node.attrs.name, node]));
+function submitAction(page, appId, label, values) {
+  assert.equal(page.show(appId), true, appId);
+  const card = page.select("[data-kyro-app-action]").find(node => node.attrs["data-kyro-app-action"] === label); assert.ok(card, `${appId}: ${label}`);
+  const fields = fieldsOf(card); for (const [name, value] of Object.entries(values)) fields[name].value = value;
+  card.find(node => node.tag === "form")[0].submit();
+  return page.sent.at(-1) && page.sent.at(-1)[0];
+}
+
+test("every application opens as a screen with its own forms and buttons, and each form sends the right governed request", () => {
+  const page = appPage();
+  assert.equal(submitAction(page, "health", "Record blood pressure", { up: "128", down: "82" }), "My blood pressure is 128 over 82");
+  assert.equal(submitAction(page, "health", "Find a pharmacy", { place: "Nairobi" }), "Find a pharmacy near Nairobi");
+  assert.equal(submitAction(page, "health", "Find a pharmacy", { place: "" }), "Find a pharmacy near me", "no town: near me");
+  assert.equal(submitAction(page, "health", "Find a clinic", { place: "Kisumu" }), "Find a clinic near Kisumu");
+  assert.equal(submitAction(page, "agriculture", "Ask about a crop or a pest", { question: "why are my maize leaves yellow?" }), "why are my maize leaves yellow?");
+  assert.equal(submitAction(page, "agriculture", "Write in my farm log", { entry: "12 mm of rain" }), "Log 12 mm of rain");
+  assert.equal(submitAction(page, "agriculture", "Weather", { place: "Kisumu" }), "What is the weather in Kisumu");
+  assert.equal(submitAction(page, "workforce", "Find jobs", { what: "" }), "Find jobs near me");
+  assert.equal(submitAction(page, "workforce", "Find jobs", { what: "farm" }), "Find farm jobs near me");
+  assert.equal(submitAction(page, "learning", "Learn about a topic", { topic: "soil" }), "Teach me a short lesson on soil");
+  assert.equal(submitAction(page, "trade", "Look for buyers or offers", { product: "maize" }), "Show marketplace listings for maize");
+  assert.equal(submitAction(page, "operations", "Write down a job", { job: "spray the north field on Friday" }), "Prepare a field operation: spray the north field on Friday. Record approval state and return its receipt.");
+  assert.equal(submitAction(page, "communications", "Send a message", { how: "Email", to: "amina@example.org", words: "the delivery is ready" }), "Email amina@example.org saying the delivery is ready");
+  assert.equal(submitAction(page, "communications", "Send a message", { how: "Text", to: "+254700000001", words: "I am on my way" }), "Text +254700000001 saying I am on my way");
+  assert.equal(submitAction(page, "business", "Add a client", { name: "Amina Otieno", phone: "+254712345678" }), "Add a customer named Amina Otieno phone +254712345678");
+  assert.equal(submitAction(page, "business", "Add a client", { name: "Amina Otieno", phone: "" }), "Add a customer named Amina Otieno");
+  assert.equal(submitAction(page, "business", "Write down money out", { amount: "5000", currency: "shillings", what: "seeds" }), "Log an expense of 5000 shillings for seeds");
+  assert.equal(submitAction(page, "business", "Write down money in", { amount: "12000", currency: "naira", what: "maize sales" }), "Log income of 12000 naira from maize sales");
+  assert.equal(submitAction(page, "business", "Write a business plan", { what: "a poultry farm in Kisumu" }), "Write a business plan for a poultry farm in Kisumu");
+  for (const [text, options] of page.sent) assert.equal(options, JSON.stringify({ source: "typed", kyroDirect: true }), text);
+  assert.equal(page.select("[data-kyro-result]").length, 0, "the application screen is put away when its request goes out");
+});
+
+test("a form with a field left empty says which one and sends nothing; the buttons and the special starts work", () => {
+  const page = appPage();
+  assert.equal(submitAction(page, "operations", "Write down a job", { job: "  " }), undefined);
+  assert.equal(page.sent.length, 0);
+  assert.match(page.select("[role=\"status\"]")[0].textContent, /^Please fill in: /);
+  page.show("health"); page.select("button").find(node => node.textContent === "Start a telehealth request").click();
+  page.show("trade"); page.select("button").find(node => node.textContent === "Sell something").click();
+  page.show("workforce"); page.select("button").find(node => node.textContent === "Build my résumé").click();
+  assert.deepEqual(page.specials.map(entry => entry.replace(/resume:Build my resume/, "resume")), ["telehealth", "sale", "resume"]);
+  page.show("health"); page.select("button").find(node => node.textContent === "Show my readings").click();
+  assert.equal(page.sent.at(-1)[0], "Show my readings");
+  page.show("business");
+  const labels = page.select("button").map(node => node.textContent);
+  for (const wanted of ["Clients", "Donors", "Grants due", "Invoices", "Summary", "Follow-ups"]) assert.ok(labels.includes(wanted), wanted);
+  page.select("button").find(node => node.textContent === "Grants due").click();
+  assert.equal(page.sent.at(-1)[0], "Which grants are due soon");
+  assert.equal(page.show("nothing-like-this"), false);
+  const screen = (page.show("health"), page.select("[data-kyro-result]")[0]);
+  assert.equal(screen.attrs["data-kyro-keep"], "true", "kept until it is closed");
+});
+
+test("a saved document is on the screen with its words and a Download button, and 'open health' and the others show the application", () => {
+  const page = appPage();
+  assert.equal(page.showDoc({ data: { documentId: "doc_abc123", title: "Pump Log", content: "replaced the seal on Tuesday" } }), true);
+  const screen = page.select("[data-kyro-result]")[0];
+  assert.equal(screen.attrs["data-kyro-result"], "document"); assert.equal(screen.attrs["data-kyro-keep"], "true");
+  assert.ok(screen.find(node => node.textContent === "replaced the seal on Tuesday").length === 1);
+  page.select("button").find(node => node.attrs["data-kyro-download"] === "doc_abc123").click();
+  assert.deepEqual(page.specials, ["download:doc_abc123"]);
+  assert.equal(page.showDoc({ data: { title: "No id" } }), false);
+  assert.match(app, /if \(KYRO_APP_SCREENS\[workspace\] && kyroShowAppScreen\(workspace\)\) return true;/, "the help screen is the application screen");
+  assert.match(app, /if \(openApp\[1\]\) return \(typeof kyroShowAppScreen === "function" && kyroShowAppScreen\("business"\)\)/, "open business is the business screen");
+  assert.match(app, /if \(drawn\.data\?\.documentId && String\(drawn\.data\?\.title \|\| ""\)\.trim\(\) && kyroShowDocumentScreen\(drawn\)\) return true;/, "a saved document is shown on a screen");
 });

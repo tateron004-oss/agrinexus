@@ -51822,7 +51822,7 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     const run = command => { void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true }); return true; };
     const card = openApp[2] ? "operations" : openApp[3] ? "communications" : (openApp[4] || openApp[13]) ? "health" : (openApp[7] || openApp[12]) ? "learning" : (openApp[8] || openApp[14]) ? "agriculture" : openApp[11] ? "workforce" : openApp[15] ? "trade" : "";
     if (card && kyroOpenAppCard(card, said, lang)) return true;
-    if (openApp[1]) return run("Open the business workspace");
+    if (openApp[1]) return (typeof kyroShowAppScreen === "function" && kyroShowAppScreen("business")) || run("Open the business workspace");
     // (weather needs a town and a shipment needs its two ends: the screen asks, and the short answer is taken)
     const askOnScreen = (kind, ask) => {
       kyroPendingMedia = { kind, at: Date.now() };
@@ -51942,7 +51942,7 @@ function kyroUiText() {
   try { return KYRO_COMPOSER_TEXT[languageCode() === "sw" ? "sw" : "en"]; } catch { return KYRO_COMPOSER_TEXT.en; }
 }
 const KYRO_FIELD_STYLE = "width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1px solid #475569;background:#0f172a;color:#f1f5f9;font:inherit;font-size:1.05rem";
-const KYRO_BUTTON_STYLE = "padding:12px 22px;border:0;border-radius:12px;background:#06a77d;color:#fff;font:inherit;font-size:1.05rem;font-weight:600;cursor:pointer";
+const KYRO_BUTTON_STYLE = "padding:12px 22px;border:0;border-radius:12px;background:#06a77d;color:#fff;font:inherit;font-size:1.05rem;font-weight:600;cursor:pointer;white-space:nowrap;flex:none";
 function kyroMake(tag, attrs, text) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs || {})) node.setAttribute(key, value);
@@ -52096,6 +52096,150 @@ function kyroShowGalleryScreen(drawn) {
   } catch { return false; }
 }
 
+// ---- The applications, as screens you can use ----
+// Found by the Standard User test: "open operations / messages / learning / ..." showed a few lines of information with nothing to click or type ("did not open, just showed info"). Each application is now a screen with
+// its own fields and buttons. Pressing one sends the same governed request a spoken sentence would (so the answer, the question and the Yes and No work exactly as they do by voice).
+const KYRO_CURRENCIES = Object.freeze([["Kenya shillings", "shillings"], ["Naira", "naira"], ["US dollars", "dollars"], ["Ghana cedis", "cedis"], ["Rand", "rand"], ["Birr", "birr"]]);
+const KYRO_APP_SCREENS = Object.freeze({
+  health: { title: "Health", intro: "I record what you tell me and help you get ready for a visit. I do not diagnose or give treatment advice.", actions: [
+    { kind: "button", label: "Start a telehealth request", special: "telehealth" },
+    { kind: "form", label: "Record blood pressure", button: "Record", fields: [{ name: "up", label: "Top number (systolic)", type: "number" }, { name: "down", label: "Bottom number (diastolic)", type: "number" }], command: f => "My blood pressure is " + f.up + " over " + f.down },
+    { kind: "form", label: "Find a pharmacy", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a pharmacy near " + (f.place || "me") },
+    { kind: "form", label: "Find a clinic", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a clinic near " + (f.place || "me") },
+    { kind: "button", label: "Show my readings", command: "Show my readings" }
+  ] },
+  agriculture: { title: "Crop and farm help", intro: "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.", actions: [
+    { kind: "form", label: "Ask about a crop or a pest", button: "Ask", fields: [{ name: "question", label: "For example: why are my maize leaves turning yellow?", type: "textarea" }], command: f => f.question },
+    { kind: "form", label: "Write in my farm log", button: "Save", fields: [{ name: "entry", label: "For example: 12 mm of rain", optional: false }], command: f => "Log " + f.entry },
+    { kind: "button", label: "Show my farm log", command: "Show my farm log" },
+    { kind: "form", label: "Weather", button: "Show", fields: [{ name: "place", label: "Town" }], command: f => "What is the weather in " + f.place }
+  ] },
+  workforce: { title: "Work and jobs", intro: "Find work, and make a résumé by answering a few short questions.", actions: [
+    { kind: "form", label: "Find jobs", button: "Find", fields: [{ name: "what", label: "What kind of work? (leave empty for any)", optional: true }], command: f => "Find " + (f.what ? f.what + " " : "") + "jobs near me" },
+    { kind: "button", label: "Build my résumé", special: "resume" },
+    { kind: "button", label: "My résumés", command: "Show my resumes" }
+  ] },
+  learning: { title: "Learning", intro: "Short practice lessons, one small step at a time. These are not certified courses.", actions: [
+    { kind: "button", label: "Teach me letters", command: "Teach me letters" },
+    { kind: "button", label: "Start the AI basics course", command: "Start the AI basics course" },
+    { kind: "button", label: "Give me a practice interview", command: "Give me a practice interview" },
+    { kind: "form", label: "Learn about a topic", button: "Teach me", fields: [{ name: "topic", label: "For example: soil" }], command: f => "Teach me a short lesson on " + f.topic }
+  ] },
+  trade: { title: "AgriTrade", intro: "Post what you have for sale, and look for buyers. I do not take payments or move money.", actions: [
+    { kind: "button", label: "Sell something", special: "sale" },
+    { kind: "form", label: "Look for buyers or offers", button: "Look", fields: [{ name: "product", label: "What? For example: maize" }], command: f => "Show marketplace listings for " + f.product }
+  ] },
+  operations: { title: "Field operations", intro: "I write a field or drone job down as a request for you to look over before anything happens. I do not fly a drone or send anyone out.", actions: [
+    { kind: "form", label: "Write down a job", button: "Write it down", fields: [{ name: "job", label: "For example: spray the north field on Friday", type: "textarea" }], command: f => "Prepare a field operation: " + f.job + ". Record approval state and return its receipt." }
+  ] },
+  communications: { title: "Messages", intro: "I write a text, a WhatsApp message or an email, and I ask for your clear yes before anything is sent.", actions: [
+    { kind: "form", label: "Send a message", button: "Review and send", fields: [
+      { name: "how", label: "How", type: "select", options: [["Text message", "Text"], ["WhatsApp", "WhatsApp"], ["Email", "Email"]] },
+      { name: "to", label: "To: phone number with country code (+254...) or an email address" },
+      { name: "words", label: "What it should say", type: "textarea" }], command: f => f.how + " " + f.to + " saying " + f.words }
+  ] },
+  business: { title: "Business", intro: "Your clients, money and grants. Anything that changes your records asks for your yes first.", actions: [
+    { kind: "form", label: "Add a client", button: "Add", fields: [{ name: "name", label: "Name" }, { name: "phone", label: "Phone number with country code (optional)", optional: true }], command: f => "Add a customer named " + f.name + (f.phone ? " phone " + f.phone : "") },
+    { kind: "form", label: "Write down money in", button: "Save", fields: [{ name: "amount", label: "Amount", type: "number" }, { name: "currency", label: "Currency", type: "select", options: KYRO_CURRENCIES }, { name: "what", label: "From what or whom" }], command: f => "Log income of " + f.amount + " " + f.currency + " from " + f.what },
+    { kind: "form", label: "Write down money out", button: "Save", fields: [{ name: "amount", label: "Amount", type: "number" }, { name: "currency", label: "Currency", type: "select", options: KYRO_CURRENCIES }, { name: "what", label: "What it was for" }], command: f => "Log an expense of " + f.amount + " " + f.currency + " for " + f.what },
+    { kind: "form", label: "Write a business plan", button: "Write it", fields: [{ name: "what", label: "For example: a poultry farm in Kisumu" }], command: f => "Write a business plan for " + f.what },
+    { kind: "buttons", label: "Look at my records", items: [["Clients", "Show my clients"], ["Donors", "Who are my donors"], ["Grants due", "Which grants are due soon"], ["Invoices", "Show my invoices"], ["Summary", "Give me a business summary"], ["Follow-ups", "Who needs a follow up"]] }
+  ] }
+});
+function kyroRunAppCommand(special, command) {
+  document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+  if (special === "telehealth") { startKyroTelehealthIntake({ seedUtterance: { id: "", text: "I need telehealth" }, source: "app-screen" }); return; }
+  if (special === "sale") { startKyroSaleIntake({ seedUtterance: { id: "", text: "I want to sell something" }, source: "app-screen" }); return; }
+  if (special === "resume") { routeKyroVoiceIntakeTranscript({ transcript: "Build my resume", utteranceId: "app-" + Date.now(), source: "app-screen" }); return; }
+  void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true });
+}
+// The screen of one application: what it is for, and a form or a button for each thing it can do.
+function kyroShowAppScreen(appId) {
+  try {
+    const app = KYRO_APP_SCREENS[appId];
+    if (!app) return false;
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "app", "data-kyro-app": appId, "data-kyro-keep": "true", role: "dialog", "aria-label": app.title,
+      style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;align-items:flex-start" });
+    const close = kyroMake("button", { type: "button", "aria-label": "Close", style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
+    close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "app-screen" }); });
+    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, app.title), kyroMake("p", { style: "margin:0;color:#cbd5e1;max-width:34em" }, app.intro));
+    for (const action of app.actions) {
+      const card = kyroMake("div", { "data-kyro-app-action": action.label, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07);box-sizing:border-box" });
+      if (action.kind === "button") {
+        const button = kyroMake("button", { type: "button", style: KYRO_BUTTON_STYLE }, action.label);
+        button.addEventListener("click", () => kyroRunAppCommand(action.special || "", action.command || ""));
+        card.append(button);
+      } else if (action.kind === "buttons") {
+        card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.15rem" }, action.label));
+        const row = kyroMake("div", { style: "display:flex;flex-wrap:wrap;gap:8px" });
+        for (const [label, command] of action.items) {
+          const button = kyroMake("button", { type: "button", style: KYRO_BUTTON_STYLE }, label);
+          button.addEventListener("click", () => kyroRunAppCommand("", command));
+          row.append(button);
+        }
+        card.append(row);
+      } else {
+        card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.15rem" }, action.label));
+        const form = kyroMake("form", { style: "display:flex;flex-direction:column;gap:8px" });
+        const inputs = {};
+        for (const field of action.fields) {
+          let input;
+          if (field.type === "select") {
+            input = kyroMake("select", { name: field.name, "aria-label": field.label, style: KYRO_FIELD_STYLE });
+            for (const [label, value] of field.options) input.append(kyroMake("option", { value }, label));
+          } else if (field.type === "textarea") {
+            input = kyroMake("textarea", { name: field.name, "aria-label": field.label, placeholder: field.label, rows: "3", style: KYRO_FIELD_STYLE });
+          } else {
+            input = kyroMake("input", { name: field.name, "aria-label": field.label, placeholder: field.label, type: field.type === "number" ? "number" : "text", ...(field.type === "number" ? { inputmode: "decimal", step: "any", min: "0" } : {}), style: KYRO_FIELD_STYLE });
+          }
+          inputs[field.name] = { input, field };
+          form.append(input);
+        }
+        const note = kyroMake("p", { role: "status", style: "margin:0;color:#fca5a5;min-height:1.2em" });
+        form.append(kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE + ";align-self:flex-start" }, action.button || "Go"), note);
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          const values = {};
+          for (const [name, { input, field }] of Object.entries(inputs)) {
+            values[name] = String(input.value || "").replace(/\s+/g, " ").trim();
+            if (!values[name] && !field.optional) { note.textContent = "Please fill in: " + field.label; return; }
+          }
+          kyroRunAppCommand("", action.command(values));
+        });
+        card.append(form);
+      }
+      screen.append(card);
+    }
+    document.body.append(screen);
+    try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    return true;
+  } catch { return false; }
+}
+// A saved document (or résumé): its title and words on the screen, with the Download button (it used to be drawn into a window that could have no size on the screen).
+function kyroShowDocumentScreen(drawn) {
+  try {
+    const data = drawn?.data || {};
+    if (!data.documentId || !String(data.title || "").trim()) return false;
+    const t = kyroUiText();
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "document", "data-kyro-keep": "true", role: "dialog", "aria-label": String(data.title),
+      style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;align-items:flex-start" });
+    const close = kyroMake("button", { type: "button", "aria-label": t.close, style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
+    close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "document-screen" }); });
+    const status = kyroMake("p", { role: "status", style: "margin:0;color:#94a3b8;min-height:1.2em" }, "Saved.");
+    const download = kyroMake("button", { type: "button", "data-kyro-download": data.documentId, style: KYRO_BUTTON_STYLE }, "Download");
+    download.addEventListener("click", () => { void downloadNexusAuthoritativeDocument(data.documentId, status); });
+    const words = String(data.content || data.text || "").trim();
+    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, String(data.title)));
+    if (words) screen.append(kyroMake("div", { style: "width:100%;max-width:40em;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07);max-height:55vh;overflow-y:auto;box-sizing:border-box" }, words));
+    screen.append(download, status);
+    document.body.append(screen);
+    try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    return true;
+  } catch { return false; }
+}
+
 function kyroShowResultScreen(toolName, command, result) {
   try {
     if (!kyroResultScreenEligible(toolName, result)) return false;
@@ -52154,6 +52298,8 @@ function kyroShowHelpScreen(workspace, context = null) {
     const said = `${context.command || ""} ${typeof payload.query === "string" ? payload.query : Object.values(payload).join(" ")}`;
     if (!window.KyroAnswerCard.isGeneralFor(workspace, said)) return false;
   }
+  // a plain "open health", "open operations", "open messages", ...: the application as a screen with its own fields and buttons, not a few lines of information
+  if (KYRO_APP_SCREENS[workspace] && kyroShowAppScreen(workspace)) return true;
   let roles = [];
   try { roles = Array.isArray(data?.roles) ? data.roles : []; } catch { roles = []; }
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
@@ -52258,16 +52404,23 @@ function kyroRenderedAnswerLine(render) {
       if (said.length >= 20 && !/^Nexus completed the governed execution/i.test(said) && !/download/i.test(said) && !data.documentId && !data.fileUrl && !data.downloadUrl) return said;
     }
     if (kind === "task-list" && data.syncState) return sentence(String(data.note || "").replace(/\s+/g, " "));
-    if (kind === "source-answer") {
-      const answer = sentence(String(data.answer || data.summary || "").replace(/\s+/g, " "));
-      if (!answer) return "";
+    // a web answer, a lesson and a crop assessment: the text, with the sources it came from. (A lesson was "on your screen" in a window that had no size on the screen: nothing showed.)
+    if (kind === "source-answer" || kind === "learning-plan" || kind === "assessment") {
+      const answer = sentence(String(data.answer || data.lesson || data.assessment || data.summary || "").replace(/\s+/g, " "));
+      if (!answer || (kind !== "source-answer" && answer.length < 30)) return "";
       const sources = (Array.isArray(data.sources) ? data.sources : []).map(textOf).filter(Boolean).slice(0, 4);
       return sources.length ? `${answer} Sources: ${sources.join("; ")}.` : answer;
     }
-    if (kind === "operation" && Array.isArray(data.listings) && data.listings.length) {
+    // job listings and marketplace listings: the titles, as a list
+    if ((kind === "operation" || kind === "listing") && Array.isArray(data.listings) && data.listings.length) {
       const names = data.listings.map(item => textOf(item).replace(/\s+[-\u2013\u2014]\s+https?:\/\/\S+$/i, "").trim()).filter(Boolean).slice(0, 8);
       if (names.length >= 2) return `I found ${data.listings.length} listings: ${names.join("; ")}.`;
       if (names.length === 1) return `I found one listing: ${names[0]}.`;
+    }
+    // a field or drone job written down for approval: what was done, and that nothing was sent out
+    if (kind === "operation" && render?.application === "operations" && typeof data.note === "string" && data.note.trim()) {
+      const state = data.approvalState ? ` Status: ${String(data.approvalState).replace(/_/g, " ")}.` : "";
+      return sentence(data.note.replace(/\s+/g, " ")) + state;
     }
   } catch { /* the card is drawn as before */ }
   return "";
@@ -52304,6 +52457,8 @@ function kyroShowTypedResult(result, text, message) {
     } else if (drawn && result.state === "render_required") {
       const cards = Array.isArray(drawn.data?.cards) ? drawn.data.cards : Array.isArray(drawn.data?.data?.cards) ? drawn.data.data.cards : [];
       const drawnKind = drawn.presentation?.kind;
+      // a saved document or résumé: its words and its Download button on a screen
+      if (drawn.data?.documentId && String(drawn.data?.title || "").trim() && kyroShowDocumentScreen(drawn)) return true;
       // pictures and videos: a screen of their own; checklists: every list with its items to tick, take off and add to
       if (drawnKind === "image-gallery" || drawnKind === "video-gallery") return kyroShowGalleryScreen(drawn);
       if (drawnKind === "checklist") {
