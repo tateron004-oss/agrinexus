@@ -17,9 +17,10 @@ function load() {
   const start = app.indexOf("// ---- Maps beyond Africa");
   const end = app.indexOf("// ---- Answer-first (the Jarvis way)");
   assert.ok(start > 0 && end > start);
-  const calls = { typed: [], screens: [], spoken: [], interrupted: 0, maps: [] };
+  const calls = { typed: [], screens: [], spoken: [], interrupted: 0, maps: [], cards: [] };
   const sandbox = {
-    window: { KyroDismissCommands: { parse: text => (/^(?:close it|i'm done|go back to the orb)$/i.test(text) ? { kind: "done" } : null) } },
+    kyroShowHelpScreen: (card, context) => { calls.cards.push({ card, context }); return !sandbox.noCards; },
+    window: { KyroAnswerCard: require("../../public/kyro-answer-card.js"), KyroDismissCommands: { parse: text => (/^(?:close it|i'm done|go back to the orb)$/i.test(text) ? { kind: "done" } : null) } },
     languageCode: () => "en", realtimeVoiceActive: () => true, realtimeVoiceSession: { sdkController: { interrupt: () => { calls.interrupted += 1; } } },
     handleNexusUnifiedBrainRuntimeCommand: async (text, options) => { calls.typed.push({ text, options }); },
     kyroShowResultScreen: (tool, command, result) => { calls.screens.push(result.response); return true; },
@@ -49,7 +50,7 @@ test("which sentences the page answers by itself", () => {
   const { api } = load();
   for (const text of ["open documents", "Open docs", "open my documents", "Kyro, open the documents", "open my business plan", "open images", "Open videos", "show me pictures", "open my photos", "create a business plan", "Create a document", "write a letter to my buyer",
     "Can you make a business plan for my farm", "I want to write a report", "draft a proposal for the cooperative"]) assert.equal(api.kyroSpokenOpenOwns(text), true, text);
-  for (const text of ["help me with a business plan", "how do I write a business plan", "open health", "open the map", "create a resume", "make my CV", "create a checklist called Market Day", "make a note that the pump leaks", "show me pictures of a maize plant", "what is the weather", "remind me to write a letter", ""]) assert.equal(api.kyroSpokenOpenOwns(text), false, text);
+  for (const text of ["help me with a business plan", "how do I write a business plan", "open the map", "create a resume", "make my CV", "create a checklist called Market Day", "make a note that the pump leaks", "show me pictures of a maize plant", "what is the weather", "remind me to write a letter", ""]) assert.equal(api.kyroSpokenOpenOwns(text), false, text);
 });
 
 test("'open documents' lists the saved ones; 'open images' asks what to look for and takes the next short answer as the subject", async () => {
@@ -175,4 +176,42 @@ test("a card left open by an earlier request is closed by the next request, the 
   assert.match(app, /async function handleNexusUnifiedBrainRuntimeCommand\(command = "", options = \{\}\) \{\s*const text = String\(command \|\| ""\)\.trim\(\);\s*if \(!text\) return false;\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
   assert.match(app, /function startKyroVoiceIntake\(definition, options = \{\}\) \{\s*if \(kyroActiveVoiceIntake\) kyroActiveVoiceIntake\.engine\.cancel\(\);\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
   assert.match(app, /async function callNexusOpenAiRealtimeTool\(toolName, args = \{\}\) \{\s*const command = [^\n]*\n\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
+});
+
+// Found when sweeping the applications: "Open business", "open operations", "open messages", "open the pharmacy", "open logistics", "open the weather", "open live knowledge" and "open the calendar" were answered "I'm not sure what you'd like me to do".
+test("every application opens something: a card for those that have one, the real list or answer for the others, and a question for live knowledge", () => {
+  const cards = [["Open operations", "operations"], ["open drones", "operations"], ["Kyro, open the field operations", "operations"], ["Open messages", "communications"], ["open communications", "communications"], ["open WhatsApp", "communications"],
+    ["Open pharmacy", "health"], ["open the mobile clinic", "health"], ["Open health", "health"], ["open clinics", "health"], ["Open courses", "learning"], ["open learning", "learning"], ["Open crop help", "agriculture"], ["open the farm", "agriculture"],
+    ["Open agriculture", "agriculture"], ["open jobs", "workforce"], ["Open workforce", "workforce"], ["open careers", "workforce"], ["Open AgriTrade", "trade"], ["open the marketplace", "trade"], ["Open trade", "trade"]];
+  for (const [text, card] of cards) {
+    const { api, calls } = load();
+    assert.equal(api.kyroSpokenOpenOwns(text), true, text);
+    assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text);
+    assert.equal(calls.cards.at(-1).card, card, text); assert.equal(calls.cards.at(-1).context.command, "open " + card, "the card is asked for as a general request");
+    assert.match(calls.spoken.at(-1), /\w/, `${text}: the card is read out`);
+  }
+  const runs = [["Open business", "Open the business workspace"], ["open my nonprofit", "Open the business workspace"], ["Open the business workspace", "Open the business workspace"], ["Open logistics", "Where is my shipment"], ["show my shipments", "Where is my shipment"],
+    ["Open the weather", "What is the weather today"], ["open the forecast", "What is the weather today"], ["Open the calendar", "Show my reminders"]];
+  for (const [text, command] of runs) {
+    const { api, calls } = load();
+    assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text); assert.equal(calls.typed.at(-1).text, command, text); assert.deepEqual({ ...calls.typed.at(-1).options }, { source: "typed", kyroDirect: true });
+  }
+  const { api, calls } = load();
+  assert.equal(api.kyroHandleSpokenOpen("Open live knowledge", {}), true);
+  assert.equal(calls.screens.at(-1), "What would you like me to look up? For example: what is the maize price in Kenya today?"); assert.equal(api.pending().kind, "lookup");
+  assert.equal(api.kyroHandleSpokenOpen("what is the maize price in Kenya today", {}), true);
+  assert.equal(calls.typed.at(-1).text, "what is the maize price in Kenya today");
+  for (const text of ["Open the map", "show me the weather in Kisumu", "start a business", "how do I open a business", "open health records", "what is a pharmacy", "show me clinics near me", ""]) assert.equal(load().api.kyroSpokenOpenOwns(text), false, text);
+});
+
+test("a card that cannot be shown leaves the sentence to the usual route, and the same words heard and then sent as a tool call are done once", () => {
+  const { api, calls, sandbox } = load(); sandbox.noCards = true;
+  assert.equal(api.kyroHandleSpokenOpen("Open operations", {}), false);
+  const again = load();
+  assert.equal(again.api.kyroHandleSpokenOpen("Open documents", {}), true); assert.equal(again.api.kyroHandleSpokenOpen("open documents.", {}), true);
+  assert.equal(again.calls.typed.filter(item => item.text === "Show my saved documents").length, 1, "once, not twice");
+  assert.equal(again.api.kyroHandleSpokenOpen("Open documents", { typed: true }), true, "a typed repeat is always done");
+  assert.equal(again.calls.typed.filter(item => item.text === "Show my saved documents").length, 2);
+  assert.match(app, /let pageOwnsIt = kyroVoiceIntakeOwnsTurn\(command\);\s*if \(pageOwnsIt && !kyroActiveVoiceIntake\) \{\s*let started = false;\s*try \{ started = routeKyroVoiceIntakeTranscript\(\{ transcript: command, utteranceId: "tool-"/);
+  assert.match(app, /mediaAsk && \(mediaAsk\.type === "control" \|\| mediaAsk\.type === "play"\) && await kyroMediaCommand\(command\)/);
 });

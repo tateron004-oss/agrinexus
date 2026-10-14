@@ -50496,7 +50496,15 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
   // text) run alongside it. See routeKyroVoiceIntakeTranscript for the transcript-level guard.
-  if (kyroVoiceIntakeOwnsTurn(command)) {
+  // The page starts these itself from the words it hears (the interviews, the camera, "open documents"). When the model's tool call comes first, or the words were not heard as a final transcript, it is started here: the
+  // model is only told "Kyro is doing it" of something that really was started.
+  let pageOwnsIt = kyroVoiceIntakeOwnsTurn(command);
+  if (pageOwnsIt && !kyroActiveVoiceIntake) {
+    let started = false;
+    try { started = routeKyroVoiceIntakeTranscript({ transcript: command, utteranceId: "tool-" + Date.now().toString(36), source: "tool-call" }) === true; } catch { started = false; }
+    if (!started) pageOwnsIt = false;
+  }
+  if (pageOwnsIt) {
     return { ok: true, status: "completed", response: kyroIntakeBusyLine(command),
       executionVerified: false, blockedReason: null };
   }
@@ -50505,8 +50513,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     return { ok: true, status: "completed", response: "Okay.", executionVerified: false, blockedReason: null, clientAction: { type: "return-to-orb" } };
   }
   // "Pause the music", "next song", "louder": the player is on this page, so the page does it (the music tool would go and play a song called "pause").
-  if (window.KyroMediaCommands?.parse?.(command)?.type === "control" && await kyroMediaCommand(command)) {
-    return { ok: true, status: "completed", response: "Kyro's player did that and said so. Say nothing more.", executionVerified: false, blockedReason: null, clientAction: { type: "media-control" } };
+  const mediaAsk = window.KyroMediaCommands?.parse?.(command);
+  if (mediaAsk && (mediaAsk.type === "control" || mediaAsk.type === "play") && await kyroMediaCommand(command)) {
+    return { ok: true, status: "completed", response: mediaAsk.type === "play" ? "Kyro's player is playing it and said so. Say nothing more." : "Kyro's player did that and said so. Say nothing more.",
+      executionVerified: false, blockedReason: null, clientAction: { type: mediaAsk.type === "play" ? "media-play" : "media-control" } };
   }
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
   const visualKind = kyroVisualRequestKind(command);
@@ -51633,11 +51643,25 @@ function kyroListKindOf(word) {
   if (/^note/.test(w)) return "notes";
   return "";
 }
-let kyroPendingMedia = null; // { kind: "images" | "videos" | "music" | "list", at } while Kyro has asked what to look for
+// "Open business", "open the weather", "open messages", "open operations", "open the pharmacy", "open logistics", "open live knowledge", "open the calendar": found testing, many of these were answered "I'm not sure what you'd
+// like me to do". Each application now opens something real: its card (what it does, and what it does not), its list, or the answer, and the live-knowledge one asks what to look up.
+const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))[.?!]*$", "i");
+// Shows an application's card and reads it out (the first lines, short). True when it was shown.
+function kyroOpenAppCard(card, said, lang) {
+  if (!window.KyroAnswerCard?.specFor || !kyroShowHelpScreen(card, { command: "open " + card, payload: {} })) return false;
+  try {
+    const spec = window.KyroAnswerCard.specFor(card, { roles: [], lang });
+    const line = (spec?.lines || []).slice(0, 2).join(" ");
+    if (line) setVoiceResponse(line, true, { allowHandoff: false, command: said, source: "kyro-open" });
+  } catch { /* the card is on the screen */ }
+  return true;
+}
+let kyroPendingMedia = null; // { kind: "images" | "videos" | "music" | "list" | "lookup", at } while Kyro has asked what to look for
+let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answered from the voice, so the model's tool call for the same words does not do it twice
 function kyroSpokenOpenOwns(text) {
   const said = String(text || "").trim();
   if (!said) return false;
-  return KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -51653,12 +51677,22 @@ function kyroTakeOverTurn() {
 function kyroHandleSpokenOpen(text, options = {}) {
   const said = String(text || "").trim();
   if (!said) return false;
+  // Said aloud, the words reach the page twice: as the transcript and as the model's own tool call. The second is not done again (a typed repeat always is).
+  const spokenKey = options.typed ? "" : said.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (spokenKey && kyroLastSpokenOpen.key === spokenKey && Date.now() - kyroLastSpokenOpen.at < 5000) return true;
+  const handled = kyroHandleSpokenOpenOnce(said, options);
+  if (handled && spokenKey) kyroLastSpokenOpen = { key: spokenKey, at: Date.now() };
+  return handled;
+}
+function kyroHandleSpokenOpenOnce(text, options = {}) {
+  const said = String(text || "").trim();
+  if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
   // the short answer to "what would you like to see?"
   if (kyroPendingMedia) {
     const pending = kyroPendingMedia; kyroPendingMedia = null;
     const stillAsking = Date.now() - pending.at < 90000;
-    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && (pending.kind === "list" || !KYRO_NOT_A_SUBJECT.test(said)) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
+    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && (pending.kind === "list" || pending.kind === "lookup" || !KYRO_NOT_A_SUBJECT.test(said)) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
       if (pending.kind === "list") {
         const named = /\b(documents?|docs?|files?|reminders?|checklists?|to-?do|notes?)\b/i.exec(said);
         const listKind = named ? kyroListKindOf(named[1]) : "";
@@ -51667,6 +51701,10 @@ function kyroHandleSpokenOpen(text, options = {}) {
           void handleNexusUnifiedBrainRuntimeCommand(KYRO_LIST_COMMANDS[listKind], { source: "typed", kyroDirect: true });
           return true;
         }
+      } else if (pending.kind === "lookup") {
+        kyroTakeOverTurn();
+        void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
+        return true;
       } else {
         const subject = said.replace(/^(?:show me|find|i want to see|i'd like to see|i would like to see|let me see|i want to hear|i'd like to hear|let me hear|listen to|put on|some|of|about|pictures of|videos about|images of)\s+/gi, "").replace(/[.?!]+$/, "").trim();
         if (subject) {
@@ -51695,6 +51733,24 @@ function kyroHandleSpokenOpen(text, options = {}) {
     kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask });
     try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
     return true;
+  }
+  const openApp = KYRO_OPEN_APP.exec(said);
+  if (openApp) {
+    kyroTakeOverTurn();
+    const run = command => { void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true }); return true; };
+    const card = openApp[2] ? "operations" : openApp[3] ? "communications" : (openApp[4] || openApp[13]) ? "health" : (openApp[7] || openApp[12]) ? "learning" : (openApp[8] || openApp[14]) ? "agriculture" : openApp[11] ? "workforce" : openApp[15] ? "trade" : "";
+    if (card && kyroOpenAppCard(card, said, lang)) return true;
+    if (openApp[1]) return run("Open the business workspace");
+    if (openApp[5]) return run("Where is my shipment");
+    if (openApp[6]) return run("What is the weather today");
+    if (openApp[10]) return run("Show my reminders");
+    if (openApp[9]) {
+      kyroPendingMedia = { kind: "lookup", at: Date.now() };
+      const ask = lang === "sw" ? "Ungependa nitafute nini? Kwa mfano: bei ya mahindi nchini Kenya leo ni ngapi?" : "What would you like me to look up? For example: what is the maize price in Kenya today?";
+      kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask });
+      try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
+      return true;
+    }
   }
   const player = KYRO_OPEN_PLAYER.exec(said);
   if (player) {
