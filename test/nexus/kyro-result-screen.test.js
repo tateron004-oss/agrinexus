@@ -309,3 +309,8 @@ test("typed: a checklist, a web search answer and a list of jobs are drawn as an
   }
   assert.equal(api.kyroShowTypedResult(render("operation", { origin: "Kisumu" }), "How far is it", "x"), false, "an operation with no listings is drawn as before");
 });
+
+// Found re-running the sweep on the live site: a checklist answer had "Live Knowledge Research" open behind it, a web answer had a raw "Nexus completed..." card behind it.
+test("typed: when the answer is on the screen the card window the renderer opened for the same result is closed", () => {
+  assert.match(app, /const answerOnScreen = kyroShowTypedResult\(result, text, message\);\s*\/\/[^\n]*\n\s*if \(answerOnScreen\) \{ try \{ if \(document\.querySelector\("#nexus-workspace"\)\) closeNexusFunctionWindow\(\{ command: "" \}\); \} catch/);
+});
