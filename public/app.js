@@ -52093,7 +52093,7 @@ function kyroShowTypedResult(result, text, message) {
     if (!window.KyroResultScreen || !result || typeof result !== "object") return false;
     if (kyroExplicitOpenCard(text)) return false;
     const drawn = result.render;
-    let answer = null;
+    let answer = null; let wantsButtons = false;
     const emptyAnswer = kyroEmptyRenderAnswer(result);
     if (emptyAnswer) {
       answer = { response: emptyAnswer };
@@ -52109,12 +52109,40 @@ function kyroShowTypedResult(result, text, message) {
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
     } else if (result.state === "completed" && result.application === "conversation" && result.outcome?.modelAnswered === false && String(message || "").trim().length >= 24) {
       answer = { response: message };
+    } else if (result.state === "confirmation_required" && String(message || "").trim().length >= 12 && result.outcome?.pendingStepId && String(result.taskId || "").startsWith("tsk_")) {
+      // "I can add Amina as a client. Should I go ahead?": on the screen with a Yes and a No to tap (saying yes works too), for a person who cannot type
+      answer = { response: message, requiresConfirmation: true }; wantsButtons = true;
     } else if (result.state === "clarification_required" && String(message || "").trim().length >= 12) {
       // a question Kyro needs answered ("Which town, county, or region in Kenya should I use?") is on the screen too, and stays up until it is answered
       answer = { response: message, requiresConfirmation: true };
     } else return false;
-    return kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
+    const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
+    if (shown && wantsButtons) kyroAddConfirmButtons();
+    return shown;
   } catch { return false; }
+}
+// A Yes and a No under a question that waits for one: tapping is the same as saying it (submitNexusPendingBehaviorConfirmation).
+function kyroAddConfirmButtons() {
+  try {
+    const screen = document.querySelector("[data-kyro-result]");
+    if (!screen) return;
+    const sw = (() => { try { return languageCode() === "sw"; } catch { return false; } })();
+    const row = document.createElement("div");
+    row.setAttribute("data-kyro-confirm-buttons", "true");
+    row.style.cssText = "display:flex;gap:16px;align-self:flex-start;position:relative;z-index:1";
+    const make = (label, approved, color) => {
+      const button = document.createElement("button");
+      button.type = "button"; button.textContent = label; button.setAttribute("data-kyro-confirm", approved ? "yes" : "no");
+      button.style.cssText = "padding:16px 36px;border:0;border-radius:16px;color:#fff;font-size:1.25rem;font-weight:600;cursor:pointer;background:" + color;
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+        void submitNexusPendingBehaviorConfirmation(approved, approved ? "yes" : "no", { source: "typed" });
+      });
+      return button;
+    };
+    row.append(make(sw ? "Ndiyo" : "Yes", true, "#06a77d"), make(sw ? "Hapana" : "No", false, "#9b2c2c"));
+    screen.append(row);
+  } catch { /* the question is on the screen, and saying yes works */ }
 }
 
 function genesisWorkspaceActionFromFinalTranscript(transcript = "") {

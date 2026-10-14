@@ -373,6 +373,13 @@ test("'play music' with no song: the last choice if remembered on this device, o
   assert.equal(remembered.spoken[0], "Playing your last choice, Last Last.");
   remembered.controller.forgetLast();
   assert.equal(remembered.store["kyro.media.last"], undefined);
+  // found on the live site: after a video about drip irrigation, "play some music" played that video again
+  const afterVideo = makeWorld({ responses: [okResponse(station())], storage: { "kyro.media.last": JSON.stringify({ query: "drip irrigation", kind: "video", title: "Simple DIY Drip Irrigation System" }) } });
+  const third = afterVideo.controller.play("", { kind: "music" });
+  await until(() => afterVideo.elements.length === 1, "element");
+  afterVideo.elements[0].startPlayingFor(4);
+  await third;
+  assert.notEqual(afterVideo.requests[0].body.query, "drip irrigation"); assert.notEqual(afterVideo.requests[0].body.kind, "video");
 });
 
 test("a newer request cancels an older one that is still loading (no stale 'Playing')", async () => {
