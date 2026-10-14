@@ -209,3 +209,17 @@ test("typed 'open marketplace / agritrade / trade' shows the trade card; one tha
   assert.match(server, /generalTrade \? \{ answerCard: "trade" \} : \{\}\);/);
   assert.match(app, /card === "health" \|\| card === "agriculture" \|\| card === "trade"/);
 });
+
+// Found sweeping the applications: operations (drones) and messages had no screen to open.
+test("operations and messages have a card that says what each does and does not do, in English and Kiswahili, with nothing to tap", () => {
+  const Card = require("../../public/kyro-answer-card.js");
+  const Screen = require("../../public/kyro-result-screen.js");
+  for (const lang of ["en", "sw"]) for (const id of ["operations", "communications"]) {
+    const spec = Card.specFor(id, { lang });
+    assert.equal(spec.id, id); assert.equal(spec.lines.length, 2); assert.deepEqual(spec.choices, []);
+    const model = Screen.helpModel(spec, lang); assert.equal(model.kind, "help"); assert.ok(model.title);
+  }
+  const ops = Card.specFor("operations", { lang: "en" }); assert.match(ops.lines.join(" "), /do not fly a drone, control an aircraft or send anyone out/);
+  const comms = Card.specFor("communications", { lang: "en" }); assert.match(comms.lines.join(" "), /ask for your clear yes before anything is sent/); assert.match(comms.lines.join(" "), /Nothing is sent without your yes/);
+  assert.equal(Card.specFor("nope", { lang: "en" }), null);
+});
