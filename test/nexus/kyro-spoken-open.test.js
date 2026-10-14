@@ -190,11 +190,18 @@ test("every application opens something: a card for those that have one, the rea
     assert.equal(calls.cards.at(-1).card, card, text); assert.equal(calls.cards.at(-1).context.command, "open " + card, "the card is asked for as a general request");
     assert.match(calls.spoken.at(-1), /\w/, `${text}: the card is read out`);
   }
-  const runs = [["Open business", "Open the business workspace"], ["open my nonprofit", "Open the business workspace"], ["Open the business workspace", "Open the business workspace"], ["Open logistics", "Where is my shipment"], ["show my shipments", "Where is my shipment"],
-    ["Open the weather", "What is the weather today"], ["open the forecast", "What is the weather today"], ["Open the calendar", "Show my reminders"]];
+  const runs = [["Open business", "Open the business workspace"], ["open my nonprofit", "Open the business workspace"], ["Open the business workspace", "Open the business workspace"],
+    ["Open the calendar", "Show my reminders"]];
   for (const [text, command] of runs) {
     const { api, calls } = load();
     assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text); assert.equal(calls.typed.at(-1).text, command, text); assert.deepEqual({ ...calls.typed.at(-1).options }, { source: "typed", kyroDirect: true });
+  }
+  // Weather needs a town and a shipment needs its two ends: the screen asks, and the short answer is taken (found sweeping: both opened nothing).
+  for (const [text, kind, answer, command] of [["Open the weather", "weather", "Kisumu", "What is the weather in Kisumu"], ["open the forecast", "weather", "in Lagos", "What is the weather in Lagos"], ["Open the weather", "weather", "what is the weather in Nakuru", "what is the weather in Nakuru"],
+    ["Open logistics", "shipment", "from Kisumu to Nairobi", "Where is my shipment from Kisumu to Nairobi"], ["show my shipments", "shipment", "Kisumu to Nairobi", "Where is my shipment from Kisumu to Nairobi"]]) {
+    const { api, calls } = load();
+    assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text); assert.equal(api.pending().kind, kind, text); assert.match(calls.screens.at(-1), /\?|For example/, text);
+    assert.equal(api.kyroHandleSpokenOpen(answer, {}), true, answer); assert.equal(calls.typed.at(-1).text, command, answer); assert.equal(api.pending(), null);
   }
   const { api, calls } = load();
   assert.equal(api.kyroHandleSpokenOpen("Open live knowledge", {}), true);
@@ -238,4 +245,38 @@ test("the full-screen map is closed by a request that is not about places, and k
   for (const command of ["Show me the map of Kisumu", "Route from Kisumu to Nakuru", "Find a pharmacy near me", "Where is the nearest clinic", "Open maps"]) assert.equal(run(command, true).mapOpen, true, command);
   assert.equal(run("", true).mapOpen, true, "no words, nothing to judge by");
   assert.deepEqual(run("Show me pictures of maize", false).sections, [], "no map open, nothing to close");
+});
+
+// Found sweeping the applications: after "open videos" (asking what to watch), "search the web for maize prices" was answered with six videos about it; and after "open images", "show me videos about composting" returned pictures.
+test("an answer to 'what would you like to see?' that is itself a request for the other medium, or for anything else, is that request", async () => {
+  const { api, calls } = load();
+  api.kyroHandleSpokenOpen("open images", {}); assert.equal(api.pending().kind, "images");
+  assert.equal(api.kyroHandleSpokenOpen("show me videos about composting", {}), true);
+  assert.equal(calls.typed.at(-1).text, "show me videos about composting"); assert.equal(api.pending(), null);
+  api.kyroHandleSpokenOpen("open videos", {}); assert.equal(api.pending().kind, "videos");
+  assert.equal(api.kyroHandleSpokenOpen("pictures of a maize plant", {}), true);
+  assert.equal(calls.typed.at(-1).text, "Show me pictures of a maize plant");
+  api.kyroHandleSpokenOpen("open videos", {}); assert.equal(api.kyroHandleSpokenOpen("drip irrigation", {}), true);
+  assert.equal(calls.typed.at(-1).text, "Show me videos about drip irrigation", "a plain topic is still the topic");
+  api.kyroHandleSpokenOpen("open videos", {}); assert.equal(api.kyroHandleSpokenOpen("Search the web for maize prices in Kenya", {}), true);
+  assert.equal(calls.typed.at(-1).text, "Search the web for maize prices in Kenya", "a command is not a topic");
+  api.kyroHandleSpokenOpen("open images", {}); assert.equal(api.kyroHandleSpokenOpen("maize", {}), true);
+  assert.equal(calls.typed.at(-1).text, "Show me pictures of maize");
+});
+
+// Found sweeping the business side: "open the CRM" and "open grants" were answered "I could not tell what to do with that in your business records", "open my resume" listed the business plans as raw fields, and "open uploads" showed internal fields.
+test("the business applications, the résumés and the uploads open", () => {
+  for (const [text, command] of [["Open the CRM", "Show my clients"], ["open clients", "Show my clients"], ["Open customers", "Show my clients"], ["Open donors", "Who are my donors"], ["open grants", "Which grants are due soon"], ["Open funding", "Which grants are due soon"],
+    ["open my invoices", "Show my invoices"], ["show the finances", "Give me a business summary"], ["Open bookkeeping", "Give me a business summary"], ["open my resume", "Show my resumes"], ["Show my CV", "Show my resumes"], ["Kyro, open my résumé", "Show my resumes"]]) {
+    const { api, calls } = load();
+    assert.equal(api.kyroSpokenOpenOwns(text), true, text);
+    assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text); assert.equal(calls.typed.at(-1).text, command, text); assert.deepEqual({ ...calls.typed.at(-1).options }, { source: "typed", kyroDirect: true });
+  }
+  for (const text of ["Open uploads", "Upload a document", "I want to upload a photo", "attach a file", "open the file upload"]) {
+    const { api, calls } = load();
+    assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text);
+    assert.match(calls.screens.at(-1), /Choose a picture or a PDF \(up to 10 MB\)/, text);
+  }
+  for (const text of ["how do I find grants", "show me grants for women farmers", "build my resume", "how do I upload a photo", "download my document", "open a business"]) assert.equal(load().api.kyroSpokenOpenOwns(text), false, text);
+  assert.match(app, /function kyroOpenUploadScreen\(said, lang\)[^]*?data-kyro-upload-button[^]*?kyroAskAboutPicture\(file/, "the screen has a real button that sends the file and reads it out");
 });
