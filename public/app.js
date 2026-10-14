@@ -51658,10 +51658,38 @@ function kyroOpenAppCard(card, said, lang) {
 }
 let kyroPendingMedia = null; // { kind: "images" | "videos" | "music" | "list" | "lookup", at } while Kyro has asked what to look for
 let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answered from the voice, so the model's tool call for the same words does not do it twice
+// "Open my resume", "open the CRM", "open grants", "open uploads": the page opens what each is (the résumés list, the clients, the grants due, the invoices, a place to choose a file).
+const KYRO_OPEN_RESUMES = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|see|view|list|find|get)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:saved\\s+)?(?:resumes?|résumés?|resumés?|cvs?)[.?!]*$`, "i");
+const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|bring up|see|view|launch|start)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:(?:business|customer)\\s+)?(?:(crm|clients?|customers?|contacts|customer list|client list)|(donors?|donations|fundraising)|(grants?|funding|grant (?:writing|tracker|deadlines))|(invoices?|billing)|(expenses?|income|finances?|financials?|books|bookkeeping|accounting|sales|profit))[.?!]*$`, "i");
+const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|pictures?|photos?|pdfs?|images?|letters?))?)[.?!]*$`, "i");
+// A screen with a real button (a file can only be chosen from a tap): the picture or PDF is sent and read out, as "look at this" does.
+function kyroOpenUploadScreen(said, lang) {
+  const ask = lang === "sw" ? "Chagua picha au PDF (hadi MB 10) nikusomee. Gusa kitufe hapa chini." : "Choose a picture or a PDF (up to 10 MB) and I will read it to you. Tap the button below.";
+  if (!kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask })) return false;
+  try {
+    const screen = document.querySelector("[data-kyro-result]");
+    const label = document.createElement("label");
+    label.setAttribute("data-kyro-upload-button", "true");
+    label.textContent = lang === "sw" ? "Chagua faili" : "Choose a file";
+    label.style.cssText = "display:inline-block;align-self:flex-start;padding:16px 28px;border-radius:16px;background:#06a77d;color:#fff;font-size:1.25rem;font-weight:600;cursor:pointer;position:relative;z-index:1";
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "image/jpeg,image/png,image/webp,application/pdf"; input.hidden = true;
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) { setVoiceResponse(lang === "sw" ? "Faili hiyo ni kubwa kuliko MB 10." : "That file is bigger than 10 MB.", true, { allowHandoff: false, command: said, source: "kyro-upload" }); return; }
+      void kyroAskAboutPicture(file, lang === "sw" ? "Soma faili hii na uniambie inasema nini" : "Read this file and tell me what it says", file.name);
+    });
+    label.append(input);
+    screen?.append(label);
+  } catch { /* the question is on the screen */ }
+  try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
+  return true;
+}
 function kyroSpokenOpenOwns(text) {
   const said = String(text || "").trim();
   if (!said) return false;
-  return KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -51702,7 +51730,7 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (kyroPendingMedia) {
     const pending = kyroPendingMedia; kyroPendingMedia = null;
     const stillAsking = Date.now() - pending.at < 90000;
-    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && (pending.kind === "list" || pending.kind === "lookup" || !KYRO_NOT_A_SUBJECT.test(said)) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
+    if (stillAsking && said.split(/\s+/).length <= 10 && !window.KyroDismissCommands?.parse?.(said) && (pending.kind === "list" || pending.kind === "lookup" || pending.kind === "weather" || pending.kind === "shipment" || !KYRO_NOT_A_SUBJECT.test(said)) && !/^(?:no|nothing|cancel|never mind|nevermind|stop|forget it)\b/i.test(said)) {
       if (pending.kind === "list") {
         const named = /\b(documents?|docs?|files?|reminders?|checklists?|to-?do|notes?)\b/i.exec(said);
         const listKind = named ? kyroListKindOf(named[1]) : "";
@@ -51711,11 +51739,30 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
           void handleNexusUnifiedBrainRuntimeCommand(KYRO_LIST_COMMANDS[listKind], { source: "typed", kyroDirect: true });
           return true;
         }
+      } else if (pending.kind === "weather") {
+        // "Open the weather" asked which town: the town is the answer, anything else is a request of its own
+        kyroTakeOverTurn();
+        const town = said.replace(/^(?:in|for|at|it is|it's|i live in|i am in|i'm in)\s+/i, "").replace(/[.?!]+$/, "");
+        void handleNexusUnifiedBrainRuntimeCommand(/\b(?:weather|forecast|temperature|rain)\b/i.test(said) ? said : `What is the weather in ${town}`, { source: "typed", kyroDirect: true });
+        return true;
+      } else if (pending.kind === "shipment") {
+        kyroTakeOverTurn();
+        void handleNexusUnifiedBrainRuntimeCommand(/\b(?:shipment|delivery|parcel|package|order)\b/i.test(said) ? said : `Where is my shipment ${/^from\b/i.test(said) ? said : "from " + said}`, { source: "typed", kyroDirect: true });
+        return true;
       } else if (pending.kind === "lookup") {
         kyroTakeOverTurn();
         void handleNexusUnifiedBrainRuntimeCommand(said, { source: "typed", kyroDirect: true });
         return true;
       } else {
+        // Asked what pictures to show, and the answer is a request for videos (or the other way round): it is that new request, not a picture topic of "videos about composting".
+        const named = /\b(videos?|clips?|pictures?|images?|photos?)\b/i.exec(said);
+        const otherMedium = (named && ((/^(?:video|clip)/i.test(named[1]) ? "videos" : "images") !== pending.kind) && pending.kind !== "music")
+          || /^(?:search|what|what's|who|how|where|when|why|tell|make|create|write|build|remind|call|send|add|open|start|take|route)\b/i.test(said); // (a command of its own: not a topic to show pictures of)
+        if (otherMedium) {
+          kyroTakeOverTurn();
+          void handleNexusUnifiedBrainRuntimeCommand(/^(?:show|find|search|watch|play|display|open)\b/i.test(said) ? said : "Show me " + said, { source: "typed", kyroDirect: true });
+          return true;
+        }
         const subject = said.replace(/^(?:show me|find|i want to see|i'd like to see|i would like to see|let me see|i want to hear|i'd like to hear|let me hear|listen to|put on|some|of|about|pictures of|videos about|images of)\s+/gi, "").replace(/[.?!]+$/, "").trim();
         if (subject) {
           kyroTakeOverTurn();
@@ -51744,6 +51791,22 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
     return true;
   }
+  if (KYRO_OPEN_RESUMES.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand("Show my resumes", { source: "typed", kyroDirect: true });
+    return true;
+  }
+  const openBiz = KYRO_OPEN_BIZ.exec(said);
+  if (openBiz) {
+    kyroTakeOverTurn();
+    const command = openBiz[1] ? "Show my clients" : openBiz[2] ? "Who are my donors" : openBiz[3] ? "Which grants are due soon" : openBiz[4] ? "Show my invoices" : "Give me a business summary";
+    void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true });
+    return true;
+  }
+  if (KYRO_OPEN_UPLOAD.test(said)) {
+    kyroTakeOverTurn();
+    if (kyroOpenUploadScreen(said, lang)) return true;
+  }
   const openApp = KYRO_OPEN_APP.exec(said);
   if (openApp) {
     kyroTakeOverTurn();
@@ -51751,8 +51814,15 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     const card = openApp[2] ? "operations" : openApp[3] ? "communications" : (openApp[4] || openApp[13]) ? "health" : (openApp[7] || openApp[12]) ? "learning" : (openApp[8] || openApp[14]) ? "agriculture" : openApp[11] ? "workforce" : openApp[15] ? "trade" : "";
     if (card && kyroOpenAppCard(card, said, lang)) return true;
     if (openApp[1]) return run("Open the business workspace");
-    if (openApp[5]) return run("Where is my shipment");
-    if (openApp[6]) return run("What is the weather today");
+    // (weather needs a town and a shipment needs its two ends: the screen asks, and the short answer is taken)
+    const askOnScreen = (kind, ask) => {
+      kyroPendingMedia = { kind, at: Date.now() };
+      kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask });
+      try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
+      return true;
+    };
+    if (openApp[5]) return askOnScreen("shipment", lang === "sw" ? "Mzigo wako unatoka wapi na unaenda wapi? Kwa mfano: kutoka Kisumu hadi Nairobi." : "Where is it coming from, and where is it going? For example: from Kisumu to Nairobi.");
+    if (openApp[6]) return askOnScreen("weather", lang === "sw" ? "Nikague hali ya hewa ya mji gani? Kwa mfano: Kisumu." : "Which town should I check the weather for? For example: Kisumu.");
     if (openApp[10]) return run("Show my reminders");
     if (openApp[9]) {
       kyroPendingMedia = { kind: "lookup", at: Date.now() };
@@ -51979,6 +52049,14 @@ function kyroRenderedAnswerLine(render) {
       if (lists.length > 1) return `You have ${lists.length} checklists: ${lists.map(list => textOf(list.title) || "Untitled").slice(0, 8).join("; ")}.`;
       return "";
     }
+    if (kind === "reminder") return kyroReminderListLine(data);
+    // the person's own business records ("Kyro Test Workspace has 2 clients: Grace Otieno and Services."): the sentence is the answer, not a card of "Command:" and "Summary:" rows
+    if (kind === "operation" && render?.application === "business") {
+      const said = String(render.response || "").replace(/\s+/g, " ").trim();
+      // (a result with a file to download keeps its card: the Download button is on it)
+      if (said.length >= 20 && !/^Nexus completed the governed execution/i.test(said) && !/download/i.test(said) && !data.documentId && !data.fileUrl && !data.downloadUrl) return said;
+    }
+    if (kind === "task-list" && data.syncState) return sentence(String(data.note || "").replace(/\s+/g, " "));
     if (kind === "source-answer") {
       const answer = sentence(String(data.answer || data.summary || "").replace(/\s+/g, " "));
       if (!answer) return "";
@@ -58574,8 +58652,9 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
     document.body.dataset.genesisWorkspace = outcome.workspace;
     document.body.dataset.genesisWorkspaceRequestId = outcome.commandId;
   } else {
+    const cardLine = /^Nexus completed the governed execution/i.test(String(outcome.response || "")) ? (kyroRenderedAnswerLine(outcome) || nexusGalleryMessage(outcome) || "Here is the result.") : outcome.response; // (never the server's status line)
     opened = openNexusCapability(nexusAuthoritativeCapabilityId(outcome), {
-      command: outcome.response || `${outcome.application} result`,
+      command: cardLine || `${outcome.application} result`,
       source: "nexus-authoritative-typed-outcome",
       sourceSurface: outcome.channel === "voice" ? "voice_audio" : "ask_nexus",
       instant: true,
@@ -58583,7 +58662,7 @@ async function renderNexusPassiveWorkspace(outcome = {}, data = {}, context = {}
         ok: true,
         status: "authoritative_provider_result",
         mode: outcome.application,
-        message: outcome.response,
+        message: cardLine,
         command: outcome.originalText,
         result: data,
         authoritative: true,

@@ -532,3 +532,33 @@ test("a job search that names no place is a search in the country on the person'
   const planner = require("node:fs").readFileSync(require("node:path").join(__dirname, "../../nexus/brain/planner.js"), "utf8");
   assert.match(planner, /withJobsPlace\(completeRemainingWorkspace, command\.text, context\?\.country\)/, "the planner hands the account's country to the job search");
 });
+
+// Found sweeping the applications: "Open the offline queue" was answered with nothing at all. It is the server's own count of what it has applied from the person's devices.
+test("'open the offline queue' is a read of the sync status, and 'queue ... offline ... sync' is still the sync of a new change", () => {
+  const { completeRemainingWorkspacePlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: ["offline.sync"].map(toolId => ({ toolId })) };
+  for (const text of ["Open the offline queue", "Show my offline work", "Check the sync status", "Open offline status", "what is my offline queue", "Kyro, show the queued offline changes"]) {
+    const plan = completeRemainingWorkspacePlan(text, catalog);
+    assert.equal(plan?.application, "offline-queue", text); assert.equal(plan.steps[0].toolId, "offline.sync", text); assert.equal(plan.steps[0].input.operation, "status", text);
+  }
+  const sync = completeRemainingWorkspacePlan("Queue a crop observation offline, synchronize it, and show the server acknowledgement.", catalog);
+  assert.equal(sync.steps[0].input.operation, "sync");
+  for (const text of ["Tell me about offline work", "Open the map offline", "How do I work offline"]) assert.notEqual(completeRemainingWorkspacePlan(text, catalog)?.steps?.[0]?.input?.operation, "status", text);
+});
+
+test("'show my resumes' lists the saved résumés (titled 'Resume - <name>') and says how to make one when there are none", async () => {
+  const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
+  const planFor = async (rows, text) => {
+    const planner = Object.create(OpenEndedPlanner.prototype); planner.documents = { list: async () => rows };
+    const { documentsListPlan } = require("../../nexus/brain/planner.js");
+    return (documentsListPlan || (async () => null))(planner.documents, { text, tenantId: "t", actorId: "u" });
+  };
+  const planner = require("../../nexus/brain/planner.js");
+  if (!planner.documentsListPlan) return; // (exported below)
+  const rows = [{ title: "Business plan - a poultry farm" }, { title: "Resume - Grace Otieno" }, { title: "Field Notes" }, { title: "Resume - Amina Otieno" }];
+  assert.match((await planFor(rows, "Show my resumes")).response, /^Your résumés, newest first: 1, Resume - Grace Otieno; 2, Resume - Amina Otieno\. Say "build my resume"/);
+  assert.match((await planFor(rows, "open my CV")).response, /Resume - Grace Otieno/);
+  assert.match((await planFor([{ title: "Field Notes" }], "Show my resumes")).response, /^You have no saved résumé yet\. Say "build my resume"/);
+  assert.match((await planFor(rows, "Show my documents")).response, /^Your saved documents, newest first: 1, Business plan/, "the documents list is as before");
+  assert.equal(await planFor(rows, "Build my resume"), null);
+});

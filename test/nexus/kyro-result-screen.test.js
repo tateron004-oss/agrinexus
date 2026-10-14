@@ -149,7 +149,7 @@ test("it is wired: voice answers draw the screen and open no form; the form from
 });
 
 function typedApi(shown) {
-  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroRenderedAnswerLine(", "function nexusGalleryMessage(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
+  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroReminderListLine(", "function kyroRenderedAnswerLine(", "function nexusGalleryMessage(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
   return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply, kyroEmptyRenderAnswer, kyroPlainRenderMessage };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
@@ -313,4 +313,21 @@ test("typed: a checklist, a web search answer and a list of jobs are drawn as an
 // Found re-running the sweep on the live site: a checklist answer had "Live Knowledge Research" open behind it, a web answer had a raw "Nexus completed..." card behind it.
 test("typed: when the answer is on the screen the card window the renderer opened for the same result is closed", () => {
   assert.match(app, /const answerOnScreen = kyroShowTypedResult\(result, text, message\);\s*\/\/[^\n]*\n\s*if \(answerOnScreen\) \{ try \{ if \(document\.querySelector\("#nexus-workspace"\)\) closeNexusFunctionWindow\(\{ command: "" \}\); \} catch/);
+});
+
+test("typed: the person's own business records (clients, donors, invoices, grants) are an answer on the screen, not a card of 'Command:' and 'Summary:' rows; résumé and reminder lists too", () => {
+  const shown = []; const api = typedApi(shown);
+  const business = (response, data = {}) => ({ state: "render_required", application: "business", render: { application: "business", presentation: { kind: "operation" }, response, data: { command: "Show my clients", ...data } } });
+  assert.equal(api.kyroShowTypedResult(business('"Kyro Test Workspace" has 2 clients: Grace Otieno and Services.'), "Show my clients", "x"), true);
+  assert.equal(shown.at(-1).result.response, '"Kyro Test Workspace" has 2 clients: Grace Otieno and Services.');
+  assert.equal(api.kyroShowTypedResult(business("Nexus completed the governed execution and is rendering the verified result."), "Show my clients", "x"), false, "the server's status line is not an answer");
+  assert.equal(api.kyroShowTypedResult(business("Done."), "Show my clients", "x"), false, "too short to be an answer");
+  const other = { state: "render_required", application: "workforce", render: { application: "workforce", presentation: { kind: "operation" }, response: "Here are some listings for you to look over, one by one.", data: { origin: "Kisumu" } } };
+  assert.equal(api.kyroShowTypedResult(other, "How far is it", "x"), false, "only business records");
+});
+
+test("typed: a business result with a file to download keeps its card", () => {
+  const shown = []; const api = typedApi(shown);
+  const withFile = { state: "render_required", application: "business", render: { application: "business", presentation: { kind: "operation" }, response: 'Saved "Service Agreement" as a Word file; press Download on the card.', data: { documentId: "doc_1" } } };
+  assert.equal(api.kyroShowTypedResult(withFile, "Make a service agreement", "x"), false);
 });

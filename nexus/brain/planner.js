@@ -1450,12 +1450,22 @@ function exportLatestDocumentFormat(text) {
 }
 const DOCUMENTS_LIST_REQUEST = /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:(?:show|list|read|open|see)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?my\s+(?:saved\s+)?(?:documents|docs|files)|what\s+(?:documents|docs|files)\s+do\s+i\s+have|(?:do\s+i\s+have\s+any|what\s+have\s+i\s+saved\s+in\s+my)\s+(?:saved\s+)?(?:documents|docs))\s*[.?!]*$/i;
 // "Show my documents", "what documents do I have": the titles of the person's own saved documents, newest first (null when it is not that request or the documents cannot be read).
+// "Show my resumes", "open my CV": the saved documents that are résumés (they are saved as "Resume - <name>"). Found sweeping: "open my resume" listed the business plans, as raw fields.
+const RESUMES_LIST_REQUEST = /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:(?:show|list|read|open|see|view|find|get)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?(?:my|the)\s+(?:saved\s+)?(?:resumes?|résumés?|resumés?|cvs?|curriculum vitae)|(?:do\s+i\s+have|where\s+is)\s+(?:a|an|any|my)\s+(?:saved\s+)?(?:resumes?|résumés?|cvs?))[.?!\s]*$/i;
 async function documentsListPlan(documents, command) {
   const goal = String(command.text || "").trim();
-  if (!documents?.list || !DOCUMENTS_LIST_REQUEST.test(goal)) return null;
+  const resumes = RESUMES_LIST_REQUEST.test(goal);
+  if (!documents?.list || !(resumes || DOCUMENTS_LIST_REQUEST.test(goal))) return null;
   let rows = null;
-  try { rows = await documents.list({ tenantId: command.tenantId, ownerId: command.actorId, limit: 8 }); } catch { return null; }
+  try { rows = await documents.list({ tenantId: command.tenantId, ownerId: command.actorId, limit: resumes ? 50 : 8 }); } catch { return null; }
   if (!Array.isArray(rows)) return null;
+  if (resumes) {
+    const mine = rows.filter(row => /\b(?:resume|résumé|resumé|cv|curriculum vitae)\b/i.test(String(row.title || ""))).slice(0, 8);
+    const said = mine.length
+      ? `Your résumés, newest first: ${mine.map((row, index) => `${index + 1}, ${row.title}`).join("; ")}. Say "build my resume" to make a new one.`
+      : 'You have no saved résumé yet. Say "build my resume" and I will ask you a few short questions.';
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: said, sourceRequired: false };
+  }
   const response = rows.length
     ? `Your saved documents, newest first: ${rows.map((row, index) => `${index + 1}, ${row.title || "untitled"}`).join("; ")}. Say "export the latest document as a PDF" to get a file.`
     : 'You have no saved documents yet. Say, for example, "Create a document called Maize Sales that says Sold 3 sacks of maize, and save it."';
@@ -1663,6 +1673,9 @@ function completeRemainingWorkspacePlan(text, catalog) {
     // A time that is unclear ("at 6": morning or evening?) is asked about instead of being set at a guess.
     return scheduled && (clarifyReminderTime(goal) || scheduled);
   }
+  // "Open the offline queue", "Show my offline work", "What is my sync status": the server's own count of what it has applied from the person's devices (nexus/sync/status-executor.js).
+  if (/^\s*(?:(?:nexus|kyro)[,:]?\s+)?(?:please\s+)?(?:open|show|check|see|view|what(?:'s| is) in|what(?:'s| is))\s+(?:me\s+)?(?:(?:the|my|our)\s+)?(?:offline\s+(?:queue|work|changes|sync(?:\s+status)?)|(?:sync|offline)\s+status|queued\s+(?:offline\s+)?(?:work|changes))[.?!\s]*$/i.test(goal))
+    return plan("offline-queue", "offline.sync", "Check the offline sync status", { operation: "status", requireServerAcknowledgement: true });
   if (/\b(queue|queued)\b/i.test(goal) && /\boffline\b/i.test(goal) && /\b(sync|synchronize|synchronise)\b/i.test(goal) &&
       /\b(acknowledg(?:e|ement)|server|receipt|confirm)\b/i.test(goal))
     return plan("offline-queue", "offline.sync", "Synchronize governed offline operation",
@@ -1913,4 +1926,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, translationRequest, exportLatestDocumentFormat, exportLatestDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
-  completeRemainingWorkspacePlan, withJobsPlace, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
+  completeRemainingWorkspacePlan, withJobsPlace, documentsListPlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
