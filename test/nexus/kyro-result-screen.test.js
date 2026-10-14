@@ -149,10 +149,13 @@ test("it is wired: voice answers draw the screen and open no form; the form from
 });
 
 function typedApi(shown) {
-  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroReminderListLine(", "function kyroRenderedAnswerLine(", "function nexusGalleryMessage(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroAddConfirmButtons(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
+  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroReminderListLine(", "function kyroRenderedAnswerLine(", "function nexusGalleryMessage(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroAddConfirmButtons(", "function kyroWritableListKind(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
-  return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply, kyroEmptyRenderAnswer, kyroPlainRenderMessage };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
+  // (the screens that draw into the page itself are stubbed: they are tested on their own below)
+  shown.composers = []; shown.checklists = []; shown.galleries = [];
+  const stubs = { kyroAddComposer: kind => { shown.composers.push(kind); return true; }, kyroShowChecklistScreen: (lists, line) => { shown.checklists.push({ lists, line }); return true; }, kyroShowGalleryScreen: drawn => { shown.galleries.push(drawn.presentation.kind); return true; }, kyroRefreshList: async () => {} };
+  return new Function("window", "kyroShowResultScreen", "kyroAddComposer", "kyroShowChecklistScreen", "kyroShowGalleryScreen", "kyroRefreshList", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply, kyroEmptyRenderAnswer, kyroPlainRenderMessage, kyroWritableListKind };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; }, stubs.kyroAddComposer, stubs.kyroShowChecklistScreen, stubs.kyroShowGalleryScreen, stubs.kyroRefreshList);
 }
 
 test("typed: clinics and pharmacies from data, and a plain answer the server worked out itself, fill the screen; chat, questions, forms and 'open health' do not", () => {
@@ -373,4 +376,127 @@ test("the Yes and No buttons answer the pending confirmation the way saying it d
   yes.listeners.click(); no.listeners.click();
   assert.equal(JSON.stringify(submitted), JSON.stringify([[true, "yes", { source: "typed" }], [false, "no", { source: "typed" }]]));
   assert.equal(removed.length, 2, "the screen is put away on each tap");
+});
+
+// Found by the Standard User test: "none of the lists would allow for clicking to write", and "the system says 6 videos but nothing shows". Lists are screens you can write in; pictures and videos have a screen of their own.
+test("typed: checklists open as the real lists, pictures and videos on a screen of their own, and the list screens get a form to write in", () => {
+  const shown = []; const api = typedApi(shown);
+  const render = (kind, data) => ({ state: "render_required", application: kind, render: { presentation: { kind }, response: "Nexus completed the governed execution and is rendering the verified result.", data } });
+  assert.equal(api.kyroShowTypedResult(render("checklist", { lists: [{ listId: "rec_a1b2c3d4", title: "Market Day", items: [{ text: "seeds", done: false }] }] }), "Show my checklists", "x"), true);
+  assert.equal(shown.checklists.length, 1); assert.equal(shown.checklists[0].lists[0].listId, "rec_a1b2c3d4"); assert.equal(shown.length, 0, "not the read-only text screen");
+  assert.equal(api.kyroShowTypedResult(render("checklist", { lists: [{ title: "Market Day", items: [{ text: "seeds" }] }] }), "Show my checklists", "x"), true);
+  assert.equal(shown.at(-1).result.response, "Market Day has one item: seeds.", "a list with no id cannot be changed, so it is only shown");
+  assert.equal(api.kyroShowTypedResult(render("image-gallery", { images: [{ url: "https://example.org/a.jpg" }], query: "maize" }), "Show me pictures of maize", "x"), true);
+  assert.equal(api.kyroShowTypedResult(render("video-gallery", { videos: [{ embedUrl: "https://www.youtube.com/embed/abc" }] }), "Show me videos about composting", "x"), true);
+  assert.deepEqual(shown.galleries, ["image-gallery", "video-gallery"]);
+  shown.composers.length = 0;
+  const conversation = () => ({ state: "completed", application: "conversation", outcome: { modelAnswered: false } });
+  assert.equal(api.kyroShowTypedResult(conversation(), "Show my notes", "You have no notes. Say \"note that the pump needs a new seal\"."), true);
+  assert.equal(api.kyroShowTypedResult(conversation(), "Show my saved documents", "Your saved documents, newest first: 1, Business plan - a poultry farm."), true);
+  assert.equal(api.kyroShowTypedResult({ state: "render_required", application: "reminders", render: { presentation: { kind: "reminder" }, data: { reminders: ["check the tank (due Thu 15 Oct, 9:00 am)"], summary: "You have 1 reminder" } } }, "Show my reminders", "x"), true);
+  assert.equal(api.kyroShowTypedResult(conversation(), "How are you today", "I am well, thank you for asking me, and you?"), true);
+  assert.deepEqual(shown.composers, ["notes", "documents", "reminders"], "a form under each list, and none under an ordinary answer");
+});
+
+test("which sentences ask to see a list you can write in", () => {
+  const api = typedApi([]);
+  for (const [text, kind] of [["Show my notes", "notes"], ["what are my notes", "notes"], ["Show my reminders", "reminders"], ["open the calendar", "reminders"], ["Show my saved documents", "documents"], ["list my documents", "documents"], ["Show my checklists", "checklists"], ["show my to-do list", "checklists"]]) assert.equal(api.kyroWritableListKind(text), kind, text);
+  for (const text of ["Note that the pump needs a new seal", "Remind me to check the tank tomorrow", "Create a checklist called Market Day", "Create a document called Notes", "Add milk to my list", "Delete my notes", "How do I write notes", "Play music", ""]) assert.equal(api.kyroWritableListKind(text), "", text);
+});
+
+// A small stand-in for the page, enough to press the buttons and read what was done.
+function fakePage(app, names) {
+  const vm = require("node:vm");
+  const make = tag => ({ tag, attrs: {}, children: [], listeners: {}, value: "", textContent: "", disabled: false, style: {},
+    setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return this.attrs[k]; }, append(...kids) { this.children.push(...kids); }, addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); },
+    remove() { body.children = body.children.filter(child => child !== this); }, click() { (this.listeners.click || []).forEach(fn => fn({ preventDefault() {} })); },
+    submit() { (this.listeners.submit || []).forEach(fn => fn({ preventDefault() {} })); },
+    find(match, out = []) { for (const child of this.children) { if (match(child)) out.push(child); child.find(match, out); } return out; },
+    querySelector(selector) { return this.find(matcher(selector))[0] || null; } });
+  const matcher = selector => {
+    const attr = /^\[([a-z-]+)(?:="([^"]*)")?\]$/.exec(selector);
+    return node => (attr ? (attr[2] === undefined ? node.attrs[attr[1]] !== undefined : node.attrs[attr[1]] === attr[2]) : node.tag === selector);
+  };
+  const body = make("body");
+  const select = selector => body.find(matcher(selector));
+  const sandbox = { document: { body, createElement: make, querySelector: sel => select(sel)[0] || null, querySelectorAll: sel => ({ forEach: fn => select(sel).forEach(fn) }) },
+    languageCode: () => "en", kyroDeviceTimeZone: () => "UTC", requestWithTimeout: async () => ({}), nexusAuthoritativeConversationId: () => "c1", kyroNoteActivity() {}, kyroReturnToOrb: async () => {}, kyroReminderListLine: data => (data && data.summary) || "",
+    nexusGalleryMessage: drawn => (drawn.presentation.kind === "image-gallery" ? "Here are 2 pictures I found of maize." : "Here are 2 videos I found about composting."), Date, Object, Array, String, Number, Boolean, Promise, Error, Math };
+  sandbox.kyroShowResultScreen = (tool, command, result) => { body.children = body.children.filter(c => c.attrs["data-kyro-result"] === undefined); const screen = make("section"); screen.attrs["data-kyro-result"] = "text"; screen.textContent = result.response; body.children.push(screen); sandbox.lastScreen = result; return true; };
+  vm.createContext(sandbox);
+  const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, name.startsWith("const ") ? app.indexOf(";\n", start) + 2 : app.indexOf("\n}\n", start) + 3); }).join("\n");
+  vm.runInContext(`${source}\nthis.api = { kyroAddComposer, kyroRefreshList, kyroShowChecklistScreen, kyroShowGalleryScreen };`, sandbox);
+  return { sandbox, body, make, select, api: sandbox.api };
+}
+const WRITABLE_NAMES = ["const KYRO_READ_COMMANDS", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroTwelveHour(", "function kyroAddComposer(", "async function kyroRefreshList(", "function kyroShowChecklistScreen(", "function kyroShowGalleryScreen("];
+const settle = () => new Promise(resolve => setTimeout(resolve, 25));
+
+test("the forms under the lists send the same governed commands a spoken request does, then show the list again", async () => {
+  const page = fakePage(app, WRITABLE_NAMES);
+  const said = [];
+  page.sandbox.kyroSilentTurn = async text => { said.push(text); return { response: text === "Show my notes" ? "Your notes, newest first: pump needs a new seal." : "Done.", render: null }; };
+  const run = async (kind, fill) => {
+    page.sandbox.kyroShowResultScreen("typed", "x", { response: "something" });
+    assert.equal(page.api.kyroAddComposer(kind), true, kind);
+    const form = page.select("[data-kyro-composer]")[0];
+    fill(Object.fromEntries(form.find(node => node.tag === "input" || node.tag === "textarea" || node.tag === "select").map(node => [node.attrs.name, node])));
+    form.submit(); await settle();
+  };
+  assert.equal(page.api.kyroAddComposer("nothing"), false);
+  await run("notes", f => { f.note.value = "the pump needs a new seal"; });
+  assert.equal(said[0], "Note that the pump needs a new seal"); assert.equal(said[1], "Show my notes", "the list is read again");
+  assert.match(page.sandbox.lastScreen.response, /^Your notes, newest first: pump needs a new seal/);
+  said.length = 0;
+  await run("reminders", f => { f.what.value = "check the tank"; f.day.value = "tomorrow"; f.time.value = "15:30"; });
+  assert.equal(said[0], "Remind me to check the tank tomorrow at 3:30 pm");
+  said.length = 0;
+  await run("documents", f => { f.title.value = "Field Notes"; f.body.value = "planted maize today"; });
+  assert.equal(said[0], "Create a document called Field Notes that says planted maize today");
+  said.length = 0;
+  await run("checklists", f => { f.name.value = "Market Day"; f.items.value = "seeds, sacks"; });
+  assert.equal(said[0], "Create a checklist called Market Day with items seeds, sacks");
+  said.length = 0;
+  await run("notes", f => { f.note.value = "   "; });
+  assert.equal(said.length, 0, "an empty form sends nothing"); assert.equal(page.select("[data-kyro-composer-status]")[0].textContent, "Write something first.");
+});
+
+test("the checklist screen ticks, removes and adds by the list's own id, and shows the lists again", async () => {
+  const page = fakePage(app, WRITABLE_NAMES);
+  const said = [];
+  const lists = [{ listId: "rec_a1b2c3d4", title: "Market Day", items: [{ text: "seeds", done: false }, { text: "sacks", done: true }] }, { listId: "rec_e5f6a7b8", title: "Water tank", items: [] }];
+  page.sandbox.kyroSilentTurn = async text => { said.push(text); return { render: { data: { lists } } }; };
+  assert.equal(page.api.kyroShowChecklistScreen(lists, "Saved."), true);
+  const screen = page.select("[data-kyro-result]")[0];
+  assert.equal(screen.attrs["data-kyro-keep"], "true", "kept until it is closed");
+  assert.equal(page.select("[data-kyro-checklist]").length, 2);
+  const buttons = page.select("[data-kyro-checklist]")[0].find(node => node.tag === "button");
+  assert.equal(buttons[0].textContent, "☐ seeds"); assert.equal(buttons[2].textContent, "☑ sacks");
+  buttons[0].click(); await settle();
+  assert.equal(said[0], "Mark item 1 done on checklist rec_a1b2c3d4"); assert.equal(said[1], "Show my checklists");
+  said.length = 0; buttons[1].click(); await settle();
+  assert.equal(said[0], "Remove item 1 from checklist rec_a1b2c3d4");
+  said.length = 0;
+  const add = page.select("[data-kyro-checklist]")[1].find(node => node.tag === "form")[0];
+  add.find(node => node.tag === "input")[0].value = "pipe  and   tape"; add.submit(); await settle();
+  assert.equal(said[0], "Add to checklist rec_e5f6a7b8: pipe and tape");
+  assert.ok(page.select("[data-kyro-composer]").length >= 1, "a form for a new checklist is on the screen too");
+});
+
+test("pictures and videos get a screen of their own that is kept, with the pictures or the playable videos on it", () => {
+  const page = fakePage(app, WRITABLE_NAMES);
+  const pictures = { presentation: { kind: "image-gallery" }, data: { query: "maize", images: [{ url: "https://example.org/a.jpg", title: "Maize field" }, { url: "https://example.org/b.jpg" }] } };
+  assert.equal(page.api.kyroShowGalleryScreen(pictures), true);
+  const screen = page.select("[data-kyro-result]")[0];
+  assert.equal(screen.attrs["data-kyro-result"], "gallery"); assert.equal(screen.attrs["data-kyro-keep"], "true");
+  assert.deepEqual(page.select("img").map(node => node.attrs.src), ["https://example.org/a.jpg", "https://example.org/b.jpg"]);
+  const videos = { presentation: { kind: "video-gallery" }, data: { videos: [{ embedUrl: "https://www.youtube.com/embed/abc", title: "Composting 101", channelTitle: "Farm Channel" }, { videoUrl: "https://example.org/v.webm", mimeType: "video/webm" }] } };
+  assert.equal(page.api.kyroShowGalleryScreen(videos), true);
+  assert.equal(page.select("[data-kyro-result]").length, 1, "the earlier screen is replaced");
+  assert.equal(page.select("iframe")[0].attrs.src, "https://www.youtube.com/embed/abc"); assert.equal(page.select("video").length, 1);
+  assert.equal(page.api.kyroShowGalleryScreen({ presentation: { kind: "image-gallery" }, data: { images: [] } }), false, "nothing to show");
+});
+
+test("a kept screen is work: nothing puts it away by itself, and a new request does", () => {
+  assert.match(app, /if \(document\.querySelector\("\[data-kyro-keep\]"\)\) return true;/);
+  assert.match(app, /document\.querySelectorAll\("\[data-kyro-keep\]"\)\.forEach\(node => node\.remove\(\)\);/);
 });
