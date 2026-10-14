@@ -212,7 +212,7 @@ test("the typed route never reads out the server's status line or the internal n
   // the plain answer goes on the screen before the card is drawn and verified (which takes seconds), so the raw card is never what is looked at
   assert.match(typed, /if \(!emptyAnswer && kyroRenderedAnswerLine\(result\.render\)\) \{ try \{ kyroShowTypedResult\(result, text, message\); \} catch[^]*?renderReceipt = await renderer\.render/);
   // a result with a plain answer is shown and said even when the card cannot be verified as showing (found on the live site: business records drew a card and said nothing)
-  assert.match(typed, /if \(!emptyAnswer\) \{ if \(kyroRenderedAnswerLine\(result\.render\)\) answeredWithoutCard = true; else throw error; \}[^]*?if \(!emptyAnswer && !answeredWithoutCard && !renderReceipt\?\.acknowledged\) throw new Error/);
+  assert.match(typed, /if \(!emptyAnswer\) \{ if \(kyroRenderedAnswerLine\(result\.render\) \|\| kyroShowTypedResult\(result, text, message\)\) answeredWithoutCard = true; else throw error; \}[^]*?if \(!emptyAnswer && !answeredWithoutCard && !renderReceipt\?\.acknowledged\) throw new Error/);
   assert.match(typed, /else throw error; \}/); assert.match(typed, /if \(!emptyAnswer && !answeredWithoutCard && !renderReceipt\?\.acknowledged\) throw new Error/);
   assert.match(typed, /message = emptyAnswer \|\| nexusGalleryMessage\(result\.render\) \|\| result\.render\.response \|\| message;/);
   assert.match(typed, /message = kyroPlainRenderMessage\(result, message\);\s*nexusAgenticBrainLastResult = \{/);
@@ -334,4 +334,14 @@ test("typed: a business result with a file to download keeps its card", () => {
   const shown = []; const api = typedApi(shown);
   const withFile = { state: "render_required", application: "business", render: { application: "business", presentation: { kind: "operation" }, response: 'Saved "Service Agreement" as a Word file; press Download on the card.', data: { documentId: "doc_1" } } };
   assert.equal(api.kyroShowTypedResult(withFile, "Make a service agreement", "x"), false);
+});
+
+// Found sweeping the applications: "Search the web for maize prices in Kenya" was answered "Which town, county, or region in Kenya should I use?" by voice only; nothing was on the screen.
+test("typed: a question Kyro needs answered is on the screen and stays up; a yes/no confirmation still waits in the window", () => {
+  const shown = []; const api = typedApi(shown);
+  const question = { state: "clarification_required", application: "live-knowledge" };
+  assert.equal(api.kyroShowTypedResult(question, "Search the web for maize prices in Kenya", "Which town, county, or region in Kenya should I use?"), true);
+  assert.equal(shown.at(-1).result.response, "Which town, county, or region in Kenya should I use?"); assert.equal(shown.at(-1).result.requiresConfirmation, true, "it stays up until it is answered");
+  assert.equal(api.kyroShowTypedResult(question, "x", "Which?"), false, "too short to be a question");
+  assert.equal(api.kyroShowTypedResult({ state: "confirmation_required", application: "business" }, "Add a client named Amina", "I can add Amina Otieno as a client. Should I go ahead?"), false, "a yes or a no waits in the window");
 });
