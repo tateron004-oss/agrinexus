@@ -11,7 +11,7 @@
 // are used only when an earlier one cannot help, or when the phone asks again with excludeIds after a candidate failed to play.
 //
 // Sources: for now music, radio requests and videos come from YouTube ONLY (the owner's decision: "we are only using YouTube"). A request for a radio station is searched on YouTube
-// ("Capital FM live"), "play some music" with nothing named is a YouTube search for popular music, and the radio, Audius, Jamendo, Internet Archive and 30-second preview sources are off.
+// ("Capital FM live"), "play the radio" with no station is a search for live radio in the person's country, "play some music" with nothing named is a YouTube search for popular music, and the radio, Audius, Jamendo, Internet Archive and 30-second preview sources are off.
 // KYRO_MEDIA_SOURCES="all" (or a comma list such as "youtube,radio-browser") turns the others back on; the order above then applies.
 //
 // Nothing here downloads, extracts or relays media. Every candidate is a URL the phone's own player opens directly from the provider.
@@ -132,7 +132,10 @@ async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
   const sources = enabledSources(ctx);
   if (kind === "radio" && sources && !sources.has(radioBrowser.id)) {
     // Radio is off: a named station is searched on YouTube ("Capital FM live"), and "play some music" is a search for popular music there.
-    query = query ? `${query} live` : "popular music";
+    // ("play the radio" with no station is a search for live radio in the person's country, not for a random popular video)
+    const place = normalizeText(rawRequest.country);
+    const wantedRadio = rawRequest.kind === "radio";
+    query = query ? `${query} live` : wantedRadio ? (place.length > 2 ? `${place} radio live` : "live radio") : "popular music";
     kind = "music";
     originalKind = "music";
   }

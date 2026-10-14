@@ -78,15 +78,26 @@ test("a named place is geocoded and used, with the account's country preferred f
   assert.match(result.body.message, /Found 1 real clinic location\(s\) near Kisumu, Kisumu County, Kenya/);
 });
 
-test("places in a different country from the account's are listed with a plain note saying so (never silently)", async () => {
-  // the account is in Nigeria; the person names Kisumu, which is not found in Nigeria and then is found in Kenya
-  const { fetchImpl, calls } = stubFetch({ geocode: (q, code) => (code === "ng" ? [] : [kisumuKenya]) });
+// Found sweeping the applications: "Find a pharmacy near Nairobi" from a Nigerian account listed streets in Abuja, because the account's country was searched first and a look-alike name won there.
+test("a well-known city is looked for in its own country first, whatever country the account is in", async () => {
+  const { fetchImpl, calls } = stubFetch({ geocode: () => [kisumuKenya] });
   const result = await pharmacyBridgeProvider.search({ location: "Kisumu", country: "Nigeria" }, { NEXUS_MAPS_FETCH_IMPL: fetchImpl });
+  assert.deepEqual(calls.filter(call => call.kind === "geocode").map(call => call.countrycodes), ["ke"]);
+  assert.equal(result.body.data.countryNote, undefined, "the person asked for Kisumu and got Kisumu: no note");
+  const nairobiFromNigeria = stubFetch({ geocode: () => [nairobi] });
+  await pharmacyBridgeProvider.search({ location: "Nairobi", country: "Nigeria" }, { NEXUS_MAPS_FETCH_IMPL: nairobiFromNigeria.fetchImpl });
+  assert.equal(nairobiFromNigeria.calls.find(call => call.kind === "geocode").countrycodes, "ke");
+});
+
+test("places in a different country from the account's are listed with a plain note saying so (never silently)", async () => {
+  // the account is in Nigeria; the person names a Kenyan town the page does not know, which is not found in Nigeria and then is found in Kenya
+  const { fetchImpl, calls } = stubFetch({ geocode: (q, code) => (code === "ng" ? [] : [kisumuKenya]) });
+  const result = await pharmacyBridgeProvider.search({ location: "Kisumuville", country: "Nigeria" }, { NEXUS_MAPS_FETCH_IMPL: fetchImpl });
   assert.deepEqual(calls.filter(call => call.kind === "geocode").map(call => call.countrycodes), ["ng", null]);
   assert.equal(result.body.data.countryNote, "Note: these places are in Kenya, not Nigeria.");
   assert.match(result.body.message, /these places are in Kenya, not Nigeria/);
   // and in Kiswahili
-  const sw = await pharmacyBridgeProvider.search({ location: "Kisumu", country: "Nigeria", language: "sw" }, { NEXUS_MAPS_FETCH_IMPL: stubFetch({ geocode: (q, code) => (code === "ng" ? [] : [kisumuKenya]) }).fetchImpl });
+  const sw = await pharmacyBridgeProvider.search({ location: "Kisumuville", country: "Nigeria", language: "sw" }, { NEXUS_MAPS_FETCH_IMPL: stubFetch({ geocode: (q, code) => (code === "ng" ? [] : [kisumuKenya]) }).fetchImpl });
   assert.match(sw.body.data.countryNote, /Kumbuka: maeneo haya yako Kenya, si Nigeria/);
 });
 

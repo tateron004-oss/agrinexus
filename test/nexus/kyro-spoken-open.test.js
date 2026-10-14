@@ -171,11 +171,11 @@ test("'show me a list' asks a list of what; 'show me a list of my documents / re
 });
 
 test("a card left open by an earlier request is closed by the next request, the next interview and the next tool call, and is not closed by the quiet-spell return", () => {
-  assert.match(app, /function kyroDismissStaleWorkspace\(\) \{\s*try \{ if \(document\.querySelector\("#nexus-workspace"\)\) closeNexusFunctionWindow\(\{ command: "" \}\); \} catch/);
+  assert.match(app, /function kyroDismissStaleWorkspace\(command = ""\) \{\s*try \{ if \(document\.querySelector\("#nexus-workspace"\)\) closeNexusFunctionWindow\(\{ command: "" \}\); \} catch/);
   assert.match(app, /delete document\.body\.dataset\.genesisWorkspace; delete document\.body\.dataset\.genesisWorkspaceRequestId;/);
-  assert.match(app, /async function handleNexusUnifiedBrainRuntimeCommand\(command = "", options = \{\}\) \{\s*const text = String\(command \|\| ""\)\.trim\(\);\s*if \(!text\) return false;\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
+  assert.match(app, /async function handleNexusUnifiedBrainRuntimeCommand\(command = "", options = \{\}\) \{\s*const text = String\(command \|\| ""\)\.trim\(\);\s*if \(!text\) return false;\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(text\);/);
   assert.match(app, /function startKyroVoiceIntake\(definition, options = \{\}\) \{\s*if \(kyroActiveVoiceIntake\) kyroActiveVoiceIntake\.engine\.cancel\(\);\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
-  assert.match(app, /async function callNexusOpenAiRealtimeTool\(toolName, args = \{\}\) \{\s*const command = [^\n]*\n\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
+  assert.match(app, /async function callNexusOpenAiRealtimeTool\(toolName, args = \{\}\) \{\s*const command = [^\n]*\n\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(command\);/);
 });
 
 // Found when sweeping the applications: "Open business", "open operations", "open messages", "open the pharmacy", "open logistics", "open the weather", "open live knowledge" and "open the calendar" were answered "I'm not sure what you'd like me to do".
@@ -214,4 +214,28 @@ test("a card that cannot be shown leaves the sentence to the usual route, and th
   assert.equal(again.calls.typed.filter(item => item.text === "Show my saved documents").length, 2);
   assert.match(app, /let pageOwnsIt = kyroVoiceIntakeOwnsTurn\(command\);\s*if \(pageOwnsIt && !kyroActiveVoiceIntake\) \{\s*let started = false;\s*try \{ started = routeKyroVoiceIntakeTranscript\(\{ transcript: command, utteranceId: "tool-"/);
   assert.match(app, /mediaAsk && \(mediaAsk\.type === "control" \|\| mediaAsk\.type === "play"\) && await kyroMediaCommand\(command\)/);
+});
+
+// Found sweeping the applications: the full-screen map stayed open under the next request and hid the gallery, document and list cards drawn behind it.
+test("the full-screen map is closed by a request that is not about places, and kept by one that is", () => {
+  const start = app.indexOf("const KYRO_MAP_RELATED"); const end = app.indexOf("\n}\n", app.indexOf("function kyroDismissStaleWorkspace(")) + 3;
+  assert.ok(start > 0 && end > start);
+  const run = (command, mapOpen) => {
+    const log = { sections: [] }; const classes = new Set(mapOpen ? ["user-map-full-open"] : []);
+    const sandbox = {
+      document: { querySelector: () => null, body: { dataset: {}, classList: { contains: name => classes.has(name), remove: name => classes.delete(name) } } },
+      closeNexusFunctionWindow: () => {}, goSection: (id, options) => log.sections.push([id, options.source])
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(app.slice(start, end) + "\nthis.run = kyroDismissStaleWorkspace;", sandbox);
+    sandbox.run(command);
+    return { sections: log.sections, mapOpen: classes.has("user-map-full-open") };
+  };
+  for (const command of ["Show me pictures of maize", "Open documents", "Show my checklists", "Search the web for maize prices", "Find jobs near me", "Play some music"]) {
+    const after = run(command, true);
+    assert.equal(after.mapOpen, false, command); assert.deepEqual(after.sections, [["dashboard", "new-request-closes-map"]], command);
+  }
+  for (const command of ["Show me the map of Kisumu", "Route from Kisumu to Nakuru", "Find a pharmacy near me", "Where is the nearest clinic", "Open maps"]) assert.equal(run(command, true).mapOpen, true, command);
+  assert.equal(run("", true).mapOpen, true, "no words, nothing to judge by");
+  assert.deepEqual(run("Show me pictures of maize", false).sections, [], "no map open, nothing to close");
 });

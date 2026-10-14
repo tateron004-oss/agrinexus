@@ -50492,7 +50492,7 @@ async function kyroShowVisualRequest(command, kind) {
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
-  kyroDismissStaleWorkspace();
+  kyroDismissStaleWorkspace(command);
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
   // text) run alongside it. See routeKyroVoiceIntakeTranscript for the transcript-level guard.
@@ -51665,8 +51665,17 @@ function kyroSpokenOpenOwns(text) {
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
-function kyroDismissStaleWorkspace() {
+// The full-screen map is left alone by a request about places, routes or maps, and closed by any other: it hid the gallery, document and list cards the next request drew behind it.
+const KYRO_MAP_RELATED = /\b(?:maps?|route|routes|directions?|navigate|navigation|gps|pharmacy|pharmacies|clinics?|hospitals?|markets?|distance|traffic|road|roads|where\s+(?:is|are)|location|ramani|karibu)\b/i;
+function kyroDismissStaleWorkspace(command = "") {
   try { if (document.querySelector("#nexus-workspace")) closeNexusFunctionWindow({ command: "" }); } catch { /* the new request carries on */ }
+  try {
+    const said = String(command || "").trim();
+    if (said && document.body.classList.contains("user-map-full-open") && !KYRO_MAP_RELATED.test(said)) {
+      document.body.classList.remove("user-map-full-open");
+      goSection("dashboard", { instant: true, scroll: false, openDefaultAction: false, keepAssistant: false, allowRealtimeSurfaceChange: true, source: "new-request-closes-map" });
+    }
+  } catch { /* the new request carries on */ }
   try { delete document.body.dataset.genesisWorkspace; delete document.body.dataset.genesisWorkspaceRequestId; } catch { /* nothing to clear */ }
 }
 // The model may already have started to answer what was just said: it is cut off before the page answers.
@@ -51680,6 +51689,7 @@ function kyroHandleSpokenOpen(text, options = {}) {
   // Said aloud, the words reach the page twice: as the transcript and as the model's own tool call. The second is not done again (a typed repeat always is).
   const spokenKey = options.typed ? "" : said.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
   if (spokenKey && kyroLastSpokenOpen.key === spokenKey && Date.now() - kyroLastSpokenOpen.at < 5000) return true;
+  if (kyroSpokenOpenOwns(said)) kyroDismissStaleWorkspace(said); // a map left open does not hide what this request opens
   const handled = kyroHandleSpokenOpenOnce(said, options);
   if (handled && spokenKey) kyroLastSpokenOpen = { key: spokenKey, at: Date.now() };
   return handled;
@@ -51952,6 +51962,37 @@ function kyroEmptyRenderAnswer(result) {
   if (kind === "document" && Array.isArray(data.documents) && !data.documents.length) return "I don't have a saved document or receipt like that yet. Say, for example: create a document called Maize Sales that says sold 3 sacks of maize.";
   return "";
 }
+// What a checklist, a web search answer or a list of jobs says in plain words, in the "Title: a; b; c." shape the answer screen draws as a list. "" when the result has nothing to say (the card is drawn as before).
+function kyroRenderedAnswerLine(render) {
+  try {
+    const kind = render?.presentation?.kind; const data = render?.data || {};
+    const textOf = value => String((value && typeof value === "object" ? (value.text || value.title || value.name) : value) ?? "").trim();
+    const sentence = value => { const t = String(value || "").trim(); return !t || /[.!?]$/.test(t) ? t : t + "."; };
+    if (kind === "checklist") {
+      const lists = (Array.isArray(data.lists) ? data.lists : [Array.isArray(data.items) ? { title: data.title, items: data.items } : data.list]).filter(list => list && Array.isArray(list.items));
+      if (lists.length === 1) {
+        const items = lists[0].items.map(textOf).filter(Boolean); const title = textOf(lists[0].title) || "Your checklist";
+        if (items.length >= 2) return `${title}: ${items.join("; ")}.`;
+        if (items.length === 1) return `${title} has one item: ${items[0]}.`;
+        return `${title} has no items yet.`;
+      }
+      if (lists.length > 1) return `You have ${lists.length} checklists: ${lists.map(list => textOf(list.title) || "Untitled").slice(0, 8).join("; ")}.`;
+      return "";
+    }
+    if (kind === "source-answer") {
+      const answer = sentence(String(data.answer || data.summary || "").replace(/\s+/g, " "));
+      if (!answer) return "";
+      const sources = (Array.isArray(data.sources) ? data.sources : []).map(textOf).filter(Boolean).slice(0, 4);
+      return sources.length ? `${answer} Sources: ${sources.join("; ")}.` : answer;
+    }
+    if (kind === "operation" && Array.isArray(data.listings) && data.listings.length) {
+      const names = data.listings.map(item => textOf(item).replace(/\s+[-\u2013\u2014]\s+https?:\/\/\S+$/i, "").trim()).filter(Boolean).slice(0, 8);
+      if (names.length >= 2) return `I found ${data.listings.length} listings: ${names.join("; ")}.`;
+      if (names.length === 1) return `I found one listing: ${names[0]}.`;
+    }
+  } catch { /* the card is drawn as before */ }
+  return "";
+}
 // The sentence the typed route reads out and shows: the server's own status line ("Nexus completed the governed execution and is rendering the verified result.") is not an answer, and the internal name is never said.
 function kyroPlainRenderMessage(result, message) {
   let said = String(message || "");
@@ -51961,7 +52002,7 @@ function kyroPlainRenderMessage(result, message) {
     const titles = (list, key) => list.map(item => String((item && (item[key] || item.title || item.name)) || "").trim()).filter(Boolean);
     if (kind === "document" && Array.isArray(data.documents) && data.documents.length) said = `You have ${data.documents.length} saved document${data.documents.length === 1 ? "" : "s"}: ${titles(data.documents, "title").slice(0, 5).join("; ")}.`;
     else if (kind === "checklist" && Array.isArray(data.lists) && data.lists.length) said = `You have ${data.lists.length} checklist${data.lists.length === 1 ? "" : "s"}: ${titles(data.lists, "title").slice(0, 5).join("; ")}.`;
-    else said = "Done. It is on your screen.";
+    else said = kyroRenderedAnswerLine(result?.render) || nexusGalleryMessage(result?.render) || "Done. It is on your screen.";
   }
   return said.replace(/\bNexus Genesis\b|\bNexus\b/g, "Kyro");
 }
@@ -51983,6 +52024,8 @@ function kyroShowTypedResult(result, text, message) {
       answer = { response: kyroReminderListLine(drawn.data) || message };
     } else if (drawn && result.state === "render_required") {
       const cards = Array.isArray(drawn.data?.cards) ? drawn.data.cards : Array.isArray(drawn.data?.data?.cards) ? drawn.data.data.cards : [];
+      const saidLine = kyroRenderedAnswerLine(drawn);
+      if (saidLine) return kyroShowResultScreen("typed", text, { ok: true, status: "completed", response: saidLine }); // a checklist, a web search answer or a list of jobs is an answer, not a card of raw fields
       if (drawn.presentation?.kind !== "location-list" || !cards.length || KYRO_FORM_FLOW.test(String(text || ""))) return false;
       const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
@@ -57928,7 +57971,7 @@ function renderNexusAuthoritativeData(outcome = {}) {
   surface.dataset.workspace = outcome.workspace;
   surface.setAttribute("aria-label", "Authoritative Nexus result");
   const heading = document.createElement("strong");
-  heading.textContent = outcome.response || "Nexus result";
+  heading.textContent = (/^Nexus completed the governed execution/i.test(String(outcome.response || "")) ? (kyroRenderedAnswerLine(outcome) || nexusGalleryMessage(outcome) || "Here is the result.") : outcome.response) || "Here is the result.";
   surface.append(heading);
   Object.entries(outcome.data || {}).forEach(([key, value]) => {
     if (value === undefined || value === null || value === "") return;
@@ -59034,7 +59077,7 @@ async function handleNexusUnifiedBrainRuntimeCommand(command = "", options = {})
   const text = String(command || "").trim();
   if (!text) return false;
   // a card left open by an earlier request does not stay in front of this one
-  kyroDismissStaleWorkspace();
+  kyroDismissStaleWorkspace(text);
   if (nexusPendingBehaviorConfirmation) {
     const decision = detectNexusPendingConfirmationReply(text);
     if (decision) return submitNexusPendingBehaviorConfirmation(decision === "approve", text, options);
