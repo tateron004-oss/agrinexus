@@ -579,3 +579,14 @@ test("the checklist screen's buttons are deterministic updates of one list by it
   for (const text of ["Add milk to my Market Day list", "Add to checklist: milk", "Add to checklist rec_1: milk", "Mark item two done on checklist rec_046c6a74", "Remove item 3 from my list", "Add to checklist rec_046c6a74:   ", ""]) assert.equal(listUpdatePlan(text, catalog), null, text);
   assert.equal(listUpdatePlan("Add to checklist rec_046c6a74: milk", { applications: catalog.applications, tools: [{ toolId: "lists.create" }] }), null, "no update tool, no plan");
 });
+
+test("the document screen's Save changes is a deterministic new version of that document by its id", () => {
+  const { documentSaveChangesPlan } = require("../../nexus/brain/planner.js");
+  const catalog = { applications: defaultApplicationManifests(), tools: ["documents.create"].map(toolId => ({ toolId })) };
+  const plan = documentSaveChangesPlan("Save changes to document doc_e957d697-160b-4f31-969c-1b81a70850e3: the seal was replaced on Tuesday.\nSecond line.", catalog);
+  assert.equal(plan.application, "documents"); assert.equal(plan.steps[0].toolId, "documents.create");
+  assert.equal(plan.steps[0].input.documentId, "doc_e957d697-160b-4f31-969c-1b81a70850e3"); assert.equal(plan.steps[0].input.content, "the seal was replaced on Tuesday.\nSecond line.");
+  assert.equal(documentSaveChangesPlan("Save changes to document doc_e957d697: " + "x".repeat(30000), catalog).steps[0].input.content.length, 20000, "capped");
+  for (const text of ["Save changes to document: hello", "Save changes to document doc_abc123:   ", "Save changes to my document called Farm Plan", "Create a document called Notes that says hi", ""]) assert.equal(documentSaveChangesPlan(text, catalog), null, text);
+  assert.equal(documentSaveChangesPlan("Save changes to document doc_e957d697: hello", { applications: catalog.applications, tools: [] }), null, "no tool, no plan");
+});

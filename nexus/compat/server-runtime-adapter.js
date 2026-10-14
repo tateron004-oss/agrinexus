@@ -705,6 +705,9 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         const documentId = decodeURIComponent(url.pathname.split("/").pop());
         const document = await active.documents.get({ tenantId: context.tenantId, ownerId: context.userId, documentId });
         if (!document) { send(res, 404, { error: "Document not found.", code: "document_not_found" }); return true; }
+        // the words the document was made from, so a screen can edit them (owner-scoped like the lookup above; "" for an older document saved before the words were kept)
+        let sourceText = "";
+        try { sourceText = typeof active.documents.getSource === "function" ? String((await active.documents.getSource({ tenantId: context.tenantId, ownerId: context.userId, documentId }))?.sourceText || "") : ""; } catch { sourceText = ""; }
         // documents.create today writes real bytes to local disk (no S3
         // credentials configured) rather than the shared object store, so
         // object_key carries a "local:<filename>" reference instead of an S3
@@ -719,20 +722,20 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
           if (!filePath.startsWith(exportRoot)) { send(res, 403, { error: "Forbidden.", code: "path_traversal_rejected" }); return true; }
           try {
             const bytes = fs.readFileSync(filePath);
-            send(res, 200, { authoritative: true, document: formatDocumentSummary(document),
+            send(res, 200, { authoritative: true, document: formatDocumentSummary(document), sourceText,
               contentBase64: bytes.toString("base64"), contentType: contentTypeForFormat(document.document_type) });
           } catch {
             // The file on disk is gone (the app was updated since). Use the copy kept in the database, owner-scoped like the lookup above.
             let kept = null;
             try { kept = active.documents.getFileContent ? await active.documents.getFileContent({ tenantId: context.tenantId, ownerId: context.userId, documentId }) : null; } catch { kept = null; }
-            if (kept) send(res, 200, { authoritative: true, document: formatDocumentSummary(document), contentBase64: kept, contentType: contentTypeForFormat(document.document_type) });
+            if (kept) send(res, 200, { authoritative: true, document: formatDocumentSummary(document), sourceText, contentBase64: kept, contentType: contentTypeForFormat(document.document_type) });
             else send(res, 404, { error: "The document record exists but its file is unavailable.", code: "document_file_missing" });
           }
           return true;
         }
         if (!active.objectStorage) { send(res, 503, { error: "Shared object storage is unavailable.", code: "object_storage_unavailable" }); return true; }
         const object = await active.objectStorage.get(document.object_key);
-        send(res, 200, { authoritative: true, document: formatDocumentSummary(document), contentBase64: object.body.toString("base64"), contentType: object.contentType });
+        send(res, 200, { authoritative: true, document: formatDocumentSummary(document), sourceText, contentBase64: object.body.toString("base64"), contentType: object.contentType });
         return true;
       } else if (url.pathname === "/api/nexus/runtime/workspaces" && req.method === "GET") {
         const statuses = await Promise.all(active.applications.list().map(async application => ({ ...application,

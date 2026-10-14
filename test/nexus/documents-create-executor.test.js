@@ -301,3 +301,33 @@ test("reports reopenVerified false, without losing the real documentId/savedVers
   });
   fs.unlinkSync(tmpFile);
 });
+
+// Found by the Standard User test: "it created the note but could not make changes. nowhere to add information". Saving changes is a new version of the SAME document, in its own title and format, and only for its owner.
+test("saving changes to a document the caller owns adds a version to that document, in its own title and format", async () => {
+  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path");
+  const file = path.join(os.tmpdir(), "doc-edit-" + Date.now() + ".txt"); fs.writeFileSync(file, "the new words");
+  const calls = { created: 0, versions: [], got: [] };
+  const documents = {
+    get: async args => { calls.got.push(args); return args.documentId === "doc_mine" ? { document_id: "doc_mine", title: "Pump Log", document_type: "docx", version: 1 } : (args.documentId === "doc_other" && args.ownerId === "owner_other" ? { document_id: "doc_other", title: "x", document_type: "txt", version: 1 } : null); },
+    create: async () => { calls.created += 1; return { document_id: "doc_new" }; },
+    addVersion: async args => { calls.versions.push(args); return { version: 2 }; }
+  };
+  try {
+    await withPatched(exportProvider, "exportDocument", async body => {
+      assert.equal(body.title, "Pump Log"); assert.equal(body.format, "docx"); assert.equal(body.content, "the new words");
+      return { httpStatus: 200, body: { ok: true, status: "completed", data: { exportId: "exp-edit", filename: "abc.docx", bytes: 13, localPath: file, downloadPath: "/exports/abc.docx" } } };
+    }, async () => {
+      const execute = createDocumentsCreateExecutor({ env: {}, documents });
+      const result = await execute({ input: { documentId: "doc_mine", content: "the new words", title: "A different title", format: "pdf" }, context: { tenantId: "t1", userId: "owner_me" }, taskId: "tsk_1" });
+      assert.equal(result.documentId, "doc_mine"); assert.equal(result.savedVersion, 2); assert.equal(result.updated, true);
+      assert.equal(calls.created, 0, "no new document is made"); assert.equal(calls.versions.length, 1); assert.equal(calls.versions[0].documentId, "doc_mine");
+      assert.equal(calls.got[0].ownerId, "owner_me", "looked up for the caller only");
+    });
+    await withPatched(exportProvider, "exportDocument", async () => { throw new Error("nothing must be exported for a document that is not the caller's"); }, async () => {
+      const execute = createDocumentsCreateExecutor({ env: {}, documents });
+      await assert.rejects(() => execute({ input: { documentId: "doc_other", content: "x" }, context: { tenantId: "t1", userId: "owner_me" } }), /could not find that document/);
+      await assert.rejects(() => execute({ input: { documentId: "doc_missing", content: "x" }, context: { tenantId: "t1", userId: "owner_me" } }), error => error.code === "document_not_found");
+      await assert.rejects(() => createDocumentsCreateExecutor({ env: {} })({ input: { documentId: "doc_mine", content: "x" } }), error => error.code === "document_not_found", "no repository, nothing to change");
+    });
+  } finally { fs.rmSync(file, { force: true }); }
+});

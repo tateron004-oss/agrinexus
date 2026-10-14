@@ -20,6 +20,7 @@ function load() {
   const calls = { typed: [], screens: [], spoken: [], interrupted: 0, maps: [], cards: [] };
   const sandbox = {
     kyroShowHelpScreen: (card, context) => { calls.cards.push({ card, context }); return !sandbox.noCards; },
+    kyroShowOfflineScreen: () => { calls.offline = (calls.offline || 0) + 1; return true; },
     window: { KyroAnswerCard: require("../../public/kyro-answer-card.js"), KyroDismissCommands: { parse: text => (/^(?:close it|i'm done|go back to the orb)$/i.test(text) ? { kind: "done" } : null) } },
     languageCode: () => "en", realtimeVoiceActive: () => true, realtimeVoiceSession: { sdkController: { interrupt: () => { calls.interrupted += 1; } } },
     handleNexusUnifiedBrainRuntimeCommand: async (text, options) => { calls.typed.push({ text, options }); },
@@ -287,4 +288,14 @@ test("the business applications, the résumés and the uploads open", () => {
   }
   for (const text of ["how do I find grants", "show me grants for women farmers", "build my resume", "how do I upload a photo", "download my document", "open a business"]) assert.equal(load().api.kyroSpokenOpenOwns(text), false, text);
   assert.match(app, /function kyroOpenUploadScreen\(said, lang\)[^]*?data-kyro-upload-button[^]*?kyroAskAboutPicture\(file/, "the screen has a real button that sends the file and reads it out");
+});
+
+// Found by the Standard User test: "open the offline queue" asked for a confirmation to read a server count no account can use. What a person has is the notes kept on the phone, and that is what opens.
+test("'open the offline queue' and its other names open the offline notes screen, and other sentences about offline do not", () => {
+  for (const text of ["Open the offline queue", "show my offline work", "Check the sync status", "open offline status", "Kyro, show the queued offline changes", "open offline notes", "see my offline changes"]) {
+    const { api, calls } = load();
+    assert.equal(api.kyroSpokenOpenOwns(text), true, text);
+    assert.equal(api.kyroHandleSpokenOpen(text, {}), true, text); assert.equal(calls.offline, 1, text);
+  }
+  for (const text of ["tell me about offline work", "open the map offline", "how do I work offline", "queue a crop observation offline and synchronize it"]) assert.equal(load().api.kyroSpokenOpenOwns(text), false, text);
 });
