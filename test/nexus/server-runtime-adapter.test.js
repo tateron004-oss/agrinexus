@@ -874,3 +874,18 @@ test("DELETE archives only the caller's own document, keeps it, and records who 
   assert.equal(someoneElses.result.status, 404); assert.equal(someoneElses.result.body.code, "document_not_found");
   assert.equal(audited.length, 1, "nothing is audited for a document that was not archived");
 });
+
+// Found on live: after "yes" the cancel answer gave its times in UTC ("due 2026-10-14 16:00 UTC") while the question before it gave them in the person's time. A turn already used the device's time zone; the confirm did not.
+test("behavior confirm uses the device's time zone when the app sends a real one, and ignores a made-up one", async () => {
+  const seen = [];
+  const runtime = { ready: Promise.resolve(), engine: { tasks: {} }, behavior: { confirm: async input => { seen.push(input.context.timeZone); return { schema: "nexus.behavior-turn.v1", completed: true, state: "completed", taskId: "tsk_1", application: "reminders", legacyFallbackUsed: false }; } } };
+  for (const timeZone of ["America/Chicago", "Not/AZone", undefined]) {
+    const adapter = createServerRuntimeAdapter({ resolveUser: async () => ({ id: "user-1", tenantId: "tenant-1", permissions: ["tasks:execute"] }),
+      readJson: async () => ({ taskId: "tsk_1", stepId: "stp_1", approved: true, text: "yes", ...(timeZone ? { timeZone } : {}) }), createRuntimeFn: () => runtime });
+    const response = responseCapture();
+    await adapter.handle({ method: "POST", headers: { "x-request-id": "request-tz" } }, {}, new URL("http://local/api/nexus/runtime/behavior/confirm"), response.send);
+    assert.equal(response.result.status, 200);
+  }
+  assert.equal(seen[0], "America/Chicago"); assert.notEqual(seen[1], "Not/AZone"); assert.notEqual(seen[2], "America/Chicago");
+  assert.ok(require("node:fs").readFileSync(require("node:path").join(__dirname, "../../public/app.js"), "utf8").includes("        timeZone: kyroDeviceTimeZone(),\n        channel: options.source === \"voice\""), "the page sends it with the yes");
+});
