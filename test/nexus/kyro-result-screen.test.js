@@ -421,6 +421,7 @@ function fakePage(app, names) {
   const select = selector => body.find(matcher(selector));
   const sandbox = { document: { body, createElement: make, querySelector: sel => select(sel)[0] || null, querySelectorAll: sel => ({ forEach: fn => select(sel).forEach(fn) }) },
     languageCode: () => "en", kyroDeviceTimeZone: () => "UTC", requestWithTimeout: async () => ({}), nexusAuthoritativeConversationId: () => "c1", kyroNoteActivity() {}, kyroReturnToOrb: async () => {}, kyroReminderListLine: data => (data && data.summary) || "",
+    fetch: async () => ({ ok: false, json: async () => ({}) }),
     nexusGalleryMessage: drawn => (drawn.presentation.kind === "image-gallery" ? "Here are 2 pictures I found of maize." : "Here are 2 videos I found about composting."), Date, Object, Array, String, Number, Boolean, Promise, Error, Math };
   sandbox.kyroShowResultScreen = (tool, command, result) => { body.children = body.children.filter(c => c.attrs["data-kyro-result"] === undefined); const screen = make("section"); screen.attrs["data-kyro-result"] = "text"; screen.textContent = result.response; body.children.push(screen); sandbox.lastScreen = result; return true; };
   vm.createContext(sandbox);
@@ -428,7 +429,7 @@ function fakePage(app, names) {
   vm.runInContext(`${source}\nthis.api = Object.fromEntries(["kyroAddComposer", "kyroRefreshList", "kyroShowChecklistScreen", "kyroShowGalleryScreen"].map(name => [name, (() => { try { return eval(name); } catch { return undefined; } })()]));`, sandbox);
   return { sandbox, body, make, select, api: sandbox.api };
 }
-const WRITABLE_NAMES = ["const KYRO_READ_COMMANDS", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroTwelveHour(", "function kyroAddComposer(", "async function kyroRefreshList(", "function kyroShowChecklistScreen(", "function kyroShowGalleryScreen("];
+const WRITABLE_NAMES = ["const KYRO_READ_COMMANDS", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroTwelveHour(", "function kyroAddComposer(", "async function kyroFillDocumentButtons(", "async function kyroOpenDocumentById(", "function kyroShowDocumentScreen(", "async function kyroRefreshList(", "function kyroShowChecklistScreen(", "function kyroShowGalleryScreen("];
 const settle = () => new Promise(resolve => setTimeout(resolve, 25));
 
 test("the forms under the lists send the same governed commands a spoken request does, then show the list again", async () => {
@@ -515,7 +516,7 @@ test("typed: a lesson, marketplace listings and a field job written down for app
 });
 
 // Found by the Standard User test: "open operations / messages / learning / ..." showed information and nothing to use. Each application is a screen with fields and buttons that send the same governed request a sentence would.
-const APP_NAMES = ["const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "const KYRO_CURRENCIES", "const KYRO_APP_SCREENS", "function kyroRunAppCommand(", "function kyroShowAppScreen(", "function kyroShowDocumentScreen("];
+const APP_NAMES = ["const KYRO_APP_SW", "function kyroT(", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "const KYRO_CURRENCIES", "const KYRO_APP_SCREENS", "function kyroRunAppCommand(", "function kyroShowAppScreen(", "function kyroShowDocumentScreen("];
 function appPage() {
   const page = fakePage(app, APP_NAMES);
   const sent = []; const specials = [];
@@ -593,4 +594,89 @@ test("a saved document is on the screen with its words and a Download button, an
   assert.match(app, /if \(KYRO_APP_SCREENS\[workspace\] && kyroShowAppScreen\(workspace\)\) return true;/, "the help screen is the application screen");
   assert.match(app, /if \(openApp\[1\]\) return \(typeof kyroShowAppScreen === "function" && kyroShowAppScreen\("business"\)\)/, "open business is the business screen");
   assert.match(app, /if \(drawn\.data\?\.documentId && String\(drawn\.data\?\.title \|\| ""\)\.trim\(\) && kyroShowDocumentScreen\(drawn\)\) return true;/, "a saved document is shown on a screen");
+});
+
+test("the application screens are in Kiswahili for a Kiswahili session, and still send the requests in English", () => {
+  const page = appPage();
+  page.sandbox.languageCode = () => "sw";
+  assert.equal(page.show("health"), true);
+  const screen = page.select("[data-kyro-result]")[0];
+  assert.equal(screen.attrs["aria-label"], "Afya");
+  const texts = screen.find(() => true).map(node => node.textContent).filter(Boolean);
+  for (const wanted of ["Afya", "Anza ombi la huduma ya afya kwa video", "Rekodi shinikizo la damu", "Tafuta duka la dawa", "Tafuta kliniki", "Onyesha vipimo vyangu"]) assert.ok(texts.includes(wanted), wanted);
+  assert.ok(!texts.includes("Health") && !texts.includes("Find a clinic"), "no English left on the screen");
+  const card = page.select("[data-kyro-app-action]").find(node => node.attrs["data-kyro-app-action"] === "Find a pharmacy");
+  const fields = fieldsOf(card); fields.place.value = "Kisumu"; card.find(node => node.tag === "form")[0].submit();
+  assert.equal(page.sent.at(-1)[0], "Find a pharmacy near Kisumu");
+  // every English string the screens show has a Kiswahili one (so none is left in English by accident)
+  const sw = require("node:vm").runInContext("KYRO_APP_SW", page.sandbox);
+  const shown = new Set();
+  const apps = require("node:vm").runInContext("KYRO_APP_SCREENS", page.sandbox);
+  for (const spec of Object.values(apps)) {
+    shown.add(spec.title); shown.add(spec.intro);
+    for (const action of spec.actions) { shown.add(action.label); if (action.button) shown.add(action.button); for (const field of action.fields || []) { shown.add(field.label); for (const option of field.options || []) shown.add(option[0]); } for (const item of action.items || []) shown.add(item[0]); }
+  }
+  const missing = [...shown].filter(text => text && !(text in sw));
+  assert.deepEqual(missing, [], "strings with no Kiswahili");
+});
+
+test("the offline notes screen shows what is kept on the phone, and sends it on a tap", async () => {
+  const page = fakePage(app, ["const KYRO_APP_SW", "function kyroT(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroOfflineLines(", "function kyroShowOfflineScreen("]);
+  let pending = 2; let replays = 0;
+  Object.assign(page.sandbox, { window: { KyroOfflineNotes: { pending: () => pending } }, navigator: { onLine: true }, replayKyroOfflineNotes: async () => { replays += 1; pending = 0; } });
+  require("node:vm").runInContext("this.showOffline = kyroShowOfflineScreen;", page.sandbox);
+  assert.equal(page.sandbox.showOffline(), true);
+  const texts = () => page.select("[data-kyro-result]")[0].find(() => true).map(node => node.textContent).filter(Boolean);
+  assert.ok(texts().includes("Offline notes")); assert.ok(texts().includes("You are online.")); assert.ok(texts().includes("2 notes are waiting on this phone."));
+  assert.equal(page.select("[data-kyro-result]")[0].attrs["data-kyro-keep"], "true");
+  const send = page.select("[data-kyro-offline-send]")[0]; assert.equal(send.disabled, false);
+  send.click(); await settle();
+  assert.equal(replays, 1); assert.ok(texts().includes("Sent."));
+  pending = 0; page.sandbox.showOffline();
+  assert.ok(page.select("[data-kyro-result]")[0].find(() => true).map(node => node.textContent).includes("No notes are waiting on this phone."));
+  assert.equal(page.select("[data-kyro-offline-send]")[0].disabled, true, "nothing to send");
+  page.sandbox.navigator.onLine = false; pending = 1; page.sandbox.showOffline();
+  const offline = page.select("[data-kyro-result]")[0].find(() => true).map(node => node.textContent);
+  assert.ok(offline.includes("You are offline. Notes you record are kept on this phone.")); assert.ok(offline.includes("1 note is waiting on this phone."));
+  assert.equal(page.select("[data-kyro-offline-send]")[0].disabled, true, "no signal, so it cannot send yet");
+  page.sandbox.languageCode = () => "sw"; page.sandbox.showOffline();
+  assert.ok(page.select("[data-kyro-result]")[0].find(() => true).map(node => node.textContent).includes("Kumbukumbu za nje ya mtandao"));
+});
+
+test("a saved document opens with its own words in a box to change, Save changes sends a new version of that document, and the documents list has buttons that open each one", async () => {
+  const page = fakePage(app, ["const KYRO_APP_SW", "function kyroT(", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroShowDocumentScreen(", "async function kyroOpenDocumentById(", "async function kyroFillDocumentButtons("]);
+  const requests = []; const turns = []; const downloads = [];
+  page.sandbox.fetch = async url => { requests.push(url); if (/documents\?limit/.test(url)) return { ok: true, json: async () => ({ documents: [{ documentId: "doc_aaa111", title: "Pump Log" }, { documentId: "doc_bbb222", title: "Field Notes" }] }) }; return { ok: true, json: async () => ({ sourceText: "replaced the seal on Tuesday", document: { title: "Pump Log" } }) }; };
+  page.sandbox.kyroSilentTurn = async text => { turns.push(text); return { render: { data: { documentId: "doc_aaa111", savedVersion: 3 } } }; };
+  page.sandbox.downloadNexusAuthoritativeDocument = id => downloads.push(id);
+  require("node:vm").runInContext("this.showDoc = kyroShowDocumentScreen; this.openById = kyroOpenDocumentById; this.fillList = kyroFillDocumentButtons;", page.sandbox);
+  // a document just made: its words read-only at first, then the box once its own text has arrived
+  assert.equal(page.sandbox.showDoc({ data: { documentId: "doc_aaa111", title: "Pump Log", content: "replaced the seal" } }), true);
+  const editor = page.select("[data-kyro-doc-editor]")[0]; const save = page.select("[data-kyro-doc-save]")[0]; const words = page.select("[data-kyro-doc-words]")[0];
+  assert.equal(editor.hidden, true, "hidden until the text arrives"); assert.ok(words);
+  await settle();
+  assert.equal(editor.hidden, false); assert.equal(save.hidden, false); assert.equal(words.hidden, true); assert.equal(editor.value, "replaced the seal on Tuesday");
+  assert.match(requests[0], /\/api\/nexus\/runtime\/documents\/doc_aaa111$/);
+  editor.value = "replaced the seal on Tuesday and the hose on Friday"; save.click(); await settle();
+  assert.equal(turns[0], "Save changes to document doc_aaa111: replaced the seal on Tuesday and the hose on Friday");
+  const status = () => page.select("[role=\"status\"]")[0].textContent;
+  assert.equal(status(), "Saved. (version 3)");
+  editor.value = "   "; save.click(); await settle(); assert.equal(turns.length, 1, "nothing empty is saved"); assert.equal(status(), "Write something first.");
+  page.sandbox.kyroSilentTurn = async () => { throw new Error("server said no"); };
+  editor.value = "words"; save.click(); await settle(); assert.equal(status(), "That did not save. Please try again.");
+  page.select("button").find(node => node.attrs["data-kyro-download"] === "doc_aaa111").click(); assert.deepEqual(downloads, ["doc_aaa111"]);
+  // a document with no text of its own stays read-only
+  page.sandbox.fetch = async () => ({ ok: true, json: async () => ({ sourceText: "" }) });
+  page.sandbox.showDoc({ data: { documentId: "doc_old", title: "Old", content: "old words" } }); await settle();
+  assert.equal(page.select("[data-kyro-doc-editor]")[0].hidden, true);
+  // the list of documents: buttons that open each one
+  page.sandbox.fetch = async url => { requests.push(url); if (/documents\?limit/.test(url)) return { ok: true, json: async () => ({ documents: [{ documentId: "doc_aaa111", title: "Pump Log" }, { documentId: "doc_bbb222", title: "Field Notes" }] }) }; return { ok: true, json: async () => ({ sourceText: "field words", document: { title: "Field Notes" } }) }; };
+  const list = page.sandbox.document.createElement("div"); page.body.append(list);
+  await page.sandbox.fillList(list);
+  const buttons = list.find(node => node.attrs["data-kyro-open-document"]);
+  assert.deepEqual(buttons.map(node => node.textContent), ["Pump Log", "Field Notes"]);
+  buttons[1].click(); await settle();
+  assert.equal(page.select("[data-kyro-result]")[0].attrs["data-kyro-result"], "document");
+  assert.equal(page.select("h2")[0].textContent, "Field Notes");
+  assert.equal(page.select("[role=\"status\"]")[0].textContent, "", "an opened document does not say Saved.");
 });

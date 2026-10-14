@@ -20639,6 +20639,9 @@ function openAiRealtimeInstructions(user, language = "en") {
     "When the user explicitly asks Nexus to translate text or change language and say a phrase, you must call nexus_translation with the complete request and the requested language code.",
     "When the user explicitly asks to open, show, display, or use Maps, or requests a route, directions, or traffic between two places, you must call nexus_maps_route with the user's complete request. Never answer that you cannot open a Maps app.",
     "When the user reports any health vital or reading — blood pressure, blood sugar/glucose, oxygen/SpO2, weight, pulse/heart rate, even as a plain statement like 'my blood pressure is 150 over 95' — or asks about a mobile clinic, pharmacist question, telehealth intake, chronic condition management (diabetes, hypertension, weight), patient support resources, or finding or saving a doctor/provider, you must call nexus_health_preparation with the complete request. A statement of a number is still a reportable reading; log it, do not just comment on it. The tool reads the reading back and asks whether to save it: say that question to the person word for word, and when they answer yes or no (including ndiyo, sawa or hapana), call nexus_health_preparation again with exactly their answer. Nothing is saved until they say yes. The same tool shows, deletes and corrects their saved readings and answers who can see them; never say a reading was saved, deleted or shared unless the tool says so.",
+    // Found by the Standard User test: asking for a pharmacy or a clinic was answered "use Google Maps". The page has a real places search for this, and the model never called it.
+    "When the user asks to find a pharmacy, chemist, clinic, hospital, health post or mobile clinic near them or near a named place (\"find a pharmacy near Nairobi\", \"where is the nearest clinic\"), you must call nexus_health_preparation with their complete request. It searches real places in their country and puts the list on the screen. Never answer that you cannot search for places, and never tell them to use Google, Google Maps or another app.",
+    "Never tell the person to use Google, Google Maps, a search engine or another app for something Nexus can do itself. Call the matching tool, and if it fails say plainly what went wrong.",
     "When the user asks to start or join a telehealth video call, video visit, or virtual appointment with a doctor or provider, you must call nexus_health_preparation with the complete request, including any symptoms mentioned. This creates a real, provider-reviewed video visit -- it is never a communications/messaging request.",
     "When the user asks to create a fitness or training plan, reports a completed workout, run, or training session, or asks about their fitness or training progress, you must call nexus_health_preparation with the complete request. This is general activity tracking, not a training program from a coach, trainer, or clinician.",
     "When the user asks to learn something, requests a lesson, course, or training topic, or asks how to do something agriculture- or skills-related that matches a learning resource, you must call nexus_workforce_learning.",
@@ -59370,7 +59373,11 @@ async function api(req, res, url) {
     }
     try {
       const language = body.language || url.searchParams.get("language") || authContext.user.language || "en";
+      // (how long OpenAI took to issue the browser's voice key, written down when it is slow: when "hello" took ninety seconds nothing said where the time went)
+      const mintStartedAt = Date.now();
       const session = await openAiRealtimeClientSecret({ user: authContext.user, language });
+      const mintMs = Date.now() - mintStartedAt;
+      if (mintMs > 4000) console.warn("[voice-session-slow]", JSON.stringify({ phase: "client-secret", ms: mintMs, at: new Date().toISOString() }));
       voiceRecord(db, authContext.user, "openai-agents-realtime", "OpenAI Agents Realtime voice session authorized.", {
         provider: session.provider,
         model: session.model,

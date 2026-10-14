@@ -71,11 +71,17 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
     // every documents.create caller funnels through, protects all of them at once rather than requiring
     // each caller to separately guess at the 50000-char ceiling before it even calls this executor.
     const truncated = rawContent.length > MAX_DOCUMENT_CONTENT_LENGTH;
+    // "Save changes to document doc_...": a new version of a document the caller already owns (found with the owner-scoped lookup), in its own title and format. Not the caller's own, or not there: nothing is written.
+    let existing = null;
+    if (input.documentId) {
+      if (documents?.get && context) existing = await documents.get({ tenantId: context.tenantId, ownerId: context.userId, documentId: String(input.documentId) });
+      if (!existing) throw Object.assign(new Error("I could not find that document, so nothing was changed."), { code: "document_not_found" });
+    }
     const body = {
       confirmed: true,
-      title: input.title || "Nexus document",
+      title: existing ? existing.title : (input.title || "Nexus document"),
       content: truncated ? rawContent.slice(0, MAX_DOCUMENT_CONTENT_LENGTH) : rawContent,
-      format: normalizeDocumentFormat(input.format)
+      format: normalizeDocumentFormat(existing ? existing.document_type : input.format)
     };
     const result = await exportProvider.exportDocument(body, env);
     if (truncated && result.body?.data) result.body = { ...result.body, data: { ...result.body.data, truncated: true, originalLength: rawContent.length, savedLength: body.content.length } };
@@ -84,7 +90,7 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
       try {
         const bytes = require("node:fs").readFileSync(data.localPath);
         const checksum = crypto.createHash("sha256").update(bytes).digest("hex");
-        const document = await documents.create({ tenantId: context.tenantId, ownerId: context.userId,
+        const document = existing ? { document_id: existing.document_id } : await documents.create({ tenantId: context.tenantId, ownerId: context.userId,
           taskId, title: body.title, documentType: body.format,
           // fingerprint: an optional short label a caller can use to recognise "this exact thing was already saved" (see nexus/resume/executor.js).
           metadata: { exportId: data.exportId, filename: data.filename, bytes: data.bytes, ...(typeof input.fingerprint === "string" && input.fingerprint ? { fingerprint: input.fingerprint.slice(0, 80) } : {}) } });
@@ -120,7 +126,7 @@ function createDocumentsCreateExecutor({ env = process.env, documents = null } =
         // Override it with the real, owner-scoped route this document is
         // actually readable through, matching read-executor.js's formatDocument.
         return { ...result.body, downloadPath: `/api/nexus/runtime/documents/${document.document_id}`,
-          documentId: document.document_id, savedVersion: version.version, reopenVerified };
+          documentId: document.document_id, savedVersion: version.version, reopenVerified, ...(existing ? { updated: true } : {}) };
       } catch {
         // The real file export already succeeded; a failure to also index it
         // for later listing/reading shouldn't fail the whole create action --

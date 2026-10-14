@@ -50132,11 +50132,12 @@ async function loadRealtimeVoiceStatus(options = {}) {
   if (!options.force && realtimeVoiceStatusCache && Date.now() - (realtimeVoiceStatusCache.checkedAt || 0) < 60000) {
     return realtimeVoiceStatusCache;
   }
-  const response = await fetch("/api/voice/realtime/status", {
+  // (a status request that hangs must not hold the voice up: it gives up after ten seconds and the voice starts from what is known)
+  const response = await kyroFetchWithTimeout("/api/voice/realtime/status", {
     method: "GET",
     credentials: "same-origin",
     headers: { Accept: "application/json" }
-  });
+  }, 10000);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `Realtime voice status failed: ${response.status}`);
   realtimeVoiceStatusCache = { ...payload, checkedAt: Date.now() };
@@ -50444,17 +50445,25 @@ function loadNexusOpenAiRealtimeAgentModule() {
 }
 
 async function requestNexusOpenAiRealtimeSession(status = {}) {
-  const response = await fetch(`/api/voice/realtime/session?language=${encodeURIComponent(languageCode())}`, {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      language: languageCode(),
-      model: status.model || "",
-      transport: "agents-sdk-webrtc"
-    })
-  });
+  // Found when "hello" took ninety seconds: this request had no time limit, so one that hung left the person with nothing on the screen. It now gives up after fifteen seconds and asks once more.
+  let response = null;
+  for (let attempt = 0; attempt < 2 && !response; attempt += 1) {
+    try {
+      response = await kyroFetchWithTimeout(`/api/voice/realtime/session?language=${encodeURIComponent(languageCode())}`, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          language: languageCode(),
+          model: status.model || "",
+          transport: "agents-sdk-webrtc"
+        })
+      }, 15000);
+    } catch (error) {
+      if (attempt === 1) throw new Error("The voice session did not answer in time.");
+    }
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `OpenAI Realtime session failed: ${response.status}`);
   if (!String(payload.clientSecret || "").startsWith("ek_")) throw new Error("OpenAI Realtime session did not return a browser client secret.");
@@ -51661,6 +51670,7 @@ function kyroOpenAppCard(card, said, lang) {
 let kyroPendingMedia = null; // { kind: "images" | "videos" | "music" | "list" | "lookup", at } while Kyro has asked what to look for
 let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answered from the voice, so the model's tool call for the same words does not do it twice
 // "Open my resume", "open the CRM", "open grants", "open uploads": the page opens what each is (the résumés list, the clients, the grants due, the invoices, a place to choose a file).
+const KYRO_OPEN_OFFLINE = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|check|see|view)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:offline\\s+(?:queue|work|notes|changes|sync(?:\\s+status)?)|(?:sync|offline)\\s+status|queued\\s+(?:offline\\s+)?(?:work|changes|notes))[.?!]*$`, "i");
 const KYRO_OPEN_RESUMES = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|see|view|list|find|get)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:saved\\s+)?(?:resumes?|résumés?|resumés?|cvs?)[.?!]*$`, "i");
 const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|bring up|see|view|launch|start)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:(?:business|customer)\\s+)?(?:(crm|clients?|customers?|contacts|customer list|client list)|(donors?|donations|fundraising)|(grants?|funding|grant (?:writing|tracker|deadlines))|(invoices?|billing)|(expenses?|income|finances?|financials?|books|bookkeeping|accounting|sales|profit))[.?!]*$`, "i");
 const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|pictures?|photos?|pdfs?|images?|letters?))?)[.?!]*$`, "i");
@@ -51691,7 +51701,7 @@ function kyroOpenUploadScreen(said, lang) {
 function kyroSpokenOpenOwns(text) {
   const said = String(text || "").trim();
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -51804,6 +51814,10 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
     kyroTakeOverTurn();
     void handleNexusUnifiedBrainRuntimeCommand("Show my resumes", { source: "typed", kyroDirect: true });
     return true;
+  }
+  if (KYRO_OPEN_OFFLINE.test(said)) {
+    kyroTakeOverTurn();
+    if (typeof kyroShowOfflineScreen === "function" && kyroShowOfflineScreen()) return true;
   }
   const openBiz = KYRO_OPEN_BIZ.exec(said);
   if (openBiz) {
@@ -52000,6 +52014,11 @@ function kyroAddComposer(kind) {
       try { await kyroSilentTurn(said); await kyroRefreshList(kind, t.saved); } catch { status.textContent = t.failed; button.disabled = false; }
     });
     screen.append(form);
+    if (kind === "documents") {
+      const list = kyroMake("div", { "data-kyro-doc-list": "true", style: "display:flex;flex-direction:column;gap:8px;width:100%;max-width:34em;position:relative;z-index:1" });
+      screen.append(list);
+      void kyroFillDocumentButtons(list);
+    }
     return true;
   } catch { return false; }
 }
@@ -52146,6 +52165,86 @@ const KYRO_APP_SCREENS = Object.freeze({
     { kind: "buttons", label: "Look at my records", items: [["Clients", "Show my clients"], ["Donors", "Who are my donors"], ["Grants due", "Which grants are due soon"], ["Invoices", "Show my invoices"], ["Summary", "Give me a business summary"], ["Follow-ups", "Who needs a follow up"]] }
   ] }
 });
+// Kiswahili for the application screens (the requests they send stay in English: the server reads those). Written for review by a Kiswahili speaker.
+const KYRO_APP_SW = Object.freeze({
+  "Health": "Afya", "I record what you tell me and help you get ready for a visit. I do not diagnose or give treatment advice.": "Ninarekodi unachoniambia na kukusaidia kujiandaa kwa ziara ya daktari. Sitambui magonjwa wala kutoa matibabu.",
+  "Start a telehealth request": "Anza ombi la huduma ya afya kwa video", "Record blood pressure": "Rekodi shinikizo la damu", "Top number (systolic)": "Namba ya juu (systolic)", "Bottom number (diastolic)": "Namba ya chini (diastolic)", "Record": "Rekodi",
+  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu",
+  "Crop and farm help": "Msaada wa mazao na shamba", "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.": "Uliza kuhusu zao, mdudu au hali ya hewa shambani, na uweke kumbukumbu ya yanayotokea.",
+  "Ask about a crop or a pest": "Uliza kuhusu zao au mdudu", "For example: why are my maize leaves turning yellow?": "Kwa mfano: kwa nini majani ya mahindi yangu yanageuka manjano?", "Ask": "Uliza",
+  "Write in my farm log": "Andika kwenye kumbukumbu ya shamba", "For example: 12 mm of rain": "Kwa mfano: mvua ya mm 12", "Save": "Hifadhi", "Show my farm log": "Onyesha kumbukumbu ya shamba langu",
+  "Weather": "Hali ya hewa", "Town": "Mji", "Show": "Onyesha",
+  "Work and jobs": "Kazi na ajira", "Find work, and make a résumé by answering a few short questions.": "Tafuta kazi, na utengeneze wasifu kwa kujibu maswali machache mafupi.",
+  "Find jobs": "Tafuta kazi", "What kind of work? (leave empty for any)": "Kazi ya aina gani? (acha tupu kwa yoyote)", "Build my résumé": "Tengeneza wasifu wangu", "My résumés": "Wasifu wangu",
+  "Learning": "Kujifunza", "Short practice lessons, one small step at a time. These are not certified courses.": "Masomo mafupi ya mazoezi, hatua ndogo kwa wakati mmoja. Si kozi zilizothibitishwa.",
+  "Teach me letters": "Nifundishe herufi", "Start the AI basics course": "Anza kozi ya misingi ya AI", "Give me a practice interview": "Nipe mahojiano ya mazoezi", "Learn about a topic": "Jifunze kuhusu mada", "For example: soil": "Kwa mfano: udongo", "Teach me": "Nifundishe",
+  "AgriTrade": "AgriTrade", "Post what you have for sale, and look for buyers. I do not take payments or move money.": "Tangaza unachouza, na utafute wanunuzi. Sipokei malipo wala kuhamisha pesa.",
+  "Sell something": "Uza kitu", "Look for buyers or offers": "Tafuta wanunuzi au ofa", "What? For example: maize": "Nini? Kwa mfano: mahindi", "Look": "Tafuta",
+  "Field operations": "Kazi za shambani", "I write a field or drone job down as a request for you to look over before anything happens. I do not fly a drone or send anyone out.": "Naandika kazi ya shambani au ya ndege isiyo na rubani kama ombi ulipitie kabla ya chochote kufanyika. Siendeshi ndege wala kutuma mtu.",
+  "Write down a job": "Andika kazi", "For example: spray the north field on Friday": "Kwa mfano: nyunyizia shamba la kaskazini Ijumaa", "Write it down": "Iandike",
+  "Messages": "Ujumbe", "I write a text, a WhatsApp message or an email, and I ask for your clear yes before anything is sent.": "Naandika ujumbe mfupi, ujumbe wa WhatsApp au barua pepe, na naomba ndiyo yako wazi kabla ya kutuma chochote.",
+  "Send a message": "Tuma ujumbe", "How": "Kwa njia gani", "Text message": "Ujumbe mfupi", "Email": "Barua pepe", "To: phone number with country code (+254...) or an email address": "Kwa: namba ya simu yenye msimbo wa nchi (+254...) au barua pepe", "What it should say": "Unachopaswa kusema", "Review and send": "Kagua na utume",
+  "Business": "Biashara", "Your clients, money and grants. Anything that changes your records asks for your yes first.": "Wateja wako, pesa na ruzuku. Chochote kinachobadilisha rekodi zako kinaomba ndiyo yako kwanza.",
+  "Add a client": "Ongeza mteja", "Name": "Jina", "Phone number with country code (optional)": "Namba ya simu yenye msimbo wa nchi (si lazima)", "Add": "Ongeza",
+  "Write down money in": "Andika pesa zilizoingia", "Amount": "Kiasi", "Currency": "Sarafu", "From what or whom": "Kutoka kwa nini au nani", "Write down money out": "Andika pesa zilizotoka", "What it was for": "Ilikuwa ya nini",
+  "Write a business plan": "Andika mpango wa biashara", "For example: a poultry farm in Kisumu": "Kwa mfano: shamba la kuku Kisumu", "Write it": "Andika",
+  "Look at my records": "Angalia rekodi zangu", "Clients": "Wateja", "Donors": "Wafadhili", "Grants due": "Ruzuku zinazokaribia", "Invoices": "Ankara", "Summary": "Muhtasari", "Follow-ups": "Ufuatiliaji",
+  "Kenya shillings": "Shilingi za Kenya", "US dollars": "Dola za Marekani", "Ghana cedis": "Cedi za Ghana", "Rand": "Randi", "WhatsApp": "WhatsApp", "Naira": "Naira", "Birr": "Birr",
+  "Please fill in: ": "Tafadhali jaza: ", "Close": "Funga", "Download": "Pakua", "Saved.": "Imehifadhiwa.",
+  "Edit the document": "Hariri waraka", "Save changes": "Hifadhi mabadiliko", "version": "toleo", "Open a document": "Fungua waraka", "Write something first.": "Andika kitu kwanza.", "Saving...": "Inahifadhi...", "That did not save. Please try again.": "Haikuhifadhiwa. Tafadhali jaribu tena."
+});
+function kyroT(text) {
+  try { if (languageCode() === "sw") return KYRO_APP_SW[text] || text; } catch { /* English */ }
+  return text;
+}
+// The offline notes: what is kept on this phone while there is no signal, and a button to send it now. (Found by the Standard User test: "open the offline queue" asked for a confirmation to read a server count that
+// no account can use. What a person has is the notes kept on the phone, so that is what opens.)
+function kyroOfflineLines(count, online) {
+  let sw = false;
+  try { sw = languageCode() === "sw"; } catch { sw = false; }
+  if (sw) return {
+    title: "Kumbukumbu za nje ya mtandao",
+    status: online ? "Una mtandao." : "Huna mtandao. Kumbukumbu unazorekodi zinahifadhiwa kwenye simu hii.",
+    count: count === 0 ? "Hakuna kumbukumbu zinazosubiri kwenye simu hii." : count + " kumbukumbu zinasubiri kwenye simu hii.",
+    about: "Kukiwa hakuna mtandao, rekodi rahisi kama \"nimeuza kilo 200 za mahindi\" huhifadhiwa kwenye simu hii na kutumwa kwa Kyro ukirudi mtandaoni.",
+    send: "Zitume sasa", sending: "Inatuma...", done: "Imetumwa.", later: "Haikuweza kutuma bado. Jaribu tena ukiwa na mtandao."
+  };
+  return {
+    title: "Offline notes",
+    status: online ? "You are online." : "You are offline. Notes you record are kept on this phone.",
+    count: count === 0 ? "No notes are waiting on this phone." : count === 1 ? "1 note is waiting on this phone." : count + " notes are waiting on this phone.",
+    about: "When there is no signal, a plain record such as \"sold 200 kg of maize\" is kept on this phone and sent to Kyro when you are back online.",
+    send: "Send them now", sending: "Sending...", done: "Sent.", later: "Could not send yet. Try again when you have a signal."
+  };
+}
+function kyroShowOfflineScreen() {
+  try {
+    const notes = window.KyroOfflineNotes;
+    const online = typeof navigator === "undefined" || navigator.onLine !== false;
+    const count = notes && typeof notes.pending === "function" ? Number(notes.pending()) || 0 : 0;
+    const t = kyroOfflineLines(count, online);
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "offline", "data-kyro-keep": "true", role: "dialog", "aria-label": t.title,
+      style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;align-items:flex-start" });
+    const close = kyroMake("button", { type: "button", "aria-label": kyroT("Close"), style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
+    close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "offline-screen" }); });
+    const status = kyroMake("p", { role: "status", style: "margin:0;color:#94a3b8;min-height:1.2em" });
+    const send = kyroMake("button", { type: "button", "data-kyro-offline-send": "true", style: KYRO_BUTTON_STYLE }, t.send);
+    if (count === 0 || !online) send.disabled = true;
+    send.addEventListener("click", async () => {
+      send.disabled = true; status.textContent = t.sending;
+      try { await replayKyroOfflineNotes(); } catch { /* the count below says what is left */ }
+      const left = notes && typeof notes.pending === "function" ? Number(notes.pending()) || 0 : 0;
+      status.textContent = left === 0 ? t.done : t.later;
+      send.disabled = left === 0;
+    });
+    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, t.title), kyroMake("p", { style: "margin:0;font-size:1.2rem" }, t.status), kyroMake("p", { style: "margin:0;font-size:1.2rem;font-weight:600" }, t.count),
+      kyroMake("p", { style: "margin:0;color:#cbd5e1;max-width:34em" }, t.about), send, status);
+    document.body.append(screen);
+    try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    return true;
+  } catch { return false; }
+}
 function kyroRunAppCommand(special, command) {
   document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
   if (special === "telehealth") { startKyroTelehealthIntake({ seedUtterance: { id: "", text: "I need telehealth" }, source: "app-screen" }); return; }
@@ -52159,51 +52258,51 @@ function kyroShowAppScreen(appId) {
     const app = KYRO_APP_SCREENS[appId];
     if (!app) return false;
     document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
-    const screen = kyroMake("section", { "data-kyro-result": "app", "data-kyro-app": appId, "data-kyro-keep": "true", role: "dialog", "aria-label": app.title,
+    const screen = kyroMake("section", { "data-kyro-result": "app", "data-kyro-app": appId, "data-kyro-keep": "true", role: "dialog", "aria-label": kyroT(app.title),
       style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;align-items:flex-start" });
-    const close = kyroMake("button", { type: "button", "aria-label": "Close", style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
+    const close = kyroMake("button", { type: "button", "aria-label": kyroT("Close"), style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
     close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "app-screen" }); });
-    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, app.title), kyroMake("p", { style: "margin:0;color:#cbd5e1;max-width:34em" }, app.intro));
+    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, kyroT(app.title)), kyroMake("p", { style: "margin:0;color:#cbd5e1;max-width:34em" }, kyroT(app.intro)));
     for (const action of app.actions) {
       const card = kyroMake("div", { "data-kyro-app-action": action.label, style: "width:100%;max-width:34em;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07);box-sizing:border-box" });
       if (action.kind === "button") {
-        const button = kyroMake("button", { type: "button", style: KYRO_BUTTON_STYLE }, action.label);
+        const button = kyroMake("button", { type: "button", style: KYRO_BUTTON_STYLE }, kyroT(action.label));
         button.addEventListener("click", () => kyroRunAppCommand(action.special || "", action.command || ""));
         card.append(button);
       } else if (action.kind === "buttons") {
-        card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.15rem" }, action.label));
+        card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.15rem" }, kyroT(action.label)));
         const row = kyroMake("div", { style: "display:flex;flex-wrap:wrap;gap:8px" });
         for (const [label, command] of action.items) {
-          const button = kyroMake("button", { type: "button", style: KYRO_BUTTON_STYLE }, label);
+          const button = kyroMake("button", { type: "button", style: KYRO_BUTTON_STYLE }, kyroT(label));
           button.addEventListener("click", () => kyroRunAppCommand("", command));
           row.append(button);
         }
         card.append(row);
       } else {
-        card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.15rem" }, action.label));
+        card.append(kyroMake("h3", { style: "margin:0 0 8px;font-size:1.15rem" }, kyroT(action.label)));
         const form = kyroMake("form", { style: "display:flex;flex-direction:column;gap:8px" });
         const inputs = {};
         for (const field of action.fields) {
           let input;
           if (field.type === "select") {
-            input = kyroMake("select", { name: field.name, "aria-label": field.label, style: KYRO_FIELD_STYLE });
-            for (const [label, value] of field.options) input.append(kyroMake("option", { value }, label));
+            input = kyroMake("select", { name: field.name, "aria-label": kyroT(field.label), style: KYRO_FIELD_STYLE });
+            for (const [label, value] of field.options) input.append(kyroMake("option", { value }, kyroT(label)));
           } else if (field.type === "textarea") {
-            input = kyroMake("textarea", { name: field.name, "aria-label": field.label, placeholder: field.label, rows: "3", style: KYRO_FIELD_STYLE });
+            input = kyroMake("textarea", { name: field.name, "aria-label": kyroT(field.label), placeholder: kyroT(field.label), rows: "3", style: KYRO_FIELD_STYLE });
           } else {
-            input = kyroMake("input", { name: field.name, "aria-label": field.label, placeholder: field.label, type: field.type === "number" ? "number" : "text", ...(field.type === "number" ? { inputmode: "decimal", step: "any", min: "0" } : {}), style: KYRO_FIELD_STYLE });
+            input = kyroMake("input", { name: field.name, "aria-label": kyroT(field.label), placeholder: kyroT(field.label), type: field.type === "number" ? "number" : "text", ...(field.type === "number" ? { inputmode: "decimal", step: "any", min: "0" } : {}), style: KYRO_FIELD_STYLE });
           }
           inputs[field.name] = { input, field };
           form.append(input);
         }
         const note = kyroMake("p", { role: "status", style: "margin:0;color:#fca5a5;min-height:1.2em" });
-        form.append(kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE + ";align-self:flex-start" }, action.button || "Go"), note);
+        form.append(kyroMake("button", { type: "submit", style: KYRO_BUTTON_STYLE + ";align-self:flex-start" }, kyroT(action.button || "Go")), note);
         form.addEventListener("submit", event => {
           event.preventDefault();
           const values = {};
           for (const [name, { input, field }] of Object.entries(inputs)) {
             values[name] = String(input.value || "").replace(/\s+/g, " ").trim();
-            if (!values[name] && !field.optional) { note.textContent = "Please fill in: " + field.label; return; }
+            if (!values[name] && !field.optional) { note.textContent = kyroT("Please fill in: ") + kyroT(field.label); return; }
           }
           kyroRunAppCommand("", action.command(values));
         });
@@ -52221,23 +52320,76 @@ function kyroShowDocumentScreen(drawn) {
   try {
     const data = drawn?.data || {};
     if (!data.documentId || !String(data.title || "").trim()) return false;
-    const t = kyroUiText();
+    const id = String(data.documentId);
     document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
     const screen = kyroMake("section", { "data-kyro-result": "document", "data-kyro-keep": "true", role: "dialog", "aria-label": String(data.title),
       style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;align-items:flex-start" });
-    const close = kyroMake("button", { type: "button", "aria-label": t.close, style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
+    const close = kyroMake("button", { type: "button", "aria-label": kyroT("Close"), style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer" }, "×");
     close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "document-screen" }); });
-    const status = kyroMake("p", { role: "status", style: "margin:0;color:#94a3b8;min-height:1.2em" }, "Saved.");
-    const download = kyroMake("button", { type: "button", "data-kyro-download": data.documentId, style: KYRO_BUTTON_STYLE }, "Download");
-    download.addEventListener("click", () => { void downloadNexusAuthoritativeDocument(data.documentId, status); });
+    const status = kyroMake("p", { role: "status", style: "margin:0;color:#94a3b8;min-height:1.2em" }, drawn.opened ? "" : kyroT("Saved."));
+    const download = kyroMake("button", { type: "button", "data-kyro-download": id, style: KYRO_BUTTON_STYLE }, kyroT("Download"));
+    download.addEventListener("click", () => { void downloadNexusAuthoritativeDocument(id, status); });
     const words = String(data.content || data.text || "").trim();
     screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, String(data.title)));
-    if (words) screen.append(kyroMake("div", { style: "width:100%;max-width:40em;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07);max-height:55vh;overflow-y:auto;box-sizing:border-box" }, words));
-    screen.append(download, status);
+    // the words: read-only until the document's own text arrives, then a box to change them in
+    const readonly = words ? kyroMake("div", { "data-kyro-doc-words": id, style: "width:100%;max-width:40em;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.07);max-height:55vh;overflow-y:auto;box-sizing:border-box" }, words) : null;
+    const editor = kyroMake("textarea", { "data-kyro-doc-editor": id, "aria-label": kyroT("Edit the document"), rows: "10", style: KYRO_FIELD_STYLE + ";max-width:40em;min-height:12em" });
+    const save = kyroMake("button", { type: "button", "data-kyro-doc-save": id, style: KYRO_BUTTON_STYLE }, kyroT("Save changes"));
+    editor.hidden = true; save.hidden = true;
+    save.addEventListener("click", async () => {
+      const said = String(editor.value || "").trim();
+      if (!said) { status.textContent = kyroT("Write something first."); return; }
+      save.disabled = true; status.textContent = kyroT("Saving...");
+      try {
+        const result = await kyroSilentTurn("Save changes to document " + id + ": " + said);
+        const saved = result?.render?.data;
+        if (!saved || saved.documentId !== id) throw new Error("not saved");
+        status.textContent = kyroT("Saved.") + (saved.savedVersion ? " (" + kyroT("version") + " " + saved.savedVersion + ")" : "");
+      } catch { status.textContent = kyroT("That did not save. Please try again."); }
+      save.disabled = false;
+    });
+    if (readonly) screen.append(readonly);
+    screen.append(editor, save, download, status);
     document.body.append(screen);
+    void (async () => {
+      try {
+        const response = await fetch("/api/nexus/runtime/documents/" + encodeURIComponent(id), { credentials: "same-origin" });
+        if (!response.ok) return;
+        const source = String((await response.json())?.sourceText || "").trim();
+        if (!source) return;
+        editor.value = source; editor.hidden = false; save.hidden = false;
+        if (readonly) readonly.hidden = true;
+      } catch { /* the words stay read-only */ }
+    })();
     try { kyroNoteActivity(); } catch { /* nothing to note */ }
     return true;
   } catch { return false; }
+}
+// A saved document from the list of them: its words and a box to change them in.
+async function kyroOpenDocumentById(id, title) {
+  let content = "";
+  let name = String(title || "");
+  try {
+    const response = await fetch("/api/nexus/runtime/documents/" + encodeURIComponent(id), { credentials: "same-origin" });
+    if (response.ok) { const body = await response.json(); content = String(body.sourceText || ""); name = name || String(body.document?.title || ""); }
+  } catch { /* shown without its words */ }
+  return kyroShowDocumentScreen({ opened: true, data: { documentId: id, title: name || "Document", content } });
+}
+// The person's saved documents as buttons that open them.
+async function kyroFillDocumentButtons(list) {
+  try {
+    const response = await fetch("/api/nexus/runtime/documents?limit=12", { credentials: "same-origin" });
+    if (!response.ok) return;
+    const documents = (await response.json())?.documents || [];
+    if (!documents.length) return;
+    list.append(kyroMake("h3", { style: "margin:0;font-size:1.1rem" }, kyroT("Open a document")));
+    for (const item of documents.slice(0, 12)) {
+      if (!item || !item.documentId) continue;
+      const button = kyroMake("button", { type: "button", "data-kyro-open-document": item.documentId, style: "text-align:left;padding:12px 14px;border:0;border-radius:12px;background:rgba(255,255,255,.08);color:#f1f5f9;font:inherit;font-size:1.05rem;cursor:pointer" }, String(item.title || "Document"));
+      button.addEventListener("click", () => { void kyroOpenDocumentById(item.documentId, item.title); });
+      list.append(button);
+    }
+  } catch { /* the form is still there */ }
 }
 
 function kyroShowResultScreen(toolName, command, result) {

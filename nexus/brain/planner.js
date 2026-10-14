@@ -680,6 +680,8 @@ class OpenEndedPlanner {
     // "Show my documents", "what documents do I have": the titles of the person's own saved documents, newest first.
     const documentsListed = await documentsListPlan(this.documents, command);
     if (documentsListed) return Object.freeze({ ...documentsListed, planningAttempts: 1 });
+    const documentChanges = documentSaveChangesPlan(command.text, catalog);
+    if (documentChanges) return Object.freeze({ ...documentChanges, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
     if (completeDocument) return Object.freeze({ ...completeDocument, planningAttempts: 1 });
     const listUpdate = listUpdatePlan(command.text, catalog);
@@ -1487,6 +1489,18 @@ async function exportLatestDocumentPlan(documents, { text, format, tenantId, own
       input: { title: latest.title, content: source.sourceText, format, reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
+// What the document screen's Save changes button says: "Save changes to document doc_a1b2c3: the new words". The document is named by its own id, so the right one gets the new version.
+const DOCUMENT_SAVE_CHANGES = /^\s*save changes to document (doc_[a-z0-9_-]{4,60})\s*:\s*([\s\S]+?)\s*$/i;
+function documentSaveChangesPlan(text, catalog) {
+  const goal = String(text || "");
+  const match = DOCUMENT_SAVE_CHANGES.exec(goal);
+  if (!match || !match[2].trim()) return null;
+  if (!catalog?.tools?.some(tool => tool.toolId === "documents.create") || !catalog.applications?.some(app => app.applicationId === "documents")) return null;
+  return { goal: goal.slice(0, 200), application: "documents", riskTier: "low", clarification: null,
+    steps: [{ clientStepId: "save-document-changes", title: "Save changes to the document", toolId: "documents.create",
+      input: { documentId: match[1], content: match[2].slice(0, 20000), reopenAfterSave: true }, dependsOn: [], fallbackToolIds: [] }] };
+}
+
 function completeDocumentPlan(text, catalog) {
   const goal = String(text || "").trim();
   if (!/\b(create|write|draft|make)\b/i.test(goal) || !/\b(document|plan|report|resume|résumé)\b/i.test(goal) ||
@@ -1953,4 +1967,4 @@ function safeTurn(item) { return { role: item.role, content: item.content, occur
 module.exports = Object.freeze({ OpenEndedPlanner, parseAlertsControl, resumePlan, ordinaryConversationPlan, isMemoryRecallQuestion, memoryRecallPlan, isAssistantIntroductionRequest, assistantIntroductionPlan, agricultureAdvicePlan, canonicalizeExplicitApplication, emergencyHealthGuidancePlan, completeHealthRecordPlan,
   completeTelehealthIntakePlan, completeMarketplaceSearchPlan, completeLiveKnowledgePlan,
   completeMobileClinicPlan, completeNearbyPlacesPlan, completeMediaPlaybackPlan, completeMediaExtendedPlan, completeImageSearchPlan, completeVideoSearchPlan, completeLogisticsTrackPlan, completeDocumentPlan, completeSaveConversationPlan, translationRequest, exportLatestDocumentFormat, exportLatestDocumentPlan, completeListsPlan, completeCommunicationPlan, sendMessagePlan, callPlan, personalRecordQuestionPlan, isLightChatRequest, isBriefRequest, parseBriefControl,
-  completeRemainingWorkspacePlan, withJobsPlace, documentsListPlan, listUpdatePlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });
+  completeRemainingWorkspacePlan, withJobsPlace, documentsListPlan, listUpdatePlan, documentSaveChangesPlan, completeBusinessPlan, completeRemindersManagePlan, validatePlan });

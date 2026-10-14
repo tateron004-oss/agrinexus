@@ -61,3 +61,15 @@ test("both startup awaits in startOpenAiAgentsRealtimeVoiceSession are wrapped",
   assert.match(body, /await withRealtimeStartTimeout\(\s*Promise\.all\(\[loadNexusOpenAiRealtimeAgentModule\(\), requestNexusOpenAiRealtimeSession/);
   assert.match(body, /controller = await withRealtimeStartTimeout\(module\.startNexusOpenAiRealtimeGenesisSession/);
 });
+
+// When "hello" took ninety seconds the voice status and session requests had no time limit at all: one that hung left nothing on the screen.
+test("the voice status and session requests have time limits, and the session request asks once more", () => {
+  const source = require("node:fs").readFileSync(require("node:path").join(__dirname, "../../public/app.js"), "utf8");
+  assert.match(source, /const response = await kyroFetchWithTimeout\("\/api\/voice\/realtime\/status", \{[^]*?\}, 10000\);/);
+  const request = source.slice(source.indexOf("async function requestNexusOpenAiRealtimeSession("), source.indexOf("function kyroDeviceTimeZone()"));
+  assert.match(request, /for \(let attempt = 0; attempt < 2 && !response; attempt \+= 1\)/);
+  assert.match(request, /kyroFetchWithTimeout\(`\/api\/voice\/realtime\/session\?language=/);
+  assert.match(request, /\}, 15000\);/);
+  assert.match(request, /if \(attempt === 1\) throw new Error\("The voice session did not answer in time\."\);/);
+  assert.doesNotMatch(request, /[^a-zA-Z]fetch\(/, "no request without a time limit");
+});
