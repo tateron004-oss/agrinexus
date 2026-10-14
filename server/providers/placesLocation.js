@@ -40,6 +40,13 @@ function countryOfKnownCity(value) {
   return code ? COUNTRIES.find(country => country.code === code) || null : null;
 }
 // A country named inside a longer place text ("Kisumu, Kenya", "Nairobi Kenya")
+// True when the text names a supported country or a well-known city ("jobs in Kisumu", "work in Kenya").
+function placeMentionedIn(value) {
+  const text = clean(value).toLowerCase();
+  if (!text) return false;
+  if (countryNamedIn(text)) return true;
+  return Object.values(KNOWN_CITIES).some(cities => cities.some(city => new RegExp(`\\b${city}\\b`).test(text)));
+}
 function countryNamedIn(value) {
   const text = clean(value).toLowerCase();
   if (!text) return null;
@@ -161,4 +168,4 @@ function parseNearbyPlacesRequest(text) {
   return { kind, place, nearest: /\b(?:nearest|closest)\b/i.test(goal) };
 }
 
-module.exports = Object.freeze({ parseNearbyPlacesRequest, COUNTRIES, countryEntry, countryNamedIn, namedPlaceIn, isUnnamed, planPlaceSearch, originCountry, countryNote, wordsFor });
+module.exports = Object.freeze({ parseNearbyPlacesRequest, COUNTRIES, countryEntry, countryNamedIn, placeMentionedIn, namedPlaceIn, isUnnamed, planPlaceSearch, originCountry, countryNote, wordsFor });
