@@ -47,6 +47,12 @@
       tradeBoard: "What is for sale", tradeBoardSay: "What is for sale?",
       tradeListings: "My listings", tradeListingsSay: "Show my listings",
       tradeOrders: "My orders", tradeOrdersSay: "Show my orders",
+      opsTitle: "Operations",
+      opsLine: "I can write down a field or drone job as a request for you to look over before anything happens.",
+      opsNot: "I do not fly a drone, control an aircraft or send anyone out.",
+      commsTitle: "Messages",
+      commsLine: "I can help you write a text, a WhatsApp message or an email, and I ask for your clear yes before anything is sent.",
+      commsNot: "Nothing is sent without your yes, and sending only works for a service that is connected.",
       close: "Close"
     },
     sw: {
@@ -74,6 +80,12 @@
       tradeTitle: "Biashara",
       tradeLine: "Ninatunza ubao wa jamii ambapo unaweza kuweka unachouza, na maagizo ya wanunuzi wako. Sipokei malipo, sinunui chochote wala kupanga usafirishaji kutoka hapa.",
       tradeEnglishOnly: "Ubao wa mauzo na maagizo hufanya kazi kwa Kiingereza kwa sasa.",
+      opsTitle: "Shughuli",
+      opsLine: "Naweza kuandika kazi ya shambani au ya ndege isiyo na rubani kama ombi ili uliangalie kabla ya jambo lolote kutendeka.",
+      opsNot: "Sirushi ndege isiyo na rubani, sidhibiti ndege wala kumtuma mtu.",
+      commsTitle: "Ujumbe",
+      commsLine: "Naweza kukusaidia kuandika ujumbe wa simu, WhatsApp au barua pepe, na ninaomba ndiyo yako wazi kabla ya kutuma chochote.",
+      commsNot: "Hakuna kinachotumwa bila ndiyo yako, na kutuma kunafanya kazi tu kwa huduma iliyounganishwa.",
       close: "Funga"
     }
   };
@@ -154,6 +166,16 @@
   const TRADE_SPECIFIC = /sell|\bsold\b|\bbuy|purchase|price|\bship|deliver|track|route|invoice|\bpay|payment|wallet|escrow|checkout|\bpost\b|listing|\border|\bkg\b|\bbags?\b|\btons?\b|maize|coffee|cassava|rice|beans|wheat|tomato|kuuza|nunua|bei|mahindi/i;
   function tradeIsGeneral(text) { return !TRADE_SPECIFIC.test(String(text || "")); }
 
+  // Operations and messages: what each really does, and what it does not (it never flies or sends by itself). Plain lines, nothing to tap.
+  function operationsSpec({ lang } = {}) {
+    const t = TEXT[lang === "sw" ? "sw" : "en"];
+    return { id: "operations", title: t.opsTitle, closeLabel: t.close, lines: [t.opsLine, t.opsNot], choices: [] };
+  }
+  function communicationsSpec({ lang } = {}) {
+    const t = TEXT[lang === "sw" ? "sw" : "en"];
+    return { id: "communications", title: t.commsTitle, closeLabel: t.close, lines: [t.commsLine, t.commsNot], choices: [] };
+  }
+
   // The card for a workspace that has one (null when it does not: the usual window opens).
   function specFor(workspace, options) {
     if (workspace === "workforce") return workSpec(options);
@@ -161,6 +183,8 @@
     if (workspace === "health") return healthSpec(options);
     if (workspace === "agriculture") return farmSpec(options);
     if (workspace === "trade") return tradeSpec(options);
+    if (workspace === "operations") return operationsSpec(options);
+    if (workspace === "communications") return communicationsSpec(options);
     return null;
   }
 
@@ -172,5 +196,5 @@
     return true;
   }
 
-  return Object.freeze({ workSpec, learnSpec, healthSpec, healthIsGeneral, farmSpec, farmIsGeneral, tradeSpec, tradeIsGeneral, isGeneralFor, specFor, TEXT });
+  return Object.freeze({ operationsSpec, communicationsSpec, workSpec, learnSpec, healthSpec, healthIsGeneral, farmSpec, farmIsGeneral, tradeSpec, tradeIsGeneral, isGeneralFor, specFor, TEXT });
 });

@@ -223,7 +223,7 @@ test("callNexusOpenAiRealtimeTool short-circuits with no network call when a Kyr
   assert.ok(start > 0 && end > start, "could not locate callNexusOpenAiRealtimeTool in app.js");
   let fetchCalls = 0;
   const sandbox = {
-    kyroDismissStaleWorkspace: () => {}, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
+    kyroDismissStaleWorkspace: () => {}, kyroActiveVoiceIntake: { engine: {} }, routeKyroVoiceIntakeTranscript: () => { throw new Error("an interview already under way is not started again"); }, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person their résumé questions one at a time. Say nothing now.",
     fetch: async () => { fetchCalls += 1; return { ok: true, json: async () => ({}) }; },
     nexusGenesisVoiceDebugLog: () => {}
   };
@@ -233,6 +233,30 @@ test("callNexusOpenAiRealtimeTool short-circuits with no network call when a Kyr
   assert.equal(fetchCalls, 0, "no HTTP tool call should be made once the intake owns the turn");
   assert.equal(result.executionVerified, false);
   assert.match(result.response, /already asking/);
+});
+
+// The model's own tool call starts what the page owns when nothing has started it yet, and is only told "Kyro is doing it" of something that really was started.
+test("callNexusOpenAiRealtimeTool starts the interview itself when it comes first, and carries on to the server when the page did not take the words", async () => {
+  const start = appSource.indexOf("async function callNexusOpenAiRealtimeTool(toolName, args = {}) {");
+  const end = appSource.indexOf("\nfunction handleOpenAiAgentsRealtimeEvent(");
+  const run = async started => {
+    const routed = []; let fetchCalls = 0;
+    const sandbox = {
+      kyroDismissStaleWorkspace: () => {}, kyroActiveVoiceIntake: null, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.",
+      routeKyroVoiceIntakeTranscript: arg => { routed.push(arg); return started; }, kyroMediaCommand: async () => false, kyroVisualRequestKind: () => null, kyroShowResultScreen: () => false,
+      kyroDeviceTimeZone: () => "UTC", languageCode: () => "en", nexusGenesisVoiceDebugLog: () => {}, window: { setTimeout, KyroMediaCommands: { parse: () => null } },
+      kyroFetchWithTimeout: async () => { fetchCalls += 1; throw new Error("stop here: the server was asked"); }, kyroToolFailureResult: () => ({ ok: false, status: "failed", response: "stopped" })
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(appSource.slice(start, end) + "\nthis.run = callNexusOpenAiRealtimeTool;", sandbox);
+    const result = await sandbox.run("nexus_marketplace_logistics", { command: "Sell 50 bags of maize" });
+    return { routed, fetchCalls, result };
+  };
+  const taken = await run(true);
+  assert.equal(taken.routed.length, 1); assert.equal(taken.routed[0].transcript, "Sell 50 bags of maize"); assert.equal(taken.routed[0].source, "tool-call"); assert.match(taken.routed[0].utteranceId, /^tool-/);
+  assert.equal(taken.fetchCalls, 0); assert.match(taken.result.response, /already asking the person about what they want to sell/);
+  const notTaken = await run(false);
+  assert.equal(notTaken.routed.length, 1); assert.equal(notTaken.fetchCalls, 1, "the page did not take the words, so the server is asked as before");
 });
 
 // The same wiring in Kiswahili: asked, spoken and cancelled in the language the person speaks.

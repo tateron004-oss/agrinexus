@@ -22333,7 +22333,10 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     nexus_email: "communications-send",
     nexus_health_preparation: "health-record-write"
   }[toolName];
-  if (restrictedToolCategory && userIsRestrictedFrom(user, restrictedToolCategory)) {
+  // Looking up a pharmacy or a clinic near a place only reads a directory: it saves nothing and sends nothing, so a restricted account (a guest) may do it. (Found testing: "Find a pharmacy near Nairobi" and "Open pharmacy"
+  // were refused with "Sign in with a full account". Writing a health record, a message or a transaction is still refused.) (typeof guard: tests evaluate this function's source alone.)
+  const readsADirectory = restrictedToolCategory === "health-record-write" && typeof parseNearbyPlacesRequest === "function" && (Boolean(parseNearbyPlacesRequest(command)) || (/\bmobile\s+clinics?\b/i.test(command) && /\b(find|search|show|locate|near|nearest|where)\b/i.test(command)));
+  if (restrictedToolCategory && !readsADirectory && userIsRestrictedFrom(user, restrictedToolCategory)) {
     return {
       ...common,
       ok: false,

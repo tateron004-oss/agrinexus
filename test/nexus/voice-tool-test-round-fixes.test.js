@@ -65,3 +65,14 @@ test("'play music on Spotify' does not say Spotify is playing", async () => {
   assert.doesNotMatch(answer.response || "", /spotify/i);
   assert.match(answer.response || "", /^Okay\. Starting music in the player now\.$/);
 });
+
+// Found sweeping the applications as a guest: "Find a pharmacy near Nairobi" and "Find a clinic near Kisumu" were refused with "Sign in with a full account", though they only read a directory. Writing a health record is still refused.
+test("a guest may look up a pharmacy or a clinic near a place, and still may not write a health record", async () => {
+  for (const command of ["Find a pharmacy near Nairobi", "Find a clinic near Kisumu", "Find a mobile clinic near Kisumu"]) {
+    const answer = await tool("nexus_health_preparation", command, { timeZone: "Africa/Nairobi" });
+    assert.notEqual(answer.status, "restricted", command);
+    assert.doesNotMatch(answer.response || "", /Sign in with a full account/, command);
+  }
+  const write = await tool("nexus_health_preparation", "Save a telehealth intake for my chest pain", { timeZone: "Africa/Nairobi" });
+  assert.ok(write.status === "restricted" || !/saved/i.test(write.response || ""), "a write is not done for a guest");
+});
