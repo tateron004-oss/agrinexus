@@ -19,6 +19,26 @@ function countryEntry(value) {
   if (!text) return null;
   return COUNTRIES.find(country => country.names.includes(text)) || null;
 }
+// Well-known cities and towns, so "Nairobi" or "Kisumu" is looked for in Kenya even when the account is in Nigeria (otherwise the account's country is searched first and a look-alike street in it wins).
+const KNOWN_CITIES = Object.freeze({
+  ke: ["nairobi", "mombasa", "kisumu", "nakuru", "eldoret", "thika", "nyeri", "machakos", "kakamega", "kisii", "meru", "kitale", "malindi", "garissa"],
+  ng: ["lagos", "abuja", "kano", "ibadan", "port harcourt", "benin city", "kaduna", "enugu", "jos", "abeokuta", "ilorin", "onitsha", "owerri"],
+  ug: ["kampala", "entebbe", "gulu", "mbarara", "jinja", "mbale", "lira"],
+  tz: ["dar es salaam", "dodoma", "arusha", "mwanza", "zanzibar", "mbeya", "moshi"],
+  gh: ["accra", "kumasi", "tamale", "takoradi", "cape coast"],
+  rw: ["kigali", "huye", "musanze"],
+  et: ["addis ababa", "dire dawa", "hawassa", "bahir dar"],
+  zm: ["lusaka", "ndola", "kitwe", "livingstone"],
+  mw: ["lilongwe", "blantyre", "mzuzu", "zomba"],
+  eg: ["cairo", "alexandria", "giza", "luxor", "aswan"],
+  za: ["johannesburg", "cape town", "durban", "pretoria", "port elizabeth", "bloemfontein"],
+  cd: ["kinshasa", "lubumbashi", "goma", "kisangani"]
+});
+function countryOfKnownCity(value) {
+  const text = clean(value).toLowerCase().replace(/\s+(?:city|town|county)$/, "");
+  const code = text && Object.keys(KNOWN_CITIES).find(key => KNOWN_CITIES[key].includes(text));
+  return code ? COUNTRIES.find(country => country.code === code) || null : null;
+}
 // A country named inside a longer place text ("Kisumu, Kenya", "Nairobi Kenya")
 function countryNamedIn(value) {
   const text = clean(value).toLowerCase();
@@ -86,7 +106,7 @@ function planPlaceSearch(query = {}, { kind = "pharmacy" } = {}) {
   const named = isUnnamed(query.location || query.city) ? "" : clean(query.location || query.city);
   const lat = Number(query.lat ?? query.latitude); const lon = Number(query.lon ?? query.lng ?? query.longitude);
   if (named) {
-    const asked = countryNamedIn(named);
+    const asked = countryNamedIn(named) || countryOfKnownCity(named);
     return { mode: "named", locationText: named, countryCode: (asked || account)?.code || "", expectedCountry: asked || account, account, note: "", words };
   }
   if (query.lat !== undefined || query.latitude !== undefined) {

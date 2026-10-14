@@ -149,7 +149,7 @@ test("it is wired: voice answers draw the screen and open no form; the form from
 });
 
 function typedApi(shown) {
-  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
+  const names = ["function kyroReminderListLine(", "function kyroEmptyRenderAnswer(", "function kyroRenderedAnswerLine(", "function nexusGalleryMessage(", "function kyroPlainRenderMessage(", "function kyroShowTypedResult(", "function kyroTypedToolFor(", "function kyroTypedLessonReply(", "function kyroExplicitOpenCard("];
   const source = names.map(name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }).join("\n");
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
   return new Function("window", "kyroShowResultScreen", `const KYRO_FORM_FLOW = ${formFlow[1]}; ${source}; return { kyroShowTypedResult, kyroTypedToolFor, kyroTypedLessonReply, kyroEmptyRenderAnswer, kyroPlainRenderMessage };`)({ KyroResultScreen: {} }, (tool, command, result) => { shown.push({ tool, command, result }); return true; });
@@ -288,4 +288,24 @@ test("a list of short things is still a list, and its other sentences are not cu
   const model = RS.buildModel({ ok: true, status: "completed", response: "Nothing was booked. Maize seed lot in A; Compost in B; Tools in C. One. Two. Three. Four. Five. Six. Seven." }, { command: "list", lang: "en" });
   assert.equal(model.kind, "list"); assert.deepEqual(model.items.map(item => item.name), ["Maize seed lot in A", "Compost in B", "Tools in C"]);
   assert.equal(model.notes.length, 7, "the other sentences are all there");
+});
+
+// Found sweeping the applications as a Standard User: a checklist, a web search and a job search each left a card headed "Nexus completed the governed execution..." of raw fields. They are answers, drawn as a screen.
+test("typed: a checklist, a web search answer and a list of jobs are drawn as an answer, never as 'Nexus completed the governed execution'", () => {
+  const shown = []; const api = typedApi(shown);
+  const render = (kind, data) => ({ state: "render_required", application: kind, render: { presentation: { kind }, response: "Nexus completed the governed execution and is rendering the verified result.", data } });
+  const checklist = render("checklist", { lists: [{ title: "Market Day", items: [{ text: "seeds" }, { text: "sacks" }, { text: "scale" }] }] });
+  assert.equal(api.kyroShowTypedResult(checklist, "Show my checklist", "Nexus completed the governed execution and is rendering the verified result."), true);
+  assert.equal(shown.at(-1).result.response, "Market Day: seeds; sacks; scale.");
+  const search = render("source-answer", { answer: "Maize prices in Kenya are about 3,500 shillings per 90kg bag", sources: [{ title: "FEWS NET", url: "https://fews.net" }, { title: "KAMIS", url: "https://kamis.go.ke" }] });
+  assert.equal(api.kyroShowTypedResult(search, "Search the web for maize prices in Kenya", "x"), true);
+  assert.equal(shown.at(-1).result.response, "Maize prices in Kenya are about 3,500 shillings per 90kg bag. Sources: FEWS NET; KAMIS.");
+  const jobs = render("operation", { listings: ["Farm supervisor - https://example.org/1", "Tractor driver - https://example.org/2"] });
+  assert.equal(api.kyroShowTypedResult(jobs, "Find jobs near me", "x"), true);
+  assert.equal(shown.at(-1).result.response, "I found 2 listings: Farm supervisor; Tractor driver.");
+  for (const result of [checklist, search, jobs]) {
+    const said = api.kyroPlainRenderMessage(result, "Nexus completed the governed execution and is rendering the verified result.");
+    assert.doesNotMatch(said, /governed execution|Nexus/); assert.notEqual(said, "Done. It is on your screen.");
+  }
+  assert.equal(api.kyroShowTypedResult(render("operation", { origin: "Kisumu" }), "How far is it", "x"), false, "an operation with no listings is drawn as before");
 });

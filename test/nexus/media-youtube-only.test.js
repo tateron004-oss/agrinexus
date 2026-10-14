@@ -64,3 +64,14 @@ test("KYRO_MEDIA_SOURCES turns the other sources back on", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.candidates[0].provider, "radio-browser");
 });
+
+// Found sweeping the applications: "Play the radio" played a random popular video, because with no station named it searched YouTube for "popular music".
+test("'play the radio' with no station is a YouTube search for live radio in the person's country", async () => {
+  const kenya = setup();
+  const result = await resolveMedia({ query: "", kind: "radio", country: "Kenya" }, kenya.ctx);
+  assert.equal(result.ok, true);
+  assert.match(decodeURIComponent(kenya.world.calls.find(call => call.url.includes("/youtube/v3/search")).url), /q=Kenya[+ ]radio[+ ]live/);
+  const anywhere = setup();
+  await resolveMedia({ query: "", kind: "radio", country: "" }, anywhere.ctx);
+  assert.match(decodeURIComponent(anywhere.world.calls.find(call => call.url.includes("/youtube/v3/search")).url), /q=live[+ ]radio/);
+});
