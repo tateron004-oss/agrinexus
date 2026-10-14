@@ -134,3 +134,45 @@ test("if the map will not open the typed sentence is left to the usual route, an
   assert.equal(calls.spoken.length, 0);
   assert.equal(api.kyroSpokenOpenOwns("Open the map"), false, "the model's own tool call for a map is not stopped");
 });
+
+// Found in the first round of testing by voice: "Open YouTube", "Open Spotify" and "Show me a list" were answered "I'm not sure what you'd like me to do", and a card a "sell" had opened stayed in front of everything after it.
+test("'open YouTube' and 'open Spotify' ask what to play, 'play something on YouTube' plays music, and the next short answer is played", () => {
+  for (const text of ["Open YouTube", "open Spotify", "Kyro, open the YouTube app", "launch Spotify", "go to YouTube", "Play something on YouTube", "play some music on Spotify", "Play music from YouTube"]) assert.equal(load().api.kyroSpokenOpenOwns(text), true, text);
+  for (const text of ["Play Sauti Sol", "play some Kenyan music", "How do I use YouTube", "tell me about Spotify", "open the map", ""]) assert.equal(load().api.kyroSpokenOpenOwns(text), false, text);
+  const { api, calls } = load();
+  assert.equal(api.kyroHandleSpokenOpen("Open YouTube", {}), true);
+  assert.equal(calls.screens.at(-1), "What would you like to play? For example: play Sauti Sol, or play some Kenyan music.");
+  assert.equal(api.pending().kind, "music");
+  assert.equal(api.kyroHandleSpokenOpen("Sauti Sol", {}), true);
+  assert.equal(calls.typed.at(-1).text, "Play Sauti Sol"); assert.deepEqual({ ...calls.typed.at(-1).options }, { source: "typed", kyroDirect: true });
+  assert.equal(api.kyroHandleSpokenOpen("open Spotify", {}), true);
+  assert.match(calls.screens.at(-1), /^Spotify is not connected here, so I play music from YouTube\. What would you like to hear\?/);
+  assert.equal(api.kyroHandleSpokenOpen("Play something on YouTube", {}), true);
+  assert.equal(calls.typed.at(-1).text, "Play some music");
+  assert.equal(api.kyroHandleSpokenOpen("open Spotify", {}), true);
+  assert.equal(api.kyroHandleSpokenOpen("play Sauti Sol", {}), false, "a reply that is a request of its own is not taken as the subject");
+});
+
+test("'show me a list' asks a list of what; 'show me a list of my documents / reminders / checklists / notes' shows it; the next answer names one", () => {
+  for (const text of ["Show me a list", "show my list", "Kyro, give me a list", "Show me a list of my documents", "show me a list of my reminders", "open my reminders", "Show me my checklists", "list my notes", "show me my to-do list"]) assert.equal(load().api.kyroSpokenOpenOwns(text), true, text);
+  for (const text of ["show me a list of clinics", "show me the list of maize buyers", "make a list", "what is a list", ""]) assert.equal(load().api.kyroSpokenOpenOwns(text), false, text);
+  const { api, calls } = load();
+  assert.equal(api.kyroHandleSpokenOpen("show me a list of my documents", {}), true); assert.equal(calls.typed.at(-1).text, "Show my saved documents");
+  assert.equal(api.kyroHandleSpokenOpen("Show me a list of my reminders", {}), true); assert.equal(calls.typed.at(-1).text, "Show my reminders");
+  assert.equal(api.kyroHandleSpokenOpen("show my checklists", {}), true); assert.equal(calls.typed.at(-1).text, "Show my checklists");
+  assert.equal(api.kyroHandleSpokenOpen("list my notes", {}), true); assert.equal(calls.typed.at(-1).text, "Show my notes");
+  assert.equal(api.kyroHandleSpokenOpen("Show me a list", {}), true);
+  assert.equal(calls.screens.at(-1), "A list of what? You can say: my reminders, my documents, my checklists or my notes."); assert.equal(api.pending().kind, "list");
+  assert.equal(api.kyroHandleSpokenOpen("my reminders", {}), true); assert.equal(calls.typed.at(-1).text, "Show my reminders");
+  api.kyroHandleSpokenOpen("show me a list", {});
+  assert.equal(api.kyroHandleSpokenOpen("the weather in Kisumu", {}), false, "an answer that names no list is not taken, and the question is dropped");
+  assert.equal(api.pending(), null);
+});
+
+test("a card left open by an earlier request is closed by the next request, the next interview and the next tool call, and is not closed by the quiet-spell return", () => {
+  assert.match(app, /function kyroDismissStaleWorkspace\(\) \{\s*try \{ if \(document\.querySelector\("#nexus-workspace"\)\) closeNexusFunctionWindow\(\{ command: "" \}\); \} catch/);
+  assert.match(app, /delete document\.body\.dataset\.genesisWorkspace; delete document\.body\.dataset\.genesisWorkspaceRequestId;/);
+  assert.match(app, /async function handleNexusUnifiedBrainRuntimeCommand\(command = "", options = \{\}\) \{\s*const text = String\(command \|\| ""\)\.trim\(\);\s*if \(!text\) return false;\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
+  assert.match(app, /function startKyroVoiceIntake\(definition, options = \{\}\) \{\s*if \(kyroActiveVoiceIntake\) kyroActiveVoiceIntake\.engine\.cancel\(\);\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
+  assert.match(app, /async function callNexusOpenAiRealtimeTool\(toolName, args = \{\}\) \{\s*const command = [^\n]*\n\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
+});

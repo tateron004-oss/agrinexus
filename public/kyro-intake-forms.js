@@ -167,7 +167,7 @@
   // --- selling something --------------------------------------------------------------------------
   // "I want to sell 50 bags of maize" used to open the Trade form, or ask the person to say yes to their own sentence. Now Kyro asks only for what is missing (what, how much, what price, where), reads it
   // back, and posts it to the community board after a yes -- the same listing "post for sale: 50 bags of maize at 3000 per bag" makes. Nothing is bought, paid or delivered from here.
-  const SALE_INTENT = /\b(?:i (?:want|need|would like|plan|wish|have) to sell|i'?d like to sell|i'?m (?:going to |gonna |planning to )?sell(?:ing)?|i am (?:going to |planning to )?sell(?:ing)?|let me sell|help me sell|sell my|i have\b.{1,70}\bto sell|put\b.{1,70}\bfor sale|list\b.{1,70}\bfor sale|nataka kuuza|ninataka kuuza|nina\b.{1,60}\bya kuuza|nisaidie kuuza|ninauza)\b/i;
+  const SALE_INTENT = /\b(?:i (?:want|need|would like|plan|wish|have) to sell|i'?d like to sell|i'?m (?:going to |gonna |planning to )?sell(?:ing)?|i am (?:going to |planning to )?sell(?:ing)?|let me sell|help me sell|sell my|i have\b.{1,70}\bto sell|put\b.{1,70}\bfor sale|list\b.{1,70}\bfor sale|post\s+(?:my|some|the|a|an|\d+)\b.{0,60}?\bfor sale|advertise\s+(?:my|some|the|a|an|\d+)\b.{0,60}?\bfor sale|(?:can|could|will|would) you (?:help me )?sell|nataka kuuza|ninataka kuuza|nina\b.{1,60}\bya kuuza|nisaidie kuuza|ninauza)\b/i;
   const SALE_NOT = /^\s*(?:how|what|where|when|why|which|who|can you explain|tips|is it|do i|should i)\b|\b(?:sold|selling price|who buys|who wants|price of|market price|cancel|remove|delete)\b|\bnimeuza\b/i;
   const SALE_UNITS = { kilograms: "kg", kilogram: "kg", kilos: "kg", kilo: "kg", kgs: "kg", kg: "kg", bags: "bag", bag: "bag", sacks: "sack", sack: "sack", crates: "crate", crate: "crate", tons: "ton", tonnes: "ton", ton: "ton", tonne: "ton", litres: "litre", liters: "litre", litre: "litre", liter: "litre", bunches: "bunch", bunch: "bunch", pieces: "piece", piece: "piece" };
   const SALE_QTY = /(?:^|\s)(\d[\d,.]*\s*(?:kilograms?|kilos?|kgs?|bags?|sacks?|crates?|tonnes?|tons?|litres?|liters?|bunch(?:es)?|pieces?|goats?|cows?|sheep|chickens?|hens?|eggs?|trays?|heads?|[a-z]{3,12})?)\s+(?:of\s+)?([a-z][a-z -]{1,40}?)(?=\s+(?:at|for|in|to|from)\b|[.,!?]|$)/i;
@@ -192,7 +192,9 @@
   function isSaleRequest(text) {
     const value = clean(text).replace(/[’]/g, "'").replace(WAKE_LEAD, "").replace(FILLER_LEAD, "").trim();
     if (!value || value.split(/\s+/).length > 28) return false;
-    return SALE_INTENT.test(value) && !SALE_NOT.test(value);
+    // "Sell 50 bags of maize", "sell my maize", "sell some tomatoes": said as an order, with no "I want to". (A bare "sell" with nothing after it, or "sell price", is not a request.)
+    const imperative = /^(?:please\s+)?sell\s+(?!price|prices|tips|out\b|off\b)\S/i.test(value);
+    return (SALE_INTENT.test(value) || imperative) && !SALE_NOT.test(value);
   }
   function saleCommand(values) {
     const product = clean(values.product); const quantity = clean(values.quantity); let price = clean(values.price); const location = clean(values.location);
