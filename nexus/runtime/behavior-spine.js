@@ -69,6 +69,11 @@ class BehaviorSpine {
     if (priorTask.ownerId !== context.userId && !context.hasRole?.("admin")) {
       throw new NexusRuntimeError("task_owner_required", "Only the task owner may confirm this task.", 403);
     }
+    // An administrator may decline someone else's waiting step, never say yes to it: the step's tool would run as the administrator,
+    // against the administrator's own records (the engine's approve() holds the same rule).
+    if (approved && priorTask.ownerId !== context.userId) {
+      throw new NexusRuntimeError("confirmation_owner_required", "Only the person this task belongs to can say yes to it.", 403);
+    }
     const command = createCommand({ text: input.text || (approved ? "Confirmed." : "Cancelled."),
       channel: input.channel || "api", correlationId: input.correlationId || crypto.randomUUID(),
       conversationId: priorTask.conversationId, taskId, tenantId: context.tenantId, actorId: context.userId });

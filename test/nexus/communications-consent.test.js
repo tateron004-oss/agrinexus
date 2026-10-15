@@ -71,8 +71,10 @@ test("no consent and no send for an incomplete request, a bystander, or a declin
     assert.equal(calls.some(call => call[0] === "grant"), false, JSON.stringify(input));
   }
   const other = harness({ input: good, ownerId: "user-1" });
-  await other.spine.confirm({ input: yes, context: ctx("admin-9", () => true) });
+  // Refused outright: only the task's owner can say yes (admin-cannot-approve-others-steps.test.js).
+  await assert.rejects(other.spine.confirm({ input: yes, context: ctx("admin-9", () => true) }), error => error.code === "confirmation_owner_required");
   assert.equal(other.calls.some(call => call[0] === "grant"), false, "an administrator's yes is not the sender's consent");
+  assert.equal(other.calls.some(call => call[0] === "execute"), false);
   const declined = harness({ input: good });
   await declined.spine.confirm({ input: { ...yes, approved: false }, context: ctx() });
   assert.equal(declined.calls.some(call => call[0] === "grant" || call[0] === "execute"), false);
