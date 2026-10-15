@@ -2742,17 +2742,28 @@ function durableAuthSecret(env = process.env) {
   return String(env.SESSION_SECRET || "").trim();
 }
 
+// A sign-in is kept open while it is being used (see renewSignIn), but never for longer than this from the moment the person signed in: a day by default (AUTH_SESSION_HARD_MAX_MS, at most a week).
+function sessionHardMaxMs(env = process.env) {
+  const ttlMs = Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
+  return Math.min(Math.max(Number(env.AUTH_SESSION_HARD_MAX_MS || 86_400_000), ttlMs), 604_800_000);
+}
+// How often a busy sign-in is extended (a request inside this window of the last extension changes nothing).
+const SESSION_RENEW_AFTER_MS = 600_000;
+
 // "extra" is claims signed into the token. A guest's token carries { guest: true, name, language }: everything needed to make that guest's record again if a concurrent write loses it (see currentUser).
-function issueDurableAuthToken(userId, now = Date.now(), env = process.env, space = "", extra = null) {
+// "startedAt" is when the person first signed in; it is carried through every renewal so the hard stop counts from the first sign-in.
+function issueDurableAuthToken(userId, now = Date.now(), env = process.env, space = "", extra = null, startedAt = now) {
   const secret = durableAuthSecret(env);
   if (!secret || !userId) return "";
   const ttlMs = Math.min(Math.max(Number(env.AUTH_SESSION_TTL_MS || 43_200_000), 900_000), 86_400_000);
+  const began = Number(startedAt) > 0 && Number(startedAt) <= now ? Number(startedAt) : now;
   const payload = Buffer.from(JSON.stringify({
     userId: String(userId),
     ...(space && space !== "default" ? { space } : {}),
     ...(extra && extra.guest === true ? { guest: true, name: String(extra.name || "").slice(0, 80), language: String(extra.language || "en").slice(0, 12) } : {}),
     issuedAt: now,
-    expiresAt: now + ttlMs
+    startedAt: began,
+    expiresAt: Math.min(now + ttlMs, began + sessionHardMaxMs(env))
   })).toString("base64url");
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
@@ -2823,17 +2834,18 @@ async function ensureSessionsPostgresTable() {
     )
   `);
   await pool.query("alter table agrinexus_sessions add column if not exists space_id text");
+  await pool.query("alter table agrinexus_sessions add column if not exists started_at timestamptz");
   sessionsPostgresReady = true;
 }
 
-async function persistSessionToPostgres(sid, userId, expiresAt, space = "") {
+async function persistSessionToPostgres(sid, userId, expiresAt, space = "", startedAt = Date.now()) {
   if (!sessionsPostgresEnabled()) return;
   try {
     await ensureSessionsPostgresTable();
     await getPgPool().query(
-      `insert into agrinexus_sessions (sid, user_id, expires_at, space_id) values ($1, $2, $3, $4)
+      `insert into agrinexus_sessions (sid, user_id, expires_at, space_id, started_at) values ($1, $2, $3, $4, $5)
        on conflict (sid) do update set user_id = excluded.user_id, expires_at = excluded.expires_at, space_id = excluded.space_id`,
-      [sid, userId, new Date(expiresAt).toISOString(), space && space !== "default" ? space : null]
+      [sid, userId, new Date(expiresAt).toISOString(), space && space !== "default" ? space : null, new Date(startedAt).toISOString()]
     );
   } catch (error) {
     console.error("[sessions] Postgres write failed:", error.message);
@@ -2888,9 +2900,12 @@ async function hydrateSessionsFromPostgres() {
   try {
     await ensureSessionsPostgresTable();
     await getPgPool().query("delete from agrinexus_sessions where expires_at <= now()");
-    const result = await getPgPool().query("select sid, user_id, expires_at, space_id from agrinexus_sessions");
+    const result = await getPgPool().query("select sid, user_id, expires_at, space_id, started_at from agrinexus_sessions");
     for (const row of result.rows) {
-      sessions.set(row.sid, { userId: row.user_id, expiresAt: new Date(row.expires_at).getTime(), space: row.space_id || "default" });
+      const expiresAt = new Date(row.expires_at).getTime();
+      // (a row written before the start was recorded: it began one sign-in length before it ends)
+      const startedAt = row.started_at ? new Date(row.started_at).getTime() : expiresAt - sessionTtlMs();
+      sessions.set(row.sid, { userId: row.user_id, expiresAt, space: row.space_id || "default", startedAt, renewedAt: Date.now() });
     }
     if (result.rows.length) console.log(`[sessions] restored ${result.rows.length} session(s) from Postgres after restart`);
   } catch (error) {
@@ -2911,9 +2926,10 @@ async function issueSession(sid, userId, space = "") {
       getPgPool().query("delete from agrinexus_sessions where expires_at <= now()").catch(() => {});
     }
   }
-  const expiresAt = Date.now() + sessionTtlMs();
-  sessions.set(sid, { userId, expiresAt, space: space || "default" });
-  await persistSessionToPostgres(sid, userId, expiresAt, space);
+  const startedAt = Date.now();
+  const expiresAt = startedAt + sessionTtlMs();
+  sessions.set(sid, { userId, expiresAt, space: space || "default", startedAt, renewedAt: startedAt });
+  await persistSessionToPostgres(sid, userId, expiresAt, space, startedAt);
 }
 
 // What a guest account may not do (kept in one place: the guest is made here and made again by currentUser below).
@@ -2962,6 +2978,41 @@ function currentUser(req, db) {
   // A team member switched off by their business manager (or an Admin) stops working at once, whatever session they already hold.
   if (resolvedUser?.status === "disabled") return null;
   return resolvedUser;
+}
+
+// Found by the Standard User test: a sign-in lasted twelve hours from the moment of signing in, busy or not, and then everything failed in silence. A sign-in that is being used is now extended (the last twelve hours
+// again, at most every ten minutes) in both places it lives, the server's session and the signed cookie, with a hard stop a day after the first sign-in. It is only ever done for a request that already resolved to a
+// signed-in person (a revoked, erased or switched-off account resolves to nobody, so it is never extended), and never on the routes that make or end a sign-in themselves.
+function renewSignIn(req, res, user, pathname = "") {
+  try {
+    if (!user || /^\/api\/(?:login|logout|register|auth\/|guest)/.test(String(pathname || ""))) return false;
+    const now = Date.now();
+    const cookies = parseCookies(req);
+    const sid = cookies.agrinexus_sid;
+    const entry = sid && sessions.get(sid);
+    const live = entry && entry.expiresAt > now ? entry : null;
+    const durable = verifyDurableAuthToken(cookies.agrinexus_auth, now);
+    if (!live && !durable) return false;
+    const startedAt = Number(live?.startedAt || durable?.startedAt || durable?.issuedAt || now);
+    const lastExtended = Number(live?.renewedAt || durable?.issuedAt || 0);
+    if (now - lastExtended < SESSION_RENEW_AFTER_MS) return false;
+    const expiresAt = Math.min(now + sessionTtlMs(), startedAt + sessionHardMaxMs());
+    if (expiresAt <= now + 60_000) return false; // the hard stop is here: no more extending
+    const maxAge = Math.floor((expiresAt - now) / 1000);
+    const secure = secureCookieAttribute(req);
+    const out = [];
+    if (live) {
+      live.expiresAt = expiresAt; live.renewedAt = now; live.startedAt = startedAt;
+      void persistSessionToPostgres(sid, live.userId, expiresAt, live.space, startedAt);
+      out.push(setCookieHeader("agrinexus_sid", sid, { maxAge, secure }));
+    }
+    if (durable) {
+      const token = issueDurableAuthToken(durable.userId, now, process.env, durable.space || "", durable.guest === true ? { guest: true, name: durable.name, language: durable.language } : null, startedAt);
+      if (token) out.push(setCookieHeader("agrinexus_auth", token, { maxAge, secure }));
+    }
+    if (out.length) res.setHeader("set-cookie", out);
+    return out.length > 0;
+  } catch { return false; }
 }
 
 // The /exports/:filename download route (see serveExport()) previously had
@@ -48343,6 +48394,7 @@ async function api(req, res, url) {
   // The documented demo accounts exist only in the default space: a business space never gets them (they carry a published password).
   const usersChanged = businessSpaces.currentSpace() === businessSpaces.DEFAULT_SPACE ? ensureDefaultUsers(db) : false;
   const user = currentUser(req, db);
+  renewSignIn(req, res, user, url.pathname); // a sign-in that is being used stays open (up to a day from the first sign-in)
   // From here to the end of this request, saves stamp the owner on the records it creates (see profileOwnerStamping). Reads never change data, so skip them.
   if (user?.email && req.method !== "GET" && req.method !== "HEAD") profileOwnerStamping.enterWith({ db, email: user.email, role: user.role, snapshot: snapshotProfileRecordsForOwnerStamping(db) });
 
