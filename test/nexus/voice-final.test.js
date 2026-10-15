@@ -124,3 +124,10 @@ test("a line the page speaks over the live voice is out of band and the model is
   assert.equal(events[0].response.conversation, "none");
   assert.equal(notes.length, 1); assert.match(notes[0], /Kyro's screen just told the person: Your reminders: milk at nine\./);
 });
+
+test("'open the offline notes screen' and 'open business forms' open those screens", () => {
+  const w = new vm.Script(sliceConst("const KYRO_OPEN_LEAD") + sliceConst("const KYRO_OPEN_APP") + sliceConst("const KYRO_OPEN_OFFLINE") + "({ KYRO_OPEN_APP, KYRO_OPEN_OFFLINE })").runInNewContext({});
+  for (const said of ["Open the offline notes screen.", "Open the offline queue", "Show me my offline notes page"]) assert.ok(w.KYRO_OPEN_OFFLINE.test(said), said);
+  for (const said of ["Open business forms.", "Open the business tools", "Open business"]) assert.ok(w.KYRO_OPEN_APP.test(said), said);
+  assert.ok(!w.KYRO_OPEN_APP.test("Open business forms and then call my brother"));
+});
