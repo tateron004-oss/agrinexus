@@ -46734,6 +46734,10 @@ function setVoiceResponse(message, speak = false, options = {}) {
     && options.allowCompetingRealtimeSpeech !== true
   );
   if (realtimeOwnsAudibleResponse) {
+    // (a request the page took over is answered in the page's own words, by this same voice: see kyroSpeakPageLine)
+    if (speak && Date.now() < kyroPageSpeaksUntil && options.source !== "kyro-voice-intake" && options.kyroPageLine !== true) {
+      try { kyroSpeakPageLine(kyroPlainText(String(message || ""))); } catch { /* the screen has it */ }
+    }
     // Realtime WebRTC already plays the model response. Keep this path for
     // captions, presence, and history, but never start a second browser/TTS
     // voice for the same turn.
@@ -50996,6 +51000,27 @@ function kyroArmIntakeSafetyNet() {
 // the same pattern already used for interrupting a response (cancelActiveRealtimeResponse), just
 // asking the model to speak specific text instead of stopping it. Falls back to setVoiceResponse
 // when Realtime isn't active (the legacy browser-voice path), so the engine works there too.
+// When the page takes a spoken request over from the voice model (it cuts the model off and draws the answer itself), the answer is said by this same voice. Found testing by voice on a real desktop: during a live
+// voice session the page stays silent on purpose (the model owns the audio), so the person heard the half sentence the model had begun ("I can't open documents from here...") and then nothing, while the screen
+// filled in without a word. Window: set when the page takes a request over, cleared when the next thing is heard.
+let kyroPageSpeaksUntil = 0;
+let kyroLastPageLine = { text: "", at: 0 };
+function kyroSpeakPageLine(text) {
+  const line = String(text || "").replace(/\s+/g, " ").trim().slice(0, 500);
+  if (!line || !realtimeVoiceActive()) return false;
+  if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
+  kyroLastPageLine = { text: line, at: Date.now() };
+  try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
+  return sendKyroRealtimeEvent({
+    type: "response.create",
+    response: {
+      instructions: `Say exactly the following to the person, in ${languageCode()}, clearly and warmly. Add nothing and call no tool. Say: ${line}`,
+      tool_choice: "none",
+      output_modalities: ["audio"],
+      metadata: { source: "kyro-page-line" }
+    }
+  });
+}
 function speakKyroIntakeLine(text, options = {}) {
   const safeText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 600);
   if (!safeText) return;
@@ -51310,12 +51335,18 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     kyroAnswerHeardTurn("intake-expired");
   }
   if (!kyroActiveVoiceIntake) {
+    kyroPageSpeaksUntil = 0;
+    // "Close it", "close the screen", "go back to the orb", "I'm done": typed, the page always did it; said aloud it did nothing, so the last list or map stayed in front of everything that came after it.
+    if (trimmed && window.KyroDismissCommands?.parse?.(trimmed)) {
+      try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+      if (handleKyroDismissCommand(trimmed, { source: "voice-transcript" })) return true;
+    }
     if (window.KyroIntakeForms?.isResumeBuildRequest?.(trimmed) && !KYRO_OPEN_RESUMES.test(trimmed)) { // ("open my resume" shows the saved ones: the page answers it just below)
       startKyroResumeIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
       return true;
     }
     // "Open documents", "open images", "create a business plan": answered on the page
-    if (kyroHandleSpokenOpen(trimmed, {})) return true;
+    if (kyroHandleSpokenOpen(trimmed, {})) { kyroPageSpeaksUntil = Date.now() + 30000; return true; }
     // "Look at this", "what is wrong with this plant", "read this letter": the camera opens, the picture is taken and described
     if (window.KyroCapture?.isLookRequest?.(trimmed) && startKyroCapture(trimmed, { source })) return true;
     // "I want to sell 50 bags of maize": Kyro asks only for what is missing and posts it to the board after a yes
@@ -51624,7 +51655,11 @@ function kyroWorldMapTarget(command = "") {
 // Said out loud these have no subject, or are a document to make: the voice tool used to answer them with a canned sentence about an "AI copilot" and "DRC", or "I can only save a document from the keyboard".
 // Now: "open documents" lists the saved ones; "open images / videos" asks what to look for and the next short answer is the subject; "create a business plan" is made by the same route as typing it (Download button
 // and all), because that route is where documents are made.
-const KYRO_OPEN_VERB = "(?:open|show|go to|pull up|bring up|start|launch|see|let me see|show me)";
+const KYRO_OPEN_VERB = "(?:i want to see|i'd like to see|i would like to see|open|show|go to|pull up|bring up|start|launch|see|let me see|show me)";
+// "Open documents, please", "show my notes for me", "open the map now": the polite tail is not part of the request (speech-to-text writes it down, and each pattern ends the sentence).
+function kyroWithoutPoliteTail(text) {
+  return String(text || "").trim().replace(/[,;]?\s+(?:please|for me|right now|now|thanks|thank you)(?:\s+(?:please|for me|now))*\s*[.?!]*$/i, "").trim();
+}
 const KYRO_OPEN_LEAD = "^(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?(?:(?:can|could|would|will) you\\s+)?";
 const KYRO_OPEN_DOCS = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|all|some)\\s+)?(?:saved\\s+)?(?:documents?|docs?|files?|papers|business plans?|letters|reports)[.?!]*$`, "i");
 const KYRO_OPEN_MEDIA = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|some|any)\\s+)?(images?|pictures?|photos?|videos?|clips?)[.?!]*$`, "i");
@@ -51700,7 +51735,7 @@ function kyroOpenUploadScreen(said, lang) {
   return true;
 }
 function kyroSpokenOpenOwns(text) {
-  const said = String(text || "").trim();
+  const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
@@ -51728,7 +51763,7 @@ function kyroTakeOverTurn() {
 }
 // True when the page answered the sentence itself. options.typed: it was typed, so a document request already goes the typed way and is left to the usual route.
 function kyroHandleSpokenOpen(text, options = {}) {
-  const said = String(text || "").trim();
+  const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   // Said aloud, the words reach the page twice: as the transcript and as the model's own tool call. The second is not done again (a typed repeat always is).
   const spokenKey = options.typed ? "" : said.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
@@ -51739,7 +51774,7 @@ function kyroHandleSpokenOpen(text, options = {}) {
   return handled;
 }
 function kyroHandleSpokenOpenOnce(text, options = {}) {
-  const said = String(text || "").trim();
+  const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
   const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
   // the short answer to "what would you like to see?"
@@ -52455,6 +52490,10 @@ async function kyroAddResumeButtons() {
     return true;
   } catch { return false; }
 }
+
+// By voice the older browser action controller (public/browser-action-controller.js) also opened its own cards for the same words: a Kenya-only "Map of Kenya" over the real map, a second music player playing at
+// the same time as the real one (the "distorted" sound), the maize disease pictures over the pictures asked for, a second weather card. Typed requests never went through it. The page now owns these by voice, as it does typed.
+window.KYRO_PAGE_OWNS_VISUALS = true;
 
 // ---- When the sign-in has ended ----
 // A sign-in lasts twelve hours. When it ended the page said nothing: the request failed in silence, the voice carried on as a limited guest, and only the screens that need no sign-in still worked ("only the information worked"). Now the

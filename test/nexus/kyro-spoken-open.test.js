@@ -96,7 +96,7 @@ test("it is wired: the map uses the world list and its zoom, the first handler o
   assert.match(app, /if \(!country\.world\) \{\s*addOperationalCountryMarkers\(userMap, userMapLayers\.markers, country\);\s*addNearbyFacilityMarkers\(userMapLayers\.facilities, country, "Support point"\);/);
   // and the spoken words reach the page with the map action (the server only knows a few African countries by name)
   assert.ok(server.includes("country, query: text } // (query: what was said"));
-  assert.match(app, /if \(kyroHandleSpokenOpen\(trimmed, \{\}\)\) return true;/);
+  assert.match(app, /if \(kyroHandleSpokenOpen\(trimmed, \{\}\)\) \{ kyroPageSpeaksUntil = Date\.now\(\) \+ 30000; return true; \}/); // (the page then says its own words in the live voice: voice-takeover.test.js)
   assert.match(app, /if \(!options\.kyroDirect && !kyroActiveVoiceIntake && kyroHandleSpokenOpen\(text, \{ typed: true \}\)\) return true;/, "and not again from the route it calls");
   assert.match(app, /window\.KyroCapture\?\.isLookRequest\?\.\(command\) \|\| kyroSpokenOpenOwns\(command\)\);/);
   assert.match(app, /return "Kyro is showing that on the screen by itself/);
