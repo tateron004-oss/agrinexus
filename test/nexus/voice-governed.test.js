@@ -108,3 +108,28 @@ test("the wiring: what the page says is captured for the model, the tool call go
   assert.match(app, /try \{ kyroWatchForRefusal\(eventType, payload\); \} catch/);
   assert.equal((app.match(/try \{ kyroRecoverRefusal\(\); \} catch/g) || []).length, 2, "after the words are heard by either route");
 });
+
+// Also found on the same run: "show me some pictures of tomato plants" put the gallery on the screen, but the model was told "nothing is showing" (the check looked for an attribute the gallery no longer carries) and said so; and
+// "close the screen" by voice left the map on the screen (a section opened by name was never left).
+test("the model is told the pictures or videos are showing when the gallery screen the page draws is on the screen, and told the truth when nothing is", async () => {
+  const start = app.indexOf("async function kyroShowVisualRequest(");
+  const fn = app.slice(start, app.indexOf("\n}\n", start) + 3);
+  const run = async (kind, present) => {
+    const sandbox = { handleNexusUnifiedBrainRuntimeCommand: async () => true, window: { setTimeout: callback => callback() }, document: { querySelectorAll: selector => ({ length: present(selector) }) }, Promise };
+    vm.createContext(sandbox); vm.runInContext(fn + "\nthis.run = kyroShowVisualRequest;", sandbox);
+    return sandbox.run("Show me pictures of tomatoes", kind);
+  };
+  let result = await run("images", selector => (selector.includes('[data-kyro-result="gallery"] img') ? 5 : 0));
+  assert.equal(result.ok, true); assert.match(result.response, /5 pictures/);
+  result = await run("videos", selector => (selector.includes('[data-kyro-result="gallery"] iframe') ? 6 : 0));
+  assert.equal(result.ok, true); assert.match(result.response, /6 videos/);
+  result = await run("images", () => 0);
+  assert.equal(result.ok, false); assert.equal(result.blockedReason, "visual-results-not-shown");
+});
+
+test("closing returns to the orb even from a section opened by name (the map)", () => {
+  const start = app.indexOf("async function kyroReturnToOrb(");
+  const fn = app.slice(start, app.indexOf("\n}\n", start) + 3);
+  assert.match(fn, /if \(typeof currentSectionId === "function" && currentSectionId\(\) !== "dashboard"\) goSection\("dashboard", \{ instant: true, scroll: false, openDefaultAction: false, keepAssistant: false, allowRealtimeSurfaceChange: true, source: "return-to-orb" \}\);/);
+  assert.ok(fn.indexOf("closeNexusFunctionWindow") < fn.indexOf('goSection("dashboard"'), "after the function window is closed");
+});

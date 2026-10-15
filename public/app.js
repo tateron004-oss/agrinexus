@@ -27914,6 +27914,8 @@ async function kyroReturnToOrb(options = {}) {
   if (options.reason !== "idle") { pendingAgentClarification = null; pendingNexusSpokenCommand = null; nexusPendingBehaviorConfirmation = null; }
   kyroTearDownScreens({ stopMedia: explicitEnd });
   closeNexusFunctionWindow({ command: "What can Nexus do?" });
+  // (a section opened by name, the map for one, is left too: "close it", typed or said, used to leave the map on the screen)
+  try { if (typeof currentSectionId === "function" && currentSectionId() !== "dashboard") goSection("dashboard", { instant: true, scroll: false, openDefaultAction: false, keepAssistant: false, allowRealtimeSurfaceChange: true, source: "return-to-orb" }); } catch { /* the rest of the return carries on */ }
   nexusPresenceState = { ...nexusPresenceState, state: NEXUS_PRESENCE_STATES.IDLE, status: "Ask Nexus what you need.", lastUserInput: "", lastResponse: "", nextQuestion: "", activeMission: "", updatedAt: new Date().toISOString() };
   await handleNexusOsMissionLifecycleAction("return-home");
   try { nexusGenesisVoiceDebugLog("kyro-return-to-orb", { reason: options.reason || "", source: options.source || "" }); } catch { /* logging only */ }
@@ -50493,7 +50495,10 @@ function kyroVisualRequestKind(text) {
 }
 
 async function kyroShowVisualRequest(command, kind) {
-  const selector = kind === "videos" ? "[data-nexus-authoritative-video] iframe, [data-nexus-authoritative-video] video" : "img[data-nexus-authoritative-image]";
+  // (the gallery screen the page draws now carries no authoritative-image attribute, so it is counted as well: the model was told "nothing is showing" while the pictures were on the screen)
+  const selector = kind === "videos"
+    ? "[data-nexus-authoritative-video] iframe, [data-nexus-authoritative-video] video, [data-kyro-result=\"gallery\"] iframe, [data-kyro-result=\"gallery\"] video"
+    : "img[data-nexus-authoritative-image], [data-kyro-result=\"gallery\"] img";
   const noun = kind === "videos" ? "video" : "picture";
   try { await handleNexusUnifiedBrainRuntimeCommand(command, { source: "openai-realtime-tool" }); } catch { /* the check below says what is on the screen */ }
   await new Promise(resolve => window.setTimeout(resolve, 400));
