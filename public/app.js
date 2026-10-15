@@ -1941,8 +1941,8 @@ function renderNexusMentalHealthSupportCard(packet = {}) {
   // Where the helpline numbers come from and when they were last looked at (they are not guessed; for a country with no checked list the card says so)
   const sourceLine = (() => {
     try {
-      const lines = window.KyroCrisisLines; const place = escalation.jurisdictionId === "kenya" ? "Kenya" : escalation.jurisdictionId === "nigeria" ? "Nigeria" : "";
-      if (lines?.SOURCES?.[place]) return `Helpline sources, checked ${lines.CHECKED_ON}: ${lines.SOURCES[place].map(source => source.name).join("; ")}`;
+      const lines = window.KyroCrisisLines; const place = escalation.jurisdictionId === "kenya" ? "Kenya" : escalation.jurisdictionId === "nigeria" ? "Nigeria" : escalation.jurisdictionId === "us" ? "United States" : "";
+      if (lines?.SOURCES?.[place]) return `Helpline sources, checked ${lines.CHECKED_ON_BY_COUNTRY?.[place] || lines.CHECKED_ON}: ${lines.SOURCES[place].map(source => source.name).join("; ")}`;
     } catch { /* the card still shows the numbers */ }
     return "Helpline sources: no checked list for this place yet. Please confirm any number with your local emergency services.";
   })();
@@ -50107,6 +50107,25 @@ function kyroOnVisibilityChange() {
 }
 if (typeof document !== "undefined" && typeof document.addEventListener === "function") document.addEventListener("visibilitychange", kyroOnVisibilityChange, { passive: true });
 
+// A session whose connection died while the page stayed in front (found on a long real-voice run: after a realtime error nothing the person said was heard for minutes, and the page still said it was listening).
+// The connection is looked at every ten seconds; two bad looks in a row restart it, as coming back to the page does.
+let kyroHealthStrikes = 0;
+function kyroRealtimeHealthTick() {
+  try {
+    const session = realtimeVoiceSession;
+    if (!session?.active || realtimeVoiceStarting || (typeof document !== "undefined" && document.hidden === true)) { kyroHealthStrikes = 0; return false; }
+    const health = kyroRealtimeHealth(session);
+    if (health.healthy) { kyroHealthStrikes = 0; return false; }
+    kyroHealthStrikes += 1;
+    if (kyroHealthStrikes < 2) return false;
+    kyroHealthStrikes = 0;
+    reportKyroVoiceStall(health.why === "microphone-ended" ? "mic-lost" : "disconnected", { lastActivity: `health-check:${health.why}` });
+    restartRealtimeVoiceAfterStall(`health-check:${health.why}`);
+    return true;
+  } catch { return false; }
+}
+if (typeof setInterval === "function") setInterval(kyroRealtimeHealthTick, 10000);
+
 // The body of a stall report: where the session was when it went quiet, in numbers and type names only (no speech, names, keys or other personal data).
 function kyroStallReportBody(kind, detail = {}) {
   const session = realtimeVoiceSession || {};
@@ -51848,7 +51867,7 @@ function kyroListKindOf(word) {
 }
 // "Open business", "open the weather", "open messages", "open operations", "open the pharmacy", "open logistics", "open live knowledge", "open the calendar": found testing, many of these were answered "I'm not sure what you'd
 // like me to do". Each application now opens something real: its card (what it does, and what it does not), its list, or the answer, and the live-knowledge one asks what to look up.
-const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up|take me to|bring me to|switch to|navigate to|let me see|i want to see|i'd like to see|can i see)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard|forms?|tools?))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))(?:\\s+(?:section|page|screen|area|tab|app|menu))?[.?!]*$", "i");
+const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up|take me to|bring me to|switch to|navigate to|let me see|i want to see|i'd like to see|can i see)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard|forms?|tools?))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade)|(wellness|self[- ]?care|care and wellness|care section))(?:\\s+(?:section|page|screen|area|tab|app|menu))?[.?!]*$", "i");
 // Shows an application's card and reads it out (the first lines, short). True when it was shown.
 function kyroOpenAppCard(card, said, lang) {
   if (!window.KyroAnswerCard?.specFor || !kyroShowHelpScreen(card, { command: "open " + card, payload: {} })) return false;
@@ -52031,7 +52050,7 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (openApp) {
     kyroTakeOverTurn();
     const run = command => { void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true }); return true; };
-    const card = openApp[2] ? "operations" : openApp[3] ? "communications" : (openApp[4] || openApp[13]) ? "health" : (openApp[7] || openApp[12]) ? "learning" : (openApp[8] || openApp[14]) ? "agriculture" : openApp[11] ? "workforce" : openApp[15] ? "trade" : "";
+    const card = openApp[2] ? "operations" : openApp[3] ? "communications" : (openApp[4] || openApp[13]) ? "health" : (openApp[7] || openApp[12]) ? "learning" : (openApp[8] || openApp[14]) ? "agriculture" : openApp[11] ? "workforce" : openApp[15] ? "trade" : openApp[16] ? "care" : "";
     if (card && kyroOpenAppCard(card, said, lang)) return true;
     if (openApp[1]) return (typeof kyroShowAppScreen === "function" && kyroShowAppScreen("business")) || run("Open the business workspace");
     // (weather needs a town and a shipment needs its two ends: the screen asks, and the short answer is taken)
@@ -52323,10 +52342,22 @@ const KYRO_APP_SCREENS = Object.freeze({
     { kind: "form", label: "Find a pharmacy", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a pharmacy near " + (f.place || "me") },
     { kind: "form", label: "Find a clinic", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a clinic near " + (f.place || "me") },
     { kind: "button", label: "Show my readings", command: "Show my blood pressure readings" },
+    { kind: "button", label: "Summary for my provider", command: "Prepare a provider summary of my readings" },
     { kind: "form", label: "Record blood sugar", button: "Record", fields: [{ name: "sugar", label: "Blood sugar number", type: "number" }, { name: "unit", label: "Unit", type: "select", options: [["mmol/L", "mmol/L"], ["mg/dL", "mg/dL"]] }], command: f => "My blood sugar is " + f.sugar + " " + f.unit },
     { kind: "form", label: "Remind me to take a medicine", button: "Remind me", fields: [{ name: "medicine", label: "Name of the medicine" }, { name: "time", label: "At what time? For example: 8 am" }], command: f => "Remind me to take " + f.medicine + " at " + f.time + " every day" },
     { kind: "button", label: "I am feeling low or worried", command: "I am feeling sad and worried" },
-    { kind: "button", label: "Women's health information", command: "Tell me about women's health" }
+    { kind: "button", label: "Women's health information", command: "Tell me about women's health" },
+    { kind: "button", label: "More care and wellness", special: "care" }
+  ] },
+  care: { title: "Care and wellness", intro: "Your medicines, a daily check-in, the people you trust, and a simple log of sleep and water. I repeat what you tell me; I do not check doses or diagnose.", actions: [
+    { kind: "button", label: "My medicines", command: "Show my medicines" },
+    { kind: "form", label: "Ask me how I am every day", button: "Start check-ins", fields: [{ name: "time", label: "At what time? For example: 8 am" }], command: f => "Check in on me every day at " + f.time },
+    { kind: "button", label: "Stop my daily check-ins", command: "Stop checking in on me" },
+    { kind: "button", label: "Who is in my trusted circle", command: "Who is in my circle" },
+    { kind: "form", label: "Add someone I trust", button: "Add", fields: [{ name: "who", label: "Their email address" }], command: f => "Add " + f.who + " to my circle" },
+    { kind: "form", label: "Write down how I slept", button: "Save", fields: [{ name: "hours", label: "Hours of sleep", type: "number" }], command: f => "I slept " + f.hours + " hours" },
+    { kind: "form", label: "Write down water I drank", button: "Save", fields: [{ name: "glasses", label: "Glasses of water", type: "number" }], command: f => "I drank " + f.glasses + " glasses of water" },
+    { kind: "button", label: "Show my wellness log", command: "Show my wellness log" }
   ] },
   agriculture: { title: "Crop and farm help", intro: "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.", actions: [
     { kind: "form", label: "Ask about a crop or a pest", button: "Ask", fields: [{ name: "question", label: "For example: why are my maize leaves turning yellow?", type: "textarea" }], command: f => f.question },
@@ -52370,7 +52401,7 @@ const KYRO_APP_SCREENS = Object.freeze({
 const KYRO_APP_SW = Object.freeze({
   "Health": "Afya", "I record what you tell me and help you get ready for a visit. I do not diagnose or give treatment advice.": "Ninarekodi unachoniambia na kukusaidia kujiandaa kwa ziara ya daktari. Sitambui magonjwa wala kutoa matibabu.",
   "Start a telehealth request": "Anza ombi la huduma ya afya kwa video", "Record blood pressure": "Rekodi shinikizo la damu", "Top number (systolic)": "Namba ya juu (systolic)", "Bottom number (diastolic)": "Namba ya chini (diastolic)", "Record": "Rekodi",
-  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu", "Record blood sugar": "Rekodi sukari ya damu", "Blood sugar number": "Namba ya sukari ya damu", "Unit": "Kipimo", "mmol/L": "mmol/L", "mg/dL": "mg/dL", "Remind me to take a medicine": "Nikumbushe kunywa dawa", "Remind me": "Nikumbushe", "Name of the medicine": "Jina la dawa", "At what time? For example: 8 am": "Saa ngapi? Kwa mfano: saa mbili asubuhi", "I am feeling low or worried": "Nina huzuni au wasiwasi", "Women's health information": "Maelezo kuhusu afya ya wanawake",
+  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu", "Summary for my provider": "Muhtasari kwa mtoa huduma wangu", "More care and wellness": "Huduma zaidi na afya njema", "Care and wellness": "Huduma na afya njema", "Your medicines, a daily check-in, the people you trust, and a simple log of sleep and water. I repeat what you tell me; I do not check doses or diagnose.": "Dawa zako, kuulizwa hali yako kila siku, watu unaowaamini, na kumbukumbu rahisi ya usingizi na maji. Narudia unachoniambia; sikagui vipimo vya dawa wala kutambua magonjwa.", "My medicines": "Dawa zangu", "Ask me how I am every day": "Niulize hali yangu kila siku", "Start check-ins": "Anza kuuliza", "Stop my daily check-ins": "Acha kuniuliza kila siku", "Who is in my trusted circle": "Nani yuko kwenye kundi langu la kuaminika", "Add someone I trust": "Ongeza mtu ninayemwamini", "Add": "Ongeza", "Their email address": "Barua pepe yake", "Write down how I slept": "Andika nilivyolala", "Hours of sleep": "Saa za usingizi", "Write down water I drank": "Andika maji niliyokunywa", "Glasses of water": "Glasi za maji", "Show my wellness log": "Onyesha kumbukumbu yangu ya afya njema", "Record blood sugar": "Rekodi sukari ya damu", "Blood sugar number": "Namba ya sukari ya damu", "Unit": "Kipimo", "mmol/L": "mmol/L", "mg/dL": "mg/dL", "Remind me to take a medicine": "Nikumbushe kunywa dawa", "Remind me": "Nikumbushe", "Name of the medicine": "Jina la dawa", "At what time? For example: 8 am": "Saa ngapi? Kwa mfano: saa mbili asubuhi", "I am feeling low or worried": "Nina huzuni au wasiwasi", "Women's health information": "Maelezo kuhusu afya ya wanawake",
   "Crop and farm help": "Msaada wa mazao na shamba", "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.": "Uliza kuhusu zao, mdudu au hali ya hewa shambani, na uweke kumbukumbu ya yanayotokea.",
   "Ask about a crop or a pest": "Uliza kuhusu zao au mdudu", "For example: why are my maize leaves turning yellow?": "Kwa mfano: kwa nini majani ya mahindi yangu yanageuka manjano?", "Ask": "Uliza",
   "Write in my farm log": "Andika kwenye kumbukumbu ya shamba", "For example: 12 mm of rain": "Kwa mfano: mvua ya mm 12", "Save": "Hifadhi", "Show my farm log": "Onyesha kumbukumbu ya shamba langu",
@@ -52454,6 +52485,7 @@ function kyroRunAppCommand(special, command) {
   document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
   if (special === "telehealth") { startKyroTelehealthIntake({ seedUtterance: { id: "", text: "I need telehealth" }, source: "app-screen" }); return; }
   if (special === "sale") { startKyroSaleIntake({ seedUtterance: { id: "", text: "I want to sell something" }, source: "app-screen" }); return; }
+  if (special === "care") { kyroShowAppScreen("care"); return; }
   if (special === "resume") { routeKyroVoiceIntakeTranscript({ transcript: "Build my resume", utteranceId: "app-" + Date.now(), source: "app-screen" }); return; }
   void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true });
 }

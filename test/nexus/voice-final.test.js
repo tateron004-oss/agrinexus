@@ -165,3 +165,19 @@ test("a picture or file description is shown without the server's own first sent
   assert.equal(strip("Image described by a real vision model call. This is a description, not a diagnosis. A page with the words MAIZE PRICE 50 KES."), "A page with the words MAIZE PRICE 50 KES.");
   assert.equal(strip("PDF text extracted and analyzed locally. Dear Sir, I am writing about my loan."), "Dear Sir, I am writing about my loan.");
 });
+
+test("a live session whose connection has died is restarted by the page after two bad looks ten seconds apart, and a healthy or hidden one is left alone", () => {
+  const calls = []; let session = { active: true }; let health = { healthy: false, why: "peer-connection-down" }; let hidden = false;
+  const sandbox = { realtimeVoiceSession: null, realtimeVoiceStarting: false, document: { get hidden() { return hidden; } }, kyroRealtimeHealth: () => health,
+    reportKyroVoiceStall: (kind, detail) => calls.push(["report", kind, detail.lastActivity]), restartRealtimeVoiceAfterStall: reason => calls.push(["restart", reason]), Date, String };
+  vm.createContext(sandbox);
+  vm.runInContext("let kyroHealthStrikes = 0;\n" + sliceFn("function kyroRealtimeHealthTick(") + "\nthis.tick = kyroRealtimeHealthTick;", sandbox);
+  sandbox.realtimeVoiceSession = session;
+  assert.equal(sandbox.tick(), false, "one bad look is not enough"); assert.deepEqual(calls, []);
+  assert.equal(sandbox.tick(), true); assert.deepEqual(calls, [["report", "disconnected", "health-check:peer-connection-down"], ["restart", "health-check:peer-connection-down"]]);
+  calls.length = 0; health = { healthy: false, why: "microphone-ended" }; sandbox.tick(); sandbox.tick(); assert.equal(calls[0][1], "mic-lost");
+  calls.length = 0; health = { healthy: true, why: "" }; assert.equal(sandbox.tick(), false); assert.equal(sandbox.tick(), false); assert.deepEqual(calls, []);
+  health = { healthy: false, why: "x" }; hidden = true; sandbox.tick(); sandbox.tick(); assert.deepEqual(calls, [], "a page in the background is checked when the person comes back");
+  hidden = false; sandbox.realtimeVoiceSession = null; sandbox.tick(); sandbox.tick(); assert.deepEqual(calls, [], "no session: nothing to restart");
+  assert.match(app, /if \(typeof setInterval === "function"\) setInterval\(kyroRealtimeHealthTick, 10000\);/);
+});

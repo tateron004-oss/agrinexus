@@ -7,7 +7,9 @@
 // The WORDING in urgentGuidance()/lowNote() is general safety information and must be reviewed by a clinician before it is relied on.
 
 const LIMITS = Object.freeze({ systolicMin: 60, systolicMax: 300, diastolicMin: 30, diastolicMax: 200, minPulsePressure: 10 });
-// Very high readings (the commonly used "hypertensive crisis" thresholds) and low readings worth a gentle note.
+// Very high readings and low readings worth a gentle note. Read from the World Health Organization hypertension fact sheet (https://www.who.int/news-room/fact-sheets/detail/hypertension) on 15 October 2026: high is 140/90 or more,
+// "very high" is usually 180/120 or more, and with symptoms it says to seek care immediately. The low note (under 90/60) is a gentle note, not a threshold from that page.
+const SOURCE = Object.freeze({ name: "World Health Organization, hypertension fact sheet", url: "https://www.who.int/news-room/fact-sheets/detail/hypertension", checkedOn: "15 October 2026" });
 const URGENT = Object.freeze({ systolic: 180, diastolic: 120 });
 const LOW = Object.freeze({ systolic: 90, diastolic: 60 });
 
@@ -37,7 +39,7 @@ function urgentGuidance(systolic, diastolic, spokenText = "") {
   const act = symptoms
     ? "Because you also mention symptoms, get emergency help now. Call your local emergency number or go to the nearest clinic or hospital. Do not wait."
     : "If you have chest pain, trouble breathing, a bad headache, weakness or numbness, confusion, trouble speaking, or changes in your sight, get emergency help now: call your local emergency number or go to the nearest clinic.";
-  const rest = "If you feel well, sit quietly for five minutes and measure again. If it is still this high, contact a clinic or health worker today. I cannot diagnose; this is general safety information.";
+  const rest = "If you feel well, sit quietly for five minutes and measure again. If it is still this high, contact a clinic or health worker today. I cannot diagnose; this is general safety information. The 180 over 120 level is from the World Health Organization, checked 15 October 2026.";
   return `${lead} ${act} ${rest}`;
 }
 
@@ -53,4 +55,4 @@ function lowNote() {
   return "That is lower than many people's usual reading. If you feel dizzy, faint or unwell, sit or lie down and get medical help.";
 }
 
-module.exports = Object.freeze({ assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote, savedReply, notSavedReply, LIMITS, URGENT, LOW, SYMPTOMS });
+module.exports = Object.freeze({ assessBloodPressure, invalidReadingReply, urgentGuidance, lowNote, savedReply, notSavedReply, SOURCE, LIMITS, URGENT, LOW, SYMPTOMS });

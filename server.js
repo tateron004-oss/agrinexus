@@ -93,6 +93,10 @@ const workLearningFloor = require("./nexus/floor/index.js");
 // older paths: the phone line, the older command route, and the fallback when the planner cannot be reached. Those cannot alert a circle, so the answer says what to do and whom to call, and never offers to alert anyone.
 // `requested` is the language the request asked for; it and then the account language are only the default when the words do not settle it (nexus/i18n/reply-language.js). Found against the real runtime:
 // English words with language "en" in a Kiswahili account were answered in Kiswahili because this passed only the account language.
+// The country the crisis helplines and the emergency number are chosen for: the account's own country, else the one the device's time zone names (public/kyro-crisis-lines.js), else none (then no number is guessed).
+function crisisCountryFor(user, timeZone = "") {
+  try { return String(user?.country || "").trim() || require("./public/kyro-crisis-lines.js").countryFromTimeZone(timeZone) || ""; } catch { return ""; }
+}
 async function careSafetyReply(text, user, requested = "") {
   const found = readCompanionSafety(text);
   if (!found) return null;
@@ -12936,7 +12940,8 @@ function nearestRuralHealthSites(db, patientPoint, type = "clinic", limit = 3) {
   const catalog = ruralHealthNetworkCatalog(db);
   const sites = type === "pharmacy" ? catalog.pharmacies : type === "mobile-clinic" ? catalog.mobileClinics : type === "medical-supply" ? catalog.supplySources : catalog.clinics;
   return sites
-    .map(site => ({ ...site, distanceKm: distanceKmBetween(patientPoint, site) }))
+    // (every entry of this catalog is an example written for the demonstration, with placeholder phone numbers: none is a verified facility, and the page that shows it must not present it as one)
+    .map(site => ({ ...site, distanceKm: distanceKmBetween(patientPoint, site), verified: false, sourceNote: "Example listing for demonstration, not a verified facility or supplier." }))
     .sort((a, b) => (a.distanceKm ?? 99999) - (b.distanceKm ?? 99999))
     .slice(0, limit);
 }
@@ -22336,7 +22341,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
     effectiveMentalHealthSignal.state === "medical_emergency" && toolName === "nexus_general_conversation";
   if (effectiveMentalHealthSignal.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
     const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(effectiveMentalHealthText, {
-      language, source: context.inputMode || "voice-or-native",
+      language, source: context.inputMode || "voice-or-native", country: typeof crisisCountryFor === "function" ? crisisCountryFor(user, context.timeZone || args.timeZone) : "",
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(effectiveMentalHealthText),
       screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(effectiveMentalHealthText)
     });
@@ -38171,7 +38176,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     mentalHealthSignal?.state === "medical_emergency" && body.conversational === true;
   if (mentalHealthSignal?.crisisOverride === true && !mentalHealthAlreadyHandledElsewhere) {
     const packet = nexusMentalHealthBehavioralWellness.buildSupportPacket(command, {
-      language: commandLanguage, source: inputMode,
+      language: commandLanguage, source: inputMode, country: typeof crisisCountryFor === "function" ? crisisCountryFor(user, body.timeZone) : "",
       locationProvided: /\b(in|near|around)\s+[a-z][a-z\s,.-]{2,}\b/i.test(command),
       screeningConsent: /\b(i consent|yes.*screen|start screening)\b/i.test(command)
     });

@@ -61,7 +61,7 @@ test("only the numbers the pages gave are used", () => {
   for (const unused of ["0800 723 253", "0809 210 6493", "0809 111 6264", "07000006463", "0776543099", "1190", "793594849", "0206814666", "999 or 112"]) assert.ok(!all.includes(unused), unused);
   assert.doesNotMatch(lines.linesFor("Kenya", "en"), /24/, "Befrienders Kenya is weekdays only, never described as 24 hours");
   assert.equal(lines.linesFor("Chile", "en"), ""); assert.equal(lines.linesFor("", "en"), "");
-  assert.equal(lines.countryFromTimeZone("Africa/Nairobi"), "Kenya"); assert.equal(lines.countryFromTimeZone("Africa/Lagos"), "Nigeria"); assert.equal(lines.countryFromTimeZone("America/Chicago"), ""); assert.equal(lines.countryFromTimeZone(""), "");
+  assert.equal(lines.countryFromTimeZone("Africa/Nairobi"), "Kenya"); assert.equal(lines.countryFromTimeZone("Africa/Lagos"), "Nigeria"); assert.equal(lines.countryFromTimeZone("America/Chicago"), "United States", "the United States now has its 988 line"); assert.equal(lines.countryFromTimeZone("America/Toronto"), ""); assert.equal(lines.countryFromTimeZone(""), "");
   assert.equal(lines.CHECKED_ON, "13 October 2026"); for (const list of Object.values(lines.SOURCES)) for (const source of list) assert.match(source.url, /^https:\/\//);
 });
 
