@@ -19,7 +19,9 @@ const sliceFn = name => { const start = app.indexOf(name); assert.ok(start >= 0,
 const sliceConst = name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf(";\n", start) + 2); };
 
 test("a polite tail and 'I want to see' no longer stop a request from being understood", () => {
-  const api = new vm.Script(`${sliceConst("const KYRO_OPEN_LEAD")}\n${sliceConst("const KYRO_OPEN_VERB")}\n${sliceFn("function kyroWithoutPoliteTail(")}\n${sliceConst("const KYRO_OPEN_DOCS")}\n${sliceConst("const KYRO_OPEN_MEDIA")}\n${sliceConst("const KYRO_OPEN_MAP =")}\n({ kyroWithoutPoliteTail, KYRO_OPEN_DOCS, KYRO_OPEN_MEDIA, KYRO_OPEN_MAP })`).runInNewContext({});
+  const api = new vm.Script(`${sliceConst("const KYRO_OPEN_LEAD")}\n${sliceConst("const KYRO_OPEN_VERB")}\n${sliceConst("const KYRO_MISHEARD_OPEN")}
+${sliceFn("function kyroHeardOpenVerb(")}
+${sliceFn("function kyroWithoutPoliteTail(")}\n${sliceConst("const KYRO_OPEN_DOCS")}\n${sliceConst("const KYRO_OPEN_MEDIA")}\n${sliceConst("const KYRO_OPEN_MAP =")}\n({ kyroWithoutPoliteTail, KYRO_OPEN_DOCS, KYRO_OPEN_MEDIA, KYRO_OPEN_MAP })`).runInNewContext({});
   const owns = (re, text) => re.test(api.kyroWithoutPoliteTail(text));
   for (const said of ["Open documents.", "Open documents, please.", "Open documents for me.", "Open my documents please", "I want to see my documents.", "Please open the documents.", "Kyro, show my docs right now."]) assert.ok(owns(api.KYRO_OPEN_DOCS, said), said);
   for (const said of ["Open the map now.", "Open US maps, please.", "Open U.S. maps."]) assert.ok(owns(api.KYRO_OPEN_MAP, said), said);

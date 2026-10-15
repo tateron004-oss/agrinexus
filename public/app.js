@@ -51786,7 +51786,13 @@ function kyroWorldMapTarget(command = "") {
 const KYRO_OPEN_VERB = "(?:i want to (?:see|look at|check|view)|i'd like to (?:see|look at|check|view)|i would like to (?:see|look at|check|view)|let me (?:see|look at|check|view)|can i (?:see|look at|check|view)|could i (?:see|look at|check|view)|take me to|bring me to|switch to|navigate to|open|show|go to|pull up|bring up|start|launch|see|look at|check|view|show me)";
 // "Open documents, please", "show my notes for me", "open the map now": the polite tail is not part of the request (speech-to-text writes it down, and each pattern ends the sentence).
 function kyroWithoutPoliteTail(text) {
-  return String(text || "").trim().replace(/[,;]?\s+(?:please|for me|right now|now|thanks|thank you)(?:\s+(?:please|for me|now))*\s*[.?!]*$/i, "").trim();
+  return kyroHeardOpenVerb(String(text || "").trim().replace(/[,;]?\s+(?:please|for me|right now|now|thanks|thank you)(?:\s+(?:please|for me|now))*\s*[.?!]*$/i, "").trim());
+}
+// The speech-to-text hears "Show my notes" as "Go my notes" or "So my notes": a word that is not a way of opening, followed by "my" and the name of a list, is the request to show it.
+const KYRO_MISHEARD_OPEN = /^(?:go|so|low|though|row)\s+(my|the|our)\s+(notes?|reminders?|check ?lists?|to-?do list|documents?|docs|files|clients|customers|invoices|donors|resumes?|r[eé]sum[eé]s?)([.?!]*)$/i;
+function kyroHeardOpenVerb(text) {
+  const match = KYRO_MISHEARD_OPEN.exec(String(text || ""));
+  return match ? "Show " + match[1].toLowerCase() + " " + match[2] + match[3] : text;
 }
 const KYRO_OPEN_LEAD = "^(?:please\\s+)?(?:(?:hey\\s+)?(?:kyro|nexus)[,.]?\\s+)?(?:(?:can|could|would|will) you\\s+)?";
 const KYRO_OPEN_DOCS = new RegExp(`${KYRO_OPEN_LEAD}${KYRO_OPEN_VERB}\\s+(?:(?:my|the|all|some)\\s+)?(?:saved\\s+)?(?:documents?|docs?|files?|papers|business plans?|letters|reports)[.?!]*$`, "i");
@@ -51805,6 +51811,8 @@ function kyroOpenMapRequest(text) {
 }
 // "Open YouTube", "open Spotify", "play something on YouTube": found testing by voice, these were answered "I'm not sure what you'd like me to do". Kyro asks what to play and the next short answer is played.
 // (Spotify is not connected here, so it is said plainly and the music comes from YouTube.)
+// "I need help with my maize crop", "help me with my farm": the crop and farm help screen, which has the box to ask in and the farm log.
+const KYRO_CROP_HELP = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i|we)\\s+(?:need|want)\\s+(?:some\\s+)?help\\s+(?:with|on)|(?:can|could|will) you help me with|help me with|help with)\\s+(?:my|the|our)\\s+(?:[a-z-]+\\s+){0,2}(?:crops?|farm|fields?|garden|plants?|harvest)[.?!]*$`, "i");
 const KYRO_OPEN_PLAYER = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|start|launch|go to|play|use)\\s+(?:the\\s+)?(you\\s?tube|spotify)(?:\\s+(?:app|music|player))?|play\\s+(?:something|some music|music|anything)\\s+(?:on|from|in|with)\\s+(you\\s?tube|spotify))[.?!]*$`, "i");
 // "Show me a list", "show me a list of my documents / reminders / checklists / notes": a list of what, or that list.
 const KYRO_LIST_BARE = new RegExp(`${KYRO_OPEN_LEAD}(?:show|give|open|see|get|pull up)(?:\\s+me)?\\s+(?:a|my|the|some)?\\s*lists?[.?!]*$`, "i");
@@ -51866,7 +51874,7 @@ function kyroOpenUploadScreen(said, lang) {
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -51994,6 +52002,10 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (KYRO_OPEN_UPLOAD.test(said)) {
     kyroTakeOverTurn();
     if (kyroOpenUploadScreen(said, lang)) return true;
+  }
+  if (KYRO_CROP_HELP.test(said)) {
+    kyroTakeOverTurn();
+    if (kyroOpenAppCard("agriculture", said, lang)) return true;
   }
   const openApp = KYRO_OPEN_APP.exec(said);
   if (openApp) {
