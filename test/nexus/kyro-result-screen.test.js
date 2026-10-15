@@ -359,23 +359,32 @@ test("typed: a question waiting for a yes or a no is on the screen with a Yes an
   assert.equal(api.kyroShowTypedResult({ ...waiting, taskId: "" }, "x", "I can add Amina Otieno as a client. Should I go ahead?"), false);
 });
 
-test("the Yes and No buttons answer the pending confirmation the way saying it does, and put the screen away", () => {
+test("the Yes and No buttons answer the pending confirmation the way saying it does; the screen says one moment, then goes when the answer comes (a No also says nothing was done)", async () => {
   const vm = require("node:vm");
   const start = app.indexOf("function kyroAddConfirmButtons()"); const end = app.indexOf("\n}\n", start) + 3;
   assert.ok(start > 0 && end > start);
-  const removed = []; const submitted = []; const buttons = [];
-  const element = () => { const node = { style: {}, attrs: {}, children: [], listeners: {}, setAttribute(k, v) { this.attrs[k] = v; }, append(...kids) { this.children.push(...kids); }, addEventListener(type, fn) { this.listeners[type] = fn; } }; return node; };
+  const submitted = []; const buttons = []; const shownAfter = []; const gone = [];
+  const element = () => { const node = { style: {}, attrs: {}, children: [], listeners: {}, setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; }, remove() { gone.push(this); this.removed = true; }, append(...kids) { this.children.push(...kids); }, addEventListener(type, fn) { this.listeners[type] = fn; } }; return node; };
   const screen = element();
-  const sandbox = { document: { querySelector: () => screen, createElement: () => { const node = element(); buttons.push(node); return node; }, querySelectorAll: () => ({ forEach: fn => { removed.push("screen"); } }) },
-    languageCode: () => "en", submitNexusPendingBehaviorConfirmation: (approved, text, options) => submitted.push([approved, text, options]) };
+  const sandbox = { document: { querySelector: () => (screen.removed ? null : screen), createElement: () => { const node = element(); buttons.push(node); return node; } },
+    languageCode: () => "en", submitNexusPendingBehaviorConfirmation: async (approved, text, options) => { submitted.push([approved, text, options]); return true; },
+    kyroShowResultScreen: (tool, command, result) => { shownAfter.push(result.response); return true; }, Promise };
   vm.createContext(sandbox);
-  vm.runInContext(`${app.slice(start, end)}\nthis.add = kyroAddConfirmButtons;`, sandbox);
+  vm.runInContext(app.slice(start, end) + "\nthis.add = kyroAddConfirmButtons;", sandbox);
   sandbox.add();
   const yes = buttons.find(node => node.attrs["data-kyro-confirm"] === "yes"); const no = buttons.find(node => node.attrs["data-kyro-confirm"] === "no");
   assert.equal(yes.textContent, "Yes"); assert.equal(no.textContent, "No");
-  yes.listeners.click(); no.listeners.click();
+  yes.listeners.click();
+  assert.equal(screen.attrs["data-kyro-result"], undefined, "the waiting screen is no longer a result screen, so the answer draws as a new one");
+  assert.equal(screen.attrs["data-kyro-working-screen"], "true");
+  assert.ok(buttons.some(node => node.textContent === "One moment..."), "one moment while the answer is on its way");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(screen.removed, true, "gone when the answer has come");
+  assert.deepEqual(shownAfter, [], "a yes draws nothing of its own");
+  no.listeners.click();
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(JSON.stringify(submitted), JSON.stringify([[true, "yes", { source: "typed" }], [false, "no", { source: "typed" }]]));
-  assert.equal(removed.length, 2, "the screen is put away on each tap");
+  assert.deepEqual(shownAfter, ["Okay, I did not proceed with that."]);
 });
 
 // Found by the Standard User test: "none of the lists would allow for clicking to write", and "the system says 6 videos but nothing shows". Lists are screens you can write in; pictures and videos have a screen of their own.
@@ -571,7 +580,7 @@ test("a form with a field left empty says which one and sends nothing; the butto
   page.show("workforce"); page.select("button").find(node => node.textContent === "Build my résumé").click();
   assert.deepEqual(page.specials.map(entry => entry.replace(/resume:Build my resume/, "resume")), ["telehealth", "sale", "resume"]);
   page.show("health"); page.select("button").find(node => node.textContent === "Show my readings").click();
-  assert.equal(page.sent.at(-1)[0], "Show my readings");
+  assert.equal(page.sent.at(-1)[0], "Show my blood pressure readings");
   page.show("business");
   const labels = page.select("button").map(node => node.textContent);
   for (const wanted of ["Clients", "Donors", "Grants due", "Invoices", "Summary", "Follow-ups"]) assert.ok(labels.includes(wanted), wanted);

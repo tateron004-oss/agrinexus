@@ -124,3 +124,22 @@ test("a line the page speaks over the live voice is out of band and the model is
   assert.equal(events[0].response.conversation, "none");
   assert.equal(notes.length, 1); assert.match(notes[0], /Kyro's screen just told the person: Your reminders: milk at nine\./);
 });
+
+test("'open the offline notes screen' and 'open business forms' open those screens", () => {
+  const w = new vm.Script(sliceConst("const KYRO_OPEN_LEAD") + sliceConst("const KYRO_OPEN_APP") + sliceConst("const KYRO_OPEN_OFFLINE") + "({ KYRO_OPEN_APP, KYRO_OPEN_OFFLINE })").runInNewContext({});
+  for (const said of ["Open the offline notes screen.", "Open the offline queue", "Show me my offline notes page"]) assert.ok(w.KYRO_OPEN_OFFLINE.test(said), said);
+  for (const said of ["Open business forms.", "Open the business tools", "Open business"]) assert.ok(w.KYRO_OPEN_APP.test(said), said);
+  assert.ok(!w.KYRO_OPEN_APP.test("Open business forms and then call my brother"));
+});
+
+test("the upload screen, with its Choose a file button, stays until it is closed", () => {
+  assert.match(sliceFn("function kyroOpenUploadScreen("), /screen\?\.setAttribute\("data-kyro-keep", "true"\)/);
+});
+
+test("tapping Yes or No on a question says 'one moment' while the answer is on its way, and the answer is drawn as any new screen", () => {
+  const fn = sliceFn("function kyroAddConfirmButtons(");
+  assert.match(fn, /screen\.removeAttribute\("data-kyro-result"\); screen\.setAttribute\("data-kyro-working-screen", "true"\)/);
+  assert.match(fn, /One moment\.\.\./);
+  assert.match(fn, /submitNexusPendingBehaviorConfirmation\(approved, approved \? "yes" : "no", \{ source: "typed" \}\)\)\.then\(done, done\)/);
+  assert.ok(!/forEach\(node => node\.remove\(\)\);\s*void submitNexusPendingBehaviorConfirmation/.test(fn), "the screen no longer goes blank");
+});

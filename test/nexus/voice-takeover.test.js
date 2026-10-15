@@ -43,12 +43,13 @@ test("the page's own words are said by the live voice: the model is cut off, the
   assert.equal(api.kyroSpeakPageLine("Your saved documents, newest first: 1, Field Notes; 2, Business plan."), true);
   assert.equal(interrupts.length, 1, "what the model had begun is cut off first");
   assert.equal(events.length, 1); assert.equal(events[0].type, "response.create");
-  assert.match(events[0].response.instructions, /Say exactly the following to the person, in en, clearly and warmly\. Add nothing and call no tool\. Say: Your saved documents, newest first: 1, Field Notes; 2, Business plan\./);
+  assert.match(events[0].response.instructions, /Read it aloud, in en, clearly and warmly, word for word\. Add nothing, explain nothing, never say you cannot see or open anything, and call no tool\./);
+  assert.equal(events[0].response.input[0].content[0].text, "Your saved documents, newest first: 1, Field Notes; 2, Business plan.", "the text itself is the input");
   assert.equal(events[0].response.tool_choice, "none"); assert.deepEqual(Array.from(events[0].response.output_modalities), ["audio"]);
   assert.equal(api.kyroSpeakPageLine("Your saved documents, newest first: 1, Field Notes; 2, Business plan."), true, "the same words arriving twice");
   assert.equal(events.length, 1, "are said once");
   assert.equal(api.kyroSpeakPageLine("   "), false);
-  api.kyroSpeakPageLine("x".repeat(900)); assert.ok(events.at(-1).response.instructions.endsWith("x".repeat(500)) && !events.at(-1).response.instructions.includes("x".repeat(501)), "at most 500 characters");
+  api.kyroSpeakPageLine("x".repeat(900)); assert.equal(events.at(-1).response.input[0].content[0].text, "x".repeat(500), "at most 500 characters");
   assert.equal(speaker({ active: false }).api.kyroSpeakPageLine("Hello"), false, "no live voice: nothing is sent (the page speaks the older way)");
   assert.equal(speaker({ sent: false }).api.kyroSpeakPageLine("Hello"), false, "a failed send is reported");
 });

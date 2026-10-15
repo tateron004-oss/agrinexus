@@ -51059,7 +51059,9 @@ function kyroSpeakPageLine(text) {
     type: "response.create",
     response: {
       conversation: "none",
-      instructions: `Say exactly the following to the person, in ${languageCode()}, clearly and warmly. Add nothing and call no tool. Say: ${line}`,
+      instructions: `You are Kyro's speaking voice. The next message is the exact text the person is being shown on their screen. Read it aloud, in ${languageCode()}, clearly and warmly, word for word. Add nothing, explain nothing, never say you cannot see or open anything, and call no tool.`,
+      // (the text itself is the input: given only as instructions, the model sometimes answered with a refusal of its own instead of reading it)
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: line }] }],
       tool_choice: "none",
       output_modalities: ["audio"],
       metadata: { source: "kyro-page-line" }
@@ -51818,7 +51820,7 @@ function kyroListKindOf(word) {
 }
 // "Open business", "open the weather", "open messages", "open operations", "open the pharmacy", "open logistics", "open live knowledge", "open the calendar": found testing, many of these were answered "I'm not sure what you'd
 // like me to do". Each application now opens something real: its card (what it does, and what it does not), its list, or the answer, and the live-knowledge one asks what to look up.
-const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up|take me to|bring me to|switch to|navigate to|let me see|i want to see|i'd like to see|can i see)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))(?:\\s+(?:section|page|screen|area|tab|app|menu))?[.?!]*$", "i");
+const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up|take me to|bring me to|switch to|navigate to|let me see|i want to see|i'd like to see|can i see)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard|forms?|tools?))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))(?:\\s+(?:section|page|screen|area|tab|app|menu))?[.?!]*$", "i");
 // Shows an application's card and reads it out (the first lines, short). True when it was shown.
 function kyroOpenAppCard(card, said, lang) {
   if (!window.KyroAnswerCard?.specFor || !kyroShowHelpScreen(card, { command: "open " + card, payload: {} })) return false;
@@ -51832,7 +51834,7 @@ function kyroOpenAppCard(card, said, lang) {
 let kyroPendingMedia = null; // { kind: "images" | "videos" | "music" | "list" | "lookup", at } while Kyro has asked what to look for
 let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answered from the voice, so the model's tool call for the same words does not do it twice
 // "Open my resume", "open the CRM", "open grants", "open uploads": the page opens what each is (the résumés list, the clients, the grants due, the invoices, a place to choose a file).
-const KYRO_OPEN_OFFLINE = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|check|see|view)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:offline\\s+(?:queue|work|notes|changes|sync(?:\\s+status)?)|(?:sync|offline)\\s+status|queued\\s+(?:offline\\s+)?(?:work|changes|notes))[.?!]*$`, "i");
+const KYRO_OPEN_OFFLINE = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|check|see|view)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:offline\\s+(?:queue|work|notes|changes|sync(?:\\s+status)?)|(?:sync|offline)\\s+status|queued\\s+(?:offline\\s+)?(?:work|changes|notes))(?:\\s+(?:screen|page|section|list))?[.?!]*$`, "i");
 const KYRO_OPEN_RESUMES = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|see|view|list|find|get)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:saved\\s+)?(?:resumes?|résumés?|resumés?|cvs?)[.?!]*$`, "i");
 const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|bring up|see|view|launch|start)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:(?:business|customer)\\s+)?(?:(crm|clients?|customers?|contacts|customer list|client list)|(donors?|donations|fundraising)|(grants?|funding|grant (?:writing|tracker|deadlines))|(invoices?|billing)|(expenses?|income|finances?|financials?|books|bookkeeping|accounting|sales|profit))[.?!]*$`, "i");
 const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|pictures?|photos?|pdfs?|images?|letters?))?(?:\\s+(?:of|for|from|to|about|showing)\\s+[a-z' -]{1,60})?)[.?!]*$`, "i");
@@ -51842,6 +51844,7 @@ function kyroOpenUploadScreen(said, lang) {
   if (!kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask })) return false;
   try {
     const screen = document.querySelector("[data-kyro-result]");
+    screen?.setAttribute("data-kyro-keep", "true"); // (a button to tap: the screen stays until it is closed, not ten seconds)
     const label = document.createElement("label");
     label.setAttribute("data-kyro-upload-button", "true");
     label.textContent = lang === "sw" ? "Chagua faili" : "Choose a file";
@@ -52287,7 +52290,7 @@ const KYRO_APP_SCREENS = Object.freeze({
     { kind: "form", label: "Record blood pressure", button: "Record", fields: [{ name: "up", label: "Top number (systolic)", type: "number" }, { name: "down", label: "Bottom number (diastolic)", type: "number" }], command: f => "My blood pressure is " + f.up + " over " + f.down },
     { kind: "form", label: "Find a pharmacy", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a pharmacy near " + (f.place || "me") },
     { kind: "form", label: "Find a clinic", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a clinic near " + (f.place || "me") },
-    { kind: "button", label: "Show my readings", command: "Show my readings" }
+    { kind: "button", label: "Show my readings", command: "Show my blood pressure readings" }
   ] },
   agriculture: { title: "Crop and farm help", intro: "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.", actions: [
     { kind: "form", label: "Ask about a crop or a pest", button: "Ask", fields: [{ name: "question", label: "For example: why are my maize leaves turning yellow?", type: "textarea" }], command: f => f.question },
@@ -52930,8 +52933,24 @@ function kyroAddConfirmButtons() {
       button.type = "button"; button.textContent = label; button.setAttribute("data-kyro-confirm", approved ? "yes" : "no");
       button.style.cssText = "padding:16px 36px;border:0;border-radius:16px;color:#fff;font-size:1.25rem;font-weight:600;cursor:pointer;background:" + color;
       button.addEventListener("click", () => {
-        document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
-        void submitNexusPendingBehaviorConfirmation(approved, approved ? "yes" : "no", { source: "typed" });
+        // The answer can take several seconds (the server does the step): the question stays up as "one moment" instead of the screen going blank, and goes when the answer arrives.
+        let waiting = null;
+        try {
+          row.remove();
+          // (no longer "a result screen" to the rest of the page, so the answer, when it comes, is drawn and given its buttons as any new screen is; this one is removed after it)
+          screen.removeAttribute("data-kyro-result"); screen.setAttribute("data-kyro-working-screen", "true");
+          waiting = document.createElement("p");
+          waiting.setAttribute("role", "status"); waiting.setAttribute("data-kyro-working", "true");
+          waiting.style.cssText = "margin:0;font-size:1.2rem;position:relative;z-index:1";
+          waiting.textContent = sw ? "Subiri kidogo..." : "One moment...";
+          screen.append(waiting);
+        } catch { /* the answer still arrives */ }
+        // (a "no" has nothing more to draw: the person is told, on the screen, that nothing was done)
+        const done = () => {
+          try { screen.remove(); } catch { /* gone already */ }
+          if (!approved) { try { if (!document.querySelector("[data-kyro-result]")) kyroShowResultScreen("typed", "I did not proceed", { ok: true, status: "completed", response: sw ? "Sawa, sikuendelea na hilo." : "Okay, I did not proceed with that." }); } catch { /* the voice said it */ } }
+        };
+        Promise.resolve(submitNexusPendingBehaviorConfirmation(approved, approved ? "yes" : "no", { source: "typed" })).then(done, done);
       });
       return button;
     };
