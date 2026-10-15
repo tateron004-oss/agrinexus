@@ -506,7 +506,7 @@
       return "I cannot search for counsellors or therapists yet, and I will not give you a list I cannot check. You can ask at your nearest clinic or hospital about mental-health care, and I can look up a clinic near you if you tell me the town. If you want to talk to someone right now, tell me and I will give you a helpline. I will not contact anyone for you.";
     }
     if (classification.state === "consent_blocked" && classification.action === "optional_screening") {
-      return "I cannot run a screening questionnaire yet. If you are feeling low or worried, I can listen, and I can help you prepare what to say to a nurse or doctor. A questionnaire is not a diagnosis, and only a professional can tell you what is wrong.";
+      return "I cannot run a non-diagnostic screening questionnaire yet, so there is nothing to consent to. If you are feeling low or worried, I can listen, and I can help you prepare what to say to a nurse or doctor. A questionnaire is not a diagnosis, and only a professional can tell you what is wrong.";
     }
     if (classification.action === "privacy_control") {
       return "Mental-health information is sensitive. I can keep this session-only, show what is remembered, prepare an export, or help delete approved mental-health records where the app supports deletion. I will not share this with another module or provider without explicit consent.";
