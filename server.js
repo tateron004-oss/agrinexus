@@ -10303,9 +10303,10 @@ function nearbyPlacesReply({ kind, cards, searchResult, language }) {
   const label = kind === "pharmacy" ? "pharmacy" : kind;
   const head = sw ? `Nimepata ${kind === "pharmacy" ? "maduka" : "kliniki"} ${cards.length}: ${list}.` : `I found ${cards.length} ${label} option(s): ${list}.`;
   const nature = kind === "pharmacy"
-    ? (sw ? "Hii ni orodha ya mahali tu; sikuomba dawa tena, sikuhamisha wala kuwasiliana na yeyote." : "This is a directory lookup only; I did not request a refill, transfer, or contact anyone.")
+    ? (live ? (sw ? "Hii ni orodha ya mahali tu kutoka OpenStreetMap; saa za kufungua zinaweza kuwa za zamani. Sikuomba dawa tena, sikuhamisha wala kuwasiliana na yeyote." : "This is a directory lookup only, from OpenStreetMap; opening hours may be out of date. I did not request a refill, transfer, or contact anyone.")
+      : (sw ? "Hizi ni mifano kutoka orodha ya mwanzo, si maduka halisi unayoweza kuyategemea. Niambie mji nitaangalia tena. Sikuomba dawa tena wala kuwasiliana na yeyote." : "These are examples from a starter list, not real pharmacies you can rely on. Tell me a town and I will look again. I did not request a refill or contact anyone."))
     : live ? (sw ? "Hii ni orodha ya mahali kutoka OpenStreetMap, si miadi; hakuna kilichopangwa wala mtu aliyewasiliana naye." : "This is a live OpenStreetMap directory lookup, not a booking; nothing has been scheduled or contacted.")
-      : (sw ? "Hizi ni orodha za mwanzo za hapa, si miadi; hakuna kilichopangwa wala mtu aliyewasiliana naye." : "These are local starter listings, not a live booking; nothing has been scheduled or contacted.");
+      : (sw ? "Hizi ni mifano kutoka orodha ya mwanzo, si kliniki halisi unazoweza kuzitegemea; hakuna kilichopangwa wala mtu aliyewasiliana naye. Niambie mji nitaangalia tena." : "These are examples from a starter list, not real clinics you can rely on; nothing has been scheduled or contacted. Tell me a town and I will look again.");
   return [head, nature, nearbyPlaceNotes(searchResult)].filter(Boolean).join(" ");
 }
 // [{ id, name, phone, savedAt }] newest first; only contacts that have a usable phone number
@@ -20771,7 +20772,7 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
           model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
           language: String(language || "en").slice(0, 12),
           // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, the towns and crops people name, and the short commands.
-          prompt: "Kyro, AgriNexus. Close it. Close the screen. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava."
+          prompt: "Kyro, AgriNexus. Close it. Close the screen. Show my notes, reminders, checklists. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava."
         },
         turn_detection: turnDetection
       },
@@ -23958,7 +23959,7 @@ async function executeNexusOpenAiNativeTool(db, user, toolName = "", args = {}, 
       const cards = searchResult?.body?.data?.cards || [];
       extraData = { providerSearchResults: cards };
       response = cards.length
-        ? `I found ${cards.length} public provider record(s): ${cards.slice(0, 3).map(c => `${c.providerName}${c.providerType ? `, ${c.providerType}` : ""} at ${c.address || "address not listed"}`).join("; ")}. This is a public directory lookup only; I did not contact anyone. Say "save that provider" if you want to keep one.`
+        ? `I found ${cards.length} public provider record(s): ${cards.slice(0, 3).map(c => `${c.providerName}${c.providerType ? `, ${c.providerType}` : ""} at ${c.address || "address not listed"}`).join("; ")}. This is a lookup in the United States public provider registry (NPI) only. It does not confirm that someone is licensed, so check with their licensing board or the clinic. I did not contact anyone. Say "save that provider" if you want to keep one.`
         : `I did not find a matching public provider record. Try a full name, specialty, or city.`;
     } else if (wantsSaveProvider) {
       const saveResult = nexusRealProviders.providerContactBridge.saveProvider({

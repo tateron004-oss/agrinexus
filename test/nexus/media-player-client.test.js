@@ -566,3 +566,34 @@ test("when a candidate was offered but would not start, the message says so (nev
   const sw = await run("sw");
   assert.match(sw.message, /^Nimepata Last Last, lakini haikuanza kwenye simu hii\./);
 });
+
+// found on the live site: an older version had played a song called "pause" for "Pause the music" and kept it as the last choice, so every "play some music" after it played that song again
+test("a control word kept as the last choice is never played back, and is never kept", async () => {
+  const world = makeWorld({ responses: [okResponse(station())], storage: { "kyro.media.last": JSON.stringify({ query: "PAUSE", kind: "music", title: "PAUSE - 112 (Official Audio)" }) } });
+  const run = world.controller.play("", { kind: "music" });
+  await until(() => world.elements.length === 1, "element");
+  world.elements[0].startPlayingFor(4);
+  await run;
+  assert.notEqual(String(world.requests[0].body.query).toLowerCase(), "pause");
+  const again = makeWorld({ responses: [okResponse(track())] });
+  const second = again.controller.play("pause", { kind: "music" });
+  await until(() => again.elements.length === 1, "element");
+  again.elements[0].startPlayingFor(4);
+  await second;
+  assert.equal(again.store["kyro.media.last"], undefined, "'pause' is not remembered as a song");
+});
+
+test("'pause the music' while the song is still being found cancels the start instead of saying nothing is playing and then starting", async () => {
+  let release; const held = new Promise(resolve => { release = resolve; });
+  const world = makeWorld({ responses: [held] });
+  const run = world.controller.play("some songs", { kind: "music" });
+  await until(() => world.controller.getState().state === "resolving", "resolving");
+  assert.equal(await world.controller.handleCommand("Pause the music."), true);
+  assert.equal(world.controller.getState().state, "idle");
+  assert.ok(world.spoken.some(message => /stopped/i.test(message)), "it says it stopped");
+  assert.ok(!world.spoken.some(message => /nothing is playing/i.test(message)));
+  release(okResponse(track()));
+  await run;
+  assert.equal(world.elements.length, 0, "nothing started afterwards");
+  assert.equal(world.controller.getState().state, "idle");
+});

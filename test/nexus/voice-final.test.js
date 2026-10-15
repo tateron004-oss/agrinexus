@@ -143,3 +143,16 @@ test("tapping Yes or No on a question says 'one moment' while the answer is on i
   assert.match(fn, /submitNexusPendingBehaviorConfirmation\(approved, approved \? "yes" : "no", \{ source: "typed" \}\)\)\.then\(done, done\)/);
   assert.ok(!/forEach\(node => node\.remove\(\)\);\s*void submitNexusPendingBehaviorConfirmation/.test(fn), "the screen no longer goes blank");
 });
+
+test("'Go my notes' (heard for 'Show my notes') is the request to show them, and 'I need help with my maize crop' opens the crop help screen", () => {
+  const fix = new vm.Script(sliceConst("const KYRO_MISHEARD_OPEN") + sliceFn("function kyroHeardOpenVerb(") + "\nkyroHeardOpenVerb").runInNewContext({});
+  assert.equal(fix("Go my notes."), "Show my notes.");
+  assert.equal(fix("So my reminders"), "Show my reminders");
+  assert.equal(fix("Go the documents."), "Show the documents.");
+  assert.equal(fix("Go to my notes"), "Go to my notes", "a real verb is left alone");
+  assert.equal(fix("Go my own way"), "Go my own way");
+  const w = new vm.Script(sliceConst("const KYRO_OPEN_LEAD") + sliceConst("const KYRO_CROP_HELP") + "KYRO_CROP_HELP").runInNewContext({});
+  for (const said of ["I need help with my maize crop.", "I need some help with my farm", "Help me with my tomato plants", "Can you help me with my field", "I want help on my harvest"]) assert.ok(w.test(said), said);
+  for (const said of ["I need help with my phone", "Help me with my maize crop because the leaves are yellow and curling"]) assert.ok(!w.test(said), said);
+  assert.match(app, /if \(KYRO_CROP_HELP\.test\(said\)\) \{\s*kyroTakeOverTurn\(\);\s*if \(kyroOpenAppCard\("agriculture", said, lang\)\) return true;/);
+});

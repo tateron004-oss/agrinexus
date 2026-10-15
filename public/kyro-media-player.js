@@ -129,8 +129,10 @@
     }
     function audioOnly() { return readPref("audioOnly", "0") === "1"; }
     function playIn() { return readPref("playIn", "kyro") === "youtube" ? "youtube" : "kyro"; }
+    const CONTROL_WORD = /^(?:pause|paused|resume|stop|next|previous|skip|mute|unmute|louder|quieter|volume(?: up| down)?|play|sitisha|endelea|simamisha)$/i;
     function lastChoice() {
-      try { const raw = readPref("last", ""); const value = raw ? JSON.parse(raw) : null; return value && value.query ? value : null; } catch (_) { return null; }
+      // (a control word saved as if it were a song, by an older version, is never played back: "pause" is not what "play some music" asks for)
+      try { const raw = readPref("last", ""); const value = raw ? JSON.parse(raw) : null; return value && value.query && !CONTROL_WORD.test(String(value.query).trim()) ? value : null; } catch (_) { return null; }
     }
 
     function langFor(options) {
@@ -500,7 +502,7 @@
       if (!alreadyAnnounced) history.push(candidate);
       current = { candidate, engine: result.engine, query: lastRequest.query, kind: lastRequest.kind, lang, remembered, queryNamed: Boolean(lastRequest.query) && !remembered };
       if (!alreadyAnnounced) { setState("playing"); setSessionPlaybackState("playing"); wireMediaSession(candidate); }
-      try { writePref("last", JSON.stringify({ query: lastRequest.query, kind: lastRequest.kind, title: candidate.title })); } catch (_) { /* ignore */ }
+      try { if (!CONTROL_WORD.test(String(lastRequest.query || "").trim())) writePref("last", JSON.stringify({ query: lastRequest.query, kind: lastRequest.kind, title: candidate.title })); } catch (_) { /* ignore */ }
       if (candidate.provider === "radio-browser" && deps.request) {
         const id = String(candidate.id).replace(/^radio-browser:/, "");
         Promise.resolve(deps.request("/api/media/played", { method: "POST", body: { provider: "radio-browser", id } })).catch(() => {});
@@ -650,6 +652,9 @@
       }
       if (parsed.type === "control") {
         const active = isActive() || state === "ended";
+        if (!active && !parsed.explicit && state !== "resolving") return false;
+        // "Pause the music" said while the song is still being found: the start is cancelled (it used to say nothing was playing and then start anyway)
+        if (!active && state === "resolving" && (parsed.control === "pause" || parsed.control === "stop")) { sessionLang = lang; stopAll({ announce: false, lang }); announce(t("stopped", {}, lang), {}); return true; }
         if (!active && !parsed.explicit) return false;
         if (!active) { sessionLang = lang; announce(t("nothingPlaying", {}, lang), {}); return true; }
         control(parsed.control, { lang });
