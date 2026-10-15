@@ -131,3 +131,15 @@ test("'open the offline notes screen' and 'open business forms' open those scree
   for (const said of ["Open business forms.", "Open the business tools", "Open business"]) assert.ok(w.KYRO_OPEN_APP.test(said), said);
   assert.ok(!w.KYRO_OPEN_APP.test("Open business forms and then call my brother"));
 });
+
+test("the upload screen, with its Choose a file button, stays until it is closed", () => {
+  assert.match(sliceFn("function kyroOpenUploadScreen("), /screen\?\.setAttribute\("data-kyro-keep", "true"\)/);
+});
+
+test("tapping Yes or No on a question says 'one moment' while the answer is on its way, and the answer is drawn as any new screen", () => {
+  const fn = sliceFn("function kyroAddConfirmButtons(");
+  assert.match(fn, /screen\.removeAttribute\("data-kyro-result"\); screen\.setAttribute\("data-kyro-working-screen", "true"\)/);
+  assert.match(fn, /One moment\.\.\./);
+  assert.match(fn, /submitNexusPendingBehaviorConfirmation\(approved, approved \? "yes" : "no", \{ source: "typed" \}\)\)\.then\(done, done\)/);
+  assert.ok(!/forEach\(node => node\.remove\(\)\);\s*void submitNexusPendingBehaviorConfirmation/.test(fn), "the screen no longer goes blank");
+});

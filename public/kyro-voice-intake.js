@@ -41,7 +41,8 @@
   const WAKE_NAMES = "kyro|kiro|kairo|cairo|cyro|kyra|kira|chiro|kayro|chatroom|nexus";
   const WAKE_PREFIX = new RegExp(`^(?:hey[, ]+)?(?:${WAKE_NAMES})[, ]+`);
   const CONTROL_PATTERNS = {
-    cancel: /^(please )?(cancel|quit|exit|never ?mind|forget (it|this|that)|i don'?t want (this|it|to)|i want to (stop|quit))( (this|it|that|the (resume|r[ée]sum[ée]|form)))?( please)?$/i,
+    // ("close it" / "close the screen" / "go back to the orb" end the form too: it is a screen, and these are the words for putting a screen away)
+    cancel: /^(please )?(cancel|quit|exit|never ?mind|forget (it|this|that)|i don'?t want (this|it|to)|i want to (stop|quit)|close( (it|this|that|the (screen|form|window|page|panel|intake|visit|interview)))?|go back to (the )?(orb|home|start)|back to the orb)( (this|it|that|the (resume|r[ée]sum[ée]|form)))?( please)?$/i,
     repeat: /^(repeat|say (that|it) again|what( was that| did you say)?|pardon|sorry|i didn'?t (hear|understand|get) (that|you))\??$/i,
     // "none" in the many ways people say it ("I have none", "n/a", "no experience", "I do not have any"): an optional question is skipped, never saved as the answer "I have none".
     skip: /^(skip|pass|next|none|nothing|no|nope|nil|n\/?a|not now|no thanks|no thank you|not any|i have (none|nothing|not got any)|i (do not|don'?t) have (one|any|it|anything)|i have no (experience|school|training|education|email|phone|skills?|languages?)|no (experience|school|training|education|email|phone|skills?|languages?)|(i )?(don'?t know|no idea|not sure))$/i,

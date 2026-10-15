@@ -264,7 +264,7 @@ async function openAiWebSearch(query) {
   return { answer, sources };
 }
 
-const LISTING_HINTS = Object.freeze({ jobs: "job openings vacancies apply", marketplace: "for sale buy sell prices listings" });
+const LISTING_HINTS = Object.freeze({ jobs: "job openings vacancies apply", marketplace: "farm produce crop for sale buy sell prices listings" });
 async function liveListingsEvidence(kind, input, receiptId) {
   const query = String(input.query || "").trim();
   if (!query) throw Object.assign(new Error("A search request is required."), { code: "listings_query_required" });

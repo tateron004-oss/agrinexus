@@ -51844,6 +51844,7 @@ function kyroOpenUploadScreen(said, lang) {
   if (!kyroShowResultScreen("typed", said, { ok: true, status: "completed", response: ask })) return false;
   try {
     const screen = document.querySelector("[data-kyro-result]");
+    screen?.setAttribute("data-kyro-keep", "true"); // (a button to tap: the screen stays until it is closed, not ten seconds)
     const label = document.createElement("label");
     label.setAttribute("data-kyro-upload-button", "true");
     label.textContent = lang === "sw" ? "Chagua faili" : "Choose a file";
@@ -52289,7 +52290,7 @@ const KYRO_APP_SCREENS = Object.freeze({
     { kind: "form", label: "Record blood pressure", button: "Record", fields: [{ name: "up", label: "Top number (systolic)", type: "number" }, { name: "down", label: "Bottom number (diastolic)", type: "number" }], command: f => "My blood pressure is " + f.up + " over " + f.down },
     { kind: "form", label: "Find a pharmacy", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a pharmacy near " + (f.place || "me") },
     { kind: "form", label: "Find a clinic", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a clinic near " + (f.place || "me") },
-    { kind: "button", label: "Show my readings", command: "Show my readings" }
+    { kind: "button", label: "Show my readings", command: "Show my blood pressure readings" }
   ] },
   agriculture: { title: "Crop and farm help", intro: "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.", actions: [
     { kind: "form", label: "Ask about a crop or a pest", button: "Ask", fields: [{ name: "question", label: "For example: why are my maize leaves turning yellow?", type: "textarea" }], command: f => f.question },
@@ -52932,8 +52933,24 @@ function kyroAddConfirmButtons() {
       button.type = "button"; button.textContent = label; button.setAttribute("data-kyro-confirm", approved ? "yes" : "no");
       button.style.cssText = "padding:16px 36px;border:0;border-radius:16px;color:#fff;font-size:1.25rem;font-weight:600;cursor:pointer;background:" + color;
       button.addEventListener("click", () => {
-        document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
-        void submitNexusPendingBehaviorConfirmation(approved, approved ? "yes" : "no", { source: "typed" });
+        // The answer can take several seconds (the server does the step): the question stays up as "one moment" instead of the screen going blank, and goes when the answer arrives.
+        let waiting = null;
+        try {
+          row.remove();
+          // (no longer "a result screen" to the rest of the page, so the answer, when it comes, is drawn and given its buttons as any new screen is; this one is removed after it)
+          screen.removeAttribute("data-kyro-result"); screen.setAttribute("data-kyro-working-screen", "true");
+          waiting = document.createElement("p");
+          waiting.setAttribute("role", "status"); waiting.setAttribute("data-kyro-working", "true");
+          waiting.style.cssText = "margin:0;font-size:1.2rem;position:relative;z-index:1";
+          waiting.textContent = sw ? "Subiri kidogo..." : "One moment...";
+          screen.append(waiting);
+        } catch { /* the answer still arrives */ }
+        // (a "no" has nothing more to draw: the person is told, on the screen, that nothing was done)
+        const done = () => {
+          try { screen.remove(); } catch { /* gone already */ }
+          if (!approved) { try { if (!document.querySelector("[data-kyro-result]")) kyroShowResultScreen("typed", "I did not proceed", { ok: true, status: "completed", response: sw ? "Sawa, sikuendelea na hilo." : "Okay, I did not proceed with that." }); } catch { /* the voice said it */ } }
+        };
+        Promise.resolve(submitNexusPendingBehaviorConfirmation(approved, approved ? "yes" : "no", { source: "typed" })).then(done, done);
       });
       return button;
     };

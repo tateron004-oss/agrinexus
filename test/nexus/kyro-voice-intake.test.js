@@ -379,3 +379,15 @@ test("the starting words coming back under other ids are an echo until the first
   tick(20000);
   assert.notEqual(intake.handleUtterance("Start a telehealth visit.", { utteranceId: "item-80" }).action, "duplicate", "after the first answer the guard is gone");
 });
+
+test("'close it', 'close the screen' and 'go back to the orb' end the form; 'go back' still means the previous question", () => {
+  for (const said of ["Close it.", "Close the screen.", "close this", "Go back to the orb", "Please close the form"]) {
+    const intake = KyroVoiceIntake.create(sampleForm(), { now }); intake.start();
+    assert.equal(intake.handleUtterance(said, { utteranceId: "c-" + said }).action, "cancelled", said);
+  }
+  const intake = KyroVoiceIntake.create(sampleForm(), { now }); intake.start();
+  intake.handleUtterance("Amina", { utteranceId: "a1" });
+  assert.notEqual(intake.handleUtterance("go back", { utteranceId: "a2" }).action, "cancelled");
+  const answer = KyroVoiceIntake.create(sampleForm(), { now }); answer.start();
+  assert.notEqual(answer.handleUtterance("I live close to the market", { utteranceId: "a3" }).action, "cancelled", "a long answer containing 'close' is an answer");
+});
