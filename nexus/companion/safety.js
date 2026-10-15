@@ -305,6 +305,8 @@ function emergencyNumberForCountry(country = "") {
   const place = String(country || "").trim().toLowerCase();
   if (/\bkenya\b/.test(place)) return { country: "Kenya", numbers: "999 or 112" };
   if (/\bnigeria\b/.test(place)) return { country: "Nigeria", numbers: "112" };
+  // (911 is the emergency number across the United States; the 988 Suicide and Crisis Lifeline is on the crisis-line list, public/kyro-crisis-lines.js)
+  if (/\b(?:united states|usa|u\.s\.a?\.?|us)\b/.test(place)) return { country: "the United States", countrySw: "Marekani", numbers: "911" };
   return null;
 }
 
@@ -317,7 +319,7 @@ async function safetyTurn({ text, circle, push, tenantId, userId, userName, now 
   const kind = found.kind; const language = replyLanguage(text, { detected: found.language, requested: locale });
   // When the person's country is known and the platform has its number, the reply names it (never the U.S. number); otherwise it says "your local emergency number".
   const known = emergencyNumberForCountry(country);
-  const number = known ? t(language, "safety.numberIn", { numbers: known.numbers, country: known.country }) : t(language, "safety.number");
+  const number = known ? t(language, "safety.numberIn", { numbers: known.numbers, country: language === "sw" && known.countrySw ? known.countrySw : known.country }) : t(language, "safety.number");
   const members = circle?.activeMembers ? await circle.activeMembers({ tenantId, personId: userId }).catch(() => []) : [];
   if (kind === "emergency") {
     if (!members.length) return t(language, "safety.noCircle", { number });

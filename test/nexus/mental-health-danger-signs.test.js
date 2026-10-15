@@ -53,3 +53,42 @@ test("the browser's own mental-health reply is shown in words on the screen as w
   assert.ok(body.indexOf("setVoiceResponse(response") < body.indexOf("kyroShowResultScreen("), "said first, then shown");
   assert.match(body, /packet\.classification\?\.crisisOverride[^\n]*setAttribute\("data-kyro-keep", "true"\)/);
 });
+
+test("the United States has its emergency number (911) and the 988 Lifeline, said for a US account or a US time zone, and never for another country", async () => {
+  const lines = require("../../public/kyro-crisis-lines.js");
+  const { safetyTurn } = require("../../nexus/companion/safety.js");
+  assert.match(lines.linesFor("United States", "en"), /call or text 988/); assert.match(lines.linesFor("us", "en"), /988/); assert.match(lines.linesFor("USA", "sw"), /988/);
+  assert.equal(lines.linesFor("Canada", "en"), ""); assert.equal(lines.linesFor("", "en"), "");
+  assert.equal(lines.countryFromTimeZone("America/Los_Angeles"), "United States"); assert.equal(lines.countryFromTimeZone("America/Indiana/Knox"), "United States");
+  assert.equal(lines.countryFromTimeZone("America/Toronto"), ""); assert.equal(lines.countryFromTimeZone("America/Mexico_City"), "");
+  assert.equal(lines.CHECKED_ON_BY_COUNTRY["United States"], "15 October 2026"); assert.match(lines.SOURCES["United States"][0].url, /^https:\/\/988lifeline\.org/);
+  const reply = country => safetyTurn({ text: "this is an emergency", circle: null, push: null, tenantId: "t", userId: "u", userName: "A", locale: "en", country });
+  assert.match(await reply("United States"), /911 in the United States/);
+  assert.match(await reply("Kenya"), /999 or 112 in Kenya/); assert.match(await reply("Nigeria"), /112 in Nigeria/);
+  assert.doesNotMatch(await reply("Uganda"), /911|988/); assert.match(await reply(""), /your local emergency number/);
+  const sw = await safetyTurn({ text: "siwezi kupumua", circle: null, push: null, tenantId: "t", userId: "u", userName: "A", locale: "sw", country: "United States" });
+  assert.match(sw, /911 nchini Marekani/);
+});
+
+test("the server's crisis packets are built for the account's country (or the device's time zone), not for nobody", () => {
+  const fs = require("node:fs"); const path = require("node:path");
+  const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  assert.match(server, /function crisisCountryFor\(user, timeZone = ""\)/);
+  assert.match(server, /country: typeof crisisCountryFor === "function" \? crisisCountryFor\(user, context\.timeZone \|\| args\.timeZone\) : ""/);
+  assert.match(server, /country: typeof crisisCountryFor === "function" \? crisisCountryFor\(user, body\.timeZone\) : ""/);
+});
+
+test("the very-high blood-pressure reply names where its 180 over 120 level comes from", () => {
+  const bp = require("../../server/providers/bloodPressure.js");
+  assert.match(bp.urgentGuidance(190, 125, ""), /180 over 120 level is from the World Health Organization, checked 15 October 2026/);
+  assert.match(bp.SOURCE.url, /^https:\/\/www\.who\.int\//);
+  assert.equal(bp.assessBloodPressure(185, 100).level, "urgent"); assert.equal(bp.assessBloodPressure(140, 85).level, "high");
+});
+
+test("the example rural-network catalog marks every entry as an unverified example, and the Health screen has the provider-summary button", () => {
+  const fs = require("node:fs"); const path = require("node:path");
+  const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  assert.match(server, /verified: false, sourceNote: "Example listing for demonstration, not a verified facility or supplier\."/);
+  const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+  assert.match(app, /\{ kind: "button", label: "Summary for my provider", command: "Prepare a provider summary of my readings" \}/);
+});

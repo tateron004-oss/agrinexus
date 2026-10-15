@@ -24,8 +24,15 @@
       { name: "Lifeline International: SURPIN", url: "https://www.lifeline-international.com/member/nigeria-surpin/" },
       { name: "SURPIN", url: "https://surpinng.com/" },
       { name: "findahelpline: Nigeria", url: "https://findahelpline.com/countries/ng" }
+    ],
+    // (the 988 Suicide and Crisis Lifeline: its own page says call or text 988, or chat, free, available 24/7/365)
+    "United States": [
+      { name: "988 Suicide & Crisis Lifeline", url: "https://988lifeline.org/" }
     ]
   });
+
+  // When each country's numbers were last read from the pages above.
+  const CHECKED_ON_BY_COUNTRY = Object.freeze({ Kenya: CHECKED_ON, Nigeria: CHECKED_ON, "United States": "15 October 2026" });
 
   const LINES = Object.freeze({
     Kenya: {
@@ -35,11 +42,20 @@
     Nigeria: {
       en: " You can also talk to a person: SURPIN, a free helpline, on 0800 078 7746, open 24 hours.",
       sw: " Unaweza pia kuzungumza na mtu: SURPIN, laini ya bure, kwa 0800 078 7746, inayopatikana saa 24."
+    },
+    "United States": {
+      en: " You can also talk to a person: call or text 988, the Suicide and Crisis Lifeline, free, at any time of day or night.",
+      sw: " Unaweza pia kuzungumza na mtu: piga simu au tuma ujumbe kwa 988, Suicide and Crisis Lifeline, bila malipo, saa 24 kila siku."
     }
   });
 
+  function placeOf(country) {
+    const value = String(country || "");
+    return /kenya/i.test(value) ? "Kenya" : /nigeria/i.test(value) ? "Nigeria" : /\b(?:united states|usa|u\.s\.a?\.?)\b/i.test(value) || /^us$/i.test(value.trim()) ? "United States" : "";
+  }
+
   function linesFor(country, language) {
-    const place = /kenya/i.test(String(country || "")) ? "Kenya" : /nigeria/i.test(String(country || "")) ? "Nigeria" : "";
+    const place = placeOf(country);
     if (!place) return "";
     return LINES[place][/^sw/i.test(String(language || "")) ? "sw" : "en"];
   }
@@ -48,8 +64,10 @@
     const value = String(zone || "");
     if (/^Africa\/Nairobi$/i.test(value)) return "Kenya";
     if (/^Africa\/Lagos$/i.test(value)) return "Nigeria";
+    // (zones that are only in the United States: not America/Toronto, Mexico_City or Sao_Paulo)
+    if (/^America\/(?:New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Adak|Boise|Detroit|Juneau|Sitka|Nome|Yakutat|Metlakatla|Menominee)$|^America\/(?:Indiana|Kentucky|North_Dakota)\/|^Pacific\/Honolulu$/i.test(value)) return "United States";
     return "";
   }
 
-  return Object.freeze({ CHECKED_ON, SOURCES, linesFor, countryFromTimeZone });
+  return Object.freeze({ CHECKED_ON, CHECKED_ON_BY_COUNTRY, SOURCES, linesFor, countryFromTimeZone });
 });

@@ -95,7 +95,7 @@
   });
 
   const JURISDICTION_ESCALATION_REGISTRY = Object.freeze({
-    us: jurisdictionEscalation("us", "United States", ["988 Suicide & Crisis Lifeline", "local emergency services", "SAMHSA treatment locator"], ["988", "911"], "requires current local resource verification before any live handoff"),
+    us: jurisdictionEscalation("us", "United States", ["988 Suicide & Crisis Lifeline", "local emergency services", "SAMHSA treatment locator"], ["988", "911"], "988 and 911 checked against 988lifeline.org on 15 October 2026; other resources not verified, no live handoff"),
     kenya: jurisdictionEscalation("kenya", "Kenya", ["local emergency services", "local approved crisis or safeguarding resource"], ["local emergency number required"], "configuration required before local crisis resource display"),
     nigeria: jurisdictionEscalation("nigeria", "Nigeria", ["local emergency services", "local approved crisis or safeguarding resource"], ["local emergency number required"], "configuration required before local crisis resource display"),
     generic: jurisdictionEscalation("generic", "User jurisdiction not verified", ["local emergency services", "trusted local crisis/safeguarding resource", "nearest safe emergency location"], ["ask for city/region if safe"], "do not claim jurisdiction-specific resource without configured source")
