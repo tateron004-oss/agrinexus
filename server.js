@@ -20769,7 +20769,9 @@ function openAiRealtimeSessionConfig(user, language = "en", env = process.env) {
         },
         transcription: {
           model: String(env.OPENAI_REALTIME_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe").trim() || "gpt-4o-mini-transcribe",
-          language: String(language || "en").slice(0, 12)
+          language: String(language || "en").slice(0, 12),
+          // A short hint for the speech-to-text (it heard "Close it" as "Flows it", "Kisumu" as "Hisumu", "maize" as "maze"): the assistant's name, the towns and crops people name, and the short commands.
+          prompt: "Kyro, AgriNexus. Close it. Close the screen. Kisumu, Nairobi, Nakuru, Mombasa, Lagos, Stockton, Sacramento. Maize, sorghum, cassava."
         },
         turn_detection: turnDetection
       },

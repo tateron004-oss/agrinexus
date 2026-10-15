@@ -18,7 +18,7 @@ const plain = (() => { const s = app.indexOf("function kyroPlainText("); return 
 function load({ handled = true, tool = false } = {}) {
   const calls = { typed: [], takeover: 0, said: [] };
   const sandbox = {
-    kyroActiveVoiceIntake: null, Date, String, Array, Object, Promise, JSON,
+    kyroActiveVoiceIntake: null, Date, String, Array, Object, Promise, JSON, setTimeout,
     kyroTakeOverTurn: () => { calls.takeover++; },
     kyroSpeakPageLine: text => { calls.said.push(text); return true; },
     handleNexusUnifiedBrainRuntimeCommand: async (text, options) => { calls.typed.push([text, options]); if (typeof handled === "function") return handled(text); sandbox.pushCapture("One moment."); sandbox.pushCapture("**Your to-do list is empty.**"); return handled; }
@@ -115,7 +115,7 @@ test("the model is told the pictures or videos are showing when the gallery scre
   const start = app.indexOf("async function kyroShowVisualRequest(");
   const fn = app.slice(start, app.indexOf("\n}\n", start) + 3);
   const run = async (kind, present) => {
-    const sandbox = { handleNexusUnifiedBrainRuntimeCommand: async () => true, window: { setTimeout: callback => callback() }, document: { querySelectorAll: selector => ({ length: present(selector) }) }, Promise };
+    const sandbox = { kyroCanonicalVisualRequest: text => text, handleNexusUnifiedBrainRuntimeCommand: async () => true, window: { setTimeout: callback => callback() }, document: { querySelectorAll: selector => ({ length: present(selector) }) }, Promise };
     vm.createContext(sandbox); vm.runInContext(fn + "\nthis.run = kyroShowVisualRequest;", sandbox);
     return sandbox.run("Show me pictures of tomatoes", kind);
   };

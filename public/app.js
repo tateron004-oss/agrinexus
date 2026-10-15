@@ -50494,21 +50494,35 @@ function kyroVisualRequestKind(text) {
   return /^video/i.test(match[1]) ? "videos" : "images";
 }
 
+// "I'd like to watch a video on how to prune tomatoes" is searched as "Show me videos about how to prune tomatoes" (the whole sentence used to become the heading: "videos I found about I'd like to...").
+function kyroCanonicalVisualRequest(command, kind) {
+  const said = String(command || "");
+  const match = KYRO_VISUAL_REQUEST.exec(said);
+  if (!match) return said;
+  const subject = said.slice(match[0].length).replace(/^\s*(?:of|about|on|for|showing|that show|with)\s+/i, "").replace(/[.?!]+$/, "").trim();
+  if (!subject) return said;
+  return kind === "videos" ? `Show me videos about ${subject}` : `Show me pictures of ${subject}`;
+}
 async function kyroShowVisualRequest(command, kind) {
   // (the gallery screen the page draws now carries no authoritative-image attribute, so it is counted as well: the model was told "nothing is showing" while the pictures were on the screen)
   const selector = kind === "videos"
     ? "[data-nexus-authoritative-video] iframe, [data-nexus-authoritative-video] video, [data-kyro-result=\"gallery\"] iframe, [data-kyro-result=\"gallery\"] video"
     : "img[data-nexus-authoritative-image], [data-kyro-result=\"gallery\"] img";
   const noun = kind === "videos" ? "video" : "picture";
-  try { await handleNexusUnifiedBrainRuntimeCommand(command, { source: "openai-realtime-tool" }); } catch { /* the check below says what is on the screen */ }
+  let searchFailed = "";
+  try { await handleNexusUnifiedBrainRuntimeCommand(kyroCanonicalVisualRequest(command, kind), { source: "openai-realtime-tool" }); } catch (error) { searchFailed = String(error?.message || ""); /* the check below says what is on the screen */ }
   await new Promise(resolve => window.setTimeout(resolve, 400));
   const shown = document.querySelectorAll(selector).length;
   if (shown > 0) {
     return { ok: true, status: "completed", executionVerified: true, blockedReason: null, clientAction: { type: "show-visual-results", kind },
       response: `I have put ${shown} ${noun}${shown === 1 ? "" : "s"} on the screen for the person to look at. Tell them so in one short sentence. Do not read out any web addresses and do not describe what the ${noun}${shown === 1 ? " shows" : "s show"}, because you cannot see ${shown === 1 ? "it" : "them"}.` };
   }
+  // (a search that found nothing it is allowed to show is said as that, with a way forward: "a professional basketball team" found no pictures)
+  const foundNothing = /no verifiable|returned no|no (?:images|pictures|videos) /i.test(searchFailed);
   return { ok: false, status: "failed-truthfully", executionVerified: false, blockedReason: "visual-results-not-shown", category: "visual-results",
-    response: `I could not put ${noun}s on the screen just now. Tell the person plainly that nothing is showing, and that they can try again or type the request.` };
+    response: foundNothing
+      ? `I looked, but I could not find any ${noun}s of that which I am allowed to show. Tell the person that plainly in one short sentence, and ask them to try a different subject, for example a crop, an animal or a place.`
+      : `I could not put ${noun}s on the screen just now. Tell the person plainly that nothing is showing, and that they can try again or type the request.` };
 }
 
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
@@ -51092,13 +51106,21 @@ function kyroRecoverRefusal() {
 // The voice tools (/api/voice/realtime/tool) are a second, weaker implementation of the same requests: "I want to look at my notes" came back "I'm not sure what you'd like me to do", "find jobs near me" came back "I can't
 // search live job listings", while the governed route that typing uses answers both. For the tools that keep, find and make the person's own things, the page runs the words through that route, draws what it draws, and gives
 // the model the answer to say.
-const KYRO_GOVERNED_VOICE_TOOLS = new Set(["nexus_everyday_records", "nexus_lists", "nexus_automation_reminder", "nexus_calendar", "nexus_health_preparation", "nexus_workforce_learning", "nexus_marketplace_logistics", "nexus_business_assistant", "nexus_agriculture", "nexus_document_export"]);
+const KYRO_GOVERNED_VOICE_TOOLS = new Set(["nexus_everyday_records", "nexus_lists", "nexus_automation_reminder", "nexus_calendar", "nexus_health_preparation", "nexus_workforce_learning", "nexus_marketplace_logistics", "nexus_business_assistant", "nexus_agriculture", "nexus_document_export", "nexus_workflow"]);
 async function kyroAnswerLikeTyped(command) {
   const said = String(command || "").trim();
   if (!said) return null;
   kyroVoiceCapture = [];
   let handled = false;
-  try { handled = await handleNexusUnifiedBrainRuntimeCommand(said, { source: "voice-tool", kyroDirect: true }); } catch { handled = false; }
+  let tookTooLong = false;
+  try {
+    handled = await Promise.race([
+      handleNexusUnifiedBrainRuntimeCommand(said, { source: "voice-tool", kyroDirect: true }),
+      new Promise(resolve => setTimeout(() => { tookTooLong = true; resolve(true); }, 28000))
+    ]);
+  } catch { handled = false; }
+  // (the route carries on and draws its answer when it has one: the old tool is not asked as well, so nothing is done twice)
+  if (tookTooLong) { kyroVoiceCapture = null; return { ok: true, status: "completed", response: "That is taking longer than usual and will appear on the screen when it is ready. Tell the person that in one short sentence.", executionVerified: false, blockedReason: null }; }
   const lines = (kyroVoiceCapture || []).map(line => kyroPlainText(line).replace(/\s+/g, " ").trim()).filter(line => line && !/^(?:one moment|okay|done|got it)[.!]?$/i.test(line));
   kyroVoiceCapture = null;
   if (handled !== true) return null;
@@ -51790,7 +51812,7 @@ function kyroListKindOf(word) {
 }
 // "Open business", "open the weather", "open messages", "open operations", "open the pharmacy", "open logistics", "open live knowledge", "open the calendar": found testing, many of these were answered "I'm not sure what you'd
 // like me to do". Each application now opens something real: its card (what it does, and what it does not), its list, or the answer, and the live-knowledge one asks what to look up.
-const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up|take me to|bring me to|switch to|navigate to|let me see|i want to see|i'd like to see|can i see)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))[.?!]*$", "i");
+const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up|take me to|bring me to|switch to|navigate to|let me see|i want to see|i'd like to see|can i see)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))(?:\\s+(?:section|page|screen|area|tab|app|menu))?[.?!]*$", "i");
 // Shows an application's card and reads it out (the first lines, short). True when it was shown.
 function kyroOpenAppCard(card, said, lang) {
   if (!window.KyroAnswerCard?.specFor || !kyroShowHelpScreen(card, { command: "open " + card, payload: {} })) return false;
@@ -51807,7 +51829,7 @@ let kyroLastSpokenOpen = { key: "", at: 0 }; // the sentence the page last answe
 const KYRO_OPEN_OFFLINE = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|check|see|view)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:offline\\s+(?:queue|work|notes|changes|sync(?:\\s+status)?)|(?:sync|offline)\\s+status|queued\\s+(?:offline\\s+)?(?:work|changes|notes))[.?!]*$`, "i");
 const KYRO_OPEN_RESUMES = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|see|view|list|find|get)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:saved\\s+)?(?:resumes?|résumés?|resumés?|cvs?)[.?!]*$`, "i");
 const KYRO_OPEN_BIZ = new RegExp(`${KYRO_OPEN_LEAD}(?:open|show|go to|pull up|bring up|see|view|launch|start)\\s+(?:me\\s+)?(?:(?:my|the|our)\\s+)?(?:(?:business|customer)\\s+)?(?:(crm|clients?|customers?|contacts|customer list|client list)|(donors?|donations|fundraising)|(grants?|funding|grant (?:writing|tracker|deadlines))|(invoices?|billing)|(expenses?|income|finances?|financials?|books|bookkeeping|accounting|sales|profit))[.?!]*$`, "i");
-const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|pictures?|photos?|pdfs?|images?|letters?))?)[.?!]*$`, "i");
+const KYRO_OPEN_UPLOAD = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|show|start|go to)\\s+(?:the\\s+|my\\s+)?(?:file\\s+|document\\s+|photo\\s+)?uploads?|(?:i\\s+(?:want|need)\\s+to\\s+|let me\\s+|help me\\s+|i'd like to\\s+)?(?:upload|attach)(?:\\s+(?:a|an|my|the|some))?(?:\\s+(?:files?|documents?|pictures?|photos?|pdfs?|images?|letters?))?(?:\\s+(?:of|for|from|to|about|showing)\\s+[a-z' -]{1,60})?)[.?!]*$`, "i");
 // A screen with a real button (a file can only be chosen from a tap): the picture or PDF is sent and read out, as "look at this" does.
 function kyroOpenUploadScreen(said, lang) {
   const ask = lang === "sw" ? "Chagua picha au PDF (hadi MB 10) nikusomee. Gusa kitufe hapa chini." : "Choose a picture or a PDF (up to 10 MB) and I will read it to you. Tap the button below.";
@@ -52378,6 +52400,8 @@ function kyroShowOfflineScreen() {
       kyroMake("p", { style: "margin:0;color:#cbd5e1;max-width:34em" }, t.about), send, status);
     document.body.append(screen);
     try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    // (said as well as shown: by voice the page took the request from the model, which was cut off, and this screen said nothing)
+    try { setVoiceResponse(`${t.status} ${t.count}`, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the screen has it */ }
     return true;
   } catch { return false; }
 }
@@ -58761,15 +58785,18 @@ let nexusPendingBehaviorConfirmation = null;
 const NEXUS_CONFIRMATION_AFFIRM_PHRASES = new Set([
   "yes", "yeah", "yea", "yep", "yup", "sure", "ok", "okay", "confirm", "confirmed",
   "confirm it", "yes confirm it", "go ahead", "do it", "please do", "proceed",
-  "yes please", "yes go ahead", "that's right", "correct", "affirmative"
+  "yes please", "yes go ahead", "that's right", "correct", "affirmative",
+  "yes", "go for it", "that's fine", "sounds good", "do that", "yes do it", "yes do that", "ok go ahead", "okay go ahead", "sure go ahead", "yes sure", "yes that's right", "yes go for it", "please go ahead", "yes confirm"
 ]);
 const NEXUS_CONFIRMATION_DECLINE_PHRASES = new Set([
   "no", "nope", "nah", "cancel", "cancel it", "never mind", "nevermind", "stop",
-  "don't", "do not", "no cancel it", "no thanks", "not now", "decline"
+  "don't", "do not", "no cancel it", "no thanks", "not now", "decline",
+  "no", "no don't", "no do not", "don't do that", "do not do that", "no don't do that", "no do not do that", "no thanks don't do that", "no thanks do not do that", "not yet", "maybe later", "not right now", "stop that", "cancel that", "forget it", "leave it", "i don't want to", "no i don't", "no i don't want to"
 ]);
 
 function normalizeNexusConfirmationReplyText(text) {
-  return String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "").trim();
+  // (punctuation inside the reply, a leading "oh/well/um" and a trailing "please/thanks" are not part of the answer: "No, thanks." "Well, yes please." "Yes, go ahead!")
+  return String(text || "").trim().toLowerCase().replace(/[\u2018\u2019]/g, "'").replace(/[,.!?;:]+/g, " ").replace(/\s+/g, " ").replace(/^(?:oh|well|um|uh|hmm|so|okay so)\s+/, "").replace(/\s+(?:please|thanks|thank you)$/, "").trim();
 }
 
 // Deliberately an exact-phrase match against a short, specific set, not a
