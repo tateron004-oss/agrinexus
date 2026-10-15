@@ -43,3 +43,13 @@ test("example listings from the starter list are said to be examples, not real p
   assert.doesNotMatch(text, /I can help look for verified behavioral-health/);
   assert.match(mh.buildSupportPacket("I want to find a therapy provider", {}).userVisibleStatus, /cannot search for counsellors or therapists yet/);
 });
+
+test("the browser's own mental-health reply is shown in words on the screen as well as said, and an emergency or crisis stays up until closed", () => {
+  const fs = require("node:fs"); const path = require("node:path");
+  const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+  const start = app.indexOf("function handleNexusMentalHealthBehavioralWellnessCommand(");
+  const body = app.slice(start, app.indexOf("\n}\n", start));
+  assert.match(body, /kyroShowResultScreen\("typed", text, \{ ok: true, status: "completed", response \}\)/);
+  assert.ok(body.indexOf("setVoiceResponse(response") < body.indexOf("kyroShowResultScreen("), "said first, then shown");
+  assert.match(body, /packet\.classification\?\.crisisOverride[^\n]*setAttribute\("data-kyro-keep", "true"\)/);
+});

@@ -2052,6 +2052,14 @@ function handleNexusMentalHealthBehavioralWellnessCommand(command = "", options 
     source: "nexus-mental-health-behavioral-wellness",
     mentalHealthSupportPacket: packet
   });
+  // Said, and also shown in words: found by trying "I feel sad" typed, nothing at all was on the screen (only the voice said it), so a person who cannot hear, or has the sound off, saw no support and no helpline.
+  // An emergency or a crisis stays up until it is closed.
+  try {
+    if (typeof kyroShowResultScreen === "function" && kyroShowResultScreen("typed", text, { ok: true, status: "completed", response })) {
+      const shown = document.querySelector("[data-kyro-result]");
+      if (shown && (packet.classification?.crisisOverride || /emergency|danger|crisis|urgent/i.test(String(packet.classification?.state || packet.classification?.riskTier || "")))) shown.setAttribute("data-kyro-keep", "true");
+    }
+  } catch { /* the voice said it */ }
   renderUserWorkspace?.();
   return true;
 }
@@ -51724,10 +51732,13 @@ async function kyroAskAboutPicture(blob, command, filename) {
       body: JSON.stringify({ name: "nexus_file_document_analysis", correlationId: `look-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command, fileId: uploaded.fileId || uploaded.id || undefined, language: lang }, language: lang })
     }, 60000);
     const result = await response.json().catch(() => ({}));
-    const described = kyroPlainText(String(result?.response || "").trim());
+    // (the server's own first sentence about how it was made is for its receipts, not for the person: the description, or the words in the file, are what they asked for)
+    const described = kyroPlainText(String(result?.response || "").trim()).replace(/^(?:Image described by a real vision model call|PDF text extracted and analy[sz]ed[^.]*)\.\s*(?:This is a description, not a diagnosis\.\s*)?/i, "").trim();
     if (!response.ok || !described) { say(lang === "sw" ? "Siwezi kuchambua picha hiyo sasa." : "I can't look at that picture right now."); return false; }
     const answer = `${described}${kyroPictureClosing(command)}`;
-    kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: answer });
+    if (kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: answer })) {
+      try { document.querySelector("[data-kyro-result]")?.setAttribute("data-kyro-keep", "true"); } catch { /* the answer is said too */ } // (a description, or the words in a file, take time to read: it stays until closed)
+    }
     say(answer);
     return true;
   } catch (error) {
@@ -52314,7 +52325,7 @@ const KYRO_APP_SCREENS = Object.freeze({
     { kind: "button", label: "Show my readings", command: "Show my blood pressure readings" },
     { kind: "form", label: "Record blood sugar", button: "Record", fields: [{ name: "sugar", label: "Blood sugar number", type: "number" }, { name: "unit", label: "Unit", type: "select", options: [["mmol/L", "mmol/L"], ["mg/dL", "mg/dL"]] }], command: f => "My blood sugar is " + f.sugar + " " + f.unit },
     { kind: "form", label: "Remind me to take a medicine", button: "Remind me", fields: [{ name: "medicine", label: "Name of the medicine" }, { name: "time", label: "At what time? For example: 8 am" }], command: f => "Remind me to take " + f.medicine + " at " + f.time + " every day" },
-    { kind: "button", label: "I am feeling low or worried", command: "I feel low and worried today" },
+    { kind: "button", label: "I am feeling low or worried", command: "I am feeling sad and worried" },
     { kind: "button", label: "Women's health information", command: "Tell me about women's health" }
   ] },
   agriculture: { title: "Crop and farm help", intro: "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.", actions: [
