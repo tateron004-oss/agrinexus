@@ -369,3 +369,13 @@ test("normalizers: list and sentences never split the text themselves", () => {
   assert.equal(list.ok, true);
   assert.equal(list.value, "crop planning, irrigation, and livestock management");
 });
+
+test("the starting words coming back under other ids are an echo until the first real answer; the same words later are an answer", () => {
+  const intake = KyroVoiceIntake.create(sampleForm(), { now, seedUtterance: { id: "start-1", text: "Start a telehealth visit." } });
+  intake.start();
+  assert.equal(intake.handleUtterance("Start a telehealth visit.", { utteranceId: "item-77" }).action, "duplicate", "another id, same words");
+  assert.equal(intake.handleUtterance("start a telehealth visit", { utteranceId: "item-78" }).action, "duplicate");
+  assert.notEqual(intake.handleUtterance("Amina", { utteranceId: "item-79" }).action, "duplicate");
+  tick(20000);
+  assert.notEqual(intake.handleUtterance("Start a telehealth visit.", { utteranceId: "item-80" }).action, "duplicate", "after the first answer the guard is gone");
+});

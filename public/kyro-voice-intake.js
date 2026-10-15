@@ -19,6 +19,7 @@
 
   const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
   const DUPLICATE_TEXT_WINDOW_MS = 4000;
+  const SEED_ECHO_WINDOW_MS = 10000;
   const MAX_SEEN_UTTERANCES = 30;
   const MAX_ATTEMPTS_BEFORE_SKIP_OFFER = 2;
 
@@ -378,12 +379,19 @@
       lastUtterance = { norm: normalizeText(text), at: now() };
     }
 
+    // The words that started the intake come back from the voice service a second and third time under other ids ("Start a telehealth visit" was taken as the first answer); until the first real answer, the same words are an echo.
+    let seedEcho = null;
     if (options.seedUtterance && options.seedUtterance.text) {
       recordUtterance(options.seedUtterance.id || "", options.seedUtterance.text);
+      seedEcho = { norm: normalizeText(options.seedUtterance.text), at: now() };
     }
 
     function isDuplicate(utteranceId, text) {
       if (utteranceId && seenUtteranceIds.includes(utteranceId)) return true;
+      if (seedEcho) {
+        const norm = normalizeText(text);
+        if (norm && norm === seedEcho.norm && (now() - seedEcho.at) < SEED_ECHO_WINDOW_MS) return true;
+      }
       if (!utteranceId && lastUtterance) {
         const norm = normalizeText(text);
         if (norm && norm === lastUtterance.norm && (now() - lastUtterance.at) < DUPLICATE_TEXT_WINDOW_MS) return true;
@@ -657,6 +665,7 @@
       if (isDuplicate(meta.utteranceId, text)) return decision("duplicate", "");
       const trimmed = String(text || "").trim();
       if (!trimmed) return decision("duplicate", "");
+      seedEcho = null;
       recordUtterance(meta.utteranceId, text);
       const spoken = detectLanguage(trimmed, { strict: true });
       if (spoken) lang = spoken;

@@ -51054,15 +51054,21 @@ function kyroSpeakPageLine(text) {
   if (line === kyroLastPageLine.text && Date.now() - kyroLastPageLine.at < 6000) return true; // (the same words arriving twice are said once)
   kyroLastPageLine = { text: line, at: Date.now() };
   try { realtimeVoiceSession?.sdkController?.interrupt?.(); } catch { /* nothing to cut off */ }
-  return sendKyroRealtimeEvent({
+  // Out of band (conversation "none"): the line is spoken but is not a turn of the conversation the model then answers or repeats; the model is told afterwards, as a note, what the person was told.
+  const sent = sendKyroRealtimeEvent({
     type: "response.create",
     response: {
+      conversation: "none",
       instructions: `Say exactly the following to the person, in ${languageCode()}, clearly and warmly. Add nothing and call no tool. Say: ${line}`,
       tool_choice: "none",
       output_modalities: ["audio"],
       metadata: { source: "kyro-page-line" }
     }
   });
+  if (sent && typeof injectKyroRealtimeContext === "function") {
+    try { injectKyroRealtimeContext(`Kyro's screen just told the person: ${line.slice(0, 400)} Do not repeat it unless they ask.`); } catch { /* the note is only for the model's memory */ }
+  }
+  return sent;
 }
 // ---- When the voice model refuses something the page can do ----
 // Found by speaking off-script wording into a real voice session: "What's on my to-do list?" was answered "I can't see a current to-do list from here" with no tool called and nothing on the screen, while the same
@@ -52576,6 +52582,7 @@ function kyroAddListingLinks(drawn) {
       return /^https?:\/\//i.test(url) && title ? { title, url } : null;
     }).filter(Boolean).slice(0, 8);
     if (!rows.length) return false;
+    screen.setAttribute("data-kyro-keep", "true"); // (links to tap: the screen stays until it is dismissed, instead of going back to the orb after ten seconds)
     const wrap = kyroMake("div", { "data-kyro-listing-links": "true", style: "display:flex;flex-direction:column;gap:8px;width:100%;max-width:34em;position:relative;z-index:1" });
     wrap.append(kyroMake("h3", { style: "margin:0;font-size:1.1rem" }, kyroT("Tap to open")));
     for (const row of rows) {
@@ -52591,6 +52598,7 @@ async function kyroAddResumeButtons() {
   try {
     const screen = document.querySelector("[data-kyro-result]");
     if (!screen) return false;
+    screen.setAttribute("data-kyro-keep", "true"); // (buttons to tap: the screen stays until it is dismissed)
     const wrap = kyroMake("div", { "data-kyro-resume-list": "true", style: "display:flex;flex-direction:column;gap:8px;width:100%;max-width:34em;position:relative;z-index:1" });
     const build = kyroMake("button", { type: "button", "data-kyro-build-resume": "true", style: KYRO_BUTTON_STYLE + ";align-self:flex-start" }, kyroT("Build a new résumé"));
     build.addEventListener("click", () => {
