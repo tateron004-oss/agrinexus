@@ -57,7 +57,7 @@ test("the page takes over spoken requests and a spoken 'close it', and says its 
   assert.match(app, /if \(speak && Date\.now\(\) < kyroPageSpeaksUntil && options\.source !== "kyro-voice-intake" && options\.kyroPageLine !== true\) \{\s*try \{ kyroSpeakPageLine\(kyroPlainText\(String\(message \|\| ""\)\)\); \}/, "setVoiceResponse hands the page's words to the live voice");
   assert.match(app, /if \(kyroHandleSpokenOpen\(trimmed, \{\}\)\) \{ kyroPageSpeaksUntil = Date\.now\(\) \+ 30000; return true; \}/, "a request the page took over opens the speaking window");
   const route = sliceFn("function routeKyroVoiceIntakeTranscript(");
-  assert.match(route, /kyroPageSpeaksUntil = 0;\s*\/\/ "Close it"/, "the next thing said ends the window");
+  assert.match(route, /kyroPageSpeaksUntil = 0;[\s\S]*\/\/ "Close it"/, "the next thing said ends the window");
   assert.match(route, /window\.KyroDismissCommands\?\.parse\?\.\(trimmed\)[\s\S]*handleKyroDismissCommand\(trimmed, \{ source: "voice-transcript" \}\)\) return true;/, "a spoken 'close it' closes things, as a typed one does");
   assert.ok(route.indexOf("KyroDismissCommands") < route.indexOf("isResumeBuildRequest"), "before anything else is started");
   assert.match(app, /window\.KYRO_PAGE_OWNS_VISUALS = true;/);

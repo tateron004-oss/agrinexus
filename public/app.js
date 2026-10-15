@@ -27914,6 +27914,8 @@ async function kyroReturnToOrb(options = {}) {
   if (options.reason !== "idle") { pendingAgentClarification = null; pendingNexusSpokenCommand = null; nexusPendingBehaviorConfirmation = null; }
   kyroTearDownScreens({ stopMedia: explicitEnd });
   closeNexusFunctionWindow({ command: "What can Nexus do?" });
+  // (a section opened by name, the map for one, is left too: "close it", typed or said, used to leave the map on the screen)
+  try { if (typeof currentSectionId === "function" && currentSectionId() !== "dashboard") goSection("dashboard", { instant: true, scroll: false, openDefaultAction: false, keepAssistant: false, allowRealtimeSurfaceChange: true, source: "return-to-orb" }); } catch { /* the rest of the return carries on */ }
   nexusPresenceState = { ...nexusPresenceState, state: NEXUS_PRESENCE_STATES.IDLE, status: "Ask Nexus what you need.", lastUserInput: "", lastResponse: "", nextQuestion: "", activeMission: "", updatedAt: new Date().toISOString() };
   await handleNexusOsMissionLifecycleAction("return-home");
   try { nexusGenesisVoiceDebugLog("kyro-return-to-orb", { reason: options.reason || "", source: options.source || "" }); } catch { /* logging only */ }
@@ -46727,6 +46729,7 @@ function authoritativeNexusFinalAnswer(...candidates) {
 
 function setVoiceResponse(message, speak = false, options = {}) {
   kyroNoteActivity();
+  if (kyroVoiceCapture) kyroVoiceCapture.push(String(message ?? "")); // (a tool call answered by the governed route hands these words to the model: kyroAnswerLikeTyped)
   if (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken)) return;
   const realtimeOwnsAudibleResponse = Boolean(
     typeof realtimeVoiceActive === "function"
@@ -50492,7 +50495,10 @@ function kyroVisualRequestKind(text) {
 }
 
 async function kyroShowVisualRequest(command, kind) {
-  const selector = kind === "videos" ? "[data-nexus-authoritative-video] iframe, [data-nexus-authoritative-video] video" : "img[data-nexus-authoritative-image]";
+  // (the gallery screen the page draws now carries no authoritative-image attribute, so it is counted as well: the model was told "nothing is showing" while the pictures were on the screen)
+  const selector = kind === "videos"
+    ? "[data-nexus-authoritative-video] iframe, [data-nexus-authoritative-video] video, [data-kyro-result=\"gallery\"] iframe, [data-kyro-result=\"gallery\"] video"
+    : "img[data-nexus-authoritative-image], [data-kyro-result=\"gallery\"] img";
   const noun = kind === "videos" ? "video" : "picture";
   try { await handleNexusUnifiedBrainRuntimeCommand(command, { source: "openai-realtime-tool" }); } catch { /* the check below says what is on the screen */ }
   await new Promise(resolve => window.setTimeout(resolve, 400));
@@ -50509,6 +50515,7 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
   kyroDismissStaleWorkspace(command);
+  kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
   // text) run alongside it. See routeKyroVoiceIntakeTranscript for the transcript-level guard.
@@ -50537,6 +50544,15 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
   const visualKind = kyroVisualRequestKind(command);
   if (visualKind) return kyroShowVisualRequest(command, visualKind);
+  // "yes" or "no" the page already took from what it heard (see routeKyroVoiceIntakeTranscript): the model's own tool call for the same word does not answer it a second time
+  if (/^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|do it|no|nope|cancel|do not|don't)\b/i.test(command) && Date.now() - kyroConfirmedAt < 8000) {
+    return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+  }
+  // The governed route a typed request takes (see kyroAnswerLikeTyped); a question waiting for a yes or a no is always answered there.
+  if (KYRO_GOVERNED_VOICE_TOOLS.has(String(toolName || "")) || nexusPendingBehaviorConfirmation) {
+    const governed = await kyroAnswerLikeTyped(command);
+    if (governed) return governed;
+  }
   const correlationId = `rt-sdk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   nexusGenesisVoiceDebugLog("openai-agents-tool-call-requested", {
     toolName,
@@ -50705,6 +50721,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
   }
   if (eventName === "transport_event") {
     if (eventType && typeof kyroNoteRealtimeEvent === "function") kyroNoteRealtimeEvent(eventType);
+    try { kyroWatchForRefusal(eventType, payload); } catch { /* watching never breaks the session */ }
     if (realtimeVoiceSession) {
       realtimeVoiceSession.lastModelEvent = eventType || realtimeVoiceSession.lastModelEvent || "";
       if (/audio|response|conversation|session|input_audio/i.test(eventType)) {
@@ -50751,6 +50768,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
       const transcript = String(payload.acceptanceText || payload.transcript || payload.text || content.map(part => part.transcript || part.text || "").join(" ") || "").trim();
       const kyroUtteranceId = payload.item_id || payload.item?.id || payload.transcript_id || "";
       if (!routeKyroVoiceIntakeTranscript({ transcript, utteranceId: kyroUtteranceId, source: "realtime-transport" })) {
+      try { kyroRecoverRefusal(); } catch { /* recovery never breaks the session */ }
       const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({ transcript, transcriptId: payload.transcript_id || payload.item_id || payload.item?.id || "", sessionId: nexusRealtimeConversationIdentity || realtimeVoiceSession?.sessionId || "", role: payload.role || payload.item?.role || "user", isFinal: payload.is_final !== false }, genesisWorkspaceActionFromFinalTranscript);
       nexusGenesisVoiceDebugLog("browser-action-controller-transcript", { handled: controllerResult?.handled === true, duplicate: controllerResult?.duplicate === true, transcriptLength: transcript.length });
       if (controllerResult?.handled) void executeGenesisWorkspaceFromFinalTranscript(controllerResult.originalTranscript);
@@ -50766,6 +50784,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
     const transcript = String(payload.transcript || "").trim();
     const kyroUtteranceId = payload.item_id || payload.transcript_id || "";
     if (!routeKyroVoiceIntakeTranscript({ transcript, utteranceId: kyroUtteranceId, source: "realtime-history" })) {
+    try { kyroRecoverRefusal(); } catch { /* recovery never breaks the session */ }
     const controllerResult = window.NexusBrowserActionController?.handleFinalUserTranscript({
       transcript,
       transcriptId: payload.transcript_id || payload.item_id || "",
@@ -51020,6 +51039,59 @@ function kyroSpeakPageLine(text) {
       metadata: { source: "kyro-page-line" }
     }
   });
+}
+// ---- When the voice model refuses something the page can do ----
+// Found by speaking off-script wording into a real voice session: "What's on my to-do list?" was answered "I can't see a current to-do list from here" with no tool called and nothing on the screen, while the same
+// words typed are answered by the governed route. When the model begins a refusal for something it heard, did not call a tool for, and the page has not taken, the page answers it the way a typed request is answered.
+const KYRO_REFUSAL = /\bi\s+(?:can(?:'|\u2019)?t|cannot|can not|couldn(?:'|\u2019)?t|could not|am not able|am unable|was not able|wasn(?:'|\u2019)?t able|don(?:'|\u2019)?t have (?:access|a way|the ability))\b|\bi(?:'|\u2019)m\s+(?:not able|unable|not sure what you)\b|\bnot sure what you(?:'|\u2019)?d like\b/i;
+let kyroHeard = { key: "", text: "", at: 0, recovered: false };
+let kyroRefusalBuf = "";
+let kyroRefusalSeenAt = 0;
+let kyroToolCalledAt = 0;
+let kyroConfirmedAt = 0;
+let kyroVoiceCapture = null;
+function kyroWatchForRefusal(type, payload) {
+  const kind = String(type || "");
+  if (kind === "response.created") { kyroRefusalBuf = ""; kyroRefusalSeenAt = 0; return; }
+  if (/^response\.(?:output_)?audio_transcript\.delta$/.test(kind)) kyroRefusalBuf += String(payload?.delta || "");
+  else if (/^response\.(?:output_)?audio_transcript\.done$/.test(kind)) kyroRefusalBuf = String(payload?.transcript || kyroRefusalBuf);
+  else return;
+  if (!kyroRefusalSeenAt && KYRO_REFUSAL.test(kyroRefusalBuf.slice(0, 160))) { kyroRefusalSeenAt = Date.now(); kyroRecoverRefusal(); }
+}
+function kyroRecoverRefusal() {
+  if (!kyroRefusalSeenAt || kyroHeard.recovered || !kyroHeard.text) return false;
+  const now = Date.now();
+  if (now - kyroHeard.at > 20000 || now - kyroRefusalSeenAt > 20000) return false;
+  if (kyroToolCalledAt >= kyroHeard.at) return false; // the model did act on it: its answer stands
+  if (now < kyroPageSpeaksUntil || kyroActiveVoiceIntake) return false; // the page already has this turn
+  kyroHeard.recovered = true;
+  const said = kyroHeard.text;
+  kyroPageSpeaksUntil = now + 40000;
+  try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+  void (async () => {
+    let handled = false;
+    try { handled = await handleNexusUnifiedBrainRuntimeCommand(said, { source: "voice-recovery", kyroDirect: true }); } catch { handled = false; }
+    if (handled !== true) { kyroPageSpeaksUntil = 0; kyroSpeakPageLine("Sorry, I could not do that one. Could you say it another way?"); }
+  })();
+  return true;
+}
+
+// ---- The voice model's tools answer through the governed route a typed request takes ----
+// The voice tools (/api/voice/realtime/tool) are a second, weaker implementation of the same requests: "I want to look at my notes" came back "I'm not sure what you'd like me to do", "find jobs near me" came back "I can't
+// search live job listings", while the governed route that typing uses answers both. For the tools that keep, find and make the person's own things, the page runs the words through that route, draws what it draws, and gives
+// the model the answer to say.
+const KYRO_GOVERNED_VOICE_TOOLS = new Set(["nexus_everyday_records", "nexus_lists", "nexus_automation_reminder", "nexus_calendar", "nexus_health_preparation", "nexus_workforce_learning", "nexus_marketplace_logistics", "nexus_business_assistant", "nexus_agriculture", "nexus_document_export"]);
+async function kyroAnswerLikeTyped(command) {
+  const said = String(command || "").trim();
+  if (!said) return null;
+  kyroVoiceCapture = [];
+  let handled = false;
+  try { handled = await handleNexusUnifiedBrainRuntimeCommand(said, { source: "voice-tool", kyroDirect: true }); } catch { handled = false; }
+  const lines = (kyroVoiceCapture || []).map(line => kyroPlainText(line).replace(/\s+/g, " ").trim()).filter(line => line && !/^(?:one moment|okay|done|got it)[.!]?$/i.test(line));
+  kyroVoiceCapture = null;
+  if (handled !== true) return null;
+  const answer = lines.join(" ").slice(0, 900) || "It is on the screen now.";
+  return { ok: true, status: "completed", response: answer, executionVerified: true, blockedReason: null, shownOnScreen: true };
 }
 function speakKyroIntakeLine(text, options = {}) {
   const safeText = String(text || "").replace(/\s+/g, " ").trim().slice(0, 600);
@@ -51336,10 +51408,24 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
   }
   if (!kyroActiveVoiceIntake) {
     kyroPageSpeaksUntil = 0;
+    if (trimmed && source !== "tool-call") {
+      try {
+        const heardKey = trimmed.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+        if (heardKey && (heardKey !== kyroHeard.key || Date.now() - kyroHeard.at > 6000)) kyroHeard = { key: heardKey, text: trimmed, at: Date.now(), recovered: false };
+      } catch { /* noting what was heard never stops it being handled */ }
+    }
     // "Close it", "close the screen", "go back to the orb", "I'm done": typed, the page always did it; said aloud it did nothing, so the last list or map stayed in front of everything that came after it.
     if (trimmed && window.KyroDismissCommands?.parse?.(trimmed)) {
       try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
       if (handleKyroDismissCommand(trimmed, { source: "voice-transcript" })) return true;
+    }
+    // "Yes" or "no" to a question the page asked ("Should I go ahead?"): answered from what was heard, as typing it is, instead of leaving it to the model.
+    if (trimmed && typeof nexusPendingBehaviorConfirmation !== "undefined" && nexusPendingBehaviorConfirmation && detectNexusPendingConfirmationReply(trimmed)) {
+      try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+      kyroConfirmedAt = Date.now();
+      kyroPageSpeaksUntil = Date.now() + 40000;
+      void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "voice-confirmation", kyroDirect: true });
+      return true;
     }
     if (window.KyroIntakeForms?.isResumeBuildRequest?.(trimmed) && !KYRO_OPEN_RESUMES.test(trimmed)) { // ("open my resume" shows the saved ones: the page answers it just below)
       startKyroResumeIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
