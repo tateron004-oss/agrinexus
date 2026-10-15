@@ -52888,6 +52888,20 @@ function kyroRenderedAnswerLine(render) {
       if (said.length >= 20 && !/^Nexus completed the governed execution/i.test(said) && !/download/i.test(said) && !data.documentId && !data.fileUrl && !data.downloadUrl) return said;
     }
     if (kind === "task-list" && data.syncState) return sentence(String(data.note || "").replace(/\s+/g, " "));
+    // a summary of the person's readings to show a provider: in plain words, not a card of "Persisted: true" and "Condition Focus: cardiometabolic" rows
+    if (kind === "health-support" && typeof data.readingCount === "number" && "includeProviderReview" in data) {
+      if (!data.readingCount) return "You have no saved readings yet, so there is nothing to summarise. Say a reading, for example: my blood pressure is 120 over 80, and I will keep it. When you have some, ask me again and I will prepare a summary for your nurse or doctor.";
+      const list = value => [].concat(value || []).map(textOf).filter(Boolean);
+      const parts = [`Summary of your readings for your provider: ${data.readingCount} saved reading${data.readingCount === 1 ? "" : "s"}.`];
+      const table = sentence(list(data.readingTableSummary).join("; ").replace(/\s+/g, " "));
+      if (table) parts.push(table);
+      const patterns = list(data.notablePatternsForProviderReview);
+      if (patterns.length) parts.push(`Worth showing your provider: ${patterns.join("; ")}.`);
+      const asks = [...list(data.patientQuestions), ...list(data.discussionPrompts)].slice(0, 5);
+      if (asks.length) parts.push(`You could talk about: ${asks.join("; ")}.`);
+      parts.push(sentence(String(data.emergencySafetyMessage || "").replace(/\s+/g, " ")) || "This is not a diagnosis.");
+      return parts.join(" ");
+    }
     // a web answer, a lesson and a crop assessment: the text, with the sources it came from. (A lesson was "on your screen" in a window that had no size on the screen: nothing showed.)
     if (kind === "source-answer" || kind === "learning-plan" || kind === "assessment") {
       const answer = sentence(String(data.answer || data.lesson || data.assessment || data.summary || "").replace(/\s+/g, " "));

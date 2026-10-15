@@ -181,3 +181,13 @@ test("a live session whose connection has died is restarted by the page after tw
   hidden = false; sandbox.realtimeVoiceSession = null; sandbox.tick(); sandbox.tick(); assert.deepEqual(calls, [], "no session: nothing to restart");
   assert.match(app, /if \(typeof setInterval === "function"\) setInterval\(kyroRealtimeHealthTick, 10000\);/);
 });
+
+test("a summary of readings for a provider is said in plain words, with no 'Persisted: true' rows", () => {
+  const say = new vm.Script(sliceFn("function kyroRenderedAnswerLine(") + "\nkyroRenderedAnswerLine").runInNewContext({ String, Array });
+  const render = data => ({ presentation: { kind: "health-support" }, data: { locale: "en", persisted: true, includeProviderReview: true, conditionFocus: "cardiometabolic", ...data } });
+  const none = say(render({ readingCount: 0, missingData: ["No readings saved yet"], emergencySafetyMessage: "Seek emergency help now if severe symptoms are present." }));
+  assert.match(none, /You have no saved readings yet.*my blood pressure is 120 over 80.*nurse or doctor/); assert.doesNotMatch(none, /Persisted|cardiometabolic|Locale/);
+  const some = say(render({ readingCount: 3, readingTableSummary: "Average 128 over 82", notablePatternsForProviderReview: ["two readings above 140 over 90"], discussionPrompts: ["medication adherence discussion"], patientQuestions: [], emergencySafetyMessage: "Seek emergency help now if severe symptoms are present. Nexus does not dispatch." }));
+  assert.equal(some, "Summary of your readings for your provider: 3 saved readings. Average 128 over 82. Worth showing your provider: two readings above 140 over 90. You could talk about: medication adherence discussion. Seek emergency help now if severe symptoms are present. Nexus does not dispatch.");
+  assert.equal(say({ presentation: { kind: "health-support" }, data: { answer: "x" } }), "", "other health answers are drawn as before");
+});
