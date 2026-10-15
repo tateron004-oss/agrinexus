@@ -787,7 +787,7 @@
       bar.setAttribute("aria-label", s("region"));
       document.body.classList.toggle("kyro-mp-open", visible);
       title.textContent = snapshot.title || (snapshot.state === "resolving" ? "..." : "");
-      sub.textContent = [snapshot.artist, snapshot.provider].filter(Boolean).join(" Â· ");
+      sub.textContent = [snapshot.artist, snapshot.provider].filter(Boolean).join(" · ");
       badge.hidden = !(snapshot.live || snapshot.isPreview);
       badge.textContent = snapshot.live ? s("live") : s("preview");
       badge.dataset.kind = snapshot.live ? "live" : "preview";
@@ -813,7 +813,7 @@
       if (queued) { open.href = snapshot.handoff.url; open.textContent = s("openYoutube"); }
       stage.hidden = snapshot.state === "queued";
       extra.hidden = snapshot.state === "queued" || snapshot.state === "failed";
-      attribution.textContent = snapshot.attribution ? `${s("source")}: ${snapshot.attribution}${snapshot.license ? ` Â· ${s("license")}: ${snapshot.license}` : ""}` : "";
+      attribution.textContent = snapshot.attribution ? `${s("source")}: ${snapshot.attribution}${snapshot.license ? ` · ${s("license")}: ${snapshot.license}` : ""}` : "";
     }
     return { render, stage, element: bar, hide() { bar.hidden = true; document.body.classList.remove("kyro-mp-open"); stage.textContent = ""; } };
   }

@@ -30408,7 +30408,7 @@ async function runNexusPersistentOperationsCommand(command = "", options = {}) {
   // operations record, not a real résumé. Redirect a genuine résumé-build request to the Kyro voice
   // intake engine instead (it works equally well typed, since this routes through the same
   // applyKyroIntakeDecision as a spoken answer would).
-  if (!options.action && window.KyroIntakeForms?.isResumeBuildRequest?.(command)) {
+  if (!options.action && window.KyroIntakeForms?.isResumeBuildRequest?.(command) && !KYRO_OPEN_RESUMES.test(String(command || "").trim())) {
     startKyroResumeIntake({ seedUtterance: { id: "", text: command }, source: options.source || "typed" });
     return { kyroVoiceIntake: true };
   }
@@ -51310,7 +51310,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     kyroAnswerHeardTurn("intake-expired");
   }
   if (!kyroActiveVoiceIntake) {
-    if (window.KyroIntakeForms?.isResumeBuildRequest?.(trimmed)) {
+    if (window.KyroIntakeForms?.isResumeBuildRequest?.(trimmed) && !KYRO_OPEN_RESUMES.test(trimmed)) { // ("open my resume" shows the saved ones: the page answers it just below)
       startKyroResumeIntake({ seedUtterance: { id: utteranceId, text: trimmed }, source });
       return true;
     }
@@ -51556,7 +51556,7 @@ async function kyroAskAboutPicture(blob, command, filename) {
       body: JSON.stringify({ name: "nexus_file_document_analysis", correlationId: `look-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command, fileId: uploaded.fileId || uploaded.id || undefined, language: lang }, language: lang })
     }, 60000);
     const result = await response.json().catch(() => ({}));
-    const described = String(result?.response || "").trim();
+    const described = kyroPlainText(String(result?.response || "").trim());
     if (!response.ok || !described) { say(lang === "sw" ? "Siwezi kuchambua picha hiyo sasa." : "I can't look at that picture right now."); return false; }
     const answer = `${described}${kyroPictureClosing(command)}`;
     kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: answer });
@@ -52105,7 +52105,7 @@ function kyroShowGalleryScreen(drawn) {
         player.append(kyroMake("source", { src: String(item?.videoUrl || ""), type: String(item?.mimeType || "video/webm") }));
         figure.append(player);
       }
-      const caption = [item?.title, item?.channelTitle].filter(Boolean).join(" — ");
+      const caption = kyroDecodeText([item?.title, item?.channelTitle].filter(Boolean).join(" — "));
       if (caption) figure.append(kyroMake("figcaption", { style: "margin-top:6px;font-size:.95rem;color:#cbd5e1;overflow-wrap:anywhere" }, caption));
       grid.append(figure);
     }
@@ -52193,6 +52193,7 @@ const KYRO_APP_SW = Object.freeze({
   "Kenya shillings": "Shilingi za Kenya", "US dollars": "Dola za Marekani", "Ghana cedis": "Cedi za Ghana", "Rand": "Randi", "WhatsApp": "WhatsApp", "Naira": "Naira", "Birr": "Birr",
   "Please fill in: ": "Tafadhali jaza: ", "Close": "Funga", "Download": "Pakua", "Saved.": "Imehifadhiwa.",
   "Your sign-in has ended": "Umetolewa kwenye akaunti", "For your privacy you are signed out after a while. Please sign in again to keep going.": "Kwa faragha yako, unatolewa baada ya muda. Tafadhali ingia tena ili uendelee.", "Sign in again": "Ingia tena",
+  "Tap to open": "Gusa ili ufungue", "Build a new r\u00e9sum\u00e9": "Tengeneza wasifu mpya", "Open a r\u00e9sum\u00e9": "Fungua wasifu",
   "Edit the document": "Hariri waraka", "Save changes": "Hifadhi mabadiliko", "version": "toleo", "Open a document": "Fungua waraka", "Write something first.": "Andika kitu kwanza.", "Saving...": "Inahifadhi...", "That did not save. Please try again.": "Haikuhifadhiwa. Tafadhali jaribu tena."
 });
 function kyroT(text) {
@@ -52394,6 +52395,67 @@ async function kyroFillDocumentButtons(list) {
   } catch { /* the form is still there */ }
 }
 
+// ---- Small helpers for the screens ----
+// A video title comes from YouTube with its characters written as codes ("Beginner&#39;s Guide"): shown as they are, the person sees the code.
+function kyroDecodeText(value) {
+  const text = String(value ?? "");
+  if (!/&(?:#\d+|#x[0-9a-f]+|amp|lt|gt|quot|apos);/i.test(text)) return text;
+  try { const box = document.createElement("textarea"); box.innerHTML = text; return box.value; } catch { return text; }
+}
+// The AI model writes in markdown ("**Product**: Maize"); on a screen and read aloud the stars are noise.
+function kyroPlainText(value) {
+  return String(value ?? "").replace(/\*\*/g, "").replace(/^#{1,6}\s+/gm, "").replace(/`/g, "");
+}
+// Job and marketplace listings come as "Title - https://address": the screen reads them out, and each one is also a button to open it.
+function kyroAddListingLinks(drawn) {
+  try {
+    const screen = document.querySelector("[data-kyro-result]");
+    const listings = Array.isArray(drawn?.data?.listings) ? drawn.data.listings : [];
+    if (!screen || !listings.length) return false;
+    const rows = listings.map(item => {
+      const text = String((item && typeof item === "object" ? (item.title || item.text || item.name) : item) ?? "");
+      const url = String((item && typeof item === "object" && (item.url || item.link || item.href)) || (/https?:\/\/\S+/.exec(text) || [""])[0]).replace(/[.,;)]+$/, "");
+      const title = text.replace(/\s+[-\u2013\u2014]\s+https?:\/\/\S+$/i, "").trim();
+      return /^https?:\/\//i.test(url) && title ? { title, url } : null;
+    }).filter(Boolean).slice(0, 8);
+    if (!rows.length) return false;
+    const wrap = kyroMake("div", { "data-kyro-listing-links": "true", style: "display:flex;flex-direction:column;gap:8px;width:100%;max-width:34em;position:relative;z-index:1" });
+    wrap.append(kyroMake("h3", { style: "margin:0;font-size:1.1rem" }, kyroT("Tap to open")));
+    for (const row of rows) {
+      const link = kyroMake("a", { href: row.url, target: "_blank", rel: "noopener noreferrer", style: "text-align:left;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.08);color:#f1f5f9;font-size:1.05rem;text-decoration:none;overflow-wrap:anywhere" }, kyroDecodeText(row.title));
+      wrap.append(link);
+    }
+    screen.append(wrap);
+    return true;
+  } catch { return false; }
+}
+// "Open my resume": the résumés as buttons to tap (each opens on the screen with its Download button), and a button to build a new one.
+async function kyroAddResumeButtons() {
+  try {
+    const screen = document.querySelector("[data-kyro-result]");
+    if (!screen) return false;
+    const wrap = kyroMake("div", { "data-kyro-resume-list": "true", style: "display:flex;flex-direction:column;gap:8px;width:100%;max-width:34em;position:relative;z-index:1" });
+    const build = kyroMake("button", { type: "button", "data-kyro-build-resume": "true", style: KYRO_BUTTON_STYLE + ";align-self:flex-start" }, kyroT("Build a new résumé"));
+    build.addEventListener("click", () => {
+      document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+      routeKyroVoiceIntakeTranscript({ transcript: "Build my resume", utteranceId: "tap-" + Date.now(), source: "tap" });
+    });
+    wrap.append(build);
+    screen.append(wrap);
+    const response = await fetch("/api/nexus/runtime/documents?limit=30", { credentials: "same-origin" });
+    if (!response.ok) return true;
+    const resumes = ((await response.json())?.documents || []).filter(item => item && item.documentId && /r[eé]sum[eé]|\bcv\b/i.test(String(item.title || ""))).slice(0, 12);
+    if (!resumes.length) return true;
+    wrap.append(kyroMake("h3", { style: "margin:8px 0 0;font-size:1.1rem" }, kyroT("Open a résumé")));
+    for (const item of resumes) {
+      const button = kyroMake("button", { type: "button", "data-kyro-open-document": item.documentId, style: "text-align:left;padding:12px 14px;border:0;border-radius:12px;background:rgba(255,255,255,.08);color:#f1f5f9;font:inherit;font-size:1.05rem;cursor:pointer" }, String(item.title || "Résumé"));
+      button.addEventListener("click", () => { void kyroOpenDocumentById(item.documentId, item.title); });
+      wrap.append(button);
+    }
+    return true;
+  } catch { return false; }
+}
+
 // ---- When the sign-in has ended ----
 // A sign-in lasts twelve hours. When it ended the page said nothing: the request failed in silence, the voice carried on as a limited guest, and only the screens that need no sign-in still worked ("only the information worked"). Now the
 // first request the server refuses for want of a sign-in puts a screen up that says so and offers to sign in again.
@@ -52430,6 +52492,7 @@ function kyroShowResultScreen(toolName, command, result) {
     // a greeting, a thank-you or a "yes" is spoken back, not drawn across the whole screen
     if (KYRO_SMALL_TALK.test(String(command || "").trim())) return false;
     const lang = (() => { try { return languageCode() === "sw" ? "sw" : "en"; } catch { return "en"; } })();
+    if (result && typeof result.response === "string") result = { ...result, response: kyroPlainText(result.response) };
     const model = window.KyroResultScreen.buildModel(result, { command, lang });
     if (!model) return false;
     window.KyroResultScreen.show(document, model, { onClose: () => { void kyroReturnToOrb({ reason: "done", source: "result-screen" }); } }, lang);
@@ -52603,6 +52666,12 @@ function kyroRenderedAnswerLine(render) {
       const state = data.approvalState ? ` Status: ${String(data.approvalState).replace(/_/g, " ")}.` : "";
       return sentence(data.note.replace(/\s+/g, " ")) + state;
     }
+    // a shipment asked about by its two ends: a road-route estimate (nothing on the screen but "Done" before this)
+    if (kind === "operation" && (render?.application === "logistics" || data.trackingMethod === "route_based_estimate") && Number(data.distanceMeters) > 0 && data.origin && data.destination) {
+      const km = Math.round(Number(data.distanceMeters) / 1000); const minutes = Math.round(Number(data.durationSeconds || 0) / 60);
+      const time = minutes >= 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes} min`;
+      return `From ${data.origin} to ${data.destination}: about ${km} km, around ${time} by road. This is a road-route estimate, not live tracking.`;
+    }
   } catch { /* the card is drawn as before */ }
   return "";
 }
@@ -52652,7 +52721,11 @@ function kyroShowTypedResult(result, text, message) {
         }
       }
       const saidLine = kyroRenderedAnswerLine(drawn);
-      if (saidLine) return kyroShowResultScreen("typed", text, { ok: true, status: "completed", response: saidLine }); // a checklist, a web search answer or a list of jobs is an answer, not a card of raw fields
+      if (saidLine) {
+        const shownLine = kyroShowResultScreen("typed", text, { ok: true, status: "completed", response: saidLine });
+        if (shownLine && typeof kyroAddListingLinks === "function") kyroAddListingLinks(drawn);
+        return shownLine;
+      } // a checklist, a web search answer or a list of jobs is an answer, not a card of raw fields
       if (drawn.presentation?.kind !== "location-list" || !cards.length || KYRO_FORM_FLOW.test(String(text || ""))) return false;
       const pharmacy = cards.some(card => /pharmac/i.test(String(card?.category || ""))) || result.application === "pharmacy";
       answer = { response: message, [pharmacy ? "pharmacyLocations" : "mobileClinics"]: cards, locationNote: drawn.data?.locationNote };
@@ -52667,6 +52740,7 @@ function kyroShowTypedResult(result, text, message) {
     } else return false;
     const shown = kyroShowResultScreen("typed", text, { ok: true, status: "completed", ...answer });
     if (shown && wantsButtons) kyroAddConfirmButtons();
+    if (shown && typeof kyroAddResumeButtons === "function" && /^show my r[e\u00e9]sum[e\u00e9]s?$/i.test(String(text || "").trim())) void kyroAddResumeButtons();
     // a list of notes, reminders, documents or checklists has a form under it to write in
     const writable = shown ? kyroWritableListKind(text) : "";
     if (writable) kyroAddComposer(writable);
