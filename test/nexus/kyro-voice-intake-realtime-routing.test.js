@@ -242,7 +242,7 @@ test("callNexusOpenAiRealtimeTool starts the interview itself when it comes firs
   const run = async started => {
     const routed = []; let fetchCalls = 0;
     const sandbox = {
-      kyroDismissStaleWorkspace: () => {}, kyroActiveVoiceIntake: null, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.",
+      KYRO_GOVERNED_VOICE_TOOLS: new Set(), nexusPendingBehaviorConfirmation: null, kyroDismissStaleWorkspace: () => {}, kyroActiveVoiceIntake: null, kyroVoiceIntakeOwnsTurn: () => true, kyroIntakeBusyLine: () => "Kyro is already asking the person about what they want to sell, one question at a time. Say nothing now.",
       routeKyroVoiceIntakeTranscript: arg => { routed.push(arg); return started; }, kyroMediaCommand: async () => false, kyroVisualRequestKind: () => null, kyroShowResultScreen: () => false,
       kyroDeviceTimeZone: () => "UTC", languageCode: () => "en", nexusGenesisVoiceDebugLog: () => {}, window: { setTimeout, KyroMediaCommands: { parse: () => null } },
       kyroFetchWithTimeout: async () => { fetchCalls += 1; throw new Error("stop here: the server was asked"); }, kyroToolFailureResult: () => ({ ok: false, status: "failed", response: "stopped" })
