@@ -47,7 +47,7 @@ function readRequest(text, today) {
   if (listRequest) return listRequest;
 
   // notes
-  if ((m = /^(?:please )?(?:take|make|save|add|leave) a note(?: to self)?(?: (?:that|which|it) says| saying| that| about| of)?[:,]?\s+(.+)$/i.exec(t)) || (m = /^(?:please )?note(?: down)?(?: that)?[:,]\s*(.+)$/i.exec(t)) ||
+  if ((m = /^(?:please )?(?:take|make|save|add|leave|write|create|record|type)(?: me)? a note(?: to self)?(?: (?:that|which|it) says| saying| that| about| of)?[:,]?\s+(.+)$/i.exec(t)) || (m = /^(?:please )?note(?: down)?(?: that)?[:,]\s*(.+)$/i.exec(t)) ||
       (m = /^(?:please )?(?:note down|jot down|note that)\s+(.+)$/i.exec(t)) ||
       (m = /^(?:please )?(?:write|put|jot)(?: this| that| it)? down(?: that)?[:,]?\s+(.+)$/i.exec(t))) return { action: "note-add", text: tidyTitle(m[1]) };
   // "Remember that the pump needs a new seal": kept as a note (a plain statement about the person, like "I grow maize", is saved as a fact before this is reached).

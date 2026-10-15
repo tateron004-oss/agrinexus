@@ -41,7 +41,7 @@ test("the model is told truthfully: pictures on the screen, or nothing showing; 
   const sent = [];
   const shown = load({ handleNexusUnifiedBrainRuntimeCommand: async (text, options) => { sent.push([text, options.source]); return true; }, document: { querySelectorAll: selector => (/img\[data-nexus-authoritative-image\]/.test(selector) ? [1, 2, 3, 4, 5] : []) } });
   const ok = await shown.show("Find a picture of a maize armyworm", "images");
-  assert.deepEqual(sent, [["Find a picture of a maize armyworm", "openai-realtime-tool"]], "sent down the typed path");
+  assert.deepEqual(sent, [["Show me pictures of a maize armyworm", "openai-realtime-tool"]], "sent down the typed path, as its subject (kyroCanonicalVisualRequest)");
   assert.equal(ok.ok, true); assert.equal(ok.executionVerified, true); assert.equal(ok.clientAction.type, "show-visual-results");
   assert.match(ok.response, /I have put 5 pictures on the screen/); assert.match(ok.response, /Do not read out any web addresses/); assert.match(ok.response, /cannot see them/);
 
