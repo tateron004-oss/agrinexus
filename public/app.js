@@ -1938,6 +1938,14 @@ function renderNexusMentalHealthSupportCard(packet = {}) {
   const escalationLine = escalation.jurisdictionId
     ? `Jurisdiction escalation: ${escalation.jurisdictionId}${escalationNumbers.length ? ` -- contact ${escalationDetail.resourceTypes.join(", ")} (${escalationNumbers.join(" or ")})` : ""}`
     : "Jurisdiction escalation: not active";
+  // Where the helpline numbers come from and when they were last looked at (they are not guessed; for a country with no checked list the card says so)
+  const sourceLine = (() => {
+    try {
+      const lines = window.KyroCrisisLines; const place = escalation.jurisdictionId === "kenya" ? "Kenya" : escalation.jurisdictionId === "nigeria" ? "Nigeria" : "";
+      if (lines?.SOURCES?.[place]) return `Helpline sources, checked ${lines.CHECKED_ON}: ${lines.SOURCES[place].map(source => source.name).join("; ")}`;
+    } catch { /* the card still shows the numbers */ }
+    return "Helpline sources: no checked list for this place yet. Please confirm any number with your local emergency services.";
+  })();
   const safetyPlan = packet.safetyPlan || {};
   // Previously this only reported a count ("Safety plan steps: 4") and the
   // jurisdiction id alone ("us") -- real crisis numbers/steps existed in the
@@ -1963,6 +1971,7 @@ function renderNexusMentalHealthSupportCard(packet = {}) {
       `Professional review required: ${classification.professionalReviewRequired ? "yes" : "no"}`,
       `Screening governance: ${screening.instrumentId || "not requested"}`,
       escalationLine,
+      sourceLine,
       ...safetyStepBullets,
       `No diagnosis: ${safety.noDiagnosis ? "yes" : "required"}`,
       `No provider contacted: ${safety.noProviderContacted ? "yes" : "required"}`,
@@ -52302,7 +52311,11 @@ const KYRO_APP_SCREENS = Object.freeze({
     { kind: "form", label: "Record blood pressure", button: "Record", fields: [{ name: "up", label: "Top number (systolic)", type: "number" }, { name: "down", label: "Bottom number (diastolic)", type: "number" }], command: f => "My blood pressure is " + f.up + " over " + f.down },
     { kind: "form", label: "Find a pharmacy", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a pharmacy near " + (f.place || "me") },
     { kind: "form", label: "Find a clinic", button: "Find", fields: [{ name: "place", label: "Town (leave empty for near me)", optional: true }], command: f => "Find a clinic near " + (f.place || "me") },
-    { kind: "button", label: "Show my readings", command: "Show my blood pressure readings" }
+    { kind: "button", label: "Show my readings", command: "Show my blood pressure readings" },
+    { kind: "form", label: "Record blood sugar", button: "Record", fields: [{ name: "sugar", label: "Blood sugar number", type: "number" }, { name: "unit", label: "Unit", type: "select", options: [["mmol/L", "mmol/L"], ["mg/dL", "mg/dL"]] }], command: f => "My blood sugar is " + f.sugar + " " + f.unit },
+    { kind: "form", label: "Remind me to take a medicine", button: "Remind me", fields: [{ name: "medicine", label: "Name of the medicine" }, { name: "time", label: "At what time? For example: 8 am" }], command: f => "Remind me to take " + f.medicine + " at " + f.time + " every day" },
+    { kind: "button", label: "I am feeling low or worried", command: "I feel low and worried today" },
+    { kind: "button", label: "Women's health information", command: "Tell me about women's health" }
   ] },
   agriculture: { title: "Crop and farm help", intro: "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.", actions: [
     { kind: "form", label: "Ask about a crop or a pest", button: "Ask", fields: [{ name: "question", label: "For example: why are my maize leaves turning yellow?", type: "textarea" }], command: f => f.question },
@@ -52346,7 +52359,7 @@ const KYRO_APP_SCREENS = Object.freeze({
 const KYRO_APP_SW = Object.freeze({
   "Health": "Afya", "I record what you tell me and help you get ready for a visit. I do not diagnose or give treatment advice.": "Ninarekodi unachoniambia na kukusaidia kujiandaa kwa ziara ya daktari. Sitambui magonjwa wala kutoa matibabu.",
   "Start a telehealth request": "Anza ombi la huduma ya afya kwa video", "Record blood pressure": "Rekodi shinikizo la damu", "Top number (systolic)": "Namba ya juu (systolic)", "Bottom number (diastolic)": "Namba ya chini (diastolic)", "Record": "Rekodi",
-  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu",
+  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu", "Record blood sugar": "Rekodi sukari ya damu", "Blood sugar number": "Namba ya sukari ya damu", "Unit": "Kipimo", "mmol/L": "mmol/L", "mg/dL": "mg/dL", "Remind me to take a medicine": "Nikumbushe kunywa dawa", "Remind me": "Nikumbushe", "Name of the medicine": "Jina la dawa", "At what time? For example: 8 am": "Saa ngapi? Kwa mfano: saa mbili asubuhi", "I am feeling low or worried": "Nina huzuni au wasiwasi", "Women's health information": "Maelezo kuhusu afya ya wanawake",
   "Crop and farm help": "Msaada wa mazao na shamba", "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.": "Uliza kuhusu zao, mdudu au hali ya hewa shambani, na uweke kumbukumbu ya yanayotokea.",
   "Ask about a crop or a pest": "Uliza kuhusu zao au mdudu", "For example: why are my maize leaves turning yellow?": "Kwa mfano: kwa nini majani ya mahindi yangu yanageuka manjano?", "Ask": "Uliza",
   "Write in my farm log": "Andika kwenye kumbukumbu ya shamba", "For example: 12 mm of rain": "Kwa mfano: mvua ya mm 12", "Save": "Hifadhi", "Show my farm log": "Onyesha kumbukumbu ya shamba langu",

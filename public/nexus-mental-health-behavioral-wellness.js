@@ -219,10 +219,18 @@
     /\b(overdose|chest pain|can't breathe|cannot breathe|medical emergency)\b/i
   ];
 
+  // Somebody else in danger ("my baby is not breathing", "she is unconscious", "he is having a seizure", "the child swallowed poison"): found by trying the words, this handler answered "my baby is not breathing" with a
+  // one-minute grounding exercise, because the word "breathing" only meant "calm down". These are NOT taken here: the server reads them (nexus/companion/safety.js), names the person's own emergency number, offers to
+  // alert the circle and gives the child, baby, poison and pregnancy guidance. This handler stands aside for them, unless the words are also about hurting oneself or being hurt.
+  const DANGER_SIGN_PATTERNS = [
+    /\b(?:not|isn't|is not|stopped|stops|stop|won't|barely|no longer)\s+(?:be\s+)?breathing\b|\bbreathing\s+(?:has\s+)?stopped\b|\bstruggling to breathe\b|\bgasping\b|\bturning blue\b/i,
+    /\b(?:unconscious|unresponsive|passed out|collapsed|not responding|won't wake up|can't wake|cannot wake|seizure|convulsing|choking|no pulse|heart attack|having a stroke|snake ?bite|swallowed (?:poison|bleach|kerosene|paraffin)|poisoned|bleeding (?:heavily|badly|a lot)|won't stop bleeding|severe bleeding)\b/i
+  ];
+
   const MENTAL_HEALTH_PATTERNS = [
-    /\b(overwhelmed|need to talk|not feel like myself|anxious|anxiety|panic|stressed|stress|burned out|burnt out)\b/i,
+    /\b(overwhelmed|need to talk|not feel like myself|anxious|anxiety|panic|stressed|stress(?!\s+(?:fractures?|tests?|echo))|burned out|burnt out)\b/i,
     /\b(depressed|low mood|sad|hopeless|alone|lonely|grief|lost someone|bereavement|cannot sleep|insomnia)\b/i,
-    /\b(coping|cope|calm down|grounding|breathing|counseling|counselling|therapist|therapy|psychiatrist|psychologist|social worker|provider)\b/i,
+    /\b(coping|cope|calm down|grounding|breathing (?:exercises?|techniques?)|counseling|counselling|therapist|therapy|psychiatrist|psychologist|social worker|(?:mental health|behaviou?ral health|counsell?ing|therapy) providers?)\b/i,
     /\b(drinking more|substance use|addiction|withdrawal|caregiver|worried about my child|mother seems depressed)\b/i,
     /\b(phq|gad|screening|well[-\s]?being|wellbeing|safety plan|mental health|behavioral health|behavioural health)\b/i,
     /\b(do not remember this|don't remember this|show me what you remember|delete.*mental health|stop.*check[-\s]?ins)\b/i
@@ -235,10 +243,9 @@
   function shouldHandle(input = "") {
     const text = normalizeText(input);
     if (!text) return false;
-    return CRISIS_PATTERNS.some(pattern => pattern.test(text))
-      || CRISIS_PATTERNS_SW.some(pattern => pattern.test(text))
-      || sharedCrisis(input) || sharedAbuse(input)
-      || SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text))
+    const aboutSelfOrAbuse = CRISIS_PATTERNS.some(pattern => pattern.test(text)) || CRISIS_PATTERNS_SW.some(pattern => pattern.test(text)) || sharedCrisis(input) || sharedAbuse(input) || SAFEGUARDING_PATTERNS.some(pattern => pattern.test(text));
+    if (!aboutSelfOrAbuse && !MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text)) && DANGER_SIGN_PATTERNS.some(pattern => pattern.test(text))) return false;
+    return aboutSelfOrAbuse
       || MEDICAL_EMERGENCY_PATTERNS.some(pattern => pattern.test(text))
       || HOPELESSNESS_PATTERNS.some(pattern => pattern.test(text)) || hopelessWords(text)
       || MENTAL_HEALTH_PATTERNS.some(pattern => pattern.test(text));
@@ -300,9 +307,15 @@
   function inferJurisdiction(input = "", context = {}) {
     const explicit = normalizeText(context.jurisdiction || context.country || "");
     const text = `${normalizeText(input)} ${explicit}`.trim();
-    if (/\b(united states|usa|u\.s\.|us|california|stockton|new york|texas)\b/.test(text)) return "us";
+    // (the account's country comes first; "help us" is not the United States, so a bare "us" only counts as the country when it is the country named)
+    if (explicit) {
+      if (/^(?:us|usa|u\.s\.|u\.s\.a\.|united states)$/.test(explicit)) return "us";
+      if (/\b(kenya)\b/.test(explicit)) return "kenya";
+      if (/\b(nigeria)\b/.test(explicit)) return "nigeria";
+    }
     if (/\b(kenya|nairobi|mombasa|kisumu)\b/.test(text)) return "kenya";
     if (/\b(nigeria|lagos|abuja|kano)\b/.test(text)) return "nigeria";
+    if (/\b(united states|usa|u\.s\.|u\.s\.a\.|california|stockton|new york|texas)\b|\b(?:in|from|across) the us\b/.test(text)) return "us";
     return "generic";
   }
 
@@ -490,10 +503,10 @@
       return "I'm really glad you told me that. Feeling like there's no point, or like giving up, is a serious sign worth taking seriously -- you don't have to carry it alone. If you're ever thinking about hurting yourself, please reach out to a crisis line or trusted person right away. I can stay with you in support mode and help you think through next steps, but I cannot replace a real person or professional.";
     }
     if (classification.state === "location_required") {
-      return "I can help look for verified behavioral-health or social-care resources, but I need a city, region, or approved location text first. I will not request browser location permission or contact a provider automatically.";
+      return "I cannot search for counsellors or therapists yet, and I will not give you a list I cannot check. You can ask at your nearest clinic or hospital about mental-health care, and I can look up a clinic near you if you tell me the town. If you want to talk to someone right now, tell me and I will give you a helpline. I will not contact anyone for you.";
     }
     if (classification.state === "consent_blocked" && classification.action === "optional_screening") {
-      return "I can offer an optional non-diagnostic screening only if you consent. Screening is not a diagnosis, and concerning answers may need professional review.";
+      return "I cannot run a screening questionnaire yet. If you are feeling low or worried, I can listen, and I can help you prepare what to say to a nurse or doctor. A questionnaire is not a diagnosis, and only a professional can tell you what is wrong.";
     }
     if (classification.action === "privacy_control") {
       return "Mental-health information is sensitive. I can keep this session-only, show what is remembered, prepare an export, or help delete approved mental-health records where the app supports deletion. I will not share this with another module or provider without explicit consent.";
