@@ -7,7 +7,8 @@
 
 const watchdog = require("../public/kyro-stall-watchdog.js");
 
-const KINDS = Object.freeze(["no-response", "tool-stuck", "auto-response-stuck", "mic-lost", "disconnected", "restart-failed"]);
+// ("slow-start": the voice took over eight seconds to connect; "start-failed": it did not connect at all. waitedMs is how long, lastActivity the short reason.)
+const KINDS = Object.freeze(["no-response", "tool-stuck", "auto-response-stuck", "mic-lost", "disconnected", "restart-failed", "slow-start", "start-failed"]);
 const PHASES = Object.freeze([...watchdog.PHASES]);
 const STORE_CAP = 300;
 

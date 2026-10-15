@@ -52934,6 +52934,8 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       controller.close?.("stale-openai-agents-session");
       return false;
     }
+    // How long the voice took to connect, recorded when it was slow (the owner reads these at /api/admin/voice/stall-summary): "hello" once took ninety seconds and nothing said where the time went.
+    try { const startMs = Date.now() - Number(realtimeVoiceSession?.startedAt || Date.now()); if (startMs > 8000) reportKyroVoiceStall("slow-start", { waitedMs: startMs, lastActivity: "connected" }); } catch { /* a report never breaks the voice */ }
     recordNexusAudioPipelineEvent("openai-realtime-connected", {
       model: sessionPayload.model || status.model || "",
       voice: sessionPayload.voice || status.voice || "",
@@ -53046,6 +53048,8 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       });
       return false;
     }
+    // (a start that did not connect at all is recorded with how long it took and a short reason)
+    try { reportKyroVoiceStall("start-failed", { waitedMs: Date.now() - Number(realtimeVoiceSession?.startedAt || Date.now()), lastActivity: String(message || "").slice(0, 60) }); } catch { /* a report never breaks the voice */ }
     realtimeVoiceSession = null;
     realtimeVoiceStarting = false;
     voiceStopRequested = priorVoiceStopRequested;
