@@ -894,11 +894,13 @@
     const pilotDashboard = pilotEvidenceRequest(transcript)
       ? openPilotEvidenceDashboard({ source: "voice-final-transcript" })
       : null;
-    const weatherCardRequested = weatherRequest(transcript);
+    // (when the page owns weather, music and the visual cards itself -- app.js sets KYRO_PAGE_OWNS_VISUALS -- these older cards are not opened as well: they covered and doubled what the page drew)
+    const pageOwnsVisuals = global.KYRO_PAGE_OWNS_VISUALS === true;
+    const weatherCardRequested = !pageOwnsVisuals && weatherRequest(transcript);
     if (weatherCardRequested) void openLiveWeatherCard(transcript, { source: "voice-final-transcript" });
-    const musicPlayerRequested = musicRequest(transcript);
+    const musicPlayerRequested = !pageOwnsVisuals && musicRequest(transcript);
     if (musicPlayerRequested) void openLiveMusicPlayer(transcript, { source: "voice-final-transcript" });
-    const visualIntent = visualExperienceIntent(transcript);
+    const visualIntent = pageOwnsVisuals ? "" : visualExperienceIntent(transcript);
     if (visualIntent) void openVisualExperience(transcript, { source: "voice-final-transcript" });
     const action = typeof actionBuilder === "function" ? actionBuilder(transcript) : null;
     if (!action && !providerCard?.opened && !pilotDashboard?.opened && !weatherCardRequested && !musicPlayerRequested && !visualIntent) return { handled: false };
