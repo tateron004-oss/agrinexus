@@ -592,3 +592,17 @@ test.describe("server (real)", () => {
     assert.equal(last.headers.get("retry-after"), "30");
   });
 });
+
+// When "hello" took ninety seconds nothing said where the time went: a voice start that took over eight seconds, or did not connect, is recorded with how long it took and a short reason.
+test("a slow or failed voice start is a kind of report the server keeps, and the page sends one", () => {
+  const stall = require("../../server/voice-stall-reports.js");
+  assert.equal(stall.sanitiseStallReport({ kind: "slow-start", waitedMs: 42000, lastActivity: "connected" }).kind, "slow-start");
+  const failed = stall.sanitiseStallReport({ kind: "start-failed", waitedMs: 25000, lastActivity: "The voice session did not answer in time.", secret: "must not be kept" });
+  assert.equal(failed.kind, "start-failed"); assert.equal(failed.waitedMs, 25000); assert.equal(failed.lastActivity, "The voice session did not answer in time."); assert.equal(failed.secret, undefined);
+  assert.equal(stall.sanitiseStallReport({ kind: "anything-else" }).kind, "unknown");
+  const summary = stall.summariseStallReports([stall.sanitiseStallReport({ kind: "slow-start", waitedMs: 42000 }), stall.sanitiseStallReport({ kind: "start-failed", waitedMs: 25000 })]);
+  assert.equal(summary.total, 2);
+  assert.match(JSON.stringify(summary.byKind), /slow-start/); assert.match(JSON.stringify(summary.byKind), /start-failed/);
+  assert.match(appSource, /if \(startMs > 8000\) reportKyroVoiceStall\("slow-start", \{ waitedMs: startMs, lastActivity: "connected" \}\)/);
+  assert.match(appSource, /reportKyroVoiceStall\("start-failed", \{ waitedMs: Date\.now\(\) - Number\(realtimeVoiceSession\?\.startedAt \|\| Date\.now\(\)\), lastActivity: String\(message \|\| ""\)\.slice\(0, 60\) \}\)/);
+});

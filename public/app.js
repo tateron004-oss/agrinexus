@@ -9544,6 +9544,7 @@ async function request(path, options = {}) {
   if (!res.ok) {
     const failure = new Error(json.error || "Request failed");
     failure.status = res.status; failure.code = json.code || "";
+    if (res.status === 401 && typeof kyroNoteSessionEnded === "function") kyroNoteSessionEnded(path);
     throw failure;
   }
   data = json.user ? json : data;
@@ -52191,6 +52192,7 @@ const KYRO_APP_SW = Object.freeze({
   "Look at my records": "Angalia rekodi zangu", "Clients": "Wateja", "Donors": "Wafadhili", "Grants due": "Ruzuku zinazokaribia", "Invoices": "Ankara", "Summary": "Muhtasari", "Follow-ups": "Ufuatiliaji",
   "Kenya shillings": "Shilingi za Kenya", "US dollars": "Dola za Marekani", "Ghana cedis": "Cedi za Ghana", "Rand": "Randi", "WhatsApp": "WhatsApp", "Naira": "Naira", "Birr": "Birr",
   "Please fill in: ": "Tafadhali jaza: ", "Close": "Funga", "Download": "Pakua", "Saved.": "Imehifadhiwa.",
+  "Your sign-in has ended": "Umetolewa kwenye akaunti", "For your privacy you are signed out after a while. Please sign in again to keep going.": "Kwa faragha yako, unatolewa baada ya muda. Tafadhali ingia tena ili uendelee.", "Sign in again": "Ingia tena",
   "Edit the document": "Hariri waraka", "Save changes": "Hifadhi mabadiliko", "version": "toleo", "Open a document": "Fungua waraka", "Write something first.": "Andika kitu kwanza.", "Saving...": "Inahifadhi...", "That did not save. Please try again.": "Haikuhifadhiwa. Tafadhali jaribu tena."
 });
 function kyroT(text) {
@@ -52392,6 +52394,33 @@ async function kyroFillDocumentButtons(list) {
   } catch { /* the form is still there */ }
 }
 
+// ---- When the sign-in has ended ----
+// A sign-in lasts twelve hours. When it ended the page said nothing: the request failed in silence, the voice carried on as a limited guest, and only the screens that need no sign-in still worked ("only the information worked"). Now the
+// first request the server refuses for want of a sign-in puts a screen up that says so and offers to sign in again.
+function kyroShowSessionEndedScreen() {
+  try {
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "signin", "data-kyro-keep": "true", role: "alertdialog", "aria-label": kyroT("Your sign-in has ended"),
+      style: "position:fixed;inset:0;z-index:2147482600;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:16px;align-items:flex-start;justify-content:center" });
+    const again = kyroMake("button", { type: "button", "data-kyro-signin-again": "true", style: KYRO_BUTTON_STYLE }, kyroT("Sign in again"));
+    again.addEventListener("click", () => { again.disabled = true; location.reload(); });
+    screen.append(kyroMake("h2", { style: "margin:0;font-size:1.6rem" }, kyroT("Your sign-in has ended")),
+      kyroMake("p", { style: "margin:0;color:#cbd5e1;max-width:30em" }, kyroT("For your privacy you are signed out after a while. Please sign in again to keep going.")), again);
+    document.body.append(screen);
+    return true;
+  } catch { return false; }
+}
+// Called when the server refuses a request for want of a sign-in. Only a person who was signed in is told (a wrong password at the sign-in page is not a sign-in that ended).
+function kyroNoteSessionEnded(path) {
+  try {
+    if (/^\/api\/(?:login|logout|register|auth\/|guest)/.test(String(path || ""))) return false;
+    const view = document.getElementById("appView");
+    const signedIn = Boolean(data && data.user) && Boolean(view) && getComputedStyle(view).display !== "none";
+    if (!signedIn) return false;
+    if (document.querySelector('[data-kyro-result="signin"]')) return true;
+    return kyroShowSessionEndedScreen();
+  } catch { return false; }
+}
 function kyroShowResultScreen(toolName, command, result) {
   try {
     if (!kyroResultScreenEligible(toolName, result)) return false;
@@ -52934,6 +52963,8 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       controller.close?.("stale-openai-agents-session");
       return false;
     }
+    // How long the voice took to connect, recorded when it was slow (the owner reads these at /api/admin/voice/stall-summary): "hello" once took ninety seconds and nothing said where the time went.
+    try { const startMs = Date.now() - Number(realtimeVoiceSession?.startedAt || Date.now()); if (startMs > 8000) reportKyroVoiceStall("slow-start", { waitedMs: startMs, lastActivity: "connected" }); } catch { /* a report never breaks the voice */ }
     recordNexusAudioPipelineEvent("openai-realtime-connected", {
       model: sessionPayload.model || status.model || "",
       voice: sessionPayload.voice || status.voice || "",
@@ -53046,6 +53077,8 @@ async function startOpenAiAgentsRealtimeVoiceSession(status = {}, options = {}) 
       });
       return false;
     }
+    // (a start that did not connect at all is recorded with how long it took and a short reason)
+    try { reportKyroVoiceStall("start-failed", { waitedMs: Date.now() - Number(realtimeVoiceSession?.startedAt || Date.now()), lastActivity: String(message || "").slice(0, 60) }); } catch { /* a report never breaks the voice */ }
     realtimeVoiceSession = null;
     realtimeVoiceStarting = false;
     voiceStopRequested = priorVoiceStopRequested;

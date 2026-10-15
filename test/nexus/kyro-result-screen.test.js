@@ -680,3 +680,41 @@ test("a saved document opens with its own words in a box to change, Save changes
   assert.equal(page.select("h2")[0].textContent, "Field Notes");
   assert.equal(page.select("[role=\"status\"]")[0].textContent, "", "an opened document does not say Saved.");
 });
+
+// Found by the Standard User test: a sign-in lasts twelve hours, and when it ended the page said nothing. Requests failed in silence, the voice carried on as a limited guest, and only the screens that need no sign-in still worked.
+test("when the server refuses a request for want of a sign-in, a person who was signed in is told and offered a way back; a wrong password at the sign-in page is not that", async () => {
+  const page = fakePage(app, ["const KYRO_APP_SW", "function kyroT(", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroShowSessionEndedScreen(", "function kyroNoteSessionEnded("]);
+  const view = { tag: "appView", attrs: { id: "appView" }, children: [], display: "block" }; const reloads = [];
+  Object.assign(page.sandbox, { data: { user: { id: "u1" } }, location: { reload: () => reloads.push("reload") }, getComputedStyle: el => ({ display: el.display }) });
+  page.sandbox.document.getElementById = id => (id === "appView" ? view : null);
+  require("node:vm").runInContext("this.note = kyroNoteSessionEnded; this.show = kyroShowSessionEndedScreen;", page.sandbox);
+  assert.equal(page.sandbox.note("/api/nexus/runtime/behavior/turn"), true);
+  const screen = page.select("[data-kyro-result]")[0];
+  assert.equal(screen.attrs["data-kyro-result"], "signin"); assert.equal(screen.attrs.role, "alertdialog");
+  const texts = screen.find(() => true).map(node => node.textContent);
+  assert.ok(texts.includes("Your sign-in has ended")); assert.ok(texts.includes("For your privacy you are signed out after a while. Please sign in again to keep going.")); assert.ok(texts.includes("Sign in again"));
+  assert.equal(page.sandbox.note("/api/anything"), true); assert.equal(page.select("[data-kyro-result]").length, 1, "only one screen, however many requests fail");
+  page.select("[data-kyro-signin-again]")[0].click(); assert.deepEqual(reloads, ["reload"]);
+  page.select("[data-kyro-result]")[0].remove();
+  for (const path of ["/api/login", "/api/logout", "/api/register", "/api/auth/guest-session", "/api/guest"]) assert.equal(page.sandbox.note(path), false, path);
+  view.display = "none"; assert.equal(page.sandbox.note("/api/user/language"), false, "the sign-in page is showing: nobody was signed in");
+  view.display = "block"; page.sandbox.data = {}; assert.equal(page.sandbox.note("/api/user/language"), false, "no signed-in person");
+  assert.equal(page.select("[data-kyro-result]").length, 0);
+  page.sandbox.data = { user: { id: "u1" } }; page.sandbox.languageCode = () => "sw"; page.sandbox.show();
+  assert.ok(page.select("[data-kyro-result]")[0].find(() => true).map(node => node.textContent).includes("Umetolewa kwenye akaunti"));
+});
+
+test("request() tells the person on a 401 and still throws the same error to its caller; other failures are untouched", async () => {
+  const vm = require("node:vm");
+  const start = app.indexOf("async function request(path, options = {}) {"); const end = app.indexOf("\n}\n", start) + 3;
+  assert.ok(start > 0 && end > start);
+  const noted = []; let status = 401;
+  const sandbox = { fetch: async () => ({ ok: false, status, json: async () => ({ error: "Authentication is required for authoritative Nexus tasks.", code: "auth" }) }), data: {}, kyroNoteSessionEnded: path => noted.push(path), JSON, Error };
+  vm.createContext(sandbox); vm.runInContext(app.slice(start, end) + "\nthis.request = request;", sandbox);
+  await assert.rejects(() => sandbox.request("/api/nexus/runtime/behavior/turn", { method: "POST", body: { text: "x" } }), error => error.status === 401 && /Authentication is required/.test(error.message) && error.code === "auth");
+  assert.deepEqual(noted, ["/api/nexus/runtime/behavior/turn"]);
+  status = 403; await assert.rejects(() => sandbox.request("/api/x"), error => error.status === 403); status = 500; await assert.rejects(() => sandbox.request("/api/y"), error => error.status === 500);
+  assert.equal(noted.length, 1, "only a 401 is a sign-in that ended");
+  // (the typed route still hands a 401 on, as before: request() has already put the sign-in screen up)
+  assert.doesNotMatch(app, /if \(status === 401\) return true;/);
+});
