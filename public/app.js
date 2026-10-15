@@ -51732,10 +51732,13 @@ async function kyroAskAboutPicture(blob, command, filename) {
       body: JSON.stringify({ name: "nexus_file_document_analysis", correlationId: `look-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`, arguments: { command, fileId: uploaded.fileId || uploaded.id || undefined, language: lang }, language: lang })
     }, 60000);
     const result = await response.json().catch(() => ({}));
-    const described = kyroPlainText(String(result?.response || "").trim());
+    // (the server's own first sentence about how it was made is for its receipts, not for the person: the description, or the words in the file, are what they asked for)
+    const described = kyroPlainText(String(result?.response || "").trim()).replace(/^(?:Image described by a real vision model call|PDF text extracted and analy[sz]ed[^.]*)\.\s*(?:This is a description, not a diagnosis\.\s*)?/i, "").trim();
     if (!response.ok || !described) { say(lang === "sw" ? "Siwezi kuchambua picha hiyo sasa." : "I can't look at that picture right now."); return false; }
     const answer = `${described}${kyroPictureClosing(command)}`;
-    kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: answer });
+    if (kyroShowResultScreen("nexus_file_document_analysis", command, { ...result, ok: true, status: "completed", response: answer })) {
+      try { document.querySelector("[data-kyro-result]")?.setAttribute("data-kyro-keep", "true"); } catch { /* the answer is said too */ } // (a description, or the words in a file, take time to read: it stays until closed)
+    }
     say(answer);
     return true;
   } catch (error) {
