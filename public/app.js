@@ -50485,7 +50485,7 @@ function kyroDeviceTimeZone() {
 // A spoken request to SEE pictures or videos ("find a picture of a maize armyworm", "show me videos about drip irrigation"). The orb's tools have none for this, so the model answered with a canned line and nothing was shown
 // (found testing production). The same words typed work (the page's own typed path searches and draws the gallery on the screen), so a spoken request is sent down that path and the model is told truthfully whether the
 // pictures or videos are on the screen. "Watch ... on YouTube" and "play ..." are left to the music and video player, and anything about a person's own injury or a camera is left to the health flow.
-const KYRO_VISUAL_REQUEST = /^\s*(?:(?:nexus|kyro)[,:]?\s*)?(?:please\s+)?(?:(?:can|could|would)\s+you\s+)?(?:(?:show|find|search for|search|get|display|bring up|pull up)\s+(?:me\s+)?|let me see\s+|i (?:want|need|would like) to see\s+)(?:(?:some|a|an|the|any|more)\s+)?(?:[\w'-]+\s+){0,3}?(pictures?|photos?|photographs?|images?|videos?)\b/i;
+const KYRO_VISUAL_REQUEST = /^\s*(?:(?:nexus|kyro)[,:]?\s*)?(?:please\s+)?(?:(?:can|could|would)\s+you\s+)?(?:(?:show|find|search for|search|get|display|bring up|pull up)\s+(?:me\s+)?|let me (?:see|watch)\s+|(?:can|could) i (?:see|watch)\s+|i(?:'|\u2019)?d like to (?:see|watch|look at)\s+|i (?:want|need|would like) to (?:see|watch|look at)\s+)(?:(?:some|a|an|the|any|more)\s+)?(?:[\w'-]+\s+){0,3}?(pictures?|photos?|photographs?|images?|videos?)\b/i;
 const KYRO_VISUAL_HEALTH = /\b(injur\w*|wound|rash|swelling|bleeding|my (?:skin|leg|arm|foot|hand|eye|baby|child)|provider|doctor|clinic|telehealth|screenshot|camera)\b/i;
 function kyroVisualRequestKind(text) {
   const said = String(text || "");
@@ -50537,9 +50537,19 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   }
   // "Pause the music", "next song", "louder": the player is on this page, so the page does it (the music tool would go and play a song called "pause").
   const mediaAsk = window.KyroMediaCommands?.parse?.(command);
-  if (mediaAsk && (mediaAsk.type === "control" || mediaAsk.type === "play") && await kyroMediaCommand(command)) {
-    return { ok: true, status: "completed", response: mediaAsk.type === "play" ? "Kyro's player is playing it and said so. Say nothing more." : "Kyro's player did that and said so. Say nothing more.",
-      executionVerified: false, blockedReason: null, clientAction: { type: mediaAsk.type === "play" ? "media-play" : "media-control" } };
+  if (mediaAsk && (mediaAsk.type === "control" || mediaAsk.type === "play")) {
+    // What the player says ("I could not find anything to play for relaxing") is handed to the model to say: the page stays silent during a live voice, and the model used to say "It's playing now" whatever happened.
+    kyroVoiceCapture = [];
+    let playerHandled = false;
+    try { playerHandled = await kyroMediaCommand(command); } catch { playerHandled = false; }
+    const playerSaid = (kyroVoiceCapture || []).map(line => kyroPlainText(line).replace(/\s+/g, " ").trim()).filter(Boolean).join(" ").slice(0, 400);
+    kyroVoiceCapture = null;
+    if (playerHandled) {
+      return { ok: true, status: "completed",
+        response: playerSaid ? `${playerSaid} Tell the person exactly this, in one short sentence. Do not say anything is playing unless these words say so.`
+          : (mediaAsk.type === "play" ? "Kyro's player is playing it and said so. Say nothing more." : "Kyro's player did that and said so. Say nothing more."),
+        executionVerified: false, blockedReason: null, clientAction: { type: mediaAsk.type === "play" ? "media-play" : "media-control" } };
+    }
   }
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
   const visualKind = kyroVisualRequestKind(command);
@@ -51044,6 +51054,8 @@ function kyroSpeakPageLine(text) {
 // Found by speaking off-script wording into a real voice session: "What's on my to-do list?" was answered "I can't see a current to-do list from here" with no tool called and nothing on the screen, while the same
 // words typed are answered by the governed route. When the model begins a refusal for something it heard, did not call a tool for, and the page has not taken, the page answers it the way a typed request is answered.
 const KYRO_REFUSAL = /\bi\s+(?:can(?:'|\u2019)?t|cannot|can not|couldn(?:'|\u2019)?t|could not|am not able|am unable|was not able|wasn(?:'|\u2019)?t able|don(?:'|\u2019)?t have (?:access|a way|the ability))\b|\bi(?:'|\u2019)m\s+(?:not able|unable|not sure what you)\b|\bnot sure what you(?:'|\u2019)?d like\b/i;
+// ("Your notes should open on the screen now" said with no tool called and nothing opened: the same recovery answers it)
+const KYRO_FALSE_CLAIM = /\bshould (?:now )?(?:open|appear|show)\b[^.]{0,40}\bscreen\b|\b(?:is|are) now (?:open|showing|on (?:the|your) screen)\b|\bon (?:the|your) screen now\b|\bi(?:'|\u2019)?ve (?:opened|pulled up|brought up|put up)\b|\bi have (?:opened|pulled up|brought up)\b/i;
 let kyroHeard = { key: "", text: "", at: 0, recovered: false };
 let kyroRefusalBuf = "";
 let kyroRefusalSeenAt = 0;
@@ -51056,7 +51068,7 @@ function kyroWatchForRefusal(type, payload) {
   if (/^response\.(?:output_)?audio_transcript\.delta$/.test(kind)) kyroRefusalBuf += String(payload?.delta || "");
   else if (/^response\.(?:output_)?audio_transcript\.done$/.test(kind)) kyroRefusalBuf = String(payload?.transcript || kyroRefusalBuf);
   else return;
-  if (!kyroRefusalSeenAt && KYRO_REFUSAL.test(kyroRefusalBuf.slice(0, 160))) { kyroRefusalSeenAt = Date.now(); kyroRecoverRefusal(); }
+  if (!kyroRefusalSeenAt && (KYRO_REFUSAL.test(kyroRefusalBuf.slice(0, 160)) || KYRO_FALSE_CLAIM.test(kyroRefusalBuf.slice(0, 200)))) { kyroRefusalSeenAt = Date.now(); kyroRecoverRefusal(); }
 }
 function kyroRecoverRefusal() {
   if (!kyroRefusalSeenAt || kyroHeard.recovered || !kyroHeard.text) return false;
@@ -51741,7 +51753,7 @@ function kyroWorldMapTarget(command = "") {
 // Said out loud these have no subject, or are a document to make: the voice tool used to answer them with a canned sentence about an "AI copilot" and "DRC", or "I can only save a document from the keyboard".
 // Now: "open documents" lists the saved ones; "open images / videos" asks what to look for and the next short answer is the subject; "create a business plan" is made by the same route as typing it (Download button
 // and all), because that route is where documents are made.
-const KYRO_OPEN_VERB = "(?:i want to see|i'd like to see|i would like to see|open|show|go to|pull up|bring up|start|launch|see|let me see|show me)";
+const KYRO_OPEN_VERB = "(?:i want to (?:see|look at|check|view)|i'd like to (?:see|look at|check|view)|i would like to (?:see|look at|check|view)|let me (?:see|look at|check|view)|can i (?:see|look at|check|view)|could i (?:see|look at|check|view)|take me to|bring me to|switch to|navigate to|open|show|go to|pull up|bring up|start|launch|see|look at|check|view|show me)";
 // "Open documents, please", "show my notes for me", "open the map now": the polite tail is not part of the request (speech-to-text writes it down, and each pattern ends the sentence).
 function kyroWithoutPoliteTail(text) {
   return String(text || "").trim().replace(/[,;]?\s+(?:please|for me|right now|now|thanks|thank you)(?:\s+(?:please|for me|now))*\s*[.?!]*$/i, "").trim();
@@ -51766,7 +51778,7 @@ function kyroOpenMapRequest(text) {
 const KYRO_OPEN_PLAYER = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|start|launch|go to|play|use)\\s+(?:the\\s+)?(you\\s?tube|spotify)(?:\\s+(?:app|music|player))?|play\\s+(?:something|some music|music|anything)\\s+(?:on|from|in|with)\\s+(you\\s?tube|spotify))[.?!]*$`, "i");
 // "Show me a list", "show me a list of my documents / reminders / checklists / notes": a list of what, or that list.
 const KYRO_LIST_BARE = new RegExp(`${KYRO_OPEN_LEAD}(?:show|give|open|see|get|pull up)(?:\\s+me)?\\s+(?:a|my|the|some)?\\s*lists?[.?!]*$`, "i");
-const KYRO_LIST_OF = new RegExp(`${KYRO_OPEN_LEAD}(?:show|give|open|see|get|pull up|list)(?:\\s+me)?\\s+(?:(?:a|my|the|all my|all)\\s+)?(?:list\\s+of\\s+)?(?:my\\s+)?(documents?|docs?|reminders?|checklists?|to-?do ?lists?|to-?dos?|notes?|files?)[.?!]*$`, "i");
+const KYRO_LIST_OF = new RegExp(`${KYRO_OPEN_LEAD}(?:i want to (?:see|look at|check|view|read)|i'd like to (?:see|look at|check|view|read)|let me (?:see|look at|check|view|read)|can i (?:see|look at|check|view)|could i (?:see|look at|check|view)|show|give|open|see|get|pull up|look at|check|view|read|list)(?:\\s+me)?\\s+(?:(?:a|my|the|all my|all)\\s+)?(?:list\\s+of\\s+)?(?:my\\s+)?(documents?|docs?|reminders?|checklists?|to-?do ?lists?|to-?dos?|notes?|files?)[.?!]*$`, "i");
 const KYRO_LIST_COMMANDS = Object.freeze({ documents: "Show my saved documents", reminders: "Show my reminders", checklists: "Show my checklists", notes: "Show my notes" });
 function kyroListKindOf(word) {
   const w = String(word || "").toLowerCase();
@@ -51778,7 +51790,7 @@ function kyroListKindOf(word) {
 }
 // "Open business", "open the weather", "open messages", "open operations", "open the pharmacy", "open logistics", "open live knowledge", "open the calendar": found testing, many of these were answered "I'm not sure what you'd
 // like me to do". Each application now opens something real: its card (what it does, and what it does not), its list, or the answer, and the live-knowledge one asks what to look up.
-const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))[.?!]*$", "i");
+const KYRO_OPEN_APP = new RegExp(KYRO_OPEN_LEAD + "(?:open|show|go to|launch|bring up|pull up|take me to|bring me to|switch to|navigate to|let me see|i want to see|i'd like to see|can i see)\\s+(?:me\\s+)?(?:(?:the|my|our)\\s+)?(?:(business|nonprofit|non-profit|ngo|church)(?:\\s+(?:workspace|space|dashboard))?|(operations?|drones?|drone missions?|field operations?)|(messages?|messaging|communications?|texts|sms|whatsapp|emails?)|(pharmacy|pharmacies|mobile clinics?|clinics?)|(logistics|shipments?|deliver(?:y|ies)|tracking)|(weather|forecast)|(courses?)|(crops?|crop help|farming|farm help)|(live knowledge|research|web search|the web|web)|(calendar|agenda|schedule)|(jobs?|work|workforce|careers?)|(learning|lessons?)|(health)|(agriculture|farm)|(marketplace|agritrade|trade))[.?!]*$", "i");
 // Shows an application's card and reads it out (the first lines, short). True when it was shown.
 function kyroOpenAppCard(card, said, lang) {
   if (!window.KyroAnswerCard?.specFor || !kyroShowHelpScreen(card, { command: "open " + card, payload: {} })) return false;

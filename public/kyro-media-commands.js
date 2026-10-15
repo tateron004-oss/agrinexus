@@ -44,6 +44,7 @@
     ["resume", /^(?:play|cheza)$/i, 0],
     ["stop", /^(?:stop|end|turn off|switch off|shut off|kill|cancel|close)(?:\s+playing)?\s+(?:the |this |that |my )?(music|songs?|radio|video|playback|audio|stream|playing)$/i, 1],
     ["stop", /^stop playing(?:\s+(?:the |this |that )?(music|songs?|radio|video))?$/i, 1],
+    ["stop", /^(?:turn|switch|shut)\s+(?:the |this |that |my )?(music|songs?|radio|video|audio|stream|playback)\s+off$/i, 1],
     ["next", /^(?:play\s+)?(?:the\s+)?(?:next|skip)(?:\s+(?:the |this )?(song|track|one|station|video|music))?$/i, 1],
     ["next", /^(?:another|a different)\s+(song|track|one|station)$/i, 1],
     ["next", /^(?:play something else|change the (?:song|station|track)|different (?:song|station))$/i, 1],
@@ -104,7 +105,10 @@
     query = query.replace(/^(?:me\s+)?(?:some|any|a|an|the|my)\s+/i, "");
     query = query.replace(/^(?:music|songs?|tracks?|tunes?|something)\b\s*(?:by|from|of|for|like)?\s*/i, "");
     query = query.replace(/^(?:the\s+)?(?:song|track|tune|artist|album)\s+/i, "");
-    return strip(query);
+    query = strip(query);
+    // ("play something relaxing": a mood on its own finds nothing as a search, so it is searched as music of that mood)
+    if (/^(?:relaxing|relaxed|calm|calming|soothing|chill|upbeat|happy|sad|slow|fast|energetic|romantic|gentle|quiet|peaceful|soft|cheerful|lively|dance|party|sleep|sleepy|study|worship|praise|gospel|classical|jazzy)$/i.test(query)) query += " music";
+    return query;
   }
 
   function stripSwahiliMusicWords(value) {

@@ -229,7 +229,7 @@ test("a card that cannot be shown leaves the sentence to the usual route, and th
   assert.equal(again.api.kyroHandleSpokenOpen("Open documents", { typed: true }), true, "a typed repeat is always done");
   assert.equal(again.calls.typed.filter(item => item.text === "Show my saved documents").length, 2);
   assert.match(app, /let pageOwnsIt = kyroVoiceIntakeOwnsTurn\(command\);\s*if \(pageOwnsIt && !kyroActiveVoiceIntake\) \{\s*let started = false;\s*try \{ started = routeKyroVoiceIntakeTranscript\(\{ transcript: command, utteranceId: "tool-"/);
-  assert.match(app, /mediaAsk && \(mediaAsk\.type === "control" \|\| mediaAsk\.type === "play"\) && await kyroMediaCommand\(command\)/);
+  assert.match(app, /mediaAsk && \(mediaAsk\.type === "control" \|\| mediaAsk\.type === "play"\)\) \{[\s\S]*playerHandled = await kyroMediaCommand\(command\)/);
 });
 
 // Found sweeping the applications: the full-screen map stayed open under the next request and hid the gallery, document and list cards drawn behind it.

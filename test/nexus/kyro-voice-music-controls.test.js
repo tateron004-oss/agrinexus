@@ -20,7 +20,7 @@ test("these sentences are controls (so the page, not the music tool, answers the
 test("it is wired: the model's tool call runs a control on the page player before anything is sent to the server", () => {
   const start = app.indexOf("async function callNexusOpenAiRealtimeTool");
   const body = app.slice(start, app.indexOf("const correlationId", start));
-  assert.match(body, /mediaAsk && \(mediaAsk\.type === "control" \|\| mediaAsk\.type === "play"\) && await kyroMediaCommand\(command\)/);
+  assert.match(body, /mediaAsk && \(mediaAsk\.type === "control" \|\| mediaAsk\.type === "play"\)\) \{[\s\S]*playerHandled = await kyroMediaCommand\(command\)/);
   assert.ok(body.indexOf("kyroMediaCommand(command)") < body.indexOf("kyroShowVisualRequest"), "before the picture/video handling and the fetch");
   assert.match(body, /Say nothing more\./);
 });
