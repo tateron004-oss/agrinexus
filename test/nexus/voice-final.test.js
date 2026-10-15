@@ -100,3 +100,27 @@ test("the offline screen says what it shows (by voice the model had been cut off
   assert.match(fn, /setVoiceResponse\(`\$\{t\.status\} \$\{t\.count\}`, true, \{ allowHandoff: false, source: "kyro-open" \}\)/);
   assert.ok(fn.indexOf("document.body.append(screen)") < fn.indexOf("setVoiceResponse("), "after the screen is on the page");
 });
+
+// The last round of the live run: screens with buttons to tap went back to the orb after ten seconds, the voice-to-text heard "Build my resume" as "Builds my resume", and the page's own spoken lines became turns of the conversation.
+test("the screens with links and buttons to tap stay until they are dismissed", () => {
+  for (const name of ["function kyroAddListingLinks(", "async function kyroAddResumeButtons("]) {
+    assert.match(sliceFn(name), /screen\.setAttribute\("data-kyro-keep", "true"\)/, name);
+  }
+});
+
+test("'Builds my resume' and the other forms of the verb start the résumé form; resuming music does not", () => {
+  const forms = require(path.join(root, "public/kyro-intake-forms.js"));
+  for (const said of ["Builds my resume", "Billed my resume", "Creates my resume", "Makes me a resume", "Build my resume"]) assert.ok(forms.isResumeBuildRequest(said), said);
+  for (const said of ["Resume the music", "Resume my course", "What is a resume"]) assert.ok(!forms.isResumeBuildRequest(said), said);
+});
+
+test("a line the page speaks over the live voice is out of band and the model is told afterwards what was said", () => {
+  const events = []; const notes = [];
+  const sandbox = { realtimeVoiceActive: () => true, languageCode: () => "en", sendKyroRealtimeEvent: event => { events.push(event); return true; }, injectKyroRealtimeContext: text => notes.push(text),
+    realtimeVoiceSession: { sdkController: { interrupt() {} } }, Date, String, Number };
+  vm.createContext(sandbox);
+  vm.runInContext(`let kyroLastPageLine = { text: "", at: 0 };\n${sliceFn("function kyroSpeakPageLine(")}\nthis.say = kyroSpeakPageLine;`, sandbox);
+  assert.equal(sandbox.say("Your reminders: milk at nine."), true);
+  assert.equal(events[0].response.conversation, "none");
+  assert.equal(notes.length, 1); assert.match(notes[0], /Kyro's screen just told the person: Your reminders: milk at nine\./);
+});
