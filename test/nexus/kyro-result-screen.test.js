@@ -226,7 +226,7 @@ test("a note that mentions buying is an answer; a trade or telehealth form the s
   const formFlow = app.match(/const KYRO_FORM_FLOW = (\/.*\/i);/);
   const drawn = [];
   const fake = { KyroResultScreen: { buildModel: (result) => ({ kind: "text", headline: result.response, items: [], notes: [], awaiting: false }), show: (doc, model) => drawn.push(model) } };
-  const api = new Function("window", "document", "languageCode", "kyroNoteActivity", "kyroReturnToOrb", `const KYRO_FORM_FLOW = ${formFlow[1]}; const KYRO_SMALL_TALK = ${app.match(/const KYRO_SMALL_TALK = (\/.*\/i);/)[1]}; ${pick("function kyroResultScreenEligible(")}\n${pick("function kyroExplicitOpenCard(")}\n${pick("function kyroShowResultScreen(")}; return { kyroShowResultScreen };`)(fake, {}, () => "en", () => {}, async () => {});
+  const api = new Function("window", "document", "languageCode", "kyroNoteActivity", "kyroReturnToOrb", `const KYRO_FORM_FLOW = ${formFlow[1]}; const KYRO_SMALL_TALK = ${app.match(/const KYRO_SMALL_TALK = (\/.*\/i);/)[1]}; ${pick("function kyroResultScreenEligible(")}\n${pick("function kyroExplicitOpenCard(")}\n${pick("function kyroPlainText(")}\n${pick("function kyroShowResultScreen(")}; return { kyroShowResultScreen };`)(fake, {}, () => "en", () => {}, async () => {});
   const note = { ok: true, status: "completed", response: "Noted: buy seeds. Say \"what are my notes?\" any time." };
   assert.equal(api.kyroShowResultScreen("nexus_everyday_records", "Take a note: buy seeds", note), true, "nothing is being opened for it");
   assert.equal(api.kyroShowResultScreen("nexus_marketplace_logistics", "I want to sell 50 bags of maize", { ...note, genesisAction: { type: "genesis.workspace.open", workspace: "trade" } }), false, "the server is opening the trade form");
@@ -429,7 +429,7 @@ function fakePage(app, names) {
   vm.runInContext(`${source}\nthis.api = Object.fromEntries(["kyroAddComposer", "kyroRefreshList", "kyroShowChecklistScreen", "kyroShowGalleryScreen"].map(name => [name, (() => { try { return eval(name); } catch { return undefined; } })()]));`, sandbox);
   return { sandbox, body, make, select, api: sandbox.api };
 }
-const WRITABLE_NAMES = ["const KYRO_READ_COMMANDS", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroTwelveHour(", "function kyroAddComposer(", "async function kyroFillDocumentButtons(", "async function kyroOpenDocumentById(", "function kyroShowDocumentScreen(", "async function kyroRefreshList(", "function kyroShowChecklistScreen(", "function kyroShowGalleryScreen("];
+const WRITABLE_NAMES = ["const KYRO_READ_COMMANDS", "const KYRO_COMPOSER_TEXT", "function kyroUiText(", "const KYRO_FIELD_STYLE", "const KYRO_BUTTON_STYLE", "function kyroMake(", "function kyroDecodeText(", "function kyroTwelveHour(", "function kyroAddComposer(", "async function kyroFillDocumentButtons(", "async function kyroOpenDocumentById(", "function kyroShowDocumentScreen(", "async function kyroRefreshList(", "function kyroShowChecklistScreen(", "function kyroShowGalleryScreen("];
 const settle = () => new Promise(resolve => setTimeout(resolve, 25));
 
 test("the forms under the lists send the same governed commands a spoken request does, then show the list again", async () => {
@@ -717,4 +717,63 @@ test("request() tells the person on a 401 and still throws the same error to its
   assert.equal(noted.length, 1, "only a 401 is a sign-in that ended");
   // (the typed route still hands a 401 on, as before: request() has already put the sign-in screen up)
   assert.doesNotMatch(app, /if \(status === 401\) return true;/);
+});
+
+// Found running the whole "Kyro Open Everything" sheet as the Standard User before the owner did: "open my resume" started the build questions, a shipment answer said "Done" with nothing on the screen,
+// job listings could not be opened, and a few words were shown wrongly (a code in a video title, stars from markdown, a doubled character in the player).
+function sliceFn(name) { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf("\n}\n", start) + 3); }
+
+test("a shipment asked about by its two ends is an answer with its distance and time", () => {
+  const line = new Function("kyroReminderListLine", sliceFn("function kyroRenderedAnswerLine(") + "\nreturn kyroRenderedAnswerLine;")(() => "");
+  const render = { application: "logistics", presentation: { kind: "operation" }, data: { origin: "Kisumu", destination: "Nairobi", distanceMeters: 354397, durationSeconds: 16128, trackingMethod: "route_based_estimate" } };
+  assert.equal(line(render), "From Kisumu to Nairobi: about 354 km, around 4 h 29 min by road. This is a road-route estimate, not live tracking.");
+  assert.match(line({ ...render, data: { ...render.data, durationSeconds: 1500 } }), /around 25 min by road/);
+  assert.equal(line({ ...render, data: { origin: "A", destination: "B" } }), "", "no distance: no made-up answer");
+});
+
+test("a code in a video title and the stars of markdown are shown as plain words", () => {
+  const box = { set innerHTML(v) { this.v = String(v).replace(/&#39;/g, "'").replace(/&amp;/g, "&"); }, get value() { return this.v; } };
+  const api = new Function("document", sliceFn("function kyroDecodeText(") + sliceFn("function kyroPlainText(") + "\nreturn { kyroDecodeText, kyroPlainText };")({ createElement: () => Object.create(box) });
+  assert.equal(api.kyroDecodeText("Never Fail at Composting Again - Beginner&#39;s Guide"), "Never Fail at Composting Again - Beginner's Guide");
+  assert.equal(api.kyroDecodeText("Plain title"), "Plain title");
+  assert.equal(api.kyroPlainText("The image shows:\n\n- **Product**: Maize\n- **Quantity**: 50 bags"), "The image shows:\n\n- Product: Maize\n- Quantity: 50 bags");
+  assert.match(app, /const caption = kyroDecodeText\(\[item\?\.title, item\?\.channelTitle\]/, "the gallery captions are decoded");
+  assert.match(app, /response: kyroPlainText\(result\.response\) \}/, "an answer on a screen has no stars");
+  assert.match(app, /const described = kyroPlainText\(/, "a described picture has no stars");
+  for (const file of ["public/kyro-media-player.js", "public/nexus-genesis-conversational-mode-orchestrator.js"]) assert.ok(!fs.readFileSync(path.join(root, file), "utf8").includes("\u00c2"), file + " has no doubled characters");
+});
+
+test("job and marketplace listings are drawn with a button to open each one (only real web addresses)", () => {
+  const page = fakePage(app, ["function kyroMake(", "function kyroDecodeText(", "function kyroAddListingLinks("]);
+  page.sandbox.kyroT = text => text;
+  page.sandbox.kyroShowResultScreen("typed", "Find jobs near me", { response: "I found 4 listings: A; B; C; D." });
+  require("node:vm").runInContext("this.add = kyroAddListingLinks;", page.sandbox);
+  assert.equal(page.sandbox.add({ data: { listings: ["Jobs in Nigeria - https://www.fuzu.com/nigeria", "No address here", "Bad - javascript:alert(1)", { title: "Farm hand - https://x.example/jobs" }] } }), true);
+  const links = page.select("a");
+  assert.deepEqual(links.map(link => [link.textContent, link.attrs.href]), [["Jobs in Nigeria", "https://www.fuzu.com/nigeria"], ["Farm hand", "https://x.example/jobs"]]);
+  assert.ok(links.every(link => link.attrs.target === "_blank" && /noopener/.test(link.attrs.rel)));
+  assert.equal(page.sandbox.add({ data: { listings: [] } }), false);
+  assert.match(app, /const shownLine = kyroShowResultScreen\("typed", text, \{ ok: true, status: "completed", response: saidLine \}\);\s*if \(shownLine && typeof kyroAddListingLinks === "function"\) kyroAddListingLinks\(drawn\);/);
+});
+
+test("the résumés list has a button for each saved résumé and one to build a new one; 'open my resume' lists them, only a request to make one starts the questions", async () => {
+  const page = fakePage(app, ["const KYRO_BUTTON_STYLE", "function kyroMake(", "async function kyroAddResumeButtons("]);
+  const opened = []; const routed = [];
+  Object.assign(page.sandbox, { kyroT: text => text, kyroOpenDocumentById: (id, title) => opened.push([id, title]), routeKyroVoiceIntakeTranscript: arg => routed.push(arg.transcript),
+    fetch: async () => ({ ok: true, json: async () => ({ documents: [{ documentId: "d1", title: "Resume - Jane Wanjiru" }, { documentId: "d2", title: "Field Notes" }, { documentId: "d3", title: "My CV" }] }) }) });
+  page.sandbox.kyroShowResultScreen("typed", "Show my resumes", { response: "Your résumés, newest first: 1, Resume - Jane Wanjiru." });
+  require("node:vm").runInContext("this.add = kyroAddResumeButtons;", page.sandbox);
+  assert.equal(await page.sandbox.add(), true);
+  const labels = page.select("button").map(button => button.textContent);
+  assert.deepEqual(labels, ["Build a new résumé", "Resume - Jane Wanjiru", "My CV"], "only résumés, plus the button to build one");
+  page.select("button")[1].click(); assert.deepEqual(opened, [["d1", "Resume - Jane Wanjiru"]]);
+  page.select("button")[0].click(); assert.deepEqual(routed, ["Build my resume"]); assert.equal(page.select("[data-kyro-result]").length, 0, "the screen is put away as the questions start");
+  // which sentences list and which build
+  const open = new Function(app.match(/const KYRO_OPEN_LEAD = .*;/)[0] + "\n" + app.match(/const KYRO_OPEN_RESUMES = .*;/)[0] + "\nreturn KYRO_OPEN_RESUMES;")();
+  const Forms = require("../../public/kyro-intake-forms.js");
+  for (const said of ["Open my resume", "show my resumes", "Kyro, open my CV", "see my résumé"]) assert.ok(open.test(said), said);
+  for (const said of ["Build my resume", "Make me a resume", "I want a resume", "open the resume builder"]) { assert.ok(!open.test(said), said); assert.ok(Forms.isResumeBuildRequest(said), said); }
+  assert.match(app, /isResumeBuildRequest\?\.\(trimmed\) && !KYRO_OPEN_RESUMES\.test\(trimmed\)/, "the voice route lists them first");
+  assert.match(app, /isResumeBuildRequest\?\.\(command\) && !KYRO_OPEN_RESUMES\.test\(String\(command \|\| ""\)\.trim\(\)\)/, "and so does the typed route");
+  assert.match(app, /if \(shown && typeof kyroAddResumeButtons === "function" && \/\^show my r/, "the list that answers 'show my resumes' gets the buttons");
 });

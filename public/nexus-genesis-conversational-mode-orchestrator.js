@@ -650,7 +650,7 @@
       teaching: hasAny(lower, [/\b(explain simply|teach me|step by step|give me an example|show me how|quiz me|check whether i understand|repeat the last|use fewer words|use an analogy|explain it in my language)\b/]),
       professional: hasAny(lower, [/\b(professional analysis|clinical|clinician|pharmacist|agronomist|methodology|evidence strength|guideline|differential|implementation considerations|policy implications|limitations)\b/]),
       advisory: hasAny(lower, [/\b(what are my choices|which approach is safer|what should i consider|what would you recommend|advantages and disadvantages|pros and cons|before deciding)\b/]),
-      coaching: hasAny(lower, [/\b(help me prepare|prepare me|coach me|one step at a time|next manageable step|daily task|interview preparation|resume|rÃ©sumÃ©|business planning)\b/]),
+      coaching: hasAny(lower, [/\b(help me prepare|prepare me|coach me|one step at a time|next manageable step|daily task|interview preparation|resume|résumé|business planning)\b/]),
       creation: hasAny(lower, [/\b(remove that section|add transportation|make it simpler|make it more professional|translate this|change the order|save this version|compare this version|start over|close this|build a checklist|create a report|write a lesson|draft a message)\b/]),
       workflow: hasAny(lower, [/\b(turn (this|that|it) into|turn it into|create the checklist|open workflow|not yet|keep explaining|go back|do that later|close the workflow|field checklist|provider summary|working checklist)\b/]),
       proactive: hasAny(lower, [/\b(would you like|ask me later|not now|stop suggesting|do not bring this up again|only remind me)\b/]),
@@ -672,7 +672,7 @@
   function detectDomain(lower) {
     if (/\b(diabetes|hypertension|blood pressure|obesity|rpm|rtm|clinic|doctor|patient|health|pharmacy|medicine|telehealth|caregiver|senior)\b/.test(lower)) return "health";
     if (/\b(crop|farm|maize|soil|harvest|pest|disease|irrigation|buyer|cooperative|field)\b/.test(lower)) return "agriculture";
-    if (/\b(job|workforce|training|course|lesson|resume|rÃ©sumÃ©|employer|apprentice|internship)\b/.test(lower)) return "workforce";
+    if (/\b(job|workforce|training|course|lesson|resume|résumé|employer|apprentice|internship)\b/.test(lower)) return "workforce";
     if (/\b(marketplace|agritrade|seller|vendor|payment|checkout|product)\b/.test(lower)) return "marketplace";
     if (/\b(map|route|logistics|shipment|transport|mobile clinic|field visit)\b/.test(lower)) return "logistics";
     if (/\b(drone|flight|imagery)\b/.test(lower)) return "drone";
