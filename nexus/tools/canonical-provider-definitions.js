@@ -76,7 +76,11 @@ const CANONICAL_PROVIDER_TOOLS = Object.freeze([
   // multi-turn clarification/confirmation shape.
   Object.freeze({ toolId: "business.query", domain: "business", description: "List business/nonprofit workspaces or get a computed performance summary" }),
   Object.freeze({ toolId: "business.manage", domain: "business", description: "Create or manage a business/nonprofit workspace record (customers, donors, transactions, invoices, grants, tasks, appointments, documents, plan, marketing)",
-    confirmationRequired: true })
+    confirmationRequired: true }),
+  // One message to ONE outside automation (a Zapier, Make, n8n or IFTTT link) the person connected and named. Outward and cannot be unsent, so it needs the person's yes and is capped per day
+  // (see consent/user-confirmable-consents.js and nexus/automations/). The executor is local (create-runtime.js's LOCAL_EXECUTORS), not the signed-receipt mock.
+  Object.freeze({ toolId: "automations.trigger", domain: "automations", description: "Send one confirmed message to an outside automation the person connected",
+    riskTier: "regulated", confirmationRequired: true, consentScope: "automations:trigger:write", dataClassification: "communications" })
 ]);
 
 function canonicalProviderTools({ receiptSecret, providerBaseUrl }) {

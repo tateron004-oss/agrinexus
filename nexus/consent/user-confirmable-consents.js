@@ -17,6 +17,7 @@ const { glucoseLevel } = require("../../server/providers/bloodGlucose.js");
 // cannot be unsent, so a request that does not fit that shape (no recipient, no message, a very long message, an emergency or
 // premium-rate number) gets no consent here and simply does not go out.
 const { normalizeSendRequest, CALL_INTRO } = require("../communications/send-request.js");
+const { normalizeName } = require("../automations/connection.js");
 
 const POLICIES = Object.freeze({
   "health:record:write": Object.freeze({ policyVersion: "user-confirmation-health-record-v1",
@@ -24,23 +25,37 @@ const POLICIES = Object.freeze({
   "health:telehealth-intake:write": Object.freeze({ policyVersion: "user-confirmation-telehealth-intake-v1",
     purpose: "Save the telehealth intake you asked Nexus to prepare to your own health records" }),
   "communications:send:write": Object.freeze({ policyVersion: "user-confirmation-message-send-v1", dailyLimit: 10, callDailyLimit: 3,
-    purpose: "Send the one message or place the one call you asked Nexus to make, to the recipient you named, exactly as read back to you" })
+    purpose: "Send the one message or place the one call you asked Nexus to make, to the recipient you named, exactly as read back to you" }),
+  // ONE message to ONE outside automation (Zapier, Make, n8n, IFTTT) the person connected and named, exactly as read back. Outward and cannot be unsent, so it is capped per day.
+  "automations:trigger:write": Object.freeze({ policyVersion: "user-confirmation-automation-send-v1", dailyLimit: 30,
+    purpose: "Send the one message you asked Nexus to send to the outside automation you named, exactly as read back to you" })
 });
+
+// A trigger is only confirmable when it names one automation and carries words to send.
+function automationRequest(step) {
+  const input = step?.input && typeof step.input === "object" ? step.input : {};
+  const name = normalizeName(input.connection || input.name);
+  const text = clip(input.text || input.message, 1500);
+  return name && text ? { name, text } : null;
+}
 
 // A message send is only confirmable when the step itself is a complete, sendable request; the health scopes need no step.
 function userConfirmableConsent(scope, step) {
   if (!Object.hasOwn(POLICIES, String(scope || ""))) return null;
   if (scope === "communications:send:write" && !normalizeSendRequest(step?.input)) return null;
+  if (scope === "automations:trigger:write" && !automationRequest(step)) return null;
   return POLICIES[scope];
 }
 
 // Who the consent is for, recorded on the consent row (null for the health scopes, which stay in the person's own records).
 function consentRecipient(scope, step) {
+  if (scope === "automations:trigger:write") return automationRequest(step)?.name || null;
   return scope === "communications:send:write" ? normalizeSendRequest(step?.input)?.to || null : null;
 }
 
 // Which way the send goes (sms, whatsapp, email, call), recorded on the consent so calls can be counted on their own.
 function consentSendChannel(scope, step) {
+  if (scope === "automations:trigger:write") return automationRequest(step) ? "automation" : null;
   return scope === "communications:send:write" ? normalizeSendRequest(step?.input)?.channel || null : null;
 }
 
@@ -49,6 +64,7 @@ function consentSendChannel(scope, step) {
 function dailyCaps(scope, step) {
   const policy = userConfirmableConsent(scope, step);
   if (!policy?.dailyLimit) return [];
+  if (scope === "automations:trigger:write") return [{ limit: policy.dailyLimit, channel: null, noun: "sends to outside automations" }];
   const send = normalizeSendRequest(step?.input);
   const caps = [];
   if (send?.channel === "call" && policy.callDailyLimit) caps.push({ limit: policy.callDailyLimit, channel: "call", noun: "calls" });
@@ -99,6 +115,10 @@ function informedConfirmationPrompt({ scope, step }) {
     }
     const kind = { sms: "text message", whatsapp: "WhatsApp message", email: "email" }[send.channel];
     return `I can send this ${kind} to ${who}${send.subject ? `, subject "${send.subject}"` : ""}: "${send.message}". It will really be sent and cannot be unsent. Say yes to send it, or no to cancel.`;
+  }
+  if (scope === "automations:trigger:write") {
+    const request = automationRequest(step);
+    return `I can send this to your automation "${request.name}": "${request.text}". It goes to the outside service you connected, and it cannot be unsent. Say yes to send it, or no to cancel.`;
   }
   if (scope === "health:telehealth-intake:write") {
     const concern = clip(input.concern || input.reason || input.goal, 160);

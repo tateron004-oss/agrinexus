@@ -7,6 +7,9 @@ const businessVoiceDispatch = require("../business/voice-dispatch.js");
 const WORKSPACE_FIRST_INTENTS = new Set(["listInvoices", "listLeads", "addLead", "billsDue", "listListings"]);
 const businessInsights = require("../business/insights.js");
 const { normalizeRecipient, normalizeSendRequest } = require("../communications/send-request.js");
+const automationCommands = require("../../public/kyro-automation-commands.js");
+const { sameName: automationSameName } = require("../automations/connection.js");
+const { WORKSPACE_ID: automationWorkspace, RECORD_TYPE: automationRecordType } = require("../automations/executor.js");
 const { accepted: acceptedAlertOffer } = require("../companion/offer.js");
 const { farmLogTurn } = require("../farm/log.js");
 const { farmWorkTurn } = require("../farmwork/index.js");
@@ -49,9 +52,9 @@ const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
 class OpenEndedPlanner {
-  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, maxRepairAttempts = 2 }) {
+  constructor({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, maxRepairAttempts = 2 }) {
     if (!model?.plan) throw new Error("A planning model is required.");
-    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, maxRepairAttempts });
+    Object.assign(this, { model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore, repeatReminders, community, farmWork, healthWork, healthReadings, businessWorkspaces, documents, automationRecords, maxRepairAttempts });
   }
 
   // The no-workspace answer for a business/nonprofit request, or null when the person has a workspace (or this cannot be told: then the request goes on as before and the executor's own check still applies).
@@ -692,6 +695,9 @@ class OpenEndedPlanner {
     // "Show my documents", "what documents do I have": the titles of the person's own saved documents, newest first.
     const documentsListed = await documentsListPlan(this.documents, command);
     if (documentsListed) return Object.freeze({ ...documentsListed, planningAttempts: 1 });
+    // "Send new customer Grace to my sales sheet automation", "show my automations": only an automation the person connected, and a send is always a request they must say yes to.
+    const automation = await automationPlan(this.automationRecords, command, catalog);
+    if (automation) return Object.freeze({ ...automation, planningAttempts: 1 });
     const documentChanges = documentSaveChangesPlan(command.text, catalog);
     if (documentChanges) return Object.freeze({ ...documentChanges, planningAttempts: 1 });
     const completeDocument = completeDocumentPlan(command.text, catalog);
@@ -1486,6 +1492,28 @@ async function documentsListPlan(documents, command) {
     ? `Your saved documents, newest first: ${rows.map((row, index) => `${index + 1}, ${row.title || "untitled"}`).join("; ")}. Say "export the latest document as a PDF" to get a file.`
     : 'You have no saved documents yet. Say, for example, "Create a document called Maize Sales that says Sold 3 sacks of maize, and save it."';
   return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false };
+}
+
+const AUTOMATION_START = 'You have no automations connected yet. Say "open automations" to connect one with the link from Zapier, Make, n8n or IFTTT.';
+async function automationPlan(records, command, catalog) {
+  if (!records?.list) return null;
+  const goal = String(command.text || "").trim();
+  const trigger = automationCommands.parseTrigger(goal);
+  const listing = !trigger && automationCommands.isList(goal);
+  if (!trigger && !listing) return null;
+  const say = response => ({ goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response, sourceRequired: false });
+  let rows = null;
+  try { rows = await records.list({ tenantId: command.tenantId, ownerId: command.actorId, workspaceId: automationWorkspace, recordType: automationRecordType, limit: 50 }); } catch { return null; }
+  if (!Array.isArray(rows)) return null;
+  const names = rows.map(row => row.data?.name).filter(Boolean);
+  if (listing) {
+    return say(names.length ? `You have ${names.length} automation${names.length === 1 ? "" : "s"}: ${names.join("; ")}. Say "send" and your words, then "to my" and the name, then "automation", to use one.` : AUTOMATION_START);
+  }
+  const found = rows.find(row => automationSameName(row.data?.name, trigger.connection));
+  if (!found) return say(`I could not find an automation called ${trigger.connection}, so nothing was sent. ${names.length ? `You have: ${names.join("; ")}.` : AUTOMATION_START}`);
+  if (!catalog?.tools?.some(tool => tool.toolId === "automations.trigger") || !catalog.applications?.some(app => app.applicationId === "communications")) return null;
+  return { goal, application: "communications", riskTier: "regulated", clarification: null,
+    steps: [{ clientStepId: "send-automation", title: `Send to ${found.data.name}`, toolId: "automations.trigger", input: { connection: found.data.name, text: trigger.text }, dependsOn: [], fallbackToolIds: [] }] };
 }
 
 async function exportLatestDocumentPlan(documents, { text, format, tenantId, ownerId }) {

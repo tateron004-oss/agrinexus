@@ -133,9 +133,9 @@ test("each step of a compound task gets its own consent receipt, even when two s
   assert.equal(grants.length, 2, "re-confirming an already-granted step must not create a duplicate consent");
 });
 
-test("the policy is a short allow-list: own-record health writes and one confirmed message", () => {
-  assert.deepEqual(Object.keys(POLICIES).sort(), ["communications:send:write", "health:record:write", "health:telehealth-intake:write"]);
-  for (const scope of ["communications:send:write", "acceptance:identity", "", undefined, "__proto__", "constructor"]) assert.equal(userConfirmableConsent(scope), null, String(scope));
+test("the policy is a short allow-list: own-record health writes, one confirmed message and one confirmed send to an outside automation", () => {
+  assert.deepEqual(Object.keys(POLICIES).sort(), ["automations:trigger:write", "communications:send:write", "health:record:write", "health:telehealth-intake:write"]);
+  for (const scope of ["communications:send:write", "automations:trigger:write", "acceptance:identity", "", undefined, "__proto__", "constructor"]) assert.equal(userConfirmableConsent(scope), null, String(scope));
   assert.equal(informedConfirmationPrompt({ scope: "communications:send:write", step: step("communications.send") }), null);
   assert.equal(describeReading({ glucose: 110 }), "blood glucose 110"); assert.equal(describeReading({ oxygenSaturation: 96 }), "oxygen saturation 96 percent");
   assert.equal(describeReading({ temperature: 99.1 }), "temperature 99.1"); assert.equal(describeReading({ pulse: 72 }), "pulse 72"); assert.equal(describeReading({ systolic: "x", diastolic: 80 }), "");
