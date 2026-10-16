@@ -1,7 +1,7 @@
 "use strict";
 // Questions a Spanish-speaking owner asks about a small business, spoken in Spanish and answered in Spanish from the checked guide (nexus/knowledge/us-small-business-es/: a preliminary translation, see docs/SPANISH.md).
-// Each must put the Spanish sources line and the preliminary-translation note on the screen. They change nothing on the account. What the speech-to-text wrote is only ever a warning.
-const strict = (id, say, key) => ({ id: `es-biz-${id}`, area: "spanish", say, timeoutMs: 50000, expect: { screen: ["text", "list"], text: `Fuentes: [^]*${key}|${key}[^]*Fuentes: `, notText: "I cannot find|not sure what you|Sources: " } });
+// Each must put the key fact for its topic on the screen, in Spanish (the sources line and the preliminary-translation note are checked by test/nexus/us-small-business-spanish.test.js: a long answer's last line is beyond the 1500 characters the rig reads from a screen). They change nothing on the account. What the speech-to-text wrote is only ever a warning.
+const strict = (id, say, key) => ({ id: `es-biz-${id}`, area: "spanish", say, timeoutMs: 50000, expect: { screen: ["text", "list"], text: key, notText: "I cannot find|not sure what you|Sources: " } });
 
 module.exports = Object.freeze([
   strict("8a", "¿Qué es el programa 8(a)?", "8\\(a\\)"),
