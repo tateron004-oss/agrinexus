@@ -19,6 +19,7 @@ const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { professionalAdviceTopic, professionalAdviceReply, professionalAdviceGoal, withProfessionalAdviceNote } = require("../guardrails/professional-advice.js");
 const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext, UNIVERSAL_TOPICS } = require("../knowledge/us-small-business.js");
+const { language: guideLanguage } = require("../../public/kyro-business-topics.js");
 const { communityTopic, communityAnswer, isCommunityUs } = require("../knowledge/us-community-support.js");
 const { africaTopic, africaAnswer, africaCountry, africaNamed } = require("../knowledge/africa-small-business.js");
 const { technologyTopic, technologyAnswer } = require("../knowledge/small-business-technology.js");
@@ -514,12 +515,12 @@ class OpenEndedPlanner {
     }
     const universalId =!ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (universalId && UNIVERSAL_TOPICS.includes(universalId)) {
-      const guide = usSmallBusinessAnswer(universalId, { question: askText, us: false, country: africaCountry({ timeZone: placeZone, country: context?.country, text: askText }) });
+      const guide = usSmallBusinessAnswer(universalId, { question: askText, us: false, lang: guideLanguage(askText), country: africaCountry({ timeZone: placeZone, country: context?.country, text: askText }) });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${universalId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     const usTopic = !ownWorkspace && usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (usTopic) {
-      const guide = usSmallBusinessAnswer(usTopic, { question: askText });
+      const guide = usSmallBusinessAnswer(usTopic, { question: askText, lang: guideLanguage(askText) }); // (the language of the words asked: a question in Spanish is answered in Spanish)
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${usTopic}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     // The checked technology and AI guide (using AI tools safely, AI scams, fake reviews, cybersecurity, phishing, email and domain protection, hiring a web host or designer, what Kyro can automate, getting online).
