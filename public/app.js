@@ -50561,10 +50561,18 @@ async function kyroShowVisualRequest(command, kind) {
       : `I could not put ${noun}s on the screen just now. Tell the person plainly that nothing is showing, and that they can try again or type the request.` };
 }
 
+// The page may already have opened what was just asked for, from the words it heard, before the voice model's own tool call for the same words arrives (the two come in either order). That call must not clear the screen
+// the page has just drawn (found by the live voice test: "open health" sometimes showed nothing, depending on which came first).
+function kyroPageJustOpened(command) {
+  try {
+    const key = kyroWithoutPoliteTail(command).toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+    return Boolean(key) && kyroLastSpokenOpen.key === key && Date.now() - kyroLastSpokenOpen.at < 8000;
+  } catch { return false; }
+}
 async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
-  kyroDismissStaleWorkspace(command);
+  if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command))) kyroDismissStaleWorkspace(command);
   kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
@@ -50609,7 +50617,8 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
   }
   // The governed route a typed request takes (see kyroAnswerLikeTyped); a question waiting for a yes or a no is always answered there.
-  if (KYRO_GOVERNED_VOICE_TOOLS.has(String(toolName || "")) || nexusPendingBehaviorConfirmation) {
+  // (a readings summary for a provider is answered by the voice tool's own reader: the planner's answer to the same words varies, sometimes a question, sometimes a card of rows)
+  if ((KYRO_GOVERNED_VOICE_TOOLS.has(String(toolName || "")) && !(typeof KYRO_VOICE_TOOL_ANSWERS !== "undefined" && KYRO_VOICE_TOOL_ANSWERS.test(command))) || nexusPendingBehaviorConfirmation) {
     const governed = await kyroAnswerLikeTyped(command);
     if (governed) return governed;
   }
@@ -51137,11 +51146,13 @@ function kyroRecoverRefusal() {
   kyroHeard.recovered = true;
   const said = kyroHeard.text;
   kyroPageSpeaksUntil = now + 40000;
+  // counted (never the words) so the owner can see how often the voice model refuses what the page can do: /api/admin/voice/stall-summary
+  try { reportKyroVoiceStall("model-refused", { lastActivity: "refusal-recovered" }); } catch { /* a report never breaks the turn */ }
   try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
   void (async () => {
     let handled = false;
     try { handled = await handleNexusUnifiedBrainRuntimeCommand(said, { source: "voice-recovery", kyroDirect: true }); } catch { handled = false; }
-    if (handled !== true) { kyroPageSpeaksUntil = 0; kyroSpeakPageLine("Sorry, I could not do that one. Could you say it another way?"); }
+    if (handled !== true) { kyroPageSpeaksUntil = 0; try { reportKyroVoiceStall("request-not-understood", { lastActivity: "refusal-not-answered" }); } catch { /* optional */ } kyroSpeakPageLine("Sorry, I could not do that one. Could you say it another way?"); }
   })();
   return true;
 }
@@ -51852,6 +51863,10 @@ function kyroOpenMapRequest(text) {
 // (Spotify is not connected here, so it is said plainly and the music comes from YouTube.)
 // "I need help with my maize crop", "help me with my farm": the crop and farm help screen, which has the box to ask in and the farm log.
 const KYRO_CROP_HELP = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i|we)\\s+(?:need|want)\\s+(?:some\\s+)?help\\s+(?:with|on)|(?:can|could|will) you help me with|help me with|help with)\\s+(?:my|the|our)\\s+(?:[a-z-]+\\s+){0,2}(?:crops?|farm|fields?|garden|plants?|harvest)[.?!]*$`, "i");
+// "What have you done for me?", "what is waiting for me?", "open activity": the activity screen (kyroShowActivityScreen, below with the application screens).
+// "What do you know about me?", "what do you remember?": what Kyro has saved about the person, shown on the screen (the voice model had answered, wrongly, that it remembers nothing between sessions).
+const KYRO_ASK_MEMORY = new RegExp(KYRO_OPEN_LEAD + "(?:what (?:do|did) you (?:know|remember) about me|what have you (?:saved|remembered|learned|stored) about me|what (?:do|did) you remember)[.?!]*$", "i");
+const KYRO_OPEN_ACTIVITY = new RegExp(KYRO_OPEN_LEAD + "(?:(?:open|show|see|view|check)\\s+(?:me\\s+)?(?:(?:my|the)\\s+)?(?:recent\\s+)?activity|what (?:have you|did you|are you) (?:done|do|doing|working on)(?: for me)?|what(?:'s| is| are) (?:waiting|pending)(?: for me)?(?: on me)?)[.?!]*$", "i");
 const KYRO_OPEN_PLAYER = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|start|launch|go to|play|use)\\s+(?:the\\s+)?(you\\s?tube|spotify)(?:\\s+(?:app|music|player))?|play\\s+(?:something|some music|music|anything)\\s+(?:on|from|in|with)\\s+(you\\s?tube|spotify))[.?!]*$`, "i");
 // "Show me a list", "show me a list of my documents / reminders / checklists / notes": a list of what, or that list.
 const KYRO_LIST_BARE = new RegExp(`${KYRO_OPEN_LEAD}(?:show|give|open|see|get|pull up)(?:\\s+me)?\\s+(?:a|my|the|some)?\\s*lists?[.?!]*$`, "i");
@@ -51913,7 +51928,7 @@ function kyroOpenUploadScreen(said, lang) {
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -52041,6 +52056,16 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (KYRO_OPEN_UPLOAD.test(said)) {
     kyroTakeOverTurn();
     if (kyroOpenUploadScreen(said, lang)) return true;
+  }
+  if (KYRO_OPEN_ACTIVITY.test(said)) {
+    kyroTakeOverTurn();
+    void kyroShowActivityScreen();
+    return true;
+  }
+  if (KYRO_ASK_MEMORY.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand("What do you know about me?", { source: "typed", kyroDirect: true });
+    return true;
   }
   if (KYRO_CROP_HELP.test(said)) {
     kyroTakeOverTurn();
@@ -52357,7 +52382,9 @@ const KYRO_APP_SCREENS = Object.freeze({
     { kind: "form", label: "Add someone I trust", button: "Add", fields: [{ name: "who", label: "Their email address" }], command: f => "Add " + f.who + " to my circle" },
     { kind: "form", label: "Write down how I slept", button: "Save", fields: [{ name: "hours", label: "Hours of sleep", type: "number" }], command: f => "I slept " + f.hours + " hours" },
     { kind: "form", label: "Write down water I drank", button: "Save", fields: [{ name: "glasses", label: "Glasses of water", type: "number" }], command: f => "I drank " + f.glasses + " glasses of water" },
-    { kind: "button", label: "Show my wellness log", command: "Show my wellness log" }
+    { kind: "button", label: "Show my wellness log", command: "Show my wellness log" },
+    { kind: "button", label: "What I have done and what is waiting", special: "activity" },
+    { kind: "button", label: "What you know about me", command: "What do you know about me?" }
   ] },
   agriculture: { title: "Crop and farm help", intro: "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.", actions: [
     { kind: "form", label: "Ask about a crop or a pest", button: "Ask", fields: [{ name: "question", label: "For example: why are my maize leaves turning yellow?", type: "textarea" }], command: f => f.question },
@@ -52401,7 +52428,7 @@ const KYRO_APP_SCREENS = Object.freeze({
 const KYRO_APP_SW = Object.freeze({
   "Health": "Afya", "I record what you tell me and help you get ready for a visit. I do not diagnose or give treatment advice.": "Ninarekodi unachoniambia na kukusaidia kujiandaa kwa ziara ya daktari. Sitambui magonjwa wala kutoa matibabu.",
   "Start a telehealth request": "Anza ombi la huduma ya afya kwa video", "Record blood pressure": "Rekodi shinikizo la damu", "Top number (systolic)": "Namba ya juu (systolic)", "Bottom number (diastolic)": "Namba ya chini (diastolic)", "Record": "Rekodi",
-  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu", "Summary for my provider": "Muhtasari kwa mtoa huduma wangu", "More care and wellness": "Huduma zaidi na afya njema", "Care and wellness": "Huduma na afya njema", "Your medicines, a daily check-in, the people you trust, and a simple log of sleep and water. I repeat what you tell me; I do not check doses or diagnose.": "Dawa zako, kuulizwa hali yako kila siku, watu unaowaamini, na kumbukumbu rahisi ya usingizi na maji. Narudia unachoniambia; sikagui vipimo vya dawa wala kutambua magonjwa.", "My medicines": "Dawa zangu", "Ask me how I am every day": "Niulize hali yangu kila siku", "Start check-ins": "Anza kuuliza", "Stop my daily check-ins": "Acha kuniuliza kila siku", "Who is in my trusted circle": "Nani yuko kwenye kundi langu la kuaminika", "Add someone I trust": "Ongeza mtu ninayemwamini", "Add": "Ongeza", "Their email address": "Barua pepe yake", "Write down how I slept": "Andika nilivyolala", "Hours of sleep": "Saa za usingizi", "Write down water I drank": "Andika maji niliyokunywa", "Glasses of water": "Glasi za maji", "Show my wellness log": "Onyesha kumbukumbu yangu ya afya njema", "Record blood sugar": "Rekodi sukari ya damu", "Blood sugar number": "Namba ya sukari ya damu", "Unit": "Kipimo", "mmol/L": "mmol/L", "mg/dL": "mg/dL", "Remind me to take a medicine": "Nikumbushe kunywa dawa", "Remind me": "Nikumbushe", "Name of the medicine": "Jina la dawa", "At what time? For example: 8 am": "Saa ngapi? Kwa mfano: saa mbili asubuhi", "I am feeling low or worried": "Nina huzuni au wasiwasi", "Women's health information": "Maelezo kuhusu afya ya wanawake",
+  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu", "Summary for my provider": "Muhtasari kwa mtoa huduma wangu", "More care and wellness": "Huduma zaidi na afya njema", "Care and wellness": "Huduma na afya njema", "Your medicines, a daily check-in, the people you trust, and a simple log of sleep and water. I repeat what you tell me; I do not check doses or diagnose.": "Dawa zako, kuulizwa hali yako kila siku, watu unaowaamini, na kumbukumbu rahisi ya usingizi na maji. Narudia unachoniambia; sikagui vipimo vya dawa wala kutambua magonjwa.", "My medicines": "Dawa zangu", "Ask me how I am every day": "Niulize hali yangu kila siku", "Start check-ins": "Anza kuuliza", "Stop my daily check-ins": "Acha kuniuliza kila siku", "Who is in my trusted circle": "Nani yuko kwenye kundi langu la kuaminika", "Add someone I trust": "Ongeza mtu ninayemwamini", "Add": "Ongeza", "Their email address": "Barua pepe yake", "Write down how I slept": "Andika nilivyolala", "Hours of sleep": "Saa za usingizi", "Write down water I drank": "Andika maji niliyokunywa", "Glasses of water": "Glasi za maji", "Show my wellness log": "Onyesha kumbukumbu yangu ya afya njema", "What I have done and what is waiting": "Nilichofanya na kinachosubiri", "What you know about me": "Unachojua kunihusu", "One moment...": "Subiri kidogo...", "Waiting for your yes": "Kinasubiri ndiyo yako", "I am working on": "Ninafanyia kazi", "Done recently": "Vilivyokamilika hivi karibuni", "Could not be finished": "Visivyoweza kukamilika", "I could not read your activity just now. Please try again.": "Sikuweza kusoma shughuli zako sasa. Tafadhali jaribu tena.", "Record blood sugar": "Rekodi sukari ya damu", "Blood sugar number": "Namba ya sukari ya damu", "Unit": "Kipimo", "mmol/L": "mmol/L", "mg/dL": "mg/dL", "Remind me to take a medicine": "Nikumbushe kunywa dawa", "Remind me": "Nikumbushe", "Name of the medicine": "Jina la dawa", "At what time? For example: 8 am": "Saa ngapi? Kwa mfano: saa mbili asubuhi", "I am feeling low or worried": "Nina huzuni au wasiwasi", "Women's health information": "Maelezo kuhusu afya ya wanawake",
   "Crop and farm help": "Msaada wa mazao na shamba", "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.": "Uliza kuhusu zao, mdudu au hali ya hewa shambani, na uweke kumbukumbu ya yanayotokea.",
   "Ask about a crop or a pest": "Uliza kuhusu zao au mdudu", "For example: why are my maize leaves turning yellow?": "Kwa mfano: kwa nini majani ya mahindi yangu yanageuka manjano?", "Ask": "Uliza",
   "Write in my farm log": "Andika kwenye kumbukumbu ya shamba", "For example: 12 mm of rain": "Kwa mfano: mvua ya mm 12", "Save": "Hifadhi", "Show my farm log": "Onyesha kumbukumbu ya shamba langu",
@@ -52481,7 +52508,69 @@ function kyroShowOfflineScreen() {
     return true;
   } catch { return false; }
 }
+// ---- What Kyro has done, and what is waiting ----
+// "What have you done for me?", "what is waiting for me?", "open activity": the person's own tasks in plain words, in groups, so nothing Kyro does (or is waiting to do) is hidden from them. Each line says whether Kyro did it
+// on its own. Read from the person's own task list (GET /api/nexus/runtime/tasks); nothing here changes anything.
+function kyroActivityGroups(tasks, now = Date.now()) {
+  const waitingStates = new Set(["awaiting_confirmation", "awaiting_consent"]);
+  const doingStates = new Set(["planned", "queued", "running", "verifying", "paused"]);
+  const stuckStates = new Set(["failed", "blocked", "expired"]);
+  const when = value => {
+    const date = new Date(value); if (!Number.isFinite(date.getTime())) return "";
+    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return new Date(now).toDateString() === date.toDateString() ? `today ${time}` : `${date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })} ${time}`;
+  };
+  const groups = { waiting: [], doing: [], done: [], stuck: [] };
+  for (const task of Array.isArray(tasks) ? tasks : []) {
+    const goal = kyroPlainText(String(task?.goal || "").replace(/\s+/g, " ").trim()).slice(0, 140); if (!goal) continue;
+    const line = `${goal}${task.autonomous === true ? " (I did this on my own)" : ""}`;
+    const state = String(task.state || "");
+    if (waitingStates.has(state)) groups.waiting.push(line);
+    else if (doingStates.has(state)) groups.doing.push(line);
+    else if (state === "completed") groups.done.push(`${line}${when(task.updatedAt || task.createdAt) ? `, ${when(task.updatedAt || task.createdAt)}` : ""}`);
+    else if (stuckStates.has(state)) groups.stuck.push(line);
+  }
+  for (const key of Object.keys(groups)) groups[key] = groups[key].slice(0, key === "done" ? 8 : 6);
+  return groups;
+}
+function kyroActivitySummary(groups) {
+  const parts = [];
+  if (groups.waiting.length) parts.push(`${groups.waiting.length} ${groups.waiting.length === 1 ? "thing is" : "things are"} waiting for your yes.`);
+  if (groups.doing.length) parts.push(`I am working on ${groups.doing.length}.`);
+  if (groups.done.length) parts.push(`I finished ${groups.done.length} recently.`);
+  if (groups.stuck.length) parts.push(`${groups.stuck.length} could not be finished.`);
+  return parts.join(" ") || "Nothing is waiting for you, and I am not working on anything right now.";
+}
+async function kyroShowActivityScreen() {
+  try {
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "activity", "data-kyro-keep": "true", role: "dialog", "aria-label": kyroT("What I have done and what is waiting"),
+      style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;align-items:flex-start" });
+    const close = kyroMake("button", { type: "button", "aria-label": kyroT("Close"), style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer;z-index:1" }, "×");
+    close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "activity-screen" }); });
+    const status = kyroMake("p", { role: "status", style: "margin:0;font-size:1.2rem" }, kyroT("One moment..."));
+    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, kyroT("What I have done and what is waiting")), status);
+    document.body.append(screen);
+    try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    let tasks = [];
+    try { tasks = await request("/api/nexus/runtime/tasks?limit=40"); } catch { status.textContent = kyroT("I could not read your activity just now. Please try again."); return true; }
+    const groups = kyroActivityGroups(tasks);
+    const summary = kyroActivitySummary(groups);
+    status.textContent = summary;
+    const sections = [["waiting", "Waiting for your yes"], ["doing", "I am working on"], ["done", "Done recently"], ["stuck", "Could not be finished"]];
+    for (const [key, title] of sections) {
+      if (!groups[key].length) continue;
+      const block = kyroMake("div", { "data-kyro-activity-group": key, style: "width:100%;max-width:38em" });
+      block.append(kyroMake("h3", { style: "margin:10px 0 6px;font-size:1.1rem" }, kyroT(title)));
+      for (const line of groups[key]) block.append(kyroMake("p", { style: "margin:0 0 6px;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.07)" }, line));
+      screen.append(block);
+    }
+    try { setVoiceResponse(summary, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the screen has it */ }
+    return true;
+  } catch { return false; }
+}
 function kyroRunAppCommand(special, command) {
+  if (special === "activity") { void kyroShowActivityScreen(); return; }
   document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
   if (special === "telehealth") { startKyroTelehealthIntake({ seedUtterance: { id: "", text: "I need telehealth" }, source: "app-screen" }); return; }
   if (special === "sale") { startKyroSaleIntake({ seedUtterance: { id: "", text: "I want to sell something" }, source: "app-screen" }); return; }
@@ -52796,8 +52885,10 @@ function kyroShowHelpScreen(workspace, context = null) {
 
 // A request the voice tool route answers for certain and the typed route would hand to the AI model (the practice lessons, the guided courses, the interview practice): typed, it goes to the route voice uses,
 // and the answer is shown on the screen and spoken, the same as when it is said. Returns the tool's name, or "".
+const KYRO_VOICE_TOOL_ANSWERS = /\bprovider summary\b|\bsummary (?:for|of) my (?:provider|doctor|nurse)\b/i;
 function kyroTypedToolFor(text) {
   const t = String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
+  if (/^(?:please\s+)?(?:prepare|make|give me|create|write)\s+(?:me\s+)?(?:a\s+|my\s+)?(?:provider|doctor|nurse|clinic)\s+summary(?:\s+(?:of|for)\s+my\s+(?:readings?|blood pressure|health|chronic readings?))?$|^(?:please\s+)?summary for my (?:provider|doctor|nurse)$/.test(t)) return "nexus_health_preparation";
   if (/^(?:please\s+)?(?:teach me|nifundishe)\s+(?:the\s+)?(?:letters|herufi|maths?|math|hesabu|numbers|counting|adding)$/.test(t)) return "nexus_workforce_learning";
   if (/^(?:please\s+)?(?:start|begin)\s+(?:the\s+)?ai basics(?:\s+course)?$/.test(t)) return "nexus_workforce_learning";
   if (/^(?:please\s+)?(?:give me|start|begin)\s+(?:a\s+)?(?:job\s+)?(?:practice interview|interview practice)$/.test(t) || /^practi[sc]e\s+(?:a\s+)?job interview$/.test(t)) return "nexus_workforce_learning";

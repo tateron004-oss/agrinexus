@@ -99,7 +99,7 @@ test("the wiring: what the page says is captured for the model, the tool call go
   assert.match(app, /function setVoiceResponse\(message, speak = false, options = \{\}\) \{\s*kyroNoteActivity\(\);\s*if \(kyroVoiceCapture\) kyroVoiceCapture\.push\(String\(message \?\? ""\)\);/);
   const call = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool("), app.indexOf("const correlationId = `rt-sdk-", app.indexOf("async function callNexusOpenAiRealtimeTool(")));
   assert.match(call, /kyroToolCalledAt = Date\.now\(\);/);
-  assert.match(call, /if \(KYRO_GOVERNED_VOICE_TOOLS\.has\(String\(toolName \|\| ""\)\) \|\| nexusPendingBehaviorConfirmation\) \{\s*const governed = await kyroAnswerLikeTyped\(command\);\s*if \(governed\) return governed;/);
+  assert.match(call, /if \(\(KYRO_GOVERNED_VOICE_TOOLS\.has\(String\(toolName \|\| ""\)\) && !\(typeof KYRO_VOICE_TOOL_ANSWERS !== "undefined" && KYRO_VOICE_TOOL_ANSWERS\.test\(command\)\)\) \|\| nexusPendingBehaviorConfirmation\) \{\s*const governed = await kyroAnswerLikeTyped\(command\);\s*if \(governed\) return governed;/);
   assert.ok(call.indexOf("kyroShowVisualRequest") < call.indexOf("kyroAnswerLikeTyped"), "after the page's own quick answers");
   assert.match(call, /Date\.now\(\) - kyroConfirmedAt < 8000/, "a yes the page already answered is not answered twice");
   const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("), app.indexOf("function startKyroResumeIntake") > 0 ? app.indexOf("function routeKyroVoiceIntakeTranscript(") + 6000 : undefined);

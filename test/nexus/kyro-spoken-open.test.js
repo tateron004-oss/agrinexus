@@ -176,7 +176,7 @@ test("a card left open by an earlier request is closed by the next request, the 
   assert.match(app, /delete document\.body\.dataset\.genesisWorkspace; delete document\.body\.dataset\.genesisWorkspaceRequestId;/);
   assert.match(app, /async function handleNexusUnifiedBrainRuntimeCommand\(command = "", options = \{\}\) \{\s*const text = String\(command \|\| ""\)\.trim\(\);\s*if \(!text\) return false;\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(text\);/);
   assert.match(app, /function startKyroVoiceIntake\(definition, options = \{\}\) \{\s*if \(kyroActiveVoiceIntake\) kyroActiveVoiceIntake\.engine\.cancel\(\);\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(\);/);
-  assert.match(app, /async function callNexusOpenAiRealtimeTool\(toolName, args = \{\}\) \{\s*const command = [^\n]*\n\s*\/\/ [^\n]*\n\s*kyroDismissStaleWorkspace\(command\);/);
+  assert.match(app, /async function callNexusOpenAiRealtimeTool\(toolName, args = \{\}\) \{\s*const command = [^\n]*\n\s*\/\/ [^\n]*\n\s*if \(!\(typeof kyroPageJustOpened === "function" && kyroPageJustOpened\(command\)\)\) kyroDismissStaleWorkspace\(command\);/);
 });
 
 // Found when sweeping the applications: "Open business", "open operations", "open messages", "open the pharmacy", "open logistics", "open the weather", "open live knowledge" and "open the calendar" were answered "I'm not sure what you'd like me to do".

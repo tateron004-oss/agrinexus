@@ -21,6 +21,7 @@
     "qa:nexus-path-1-gap-resolution": "node scripts/nexus-path-1-gap-resolution-guard.js && node --test test/nexus/path-1-gap-resolution.test.js",
     "qa:nexus-path-1-evidence-matrix": "node scripts/nexus-path-1-evidence-matrix-guard.js && node --test test/nexus/path-1-evidence-matrix.test.js",
     "qa:voice": "node scripts/qa-suite.js voice",
+    "qa:voice-live": "node scripts/live-voice-suite/run.js",
     "qa:nexus-genesis-live-provider-browser-smoke": "node scripts/nexus-genesis-live-provider-browser-smoke.js",
     "qa:nexus-sanitize-realtime-audit-records": "node scripts/nexus-sanitize-realtime-audit-records.js",
     "qa:nexus-genesis-rails-core": "node scripts/qa-suite.js genesis-rails-core",

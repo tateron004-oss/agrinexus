@@ -1,0 +1,49 @@
+name: Live voice test
+
+# Talks to the live site by voice every night (and on demand) and fails when something that used to open no longer does.
+# Optional repository secrets KYRO_TEST_EMAIL and KYRO_TEST_PASSWORD (a test account, never a real person's) give the full list; without them it starts as a guest.
+on:
+  workflow_dispatch:
+    inputs:
+      area:
+        description: "Only these areas (for example documents,lists), or leave empty for all"
+        required: false
+        default: ""
+  schedule:
+    - cron: "30 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-voice-suite
+  cancel-in-progress: false
+
+jobs:
+  live-voice:
+    name: Real voice to visible screens
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      KYRO_TEST_EMAIL: ${{ secrets.KYRO_TEST_EMAIL }}
+      KYRO_TEST_PASSWORD: ${{ secrets.KYRO_TEST_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check the suite itself
+        run: node --test test/nexus/live-voice-suite.test.js
+      - name: Talk to the live site
+        run: |
+          mkdir -p output/live-voice
+          args="--out output/live-voice/report.json"
+          if [ -n "${{ github.event.inputs.area }}" ]; then args="$args --area ${{ github.event.inputs.area }}"; fi
+          node scripts/live-voice-suite/run.js $args
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-voice-report
+          path: output/live-voice/report.json
+          if-no-files-found: ignore

@@ -850,7 +850,9 @@ function classify(command = "") {
   // this same workspace with its own words rather than being forced to say
   // "business" or "nonprofit".
   const BUSINESS_WORKSPACE_NOUN = "(?:business(?:es)?|nonprofit|non-profit|ngo|church(?:es)?|congregation|parish|admin[- ]assistant|workspace)s?";
-  const wantsBusinessDashboard = /\b(business|nonprofit|church|congregation|parish)\b/i.test(command) && /\b(dashboard|doing|performing|performance summary|financial summary)\b/i.test(command);
+  // ("a business summary", "a summary of my business", "a business summary for Kyro Test Workspace": found by the live voice test, the voice model adds the workspace's name and this was refused as "could not tell what to do")
+  const wantsBusinessDashboard = (/\b(business|nonprofit|church|congregation|parish)\b/i.test(command) && /\b(dashboard|doing|performing|performance summary|financial summary|business summary|summary of (?:my|our|the) (?:business|nonprofit|church|congregation|parish))\b/i.test(command))
+    || (/\b(?:summary|overview)\b/i.test(command) && /\bworkspace\b/i.test(command) && !/\b(?:farm|weather|health|drone|field)\b/i.test(command));
   // "Open the business workspace" / "go to my nonprofit" (found on production: refused with "I could not tell what to do with that in your business records"): it is answered with the person's
   // workspaces, the same as "show my business workspace". Only the business-type words count here, not the bare word "workspace" ("open the farm workspace" is the farm window).
   const wantsOpenBusiness = /\b(?:open|go to)\s+(?:the|my)\s+(?:business(?:es)?|nonprofit|non-profit|ngo|church(?:es)?|congregation|parish)\b/i.test(command);
