@@ -119,7 +119,7 @@ test("no time at all is asked about, never turned into 'tomorrow'", async () => 
   const asked = await speak("remind me to take my medicine");
   assert.match(asked.response, /When should I remind you\?/);
   const answered = await speak("in 20 minutes");
-  assert.match(answered.response, /take my medicine in 20 minutes/);
+  assert.match(answered.response, /take your medicine in 20 minutes/);
   assert.equal((await stored()).length, 1);
   // something that is not an answer is a new request, and the question is dropped
   await reset();

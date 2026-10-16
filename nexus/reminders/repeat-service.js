@@ -3,6 +3,7 @@
 const { readRepeatRequest, DAY_NAMES } = require("./repeat-phrase.js");
 const { isPrivateReminder, pushBodyFor } = require("./private-reminder.js");
 const { normalizeSpokenText } = require("../i18n/spoken-input.js");
+const { toSecondPerson } = require("./second-person.js");
 const { isDueNow, localClock, formatTimeOfDay, minutesOfDay } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 const { addDays, weekdayOf } = require("../personal/dates.js");
@@ -42,7 +43,7 @@ function whenWords(days, timeOfDay, extra = {}) {
   }
   return `${daysWords(days)} at ${formatTimeOfDay(timeOfDay)}`;
 }
-const remindYou = task => `remind you ${/^about\s/i.test(task) ? "" : "to "}${task}`;
+const remindYou = task => `remind you ${/^about\s/i.test(task) ? "" : "to "}${toSecondPerson(task)}`;
 
 // The first day a counted repeat (every other day...) counts from: today if its first time has not passed yet, otherwise tomorrow.
 function firstDay(zone, now, firstTime) {

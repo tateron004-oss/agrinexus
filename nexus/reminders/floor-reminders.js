@@ -3,6 +3,7 @@
 const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("./time-phrase.js");
 const { scanTime, SW_PERIODS } = require("./time-grammar.js");
 const { normaliseSwahiliDates } = require("./sw-dates.js");
+const { toSecondPerson } = require("./second-person.js");
 
 // What the older command route and the phone line understand about reminders: reading the request (set, list, change, cancel one, cancel all), finding the reminder meant,
 // answering a "what time?" question, and not saving the same reminder twice. Pure functions over plain reminder records, so they are tested without a server.
@@ -138,7 +139,7 @@ const MESSAGES = Object.freeze({
     sw: (reminder, readbackSw) => `Tayari una kikumbusho hicho${reminder.reminderNumber ? ` (${reminder.reminderNumber})` : ""}: ${reminder.task}, ${readbackSw}. Sijakiongeza tena.`
   },
   set: {
-    en: (task, readback) => `Done. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${task} ${readback}.`,
+    en: (task, readback) => `Done. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${toSecondPerson(task)} ${readback}.`,
     sw: (task, readbackSw) => `Sawa. Nitakukumbusha ${task} ${readbackSw}.`
   },
   repeatUnavailable: {

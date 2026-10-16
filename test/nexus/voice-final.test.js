@@ -260,3 +260,15 @@ test("a spoken yes or no takes the question off the screen and puts the answer t
   const none = world([], false); none.run({ response: "Added." }, true);
   assert.deepEqual(none.drawn, [], "a tap already took the question down: nothing more to do");
 });
+
+// found by the live voice test: "I'm 70 years old." was answered by the voice model on its own ("I'll keep it in mind") and Kyro never told the person what it can do for them; "I'm a veteran." went to Kyro and was.
+test("a person saying they are 65 or over, an older adult or a veteran is answered by Kyro, not left to the voice model", () => {
+  const sourceFor = () => ["const KYRO_SELF_VETERAN", "const KYRO_SELF_ELDERLY_WORDS", "const KYRO_SELF_ELDERLY_AGE"].map(sliceConst).join("\n") + sliceFn("function kyroSelfIntroducedAudience(") + "\nkyroSelfIntroducedAudience";
+  const owns = new vm.Script(sourceFor()).runInNewContext({ Number, Boolean, String });
+  for (const said of ["I'm 70 years old.", "I’m 70 years old.", "I am 72 and I live alone", "I'm 65, how do I use this", "I'm a veteran.", "I’m an army veteran", "I am an older adult", "I'm a senior"]) assert.equal(owns(said), true, said);
+  for (const said of ["I'm 15, and I want to learn.", "I'm 64 years old", "I'm 70 kg", "I'm 80 meters away", "my grandfather is a veteran", "a veteran teacher helped me", "Open documents", "I'm 150 years old"]) assert.equal(owns(said), false, said);
+  const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
+  assert.match(route, /typeof kyroSelfIntroducedAudience === "function" && kyroSelfIntroducedAudience\(trimmed\)\) \{\s+if \(!heardAgain\) \{[^]*?handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);[^]*?\}\s+return true;/);
+  const audience = require("../../nexus/companion/audience.js");
+  for (const said of ["I’m 70 years old.", "I’m a veteran."]) assert.ok(audience.readAudienceIntro(said), `the server reads the curly apostrophe too: ${said}`);
+});

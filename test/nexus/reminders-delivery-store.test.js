@@ -97,7 +97,7 @@ test("with a delivery store: reminders go there, other accounts never see or can
     const admin = await server.login("admin@agrinexus.org", "Admin2026!");
     const made = await server.say(ada, "remind me in 30 minutes to take my medicine");
     assert.equal(made.intent, "assistant.reminder_scheduled"); assert.equal(made.metadata.delivery, "push");
-    assert.match(made.response, /take my medicine in 30 minutes, at \d{1,2}:\d{2} (?:am|pm) (?:today|tomorrow)/);
+    assert.match(made.response, /take your medicine in 30 minutes, at \d{1,2}:\d{2} (?:am|pm) (?:today|tomorrow)/);
     // her own list: the new one, the older future one (moved in), the old missed one; and never the other account's
     const mine = (await server.say(ada, "what reminders do I have")).metadata.reminders;
     assert.deepEqual(mine.map(item => item.task).sort(), ["an old missed one", "send the invoice", "take my medicine"]);

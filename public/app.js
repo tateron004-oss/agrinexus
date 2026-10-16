@@ -51527,6 +51527,16 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
       if (handleKyroDismissCommand(trimmed, { source: "voice-transcript" })) return true;
     }
+    // "I'm 70 years old", "I'm a veteran": the voice model sometimes answered these on its own ("I'll keep it in mind") instead of asking Kyro, so the older person or the veteran was never told what Kyro can do for them
+    // (daily check-ins, medicine reminders, a trusted circle). The same words go to Kyro the way they are typed.
+    if (trimmed && typeof kyroSelfIntroducedAudience === "function" && kyroSelfIntroducedAudience(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 30000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
+    }
     // A drafted message on the activity screen: "send it" / "don't send it" (and a plain yes or no within two minutes of being asked) press that card's own button.
     if (trimmed && typeof kyroDraftVoiceReply === "function" && kyroDraftVoiceReply(trimmed)) return true;
     // "Yes" or "no" to a question the page asked ("Should I go ahead?"): answered from what was heard, as typing it is, instead of leaving it to the model.
@@ -52598,6 +52608,17 @@ function kyroDraftCard(draft) {
 }
 // Spoken yes or no for a drafted message that is on the screen. Only the card's own button is pressed, so it is the same governed send as a tap. "Send it" and "don't send it" count
 // whenever a draft is showing; a plain yes or no counts only within two minutes of the screen asking. With more than one draft showing, the person is asked to tap the one they mean.
+// The same words nexus/companion/audience.js reads (a person saying they are a veteran, an older adult, or 65 or over). First person only, and a number counts only when it is said as an age.
+const KYRO_SELF_VETERAN = /\bi(?:['’]m| am) (?:a |an )?(?:military |army |navy |air force |marine corps |combat |former )?veteran\b/i;
+const KYRO_SELF_ELDERLY_WORDS = /\bi(?:['’]m| am) (?:elderly|a senior citizen|an older (?:person|adult)|getting (?:up there|older)|a senior)\b/i;
+const KYRO_SELF_ELDERLY_AGE = /\bi(?:['’]m| am) (\d{2,3})(?:[\s-]*(?:years?|yrs?)(?:[\s-]*old)?|\s*y\/?o)?(?=\s*(?:[.,;!?]|$)|\s+(?:and|but|so)\b)/i;
+function kyroSelfIntroducedAudience(text) {
+  const said = String(text || "").trim();
+  if (!said || said.length > 200) return false;
+  if (KYRO_SELF_VETERAN.test(said) || KYRO_SELF_ELDERLY_WORDS.test(said)) return true;
+  const age = KYRO_SELF_ELDERLY_AGE.exec(said);
+  return Boolean(age && Number(age[1]) >= 65 && Number(age[1]) <= 130);
+}
 let kyroDraftAskedAt = 0;
 const KYRO_DRAFT_SEND = /^(?:(?:yes|yeah|yep|ok|okay)[,.]?\s+)?(?:please\s+)?(?:send it|send (?:the|that|this) (?:message|text|email|one)|go ahead and send(?: it)?)[.!]*$/i;
 const KYRO_DRAFT_HOLD = /^(?:(?:no|nope)[,.]?\s+)?(?:please\s+)?(?:do not|don't|dont) send(?: it| (?:the|that|this) (?:message|text|email|one))?[.!]*$|^(?:cancel|forget) (?:it|that|the message)[.!]*$/i;

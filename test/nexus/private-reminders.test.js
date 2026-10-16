@@ -46,7 +46,7 @@ test("a reminder set through the planner's tool and one set through the older ro
 test("Kyro says what the phone will show, only for a private reminder", () => {
   const plan = reminder => ({ steps: [{ toolId: "reminders.schedule", input: { reminder, when: "tomorrow at 9am" } }] });
   const said = reminderSetResponse(plan("remind me about my Pap smear"), { timeZone: "America/Chicago" });
-  assert.match(said, /^Okay\. I will remind you about my Pap smear /); assert.match(said, /The notification on your phone will say only that you have a private reminder\.$/);
+  assert.match(said, /^Okay\. I will remind you about your Pap smear /); assert.match(said, /The notification on your phone will say only that you have a private reminder\.$/);
   assert.doesNotMatch(reminderSetResponse(plan("remind me to check the pump"), { timeZone: "America/Chicago" }), /private reminder/);
 });
 
@@ -58,4 +58,17 @@ test("the repeating reminder and the morning brief use it too, and the guides te
   for (const [id, options, pattern] of [["cervical-screening", { us: true }, /remind me about my Pap smear on 3 March/], ["breast-health", { us: true }, /remind me about my mammogram/], ["prenatal-care", { us: true }, /remind me about my prenatal visit/],
     ["womens-health-overview", { us: true }, /will say only that you have a private reminder/], ["cervical-screening", { us: false }, /remind me about my screening/], ["prenatal-care", { us: false }, /remind me about my antenatal visit/]])
     assert.match(guide.womensHealthAnswer(id, options).text, pattern, `${id} ${JSON.stringify(options)}`);
+});
+
+// found by the live voice test (a senior's "remind me to take my pills at 8 pm"): it was said back as "I will remind you to take my pills", as if the pills were Kyro's
+test("what a reminder is said back as turns the person's words round: my is your, me is you, I is you", () => {
+  const { toSecondPerson } = require("../../nexus/reminders/second-person.js");
+  assert.equal(toSecondPerson("take my pills"), "take your pills");
+  assert.equal(toSecondPerson("call my daughter and tell her I am home"), "call your daughter and tell her you are home");
+  assert.equal(toSecondPerson("Pay me back, I'll be late, it is mine"), "Pay you back, you'll be late, it is yours");
+  assert.equal(toSecondPerson("My pills"), "Your pills");
+  assert.equal(toSecondPerson("do it myself"), "do it yourself");
+  assert.equal(toSecondPerson("take metformin"), "take metformin", "words with no first person are left alone");
+  assert.equal(toSecondPerson("collect the permit at the Mayor’s office"), "collect the permit at the Mayor’s office", "'Mayor' and 'mine' inside other words are not touched");
+  assert.equal(toSecondPerson(null), "");
 });
