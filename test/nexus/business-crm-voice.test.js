@@ -166,3 +166,35 @@ test("a task due date and a grant deadline said by voice are stored as real date
   const saved = ws.client.data.editable.tasks.find(item => item.title.toLowerCase().includes("order feed"));
   assert.match(saved.dueDate, /^\d{4}-\d{2}-\d{2}$/, `stored as a real date, not the word: ${saved.dueDate}`);
 });
+
+// found by the live voice test: "Create an invoice for Test Person for 5,000 shillings" made the invoice out to "Test Person for 5" (the comma ended the name) and threw the amount away.
+test("an amount said with 'create an invoice' is the invoice's amount, never part of the client's name", async () => {
+  for (const said of ["Create an invoice for Test Person for 5,000 shillings.", "Create an invoice for Test Person for 5000 shillings", "create an invoice for Test Person for five thousand shillings"]) {
+    const ws = workspace();
+    const ask = await say(ws, said, false);
+    assert.equal(ask.status, "needs-confirmation", said);
+    assert.match(ask.response, /invoice INV-1004 for Test Person for KES 5,000 in "Mama Grace Shop"/, said);
+    assert.doesNotMatch(ask.response, /Test Person for 5\b(?!,)/, said);
+    const done = await say(ws, said, true);
+    assert.equal(done.status, "completed");
+    const saved = ws.saves.at(-1).editable;
+    assert.equal(saved.invoices.at(-1).clientName, "Test Person");
+    assert.deepEqual(saved.invoiceItems.at(-1), { invoiceNumber: "INV-1004", description: "Amount due", quantity: 1, unitPrice: 5000, currency: "KES" });
+  }
+});
+
+test("an invoice with no amount is made as before, a different currency is kept, and a bare number is asked about instead of guessed", async () => {
+  const plain = workspace();
+  assert.match((await say(plain, "Create an invoice for Grace Otieno", false)).response, /^I can create invoice INV-1004 for Grace Otieno in "Mama Grace Shop"\. Should I go ahead\?$/);
+  await say(plain, "Create an invoice for Grace Otieno", true);
+  assert.equal(plain.saves.at(-1).editable.invoiceItems.length, 4, "no line is added when no amount was said");
+  const dollars = workspace();
+  await say(dollars, "Create an invoice for Five Star Hotel for 2,500 dollars", true);
+  assert.deepEqual(dollars.saves.at(-1).editable.invoiceItems.at(-1), { invoiceNumber: "INV-1004", description: "Amount due", quantity: 1, unitPrice: 2500, currency: "USD" });
+  assert.equal(dollars.saves.at(-1).editable.invoices.at(-1).clientName, "Five Star Hotel");
+  const bare = workspace();
+  const asked = await say(bare, "Create an invoice for Amina for 5000", true);
+  assert.equal(asked.status, "needs-input"); assert.match(asked.response, /What currency is 5,000 in\?/); assert.equal(bare.saves.length, 0, "nothing is saved until the currency is known");
+  const weeks = workspace();
+  assert.equal((await say(weeks, "Create an invoice for Peter for 2 weeks of work", false)).status, "needs-confirmation", "a number that is not money is not asked about as money");
+});

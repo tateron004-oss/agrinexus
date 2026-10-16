@@ -275,7 +275,7 @@ test("an answer to 'what would you like to see?' that is itself a request for th
 
 // Found sweeping the business side: "open the CRM" and "open grants" were answered "I could not tell what to do with that in your business records", "open my resume" listed the business plans as raw fields, and "open uploads" showed internal fields.
 test("the business applications, the résumés and the uploads open", () => {
-  for (const [text, command] of [["Open the CRM", "Show my clients"], ["open clients", "Show my clients"], ["Open customers", "Show my clients"], ["Open donors", "Who are my donors"], ["open grants", "Which grants are due soon"], ["Open funding", "Which grants are due soon"],
+  for (const [text, command] of [["Open the CRM", "Show my clients"], ["open clients", "Show my clients"], ["Open customers", "Show my clients"], ["Open donors", "Who are my donors"], ["Show my donations", "Show my donations"], ["open fundraising", "Show my donations"], ["Show my donors", "Who are my donors"], ["open grants", "Which grants are due soon"], ["Open funding", "Which grants are due soon"],
     ["open my invoices", "Show my invoices"], ["show the finances", "Give me a business summary"], ["Open bookkeeping", "Give me a business summary"], ["open my resume", "Show my resumes"], ["Show my CV", "Show my resumes"], ["Kyro, open my résumé", "Show my resumes"]]) {
     const { api, calls } = load();
     assert.equal(api.kyroSpokenOpenOwns(text), true, text);

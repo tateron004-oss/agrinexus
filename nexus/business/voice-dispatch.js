@@ -366,10 +366,25 @@ function nextInvoiceNumber(editable) {
   return `INV-${(used.length ? Math.max(...used) : 1000) + 1}`;
 }
 
+// "Create an invoice for Test Person for 5,000 shillings": the client is the first name after "for"; an amount said after it is the invoice's amount, not part of the client's name
+// (it used to be: the invoice was made out to "Test Person for 5", the comma ended the name, and the amount was thrown away).
 function extractInvoiceArgs(command = "", args = {}) {
   const text = String(command || "");
-  const clientMatch = text.match(/\bfor\s+["']?([^"'.,\n]{2,80})["']?/i);
-  return { clientName: sanitizeText(args.clientName || args.name || (clientMatch ? clientMatch[1].trim() : ""), 160) };
+  const after = /\bfor\s+["']?(.+)$/i.exec(text);
+  const tail = after ? after[1].replace(/[.!?]+\s*$/, "") : "";
+  let cut = tail.search(/\s+(?:for|of|worth|at)\s+(?:[A-Za-z]{0,3}\s?)?[$€£]?\d/i);
+  if (cut < 0 && amountWithCurrency(tail)) { const words = /\s+(?:for|of|worth)\s+(?![^]*\s(?:for|of|worth)\s)/i.exec(tail); cut = words ? words.index : -1; } // ("for five thousand shillings")
+  const namePart = (cut >= 0 ? tail.slice(0, cut) : tail).replace(/["']/g, "").split(/[.,;]/)[0].trim().slice(0, 80);
+  const amountText = cut >= 0 ? tail.slice(cut) : "";
+  const money = amountText ? amountWithCurrency(amountText) : null;
+  const bare = amountText && !money ? /^\s*(?:for|of|worth|at)\s+[$€£]?(\d[\d,]*(?:\.\d+)?)\s*$/i.exec(amountText) : null;
+  return {
+    clientName: sanitizeText(args.clientName || args.name || namePart, 160),
+    amount: money && Number.isFinite(money.amount) && money.amount > 0 ? money.amount : null,
+    currency: money ? money.currency : "",
+    // an amount said with no currency is asked about, not guessed
+    bareAmount: bare ? Number(bare[1].replace(/,/g, "")) : null
+  };
 }
 
 function extractInvoiceItemArgs(command = "", args = {}) {
@@ -1350,13 +1365,17 @@ async function run({ command = "", args = {}, confirmed, businessRequest, timeZo
     if (!resolved.client) return { status: "needs-input", response: "You do not have a business or nonprofit workspace yet. Tell me its name and I can start one before creating an invoice.", missingInformation: ["businessName"] };
     const workspaceName = resolved.client.data?.info?.businessName || "your workspace";
     const invoiceNumber = nextInvoiceNumber(resolved.client.data.editable);
+    if (invoiceArgs.bareAmount !== null) return { status: "needs-input", response: `What currency is ${invoiceArgs.bareAmount.toLocaleString("en-US")} in? For example, say "${invoiceArgs.bareAmount} shillings" or "${invoiceArgs.bareAmount} dollars".`, missingInformation: ["currency"] };
     const clientPhrase = invoiceArgs.clientName ? ` for ${invoiceArgs.clientName}` : "";
-    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can create invoice ${invoiceNumber}${clientPhrase} in "${workspaceName}". Should I go ahead?` };
+    // An amount said with the request becomes the invoice's one line ("Amount due"), so the invoice is not left empty with the amount lost.
+    const amountPhrase = invoiceArgs.amount ? ` for ${formatMoney(invoiceArgs.currency, invoiceArgs.amount)}` : "";
+    if (!isConfirmed) return { status: "needs-confirmation", requiresConfirmation: true, response: `I can create invoice ${invoiceNumber}${clientPhrase}${amountPhrase} in "${workspaceName}". Should I go ahead?` };
     const editable = { ...resolved.client.data.editable, invoices: [...resolved.client.data.editable.invoices,
-      { invoiceNumber, clientName: invoiceArgs.clientName, date: todayIn(new Date(), timeZone), dueDate: "", notes: "", status: "draft" }] };
+      { invoiceNumber, clientName: invoiceArgs.clientName, date: todayIn(new Date(), timeZone), dueDate: "", notes: "", status: "draft" }],
+    invoiceItems: invoiceArgs.amount ? [...resolved.client.data.editable.invoiceItems, { invoiceNumber, description: "Amount due", quantity: 1, unitPrice: invoiceArgs.amount, currency: invoiceArgs.currency || "USD" }] : resolved.client.data.editable.invoiceItems };
     const updated = await businessRequest({ method: "PUT", pathname: `/api/nexus/runtime/business/clients/${resolved.client.record_id}`,
       body: { expectedVersion: resolved.client.version, info: resolved.client.data.info, editable } });
-    const response = `Created invoice ${invoiceNumber}${clientPhrase} in "${workspaceName}".`;
+    const response = `Created invoice ${invoiceNumber}${clientPhrase}${amountPhrase} in "${workspaceName}".`;
     return { status: "completed", localOnly: true, response, businessRecord: updated?.body || null, summary: response };
   }
 
