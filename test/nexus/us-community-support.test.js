@@ -120,3 +120,22 @@ test("through the planner: a question naming a US programme gets the US guide wi
   await assert.rejects(ask(planner(null), "What help is there for veterans?", { timeZone: "Africa/Nairobi" }), /must not reach the AI planning model/);
   assert.equal(guide.isCommunityUs("What help is there for veterans?"), false); assert.equal(guide.isCommunityUs("What is the Veterans Crisis Line?"), true);
 });
+
+// found by the live voice test: the voice model answered "What is the Veterans Crisis Line?" and "What help is there for veterans?" from memory ("depending on the country"), with no phone number. The page now takes these
+// questions, with the same words the guide uses, and answers them from the guide.
+test("the page answers a spoken question of this kind from the guide, on a US device or when it names a US programme", () => {
+  const fs = require("node:fs"); const path = require("node:path"); const vm = require("node:vm");
+  const app = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+  const topics = require("../../public/kyro-community-topics.js");
+  assert.equal(topics.topic("What is the Veterans Crisis Line?"), "vet-crisis"); assert.equal(topics.usTimeZone("America/Los_Angeles"), true); assert.equal(topics.usTimeZone("Africa/Nairobi"), false);
+  const start = app.indexOf("function kyroCommunityQuestion("); const fn = app.slice(start, app.indexOf("\n}\n", start) + 3);
+  const owns = (text, zone) => new vm.Script(fn + "\nkyroCommunityQuestion").runInNewContext({ window: { KyroCommunityTopics: topics }, kyroDeviceTimeZone: () => zone, Boolean })(text);
+  assert.equal(owns("What is the Veterans Crisis Line?", "Africa/Nairobi"), true, "it names a US programme");
+  assert.equal(owns("What help is there for veterans?", "America/Chicago"), true, "a US device");
+  assert.equal(owns("What help is there for veterans?", "Africa/Nairobi"), false, "no American numbers for a person in Kenya");
+  assert.equal(owns("Open documents.", "America/Chicago"), false); assert.equal(owns("Show my donations.", "America/Chicago"), false);
+  const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
+  assert.match(route, /typeof kyroCommunityQuestion === "function" && kyroCommunityQuestion\(trimmed\)\) \{\s+if \(!heardAgain\) \{[^]*?handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);[^]*?\}\s+return true;/);
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-community-topics.js?v=kyro-community-topics-1"'));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-community-topics.js?v=kyro-community-topics-1"));
+});
