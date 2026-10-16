@@ -213,6 +213,7 @@ const senderOverride = require("./server/providers/senderOverride.js");
 const { normaliseSpoken } = require("./nexus/speech/normalise.js");
 const frontDoor = require("./server/frontDoor.js");
 const voiceStallReports = require("./server/voice-stall-reports.js");
+const voiceUsage = require("./server/voice-usage.js");
 const { cleanContactName, localPhoneToE164 } = require("./nexus/memory/contacts.js");
 // What the current request sends as. In the default space this is process.env itself; inside a business it is a copy carrying that business's own numbers and settings (and none of the platform's).
 // The Twilio and email providers apply the same swap themselves (server/providers/senderOverride.js), so a call that was handed process.env still sends as the right business.
@@ -59651,6 +59652,27 @@ async function api(req, res, url) {
     db.profile.voiceStallReports = voiceStallReports.storeStallReport(db.profile.voiceStallReports, report);
     await writeDb(db);
     return send(res, 200, { ok: true }, { "cache-control": "no-store" });
+  }
+
+  // The browser's running totals for a voice session: how many spoken requests it heard and how many had a problem (counts only, see server/voice-usage.js), added into a per-day total.
+  if (url.pathname === "/api/voice/realtime/usage-report" && req.method === "POST") {
+    if (!(accountableUser(user) ? perUserRateLimit(req, user, "voice-usage", 12, 60_000, 10) : rateLimit(req, 12, 60_000))) return send(res, 429, { error: "Too many usage reports", category: "rate-limited" });
+    if (!nexusGenesisVoiceOriginAllowed(req)) return send(res, 403, { error: "Origin not allowed", category: "application-origin-forbidden" });
+    const body = await readBody(req);
+    const authContext = resolveGenesisVoiceAuthContext(req, db, user, { language: "en", issueGuest: false });
+    if (!authContext.authenticated) return send(res, 401, { ok: false, error: "Sign in required" });
+    const usage = voiceUsage.sanitiseUsage(body);
+    if (!voiceUsage.FIELDS.some(field => usage[field] > 0)) return send(res, 200, { ok: true, kept: false }, { "cache-control": "no-store" });
+    db.profile.voiceUsageDaily = voiceUsage.addUsage(db.profile.voiceUsageDaily, usage);
+    await writeDb(db);
+    return send(res, 200, { ok: true, kept: true }, { "cache-control": "no-store" });
+  }
+
+  // Read-only: how often spoken requests went smoothly, per day (see server/voice-usage.js). Owner only.
+  if (url.pathname === "/api/admin/voice/usage-summary" && req.method === "GET") {
+    if (!canUse(user, "admin") || !businessSpaces.isPlatformOwner(user)) return send(res, 403, { error: "Role does not allow viewing voice usage" });
+    return send(res, 200, { ...voiceUsage.summariseUsage(db.profile.voiceUsageDaily, { days: Number(url.searchParams.get("days") || 14) }),
+      note: "Counts only, from browsers that reported them: spoken requests heard, and how many had a problem (the voice began to refuse, the page could not answer, the session stalled). Smooth = no problem counted. It is not a count of every spoken request ever made: a browser that closed before it reported is missing." });
   }
 
   // Read-only: the stall reports above, counted by phase / kind / tool / last event, with a plain-language reading of the most common one. Owner only.
