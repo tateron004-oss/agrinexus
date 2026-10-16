@@ -19,6 +19,7 @@ const { parseWeeklyControl, WEEKDAYS } = require("../brief/weekly.js");
 const { extractProfileStatement, extractForgetRequest, savedNotice, forgottenNotice, sentenceFor, isFact } = require("../memory/profile-facts.js");
 const { professionalAdviceTopic, professionalAdviceReply, professionalAdviceGoal, withProfessionalAdviceNote } = require("../guardrails/professional-advice.js");
 const { usSmallBusinessTopic, usSmallBusinessAnswer, isUsContext, UNIVERSAL_TOPICS } = require("../knowledge/us-small-business.js");
+const { communityTopic, communityAnswer, isCommunityUs } = require("../knowledge/us-community-support.js");
 const { africaTopic, africaAnswer, africaCountry, africaNamed } = require("../knowledge/africa-small-business.js");
 const { technologyTopic, technologyAnswer } = require("../knowledge/small-business-technology.js");
 const { aiToolsTopic, aiToolsAnswer } = require("../knowledge/ai-tools-for-business.js");
@@ -500,6 +501,15 @@ class OpenEndedPlanner {
     if (africaId) {
       const guide = africaAnswer(africaId);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `africa-small-business:${africaId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
+    // The checked guide to official help for veterans, older adults, young people and nonprofits (see knowledge/us-community-support.js): a question about those, on a US device or naming a US programme (VA, Medicare, 988, the IRS ...).
+    // Each answer carries the official sources, the date they were read and the "confirm on the official site" warning. A person's own records ("who are my donors") are never taken, and the safety layer answers a person in crisis first.
+    // ("do I have to give donors a receipt" has "I have" in it, which reads as a question about the person's own records: the nonprofit topics are specific enough to be taken anyway)
+    const communityPick = !techTopic && (usPerson || isCommunityUs(askText)) ? communityTopic(askText) : null;
+    const communityId = communityPick && (!ownWorkspace || communityPick.startsWith("np-")) ? communityPick : null;
+    if (communityId) {
+      const guide = communityAnswer(communityId);
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-community-support:${communityId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
     const universalId = !ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (universalId && UNIVERSAL_TOPICS.includes(universalId)) {
