@@ -48,3 +48,12 @@ test("the spoken request and the Care and wellness button open it, and it reads 
   assert.match(screen, /request\("\/api\/nexus\/runtime\/tasks\?limit=40"\)/); assert.match(screen, /"data-kyro-keep": "true"/);
   assert.ok(!/method: "POST"|method: "DELETE"/.test(screen), "it changes nothing");
 });
+
+test("'what do you know about me' is answered by the page from what Kyro has saved, and the voice model is told Kyro does remember between sessions", () => {
+  const re = new vm.Script(sliceConst("const KYRO_OPEN_LEAD") + sliceConst("const KYRO_ASK_MEMORY") + "KYRO_ASK_MEMORY").runInNewContext({});
+  for (const said of ["What do you know about me?", "What do you remember about me", "What have you saved about me?", "What do you remember?", "What did you learn" ]) assert.equal(re.test(said), said !== "What did you learn", said);
+  for (const said of ["What do you know about maize", "What do you remember about the meeting in Kisumu", "Do you know me"]) assert.ok(!re.test(said), said);
+  assert.match(app, /if \(KYRO_ASK_MEMORY\.test\(said\)\) \{\s*kyroTakeOverTurn\(\);\s*void handleNexusUnifiedBrainRuntimeCommand\("What do you know about me\?", \{ source: "typed", kyroDirect: true \}\);\s*return true;/);
+  const server = fs.readFileSync(path.join(__dirname, "../../server.js"), "utf8");
+  assert.match(server, /Kyro DOES remember what the person tells it across sessions[^"]*never say you do not remember anything between sessions\./);
+});

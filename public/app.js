@@ -51864,6 +51864,8 @@ function kyroOpenMapRequest(text) {
 // "I need help with my maize crop", "help me with my farm": the crop and farm help screen, which has the box to ask in and the farm log.
 const KYRO_CROP_HELP = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:i|we)\\s+(?:need|want)\\s+(?:some\\s+)?help\\s+(?:with|on)|(?:can|could|will) you help me with|help me with|help with)\\s+(?:my|the|our)\\s+(?:[a-z-]+\\s+){0,2}(?:crops?|farm|fields?|garden|plants?|harvest)[.?!]*$`, "i");
 // "What have you done for me?", "what is waiting for me?", "open activity": the activity screen (kyroShowActivityScreen, below with the application screens).
+// "What do you know about me?", "what do you remember?": what Kyro has saved about the person, shown on the screen (the voice model had answered, wrongly, that it remembers nothing between sessions).
+const KYRO_ASK_MEMORY = new RegExp(KYRO_OPEN_LEAD + "(?:what (?:do|did) you (?:know|remember) about me|what have you (?:saved|remembered|learned|stored) about me|what (?:do|did) you remember)[.?!]*$", "i");
 const KYRO_OPEN_ACTIVITY = new RegExp(KYRO_OPEN_LEAD + "(?:(?:open|show|see|view|check)\\s+(?:me\\s+)?(?:(?:my|the)\\s+)?(?:recent\\s+)?activity|what (?:have you|did you|are you) (?:done|do|doing|working on)(?: for me)?|what(?:'s| is| are) (?:waiting|pending)(?: for me)?(?: on me)?)[.?!]*$", "i");
 const KYRO_OPEN_PLAYER = new RegExp(`${KYRO_OPEN_LEAD}(?:(?:open|start|launch|go to|play|use)\\s+(?:the\\s+)?(you\\s?tube|spotify)(?:\\s+(?:app|music|player))?|play\\s+(?:something|some music|music|anything)\\s+(?:on|from|in|with)\\s+(you\\s?tube|spotify))[.?!]*$`, "i");
 // "Show me a list", "show me a list of my documents / reminders / checklists / notes": a list of what, or that list.
@@ -51926,7 +51928,7 @@ function kyroOpenUploadScreen(said, lang) {
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -52058,6 +52060,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (KYRO_OPEN_ACTIVITY.test(said)) {
     kyroTakeOverTurn();
     void kyroShowActivityScreen();
+    return true;
+  }
+  if (KYRO_ASK_MEMORY.test(said)) {
+    kyroTakeOverTurn();
+    void handleNexusUnifiedBrainRuntimeCommand("What do you know about me?", { source: "typed", kyroDirect: true });
     return true;
   }
   if (KYRO_CROP_HELP.test(said)) {

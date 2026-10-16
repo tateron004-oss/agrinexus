@@ -13,9 +13,9 @@ module.exports = [
   { id: "map-open", area: "media", say: "Open the map.", expect: { section: "map|dashboard", model: true } },
 
   { id: "music-play", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { active: true } } },
-  { id: "music-pause", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { active: true } }, then: [{ say: "Pause the music." }, { expect: { player: { state: "paused" } }, timeoutMs: 30000 }] },
-  { id: "music-resume", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { active: true } }, then: [{ say: "Pause the music." }, { expect: { player: { state: "paused" } }, timeoutMs: 30000 }, { say: "Resume the music." }, { expect: { player: { state: "playing" } }, timeoutMs: 30000 }] },
-  { id: "music-stop", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { active: true } }, then: [{ say: "Stop the music." }, { expect: { player: { active: false } }, timeoutMs: 30000 }] },
+  { id: "music-pause", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { state: "playing" } }, then: [{ say: "Pause the music." }, { expect: { player: { state: "paused" } }, timeoutMs: 30000 }] },
+  { id: "music-resume", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { state: "playing" } }, then: [{ say: "Pause the music." }, { expect: { player: { state: "paused" } }, timeoutMs: 30000 }, { say: "Resume the music." }, { expect: { player: { state: "playing" } }, timeoutMs: 30000 }] },
+  { id: "music-stop", area: "music", needs: "sound", say: "Play some music.", timeoutMs: 60000, expect: { player: { state: "playing" } }, then: [{ say: "Stop the music." }, { expect: { player: { active: false } }, timeoutMs: 30000 }] },
   { id: "music-artist", area: "music", needs: "sound", say: "Play Burna Boy.", timeoutMs: 60000, expect: { player: { active: true } } },
   { id: "music-radio", area: "music", needs: "sound", say: "Play the radio.", timeoutMs: 60000, expect: { player: { active: true } } },
   { id: "music-mood", area: "music", needs: "sound", say: "Play something relaxing.", timeoutMs: 60000, expect: { player: { active: true } } },
