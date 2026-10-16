@@ -2,8 +2,9 @@
 const documentsAndLists = require("./documents-and-lists.js");
 const businessAndApps = require("./business-and-apps.js");
 const mediaSearchHealthForms = require("./media-search-health-forms.js");
+const resourcesForPeople = require("./resources-for-people.js");
 
-const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms]);
+const ALL = Object.freeze([...documentsAndLists, ...businessAndApps, ...mediaSearchHealthForms, ...resourcesForPeople]);
 
 // Which cases run: by default the ones that change nothing on the account; --writes adds the ones that save something, --risky the emergency words,
 // --only a,b (ids) or --area documents,lists (areas) narrows it, and --no-sound leaves out the ones that need sound to start.
