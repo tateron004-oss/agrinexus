@@ -486,6 +486,16 @@ class OpenEndedPlanner {
       const guide = aiToolsAnswer(aiToolsTopicId, { us: usPerson });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `ai-tools-for-business:${aiToolsTopicId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
+    // The checked guide to official help for veterans, older adults, young people and nonprofits (see knowledge/us-community-support.js): a question about those, on a US device or naming a US programme (VA, Medicare, 988, the IRS ...).
+    // Each answer carries the official sources, the date they were read and the "confirm on the official site" warning. A person's own records ("who are my donors") are never taken, and the safety layer answers a person in crisis first.
+    // (the topics are specific enough to be taken even when the sentence also reads as a question about the person's own records or about forming a business: "do I have to give donors a receipt" has "I have" in it, "tell me about the GI Bill"
+    // read as "my bills" and was answered "your workspace has no bills recorded yet", "who do I call about my grandmother being scammed" read as "who should I follow up with", and "do I need to register my nonprofit to fundraise" was
+    // answered with how to form a nonprofit: all found by the live voice test)
+    const communityId = !techTopic && (usPerson || isCommunityUs(askText)) ? communityTopic(askText) : null;
+    if (communityId) {
+      const guide = communityAnswer(communityId);
+      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-community-support:${communityId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
+    }
     // "How do I register an LLC in California?", "what does a nonprofit cost to start in Texas?", "I want to set up my business in Ohio": the state's own fees and steps (see knowledge/state-entities.js). It is a question about forming an
     // entity, so a "my business" in it is not a request for the person's own workspace; a question that names a Kenyan or Nigerian agency, or has no state on a device outside the United States, is left to the guides below.
     const stateIntent = !techTopic && !aiToolsTopicId && !africaNamed(askText) ? stateEntityIntent(askText) : null;
@@ -502,16 +512,7 @@ class OpenEndedPlanner {
       const guide = africaAnswer(africaId);
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `africa-small-business:${africaId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
     }
-    // The checked guide to official help for veterans, older adults, young people and nonprofits (see knowledge/us-community-support.js): a question about those, on a US device or naming a US programme (VA, Medicare, 988, the IRS ...).
-    // Each answer carries the official sources, the date they were read and the "confirm on the official site" warning. A person's own records ("who are my donors") are never taken, and the safety layer answers a person in crisis first.
-    // ("do I have to give donors a receipt" has "I have" in it, which reads as a question about the person's own records: the nonprofit topics are specific enough to be taken anyway)
-    const communityPick = !techTopic && (usPerson || isCommunityUs(askText)) ? communityTopic(askText) : null;
-    const communityId = communityPick && (!ownWorkspace || communityPick.startsWith("np-")) ? communityPick : null;
-    if (communityId) {
-      const guide = communityAnswer(communityId);
-      return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-community-support:${communityId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });
-    }
-    const universalId = !ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
+    const universalId =!ownWorkspace && !usPerson && !techTopic ? usSmallBusinessTopic(askText) : null;
     if (universalId && UNIVERSAL_TOPICS.includes(universalId)) {
       const guide = usSmallBusinessAnswer(universalId, { question: askText, us: false, country: africaCountry({ timeZone: placeZone, country: context?.country, text: askText }) });
       return Object.freeze({ goal: command.spokenText || command.text, application: "conversation", riskTier: "low", clarification: null, steps: [], response: guide.text, sourceRequired: false, knowledge: `us-small-business:${universalId}`, sources: guide.sources, guardrail: "professional-advice", planningAttempts: 0 });

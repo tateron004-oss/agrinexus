@@ -6,6 +6,7 @@ const { createEmergencyLocation } = require("./emergency-location.js");
 const { createCheckinService, parseCheckinControl, readCheckinAnswer, MIN_GRACE_HOURS, MAX_GRACE_HOURS } = require("./checkins.js");
 const { createMedicationService, readMedicationRequest } = require("./medications.js");
 const { readAudienceIntro, audienceIntroReply } = require("./audience.js");
+const { topic: communityTopic } = require("../../public/kyro-community-topics.js");
 const { formatTimeOfDay } = require("../brief/schedule.js");
 const { validTimeZone, DEFAULT_TIME_ZONE } = require("../brief/compose.js");
 
@@ -48,7 +49,8 @@ function createCompanion({ circle, checkinSettings, checkinState, medicationStor
 
   async function run({ command, context, outcome }) {
       // Most messages are nothing for the companion: decide from the words alone, before any lookup.
-      const audienceKind = readAudienceIntro(command.text);
+      // ("I'm a veteran and I'm homeless, what can I do?" is a question the checked guide answers, with the numbers: the plain introduction is only for a statement)
+      const audienceKind = communityTopic(command.text) ? null : readAudienceIntro(command.text);
       const needsName = Boolean(readSafety(command.text) || readSafe(command.text) || readCheckinAnswer(command.text) || parseCheckinControl(command.text) || readCircleRequest(command.text));
       if (!needsName && !audienceKind && !(medications && readMedicationRequest(command.text))) return null;
       const tenantId = command.tenantId; const userId = command.actorId;

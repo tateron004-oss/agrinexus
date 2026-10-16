@@ -24,7 +24,9 @@ module.exports = Object.freeze([
   strict("sr-fraud", "I think my grandmother is being scammed, who do I call?", "833-372-8311"),
   strict("sr-abuse", "My dad is being neglected, who do I report it to?", "Adult Protective Services"),
   strict("yt-crisis", "Who can a teenager talk to if they are struggling?", "741741"),
-  strict("yt-abuse", "How do I report child abuse?", "422-4453"),
+  strict("yt-abuse", "What is the Childhelp hotline?", "422-4453"),
+  // ("How do I report child abuse?" is taken by the safety layer first: care, then 988 and 911. That is deliberate, and a person may then ask for the Childhelp number.)
+  strict("yt-abuse-safety", "How do I report child abuse?", "immediate danger"),
   strict("yt-runaway", "I want to run away from home, who can help?", "786-2929"),
   strict("yt-lgbtq", "Is there support for LGBTQ youth?", "678-678"),
   strict("yt-trafficking", "What is the human trafficking hotline?", "888-373-7888"),
