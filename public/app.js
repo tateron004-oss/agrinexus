@@ -51508,6 +51508,8 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
       if (handleKyroDismissCommand(trimmed, { source: "voice-transcript" })) return true;
     }
+    // A drafted message on the activity screen: "send it" / "don't send it" (and a plain yes or no within two minutes of being asked) press that card's own button.
+    if (trimmed && typeof kyroDraftVoiceReply === "function" && kyroDraftVoiceReply(trimmed)) return true;
     // "Yes" or "no" to a question the page asked ("Should I go ahead?"): answered from what was heard, as typing it is, instead of leaving it to the model.
     if (trimmed && typeof nexusPendingBehaviorConfirmation !== "undefined" && nexusPendingBehaviorConfirmation && detectNexusPendingConfirmationReply(trimmed)) {
       try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
@@ -52536,7 +52538,7 @@ function kyroActivityGroups(tasks, now = Date.now(), skipTaskIds = null) {
 }
 function kyroActivitySummary(groups, drafts = 0) {
   const parts = [];
-  if (drafts) parts.push(`${drafts} ${drafts === 1 ? "message is" : "messages are"} drafted and waiting for your yes: nothing is sent until you tap Send it.`);
+  if (drafts) parts.push(`${drafts} ${drafts === 1 ? "message is" : "messages are"} drafted and waiting for your yes: nothing is sent until you tap Send it or say send it.`);
   if (groups.waiting.length) parts.push(`${groups.waiting.length} ${groups.waiting.length === 1 ? "thing is" : "things are"} waiting for your yes.`);
   if (groups.doing.length) parts.push(`I am working on ${groups.doing.length}.`);
   if (groups.done.length) parts.push(`I finished ${groups.done.length} recently.`);
@@ -52561,6 +52563,7 @@ function kyroDraftCard(draft) {
         body: { taskId: draft.taskId, stepId: draft.stepId, approved, text: approved ? "Yes, send it." : "No, do not send it.", timeZone: kyroDeviceTimeZone(), channel: "typed" } }, 90000);
       note.textContent = String(result?.response || (approved ? "Done." : "Okay, I did not send it.")).slice(0, 300);
       row.remove();
+      try { setVoiceResponse(note.textContent, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the card has it */ }
     } catch (error) {
       note.textContent = String(error?.message || "That did not go through. Nothing was changed. Please try again.").slice(0, 300);
       for (const button of row.querySelectorAll("button")) button.disabled = false;
@@ -52573,6 +52576,29 @@ function kyroDraftCard(draft) {
   row.append(yes, no);
   card.append(row, note);
   return card;
+}
+// Spoken yes or no for a drafted message that is on the screen. Only the card's own button is pressed, so it is the same governed send as a tap. "Send it" and "don't send it" count
+// whenever a draft is showing; a plain yes or no counts only within two minutes of the screen asking. With more than one draft showing, the person is asked to tap the one they mean.
+let kyroDraftAskedAt = 0;
+const KYRO_DRAFT_SEND = /^(?:(?:yes|yeah|yep|ok|okay)[,.]?\s+)?(?:please\s+)?(?:send it|send (?:the|that|this) (?:message|text|email|one)|go ahead and send(?: it)?)[.!]*$/i;
+const KYRO_DRAFT_HOLD = /^(?:(?:no|nope)[,.]?\s+)?(?:please\s+)?(?:do not|don't|dont) send(?: it| (?:the|that|this) (?:message|text|email|one))?[.!]*$|^(?:cancel|forget) (?:it|that|the message)[.!]*$/i;
+const KYRO_DRAFT_BARE_YES = /^(?:yes|yeah|yep|ok|okay|sure|please do|go ahead)[.!]*$/i;
+const KYRO_DRAFT_BARE_NO = /^(?:no|nope|no thanks|no thank you|don't|do not)[.!]*$/i;
+function kyroDraftVoiceReply(text) {
+  try {
+    const said = String(text || "").trim();
+    const cards = [...document.querySelectorAll("[data-kyro-draft]")].filter(card => card.isConnected && card.querySelector("button:not([disabled])"));
+    if (!cards.length) return false;
+    const asked = Date.now() - kyroDraftAskedAt < 120000;
+    const send = KYRO_DRAFT_SEND.test(said) || (asked && KYRO_DRAFT_BARE_YES.test(said));
+    const hold = KYRO_DRAFT_HOLD.test(said) || (asked && KYRO_DRAFT_BARE_NO.test(said));
+    if (!send && !hold) return false;
+    try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+    if (cards.length !== 1) { try { setVoiceResponse("More than one message is waiting. Please tap Send it on the one you want.", true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the screen shows them */ } return true; }
+    const buttons = cards[0].querySelectorAll("button");
+    (send ? buttons[0] : buttons[1])?.click();
+    return true;
+  } catch { return false; }
 }
 async function kyroShowActivityScreen() {
   try {
@@ -52594,6 +52620,7 @@ async function kyroShowActivityScreen() {
     const summary = kyroActivitySummary(groups, drafts.length);
     status.textContent = summary;
     if (drafts.length) {
+      kyroDraftAskedAt = Date.now();
       const block = kyroMake("div", { "data-kyro-activity-group": "drafts", style: "width:100%;max-width:38em" });
       block.append(kyroMake("h3", { style: "margin:10px 0 6px;font-size:1.1rem" }, kyroT("Drafted for your yes")));
       for (const draft of drafts) block.append(kyroDraftCard(draft));

@@ -79,7 +79,7 @@ test("drafted tasks are left out of the plain waiting list and counted in what i
   const tasks = [{ taskId: "tsk_1", goal: "Draft a follow-up email", state: "awaiting_confirmation", autonomous: true }, { taskId: "tsk_2", goal: "Send a text to Amina", state: "awaiting_confirmation" }];
   const groups = JSON.parse(JSON.stringify(kyroActivityGroups(tasks, Date.now(), new Set(["tsk_1"]))));
   assert.deepEqual(groups.waiting, ["Send a text to Amina"]);
-  assert.match(kyroActivitySummary(groups, 1), /^1 message is drafted and waiting for your yes: nothing is sent until you tap Send it\. 1 thing is waiting for your yes\.$/);
+  assert.match(kyroActivitySummary(groups, 1), /^1 message is drafted and waiting for your yes: nothing is sent until you tap Send it or say send it. 1 thing is waiting for your yes\.$/);
   assert.match(kyroActivitySummary({ waiting: [], doing: [], done: [], stuck: [] }, 2), /^2 messages are drafted/);
 });
 
@@ -94,4 +94,47 @@ test("the draft card sends only on a tap of Send it, cancels on Do not send, and
   assert.match(screen, /\/api\/nexus\/runtime\/waiting-approvals/);
   assert.ok(!/method: "POST"|method: "DELETE"/.test(screen), "opening the screen sends nothing");
   assert.match(app, /"Send it": "Itume", "Do not send": "Usitume"/);
+});
+
+// spoken yes / no for a drafted message that is on the screen
+const sliceConst = name => { const start = app.indexOf(name); assert.ok(start >= 0, name); return app.slice(start, app.indexOf(";\n", start) + 2); };
+function voiceWorld(cardCount, { askedMsAgo = 1000 } = {}) {
+  const pressed = []; const spoken = []; let taken = 0;
+  const cards = Array.from({ length: cardCount }, (_, i) => ({ isConnected: true,
+    querySelector: () => ({}), querySelectorAll: () => [{ click: () => pressed.push(i + ":send") }, { click: () => pressed.push(i + ":hold") }] }));
+  const context = { document: { querySelectorAll: () => cards }, Date, String, Array, kyroTakeOverTurn: () => { taken += 1; }, setVoiceResponse: text => spoken.push(text) };
+  const source = ["let kyroDraftAskedAt", "const KYRO_DRAFT_SEND", "const KYRO_DRAFT_HOLD", "const KYRO_DRAFT_BARE_YES", "const KYRO_DRAFT_BARE_NO"].map(sliceConst).join("\n")
+    + sliceFn("function kyroDraftVoiceReply(") + "\nkyroDraftAskedAt = Date.now() - " + askedMsAgo + ";\n({ reply: kyroDraftVoiceReply })";
+  const { reply } = new vm.Script(source).runInNewContext(context);
+  return { reply, pressed, spoken, taken: () => taken };
+}
+
+test("'send it' presses Send it and 'don't send it' presses Do not send, only while a draft is showing", () => {
+  const world = voiceWorld(1);
+  assert.equal(world.reply("Send it."), true); assert.equal(world.reply("Yes, send it"), true); assert.equal(world.reply("Don't send it."), true); assert.equal(world.reply("No, do not send the message"), true);
+  assert.deepEqual(world.pressed, ["0:send", "0:send", "0:hold", "0:hold"]);
+  assert.equal(world.taken(), 4, "the voice model is cut off so it does not answer too");
+  const unrelated = voiceWorld(1);
+  for (const said of ["Send my invoice to Grace", "I will send it tomorrow", "Open documents", "What is the weather", "Send it to Amina"]) assert.equal(unrelated.reply(said), false, said);
+  assert.deepEqual(unrelated.pressed, []);
+  const none = voiceWorld(0);
+  assert.equal(none.reply("Send it."), false, "no draft showing: nothing is sent and the sentence is left for the rest of Kyro");
+});
+
+test("a plain yes or no counts only soon after the screen asked, and with two drafts showing nothing is pressed", () => {
+  const soon = voiceWorld(1, { askedMsAgo: 5000 });
+  assert.equal(soon.reply("Yes."), true); assert.equal(soon.reply("No."), true);
+  assert.deepEqual(soon.pressed, ["0:send", "0:hold"]);
+  const late = voiceWorld(1, { askedMsAgo: 10 * 60 * 1000 });
+  assert.equal(late.reply("Yes."), false); assert.equal(late.reply("No"), false); assert.deepEqual(late.pressed, []);
+  const two = voiceWorld(2);
+  assert.equal(two.reply("Send it."), true);
+  assert.deepEqual(two.pressed, [], "which one is not guessed");
+  assert.match(two.spoken[0], /More than one message is waiting/);
+});
+
+test("the spoken reply is tried before the general yes/no handling, and the result of a send is said aloud", () => {
+  const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
+  assert.ok(route.indexOf("kyroDraftVoiceReply(trimmed)") > 0 && route.indexOf("kyroDraftVoiceReply(trimmed)") < route.indexOf("detectNexusPendingConfirmationReply(trimmed)"));
+  assert.match(sliceFn("function kyroDraftCard("), /setVoiceResponse\(note\.textContent, true/);
 });
