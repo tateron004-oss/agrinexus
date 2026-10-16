@@ -413,3 +413,35 @@ test('concurrent idempotent claims never trigger a second provider while work is
   assert.equal(starts,1);assert.equal(store.calls,0);
  }
 });
+
+// A call's reserved budget is given back on every way out: it finished, it failed, or it turned out to be a duplicate that never ran.
+test("a tool call's cost reservation is released after a failure, a success and a duplicate claim", async () => {
+  const run = async scenario => {
+    const { engine, store } = fixture();
+    store.task = { tenantId: "tenant", correlationId: "trace" };
+    store.steps = [{ step_id: "s", tool_id: "documents.save", confirmation_state: "approved", idempotency_key: "one", state: "pending", input: {} }];
+    const context = { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false };
+    const reserved = []; let released = 0;
+    engine.observability = { reserveCost: async input => { reserved.push(input); return () => { released += 1; }; }, recordCost: async () => {}, recordProviderHealth: async () => {}, alert: async () => {} };
+    if (scenario === "failure") engine.executors["documents.save"] = async () => { throw new Error("provider outage"); };
+    if (scenario === "duplicate") engine.executions.start = async () => ({ duplicate: true, execution: { state: "completed", receipt: { verification: { verified: true } } } });
+    if (scenario === "failure") await assert.rejects(() => engine.execute({ context, taskId: "task", stepId: "s" }));
+    else await engine.execute({ context, taskId: "task", stepId: "s" }).catch(() => {});
+    return { reserved, released };
+  };
+  for (const scenario of ["failure", "success", "duplicate"]) { const result = await run(scenario); assert.equal(result.reserved.length, 1, scenario + ": reserved once"); assert.equal(result.released, 1, scenario + ": released once"); assert.equal(typeof result.reserved[0].holdMs, "number"); }
+});
+
+test("a billed tool without its own estimate is reserved at the default rough cost, and a free tool at none", async () => {
+  const run = async toolId => {
+    const { engine, store } = fixture();
+    store.task = { tenantId: "tenant", correlationId: "trace" };
+    store.steps = [{ step_id: "s", tool_id: toolId, confirmation_state: "approved", idempotency_key: "one", state: "pending", input: {} }];
+    const reserved = []; engine.observability = { reserveCost: async input => { reserved.push(input.estimatedCostCents); return () => {}; }, recordCost: async () => {}, recordProviderHealth: async () => {}, alert: async () => {} };
+    engine.tools.get = async id => ({ tool_id: id, availability: "available", required_permission: "tasks:execute", confirmation_required: false, consent_scope: null, timeout_ms: 1000, max_attempts: 3 });
+    engine.executors[toolId] = async () => ({ persisted: true });
+    await engine.execute({ context: { tenantId: "tenant", userId: "user", can: () => true, hasRole: () => false }, taskId: "task", stepId: "s" }).catch(() => {});
+    return reserved[0];
+  };
+  assert.equal(await run("knowledge.search"), 2); assert.equal(await run("communications.send"), 5); assert.equal(await run("documents.save"), 0);
+});

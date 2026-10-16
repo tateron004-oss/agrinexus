@@ -51839,7 +51839,7 @@ function kyroWithoutPoliteTail(text) {
   return kyroHeardOpenVerb(String(text || "").trim().replace(/[,;]?\s+(?:please|for me|right now|now|thanks|thank you)(?:\s+(?:please|for me|now))*\s*[.?!]*$/i, "").trim());
 }
 // The speech-to-text hears "Show my notes" as "Go my notes" or "So my notes": a word that is not a way of opening, followed by "my" and the name of a list, is the request to show it.
-const KYRO_MISHEARD_OPEN = /^(?:go|so|low|though|row)\s+(my|the|our)\s+(notes?|reminders?|check ?lists?|to-?do list|documents?|docs|files|clients|customers|invoices|donors|resumes?|r[eé]sum[eé]s?)([.?!]*)$/i;
+const KYRO_MISHEARD_OPEN = /^(?:go|so|low|though|row)[,.]?\s+(my|the|our)\s+(notes?|reminders?|check ?lists?|to-?do list|documents?|docs|files|clients|customers|invoices|donors|resumes?|r[eé]sum[eé]s?)([.?!]*)$/i;
 function kyroHeardOpenVerb(text) {
   const match = KYRO_MISHEARD_OPEN.exec(String(text || ""));
   return match ? "Show " + match[1].toLowerCase() + " " + match[2] + match[3] : text;
