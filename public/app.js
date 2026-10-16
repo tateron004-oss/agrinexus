@@ -50161,7 +50161,23 @@ function kyroStallReportBody(kind, detail = {}) {
   };
 }
 
+// Running totals of how spoken requests went, sent now and then as counts only (server/voice-usage.js): requests heard, and how many had a problem.
+let kyroVoiceTally = { requests: 0, refused: 0, notUnderstood: 0, stalls: 0, slowStarts: 0 };
+function kyroNoteVoice(field) { try { if (Object.prototype.hasOwnProperty.call(kyroVoiceTally, field)) kyroVoiceTally[field] += 1; } catch { /* counting never stops the voice */ } }
+function kyroFlushVoiceUsage() {
+  try {
+    const tally = kyroVoiceTally; if (!Object.values(tally).some(value => value > 0)) return;
+    kyroVoiceTally = { requests: 0, refused: 0, notUnderstood: 0, stalls: 0, slowStarts: 0 };
+    fetch("/api/voice/realtime/usage-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...tally, build: typeof AGRINEXUS_BUILD_VERSION !== "undefined" ? String(AGRINEXUS_BUILD_VERSION) : "" }), keepalive: true }).catch(() => {});
+  } catch { /* a report must never break the voice session */ }
+}
+try {
+  window.setInterval(kyroFlushVoiceUsage, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") kyroFlushVoiceUsage(); });
+  window.addEventListener("pagehide", kyroFlushVoiceUsage);
+} catch { /* optional */ }
 function reportKyroVoiceStall(kind, detail = {}) {
+  try { kyroNoteVoice(kind === "model-refused" ? "refused" : kind === "request-not-understood" ? "notUnderstood" : (kind === "slow-start" || kind === "start-failed") ? "slowStarts" : "stalls"); } catch { /* counted if it can be */ }
   try {
     const body = JSON.stringify(kyroStallReportBody(kind, detail));
     fetch("/api/voice/realtime/stall-report", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
@@ -51500,7 +51516,7 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     if (trimmed && source !== "tool-call") {
       try {
         const heardKey = trimmed.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-        if (heardKey && (heardKey !== kyroHeard.key || Date.now() - kyroHeard.at > 6000)) kyroHeard = { key: heardKey, text: trimmed, at: Date.now(), recovered: false };
+        if (heardKey && (heardKey !== kyroHeard.key || Date.now() - kyroHeard.at > 6000)) { kyroHeard = { key: heardKey, text: trimmed, at: Date.now(), recovered: false }; if (typeof kyroNoteVoice === "function") kyroNoteVoice("requests"); }
       } catch { /* noting what was heard never stops it being handled */ }
     }
     // "Close it", "close the screen", "go back to the orb", "I'm done": typed, the page always did it; said aloud it did nothing, so the last list or map stayed in front of everything that came after it.

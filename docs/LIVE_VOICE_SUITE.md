@@ -59,3 +59,7 @@ button actually saving a file, or Kiswahili wording. Those stay with a person.
 
 - `run.js` starts Chrome, signs in, installs the rig, starts the voice and runs the cases; `chrome.js` and `cdp.js` are the launcher and a tiny DevTools client (no dependency; Node 22+).
 - `rig-page.js` runs inside the page; `expect.js` judges (pure, unit-tested in `test/nexus/live-voice-suite.test.js`); `print-bundle.js` prints the console version.
+
+## Reading how real spoken requests go (not only the test run)
+
+Each browser adds up, per voice session, how many spoken requests it heard and how many had a problem (the voice began to refuse, the page could not answer, the session stalled, the voice was slow to connect), and sends only those counts now and then. The owner reads them, per day, at `GET /api/admin/voice/usage-summary?days=14` (`smoothPercent` = requests with no problem counted). The reasons for the problems are in `GET /api/admin/voice/stall-summary`. Counts only: no speech, names or ids. A browser that closed before reporting is missing, so treat it as a trend, not a total.
