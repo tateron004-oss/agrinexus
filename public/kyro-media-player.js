@@ -129,7 +129,7 @@
     }
     function audioOnly() { return readPref("audioOnly", "0") === "1"; }
     function playIn() { return readPref("playIn", "kyro") === "youtube" ? "youtube" : "kyro"; }
-    const CONTROL_WORD = /^(?:pause|paused|resume|stop|next|previous|skip|mute|unmute|louder|quieter|volume(?: up| down)?|play|sitisha|endelea|simamisha)$/i;
+    const CONTROL_WORD = /^(?:pause|paused|resume|stop|next|previous|skip|mute|unmute|louder|quieter|volume(?: up| down)?|play|sitisha|endelea|simamisha|(?:pause|resume|stop|play|skip|unpause)\s+(?:the |some |my |this |that )?(?:music|songs?|radio|video|playback|audio)|play it again)[.!?]*$/i;
     function lastChoice() {
       // (a control word saved as if it were a song, by an older version, is never played back: "pause" is not what "play some music" asks for)
       try { const raw = readPref("last", ""); const value = raw ? JSON.parse(raw) : null; return value && value.query && !CONTROL_WORD.test(String(value.query).trim()) ? value : null; } catch (_) { return null; }
