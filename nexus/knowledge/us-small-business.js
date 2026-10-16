@@ -9,6 +9,7 @@
 // usSmallBusinessTopic(text) -> a topic id, or null (the words are in public/kyro-business-topics.js). Only a QUESTION or a request for help is taken; a record ("log a tax payment of $300"), a draft ("draft a grant proposal") or other talk is not.
 // usSmallBusinessAnswer(id) -> { text, sources: [{ name, url }], topic } or null.
 
+const spanishGuide = require("./us-small-business-es/index.js");
 const { topic: usSmallBusinessTopic, isUsContext } = require("../../public/kyro-business-topics.js"); // the words that pick a topic are shared with the page, which uses them to answer a spoken question through this guide
 
 const CHECKED_ON = "9 October 2026";
@@ -232,11 +233,17 @@ const CLOSING = `This is general information, not legal, tax or financial advice
 const UNIVERSAL_TOPICS = Object.freeze(["business-plan", "startup-costs", "marketing-visibility", "bookkeeping-accounting"]);
 const LOCAL_OFFICE = Object.freeze({ ke: " (in Kenya, the Micro and Small Enterprises Authority, MSEA)", ng: " (in Nigeria, SMEDAN)" });
 
-function usSmallBusinessAnswer(id, { question = "", us = true, country = null } = {}) {
+function usSmallBusinessAnswer(id, { question = "", us = true, country = null, lang = "en" } = {}) {
   const topic = TOPICS[id];
   if (!topic) return null;
   const sources = topic.sources.map(key => SOURCES[key]);
   const zip = id === "local-help" ? /\b(\d{5})(?:-\d{4})?\b/.exec(String(question || ""))?.[1] : "";
+  // Spanish (a preliminary translation, see us-small-business-es/index.js): the same sources and date, in Spanish words, with a plain note that it is a translation.
+  const spanish = lang === "es" && spanishGuide.TOPICS_ES[id];
+  if (spanish) {
+    const text = `${zip ? spanishGuide.ZIP_LEAD(zip) : ""}${spanish.text} ${spanishGuide.SOURCES_LABEL}: ${sources.map(source => source.name).join("; ")} (revisado el ${spanishGuide.CHECKED_ON_ES}).${us ? "" : spanishGuide.OUTSIDE(spanishGuide.LOCAL_OFFICE[country])} ${spanishGuide.PRELIMINARY} ${spanishGuide.CLOSING}`;
+    return { topic: id, title: spanish.title, text, sources, language: "es" };
+  }
   const lead = zip ? `For ZIP code ${zip}: ` : "";
   const outside = us ? "" : ` These are United States government sources: the programmes named (SBA, SBDC, SCORE) are American, and laws and rules differ in your country, so also ask your local small business support office${LOCAL_OFFICE[country] || ""}.`;
   const text = `${lead}${topic.text} Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).${outside} ${CLOSING}`;

@@ -130,6 +130,7 @@ async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
   let kind = pickKind(rawRequest.kind, query);
   let originalKind = ["music", "radio", "video"].includes(rawRequest.kind) ? rawRequest.kind : "music";
   const sources = enabledSources(ctx);
+  const namedStation = Boolean(query); // (only a station the person named is worth a live stream; see providers/youtube.js)
   if (kind === "radio" && sources && !sources.has(radioBrowser.id)) {
     // Radio is off: a named station is searched on YouTube ("Capital FM live"), and "play some music" is a search for popular music there.
     // ("play the radio" with no station is a search for live radio in the person's country, not for a random popular video)
@@ -141,6 +142,7 @@ async function resolveMedia(rawRequest = {}, ctx = util.createContext()) {
   }
   const request = {
     query,
+    preferLive: namedStation && kind !== "video",
     kind,
     originalKind,
     country: normalizeText(rawRequest.country),

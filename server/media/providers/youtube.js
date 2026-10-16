@@ -126,10 +126,11 @@ async function search(ctx, request) {
   const shortEnough = playableItems.filter(item => !tooLong(item));
   const eligible = (shortEnough.length ? shortEnough : playableItems).map(item => ({ item, score: rankTitle(item.snippet.title, request.query, kind) })).sort((a, b) => b.score - a.score);
   // 24/7 live streams are often refused by YouTube's embedded player (error 151) although the API calls them embeddable. Found by the live voice test: "play some music" and "play the radio" were
-  // answered "it would not start on this device" in a real Chrome, because a live stream was the only thing offered. A live stream is only the first choice when the person asked for one ("Capital FM live");
-  // otherwise ordinary videos come first, and when live was asked for, a few ordinary videos follow the live ones so there is always something that can play.
-  const isLive = entry => entry.item.snippet?.liveBroadcastContent === "live";
-  const wantsLive = /\blive\b/.test(fold(request.query));
+  // answered "it would not start on this device" in a real Chrome, because a live stream was the only thing offered. A live stream is only the first choice when the person named a station ("Capital FM live");
+  // "play some music" and "play the radio" with no station named never start with one: ordinary videos come first, and when live was asked for, a few ordinary videos follow the live ones so there is always something that can play.
+  // (a live stream is sometimes not flagged as live in the search results, but its duration is zero)
+  const isLive = entry => entry.item.snippet?.liveBroadcastContent === "live" || !parseIsoDuration(detailById.get(entry.item.id.videoId)?.contentDetails?.duration);
+  const wantsLive = request.preferLive === true;
   const liveFirst = eligible.filter(isLive); const ordinary = eligible.filter(entry => !isLive(entry));
   const ordered = wantsLive ? [...liveFirst.slice(0, 3), ...ordinary.slice(0, 3)] : [...ordinary, ...liveFirst];
 

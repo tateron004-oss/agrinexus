@@ -92,11 +92,19 @@ test("'play some music' offers ordinary videos before any live stream", async ()
   assert.ok(ids.slice(0, 2).every(id => id.startsWith("songVid")), `ordinary videos first: ${ids.join(", ")}`);
   assert.ok(ids.includes("liveStream01"), "a live stream stays as a last resort");
 });
-test("when a live stream is asked for, a few ordinary videos follow the live ones so something can still play", async () => {
-  const { ctx } = setup(KEY, { youtubeItems: LIVE_AND_ORDINARY, oembedFail: new Set() });
+test("'play the radio' with no station named also starts with an ordinary video, even when the search does not flag a live stream as live (its duration is zero)", async () => {
+  const unflagged = LIVE_AND_ORDINARY.map(item => ({ ...item, live: false }));
+  const { ctx } = setup(KEY, { youtubeItems: unflagged, oembedFail: new Set() });
   const result = await resolveMedia({ query: "", kind: "radio", country: "Kenya" }, ctx);
   assert.equal(result.ok, true);
   const ids = result.candidates.map(candidate => candidate.videoId);
-  assert.ok(ids[0].startsWith("liveStream"), `live first when asked: ${ids.join(", ")}`);
+  assert.ok(ids[0].startsWith("songVid"), `ordinary first: ${ids.join(", ")}`);
+});
+test("when a station is named, its live streams come first and a few ordinary videos follow so something can still play", async () => {
+  const { ctx } = setup(KEY, { youtubeItems: LIVE_AND_ORDINARY, oembedFail: new Set() });
+  const result = await resolveMedia({ query: "Hits Radio", kind: "radio", country: "Kenya" }, ctx);
+  assert.equal(result.ok, true);
+  const ids = result.candidates.map(candidate => candidate.videoId);
+  assert.ok(ids[0].startsWith("liveStream"), `live first when a station is named: ${ids.join(", ")}`);
   assert.ok(ids.some(id => id.startsWith("songVid")), "an ordinary video is there as a fallback");
 });

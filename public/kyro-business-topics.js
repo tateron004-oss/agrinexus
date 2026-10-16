@@ -58,7 +58,7 @@
     ["free-help", /\b(free (?:business )?(?:help|counsel(?:ing|ling|or|ors)|mentor(?:ing|s)?|advice|training)|sbdc|small business development center|score (?:mentor|mentors|chapter|business mentoring)|score\.org|women'?s business center|veterans? business outreach|business mentor|business mentoring|where can i get help (?:with|for) (?:my |a )?business|help (?:with|for) my (?:small )?business)\b/i]
   ];
   
-  function usSmallBusinessTopic(text) {
+  function topicEnglish(text) {
     const value = String(text || "").replace(/\s+/g, " ").trim();
     if (!value || value.length > 300) return null;
     if (RECORD_OR_DRAFT.test(value) || !ASKS.test(value)) return null;
@@ -68,6 +68,73 @@
     return null;
   }
   
+  // ---- Spanish ----
+  // A question asked in Spanish reaches the same topics. Matching is done on text with the accents taken off and in lower case ("préstamo" and "prestamo" are the same word to it), so a spoken question that the
+  // speech-to-text wrote without accents works too. The order is the English order: most specific first.
+  const fold = value => String(value || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[¿¡]/g, " ").toLowerCase();
+  // Markers of Spanish: a question mark or exclamation mark in Spanish form, an ñ or accent in a word, or at least two everyday Spanish words that English does not use.
+  const SPANISH_WORDS = new Set(["como", "que", "cual", "cuales", "donde", "cuanto", "cuanta", "cuando", "quiero", "necesito", "puedo", "podria", "debo", "los", "las", "del", "para", "una", "un", "mi", "mis", "con", "por", "es", "en", "el", "la", "de", "y", "negocio", "empresa", "ayuda", "hola", "gracias"]);
+  const STRONG_SPANISH = new Set(["como", "que", "cual", "cuales", "donde", "cuanto", "cuanta", "cuando", "quiero", "necesito", "puedo", "podria", "debo", "hola", "gracias"]);
+  function language(text) {
+    const raw = String(text || "");
+    if (/[¿¡ñÑáéíóúÁÉÍÓÚ]/.test(raw)) return "es";
+    const words = fold(raw).match(/[a-z]+/g) || [];
+    const found = new Set(words.filter(word => SPANISH_WORDS.has(word)));
+    // (one Spanish word is enough when it is a question word or a verb only Spanish uses, and the whole sentence is a question about a business that only the Spanish matchers understand, e.g. a speech-to-text line with
+    // no accents. "los", "la", "en" alone are not: "Do I need an LLC in Los Angeles?" is English.)
+    const strong = [...found].some(word => STRONG_SPANISH.has(word));
+    return found.size >= 2 || (strong && topicSpanish(raw) !== null) ? "es" : "en";
+  }
+  const ASKS_ES = /(?:\?|^(?:por favor\s+|kyro,?\s+)?(?:como|que|cual|cuales|cuando|donde|adonde|por que|quien|quienes|cuanto|cuanta|cuantos|puedo|podria|podemos|debo|deberia|necesito|quiero|quisiera|me gustaria|hay|existe|existen|tengo que|se puede|me puedes|puedes|puede|ayudame|ayuda|dime|dame|explicame|cuentame|busco|buscar|encuentra|encuentrame|muestrame|informacion|es|son)\b)/;
+  const RECORD_OR_DRAFT_ES = /^(?:por favor\s+)?(?:registra|anota|agrega|anade|guarda|recuerdame|crea|redacta|escribe|haz|borra|elimina|olvida|llama|envia|manda|reproduce|abre|empieza|traduce|exporta|convierte|vendi|compre)\b/;
+  const MATCHERS_ES = [
+    ["local-help", /(?=.*\b(?:cerca de mi|cercano|mas cercano|cerca|en mi (?:area|zona|ciudad|condado)|codigo postal|\d{5}(?:-\d{4})?)\b)(?=.*\b(?:sbdc|centro de desarrollo de (?:pequenas )?empresas|mentor(?:es)? de score|score|centro de negocios para mujeres|centro de apoyo empresarial para veteranos|asesor(?:es|ia)? (?:de )?negocios|camara de comercio|cdfi|prestamista comunitario)\b)/],
+    ["mbda", /\b(mbda|agencia de desarrollo de (?:negocios|empresas) (?:de )?minorias)\b/],
+    ["8a", /\b8\s?\(\s?a\s?\)|\b8a\b/],
+    ["nmsdc", /\b(nmsdc|diversidad de proveedores|proveedores? minoritarios?|mbe)\b/],
+    ["certification", /\b(certific\w+|wosb|edwosb|hubzone|sdvosb|vosb|dbe|pequena empresa de propiedad de mujeres|empresa de propiedad de (?:mujeres|veteranos)|negocio de propiedad de (?:mujeres|veteranos))\b/],
+    ["contracting", /\b(sam\.gov|registro en sam|contratos? (?:con )?(?:el )?gobierno|contratos? federales?|vender (?:al|le al) gobierno|venderle al gobierno|(?:le )?vendo al gobierno|licitar|licitacion(?:es)?)\b/],
+    ["startup-funding", /\b(inversionistas?|inversores?|capital de riesgo|crowdfunding|financiamiento colectivo|financiacion colectiva|reunir (?:dinero|capital|fondos)|conseguir inversion|levantar capital|opciones de financiamiento|formas de financiar|(?:financiar|fondear) (?:mi|un|una|nuestro|nuestra) (?:negocio|empresa|startup|emprendimiento)|ronda de inversion|capital semilla|vender acciones|buscando financiamiento)\b/],
+    ["loans", /\b(prestamos? (?:de la )?sba|prestamos? 7\s?\(a\)|prestamos? 504|microprestamos?|microcreditos?|prestamos? (?:para|de) (?:pequenos? )?(?:negocios?|empresas?)|prestamos? comerciales?|prestamo para mi (?:negocio|empresa)|linea de credito|(?:obtener|conseguir|solicitar|pedir|necesito|quiero)(?: un)? (?:prestamo|credito|financiamiento))\b/],
+    ["grants", /\b(subvenci(?:on|ones)|grants?|fondos? (?:federales )?no reembolsables|becas? para (?:negocios|empresas))\b/],
+    ["estimated-tax", /\b(impuestos? estimados?|impuestos? trimestrales|pagos? estimados?|1040-?es|impuesto (?:de )?trabajo (?:por cuenta propia|independiente)|autoempleo|schedule c|pagar (?:mis )?impuestos (?:de|por|sobre) (?:mi|mis) (?:negocio|ingresos?))\b/],
+    ["1099", /\b1099\b/],
+    ["licenses", /\b(licencias? (?:de )?(?:comerciales?|negocios?)|licencias? comerciales?|permisos? (?:de )?(?:comerciales?|negocios?)|permisos?|necesito (?:una )?licencia|licencia para (?:vender|operar|abrir))\b/],
+    ["business-structure", /\b(?:que|cual) (?:tipo|clase|forma|estructura)s? de (?:negocio|empresa|entidad)\b|\b(?:tipo|clase|forma|estructura) de (?:negocio|empresa|entidad) (?:debo|deberia|elegir|escoger)\b|\bestructuras? (?:de )?(?:negocio|empresa)|\bentidades? comerciales?\b/],
+    ["llc-vs-corp", /\bllc\b.{0,40}\b(?:o|vs\.?|versus|y|contra)\b.{0,40}\b(?:corporacion(?:es)?|s[- ]?corp\w*|c[- ]?corp\w*)\b|\b(?:corporacion(?:es)?|s[- ]?corp\w*|c[- ]?corp\w*)\b.{0,40}\b(?:o|vs\.?|versus|y|contra)\b.{0,40}\bllc\b|\bdiferencias? entre\b.{0,60}\b(?:llc|corporacion|c[- ]?corp|s[- ]?corp)\b/],
+    ["s-corp", /\b(corporacion(?:es)? s|s[- ]?corp\w*|subchapter s|formulario 2553|2553)\b/],
+    ["for-profit-nonprofit", /\b(sin fines de lucro|con fines de lucro|501\s?\(?c\)?\s?\(?3\)?|exenta? de impuestos|corporacion de beneficio|b[- ]corp)\b/],
+    ["llc-vs-corp", /\b(llc|compania de responsabilidad limitada|corporacion(?:es)?|incorporar|constituir (?:mi|una|un) (?:empresa|negocio|llc|sociedad)|articulos de (?:organizacion|incorporacion)|acuerdo operativo)\b/],
+    ["business-structure", /\b(propietario unico|empresa unipersonal|sociedad(?:es)?|estructura de negocio)\b/],
+    ["business-plan", /\b(plan(?:es)? de negocios?|plan de empresa|plan lean|resumen ejecutivo|proyecciones financieras)\b/],
+    ["name-trademark", /\b(nombre (?:de|del|para) (?:mi |el |un )?(?:negocio|empresa)|nombre comercial|marcas? registradas?|registrar (?:una )?marca|dba|haciendo negocios como|nombre de dominio|ponerle nombre a (?:mi|un) negocio|como (?:llamar|nombrar) (?:mi|un) negocio)\b/],
+    ["ein-registration", /\b(ein|numero de identificacion (?:del )?empleador|(?:registrar|registro) (?:mi|un|una|el) (?:negocio|empresa|llc|corporacion)|registro (?:de )?(?:mi |un )?(?:negocio|empresa)|agente registrado|identificacion fiscal|numero de identificacion fiscal|secretari[oa] de estado)\b/],
+    ["startup-costs", /\b(costos? de (?:arranque|inicio|puesta en marcha|apertura)|cuanto (?:cuesta|cuestan|me costaria|dinero necesito) (?:para )?(?:iniciar|empezar|abrir|montar|comenzar|lanzar)|punto de equilibrio|cuanto dinero (?:necesito|se necesita) para (?:iniciar|empezar|abrir))\b/],
+    ["business-credit", /\b(credito comercial|credito (?:de|para) (?:mi )?(?:negocio|empresa)|construir credito (?:para|de) (?:mi )?(?:negocio|empresa)|d-?u-?n-?s|dun (?:&|y) bradstreet|puntaje de credito (?:de|para) (?:mi )?(?:negocio|empresa))\b/],
+    ["buy-business-franchise", /\b(franquicias?|comprar (?:un )?(?:negocio|empresa)(?: existente)?|adquirir (?:un )?(?:negocio|empresa))\b/],
+    ["business-insurance", /\b(seguro (?:comercial|de negocios?|para (?:mi )?(?:negocio|empresa|tienda|restaurante))|que seguro (?:necesita|necesito|debe tener|debo tener) (?:mi |un |una )?(?:pequeno )?(?:negocio|empresa)|seguro de responsabilidad|compensacion (?:para|de) trabajadores|poliza para duenos de negocios)\b/],
+    ["business-location", /\b(zonificacion|ubicacion (?:de|para) (?:mi )?(?:negocio|empresa|tienda|local)|donde (?:debo|puedo|deberia) (?:abrir|poner|ubicar|instalar) (?:mi|un|una) (?:negocio|tienda|local|empresa)|elegir (?:una )?ubicacion|negocio (?:en|desde) (?:mi )?casa|negocio casero|local para (?:mi )?negocio)\b/],
+    ["business-bank-account", /\b(cuenta bancaria (?:comercial|de negocios?|para (?:mi )?(?:negocio|empresa))|cuenta corriente comercial|abrir (?:una )?cuenta bancaria|servicios? para comercios?|procesadores? de pagos?|separar (?:mis )?(?:finanzas|gastos) (?:personales|del negocio)|aceptar (?:pagos con )?tarjetas?)\b/],
+    ["hiring-employees", /\b(contratar (?:a )?(?:mi |un |una |el |al )?(?:primer |nuevo )?(?:empleados?|trabajadores?|personal)|primer empleado|nomina|w-?4|i-?9|contratistas? independientes?|empleado o (?:un )?contratista|convertirme en empleador|nuevos? empleados?)\b/],
+    ["bookkeeping-accounting", /\b(contabilidad|teneduria de libros|tenedor(?:a)? de libros|contadores?|libros contables|programa de contabilidad|balance general|cpa|llevar (?:mis )?(?:libros|cuentas|registros)|registrar (?:mis )?(?:ingresos|gastos))\b/],
+    ["business-taxes", /\b(impuestos? (?:de|para|del|sobre) (?:mi |un |una )?(?:pequeno )?(?:negocio|empresa|llc)|que impuestos|impuesto (?:sobre|a) las ventas|ano fiscal|impuestos estatales|pagar impuestos (?:de|del) (?:mi )?negocio)\b/],
+    ["startup-steps", /\b((?:iniciar|inicio|empezar|empiezo|comenzar|comienzo|abrir|abro|lanzar|lanzo|montar|monto|crear) (?:un |mi |una |nuestro )?(?:nuevo |propio )?(?:pequeno )?(?:negocio|empresa|emprendimiento|startup)|pasos para (?:iniciar|empezar|abrir|lanzar)|soy (?:un )?(?:nuevo )?(?:dueno|emprendedor)|primeros pasos (?:para|de|en) (?:mi|un) negocio)\b/],
+    ["growth-scaling", /\b(hacer crecer (?:mi |el |un )?(?:pequeno )?(?:negocio|empresa)|crecer (?:mi |el )?(?:negocio|empresa)|escalar|expandir(?:me)? (?:mi |el )?(?:negocio|empresa)|expansion|nuevas? (?:ubicaciones?|mercados?)|exportar|exportacion|fusion(?:ar)?|adquisicion)\b/],
+    ["marketing-visibility", /\b(mercadeo|marketing|(?:conseguir|consigo|encontrar|encuentro|atraer|atraigo|busco) (?:mas |nuevos )?clientes|visibilidad|darme a conocer|dar a conocer (?:mi )?(?:negocio|empresa)|promocionar (?:mi )?(?:negocio|empresa)|publicidad)\b/],
+    ["free-help", /\b(ayuda gratis|ayuda gratuita|asesoria gratuita|asesoria gratis|mentor(?:es|ia)? gratuit\w+|sbdc|centro de desarrollo de (?:pequenas )?empresas|score|centro de negocios para mujeres|centro de apoyo empresarial para veteranos|mentoria|donde (?:puedo )?(?:conseguir|encontrar|obtener) ayuda (?:con|para) (?:mi )?(?:negocio|empresa)|ayuda (?:con|para) mi (?:pequeno )?(?:negocio|empresa))\b/]
+  ];
+  function topicSpanish(text) {
+    const value = fold(String(text || "").replace(/\s+/g, " ").trim());
+    if (!value || value.length > 300) return null;
+    if (RECORD_OR_DRAFT_ES.test(value) || !(ASKS_ES.test(value) || /\?/.test(String(text || "")))) return null;
+    for (const [topic, pattern] of MATCHERS_ES) if (pattern.test(value)) return topic;
+    return null;
+  }
+  // A topic id for a question in English or in Spanish.
+  function usSmallBusinessTopic(text) { return topicEnglish(text) || (language(text) === "es" ? topicSpanish(text) : null); }
+
+  const BUSINESS_WORDS_ES = /\b(?:negocios?|empresas?|emprend\w*|startup|llc|sba|prestamos?|subvenci\w+|licencias?|permisos?|impuestos?|contad\w+|contabilidad|nomina|empleados?|inversionistas?|franquicias?|certific\w+|minorias|veteranos?|clientes?|vender|tienda|restaurante|gobierno|credito|seguro|marcas?|mentor\w*|asesor\w*|sociedad\w*|corporacion\w*|mercadeo|marketing|exportar|zonificacion|bancari\w*|comercial\w*|banco)\b/;
+
   // When is this United States guide the right one? A person's time zone is the best signal the page and the phone line give; the words of the question can also say so ("SBA", "IRS", "8(a)", "NMSDC", "SBDC",
   // "SAM.gov", "United States"). Without either, the question is left to the general guardrail, which names no country-specific agency.
   const US_TIME_ZONES = /^(?:America\/(?:New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage|Detroit|Boise|Juneau|Sitka|Nome|Adak|Metlakatla|Yakutat|Menominee|North_Dakota\/.+|Indiana\/.+|Kentucky\/.+)|Pacific\/Honolulu|US\/.+)$/;
@@ -77,7 +144,7 @@
   }
 
   const BUSINESS_WORDS = /\b8\s?\(\s?a\s?\)|\b(?:bookkeep\w*|accountants?|accounting|business(?:es)?|compan(?:y|ies)|start-?ups?|llc|s[- ]?corp|c[- ]?corp|non-?profits?|self[- ]employed|entrepreneur\w*|sba|sbdc|score|mbda|nmsdc|8a|mbe|wosb|edwosb|hubzone|sdvosb|vosb|sam\.gov|ein|1099|investors?|franchis\w*|payroll|employees?|customers|contractors?|catering|restaurant|shop|store|sell(?:ing)?|cdfi|grants?|loans?)\b/i;
-  function isBusinessQuestion(text) { return BUSINESS_WORDS.test(String(text || "")); }
+  function isBusinessQuestion(text) { return BUSINESS_WORDS.test(String(text || "")) || BUSINESS_WORDS_ES.test(fold(text)); }
 
-  return Object.freeze({ topic: usSmallBusinessTopic, isUsContext, isBusinessQuestion });
+  return Object.freeze({ topic: usSmallBusinessTopic, isUsContext, isBusinessQuestion, language });
 });
