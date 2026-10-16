@@ -138,6 +138,20 @@ test("YouTube: official search parameters, embeddability check, quota counted, r
   assert.ok(!skipFirst.candidates.some(candidate => candidate.videoId === "dQw4w9WgXcQ"), "excludeIds works on cached results too");
 });
 
+// found by the live voice test: "play something relaxing" found nothing to play, because every result for "relaxing music" is a long recording and long recordings were all passed over
+test("YouTube: a mood request whose results are all long recordings plays one; a song request still prefers the short ones", async () => {
+  const items = [
+    { videoId: "relaxHour001", title: "Relaxing Music for Sleep", channel: "Calm Co", embeddable: true, duration: "PT3H" },
+    { videoId: "relaxHour002", title: "Relaxing Piano Music", channel: "Piano Co", embeddable: true, duration: "PT2H10M" }
+  ];
+  const mood = setup({ youtubeItems: items }, KEY);
+  const result = await resolveMedia({ query: "relaxing music", kind: "music", country: "US", includePreview: false }, mood.ctx);
+  assert.ok(result.candidates.some(candidate => candidate.provider === "youtube" && candidate.videoId.startsWith("relaxHour")), "a long recording is played when nothing shorter can be");
+  const mixed = setup({ youtubeItems: [...items, { videoId: "shortSong001", title: "Relaxing Music Song", channel: "Singer", embeddable: true, duration: "PT4M" }] }, KEY);
+  const song = await resolveMedia({ query: "relaxing music", kind: "music", country: "US", includePreview: false }, mixed.ctx);
+  assert.deepEqual(song.candidates.filter(candidate => candidate.provider === "youtube").map(candidate => candidate.videoId), ["shortSong001"], "a short song is still chosen over a long recording");
+});
+
 test("YouTube: the daily quota guard stops searching and the other providers answer; Google's own quota error is remembered", async () => {
   const guarded = setup({}, { ...KEY, NEXUS_YOUTUBE_DAILY_QUOTA: "400", NEXUS_YOUTUBE_QUOTA_RESERVE: "0" });
   for (let index = 0; index < 4; index += 1) guarded.state.spendYoutube(100);

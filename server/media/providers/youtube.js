@@ -108,15 +108,23 @@ async function search(ctx, request) {
     throw error;
   }
   const detailById = new Map((details?.items || []).map(item => [item.id, item]));
-  const eligible = items.filter(item => {
+  const playable = item => {
     const detail = detailById.get(item.id.videoId);
     if (!detail || detail.status?.embeddable !== true || detail.status?.privacyStatus !== "public") return false;
     if (blockedIn(detail, cc)) return false;
     const seconds = parseIsoDuration(detail.contentDetails?.duration);
-    if (kind === "music" && seconds && seconds > 20 * 60 && !/\b(mix|album|playlist|hour|nonstop|non stop)\b/i.test(request.query)) return false;
     if (kind === "video" && seconds !== null && seconds < 10) return false;
     return true;
-  }).map(item => ({ item, score: rankTitle(item.snippet.title, request.query, kind) })).sort((a, b) => b.score - a.score);
+  };
+  const tooLong = item => {
+    const seconds = parseIsoDuration(detailById.get(item.id.videoId)?.contentDetails?.duration);
+    return kind === "music" && seconds && seconds > 20 * 60 && !/\b(mix|album|playlist|hour|nonstop|non stop)\b/i.test(request.query);
+  };
+  // Long recordings are passed over for a song request, but a mood or style ("relaxing music") is mostly long recordings: when nothing shorter can be played, they are played
+  // (found by the live voice test, where "play something relaxing" found nothing to play).
+  const playableItems = items.filter(playable);
+  const shortEnough = playableItems.filter(item => !tooLong(item));
+  const eligible = (shortEnough.length ? shortEnough : playableItems).map(item => ({ item, score: rankTitle(item.snippet.title, request.query, kind) })).sort((a, b) => b.score - a.score);
 
   const embeddable = await Promise.all(eligible.slice(0, 6).map(async entry => ({ ...entry, ok: await checkYoutubeEmbeddable(ctx, entry.item.id.videoId) })));
   const candidates = embeddable.filter(entry => entry.ok).slice(0, 5).map(({ item, score }) => {
