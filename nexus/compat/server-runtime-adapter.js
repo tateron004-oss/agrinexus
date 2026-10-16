@@ -7,6 +7,7 @@ const { createBusinessApi } = require("../business/api.js");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createTaskApi } = require("./task-api.js");
+const { createWaitingApprovalsApi } = require("./waiting-approvals.js");
 const { createControlApi } = require("./control-api.js");
 const { createSyncApi } = require("./sync-api.js");
 const { NexusRuntimeError } = require("../runtime/authoritative-task-engine.js");
@@ -648,6 +649,7 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         send(res, planned.action === "clarify" ? 200 : 201, planned); return true;
       } else if (url.pathname === "/api/nexus/runtime/tasks" && req.method === "POST") { await active.cutover.requireAuthoritative(body.application); result = await api.create(request); }
       else if (url.pathname === "/api/nexus/runtime/tasks" && req.method === "GET") result = await api.list(request);
+      else if (url.pathname === "/api/nexus/runtime/waiting-approvals" && req.method === "GET") result = await createWaitingApprovalsApi(active.engine).list(request);
       else if (url.pathname === "/api/nexus/runtime/observability/summary" && req.method === "GET") {
         if (!context.can("observability:read") && !context.hasRole("admin")) { send(res, 403, { error: "Observability permission is required.", code: "permission_denied" }); return true; }
         send(res, 200, await active.observability.summary({ tenantId: context.tenantId, windowMinutes: request.query.windowMinutes })); return true;
