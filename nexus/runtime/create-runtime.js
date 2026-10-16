@@ -54,6 +54,7 @@ const { createResumeCreateExecutor, verifyResumeCreateOutcome } = require("../re
 const { createDocumentsReadExecutor, verifyDocumentsReadOutcome } = require("../documents/read-executor.js");
 const { createListsCreateExecutor, verifyListsCreateOutcome, createListsReadExecutor, verifyListsReadOutcome,
   createListsUpdateExecutor, verifyListsUpdateOutcome } = require("../lists/executor.js");
+const { createAutomationTriggerExecutor, verifyAutomationTriggerOutcome } = require("../automations/executor.js");
 const { createMapsViewExecutor, verifyMapsViewOutcome } = require("../maps/executor.js");
 const { createTelehealthPrepareExecutor, verifyTelehealthPrepareOutcome, createOperationPlanExecutor, verifyOperationPlanOutcome } = require("../data/prepared-record-executors.js");
 const { createHealthRecordExecutor, verifyHealthRecordOutcome } = require("../health/executor.js");
@@ -159,7 +160,8 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
     // already branches internally on whether the command is a read or a
     // write.
     "business.manage": { create: () => createBusinessExecutor({ repository: businessRecords, access, consents, env }), verify: verifyBusinessOutcome, method: "real_business_workspace_write" },
-    "business.query": { create: () => createBusinessExecutor({ repository: businessRecords, access, consents, env }), verify: verifyBusinessOutcome, method: "real_business_workspace_write" }
+    "business.query": { create: () => createBusinessExecutor({ repository: businessRecords, access, consents, env }), verify: verifyBusinessOutcome, method: "real_business_workspace_write" },
+    "automations.trigger": { create: () => createAutomationTriggerExecutor({ records }), verify: verifyAutomationTriggerOutcome, method: "real_outside_post" }
   };
   const localExecutorFns = Object.fromEntries(Object.entries(LOCAL_EXECUTORS).map(([toolId, entry]) => [toolId, entry.create()]));
   const governedExecutors = Object.assign({}, providers.executors, localExecutorFns, executors);
@@ -202,7 +204,7 @@ function createRuntime({ env = process.env, executors = {}, verifier, planningMo
   const weekly = createWeeklySummaryService({ notifications, settings: new WeeklySummarySettingsRepository(db), memory, devices, autonomyControl });
   const circleRepository = new CircleRepository(db);
   const companion = createCompanion({ circle: circleRepository, checkinSettings: new CheckinSettingsRepository(db), checkinState: new CheckinStateRepository(db), medicationStore: new MedicationRepository(db), memory, notifications, devices, autonomyControl });
-  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, wellnessStore: wellnessRecords, repeatReminders: repeatReminderRecords,
+  const planner = model ? new OpenEndedPlanner({ model, tools, applications, memory, brief, alerts, weekly, companion, automationRecords: records, wellnessStore: wellnessRecords, repeatReminders: repeatReminderRecords,
     community: { store: new CommunityRepository(db), notifications, nameOf: args => circleRepository.userName(args) },
     farmWork: { store: farmRecords, notifications, nameOf: args => circleRepository.userName(args) },
     healthWork: { store: healthRecords, notifications, nameOf: args => circleRepository.userName(args) },

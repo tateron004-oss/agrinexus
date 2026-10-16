@@ -76,7 +76,7 @@ const BODIES = {
     `${BLANK} | ${BLANK} | ${BLANK} | ${BLANK} | ${BLANK} | ${BLANK} | ${BLANK} | ${BLANK}`, "",
     "Questions to ask about each task", "What starts it?", "What does it produce?", "What could go wrong, and how would we notice?", "Who checks the result before it reaches a customer or moves money?", "",
     "Choosing what to automate first", "Start with a task that repeats every week, takes real time and carries little risk (a reminder, a follow-up message you review, a list). Leave anything that moves money or sends to customers on its own until a person checks it.", "",
-    "What Kyro can do for the owner today", "Reminders and repeating reminders; follow-up days for customers; customer, invoice and expense records with drafts to review; lists; a morning or weekly summary; and a prepared text or call that is only sent after the owner says yes. Kyro does not take payments or connect to a bank or accounting software.", "",
+    "What Kyro can do for the owner today", "Reminders and repeating reminders; follow-up days for customers; customer, invoice and expense records with drafts to review; lists; a morning or weekly summary; a prepared text or call that is only sent after the owner says yes; and one confirmed message to an outside automation (Zapier, Make, n8n or IFTTT) the owner connects. Kyro does not take payments or connect directly to a bank or accounting software.", "",
     `First task to automate: ${BLANK}`, `Owner and start date: ${BLANK}`, "", note),
   "website-brief": client => lines(
     `Website brief${client ? ` for ${client}` : ""}`, "",

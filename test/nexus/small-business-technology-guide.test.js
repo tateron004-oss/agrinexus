@@ -42,7 +42,7 @@ test("the facts that matter are there as the official pages gave them", () => {
   assert.match(text("cybersecurity-basics"), /one of the fastest, cheapest ways to protect your data/); assert.match(text("cybersecurity-basics"), /Govern, Identify, Protect, Detect, Respond and Recover/);
   assert.match(text("email-domain"), /SPF, DKIM and DMARC/); assert.match(text("web-host-designer"), /Do they use TLS/); assert.match(text("web-host-designer"), /who can change your website/);
   assert.match(text("phishing-ransomware"), /IC3\.gov/); assert.match(text("phishing-ransomware"), /reportphishing@apwg\.org/); assert.match(text("data-breach"), /IdentityTheft\.gov/);
-  assert.match(text("automation"), /does not take payments, send anything on its own, or connect to your bank or accounting software/);
+  assert.match(text("automation"), /does not take payments, send anything on its own, or connect directly to your bank or accounting software/);
 });
 
 test("which sentences ask for a consulting template, and the document they name", () => {

@@ -14,7 +14,7 @@ const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps,
 
 // Errors from communications.send that mean nothing went out (the provider is switched off or not configured, or refused the
 // request before sending). An undelivered text or failed call is not here: the provider did try, so it still counts.
-const NOT_SENT_CODES = new Set(["communications_provider_unavailable", "communications_send_blocked"]);
+const NOT_SENT_CODES = new Set(["communications_provider_unavailable", "communications_send_blocked", "automation_not_found", "automation_blocked", "automation_unreachable", "automation_restricted", "automation_incomplete"]);
 
 class BehaviorSpine {
   constructor({ agent, engine, tasks, conversations, workspaceStates, businessPreview, reminderCancelPreview }) {
@@ -207,7 +207,7 @@ class BehaviorSpine {
     }
     if (execution.state === "awaiting_render") {
       const result = envelope({ command, plan, task, execution, state: "render_required", completed: false,
-        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || documentSavedResponse(plan, task, context) || businessAnswerResponse(plan, task) || reminderCancelledResponse(plan, task) || "Nexus completed the governed execution and is rendering the verified result.",
+        response: reminderSetResponse(plan, context) || healthSavedResponse(plan, context) || placesFoundResponse(plan, task, context) || documentSavedResponse(plan, task, context) || businessAnswerResponse(plan, task) || reminderCancelledResponse(plan, task) || automationSentResponse(plan, task) || "Nexus completed the governed execution and is rendering the verified result.",
         outcome: { verified: true, renderVerified: false, reason: "renderer_acknowledgement_required" } });
       await this.workspaceStates.stage({ tenantId: context.tenantId, ownerId: context.userId,
         taskId: task.taskId, outcome: result.render });
@@ -238,6 +238,18 @@ class BehaviorSpine {
       legacyFallbackUsed: false, taskId: input.taskId, commandId: input.commandId,
       state: execution.state, completed: execution.completed, outcome: execution.outcome });
   }
+}
+
+// What is said after a send to an outside automation was accepted: which automation, and the words that went (never the link).
+function automationSentResponse(plan, task) {
+  try {
+    const step = (plan?.steps || []).find(item => item?.toolId === "automations.trigger");
+    if (!step) return "";
+    const output = (task?.steps || []).find(item => item?.tool_id === "automations.trigger")?.output;
+    if (output?.sent !== true) return "";
+    const words = String(step.input?.text || "").replace(/\s+/g, " ").trim().slice(0, 160);
+    return `Sent to your automation ${output.connection || step.input?.connection}${words ? `: "${words}"` : ""}. The outside service accepted it.`;
+  } catch { return ""; }
 }
 
 // What is said after a one-time reminder is set: the task and the time, in the person's own words and time zone, not "Nexus completed the governed execution".
@@ -384,4 +396,4 @@ function envelope({ command, plan, execution = null, task = null, state, complet
     receipts: execution?.receipts || [], render });
 }
 
-module.exports = Object.freeze({ BehaviorSpine, healthSavedResponse, placesFoundResponse, documentSavedResponse, businessAnswerResponse, reminderSetResponse, reminderCancelledResponse });
+module.exports = Object.freeze({ BehaviorSpine, automationSentResponse, healthSavedResponse, placesFoundResponse, documentSavedResponse, businessAnswerResponse, reminderSetResponse, reminderCancelledResponse });

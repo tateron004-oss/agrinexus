@@ -51557,6 +51557,15 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // "Send new customer Grace to my sales sheet automation", "show my automations": answered by Kyro's own planner (a send is read back and waits for a yes), as typing it is, instead of leaving it to the voice model.
+    if (trimmed && typeof kyroAutomationRequest === "function" && kyroAutomationRequest(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 40000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
+    }
     // A drafted message on the activity screen: "send it" / "don't send it" (and a plain yes or no within two minutes of being asked) press that card's own button.
     if (trimmed && typeof kyroDraftVoiceReply === "function" && kyroDraftVoiceReply(trimmed)) return true;
     // "Yes" or "no" to a question the page asked ("Should I go ahead?"): answered from what was heard, as typing it is, instead of leaving it to the model.
@@ -51979,7 +51988,7 @@ function kyroOpenUploadScreen(said, lang) {
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -52111,6 +52120,11 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   if (KYRO_OPEN_ACTIVITY.test(said)) {
     kyroTakeOverTurn();
     void kyroShowActivityScreen();
+    return true;
+  }
+  if (window.KyroAutomationCommands?.isOpen?.(said)) {
+    kyroTakeOverTurn();
+    void kyroShowAutomationsScreen();
     return true;
   }
   if (KYRO_ASK_MEMORY.test(said)) {
@@ -52712,6 +52726,78 @@ async function kyroShowActivityScreen() {
       screen.append(block);
     }
     try { setVoiceResponse(summary, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the screen has it */ }
+    return true;
+  } catch { return false; }
+}
+// "Open automations", "set up an automation": the screen where a person connects an outside tool (Zapier, Make, n8n, IFTTT) by pasting the link it gives, and sees or removes what is connected.
+// The link is typed or pasted (it cannot be said aloud) and is never shown again: the list shows the name and the web address's host. Sending is spoken: "send new customer Grace to my sales sheet automation".
+function kyroAutomationRequest(text) {
+  try {
+    const commands = window.KyroAutomationCommands;
+    return Boolean(commands && (commands.parseTrigger(text) || commands.isList(text)));
+  } catch { return false; }
+}
+async function kyroShowAutomationsScreen() {
+  try {
+    document.querySelectorAll("[data-kyro-result]").forEach(node => node.remove());
+    const screen = kyroMake("section", { "data-kyro-result": "automations", "data-kyro-keep": "true", role: "dialog", "aria-label": kyroT("Outside tool automations"),
+      style: "position:fixed;inset:0;z-index:2147482500;overflow-y:auto;background:#080b10;color:#f1f5f9;padding:clamp(20px,5vw,48px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;align-items:flex-start" });
+    const close = kyroMake("button", { type: "button", "aria-label": kyroT("Close"), style: "position:absolute;top:12px;right:12px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#f1f5f9;font-size:1.7rem;cursor:pointer;z-index:1" }, "×");
+    close.addEventListener("click", () => { screen.remove(); void kyroReturnToOrb({ reason: "done", source: "automations-screen" }); });
+    const status = kyroMake("p", { role: "status", style: "margin:0;font-size:1.2rem;max-width:38em" }, kyroT("One moment..."));
+    screen.append(close, kyroMake("h2", { style: "margin:8px 48px 0 0;font-size:1.5rem" }, kyroT("Outside tool automations")), status);
+    document.body.append(screen);
+    try { kyroNoteActivity(); } catch { /* nothing to note */ }
+    const listBox = kyroMake("div", { "data-kyro-automation-list": "true", style: "width:100%;max-width:38em;display:flex;flex-direction:column;gap:8px" });
+    const formBox = kyroMake("form", { "data-kyro-automation-form": "true", style: "width:100%;max-width:38em;display:flex;flex-direction:column;gap:10px;margin-top:8px" });
+    const secretBox = kyroMake("div", { "data-kyro-automation-secret": "true", style: "width:100%;max-width:38em" });
+    screen.append(listBox, formBox, secretBox);
+    const inputStyle = "padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.3);background:#10151d;color:#f1f5f9;font-size:1.1rem;width:100%;box-sizing:border-box";
+    const nameInput = kyroMake("input", { name: "name", type: "text", maxlength: "40", autocomplete: "off", "aria-label": kyroT("Name you will say, such as Sales sheet"), placeholder: kyroT("Name you will say, such as Sales sheet"), style: inputStyle });
+    const urlInput = kyroMake("input", { name: "url", type: "url", maxlength: "2000", autocomplete: "off", spellcheck: "false", "aria-label": kyroT("Link from Zapier, Make, n8n or IFTTT (starts with https://)"), placeholder: kyroT("Link from Zapier, Make, n8n or IFTTT (starts with https://)"), style: inputStyle });
+    const save = kyroMake("button", { type: "submit", style: "padding:14px 22px;border:0;border-radius:14px;background:#06a77d;color:#fff;font-size:1.15rem;font-weight:600;cursor:pointer;align-self:flex-start" }, kyroT("Connect it"));
+    formBox.append(nameInput, urlInput, save);
+    const render = async () => {
+      let state = null;
+      try { state = await request("/api/nexus/runtime/automations"); } catch { status.textContent = kyroT("I could not read your automations just now. Please try again."); return; }
+      const items = Array.isArray(state?.automations) ? state.automations : [];
+      listBox.textContent = "";
+      for (const item of items) {
+        const row = kyroMake("div", { "data-kyro-automation": item.name, style: "display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.07)" });
+        const where = item.host ? " (" + item.host + ")" : "";
+        const last = item.lastSentAt ? (Number(item.lastStatus) >= 200 && Number(item.lastStatus) < 300 ? " - " + kyroT("last send went through") : " - " + kyroT("last send did not go through")) : "";
+        row.append(kyroMake("span", {}, item.name + where + last));
+        const remove = kyroMake("button", { type: "button", style: "padding:8px 14px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:transparent;color:#f1f5f9;font-size:1rem;cursor:pointer" }, kyroT("Remove"));
+        let armed = false;
+        remove.addEventListener("click", async () => {
+          if (!armed) { armed = true; remove.textContent = kyroT("Tap again to remove"); return; }
+          try { await request("/api/nexus/runtime/automations/remove", { method: "POST", body: { name: item.name } }); } catch { /* the list below shows what is left */ }
+          void render();
+        });
+        row.append(remove);
+        listBox.append(row);
+      }
+      formBox.hidden = state?.canConnect === false;
+      status.textContent = state?.canConnect === false
+        ? kyroT("Connecting an outside tool needs a full account. Sign in, and this screen will let you connect one.")
+        : items.length
+          ? kyroT("These are connected. To send something, say: send new customer Grace to my ") + items[0].name + kyroT(" automation. I read it back and wait for your yes.")
+          : kyroT("Nothing is connected yet. Paste the link your tool gives you (a webhook or catch-hook link) and a short name. Then you can say: send new customer Grace to my sales sheet automation.");
+      return items;
+    };
+    formBox.addEventListener("submit", async event => {
+      event.preventDefault();
+      secretBox.textContent = "";
+      try {
+        const made = await request("/api/nexus/runtime/automations", { method: "POST", body: { name: nameInput.value, url: urlInput.value } });
+        nameInput.value = ""; urlInput.value = "";
+        secretBox.append(kyroMake("p", { style: "margin:0 0 6px" }, kyroT("Connected: ") + made.name + " (" + made.host + "). " + kyroT("If the tool you connected can check signatures, this secret proves a message came from Kyro. It is shown once:")),
+          kyroMake("code", { "data-kyro-automation-signing": "true", style: "display:block;padding:10px 14px;border-radius:10px;background:#10151d;word-break:break-all;user-select:all" }, made.signingSecret));
+        await render();
+      } catch (error) { status.textContent = String(error?.message || kyroT("I could not connect that.")); }
+    });
+    const items = await render();
+    try { if (Array.isArray(items)) setVoiceResponse(status.textContent, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the screen says it */ }
     return true;
   } catch { return false; }
 }
