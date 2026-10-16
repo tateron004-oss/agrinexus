@@ -36,7 +36,7 @@
     ["sr-benefits", /\bbenefitscheckup\b|\bbenefits? (?:i|we|my (?:mom|dad|parents?)) (?:may|might|can) qualify\b|\b(?:senior|older|elderly|retire\w*)\b.{0,40}\b(?:benefits?|snap|food stamps|liheap|assistance programs?|help (?:paying|with) (?:for )?(?:food|utilities|heating|bills|groceries))\b/i],
     ["sr-eldercare", /\beldercare\b|\barea agency on aging\b|\bmeals on wheels\b|\bhome[- ]delivered meals\b|\bfamily caregiver\b|\b(?:senior|older adult|elderly|aging parent)s?\b.{0,40}\b(?:services?|resources?|support|programs?|care)\b|\b(?:services?|resources?|support|programs?|care|help)\b.{0,30}\b(?:for|to) (?:my )?(?:elderly|seniors?|older (?:adults?|people|person)|aging (?:parents?|mom|dad))\b/i],
 
-    ["yt-abuse", /\bchild abuse\b|\bchildhelp\b|\b(?:someone|my (?:dad|mom|stepdad|stepmom|parent|uncle|teacher|coach)) (?:is|are|has been) (?:hurting|hitting|abusing) me\b|\breport (?:child )?abuse\b/i],
+    ["yt-abuse", /\bchild abuse\b|\bchild ?help\b|\b(?:someone|my (?:dad|mom|stepdad|stepmom|parent|uncle|teacher|coach)) (?:is|are|has been) (?:hurting|hitting|abusing) me\b|\breport (?:child )?abuse\b/i],
     ["yt-runaway", /\brun(?:ning)? away\b|\brunaway\b|\bkicked out of (?:my )?(?:home|house)\b|\bno (?:place|where) to (?:stay|live)\b.{0,40}\b(?:teen|youth|young|minor|i(?:'m| am) (?:1[3-9]|2[0-4]))\b/i],
     ["yt-lgbtq", /\btrevor project\b|\blgbtq\+?\b.{0,40}\b(?:youth|teens?|young|support|crisis|help)\b|\b(?:youth|teens?|young)\b.{0,40}\blgbtq/i],
     ["yt-trafficking", /\bhuman trafficking\b|\btrafficking hotline\b|\bbeing trafficked\b/i],
