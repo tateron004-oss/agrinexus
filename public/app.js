@@ -52428,7 +52428,7 @@ const KYRO_APP_SCREENS = Object.freeze({
 const KYRO_APP_SW = Object.freeze({
   "Health": "Afya", "I record what you tell me and help you get ready for a visit. I do not diagnose or give treatment advice.": "Ninarekodi unachoniambia na kukusaidia kujiandaa kwa ziara ya daktari. Sitambui magonjwa wala kutoa matibabu.",
   "Start a telehealth request": "Anza ombi la huduma ya afya kwa video", "Record blood pressure": "Rekodi shinikizo la damu", "Top number (systolic)": "Namba ya juu (systolic)", "Bottom number (diastolic)": "Namba ya chini (diastolic)", "Record": "Rekodi",
-  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu", "Summary for my provider": "Muhtasari kwa mtoa huduma wangu", "More care and wellness": "Huduma zaidi na afya njema", "Care and wellness": "Huduma na afya njema", "Your medicines, a daily check-in, the people you trust, and a simple log of sleep and water. I repeat what you tell me; I do not check doses or diagnose.": "Dawa zako, kuulizwa hali yako kila siku, watu unaowaamini, na kumbukumbu rahisi ya usingizi na maji. Narudia unachoniambia; sikagui vipimo vya dawa wala kutambua magonjwa.", "My medicines": "Dawa zangu", "Ask me how I am every day": "Niulize hali yangu kila siku", "Start check-ins": "Anza kuuliza", "Stop my daily check-ins": "Acha kuniuliza kila siku", "Who is in my trusted circle": "Nani yuko kwenye kundi langu la kuaminika", "Add someone I trust": "Ongeza mtu ninayemwamini", "Add": "Ongeza", "Their email address": "Barua pepe yake", "Write down how I slept": "Andika nilivyolala", "Hours of sleep": "Saa za usingizi", "Write down water I drank": "Andika maji niliyokunywa", "Glasses of water": "Glasi za maji", "Show my wellness log": "Onyesha kumbukumbu yangu ya afya njema", "What I have done and what is waiting": "Nilichofanya na kinachosubiri", "What you know about me": "Unachojua kunihusu", "One moment...": "Subiri kidogo...", "Waiting for your yes": "Kinasubiri ndiyo yako", "I am working on": "Ninafanyia kazi", "Done recently": "Vilivyokamilika hivi karibuni", "Could not be finished": "Visivyoweza kukamilika", "I could not read your activity just now. Please try again.": "Sikuweza kusoma shughuli zako sasa. Tafadhali jaribu tena.", "Record blood sugar": "Rekodi sukari ya damu", "Blood sugar number": "Namba ya sukari ya damu", "Unit": "Kipimo", "mmol/L": "mmol/L", "mg/dL": "mg/dL", "Remind me to take a medicine": "Nikumbushe kunywa dawa", "Remind me": "Nikumbushe", "Name of the medicine": "Jina la dawa", "At what time? For example: 8 am": "Saa ngapi? Kwa mfano: saa mbili asubuhi", "I am feeling low or worried": "Nina huzuni au wasiwasi", "Women's health information": "Maelezo kuhusu afya ya wanawake",
+  "Find a pharmacy": "Tafuta duka la dawa", "Town (leave empty for near me)": "Mji (acha tupu kwa karibu nami)", "Find": "Tafuta", "Find a clinic": "Tafuta kliniki", "Show my readings": "Onyesha vipimo vyangu", "Summary for my provider": "Muhtasari kwa mtoa huduma wangu", "More care and wellness": "Huduma zaidi na afya njema", "Care and wellness": "Huduma na afya njema", "Your medicines, a daily check-in, the people you trust, and a simple log of sleep and water. I repeat what you tell me; I do not check doses or diagnose.": "Dawa zako, kuulizwa hali yako kila siku, watu unaowaamini, na kumbukumbu rahisi ya usingizi na maji. Narudia unachoniambia; sikagui vipimo vya dawa wala kutambua magonjwa.", "My medicines": "Dawa zangu", "Ask me how I am every day": "Niulize hali yangu kila siku", "Start check-ins": "Anza kuuliza", "Stop my daily check-ins": "Acha kuniuliza kila siku", "Who is in my trusted circle": "Nani yuko kwenye kundi langu la kuaminika", "Add someone I trust": "Ongeza mtu ninayemwamini", "Add": "Ongeza", "Their email address": "Barua pepe yake", "Write down how I slept": "Andika nilivyolala", "Hours of sleep": "Saa za usingizi", "Write down water I drank": "Andika maji niliyokunywa", "Glasses of water": "Glasi za maji", "Show my wellness log": "Onyesha kumbukumbu yangu ya afya njema", "What I have done and what is waiting": "Nilichofanya na kinachosubiri", "What you know about me": "Unachojua kunihusu", "Drafted for your yes": "Zilizoandaliwa kwa ndiyo yako", "To": "Kwa", "Send it": "Itume", "Do not send": "Usitume", "One moment...": "Subiri kidogo...", "Waiting for your yes": "Kinasubiri ndiyo yako", "I am working on": "Ninafanyia kazi", "Done recently": "Vilivyokamilika hivi karibuni", "Could not be finished": "Visivyoweza kukamilika", "I could not read your activity just now. Please try again.": "Sikuweza kusoma shughuli zako sasa. Tafadhali jaribu tena.", "Record blood sugar": "Rekodi sukari ya damu", "Blood sugar number": "Namba ya sukari ya damu", "Unit": "Kipimo", "mmol/L": "mmol/L", "mg/dL": "mg/dL", "Remind me to take a medicine": "Nikumbushe kunywa dawa", "Remind me": "Nikumbushe", "Name of the medicine": "Jina la dawa", "At what time? For example: 8 am": "Saa ngapi? Kwa mfano: saa mbili asubuhi", "I am feeling low or worried": "Nina huzuni au wasiwasi", "Women's health information": "Maelezo kuhusu afya ya wanawake",
   "Crop and farm help": "Msaada wa mazao na shamba", "Ask about a crop, a pest or the weather on your farm, and keep a log of what happens.": "Uliza kuhusu zao, mdudu au hali ya hewa shambani, na uweke kumbukumbu ya yanayotokea.",
   "Ask about a crop or a pest": "Uliza kuhusu zao au mdudu", "For example: why are my maize leaves turning yellow?": "Kwa mfano: kwa nini majani ya mahindi yangu yanageuka manjano?", "Ask": "Uliza",
   "Write in my farm log": "Andika kwenye kumbukumbu ya shamba", "For example: 12 mm of rain": "Kwa mfano: mvua ya mm 12", "Save": "Hifadhi", "Show my farm log": "Onyesha kumbukumbu ya shamba langu",
@@ -52511,7 +52511,7 @@ function kyroShowOfflineScreen() {
 // ---- What Kyro has done, and what is waiting ----
 // "What have you done for me?", "what is waiting for me?", "open activity": the person's own tasks in plain words, in groups, so nothing Kyro does (or is waiting to do) is hidden from them. Each line says whether Kyro did it
 // on its own. Read from the person's own task list (GET /api/nexus/runtime/tasks); nothing here changes anything.
-function kyroActivityGroups(tasks, now = Date.now()) {
+function kyroActivityGroups(tasks, now = Date.now(), skipTaskIds = null) {
   const waitingStates = new Set(["awaiting_confirmation", "awaiting_consent"]);
   const doingStates = new Set(["planned", "queued", "running", "verifying", "paused"]);
   const stuckStates = new Set(["failed", "blocked", "expired"]);
@@ -52523,6 +52523,7 @@ function kyroActivityGroups(tasks, now = Date.now()) {
   const groups = { waiting: [], doing: [], done: [], stuck: [] };
   for (const task of Array.isArray(tasks) ? tasks : []) {
     const goal = kyroPlainText(String(task?.goal || "").replace(/\s+/g, " ").trim()).slice(0, 140); if (!goal) continue;
+    if (skipTaskIds && skipTaskIds.has(task?.taskId)) continue; // (shown as a drafted message with its own buttons)
     const line = `${goal}${task.autonomous === true ? " (I did this on my own)" : ""}`;
     const state = String(task.state || "");
     if (waitingStates.has(state)) groups.waiting.push(line);
@@ -52533,13 +52534,45 @@ function kyroActivityGroups(tasks, now = Date.now()) {
   for (const key of Object.keys(groups)) groups[key] = groups[key].slice(0, key === "done" ? 8 : 6);
   return groups;
 }
-function kyroActivitySummary(groups) {
+function kyroActivitySummary(groups, drafts = 0) {
   const parts = [];
+  if (drafts) parts.push(`${drafts} ${drafts === 1 ? "message is" : "messages are"} drafted and waiting for your yes: nothing is sent until you tap Send it.`);
   if (groups.waiting.length) parts.push(`${groups.waiting.length} ${groups.waiting.length === 1 ? "thing is" : "things are"} waiting for your yes.`);
   if (groups.doing.length) parts.push(`I am working on ${groups.doing.length}.`);
   if (groups.done.length) parts.push(`I finished ${groups.done.length} recently.`);
   if (groups.stuck.length) parts.push(`${groups.stuck.length} could not be finished.`);
   return parts.join(" ") || "Nothing is waiting for you, and I am not working on anything right now.";
+}
+// One drafted message: who it goes to, the exact words, and the two choices. The send happens only when Send it is tapped (POST /behavior/confirm, the same governed
+// confirmation as saying yes in a conversation); Do not send cancels it. The result is said on the card.
+function kyroDraftCard(draft) {
+  const card = kyroMake("div", { "data-kyro-draft": draft.taskId, style: "margin:0 0 10px;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.07)" });
+  const way = draft.channel === "email" ? "email" : draft.channel === "whatsapp" ? "WhatsApp" : draft.channel === "call" ? "call" : "text";
+  card.append(kyroMake("p", { style: "margin:0 0 4px;color:#cbd5e1" }, `${kyroT("To")}: ${draft.to} (${way})`));
+  if (draft.subject) card.append(kyroMake("p", { style: "margin:0 0 4px;color:#cbd5e1" }, draft.subject));
+  card.append(kyroMake("p", { style: "margin:0 0 10px;font-size:1.05rem;white-space:pre-wrap" }, draft.message));
+  const note = kyroMake("p", { role: "status", style: "margin:8px 0 0" }, "");
+  const row = kyroMake("div", { style: "display:flex;gap:10px;flex-wrap:wrap" });
+  const decide = async approved => {
+    for (const button of row.querySelectorAll("button")) button.disabled = true;
+    note.textContent = kyroT("One moment...");
+    try {
+      const result = await requestWithTimeout("/api/nexus/runtime/behavior/confirm", { method: "POST",
+        body: { taskId: draft.taskId, stepId: draft.stepId, approved, text: approved ? "Yes, send it." : "No, do not send it.", timeZone: kyroDeviceTimeZone(), channel: "typed" } }, 90000);
+      note.textContent = String(result?.response || (approved ? "Done." : "Okay, I did not send it.")).slice(0, 300);
+      row.remove();
+    } catch (error) {
+      note.textContent = String(error?.message || "That did not go through. Nothing was changed. Please try again.").slice(0, 300);
+      for (const button of row.querySelectorAll("button")) button.disabled = false;
+    }
+  };
+  const yes = kyroMake("button", { type: "button", style: "min-height:48px;padding:0 20px;border:0;border-radius:12px;background:#22c55e;color:#04210f;font-size:1.05rem;font-weight:700;cursor:pointer" }, kyroT("Send it"));
+  const no = kyroMake("button", { type: "button", style: "min-height:48px;padding:0 20px;border:0;border-radius:12px;background:rgba(255,255,255,.14);color:#f1f5f9;font-size:1.05rem;cursor:pointer" }, kyroT("Do not send"));
+  yes.addEventListener("click", () => { void decide(true); });
+  no.addEventListener("click", () => { void decide(false); });
+  row.append(yes, no);
+  card.append(row, note);
+  return card;
 }
 async function kyroShowActivityScreen() {
   try {
@@ -52554,9 +52587,18 @@ async function kyroShowActivityScreen() {
     try { kyroNoteActivity(); } catch { /* nothing to note */ }
     let tasks = [];
     try { tasks = await request("/api/nexus/runtime/tasks?limit=40"); } catch { status.textContent = kyroT("I could not read your activity just now. Please try again."); return true; }
-    const groups = kyroActivityGroups(tasks);
-    const summary = kyroActivitySummary(groups);
+    // Messages Kyro drafted on its own (a follow-up to a client whose date has passed): shown in full with Send it / Do not send. Nothing is sent without a tap.
+    let drafts = [];
+    try { const waiting = await request("/api/nexus/runtime/waiting-approvals"); drafts = Array.isArray(waiting?.approvals) ? waiting.approvals : []; } catch { drafts = []; }
+    const groups = kyroActivityGroups(tasks, Date.now(), new Set(drafts.map(item => item.taskId)));
+    const summary = kyroActivitySummary(groups, drafts.length);
     status.textContent = summary;
+    if (drafts.length) {
+      const block = kyroMake("div", { "data-kyro-activity-group": "drafts", style: "width:100%;max-width:38em" });
+      block.append(kyroMake("h3", { style: "margin:10px 0 6px;font-size:1.1rem" }, kyroT("Drafted for your yes")));
+      for (const draft of drafts) block.append(kyroDraftCard(draft));
+      screen.append(block);
+    }
     const sections = [["waiting", "Waiting for your yes"], ["doing", "I am working on"], ["done", "Done recently"], ["stuck", "Could not be finished"]];
     for (const [key, title] of sections) {
       if (!groups[key].length) continue;
