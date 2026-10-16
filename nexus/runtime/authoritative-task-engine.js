@@ -1,6 +1,10 @@
 const { createId } = require("../contracts/identifiers.js");
 const { createTask, transitionTask } = require("../tasks/state-machine.js");
 
+// Rough cost of one call of the tools that bill a provider, used when the tool's own record does not say (the real cost, when the executor reports it, replaces this). They are what the daily budget
+// (NEXUS_DAILY_COST_LIMIT_CENTS, unset = no limit) counts, and what the cost ledger shows today. Written as estimates on purpose: a web search costs about a cent or two, a text message a few cents.
+const DEFAULT_ESTIMATED_COST_CENTS = Object.freeze({ "knowledge.search": 2, "images.search": 2, "videos.search": 1, "jobs.search": 2, "marketplace.search": 2, "communications.send": 5 });
+
 class NexusRuntimeError extends Error {
   constructor(code, message, status = 400, details = {}) {
     super(message); this.name = "NexusRuntimeError"; this.code = code; this.status = status; this.details = details;
@@ -168,21 +172,27 @@ class AuthoritativeTaskEngine {
       const key = retryOrdinal > 1 ? `${baseKey}:retry:${retryOrdinal}` : baseKey;
       const previous = await this.executions.get({ tenantId: context.tenantId, idempotencyKey: key });
       if (previous?.state === "completed") return verifiedDuplicate(previous);
-      const estimatedCostCents = Number(tool.metadata?.estimatedCostCents || 0);
+      const estimatedCostCents = Number(tool.metadata?.estimatedCostCents ?? DEFAULT_ESTIMATED_COST_CENTS[tool.tool_id] ?? 0);
       // Budget refusal occurs before claiming an execution or contacting its provider.
       // Found live (observability audit): a thrown CostLimitError here was not caught anywhere in
       // execute() and propagated straight out uncaught -- unlike every OTHER pre-execution denial in this
       // same loop (permission, confirmation, consent), which all go through auditDenial() first. A
       // cost-limit refusal was completely invisible on the audit review surface explicitly documented as
       // "everything Kyro did, for a human to actually look at."
+      // (the estimate is RESERVED for the time the call runs, so calls running at the same time cannot all pass the check and together overspend the daily budget; it is given back once the real cost is written down)
+      let releaseCost = () => {};
       if (this.observability) {
         try {
-          await this.observability.assertCostAllowed({ tenantId: context.tenantId, estimatedCostCents, operationLimitCents: tool.cost_limit_cents });
+          if (typeof this.observability.reserveCost === "function") releaseCost = await this.observability.reserveCost({ tenantId: context.tenantId, estimatedCostCents, operationLimitCents: tool.cost_limit_cents, holdMs: Number(tool.timeout_ms || 60000) + 60000 });
+          else await this.observability.assertCostAllowed({ tenantId: context.tenantId, estimatedCostCents, operationLimitCents: tool.cost_limit_cents });
         } catch (denied) { await auditDenial(denied); throw denied; }
       }
-      const started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
-        toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
-      if (started.duplicate) return verifiedDuplicate(started.execution);
+      let started;
+      try {
+        started = await this.executions.start({ tenantId: context.tenantId, taskId, stepId,
+          toolId: tool.tool_id, actorId: context.userId, idempotencyKey: key, request: step.input });
+      } catch (startFailed) { releaseCost(); throw startFailed; }
+      if (started.duplicate) { releaseCost(); return verifiedDuplicate(started.execution); }
       attemptedExecution = true;
       const observedAt = Date.now();
       const span = this.observability ? await observeSafely(() => this.observability.startSpan({
@@ -240,6 +250,7 @@ class AuthoritativeTaskEngine {
         // audit trail or observability metrics must not be treated as the tool
         // itself having failed.
       }
+      releaseCost();
       return { execution, duplicate: false, receipt };
       } catch (cause) {
       const error = sanitizeProviderFailure(cause, context);
@@ -266,6 +277,7 @@ class AuthoritativeTaskEngine {
           await observeSafely(() => this.observability.alert({ tenantId: context.tenantId,
             alertKey: `provider:${providerId}`, summary: "A governed provider attempt failed.", evidence: error }));
         }
+        releaseCost();
         lastError = cause;
       }
     }

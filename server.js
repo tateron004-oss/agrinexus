@@ -2470,14 +2470,37 @@ async function readDb() {
     await ensurePostgresState();
     const result = await getPgPool().query("select state from agrinexus_app_state where id = $1", [space]);
     if (!result.rows[0]) throw new Error("Unknown business space");
-    return result.rows[0].state;
+    const state = result.rows[0].state;
+    if (dbMergeEnabled() && state && typeof state === "object") dbReadSnapshots.set(state, JSON.stringify(state));
+    return state;
   }
   await ensureRuntimeData();
   const raw = await fs.promises.readFile(businessSpaces.spaceDbPath(DB_PATH, space), "utf8");
-  return JSON.parse(raw);
+  const state = JSON.parse(raw);
+  if (dbMergeEnabled() && state && typeof state === "object") dbReadSnapshots.set(state, raw);
+  return state;
 }
 
 let writeDbQueue = Promise.resolve();
+
+// Two requests that read the state at the same moment each change their own copy, and the one that saved last used to replace the other's save entirely (10 saves at once kept 5).
+// What each state read from readDb() looked like is remembered here, so that a save that finds the stored state has changed since can merge the two sets of changes instead of
+// overwriting (see server/db-merge.js for the rules). A state that did not come from readDb() has nothing remembered and is saved as before. AGRINEXUS_DB_MERGE=off turns this off.
+const dbReadSnapshots = new WeakMap();
+const dbMerge = require("./server/db-merge.js");
+let dbMergeCount = 0;
+function dbMergeEnabled() { return String(process.env.AGRINEXUS_DB_MERGE || "").toLowerCase() !== "off"; }
+function mergeStoredState(baseText, mine, latestText) {
+  try {
+    const merged = dbMerge.mergeStates(JSON.parse(baseText), mine, JSON.parse(latestText));
+    dbMergeCount += 1;
+    console.log("[state] merged a save with a change made at the same moment (" + dbMergeCount + " so far)");
+    return merged;
+  } catch (error) {
+    console.error("[state] merge failed, saving as before:", error && error.message);
+    return mine;
+  }
+}
 
 async function writeDb(db) {
   const stamping = profileOwnerStamping.getStore();
@@ -2488,10 +2511,28 @@ async function writeDb(db) {
   }
   if (usingPostgresState()) {
     await ensurePostgresState();
-    await getPgPool().query(
-      "update agrinexus_app_state set state = $2::jsonb, updated_at = now() where id = $1",
-      [businessSpaces.currentSpace(), JSON.stringify(db)]
-    );
+    const space = businessSpaces.currentSpace();
+    const baseText = dbMergeEnabled() && db && typeof db === "object" ? dbReadSnapshots.get(db) : undefined;
+    const text = JSON.stringify(db);
+    if (baseText === undefined) {
+      await getPgPool().query("update agrinexus_app_state set state = $2::jsonb, updated_at = now() where id = $1", [space, text]);
+      return;
+    }
+    // Save only if the stored state is still the one this request read; if it changed, merge with the newer state and try again (a few times, then save as before).
+    let candidate = text; let expected = baseText;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const result = await getPgPool().query(
+        "update agrinexus_app_state set state = $2::jsonb, updated_at = now() where id = $1 and state = $3::jsonb",
+        [space, candidate, expected]
+      );
+      if (result && result.rowCount !== 0) { dbReadSnapshots.set(db, text); return; }
+      const current = await getPgPool().query("select state from agrinexus_app_state where id = $1", [space]);
+      if (!current.rows[0]) return;
+      expected = JSON.stringify(current.rows[0].state);
+      candidate = JSON.stringify(mergeStoredState(baseText, db, expected));
+    }
+    await getPgPool().query("update agrinexus_app_state set state = $2::jsonb, updated_at = now() where id = $1", [space, text]);
+    dbReadSnapshots.set(db, text);
     return;
   }
   // Two real races confirmed live under concurrent load once writeFile
@@ -2514,7 +2555,17 @@ async function writeDb(db) {
     const targetPath = businessSpaces.spaceDbPath(DB_PATH, businessSpaces.currentSpace());
     await fs.promises.mkdir(path.dirname(targetPath), { recursive: true });
     const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    await fs.promises.writeFile(tempPath, JSON.stringify(db, null, 2) + "\n");
+    const text = JSON.stringify(db, null, 2) + "\n";
+    let toWrite = text;
+    const baseText = dbMergeEnabled() && db && typeof db === "object" ? dbReadSnapshots.get(db) : undefined;
+    if (baseText !== undefined) {
+      // (writes go one at a time here, so the file read now is exactly what is stored)
+      let latestText = null;
+      try { latestText = await fs.promises.readFile(targetPath, "utf8"); } catch { latestText = null; }
+      if (latestText !== null && latestText !== baseText) toWrite = JSON.stringify(mergeStoredState(baseText, db, latestText), null, 2) + "\n";
+    }
+    await fs.promises.writeFile(tempPath, toWrite);
+    if (baseText !== undefined) dbReadSnapshots.set(db, text);
     // Windows can still throw EPERM renaming over a file that has a
     // concurrent reader's handle open at that exact instant (POSIX rename
     // has no such restriction) -- confirmed live even with writes fully

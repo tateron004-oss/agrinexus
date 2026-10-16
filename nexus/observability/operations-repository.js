@@ -10,6 +10,34 @@ class ObservabilityRepository extends EventRepository {
   constructor(db, { dailyCostLimitCents = 0 } = {}) {
     super(db);
     this.dailyCostLimitCents = nonnegative(dailyCostLimitCents);
+    // What tool calls still running (in this process) have reserved against each tenant's daily budget, until their real cost is written down.
+    this.reservedCents = new Map();
+  }
+
+  // The budget check for a tool call that is about to run, made so that calls running at the same time cannot all pass it and then collectively overspend: the estimate is reserved FIRST (so every other check
+  // counts it from that moment), then the spend so far is read, and the reservation is given back if the call would not fit. Returns release(): call it once the call's real cost has been recorded (or the call
+  // did not run); it is safe to call twice, and gives itself back after `holdMs` if nobody does. Counted per process: one server process handles all of a tenant's requests.
+  async reserveCost({ tenantId, estimatedCostCents = 0, operationLimitCents = 0, holdMs = 120000 }) {
+    const estimate = nonnegative(estimatedCostCents); const operationLimit = nonnegative(operationLimitCents);
+    if (operationLimit && estimate > operationLimit) throw new CostLimitError("The estimated provider cost exceeds the tool limit.", { estimate, operationLimit });
+    if (!this.dailyCostLimitCents || !estimate) return () => {};
+    const key = String(tenantId || "");
+    this.reservedCents.set(key, (this.reservedCents.get(key) || 0) + estimate);
+    let released = false; let timer = null;
+    const release = () => {
+      if (released) return; released = true; if (timer) clearTimeout(timer);
+      const left = (this.reservedCents.get(key) || 0) - estimate; if (left > 0) this.reservedCents.set(key, left); else this.reservedCents.delete(key);
+    };
+    try {
+      const result = await this.db.query(`select coalesce(sum(estimated_cost_cents),0)::integer as spent_cents
+        from nexus_cost_events where tenant_id=$1 and occurred_at >= date_trunc('day',now())`, [tenantId]);
+      const spentCents = Number((result.rows || result)[0]?.spent_cents || 0);
+      const reserved = this.reservedCents.get(key) || 0; // (includes this call's own estimate and every other call still running)
+      if (spentCents + reserved > this.dailyCostLimitCents) throw new CostLimitError("The tenant daily provider budget would be exceeded.",
+        { estimate, spentCents, reservedByRunningCalls: reserved - estimate, dailyLimitCents: this.dailyCostLimitCents });
+    } catch (error) { release(); throw error; }
+    timer = setTimeout(release, holdMs); if (timer.unref) timer.unref();
+    return release;
   }
 
   async startSpan({ traceId, parentSpanId = null, tenantId = null, taskId = null, service = "nexus-runtime", operation, attributes = {} }) {

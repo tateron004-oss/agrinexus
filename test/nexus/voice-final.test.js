@@ -147,6 +147,7 @@ test("tapping Yes or No on a question says 'one moment' while the answer is on i
 test("'Go my notes' (heard for 'Show my notes') is the request to show them, and 'I need help with my maize crop' opens the crop help screen", () => {
   const fix = new vm.Script(sliceConst("const KYRO_MISHEARD_OPEN") + sliceFn("function kyroHeardOpenVerb(") + "\nkyroHeardOpenVerb").runInNewContext({});
   assert.equal(fix("Go my notes."), "Show my notes.");
+  assert.equal(fix("Go, my notes."), "Show my notes.", "the speech-to-text sometimes writes a comma after the misheard word");
   assert.equal(fix("So my reminders"), "Show my reminders");
   assert.equal(fix("Go the documents."), "Show the documents.");
   assert.equal(fix("Go to my notes"), "Go to my notes", "a real verb is left alone");
