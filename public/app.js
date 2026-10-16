@@ -51547,6 +51547,16 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // "How do I get certified as a minority-owned business?", "what is the 8(a) program?", "how do I start a business?": answered from Kyro's checked small-business guide with its official sources, as typing it is.
+    // The voice model answered these from memory, without the sources or the date they were checked (found by the live voice test).
+    if (trimmed && typeof kyroBusinessQuestion === "function" && kyroBusinessQuestion(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 40000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
+    }
     // A drafted message on the activity screen: "send it" / "don't send it" (and a plain yes or no within two minutes of being asked) press that card's own button.
     if (trimmed && typeof kyroDraftVoiceReply === "function" && kyroDraftVoiceReply(trimmed)) return true;
     // "Yes" or "no" to a question the page asked ("Should I go ahead?"): answered from what was heard, as typing it is, instead of leaving it to the model.
@@ -52635,6 +52645,15 @@ function kyroCommunityQuestion(text) {
     const topics = window.KyroCommunityTopics;
     if (!topics || !topics.topic(text)) return false;
     return topics.isCommunityUs(text) || topics.usTimeZone(kyroDeviceTimeZone());
+  } catch { return false; }
+}
+// A question for the checked small-business guide (public/kyro-business-topics.js): minority-owned businesses, startups, loans, grants, certification, taxes. Only when it is about a business at all, and on a device in the
+// United States or naming a US programme (SBA, 8(a), NMSDC ...); "how do I grow a garden" is left to the voice model.
+function kyroBusinessQuestion(text) {
+  try {
+    const topics = window.KyroBusinessTopics;
+    if (!topics || !topics.topic(text) || !topics.isBusinessQuestion(text)) return false;
+    return topics.isUsContext({ timeZone: kyroDeviceTimeZone(), text });
   } catch { return false; }
 }
 let kyroDraftAskedAt = 0;
