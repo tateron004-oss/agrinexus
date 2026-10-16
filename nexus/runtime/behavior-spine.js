@@ -7,6 +7,7 @@ const crypto = require("node:crypto");
 const businessDispatch = require("../business/voice-dispatch.js");
 const { resolveReminderTime, describeMoment, extractAssistantReminderTask } = require("../reminders/time-phrase.js");
 const { setReplySw } = require("../reminders/swahili-reminder.js");
+const { toSecondPerson } = require("../reminders/second-person.js");
 const { isWomensCareSearch, WOMENS_CARE_NOTE } = require("../knowledge/womens-health-topics.js");
 const { isPrivateReminder } = require("../reminders/private-reminder.js");
 const { userConfirmableConsent, consentRecipient, consentSendChannel, dailyCaps, informedConfirmationPrompt } = require("../consent/user-confirmable-consents.js");
@@ -264,7 +265,7 @@ function reminderSetResponse(plan, context) {
       : (() => { const timing = resolveReminderTime(rawText, { timeZone: context?.timeZone }); return timing.status === "ok" ? timing.readback : ""; })();
     if (!when) return "";
     // (about something private, the notification on the phone says only that she has a private reminder; she is told, so it is no surprise)
-    return `Okay. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${task} ${when}.${isPrivateReminder(task) ? " The notification on your phone will say only that you have a private reminder." : ""}`;
+    return `Okay. I will remind you ${/^about\s/i.test(task) ? "" : "to "}${toSecondPerson(task)} ${when}.${isPrivateReminder(task) ? " The notification on your phone will say only that you have a private reminder." : ""}`;
   } catch { return ""; }
 }
 

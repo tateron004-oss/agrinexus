@@ -51512,7 +51512,10 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     kyroAnswerHeardTurn("intake-expired");
   }
   if (!kyroActiveVoiceIntake) {
-    kyroPageSpeaksUntil = 0;
+    // (the same words arrive up to three times: a repeat of what the page has just taken over must not end the window in which the page says its answer. After a spoken "yes" the answer was
+    // never said, and the question stayed on the screen, because the repeat of "yes" put this back to zero before the answer came.)
+    const heardAgain = (() => { try { const again = trimmed.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); return Boolean(again && source !== "tool-call" && again === kyroHeard.key && Date.now() - kyroHeard.at <= 6000 && Date.now() < kyroPageSpeaksUntil); } catch { return false; } })();
+    if (!heardAgain) kyroPageSpeaksUntil = 0;
     if (trimmed && source !== "tool-call") {
       try {
         const heardKey = trimmed.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
@@ -51523,6 +51526,16 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     if (trimmed && window.KyroDismissCommands?.parse?.(trimmed)) {
       try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
       if (handleKyroDismissCommand(trimmed, { source: "voice-transcript" })) return true;
+    }
+    // "I'm 70 years old", "I'm a veteran": the voice model sometimes answered these on its own ("I'll keep it in mind") instead of asking Kyro, so the older person or the veteran was never told what Kyro can do for them
+    // (daily check-ins, medicine reminders, a trusted circle). The same words go to Kyro the way they are typed.
+    if (trimmed && typeof kyroSelfIntroducedAudience === "function" && kyroSelfIntroducedAudience(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 30000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
     }
     // A drafted message on the activity screen: "send it" / "don't send it" (and a plain yes or no within two minutes of being asked) press that card's own button.
     if (trimmed && typeof kyroDraftVoiceReply === "function" && kyroDraftVoiceReply(trimmed)) return true;
@@ -52067,7 +52080,7 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
   const openBiz = KYRO_OPEN_BIZ.exec(said);
   if (openBiz) {
     kyroTakeOverTurn();
-    const command = openBiz[1] ? "Show my clients" : openBiz[2] ? "Who are my donors" : openBiz[3] ? "Which grants are due soon" : openBiz[4] ? "Show my invoices" : "Give me a business summary";
+    const command = openBiz[1] ? "Show my clients" : openBiz[2] ? (/donations|fundraising/i.test(openBiz[2]) ? "Show my donations" : "Who are my donors") : openBiz[3] ? "Which grants are due soon" : openBiz[4] ? "Show my invoices" : "Give me a business summary";
     void handleNexusUnifiedBrainRuntimeCommand(command, { source: "typed", kyroDirect: true });
     return true;
   }
@@ -52595,6 +52608,17 @@ function kyroDraftCard(draft) {
 }
 // Spoken yes or no for a drafted message that is on the screen. Only the card's own button is pressed, so it is the same governed send as a tap. "Send it" and "don't send it" count
 // whenever a draft is showing; a plain yes or no counts only within two minutes of the screen asking. With more than one draft showing, the person is asked to tap the one they mean.
+// The same words nexus/companion/audience.js reads (a person saying they are a veteran, an older adult, or 65 or over). First person only, and a number counts only when it is said as an age.
+const KYRO_SELF_VETERAN = /\bi(?:['’]m| am) (?:a |an )?(?:military |army |navy |air force |marine corps |combat |former )?veteran\b/i;
+const KYRO_SELF_ELDERLY_WORDS = /\bi(?:['’]m| am) (?:elderly|a senior citizen|an older (?:person|adult)|getting (?:up there|older)|a senior)\b/i;
+const KYRO_SELF_ELDERLY_AGE = /\bi(?:['’]m| am) (\d{2,3})(?:[\s-]*(?:years?|yrs?)(?:[\s-]*old)?|\s*y\/?o)?(?=\s*(?:[.,;!?]|$)|\s+(?:and|but|so)\b)/i;
+function kyroSelfIntroducedAudience(text) {
+  const said = String(text || "").trim();
+  if (!said || said.length > 200) return false;
+  if (KYRO_SELF_VETERAN.test(said) || KYRO_SELF_ELDERLY_WORDS.test(said)) return true;
+  const age = KYRO_SELF_ELDERLY_AGE.exec(said);
+  return Boolean(age && Number(age[1]) >= 65 && Number(age[1]) <= 130);
+}
 let kyroDraftAskedAt = 0;
 const KYRO_DRAFT_SEND = /^(?:(?:yes|yeah|yep|ok|okay)[,.]?\s+)?(?:please\s+)?(?:send it|send (?:the|that|this) (?:message|text|email|one)|go ahead and send(?: it)?)[.!]*$/i;
 const KYRO_DRAFT_HOLD = /^(?:(?:no|nope)[,.]?\s+)?(?:please\s+)?(?:do not|don't|dont) send(?: it| (?:the|that|this) (?:message|text|email|one))?[.!]*$|^(?:cancel|forget) (?:it|that|the message)[.!]*$/i;
@@ -60222,7 +60246,19 @@ async function submitNexusPendingBehaviorConfirmation(approved, text, options = 
     if (result?.schema !== "nexus.behavior-turn.v1" || result.authoritative !== true || result.legacyFallbackUsed !== false) {
       throw new Error("Nexus rejected an invalid behavior-spine confirmation response. No legacy route was used.");
     }
-    return await processNexusAuthoritativeBehaviorResult(result, text, options);
+    const handled = await processNexusAuthoritativeBehaviorResult(result, text, options);
+    // A "yes" or "no" that was SAID leaves the question on the screen with its Yes and No (only a tap on them takes it down), so the person saw no sign that it had worked and could say yes again
+    // (found by the live voice test, where the record was saved and the question stayed up): the question is replaced by the answer.
+    try {
+      const staleQuestion = document.querySelector("[data-kyro-confirm-buttons]");
+      if (staleQuestion && typeof result.response === "string" && result.response.trim()) {
+        const question = staleQuestion.closest("[data-kyro-result]") || staleQuestion.parentElement;
+        const newerScreens = [...document.querySelectorAll("[data-kyro-result]")].filter(node => !node.contains(staleQuestion)); // (the answer already has a screen of its own, a document for instance)
+        if (!newerScreens.length) kyroShowResultScreen("typed", approved ? "Confirmed" : "Cancelled", { ok: true, status: "completed", response: result.response });
+        if (question && question.isConnected && question.contains(staleQuestion)) question.remove();
+      }
+    } catch { /* the answer was said */ }
+    return handled;
   } catch (error) {
     nexusPendingBehaviorConfirmation = null;
     // Found in a real browser: a guest who said "yes" to "I can save this to your own health records" got a 403 from the server

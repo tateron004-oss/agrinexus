@@ -227,3 +227,48 @@ test("the spoken media action parses the sentence like a typed one before it sea
   assert.match(branch, /spokenMedia\.type === "control"[\s\S]{0,200}kyroMediaControlInstruction\(spokenMedia\.control/);
   assert.match(branch, /spokenMedia\.type === "play" && !spokenMedia\.query[\s\S]{0,400}kyroMediaCommand\(/);
 });
+
+// found by the live voice test: after a SPOKEN "yes" to "I can add Maria Chen as a donor... Should I go ahead?" the donor was saved, but nothing was said and the question stayed on the screen with its Yes and No.
+// Two causes: the repeat of "yes" (the same words arrive up to three times) put the page's speaking window back to zero before the answer came, and the answer was never drawn over the question.
+test("a repeat of the words the page has just taken over does not end the window in which the page says its answer", () => {
+  const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
+  const guard = route.indexOf("const heardAgain = ");
+  const reset = route.indexOf("if (!heardAgain) kyroPageSpeaksUntil = 0;");
+  assert.ok(guard > 0 && reset > guard, "the reset is skipped for a repeat");
+  assert.ok(!/\n\s*kyroPageSpeaksUntil = 0;\n\s*if \(trimmed && source !== "tool-call"\)/.test(route), "the unconditional reset is gone");
+  const statement = route.slice(guard, route.indexOf("})();", guard) + "})();".length);
+  const heard = (trimmed, ago) => new vm.Script(statement + "; heardAgain").runInNewContext({ trimmed, source: "realtime-history", kyroHeard: { key: "yes", at: Date.now() - ago }, kyroPageSpeaksUntil: Date.now() + 30000, Date, Boolean });
+  assert.equal(heard("Yes.", 500), true);
+  assert.equal(heard("Show my notes", 500), false, "different words are a new turn");
+  assert.equal(heard("Yes.", 20000), false, "the same word said again much later is a new turn");
+});
+
+test("a spoken yes or no takes the question off the screen and puts the answer there, unless the answer already has a screen of its own", () => {
+  const start = app.indexOf("const staleQuestion = document.querySelector");
+  const block = app.slice(app.lastIndexOf("try {", start), app.indexOf("} catch { /* the answer was said */ }", start) + "} catch { /* the answer was said */ }".length);
+  const world = (screens, withQuestion) => {
+    const drawn = []; const question = { isConnected: true, contains: node => node === buttons, remove() { this.isConnected = false; } }; const buttons = { closest: () => question, parentElement: question };
+    const list = withQuestion ? [question, ...screens] : screens.slice();
+    return { drawn, question, run: (result, approved) => new vm.Script(block).runInNewContext({ document: { querySelector: () => (withQuestion ? buttons : null), querySelectorAll: () => list }, kyroShowResultScreen: (tool, said, shown) => { drawn.push([said, shown.response]); return true; }, approved, result, Array, String }) };
+  };
+  const a = world([], true); a.run({ response: "Added Maria Chen as a donor." }, true);
+  assert.deepEqual(a.drawn, [["Confirmed", "Added Maria Chen as a donor."]]); assert.equal(a.question.isConnected, false);
+  const no = world([], true); no.run({ response: "Okay, I did not proceed with that." }, false);
+  assert.deepEqual(no.drawn, [["Cancelled", "Okay, I did not proceed with that."]]);
+  const own = world([{ isConnected: true, contains: () => false }], true); own.run({ response: "Saved your document." }, true);
+  assert.deepEqual(own.drawn, [], "a document screen drawn for the answer is not covered"); assert.equal(own.question.isConnected, false, "but the old question still goes");
+  const none = world([], false); none.run({ response: "Added." }, true);
+  assert.deepEqual(none.drawn, [], "a tap already took the question down: nothing more to do");
+});
+
+// found by the live voice test: "I'm 70 years old." was answered by the voice model on its own ("I'll keep it in mind") and Kyro never told the person what it can do for them; "I'm a veteran." went to Kyro and was.
+test("a person saying they are 65 or over, an older adult or a veteran is answered by Kyro, not left to the voice model", () => {
+  const sourceFor = () => ["const KYRO_SELF_VETERAN", "const KYRO_SELF_ELDERLY_WORDS", "const KYRO_SELF_ELDERLY_AGE"].map(sliceConst).join("\n") + sliceFn("function kyroSelfIntroducedAudience(") + "\nkyroSelfIntroducedAudience";
+  const owns = new vm.Script(sourceFor()).runInNewContext({ Number, Boolean, String });
+  for (const said of ["I'm 70 years old.", "I’m 70 years old.", "I am 72 and I live alone", "I'm 65, how do I use this", "I'm a veteran.", "I’m an army veteran", "I am an older adult", "I'm a senior"]) assert.equal(owns(said), true, said);
+  for (const said of ["I'm 15, and I want to learn.", "I'm 64 years old", "I'm 70 kg", "I'm 80 meters away", "my grandfather is a veteran", "a veteran teacher helped me", "Open documents", "I'm 150 years old"]) assert.equal(owns(said), false, said);
+  const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
+  assert.match(route, /typeof kyroSelfIntroducedAudience === "function" && kyroSelfIntroducedAudience\(trimmed\)\) \{\s+if \(!heardAgain\) \{[^]*?handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);[^]*?\}\s+return true;/);
+  const audience = require("../../nexus/companion/audience.js");
+  for (const said of ["I’m 70 years old.", "I’m a veteran."]) assert.ok(audience.readAudienceIntro(said), `the server reads the curly apostrophe too: ${said}`);
+});
