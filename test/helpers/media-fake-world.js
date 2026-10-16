@@ -102,7 +102,7 @@ function createFakeWorld(options = {}) {
     if (host === "www.googleapis.com" && parsed.pathname === "/youtube/v3/search") {
       if (opts.youtubeDown) return jsonResponse({ error: { message: "backend error" } }, 500);
       if (opts.youtubeQuota) return jsonResponse({ error: { message: "quota exceeded", errors: [{ reason: "quotaExceeded" }] } }, 403);
-      return jsonResponse({ items: opts.youtubeItems.map(item => ({ id: { videoId: item.videoId }, snippet: { title: item.title, channelTitle: item.channel, liveBroadcastContent: "none", thumbnails: { medium: { url: "https://img.example.test/t.jpg" } } } })) });
+      return jsonResponse({ items: opts.youtubeItems.map(item => ({ id: { videoId: item.videoId }, snippet: { title: item.title, channelTitle: item.channel, liveBroadcastContent: item.live ? "live" : "none", thumbnails: { medium: { url: "https://img.example.test/t.jpg" } } } })) });
     }
     if (host === "www.googleapis.com" && parsed.pathname === "/youtube/v3/videos") {
       const ids = (p.get("id") || "").split(",");

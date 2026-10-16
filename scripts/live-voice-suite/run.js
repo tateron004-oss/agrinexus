@@ -81,7 +81,9 @@ async function main(argv) {
       await client.send("Page.navigate", { url: `${options.url}/?voice-suite=${Date.now()}#dashboard` }); await waitForPage(client); await sleep(3000);
     } else {
       await sleep(3000);
-      const started = await client.evaluate("(() => { const b = [...document.querySelectorAll('button')].find(x => /start as user/i.test(x.innerText) && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; })()");
+      // the guest start asks for a name first
+      await client.evaluate("(() => { const f = [...document.querySelectorAll('input')].find(x => /your name|type your name/i.test(x.placeholder || x.getAttribute('aria-label') || '') && x.getBoundingClientRect().width > 0); if (f) { f.focus(); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(f, 'Voice Checker'); f.dispatchEvent(new Event('input', { bubbles: true })); } return !!f; })()");
+      const started =await client.evaluate("(() => { const b = [...document.querySelectorAll('button')].find(x => /start as user/i.test(x.innerText) && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; })()");
       if (!started) { console.error("There is no 'Start as User' button to start a guest session with."); return 2; }
       await sleep(6000); await waitForPage(client);
     }
