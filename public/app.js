@@ -51537,6 +51537,16 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // "What is the Veterans Crisis Line?", "who can help my grandmother who is being scammed?", "do I have to give donors a receipt?": a question about official help for veterans, older adults, young people or nonprofits is answered
+    // from Kyro's checked guide (with its official phone numbers and sources), as typing it is. The voice model had answered these from memory, "depending on the country", with no number (found by the live voice test).
+    if (trimmed && typeof kyroCommunityQuestion === "function" && kyroCommunityQuestion(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 40000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
+    }
     // A drafted message on the activity screen: "send it" / "don't send it" (and a plain yes or no within two minutes of being asked) press that card's own button.
     if (trimmed && typeof kyroDraftVoiceReply === "function" && kyroDraftVoiceReply(trimmed)) return true;
     // "Yes" or "no" to a question the page asked ("Should I go ahead?"): answered from what was heard, as typing it is, instead of leaving it to the model.
@@ -52618,6 +52628,14 @@ function kyroSelfIntroducedAudience(text) {
   if (KYRO_SELF_VETERAN.test(said) || KYRO_SELF_ELDERLY_WORDS.test(said)) return true;
   const age = KYRO_SELF_ELDERLY_AGE.exec(said);
   return Boolean(age && Number(age[1]) >= 65 && Number(age[1]) <= 130);
+}
+// A question for the checked guide of official help (public/kyro-community-topics.js): on a device in the United States, or naming a US programme (VA, Medicare, 988, the IRS ...).
+function kyroCommunityQuestion(text) {
+  try {
+    const topics = window.KyroCommunityTopics;
+    if (!topics || !topics.topic(text)) return false;
+    return topics.isCommunityUs(text) || topics.usTimeZone(kyroDeviceTimeZone());
+  } catch { return false; }
 }
 let kyroDraftAskedAt = 0;
 const KYRO_DRAFT_SEND = /^(?:(?:yes|yeah|yep|ok|okay)[,.]?\s+)?(?:please\s+)?(?:send it|send (?:the|that|this) (?:message|text|email|one)|go ahead and send(?: it)?)[.!]*$/i;
