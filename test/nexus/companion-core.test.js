@@ -188,6 +188,10 @@ test("a veteran or elderly person self-identifying is told about real check-in/c
   // First person only, and no crisis wording invented here -- an emergency still goes through safety.js unchanged.
   assert.equal(await ask(w, "My grandfather is a veteran"), null);
   assert.match(await ask(w, "I've fallen and I can't get up"), /I don't have anyone in your circle/);
+  // Found by the live voice test: a veteran who asks a question about help is answered by the checked guide (with the numbers), not by the plain introduction.
+  assert.equal(await ask(w, "I'm a veteran and I'm homeless, what can I do?"), null, "left to the guide");
+  assert.equal(await ask(w, "I'm 70 years old, what help is there for seniors?"), null, "left to the guide");
+  assert.match(await ask(w, "I'm a veteran."), /check in on you every day/i, "the plain statement still gets the introduction");
 });
 
 test("a person in crisis is answered with care and offered the circle, never alerted without their word", async () => {
