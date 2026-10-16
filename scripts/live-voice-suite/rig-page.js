@@ -91,7 +91,7 @@ function installKyroVoiceRig(makeEvaluator) {
   rig.screens = () => [...document.querySelectorAll("[data-kyro-result]")].filter(visible).map(node => ({
     kind: node.getAttribute("data-kyro-result"), app: node.getAttribute("data-kyro-app") || "", keep: node.hasAttribute("data-kyro-keep"),
     text: node.innerText.replace(/\s+/g, " ").trim().slice(0, 1500),
-    buttons: [...node.querySelectorAll("button,a")].map(b => b.innerText.trim()).filter(Boolean).slice(0, 40),
+    buttons: [...node.querySelectorAll("button,a,label[data-kyro-upload-button]")].map(b => b.innerText.trim()).filter(Boolean).slice(0, 40),
     fields: [...node.querySelectorAll("input,textarea,select")].map(n => n.name || n.type || "").slice(0, 20),
     images: node.querySelectorAll("img").length, frames: node.querySelectorAll("iframe,video").length,
     links: node.querySelectorAll("[data-kyro-listing-links] a").length, hasDownload: [...node.querySelectorAll("button,a")].some(b => /download/i.test(b.innerText))
@@ -189,6 +189,8 @@ function installKyroVoiceRig(makeEvaluator) {
     }
     return { failures, warnings, state: last };
   };
+  // what the page did, kept with a failed case so the cause can be read from the report
+  rig.detail = state => (state ? { heard: state.heard, modelSaid: state.modelSaid.map(line => line.slice(0, 140)), tools: state.tools, typed: state.typed, pageLines: state.pageLines.map(line => line.slice(0, 100)), top: state.top, section: state.section, web: state.web.slice(-6) } : null);
   rig.runCase = async entry => {
     const started = Date.now(); const timeout = entry.timeoutMs || 30000;
     try {
@@ -198,7 +200,7 @@ function installKyroVoiceRig(makeEvaluator) {
       let failures = [...(first.outcome ? first.outcome.failures : ["no state"])]; let warnings = [...(first.outcome ? first.outcome.warnings : [])]; let last = first.state;
       if (!failures.length && entry.then) { const rest = await rig.runSteps(mark, entry.then, timeout); failures = rest.failures; warnings = warnings.concat(rest.warnings); last = rest.state || last; }
       await rig.cleanup(last);
-      return { id: entry.id, area: entry.area, say: entry.say || entry.typed, status: failures.length ? "fail" : "pass", failures, warnings, ms: Date.now() - started, heard: (first.state && first.state.heard) || [] };
+      return { id: entry.id, area: entry.area, say: entry.say || entry.typed, status: failures.length ? "fail" : "pass", failures, warnings, ms: Date.now() - started, heard: (first.state && first.state.heard) || [], detail: failures.length ? rig.detail(last || first.state) : undefined };
     } catch (error) {
       try { await rig.cleanup(null); } catch { /* the next case starts clean anyway */ }
       return { id: entry.id, area: entry.area, say: entry.say || entry.typed, status: "error", failures: [String((error && error.message) || error)], warnings: [], ms: Date.now() - started, heard: [] };

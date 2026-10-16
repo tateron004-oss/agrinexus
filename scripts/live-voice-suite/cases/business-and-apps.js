@@ -39,6 +39,10 @@ module.exports = [
   { id: "app-care", area: "apps", say: "Open wellness.", expect: { screen: "app", app: "care", buttons: ["My medicines", "Start check-ins", "Who is in my trusted circle", "Show my wellness log"] } },
   { id: "app-care-medicines", area: "apps", say: "Open wellness.", expect: { screen: "app", app: "care" }, then: [{ tap: "^My medicines" }, { expect: { text: "medic" }, timeoutMs: 30000 }] },
   { id: "app-care-circle", area: "apps", say: "Open wellness.", expect: { screen: "app", app: "care" }, then: [{ tap: "^Who is in my trusted circle" }, { expect: { text: "circle" }, timeoutMs: 30000 }] },
+  { id: "app-activity", area: "apps", say: "What have you done for me?", timeoutMs: 40000, expect: { screen: "activity", keep: true, text: "waiting|working on|finished|Nothing is waiting" } },
+  { id: "app-activity-waiting", area: "apps", say: "What is waiting for me?", timeoutMs: 40000, expect: { screen: "activity" } },
+  { id: "memory-list", area: "apps", say: "What do you know about me?", timeoutMs: 40000, expect: { screen: "text", text: "saved about you|do not have any saved" } },
+  { id: "app-care-memory-button", area: "apps", say: "Open wellness.", expect: { screen: "app", app: "care", buttons: ["What you know about me", "What I have done"] } },
   { id: "app-operations-write-asks", area: "apps", writes: true, say: "Open operations.", expect: { screen: "app", app: "operations" },
     then: [{ type: { selector: "textarea[name=job]", value: "spray the north field on Friday" } }, { tap: "^Write it down" }, { expect: { text: "approval|saved|plan" }, timeoutMs: 40000 }] }
 ];

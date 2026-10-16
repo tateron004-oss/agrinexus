@@ -30,6 +30,7 @@ function chromeArguments({ port, profileDir, headless = true, width = 1280, heig
     `--remote-debugging-port=${port}`, "--remote-allow-origins=*", `--user-data-dir=${profileDir}`,
     "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows",
     "--autoplay-policy=no-user-gesture-required", "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--window-size=${width},${height}`,
+    ...(process.env.CI ? ["--no-sandbox", "--disable-dev-shm-usage"] : []),
     ...(headless ? ["--headless=new"] : []), "about:blank"
   ];
 }

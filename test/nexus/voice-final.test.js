@@ -191,3 +191,17 @@ test("a summary of readings for a provider is said in plain words, with no 'Pers
   assert.equal(some, "Summary of your readings for your provider: 3 saved readings. Average 128 over 82. Worth showing your provider: two readings above 140 over 90. You could talk about: medication adherence discussion. Seek emergency help now if severe symptoms are present. Nexus does not dispatch.");
   assert.equal(say({ presentation: { kind: "health-support" }, data: { answer: "x" } }), "", "other health answers are drawn as before");
 });
+
+// Found by the live voice test: "open health", "open the operations screen" and "give me a business summary" sometimes showed nothing. The page opens what it heard; the voice model's tool call for the same words
+// then arrived and cleared every kept screen, including the one just drawn. It arrives before or after, so it depended on timing.
+test("the model's tool call does not clear the screen the page has just opened for the same words, but still clears one left by an earlier request", () => {
+  const sandbox = { kyroLastSpokenOpen: { key: "", at: 0 }, Date, String, Boolean, kyroWithoutPoliteTail: text => String(text || "").trim().replace(/[,;]?\s+(?:please|for me|now)\s*[.?!]*$/i, "").trim() };
+  vm.createContext(sandbox);
+  vm.runInContext(sliceFn("function kyroPageJustOpened(") + "\nthis.just = kyroPageJustOpened;", sandbox);
+  sandbox.kyroLastSpokenOpen = { key: "open health", at: Date.now() - 600 };
+  assert.equal(sandbox.just("Open Health"), true); assert.equal(sandbox.just("Open health, please."), true); assert.equal(sandbox.just("Open the weather"), false, "other words: an earlier request's screen is still cleared");
+  sandbox.kyroLastSpokenOpen = { key: "open health", at: Date.now() - 9000 }; assert.equal(sandbox.just("Open Health"), false, "long ago");
+  sandbox.kyroLastSpokenOpen = { key: "", at: 0 }; assert.equal(sandbox.just(""), false);
+  const handler = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool("), app.indexOf("async function callNexusOpenAiRealtimeTool(") + 600);
+  assert.match(handler, /if \(!\(typeof kyroPageJustOpened === "function" && kyroPageJustOpened\(command\)\)\) kyroDismissStaleWorkspace\(command\);/);
+});

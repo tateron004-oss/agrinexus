@@ -4,7 +4,7 @@
 //
 //   node scripts/live-voice-suite/run.js --url https://nexus-genesis-certified.onrender.com
 //   options: --writes (also the cases that save something)  --risky (also the emergency words)  --only id,id  --area documents,lists  --no-sound  --show (a visible window)  --out report.json
-//   sign-in: KYRO_TEST_EMAIL and KYRO_TEST_PASSWORD (a test account: never a real person's)
+//   sign-in: KYRO_TEST_EMAIL and KYRO_TEST_PASSWORD (a test account: never a real person's); with neither set it starts as a guest ("Start as User"), which some screens refuse
 //   no password handy: open the site in your own browser, sign in, and paste the output of `node scripts/live-voice-suite/print-bundle.js` into the console (see docs/LIVE_VOICE_SUITE.md)
 // Exit code: 0 all passed, 1 a case failed, 2 the voice session could not be started or sign-in failed.
 const fs = require("node:fs");
@@ -47,6 +47,7 @@ function formatResult(result) {
   const lines = [`${mark}  ${result.id}  (${(result.ms / 1000).toFixed(1)}s)`];
   for (const failure of result.failures || []) lines.push(`        - ${failure}`);
   for (const warning of result.warnings || []) lines.push(`        ~ ${warning}`);
+  if (result.detail) lines.push(`        . heard ${JSON.stringify(result.detail.heard)}; model said ${JSON.stringify(result.detail.modelSaid)}; tools ${JSON.stringify(result.detail.tools)}; page answered ${JSON.stringify(result.detail.typed)}`);
   return lines.join("\n");
 }
 
@@ -63,7 +64,8 @@ async function main(argv) {
   const options = parseArgs(argv);
   if (options.help) { console.log(fs.readFileSync(__filename, "utf8").split("\n").slice(2, 10).map(line => line.replace(/^\/\/ ?/, "")).join("\n")); return 0; }
   const email = process.env.KYRO_TEST_EMAIL; const password = process.env.KYRO_TEST_PASSWORD;
-  if (!email || !password) { console.error("Set KYRO_TEST_EMAIL and KYRO_TEST_PASSWORD (a test account), or use the browser-console way in docs/LIVE_VOICE_SUITE.md."); return 2; }
+  const guest = !email || !password;
+  if (guest) console.log("No KYRO_TEST_EMAIL / KYRO_TEST_PASSWORD: starting as a guest (some screens refuse guests). Use a test account for the full list.");
   const cases = select(options);
   if (!cases.length) { console.error("No cases match."); return 2; }
   console.log(`Live voice test of ${options.url}: ${cases.length} case(s)${options.writes ? ", including those that save things" : ""}${options.risky ? ", including emergency words" : ""}.`);
@@ -73,9 +75,16 @@ async function main(argv) {
   try {
     await client.send("Page.enable"); await client.send("Runtime.enable");
     await client.send("Page.navigate", { url: options.url + "/" }); await waitForPage(client);
-    const login = await client.evaluate(`fetch('/api/login', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(${JSON.stringify({ email, password })}) }).then(r => r.status)`);
-    if (login !== 200) { console.error(`Sign-in was refused (HTTP ${login}). Check KYRO_TEST_EMAIL and KYRO_TEST_PASSWORD.`); return 2; }
-    await client.send("Page.navigate", { url: `${options.url}/?voice-suite=${Date.now()}#dashboard` }); await waitForPage(client); await sleep(3000);
+    if (!guest) {
+      const login = await client.evaluate(`fetch('/api/login', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(${JSON.stringify({ email, password })}) }).then(r => r.status)`);
+      if (login !== 200) { console.error(`Sign-in was refused (HTTP ${login}). Check KYRO_TEST_EMAIL and KYRO_TEST_PASSWORD.`); return 2; }
+      await client.send("Page.navigate", { url: `${options.url}/?voice-suite=${Date.now()}#dashboard` }); await waitForPage(client); await sleep(3000);
+    } else {
+      await sleep(3000);
+      const started = await client.evaluate("(() => { const b = [...document.querySelectorAll('button')].find(x => /start as user/i.test(x.innerText) && x.getBoundingClientRect().width > 0); if (b) b.click(); return !!b; })()");
+      if (!started) { console.error("There is no 'Start as User' button to start a guest session with."); return 2; }
+      await sleep(6000); await waitForPage(client);
+    }
     await client.evaluate(buildInstallScript());
     if (!(await client.evaluate("__kyroRig.startVoice()", 150000))) { console.error("The live voice session could not be started."); return 2; }
     await client.evaluate(`__kyroRig.runCases(${JSON.stringify(cases)})`);
