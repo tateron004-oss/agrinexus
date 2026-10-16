@@ -50617,7 +50617,8 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
     return { ok: true, status: "completed", response: "Kyro already did that and said so. Say nothing more.", executionVerified: false, blockedReason: null };
   }
   // The governed route a typed request takes (see kyroAnswerLikeTyped); a question waiting for a yes or a no is always answered there.
-  if (KYRO_GOVERNED_VOICE_TOOLS.has(String(toolName || "")) || nexusPendingBehaviorConfirmation) {
+  // (a readings summary for a provider is answered by the voice tool's own reader: the planner's answer to the same words varies, sometimes a question, sometimes a card of rows)
+  if ((KYRO_GOVERNED_VOICE_TOOLS.has(String(toolName || "")) && !(typeof KYRO_VOICE_TOOL_ANSWERS !== "undefined" && KYRO_VOICE_TOOL_ANSWERS.test(command))) || nexusPendingBehaviorConfirmation) {
     const governed = await kyroAnswerLikeTyped(command);
     if (governed) return governed;
   }
@@ -52877,8 +52878,10 @@ function kyroShowHelpScreen(workspace, context = null) {
 
 // A request the voice tool route answers for certain and the typed route would hand to the AI model (the practice lessons, the guided courses, the interview practice): typed, it goes to the route voice uses,
 // and the answer is shown on the screen and spoken, the same as when it is said. Returns the tool's name, or "".
+const KYRO_VOICE_TOOL_ANSWERS = /\bprovider summary\b|\bsummary (?:for|of) my (?:provider|doctor|nurse)\b/i;
 function kyroTypedToolFor(text) {
   const t = String(text || "").trim().toLowerCase().replace(/[.!?]+$/g, "");
+  if (/^(?:please\s+)?(?:prepare|make|give me|create|write)\s+(?:me\s+)?(?:a\s+|my\s+)?(?:provider|doctor|nurse|clinic)\s+summary(?:\s+(?:of|for)\s+my\s+(?:readings?|blood pressure|health|chronic readings?))?$|^(?:please\s+)?summary for my (?:provider|doctor|nurse)$/.test(t)) return "nexus_health_preparation";
   if (/^(?:please\s+)?(?:teach me|nifundishe)\s+(?:the\s+)?(?:letters|herufi|maths?|math|hesabu|numbers|counting|adding)$/.test(t)) return "nexus_workforce_learning";
   if (/^(?:please\s+)?(?:start|begin)\s+(?:the\s+)?ai basics(?:\s+course)?$/.test(t)) return "nexus_workforce_learning";
   if (/^(?:please\s+)?(?:give me|start|begin)\s+(?:a\s+)?(?:job\s+)?(?:practice interview|interview practice)$/.test(t) || /^practi[sc]e\s+(?:a\s+)?job interview$/.test(t)) return "nexus_workforce_learning";

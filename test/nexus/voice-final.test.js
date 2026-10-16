@@ -205,3 +205,14 @@ test("the model's tool call does not clear the screen the page has just opened f
   const handler = app.slice(app.indexOf("async function callNexusOpenAiRealtimeTool("), app.indexOf("async function callNexusOpenAiRealtimeTool(") + 600);
   assert.match(handler, /if \(!\(typeof kyroPageJustOpened === "function" && kyroPageJustOpened\(command\)\)\) kyroDismissStaleWorkspace\(command\);/);
 });
+
+// Found by the live voice test: "prepare a provider summary of my readings" gave a card of rows, or a question, or nothing, depending on what the planner chose that time. The voice tool's own reader answers it the same way every time.
+test("a provider summary is answered by the voice tool's own reader, typed (the Health button) and said", () => {
+  const typedTool = new vm.Script(sliceConst("const KYRO_VOICE_TOOL_ANSWERS") + sliceFn("function kyroTypedToolFor(") + "\nkyroTypedToolFor").runInNewContext({});
+  for (const said of ["Prepare a provider summary of my readings", "Prepare a provider summary", "Give me a doctor summary of my blood pressure", "Make my provider summary.", "Summary for my provider"]) assert.equal(typedTool(said), "nexus_health_preparation", said);
+  for (const said of ["Teach me letters"]) assert.equal(typedTool(said), "nexus_workforce_learning");
+  for (const said of ["Show my blood pressure readings", "Prepare a business plan", "What is a provider summary used for and when is it needed by my clinic"]) assert.equal(typedTool(said), "", said);
+  const re = new vm.Script(sliceConst("const KYRO_VOICE_TOOL_ANSWERS") + "KYRO_VOICE_TOOL_ANSWERS").runInNewContext({});
+  assert.ok(re.test("Prepare a provider summary of my readings") && re.test("a summary for my doctor") && !re.test("Show my readings"));
+  assert.match(app, /if \(\(KYRO_GOVERNED_VOICE_TOOLS\.has\(String\(toolName \|\| ""\)\) && !\(typeof KYRO_VOICE_TOOL_ANSWERS !== "undefined" && KYRO_VOICE_TOOL_ANSWERS\.test\(command\)\)\) \|\| nexusPendingBehaviorConfirmation\) \{/);
+});
