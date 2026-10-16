@@ -75,3 +75,28 @@ test("'play the radio' with no station is a YouTube search for live radio in the
   await resolveMedia({ query: "", kind: "radio", country: "" }, anywhere.ctx);
   assert.match(decodeURIComponent(anywhere.world.calls.find(call => call.url.includes("/youtube/v3/search")).url), /q=live[+ ]radio/);
 });
+
+// Found by the live voice test, in a real Chrome: "play some music" and "play the radio" were answered "it would not start on this device", because a 24/7 live stream was the only thing offered and
+// YouTube's embedded player refused it (error 151) although the API calls it embeddable. Ordinary videos now come first unless a live stream was asked for.
+const LIVE_AND_ORDINARY = [
+  { videoId: "liveStream01", title: "Pop Radio 24/7 Live - Top Hits 2026", channel: "Radio Co", embeddable: true, duration: "PT0S", live: true },
+  { videoId: "liveStream02", title: "Hits Radio Live Stream", channel: "Hits", embeddable: true, duration: "PT0S", live: true },
+  { videoId: "songVid00001", title: "Popular music hits mix", channel: "Music Co", embeddable: true, duration: "PT3M10S" },
+  { videoId: "songVid00002", title: "Popular music best songs", channel: "Music Co", embeddable: true, duration: "PT4M" }
+];
+test("'play some music' offers ordinary videos before any live stream", async () => {
+  const { ctx } = setup(KEY, { youtubeItems: LIVE_AND_ORDINARY, oembedFail: new Set() });
+  const result = await resolveMedia({ query: "", kind: "music", country: "Kenya" }, ctx);
+  assert.equal(result.ok, true);
+  const ids = result.candidates.map(candidate => candidate.videoId);
+  assert.ok(ids.slice(0, 2).every(id => id.startsWith("songVid")), `ordinary videos first: ${ids.join(", ")}`);
+  assert.ok(ids.includes("liveStream01"), "a live stream stays as a last resort");
+});
+test("when a live stream is asked for, a few ordinary videos follow the live ones so something can still play", async () => {
+  const { ctx } = setup(KEY, { youtubeItems: LIVE_AND_ORDINARY, oembedFail: new Set() });
+  const result = await resolveMedia({ query: "", kind: "radio", country: "Kenya" }, ctx);
+  assert.equal(result.ok, true);
+  const ids = result.candidates.map(candidate => candidate.videoId);
+  assert.ok(ids[0].startsWith("liveStream"), `live first when asked: ${ids.join(", ")}`);
+  assert.ok(ids.some(id => id.startsWith("songVid")), "an ordinary video is there as a fallback");
+});
