@@ -57034,6 +57034,17 @@ function dispatchGenesisWorkspaceAction(action = {}, result = {}, options = {}) 
       document.body.dataset.genesisWorkspaceRequestId = action.requestId || "";
       return true;
     }
+    // A spoken "pause the music" was searched for as a song title (a song called PAUSE played, and the pause never happened), and "play some music" was searched for as "Looking for Play some music.":
+    // the sentence is parsed the way a typed one is, so a control is a control and a plain request for music starts the radio.
+    let spokenMedia = null;
+    try { spokenMedia = window.KyroMediaCommands?.parse?.(String(payload.query || command || "").trim()) || null; } catch (_) { spokenMedia = null; }
+    if (spokenMedia && (spokenMedia.type === "control" || (spokenMedia.type === "play" && !spokenMedia.query))) {
+      if (spokenMedia.type === "control") kyroMediaControlInstruction(spokenMedia.control, payload.language);
+      else void kyroMediaCommand(String(payload.query || command || "").trim(), {});
+      document.body.dataset.genesisWorkspace = "media";
+      document.body.dataset.genesisWorkspaceRequestId = action.requestId || "";
+      return true;
+    }
     playNexusProviderNeutralMusic(payload.query || command, { kind: payload.kind, handoff: payload.handoff === true, language: payload.language }).catch(error => {
       nexusGenesisVoiceDebugLog("genesis-media-playback-failed", {
         query: payload.query || command, error: String(error?.message || error).slice(0, 300)

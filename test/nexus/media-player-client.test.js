@@ -583,6 +583,18 @@ test("a control word kept as the last choice is never played back, and is never 
   assert.equal(again.store["kyro.media.last"], undefined, "'pause' is not remembered as a song");
 });
 
+// found by the live voice test: the spoken "Pause the music." was searched for as a song title, then kept as the last choice, and "Play some music." searched for it from then on
+test("a whole control sentence kept as the last choice is never played back", async () => {
+  for (const saved of ["Pause the music.", "stop the music", "Resume the music"]) {
+    const world = makeWorld({ responses: [okResponse(station())], storage: { "kyro.media.last": JSON.stringify({ query: saved, kind: "music", title: "PAUSE - L'Bayda Mon Amour (Official Audio)" }) } });
+    const run = world.controller.play("", { kind: "music" });
+    await until(() => world.elements.length === 1, "element");
+    world.elements[0].startPlayingFor(4);
+    await run;
+    assert.notEqual(String(world.requests[0].body.query).toLowerCase(), saved.toLowerCase(), `"${saved}" is not played back as a song`);
+  }
+});
+
 test("'pause the music' while the song is still being found cancels the start instead of saying nothing is playing and then starting", async () => {
   let release; const held = new Promise(resolve => { release = resolve; });
   const world = makeWorld({ responses: [held] });

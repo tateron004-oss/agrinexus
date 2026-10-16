@@ -217,3 +217,13 @@ test("a provider summary is answered by the voice tool's own reader, typed (the 
   assert.ok(re.test("Prepare a provider summary of my readings") && re.test("a summary for my doctor") && !re.test("Show my readings"));
   assert.match(app, /if \(\(KYRO_GOVERNED_VOICE_TOOLS\.has\(String\(toolName \|\| ""\)\) && !\(typeof KYRO_VOICE_TOOL_ANSWERS !== "undefined" && KYRO_VOICE_TOOL_ANSWERS\.test\(command\)\)\) \|\| nexusPendingBehaviorConfirmation\) \{/);
 });
+
+// found by the live voice test: the transcript-driven media action searched for the whole sentence "Pause the music." as a song title (a song called PAUSE played and the pause never happened)
+test("the spoken media action parses the sentence like a typed one before it searches for a song", () => {
+  const branch = app.slice(app.indexOf('if (workspace === "media") {'), app.indexOf("// Work, Learning and (for a general request) Health"));
+  const parse = branch.indexOf("KyroMediaCommands?.parse?.(");
+  const search = branch.indexOf("playNexusProviderNeutralMusic(payload.query || command");
+  assert.ok(parse > 0 && search > parse, "the sentence is parsed before any search for a title");
+  assert.match(branch, /spokenMedia\.type === "control"[\s\S]{0,200}kyroMediaControlInstruction\(spokenMedia\.control/);
+  assert.match(branch, /spokenMedia\.type === "play" && !spokenMedia\.query[\s\S]{0,400}kyroMediaCommand\(/);
+});
