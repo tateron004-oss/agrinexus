@@ -139,8 +139,8 @@ test("the page answers a spoken question of this kind from the guide, on a US de
   assert.equal(owns("Open documents.", "America/Chicago"), false); assert.equal(owns("Show my donations.", "America/Chicago"), false);
   const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
   assert.match(route, /typeof kyroCommunityQuestion === "function" && kyroCommunityQuestion\(trimmed\)\) \{\s+if \(!heardAgain\) \{[^]*?handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);[^]*?\}\s+return true;/);
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-community-topics.js?v=kyro-community-topics-3"'));
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-community-topics.js?v=kyro-community-topics-3"));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-community-topics.js?v=kyro-community-topics-4"'));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-community-topics.js?v=kyro-community-topics-4"));
 });
 
 // found by the live voice test, on an account with a business workspace: "Tell me about the GI Bill." was read as a question about the person's own bills and answered "your workspace has no bills recorded yet".
@@ -154,7 +154,7 @@ test("a question about the GI Bill or donor receipts is answered by the guide ev
 });
 
 test("the guide is taken before the business-formation and own-records answers for the questions the live voice test showed being misread", async () => {
-  for (const [text, topic] of [["I think my grandmother is being scammed, who do I call?", "sr-fraud"], ["Do I need to register my nonprofit to fundraise in my state?", "np-state-registration"],
+  for (const [text, topic] of [["I think my grandmother is being scammed, who do I call?", "sr-fraud"], ["Who do I call if someone is stealing from my grandfather?", "sr-abuse"], ["Do I need to register my nonprofit to fundraise in my state?", "np-state-registration"],
     ["What is the Childhelp hotline?", "yt-abuse"], ["What is the Child Help hotline?", "yt-abuse"], ["I'm a veteran and I'm homeless, what can I do?", "vet-homeless"]]) {
     const plan = await ask(planner(null), text, { timeZone: "America/Los_Angeles" });
     assert.equal(plan.knowledge, `us-community-support:${topic}`, text);
