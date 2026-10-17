@@ -28000,7 +28000,10 @@ let kyroLastAssistantSpokeAt = 0;
 function kyroAutoReturnSnapshot() {
   const active = document.activeElement;
   const inField = Boolean(active && /^(?:INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && !/^(?:button|submit|checkbox|radio)$/i.test(active.type || ""));
-  const assistantSpeaking = Boolean(nexusVoiceSession?.assistantSpeaking);
+  // A reply the model has started but not yet finished counts as speaking: when it follows another answer still being read out, its sound can begin more than ten seconds after its card was drawn, and the card
+  // was taken down before it was read (found by the full voice run: a question asked right after a long answer). Bounded to a minute, so a "done" that never arrives cannot keep a card up for ever.
+  const replyUnderway = Boolean(typeof realtimeVoiceSession !== "undefined" && realtimeVoiceSession?.responseInProgress && Date.now() - Number(realtimeVoiceSession.responseStartedAt || 0) < 60000);
+  const assistantSpeaking = Boolean(nexusVoiceSession?.assistantSpeaking) || replyUnderway;
   if (assistantSpeaking) kyroLastAssistantSpokeAt = Date.now();
   return {
     userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
@@ -49866,6 +49869,7 @@ function markRealtimeResponseStarted(payload = {}, sourceEvent = "response-creat
   const responseId = payload.response?.id || payload.response_id || payload.item_id || realtimeVoiceSession.activeResponseId || `${realtimeVoiceSession.turnId || "turn"}-response`;
   realtimeVoiceSession.activeResponseId = responseId;
   realtimeVoiceSession.responseInProgress = true;
+  realtimeVoiceSession.responseStartedAt = Date.now();
   realtimeVoiceSession.cancelInProgress = false;
   updateRealtimeControllerState("responding", sourceEvent, { activeResponseId: responseId });
 }

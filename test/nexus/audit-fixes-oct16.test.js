@@ -117,3 +117,11 @@ test("SAM.gov registration is the federal contracting answer, not the state busi
   for (const question of ["What business structure should I pick for my new business?", "Which type of business should I start?", "What should I name my new business?"]) assert.notEqual(dispatch.classify(question), "createWorkspace", question);
   assert.equal(dispatch.classify("Start a business workspace called Sunrise Poultry"), "createWorkspace");
 });
+
+// Found by the second full voice run: "How can my dad find out what benefits he qualifies for?" matched no topic, so the voice model answered from memory (Benefits.gov) instead of the checked BenefitsCheckUp answer.
+test("a question about what benefits a parent or grandparent qualifies for reaches the senior-benefits answer, and nearby questions do not", () => {
+  const community = require("../../public/kyro-community-topics.js");
+  for (const say of ["How can my dad find out what benefits he qualifies for?", "What benefits does my grandmother qualify for?", "Which benefits is my mom eligible for?"]) assert.equal(community.topic(say), "sr-benefits", say);
+  for (const say of ["What benefits do I qualify for?", "My dad likes his employer benefits", "What benefits do my employees qualify for?"]) assert.equal(community.topic(say), null, say);
+  assert.equal(community.topic("What benefits do veterans qualify for?"), "vet-overview");
+});

@@ -31,6 +31,15 @@ function installKyroVoiceRig(makeEvaluator) {
   wrap("kyroSpeakPageLine", a => String(a[0] || ""), "page-line");
   wrap("handleKyroDismissCommand", a => String(a[0] || ""), "dismiss");
   wrap("kyroShowResultScreen", a => String(a[1] || ""), "screen-call");
+  // who takes a result screen down (the reason a return to the orb gives, or the code that removed it), so a screen that vanishes can be explained
+  wrap("kyroReturnToOrb", a => JSON.stringify((a[0] && { reason: a[0].reason, source: a[0].source }) || {}), "return-to-orb");
+  try {
+    const originalRemove = Element.prototype.remove;
+    Element.prototype.remove = function (...args) {
+      try { if (this.getAttribute && this.getAttribute("data-kyro-result") !== null) add("screen-removed", String(new Error().stack || "").split("\n").slice(2, 5).map(line => line.trim().replace(/^at /, "").slice(0, 70)).join(" <- ")); } catch { /* describing never breaks the page */ }
+      return originalRemove.apply(this, args);
+    };
+  } catch { /* the rig still works without it */ }
   const realFetch = window.fetch;
   if (!realFetch.__rigWrapped) {
     window.fetch = function (resource, options) {
@@ -115,7 +124,9 @@ function installKyroVoiceRig(makeEvaluator) {
     const modelSaid = events.filter(t => /output_audio_transcript\.done/.test(t)).map(t => t.replace(/^.*transport_event response\.output_audio_transcript\.done\s*/, "").trim()).filter(Boolean);
     return {
       heard, tools: of("tool").map(t => t.split("\u0001")[0]), typed: of("typed-route").map(t => t.split("\u0001")[0]), pageLines: of("page-line"), modelSaid, dismissed: of("dismiss").length > 0,
-      web: of("web"), screenCalls: of("screen-call"), screens: rig.screens(), top: topKind(), intake: rig.intake(), player: rig.player(),
+      timeline: slice.filter(e => ["typed-route", "screen-call", "return-to-orb", "screen-removed", "page-line", "heard"].includes(e.kind) || (e.kind === "event" && /output_audio_transcript\.done|response\.created|response\.done/.test(e.text)))
+        .map(e => `${e.at}ms ${e.kind} ${String(e.text).replace(/\s+/g, " ").slice(0, 46)}`),
+      web: of("web"), screenCalls: of("screen-call"), returns: of("return-to-orb"), removals: of("screen-removed"), screens: rig.screens(), top: topKind(), intake: rig.intake(), player: rig.player(),
       section: typeof currentSectionId === "function" ? currentSectionId() : "", voiceActive: typeof realtimeVoiceActive === "function" ? realtimeVoiceActive() : false,
       responding: events.filter(t => /response\.created/.test(t)).length > events.filter(t => /response\.done/.test(t)).length, now: Date.now() - rig.t0
     };
@@ -192,7 +203,7 @@ function installKyroVoiceRig(makeEvaluator) {
     return { failures, warnings, state: last };
   };
   // what the page did, kept with a failed case so the cause can be read from the report
-  rig.detail = state => (state ? { heard: state.heard, modelSaid: state.modelSaid.map(line => line.slice(0, 140)), tools: state.tools, typed: state.typed, pageLines: state.pageLines.map(line => line.slice(0, 100)), top: state.top, section: state.section, web: state.web.slice(-6) } : null);
+  rig.detail = state => (state ? { heard: state.heard, modelSaid: state.modelSaid.map(line => line.slice(0, 140)), tools: state.tools, typed: state.typed, pageLines: state.pageLines.map(line => line.slice(0, 100)), top: state.top, section: state.section, web: state.web.slice(-6), screenCalls: (state.screenCalls || []).map(line => line.slice(0, 80)), dismissed: state.dismissed, returns: state.returns, removals: state.removals, timeline: state.timeline } : null);
   rig.runCase = async entry => {
     const started = Date.now(); const timeout = entry.timeoutMs || 30000;
     try {
