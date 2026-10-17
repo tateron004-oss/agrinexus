@@ -1489,7 +1489,7 @@ function exportLatestDocumentFormat(text) {
   const match = EXPORT_LATEST_DOCUMENT.exec(goal);
   return match ? DOCUMENT_FORMAT_WORDS[match[1].toLowerCase()] || null : null;
 }
-const DOCUMENTS_LIST_REQUEST = /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:(?:show|list|read|open|see)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?my\s+(?:saved\s+)?(?:documents|docs|files)|what\s+(?:documents|docs|files)\s+do\s+i\s+have|(?:do\s+i\s+have\s+any|what\s+have\s+i\s+saved\s+in\s+my)\s+(?:saved\s+)?(?:documents|docs))\s*[.?!]*$/i;
+const DOCUMENTS_LIST_REQUEST = /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:(?:show|list|read|open|see)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?(?:(?:my|the)\s+)?(?:saved\s+)?(?:documents|docs|files)|what\s+(?:documents|docs|files)\s+do\s+i\s+have|(?:do\s+i\s+have\s+any|what\s+have\s+i\s+saved\s+in\s+my)\s+(?:saved\s+)?(?:documents|docs))\s*[.?!]*$/i;
 // "Show my documents", "what documents do I have": the titles of the person's own saved documents, newest first (null when it is not that request or the documents cannot be read).
 // "Show my resumes", "open my CV": the saved documents that are résumés (they are saved as "Resume - <name>"). Found sweeping: "open my resume" listed the business plans, as raw fields.
 const RESUMES_LIST_REQUEST = /^(?:please\s+)?(?:(?:kyro|nexus)[,.]?\s+)?(?:(?:show|list|read|open|see|view|find|get)(?:\s+me)?\s+(?:all\s+)?(?:of\s+)?(?:my|the)\s+(?:saved\s+)?(?:resumes?|résumés?|resumés?|cvs?|curriculum vitae)|(?:do\s+i\s+have|where\s+is)\s+(?:a|an|any|my)\s+(?:saved\s+)?(?:resumes?|résumés?|cvs?))[.?!\s]*$/i;
