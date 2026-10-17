@@ -82,3 +82,25 @@ test("a question about a child being abused gets the Childhelp number, and an ad
 test("the voice model is told to stay silent on a time or date question, which the page answers itself", () => {
   assert.match(server, /When the user asks what time or what date it is[^\n]{0,200}do not call any tool and say nothing at all: the page answers by itself[^\n]{0,120}Never say you cannot see a clock/);
 });
+
+// Found by the second full voice run: a question asked right after a long answer drew its card, the model's reply to it began reading ten seconds later (the earlier answer was still being read), and the idle return
+// took the card down before it was read.
+const vm = require("node:vm");
+const appSource = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
+function idleSnapshot({ responseInProgress, startedAgoMs, speaking = false }) {
+  const source = appSource.slice(appSource.indexOf("function kyroAutoReturnSnapshot()"), appSource.indexOf("function kyroAutoReturnTick()"));
+  const context = { Date, kyroLastAssistantSpokeAt: 0, kyroLastActivityAt: 0, experienceMode: "user", nexusVoiceSession: { assistantSpeaking: speaking, userSpeaking: false },
+    realtimeVoiceSession: { responseInProgress, responseStartedAt: Date.now() - startedAgoMs }, kyroAnswerShowing: () => true, kyroWorkOpen: () => false,
+    nexusPendingBehaviorConfirmation: null, pendingAgentClarification: null, kyroActiveVoiceIntake: null,
+    document: { activeElement: null, body: { classList: { contains: () => true } }, querySelector: () => null } };
+  vm.runInNewContext(`${source}\nthis.snapshot = kyroAutoReturnSnapshot;`, context);
+  return context.snapshot();
+}
+
+test("a reply the model has started, but whose sound has not begun, keeps the answer card up; one that never finished does not hold it for ever", () => {
+  assert.equal(idleSnapshot({ responseInProgress: true, startedAgoMs: 3000 }).assistantSpeaking, true);
+  assert.equal(idleSnapshot({ responseInProgress: false, startedAgoMs: 3000 }).assistantSpeaking, false);
+  assert.equal(idleSnapshot({ responseInProgress: true, startedAgoMs: 61000 }).assistantSpeaking, false, "a missed 'done' is given up on after a minute");
+  assert.equal(idleSnapshot({ responseInProgress: false, startedAgoMs: 0, speaking: true }).assistantSpeaking, true);
+  assert.match(appSource, /realtimeVoiceSession\.responseInProgress = true;\s+realtimeVoiceSession\.responseStartedAt = Date\.now\(\);/);
+});
