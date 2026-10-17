@@ -50589,6 +50589,8 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   const command = String(args.command || args.query || "").trim();
   // a card left open by an earlier request does not stay in front of this one (a workspace this request opens comes after)
   if (!(typeof kyroPageJustOpened === "function" && kyroPageJustOpened(command))) kyroDismissStaleWorkspace(command);
+  // The sign-in has ended: nothing can be opened or saved, and the model must say so rather than "it is on the screen".
+  if (typeof kyroSignInEnded !== "undefined" && kyroSignInEnded) return { ok: false, status: "signin_ended", response: `The person's sign-in has ended, so nothing can be opened, listed or saved until they sign in again. Tell them exactly this in one short sentence: ${KYRO_SIGNIN_ENDED_LINE}`, executionVerified: false, blockedReason: "signin_ended" };
   kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
   // A Kyro voice intake (e.g. the résumé interview) already owns this turn -- don't let the
   // model's own tool call (which would otherwise open a workforce workspace for "résumé"-shaped
@@ -51508,6 +51510,8 @@ function kyroVoiceIntakeOwnsTurn(command) {
 // already gives every other transcript (see handleNexusMentalHealthBehavioralWellnessCommand below).
 function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
   const trimmed = String(transcript || "").trim();
+  // The sign-in has ended: whatever was asked, the answer is that one plain sentence (the page would otherwise start the request and the voice would say nothing).
+  if (trimmed && typeof kyroSignInEnded !== "undefined" && kyroSignInEnded) { kyroSaySignInEnded(); return true; }
   if (kyroActiveVoiceIntake && kyroActiveVoiceIntake.engine.isExpired(Date.now())) {
     kyroActiveVoiceIntake = null;
     setKyroRealtimeAutoResponse(true);
@@ -53082,12 +53086,22 @@ function kyroShowSessionEndedScreen() {
   } catch { return false; }
 }
 // Called when the server refuses a request for want of a sign-in. Only a person who was signed in is told (a wrong password at the sign-in page is not a sign-in that ended).
+// Once the sign-in has ended, nothing the voice does can open, list or save anything, so every request is answered with that one plain sentence, aloud and on the screen, instead of silence. Found when the owner tested for
+// hours in one tab: the microphone kept working while documents, lists, music and maps all "failed", because the sign-in had ended (a day at most, twelve hours idle) and the voice model was told "Kyro is showing it, say nothing".
+let kyroSignInEnded = false; let kyroSignInEndedSpokenAt = 0;
+const KYRO_SIGNIN_ENDED_LINE = "Your sign-in has ended, so I cannot open or save anything. Please tap Sign in again on the screen.";
+function kyroSaySignInEnded() {
+  if (Date.now() - kyroSignInEndedSpokenAt < 15000) return;
+  kyroSignInEndedSpokenAt = Date.now();
+  try { kyroPageSpeaksUntil = Date.now() + 20000; setVoiceResponse(KYRO_SIGNIN_ENDED_LINE, true, { allowHandoff: false, source: "kyro-signin" }); } catch { /* the screen says it */ }
+}
 function kyroNoteSessionEnded(path) {
   try {
     if (/^\/api\/(?:login|logout|register|auth\/|guest)/.test(String(path || ""))) return false;
     const view = document.getElementById("appView");
     const signedIn = Boolean(data && data.user) && Boolean(view) && getComputedStyle(view).display !== "none";
     if (!signedIn) return false;
+    try { kyroSignInEnded = true; kyroSaySignInEnded(); } catch { /* the screen says it */ }
     if (document.querySelector('[data-kyro-result="signin"]')) return true;
     return kyroShowSessionEndedScreen();
   } catch { return false; }
