@@ -47,5 +47,7 @@ module.exports = Object.freeze([
   strict("cs-energy", "Is there help paying my electric bill?", "LIHEAP"),
   strict("cs-medicaid", "How do I apply for Medicaid?", "healthcare\\.gov"),
   strict("cs-free-tax", "Where can I get free tax help?", "VITA"),
-  strict("cs-vital-records", "How do I get a copy of my birth certificate?", "vital records office")
+  strict("cs-vital-records", "How do I get a copy of my birth certificate?", "vital records office"),
+  strict("sr-fraud-pretending", "My grandfather got a call from someone pretending to be the IRS, who do I report it to?", "833-372-8311|ReportFraud|Elder Fraud"),
+  strict("yt-teen-daughter", "My teenage daughter is really struggling, who can she talk to?", "741741")
 ]);

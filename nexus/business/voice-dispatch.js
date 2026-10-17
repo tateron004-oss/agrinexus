@@ -879,7 +879,7 @@ function classify(command = "") {
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
   // "How do I find customers for my new business?" / "How do I start a business?" are questions for the checked guide ("new" is in "new business", "start" in "start a business"); found by the live voice audit,
   // where the first asked "What is the name of the customer to add?" and, with a workspace, the second would have offered to start one.
-  const askingHow = /^\s*(?:please\s+)?(?:how (?:do|can|could|should|would|to)\b|ways? to\b|what(?:'s| is| are) (?:the )?(?:best|good|some)\b)/i.test(command);
+  const askingHow = /^\s*(?:please\s+)?(?:how (?:do|can|could|should|would|to)\b|ways? to\b|what(?:'s| is| are) (?:the )?(?:best|good|some)\b|(?:what|which)\b[^.?!]{0,60}\b(?:should|do|can|could|would) (?:i|we)\b)/i.test(command);
   const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|client|participant|member|congregant|buyer|seller|tenant|landlord)s?\b/i.test(command) && !/\btask\b/i.test(command) && !/\b(?:appointment|showing|viewing|site visit|open house)\b/i.test(command)
     && !askingHow
     // "Create a volunteer coordination plan" or "a donor stewardship plan" is a plan about people, not a new person to add.
