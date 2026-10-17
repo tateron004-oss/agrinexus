@@ -27997,13 +27997,25 @@ function kyroWorkOpen() {
 }
 // When Kyro was last heard speaking (noted each time the quiet-spell watcher looks): an answer stays on the screen for a few seconds AFTER the last word, not from the moment it was drawn.
 let kyroLastAssistantSpokeAt = 0;
+// When each reply the voice service has started began, until its "done" arrives. A line the page reads aloud is a reply of its own, and the audio flag above is never raised for it, so without this the idle
+// return saw "nobody is speaking" for the whole of a long answer and took the card down ten seconds after it was drawn, mid-sentence (the full voice run's timeline showed every look saying speak=false
+// while the reply played). Each entry is dropped after a minute, so a "done" that never arrives cannot keep a card up for ever.
+let kyroOpenReplies = [];
+function kyroNoteReplyEvent(type) {
+  switch (type) {
+    case "response.created": kyroOpenReplies.push(Date.now()); break;
+    case "response.done": kyroOpenReplies.shift(); break;
+    default: break;
+  }
+}
 function kyroAutoReturnSnapshot() {
   const active = document.activeElement;
   const inField = Boolean(active && /^(?:INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && !/^(?:button|submit|checkbox|radio)$/i.test(active.type || ""));
   // A reply the model has started but not yet finished counts as speaking: when it follows another answer still being read out, its sound can begin more than ten seconds after its card was drawn, and the card
   // was taken down before it was read (found by the full voice run: a question asked right after a long answer). Bounded to a minute, so a "done" that never arrives cannot keep a card up for ever.
   const replyUnderway = Boolean(typeof realtimeVoiceSession !== "undefined" && realtimeVoiceSession?.responseInProgress && Date.now() - Number(realtimeVoiceSession.responseStartedAt || 0) < 60000);
-  const assistantSpeaking = Boolean(nexusVoiceSession?.assistantSpeaking) || replyUnderway;
+  const replyOpen = (kyroOpenReplies = kyroOpenReplies.filter(at => Date.now() - at < 60000)).length > 0;
+  const assistantSpeaking = Boolean(nexusVoiceSession?.assistantSpeaking) || replyUnderway || replyOpen;
   if (assistantSpeaking) kyroLastAssistantSpokeAt = Date.now();
   return {
     userMode: experienceMode === "user" || document.body.classList.contains("user-mode"),
@@ -50817,6 +50829,7 @@ function handleOpenAiAgentsRealtimeEvent(eventName, payload = {}) {
   if (eventName === "transport_event") {
     if (eventType && typeof kyroNoteRealtimeEvent === "function") kyroNoteRealtimeEvent(eventType);
     try { kyroWatchForRefusal(eventType, payload); } catch { /* watching never breaks the session */ }
+    try { kyroNoteReplyEvent(eventType); } catch { /* noting never breaks the session */ }
     if (realtimeVoiceSession) {
       realtimeVoiceSession.lastModelEvent = eventType || realtimeVoiceSession.lastModelEvent || "";
       if (/audio|response|conversation|session|input_audio/i.test(eventType)) {

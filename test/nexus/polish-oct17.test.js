@@ -87,9 +87,9 @@ test("the voice model is told to stay silent on a time or date question, which t
 // took the card down before it was read.
 const vm = require("node:vm");
 const appSource = fs.readFileSync(path.join(__dirname, "../../public/app.js"), "utf8");
-function idleSnapshot({ responseInProgress, startedAgoMs, speaking = false }) {
+function idleSnapshot({ responseInProgress = false, startedAgoMs = 0, speaking = false, openReplies = [] }) {
   const source = appSource.slice(appSource.indexOf("function kyroAutoReturnSnapshot()"), appSource.indexOf("function kyroAutoReturnTick()"));
-  const context = { Date, kyroLastAssistantSpokeAt: 0, kyroLastActivityAt: 0, experienceMode: "user", nexusVoiceSession: { assistantSpeaking: speaking, userSpeaking: false },
+  const context = { Date, kyroOpenReplies: openReplies, kyroLastAssistantSpokeAt: 0, kyroLastActivityAt: 0, experienceMode: "user", nexusVoiceSession: { assistantSpeaking: speaking, userSpeaking: false },
     realtimeVoiceSession: { responseInProgress, responseStartedAt: Date.now() - startedAgoMs }, kyroAnswerShowing: () => true, kyroWorkOpen: () => false,
     nexusPendingBehaviorConfirmation: null, pendingAgentClarification: null, kyroActiveVoiceIntake: null,
     document: { activeElement: null, body: { classList: { contains: () => true } }, querySelector: () => null } };
@@ -103,4 +103,18 @@ test("a reply the model has started, but whose sound has not begun, keeps the an
   assert.equal(idleSnapshot({ responseInProgress: true, startedAgoMs: 61000 }).assistantSpeaking, false, "a missed 'done' is given up on after a minute");
   assert.equal(idleSnapshot({ responseInProgress: false, startedAgoMs: 0, speaking: true }).assistantSpeaking, true);
   assert.match(appSource, /realtimeVoiceSession\.responseInProgress = true;\s+realtimeVoiceSession\.responseStartedAt = Date\.now\(\);/);
+});
+
+test("a reply the voice service has opened keeps the answer card up until its done arrives, as a line the page reads aloud never raises the audio flag", () => {
+  assert.equal(idleSnapshot({ openReplies: [Date.now() - 5000] }).assistantSpeaking, true);
+  assert.equal(idleSnapshot({ openReplies: [] }).assistantSpeaking, false);
+  assert.equal(idleSnapshot({ openReplies: [Date.now() - 61000] }).assistantSpeaking, false, "a done that never arrives is given up on after a minute");
+  const source = appSource.slice(appSource.indexOf("let kyroOpenReplies = [];"), appSource.indexOf("function kyroAutoReturnSnapshot()"));
+  const context = { Date };
+  vm.runInNewContext(`${source}\nthis.note = kyroNoteReplyEvent; this.open = () => kyroOpenReplies.length;`, context);
+  context.note("response.created"); context.note("response.created"); assert.equal(context.open(), 2);
+  context.note("response.done"); assert.equal(context.open(), 1);
+  context.note("response.done"); context.note("response.done"); assert.equal(context.open(), 0, "an extra done never goes below none");
+  context.note("response.output_audio_transcript.done"); assert.equal(context.open(), 0, "other events are ignored");
+  assert.match(appSource, /try \{ kyroNoteReplyEvent\(eventType\); \} catch/, "the transport events feed it");
 });
