@@ -249,3 +249,21 @@ test("after an accepted send the person is told which automation and which words
   assert.equal(automationSentResponse({ steps: [{ toolId: "communications.send", input: {} }] }, task), "");
   assert.equal(automationSentResponse(null, null), "");
 });
+
+// Found by the first real send, to a real outside service, from the owner's own session: every send failed with "unreachable" (ERR_INVALID_IP_ADDRESS), because Node asks a connection's lookup for a LIST of addresses
+// ({ all: true }) and the lookup answered with one. The stubbed tests could not see it; the answer must have the shape that was asked for.
+test("the connection's lookup answers a list when a list is asked for, and one address when one is asked for", async () => {
+  const original = dns.lookup;
+  try {
+    dns.lookup = (host, options, callback) => callback(null, [{ address: "8.8.8.8", family: 4 }, { address: "2606:4700::1", family: 6 }]);
+    const ask = options => new Promise(resolve => guardedLookup("good.example.com", options, (...answer) => resolve(answer)));
+    const [error, list] = await ask({ all: true });
+    assert.equal(error, null); assert.deepEqual(list, [{ address: "8.8.8.8", family: 4 }, { address: "2606:4700::1", family: 6 }]);
+    const [error2, address, family] = await ask({});
+    assert.equal(error2, null); assert.equal(address, "8.8.8.8"); assert.equal(family, 4);
+    const [error3, address3] = await new Promise(resolve => guardedLookup("good.example.com", (...answer) => resolve(answer)));
+    assert.equal(error3, null); assert.equal(address3, "8.8.8.8", "the two-argument form still works");
+    dns.lookup = (host, options, callback) => callback(null, [{ address: "8.8.8.8", family: 4 }, { address: "10.0.0.1", family: 4 }]);
+    assert.equal((await ask({ all: true }))[0].code, "EKYROPRIVATE", "one private address among public ones still refuses the whole answer");
+  } finally { dns.lookup = original; }
+});

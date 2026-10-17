@@ -16,12 +16,16 @@ const MAX_RESPONSE_BYTES = 4096;
 const clip = (value, limit) => String(value ?? "").replace(/\s+/g, " ").trim().slice(0, limit);
 
 // A lookup that is used by the connection itself, so the address checked is the address connected to (a name that points somewhere public when checked and somewhere private when connected, "DNS rebinding", is refused).
+// Node asks a connection's lookup for ALL of the addresses ({ all: true }, from Node 20 on) or for one; the answer must have the shape that was asked for. (Answering one address when a list was asked for failed every send with
+// ERR_INVALID_IP_ADDRESS: found by the first real send to a real outside service, which the stubbed tests could not catch.)
 function guardedLookup(hostname, options, callback) {
   const done = typeof options === "function" ? options : callback;
+  const wantsAll = Boolean(options && typeof options === "object" && options.all === true);
   dns.lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
     if (error) return done(error);
     const list = (addresses || []).filter(item => item?.address);
     if (!list.length || !list.every(item => isPublicAddress(item.address))) return done(Object.assign(new Error("private address"), { code: "EKYROPRIVATE" }));
+    if (wantsAll) return done(null, list.map(item => ({ address: item.address, family: item.family })));
     return done(null, list[0].address, list[0].family);
   });
 }
