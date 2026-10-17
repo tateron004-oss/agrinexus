@@ -32,5 +32,7 @@ module.exports = Object.freeze([
   strict("register", "How do I register my business?", "EIN|Secretary of State|state"),
   strict("location", "Where should I put my business location?", "zoning"),
   strict("1099", "What is a 1099?", "1099"),
-  strict("grow", "How do I grow my business?", "grow|expand|scal")
+  strict("grow", "How do I grow my business?", "grow|expand|scal"),
+  strict("sam-registration", "How do I register my business in SAM.gov?", "SAM\\.gov"),
+  strict("structure-pick", "What business structure should I pick for my new business?", "liability|LLC")
 ]);

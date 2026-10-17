@@ -74,6 +74,8 @@ function stateEntityIntent(text) {
   const value = stripWakeWord(String(text || "")).replace(/\s+/g, " ").trim();
   if (!value || value.length > 300) return null;
   if (NOT_A_QUESTION.test(value) || !ASKS.test(value)) return null;
+  // SAM.gov is the federal contracting registry, not a state filing: it belongs to the federal contracting guide.
+  if (/\bsam\.gov\b|\bsam registration\b|\bfederal (?:contract\w*|grants?)\b|\bgovernment contract\w*\b|\bunique entity (?:id|identifier)\b/i.test(value)) return null;
   const state = stateFromText(value);
   let kind = null;
   if (NONPROFIT.test(value)) kind = "nonprofit";

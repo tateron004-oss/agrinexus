@@ -89,3 +89,31 @@ test("a bare music control with nothing playing is answered 'nothing is playing'
   const media = require("../../public/kyro-media-commands.js");
   for (const say of ["Resume.", "Turn it up.", "Skip this one.", "Louder", "Pause the music."]) assert.equal(media.parse(say)?.type, "control", say);
 });
+
+// Found by the full-functionality voice test (Part B, 47 spoken requests on the live site).
+test("a relative being scammed by someone 'pretending to be' an agency, and a teenage daughter or son who is struggling, reach the checked answers", async () => {
+  const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("the AI model must not be asked"); } }, tools: { list: async () => [] }, applications: { list: () => [] },
+    memory: { recent: async () => [], search: async () => [] }, documents: { list: async () => [] } });
+  const ask = async text => planner.plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en" }, context: { timeZone: "America/Chicago" } });
+  for (const [say, topic] of [
+    ["My grandfather got a call from someone pretending to be the IRS, who do I report it to?", "sr-fraud"],
+    ["My mom got a call from someone impersonating her bank, who do I tell?", "sr-fraud"],
+    ["My teenage daughter is really struggling, who can she talk to?", "yt-crisis"],
+    ["My son is struggling at school, who can he talk to?", "yt-crisis"]
+  ]) assert.equal((await ask(say)).knowledge, `us-community-support:${topic}`, say);
+  const community = require("../../public/kyro-community-topics.js");
+  for (const say of ["I need to talk to my daughter about school", "My brother called pretending to be funny"]) assert.equal(community.topic(say), null, say);
+});
+
+test("SAM.gov registration is the federal contracting answer, not the state business-formation guide, and 'what structure should I pick' is a question, not a new workspace", async () => {
+  const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("the AI model must not be asked"); } }, tools: { list: async () => [] }, applications: { list: () => [] },
+    memory: { recent: async () => [], search: async () => [] }, documents: { list: async () => [] } });
+  const ask = async text => planner.plan({ command: { text, tenantId: "t1", actorId: "u1", locale: "en" }, context: { timeZone: "America/Chicago" } });
+  assert.equal((await ask("How do I register my business in SAM.gov?")).knowledge, "us-small-business:contracting");
+  assert.equal((await ask("What business structure should I pick for my new business?")).knowledge, "us-small-business:business-structure");
+  assert.equal((await ask("How do I register an LLC in California?")).knowledge, "state-entities:state-entity:llc:CA");
+  for (const question of ["What business structure should I pick for my new business?", "Which type of business should I start?", "What should I name my new business?"]) assert.notEqual(dispatch.classify(question), "createWorkspace", question);
+  assert.equal(dispatch.classify("Start a business workspace called Sunrise Poultry"), "createWorkspace");
+});
