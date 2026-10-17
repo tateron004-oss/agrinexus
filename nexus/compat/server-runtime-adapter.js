@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { createBusinessApi } = require("../business/api.js");
+const { createRecentSubmissions } = require("../intake/recent-submissions.js");
 const { createRuntime } = require("../runtime/create-runtime.js");
 const { checkRuntimeHealth } = require("../runtime/health.js");
 const { createTaskApi } = require("./task-api.js");
@@ -33,6 +34,8 @@ function safeDatabaseIdentifier(value) {
 function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, logger = console,
   createRuntimeFn = createRuntime, checkHealthFn = checkRuntimeHealth, isRestrictedFrom = () => false, memoryContactStore = null, urgentFallback = null } = {}) {
   let runtimePromise = null;
+  // A finished interview sent twice (the page gave up waiting and the person said yes again) is saved once.
+  const recentIntakes = createRecentSubmissions();
   // The GPS's place search, reverse lookup and routing (see navigation/service.js). Position is never logged or stored.
   const navigation = createNavigationService({ env });
   async function runtime() {
@@ -600,9 +603,10 @@ function createServerRuntimeAdapter({ env = process.env, resolveUser, readJson, 
         // knows how to render a nexus.behavior-turn.v1 response needs no special-casing for this route.
         if (!active.behavior?.intakeTurn) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy write fallback was used.", code: "behavior_spine_unavailable" }); return true; }
         const intakeContext = validIanaZone(body.timeZone) ? Object.freeze({ ...context, timeZone: body.timeZone }) : context;
-        const result = await active.behavior.intakeTurn({ input: { correlationId: request.context.requestId,
-          conversationId: body.conversationId, channel: request.channel, locale: request.locale,
-          intakeId: body.intakeId, values: body.values || {} }, context: intakeContext });
+        const result = await recentIntakes.once({ tenantId: context.tenantId, userId: context.userId, intakeId: body.intakeId, values: body.values || {} },
+          () => active.behavior.intakeTurn({ input: { correlationId: request.context.requestId,
+            conversationId: body.conversationId, channel: request.channel, locale: request.locale,
+            intakeId: body.intakeId, values: body.values || {} }, context: intakeContext }));
         send(res, result.completed ? 200 : 202, result); return true;
       } else if (url.pathname === "/api/nexus/runtime/behavior/confirm" && req.method === "POST") {
         if (!active.behavior?.confirm) { send(res, 503, { error: "The authoritative behavior spine is unavailable; no legacy fallback was used.", code: "behavior_spine_unavailable" }); return true; }

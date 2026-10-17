@@ -494,7 +494,10 @@
       return "I'm really glad you told me. If you may hurt yourself or someone else, contact local emergency services now or go to the nearest safe emergency location. If you can, move away from anything you could use to hurt yourself and reach a trusted person immediately. I can stay with you in support mode, but I cannot declare you safe or dispatch help from here.";
     }
     if (classification.state === "abuse_or_safeguarding_concern") {
-      return "I'm sorry this is happening. If you are in immediate danger, contact local emergency services or a trusted local crisis/safeguarding resource now. Kyro can help organize what happened and prepare questions for a qualified professional, but it will not contact anyone without your review and approval.";
+      // A child is involved: in the United States the Childhelp hotline (800-422-4453, from childhelphotline.org; the guide in nexus/knowledge/us-community-support.js carries it too) is named, as the person asked who to call.
+      const said = String(input && typeof input === "object" ? (input.text || input.command || "") : input || "");
+      const aboutChild = /\b(?:child(?:ren)?|kids?|son|daughter|toddler|teen\w*)\b.{0,40}\b(?:abus\w*|neglect\w*|hurt|beaten|molest\w*)\b|\b(?:abus\w*|neglect\w*|hurt|beating|molest\w*)\b.{0,40}\b(?:child(?:ren)?|kids?|my (?:son|daughter)|a minor)\b/i.test(said);
+      return `I'm sorry this is happening. If you are in immediate danger, contact local emergency services or a trusted local crisis/safeguarding resource now.${aboutChild ? " In the United States, the Childhelp National Child Abuse Hotline is 1-800-422-4453, and you can call it to talk it through with a counselor." : ""} Kyro can help organize what happened and prepare questions for a qualified professional, but it will not contact anyone without your review and approval.`;
     }
     if (classification.state === "medical_emergency") {
       return "This may need urgent medical help. Please contact local emergency services or go to the nearest emergency care location now. Kyro can provide support text, but it cannot dispatch or replace emergency care.";
