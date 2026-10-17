@@ -66408,4 +66408,130 @@ async function boot() {
   }
 }
 
+// ---- Voice trace: only when asked for (open the site with ?voicetrace=1; ?voicetrace=0 turns it off) ----
+// For finding out, on one person's own computer, why a spoken request does nothing: what the voice heard, which part of the page took it, what the voice model said or called, and whether a screen came up four seconds
+// later. It is written on the page in a small box with a Copy button, and stays on this device: nothing is sent anywhere. Off unless asked for, and off when the page is closed.
+const KYRO_TRACE_KEY = "kyroVoiceTrace";
+const KYRO_TRACE_SKIP = /delta|rate_limits|input_audio_buffer\.append|output_audio_buffer|response\.(?:content_part|output_item)\.|\.added$/i;
+let kyroTraceLines = [];
+let kyroTraceBox = null;
+function kyroTraceOn() {
+  try {
+    const asked = new URLSearchParams(location.search).get("voicetrace");
+    if (asked === "1") sessionStorage.setItem(KYRO_TRACE_KEY, "1");
+    else if (asked === "0") sessionStorage.removeItem(KYRO_TRACE_KEY);
+    return sessionStorage.getItem(KYRO_TRACE_KEY) === "1";
+  } catch { return false; }
+}
+function kyroTraceShow() {
+  try {
+    if (!kyroTraceBox) {
+      const box = document.createElement("div");
+      box.setAttribute("data-kyro-trace", "true");
+      box.style.cssText = "position:fixed;left:6px;bottom:6px;width:min(96vw,560px);z-index:2147483647;background:rgba(0,0,0,.9);color:#9ff2c8;font:11px/1.35 ui-monospace,Consolas,monospace;border:1px solid #2f6;border-radius:8px;padding:6px";
+      const body = document.createElement("pre");
+      body.style.cssText = "margin:0 0 6px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:34vh;overflow:auto";
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:8px";
+      const make = (label, click) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.style.cssText = "padding:6px 12px;border:0;border-radius:6px;background:#2f6;color:#012;font:inherit;font-weight:700;cursor:pointer"; b.addEventListener("click", click); return b; };
+      const status = document.createElement("span");
+      status.style.cssText = "align-self:center;color:#fff";
+      row.append(make("Copy", async () => {
+        const text = kyroTraceLines.join("\n");
+        try { await navigator.clipboard.writeText(text); status.textContent = "Copied. Paste it in the chat."; }
+        catch { const area = document.createElement("textarea"); area.value = text; document.body.append(area); area.select(); try { document.execCommand("copy"); status.textContent = "Copied. Paste it in the chat."; } catch { status.textContent = "Select the text and copy it."; } area.remove(); }
+      }), make("Clear", () => { kyroTraceLines = []; kyroTraceShow(); status.textContent = ""; }), make("Hide", () => { box.style.display = "none"; }), status);
+      box.append(body, row);
+      document.body.append(box);
+      kyroTraceBox = { box, body };
+    }
+    kyroTraceBox.box.style.display = "block";
+    kyroTraceBox.body.textContent = "Voice trace (" + kyroTraceLines.length + " lines)\n" + kyroTraceLines.slice(-14).join("\n");
+    kyroTraceBox.body.scrollTop = kyroTraceBox.body.scrollHeight;
+  } catch { /* the trace never breaks the page */ }
+}
+function kyroTrace(kind, detail) {
+  try {
+    let text = typeof detail === "string" ? detail : JSON.stringify(detail);
+    text = String(text === undefined ? "" : text).replace(/\s+/g, " ").slice(0, 200);
+    kyroTraceLines.push(new Date().toISOString().slice(11, 23) + " " + kind + (text ? ": " + text : ""));
+    if (kyroTraceLines.length > 300) kyroTraceLines.shift();
+    kyroTraceShow();
+  } catch { /* the trace never breaks the page */ }
+}
+function kyroTraceBrief(value) {
+  if (value === undefined) return "done";
+  if (value === null || typeof value !== "object") return String(value);
+  return JSON.stringify({ ok: value.ok, status: value.status, state: value.state, response: String(value.response || value.message || "").slice(0, 100) });
+}
+// the words an event carries: a transcript, an error, the name of a tool
+function kyroTraceEventText(payload) {
+  const p = payload && typeof payload === "object" ? payload : {};
+  const item = p.item && typeof p.item === "object" ? p.item : {};
+  const content = Array.isArray(item.content) ? item.content.map(part => (part && (part.transcript || part.text)) || "").join(" ") : "";
+  return String(p.transcript || p.text || content || p.error?.message || p.message || p.toolName || p.name || item.name || p.status || "").trim();
+}
+function kyroTraceWrap(name, describe) {
+  const original = window[name];
+  if (typeof original !== "function" || original.__kyroTraced) return;
+  const wrapped = function (...args) {
+    let described = null;
+    try { described = describe(args); if (described !== null) kyroTrace(name, described); } catch { /* the trace never breaks the page */ }
+    const result = original.apply(this, args);
+    try {
+      if (described !== null) {
+        if (result && typeof result.then === "function") result.then(value => kyroTrace(name + " finished", kyroTraceBrief(value)), error => kyroTrace(name + " FAILED", error && error.message));
+        else kyroTrace(name + " finished", kyroTraceBrief(result));
+      }
+    } catch { /* the trace never breaks the page */ }
+    return result;
+  };
+  wrapped.__kyroTraced = true;
+  window[name] = wrapped;
+}
+// four seconds after the page took a spoken request: is anything on the screen?
+function kyroTraceScreenCheck(heard) {
+  setTimeout(() => {
+    try {
+      const visible = node => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+      const screens = [...document.querySelectorAll("[data-kyro-result]")].filter(visible).map(node => node.getAttribute("data-kyro-result"));
+      const panel = document.querySelector("#kyroVoiceIntakePanel");
+      const workspace = document.querySelector("#nexus-workspace");
+      kyroTrace("SCREEN 4s after '" + String(heard).slice(0, 40) + "'", { screens, intake: Boolean(panel && visible(panel)), workspace: Boolean(workspace && visible(workspace)), map: document.body.classList.contains("user-map-full-open") });
+    } catch { /* the trace never breaks the page */ }
+  }, 4000);
+}
+function kyroTraceInstall() {
+  if (!kyroTraceOn()) return false;
+  kyroTrace("trace on", { page: location.pathname, signedIn: Boolean(typeof data !== "undefined" && data && data.user) });
+  try { fetch("/api/healthz", { cache: "no-store" }).then(response => response.json()).then(health => kyroTrace("release", String(health.release || "").slice(0, 8))).catch(() => {}); } catch { /* optional */ }
+  const who = () => { try { const user = data && data.user; return user ? (user.name || "?") + " / " + (user.role || "?") + (user.guest ? " / guest" : "") : "NOT SIGNED IN"; } catch { return "?"; } };
+  kyroTraceWrap("handleOpenAiAgentsRealtimeEvent", args => {
+    const type = String(args[1] && args[1].type || "");
+    if (KYRO_TRACE_SKIP.test(type) || KYRO_TRACE_SKIP.test(String(args[0]))) return null;
+    return String(args[0]) + (type ? " " + type : "") + " " + kyroTraceEventText(args[1]);
+  });
+  kyroTraceWrap("routeKyroVoiceIntakeTranscript", args => { const heard = args[0] && args[0].transcript; kyroTraceScreenCheck(heard); return "HEARD '" + String(heard).slice(0, 80) + "' via " + (args[0] && args[0].source) + " as " + who(); });
+  kyroTraceWrap("kyroHandleSpokenOpen", args => String(args[0]).slice(0, 80));
+  kyroTraceWrap("handleNexusUnifiedBrainRuntimeCommand", args => String(args[0]).slice(0, 80));
+  kyroTraceWrap("callNexusOpenAiRealtimeTool", args => "MODEL CALLED TOOL " + String(args[0] && args[0].name || args[0]).slice(0, 80) + " " + JSON.stringify(args[1] || args[0] && args[0].arguments || "").slice(0, 100));
+  kyroTraceWrap("kyroNoteSessionEnded", args => "SIGN-IN ENDED on " + String(args[0]).slice(0, 60));
+  try {
+    const original = window.fetch;
+    if (!original.__kyroTraced) {
+      window.fetch = function (input, options) {
+        const promise = original.apply(this, arguments);
+        try {
+          const url = String(input && input.url || input);
+          if (/\/api\/(?:voice|nexus\/runtime)\//.test(url)) promise.then(response => kyroTrace("web " + ((options && options.method) || "GET") + " " + url.replace(/^https?:\/\/[^/]+/, "").replace(/\?.*/, ""), response.status), error => kyroTrace("web FAILED " + url, error && error.message));
+        } catch { /* the trace never breaks the page */ }
+        return promise;
+      };
+      window.fetch.__kyroTraced = true;
+    }
+  } catch { /* optional */ }
+  return true;
+}
+kyroTraceInstall();
+
 boot();
