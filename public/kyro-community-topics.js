@@ -52,7 +52,13 @@
     ["np-federal-grants", /\bsam\.gov\b.{0,60}\bgrants?\b|\bgrants?\b.{0,60}\b(?:sam\.gov|sam registration|unique entity|uei)\b|\bunique entity id(?:entifier)?\b|\buei\b|\bregister (?:my |our |the )?(?:non-?profit|organization)\b.{0,40}\bgrants?\.gov\b/i],
     ["np-check-charity", /\b(?:is|check|verify|look up|search)\b.{0,40}\b(?:charity|non-?profit|organization)\b.{0,40}\b(?:real|legit(?:imate)?|tax[- ]exempt|501\s?\(?c\)?\s?\(?3\)?|registered|deductible)\b|\btax exempt organization search\b|\bteos\b|\bis (?:this|that|the) charity (?:real|legit(?:imate)?)\b/i],
     ["np-governance", /\bconflict of interest\b.{0,40}\b(?:policy|board|non-?profit|charity)\b|\b(?:non-?profit|charity)\b.{0,40}\b(?:board of directors|board members?|governance|bylaws)\b|\b(?:board of directors|governance|bylaws)\b.{0,40}\b(?:non-?profit|charity|501)\b|\bindependent board\b/i],
-    ["np-state-association", /\bstate association of nonprofits\b|\bnational council of nonprofits\b|\bnon-?profit (?:association|network)\b.{0,30}\b(?:my|our|in) state\b|\bfind (?:my |a )?(?:state )?nonprofit association\b/i]
+    ["np-state-association", /\bstate association of nonprofits\b|\bnational council of nonprofits\b|\bnon-?profit (?:association|network)\b.{0,30}\b(?:my|our|in) state\b|\bfind (?:my |a )?(?:state )?nonprofit association\b/i],
+    // everyday help for anyone (after every group's own questions, so "food help for veterans" still reaches the veterans' answer)
+    ["cs-food", /\bfood (?:pantr(?:y|ies)|banks?|stamps?|assistance|help|insecurity)\b|\bsnap (?:benefits?|application|card|office|eligib\w+|program)\b|\b(?:apply|applying|qualify|qualifying) for snap\b|\bhunger hotline\b|\b(?:need|find|get|where (?:can|do) i (?:get|find)) (?:some )?(?:free )?(?:food|groceries|a meal|meals)\b|\b(?:help|assistance) (?:buying|paying for|with) (?:food|groceries)\b|\b(?:can'?t|cannot|unable to) (?:afford|buy) (?:food|groceries)\b|\bi(?:'m| am) hungry\b/i],
+    ["cs-energy", /\bliheap\b|\b(?:help|assistance|programs?) (?:with |paying |to pay |for )*(?:my |the |our )?(?:electric|electricity|energy|heating|heat|gas|utility|utilities|cooling|power) (?:bills?|costs?)\b|\b(?:electric|electricity|energy|heating|utility|utilities|power|gas) bills?\b.{0,50}\b(?:help|assist\w*|afford|behind|can'?t pay|cannot pay)\b|\b(?:behind on|can'?t pay|cannot pay|unable to pay|struggling to pay) (?:my |the )?(?:electric|energy|heating|utility|utilities|power|gas) bills?\b|\b(?:power|electricity|gas|heat) (?:was |got |is )?(?:shut|cut|turned) off\b|\butility shut-?offs?\b/i],
+    ["cs-medicaid", /\bmedicaid\b|\bchip\b(?=.{0,30}\b(?:health|insurance|kids|children|coverage)\b)|\bchildren'?s health insurance program\b|\b(?:low[- ]income|free|cheap|affordable) health (?:insurance|coverage)\b|\bhealth insurance for (?:my )?(?:kids|children|family|low)\b|\bhealthcare\.gov\b/i],
+    ["cs-free-tax", /\bvita\b|\btce\b|\bvolunteer income tax assistance\b|\btax counseling for the elderly\b|\baarp tax[- ]aide\b|\bfree tax (?:help|prep(?:aration)?|filing|return|returns|preparation)\b|\b(?:where|who) can (?:i|we) (?:get|find) (?:free )?(?:help|someone)(?: with| to do| doing)? (?:my |our )?taxes\b/i],
+    ["cs-vital-records", /\b(?:birth|death|marriage) certificates?\b|\bdivorce (?:certificates?|decrees?|records?)\b|\bvital records?\b|\bcopy of (?:my |a |the )?(?:birth|marriage|death) (?:certificate|record)\b/i],
   ];
 
   function communityTopic(text) {
@@ -64,7 +70,7 @@
   }
 
   // Words that name a United States programme: they make the US answer right even on a device whose time zone is elsewhere.
-  const COMMUNITY_US_WORDS = /\b(?:va\.gov|va (?:benefits?|health ?care|loans?|disability|claims?)|veterans? crisis line|vet centers?|gi bill|myva411|medicare|medicaid|social security|ssa|ssi|988|eldercare locator|shiphelp|benefitscheckup|fafsa|federal student aid|job corps|youthrules|childhelp|crisis text line|trevor project|runaway safeline|irs|501\s?\(?c\)?\s?\(?3\)?|form 99\d|form 1023|sam\.gov|grants\.gov|nasco|vbocs?|userra)\b/i;
+  const COMMUNITY_US_WORDS = /\b(?:va\.gov|va (?:benefits?|health ?care|loans?|disability|claims?)|veterans? crisis line|vet centers?|gi bill|myva411|medicare|medicaid|social security|ssa|ssi|988|eldercare locator|shiphelp|benefitscheckup|fafsa|federal student aid|job corps|youthrules|childhelp|crisis text line|trevor project|runaway safeline|irs|501\s?\(?c\)?\s?\(?3\)?|form 99\d|form 1023|sam\.gov|grants\.gov|nasco|vbocs?|userra|liheap|snap benefits?|food stamps|hunger hotline|vita|tce|healthcare\.gov)\b/i;
   function isCommunityUs(text) { return COMMUNITY_US_WORDS.test(String(text || "")); }
 
 

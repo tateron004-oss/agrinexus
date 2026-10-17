@@ -164,7 +164,7 @@ test("the planner answers 'what time is it' on the person's own clock when it kn
   const planner = new OpenEndedPlanner({ memory, tools: { list: async () => catalog.tools }, applications: { list: () => catalog.applications }, model: { plan: async () => { throw new Error("the model must not be asked"); }, respond: async () => null } });
   const ask = (text, timeZone) => planner.plan({ command: { text, channel: "voice", locale: "en", tenantId: "t1", actorId: "u1", conversationId: "c1" }, context: { can: () => true, roles: [], ...(timeZone ? { timeZone } : {}) }, conversationHistory: [] });
   const lagos = (await ask("what time is it", "Africa/Lagos")).response;
-  assert.match(lagos, /^It is \d{2}:\d{2} on .* \(Africa\/Lagos time\)\.$/);
+  assert.match(lagos, /^It is \d{2}:\d{2} on .* \(West Africa Time\)\.$/, "the zone is named the way a person says it, not as Africa/Lagos");
   assert.doesNotMatch(lagos, /UTC/);
   assert.match((await ask("what time is it")).response, /Nairobi \(East Africa Time\)/, "with no zone known it still says which zone it is using");
 });

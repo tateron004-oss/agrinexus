@@ -1,6 +1,6 @@
 "use strict";
 
-// A checked guide to real, official help in the United States for four groups: veterans, older adults, young people, and nonprofits.
+// A checked guide to real, official help in the United States for four groups: veterans, older adults, young people, and nonprofits, and for everyday needs anyone has (food, energy bills, Medicaid, free tax help, vital records).
 //
 // Every number, name and rule below was read on CHECKED_ON from the official page listed in the topic's `sources` (VA.gov and its Vet Center and homeless-programs pages, the Veterans Crisis Line, the Department of Labor, SBA,
 // Eldercare Locator, Medicare.gov, SHIP, Social Security, the Department of Justice, the FTC, the IRS, SAM.gov and Grants.gov, Job Corps, StudentAid, and the crisis lines' own sites). Where an official page did not say something (a phone
@@ -64,7 +64,15 @@ const SOURCES = Object.freeze({
   grantsApplicant: { name: "Grants.gov: applicant registration", url: "https://www.grants.gov/applicants/applicant-registration" },
   irsTeos: { name: "IRS: Tax Exempt Organization Search", url: "https://www.irs.gov/charities-non-profits/tax-exempt-organization-search" },
   irsGovernance: { name: "IRS: governance and related topics, 501(c)(3) organizations", url: "https://www.irs.gov/pub/irs-tege/governance_practices.pdf" },
-  councilNonprofits: { name: "National Council of Nonprofits: find your state association", url: "https://www.councilofnonprofits.org/find-your-state-association" }
+  councilNonprofits: { name: "National Council of Nonprofits: find your state association", url: "https://www.councilofnonprofits.org/find-your-state-association" },
+  // everyday help for anyone
+  usaEmergencyFood: { name: "USA.gov: emergency food assistance", url: "https://www.usa.gov/emergency-food-assistance" },
+  usaSnap: { name: "USA.gov: SNAP (food stamps)", url: "https://www.usa.gov/food-stamps" },
+  usaEnergy: { name: "USA.gov: help with energy bills (LIHEAP)", url: "https://www.usa.gov/help-with-energy-bills" },
+  healthcareMedicaidApply: { name: "HealthCare.gov: how to apply for Medicaid and CHIP", url: "https://www.healthcare.gov/medicaid-chip/getting-medicaid-chip/" },
+  healthcareMedicaidWho: { name: "HealthCare.gov: Medicaid and CHIP eligibility", url: "https://www.healthcare.gov/medicaid-chip/eligibility/" },
+  irsVita: { name: "IRS: free tax return preparation for qualifying taxpayers", url: "https://www.irs.gov/individuals/free-tax-return-preparation-for-qualifying-taxpayers" },
+  cdcVitalRecords: { name: "CDC: where to write for vital records", url: "https://www.cdc.gov/nchs/w2w/index.htm" }
 });
 
 const TOPICS = Object.freeze({
@@ -179,7 +187,23 @@ const TOPICS = Object.freeze({
     sources: ["irsGovernance"] },
   "np-state-association": { group: "nonprofits", title: "Help from other nonprofits in your state",
     text: "The National Council of Nonprofits runs a network of state associations of nonprofits, with a map and directory of member associations at councilofnonprofits.org/find-your-state-association. Some states do not yet have a member. Your state association is a good place to ask about local registration, training and peer support.",
-    sources: ["councilNonprofits"] }
+    sources: ["councilNonprofits"] },
+  // ---- everyday help for anyone (read 16 October 2026) ----
+  "cs-food": { group: "everyone", title: "Food help", checkedOn: "16 October 2026",
+    text: "If you need food now, you can call the National Hunger Hotline at 1-866-3-HUNGRY (1-866-348-6479) or, in Spanish, 1-877-8-HAMBRE (1-877-842-6273); it answers in English and Spanish on weekdays, Eastern Time. To find a food pantry near you, enter your ZIP code in the HUD Find Shelter tool at hud.gov/findshelter, or call 211 to reach local agencies that can help you find food in an emergency. SNAP (food stamps) can help you pay for food if you have a low income: your state sets who is eligible, you apply through your state or local SNAP office, and depending on your state you may be able to apply online; find your state's office in the SNAP state directory at fns.usda.gov/snap/state-directory. You can also ask your state agency about emergency food through TEFAP.",
+    sources: ["usaEmergencyFood", "usaSnap"] },
+  "cs-energy": { group: "everyone", title: "Help paying energy bills (LIHEAP)", checkedOn: "16 October 2026",
+    text: "LIHEAP, the Low Income Home Energy Assistance Program, can help you pay your heating or cooling bills or get emergency services during an energy crisis; depending on where you live it may also cover electric bills. Eligibility is based on your income, and each state and territory sets its own requirements. To apply, answer a few questions to see whether you qualify, find your state or territory's LIHEAP office with the search tool at liheapch.acf.hhs.gov/search-tool, and then apply: some offices take applications online and others may need you to apply in person. If your power or gas was shut off, each state has its own rules about when a utility can disconnect you, and where to find your state's rule is liheapch.acf.hhs.gov/Disconnect/disconnect.htm. For other questions about government help, USAGov answers at 1-844-USAGOV1 (1-844-872-4681).",
+    sources: ["usaEnergy"] },
+  "cs-medicaid": { group: "everyone", title: "Medicaid and CHIP", checkedOn: "16 October 2026",
+    text: "Medicaid and CHIP cover people with a low income, including families, children, pregnant women, older adults and people with disabilities, and some states also cover low-income adults. Eligible income levels, coverage and costs differ from state to state, and full coverage is limited to certain immigration statuses. You can apply any time of year in two ways: through the Marketplace at healthcare.gov/create-account, which sends your information securely to your state agency if someone in your household looks eligible, or directly with your state Medicaid agency, whose contact details you get by choosing your state on healthcare.gov. For questions you can call HealthCare.gov at 1-800-318-2596, and localhelp.healthcare.gov can find local help.",
+    sources: ["healthcareMedicaidApply", "healthcareMedicaidWho"] },
+  "cs-free-tax": { group: "everyone", title: "Free tax help (VITA and TCE)", checkedOn: "16 October 2026",
+    text: "The IRS supports free basic tax return preparation by IRS-certified volunteers through two programmes. VITA, Volunteer Income Tax Assistance, helps people who generally make about $70,244 or less (the IRS page does not name the tax year), people with disabilities and people who speak limited English. TCE, Tax Counseling for the Elderly, is for people age 60 and older and focuses on pension and retirement questions. The IRS sets no single income limit for the programme and individual sites may set their own; services vary by site, every return gets a quality review before it is filed, and some sites let you prepare your own return with a volunteer's help only where the listing says Self-Prep. To find a site, use the IRS VITA Locator Tool or call 800-906-9887; AARP Tax-Aide, which runs mostly TCE sites, has its own locator and the number 888-227-7669, which the IRS page says to use from January to April.",
+    sources: ["irsVita"] },
+  "cs-vital-records": { group: "everyone", title: "Getting a copy of a birth certificate or other vital record", checkedOn: "16 October 2026",
+    text: "Birth, death, marriage and divorce records are kept by the state or area where the event happened, so you ask that state or area's vital records office. The CDC's page lists every state and territory, each with its own application guidelines: first work out where the birth, death, marriage or divorce took place, then open that place's page. The federal government does not hand out certificates, files or indexes with identifying information, so the CDC itself cannot give you a copy. Fees, identification and how to apply are set by each office, so read its page before you apply. For a passport, the CDC page points to the U.S. State Department.",
+    sources: ["cdcVitalRecords"] }
 });
 
 // (the question matchers live in public/kyro-community-topics.js, so the page can use the same words)
@@ -192,7 +216,7 @@ function communityAnswer(id, { us = true } = {}) {
   const topic = TOPICS[id];
   if (!topic) return null;
   const sources = topic.sources.map(key => SOURCES[key]);
-  const text = `${topic.text} Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).${us ? "" : OUTSIDE} ${CLOSING}`;
+  const text = `${topic.text} Sources: ${sources.map(source => source.name).join("; ")} (checked ${topic.checkedOn || CHECKED_ON}).${us ? "" : OUTSIDE} ${CLOSING}`;
   return { topic: id, group: topic.group, title: topic.title, text, sources };
 }
 

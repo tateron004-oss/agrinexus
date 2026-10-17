@@ -21775,6 +21775,10 @@ function stripTrailingArrivalTimeClause(value = "") {
 function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
   const text = String(command || "");
   const between = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+(?:via|through|stopping at|stopping by|by way of)\s+.+?)?(?:[.!?]|$)/i);
+  // "How far is Nakuru from Nairobi?" (the first place is where you end up) and "distance between Nairobi and Nakuru": two places without a "to". Found by the live voice audit, where the first was answered
+  // "it needs the origin and destination written out clearly".
+  const farFrom = between ? null : text.match(/\bhow far (?:is|are)\s+(?:it\s+)?(?:from\s+)?(.+?)\s+from\s+(.+?)[.!?\s]*$/i);
+  const betweenAnd = between || farFrom ? null : text.match(/\b(?:distance|how far(?: is it)?)\s+between\s+(.+?)\s+and\s+(.+?)[.!?\s]*$/i);
   const viaMatch = text.match(/\b(?:via|through|stopping at|stopping by|by way of)\s+(.+?)(?:\s+to\s+|[.!?]|$)/i);
   const waypoints = Array.isArray(args.waypoints) && args.waypoints.length
     ? args.waypoints
@@ -21785,8 +21789,8 @@ function nexusOpenAiNativeExtractRouteArgs(command = "", args = {}) {
     // model sometimes packs "A; B; C" into it when it has no origin/
     // destination/waypoints fields to use instead, so it's tried last here,
     // after the command-text regex.
-    origin: sanitizePilotText(args.origin || args.from || args.start || (between ? stripTrailingArrivalTimeClause(between[1]) : "") || args.location, 160),
-    destination: sanitizePilotText(args.destination || args.to || args.end || (between ? stripTrailingArrivalTimeClause(between[2]) : ""), 160),
+    origin: sanitizePilotText(args.origin || args.from || args.start || (between ? stripTrailingArrivalTimeClause(between[1]) : "") || (farFrom ? farFrom[2] : "") || (betweenAnd ? betweenAnd[1] : "") || args.location, 160),
+    destination: sanitizePilotText(args.destination || args.to || args.end || (between ? stripTrailingArrivalTimeClause(between[2]) : "") || (farFrom ? farFrom[1] : "") || (betweenAnd ? betweenAnd[2] : ""), 160),
     waypoints: waypoints.map(item => sanitizePilotText(item, 160)).filter(Boolean).slice(0, 8)
   };
 }

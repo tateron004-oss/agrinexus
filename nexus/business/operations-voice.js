@@ -62,7 +62,9 @@ function classifyOperations(command = "") {
 
   // ---- reads first when asked as a question
   if (asks) {
-    if (/\bcertification readiness\b|\b(?:what|which) certifications?\b|\bare we (?:ready|certified)\b|\bcertified\b.{0,30}\b(?:status|ready|readiness)\b/i.test(text) && !ADDING.test(text)) return "certificationReadiness";
+    if (/\bcertification readiness\b|\b(?:what|which) certifications?\b|\bare we (?:ready|certified)\b|\bcertified\b.{0,30}\b(?:status|ready|readiness)\b/i.test(text) && !ADDING.test(text)
+      // "What certifications can I get?" / "do I need" / "are there": a general question for the checked guide, not a look at the certifications this workspace tracks (found by the live voice audit)
+      && !/\b(?:can|could|should|would) (?:i|we)\b|\bdo (?:i|we) need\b|\bare there\b|\bavailable\b|\bqualify\b|\bhow (?:do|can) i\b|\bhow to\b/i.test(text)) return "certificationReadiness";
     if (KIND_RE.test(text) && /\b(?:expir\w+|renew\w*|due|valid|lapse\w*|run out|coming up|soon|overdue|status)\b/i.test(text) && !/\bgrants?\b|\binvoices?\b|\bbills?\b/i.test(text)) return "complianceDue";
     if (/\bcompliance\b|\bwhat(?:'s| is) due for renewal\b|\brenewals?\b/i.test(text) && !/\bgrants?\b/i.test(text)) return "complianceDue";
     if (/\bwhere do (?:our|my) (?:donors?|customers?|volunteers?|clients?|members?|supporters?|leads?|contacts?|participants?|sponsors?)\b.{0,15}\b(?:come|coming)\b/i.test(text)

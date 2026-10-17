@@ -751,6 +751,11 @@ class OpenEndedPlanner {
   }
 }
 
+// "Pacific Daylight Time" for America/Los_Angeles, so the zone is something a person can hear (the plain name read aloud was "America Los Angeles time"). Falls back to the plain name.
+function zoneName(timeZone, now) {
+  try { return new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "long" }).formatToParts(now).find(part => part.type === "timeZoneName")?.value || `${timeZone} time`; } catch { return `${timeZone} time`; }
+}
+
 function ordinaryConversationPlan(text, context = {}) {
   const goal = String(text || "").trim();
   const normalized = goal.toLowerCase().replace(/[’]/g, "'").replace(/[.!?]+$/g, "").trim();
@@ -777,6 +782,20 @@ function ordinaryConversationPlan(text, context = {}) {
     return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], response: "Karibu sana.", sourceRequired: false };
   // The date and time come from the server clock, not a web search (which answered "It is a Tuesday" for a Sunday and
   // gave two contradictory times). Nexus does not know the person's time zone, so it says which zone each time is in.
+  // In Spanish: "¿Qué hora es?", "¿Qué día es hoy?" are answered in Spanish (found by the live voice audit, where they were answered in English, with the zone read out as "America Los Angeles").
+  const foldedAsk = normalized.normalize("NFD").replace(/[̀-ͯ¿¡]/g, "").trim();
+  const spanishTime = /^(?:que hora es|que hora son|me dices la hora|dime la hora|a que hora estamos)(?: ahora| ahorita)?$/.test(foldedAsk);
+  const spanishDate = /^(?:que (?:dia|fecha) es(?: hoy)?|cual es la fecha(?: de hoy)?|a que fecha estamos|dime la fecha)$/.test(foldedAsk);
+  if ((spanishTime || spanishDate) && context.timeZone && validTimeZone(context.timeZone) === context.timeZone) {
+    const now = context.now instanceof Date ? context.now : new Date();
+    const zone = context.timeZone;
+    const date = new Intl.DateTimeFormat("es-US", { timeZone: zone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(now).replace(/^(\p{L}+),?\s+/u, "$1 ");
+    const parts = new Intl.DateTimeFormat("es-US", { timeZone: zone, hour: "numeric", minute: "2-digit", hour12: true, timeZoneName: "long" }).formatToParts(now);
+    const pick = type => parts.find(part => part.type === type)?.value || "";
+    const hour = Number(pick("hour")); const clock = `${pick("hour")}:${pick("minute")} ${pick("dayPeriod").toLowerCase().replace(/\./g, "").replace(/^(a|p)m$/, "$1. m.")}`;
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false, language: "es",
+      response: spanishDate ? `Hoy es ${date}.` : `${hour === 1 ? "Es la" : "Son las"} ${clock} del ${date} (${pick("timeZoneName")}).` };
+  }
   if (/^(?:(?:what(?:'s| is)?|tell me|give me)\s+)?(?:the\s+)?(?:current\s+)?(?:time|date|day)(?:\s+(?:is it|it is))?(?:\s+(?:now|right now|today))?$/.test(normalized) ||
       /^what (?:time|day|date) is it(?:\s+(?:now|right now|today))?$/.test(normalized) || /^what(?:'s| is) today(?:'s date)?$/.test(normalized) || /^what(?:'s| is) the date today$/.test(normalized)) {
     const now = context.now instanceof Date ? context.now : new Date();
@@ -786,7 +805,7 @@ function ordinaryConversationPlan(text, context = {}) {
     if (context.timeZone && validTimeZone(context.timeZone) === context.timeZone) {
       const mine = at(context.timeZone);
       return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
-        response: /\bdate|day\b/.test(normalized) && !/\btime\b/.test(normalized) ? `Today is ${mine.date}.` : `It is ${mine.time} on ${mine.date} (${context.timeZone} time).` };
+        response: /\bdate|day\b/.test(normalized) && !/\btime\b/.test(normalized) ? `Today is ${mine.date}.` : `It is ${mine.time} on ${mine.date} (${zoneName(context.timeZone, now)}).` };
     }
     const nairobi = at("Africa/Nairobi"), utc = at("UTC");
     return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
