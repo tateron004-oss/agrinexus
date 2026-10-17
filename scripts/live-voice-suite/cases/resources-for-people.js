@@ -23,6 +23,7 @@ module.exports = Object.freeze([
   strict("sr-benefits", "How can an older person find benefits they qualify for?", "BenefitsCheckUp"),
   strict("sr-fraud", "I think my grandmother is being scammed, who do I call?", "833-372-8311"),
   strict("sr-abuse", "My dad is being neglected, who do I report it to?", "Adult Protective Services"),
+  strict("sr-theft", "Who do I call if someone is stealing from my grandfather?", "Adult Protective Services"),
   strict("yt-crisis", "Who can a teenager talk to if they are struggling?", "741741"),
   strict("yt-abuse", "What is the Childhelp hotline?", "422-4453"),
   // ("How do I report child abuse?" is taken by the safety layer first: care, then 988 and 911. That is deliberate, and a person may then ask for the Childhelp number.)
