@@ -877,7 +877,11 @@ function classify(command = "") {
     || new RegExp(`\\b(?:which|what)\\s+${BUSINESS_WORKSPACE_NOUN}\\b`, "i").test(command)
     || new RegExp(`\\b${BUSINESS_WORKSPACE_NOUN}\\b.{0,20}\\bdo i have\\b`, "i").test(command)
   ) && !/\b(start|create|new|set ?up|begin)\b/i.test(command);
+  // "How do I find customers for my new business?" / "How do I start a business?" are questions for the checked guide ("new" is in "new business", "start" in "start a business"); found by the live voice audit,
+  // where the first asked "What is the name of the customer to add?" and, with a workspace, the second would have offered to start one.
+  const askingHow = /^\s*(?:please\s+)?(?:how (?:do|can|could|should|would|to)\b|ways? to\b|what(?:'s| is| are) (?:the )?(?:best|good|some)\b)/i.test(command);
   const wantsAddLead = /\b(?:add|create|new|log|track)\b/i.test(command) && /\b(customer|donor|lead|sponsor|volunteer|client|participant|member|congregant|buyer|seller|tenant|landlord)s?\b/i.test(command) && !/\btask\b/i.test(command) && !/\b(?:appointment|showing|viewing|site visit|open house)\b/i.test(command)
+    && !askingHow
     // "Create a volunteer coordination plan" or "a donor stewardship plan" is a plan about people, not a new person to add.
     && !/\b(?:plan|strategy|outline|handbook|programme|program)\b/i.test(command)
     // "Create a client intake form" / "an application checklist for participants" is a document, not a new person
@@ -944,7 +948,7 @@ function classify(command = "") {
   // only their "X strategy" form.
   const wantsGenerateStrategy = !wantsGenerateDocuments && !wantsGenerateBusinessPlanPdf && !wantsGenerateMarketing &&
     /\b(?:create|generate|draft|write|make|help (?:me )?(?:with|write|draft))\b/i.test(command) &&
-    /\b(strategy|strategic plan|pitch|investor pitch|pitch deck|business plan outline|marketing strategy|grant strategy|grant proposal|grant writing|donor strategy|donor relations|donor stewardship|fundraising strategy|fundraising plan|volunteer strategy|volunteer coordination|financial plan|financial literacy|partnership strategy|partnership plan|government partnership|public[\s-]?sector partnership|minority[\s-]?owned|women[\s-]?owned|black[\s-]?owned|brown[\s-]?owned|business development plan|launch plan|launch kit|product (?:plan|roadmap)|operations plan|research plan|technical plan|content (?:plan|strategy))\b/i.test(command);
+    /\b(strategy|strategic plan|pitch|investor pitch|pitch deck|business plan outline|marketing strategy|marketing plan|grant strategy|grant proposal|grant writing|donor strategy|donor relations|donor stewardship|fundraising strategy|fundraising plan|volunteer strategy|volunteer coordination|financial plan|financial literacy|partnership strategy|partnership plan|government partnership|public[\s-]?sector partnership|minority[\s-]?owned|women[\s-]?owned|black[\s-]?owned|brown[\s-]?owned|business development plan|launch plan|launch kit|product (?:plan|roadmap)|operations plan|research plan|technical plan|content (?:plan|strategy))\b/i.test(command);
   // A real, conversational client/customer/congregant intake -- captures a
   // name, contact and stated need as a persisted lead row -- is distinct from
   // wantsGenerateDocuments' "create an intake form" (a blank, unfilled
@@ -963,7 +967,7 @@ function classify(command = "") {
   // the verb and an article, so "start the farm workspace" is still the farm window.
   const wantsBareWorkspace = /\b(?:start|create|set ?up|begin|make)\s+(?:me\s+)?(?:a|an|my|the)?\s*(?:new\s+)?workspace\b/i.test(command);
   const wantsCreateWorkspace = ((/\b(business|nonprofit|non-profit|ngo|church|congregation|parish)\b/i.test(command) && /\b(start|create|new|set ?up|begin)\b/i.test(command)) || wantsBareWorkspace)
-    && !/\b(?:plan|proposal|strategy|pitch|forecast|budget)\b/i.test(command);
+    && !/\b(?:plan|proposal|strategy|pitch|forecast|budget)\b/i.test(command) && !askingHow;
 
   // Reading the workspace back ("who are my customers", "who owes me money") and the two small changes an owner makes most (mark an invoice paid, set a follow-up day).
   const crmIntent = crmVoice.classifyCrm(command);

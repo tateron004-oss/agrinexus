@@ -29,14 +29,14 @@ test("which questions reach which topic, and which are records, drafts or other 
 });
 
 test("every topic has a plain answer, official sources with web addresses, the date checked, and the warning", () => {
-  const OFFICIAL = /^https:\/\/(?:www\.)?(?:[a-z0-9-]+\.)*(?:va|veteranscrisisline|vetcenter\.va|dol|sba|acl|medicare|shiphelp|ssa|ojp|ftc|ed|988lifeline|crisistextline|childhelphotline|1800runaway|thetrevorproject|humantraffickinghotline|jobcorps|irs|nasconet|sam|grants|councilofnonprofits|benefitscheckup)\.(?:gov|org|net)\//;
+  const OFFICIAL = /^https:\/\/(?:www\.)?(?:[a-z0-9-]+\.)*(?:va|veteranscrisisline|vetcenter\.va|dol|sba|acl|medicare|shiphelp|ssa|ojp|ftc|ed|988lifeline|crisistextline|childhelphotline|1800runaway|thetrevorproject|humantraffickinghotline|jobcorps|irs|nasconet|sam|grants|councilofnonprofits|benefitscheckup|usa|healthcare|cdc)\.(?:gov|org|net)\//;
   assert.ok(Object.keys(guide.TOPICS).length >= 30);
   for (const id of Object.keys(guide.TOPICS)) {
     const answer = guide.communityAnswer(id);
-    assert.equal(answer.topic, id); assert.ok(["veterans", "seniors", "youth", "nonprofits"].includes(answer.group), id);
+    assert.equal(answer.topic, id); assert.ok(["veterans", "seniors", "youth", "nonprofits", "everyone"].includes(answer.group), id);
     assert.ok(answer.sources.length >= 1, id);
     for (const source of answer.sources) { assert.match(source.url, OFFICIAL, `${id}: ${source.url}`); assert.ok(source.name, id); }
-    assert.match(answer.text, new RegExp(`\\(checked ${guide.CHECKED_ON}\\)`), id);
+    assert.match(answer.text, new RegExp(`\\(checked ${guide.TOPICS[id].checkedOn || guide.CHECKED_ON}\\)`), id);
     assert.match(answer.text, /This is general information, not legal, medical, tax or financial advice, and numbers and rules change, so confirm on the official site or number\. I cannot call, file or apply for anything for you\.$/, id);
     assert.ok(answer.text.length < 1900, `${id} is short enough to say`);
   }
@@ -51,12 +51,15 @@ const VERIFIED_NUMBERS = new Map(Object.entries({
   "877-486-2048": "medicare.gov/talk-to-someone", "800-772-1213": "ssa.gov", "800-325-0778": "ssa.gov", "833-372-8311": "ovc.ojp.gov", "877-382-4357": "reportfraud.ftc.gov (1-877-FTC-HELP)", "741741": "crisistextline.org",
   "800-422-4453": "childhelphotline.org", "800-786-2929": "1800runaway.org", "866-488-7386": "thetrevorproject.org/get-help", "678678": "thetrevorproject.org/get-help", "866-803-3699": "thetrevorproject.org/get-help",
   "888-373-7888": "humantraffickinghotline.org", "233733": "humantraffickinghotline.org", "800-733-5627": "jobcorps.gov", "877-889-5627": "jobcorps.gov", "800-733-JOBS": "jobcorps.gov", "800-MEDICARE": "medicare.gov",
-  "800.422.4453": "childhelphotline.org", "911": "emergency", "711": "relay"
+  "800.422.4453": "childhelphotline.org", "911": "emergency", "711": "relay",
+  // read on 16 October 2026
+  "866-348-6479": "usa.gov/emergency-food-assistance (1-866-3-HUNGRY)", "877-842-6273": "usa.gov/emergency-food-assistance (1-877-8-HAMBRE)", "844-872-4681": "usa.gov (1-844-USAGOV1)",
+  "800-318-2596": "healthcare.gov/medicaid-chip/getting-medicaid-chip", "800-906-9887": "irs.gov free tax return preparation", "888-227-7669": "irs.gov free tax return preparation (AARP Tax-Aide)"
 }));
 test("no phone number is in the guide that was not read on an official page", () => {
   // the spelled-out forms of numbers are checked as words first and taken out, then every digit group that looks like a phone number or a short code is checked
-  const vanity = ["1-800-MEDICARE", "833-FRAUD-11", "1-877-FTC-HELP", "1-800-RUNAWAY", "800-733-JOBS"];
-  const allowedVanity = new Set(["1-800-MEDICARE", "833-FRAUD-11", "1-877-FTC-HELP", "1-800-RUNAWAY", "800-733-JOBS"]);
+  const vanity = ["1-800-MEDICARE", "833-FRAUD-11", "1-877-FTC-HELP", "1-800-RUNAWAY", "800-733-JOBS", "1-866-3-HUNGRY", "1-877-8-HAMBRE", "1-844-USAGOV1"];
+  const allowedVanity = new Set(["1-800-MEDICARE", "833-FRAUD-11", "1-877-FTC-HELP", "1-800-RUNAWAY", "800-733-JOBS", "1-866-3-HUNGRY", "1-877-8-HAMBRE", "1-844-USAGOV1"]);
   const digits = value => value.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
   const allowed = new Set([...VERIFIED_NUMBERS.keys()].filter(key => /^[\d.-]+$/.test(key)).map(digits));
   const used = new Set();
@@ -136,8 +139,8 @@ test("the page answers a spoken question of this kind from the guide, on a US de
   assert.equal(owns("Open documents.", "America/Chicago"), false); assert.equal(owns("Show my donations.", "America/Chicago"), false);
   const route = app.slice(app.indexOf("function routeKyroVoiceIntakeTranscript("));
   assert.match(route, /typeof kyroCommunityQuestion === "function" && kyroCommunityQuestion\(trimmed\)\) \{\s+if \(!heardAgain\) \{[^]*?handleNexusUnifiedBrainRuntimeCommand\(trimmed, \{ source: "typed", kyroDirect: true \}\);[^]*?\}\s+return true;/);
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-community-topics.js?v=kyro-community-topics-2"'));
-  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-community-topics.js?v=kyro-community-topics-2"));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/index.html"), "utf8").includes('src="/kyro-community-topics.js?v=kyro-community-topics-3"'));
+  assert.ok(fs.readFileSync(path.join(__dirname, "../../public/sw.js"), "utf8").includes("/kyro-community-topics.js?v=kyro-community-topics-3"));
 });
 
 // found by the live voice test, on an account with a business workspace: "Tell me about the GI Bill." was read as a question about the person's own bills and answered "your workspace has no bills recorded yet".
@@ -156,4 +159,24 @@ test("the guide is taken before the business-formation and own-records answers f
     const plan = await ask(planner(null), text, { timeZone: "America/Los_Angeles" });
     assert.equal(plan.knowledge, `us-community-support:${topic}`, text);
   }
+});
+
+// Found by the full off-script voice audit: these everyday questions were answered by the voice model from memory, with no official source.
+test("everyday help for anyone: food, energy bills, Medicaid, free tax help and vital records are answered from the checked guide, with their official sources", () => {
+  const text = id => guide.communityAnswer(id).text;
+  assert.match(text("cs-food"), /1-866-3-HUNGRY \(1-866-348-6479\)/); assert.match(text("cs-food"), /1-877-8-HAMBRE \(1-877-842-6273\)/); assert.match(text("cs-food"), /hud\.gov\/findshelter/); assert.match(text("cs-food"), /fns\.usda\.gov\/snap\/state-directory/);
+  assert.match(text("cs-energy"), /liheapch\.acf\.hhs\.gov\/search-tool/); assert.match(text("cs-energy"), /Eligibility is based on your income, and each state and territory sets its own requirements/);
+  assert.match(text("cs-medicaid"), /apply any time of year/); assert.match(text("cs-medicaid"), /healthcare\.gov\/create-account/); assert.match(text("cs-medicaid"), /1-800-318-2596/);
+  assert.match(text("cs-free-tax"), /800-906-9887/); assert.match(text("cs-free-tax"), /888-227-7669/); assert.match(text("cs-free-tax"), /\$70,244 or less \(the IRS page does not name the tax year\)/); assert.match(text("cs-free-tax"), /age 60 and older/);
+  assert.match(text("cs-vital-records"), /The federal government does not hand out certificates/); assert.match(text("cs-vital-records"), /state or area where the event happened/);
+  for (const id of ["cs-food", "cs-energy", "cs-medicaid", "cs-free-tax", "cs-vital-records"]) { assert.equal(guide.TOPICS[id].group, "everyone"); assert.match(text(id), /\(checked 16 October 2026\)/); }
+});
+test("everyday questions reach their topic, and nearby talk is left alone", () => {
+  const topics = require("../../public/kyro-community-topics.js");
+  for (const [say, id] of [["How do I find a food pantry?", "cs-food"], ["I need food for my family", "cs-food"], ["How do I apply for SNAP?", "cs-food"], ["Is there help paying my electric bill?", "cs-energy"], ["What is LIHEAP?", "cs-energy"],
+    ["How do I apply for Medicaid?", "cs-medicaid"], ["Is there free health insurance for my kids?", "cs-medicaid"], ["Where can I get free tax help?", "cs-free-tax"], ["What is VITA?", "cs-free-tax"],
+    ["How do I get a copy of my birth certificate?", "cs-vital-records"], ["How do I get a death certificate?", "cs-vital-records"]]) assert.equal(topics.topic(say), id, say);
+  for (const other of ["How do I snap a good photo?", "What is the weather?", "Remind me to pay the electric bill", "What is a chip shop?", "Show my donations"]) assert.equal(topics.topic(other), null, other);
+  assert.equal(topics.topic("What help is there for veterans?"), "vet-overview", "a group's own overview is unchanged");
+  assert.equal(topics.isCommunityUs("What is LIHEAP?"), true); assert.equal(topics.isCommunityUs("How do I find a food pantry?"), false);
 });

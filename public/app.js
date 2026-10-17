@@ -50624,6 +50624,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
           : (mediaAsk.type === "play" ? "Kyro's player is playing it and said so. Say nothing more." : "Kyro's player did that and said so. Say nothing more."),
         executionVerified: false, blockedReason: null, clientAction: { type: mediaAsk.type === "play" ? "media-play" : "media-control" } };
     }
+    // "Resume", "turn it up", "skip this one" with nothing playing: said plainly. They used to fall through to the general planner, which asked for a town (found by the live voice audit).
+    if (mediaAsk.type === "control" && !window.KyroMediaPlayerController?.isActive?.()) {
+      return { ok: true, status: "completed", response: "Nothing is playing right now. Tell the person exactly this in one short sentence: nothing is playing, and they can say play and then what they would like to hear.", executionVerified: false, blockedReason: null };
+    }
   }
   // "Find a picture of ..." / "show me videos about ...": drawn on the screen by the typed path (see kyroShowVisualRequest), not answered by a tool that has no pictures.
   const visualKind = kyroVisualRequestKind(command);
@@ -51566,6 +51570,15 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
       }
       return true;
     }
+    // "What time is it?" / "¿Qué hora es?": the planner's own clock answer, in the language asked, with the device's time zone.
+    if (trimmed && typeof kyroClockQuestion === "function" && kyroClockQuestion(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 20000;
+        void handleNexusUnifiedBrainRuntimeCommand(trimmed, { source: "typed", kyroDirect: true });
+      }
+      return true;
+    }
     // A drafted message on the activity screen: "send it" / "don't send it" (and a plain yes or no within two minutes of being asked) press that card's own button.
     if (trimmed && typeof kyroDraftVoiceReply === "function" && kyroDraftVoiceReply(trimmed)) return true;
     // "Yes" or "no" to a question the page asked ("Should I go ahead?"): answered from what was heard, as typing it is, instead of leaving it to the model.
@@ -51985,10 +51998,32 @@ function kyroOpenUploadScreen(said, lang) {
   try { setVoiceResponse(ask, true, { allowHandoff: false, command: said, source: "kyro-open" }); } catch { /* the screen asks too */ }
   return true;
 }
+// The name of the one saved document a person asks to open ("Sales Plan"), or "" for anything else: "open documents", "open my saved documents" and "open the document" name no document.
+const KYRO_NAMED_DOCUMENT = /^(?:please\s+)?(?:(?:hey\s+)?(?:kyro|nexus)[,.]?\s+)?(?:open|show|read|pull up|bring up|display)(?:\s+me)?\s+(?:the\s+|my\s+)?(.{2,60}?)\s+(?:document|doc|file)[.?!]*$/i;
+function kyroNamedDocument(text) {
+  const named = KYRO_NAMED_DOCUMENT.exec(String(text || "").trim());
+  const name = String(named?.[1] || "").trim();
+  return name && !/^(?:saved|all|some|my|the|new|last saved|a|an|each|every|these|those)$/i.test(name) ? name : "";
+}
+// Opens the saved document whose title has all of those words (or the newest one for "latest", "last", "newest", "recent"); says plainly when there is none.
+async function kyroOpenNamedDocument(name) {
+  const say = line => { try { setVoiceResponse(line, true, { allowHandoff: false, source: "kyro-open" }); } catch { /* the screen has it */ } };
+  try {
+    const listed = await request("/api/nexus/runtime/documents?limit=50");
+    const documents = Array.isArray(listed?.documents) ? listed.documents : [];
+    const wanted = String(name).toLowerCase().replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(Boolean);
+    const newest = /^(?:latest|last|newest|most recent|recent)$/.test(wanted.join(" "));
+    const words = title => String(title || "").toLowerCase().replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(Boolean);
+    const found = newest ? documents[0] : documents.find(doc => wanted.every(word => words(doc.title).includes(word)));
+    if (!found) { say(documents.length ? "I could not find a saved document called " + name + ". Say open documents to hear the ones you have." : "You have no saved documents yet."); return; }
+    if (kyroShowDocumentScreen({ data: { documentId: found.documentId, title: found.title }, opened: true })) say("Here is " + found.title + ".");
+    else say("I found " + found.title + " but could not open it just now.");
+  } catch { say("I could not open your documents just now. Please try again."); }
+}
 function kyroSpokenOpenOwns(text) {
   const said = kyroWithoutPoliteTail(text);
   if (!said) return false;
-  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
+  return KYRO_OPEN_RESUMES.test(said) || KYRO_OPEN_OFFLINE.test(said) || KYRO_OPEN_BIZ.test(said) || KYRO_OPEN_UPLOAD.test(said) || KYRO_CROP_HELP.test(said) || KYRO_OPEN_ACTIVITY.test(said) || window.KyroAutomationCommands?.isOpen?.(said) || KYRO_ASK_MEMORY.test(said) || KYRO_OPEN_DOCS.test(said) || kyroNamedDocument(said) || KYRO_OPEN_MEDIA.test(said) || KYRO_OPEN_PLAYER.test(said) || KYRO_LIST_BARE.test(said) || KYRO_LIST_OF.test(said) || KYRO_OPEN_APP.test(said) || (KYRO_DOCUMENT_REQUEST.test(said) && !KYRO_DOCUMENT_NOT.test(said));
 }
 // A card or interview left open by an earlier request (the AgriTrade card a "sell" opened, a telehealth card) stays in front of everything after it: the quiet-spell return never closes work the person is "in". A new
 // request closes it first; if the new request opens a workspace of its own, that opens after this.
@@ -52077,6 +52112,13 @@ function kyroHandleSpokenOpenOnce(text, options = {}) {
         }
       }
     }
+  }
+  // "Open the Sales Plan document", "read my latest document": that one document opens, with its words and the Download button (it used to list all of them and say "it's open").
+  const namedDocument = kyroNamedDocument(said);
+  if (namedDocument) {
+    kyroTakeOverTurn();
+    void kyroOpenNamedDocument(namedDocument);
+    return true;
   }
   if (KYRO_OPEN_DOCS.test(said)) {
     kyroTakeOverTurn();
@@ -52669,6 +52711,12 @@ function kyroBusinessQuestion(text) {
     if (!topics || !topics.topic(text) || !topics.isBusinessQuestion(text)) return false;
     return topics.isUsContext({ timeZone: kyroDeviceTimeZone(), text });
   } catch { return false; }
+}
+// "What time is it?", "what is today's date?", "¿qué hora es?": answered by the page's own clock route (the planner), not by the voice model, which answered "I can't see your device's current time" ahead of the real answer
+// (found by the live voice audit). Accents are taken off before matching.
+const KYRO_CLOCK_QUESTION = /^(?:(?:hey |hola )?(?:kyro,? )?)?(?:what(?:'s| is)? (?:the )?(?:current )?(?:time|date)(?: is it)?(?: now| right now| today)?|what time is it(?: now| right now)?|what(?:'s| is) today(?:'s date)?|what day is it(?: today)?|what is the date today|tell me the time|que hora es(?: ahora| ahorita)?|que hora son|me dices la hora|dime la hora|a que hora estamos|que (?:dia|fecha) es(?: hoy)?|cual es la fecha(?: de hoy)?|dime la fecha)$/;
+function kyroClockQuestion(text) {
+  try { return KYRO_CLOCK_QUESTION.test(String(text || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ¿¡?.!]/g, "").replace(/\s+/g, " ").trim()); } catch { return false; }
 }
 let kyroDraftAskedAt = 0;
 const KYRO_DRAFT_SEND = /^(?:(?:yes|yeah|yep|ok|okay)[,.]?\s+)?(?:please\s+)?(?:send it|send (?:the|that|this) (?:message|text|email|one)|go ahead and send(?: it)?)[.!]*$/i;

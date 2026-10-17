@@ -40,5 +40,11 @@ module.exports = Object.freeze([
   strict("np-grants", "How does a nonprofit register for federal grants on SAM.gov?", "Unique Entity ID"),
   strict("np-check", "How do I check that a charity is real?", "Tax Exempt Organization Search"),
   strict("np-governance", "Does our nonprofit board need a conflict of interest policy?", "conflict of interest"),
-  strict("np-association", "How do I find my state association of nonprofits?", "councilofnonprofits")
+  strict("np-association", "How do I find my state association of nonprofits?", "councilofnonprofits"),
+  // everyday help for anyone (added after the full off-script audit found these answered from memory, with no source)
+  strict("cs-food", "How do I find a food pantry?", "HUNGRY"),
+  strict("cs-energy", "Is there help paying my electric bill?", "LIHEAP"),
+  strict("cs-medicaid", "How do I apply for Medicaid?", "healthcare\\.gov"),
+  strict("cs-free-tax", "Where can I get free tax help?", "VITA"),
+  strict("cs-vital-records", "How do I get a copy of my birth certificate?", "vital records office")
 ]);
