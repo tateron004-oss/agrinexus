@@ -23,6 +23,9 @@
     ["8a", /\b8\s?\(\s?a\s?\)|\b8a\b/i],
     ["nmsdc", /\b(nmsdc|supplier diversity|minority supplier|minority business enterprise|\bmbe\b)\b/i],
     ["certification", /\b(certif(?:y|ied|ication|ications)|wosb|edwosb|hubzone|sdvosb|vosb|women[- ]owned small business|veteran[- ]owned small business|\bdbe\b)\b/i],
+    // (before "contracting": "how do I get a DUNS number" is about the identifier, not about selling to the government)
+    // (the Unique Entity ID, or a DUNS number asked about for the government; a plain "what is a DUNS number" stays with business credit below, which is what the SBA says a DUNS number is for)
+    ["duns-uei", /\b(?:unique entity (?:id|identifier)|uei)\b|\bd-?u-?n-?s\b.{0,60}\b(?:sam|government|federal|contracts?|contracting|grants?|awards?)\b|\b(?:sam|government|federal|contracts?|contracting|grants?|awards?)\b.{0,60}\bd-?u-?n-?s\b/i],
     ["contracting", /\b(sam\.gov|sam registration|register(?:ing)? in sam|government contract(?:s|ing)?|federal contract(?:s|ing)?|sell(?:ing)? to the government|bid(?:ding)? on (?:government |federal )?contracts?)\b/i],
     // investors, crowdfunding and "how do I fund a startup" come before the plain loan answer; "an SBA loan" and "a business loan" still go to loans
     ["startup-funding", /\b(investors?|venture capital|vc funding|angel investors?|crowd-?funding|equity (?:funding|financing|investment)|raise (?:money|capital|funds)|raising (?:money|capital|funds)|funding options|ways to (?:fund|finance)|(?:fund|finance) (?:my|a|our) (?:start-?up|new business)|seed (?:funding|round|money)|(?:start-?up|early[- ]stage) (?:funding|capital|financing|investment)|looking for (?:funding|investment|investors|capital)|investment capital|sell(?:ing)? (?:shares|stock|equity))\b/i],
@@ -93,6 +96,7 @@
     ["8a", /\b8\s?\(\s?a\s?\)|\b8a\b/],
     ["nmsdc", /\b(nmsdc|diversidad de proveedores|proveedores? minoritarios?|mbe)\b/],
     ["certification", /\b(certific\w+|wosb|edwosb|hubzone|sdvosb|vosb|dbe|pequena empresa de propiedad de mujeres|empresa de propiedad de (?:mujeres|veteranos)|negocio de propiedad de (?:mujeres|veteranos))\b/],
+    ["duns-uei", /\b(?:identificador unico de entidad|uei)\b|\bd-?u-?n-?s\b.{0,60}\b(?:sam|gobierno|federal\w*|contratos?|subvenciones?|adjudicaci\w+)\b|\b(?:sam|gobierno|federal\w*|contratos?|subvenciones?|adjudicaci\w+)\b.{0,60}\bd-?u-?n-?s\b/],
     ["contracting", /\b(sam\.gov|registro en sam|contratos? (?:con )?(?:el )?gobierno|contratos? federales?|vender (?:al|le al) gobierno|venderle al gobierno|(?:le )?vendo al gobierno|licitar|licitacion(?:es)?)\b/],
     ["startup-funding", /\b(inversionistas?|inversores?|capital de riesgo|crowdfunding|financiamiento colectivo|financiacion colectiva|reunir (?:dinero|capital|fondos)|conseguir inversion|levantar capital|opciones de financiamiento|formas de financiar|(?:financiar|fondear) (?:mi|un|una|nuestro|nuestra) (?:negocio|empresa|startup|emprendimiento)|ronda de inversion|capital semilla|vender acciones|buscando financiamiento)\b/],
     ["loans", /\b(prestamos? (?:de la )?sba|prestamos? 7\s?\(a\)|prestamos? 504|microprestamos?|microcreditos?|prestamos? (?:para|de) (?:pequenos? )?(?:negocios?|empresas?)|prestamos? comerciales?|prestamo para mi (?:negocio|empresa)|linea de credito|(?:obtener|conseguir|solicitar|pedir|necesito|quiero)(?: un)? (?:prestamo|credito|financiamiento))\b/],
@@ -143,7 +147,7 @@
     return US_TIME_ZONES.test(String(timeZone || "")) || US_WORDS.test(String(text || ""));
   }
 
-  const BUSINESS_WORDS = /\b8\s?\(\s?a\s?\)|\b(?:bookkeep\w*|accountants?|accounting|business(?:es)?|compan(?:y|ies)|start-?ups?|llc|s[- ]?corp|c[- ]?corp|non-?profits?|self[- ]employed|entrepreneur\w*|sba|sbdc|score|mbda|nmsdc|8a|mbe|wosb|edwosb|hubzone|sdvosb|vosb|sam\.gov|ein|1099|investors?|franchis\w*|payroll|employees?|customers|contractors?|catering|restaurant|shop|store|sell(?:ing)?|cdfi|grants?|loans?)\b/i;
+  const BUSINESS_WORDS = /\b8\s?\(\s?a\s?\)|\b(?:duns|uei|unique entity|bookkeep\w*|accountants?|accounting|business(?:es)?|compan(?:y|ies)|start-?ups?|llc|s[- ]?corp|c[- ]?corp|non-?profits?|self[- ]employed|entrepreneur\w*|sba|sbdc|score|mbda|nmsdc|8a|mbe|wosb|edwosb|hubzone|sdvosb|vosb|sam\.gov|ein|1099|investors?|franchis\w*|payroll|employees?|customers|contractors?|catering|restaurant|shop|store|sell(?:ing)?|cdfi|grants?|loans?)\b/i;
   function isBusinessQuestion(text) { return BUSINESS_WORDS.test(String(text || "")) || BUSINESS_WORDS_ES.test(fold(text)); }
 
   return Object.freeze({ topic: usSmallBusinessTopic, isUsContext, isBusinessQuestion, language });

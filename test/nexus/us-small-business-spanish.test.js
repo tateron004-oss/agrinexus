@@ -43,13 +43,13 @@ test("a Spanish answer has the same sources and date, says it is a preliminary t
     const answer = guide.usSmallBusinessAnswer(id, { question: "x", lang: "es" });
     assert.equal(answer.language, "es"); assert.equal(answer.topic, id);
     assert.deepEqual(answer.sources, english.sources, `${id} has the same sources`);
-    assert.match(answer.text, /Fuentes: /); assert.match(answer.text, /\(revisado el 9 de octubre de 2026\)/);
+    assert.match(answer.text, /Fuentes: /); assert.match(answer.text, new RegExp(`\\(revisado el ${spanish.TOPICS_ES[id].checkedOn || "9 de octubre de 2026"}\\)`)); // (a topic read later than the rest carries its own date)
     for (const source of english.sources) assert.ok(answer.text.includes(source.name), `${id}: ${source.name}`);
     assert.match(answer.text, /Traducción preliminar: puede tener errores, así que confirme en el sitio oficial\./);
     assert.match(answer.text, /no asesoría legal, de impuestos ni financiera/); assert.match(answer.text, /No puedo presentar solicitudes ni trámites por usted\.$/);
     assert.equal(/Sources: |checked 9 October/.test(answer.text), false, `${id} has no English left over`);
     assert.equal(english.language, undefined, "the English answer is unchanged");
-    assert.match(english.text, /Sources: .*\(checked 9 October 2026\)/);
+    assert.match(english.text, new RegExp(`Sources: .*\\(checked ${guide.TOPICS[id].checkedOn || "9 October 2026"}\\)`));
   }
 });
 

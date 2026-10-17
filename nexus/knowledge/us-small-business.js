@@ -60,7 +60,9 @@ const SOURCES = Object.freeze({
   sbaBank: { name: "SBA: open a business bank account", url: "https://www.sba.gov/business-guide/launch-your-business/open-business-bank-account" },
   sbaHire: { name: "SBA: hire and manage employees", url: "https://www.sba.gov/business-guide/manage-your-business/hire-manage-employees" },
   sbaFinances: { name: "SBA: manage your finances", url: "https://www.sba.gov/business-guide/manage-your-business/manage-your-finances" },
-  sbaTaxes: { name: "SBA: pay taxes", url: "https://www.sba.gov/business-guide/manage-your-business/pay-taxes" }
+  sbaTaxes: { name: "SBA: pay taxes", url: "https://www.sba.gov/business-guide/manage-your-business/pay-taxes" },
+  gsaUei: { name: "GSA news release: SAM.gov switches to the Unique Entity ID (16 March 2022)", url: "https://www.gsa.gov/about-gsa/newsroom/news-releases/gsa-systems-switch-to-unique-entity-id-sam-on-april-4-2022-03162022" },
+  samUei: { name: "SAM.gov: Get a Unique Entity ID", url: "https://sam.gov/content/duns-uei" }
 });
 
 const TOPICS = Object.freeze({
@@ -224,6 +226,13 @@ const TOPICS = Object.freeze({
     title: "Selling to the government",
     text: "To sell to the federal government you generally register in SAM.gov, the System for Award Management; SBA's 8(a) steps include it, and its certifications need your SAM registration to be current. SBA warns that look-alike sites such as samregistration.com are not affiliated with SBA, so use the official sites only. Certifications like 8(a), Women-Owned Small Business, HUBZone and veteran-owned are applied for through certifications.sba.gov, and a Small Business Development Center can help you get ready for free.",
     sources: ["sba8a", "sbaCerts", "localAssistance"]
+  },
+  // Read from the two official pages on 17 October 2026 (a later date than the rest of the guide, so it carries its own). The pages did not say whether getting the ID costs anything, so the answer does not say it either.
+  "duns-uei": {
+    title: "DUNS number and the Unique Entity ID",
+    checkedOn: "17 October 2026",
+    text: "The federal government no longer asks for a DUNS number. On 4 April 2022 SAM.gov and the other General Services Administration systems switched to the Unique Entity ID, which SAM.gov itself assigns. Registering your business at SAM.gov gives you one. You can also ask for a Unique Entity ID without registering, using only your legal business name and physical address, but with only the ID you cannot apply directly for federal awards. The place to start is sam.gov.",
+    sources: ["samUei", "gsaUei"]
   }
 });
 
@@ -241,12 +250,12 @@ function usSmallBusinessAnswer(id, { question = "", us = true, country = null, l
   // Spanish (a preliminary translation, see us-small-business-es/index.js): the same sources and date, in Spanish words, with a plain note that it is a translation.
   const spanish = lang === "es" && spanishGuide.TOPICS_ES[id];
   if (spanish) {
-    const text = `${zip ? spanishGuide.ZIP_LEAD(zip) : ""}${spanish.text} ${spanishGuide.SOURCES_LABEL}: ${sources.map(source => source.name).join("; ")} (revisado el ${spanishGuide.CHECKED_ON_ES}).${us ? "" : spanishGuide.OUTSIDE(spanishGuide.LOCAL_OFFICE[country])} ${spanishGuide.PRELIMINARY} ${spanishGuide.CLOSING}`;
+    const text = `${zip ? spanishGuide.ZIP_LEAD(zip) : ""}${spanish.text} ${spanishGuide.SOURCES_LABEL}: ${sources.map(source => source.name).join("; ")} (revisado el ${spanish.checkedOn || spanishGuide.CHECKED_ON_ES}).${us ? "" : spanishGuide.OUTSIDE(spanishGuide.LOCAL_OFFICE[country])} ${spanishGuide.PRELIMINARY} ${spanishGuide.CLOSING}`;
     return { topic: id, title: spanish.title, text, sources, language: "es" };
   }
   const lead = zip ? `For ZIP code ${zip}: ` : "";
   const outside = us ? "" : ` These are United States government sources: the programmes named (SBA, SBDC, SCORE) are American, and laws and rules differ in your country, so also ask your local small business support office${LOCAL_OFFICE[country] || ""}.`;
-  const text = `${lead}${topic.text} Sources: ${sources.map(source => source.name).join("; ")} (checked ${CHECKED_ON}).${outside} ${CLOSING}`;
+  const text = `${lead}${topic.text} Sources: ${sources.map(source => source.name).join("; ")} (checked ${topic.checkedOn || CHECKED_ON}).${outside} ${CLOSING}`;
   return { topic: id, title: topic.title, text, sources };
 }
 

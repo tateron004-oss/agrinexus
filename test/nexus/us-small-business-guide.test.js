@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const guide = require("../../nexus/knowledge/us-small-business.js");
+const topics = require("../../public/kyro-business-topics.js");
 const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
 
 // The checked guide for small and minority-owned business owners in the United States. Every fact was read from an official page on the date in CHECKED_ON, and every answer carries its sources, that date
@@ -27,8 +28,9 @@ test("every topic has a plain answer, official sources with web addresses, the d
     const answer = guide.usSmallBusinessAnswer(id);
     assert.equal(answer.topic, id);
     assert.ok(answer.sources.length >= 1, id);
-    for (const source of answer.sources) { assert.match(source.url, /^https:\/\/(?:www\.)?(?:sba|score|irs|cdfifund|grants|gao|nmsdc|federalregister|sec|uspto)\.(?:gov|org)\//, `${id}: ${source.url}`); assert.ok(source.name, id); }
-    assert.match(answer.text, new RegExp(`\\(checked ${guide.CHECKED_ON}\\)`), id);
+    for (const source of answer.sources) { assert.match(source.url, /^https:\/\/(?:www\.)?(?:sba|score|irs|cdfifund|grants|gao|nmsdc|federalregister|sec|uspto|gsa|sam)\.(?:gov|org)\//, `${id}: ${source.url}`); assert.ok(source.name, id); }
+    // (a topic read on a later date than the rest of the guide carries its own date)
+    assert.match(answer.text, new RegExp(`\\(checked ${guide.TOPICS[id].checkedOn || guide.CHECKED_ON}\\)`), id);
     assert.match(answer.text, /This is general information, not legal, tax or financial advice, and rules change, so confirm on the official site\. I cannot file or apply for anything for you\.$/, id);
   }
   assert.equal(guide.usSmallBusinessAnswer("nope"), null);
@@ -89,4 +91,28 @@ test("through the planner, for a person outside the United States: no US agency 
 test("the page shows and speaks these answers whole, with their sources and date, instead of cutting them to one sentence (and so do the guided checklists, lessons and health check, which mark their plan longForm)", () => {
   const app = fs.readFileSync(path.join(__dirname, "..", "..", "public", "app.js"), "utf8");
   assert.match(app, /\.\.\.\(result\.plan\?\.guardrail \|\| result\.plan\?\.knowledge \|\| result\.plan\?\.longForm \? \{ longForm: true \} : \{\}\)/);
+});
+
+// Found by the live voice audit: "How do I get a DUNS number?" was answered by the model alone, with nothing checked behind it.
+test("a question about a DUNS number or a Unique Entity ID gets the checked answer, with its own date and official sources, and does not claim what the pages did not say", async () => {
+  for (const say of ["Do I need a DUNS number to sell to the government?", "What is a Unique Entity ID?", "How do I get my UEI?", "How do I get a DUNS number for a federal grant?"]) assert.equal(guide.usSmallBusinessTopic(say), "duns-uei", say);
+  // a plain DUNS question stays with business credit (what the SBA says a DUNS number is for), and the page now takes it spoken instead of leaving it to the voice model
+  for (const say of ["How do I get a DUNS number?", "What is a DUNS number?"]) { assert.equal(guide.usSmallBusinessTopic(say), "business-credit", say); assert.equal(topics.isBusinessQuestion(say), true, say); }
+  assert.equal(topics.isBusinessQuestion("How do I grow a garden?"), false);
+  assert.equal(guide.usSmallBusinessTopic("How do I register my business in SAM.gov?"), "contracting");
+  const answer = guide.usSmallBusinessAnswer("duns-uei");
+  assert.match(answer.text, /no longer asks for a DUNS number\. On 4 April 2022 SAM\.gov and the other General Services Administration systems switched to the Unique Entity ID, which SAM\.gov itself assigns/);
+  assert.match(answer.text, /you cannot apply directly for federal awards/);
+  assert.match(answer.text, /\(checked 17 October 2026\)/);
+  assert.deepEqual(answer.sources.map(source => new URL(source.url).hostname), ["sam.gov", "www.gsa.gov"]);
+  assert.doesNotMatch(answer.text, /\bfree\b|\bcost|\bfee\b/i, "the official pages did not say whether the ID costs anything");
+  const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("the AI model must not be asked"); } }, tools: { list: async () => [] }, applications: { list: () => [] }, memory: { recent: async () => [], search: async () => [] }, documents: { list: async () => [] } });
+  const plan = await planner.plan({ command: { text: "Do I need a DUNS number to sell to the government?", tenantId: "t1", actorId: "u1", locale: "en" }, context: { timeZone: "America/Chicago" } });
+  assert.equal(plan.knowledge, "us-small-business:duns-uei"); // (a bare "Unique Entity ID" question is taken first by the nonprofit federal-grants answer, which already explains it)
+  const plain = await planner.plan({ command: { text: "How do I get a DUNS number?", tenantId: "t1", actorId: "u1", locale: "en" }, context: { timeZone: "America/Chicago" } });
+  assert.equal(plain.knowledge, "us-small-business:business-credit");
+  const spanish = guide.usSmallBusinessAnswer("duns-uei", { lang: "es" });
+  assert.match(spanish.text, /ya no pide un número DUNS/);
+  assert.match(spanish.text, /revisado el 17 de octubre de 2026/);
 });
