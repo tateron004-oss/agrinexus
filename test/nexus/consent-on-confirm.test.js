@@ -82,8 +82,11 @@ test("no consent is recorded for a decline, a bystander, a message send, an exis
   assert.equal(declined.calls.some(call => call[0] === "grant"), false); assert.equal(declined.calls.some(call => call[0] === "execute"), false);
 
   const admin = harness({ task: ownerTask([step("telehealth.prepare")]) });
-  await admin.spine.confirm({ input: confirmInput, context: ctx("admin-9", { hasRole: role => role === "admin" }) });
+  // An administrator's yes on someone else's step is refused outright (admin-cannot-approve-others-steps.test.js), so it is never the patient's consent either.
+  await assert.rejects(admin.spine.confirm({ input: confirmInput, context: ctx("admin-9", { hasRole: role => role === "admin" }) }),
+    error => error.code === "confirmation_owner_required");
   assert.equal(admin.calls.some(call => call[0] === "grant"), false, "an administrator's yes is not the patient's consent");
+  assert.equal(admin.calls.some(call => call[0] === "execute"), false);
 
   const message = harness({ task: ownerTask([step("communications.send", { message: "hi" })], { application: "communications" }) });
   await message.spine.confirm({ input: confirmInput, context: ctx() });

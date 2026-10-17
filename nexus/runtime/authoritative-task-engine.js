@@ -78,6 +78,18 @@ class AuthoritativeTaskEngine {
 
   async approve({ tenantId, taskId, stepId, actorId, approved }) {
     const step = await this.requiredStep({ tenantId, taskId, stepId });
+    // Only the task's owner says yes. The tools act on the signed-in person's own records (context.userId), so an administrator's yes
+    // on someone else's step ran it against the ADMIN's business workspace or reminders and reported the owner's task done. Anyone
+    // who may act on the task can still say no: rejecting never runs a tool.
+    if (approved) {
+      const owned = await this.tasks.get({ tenantId, taskId, includeSteps: false });
+      if (owned && owned.ownerId !== actorId) {
+        const denied = new NexusRuntimeError("confirmation_owner_required", "Only the person this task belongs to can say yes to it.", 403);
+        await this.audit.record({ tenantId, actorId, correlationId: owned.correlationId, taskId,
+          eventType: "step.approval_denied", outcome: "denied", metadata: { stepId, code: denied.code } });
+        throw denied;
+      }
+    }
     const updated = await this.tasks.approveStep({ tenantId, taskId, stepId, approved });
     const task = await this.tasks.get({ tenantId, taskId, includeSteps: false });
     await this.audit.record({ tenantId, actorId, correlationId: task.correlationId, taskId,
