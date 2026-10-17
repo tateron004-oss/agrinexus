@@ -41,5 +41,10 @@ module.exports = Object.freeze({
   "contracting": {
     title: "Cómo vender al gobierno",
     text: "Para venderle al gobierno federal, por lo general usted se registra en SAM.gov, el Sistema para la Administración de Adjudicaciones; los pasos del programa 8(a) de la SBA lo incluyen, y sus certificaciones necesitan que su registro en SAM esté al día. La SBA advierte que los sitios parecidos, como samregistration.com, no están afiliados a la SBA, así que use solo los sitios oficiales. Las certificaciones como 8(a), Pequeña Empresa de Propiedad de Mujeres, HUBZone y empresas de propiedad de veteranos se solicitan en certifications.sba.gov, y un Centro de Desarrollo de Pequeñas Empresas puede ayudarle a prepararse gratis."
+  },
+  "duns-uei": {
+    title: "El número DUNS y el Identificador Único de Entidad",
+    checkedOn: "17 de octubre de 2026",
+    text: "El gobierno federal ya no pide un número DUNS. El 4 de abril de 2022, SAM.gov y los demás sistemas de la Administración de Servicios Generales cambiaron al Identificador Único de Entidad, que asigna el propio SAM.gov. Al registrar su negocio en SAM.gov, usted recibe uno. También puede pedir un Identificador Único de Entidad sin registrarse, usando solo el nombre legal de su negocio y su dirección física, pero con solo el identificador no puede solicitar directamente adjudicaciones federales. El lugar para empezar es sam.gov."
   }
 });

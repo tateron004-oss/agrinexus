@@ -33,6 +33,8 @@ module.exports = Object.freeze([
   strict("location", "Where should I put my business location?", "zoning"),
   strict("1099", "What is a 1099?", "1099"),
   strict("grow", "How do I grow my business?", "grow|expand|scal"),
+  strict("duns-number", "How do I get a DUNS number?", "Dun & Bradstreet"),
+  strict("duns-for-government", "Do I need a DUNS number to sell to the government?", "Unique Entity ID"),
   strict("sam-registration", "How do I register my business in SAM.gov?", "SAM\\.gov"),
   strict("structure-pick", "What business structure should I pick for my new business?", "liability|LLC")
 ]);
