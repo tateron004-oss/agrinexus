@@ -39,3 +39,20 @@ test("a vet, an animal clinic or a livestock service is not searched as a human 
   assert.equal(places.parseNearbyPlacesRequest("Where is the nearest hospital?")?.kind, "clinic");
   assert.equal(places.parseNearbyPlacesRequest("Find a VA clinic for veterans near me")?.kind, "clinic", "'veterans' is not 'vet'");
 });
+
+test("a request for a vet or livestock service is answered plainly (not with clinics or chemists for people), and says what to do instead", async () => {
+  assert.equal(places.animalServiceRequest("Find a veterinary clinic in Nakuru."), true);
+  assert.equal(places.animalServiceRequest("Where is the nearest livestock doctor?"), true);
+  for (const say of ["Find a clinic near Nakuru", "Find a pharmacy near me", "Find a VA clinic for veterans near me", "How do I vaccinate my cows?"]) assert.equal(places.animalServiceRequest(say), false, say);
+  const { OpenEndedPlanner } = require("../../nexus/brain/planner.js");
+  const defs = require("../../nexus/tools/canonical-provider-definitions.js");
+  const { defaultApplicationManifests } = require("../../nexus/apps/default-manifests.js");
+  const list = Array.isArray(defs) ? defs : Object.values(defs).find(Array.isArray) || [];
+  const rows = list.map(tool => ({ tool_id: tool.toolId, domain: tool.domain, description: tool.description, risk_tier: tool.riskTier, confirmation_required: tool.confirmationRequired, consent_scope: tool.consentScope }));
+  const planner = new OpenEndedPlanner({ model: { plan: async () => { throw new Error("the AI model must not be asked"); } }, memory: { search: async () => [] }, tools: { list: async () => rows }, applications: { list: () => defaultApplicationManifests() }, documents: { list: async () => [] } });
+  const plan = await planner.plan({ command: { text: "Find a veterinary clinic in Nakuru.", tenantId: "t", actorId: "u", locale: "en", channel: "typed" }, context: { roles: [] } });
+  assert.equal(plan.steps.length, 0);
+  assert.match(plan.response, /I can only look up clinics and pharmacies for people, so I will not guess at a vet\. To find a vet or animal clinic, say, for example, "search the web for a vet in Nakuru"/);
+  const human = await planner.plan({ command: { text: "Find a clinic near Nakuru", tenantId: "t", actorId: "u", locale: "en", channel: "typed" }, context: { roles: [] } });
+  assert.equal(human.steps[0].toolId, "clinic.find");
+});

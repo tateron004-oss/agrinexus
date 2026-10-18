@@ -47,7 +47,7 @@ const { parseReading: parseSpokenReading } = require("../health/vitals-speech.js
 const { contentGuardReply } = require("./content-guard.js");
 const KyroMediaCommands = require("../../public/kyro-media-commands.js");
 const { emergencyNumberAnswer } = require("../companion/emergency-number.js");
-const { parseNearbyPlacesRequest, countryEntry, placeMentionedIn } = require("../../server/providers/placesLocation.js");
+const { parseNearbyPlacesRequest, animalServiceRequest: animalServiceRequestFor, countryEntry, placeMentionedIn } = require("../../server/providers/placesLocation.js");
 const { normaliseSpoken } = require("../speech/normalise.js");
 const { parseSwahiliReminder, parseSwahiliRepeating, parseSwahiliStop, parseSwahiliList, parseSwahiliCalendar, NEED_TIME_SW, NEED_TASK_SW, NEED_DAY_SW, UNSUPPORTED_REPEAT_SW, NEED_EVENT_DAY_SW, NEED_EVENT_TITLE_SW, stoppedReplySw } = require("../reminders/swahili-reminder.js");
 
@@ -1334,6 +1334,11 @@ function completeMobileClinicPlan(text, catalog) {
 // the AI model (no place was ever searched). The place named is passed on; "near me" passes none and the search then uses the person's saved town or their country (and says so) or asks which town.
 function completeNearbyPlacesPlan(text, catalog) {
   const goal = String(text || "").trim();
+  // A vet or livestock service is not on the list of clinics and pharmacies for people, and was answered with a human health post or a list of chemists: say so, and say what to do instead.
+  if (animalServiceRequestFor(goal)) {
+    return { goal, application: "conversation", riskTier: "low", clarification: null, steps: [], sourceRequired: false,
+      response: "I can only look up clinics and pharmacies for people, so I will not guess at a vet. To find a vet or animal clinic, say, for example, \"search the web for a vet in Nakuru\", or ask your local livestock officer." };
+  }
   const request = parseNearbyPlacesRequest(goal);
   if (!request) return null;
   const { kind, place, nearest } = request;

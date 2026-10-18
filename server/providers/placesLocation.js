@@ -169,5 +169,10 @@ function parseNearbyPlacesRequest(text) {
   if (!place && !NEARBY_CUE.test(goal)) return null;
   return { kind, place, nearest: /\b(?:nearest|closest)\b/i.test(goal) };
 }
+// "Find a veterinary clinic in Nakuru", "where is the nearest livestock doctor": a request for an animal service, which is not answered with a list of clinics or pharmacies for people (the planner says so plainly instead).
+function animalServiceRequest(text) {
+  const goal = clean(text);
+  return Boolean(goal && goal.length <= 200 && ANIMAL_SERVICE.test(goal) && NEARBY_VERB.test(goal) && /\b(?:clinics?|hospitals?|vets?|veterinar\w*|doctors?|pharmacy|pharmacies|chemists?|services?|treat\w*)\b/i.test(goal));
+}
 
-module.exports = Object.freeze({ parseNearbyPlacesRequest, COUNTRIES, countryEntry, countryNamedIn, placeMentionedIn, namedPlaceIn, isUnnamed, planPlaceSearch, originCountry, countryNote, wordsFor });
+module.exports = Object.freeze({ parseNearbyPlacesRequest, animalServiceRequest, COUNTRIES, countryEntry, countryNamedIn, placeMentionedIn, namedPlaceIn, isUnnamed, planPlaceSearch, originCountry, countryNote, wordsFor });
