@@ -50615,6 +50615,10 @@ async function callNexusOpenAiRealtimeTool(toolName, args = {}) {
   // The sign-in has ended: nothing can be opened or saved, and the model must say so rather than "it is on the screen".
   if (typeof kyroSignInEnded !== "undefined" && kyroSignInEnded) return { ok: false, status: "signin_ended", response: `The person's sign-in has ended, so nothing can be opened, listed or saved until they sign in again. Tell them exactly this in one short sentence: ${KYRO_SIGNIN_ENDED_LINE}`, executionVerified: false, blockedReason: "signin_ended" };
   kyroToolCalledAt = Date.now(); // (what the model has acted on: see kyroRecoverRefusal)
+  // The page has just taken this navigation request itself (the phone's GPS guidance, from where the person is): the model's own map tool, which asks for a start, is not asked as well.
+  if (toolName === "nexus_maps_route" && kyroLastNavigationSaid.key && kyroLastNavigationSaid.key === kyroNavigationKey(kyroWithoutPoliteTail(command)) && Date.now() - kyroLastNavigationSaid.at < 20000) {
+    return { ok: true, status: "completed", response: "Kyro is already guiding the person and said so. Say nothing more.", executionVerified: false, blockedReason: null };
+  }
   // The page has just opened this map itself (a place, a country, or the plain map): the model's own map tool, which asks for a start and a destination, is not asked as well.
   if (toolName === "nexus_maps_route" && kyroPageJustOpened(command) && (kyroOpenMapRequest(kyroWithoutPoliteTail(command)) || kyroMapPlace(command))) {
     return { ok: true, status: "completed", response: "Kyro already opened the map and said so. Say nothing more.", executionVerified: false, blockedReason: null };
@@ -51637,6 +51641,17 @@ function routeKyroVoiceIntakeTranscript({ transcript, utteranceId, source }) {
     }
     // "Open documents", "open images", "create a business plan": answered on the page
     if (kyroHandleSpokenOpen(trimmed, {})) { kyroPageSpeaksUntil = Date.now() + 30000; return true; }
+    // "Take me to Sacramento", "navigate to Nairobi", "start navigation to the airport", "where am I", "stop navigation": the phone's own GPS guidance (public/kyro-navigation.js), which starts from where the person is.
+    // Said aloud these went to the voice model's map tool, which asks for a start and a destination ("I'm missing your starting point") because it cannot know where the person is (found by the owner's own testing).
+    if (trimmed && typeof kyroSpokenNavigation === "function" && kyroSpokenNavigation(trimmed)) {
+      if (!heardAgain) {
+        try { kyroTakeOverTurn(); } catch { /* nothing to cut off */ }
+        kyroPageSpeaksUntil = Date.now() + 40000;
+        kyroLastNavigationSaid = { key: kyroNavigationKey(trimmed), at: Date.now() };
+        void handleKyroNavigationCommand(trimmed, { source: "voice" });
+      }
+      return true;
+    }
     // "Look at this", "what is wrong with this plant", "read this letter": the camera opens, the picture is taken and described
     if (window.KyroCapture?.isLookRequest?.(trimmed) && startKyroCapture(trimmed, { source })) return true;
     // "I want to sell 50 bags of maize": Kyro asks only for what is missing and posts it to the board after a yes
@@ -60574,6 +60589,18 @@ function handleKyroEmergencyResult(emergency) {
 
 // Kyro as a GPS (public/kyro-navigation.js): the words are handled on the phone, which asks the server only to find places and plan routes.
 let kyroNavigator = null;
+let kyroLastNavigationSaid = { key: "", at: 0 }; // the navigation request the page last took from the voice, so the model's own map tool call for the same words is not asked as well
+const kyroNavigationKey = text => String(text || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+// True when the sentence is one for the phone's GPS ("take me to Sacramento", "navigate to Nairobi", "start navigation to the airport", "where am I", "stop navigation", "save this place as home"), and not
+// a request to open a screen ("take me to the map", "take me to my documents").
+function kyroSpokenNavigation(text) {
+  try {
+    const parsed = window.KyroNavigation?.parseCommand?.(kyroWithoutPoliteTail(String(text || "").trim()));
+    if (!parsed) return false;
+    if (parsed.type === "go" && /^(?:the |my )?(?:map|maps|dashboard|home ?screen|main screen|menu|settings|orb|apps?|documents?|notes?|lists?|checklists?|reminders?|calendar|business|crm|uploads?)$/i.test(String(parsed.destination || "").trim())) return false;
+    return true;
+  } catch { return false; }
+}
 async function handleKyroNavigationCommand(text, options = {}) {
   const navigation = window.KyroNavigation; if (!navigation) return false;
   if (!kyroNavigator) kyroNavigator = navigation.forBrowser({ locale: languageCode(), speechLang: voiceLocale(), api: body => requestWithTimeout("/api/nexus/runtime/navigation", { method: "POST", body }, 25000) });
