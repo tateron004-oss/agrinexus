@@ -247,7 +247,7 @@
     if (/^(?:stop|end|cancel|exit|quit)(?: the)?(?: navigation| navigating| directions| guidance| route)$/i.test(t) || /^stop navigating$/i.test(t)) return { type: "stop" };
     if (/^(?:repeat(?: that)?|say (?:that )?again|what(?:'s| is) (?:the )?next(?: turn| instruction| direction)?|next turn)$/i.test(t)) return { type: "repeat" };
     if (/^(?:how (?:far|long)(?: is it)?(?: to go)?|how much (?:longer|further)|when (?:will|do) i arrive|what(?:'s| is) my eta|eta)$/i.test(t)) return { type: "status" };
-    if ((m = /^(?:please )?(navigate|take me|drive me|guide me|walk me|lead me|directions|give me directions|show me the way)\b\s*(.*)$/i.exec(t))) {
+    if ((m = /^(?:please )?(navigate|start navigation|start navigating|begin navigation|take me|drive me|guide me|walk me|lead me|directions|give me directions|show me the way)\b\s*(.*)$/i.exec(t))) {
       let rest = m[2]; const mode = WALK_WORDS.test(`${m[1]} ${rest}`) || /^walk me/i.test(m[1]) ? "walk" : "drive"; WALK_WORDS.lastIndex = 0;
       rest = rest.replace(WALK_WORDS, " ").replace(/\s+/g, " ").trim().replace(/^(?:to|towards|toward|me to|for|back to|back)\s+/i, "").replace(/^(?:the )?/, match => match).trim();
       if (/\bfrom\b/i.test(rest)) return null; // "directions from A to B" is a route between two named places, handled elsewhere

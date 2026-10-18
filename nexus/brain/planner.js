@@ -1248,7 +1248,8 @@ function completeMarketplaceSearchPlan(text, catalog) {
 // nexus/logistics/executor.js's header for the full honest accounting of what is and isn't real here).
 function completeLogisticsTrackPlan(text, catalog) {
   const goal = String(text || "").trim();
-  if (!/\b(track|where is|when will|how long)\b/i.test(goal) || !/\b(shipment|delivery|order|package|parcel)\b/i.test(goal)) return null;
+  // ("Estimate the delivery time from Stockton to Fresno": estimate, calculate and work out are asks too; it went to the voice model's map tool, which answered "the route details weren't accepted")
+  if (!/\b(track|where is|when will|how long|estimate|calculate|work out)\b/i.test(goal) || !/\b(shipment|delivery|order|package|parcel)\b/i.test(goal)) return null;
   if (!catalog.tools.some(tool => tool.toolId === "logistics.track") ||
       !catalog.applications.some(app => app.applicationId === "logistics")) return null;
   const match = /\bfrom\s+(.+?)\s+(?:to|arriving in|arriving at)\s+(.+?)(?:\s+(?:arrive|arrives|get there|gets there)\b.*)?(?:[.?!]|$)/i.exec(goal);
